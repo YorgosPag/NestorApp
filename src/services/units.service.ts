@@ -15,6 +15,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { normalizeToISO } from '@/lib/date-local';
 import type { Property } from '@/types/property-viewer';
 import type { UnitDoc, UnitModel } from '@/types/unit';
 import type { DocumentSnapshot, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
@@ -38,11 +39,8 @@ const transformUnit = (doc: DocumentSnapshot<DocumentData> | QueryDocumentSnapsh
     const unit: Record<string, unknown> = { id: doc.id };
 
     for (const key in data) {
-        if (data[key] instanceof Timestamp) {
-            unit[key] = data[key].toDate().toISOString();
-        } else {
-            unit[key] = data[key];
-        }
+        const iso = normalizeToISO(data[key]);
+        unit[key] = iso ?? data[key];
     }
     return unit as unknown as Property;
 };

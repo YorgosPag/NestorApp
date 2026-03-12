@@ -68,8 +68,8 @@ function SalesStorageContent() {
       floor: adv.floor?.[0] || 'all',
       type: adv.type?.[0] || 'all',
       areaRange: {
-        min: adv.areaRange?.min ?? null,
-        max: adv.areaRange?.max ?? null,
+        min: adv.ranges?.areaRange?.min ?? null,
+        max: adv.ranges?.areaRange?.max ?? null,
       },
     });
   }, [handleFiltersChange]);

@@ -37,6 +37,7 @@ import { COLLECTIONS, FIRESTORE_LIMITS, type CollectionKey } from '@/config/fire
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { requireAuthContext } from './auth-context';
 import { getTenantConfig, resolveTenantValue } from './tenant-config';
+import { chunkArray } from '@/lib/array-utils';
 import type {
   TenantContext,
   QueryOptions,
@@ -84,14 +85,7 @@ function buildTenantConstraints(
   return [where(config.fieldName, '==', value)];
 }
 
-/** Split an array into chunks of `size` */
-function chunkArray<T>(arr: readonly T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) {
-    chunks.push(arr.slice(i, i + size) as T[]);
-  }
-  return chunks;
-}
+// ADR-217: chunkArray imported from centralized @/lib/array-utils
 
 /** Extract typed document data from a snapshot */
 function extractDoc<T>(snap: DocumentSnapshot): T | null {

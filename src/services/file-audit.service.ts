@@ -58,7 +58,13 @@ export type FileAuditAction =
   | 'batch_classify'
   | 'share'
   | 'hold_place'
-  | 'hold_release';
+  | 'hold_release'
+  | 'approval_request'
+  | 'approval_approve'
+  | 'approval_reject'
+  | 'approval_cancel'
+  | 'comment'
+  | 'move';
 
 /** Audit log entry stored in Firestore */
 export interface FileAuditEntry {

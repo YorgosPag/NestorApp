@@ -5,6 +5,7 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { RealtimeService, type ProjectUpdatedPayload, type ProjectCreatedPayload, type ProjectDeletedPayload } from '@/services/realtime';
 import type { ProjectAddress } from '@/types/project/addresses';
 import { createModuleLogger } from '@/lib/telemetry';
+import { applyUpdates } from '@/lib/utils';
 
 const logger = createModuleLogger('useFirestoreProjects');
 
@@ -90,7 +91,7 @@ export function useFirestoreProjects() {
       logger.info('Applying update for project', { projectId: payload.projectId });
       setProjects(prev => prev.map(project =>
         project.id === payload.projectId
-          ? { ...project, ...payload.updates }
+          ? applyUpdates(project, payload.updates)
           : project
       ));
     };

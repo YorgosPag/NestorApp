@@ -34,6 +34,7 @@ import type { CompanyContact } from '@/types/contacts';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { chunkArray } from '@/lib/array-utils';
+import { normalizeToISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('AuditBootstrapRoute');
 
@@ -83,36 +84,7 @@ const FIRESTORE_IN_LIMIT = 10; // Firestore `in` query max items
 // HELPER FUNCTIONS
 // ============================================================================
 
-/**
- * 🔄 Convert Firestore Timestamp to ISO string
- * Enterprise requirement: Dates ως ISO strings (όχι Date objects)
- */
-function toISOString(timestamp: unknown): string | null {
-  if (!timestamp) return null;
-
-  // Handle Firestore Timestamp
-  if (typeof timestamp === 'object' && timestamp !== null && 'toDate' in timestamp) {
-    const firestoreTimestamp = timestamp as { toDate: () => Date };
-    return firestoreTimestamp.toDate().toISOString();
-  }
-
-  // Handle Date object
-  if (timestamp instanceof Date) {
-    return timestamp.toISOString();
-  }
-
-  // Handle ISO string
-  if (typeof timestamp === 'string') {
-    return timestamp;
-  }
-
-  // Handle number (epoch ms)
-  if (typeof timestamp === 'number') {
-    return new Date(timestamp).toISOString();
-  }
-
-  return null;
-}
+// ADR-217: toISOString replaced by centralized normalizeToISO from @/lib/date-local
 
 // ============================================================================
 // FORCE DYNAMIC - Enterprise requirement
@@ -527,8 +499,8 @@ function mapProjectDocument(doc: FirebaseFirestore.QueryDocumentSnapshot): Boots
     name: typeof data.name === 'string' ? data.name : 'Unnamed Project',
     companyId: typeof data.companyId === 'string' ? data.companyId : '',
     status: typeof data.status === 'string' ? data.status : 'unknown',
-    updatedAt: toISOString(data.updatedAt),
-    createdAt: toISOString(data.createdAt),
+    updatedAt: normalizeToISO(data.updatedAt),
+    createdAt: normalizeToISO(data.createdAt),
     // Precomputed aggregates (if available in document)
     totalUnits: typeof data.totalUnits === 'number' ? data.totalUnits : undefined,
     soldUnits: typeof data.soldUnits === 'number' ? data.soldUnits : undefined,

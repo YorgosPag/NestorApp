@@ -1148,7 +1148,7 @@ export class LayerRenderer {
     screenPoint: Point2D,
     transform: ViewTransform,
     viewport: Viewport,
-    tolerance = TOLERANCE_CONFIG.HIT_TEST_FALLBACK
+    tolerance: number = TOLERANCE_CONFIG.HIT_TEST_FALLBACK
   ): string | null {
     const worldPoint = CoordinateTransforms.screenToWorld(screenPoint, transform, viewport);
     // Hit test debug disabled for performance

@@ -96,7 +96,6 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
     lastUpdateDate: getSafeFieldValue(serviceContact, 'lastUpdateDate'),
     gemiDepartment: getSafeFieldValue(serviceContact, 'gemiDepartment'),
     prefecture: getSafeFieldValue(serviceContact, 'prefecture'),
-    municipality: getSafeFieldValue(serviceContact, 'municipality'),
     activityCodeKAD: getSafeFieldValue(serviceContact, 'activityCodeKAD'),
     activityDescription: getSafeFieldValue(serviceContact, 'activityDescription'),
     activityType: getSafeFieldValue(serviceContact, 'activityType', 'main'),

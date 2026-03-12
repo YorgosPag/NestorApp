@@ -865,7 +865,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
                                   variant="ghost"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    router.push(ENTITY_ROUTES.crm.task(comm.linkedTaskId));
+                                    router.push(ENTITY_ROUTES.crm.task(comm.linkedTaskId!));
                                   }}
                                 >
                                   <Eye className={`${iconSizes.sm} ${spacing.margin.right.xs}`} />

@@ -19,7 +19,9 @@
 // ============================================================================
 
 // ADR-217: Centralized in src/utils/greek-text.ts
-export { stripAccents, normalizeGreekText } from '@/utils/greek-text';
+import { stripAccents as _stripAccents, normalizeGreekText as _normalizeGreekText } from '@/utils/greek-text';
+export const stripAccents = _stripAccents;
+export const normalizeGreekText = _normalizeGreekText;
 
 // ============================================================================
 // GREEK → LATIN TRANSLITERATION

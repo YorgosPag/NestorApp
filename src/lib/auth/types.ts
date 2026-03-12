@@ -271,7 +271,7 @@ export type AuditTargetType = keyof typeof AUDIT_TARGET_TYPES;
  * Typed audit change value (NO any!).
  */
 export interface AuditChangeValue {
-  type: 'role' | 'permission' | 'grant' | 'status' | 'membership' | 'webhook' | 'building_update' | 'project_create' | 'communication_status' | 'task_linked';
+  type: 'role' | 'permission' | 'grant' | 'status' | 'membership' | 'webhook' | 'building_update' | 'building_delete' | 'project_create' | 'communication_status' | 'task_linked';
   value: string | string[] | Record<string, unknown>;
 }
 

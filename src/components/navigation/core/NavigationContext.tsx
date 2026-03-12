@@ -25,6 +25,7 @@ import type {
   NavigationSelectedUnit
 } from './types';
 import { createModuleLogger } from '@/lib/telemetry';
+import { applyUpdates } from '@/lib/utils';
 
 const logger = createModuleLogger('NavigationContext');
 
@@ -226,12 +227,12 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
         ...prev,
         projects: prev.projects.map(project =>
           project.id === payload.projectId
-            ? { ...project, ...payload.updates }
+            ? applyUpdates(project, payload.updates)
             : project
         ),
         // Also update selectedProject if it's the one being updated
         selectedProject: prev.selectedProject?.id === payload.projectId
-          ? { ...prev.selectedProject, ...payload.updates }
+          ? applyUpdates(prev.selectedProject, payload.updates)
           : prev.selectedProject
       }));
     };

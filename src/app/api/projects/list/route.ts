@@ -27,6 +27,7 @@ import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { fieldToISO } from '@/lib/date-local';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { FieldValue } from 'firebase-admin/firestore';
 import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -107,37 +108,7 @@ function getArray(data: Record<string, unknown>, field: string): unknown[] | und
   return Array.isArray(value) ? value : undefined;
 }
 
-/**
- * 🔒 ENTERPRISE: Type-safe timestamp to ISO string
- */
-function getTimestampString(data: Record<string, unknown>, field: string): string {
-  const value = data[field];
-
-  if (!value) return '';
-
-  // Handle Firestore Timestamp
-  if (typeof value === 'object' && value !== null && 'toDate' in value) {
-    const firestoreTimestamp = value as { toDate: () => Date };
-    return firestoreTimestamp.toDate().toISOString();
-  }
-
-  // Handle Date object
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-
-  // Handle ISO string
-  if (typeof value === 'string') {
-    return value;
-  }
-
-  // Handle number (epoch ms)
-  if (typeof value === 'number') {
-    return new Date(value).toISOString();
-  }
-
-  return '';
-}
+// ADR-217: getTimestampString replaced by centralized fieldToISO from @/lib/date-local
 
 // ============================================================================
 // STATUS NORMALIZER
@@ -248,9 +219,9 @@ export const GET = withHighRateLimit(
       progress: getNumber(data, 'progress'),
       totalValue: getNumber(data, 'totalValue'),
       totalArea: getNumber(data, 'totalArea'),
-      startDate: getTimestampString(data, 'startDate'),
-      completionDate: getTimestampString(data, 'completionDate'),
-      lastUpdate: getTimestampString(data, 'lastUpdate') || getTimestampString(data, 'updatedAt')
+      startDate: fieldToISO(data, 'startDate'),
+      completionDate: fieldToISO(data, 'completionDate'),
+      lastUpdate: fieldToISO(data, 'lastUpdate') || fieldToISO(data, 'updatedAt')
     };
   });
 

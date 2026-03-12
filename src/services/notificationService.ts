@@ -21,6 +21,7 @@ import {
 import type { Notification, Severity } from '@/types/notification';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateNotificationId } from '@/services/enterprise-id.service';
+import { fieldToISO } from '@/lib/date-local';
 
 const COLLECTION_NAME = COLLECTIONS.NOTIFICATIONS;
 
@@ -65,9 +66,7 @@ export async function fetchNotifications(params: NotificationQuery): Promise<Not
       id: doc.id,
       tenantId: data.tenantId || 'default',
       userId: data.userId,
-      createdAt: data.createdAt instanceof Timestamp
-        ? data.createdAt.toDate().toISOString()
-        : data.createdAt,
+      createdAt: fieldToISO(data, 'createdAt') || data.createdAt,
       severity: data.severity as Severity,
       title: data.title,
       body: data.body,
@@ -166,9 +165,7 @@ export function subscribeToNotifications(
           id: doc.id,
           tenantId: data.tenantId || 'default',
           userId: data.userId,
-          createdAt: data.createdAt instanceof Timestamp
-            ? data.createdAt.toDate().toISOString()
-            : data.createdAt,
+          createdAt: fieldToISO(data, 'createdAt') || data.createdAt,
           severity: data.severity as Severity,
           title: data.title,
           body: data.body,

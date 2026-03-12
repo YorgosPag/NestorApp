@@ -5,6 +5,7 @@ import type { Project } from '@/types/project';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
+import { applyUpdates } from '@/lib/utils';
 
 const logger = createModuleLogger('useProjectsState');
 
@@ -31,14 +32,14 @@ export function useProjectsState(initialProjects: Project[]) {
 
       setProjects(prev => prev.map(project =>
         project.id === payload.projectId
-          ? { ...project, ...payload.updates }
+          ? applyUpdates(project, payload.updates)
           : project
       ));
 
       // Also update selectedProject if it's the one being updated
       setSelectedProject(prev =>
         prev?.id === payload.projectId
-          ? { ...prev, ...payload.updates }
+          ? applyUpdates(prev, payload.updates)
           : prev
       );
     };

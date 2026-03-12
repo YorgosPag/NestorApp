@@ -165,7 +165,7 @@ export function ContactsList({
     let saved = 0;
     for (const record of records) {
       try {
-        const contactData: Record<string, unknown> = {
+        const contactData: Record<string, unknown> & { type: string; status: string } = {
           type: record.type || 'individual',
           status: record.status || 'active',
           isFavorite: false,
@@ -208,7 +208,7 @@ export function ContactsList({
           }];
         }
 
-        await ContactsService.createContact(contactData);
+        await ContactsService.createContact(contactData as Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>);
         saved++;
       } catch {
         // Continue with next record on error
@@ -239,7 +239,7 @@ export function ContactsList({
     if (selectedContact.type === 'service' && selectedContact.serviceName) {
       lines.push(`🔧 ${t('list.share.service')}: ${selectedContact.serviceName}`);
     }
-    if (selectedContact.profession) {
+    if ('profession' in selectedContact && selectedContact.profession) {
       lines.push(`💼 ${t('list.share.profession')}: ${selectedContact.profession}`);
     }
     // Primary email

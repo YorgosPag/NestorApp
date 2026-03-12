@@ -11,6 +11,7 @@ import type {
   ConstructionTask,
 } from '@/types/building/construction';
 import { createModuleLogger } from '@/lib/telemetry';
+import { normalizeToISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('ConstructionPhasesRoute');
 
@@ -30,19 +31,7 @@ interface ConstructionMutationResponse {
   cascadedTasks?: number;
 }
 
-// ─── Firestore Timestamp Helper ──────────────────────────────────────────
-
-function firestoreTimestampToISO(
-  val: string | Date | { seconds: number; nanoseconds: number } | undefined
-): string | undefined {
-  if (!val) return undefined;
-  if (typeof val === 'string') return val;
-  if (val instanceof Date) return val.toISOString();
-  if (typeof val === 'object' && 'seconds' in val) {
-    return new Date(val.seconds * 1000).toISOString();
-  }
-  return undefined;
-}
+// ADR-217: firestoreTimestampToISO replaced by centralized normalizeToISO from @/lib/date-local
 
 // =============================================================================
 // GET — Load construction phases + tasks for a building
@@ -94,8 +83,8 @@ export async function GET(
           progress: data.progress ?? 0,
           barColor: data.barColor,
           description: data.description,
-          createdAt: firestoreTimestampToISO(data.createdAt),
-          updatedAt: firestoreTimestampToISO(data.updatedAt),
+          createdAt: normalizeToISO(data.createdAt),
+          updatedAt: normalizeToISO(data.updatedAt),
           createdBy: data.createdBy,
           updatedBy: data.updatedBy,
         };
@@ -127,8 +116,8 @@ export async function GET(
           dependencies: data.dependencies ?? [],
           barColor: data.barColor,
           description: data.description,
-          createdAt: firestoreTimestampToISO(data.createdAt),
-          updatedAt: firestoreTimestampToISO(data.updatedAt),
+          createdAt: normalizeToISO(data.createdAt),
+          updatedAt: normalizeToISO(data.updatedAt),
           createdBy: data.createdBy,
           updatedBy: data.updatedBy,
         };

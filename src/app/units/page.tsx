@@ -144,6 +144,10 @@ function UnitsPageContent() {
       areas: { gross: 0 },
       orientations: [],
       buildingId: '',
+      floorId: '',
+      vertices: [],
+      building: '',
+      project: '',
     };
     setNewUnitTemplate(blankUnit);
     setIsCreatingNewUnit(true);

@@ -181,7 +181,7 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
                   {t('sales.saleInfo.buyer', { defaultValue: 'Αγοραστής' })}
                 </span>
                 <button
-                  onClick={() => router.push(ENTITY_ROUTES.contacts.withId(commercial.buyerContactId))}
+                  onClick={() => router.push(ENTITY_ROUTES.contacts.withId(commercial.buyerContactId!))}
                   className={`text-sm font-medium ${colors.text.info} flex items-center gap-1 hover:underline`}
                 >
                   {resolvedBuyerName ?? t('sales.saleInfo.unknownBuyer', { defaultValue: 'Άγνωστος' })}

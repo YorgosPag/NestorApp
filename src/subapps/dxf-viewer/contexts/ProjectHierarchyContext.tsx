@@ -15,6 +15,7 @@ import { useAuth } from '@/auth/hooks/useAuth';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
 import type { ParkingSpot as CanonicalParkingSpot } from '@/types/parking';
+import { applyUpdates } from '@/lib/utils';
 
 export interface Unit {
   id: string;
@@ -444,12 +445,12 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
         ...prev,
         projects: prev.projects.map(project =>
           project.id === payload.projectId
-            ? { ...project, ...payload.updates }
+            ? applyUpdates(project, payload.updates)
             : project
         ),
         // Also update selectedProject if it's the one being updated
         selectedProject: prev.selectedProject?.id === payload.projectId
-          ? { ...prev.selectedProject, ...payload.updates }
+          ? applyUpdates(prev.selectedProject, payload.updates)
           : prev.selectedProject
       }));
     };

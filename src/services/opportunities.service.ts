@@ -21,6 +21,7 @@ import {
 import { generateOpportunityId } from '@/services/enterprise-id.service';
 import type { Opportunity } from '@/types/crm';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { normalizeToISO } from '@/lib/date-local';
 import type { DocumentSnapshot, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 
 const OPPORTUNITIES_COLLECTION = COLLECTIONS.OPPORTUNITIES;
@@ -30,11 +31,8 @@ const transformOpportunity = (doc: DocumentSnapshot<DocumentData> | QueryDocumen
     const opportunity: Record<string, unknown> = { id: doc.id };
 
     for (const key in data) {
-        if (data[key] instanceof Timestamp) {
-            opportunity[key] = data[key].toDate().toISOString();
-        } else {
-            opportunity[key] = data[key];
-        }
+        const iso = normalizeToISO(data[key]);
+        opportunity[key] = iso ?? data[key];
     }
 
     return opportunity as unknown as Opportunity;

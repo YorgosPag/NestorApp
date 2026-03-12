@@ -15,7 +15,6 @@ import type {
   FirestoreDataConverter,
   QueryDocumentSnapshot,
   SnapshotOptions,
-  Timestamp,
 } from 'firebase/firestore';
 import type {
   Workspace,
@@ -23,6 +22,7 @@ import type {
   WorkspaceMember,
   WorkspaceMemberFirestoreDoc,
 } from '@/types/workspace';
+import { normalizeToISO } from '@/lib/date-local';
 
 // ============================================================================
 // WORKSPACE CONVERTER
@@ -73,11 +73,9 @@ export const workspaceConverter: FirestoreDataConverter<Workspace> = {
   ): Workspace {
     const data = snapshot.data(options);
 
-    // Convert Timestamps to ISO strings
-    const createdAt = (data.createdAt as Timestamp).toDate().toISOString();
-    const updatedAt = data.updatedAt
-      ? (data.updatedAt as Timestamp).toDate().toISOString()
-      : undefined;
+    // ADR-217: Centralized timestamp conversion
+    const createdAt = normalizeToISO(data.createdAt) ?? new Date().toISOString();
+    const updatedAt = normalizeToISO(data.updatedAt) ?? undefined;
 
     return {
       id: data.id,
@@ -141,10 +139,8 @@ export const workspaceMemberConverter: FirestoreDataConverter<WorkspaceMember> =
   ): WorkspaceMember {
     const data = snapshot.data(options);
 
-    const addedAt = (data.addedAt as Timestamp).toDate().toISOString();
-    const lastActiveAt = data.lastActiveAt
-      ? (data.lastActiveAt as Timestamp).toDate().toISOString()
-      : undefined;
+    const addedAt = normalizeToISO(data.addedAt) ?? new Date().toISOString();
+    const lastActiveAt = normalizeToISO(data.lastActiveAt) ?? undefined;
 
     return {
       id: data.id,

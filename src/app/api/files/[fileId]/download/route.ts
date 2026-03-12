@@ -33,7 +33,7 @@ export async function GET(
   request: NextRequest,
   segmentData: { params: Promise<{ fileId: string }> }
 ): Promise<Response> {
-  const handler = withAuth<ArrayBuffer | { error: string }>(
+  const handler = withAuth(
     async (_req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       const params = await segmentData.params;
       const fileId = params?.fileId;
@@ -68,7 +68,7 @@ export async function GET(
 
         const [fileBuffer] = await file.download();
 
-        return new NextResponse(fileBuffer, {
+        return new NextResponse(new Blob([fileBuffer]), {
           status: 200,
           headers: {
             'Content-Type': fileData.contentType || 'application/octet-stream',

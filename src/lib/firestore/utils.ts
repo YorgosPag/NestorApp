@@ -4,6 +4,7 @@ import {
 } from 'firebase/firestore';
 import type { FirestoreDataConverter } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { normalizeToDate } from '@/lib/date-local';
 
 export const getCol = <T = unknown>(path: string, converter?: FirestoreDataConverter<T>) =>
   converter ? collection(db, path).withConverter(converter) : collection(db, path);
@@ -11,16 +12,8 @@ export const getCol = <T = unknown>(path: string, converter?: FirestoreDataConve
 export const mapDocs = <T>(qs: QuerySnapshot<T>) =>
   qs.docs.map((d) => ({ id: d.id, ...(d.data() as T) }));
 
-export const asDate = (v: unknown): Date => {
-  if (!v) return new Date(NaN);
-  if (v instanceof Date) return v;
-  // Firestore Timestamp
-  const timestampCandidate = v as { toDate?: () => Date };
-  if (typeof timestampCandidate?.toDate === 'function') return timestampCandidate.toDate();
-  if (typeof v === 'number') return new Date(v);
-  if (typeof v === 'string') return new Date(v);
-  return new Date(NaN);
-};
+// ADR-217: Thin wrapper delegating to centralized normalizeToDate
+export const asDate = (v: unknown): Date => normalizeToDate(v) ?? new Date(NaN);
 
 // Re-export from centralized array-utils (ADR-213 Phase 10)
 export { chunkArray as chunk } from '@/lib/array-utils';

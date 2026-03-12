@@ -64,6 +64,9 @@ export interface Project {
   startYear?: number;
   /** Expected end date (ISO string) */
   endDate?: string;
+  buildingBlock?: string;
+  protocolNumber?: string;
+  licenseNumber?: string;
 
   // 🏢 ENTERPRISE: Boolean feature flags for filtering
   /** Has all required permits */

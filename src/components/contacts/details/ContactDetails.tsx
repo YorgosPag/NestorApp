@@ -91,8 +91,8 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
   useEffect(() => {
     if (!optimisticPersonas || !contact) return;
 
-    const contactPersonas = ('personas' in contact && Array.isArray((contact as Record<string, unknown>).personas))
-      ? ((contact as Record<string, unknown>).personas as Array<{ personaType: string; status: string }>)
+    const contactPersonas = ('personas' in contact && Array.isArray((contact as IndividualContact).personas))
+      ? ((contact as IndividualContact).personas ?? [])
         .filter(p => p.status === 'active')
         .map(p => p.personaType)
       : [];

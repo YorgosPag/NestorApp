@@ -356,7 +356,7 @@ export function CommentsPanel({
               onEdit={handleEdit}
               onDelete={handleDelete}
               onToggleResolve={handleToggleResolve}
-              t={t}
+              t={(key, fallback) => t(key, fallback ?? '')}
             />
           ))
         )}

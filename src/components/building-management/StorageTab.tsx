@@ -148,7 +148,7 @@ export function StorageTab({ building }: StorageTabProps) {
         // Map API Storage → StorageUnit (compatibility layer)
         const storageUnits: StorageUnit[] = result.storages.map(s => ({
           id: s.id,
-          code: (s as Record<string, unknown>).name as string || s.code || `S-${s.id.substring(0, 6)}`,
+          code: s.name || s.code || `S-${s.id.substring(0, 6)}`,
           type: (s.type || 'small') as StorageType,
           status: (s.status || 'available') as StorageStatus,
           floor: s.floor || '',
@@ -307,10 +307,10 @@ export function StorageTab({ building }: StorageTabProps) {
     const result = await apiClient.get<StoragesApiResponse>('/api/storages');
     if (!result?.storages) return [];
     return result.storages
-      .filter((s) => !(s as Record<string, unknown>).buildingId)
+      .filter((s) => !s.buildingId)
       .map((s) => ({
         id: s.id,
-        label: (s as Record<string, unknown>).name as string || s.code || s.id,
+        label: s.name || s.code || s.id,
         sublabel: `${translatedGetTypeLabel(s.type)} · ${s.floor || '—'}`,
       }));
   }, [translatedGetTypeLabel]);

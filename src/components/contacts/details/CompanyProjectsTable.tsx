@@ -15,6 +15,7 @@ import { useCompanyRelationships } from '@/services/relationships/hooks/useEnter
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
+import { applyUpdates } from '@/lib/utils';
 
 
 const logger = createModuleLogger('CompanyProjectsTable');
@@ -67,11 +68,7 @@ function CompanyProjectsTable({ companyId }: { companyId: string }) {
                 const nextStatus = isProjectStatus(payload.updates.status)
                     ? payload.updates.status
                     : project.status;
-                return {
-                    ...project,
-                    ...payload.updates,
-                    status: nextStatus
-                };
+                return applyUpdates(project, { ...payload.updates, status: nextStatus });
             }));
         };
 

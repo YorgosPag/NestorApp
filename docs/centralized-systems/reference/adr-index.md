@@ -510,6 +510,12 @@
 | **ADR-207** | Scattered Code Centralization — Phase 6 (Collection Utilities) | ✅ APPROVED | [View](./adrs/ADR-207-phase6-collection-utilities.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
+### ADR-217: Timestamp Conversion Centralization
+- **Status**: ✅ Implemented
+- **File**: `docs/centralized-systems/reference/adrs/ADR-217-timestamp-conversion-centralization.md`
+- **SSoT**: `src/lib/date-local.ts` — `normalizeToISO()`, `fieldToISO()`
+- **Summary**: Centralized all Firestore Timestamp→ISO string conversions. Eliminated 80+ scattered occurrences across 20 files. Extended `date-local.ts` with 2 new functions. Also fixed `chunkArray` duplicate in `firestore-query.service.ts`.
+
 ---
 
 ## 📝 **ADDING NEW ADRs**

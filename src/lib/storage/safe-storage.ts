@@ -70,6 +70,8 @@ function isStorageAvailable(): boolean {
  * For plain strings, pass a string fallback. For objects/arrays, the value
  * is automatically JSON.parsed.
  */
+export function safeGetItem(key: string, fallback: string): string;
+export function safeGetItem<T>(key: string, fallback: T): T;
 export function safeGetItem<T>(key: string, fallback: T): T {
   if (!isStorageAvailable()) return fallback;
   try {

@@ -68,7 +68,7 @@ async function handler(
 
     const watermarkedBytes = await pdfDoc.save();
 
-    return new NextResponse(watermarkedBytes, {
+    return new NextResponse(new Blob([watermarkedBytes]), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': 'attachment; filename="watermarked.pdf"',

@@ -58,6 +58,8 @@ export type RelationshipType =
   | 'supplier'                 // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.SUPPLIER
   | 'customer'                 // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.CUSTOMER
   | 'competitor'               // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.COMPETITOR
+  | 'friend'                   // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.FRIEND
+  | 'family'                   // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.FAMILY
   | 'other';                   // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.OTHER
 
 /**
@@ -151,5 +153,7 @@ export const RELATIONSHIP_TYPE_PRIORITY_SCORES: Record<RelationshipType, number>
   'protege': 15,
   'supplier': 20,
   'customer': 20,
-  'competitor': 5
+  'competitor': 5,
+  'friend': 10,
+  'family': 10
 };

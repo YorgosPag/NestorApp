@@ -530,7 +530,7 @@ export function FolderManager({
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
                 dragOverId={dragOverId}
-                t={t}
+                t={(key, fallback) => t(key, fallback ?? '')}
               />
             ))}
           </ul>

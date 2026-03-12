@@ -27,6 +27,7 @@ import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getCompanyWidePolicyAdmin, getProjectPolicyAdmin } from '@/services/assignment/AssignmentPolicyRepository';
 import { resolveTaskDueInHours } from '@/services/assignment/AssignmentPolicyService';
 import { logCommunicationApproved, logCommunicationRejected } from '@/lib/auth/audit';
+import { normalizeToISO } from '@/lib/date-local';
 import type { AuthContext } from '@/lib/auth/types';
 
 // 🏢 ENTERPRISE: Centralized collection configuration
@@ -81,11 +82,8 @@ const transformCommunication = (docSnapshot: QueryDocumentSnapshot<DocumentData>
 
     for (const key in data) {
         const value = data[key];
-        if (value instanceof Timestamp) {
-            (communication as Record<string, unknown>)[key] = value.toDate().toISOString();
-        } else {
-            (communication as Record<string, unknown>)[key] = value;
-        }
+        const iso = normalizeToISO(value);
+        (communication as Record<string, unknown>)[key] = iso ?? value;
     }
     return communication as Communication;
 };
@@ -168,11 +166,8 @@ async function fetchTriageCommunications(params: {
 
       for (const key in data) {
         const value = data[key];
-        if (value && typeof value === 'object' && 'toDate' in value) {
-          (communication as Record<string, unknown>)[key] = value.toDate().toISOString();
-        } else {
-          (communication as Record<string, unknown>)[key] = value;
-        }
+        const iso = normalizeToISO(value);
+        (communication as Record<string, unknown>)[key] = iso ?? value;
       }
 
       return communication as Communication;
@@ -464,14 +459,11 @@ export async function approveCommunication(
     const data = commDoc.data()!;
     const communication: Partial<Communication> & { id: string } = { id: commDoc.id };
 
-    // Convert Admin Timestamps to ISO strings
+    // ADR-217: Centralized timestamp conversion
     for (const key in data) {
       const value = data[key];
-      if (value && typeof value === 'object' && 'toDate' in value) {
-        (communication as Record<string, unknown>)[key] = value.toDate().toISOString();
-      } else {
-        (communication as Record<string, unknown>)[key] = value;
-      }
+      const iso = normalizeToISO(value);
+      (communication as Record<string, unknown>)[key] = iso ?? value;
     }
     const comm = communication as Communication;
 
@@ -550,7 +542,7 @@ export async function approveCommunication(
         taskId,
         {
           assignedTo: adminUid,
-          dueDate: dueDate.toDate().toISOString(),
+          dueDate: normalizeToISO(dueDate) ?? new Date().toISOString(),
           priority: comm.intentAnalysis?.needsTriage ? 'high' : 'medium',
           contactId: comm.contactId,
           projectId: comm.projectId,

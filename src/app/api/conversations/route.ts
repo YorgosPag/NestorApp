@@ -21,6 +21,7 @@ import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 // 🔒 RATE LIMITING: STANDARD category (60 req/min)
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { fieldToISO, getNestedTimestampISO } from '@/lib/date-local';
 
 // Type alias for canonical response
 type ConversationsCanonicalResponse = ApiSuccessResponse<ConversationsListResponse>;
@@ -101,52 +102,7 @@ function getArray<T>(data: Record<string, unknown>, field: string, defaultValue:
   return Array.isArray(value) ? (value as T[]) : defaultValue;
 }
 
-function getTimestampString(data: Record<string, unknown>, field: string): string {
-  const value = data[field];
-  if (!value) return '';
-
-  if (typeof value === 'object' && value !== null && 'toDate' in value) {
-    const firestoreTimestamp = value as { toDate: () => Date };
-    return firestoreTimestamp.toDate().toISOString();
-  }
-
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-
-  if (typeof value === 'string') {
-    return value;
-  }
-
-  if (typeof value === 'number') {
-    return new Date(value).toISOString();
-  }
-
-  return '';
-}
-
-function getNestedTimestamp(data: Record<string, unknown>, path: string): string {
-  const parts = path.split('.');
-  let current: unknown = data;
-
-  for (const part of parts) {
-    if (typeof current !== 'object' || current === null) return '';
-    current = (current as Record<string, unknown>)[part];
-  }
-
-  if (!current) return '';
-
-  if (typeof current === 'object' && current !== null && 'toDate' in current) {
-    const firestoreTimestamp = current as { toDate: () => Date };
-    return firestoreTimestamp.toDate().toISOString();
-  }
-
-  if (typeof current === 'string') {
-    return current;
-  }
-
-  return '';
-}
+// ADR-217: getTimestampString → fieldToISO, getNestedTimestamp → getNestedTimestampISO from @/lib/date-local
 
 // ============================================================================
 // FORCE DYNAMIC
@@ -244,7 +200,7 @@ async function handleListConversations(request: NextRequest, ctx: AuthContext): 
     const lastMessage = lastMessageData ? {
       content: getString(lastMessageData, 'content'),
       direction: getString(lastMessageData, 'direction', 'inbound') as MessageDirection,
-      timestamp: getTimestampString(lastMessageData, 'timestamp'),
+      timestamp: fieldToISO(lastMessageData, 'timestamp'),
     } : null;
 
     // Extract participants
@@ -266,8 +222,8 @@ async function handleListConversations(request: NextRequest, ctx: AuthContext): 
       tags: getArray<string>(data, 'tags'),
       assignedTo: getString(data, 'assignedTo') || null,
       audit: {
-        createdAt: getNestedTimestamp(data, 'audit.createdAt'),
-        updatedAt: getNestedTimestamp(data, 'audit.updatedAt'),
+        createdAt: getNestedTimestampISO(data, 'audit.createdAt'),
+        updatedAt: getNestedTimestampISO(data, 'audit.updatedAt'),
       },
     };
   });

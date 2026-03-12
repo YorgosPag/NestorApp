@@ -27,10 +27,10 @@ import {
   serverTimestamp,
   arrayUnion,
   arrayRemove,
-  type Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { fieldToISO } from '@/lib/date-local';
 import {
   type EntityType,
   type FileDomain,
@@ -340,12 +340,8 @@ export class FileRecordService {
       ...data,
       id: docSnap.id,
       // Convert Firestore Timestamp to ISO string if needed
-      createdAt: data.createdAt instanceof Object && 'toDate' in data.createdAt
-        ? (data.createdAt as Timestamp).toDate().toISOString()
-        : data.createdAt,
-      updatedAt: data.updatedAt instanceof Object && 'toDate' in data.updatedAt
-        ? (data.updatedAt as Timestamp).toDate().toISOString()
-        : data.updatedAt,
+      createdAt: fieldToISO(data, 'createdAt') || data.createdAt,
+      updatedAt: fieldToISO(data, 'updatedAt') || data.updatedAt,
     };
 
     // 🏢 ENTERPRISE: Validate data shape at Firestore boundary
@@ -411,12 +407,8 @@ export class FileRecordService {
       const record = {
         ...data,
         id: docSnap.id,
-        createdAt: data.createdAt instanceof Object && 'toDate' in data.createdAt
-          ? (data.createdAt as Timestamp).toDate().toISOString()
-          : data.createdAt,
-        updatedAt: data.updatedAt instanceof Object && 'toDate' in data.updatedAt
-          ? (data.updatedAt as Timestamp).toDate().toISOString()
-          : data.updatedAt,
+        createdAt: fieldToISO(data, 'createdAt') || data.createdAt,
+        updatedAt: fieldToISO(data, 'updatedAt') || data.updatedAt,
       };
 
       if (isFileRecord(record)) {
@@ -480,12 +472,8 @@ export class FileRecordService {
       const record = {
         ...data,
         id: docSnap.id,
-        createdAt: data.createdAt instanceof Object && 'toDate' in data.createdAt
-          ? (data.createdAt as Timestamp).toDate().toISOString()
-          : data.createdAt,
-        updatedAt: data.updatedAt instanceof Object && 'toDate' in data.updatedAt
-          ? (data.updatedAt as Timestamp).toDate().toISOString()
-          : data.updatedAt,
+        createdAt: fieldToISO(data, 'createdAt') || data.createdAt,
+        updatedAt: fieldToISO(data, 'updatedAt') || data.updatedAt,
       };
 
       if (isFileRecord(record)) {
@@ -678,12 +666,8 @@ export class FileRecordService {
       const record = {
         ...data,
         id: docSnap.id,
-        createdAt: data.createdAt instanceof Object && 'toDate' in data.createdAt
-          ? (data.createdAt as Timestamp).toDate().toISOString()
-          : data.createdAt,
-        trashedAt: data.trashedAt instanceof Object && 'toDate' in data.trashedAt
-          ? (data.trashedAt as Timestamp).toDate().toISOString()
-          : data.trashedAt,
+        createdAt: fieldToISO(data, 'createdAt') || data.createdAt,
+        trashedAt: fieldToISO(data, 'trashedAt') || data.trashedAt,
       };
 
       if (isFileRecord(record)) {
@@ -900,12 +884,8 @@ export class FileRecordService {
       const record = {
         ...data,
         id: docSnap.id,
-        createdAt: data.createdAt instanceof Object && 'toDate' in data.createdAt
-          ? (data.createdAt as Timestamp).toDate().toISOString()
-          : data.createdAt,
-        updatedAt: data.updatedAt instanceof Object && 'toDate' in data.updatedAt
-          ? (data.updatedAt as Timestamp).toDate().toISOString()
-          : data.updatedAt,
+        createdAt: fieldToISO(data, 'createdAt') || data.createdAt,
+        updatedAt: fieldToISO(data, 'updatedAt') || data.updatedAt,
       };
 
       if (isFileRecord(record)) {

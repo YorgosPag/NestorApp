@@ -7,6 +7,7 @@ import type { Building } from '@/types/building/contracts';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type BuildingUpdatedPayload, type BuildingCreatedPayload, type BuildingDeletedPayload } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
+import { applyUpdates } from '@/lib/utils';
 
 const logger = createModuleLogger('useFirestoreBuildings');
 
@@ -44,7 +45,7 @@ export function useFirestoreBuildings(): UseFirestoreBuildingsReturn {
       logger.info('Applying update for building', { buildingId: payload.buildingId });
       setBuildings(prev => prev.map(building =>
         building.id === payload.buildingId
-          ? { ...building, ...payload.updates }
+          ? applyUpdates(building, payload.updates)
           : building
       ));
     };

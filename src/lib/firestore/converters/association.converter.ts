@@ -14,7 +14,6 @@ import type {
   FirestoreDataConverter,
   QueryDocumentSnapshot,
   SnapshotOptions,
-  Timestamp,
 } from 'firebase/firestore';
 import type {
   ContactLink,
@@ -22,6 +21,7 @@ import type {
   FileLink,
   FileLinkFirestoreDoc,
 } from '@/types/associations';
+import { normalizeToISO } from '@/lib/date-local';
 
 // ============================================================================
 // CONTACT LINK CONVERTER
@@ -73,10 +73,8 @@ export const contactLinkConverter: FirestoreDataConverter<ContactLink> = {
   ): ContactLink {
     const data = snapshot.data(options);
 
-    const createdAt = (data.createdAt as Timestamp).toDate().toISOString();
-    const updatedAt = data.updatedAt
-      ? (data.updatedAt as Timestamp).toDate().toISOString()
-      : undefined;
+    const createdAt = normalizeToISO(data.createdAt) ?? new Date().toISOString();
+    const updatedAt = normalizeToISO(data.updatedAt) ?? undefined;
 
     return {
       id: data.id,
@@ -146,10 +144,8 @@ export const fileLinkConverter: FirestoreDataConverter<FileLink> = {
   ): FileLink {
     const data = snapshot.data(options);
 
-    const createdAt = (data.createdAt as Timestamp).toDate().toISOString();
-    const updatedAt = data.updatedAt
-      ? (data.updatedAt as Timestamp).toDate().toISOString()
-      : undefined;
+    const createdAt = normalizeToISO(data.createdAt) ?? new Date().toISOString();
+    const updatedAt = normalizeToISO(data.updatedAt) ?? undefined;
 
     return {
       id: data.id,

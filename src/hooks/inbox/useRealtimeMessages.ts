@@ -25,6 +25,7 @@ import type { MessageDirection, DeliveryStatus } from '@/types/conversations';
 import type { CommunicationChannel } from '@/types/communications';
 import type { SenderType } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import { fieldToISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('useRealtimeMessages');
 
@@ -62,29 +63,7 @@ function getObject<T extends Record<string, unknown>>(
   return typeof value === 'object' && value !== null ? (value as T) : defaultValue;
 }
 
-function getTimestampString(data: Record<string, unknown>, field: string): string {
-  const value = data[field];
-  if (!value) return '';
-
-  if (typeof value === 'object' && value !== null && 'toDate' in value) {
-    const firestoreTimestamp = value as { toDate: () => Date };
-    return firestoreTimestamp.toDate().toISOString();
-  }
-
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-
-  if (typeof value === 'string') {
-    return value;
-  }
-
-  if (typeof value === 'number') {
-    return new Date(value).toISOString();
-  }
-
-  return '';
-}
+// ADR-217: getTimestampString replaced by centralized fieldToISO (import at top of file)
 
 /**
  * Convert Firestore document to MessageListItem
@@ -104,8 +83,8 @@ function docToMessage(doc: { id: string; data: () => unknown }): MessageListItem
     providerMessageId: getString(data, 'providerMessageId'),
     deliveryStatus: getString(data, 'deliveryStatus', 'sent') as DeliveryStatus,
     providerMetadata: getObject(data, 'providerMetadata', {}),
-    createdAt: getTimestampString(data, 'createdAt'),
-    updatedAt: getTimestampString(data, 'updatedAt'),
+    createdAt: fieldToISO(data, 'createdAt'),
+    updatedAt: fieldToISO(data, 'updatedAt'),
   };
 }
 

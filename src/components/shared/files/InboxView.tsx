@@ -56,6 +56,7 @@ import type { FileRecord } from '@/types/file-record';
 import { FILE_DOMAINS, FILE_STATUS } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { formatDateTime } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized date/time formatting
+import { normalizeToISO } from '@/lib/date-local';
 
 // 🏢 ENTERPRISE: Error handling delegated to ComponentErrorBoundary wrapper
 // See FileManagerPageContent.tsx where InboxView is wrapped with ComponentErrorBoundary
@@ -150,12 +151,9 @@ function groupFilesByChatId(files: InboxFileRecord[]): ChatGroup[] {
     grouped.get(chatId)!.push(file);
   }
 
-  // Helper to convert Date or string to ISO string
-  const toISOString = (value: Date | string | undefined): string => {
-    if (!value) return '';
-    if (value instanceof Date) return value.toISOString();
-    return value;
-  };
+  // ADR-217: Centralized timestamp conversion
+  const toISOString = (value: Date | string | undefined): string =>
+    normalizeToISO(value) ?? '';
 
   // Convert to array and sort by latest timestamp
   const groups: ChatGroup[] = [];

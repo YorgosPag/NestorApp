@@ -724,7 +724,7 @@ export function FloorplanGallery({
 
   function renderViewerContent(
     zp: ReturnType<typeof useZoomPan>,
-    canvasRef: React.RefObject<HTMLCanvasElement | null>,
+    canvasRef: React.Ref<HTMLCanvasElement>,
     viewClassName?: string,
   ) {
     return (

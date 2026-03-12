@@ -67,7 +67,8 @@ async function loadRegistry(): Promise<void> {
   }
 
   loadingPromise = (async () => {
-    const data: RegistryData = await import('@/data/public-services-registry.json');
+    const imported = await import('@/data/public-services-registry.json');
+    const data: RegistryData = (imported as { default: RegistryData }).default ?? imported as RegistryData;
 
     const foreis: RegistryEntry[] = data.foreis.map(f => ({
       name: f.name,

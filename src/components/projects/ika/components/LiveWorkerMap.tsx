@@ -23,7 +23,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Map, Marker, Popup, Source, Layer } from 'react-map-gl/maplibre';
+import { Map as MapGL, Marker, Popup, Source, Layer } from 'react-map-gl/maplibre';
 import type { FillLayerSpecification, LineLayerSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
@@ -520,7 +520,7 @@ export function LiveWorkerMap({
 
         {/* Map */}
         <div className="relative overflow-hidden rounded-lg border border-slate-200">
-          <Map
+          <MapGL
             initialViewState={{
               latitude: mapCenter.latitude,
               longitude: mapCenter.longitude,
@@ -615,7 +615,7 @@ export function LiveWorkerMap({
                 </article>
               </Popup>
             )}
-          </Map>
+          </MapGL>
 
           {/* No events overlay */}
           {workerMarkers.length === 0 && (

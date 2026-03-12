@@ -27,7 +27,6 @@ import {
   query,
   where,
   onSnapshot,
-  type Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -36,6 +35,7 @@ import { isFileRecord } from '@/types/file-record';
 import type { FileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
 import { FILE_STATUS } from '@/config/domain-constants';
+import { normalizeToISO } from '@/lib/date-local';
 
 /**
  * Supported entity types for file stats
@@ -132,15 +132,9 @@ export interface UseAllCompanyFilesReturn {
 // HELPER FUNCTIONS
 // ============================================================================
 
-/**
- * Convert Firestore Timestamp to ISO string, or passthrough string values
- */
-function toISOStringOrPassthrough(value: unknown): string | undefined {
-  if (value instanceof Object && 'toDate' in value) {
-    return (value as Timestamp).toDate().toISOString();
-  }
-  return value as string | undefined;
-}
+// ADR-217: toISOStringOrPassthrough replaced by centralized normalizeToISO
+const toISOStringOrPassthrough = (value: unknown): string | undefined =>
+  normalizeToISO(value) ?? (value as string | undefined);
 
 /**
  * Group files by entity type and ID

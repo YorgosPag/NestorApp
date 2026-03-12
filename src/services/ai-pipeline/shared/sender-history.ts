@@ -19,6 +19,7 @@ import 'server-only';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { normalizeToISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('sender-history');
 
@@ -58,29 +59,9 @@ interface MessageDocPartial {
   };
 }
 
-/**
- * Extract a usable ISO date string from Firestore timestamp fields.
- * Handles: Firestore Timestamp, Date object, ISO string.
- */
+// ADR-217: Delegates to centralized normalizeToISO
 function extractDateString(createdAt: MessageDocPartial['createdAt']): string {
-  if (!createdAt) return new Date().toISOString();
-
-  // Firestore Timestamp (has toDate method)
-  if (typeof createdAt === 'object' && 'toDate' in createdAt && typeof createdAt.toDate === 'function') {
-    return createdAt.toDate().toISOString();
-  }
-
-  // Native Date
-  if (createdAt instanceof Date) {
-    return createdAt.toISOString();
-  }
-
-  // ISO string
-  if (typeof createdAt === 'string') {
-    return createdAt;
-  }
-
-  return new Date().toISOString();
+  return normalizeToISO(createdAt) ?? new Date().toISOString();
 }
 
 // ============================================================================

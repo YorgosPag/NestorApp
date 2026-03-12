@@ -464,7 +464,7 @@ export class SalesAccountingBridge {
     const hasMultipleLines = params.saleLineItems && params.saleLineItems.length > 0;
 
     const invoiceLineItems = hasMultipleLines
-      ? params.saleLineItems.map((item, idx) => {
+      ? (params.saleLineItems ?? []).map((item, idx) => {
           const lineNet = roundTwo(item.grossAmount / VAT_DIVISOR);
           return {
             lineNumber: idx + 1,

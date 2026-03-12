@@ -246,7 +246,7 @@ async function handleBatchDownload(request: NextRequest, ctx: AuthContext) {
     const timestamp = new Date().toISOString().slice(0, 10);
     const zipFilename = `files_${timestamp}.zip`;
 
-    return new NextResponse(zipData, {
+    return new NextResponse(new Blob([zipData]), {
       headers: {
         'Content-Type': 'application/zip',
         'Content-Disposition': `attachment; filename="${zipFilename}"`,

@@ -8,6 +8,7 @@ import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { BuildingMilestone } from '@/types/building/milestone';
 import { createModuleLogger } from '@/lib/telemetry';
+import { normalizeToISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('MilestonesRoute');
 
@@ -24,19 +25,7 @@ interface MilestoneMutationResponse {
   id: string;
 }
 
-// ─── Firestore Timestamp Helper ──────────────────────────────────────────
-
-function firestoreTimestampToISO(
-  val: string | Date | { seconds: number; nanoseconds: number } | undefined
-): string | undefined {
-  if (!val) return undefined;
-  if (typeof val === 'string') return val;
-  if (val instanceof Date) return val.toISOString();
-  if (typeof val === 'object' && 'seconds' in val) {
-    return new Date(val.seconds * 1000).toISOString();
-  }
-  return undefined;
-}
+// ADR-217: firestoreTimestampToISO replaced by centralized normalizeToISO from @/lib/date-local
 
 // =============================================================================
 // GET — Load milestones for a building
@@ -84,8 +73,8 @@ export async function GET(
           order: data.order,
           code: data.code,
           phaseId: data.phaseId,
-          createdAt: firestoreTimestampToISO(data.createdAt),
-          updatedAt: firestoreTimestampToISO(data.updatedAt),
+          createdAt: normalizeToISO(data.createdAt),
+          updatedAt: normalizeToISO(data.updatedAt),
           createdBy: data.createdBy,
           updatedBy: data.updatedBy,
         };

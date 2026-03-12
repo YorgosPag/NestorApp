@@ -26,6 +26,7 @@ import {
   isServiceContact
 } from '@/types/contacts';
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
+import { normalizeToISO } from '@/lib/date-local';
 
 // ============================================================================
 // 🏢 ENTERPRISE DTO (Data Transfer Object) FOR RAW CONTACT INPUT
@@ -574,20 +575,10 @@ export class ContactNameResolver {
   }
 
   /**
-   * 🏢 ENTERPRISE: Format timestamp safely
+   * 🏢 ENTERPRISE: Format timestamp safely (ADR-217: delegates to centralized normalizeToISO)
    */
   private static formatTimestamp(timestamp?: Date | { toDate: () => Date }): string | undefined {
-    if (!timestamp) return undefined;
-
-    if (timestamp instanceof Date) {
-      return timestamp.toISOString();
-    }
-
-    if (typeof timestamp === 'object' && 'toDate' in timestamp) {
-      return timestamp.toDate().toISOString();
-    }
-
-    return undefined;
+    return normalizeToISO(timestamp) ?? undefined;
   }
 
   /**

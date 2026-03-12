@@ -45,7 +45,7 @@ function summariseFile(doc: DocData & { id: string }): FileSummary {
 
 export const GET = async (request: NextRequest) => {
   const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache) => {
+    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       const unitId = req.nextUrl.searchParams.get('unitId');
       if (!unitId) {
         return NextResponse.json({ error: 'unitId query parameter is required' }, { status: 400 });

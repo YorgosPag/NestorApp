@@ -6,6 +6,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
+import { applyUpdates } from '@/lib/utils';
 
 const logger = createModuleLogger('useFirestoreProjectsPaginated');
 
@@ -227,7 +228,7 @@ export function useFirestoreProjectsPaginated(
 
       setProjects(prev => prev.map(project =>
         project.id === payload.projectId
-          ? { ...project, ...payload.updates }
+          ? applyUpdates(project, payload.updates)
           : project
       ));
     };

@@ -6,7 +6,8 @@
  */
 
 import type { DocumentData, QueryConstraint } from 'firebase/firestore';
-import type { ProjectStatus } from '@/types/project';
+import type { Project, ProjectStatus } from '@/types/project';
+import type { Building } from '@/types/building/contracts';
 
 // ============================================================================
 // CORE TYPES
@@ -221,6 +222,7 @@ export const REALTIME_EVENTS = {
   // Association link events (contact_links, file_links)
   CONTACT_LINK_CREATED: 'realtime:contact-link-created',
   CONTACT_LINK_DELETED: 'realtime:contact-link-deleted',
+  CONTACT_LINK_REMOVED: 'realtime:contact-link-removed',
   FILE_LINK_CREATED: 'realtime:file-link-created',
   FILE_LINK_DELETED: 'realtime:file-link-deleted',
   // Entity linking events (Building-Project, Unit-Building, etc.)
@@ -256,12 +258,7 @@ export interface UnitBuildingLinkPayload {
  */
 export interface ProjectUpdatedPayload {
   projectId: string;
-  updates: {
-    name?: string;
-    title?: string;
-    status?: ProjectStatus;
-    companyId?: string | null;
-  };
+  updates: Partial<Omit<Project, 'id'>>;
   timestamp: number;
 }
 
@@ -271,15 +268,7 @@ export interface ProjectUpdatedPayload {
  */
 export interface BuildingUpdatedPayload {
   buildingId: string;
-  updates: {
-    name?: string;
-    address?: string;
-    city?: string;
-    status?: string;
-    totalArea?: number;
-    floors?: number;
-    projectId?: string | null;
-  };
+  updates: Partial<Omit<Building, 'id'>>;
   timestamp: number;
 }
 
@@ -583,6 +572,7 @@ export interface FileUpdatedPayload {
   fileId: string;
   updates: {
     displayName?: string;
+    description?: string;
     status?: string;
     lifecycleState?: string;
     sizeBytes?: number;
@@ -1092,6 +1082,7 @@ export interface RealtimeEventMap {
   // Association links (4)
   CONTACT_LINK_CREATED: ContactLinkCreatedPayload;
   CONTACT_LINK_DELETED: ContactLinkDeletedPayload;
+  CONTACT_LINK_REMOVED: ContactLinkDeletedPayload;
   FILE_LINK_CREATED: FileLinkCreatedPayload;
   FILE_LINK_DELETED: FileLinkDeletedPayload;
   // Entity linking (2)

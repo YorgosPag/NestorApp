@@ -22,6 +22,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 type MessagesCanonicalResponse = ApiSuccessResponse<MessagesListResponse>;
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateRequestId } from '@/services/enterprise-id.service';
+import { fieldToISO } from '@/lib/date-local';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { type MessageDirection, type DeliveryStatus } from '@/types/conversations';
 import { type CommunicationChannel } from '@/types/communications';
@@ -100,29 +101,7 @@ function getObject<T extends Record<string, unknown>>(
   return typeof value === 'object' && value !== null ? (value as T) : defaultValue;
 }
 
-function getTimestampString(data: Record<string, unknown>, field: string): string {
-  const value = data[field];
-  if (!value) return '';
-
-  if (typeof value === 'object' && value !== null && 'toDate' in value) {
-    const firestoreTimestamp = value as { toDate: () => Date };
-    return firestoreTimestamp.toDate().toISOString();
-  }
-
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-
-  if (typeof value === 'string') {
-    return value;
-  }
-
-  if (typeof value === 'number') {
-    return new Date(value).toISOString();
-  }
-
-  return '';
-}
+// ADR-217: getTimestampString replaced by centralized fieldToISO from @/lib/date-local
 
 // ============================================================================
 // FORCE DYNAMIC
@@ -260,8 +239,8 @@ async function handleListMessages(request: NextRequest, ctx: AuthContext, conver
         chatId: getString(providerMetadata, 'chatId'),
         userName: getString(providerMetadata, 'userName'),
       },
-      createdAt: getTimestampString(data, 'createdAt'),
-      updatedAt: getTimestampString(data, 'updatedAt'),
+      createdAt: fieldToISO(data, 'createdAt'),
+      updatedAt: fieldToISO(data, 'updatedAt'),
     };
   });
 

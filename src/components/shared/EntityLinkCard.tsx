@@ -170,9 +170,9 @@ export function EntityLinkCard({
       const selectedOption = options.find(o => o.id === valueToSave);
       const name = selectedOption?.name || '';
 
-      const result = await onSave(idToSave, name);
+      const result = await onSave?.(idToSave, name);
 
-      if (result.success) {
+      if (result?.success) {
         setSaveStatus('success');
         setSavedValue(idToSave ?? undefined);
         if (onChanged) {
