@@ -140,12 +140,13 @@ export function EntityLinkCard({
     return () => { cancelled = true; };
   }, [loadOptions]);
 
-  // Sync with external value changes (but not if we have a local override from save)
+  // Sync with external value changes
+  // When currentValue changes (e.g. user selects a different entity in the sidebar),
+  // reset savedValue so we pick up the new entity's data instead of showing stale save.
   useEffect(() => {
-    if (currentValue !== undefined && savedValue === undefined) {
-      setSelectedId(currentValue || NONE_VALUE);
-    }
-  }, [currentValue, savedValue]);
+    setSavedValue(undefined);
+    setSelectedId(currentValue || NONE_VALUE);
+  }, [currentValue]);
 
   // 🏢 ENTERPRISE: Auto-save on selection change
   // Saves immediately when user picks a value — no separate save button needed.
