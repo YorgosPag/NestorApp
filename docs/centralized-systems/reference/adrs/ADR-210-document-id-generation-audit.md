@@ -14,6 +14,17 @@
 
 Πλήρης αναγνώριση και τεκμηρίωση του **κεντρικοποιημένου συστήματος δημιουργίας document IDs** στο Firestore. Εξέταση αν χρησιμοποιείται σε **όλα** τα σημεία της εφαρμογής ή αν υπάρχει διάσπαρτος κώδικας. Στόχος: **Google-grade enterprise consistency**.
 
+### Scope Boundary με ADR-209
+
+| Θέμα | ADR-210 (αυτό) | ADR-209 |
+|------|----------------|---------|
+| **Πώς δημιουργούνται** τα IDs (generation method, addDoc vs setDoc, enterprise service adoption) | ✅ Εδώ | ❌ |
+| **Πώς χρησιμοποιούνται** τα IDs μετά τη δημιουργία (fallbacks, `!` assertions, type safety, `?? ''`) | ❌ | ✅ Εκεί |
+| Inline `Date.now()` / `crypto.randomUUID()` violations | ✅ Εδώ | ❌ |
+| Email σε Firestore doc keys (PII exposure) | 🔗 Cross-ref μόνο | ✅ Πλήρης κάλυψη στο ADR-209 Cat.B |
+
+> **Κανόνας**: Αν ο agent που υλοποιεί ADR-210 βρει fallback values (`'unknown'`, `'system'`, `?? ''`) ή non-null assertions (`!`) σε IDs, **ΔΕΝ τα διορθώνει** — αυτά ανήκουν στο ADR-209.
+
 ---
 
 ## 2. Κεντρικοποιημένα Συστήματα ID Generation
@@ -134,7 +145,7 @@
 | `conversations` | `generateConversationId()` | `conv_channel_hash` | `telegram/crm/store.ts` |
 | `messages` (server) | `generateMessageDocId()` | `msg_channel_hash` | `telegram/crm/store.ts`, `email-inbound-service.ts` |
 | `external_identities` | `generateExternalIdentityId()` | `eid_provider_hash` | `telegram/crm/store.ts` |
-| `ai_chat_history` | Manual composite | `{channel}_{senderId}` | `chat-history-service.ts` |
+| `ai_chat_history` | Manual composite | `{channel}_{senderId}` | `chat-history-service.ts` | ⚠️ Email channel: PII σε doc key — βλ. **ADR-209 Cat.B** για remediation |
 | `cadLayers` | `generateLayerId()` | `lyr_uuid` | `EnterpriseLayerStyleService.ts` |
 
 ### 3.2 Collections με Deterministic Compound Keys ✅ (Αποδεκτό)
@@ -228,7 +239,7 @@
 | **Prefixed Namespacing** | Κάθε entity type = ξεχωριστό prefix | ✅ 50+ prefixes ορισμένα | 🟡 33% adopted |
 | **Collision Detection** | Retry mechanism | ✅ Max 5 retries στο enterprise service | ✅ 100% (όπου χρησιμοποιείται) |
 | **Audit Trail** | Logging σε dev mode | ✅ Development audit logging | ✅ 100% (όπου χρησιμοποιείται) |
-| **PII Protection** | No PII σε document IDs | ✅ SHA-256 hashing server-side | 🟡 Partial (email issue, ADR-209 Cat.B) |
+| **PII Protection** | No PII σε document IDs | ✅ SHA-256 hashing server-side | 🟡 Partial — **ΕΩΣ ADR-209 Cat.B remediation** (email σε doc keys, fallback IDs, type safety) |
 | **Determinism** | Idempotent server operations | ✅ SHA-256 server-side | ✅ 100% |
 | **Predictability Prevention** | No `Date.now()`, no sequential | ❌ 5 violations found | ❌ 0% |
 | **Consistency** | Single format ανά collection | ❌ Mixed auto-IDs + enterprise | ❌ 33% |
