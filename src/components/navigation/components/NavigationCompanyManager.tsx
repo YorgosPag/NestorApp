@@ -8,7 +8,8 @@
 import React, { useState, useEffect } from 'react';
 import { SelectCompanyContactModal } from '../dialogs/SelectCompanyContactModal';
 import type { Contact } from '@/types/contacts';
-import { addCompanyToNavigation, getNavigationCompanyIds } from '@/services/navigation-companies.service';
+import { getNavigationCompanyIds } from '@/services/navigation-companies.service';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import { useNavigation } from '../core/NavigationContext';
 import { REALTIME_EVENTS } from '@/services/realtime';
 // 🏢 ENTERPRISE: Use centralized NavigationCompany type
@@ -60,8 +61,8 @@ export function NavigationCompanyManager({ companies, children }: NavigationComp
     }
 
     try {
-      // Προσθήκη εταιρείας στην πλοήγηση
-      await addCompanyToNavigation(contact.id);
+      // 🏢 ENTERPRISE: Server-side add via Admin SDK (Firestore rules block client writes)
+      await apiClient.post('/api/navigation/company', { contactId: contact.id });
 
       // Ενημέρωση local state για το modal filtering
       setNavigationCompanyIds(prev => [...prev, contact.id!]);
