@@ -17,6 +17,7 @@
 import { collection, doc, getDoc, getDocs, setDoc, updateDoc, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 import { designTokens } from '@/styles/design-tokens';
@@ -249,7 +250,7 @@ const FALLBACK_COMPANY_SETTINGS: EnterpriseCompanySettings = {
   },
 
   metadata: {
-    createdBy: 'system',
+    createdBy: SYSTEM_IDENTITY.ID,
     createdAt: new Date(),
     updatedAt: new Date(),
     version: 1,

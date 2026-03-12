@@ -30,6 +30,7 @@ import type { DocumentClassifyAnalysis } from '@/schemas/ai-analysis';
 import {
   FILE_STATUS,
   FILE_LIFECYCLE_STATES,
+  SYSTEM_IDENTITY,
 } from '@/config/domain-constants';
 // 🏢 ENTERPRISE (2026-01-31): Direct imports to avoid barrel file
 // The barrel '@/services/upload' re-exports pdf-utils which imports react-i18next
@@ -463,7 +464,7 @@ export function buildIngestionFileRecordData(input: {
     status: FILE_STATUS.PENDING, // QUARANTINE: Stays PENDING until classified
     lifecycleState: FILE_LIFECYCLE_STATES.ACTIVE,
     isDeleted: false,
-    createdBy: 'system:ingestion',
+    createdBy: SYSTEM_IDENTITY.INGESTION_ID,
     source: input.source,
     ingestion,
     entityLabel: `${sourceLabel} Chat ${input.source.chatId || 'unknown'}`,

@@ -15,6 +15,7 @@ import {
   RelationshipType
 } from '@/types/contacts/relationships';
 import { Contact } from '@/types/contacts';
+import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 import { ContactsService } from '@/services/contacts.service';
 import { FirestoreRelationshipAdapter } from '../adapters/FirestoreRelationshipAdapter';
 import { RelationshipValidationService } from './RelationshipValidationService';
@@ -162,8 +163,8 @@ export class RelationshipCRUDService {
       customFields: data.customFields || {},
 
       // Audit fields
-      createdBy: data.createdBy || 'system',
-      lastModifiedBy: data.createdBy || 'system',
+      createdBy: data.createdBy || SYSTEM_IDENTITY.ID,
+      lastModifiedBy: data.createdBy || SYSTEM_IDENTITY.ID,
       createdAt: new Date(),
       updatedAt: new Date(),
       verificationStatus: 'unverified',
@@ -288,14 +289,14 @@ export class RelationshipCRUDService {
         ...existing,
         ...updates,
         updatedAt: new Date(),
-        lastModifiedBy: updates.lastModifiedBy || 'system'
+        lastModifiedBy: updates.lastModifiedBy || SYSTEM_IDENTITY.ID
       };
 
       // Add change history entry
       const changeEntry = {
         changeDate: new Date().toISOString(),
         changeType: 'updated' as const,
-        changedBy: updates.lastModifiedBy || 'system',
+        changedBy: updates.lastModifiedBy || SYSTEM_IDENTITY.ID,
         oldValue: existing,
         newValue: updates,
         ...(updates.relationshipNotes ? { notes: updates.relationshipNotes } : {}),

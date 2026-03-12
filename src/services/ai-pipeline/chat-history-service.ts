@@ -23,6 +23,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { sanitizeDocumentId } from '@/utils/firestore-helpers';
 
 const logger = createModuleLogger('CHAT_HISTORY_SERVICE');
 
@@ -71,7 +72,7 @@ export class ChatHistoryService {
   ): Promise<void> {
     try {
       const db = getAdminFirestore();
-      const docRef = db.collection(COLLECTION_NAME).doc(channelSenderId);
+      const docRef = db.collection(COLLECTION_NAME).doc(sanitizeDocumentId(channelSenderId));
 
       // Truncate content if too long
       const truncatedMessage: ChatHistoryMessage = {
@@ -128,7 +129,7 @@ export class ChatHistoryService {
   ): Promise<ChatHistoryMessage[]> {
     try {
       const db = getAdminFirestore();
-      const doc = await db.collection(COLLECTION_NAME).doc(channelSenderId).get();
+      const doc = await db.collection(COLLECTION_NAME).doc(sanitizeDocumentId(channelSenderId)).get();
 
       if (!doc.exists) {
         return [];
@@ -162,7 +163,7 @@ export class ChatHistoryService {
   async clearHistory(channelSenderId: string): Promise<void> {
     try {
       const db = getAdminFirestore();
-      await db.collection(COLLECTION_NAME).doc(channelSenderId).delete();
+      await db.collection(COLLECTION_NAME).doc(sanitizeDocumentId(channelSenderId)).delete();
       logger.info('Cleared chat history', { channelSenderId });
     } catch (error) {
       logger.warn('Failed to clear chat history', {

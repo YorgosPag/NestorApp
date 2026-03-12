@@ -215,10 +215,15 @@ export class PhotoUploadService {
       const resolvedPurpose = resolvePhotoPurpose(options.purpose);
 
       // Delegate to canonical method
+      // TS narrowing: hasCanonicalFields guarantees these exist (line 202)
+      const contactId = options.contactId!;
+      const companyId = options.companyId!;
+      const createdBy = options.createdBy!;
+
       const canonicalResult = await PhotoUploadService.uploadContactPhotoCanonical(file, {
-        contactId: options.contactId!,
-        companyId: options.companyId!,
-        createdBy: options.createdBy!,
+        contactId,
+        companyId,
+        createdBy,
         contactName: resolvedContactName,
         purpose: resolvedPurpose,
         onProgress: options.onProgress,

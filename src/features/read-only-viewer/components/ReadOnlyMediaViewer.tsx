@@ -35,6 +35,7 @@ import { cn } from '@/lib/utils';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useAuth } from '@/auth/contexts/AuthContext';
+import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 
 // 🏢 ENTERPRISE: Centralized Data Hook (ADR-031)
 import { useEntityFiles } from '@/components/shared/files/hooks/useEntityFiles';
@@ -217,7 +218,7 @@ export function ReadOnlyMediaViewer({
         entityId: floorFloorplan.floorId,
         domain: 'construction',
         category: 'floorplans',
-        createdBy: 'system',
+        createdBy: SYSTEM_IDENTITY.ID,
         createdAt: floorFloorplan.timestamp ? new Date(floorFloorplan.timestamp).toISOString() : new Date().toISOString(),
         // 🏢 ENTERPRISE: Include scene data for DXF rendering (V1 pattern for backward compat)
         // Note: SceneModel and DxfSceneData are structurally compatible for rendering purposes

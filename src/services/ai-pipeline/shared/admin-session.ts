@@ -18,6 +18,7 @@ import 'server-only';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { generateTempId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { sanitizeDocumentId } from '@/utils/firestore-helpers';
 
 const logger = createModuleLogger('ADMIN_SESSION');
 
@@ -146,13 +147,13 @@ export function buildAdminIdentifier(
   sender: { telegramId?: string; email?: string; phone?: string }
 ): string {
   if (channel === 'telegram' && sender.telegramId) {
-    return `telegram_${sender.telegramId}`;
+    return sanitizeDocumentId(`telegram_${sender.telegramId}`);
   }
   if (channel === 'email' && sender.email) {
-    return `email_${sender.email}`;
+    return sanitizeDocumentId(`email_${sender.email}`);
   }
   if (sender.phone) {
-    return `phone_${sender.phone}`;
+    return sanitizeDocumentId(`phone_${sender.phone}`);
   }
-  return generateTempId();
+  return sanitizeDocumentId(generateTempId());
 }

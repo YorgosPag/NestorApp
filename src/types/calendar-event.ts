@@ -79,5 +79,5 @@ export interface CalendarEvent {
   priority?: 'low' | 'medium' | 'high' | 'urgent';
 
   /** Company ID for tenant isolation */
-  companyId: string;
+  companyId: string | null;
 }

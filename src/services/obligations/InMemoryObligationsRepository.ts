@@ -173,7 +173,7 @@ const normalizeIssueLogEntries = (
 
 const normalizeTransmittalDocument = (id: string, data: Partial<ObligationTransmittal>): ObligationTransmittal => ({
   id,
-  companyId: data.companyId || '',
+  companyId: data.companyId || null,
   obligationId: data.obligationId || '',
   projectId: data.projectId,
   buildingId: data.buildingId,

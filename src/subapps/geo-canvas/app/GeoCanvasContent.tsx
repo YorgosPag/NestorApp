@@ -157,7 +157,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
         });
 
         // Update user analytics context
-        const userId = user?.email || 'anonymous';
+        const userId = user?.uid || 'anonymous';
         // ✅ ENTERPRISE: Type guard instead of 'as any'
         if (pendingUserType && (pendingUserType === 'citizen' || pendingUserType === 'professional' || pendingUserType === 'technical')) {
           analytics.updateUser(userId, pendingUserType);

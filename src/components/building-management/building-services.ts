@@ -213,7 +213,7 @@ export interface ProjectListItem {
   name: string;
   /** License title (τίτλος αδείας) — shown in "Τρέχον έργο" label */
   licenseTitle?: string;
-  companyId: string;
+  companyId: string | null;
   companyName: string;
 }
 
@@ -243,7 +243,7 @@ export async function getProjectsList(): Promise<ProjectListItem[]> {
       id: project.id,
       name: project.name || project.title || 'entities.project.unknown',
       licenseTitle: project.title || '',
-      companyId: project.companyId || '',
+      companyId: project.companyId || null,
       companyName: project.company || '',
     }));
 

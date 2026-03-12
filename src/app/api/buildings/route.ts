@@ -8,6 +8,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { isRoleBypass } from '@/lib/auth/roles';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
 
 const logger = createModuleLogger('BuildingsRoute');
 
@@ -55,17 +56,10 @@ export const GET = withStandardRateLimit(
     // 🎯 ENTERPRISE: Build query — projectId + fallback to companyId
     let snapshot;
     if (projectId) {
-      // Step 1: Try exact projectId match (string)
-      const stringQuery = adminDb.collection(COLLECTIONS.BUILDINGS)
-        .where('projectId', '==', projectId);
-      snapshot = await stringQuery.get();
-
-      // Step 2: Try numeric projectId (Firestore strict type matching)
-      if (snapshot.empty && !isNaN(Number(projectId))) {
-        const numQuery = adminDb.collection(COLLECTIONS.BUILDINGS)
-          .where('projectId', '==', Number(projectId));
-        snapshot = await numQuery.get();
-      }
+      // 🏢 ADR-209: Single query with normalized projectId (handles string/number mismatch)
+      const projectQuery = adminDb.collection(COLLECTIONS.BUILDINGS)
+        .where('projectId', '==', normalizeProjectIdForQuery(projectId));
+      snapshot = await projectQuery.get();
 
       // Step 3: Fallback — many buildings have no projectId field.
       // Load ALL buildings for the same companyId so the user can pick one.

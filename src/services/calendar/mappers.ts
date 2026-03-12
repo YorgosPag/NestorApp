@@ -93,7 +93,7 @@ export function taskToCalendarEvent(task: CrmTask): CalendarEvent | null {
     assignedTo: task.assignedTo,
     status: task.status,
     priority: task.priority,
-    companyId: task.companyId ?? '',
+    companyId: task.companyId ?? null,
   };
 }
 

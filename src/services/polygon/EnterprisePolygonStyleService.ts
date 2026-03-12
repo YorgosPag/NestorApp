@@ -17,6 +17,7 @@
 import { collection, doc, getDocs, setDoc, updateDoc, query, where, orderBy, type QueryConstraint } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('EnterprisePolygonStyleService');
@@ -566,7 +567,7 @@ export class EnterprisePolygonStyleService {
               contrastRatio: 4.5,
               colorBlindSafe: true
             },
-            createdBy: 'system'
+            createdBy: SYSTEM_IDENTITY.ID
           }
         });
 
@@ -588,7 +589,7 @@ export class EnterprisePolygonStyleService {
               contrastRatio: 3.0,
               colorBlindSafe: true
             },
-            createdBy: 'system'
+            createdBy: SYSTEM_IDENTITY.ID
           }
         });
 
@@ -610,7 +611,7 @@ export class EnterprisePolygonStyleService {
               contrastRatio: 7.0,
               colorBlindSafe: true
             },
-            createdBy: 'system'
+            createdBy: SYSTEM_IDENTITY.ID
           }
         });
       });

@@ -6,6 +6,7 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import type { Overlay, CreateOverlayData, UpdateOverlayData, Status, OverlayKind } from './types';
 // 🏢 ENTERPRISE: Debug system for production-silent logging
 import { dlog, dwarn, derr } from '../debug';
+import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 
 interface OverlayStoreState {
   overlays: Record<string, Overlay>;
@@ -113,6 +114,10 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
 
   const add = useCallback(async (overlayData: CreateOverlayData): Promise<string> => {
     if (!state.currentLevelId) throw new Error('No current level selected');
+    if (!user?.uid) {
+      dwarn('OverlayStore', '⚠️ Cannot create overlay without authenticated user');
+      throw new Error('Cannot create overlay without authenticated user');
+    }
 
     // 🔧 FIX (2026-01-24): Convert nested array [[x,y], ...] to array of objects [{x,y}, ...]
     // Firebase doesn't support nested arrays, but supports array of objects
@@ -126,7 +131,7 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
       status: overlayData.status || 'for-sale',
       kind: overlayData.kind || 'unit',
       polygon: polygonForFirestore,
-      createdBy: user?.uid ?? 'unknown',
+      createdBy: user.uid,
     };
 
     // Only add optional fields if they have values
@@ -192,7 +197,7 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
       status: overlay.status || 'for-sale',
       kind: overlay.kind || 'unit',
       polygon: polygonForFirestore,
-      createdBy: overlay.createdBy || user?.uid || 'unknown',
+      createdBy: overlay.createdBy || user?.uid || SYSTEM_IDENTITY.ID,
       restoredAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };

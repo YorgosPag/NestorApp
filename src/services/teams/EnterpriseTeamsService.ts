@@ -24,6 +24,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('EnterpriseTeamsService');
 
@@ -519,7 +520,7 @@ class EnterpriseTeamsService {
       complianceSettings: this.getDefaultComplianceSettings(),
       automationRules: [],
       lastUpdated: new Date(),
-      updatedBy: 'system',
+      updatedBy: SYSTEM_IDENTITY.ID,
       features: this.getDefaultFeatureFlags()
     };
   }

@@ -33,6 +33,8 @@ export const BOT_IDENTITY = {
 export const SYSTEM_IDENTITY = {
   /** Internal identifier for system actions */
   ID: 'system',
+  /** Identifier for automated ingestion processes */
+  INGESTION_ID: 'system:ingestion',
   /** Display name for system messages */
   DISPLAY_NAME: 'System',
   /** System type identifier */

@@ -407,11 +407,14 @@ export class ImportExportService {
         throw new Error(`Target contact not found για email: ${row.targetEmail}`);
       }
 
-      targetContactId = targetContact.id!;
+      if (!targetContact.id) throw new Error('Target contact must have an id for relationship import');
+      targetContactId = targetContact.id;
     }
 
+    if (!sourceContact.id) throw new Error('Source contact must have an id for relationship import');
+
     const relationship: Partial<ContactRelationship> = {
-      sourceContactId: sourceContact.id!,
+      sourceContactId: sourceContact.id,
       targetContactId,
       relationshipType: row.relationshipType as RelationshipType,
       position: row.position,

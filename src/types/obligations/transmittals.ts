@@ -56,7 +56,7 @@ export interface ObligationIssueLogEntry {
 
 export interface ObligationTransmittal {
   id: string;
-  companyId: string;
+  companyId: string | null;
   obligationId: string;
   projectId?: string;
   buildingId?: string;

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ✅ APPROVED |
+| **Status** | ✅ IMPLEMENTED (Phases 1-4) |
 | **Date** | 2026-03-12 |
 | **Category** | Security / Data Integrity |
 | **Author** | Claude Agent |
@@ -335,8 +335,19 @@ companyId: companyId ?? null,  // null, not empty string
 
 ---
 
+## Implementation Artifacts
+
+| Artifact | Path |
+|----------|------|
+| Firestore Helpers (sanitize + normalize) | `src/utils/firestore-helpers.ts` |
+| SYSTEM_IDENTITY constant (extended) | `src/config/domain-constants.ts` |
+
 ## Changelog
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-03-12 | **Phase 1**: Replace magic `'system'` strings with `SYSTEM_IDENTITY.ID` (8 files), fix `'unknown'` fallback in overlay-store (early guard), fix email→uid in GeoCanvas, sanitize email doc keys in chat-history + admin-session | Claude Agent |
+| 2026-03-12 | **Phase 2**: Add runtime guards for 7 non-null assertions in DepartmentManagementService (5), ImportExportService (1), photo-upload.service (1) | Claude Agent |
+| 2026-03-12 | **Phase 3**: Normalize projectId queries with `normalizeProjectIdForQuery()` — removed dual-query pattern from 3 routes, replaced inline ternary in floors | Claude Agent |
+| 2026-03-12 | **Phase 4**: Replace `?? ''` / `|| ''` with `?? null` / `|| null` for companyId in mappers.ts, InMemoryObligationsRepository, building-services.ts — updated corresponding type interfaces | Claude Agent |
 | 2026-03-12 | Initial audit — 7 categories, 80+ instances documented | Claude Agent |

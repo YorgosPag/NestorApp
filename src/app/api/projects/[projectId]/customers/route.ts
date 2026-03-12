@@ -27,6 +27,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIRESTORE_LIMITS } from '@/config/firestore-collections';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
 
 const logger = createModuleLogger('ProjectCustomersRoute');
 
@@ -81,25 +82,14 @@ export const GET = withStandardRateLimit(async function GET(
         const isSuperAdmin = isRoleBypass(ctx.globalRole);
         logger.info('Fetching buildings for project', { isSuperAdmin });
 
+        // 🏢 ADR-209: Single query with normalized projectId (handles string/number mismatch)
         let buildingsQuery = getAdminFirestore()
           .collection(COLLECTIONS.BUILDINGS)
-          .where('projectId', '==', projectId);
+          .where('projectId', '==', normalizeProjectIdForQuery(projectId));
         if (!isSuperAdmin) {
           buildingsQuery = buildingsQuery.where('companyId', '==', ctx.companyId);
         }
-        let buildingsSnapshot = await buildingsQuery.get();
-
-        // If no results, try with number projectId
-        if (buildingsSnapshot.docs.length === 0) {
-          logger.info('Trying numeric projectId');
-          let numericQuery = getAdminFirestore()
-            .collection(COLLECTIONS.BUILDINGS)
-            .where('projectId', '==', parseInt(projectId));
-          if (!isSuperAdmin) {
-            numericQuery = numericQuery.where('companyId', '==', ctx.companyId);
-          }
-          buildingsSnapshot = await numericQuery.get();
-        }
+        const buildingsSnapshot = await buildingsQuery.get();
 
         if (buildingsSnapshot.docs.length === 0) {
           logger.info('No buildings found for project');

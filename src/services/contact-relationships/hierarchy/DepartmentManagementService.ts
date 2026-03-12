@@ -92,9 +92,11 @@ export class DepartmentManagementService {
     logger.info('🏗️ DEPT: Creating department:', departmentName);
 
     try {
+      if (!departmentHead.id) throw new Error('Contact must have an id to be department head');
+
       // Create department head relationship
       await RelationshipCRUDService.createRelationship({
-        sourceContactId: departmentHead.id!,
+        sourceContactId: departmentHead.id,
         targetContactId: organizationId,
         relationshipType: 'department_head',
         department: departmentName,
@@ -139,8 +141,10 @@ export class DepartmentManagementService {
         throw new Error('Current employment relationship not found');
       }
 
+      if (!currentEmployment.id) throw new Error('Relationship must have an id for transfer');
+
       // Update department και position
-      await RelationshipCRUDService.updateRelationship(currentEmployment.id!, {
+      await RelationshipCRUDService.updateRelationship(currentEmployment.id, {
         department: toDepartment,
         position: newPosition || currentEmployment.position,
         relationshipNotes: `${currentEmployment.relationshipNotes || ''}\n[TRANSFER] ${reason || 'Department transfer'}`
@@ -168,8 +172,9 @@ export class DepartmentManagementService {
     try {
       // Process employee moves
       for (const move of restructuring.movingEmployees) {
+        if (!move.employee.id) throw new Error('Employee Contact must have an id for reorganization');
         await this.transferEmployee(
-          move.employee.id!,
+          move.employee.id,
           move.fromTeam,
           move.toTeam,
           undefined,
@@ -202,9 +207,11 @@ export class DepartmentManagementService {
     logger.info('👥 DEPT: Creating team:', teamName);
 
     try {
+      if (!teamLead.id) throw new Error('Contact must have an id to be team lead');
+
       // Create team lead relationship
       await RelationshipCRUDService.createRelationship({
-        sourceContactId: teamLead.id!,
+        sourceContactId: teamLead.id,
         targetContactId: organizationId,
         relationshipType: 'manager',
         department,
@@ -240,8 +247,10 @@ export class DepartmentManagementService {
         throw new Error('Current employment relationship not found');
       }
 
+      if (!currentEmployment.id) throw new Error('Relationship must have an id for team assignment');
+
       // Update team assignment
-      await RelationshipCRUDService.updateRelationship(currentEmployment.id!, {
+      await RelationshipCRUDService.updateRelationship(currentEmployment.id, {
         team: teamName,
         position: role || currentEmployment.position
       });

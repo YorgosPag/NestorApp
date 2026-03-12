@@ -29,6 +29,7 @@ import {
   where,
   orderBy
 } from 'firebase/firestore';
+import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 
 // ============================================================================
 // TYPES & INTERFACES - SECURITY CRITICAL
@@ -832,7 +833,7 @@ export class EnterpriseSecurityService {
         isActive: true,
         createdAt: new Date(),
         lastUpdated: new Date(),
-        createdBy: 'system',
+        createdBy: SYSTEM_IDENTITY.ID,
         requiresApproval: true,
         isEmergencyRole: true
       },
@@ -850,7 +851,7 @@ export class EnterpriseSecurityService {
         isActive: true,
         createdAt: new Date(),
         lastUpdated: new Date(),
-        createdBy: 'system',
+        createdBy: SYSTEM_IDENTITY.ID,
         requiresApproval: false,
         isEmergencyRole: false
       },
@@ -868,7 +869,7 @@ export class EnterpriseSecurityService {
         isActive: true,
         createdAt: new Date(),
         lastUpdated: new Date(),
-        createdBy: 'system',
+        createdBy: SYSTEM_IDENTITY.ID,
         requiresApproval: false,
         isEmergencyRole: false
       }

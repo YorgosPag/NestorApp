@@ -22,6 +22,7 @@ import { isRoleBypass } from '@/lib/auth/roles';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { groupByKey } from '@/utils/collection-utils';
+import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
 
 const logger = createModuleLogger('FloorsRoute');
 
@@ -93,9 +94,8 @@ export const GET = withStandardRateLimit(
           floorsQuery = floorsQuery.where('buildingId', '==', buildingId);
         } else if (projectId) {
           // Query floors by projectId (for project-level floor listing)
-          // Handle both string and number projectId values
-          const projectIdValue = isNaN(Number(projectId)) ? projectId : Number(projectId);
-          floorsQuery = floorsQuery.where('projectId', '==', projectIdValue);
+          // 🏢 ADR-209: Normalized projectId query (handles string/number mismatch)
+          floorsQuery = floorsQuery.where('projectId', '==', normalizeProjectIdForQuery(projectId));
         }
 
         // Execute query
