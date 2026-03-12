@@ -14,6 +14,7 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/hooks/useAuth';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { useBOQItems } from '@/hooks/useBOQItems';
 import { BOQSummaryCards } from './MeasurementsTabContent/BOQSummaryCards';
 import { BOQFilterBar } from './MeasurementsTabContent/BOQFilterBar';
@@ -42,6 +43,8 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
   const { t } = useTranslation('building');
   const { user } = useAuth();
   const { confirm, dialogProps } = useConfirmDialog();
+  // 🏢 ADR-201: Centralized companyId resolution (building → user fallback)
+  const resolvedCompanyId = useCompanyId({ building })?.companyId ?? '';
 
   const {
     items,
@@ -58,7 +61,7 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
   } = useBOQItems(
     building.id,
     building.projectId,
-    (building.companyId as string) ?? '',
+    resolvedCompanyId,
     user?.uid ?? ''
   );
 

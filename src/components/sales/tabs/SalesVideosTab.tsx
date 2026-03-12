@@ -9,6 +9,7 @@
 import React, { useState, useEffect } from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { useAuth } from '@/auth/contexts/AuthContext';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getCompanyById } from '@/services/companies.service';
 import { DEFAULT_VIDEO_ACCEPT } from '@/config/file-upload-config';
@@ -36,7 +37,7 @@ export function SalesVideosTab({ unit }: SalesVideosTabProps) {
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
 
-  const companyId = user?.companyId;
+  const companyId = useCompanyId()?.companyId;
   const currentUserId = user?.uid;
 
   // Fetch company display name for Technical View (ADR-031)

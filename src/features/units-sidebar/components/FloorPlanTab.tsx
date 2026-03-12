@@ -22,6 +22,7 @@
 import React, { useState, useEffect } from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { useAuth } from '@/auth/contexts/AuthContext';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { useTranslation } from 'react-i18next';
 import { getCompanyById } from '@/services/companies.service';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
@@ -82,12 +83,13 @@ export function FloorPlanTab({
   const { user } = useAuth();
   const { t } = useTranslation('units');
   const iconSizes = useIconSizes();
+  const fallbackCompanyId = useCompanyId()?.companyId;
 
   // 🏢 ENTERPRISE: Use unit's companyId (from Firestore) if available,
   // fallback to auth context. This ensures super_admin sees files
   // for units belonging to other companies.
   const unitCompanyId = (selectedUnit as Record<string, unknown> | null)?.companyId as string | undefined;
-  const companyId = unitCompanyId || user?.companyId;
+  const companyId = unitCompanyId || fallbackCompanyId;
   const currentUserId = user?.uid;
 
   // 🏢 ENTERPRISE: Fetch company name for Technical View display (ADR-031)

@@ -22,6 +22,7 @@
 import React, { useState, useEffect } from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { useAuth } from '@/auth/contexts/AuthContext';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { useTranslation } from 'react-i18next';
 import { getCompanyById } from '@/services/companies.service';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
@@ -78,7 +79,7 @@ export function PhotosTab({
   const iconSizes = useIconSizes();
 
   // Get companyId and userId from auth context
-  const companyId = user?.companyId;
+  const companyId = useCompanyId()?.companyId;
   const currentUserId = user?.uid;
 
   // 🏢 ENTERPRISE: Fetch company name for Technical View display (ADR-031)

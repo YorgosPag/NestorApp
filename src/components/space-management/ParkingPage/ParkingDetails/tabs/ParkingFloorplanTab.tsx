@@ -18,6 +18,7 @@
 import { useState, useEffect } from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { useAuth } from '@/auth/contexts/AuthContext';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { getCompanyById } from '@/services/companies.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
@@ -48,7 +49,7 @@ const FLOORPLAN_ACCEPT =
 export function ParkingFloorplanTab({ parking }: ParkingFloorplanTabProps) {
   const { user } = useAuth();
 
-  const companyId = user?.companyId;
+  const companyId = useCompanyId()?.companyId;
   const currentUserId = user?.uid;
 
   // Fetch company name for display (same pattern as FloorFloorplanInline)

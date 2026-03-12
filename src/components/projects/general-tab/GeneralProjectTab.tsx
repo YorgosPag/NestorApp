@@ -21,6 +21,7 @@ import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
 import type { EntityLinkOption } from '@/components/shared/EntityLinkCard';
 import { getAllCompaniesForSelect } from '@/services/companies.service';
 import { useEntityLink } from '@/hooks/useEntityLink';
+import { useCompanyId } from '@/hooks/useCompanyId';
 const logger = createModuleLogger('GeneralProjectTab');
 
 interface ExtendedGeneralProjectTabProps extends GeneralProjectTabProps {
@@ -46,6 +47,8 @@ export function GeneralProjectTab({
 }: ExtendedGeneralProjectTabProps) {
   const { t } = useTranslation('projects');
   const spacing = useSpacingTokens();
+  // 🏢 ADR-201: Centralized companyId fallback (project → user)
+  const fallbackCompanyId = useCompanyId()?.companyId ?? '';
 
   // Use lifted state if available, otherwise fallback to local state
   const [localIsEditing, setLocalIsEditing] = useState(false);
@@ -63,7 +66,7 @@ export function GeneralProjectTab({
     issueDate: '',
     status: project.status,
     companyName: project.companyName,
-    companyId: project.companyId || '',
+    companyId: project.companyId || fallbackCompanyId,
     type: project.type || '',
     priority: project.priority || '',
     riskLevel: project.riskLevel || '',
@@ -92,7 +95,7 @@ export function GeneralProjectTab({
       licenseTitle: project.title,
       status: project.status,
       companyName: project.companyName,
-      companyId: project.companyId || '',
+      companyId: project.companyId || fallbackCompanyId,
       description: project.description || prev.description,
       type: project.type || '',
       priority: project.priority || '',
@@ -180,7 +183,7 @@ export function GeneralProjectTab({
       if (isCreateMode) {
         // ADR-200: Get companyId from centralized hook in local mode
         const companyPayload = companyLink.getPayload();
-        const effectiveCompanyId = companyPayload.companyId ?? projectData.companyId ?? '';
+        const effectiveCompanyId = companyPayload.companyId ?? projectData.companyId ?? fallbackCompanyId;
         logger.info('Creating new project...', { data: projectData, companyId: effectiveCompanyId });
 
         const result = await createProject({

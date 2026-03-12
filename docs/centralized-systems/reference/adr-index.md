@@ -223,7 +223,7 @@
 | **ADR-200** | useEntityLink Hook — Centralized Entity Linking | ✅ Accepted | 2026-03-12 | Uncategorized | [📄](./adrs/ADR-200-useEntityLink-hook.md) |
 | **ADR-200** | Utility Hooks Centralization (Phase 2) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-200-utility-hooks-centralization.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
-| **ADR-201** | Centralized CompanyId Resolution | ✅ ✅ APPROVED | 2026-03-12 | Backend Systems / Multi-Tenant | [📄](./adrs/ADR-201-company-id-resolver.md) |
+| **ADR-201** | Centralized CompanyId Resolution | ✅ IMPLEMENTED | 2026-03-12 | Backend Systems / Multi-Tenant | [📄](./adrs/ADR-201-company-id-resolver.md) |
 | **ADR-202** | Floorplan Save Orchestrator | ✅ ✅ APPROVED | 2026-03-12 | Backend Systems / File Storage | [📄](./adrs/ADR-202-floorplan-save-orchestrator.md) |
 | **ADR-203** | Entity Page State Centralization | ✅ ✅ IMPLEMENTED | 2026-03-12 | Data & State / Hooks | [📄](./adrs/ADR-203-entity-page-state-centralization.md) |
 | **ADR-204** | Phase 3 — useEscapeKey, Entity Routes, Safe localStorage | ✅ IMPLEMENTED | 2026-03-12 | Code Quality / Centralization | [📄](./adrs/ADR-204-phase3-escape-routes-storage.md) |

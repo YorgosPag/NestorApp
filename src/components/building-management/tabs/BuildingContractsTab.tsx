@@ -22,6 +22,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { useAuth } from '@/auth/contexts/AuthContext';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { Building } from '@/types/building/contracts';
@@ -70,7 +71,7 @@ export function BuildingContractsTab({
   const resolvedBuilding = building || data;
 
   // Get companyId and userId from auth context
-  const companyId = user?.companyId;
+  const companyId = useCompanyId()?.companyId;
   const currentUserId = user?.uid;
 
   // 🏢 ADR-191: Fetch floors for per-floor entry point expansion

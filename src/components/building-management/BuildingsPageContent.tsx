@@ -158,7 +158,7 @@ export function BuildingsPageContent() {
     if (selectedBuilding && companies.length > 0 && projects.length > 0) {
       // Find the project and company this building belongs to
       const project = projects.find(p => p.id === selectedBuilding.projectId);
-      if (project && project.companyId) {
+      if (project) {
         const company = companies.find(c => c.id === project.companyId);
         if (company) {
           // Use atomic sync with names (not just IDs) - enterprise pattern

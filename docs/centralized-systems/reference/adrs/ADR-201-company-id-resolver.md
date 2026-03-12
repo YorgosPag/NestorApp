@@ -38,17 +38,73 @@ const companyId = selectedBuilding?.companyId || user?.companyId || selectedComp
 | `resolveCompanyIdForBuilding(params)` | ✅ Yes | SimpleProjectDialog (lookup building from array) |
 | `tryResolveCompanyId(ctx)` | ❌ No | React components (optional render) |
 
+## React Hook: useCompanyId()
+
+**Αρχείο**: `src/hooks/useCompanyId.ts`
+
+Thin wrapper γύρω από `tryResolveCompanyId()` για React components:
+
+```typescript
+import { useCompanyId } from '@/hooks/useCompanyId';
+
+// Simple — just user's tenant
+const companyId = useCompanyId()?.companyId;
+
+// With building context (building tabs)
+const companyId = useCompanyId({ building })?.companyId;
+
+// With explicit workspace selection (file manager)
+const companyId = useCompanyId({ selectedCompanyId: workspace?.companyId })?.companyId;
+```
+
 ## Files Created
 
 - `src/services/company-id-resolver.ts` — Core resolver (pure functions)
+- `src/hooks/useCompanyId.ts` — React hook wrapper (Phase 2)
 
 ## Files Modified
+
+### Phase 1 (Initial — 2026-03-12)
 
 | File | Change |
 |------|--------|
 | `SimpleProjectDialog.tsx` | 7 inline resolutions → `resolveCompanyIdForBuilding()` |
 | `BuildingFloorplanTab.tsx` | Inline fallback → `tryResolveCompanyId()` |
 | `SpaceFloorplanInline.tsx` | Added `building` prop + `tryResolveCompanyId()` |
+
+### Phase 2 Migration (2026-03-12)
+
+**Type change**: `NavigationProject.companyId` → required (was optional)
+
+**Dangerous `|| ''` fallbacks eliminated**:
+
+| File | Before | After |
+|------|--------|-------|
+| `FileManagerPageContent.tsx` | `activeWorkspace?.companyId \|\| user?.companyId \|\| ''` | `useCompanyId({ selectedCompanyId })` |
+| `GeneralProjectTab.tsx` | `project.companyId \|\| ''` (×3) | `project.companyId \|\| fallbackCompanyId` via `useCompanyId()` |
+| `GeneralTabContent.tsx` | `building.companyId \|\| ''` | `useCompanyId({ building })` |
+| `MeasurementsTabContent.tsx` | `(building.companyId as string) ?? ''` | `useCompanyId({ building })` |
+
+**`user?.companyId` → `useCompanyId()` migration** (19 files):
+
+| Category | Files |
+|----------|-------|
+| Unit sidebar tabs | `VideosTab`, `PhotosTab`, `DocumentsTab`, `FloorPlanTab` |
+| Building tabs | `BuildingVideosTab`, `BuildingPhotosTab`, `BuildingContractsTab` |
+| Project tabs | `VideosTab`, `PhotosTab`, `documents-project-tab`, `ProjectFloorplanTab` |
+| Parking tabs | `ParkingVideosTab`, `ParkingPhotosTab`, `ParkingDocumentsTab`, `ParkingFloorplanTab` |
+| Storage tabs | `StorageVideosTab` |
+| Sales | `SalesVideosTab` |
+| Contacts | `UnifiedContactTabbedSection` |
+| CRM | `teams/page.tsx` |
+
+**Breadcrumb guard simplifications** (after `NavigationProject.companyId` became required):
+
+| File | Before | After |
+|------|--------|-------|
+| `BuildingsPageContent.tsx` | `if (project && project.companyId)` | `if (project)` |
+| `spaces/parking/page.tsx` | `if (project && project.companyId)` | `if (project)` |
+| `spaces/storage/page.tsx` | `if (project && project.companyId)` | `if (project)` |
 
 ## Consequences
 
@@ -62,6 +118,7 @@ const companyId = selectedBuilding?.companyId || user?.companyId || selectedComp
 |------|--------|
 | 2026-03-12 | Initial implementation |
 | 2026-03-12 | **Extended to floor floorplans**: `FloorFloorplanInline` now receives `buildingCompanyId` prop (same pattern as `BuildingFloorplanTab`). `useFloorFloorplans` reads `companyId` from the floor document itself — critical for ReadOnlyMediaViewer where `unit.companyId` may differ from `floor.companyId` in super_admin cross-tenant scenarios. |
+| 2026-03-12 | **Phase 2 — Full Application Migration**: Created `useCompanyId()` hook. Migrated 27 files: eliminated 8 dangerous `\|\| ''` fallbacks, replaced 19 `user?.companyId` patterns, simplified 3 breadcrumb guards. Made `NavigationProject.companyId` required. |
 
 ## Known Cross-Tenant Data Pattern
 

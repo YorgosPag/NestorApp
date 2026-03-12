@@ -21,6 +21,7 @@
 import React, { useState, useEffect } from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { useAuth } from '@/auth/contexts/AuthContext';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getCompanyById } from '@/services/companies.service';
 import type { Building } from '@/types/building/contracts';
@@ -73,7 +74,7 @@ export function BuildingVideosTab({
   const resolvedBuilding = building || data;
 
   // Get companyId and userId from auth context
-  const companyId = user?.companyId;
+  const companyId = useCompanyId()?.companyId;
   const currentUserId = user?.uid;
 
   // 🏢 ENTERPRISE: Fetch company name for Technical View display (ADR-031)

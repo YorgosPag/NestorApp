@@ -16,6 +16,7 @@ import type { EntityLinkOption } from '@/components/shared/EntityLinkCard';
 import { RealtimeService } from '@/services/realtime';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useEntityLink } from '@/hooks/useEntityLink';
+import { useCompanyId } from '@/hooks/useCompanyId';
 
 const logger = createModuleLogger('GeneralTabContent');
 
@@ -54,6 +55,8 @@ export function GeneralTabContent({
   onBuildingCreated,
 }: GeneralTabContentProps) {
   const { t } = useTranslation('building');
+  // 🏢 ADR-201: Centralized companyId resolution (building → user fallback)
+  const resolvedCompanyId = useCompanyId({ building })?.companyId ?? '';
 
   // Internal editing state (used when no parent controls editing)
   const [internalIsEditing, setInternalIsEditing] = useState(false);
@@ -203,7 +206,7 @@ export function GeneralTabContent({
         logger.info('Creating new building in Firestore', { formData, projectId: projectPayload.projectId ?? null });
         const result = await createBuilding({
           ...payload,
-          companyId: building.companyId || '',
+          companyId: resolvedCompanyId,
           status: 'planning',
           // ADR-200: Include projectId from centralized hook
           ...projectPayload,

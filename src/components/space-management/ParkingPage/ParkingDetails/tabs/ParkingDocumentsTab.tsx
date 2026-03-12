@@ -16,6 +16,7 @@
 
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { useAuth } from '@/auth/contexts/AuthContext';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 
 // ============================================================================
@@ -34,7 +35,7 @@ interface ParkingDocumentsTabProps {
 export function ParkingDocumentsTab({ parking }: ParkingDocumentsTabProps) {
   const { user } = useAuth();
 
-  const companyId = user?.companyId;
+  const companyId = useCompanyId()?.companyId;
   const currentUserId = user?.uid;
 
   if (!companyId || !currentUserId) {

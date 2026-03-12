@@ -22,6 +22,7 @@
 import React, { useState, useEffect } from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { useAuth } from '@/auth/contexts/AuthContext';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getCompanyById } from '@/services/companies.service'; // 🏢 ENTERPRISE: Fetch company name (ADR-031)
 import type { Project } from '@/types/project';
@@ -76,7 +77,7 @@ export function ProjectFloorplanTab({
   const resolvedProject = project || data;
 
   // Get companyId and userId from auth context
-  const companyId = user?.companyId;
+  const companyId = useCompanyId()?.companyId;
   const currentUserId = user?.uid;
 
   // 🏢 ENTERPRISE: Fetch company name for Technical View display (ADR-031)

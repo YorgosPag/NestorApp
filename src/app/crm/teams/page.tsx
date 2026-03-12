@@ -11,6 +11,7 @@ import { enterpriseTeamsService } from '@/services/teams/EnterpriseTeamsService'
 import type { EnterpriseTeamMember } from '@/services/teams/EnterpriseTeamsService';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/auth/contexts/AuthContext';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { Spinner } from '@/components/ui/spinner';
 import { cn, getSpacingClass } from '@/lib/design-system';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -37,6 +38,7 @@ export default function CrmTeamsPage() {
   const pagePadding = getSpacingClass('p', 'lg');
   const sectionMargin = getSpacingClass('m', 'lg', 'b');
   const { user } = useAuth();
+  const resolvedCompanyId = useCompanyId()?.companyId;
   const [teams, setTeams] = useState<DisplayTeam[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +51,7 @@ export default function CrmTeamsPage() {
         setError(null);
 
         // Load teams configuration from database
-        const organizationId = user?.companyId;
+        const organizationId = resolvedCompanyId;
         if (!organizationId) {
           setError(t('teams.error.missingOrg'));
           setTeams([]);

@@ -17,6 +17,7 @@
 import React from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { useAuth } from '@/auth/contexts/AuthContext';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { DEFAULT_VIDEO_ACCEPT } from '@/config/file-upload-config';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -55,7 +56,7 @@ export function VideosTab({ project, data }: VideosTabProps) {
   const resolvedProject = project || data;
 
   // Get companyId and userId from auth context
-  const companyId = user?.companyId;
+  const companyId = useCompanyId()?.companyId;
   const currentUserId = user?.uid;
 
   // If no project, companyId, or userId, show placeholder

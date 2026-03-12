@@ -16,6 +16,7 @@
 
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { useAuth } from '@/auth/contexts/AuthContext';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { DEFAULT_VIDEO_ACCEPT } from '@/config/file-upload-config';
 import type { Storage } from '@/types/storage/contracts';
 
@@ -35,7 +36,7 @@ interface StorageVideosTabProps {
 export function StorageVideosTab({ storage }: StorageVideosTabProps) {
   const { user } = useAuth();
 
-  const companyId = user?.companyId;
+  const companyId = useCompanyId()?.companyId;
   const currentUserId = user?.uid;
 
   if (!companyId || !currentUserId) {

@@ -15,6 +15,7 @@ import { EntityFilesManager } from '@/components/shared/files';
 // 🏢 ENTERPRISE: Banking System (ADR-126)
 import { ContactBankingTab } from '@/components/contacts/tabs/ContactBankingTab';
 import { useAuth } from '@/auth/contexts/AuthContext';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { useWorkspace } from '@/contexts/WorkspaceContext'; // 🏢 ENTERPRISE: Workspace context για company name display
 import { getCompanyById } from '@/services/companies.service'; // 🏢 ENTERPRISE: Fetch company name (ADR-031)
 import { getContactFormConfig, getContactFormSections, getContactFormRenderer } from './utils/ContactFormConfigProvider';
@@ -145,6 +146,7 @@ export function UnifiedContactTabbedSection({
 
   // 🏢 ENTERPRISE: Get auth context for file management
   const { user } = useAuth();
+  const resolvedCompanyId = useCompanyId()?.companyId;
 
   // 🏢 ENTERPRISE: Get workspace context για company name display (ADR-032)
   const { activeWorkspace } = useWorkspace();
@@ -156,7 +158,7 @@ export function UnifiedContactTabbedSection({
   useEffect(() => {
     const fetchCompanyName = async () => {
       // 🏢 ENTERPRISE: Get companyId from user context (same as EntityFilesManager uses)
-      const companyId = user?.companyId;
+      const companyId = resolvedCompanyId;
 
       if (!companyId) {
         setCompanyDisplayName(undefined);
@@ -649,7 +651,7 @@ export function UnifiedContactTabbedSection({
         files: () => {
           const contactId = formData.id;
           const currentUserId = user?.uid;
-          const companyId = user?.companyId;
+          const companyId = resolvedCompanyId;
 
           // Don't render if no contact ID (new contact) or no user
           if (!contactId || !currentUserId || !companyId) {

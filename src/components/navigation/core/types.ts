@@ -16,7 +16,7 @@ export interface NavigationProject {
   id: string;
   name: string;
   company: string;
-  companyId?: string; // The ID of the company that owns this project
+  companyId: string; // The ID of the company that owns this project
   buildings: NavigationBuilding[];
   parkingSpots?: NavigationParkingSpot[];
   // 🏢 PERF-001: Building count from bootstrap (eliminates realtime listener)

@@ -48,6 +48,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/auth/contexts/AuthContext';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -352,8 +353,8 @@ export function FileManagerPageContent() {
   const [filters, setFilters] = useState<FileFilterState>(defaultFileFilters);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Get companyId from workspace or user
-  const companyId = activeWorkspace?.companyId || user?.companyId || '';
+  // 🏢 ADR-201: Centralized companyId resolution
+  const companyId = useCompanyId({ selectedCompanyId: activeWorkspace?.companyId })?.companyId ?? '';
 
   // Data fetching
   const {

@@ -97,7 +97,7 @@ function StoragePageContent() {
       if (building && building.projectId) {
         // Find the project and company
         const project = projects.find(p => p.id === building.projectId);
-        if (project && project.companyId) {
+        if (project) {
           const company = companies.find(c => c.id === project.companyId);
           if (company) {
             // Use atomic sync with names - enterprise pattern

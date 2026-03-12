@@ -21,6 +21,7 @@
 import React from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { useAuth } from '@/auth/contexts/AuthContext';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -65,7 +66,7 @@ export function DocumentsProjectTab({ project, data, onNavigateToTab }: Document
   const resolvedProject = project || data;
 
   // Get companyId and userId from auth context
-  const companyId = user?.companyId;
+  const companyId = useCompanyId()?.companyId;
   const currentUserId = user?.uid;
 
   // If no project, companyId, or userId, show placeholder
