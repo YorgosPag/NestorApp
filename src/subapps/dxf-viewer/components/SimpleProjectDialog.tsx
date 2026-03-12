@@ -470,9 +470,11 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           fileName: file.name,
           timestamp: Date.now()
         };
-        // 🏢 FIX: Use auth user's companyId (tenant) — matches what FloorPlanTab uses at load time
+        // 🏢 FIX: companyId MUST match what load-side uses (property.companyId = inherited from building)
+        // Resolution: building.companyId (Firestore source of truth) → user?.companyId → selectedCompanyId
         const createdBy = user?.uid;
-        const fileRecordCompanyId = user?.companyId || selectedCompanyId;
+        const selectedBuilding = buildings.find(b => b.id === selectedBuildingId);
+        const fileRecordCompanyId = selectedBuilding?.companyId || user?.companyId || selectedCompanyId;
         saved = await UnitFloorplanService.saveFloorplan({
           companyId: fileRecordCompanyId,
           projectId: selectedProjectId || undefined,
@@ -507,12 +509,11 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           fileName: file.name,
           timestamp: Date.now()
         };
-        // 🏢 FIX: companyId MUST match what ReadOnlyMediaViewer uses at load time
-        // ReadOnlyMediaViewer queries with: propCompanyId || user?.companyId
-        // So we MUST use user.companyId (auth tenant) as PRIMARY, not selectedCompanyId (contact entity)
+        // 🏢 FIX: companyId MUST match what load-side uses (property.companyId = inherited from building)
+        // Resolution: building.companyId (Firestore source of truth) → user?.companyId → selectedCompanyId
         const createdBy = user?.uid;
-        const authCompanyId = user?.companyId;
-        const effectiveCompanyId = authCompanyId || selectedCompanyId;
+        const selectedBuildingObj = buildings.find(b => b.id === selectedBuildingId);
+        const effectiveCompanyId = selectedBuildingObj?.companyId || user?.companyId || selectedCompanyId;
         if (effectiveCompanyId && createdBy) {
           saved = await FloorFloorplanService.saveFloorplan({
             companyId: effectiveCompanyId,
@@ -535,9 +536,10 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           timestamp: Date.now()
         };
         // 🏢 ENTERPRISE: Pass options for FileRecord creation → visible in BuildingFloorplanTab
-        // 🏢 FIX: Use auth user's companyId (tenant), not selectedCompanyId (contact entity)
+        // 🏢 FIX: companyId MUST match what load-side uses (inherited from building document)
         const createdBy = user?.uid;
-        const buildingEffectiveCompanyId = user?.companyId || selectedCompanyId;
+        const buildingObj = buildings.find(b => b.id === selectedBuildingId);
+        const buildingEffectiveCompanyId = buildingObj?.companyId || user?.companyId || selectedCompanyId;
         const fileRecordOptions = buildingEffectiveCompanyId && createdBy
           ? { companyId: buildingEffectiveCompanyId, projectId: selectedProjectId || undefined, createdBy, originalFile: file }
           : undefined;
@@ -649,11 +651,14 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
       let hasExisting = false;
 
       if (currentStep === 'unit' && type === 'unit') {
-        const checkCompanyId = user?.companyId || selectedCompanyId;
+        const checkBuilding = buildings.find(b => b.id === selectedBuildingId);
+        const checkCompanyId = checkBuilding?.companyId || user?.companyId || selectedCompanyId;
         hasExisting = await UnitFloorplanService.hasFloorplan(checkCompanyId, selectedUnitId);
       } else if (currentStep === 'building' && type === 'floor' && selectedFloorId) {
         // 🏢 ENTERPRISE (2026-01-31): Check for existing floor floorplan
-        hasExisting = await FloorFloorplanService.hasFloorplan(selectedBuildingId, selectedFloorId);
+        const floorCheckBuilding = buildings.find(b => b.id === selectedBuildingId);
+        const floorCheckCompanyId = floorCheckBuilding?.companyId || user?.companyId || selectedCompanyId;
+        hasExisting = await FloorFloorplanService.hasFloorplan(floorCheckCompanyId, selectedFloorId);
       } else if (currentStep === 'building' && (type === 'building' || type === 'storage')) {
         hasExisting = await BuildingFloorplanService.hasFloorplan(selectedBuildingId, type as 'building' | 'storage');
       } else {
@@ -832,9 +837,10 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         fileName: file.name,
         timestamp: Date.now()
       };
-      // 🏢 FIX: Use auth user's companyId (tenant) — matches load-side query
+      // 🏢 FIX: companyId MUST match building.companyId (load-side uses property.companyId = inherited from building)
       const createdBy = user?.uid;
-      const effectivePdfCompanyId = user?.companyId || selectedCompanyId;
+      const pdfBuilding = buildings.find(b => b.id === selectedBuildingId);
+      const effectivePdfCompanyId = pdfBuilding?.companyId || user?.companyId || selectedCompanyId;
       if (effectivePdfCompanyId && createdBy) {
         saved = await FloorFloorplanService.saveFloorplan({
           companyId: effectivePdfCompanyId,
@@ -860,9 +866,10 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         timestamp: Date.now()
       };
       // 🏢 ENTERPRISE: Pass options for FileRecord creation → visible in BuildingFloorplanTab
-      // 🏢 FIX: Use auth user's companyId (tenant), not selectedCompanyId (contact entity)
+      // 🏢 FIX: companyId MUST match building.companyId (load-side uses building's companyId)
       const createdBy = user?.uid;
-      const pdfBldgEffectiveCompanyId = user?.companyId || selectedCompanyId;
+      const pdfBldgObj = buildings.find(b => b.id === selectedBuildingId);
+      const pdfBldgEffectiveCompanyId = pdfBldgObj?.companyId || user?.companyId || selectedCompanyId;
       const pdfFileRecordOptions = pdfBldgEffectiveCompanyId && createdBy
         ? { companyId: pdfBldgEffectiveCompanyId, projectId: selectedProjectId || undefined, createdBy, originalFile: file }
         : undefined;

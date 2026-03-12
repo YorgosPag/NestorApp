@@ -40,6 +40,7 @@ export interface Floor {
 export interface Building {
   id: string;
   name: string;
+  companyId?: string; // 🏢 ENTERPRISE: Inherited from Firestore — used for FileRecord save companyId resolution
   floors: Floor[];
   storageAreas?: Unit[]; // Αποθήκες (συνήθως υπόγεια)
 }
