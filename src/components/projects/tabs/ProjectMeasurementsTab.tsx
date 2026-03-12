@@ -291,7 +291,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
             </div>
             <p className={cn(typography.heading.lg, 'tabular-nums')}>
               {projectSummary.totalActualCost !== null
-                ? formatCurrency(projectSummary.totalActualCost)
+                ? formatCurrencyWithDecimals(projectSummary.totalActualCost)
                 : '—'
               }
             </p>
