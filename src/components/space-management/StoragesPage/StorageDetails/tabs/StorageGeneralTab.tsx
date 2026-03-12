@@ -122,11 +122,11 @@ export function StorageGeneralTab({
   const [form, setForm] = useState<StorageFormState>(() => buildFormState(storage));
   const [linkedBuildingId, setLinkedBuildingId] = useState<string | null>(storage.buildingId ?? null);
 
-  // Reset form when storage data changes or edit mode starts
+  // Reset form when a DIFFERENT storage is selected (not on edit mode toggle)
   useEffect(() => {
     setForm(buildFormState(storage));
     setLinkedBuildingId(storage.buildingId ?? null);
-  }, [storage, isEditing]);
+  }, [storage.id]);
 
   // Building link callbacks
   const loadBuildings = useCallback(() => getBuildingsList(), []);

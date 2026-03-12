@@ -117,11 +117,11 @@ export function ParkingGeneralTab({
   const [form, setForm] = useState<ParkingFormState>(() => buildFormState(parking));
   const [linkedBuildingId, setLinkedBuildingId] = useState<string | null>(parking.buildingId ?? null);
 
-  // Reset form when parking data changes or edit mode starts
+  // Reset form when a DIFFERENT parking spot is selected (not on edit mode toggle)
   useEffect(() => {
     setForm(buildFormState(parking));
     setLinkedBuildingId(parking.buildingId ?? null);
-  }, [parking, isEditing]);
+  }, [parking.id]);
 
   // Building link callbacks
   const loadBuildings = useCallback(() => getBuildingsList(), []);
