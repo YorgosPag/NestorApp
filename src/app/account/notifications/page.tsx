@@ -19,6 +19,7 @@ import { useAuth } from '@/auth';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { cn } from '@/lib/design-system';
 import { createModuleLogger } from '@/lib/telemetry';
+import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 
 const logger = createModuleLogger('ACCOUNT_NOTIFICATIONS_PAGE');
 
@@ -32,6 +33,7 @@ export default function NotificationsPage() {
 
   return (
     <section className={cn(layout.flexColGap4)}>
+      <ModuleBreadcrumb />
       <NotificationSettings
         userId={user.uid}
         onSettingsChange={(settings) => {

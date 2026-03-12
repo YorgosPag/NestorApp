@@ -72,6 +72,7 @@ import { COMMUNICATION_CHANNELS } from '@/types/communications';
 import { Spinner } from '@/components/ui/spinner';
 // 🏢 ADR-055: Attachment upload support
 import { PhotoUploadService } from '@/services/photo-upload.service';
+import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 
 // ============================================================================
 // COMPONENT
@@ -339,6 +340,8 @@ export default function CrmCommunicationsPage() {
   const headerTitle = t('inbox.title') + ` (${totalCount})`;
 
   return (
+    <>
+    <ModuleBreadcrumb className="px-6 pt-4" />
     <PageContainer ariaLabel={t('inbox.title')}>
         {/* (1) Header - Using PageHeader directly */}
         <PageHeader
@@ -618,5 +621,6 @@ export default function CrmCommunicationsPage() {
               </section>
         </ListContainer>
       </PageContainer>
+    </>
   );
 }

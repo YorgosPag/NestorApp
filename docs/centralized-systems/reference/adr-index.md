@@ -52,7 +52,7 @@
 | **ADR-013** | Enterprise Card System (Atomic Design) | ✅ APPROVED | 2026-01-01 | UI Components | [📄](./adrs/ADR-013-enterprise-card-system-atomic-design.md) |
 | **ADR-014** | Navigation Entity Icons Centralization | ✅ APPROVED | 2026-01-01 | UI Components | [📄](./adrs/ADR-014-navigation-entity-icons-centralization.md) |
 | **ADR-015** | Entity List Column Container | ✅ APPROVED | 2026-01-01 | UI Components | [📄](./adrs/ADR-015-entity-list-column-container.md) |
-| **ADR-016** | Navigation Breadcrumb Path System | ✅ APPROVED | 2026-01-01 | UI Components | [📄](./adrs/ADR-016-navigation-breadcrumb-path-system.md) |
+| **ADR-016** | Navigation Breadcrumb Path System (Entity + Module) | ✅ APPROVED | 2026-03-12 | UI Components | [📄](./adrs/ADR-016-navigation-breadcrumb-path-system.md) |
 | **ADR-017** | Enterprise ID Generation | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-017-enterprise-id-generation.md) |
 | **ADR-018** | Unified Upload Service | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-018-unified-upload-service.md) |
 | **ADR-019** | Centralized Performance Thresholds | ✅ APPROVED | 2026-01-01 | Performance | [📄](./adrs/ADR-019-centralized-performance-thresholds.md) |

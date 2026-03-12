@@ -15,6 +15,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 
 export default function SpacesPage() {
   const iconSizes = useIconSizes();
@@ -60,6 +61,7 @@ export default function SpacesPage() {
   ];
   return (
     <div className={`flex h-screen ${colors.bg.primary}`}>
+        <ModuleBreadcrumb className="px-6 pt-4" />
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
           {/* Header */}

@@ -28,6 +28,7 @@ import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 // 🏢 ENTERPRISE: Centralized AdvancedFiltersPanel (same as Contacts/Projects/Buildings)
 import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters/AdvancedFiltersPanel';
 import { taskFiltersConfig, defaultTaskFilters } from '@/components/core/AdvancedFilters/configs';
+import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import type { TaskFilterState } from '@/components/core/AdvancedFilters/configs';
 
 // 🏢 ENTERPRISE: Task statistics interface
@@ -126,6 +127,8 @@ export default function CrmTasksPage() {
   }, [activeCardIndex]);
 
   return (
+    <>
+    <ModuleBreadcrumb className="px-6 pt-4" />
     <PageContainer ariaLabel={t('tasks.title')}>
       <Toaster position="top-right" />
 
@@ -182,5 +185,6 @@ export default function CrmTasksPage() {
         onTaskCreated={handleTaskCreated}
       />
     </PageContainer>
+    </>
   );
 }

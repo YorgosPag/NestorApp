@@ -28,6 +28,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTypography } from '@/hooks/useTypography';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCalendarEvents } from '@/hooks/useCalendarEvents';
 import { CrmCalendar } from '@/components/crm/calendar/CrmCalendar';
@@ -89,6 +90,7 @@ export default function CrmCalendarPage() {
       <Toaster position="top-right" />
 
       <main className={cn('min-h-screen', colors.bg.secondary)}>
+        <ModuleBreadcrumb className="px-6 pt-4" />
         {/* Header */}
         <header className={cn(colors.bg.primary, 'shadow-sm border-b')}>
           <div className={cn(sp.padding.x.lg, sp.padding.y.md)}>

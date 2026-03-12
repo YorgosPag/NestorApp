@@ -15,6 +15,7 @@ import {
   OBLIGATION_WORKFLOW_SEQUENCE,
 } from '@/components/obligations/workspace';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 
 const STATUS_ALL = 'all';
 
@@ -58,6 +59,7 @@ export default function ObligationsPage() {
   return (
     <PageLayout>
       <main className={`max-w-full mx-auto ${getSpacingClass('p', 'md')} md:p-6 lg:p-8 space-y-6`}>
+        <ModuleBreadcrumb />
         <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-bold">{t('workspace.register.title')}</h1>
