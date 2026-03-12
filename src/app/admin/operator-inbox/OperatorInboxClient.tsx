@@ -48,6 +48,7 @@ import toast from 'react-hot-toast';
 import type { AdminContext } from '@/server/admin/admin-guards';
 import { PageContainer, ListContainer } from '@/core/containers';
 import { PageHeader } from '@/core/headers';
+import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import {
   AdvancedFiltersPanel,
@@ -384,6 +385,7 @@ export default function OperatorInboxClient({ adminContext }: OperatorInboxClien
         variant="sticky-rounded"
         layout="compact"
         spacing="compact"
+        breadcrumb={<ModuleBreadcrumb />}
         title={{
           icon: Inbox,
           title: t('operatorInbox.title'),

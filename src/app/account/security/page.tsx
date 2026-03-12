@@ -30,8 +30,6 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
-import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
-
 const logger = createModuleLogger('ACCOUNT_SECURITY_PAGE');
 
 export default function SecurityPage() {
@@ -97,7 +95,6 @@ export default function SecurityPage() {
 
   return (
     <section className={layout.flexColGap4}>
-      <ModuleBreadcrumb />
       {/* Password Section */}
       <Card className={borders.getElementBorder('card', 'default')}>
         <CardHeader>

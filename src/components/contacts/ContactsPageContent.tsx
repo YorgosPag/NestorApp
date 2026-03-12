@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
+import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -701,6 +702,7 @@ export function ContactsPageContent() {
           showFilters={showFilters}
           setShowFilters={setShowFilters}
           contactCount={contacts.length}
+          breadcrumb={<ModuleBreadcrumb />}
         />
 
 

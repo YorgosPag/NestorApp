@@ -23,8 +23,6 @@ import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
-
 export default function PrivacyPage() {
   const { t } = useTranslation('common');
   const colors = useSemanticColors();
@@ -35,7 +33,6 @@ export default function PrivacyPage() {
 
   return (
     <section className={layout.flexColGap4}>
-      <ModuleBreadcrumb />
       {/* Privacy Overview */}
       <Card className={borders.getElementBorder('card', 'default')}>
         <CardHeader>

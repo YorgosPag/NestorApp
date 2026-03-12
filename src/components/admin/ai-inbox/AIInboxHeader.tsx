@@ -28,6 +28,8 @@ interface AIInboxHeaderProps {
   setShowFilters: (show: boolean) => void;
   /** Real-time Firestore listener is active (ADR-079) */
   isLive?: boolean;
+  /** Breadcrumb element to display inside PageHeader */
+  breadcrumb?: React.ReactNode;
 }
 
 export function AIInboxHeader({
@@ -39,6 +41,7 @@ export function AIInboxHeader({
   showFilters,
   setShowFilters,
   isLive = false,
+  breadcrumb,
 }: AIInboxHeaderProps) {
   const { t } = useTranslation('admin');
   const iconSizes = useIconSizes();
@@ -51,6 +54,7 @@ export function AIInboxHeader({
       variant="sticky-rounded"
       layout="compact"
       spacing="compact"
+      breadcrumb={breadcrumb}
       title={{
         icon: Inbox,
         title: t('aiInbox.title'),

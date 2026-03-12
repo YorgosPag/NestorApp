@@ -32,8 +32,6 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { SUPPORTED_LANGUAGES, type Language } from '@/i18n/lazy-config';
-import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
-
 export default function PreferencesPage() {
   const { t, i18n, changeLanguage } = useTranslation('common');
   const { theme, setTheme } = useTheme();
@@ -48,8 +46,6 @@ export default function PreferencesPage() {
   };
 
   return (
-    <>
-    <ModuleBreadcrumb className="mb-4" />
     <Card className={borders.getElementBorder('card', 'default')}>
       <CardHeader>
         <CardTitle className={layout.flexCenterGap2}>
@@ -113,6 +109,5 @@ export default function PreferencesPage() {
         </fieldset>
       </CardContent>
     </Card>
-    </>
   );
 }

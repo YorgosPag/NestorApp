@@ -340,14 +340,13 @@ export default function CrmCommunicationsPage() {
   const headerTitle = t('inbox.title') + ` (${totalCount})`;
 
   return (
-    <>
-    <ModuleBreadcrumb className="px-6 pt-4" />
     <PageContainer ariaLabel={t('inbox.title')}>
         {/* (1) Header - Using PageHeader directly */}
         <PageHeader
           variant="sticky-rounded"
           layout="compact"
           spacing="compact"
+          breadcrumb={<ModuleBreadcrumb />}
           title={{
             icon: Inbox,
             title: headerTitle,
@@ -621,6 +620,5 @@ export default function CrmCommunicationsPage() {
               </section>
         </ListContainer>
       </PageContainer>
-    </>
   );
 }

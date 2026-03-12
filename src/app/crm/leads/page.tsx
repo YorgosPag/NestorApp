@@ -5,9 +5,11 @@ import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 
 export default function CrmLeadsPage() {
   return (
-    <>
-      <ModuleBreadcrumb className="px-6 pt-4" />
+    <section>
+      <header className="px-6 pt-4 pb-2">
+        <ModuleBreadcrumb />
+      </header>
       <PipelineTab />
-    </>
+    </section>
   );
 }

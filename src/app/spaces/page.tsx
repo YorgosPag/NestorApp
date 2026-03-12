@@ -61,11 +61,11 @@ export default function SpacesPage() {
   ];
   return (
     <div className={`flex h-screen ${colors.bg.primary}`}>
-        <ModuleBreadcrumb className="px-6 pt-4" />
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
           {/* Header */}
           <div className={`border-b ${colors.bg.primary}/95 backdrop-blur supports-[backdrop-filter]:${colors.bg.primary}/60`}>
+            <ModuleBreadcrumb className="px-4 pt-2" />
             <div className="flex h-14 items-center px-4">
               <div className="flex items-center gap-2">
                 <Layout className={`${iconSizes.md} ${colors.text.muted}`} />

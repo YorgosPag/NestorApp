@@ -27,8 +27,6 @@ import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
-
 export default function ProfilePage() {
   const { user, updateUserProfile } = useAuth();
   const { t } = useTranslation('common');
@@ -60,8 +58,6 @@ export default function ProfilePage() {
   };
 
   return (
-    <>
-    <ModuleBreadcrumb className="mb-4" />
     <Card className={borders.getElementBorder('card', 'default')}>
       <CardHeader>
         <CardTitle className={layout.flexCenterGap2}>
@@ -199,6 +195,5 @@ export default function ProfilePage() {
         </form>
       </CardContent>
     </Card>
-    </>
   );
 }

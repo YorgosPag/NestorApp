@@ -26,7 +26,6 @@
 import { requireAdminForPage } from '@/server/admin/admin-guards';
 import AIInboxClient from './AIInboxClient';
 import AIInboxUnauthorized from './AIInboxUnauthorized';
-import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 
 // ============================================================================
 // SERVER COMPONENT (PAGE)
@@ -38,13 +37,8 @@ export default async function AIInboxPage() {
   try {
     const adminContext = await requireAdminForPage('AI_INBOX_PAGE_ACCESS');
 
-    // Authorized → render client component
-    return (
-      <>
-        <ModuleBreadcrumb className="px-6 pt-4" />
-        <AIInboxClient adminContext={adminContext} />
-      </>
-    );
+    // Authorized → render client component (breadcrumb inside AIInboxHeader)
+    return <AIInboxClient adminContext={adminContext} />;
   } catch (error) {
     // Not authorized → render unauthorized view
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

@@ -31,6 +31,7 @@ import { TRIAGE_STATUSES } from '@/types/crm';
 import type { AdminContext } from '@/server/admin/admin-guards';
 import { PageContainer, ListContainer } from '@/core/containers';
 import AIInboxHeader from '@/components/admin/ai-inbox/AIInboxHeader';
+import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import { Spinner } from '@/components/ui/spinner';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { AdvancedFiltersPanel, aiInboxFiltersConfig, defaultAIInboxFilters, type AIInboxFilterState } from '@/components/core/AdvancedFilters';
@@ -38,6 +39,7 @@ import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTypography } from '@/hooks/useTypography';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { ENTITY_ROUTES } from '@/lib/routes';
 import {
   getTriageCommunications,
   getTriageStats,
@@ -664,6 +666,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
         showFilters={showFilters}
         setShowFilters={setShowFilters}
         isLive={connected}
+        breadcrumb={<ModuleBreadcrumb />}
       />
 
       {showDashboard && (
@@ -865,7 +868,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
                                   variant="ghost"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    router.push(`/crm/tasks/${comm.linkedTaskId}`);
+                                    router.push(ENTITY_ROUTES.crm.task(comm.linkedTaskId));
                                   }}
                                 >
                                   <Eye className={`${iconSizes.sm} ${spacing.margin.right.xs}`} />

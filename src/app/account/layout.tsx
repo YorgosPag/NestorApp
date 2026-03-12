@@ -39,6 +39,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ACCOUNT_ROUTES } from '@/lib/routes';
+import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 
 /**
  * Navigation item configuration
@@ -82,6 +83,7 @@ export default function AccountLayout({
     )}>
       {/* Page Header */}
       <header>
+        <ModuleBreadcrumb className="mb-2" />
         <h1 className={cn(
           typography.heading.lg,
           'text-2xl',

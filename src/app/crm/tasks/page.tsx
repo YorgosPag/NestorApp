@@ -127,8 +127,6 @@ export default function CrmTasksPage() {
   }, [activeCardIndex]);
 
   return (
-    <>
-    <ModuleBreadcrumb className="px-6 pt-4" />
     <PageContainer ariaLabel={t('tasks.title')}>
       <Toaster position="top-right" />
 
@@ -136,6 +134,7 @@ export default function CrmTasksPage() {
       <PageHeader
         variant="sticky-rounded"
         layout="single-row"
+        breadcrumb={<ModuleBreadcrumb />}
         title={{
           icon: Clock,
           title: t('tasks.title'),
@@ -185,6 +184,5 @@ export default function CrmTasksPage() {
         onTaskCreated={handleTaskCreated}
       />
     </PageContainer>
-    </>
   );
 }

@@ -90,10 +90,10 @@ export default function CrmCalendarPage() {
       <Toaster position="top-right" />
 
       <main className={cn('min-h-screen', colors.bg.secondary)}>
-        <ModuleBreadcrumb className="px-6 pt-4" />
         {/* Header */}
         <header className={cn(colors.bg.primary, 'shadow-sm border-b')}>
           <div className={cn(sp.padding.x.lg, sp.padding.y.md)}>
+            <ModuleBreadcrumb className="mb-2" />
             <div className={cn('flex items-center justify-between')}>
               <div className={cn('flex items-center', sp.gap.sm)}>
                 <CalendarDays className={cn(iconSizes.lg, colors.text.info)} />

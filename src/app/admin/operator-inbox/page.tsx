@@ -20,7 +20,6 @@
 import { requireAdminForPage } from '@/server/admin/admin-guards';
 import OperatorInboxClient from './OperatorInboxClient';
 import AIInboxUnauthorized from '@/app/admin/ai-inbox/AIInboxUnauthorized';
-import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 
 // ============================================================================
 // SERVER COMPONENT (PAGE)
@@ -29,12 +28,8 @@ import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 export default async function OperatorInboxPage() {
   try {
     const adminContext = await requireAdminForPage('OPERATOR_INBOX_PAGE_ACCESS');
-    return (
-      <>
-        <ModuleBreadcrumb className="px-6 pt-4" />
-        <OperatorInboxClient adminContext={adminContext} />
-      </>
-    );
+    // Breadcrumb is rendered inside OperatorInboxClient → PageHeader
+    return <OperatorInboxClient adminContext={adminContext} />;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return <AIInboxUnauthorized error={errorMessage} />;

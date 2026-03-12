@@ -29,6 +29,8 @@ interface ContactsHeaderProps {
   setShowFilters?: (show: boolean) => void;
   // 🏢 ENTERPRISE COUNT DISPLAY
   contactCount?: number;
+  /** Breadcrumb element to display inside PageHeader */
+  breadcrumb?: React.ReactNode;
 }
 
 // 🏢 ENTERPRISE: Search removed from header - using unified search in AdvancedFiltersPanel
@@ -41,6 +43,7 @@ export function ContactsHeader({
   showFilters,
   setShowFilters,
   contactCount,
+  breadcrumb,
 }: ContactsHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('contacts');
@@ -58,6 +61,7 @@ export function ContactsHeader({
       variant="sticky-rounded"
       layout="compact"
       spacing="compact"
+      breadcrumb={breadcrumb}
       title={{
         icon: Users,
         title: headerTitle,

@@ -32,8 +32,8 @@ export default function CrmPage() {
 
   return (
     <div className={pagePadding}>
-      <ModuleBreadcrumb className="mb-4" />
       <div className={sectionMargin}>
+        <ModuleBreadcrumb className="mb-2" />
         <div className={cn('flex items-center gap-3 mb-2')}>
             <div className={cn('flex items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg', iconSizes.xl2)}>
                 <AppWindow className={cn(iconSizes.lg, 'text-white')} />
