@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 194 ADRs | Last Updated: 2026-03-12
+**📊 Stats**: 198 ADRs | Last Updated: 2026-03-12
 
 ---
 
@@ -24,11 +24,11 @@
 | 📂 **Entity Systems** | 11 | [View](#entity-systems) |
 | 🔧 **Tools & Keyboard** | 8 | [View](#tools-keyboard) |
 | 🔍 **Filters & Search** | 1 | [View](#filters-search) |
-| 🔒 **Security & Auth** | 8 | [View](#security-auth) |
+| 🔒 **Security & Auth** | 7 | [View](#security-auth) |
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 43 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 47 | [View](#uncategorized) |
 
 ---
 
@@ -223,15 +223,16 @@
 | **ADR-200** | useEntityLink Hook — Centralized Entity Linking | ✅ Accepted | 2026-03-12 | Uncategorized | [📄](./adrs/ADR-200-useEntityLink-hook.md) |
 | **ADR-200** | Utility Hooks Centralization (Phase 2) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-200-utility-hooks-centralization.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
-| **ADR-201** | Centralized CompanyId Resolution | ✅ IMPLEMENTED | 2026-03-12 | Backend Systems / Multi-Tenant | [📄](./adrs/ADR-201-company-id-resolver.md) |
+| **ADR-201** | Centralized CompanyId Resolution | ✅ ✅ APPROVED | 2026-03-12 | Backend Systems / Multi-Tenant | [📄](./adrs/ADR-201-company-id-resolver.md) |
 | **ADR-202** | Floorplan Save Orchestrator | ✅ ✅ APPROVED | 2026-03-12 | Backend Systems / File Storage | [📄](./adrs/ADR-202-floorplan-save-orchestrator.md) |
 | **ADR-203** | Entity Page State Centralization | ✅ ✅ IMPLEMENTED | 2026-03-12 | Data & State / Hooks | [📄](./adrs/ADR-203-entity-page-state-centralization.md) |
-| **ADR-204** | Phase 3 — useEscapeKey, Entity Routes, Safe localStorage | ✅ IMPLEMENTED | 2026-03-12 | Code Quality / Centralization | [📄](./adrs/ADR-204-phase3-escape-routes-storage.md) |
-| **ADR-205** | Phase 4 — useInterval, useSortState, truncateText promotion | ✅ IMPLEMENTED | 2026-03-12 | Code Quality / Centralization | [📄](./adrs/ADR-205-phase4-useInterval-useSortState-truncateText.md) |
-| **ADR-206** | Phase 5 — Enterprise ID migration, useDebounce, formatFileSize dedup | ✅ IMPLEMENTED | 2026-03-12 | Code Quality / Centralization | [📄](./adrs/ADR-206-phase5-enterprise-id-debounce-filesize.md) |
-| **ADR-207** | Phase 6 — Collection utilities extraction (groupByKey, tallyBy, sumByKey) | ✅ IMPLEMENTED | 2026-03-12 | Code Quality / Centralization | [📄](./adrs/ADR-207-phase6-collection-utilities.md) |
-| **ADR-208** | Phase 7 — Date formatting deduplication (formatFlexibleDateTime, formatFlexibleTimeOnly) | ✅ IMPLEMENTED | 2026-03-12 | Code Quality / Centralization | [📄](./adrs/ADR-208-phase7-date-formatting-dedup.md) |
-| **ADR-209** | ID Consistency Audit & Remediation Roadmap | ✅ APPROVED | 2026-03-12 | Security / Data Integrity | [📄](./adrs/ADR-209-id-consistency-audit.md) |
+| **ADR-204** | Scattered Code Centralization — Phase 3 | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-204-phase3-escape-routes-storage.md) |
+| **ADR-205** | Scattered Code Centralization — Phase 4 | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-205-phase4-useInterval-useSortState-truncateText.md) |
+| **ADR-206** | Scattered Code Centralization — Phase 5 | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-206-phase5-enterprise-id-debounce-filesize.md) |
+| **ADR-207** | Scattered Code Centralization — Phase 6 (Collection Utilities) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-207-phase6-collection-utilities.md) |
+| **ADR-208** | Phase 7 — Date Formatting Deduplication | ✅ ✅ Implemented | 2026-01-01 | Centralization / Deduplication | [📄](./adrs/ADR-208-phase7-date-formatting-dedup.md) |
+| **ADR-209** | ID Consistency Audit & Remediation Roadmap | ✅ ✅ APPROVED | 2026-03-12 | Security / Data Integrity | [📄](./adrs/ADR-209-id-consistency-audit.md) |
+| **ADR-210** | Document ID Generation — Full Codebase Audit & Compliance Report | ✅ ✅ APPROVED | 2026-03-12 | Security / Data Integrity | [📄](./adrs/ADR-210-document-id-generation-audit.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -416,7 +417,6 @@
 | **ADR-068** | API Rate Limiting System | ✅ APPROVED | [View](./adrs/ADR-068-api-rate-limiting-system.md) |
 | **ADR-072** | AI Inbox HTML Rendering with Enterprise Sanitization | ✅ IMPLEMENTED | [View](./adrs/ADR-072-ai-inbox-html-rendering.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | [View](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
-| **ADR-209** | ID Consistency Audit & Remediation Roadmap | ✅ APPROVED | [View](./adrs/ADR-209-id-consistency-audit.md) |
 
 ---
 
@@ -497,6 +497,10 @@
 | **ADR-199** | Παρακολουθήματα Πωλήσεων (Parking & Storage as Sale Appurtenances) | ✅ APPROVED | [View](./adrs/ADR-199-sales-appurtenances.md) |
 | **ADR-200** | useEntityLink Hook — Centralized Entity Linking | ✅ Accepted | [View](./adrs/ADR-200-useEntityLink-hook.md) |
 | **ADR-200** | Utility Hooks Centralization (Phase 2) | ✅ APPROVED | [View](./adrs/ADR-200-utility-hooks-centralization.md) |
+| **ADR-204** | Scattered Code Centralization — Phase 3 | ✅ APPROVED | [View](./adrs/ADR-204-phase3-escape-routes-storage.md) |
+| **ADR-205** | Scattered Code Centralization — Phase 4 | ✅ APPROVED | [View](./adrs/ADR-205-phase4-useInterval-useSortState-truncateText.md) |
+| **ADR-206** | Scattered Code Centralization — Phase 5 | ✅ APPROVED | [View](./adrs/ADR-206-phase5-enterprise-id-debounce-filesize.md) |
+| **ADR-207** | Scattered Code Centralization — Phase 6 (Collection Utilities) | ✅ APPROVED | [View](./adrs/ADR-207-phase6-collection-utilities.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
