@@ -12,7 +12,7 @@ export const getCol = <T = unknown>(path: string, converter?: FirestoreDataConve
 export const mapDocs = <T>(qs: QuerySnapshot<T>) =>
   qs.docs.map((d) => ({ id: d.id, ...(d.data() as T) }));
 
-// ADR-217: Thin wrapper delegating to centralized normalizeToDate
+// ADR-218: Thin wrapper delegating to centralized normalizeToDate
 export const asDate = (v: unknown): Date => normalizeToDate(v) ?? new Date(NaN);
 
 // Re-export from centralized array-utils (ADR-213 Phase 10)

@@ -132,7 +132,7 @@ export interface UseAllCompanyFilesReturn {
 // HELPER FUNCTIONS
 // ============================================================================
 
-// ADR-217: toISOStringOrPassthrough replaced by centralized normalizeToISO
+// ADR-218: toISOStringOrPassthrough replaced by centralized normalizeToISO
 const toISOStringOrPassthrough = (value: unknown): string | undefined =>
   normalizeToISO(value) ?? (value as string | undefined);
 

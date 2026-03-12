@@ -140,7 +140,7 @@ export function GeneralProjectTab({
         }));
         RealtimeService.dispatch('PROJECT_UPDATED', {
           projectId: project.id,
-          updates: { companyId: newId },
+          updates: { companyId: newId ?? undefined },
           timestamp: Date.now(),
         });
         return { success: true };

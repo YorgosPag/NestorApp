@@ -63,7 +63,7 @@ function getObject<T extends Record<string, unknown>>(
   return typeof value === 'object' && value !== null ? (value as T) : defaultValue;
 }
 
-// ADR-217: getTimestampString replaced by centralized fieldToISO (import at top of file)
+// ADR-218: getTimestampString replaced by centralized fieldToISO (import at top of file)
 
 /**
  * Convert Firestore document to MessageListItem

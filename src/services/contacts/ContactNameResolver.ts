@@ -575,7 +575,7 @@ export class ContactNameResolver {
   }
 
   /**
-   * 🏢 ENTERPRISE: Format timestamp safely (ADR-217: delegates to centralized normalizeToISO)
+   * 🏢 ENTERPRISE: Format timestamp safely (ADR-218: delegates to centralized normalizeToISO)
    */
   private static formatTimestamp(timestamp?: Date | { toDate: () => Date }): string | undefined {
     return normalizeToISO(timestamp) ?? undefined;

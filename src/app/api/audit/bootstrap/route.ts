@@ -84,7 +84,7 @@ const FIRESTORE_IN_LIMIT = 10; // Firestore `in` query max items
 // HELPER FUNCTIONS
 // ============================================================================
 
-// ADR-217: toISOString replaced by centralized normalizeToISO from @/lib/date-local
+// ADR-218: toISOString replaced by centralized normalizeToISO from @/lib/date-local
 
 // ============================================================================
 // FORCE DYNAMIC - Enterprise requirement

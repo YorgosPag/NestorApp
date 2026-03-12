@@ -8,6 +8,7 @@
  *
  * @module services/workspace.service
  * @enterprise ADR-032 - Workspace-based Multi-Tenancy
+ * @migration ADR-214 Phase 2 — reads/writes via FirestoreQueryService
  *
  * @example
  * ```typescript
@@ -25,21 +26,8 @@
  * ```
  */
 
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  updateDoc,
-  query,
-  where,
-  orderBy,
-  limit as firestoreLimit,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { workspaceConverter } from '@/lib/firestore/converters/workspace.converter';
+import { where, orderBy } from 'firebase/firestore';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import {
   SPECIAL_WORKSPACE_IDS,
   DEFAULT_WORKSPACE_SETTINGS,
@@ -51,11 +39,42 @@ import type {
   UpdateWorkspaceInput,
   ListWorkspacesParams,
 } from '@/types/workspace';
+import type { DocumentData } from 'firebase/firestore';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 import { generateWorkspaceId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { normalizeToISO } from '@/lib/date-local';
+
 const logger = createModuleLogger('WorkspaceService');
+
+// ============================================================================
+// POST-QUERY NORMALIZATION (replaces workspaceConverter.fromFirestore)
+// ============================================================================
+
+/**
+ * Convert raw Firestore document data to typed Workspace.
+ * Handles Timestamp → ISO string conversion for date fields.
+ */
+function toWorkspace(raw: DocumentData): Workspace {
+  const createdAt = normalizeToISO(raw.createdAt) ?? new Date().toISOString();
+  const updatedAt = normalizeToISO(raw.updatedAt) ?? undefined;
+
+  return {
+    id: raw.id as string,
+    type: raw.type as Workspace['type'],
+    displayName: raw.displayName as string,
+    description: raw.description as string | undefined,
+    companyId: raw.companyId as string | undefined,
+    status: raw.status as Workspace['status'],
+    settings: raw.settings as Workspace['settings'],
+    createdAt,
+    createdBy: raw.createdBy as string,
+    updatedAt,
+    updatedBy: raw.updatedBy as string | undefined,
+    metadata: raw.metadata as Workspace['metadata'],
+  };
+}
 
 // ============================================================================
 // WORKSPACE SERVICE
@@ -97,11 +116,12 @@ export class WorkspaceService {
       metadata,
     };
 
-    // Save to Firestore
-    const workspaceRef = doc(db, COLLECTIONS.WORKSPACES, workspaceId).withConverter(
-      workspaceConverter
+    // Save to Firestore via centralized service
+    await firestoreQueryService.create(
+      'WORKSPACES',
+      workspace as unknown as Record<string, unknown>,
+      { documentId: workspaceId }
     );
-    await setDoc(workspaceRef, workspace);
 
     logger.info(`✅ [WorkspaceService] Created workspace: ${workspaceId} (${type})`);
 
@@ -154,16 +174,8 @@ export class WorkspaceService {
    * @returns Workspace or null
    */
   static async getWorkspaceById(workspaceId: string): Promise<Workspace | null> {
-    const workspaceRef = doc(db, COLLECTIONS.WORKSPACES, workspaceId).withConverter(
-      workspaceConverter
-    );
-    const snapshot = await getDoc(workspaceRef);
-
-    if (!snapshot.exists()) {
-      return null;
-    }
-
-    return snapshot.data();
+    const raw = await firestoreQueryService.getById<DocumentData>('WORKSPACES', workspaceId);
+    return raw ? toWorkspace(raw) : null;
   }
 
   /**
@@ -175,27 +187,16 @@ export class WorkspaceService {
   static async listWorkspaces(params: ListWorkspacesParams = {}): Promise<Workspace[]> {
     const { type, status, limit: limitParam } = params;
 
-    // Build query
-    let q = query(
-      collection(db, COLLECTIONS.WORKSPACES).withConverter(workspaceConverter),
-      orderBy('displayName', 'asc')
-    );
+    const constraints = [orderBy('displayName', 'asc')];
+    if (type) constraints.push(where('type', '==', type));
+    if (status) constraints.push(where('status', '==', status));
 
-    // Add filters
-    if (type) {
-      q = query(q, where('type', '==', type));
-    }
-    if (status) {
-      q = query(q, where('status', '==', status));
-    }
-    if (limitParam) {
-      q = query(q, firestoreLimit(limitParam));
-    }
+    const result = await firestoreQueryService.getAll<DocumentData>('WORKSPACES', {
+      constraints,
+      maxResults: limitParam,
+    });
 
-    // Execute query
-    const snapshot = await getDocs(q);
-
-    return snapshot.docs.map((doc) => doc.data());
+    return result.documents.map(toWorkspace);
   }
 
   /**
@@ -219,20 +220,16 @@ export class WorkspaceService {
    * @returns Workspace or null
    */
   static async getWorkspaceForCompany(companyId: string): Promise<Workspace | null> {
-    const q = query(
-      collection(db, COLLECTIONS.WORKSPACES).withConverter(workspaceConverter),
-      where('type', '==', 'company'),
-      where('companyId', '==', companyId),
-      firestoreLimit(1)
-    );
+    const result = await firestoreQueryService.getAll<DocumentData>('WORKSPACES', {
+      constraints: [
+        where('type', '==', 'company'),
+        where('companyId', '==', companyId),
+      ],
+      maxResults: 1,
+    });
 
-    const snapshot = await getDocs(q);
-
-    if (snapshot.empty) {
-      return null;
-    }
-
-    return snapshot.docs[0].data();
+    if (result.isEmpty) return null;
+    return toWorkspace(result.documents[0]);
   }
 
   // ==========================================================================
@@ -251,8 +248,7 @@ export class WorkspaceService {
   ): Promise<void> {
     const { displayName, description, status, settings, updatedBy, metadata } = input;
 
-    const updates: Partial<Workspace> = {
-      updatedAt: new Date().toISOString(),
+    const updates: Record<string, unknown> = {
       updatedBy,
     };
 
@@ -266,8 +262,7 @@ export class WorkspaceService {
     }
     if (metadata !== undefined) updates.metadata = metadata;
 
-    const workspaceRef = doc(db, COLLECTIONS.WORKSPACES, workspaceId);
-    await updateDoc(workspaceRef, updates);
+    await firestoreQueryService.update('WORKSPACES', workspaceId, updates);
 
     logger.info(`✅ [WorkspaceService] Updated workspace: ${workspaceId}`);
 

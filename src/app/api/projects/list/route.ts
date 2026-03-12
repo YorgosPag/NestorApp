@@ -108,7 +108,7 @@ function getArray(data: Record<string, unknown>, field: string): unknown[] | und
   return Array.isArray(value) ? value : undefined;
 }
 
-// ADR-217: getTimestampString replaced by centralized fieldToISO from @/lib/date-local
+// ADR-218: getTimestampString replaced by centralized fieldToISO from @/lib/date-local
 
 // ============================================================================
 // STATUS NORMALIZER

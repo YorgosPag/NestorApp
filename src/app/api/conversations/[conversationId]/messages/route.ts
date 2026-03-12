@@ -101,7 +101,7 @@ function getObject<T extends Record<string, unknown>>(
   return typeof value === 'object' && value !== null ? (value as T) : defaultValue;
 }
 
-// ADR-217: getTimestampString replaced by centralized fieldToISO from @/lib/date-local
+// ADR-218: getTimestampString replaced by centralized fieldToISO from @/lib/date-local
 
 // ============================================================================
 // FORCE DYNAMIC

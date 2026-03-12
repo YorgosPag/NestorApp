@@ -73,7 +73,7 @@ export const workspaceConverter: FirestoreDataConverter<Workspace> = {
   ): Workspace {
     const data = snapshot.data(options);
 
-    // ADR-217: Centralized timestamp conversion
+    // ADR-218: Centralized timestamp conversion
     const createdAt = normalizeToISO(data.createdAt) ?? new Date().toISOString();
     const updatedAt = normalizeToISO(data.updatedAt) ?? undefined;
 

@@ -59,7 +59,7 @@ interface MessageDocPartial {
   };
 }
 
-// ADR-217: Delegates to centralized normalizeToISO
+// ADR-218: Delegates to centralized normalizeToISO
 function extractDateString(createdAt: MessageDocPartial['createdAt']): string {
   return normalizeToISO(createdAt) ?? new Date().toISOString();
 }

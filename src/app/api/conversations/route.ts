@@ -102,7 +102,7 @@ function getArray<T>(data: Record<string, unknown>, field: string, defaultValue:
   return Array.isArray(value) ? (value as T[]) : defaultValue;
 }
 
-// ADR-217: getTimestampString → fieldToISO, getNestedTimestamp → getNestedTimestampISO from @/lib/date-local
+// ADR-218: getTimestampString → fieldToISO, getNestedTimestamp → getNestedTimestampISO from @/lib/date-local
 
 // ============================================================================
 // FORCE DYNAMIC

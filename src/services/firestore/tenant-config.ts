@@ -26,8 +26,8 @@ const TENANT_OVERRIDES: Partial<Record<CollectionKey, TenantFieldConfig>> = {
   TEAMS:            { mode: 'tenantId', fieldName: 'tenantId' },
   ROLES:            { mode: 'tenantId', fieldName: 'tenantId' },
   USER_PREFERENCES: { mode: 'tenantId', fieldName: 'tenantId' },
-  WORKSPACES:       { mode: 'tenantId', fieldName: 'tenantId' },
-  WORKSPACE_MEMBERS:{ mode: 'tenantId', fieldName: 'tenantId' },
+  WORKSPACES:       { mode: 'companyId', fieldName: 'companyId' },
+  WORKSPACE_MEMBERS:{ mode: 'companyId', fieldName: 'companyId' },
   PERMISSIONS:      { mode: 'tenantId', fieldName: 'tenantId' },
 
   // --- userId collections ---

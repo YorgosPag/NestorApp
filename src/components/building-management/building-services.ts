@@ -9,7 +9,7 @@
  */
 
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
-import { RealtimeService } from '@/services/realtime';
+import { RealtimeService, type BuildingUpdatedPayload } from '@/services/realtime';
 // 🏢 ENTERPRISE: Centralized API client (Fortune-500 pattern)
 import { apiClient } from '@/lib/api/enterprise-api-client';
 // 🏢 ENTERPRISE: Multi-address support (ADR-167)
@@ -66,10 +66,10 @@ export async function updateBuilding(
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     // Dispatch ALL changed fields so components update their local state
-    const dispatchUpdates: Record<string, unknown> = {};
+    const dispatchUpdates: BuildingUpdatedPayload['updates'] = {};
     for (const [key, value] of Object.entries(updates)) {
       if (value !== undefined) {
-        dispatchUpdates[key] = value;
+        (dispatchUpdates as Record<string, unknown>)[key] = value;
       }
     }
     RealtimeService.dispatch('BUILDING_UPDATED', {

@@ -18,7 +18,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { Project, ProjectStatus } from '@/types/project';
 import type { ProjectAddress } from '@/types/project/addresses';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
-import { RealtimeService } from '@/services/realtime';
+import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
 // 🏢 ENTERPRISE: Centralized API client (Fortune-500 pattern)
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -137,10 +137,10 @@ export async function updateProjectClient(
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     // Dynamic dispatch: only include non-undefined fields to avoid overwriting existing values
-    const dispatchUpdates: Record<string, unknown> = {};
+    const dispatchUpdates: ProjectUpdatedPayload['updates'] = {};
     for (const [key, value] of Object.entries(updates)) {
       if (value !== undefined) {
-        dispatchUpdates[key] = value;
+        (dispatchUpdates as Record<string, unknown>)[key] = value;
       }
     }
     RealtimeService.dispatch('PROJECT_UPDATED', {

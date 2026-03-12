@@ -43,7 +43,7 @@ const logger = createModuleLogger('FirestoreBOQRepository');
 // NORMALIZERS — Firestore → Domain
 // ============================================================================
 
-// ADR-217: Delegates to centralized normalizeToISO
+// ADR-218: Delegates to centralized normalizeToISO
 const toDateString = (value: unknown): string =>
   normalizeToISO(value) ?? new Date().toISOString();
 

@@ -85,7 +85,7 @@ function buildTenantConstraints(
   return [where(config.fieldName, '==', value)];
 }
 
-// ADR-217: chunkArray imported from centralized @/lib/array-utils
+// ADR-218: chunkArray imported from centralized @/lib/array-utils
 
 /** Extract typed document data from a snapshot */
 function extractDoc<T>(snap: DocumentSnapshot): T | null {

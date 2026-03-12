@@ -29,7 +29,7 @@ export function normalizeToDate(val: unknown): Date | null {
 /**
  * Timestamp / Date / string / number → ISO string, or null.
  * Single source of truth for Firestore timestamp → string conversion.
- * @see ADR-217
+ * @see ADR-218
  */
 export function normalizeToISO(val: unknown): string | null {
   const d = normalizeToDate(val);
@@ -39,7 +39,7 @@ export function normalizeToISO(val: unknown): string | null {
 /**
  * Extract a Firestore document field as ISO string.
  * Replaces scattered `getTimestampString()` / `toISOStringOrPassthrough()` helpers.
- * @see ADR-217
+ * @see ADR-218
  */
 export function fieldToISO(
   data: Record<string, unknown>,
@@ -52,7 +52,7 @@ export function fieldToISO(
 /**
  * Extract timestamp from nested object path (e.g., "audit.createdAt").
  * Replaces `getNestedTimestamp()` in conversations/route.ts.
- * @see ADR-217
+ * @see ADR-218
  */
 export function getNestedTimestampISO(data: Record<string, unknown>, path: string): string {
   const parts = path.split('.');
