@@ -95,12 +95,12 @@ export function ListLayout({
           }
           floorId={
             selectedPropertyIds[0]
-              ? filteredProperties.find((p) => p.id === selectedPropertyIds[0])?.floorId ?? null
+              ? filteredProperties.find((p) => p.id === selectedPropertyIds[0])?.floorId || null
               : null
           }
           buildingId={
             selectedPropertyIds[0]
-              ? filteredProperties.find((p) => p.id === selectedPropertyIds[0])?.buildingId ?? null
+              ? filteredProperties.find((p) => p.id === selectedPropertyIds[0])?.buildingId || null
               : null
           }
           floorNumber={
@@ -110,7 +110,7 @@ export function ListLayout({
           }
           companyId={
             selectedPropertyIds[0]
-              ? (filteredProperties.find((p) => p.id === selectedPropertyIds[0]) as Record<string, unknown> | undefined)?.companyId as string | undefined ?? null
+              ? (filteredProperties.find((p) => p.id === selectedPropertyIds[0]) as Record<string, unknown> | undefined)?.companyId as string | undefined || null
               : null
           }
         />

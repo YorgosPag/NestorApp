@@ -121,8 +121,10 @@ export function ReadOnlyMediaViewer({
   // Critical for super_admin who may have a different companyId or none in claims.
   const effectiveCompanyId = propCompanyId || user?.companyId;
 
-  // 🔍 DEBUG: Log all params to help diagnose floor floorplan loading issues
-  console.error(`[ReadOnlyMediaViewer] DEBUG PARAMS: unitId="${unitId}" floorId="${floorId}" buildingId="${buildingId}" floorNumber=${floorNumber} propCompanyId="${propCompanyId}" userCompanyId="${user?.companyId}" effectiveCompanyId="${effectiveCompanyId}"`);
+  // 🔍 DEBUG: Log params only when data is available (avoid spam on initial null renders)
+  if (unitId && effectiveCompanyId) {
+    logger.debug('Params resolved', { data: { unitId, floorId, buildingId, floorNumber, propCompanyId, effectiveCompanyId } });
+  }
 
   // ==========================================================================
   // 🏢 ENTERPRISE: URL-Based State (Deep Linking Support)
