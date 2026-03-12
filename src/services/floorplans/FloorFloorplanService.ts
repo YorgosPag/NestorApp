@@ -291,13 +291,24 @@ export class FloorFloorplanService {
         return null;
       }
 
-      // Download scene JSON from Storage
-      console.error('[FloorFloorplanService] ⬇️ Downloading from Storage', { storagePath: fileRecord.storagePath });
-      const storageRef = ref(storage, fileRecord.storagePath);
-      const sceneBytes = await getBytes(storageRef);
-      console.error('[FloorFloorplanService] ✅ Downloaded', { bytes: sceneBytes.byteLength });
-      const sceneJson = new TextDecoder().decode(sceneBytes);
-      console.error('[FloorFloorplanService] 📄 JSON preview:', sceneJson.substring(0, 200));
+      // Download scene JSON — prefer downloadUrl (signed URL, bypasses Storage rules)
+      // Fallback to getBytes(storagePath) if downloadUrl is missing
+      let sceneJson: string;
+      if (fileRecord.downloadUrl) {
+        console.error('[FloorFloorplanService] ⬇️ Downloading via downloadUrl');
+        const response = await fetch(fileRecord.downloadUrl);
+        if (!response.ok) {
+          floorplanLogger.warn(`Download failed: ${response.status}`, { floorId, fileId: fileRecord.id });
+          return null;
+        }
+        sceneJson = await response.text();
+      } else {
+        console.error('[FloorFloorplanService] ⬇️ Downloading via storagePath', { storagePath: fileRecord.storagePath });
+        const storageRef = ref(storage, fileRecord.storagePath);
+        const sceneBytes = await getBytes(storageRef);
+        sceneJson = new TextDecoder().decode(sceneBytes);
+      }
+      console.error('[FloorFloorplanService] ✅ Downloaded', { bytes: sceneJson.length });
       const scene = JSON.parse(sceneJson) as SceneModel;
       console.error('[FloorFloorplanService] ✅ Parsed scene', { entities: scene.entities?.length || 0 });
 
