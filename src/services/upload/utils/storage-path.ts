@@ -326,17 +326,14 @@ export function buildStoragePath(params: StoragePathParams): StoragePathResult {
 // ============================================================================
 
 /**
- * Generates a unique file ID using timestamp + random string
- * Format: file_{timestamp}_{random}
+ * Generates a unique file ID using cryptographically secure UUID.
+ * Delegates to enterprise-id.service for consistent ID generation.
+ * Format: file_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
  *
  * @example
- * const fileId = generateFileId(); // 'file_1705234567890_x7k2m9'
+ * const fileId = generateFileId(); // 'file_a1b2c3d4-...'
  */
-export function generateFileId(): string {
-  const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 8);
-  return `file_${timestamp}_${random}`;
-}
+export { generateFileId } from '@/services/enterprise-id.service';
 
 /**
  * Extracts file extension from filename

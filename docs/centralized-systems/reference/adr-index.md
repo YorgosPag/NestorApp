@@ -228,6 +228,7 @@
 | **ADR-203** | Entity Page State Centralization | ✅ ✅ IMPLEMENTED | 2026-03-12 | Data & State / Hooks | [📄](./adrs/ADR-203-entity-page-state-centralization.md) |
 | **ADR-204** | Phase 3 — useEscapeKey, Entity Routes, Safe localStorage | ✅ IMPLEMENTED | 2026-03-12 | Code Quality / Centralization | [📄](./adrs/ADR-204-phase3-escape-routes-storage.md) |
 | **ADR-205** | Phase 4 — useInterval, useSortState, truncateText promotion | ✅ IMPLEMENTED | 2026-03-12 | Code Quality / Centralization | [📄](./adrs/ADR-205-phase4-useInterval-useSortState-truncateText.md) |
+| **ADR-206** | Phase 5 — Enterprise ID migration, useDebounce, formatFileSize dedup | ✅ IMPLEMENTED | 2026-03-12 | Code Quality / Centralization | [📄](./adrs/ADR-206-phase5-enterprise-id-debounce-filesize.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

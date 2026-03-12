@@ -23,6 +23,7 @@ import { useSemanticColors, type UseSemanticColorsReturn } from '@/ui-adapters/r
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
+import { generatePhotoId as enterpriseGeneratePhotoId } from '@/services/enterprise-id.service';
 
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('PhotoPreviewModal');
@@ -576,13 +577,8 @@ export function PhotoPreviewModal({
     return finalUrl;
   };
 
-  // Generate unique photo ID for sharing - ΧΩΡΙΣ όνομα, μόνο hash για URL safety
-  const generatePhotoId = () => {
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 10); // Μακρύτερο random
-    const photoTypePrefix = photoType || 'gallery';
-    return `${photoTypePrefix}_${timestamp}_${random}`;
-  };
+  // Generate unique photo ID for sharing — delegates to enterprise-id.service
+  const generatePhotoId = () => enterpriseGeneratePhotoId();
 
   const shareData = {
     title: title,

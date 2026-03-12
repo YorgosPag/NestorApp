@@ -19,6 +19,7 @@
  */
 
 import { formatDateShort } from '@/lib/intl-utils';
+import { generateSessionId } from '@/services/enterprise-id.service';
 import {
   collection,
   doc,
@@ -347,7 +348,7 @@ export class EnterpriseSessionService {
     }
 
     // Generate session ID
-    const sessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    const sessionId = generateSessionId();
 
     // Get device and location info
     const deviceInfo = getDeviceInfo();

@@ -18,6 +18,7 @@ import {
   orderBy,
   QueryConstraint,
 } from 'firebase/firestore';
+import { generateObligationId } from '@/services/enterprise-id.service';
 import { auth, db } from '@/lib/firebase';
 import type {
   ObligationDocument,
@@ -110,7 +111,7 @@ const createAuditEvent = (
   actor: string,
   details: string
 ): ObligationAuditEvent => ({
-  id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  id: generateObligationId(),
   action,
   actor,
   occurredAt: new Date(),
@@ -640,7 +641,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
       );
 
       const issueLogEntry: ObligationIssueLogEntry = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        id: generateObligationId(),
         transmittalId: transmittalDocRef.id,
         issuedAt: now,
         issuedBy: currentUser.uid,

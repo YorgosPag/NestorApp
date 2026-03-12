@@ -13,6 +13,7 @@
 // - Social media campaign tracking
 // - Performance metrics collection
 //
+import { generateShareId } from '@/services/enterprise-id.service';
 // ============================================================================
 
 import { type SocialPlatformType } from './platform-config';
@@ -275,9 +276,7 @@ export class AnalyticsService {
    * Generates unique tracking identifier
    */
   static generateTrackingId(): string {
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 8);
-    return `share_${timestamp}_${random}`;
+    return generateShareId();
   }
 
   // ============================================================================

@@ -3,6 +3,7 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import type { FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import { validateFile } from '@/utils/file-validation';
+import { FILE_TYPE_CONFIG } from '@/config/file-upload-config';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useMultiplePhotosHandlers');
@@ -78,7 +79,7 @@ export function useMultiplePhotosHandlers({
       // 🏢 ADR-054: Use centralized validateFile() instead of inline validation
       const validation = validateFile(file, {
         fileType: 'image',
-        maxSize: 5 * 1024 * 1024, // 5MB
+        maxSize: FILE_TYPE_CONFIG.image.maxSize,
       });
 
       if (!validation.isValid) {

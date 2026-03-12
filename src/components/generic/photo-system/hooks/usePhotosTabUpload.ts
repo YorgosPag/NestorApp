@@ -13,6 +13,7 @@
 //
 // This hook ONLY adds PhotosTab-specific logic (photos array management)
 //
+import { generatePhotoId } from '@/services/enterprise-id.service';
 // ============================================================================
 
 import { useCallback } from 'react';
@@ -146,7 +147,7 @@ export function usePhotosTabUpload({
       if (url) {
         // Create new photo object
         const newPhoto: Photo = {
-          id: `photo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          id: generatePhotoId(),
           src: url,
           alt: `${entityName || 'Photo'} - ${currentFile.name}`,
           name: fileName || currentFile.name,

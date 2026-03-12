@@ -11,6 +11,7 @@ import { useLevels } from '../../systems/levels';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
+import { formatFileSize } from '@/utils/file-validation';
 
 export function PreviewStep() {
   const iconSizes = useIconSizes();
@@ -23,15 +24,6 @@ export function PreviewStep() {
   const selectedLevel = importWizard.selectedLevelId 
     ? levels.find(l => l.id === importWizard.selectedLevelId)
     : null;
-
-  const formatFileSize = (bytes: number) => {
-    if (!bytes) return '0 Bytes';
-    const kb = bytes / 1024;
-    if (kb < 1024) {
-      return `${kb.toFixed(1)} KB`;
-    }
-    return `${(kb / 1024).toFixed(1)} MB`;
-  };
 
   return (
     <section className={PANEL_LAYOUT.SPACING.GAP_XL}>

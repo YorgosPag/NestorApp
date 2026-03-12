@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from "react";
+import { useDebounce } from '@/hooks/useDebounce';
 
 export function useAutosave<T>(data: T, isEditing: boolean, delay = 2000) {
   const [autoSaving, setAutoSaving] = useState(false);
@@ -11,19 +12,18 @@ export function useAutosave<T>(data: T, isEditing: boolean, delay = 2000) {
   const stopEditing = () => { /* noop */ };
   const setDirty = () => { dirtyRef.current = true; };
 
+  const debouncedData = useDebounce(data, delay);
+
   useEffect(() => {
-    if (!isEditing) return;
+    if (!isEditing || !dirtyRef.current) return;
+    setAutoSaving(true);
     const t = setTimeout(() => {
-      if (!dirtyRef.current) return;
-      setAutoSaving(true);
-      setTimeout(() => {
-        setAutoSaving(false);
-        setLastSaved(new Date());
-        dirtyRef.current = false;
-      }, 1000);
-    }, delay);
+      setAutoSaving(false);
+      setLastSaved(new Date());
+      dirtyRef.current = false;
+    }, 1000);
     return () => clearTimeout(t);
-  }, [data, isEditing, delay]);
+  }, [debouncedData, isEditing]);
 
   return { autoSaving, lastSaved, startEditing, stopEditing, setDirty };
 }

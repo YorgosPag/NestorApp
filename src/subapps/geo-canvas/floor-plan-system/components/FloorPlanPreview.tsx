@@ -6,6 +6,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { ParserResult } from '../types';
 import { layoutUtilities } from '@/styles/design-tokens';
+import { formatFileSize } from '@/utils/file-validation';
 
 /**
  * 🖼️ FLOOR PLAN PREVIEW COMPONENT
@@ -35,13 +36,6 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
   const { t } = useTranslationLazy('geo-canvas');
   const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
-
-  // Format file size
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-  };
 
   return (
     <article className={`flex flex-col gap-4 ${className}`} aria-labelledby="floor-plan-preview-title">

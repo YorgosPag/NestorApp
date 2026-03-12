@@ -14,7 +14,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('MultiplePhotosCompact');
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
-import type { UploadPurpose } from '@/config/file-upload-config';
+import { FILE_TYPE_CONFIG, type UploadPurpose } from '@/config/file-upload-config';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import {
   PHOTO_TEXT_COLORS,
@@ -241,7 +241,7 @@ export function MultiplePhotosCompact({
               <EnterprisePhotoUpload
                 key={`compact-enterprise-slot-${index}-${photosKey}`}
                 purpose={purpose ?? 'photo'}
-                maxSize={5 * 1024 * 1024} // 5MB
+                maxSize={FILE_TYPE_CONFIG.image.maxSize}
                 photoFile={photo.file}
                 photoPreview={photoPreviewWithCacheBuster}
                 onFileChange={(file) => {

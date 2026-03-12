@@ -40,6 +40,7 @@
 
 import { auth } from '@/lib/firebase';
 import type { User as FirebaseUser } from 'firebase/auth';
+import { generateRequestId as _generateRequestId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('enterprise-api-client');
 
@@ -693,7 +694,7 @@ export class EnterpriseApiClient {
    * Generate unique request ID για tracing
    */
   private generateRequestId(): string {
-    return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return _generateRequestId();
   }
 
   /**

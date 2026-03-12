@@ -77,7 +77,9 @@ export interface UseFloorplanUploadReturn {
 // CONSTANTS
 // ============================================================================
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024;
+// Use canonical upload limit from file-upload-config (50MB for 'any' file type)
+import { UPLOAD_LIMITS } from '@/config/file-upload-config';
+const MAX_FILE_SIZE = UPLOAD_LIMITS.MAX_FILE_SIZE;
 
 const ERROR_MESSAGES: Record<UploadErrorCode, string> = {
   AUTH_NOT_AUTHENTICATED: 'Πρέπει να είστε συνδεδεμένος για να ανεβάσετε αρχεία.',

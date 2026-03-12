@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import type { StorageUnit, StorageType } from '@/types/storage';
 import { calculatePrice } from './storageFormUtils';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface UseStorageFormStateProps {
   unit: StorageUnit | null;
@@ -37,6 +38,11 @@ export function useStorageFormState({ unit, formType, building }: UseStorageForm
   const [newFeature, setNewFeature] = useState('');
   const [isCalculatingPrice, setIsCalculatingPrice] = useState(false);
 
+  // Debounce price-calculation inputs (500ms inactivity)
+  const debouncedArea = useDebounce(formData.area, 500);
+  const debouncedFloor = useDebounce(formData.floor, 500);
+  const debouncedType = useDebounce(formData.type, 500);
+
   useEffect(() => {
     if (unit) {
       setFormData(unit);
@@ -49,18 +55,15 @@ export function useStorageFormState({ unit, formType, building }: UseStorageForm
       }));
     }
   }, [unit, formType]);
-  
+
   useEffect(() => {
-    if (formData.area && formData.area > 0 && !unit) { // only for new units
+    if (debouncedArea && debouncedArea > 0 && !unit) {
       setIsCalculatingPrice(true);
-      const timeout = setTimeout(() => {
-        const calculatedPrice = calculatePrice(formData.area!, formData.floor!, formData.type!);
-        setFormData(prev => ({ ...prev, price: calculatedPrice }));
-        setIsCalculatingPrice(false);
-      }, 500); // reduced delay
-      return () => clearTimeout(timeout);
+      const calculatedPrice = calculatePrice(debouncedArea, debouncedFloor!, debouncedType!);
+      setFormData(prev => ({ ...prev, price: calculatedPrice }));
+      setIsCalculatingPrice(false);
     }
-  }, [formData.area, formData.floor, formData.type, unit]);
+  }, [debouncedArea, debouncedFloor, debouncedType, unit]);
 
 
   // 🏢 ENTERPRISE: More flexible signature for component compatibility

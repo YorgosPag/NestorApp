@@ -6,7 +6,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { EnterprisePhotoUpload } from './EnterprisePhotoUpload';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
-import type { UploadPurpose } from '@/config/file-upload-config';
+import { FILE_TYPE_CONFIG, type UploadPurpose } from '@/config/file-upload-config';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -262,7 +262,7 @@ export function MultiplePhotosFull({
               <EnterprisePhotoUpload
                 key={`full-enterprise-slot-${index}-${photosKey}`}
                 purpose={purpose ?? 'photo'}
-                maxSize={5 * 1024 * 1024} // 5MB
+                maxSize={FILE_TYPE_CONFIG.image.maxSize}
                 photoFile={photo.file}
                 photoPreview={photoPreviewWithCacheBuster}
                 customFileName={photo.fileName} // 🔥 ΔΙΟΡΘΩΣΗ: Περνάμε το custom filename

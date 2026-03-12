@@ -12,6 +12,11 @@
  */
 
 import {
+  generateMetricId as _generateMetricId,
+  generateSubscriptionId as _generateSubscriptionId,
+  generateSessionId as _generateSessionId,
+} from '@/services/enterprise-id.service';
+import {
   PerformanceMetric,
   PerformanceSnapshot,
   PerformanceSource,
@@ -638,11 +643,11 @@ export class EnterprisePerformanceManager {
   // 🔧 UTILITY METHODS
 
   private generateMetricId(): string {
-    return `metric_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+    return _generateMetricId();
   }
 
   private generateSubscriptionId(): string {
-    return `sub_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+    return _generateSubscriptionId();
   }
 
   private mapEntryTypeToCategory(entryType: string): PerformanceCategory {
@@ -734,7 +739,7 @@ export class EnterprisePerformanceManager {
 
     let sessionId = sessionStorage.getItem('performance-session-id');
     if (!sessionId) {
-      sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+      sessionId = _generateSessionId();
       sessionStorage.setItem('performance-session-id', sessionId);
     }
     return sessionId;

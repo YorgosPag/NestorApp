@@ -107,6 +107,16 @@ export const ENTERPRISE_ID_PREFIXES = {
   EXPENSE_DOC: 'exdoc',
 
   // ==========================================================================
+  // FILE & MEDIA OPERATIONS
+  // ==========================================================================
+  PHOTO: 'photo',
+  ATTACHMENT: 'att',
+  FILE: 'file',
+  SHARE: 'share',
+  PENDING: 'pending',
+  SUBSCRIPTION: 'sub',
+
+  // ==========================================================================
   // OPTIMISTIC & TEMPORARY
   // ==========================================================================
   OPTIMISTIC: 'opt',
@@ -680,6 +690,58 @@ export class EnterpriseIdService {
   }
 
   // ==========================================================================
+  // FILE & MEDIA OPERATIONS
+  // ==========================================================================
+
+  /**
+   * 📸 Generate Photo ID
+   * Format: photo_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generatePhotoId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.PHOTO).id;
+  }
+
+  /**
+   * 📎 Generate Attachment ID
+   * Format: att_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateAttachmentId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.ATTACHMENT).id;
+  }
+
+  /**
+   * 📁 Generate File ID
+   * Format: file_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateFileId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.FILE).id;
+  }
+
+  /**
+   * 🔗 Generate Share ID
+   * Format: share_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateShareId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.SHARE).id;
+  }
+
+  /**
+   * ⏳ Generate Pending ID
+   * Format: pending_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generatePendingId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.PENDING).id;
+  }
+
+  /**
+   * 🔔 Generate Subscription ID
+   * Format: sub_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateSubscriptionId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.SUBSCRIPTION).id;
+  }
+
+  // ==========================================================================
   // UTILITY METHODS
   // ==========================================================================
 
@@ -856,6 +918,16 @@ export const generateDepreciationId = () => enterpriseIdService.generateDeprecia
 export const generateEfkaPaymentId = () => enterpriseIdService.generateEfkaPaymentId();
 export const generateImportBatchId = () => enterpriseIdService.generateImportBatchId();
 export const generateExpenseDocId = () => enterpriseIdService.generateExpenseDocId();
+
+// =============================================================================
+// FILE & MEDIA OPERATIONS
+// =============================================================================
+export const generatePhotoId = () => enterpriseIdService.generatePhotoId();
+export const generateAttachmentId = () => enterpriseIdService.generateAttachmentId();
+export const generateFileId = () => enterpriseIdService.generateFileId();
+export const generateShareId = () => enterpriseIdService.generateShareId();
+export const generatePendingId = () => enterpriseIdService.generatePendingId();
+export const generateSubscriptionId = () => enterpriseIdService.generateSubscriptionId();
 
 // =============================================================================
 // OPTIMISTIC & TEMPORARY

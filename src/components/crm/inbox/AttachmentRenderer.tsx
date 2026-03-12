@@ -18,6 +18,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { TRANSITION_PRESETS } from '@/components/ui/effects';
+import { formatFileSize as _formatFileSize } from '@/utils/file-validation';
 import {
   Image as ImageIcon,
   FileText,
@@ -56,13 +57,11 @@ interface SingleAttachmentProps {
 // ============================================================================
 
 /**
- * Format file size for display
+ * Format file size — thin wrapper over canonical formatFileSize to handle undefined
  */
 function formatFileSize(bytes?: number): string {
   if (!bytes) return '';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return _formatFileSize(bytes);
 }
 
 /**

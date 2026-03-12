@@ -10,6 +10,7 @@ import type { ContactType, Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import type { PhotoSlot } from './MultiplePhotosUpload';
+import { FILE_TYPE_CONFIG } from '@/config/file-upload-config';
 
 
 import { openGalleryPhotoModal } from '@/core/modals/usePhotoPreviewModal';
@@ -198,7 +199,7 @@ function CompanyPhotoManager({
           <CardContent>
             <EnterprisePhotoUpload
               purpose="logo"
-              maxSize={5 * 1024 * 1024} // 5MB
+              maxSize={FILE_TYPE_CONFIG.image.maxSize}
               photoFile={formData.logoFile}
               photoPreview={formData.logoPreview}
               onFileChange={handleLogoChange}
@@ -233,7 +234,7 @@ function CompanyPhotoManager({
           <CardContent>
             <EnterprisePhotoUpload
               purpose="representative"
-              maxSize={5 * 1024 * 1024} // 5MB
+              maxSize={FILE_TYPE_CONFIG.image.maxSize}
               photoFile={formData.photoFile}
               photoPreview={formData.photoPreview}
               onFileChange={(file) => {
@@ -301,7 +302,7 @@ function ServicePhotoManager({
       <CardContent>
         <EnterprisePhotoUpload
           purpose="logo"
-          maxSize={5 * 1024 * 1024}
+          maxSize={FILE_TYPE_CONFIG.image.maxSize}
           photoFile={formData.logoFile || null}
           photoPreview={formData.logoPreview || undefined}
           contactData={formData}

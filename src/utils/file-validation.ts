@@ -91,7 +91,8 @@ export interface FileValidationConfig {
  * formatFileSize(1024, 'en') // "1 KB"
  * formatFileSize(1024, 'fr') // "1 Ko" (basic French support)
  *
- * @deprecated Use fileSystemService.formatFileSize() για full enterprise features
+ * For full enterprise features (multi-tenant, database-driven units), use:
+ * `fileSystemService.formatFileSize()` from EnterpriseFileSystemService.
  */
 export function formatFileSize(bytes: number, locale: string = 'en'): string {
   if (bytes === 0) return '0 Bytes';

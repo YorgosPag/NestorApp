@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { useInterval } from '@/hooks/useInterval';
+import { generatePendingId } from '@/services/enterprise-id.service';
 import WebSocketService, {
   WebSocketEventType,
   WebSocketMessage,
@@ -354,7 +355,7 @@ export function WebSocketProvider({
   ) => {
     // Case 1: WebSocket not ready → Queue the listener
     if (!wsRef.current) {
-      const pendingId = 'pending-' + Math.random().toString(36).substr(2, 9);
+      const pendingId = generatePendingId();
       pendingListenersRef.current.push({
         id: pendingId,
         type,

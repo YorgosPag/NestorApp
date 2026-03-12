@@ -19,6 +19,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { TRANSITION_PRESETS } from '@/components/ui/effects';
+import { generateAttachmentId } from '@/services/enterprise-id.service';
+import { formatFileSize } from '@/utils/file-validation';
 import {
   Send,
   AlertCircle,
@@ -131,13 +133,6 @@ interface ReplyComposerProps {
 // ============================================================================
 
 /**
- * Generate unique ID for pending attachments
- */
-function generateAttachmentId(): string {
-  return `att_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-}
-
-/**
  * Get icon component for attachment type
  */
 function getAttachmentIcon(
@@ -155,15 +150,6 @@ function getAttachmentIcon(
     default:
       return <FileText className={iconSizes.sm} />;
   }
-}
-
-/**
- * Format file size for display
- */
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 // ============================================================================
