@@ -278,7 +278,7 @@ export const POST = withStandardRateLimit(
           name: body.name,
           buildingId: body.buildingId,
           buildingName: body.buildingName || '',
-          projectId: body.projectId ? String(body.projectId) : null,
+          projectId: body.projectId ? String(body.projectId) : undefined,
           projectName: body.projectName || '',
           companyId: ctx.companyId,  // 🔒 Tenant isolation
           units: body.units || 0,
