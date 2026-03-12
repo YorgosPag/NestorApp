@@ -19,6 +19,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { formatFloorLabel } from '@/lib/intl-utils';
+import { useNavigation } from '@/components/navigation/core/NavigationContext';
 import type { UnitHierarchyResponse } from '@/app/api/units/[id]/hierarchy/route';
 
 // =============================================================================
@@ -36,6 +38,7 @@ interface UnitHierarchyCardProps {
 export function UnitHierarchyCard({ unitId }: UnitHierarchyCardProps) {
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
+  const { syncBreadcrumb } = useNavigation();
   const [hierarchy, setHierarchy] = useState<UnitHierarchyResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -49,6 +52,19 @@ export function UnitHierarchyCard({ unitId }: UnitHierarchyCardProps) {
         );
         if (!cancelled) {
           setHierarchy(data);
+
+          // 🏢 ENTERPRISE: Sync breadcrumb with actual unit hierarchy data
+          if (data.company && data.project) {
+            syncBreadcrumb({
+              company: { id: data.company.id, name: data.company.name },
+              project: { id: data.project.id, name: data.project.name },
+              building: data.building
+                ? { id: data.building.id, name: data.building.name }
+                : undefined,
+              unit: { id: data.unit.id, name: data.unit.name },
+              currentLevel: 'units',
+            });
+          }
         }
       } catch {
         // Graceful — δεν εμφανίζουμε τίποτα αν αποτύχει
@@ -59,7 +75,7 @@ export function UnitHierarchyCard({ unitId }: UnitHierarchyCardProps) {
 
     fetchHierarchy();
     return () => { cancelled = true; };
-  }, [unitId]);
+  }, [unitId, syncBreadcrumb]);
 
   if (loading || !hierarchy) return null;
 
@@ -135,7 +151,7 @@ export function UnitHierarchyCard({ unitId }: UnitHierarchyCardProps) {
             icon={Home}
             iconColor="text-green-600"
             label={t('sales.hierarchy.unit', { defaultValue: 'Μονάδα' })}
-            value={`${hierarchy.unit.name} — ${hierarchy.unit.floor}ος όροφος`}
+            value={`${hierarchy.unit.name} — ${formatFloorLabel(hierarchy.unit.floor)}`}
             iconSizeClass={iconSizes.xs}
             isLast
           />
