@@ -151,19 +151,15 @@ export function LinkedSpacesCard({
       setLoadingParking(true);
       try {
         interface ParkingApiResponse {
-          data?: {
-            parkingSpots?: Array<{ id: string; number: string; type?: string; status?: string; floor?: string }>;
-          };
+          parkingSpots?: Array<{ id: string; number: string; type?: string; status?: string; floor?: string }>;
         }
 
+        // apiClient.get() unwraps { success, data } → returns data directly
         const result = await apiClient.get<ParkingApiResponse>(`/api/parking?buildingId=${buildingId}`);
-        const parkingData = result?.data?.parkingSpots || [];
+        const parkingData = result?.parkingSpots || [];
 
-        // Filter only available parking spots
-        const availableParking = parkingData.filter(p => p.status === 'available' || !p.status);
-
-        setParkingOptions(availableParking);
-        logger.info(`[LinkedSpacesCard] Loaded ${availableParking.length} available parking spots`);
+        setParkingOptions(parkingData);
+        logger.info(`[LinkedSpacesCard] Loaded ${parkingData.length} parking spots for building`);
       } catch (error) {
         // 🏢 ENTERPRISE: 403/404 are expected (tenant isolation / no parking configured)
         if (ApiClientError.isApiClientError(error) && (error.statusCode === 403 || error.statusCode === 404)) {
@@ -191,23 +187,16 @@ export function LinkedSpacesCard({
       setLoadingStorage(true);
       try {
         interface StorageApiResponse {
-          data?: {
-            storages?: Array<{ id: string; name: string; buildingId?: string; type?: string; status?: string; floor?: string; area?: number }>;
-          };
+          storages?: Array<{ id: string; name: string; buildingId?: string; type?: string; status?: string; floor?: string; area?: number }>;
         }
 
-        // Storages API uses projectId, but we can filter by buildingId client-side
-        const result = await apiClient.get<StorageApiResponse>('/api/storages');
-        const storageData = result?.data?.storages || [];
+        // apiClient.get() unwraps { success, data } → returns data directly
+        // Storages API supports buildingId filter
+        const result = await apiClient.get<StorageApiResponse>(`/api/storages?buildingId=${buildingId}`);
+        const storageData = result?.storages || [];
 
-        // Filter by buildingId and available status
-        const buildingStorages = storageData.filter(s =>
-          s.buildingId === buildingId &&
-          (s.status === 'available' || !s.status)
-        );
-
-        setStorageOptions(buildingStorages);
-        logger.info(`[LinkedSpacesCard] Loaded ${buildingStorages.length} available storages for building`);
+        setStorageOptions(storageData);
+        logger.info(`[LinkedSpacesCard] Loaded ${storageData.length} storages for building`);
       } catch (error) {
         // 🏢 ENTERPRISE: 403/404 are expected (tenant isolation / no storages configured)
         if (ApiClientError.isApiClientError(error) && (error.statusCode === 403 || error.statusCode === 404)) {
