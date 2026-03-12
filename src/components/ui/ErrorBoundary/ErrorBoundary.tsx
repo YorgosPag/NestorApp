@@ -4,6 +4,7 @@ import React, { Component, ErrorInfo as ReactErrorInfo, ReactNode } from 'react'
 import { AlertTriangle, RefreshCw, Home, ArrowLeft, Bug, Copy, Check, Mail, Send, Globe, HelpCircle, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { copyToClipboard } from '@/lib/share-utils';
 import { errorTracker, type MetadataRecord } from '@/services/ErrorTracker';
 import { notificationConfig } from '@/config/error-reporting';
 import { componentSizes } from '@/styles/design-tokens';
@@ -351,9 +352,12 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     };
 
     try {
-      await navigator.clipboard.writeText(JSON.stringify(errorDetails, null, 2));
-      this.setState({ copySuccess: true });
-      setTimeout(() => this.setState({ copySuccess: false }), 2000);
+      // ADR-209: centralized clipboard with fallback
+      const success = await copyToClipboard(JSON.stringify(errorDetails, null, 2));
+      if (success) {
+        this.setState({ copySuccess: true });
+        setTimeout(() => this.setState({ copySuccess: false }), 2000);
+      }
     } catch (error) {
       logger.error('Failed to copy error details', { error });
     }
@@ -1210,9 +1214,12 @@ ${errorDetails.stack || 'Stack trace not available'}
     };
 
     try {
-      await navigator.clipboard.writeText(JSON.stringify(errorDetails, null, 2));
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
+      // ADR-209: centralized clipboard with fallback
+      const success = await copyToClipboard(JSON.stringify(errorDetails, null, 2));
+      if (success) {
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+      }
     } catch (copyError) {
       logger.error('Failed to copy error details', { error: copyError });
     }

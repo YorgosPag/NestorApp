@@ -38,6 +38,9 @@ export const STORAGE_KEYS = {
 
   // Legacy user blob
   USER: 'user',
+
+  // Social platform analytics (ADR-209 Phase 8)
+  SOCIAL_PLATFORM_ANALYTICS: 'social_platform_analytics',
 } as const;
 
 export type StorageKeyValue = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];

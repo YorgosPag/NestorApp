@@ -14,6 +14,7 @@
 // - Performance metrics collection
 //
 import { generateShareId } from '@/services/enterprise-id.service';
+import { safeGetItem, safeSetItem, safeRemoveItem, STORAGE_KEYS } from '@/lib/storage/safe-storage';
 // ============================================================================
 
 import { type SocialPlatformType } from './platform-config';
@@ -327,20 +328,16 @@ export class AnalyticsService {
    */
   static storeEventLocally(event: ShareAnalyticsEvent): void {
     try {
-      if (typeof localStorage !== 'undefined') {
-        const storageKey = 'social_platform_analytics';
-        const existing = localStorage.getItem(storageKey);
-        const events = existing ? JSON.parse(existing) : [];
+      // ADR-209: centralized safe-storage
+      const events = safeGetItem<ShareAnalyticsEvent[]>(STORAGE_KEYS.SOCIAL_PLATFORM_ANALYTICS, []);
+      events.push(event);
 
-        events.push(event);
-
-        // Keep only last 100 events
-        if (events.length > 100) {
-          events.splice(0, events.length - 100);
-        }
-
-        localStorage.setItem(storageKey, JSON.stringify(events));
+      // Keep only last 100 events
+      if (events.length > 100) {
+        events.splice(0, events.length - 100);
       }
+
+      safeSetItem(STORAGE_KEYS.SOCIAL_PLATFORM_ANALYTICS, events);
     } catch (error) {
       logger.warn('Failed to store analytics event locally', { error });
     }
@@ -461,12 +458,8 @@ export class AnalyticsService {
    */
   static getStoredEvents(): ShareAnalyticsEvent[] {
     try {
-      if (typeof localStorage !== 'undefined') {
-        const storageKey = 'social_platform_analytics';
-        const stored = localStorage.getItem(storageKey);
-        return stored ? JSON.parse(stored) : [];
-      }
-      return [];
+      // ADR-209: centralized safe-storage
+      return safeGetItem<ShareAnalyticsEvent[]>(STORAGE_KEYS.SOCIAL_PLATFORM_ANALYTICS, []);
     } catch (error) {
       logger.warn('Failed to retrieve stored events', { error });
       return [];
@@ -480,9 +473,8 @@ export class AnalyticsService {
    */
   static clearStoredEvents(): void {
     try {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem('social_platform_analytics');
-      }
+      // ADR-209: centralized safe-storage
+      safeRemoveItem(STORAGE_KEYS.SOCIAL_PLATFORM_ANALYTICS);
     } catch (error) {
       logger.warn('Failed to clear stored events', { error });
     }

@@ -16,6 +16,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { cn, getSpacingClass } from '@/lib/design-system';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getAvatarPlaceholderUrl } from '@/config/media-constants';
+import { getInitials } from '@/types/contacts/helpers';
 
 interface DisplayTeam {
   id: string;
@@ -26,10 +27,6 @@ interface DisplayTeam {
 
 // Use the singleton instance of enterprise teams service
 const teamsService = enterpriseTeamsService;
-
-const getInitials = (name: string) => {
-  return name.split(' ').map(n => n[0]).join('').toUpperCase();
-}
 
 export default function CrmTeamsPage() {
   const logger = createModuleLogger('crm/teams');

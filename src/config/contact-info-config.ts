@@ -4,6 +4,7 @@
  * ZERO HARDCODED CONTACT VALUES - All data από environment variables
  */
 
+import { isValidEmail } from '@/lib/validation/email-validation';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('contact-info-config');
 
@@ -140,7 +141,6 @@ export const ContactInfoUtils = {
    * ✅ ENTERPRISE MIGRATION: Using centralized email validation
    */
   validateEmail: (email: string): boolean => {
-    const { isValidEmail } = require('@/components/ui/email-sharing/types');
     return isValidEmail(email);
   },
 

@@ -1,5 +1,7 @@
 'use client';
 
+import { isValidEmail } from '@/lib/validation/email-validation';
+
 /**
  * 🏢 ENTERPRISE: Data Import Service with Type-Safe Validation
  *
@@ -472,9 +474,9 @@ class DataImportService {
         }
 
         case 'email': {
-          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          // ADR-209: centralized email validation
           const emailStr = String(value);
-          if (!emailRegex.test(emailStr)) {
+          if (!isValidEmail(emailStr)) {
             throw new Error(`Invalid email format: "${emailStr}"`);
           }
           convertedValue = emailStr.toLowerCase();

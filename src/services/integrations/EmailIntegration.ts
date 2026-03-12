@@ -1,5 +1,6 @@
 'use client';
 
+import { isValidEmail } from '@/lib/validation/email-validation';
 import { generateMessageId, generateTemplateId } from '@/services/enterprise-id.service';
 
 // Email Integration Service
@@ -282,12 +283,11 @@ class EmailIntegrationService {
       return { isValid: false, error: 'Email content is required' };
     }
 
-    // Validate email addresses
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // Validate email addresses — ADR-209: centralized
     const allRecipients = [...message.to, ...(message.cc || []), ...(message.bcc || [])];
-    
+
     for (const email of allRecipients) {
-      if (!emailRegex.test(email)) {
+      if (!isValidEmail(email)) {
         return { isValid: false, error: `Invalid email address: ${email}` };
       }
     }

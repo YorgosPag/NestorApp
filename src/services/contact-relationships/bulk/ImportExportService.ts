@@ -12,6 +12,7 @@
 
 import { ContactRelationship, RelationshipType } from '@/types/contacts/relationships';
 import { Contact, IndividualContact, CompanyContact, ServiceContact } from '@/types/contacts';
+import { isValidEmail } from '@/lib/validation/email-validation';
 import { BulkRelationshipService } from './BulkRelationshipService';
 import { ContactsService } from '@/services/contacts.service';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -355,13 +356,12 @@ export class ImportExportService {
       }
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(row.sourceEmail)) {
+    // Validate email format — ADR-209: centralized
+    if (!isValidEmail(row.sourceEmail)) {
       throw new Error(`Row ${rowNumber}: Invalid source email format`);
     }
 
-    if (!emailRegex.test(row.targetEmail)) {
+    if (!isValidEmail(row.targetEmail)) {
       throw new Error(`Row ${rowNumber}: Invalid target email format`);
     }
 

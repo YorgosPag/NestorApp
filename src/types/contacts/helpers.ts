@@ -47,14 +47,21 @@ export function getContactDisplayName(contact: Contact): string {
   }
 }
 
-export function getContactInitials(contact: Contact): string {
-  const name = getContactDisplayName(contact);
+/**
+ * Generic string-based initials extraction (max 2 chars).
+ * ADR-209 Phase 8: Single source of truth for initials logic.
+ */
+export function getInitials(name: string): string {
   return (name || '')
     .split(' ')
     .map(word => word[0])
     .join('')
     .toUpperCase()
     .slice(0, 2);
+}
+
+export function getContactInitials(contact: Contact): string {
+  return getInitials(getContactDisplayName(contact));
 }
 
 export function getPrimaryEmail(contact: Contact): string | undefined {

@@ -11,6 +11,7 @@
 'use client';
 
 import React from 'react';
+import { isValidEmail } from '@/lib/validation/email-validation';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -407,10 +408,9 @@ export const validateRelationshipFormData = (
     );
   }
 
-  // Email validation
+  // Email validation — ADR-209: centralized
   if (data.contactInfo?.businessEmail) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(data.contactInfo.businessEmail)) {
+    if (!isValidEmail(data.contactInfo.businessEmail)) {
       // Note: Email validation error would be returned in contactInfo
       // This needs improvement for nested field errors in the future
     }

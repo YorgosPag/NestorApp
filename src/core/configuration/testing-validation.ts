@@ -26,6 +26,7 @@
  * ============================================================================
  */
 
+import { isValidEmail } from '@/lib/validation/email-validation';
 import {
   EnterpriseConfigurationManager,
   ConfigurationAPI,
@@ -620,9 +621,8 @@ export class ConfigurationTestingSuite {
   // ============================================================================
 
   private isValidEmail(email: string): boolean {
-    // ✅ ENTERPRISE MIGRATION: Using centralized email validation
-    const { isValidEmail: enterpriseValidator } = require('@/components/ui/email-sharing/types');
-    return enterpriseValidator(email);
+    // ✅ ADR-209: Using centralized email validation
+    return isValidEmail(email);
   }
 
   private isValidUrl(url: string): boolean {

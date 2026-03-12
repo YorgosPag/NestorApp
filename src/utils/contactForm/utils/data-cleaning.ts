@@ -8,6 +8,8 @@
 //
 // ============================================================================
 
+import { isValidEmail } from '@/lib/validation/email-validation';
+
 // 🏢 ENTERPRISE: i18n support for validation messages
 import i18n from '@/i18n/config';
 
@@ -302,10 +304,9 @@ export function validateContactData(contactData: ContactDataRecord): ValidationR
       break;
   }
 
-  // 📧 EMAIL VALIDATION
+  // 📧 EMAIL VALIDATION — ADR-209: centralized
   if (contactData.email && typeof contactData.email === 'string') {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(contactData.email)) {
+    if (!isValidEmail(contactData.email)) {
       errors.push(t('email.invalid'));
     }
   }

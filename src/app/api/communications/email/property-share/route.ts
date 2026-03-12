@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isValidEmail as isValidEmailFn } from '@/lib/validation/email-validation';
 import { EmailService } from '@/services/email.service';
 import type { EmailRequest } from '@/services/email.service';
 import type { EmailTemplateType } from '@/types/email-templates';
@@ -72,9 +73,8 @@ function sanitizeString(input: string): string {
 }
 
 function isValidEmail(email: string): boolean {
-  // ✅ ENTERPRISE MIGRATION: Using centralized email validation + RFC compliance
-  const { isValidEmail: enterpriseValidator } = require('@/components/ui/email-sharing/types');
-  return enterpriseValidator(email) && email.length <= 254; // RFC 5321 compliance
+  // ✅ ADR-209: Using centralized email validation + RFC 5321 compliance
+  return isValidEmailFn(email) && email.length <= 254;
 }
 
 function isValidUrl(url: string): boolean {

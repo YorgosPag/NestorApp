@@ -15,6 +15,7 @@ import {
   RelationshipType,
   isEmploymentRelationship
 } from '@/types/contacts/relationships';
+import { isValidEmail as isValidEmailFn } from '@/lib/validation/email-validation';
 import { Contact } from '@/types/contacts';
 
 // ============================================================================
@@ -341,8 +342,8 @@ export class RelationshipValidationService {
    * ✅ ENTERPRISE MIGRATION: Using centralized email validation
    */
   private static isValidEmail(email: string): boolean {
-    const { isValidEmail: enterpriseValidator } = require('@/components/ui/email-sharing/types');
-    return enterpriseValidator(email);
+    // ✅ ADR-209: Using centralized email validation (clean ES import)
+    return isValidEmailFn(email);
   }
 
   /**

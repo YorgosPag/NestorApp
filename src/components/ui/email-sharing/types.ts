@@ -256,8 +256,9 @@ export const DEFAULT_EMAIL_CONFIG: Required<EmailFormConfig> = {
 
 /**
  * 📧 Email validation regex
+ * ✅ ADR-209 Phase 8: Re-exported from canonical location
  */
-export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export { EMAIL_REGEX, isValidEmail } from '@/lib/validation/email-validation';
 
 /**
  * 🚫 Common validation error messages
@@ -276,12 +277,7 @@ export const VALIDATION_MESSAGES = {
 // TYPE GUARDS
 // ============================================================================
 
-/**
- * 🔍 Type guard για έγκυρο email
- */
-export function isValidEmail(email: string): boolean {
-  return EMAIL_REGEX.test(email.trim());
-}
+// isValidEmail re-exported above from @/lib/validation/email-validation
 
 /**
  * 🔍 Type guard για έγκυρο ShareData

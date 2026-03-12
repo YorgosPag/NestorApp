@@ -6,25 +6,7 @@
 
 import { useCallback, useEffect, useRef, useMemo } from 'react';
 
-/**
- * Debounce hook για input optimization
- * Reduces unnecessary re-renders and API calls
- */
-export function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = React.useState<T>(value);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [value, delay]);
-
-  return debouncedValue;
-}
+// NOTE: useDebounce removed — use `@/hooks/useDebounce` instead (ADR-209 Phase 8)
 
 /**
  * Throttle hook για high-frequency events

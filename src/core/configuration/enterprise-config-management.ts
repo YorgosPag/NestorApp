@@ -6,6 +6,8 @@
  * MICROSOFT/GOOGLE-CLASS CONFIGURATION ARCHITECTURE
  *
  * Αντικαθιστά όλες τις σκληρές τιμές με dynamic, database-driven configuration.
+ *
+ * ADR-209: Email validation imported from centralized location.
  * Τηρεί όλους τους κανόνες CLAUDE.md:
  * - ΟΧΙ any types ✅
  * - ΟΧΙ inline styles ✅
@@ -25,6 +27,7 @@
  * ============================================================================
  */
 
+import { isValidEmail } from '@/lib/validation/email-validation';
 import {
   doc,
   getDoc,
@@ -783,9 +786,8 @@ export class EnterpriseConfigurationManager {
       throw new Error('Invalid company configuration data');
     }
 
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(data.email)) {
+    // Email validation — ADR-209: centralized
+    if (!isValidEmail(data.email)) {
       throw new Error('Invalid email format');
     }
 
