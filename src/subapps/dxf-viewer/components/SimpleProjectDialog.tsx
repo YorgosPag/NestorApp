@@ -39,7 +39,8 @@ import { FloorplanService, type FloorplanData } from '../../../services/floorpla
 import { BuildingFloorplanService } from '../../../services/floorplans/BuildingFloorplanService';
 import { UnitFloorplanService, type UnitFloorplanData } from '../../../services/floorplans/UnitFloorplanService';
 import { FloorFloorplanService } from '../../../services/floorplans/FloorFloorplanService';
-import { useAuth } from '@/hooks/useAuth';
+// 🏢 FIX: Use AuthContext (FirebaseAuthUser with companyId), NOT @/hooks/useAuth (Firebase User WITHOUT companyId)
+import { useAuth } from '@/auth/contexts/AuthContext';
 import DxfImportModal from './DxfImportModal';
 import type { SceneModel } from '../types/scene';
 // 🏢 ENTERPRISE: PDF Background support
@@ -469,14 +470,9 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           fileName: file.name,
           timestamp: Date.now()
         };
-        // 🏢 ENTERPRISE: Use UNIT's companyId (from Firestore data), not wizard's selectedCompanyId
-        // The FloorPlanTab queries with the unit's companyId — they MUST match
+        // 🏢 FIX: Use auth user's companyId (tenant) — matches what FloorPlanTab uses at load time
         const createdBy = user?.uid;
-        const selectedUnit = units.find(u => u.id === selectedUnitId);
-        const unitCompanyId = (selectedUnit as Record<string, unknown> | undefined)?.companyId as string | undefined;
-        // 🏢 FIX: Prioritize unit's own companyId → auth user's companyId → wizard's selectedCompanyId
-        // The FloorPlanTab loads with user?.companyId, so they MUST match for super_admin
-        const fileRecordCompanyId = unitCompanyId || (user as Record<string, unknown> | null)?.companyId as string | undefined || selectedCompanyId;
+        const fileRecordCompanyId = user?.companyId || selectedCompanyId;
         saved = await UnitFloorplanService.saveFloorplan({
           companyId: fileRecordCompanyId,
           projectId: selectedProjectId || undefined,
@@ -511,17 +507,12 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           fileName: file.name,
           timestamp: Date.now()
         };
-        // 🏢 FIX: companyId MUST match what ReadOnlyMediaViewer uses at load time (property.companyId)
-        // Priority: floor's own companyId → building's companyId → first unit's companyId → selectedCompanyId (last resort)
-        // NOTE: user?.companyId is ALWAYS undefined here (useAuth returns Firebase User, NOT FirebaseAuthUser)
+        // 🏢 FIX: companyId MUST match what ReadOnlyMediaViewer uses at load time
+        // ReadOnlyMediaViewer queries with: propCompanyId || user?.companyId
+        // So we MUST use user.companyId (auth tenant) as PRIMARY, not selectedCompanyId (contact entity)
         const createdBy = user?.uid;
-        const floorCompanyId = (selectedFloorData as Record<string, unknown> | undefined)?.companyId as string | undefined;
-        const selectedBuildingData = buildings.find(b => b.id === selectedBuildingId);
-        const buildingCompanyId = (selectedBuildingData as Record<string, unknown> | undefined)?.companyId as string | undefined;
-        const unitCompanyIdFallback = units.length > 0
-          ? (units[0] as Record<string, unknown>)?.companyId as string | undefined
-          : undefined;
-        const effectiveCompanyId = floorCompanyId || buildingCompanyId || unitCompanyIdFallback || selectedCompanyId;
+        const authCompanyId = user?.companyId;
+        const effectiveCompanyId = authCompanyId || selectedCompanyId;
         if (effectiveCompanyId && createdBy) {
           saved = await FloorFloorplanService.saveFloorplan({
             companyId: effectiveCompanyId,
@@ -544,14 +535,9 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           timestamp: Date.now()
         };
         // 🏢 ENTERPRISE: Pass options for FileRecord creation → visible in BuildingFloorplanTab
-        // 🏢 FIX: Use building's own companyId (not selectedCompanyId which is contact entity)
+        // 🏢 FIX: Use auth user's companyId (tenant), not selectedCompanyId (contact entity)
         const createdBy = user?.uid;
-        const dxfBuildingData = buildings.find(b => b.id === selectedBuildingId);
-        const dxfBuildingCompanyId = (dxfBuildingData as Record<string, unknown> | undefined)?.companyId as string | undefined;
-        const dxfBuildingUnitFallback = units.length > 0
-          ? (units[0] as Record<string, unknown>)?.companyId as string | undefined
-          : undefined;
-        const buildingEffectiveCompanyId = dxfBuildingCompanyId || dxfBuildingUnitFallback || selectedCompanyId;
+        const buildingEffectiveCompanyId = user?.companyId || selectedCompanyId;
         const fileRecordOptions = buildingEffectiveCompanyId && createdBy
           ? { companyId: buildingEffectiveCompanyId, projectId: selectedProjectId || undefined, createdBy, originalFile: file }
           : undefined;
@@ -663,7 +649,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
       let hasExisting = false;
 
       if (currentStep === 'unit' && type === 'unit') {
-        const checkCompanyId = (user as Record<string, unknown> | null)?.companyId as string | undefined || selectedCompanyId;
+        const checkCompanyId = user?.companyId || selectedCompanyId;
         hasExisting = await UnitFloorplanService.hasFloorplan(checkCompanyId, selectedUnitId);
       } else if (currentStep === 'building' && type === 'floor' && selectedFloorId) {
         // 🏢 ENTERPRISE (2026-01-31): Check for existing floor floorplan
@@ -846,16 +832,9 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         fileName: file.name,
         timestamp: Date.now()
       };
-      // 🏢 FIX: companyId MUST match what ReadOnlyMediaViewer uses at load time (property.companyId)
-      // Same priority chain as DXF path above
+      // 🏢 FIX: Use auth user's companyId (tenant) — matches load-side query
       const createdBy = user?.uid;
-      const pdfFloorCompanyId = (selectedFloorData as Record<string, unknown> | undefined)?.companyId as string | undefined;
-      const pdfBuildingData = buildings.find(b => b.id === selectedBuildingId);
-      const pdfBuildingCompanyId = (pdfBuildingData as Record<string, unknown> | undefined)?.companyId as string | undefined;
-      const pdfUnitCompanyIdFallback = units.length > 0
-        ? (units[0] as Record<string, unknown>)?.companyId as string | undefined
-        : undefined;
-      const effectivePdfCompanyId = pdfFloorCompanyId || pdfBuildingCompanyId || pdfUnitCompanyIdFallback || selectedCompanyId;
+      const effectivePdfCompanyId = user?.companyId || selectedCompanyId;
       if (effectivePdfCompanyId && createdBy) {
         saved = await FloorFloorplanService.saveFloorplan({
           companyId: effectivePdfCompanyId,
@@ -881,14 +860,9 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         timestamp: Date.now()
       };
       // 🏢 ENTERPRISE: Pass options for FileRecord creation → visible in BuildingFloorplanTab
-      // 🏢 FIX: Use building's own companyId (not selectedCompanyId which is contact entity)
+      // 🏢 FIX: Use auth user's companyId (tenant), not selectedCompanyId (contact entity)
       const createdBy = user?.uid;
-      const pdfBuildingObj = buildings.find(b => b.id === selectedBuildingId);
-      const pdfBldgCompanyId = (pdfBuildingObj as Record<string, unknown> | undefined)?.companyId as string | undefined;
-      const pdfBldgUnitFallback = units.length > 0
-        ? (units[0] as Record<string, unknown>)?.companyId as string | undefined
-        : undefined;
-      const pdfBldgEffectiveCompanyId = pdfBldgCompanyId || pdfBldgUnitFallback || selectedCompanyId;
+      const pdfBldgEffectiveCompanyId = user?.companyId || selectedCompanyId;
       const pdfFileRecordOptions = pdfBldgEffectiveCompanyId && createdBy
         ? { companyId: pdfBldgEffectiveCompanyId, projectId: selectedProjectId || undefined, createdBy, originalFile: file }
         : undefined;
