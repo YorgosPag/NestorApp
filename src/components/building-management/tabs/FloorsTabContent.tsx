@@ -502,6 +502,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                             floorId={floor.id}
                             floorName={floor.name}
                             projectId={building.projectId}
+                            buildingCompanyId={building.companyId}
                           />
                         </td>
                       </tr>

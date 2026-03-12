@@ -34,6 +34,8 @@ interface FloorFloorplanInlineProps {
   floorName: string;
   /** Parent building's projectId (for storage path) */
   projectId?: string;
+  /** Parent building's companyId — ensures super_admin stores files under the correct tenant */
+  buildingCompanyId?: string;
 }
 
 // ============================================================================
@@ -52,10 +54,12 @@ export function FloorFloorplanInline({
   floorId,
   floorName,
   projectId,
+  buildingCompanyId,
 }: FloorFloorplanInlineProps) {
   const { user } = useAuth();
 
-  const companyId = user?.companyId;
+  // Use building's companyId first (critical for super_admin who manages multiple tenants)
+  const companyId = buildingCompanyId || user?.companyId;
   const currentUserId = user?.uid;
 
   // Fetch company name for display (same pattern as BuildingFloorplanTab)
