@@ -21,6 +21,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { isRoleBypass } from '@/lib/auth/roles';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { groupByKey } from '@/utils/collection-utils';
 
 const logger = createModuleLogger('FloorsRoute');
 
@@ -136,14 +137,7 @@ export const GET = withStandardRateLimit(
         // ============================================================================
 
         if (projectId) {
-          const floorsByBuilding = floors.reduce((groups: Record<string, FloorDocument[]>, floor: FloorDocument) => {
-            const buildingId = floor.buildingId;
-            if (!groups[buildingId]) {
-              groups[buildingId] = [];
-            }
-            groups[buildingId].push(floor);
-            return groups;
-          }, {} as Record<string, FloorDocument[]>);
+          const floorsByBuilding = groupByKey(floors, (floor: FloorDocument) => floor.buildingId);
 
           logger.info('[Floors/List] Complete', { floorCount: floors.length, buildingCount: Object.keys(floorsByBuilding).length });
 

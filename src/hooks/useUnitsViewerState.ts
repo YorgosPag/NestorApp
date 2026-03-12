@@ -10,6 +10,7 @@ import { useSearchParams } from 'next/navigation';
 import { ContactsService } from '@/services/contacts.service';
 import { BUILDING_IDS } from '@/config/building-ids-config';
 import { createModuleLogger } from '@/lib/telemetry';
+import { tallyBy } from '@/utils/collection-utils';
 
 const logger = createModuleLogger('useUnitsViewerState');
 
@@ -241,20 +242,9 @@ export function useUnitsViewerState() {
 
     // ✅ DISTRIBUTION METRICS (Physical attributes)
     // 🎯 DOMAIN SEPARATION: Uses operationalStatus (NOT sales status!)
-    propertiesByStatus: safeProperties.reduce((acc, p) => {
-      const status = p.operationalStatus || 'draft';
-      acc[status] = (acc[status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>),
-    propertiesByType: safeProperties.reduce((acc, p) => {
-      acc[p.type] = (acc[p.type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>),
-    propertiesByFloor: safeProperties.reduce((acc, p) => {
-      const floorLabel = `Όροφος ${p.floor}`;
-      acc[floorLabel] = (acc[floorLabel] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>),
+    propertiesByStatus: tallyBy(safeProperties, p => p.operationalStatus || 'draft'),
+    propertiesByType: tallyBy(safeProperties, p => p.type),
+    propertiesByFloor: tallyBy(safeProperties, p => `Όροφος ${p.floor}`),
 
     // ✅ STORAGE METRICS (Physical inventory - Operational status only)
     // 🎯 DOMAIN SEPARATION: No "sold" storage - that's sales data!

@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useSharedProperties } from '@/contexts/SharedPropertiesProvider';
 import type { Property, OperationalStatus } from '@/types/property-viewer';
 import type { FilterState } from '@/types/property-viewer';
+import { tallyBy } from '@/utils/collection-utils';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Public Viewing Eligibility Configuration
@@ -152,20 +153,9 @@ export function usePublicPropertyViewer() {
       averagePrice: availableProps.length > 0 ?
         availableProps.reduce((sum, p) => sum + (p.price || 0), 0) / availableProps.length : 0,
       // 🏢 ENTERPRISE: Group by effective status (market or operational)
-      propertiesByStatus: availableProps.reduce((acc, p) => {
-        const effectiveStatus = p.status || p.operationalStatus || 'unknown';
-        acc[effectiveStatus] = (acc[effectiveStatus] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>),
-      propertiesByType: availableProps.reduce((acc, p) => { 
-        acc[p.type] = (acc[p.type] || 0) + 1; 
-        return acc; 
-      }, {} as Record<string, number>),
-      propertiesByFloor: availableProps.reduce((acc, p) => { 
-        const floorLabel = `Όροφος ${p.floor}`; 
-        acc[floorLabel] = (acc[floorLabel] || 0) + 1; 
-        return acc; 
-      }, {} as Record<string, number>),
+      propertiesByStatus: tallyBy(availableProps, p => p.status || p.operationalStatus || 'unknown'),
+      propertiesByType: tallyBy(availableProps, p => p.type),
+      propertiesByFloor: tallyBy(availableProps, p => `Όροφος ${p.floor}`),
       totalStorageUnits: availableProps.filter(p => p.type === 'Αποθήκη').length,
       // 🏢 ENTERPRISE: Storage availability considers both status systems
       availableStorageUnits: availableProps.filter(p =>

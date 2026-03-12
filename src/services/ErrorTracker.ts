@@ -18,6 +18,7 @@ import { generateSessionId, generateErrorId } from '@/services/enterprise-id.ser
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { safeGetItem, safeSetItem, safeRemoveItem, STORAGE_KEYS } from '@/lib/storage';
+import { sumByKey } from '@/utils/collection-utils';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -638,15 +639,8 @@ ${context.metadata ? `\n📊 ADDITIONAL METADATA:\n${JSON.stringify(context.meta
    * Get error statistics
    */
   getStats() {
-    const errorsBySeverity = this.errorQueue.reduce((acc, error) => {
-      acc[error.severity] = (acc[error.severity] || 0) + error.count;
-      return acc;
-    }, {} as Record<ErrorSeverity, number>);
-
-    const errorsByCategory = this.errorQueue.reduce((acc, error) => {
-      acc[error.category] = (acc[error.category] || 0) + error.count;
-      return acc;
-    }, {} as Record<ErrorCategory, number>);
+    const errorsBySeverity = sumByKey(this.errorQueue, e => e.severity, e => e.count) as Record<ErrorSeverity, number>;
+    const errorsByCategory = sumByKey(this.errorQueue, e => e.category, e => e.count) as Record<ErrorCategory, number>;
 
     return {
       totalErrors: this.errorQueue.length,

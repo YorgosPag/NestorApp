@@ -1,5 +1,6 @@
 import { ObligationDocument, ObligationSection, ObligationArticle } from '@/types/obligations';
 import { calculateWordCount } from './text-utils';
+import { groupByKey } from '@/utils/collection-utils';
 
 export type SortField = 'title' | 'createdAt' | 'updatedAt' | 'status' | 'projectName' | 'wordCount' | 'completionPercentage';
 export type SortOrder = 'asc' | 'desc';
@@ -150,23 +151,9 @@ function calculateCompletionPercentage(document: ObligationDocument): number {
 }
 
 export function groupDocumentsByStatus(documents: ObligationDocument[]): Record<string, ObligationDocument[]> {
-  return documents.reduce((groups, doc) => {
-    const status = doc.status;
-    if (!groups[status]) {
-      groups[status] = [];
-    }
-    groups[status].push(doc);
-    return groups;
-  }, {} as Record<string, ObligationDocument[]>);
+  return groupByKey(documents, doc => doc.status);
 }
 
 export function groupDocumentsByProject(documents: ObligationDocument[]): Record<string, ObligationDocument[]> {
-  return documents.reduce((groups, doc) => {
-    const project = doc.projectName;
-    if (!groups[project]) {
-      groups[project] = [];
-    }
-    groups[project].push(doc);
-    return groups;
-  }, {} as Record<string, ObligationDocument[]>);
+  return groupByKey(documents, doc => doc.projectName);
 }

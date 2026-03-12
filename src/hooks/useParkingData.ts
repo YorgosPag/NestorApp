@@ -9,6 +9,7 @@ import { useState, useMemo } from 'react';
 import type { ParkingSpot, ParkingFilters, ParkingStats } from '@/types/parking';
 import { parkingSpots as mockParkingSpots } from '@/components/projects/parking/data';
 import { createModuleLogger } from '@/lib/telemetry';
+import { tallyBy } from '@/utils/collection-utils';
 
 const logger = createModuleLogger('useParkingData');
 
@@ -39,29 +40,10 @@ export function useParkingData(initialSpots: ParkingSpot[] = mockParkingSpots) {
     const totalArea = parkingSpots.reduce((sum, spot) => sum + (spot.area || 0), 0);
     const averagePrice = totalSpots > 0 ? parkingSpots.reduce((sum, spot) => sum + (spot.price || 0), 0) / totalSpots : 0;
 
-    const spotsByType = parkingSpots.reduce((acc, spot) => {
-      const t = spot.type || 'standard';
-      acc[t] = (acc[t] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const spotsByFloor = parkingSpots.reduce((acc, spot) => {
-      const f = spot.floor || 'unknown';
-      acc[f] = (acc[f] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const spotsByStatus = parkingSpots.reduce((acc, spot) => {
-      const s = spot.status || 'available';
-      acc[s] = (acc[s] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const spotsByLocationZone = parkingSpots.reduce((acc, spot) => {
-      const lz = spot.locationZone || 'unknown';
-      acc[lz] = (acc[lz] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const spotsByType = tallyBy(parkingSpots, spot => spot.type || 'standard');
+    const spotsByFloor = tallyBy(parkingSpots, spot => spot.floor || 'unknown');
+    const spotsByStatus = tallyBy(parkingSpots, spot => spot.status || 'available');
+    const spotsByLocationZone = tallyBy(parkingSpots, spot => spot.locationZone || 'unknown');
 
     return {
       totalSpots,

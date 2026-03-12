@@ -10,6 +10,7 @@ import { Alert, AlertSeverity, AlertStatus } from '../detection/AlertDetectionSy
 import { RealTimeEvent } from '../dashboard/DashboardService';
 import { Rule, RuleEvaluationResult } from '../rules/RulesEngine';
 import { NotificationMessage } from '../notifications/NotificationDispatchEngine';
+import { tallyBy } from '@/utils/collection-utils';
 
 // ============================================================================
 // ANALYTICS TYPES και INTERFACES
@@ -598,40 +599,25 @@ export class EventAnalyticsEngine {
     );
   }
 
-  // Grouping methods
+  // Grouping methods — ADR-207: Centralized collection utilities
   private groupEventsByType(events: RealTimeEvent[]): Record<string, number> {
-    return events.reduce((acc, event) => {
-      acc[event.type] = (acc[event.type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    return tallyBy(events, e => e.type);
   }
 
   private groupEventsBySeverity(events: RealTimeEvent[]): Record<string, number> {
-    return events.reduce((acc, event) => {
-      acc[event.severity] = (acc[event.severity] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    return tallyBy(events, e => e.severity);
   }
 
   private groupAlertsBySeverity(alerts: Alert[]): Record<AlertSeverity, number> {
-    return alerts.reduce((acc, alert) => {
-      acc[alert.severity] = (acc[alert.severity] || 0) + 1;
-      return acc;
-    }, {} as Record<AlertSeverity, number>);
+    return tallyBy(alerts, a => a.severity) as Record<AlertSeverity, number>;
   }
 
   private groupAlertsByStatus(alerts: Alert[]): Record<AlertStatus, number> {
-    return alerts.reduce((acc, alert) => {
-      acc[alert.status] = (acc[alert.status] || 0) + 1;
-      return acc;
-    }, {} as Record<AlertStatus, number>);
+    return tallyBy(alerts, a => a.status) as Record<AlertStatus, number>;
   }
 
   private groupNotificationsByChannel(notifications: NotificationMessage[]): Record<string, number> {
-    return notifications.reduce((acc, notification) => {
-      acc[notification.channelId] = (acc[notification.channelId] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    return tallyBy(notifications, n => n.channelId);
   }
 
   // Calculation methods (simplified implementations)
@@ -716,10 +702,7 @@ export class EventAnalyticsEngine {
   }
 
   private analyzeFrequentAlertTypes(alerts: Alert[]): AlertTypeFrequency[] {
-    const typeFreq = alerts.reduce((acc, alert) => {
-      acc[alert.type] = (acc[alert.type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const typeFreq = tallyBy(alerts, a => a.type);
 
     return Object.entries(typeFreq).map(([type, count]) => ({
       type,

@@ -11,6 +11,7 @@ import {
   matchesArrayFilter,
   matchesFeatures
 } from '@/components/core/AdvancedFilters';
+import { tallyBy } from '@/utils/collection-utils';
 
 
 /**
@@ -128,13 +129,9 @@ export function usePropertyFilters(
       totalArea: filtered.reduce((sum, p) => sum + (p.area || 0), 0),
       averagePrice: filtered.length > 0 ? filtered.reduce((sum, p) => sum + (p.price || 0), 0) / filtered.length : 0,
       // propertiesByStatus uses operationalStatus (not sales status)
-      propertiesByStatus: filtered.reduce((acc, p) => {
-        const status = p.operationalStatus || 'draft';
-        acc[status] = (acc[status] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>),
-      propertiesByType: filtered.reduce((acc, p) => { acc[p.type] = (acc[p.type] || 0) + 1; return acc; }, {} as Record<string, number>),
-      propertiesByFloor: filtered.reduce((acc, p) => { const floorLabel = `Όροφος ${p.floor}`; acc[floorLabel] = (acc[floorLabel] || 0) + 1; return acc; }, {} as Record<string, number>),
+      propertiesByStatus: tallyBy(filtered, p => p.operationalStatus || 'draft'),
+      propertiesByType: tallyBy(filtered, p => p.type),
+      propertiesByFloor: tallyBy(filtered, p => `Όροφος ${p.floor}`),
       totalStorageUnits: 0, // storageUnits not available in this Property type
       availableStorageUnits: 0,
       uniqueBuildings: [...new Set(filtered.map(p => p.building))].length,

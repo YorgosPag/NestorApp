@@ -23,6 +23,7 @@ import {
   rulesEngine,
   RuleEvaluationResult
 } from '../rules/RulesEngine';
+import { tallyBy } from '@/utils/collection-utils';
 
 // ============================================================================
 // TYPES και INTERFACES
@@ -272,17 +273,9 @@ export class DashboardService {
     const alertsLast24h = alerts.filter((a: Alert) => a.detectedAt >= last24Hours);
     const alertsLast7d = alerts.filter((a: Alert) => a.detectedAt >= last7Days);
 
-    // ✅ ENTERPRISE: Properly typed reduce accumulators
-    const bySeverity = alerts.reduce((acc: Record<AlertSeverity, number>, alert: Alert) => {
-      acc[alert.severity] = (acc[alert.severity] || 0) + 1;
-      return acc;
-    }, {} as Record<AlertSeverity, number>);
-
-    // ✅ ENTERPRISE: Properly typed reduce accumulators
-    const byStatus = alerts.reduce((acc: Record<AlertStatus, number>, alert: Alert) => {
-      acc[alert.status] = (acc[alert.status] || 0) + 1;
-      return acc;
-    }, {} as Record<AlertStatus, number>);
+    // ✅ ENTERPRISE: Centralized collection utility (ADR-207)
+    const bySeverity = tallyBy(alerts, (a: Alert) => a.severity) as Record<AlertSeverity, number>;
+    const byStatus = tallyBy(alerts, (a: Alert) => a.status) as Record<AlertStatus, number>;
 
     // ✅ ENTERPRISE: Properly typed filter and reduce
     const resolvedAlerts = alerts.filter((a: Alert) => a.status === 'resolved');

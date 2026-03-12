@@ -17,50 +17,12 @@
 
 import { useMemo } from 'react';
 
-// ─── Utility Functions ───────────────────────────────────────────────────────
+// ─── Utility Functions (re-exported from server-safe module) ─────────────────
+// ADR-207: Extracted to @/utils/collection-utils for server+client reuse.
+// `groupBy` here is the tally variant (returns counts, not arrays).
 
-/** Group items by a string accessor, returning counts per group */
-export function groupBy<T>(items: T[], accessor: (item: T) => string): Record<string, number> {
-  const result: Record<string, number> = {};
-  for (const item of items) {
-    const key = accessor(item);
-    result[key] = (result[key] || 0) + 1;
-  }
-  return result;
-}
-
-/** Sum a numeric field across all items */
-export function sumBy<T>(items: T[], accessor: (item: T) => number): number {
-  let total = 0;
-  for (const item of items) {
-    total += accessor(item);
-  }
-  return total;
-}
-
-/** Count items matching a predicate */
-export function countBy<T>(items: T[], predicate: (item: T) => boolean): number {
-  let count = 0;
-  for (const item of items) {
-    if (predicate(item)) count++;
-  }
-  return count;
-}
-
-/** Calculate percentage rate (0-100, rounded). Returns 0 if denominator is 0. */
-export function rate(numerator: number, denominator: number): number {
-  return denominator > 0 ? Math.round((numerator / denominator) * 100) : 0;
-}
-
-/** Calculate average. Returns 0 if count is 0. */
-export function avg(total: number, count: number): number {
-  return count > 0 ? total / count : 0;
-}
-
-/** Calculate rounded average. Returns 0 if count is 0. */
-export function avgRounded(total: number, count: number): number {
-  return count > 0 ? Math.round(total / count) : 0;
-}
+export { tallyBy as groupBy, countBy, sumBy, rate, avg, avgRounded } from '@/utils/collection-utils';
+import { tallyBy as groupBy, sumBy, avg } from '@/utils/collection-utils';
 
 // ─── Base Stats Interface ────────────────────────────────────────────────────
 

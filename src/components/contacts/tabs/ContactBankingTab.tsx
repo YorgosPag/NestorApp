@@ -41,6 +41,7 @@ import { Plus, Building2, CreditCard, Loader2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import toast from 'react-hot-toast';
 import { createModuleLogger } from '@/lib/telemetry';
+import { groupByKey } from '@/utils/collection-utils';
 const logger = createModuleLogger('ContactBankingTab');
 
 // ============================================================================
@@ -223,15 +224,8 @@ export function ContactBankingTab({
     setEditingAccount(undefined);
   };
 
-  // Group accounts by bank
-  const accountsByBank = accounts.reduce((groups, account) => {
-    const key = account.bankName;
-    if (!groups[key]) {
-      groups[key] = [];
-    }
-    groups[key].push(account);
-    return groups;
-  }, {} as Record<string, BankAccount[]>);
+  // Group accounts by bank — ADR-207
+  const accountsByBank = groupByKey(accounts, account => account.bankName);
 
   // Render loading state
   if (loading) {

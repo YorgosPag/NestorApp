@@ -19,6 +19,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { groupByKey } from '@/utils/collection-utils';
 
 const logger = createModuleLogger('FloorsAdminRoute');
 
@@ -122,14 +123,7 @@ export async function GET(request: NextRequest) {
 
         // Group floors by building if querying by projectId
         if (projectId) {
-          const floorsByBuilding = floors.reduce((groups: Record<string, AdminFloorDocument[]>, floor: AdminFloorDocument) => {
-            const bId = floor.buildingId;
-            if (!groups[bId]) {
-              groups[bId] = [];
-            }
-            groups[bId].push(floor);
-            return groups;
-          }, {} as Record<string, AdminFloorDocument[]>);
+          const floorsByBuilding = groupByKey(floors, (floor: AdminFloorDocument) => floor.buildingId);
 
           return NextResponse.json({
             success: true,

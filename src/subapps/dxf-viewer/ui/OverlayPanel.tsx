@@ -13,6 +13,7 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { PANEL_TOKENS, PANEL_LAYOUT } from '../config/panel-tokens';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { ENHANCED_STATUS_LABELS as REGION_STATUS_LABELS } from '../../../constants/property-statuses-enterprise';
+import { groupByKey } from '@/utils/collection-utils';
 
 interface OverlayPanelProps {
   isDrawingMode: boolean;
@@ -36,11 +37,7 @@ export function OverlayPanel({ isDrawingMode, drawingStatus, onStartDrawing, onS
     clearSelection 
   } = useOverlayManager();
 
-  const regionsByStatus = visibleRegions.reduce((acc, region) => {
-    if (!acc[region.status]) acc[region.status] = [];
-    acc[region.status].push(region);
-    return acc;
-  }, {} as Record<RegionStatus, typeof visibleRegions>);
+  const regionsByStatus = groupByKey(visibleRegions, region => region.status) as Record<RegionStatus, typeof visibleRegions>;
 
   return (
     <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${PANEL_LAYOUT.SPACING.LG} ${getStatusBorder('default')} ${quick.card}`}>

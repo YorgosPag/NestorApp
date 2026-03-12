@@ -6,6 +6,7 @@ import { BuildingCard } from '../BuildingCard';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Building } from '../BuildingsPageContent';
+import { groupByKey } from '@/utils/collection-utils';
 
 interface BuildingsGroupedViewProps {
   viewMode: 'grid' | 'byType' | 'byStatus';
@@ -23,19 +24,8 @@ export function BuildingsGroupedView({
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
 
-  const groupedByType = filteredBuildings.reduce((acc, building) => {
-    const type = building.category || 'mixed';
-    if (!acc[type]) acc[type] = [];
-    acc[type].push(building);
-    return acc;
-  }, {} as Record<string, Building[]>);
-
-  const groupedByStatus = filteredBuildings.reduce((acc, building) => {
-    const status = building.status;
-    if (!acc[status]) acc[status] = [];
-    acc[status].push(building);
-    return acc;
-  }, {} as Record<string, Building[]>);
+  const groupedByType = groupByKey(filteredBuildings, building => building.category || 'mixed');
+  const groupedByStatus = groupByKey(filteredBuildings, building => building.status);
 
   if (viewMode === 'grid') {
     return (

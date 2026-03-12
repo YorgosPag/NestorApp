@@ -26,6 +26,7 @@ import {
 } from 'firebase/firestore';
 import { PROPERTY_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 import { createModuleLogger } from '@/lib/telemetry';
+import { groupByKey } from '@/utils/collection-utils';
 
 const logger = createModuleLogger('EnterprisePropertyTypesService');
 
@@ -481,13 +482,7 @@ export class EnterprisePropertyTypesService {
   ): Promise<Record<string, PropertyTypeOption[]>> {
     const propertyTypes = await this.getPropertyTypes(tenantId, locale, environment);
 
-    return propertyTypes.reduce((groups, pt) => {
-      if (!groups[pt.category]) {
-        groups[pt.category] = [];
-      }
-      groups[pt.category].push(pt);
-      return groups;
-    }, {} as Record<string, PropertyTypeOption[]>);
+    return groupByKey(propertyTypes, pt => pt.category);
   }
 
   /**
