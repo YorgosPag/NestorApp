@@ -217,6 +217,7 @@
 | **ADR-200** | useEntityLink Hook — Centralized Entity Linking | ✅ IMPLEMENTED | 2026-03-12 | Hooks / Entity Systems | [📄](./adrs/ADR-200-useEntityLink-hook.md) |
 | **ADR-201** | Centralized CompanyId Resolution | ✅ APPROVED | 2026-03-12 | Backend Systems / Multi-Tenant | [📄](./adrs/ADR-201-company-id-resolver.md) |
 | **ADR-202** | Floorplan Save Orchestrator | ✅ APPROVED | 2026-03-12 | Backend Systems / File Storage | [📄](./adrs/ADR-202-floorplan-save-orchestrator.md) |
+| **ADR-203** | Entity Page State Centralization (useEntityPageState) | ✅ IMPLEMENTED | 2026-03-12 | Data & State / Hooks | [📄](./adrs/ADR-203-entity-page-state-centralization.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-018-1-photos-tab-base-template.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |

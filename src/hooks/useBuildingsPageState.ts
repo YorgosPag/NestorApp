@@ -1,183 +1,117 @@
 'use client';
 
-import { useState, useMemo, useEffect, useTransition, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+/**
+ * ADR-203: Buildings Page State — thin wrapper around useEntityPageState
+ *
+ * Entity-specific concerns:
+ * - URL param: buildingId
+ * - Filter logic: building-specific filters (energyClass, renovation, nested ranges)
+ */
+
+import { useCallback } from 'react';
 import type { Building } from '@/components/building-management/BuildingsPageContent';
 import { defaultBuildingFilters, type BuildingFilterState } from '@/components/core/AdvancedFilters';
-import { createModuleLogger } from '@/lib/telemetry';
+import { useEntityPageState, type EntityPageStateConfig } from './useEntityPageState';
 
-const logger = createModuleLogger('useBuildingsPageState');
+// ---------------------------------------------------------------------------
+// Filter function
+// ---------------------------------------------------------------------------
+
+function filterBuildings(buildings: Building[], filters: BuildingFilterState): Building[] {
+  return buildings.filter((building) => {
+    // Search filter
+    if (filters.searchTerm) {
+      const s = filters.searchTerm.toLowerCase();
+      const matches =
+        building.name.toLowerCase().includes(s) ||
+        building.description?.toLowerCase().includes(s) ||
+        building.address?.toLowerCase().includes(s) ||
+        building.location?.toLowerCase().includes(s) ||
+        building.project?.toLowerCase().includes(s);
+      if (!matches) return false;
+    }
+
+    // Array-based select filters
+    const selectFilters: Array<{ arr: string[] | undefined; field: keyof Building }> = [
+      { arr: filters.status, field: 'status' },
+      { arr: filters.type, field: 'type' },
+      { arr: filters.project, field: 'project' },
+      { arr: filters.location, field: 'location' },
+      { arr: filters.company, field: 'company' },
+      { arr: filters.priority, field: 'priority' },
+      { arr: filters.energyClass, field: 'energyClass' },
+      { arr: filters.renovation, field: 'renovation' },
+    ];
+    for (const { arr, field } of selectFilters) {
+      const val = arr && arr.length > 0 ? arr[0] : null;
+      if (val && val !== 'all' && building[field] !== val) return false;
+    }
+
+    // Nested range filters
+    const { ranges } = filters;
+
+    const valueRange = ranges?.valueRange;
+    if (valueRange?.min !== undefined && building.totalValue && building.totalValue < valueRange.min) return false;
+    if (valueRange?.max !== undefined && building.totalValue && building.totalValue > valueRange.max) return false;
+
+    const areaRange = ranges?.areaRange;
+    if (areaRange?.min !== undefined && building.totalArea && building.totalArea < areaRange.min) return false;
+    if (areaRange?.max !== undefined && building.totalArea && building.totalArea > areaRange.max) return false;
+
+    const unitsRange = ranges?.unitsRange;
+    if (unitsRange?.min !== undefined && building.totalUnits && building.totalUnits < unitsRange.min) return false;
+    if (unitsRange?.max !== undefined && building.totalUnits && building.totalUnits > unitsRange.max) return false;
+
+    const yearRange = ranges?.yearRange;
+    if (yearRange?.min !== undefined && building.constructionYear && building.constructionYear < yearRange.min) return false;
+    if (yearRange?.max !== undefined && building.constructionYear && building.constructionYear > yearRange.max) return false;
+
+    // Boolean feature filters
+    if (filters.hasParking && !building.hasParking) return false;
+    if (filters.hasElevator && !building.hasElevator) return false;
+    if (filters.hasGarden && !building.hasGarden) return false;
+    if (filters.hasPool && !building.hasPool) return false;
+    if (filters.accessibility && !building.accessibility) return false;
+    if (filters.furnished && !building.furnished) return false;
+
+    return true;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Hook
+// ---------------------------------------------------------------------------
 
 export function useBuildingsPageState(initialBuildings: Building[]) {
-  // [ENTERPRISE] URL parameter handling for contextual navigation
-  const searchParams = useSearchParams();
-  const buildingIdFromUrl = searchParams.get('buildingId');
+  const stableFilterFn = useCallback(filterBuildings, []);
 
-  const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'grid' | 'byType' | 'byStatus'>('list');
-  const [showDashboard, setShowDashboard] = useState(false);
+  const config: EntityPageStateConfig<Building, BuildingFilterState> = {
+    urlParamName: 'buildingId',
+    loggerName: 'useBuildingsPageState',
+    defaultFilters: defaultBuildingFilters,
+    filterFn: stableFilterFn,
+  };
 
-  // INP optimization: defer heavy detail panel re-render so browser can paint click feedback first
-  const [, startTransition] = useTransition();
-  const selectBuilding = useCallback((building: Building | null) => {
-    startTransition(() => {
-      setSelectedBuilding(building);
-    });
-  }, [startTransition]);
-
-  // Use centralized filter state
-  const [filters, setFilters] = useState<BuildingFilterState>(defaultBuildingFilters);
-
-  // [ENTERPRISE] Auto-selection from URL parameter (contextual navigation)
-  useEffect(() => {
-    if (!initialBuildings.length) return;
-
-    if (buildingIdFromUrl) {
-      // URL parameter has priority - find and select the building
-      const found = initialBuildings.find(b => b.id === buildingIdFromUrl);
-      if (found) {
-        logger.info('Auto-selecting building from URL', { buildingName: found.name });
-        setSelectedBuilding(found);
-        return;
-      }
-    }
-
-    // Default: select first building if none selected
-    if (!selectedBuilding && initialBuildings.length > 0) {
-      setSelectedBuilding(initialBuildings[0]);
-    }
-  }, [initialBuildings, buildingIdFromUrl]);
-
-  const filteredBuildings = useMemo(() => {
-    return initialBuildings.filter(building => {
-      // Search filter - extended search
-      if (filters.searchTerm) {
-        const searchLower = filters.searchTerm.toLowerCase();
-        const matchesSearch = building.name.toLowerCase().includes(searchLower) ||
-                             building.description?.toLowerCase().includes(searchLower) ||
-                             building.address?.toLowerCase().includes(searchLower) ||
-                             building.location?.toLowerCase().includes(searchLower) ||
-                             building.project?.toLowerCase().includes(searchLower);
-        if (!matchesSearch) return false;
-      }
-
-      // Status filter
-      const statusFilter = filters.status && filters.status.length > 0 ? filters.status[0] : null;
-      if (statusFilter && statusFilter !== 'all' && building.status !== statusFilter) {
-        return false;
-      }
-
-      // Type filter
-      const typeFilter = filters.type && filters.type.length > 0 ? filters.type[0] : null;
-      if (typeFilter && typeFilter !== 'all' && building.type !== typeFilter) {
-        return false;
-      }
-
-      // Project filter
-      const projectFilter = filters.project && filters.project.length > 0 ? filters.project[0] : null;
-      if (projectFilter && projectFilter !== 'all' && building.project !== projectFilter) {
-        return false;
-      }
-
-      // Location filter
-      const locationFilter = filters.location && filters.location.length > 0 ? filters.location[0] : null;
-      if (locationFilter && locationFilter !== 'all' && building.location !== locationFilter) {
-        return false;
-      }
-
-      // Company filter
-      const companyFilter = filters.company && filters.company.length > 0 ? filters.company[0] : null;
-      if (companyFilter && companyFilter !== 'all' && building.company !== companyFilter) {
-        return false;
-      }
-
-      // Priority filter
-      const priorityFilter = filters.priority && filters.priority.length > 0 ? filters.priority[0] : null;
-      if (priorityFilter && priorityFilter !== 'all' && building.priority !== priorityFilter) {
-        return false;
-      }
-
-      // Energy Class filter
-      const energyClassFilter = filters.energyClass && filters.energyClass.length > 0 ? filters.energyClass[0] : null;
-      if (energyClassFilter && energyClassFilter !== 'all' && building.energyClass !== energyClassFilter) {
-        return false;
-      }
-
-      // Renovation filter
-      const renovationFilter = filters.renovation && filters.renovation.length > 0 ? filters.renovation[0] : null;
-      if (renovationFilter && renovationFilter !== 'all' && building.renovation !== renovationFilter) {
-        return false;
-      }
-
-      // Value range filter
-      const valueRange = filters.ranges?.valueRange;
-      if (valueRange?.min !== undefined && building.totalValue && building.totalValue < valueRange.min) {
-        return false;
-      }
-      if (valueRange?.max !== undefined && building.totalValue && building.totalValue > valueRange.max) {
-        return false;
-      }
-
-      // Area range filter
-      const areaRange = filters.ranges?.areaRange;
-      if (areaRange?.min !== undefined && building.totalArea && building.totalArea < areaRange.min) {
-        return false;
-      }
-      if (areaRange?.max !== undefined && building.totalArea && building.totalArea > areaRange.max) {
-        return false;
-      }
-
-      // Units range filter
-      const unitsRange = filters.ranges?.unitsRange;
-      if (unitsRange?.min !== undefined && building.totalUnits && building.totalUnits < unitsRange.min) {
-        return false;
-      }
-      if (unitsRange?.max !== undefined && building.totalUnits && building.totalUnits > unitsRange.max) {
-        return false;
-      }
-
-      // Year range filter
-      const yearRange = filters.ranges?.yearRange;
-      if (yearRange?.min !== undefined && building.constructionYear && building.constructionYear < yearRange.min) {
-        return false;
-      }
-      if (yearRange?.max !== undefined && building.constructionYear && building.constructionYear > yearRange.max) {
-        return false;
-      }
-
-      // Boolean feature filters
-      if (filters.hasParking && !building.hasParking) {
-        return false;
-      }
-      if (filters.hasElevator && !building.hasElevator) {
-        return false;
-      }
-      if (filters.hasGarden && !building.hasGarden) {
-        return false;
-      }
-      if (filters.hasPool && !building.hasPool) {
-        return false;
-      }
-      if (filters.accessibility && !building.accessibility) {
-        return false;
-      }
-      if (filters.furnished && !building.furnished) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [initialBuildings, filters]);
-
-  return {
-    selectedBuilding,
-    setSelectedBuilding: selectBuilding,
+  const {
+    selectedItem,
+    setSelectedItem,
     viewMode,
     setViewMode,
     showDashboard,
     setShowDashboard,
-    filteredBuildings,
-    // New centralized filter state
+    filteredItems,
+    filters,
+    setFilters,
+  } = useEntityPageState(initialBuildings, config);
+
+  return {
+    selectedBuilding: selectedItem,
+    setSelectedBuilding: setSelectedItem,
+    viewMode,
+    setViewMode,
+    showDashboard,
+    setShowDashboard,
+    filteredBuildings: filteredItems,
     filters,
     setFilters,
   };
