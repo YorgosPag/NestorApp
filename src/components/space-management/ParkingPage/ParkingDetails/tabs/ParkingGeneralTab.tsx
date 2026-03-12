@@ -207,6 +207,7 @@ export function ParkingGeneralTab({
       {/* Building Link + Floor — side by side at the top */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <EntityLinkCard
+          key={`parking-building-${parking.id}`}
           cardId="parking-building-link"
           icon={Building2}
           labels={{

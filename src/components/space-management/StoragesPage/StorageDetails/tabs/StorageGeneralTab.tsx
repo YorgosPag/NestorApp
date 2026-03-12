@@ -212,6 +212,7 @@ export function StorageGeneralTab({
       {/* Building Link + Floor — side by side at the top */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <EntityLinkCard
+          key={`storage-building-${storage.id}`}
           cardId="storage-building-link"
           icon={Building2}
           labels={{
