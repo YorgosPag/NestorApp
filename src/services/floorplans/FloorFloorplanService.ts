@@ -291,14 +291,14 @@ export class FloorFloorplanService {
         return null;
       }
 
-      // Download scene JSON via server-side proxy (bypasses CORS + Storage rules)
-      console.error('[FloorFloorplanService] ⬇️ Downloading via API proxy', { fileId: fileRecord.id });
-      const proxyResponse = await fetch(`/api/files/${fileRecord.id}/download`);
-      if (!proxyResponse.ok) {
-        floorplanLogger.warn(`Proxy download failed: ${proxyResponse.status}`, { floorId, fileId: fileRecord.id });
+      // Download scene JSON via downloadUrl (CORS configured on bucket)
+      console.error('[FloorFloorplanService] ⬇️ Downloading via downloadUrl', { fileId: fileRecord.id });
+      const response = await fetch(fileRecord.downloadUrl);
+      if (!response.ok) {
+        floorplanLogger.warn(`Download failed: ${response.status}`, { floorId, fileId: fileRecord.id });
         return null;
       }
-      const sceneJson = await proxyResponse.text();
+      const sceneJson = await response.text();
       console.error('[FloorFloorplanService] ✅ Downloaded', { bytes: sceneJson.length });
       const scene = JSON.parse(sceneJson) as SceneModel;
       console.error('[FloorFloorplanService] ✅ Parsed scene', { entities: scene.entities?.length || 0 });
