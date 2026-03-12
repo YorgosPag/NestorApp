@@ -1,10 +1,14 @@
 'use client';
 
 /**
- * UnitEntityLinks — Company, Project, Building linking for units
+ * UnitEntityLinks — Building linking for units
  *
- * Uses the centralized EntityLinkCard component.
- * Allows linking a unit to a specific company, project, and building.
+ * A unit's only direct parent is its Building.
+ * Company and Project are resolved through the hierarchy:
+ * Unit → Building → Project → Company
+ *
+ * ADR-200: Uses centralized useEntityLink hook.
+ * @see ADR-199 changelog 2026-03-12
  *
  * @module features/property-details/components/UnitEntityLinks
  */
@@ -12,9 +16,9 @@
 import React, { useCallback } from 'react';
 import { Building } from 'lucide-react';
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
-import type { EntityLinkOption } from '@/components/shared/EntityLinkCard';
 import { updateUnitLink, getBuildingsList } from '@/services/units.service';
 import { useTranslation } from 'react-i18next';
+import { useEntityLink } from '@/hooks/useEntityLink';
 
 interface UnitEntityLinksProps {
   unitId: string;
@@ -27,15 +31,6 @@ interface UnitEntityLinksProps {
   onLinkChanged?: () => void;
 }
 
-/**
- * UnitEntityLinks — Building linking for units
- *
- * A unit's only direct parent is its Building.
- * Company and Project are resolved through the hierarchy:
- * Unit → Building → Project → Company
- *
- * @see ADR-199 changelog 2026-03-12
- */
 export function UnitEntityLinks({
   unitId,
   currentBuildingId,
@@ -44,39 +39,41 @@ export function UnitEntityLinks({
 }: UnitEntityLinksProps) {
   const { t } = useTranslation('units');
 
-  const loadBuildings = useCallback(async (): Promise<EntityLinkOption[]> => {
-    return getBuildingsList();
-  }, []);
+  const loadBuildings = useCallback(() => getBuildingsList(), []);
 
   const saveBuilding = useCallback(async (newId: string | null) => {
-    return updateUnitLink(unitId, {
-      buildingId: newId,
-    });
-  }, [unitId]);
+    const result = await updateUnitLink(unitId, { buildingId: newId });
+    if (result.success && onLinkChanged) onLinkChanged();
+    return result;
+  }, [unitId, onLinkChanged]);
+
+  // ADR-200: Centralized entity linking via useEntityLink
+  const buildingLink = useEntityLink({
+    relation: 'unit-building',
+    entityId: unitId,
+    initialParentId: currentBuildingId ?? null,
+    loadOptions: loadBuildings,
+    saveMode: 'immediate',
+    onSave: saveBuilding,
+    icon: Building,
+    cardId: 'unit-building-link',
+    labels: {
+      title: t('entityLinks.building.title'),
+      label: t('entityLinks.building.label'),
+      placeholder: t('entityLinks.building.placeholder'),
+      noSelection: t('entityLinks.building.noSelection'),
+      loading: t('entityLinks.building.loading'),
+      save: t('entityLinks.save'),
+      saving: t('entityLinks.saving'),
+      success: t('entityLinks.building.success'),
+      error: t('entityLinks.error'),
+      currentLabel: t('entityLinks.building.currentLabel'),
+    },
+  }, isEditing);
 
   return (
     <section>
-      <EntityLinkCard
-        cardId="unit-building-link"
-        icon={Building}
-        currentValue={currentBuildingId}
-        loadOptions={loadBuildings}
-        onSave={saveBuilding}
-        onChanged={onLinkChanged ? () => onLinkChanged() : undefined}
-        isEditing={isEditing}
-        labels={{
-          title: t('entityLinks.building.title'),
-          label: t('entityLinks.building.label'),
-          placeholder: t('entityLinks.building.placeholder'),
-          noSelection: t('entityLinks.building.noSelection'),
-          loading: t('entityLinks.building.loading'),
-          save: t('entityLinks.save'),
-          saving: t('entityLinks.saving'),
-          success: t('entityLinks.building.success'),
-          error: t('entityLinks.error'),
-          currentLabel: t('entityLinks.building.currentLabel'),
-        }}
-      />
+      <EntityLinkCard {...buildingLink.linkCardProps} />
     </section>
   );
 }

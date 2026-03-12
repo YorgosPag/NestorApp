@@ -15,6 +15,7 @@ import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
 import type { EntityLinkOption } from '@/components/shared/EntityLinkCard';
 import { RealtimeService } from '@/services/realtime';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useEntityLink } from '@/hooks/useEntityLink';
 
 const logger = createModuleLogger('GeneralTabContent');
 
@@ -76,11 +77,60 @@ export function GeneralTabContent({
   const [formData, setFormData] = useState(() => buildFormData(building));
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // 🏢 ENTERPRISE: Local projectId state for create mode
-  // In create mode, we store projectId locally until the building is saved
-  const [createProjectId, setCreateProjectId] = useState<string | null>(
-    isCreateMode ? (building.projectId || null) : null
-  );
+  // =========================================================================
+  // ADR-200: Centralized entity linking — Project
+  // =========================================================================
+
+  const loadProjects = useCallback(async (): Promise<EntityLinkOption[]> => {
+    const projects = await getProjectsList();
+    return projects.map(p => ({
+      id: p.id,
+      name: p.name,
+      currentLabel: p.licenseTitle || undefined,
+    }));
+  }, []);
+
+  const saveProject = useCallback(async (newId: string | null) => {
+    try {
+      const result = await updateBuilding(String(building.id), { projectId: newId });
+      if (result.success) {
+        logger.info('Building linked to project', { buildingId: building.id, projectId: newId });
+        RealtimeService.dispatchBuildingProjectLinked({
+          buildingId: String(building.id),
+          previousProjectId: building.projectId || null,
+          newProjectId: newId,
+          timestamp: Date.now(),
+        });
+        return { success: true };
+      }
+      return { success: false, error: result.error || 'Failed to update' };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to update' };
+    }
+  }, [building.id, building.projectId]);
+
+  const projectLink = useEntityLink({
+    relation: 'building-project',
+    entityId: String(building.id),
+    initialParentId: building.projectId || null,
+    loadOptions: loadProjects,
+    saveMode: isCreateMode ? 'local' : 'immediate',
+    onSave: isCreateMode ? undefined : saveProject,
+    icon: FolderKanban,
+    cardId: 'building-project-link',
+    labels: {
+      title: t('projectSelector.title'),
+      label: t('projectSelector.label'),
+      placeholder: t('projectSelector.placeholder'),
+      noSelection: t('projectSelector.noProject'),
+      loading: t('projectSelector.loading'),
+      save: t('projectSelector.save'),
+      saving: t('projectSelector.saving'),
+      success: t('projectSelector.success'),
+      error: t('projectSelector.error'),
+      currentLabel: t('projectSelector.currentProject'),
+    },
+  }, effectiveIsEditing);
 
   // Track cancel vs save transitions for form reset
   const didSaveRef = React.useRef(false);
@@ -149,13 +199,14 @@ export function GeneralTabContent({
       };
 
       if (isCreateMode) {
-        logger.info('Creating new building in Firestore', { formData, projectId: createProjectId });
+        const projectPayload = projectLink.getPayload();
+        logger.info('Creating new building in Firestore', { formData, projectId: projectPayload.projectId ?? null });
         const result = await createBuilding({
           ...payload,
           companyId: building.companyId || '',
           status: 'planning',
-          // 🏢 ENTERPRISE: Include projectId if selected during creation
-          ...(createProjectId ? { projectId: createProjectId } : {}),
+          // ADR-200: Include projectId from centralized hook
+          ...projectPayload,
         });
 
         if (!result.success || !result.buildingId) {
@@ -191,7 +242,7 @@ export function GeneralTabContent({
     } finally {
       setIsSaving(false);
     }
-  }, [building.id, building.companyId, formData, setEffectiveEditing, isCreateMode, onBuildingCreated, createProjectId, t]);
+  }, [building.id, building.companyId, formData, setEffectiveEditing, isCreateMode, onBuildingCreated, projectLink, t]);
 
   // Register save function for parent header delegation
   useEffect(() => {
@@ -212,48 +263,6 @@ export function GeneralTabContent({
     }
   };
 
-  // =========================================================================
-  // EntityLinkCard callbacks — Project
-  // =========================================================================
-
-  const loadProjects = useCallback(async (): Promise<EntityLinkOption[]> => {
-    const projects = await getProjectsList();
-    return projects.map(p => ({
-      id: p.id,
-      name: p.name,
-      currentLabel: p.licenseTitle || undefined,
-    }));
-  }, []);
-
-  // 🏢 ENTERPRISE: In create mode, save projectId locally (no API call — building doesn't exist yet)
-  const saveProjectLocal = useCallback(async (newId: string | null, _name: string) => {
-    setCreateProjectId(newId);
-    logger.info('Project selected for new building (local)', { projectId: newId });
-    return { success: true };
-  }, []);
-
-  const saveProject = useCallback(async (newId: string | null) => {
-    try {
-      const result = await updateBuilding(String(building.id), {
-        projectId: newId,
-      });
-      if (result.success) {
-        logger.info('Building linked to project', { buildingId: building.id, projectId: newId });
-        // Dispatch real-time event for Navigation updates
-        RealtimeService.dispatchBuildingProjectLinked({
-          buildingId: String(building.id),
-          previousProjectId: building.projectId || null,
-          newProjectId: newId,
-          timestamp: Date.now(),
-        });
-        return { success: true };
-      }
-      return { success: false, error: result.error || 'Failed to update' };
-    } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Failed to update' };
-    }
-  }, [building.id, building.projectId]);
-
   return (
     <section className="space-y-2">
       <Header
@@ -272,28 +281,8 @@ export function GeneralTabContent({
           <span>{saveError}</span>
         </aside>
       )}
-      {/* ENTERPRISE: Building → Project linking at TOP (only direct parent)
-          Company is resolved through hierarchy: Building → Project → Company */}
-      <EntityLinkCard
-        cardId="building-project-link"
-        icon={FolderKanban}
-        currentValue={isCreateMode ? createProjectId : building.projectId}
-        loadOptions={loadProjects}
-        onSave={isCreateMode ? saveProjectLocal : saveProject}
-        isEditing={effectiveIsEditing}
-        labels={{
-          title: t('projectSelector.title'),
-          label: t('projectSelector.label'),
-          placeholder: t('projectSelector.placeholder'),
-          noSelection: t('projectSelector.noProject'),
-          loading: t('projectSelector.loading'),
-          save: t('projectSelector.save'),
-          saving: t('projectSelector.saving'),
-          success: t('projectSelector.success'),
-          error: t('projectSelector.error'),
-          currentLabel: t('projectSelector.currentProject'),
-        }}
-      />
+      {/* ADR-200: Building → Project linking via centralized useEntityLink hook */}
+      <EntityLinkCard {...projectLink.linkCardProps} />
       <BasicInfoCard
         formData={formData}
         updateField={updateField}

@@ -15,11 +15,12 @@ import { updateProject } from '@/services/projects.service';
 import { createProject } from '@/services/projects-client.service';
 import { RealtimeService } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
-// 🏢 ENTERPRISE: Company linking via EntityLinkCard
+// 🏢 ENTERPRISE: Company linking via EntityLinkCard (ADR-200)
 import { Building2 } from 'lucide-react';
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
 import type { EntityLinkOption } from '@/components/shared/EntityLinkCard';
 import { getAllCompaniesForSelect } from '@/services/companies.service';
+import { useEntityLink } from '@/hooks/useEntityLink';
 const logger = createModuleLogger('GeneralProjectTab');
 
 interface ExtendedGeneralProjectTabProps extends GeneralProjectTabProps {
@@ -117,15 +118,17 @@ export function GeneralProjectTab({
       setSaveError(null);
 
       if (isCreateMode) {
-        // 🏢 ENTERPRISE: "Fill then Create" — first save creates the project
-        logger.info('Creating new project...', { data: projectData });
+        // ADR-200: Get companyId from centralized hook in local mode
+        const companyPayload = companyLink.getPayload();
+        const effectiveCompanyId = companyPayload.companyId ?? projectData.companyId ?? '';
+        logger.info('Creating new project...', { data: projectData, companyId: effectiveCompanyId });
 
         const result = await createProject({
           name: projectData.name || 'Νέο Έργο',
           title: projectData.licenseTitle,
           description: projectData.description,
           status: projectData.status || 'planning',
-          companyId: projectData.companyId || '',
+          companyId: effectiveCompanyId,
         });
 
         if (!result.success || !result.projectId) {
@@ -187,7 +190,7 @@ export function GeneralProjectTab({
     } finally {
       setIsSaving(false);
     }
-  }, [projectData, project.id, project.companyId, setIsEditing, isCreateMode, onProjectCreated]);
+  }, [projectData, project.id, project.companyId, setIsEditing, isCreateMode, onProjectCreated, companyLink]);
 
   // Register save callback with parent so header Save button works
   useEffect(() => {
@@ -197,7 +200,7 @@ export function GeneralProjectTab({
   }, [registerSaveCallback, handleSave]);
 
   // =========================================================================
-  // EntityLinkCard callbacks — Company
+  // ADR-200: Centralized entity linking — Company
   // =========================================================================
 
   const loadCompanies = useCallback(async (): Promise<EntityLinkOption[]> => {
@@ -205,16 +208,6 @@ export function GeneralProjectTab({
     return companies
       .filter(c => c.id)
       .map(c => ({ id: c.id!, name: c.companyName || '' }));
-  }, []);
-
-  // 🏢 ENTERPRISE: In create mode, save companyId locally (no API call — project not yet in Firestore)
-  const saveCompanyLocal = useCallback(async (newId: string | null, _name: string) => {
-    setProjectData(prev => ({
-      ...prev,
-      companyId: newId || '',
-      companyName: _name || '',
-    }));
-    return { success: true };
   }, []);
 
   const saveCompanyLink = useCallback(async (newId: string | null) => {
@@ -241,6 +234,30 @@ export function GeneralProjectTab({
     }
   }, [project.id]);
 
+  const companyLink = useEntityLink({
+    relation: 'project-company',
+    entityId: project.id,
+    initialParentId: project.companyId || null,
+    loadOptions: loadCompanies,
+    saveMode: isCreateMode ? 'local' : 'immediate',
+    onSave: isCreateMode ? undefined : saveCompanyLink,
+    hideCurrentLabel: true,
+    icon: Building2,
+    cardId: 'project-company-link',
+    labels: {
+      title: t('basicInfo.companyLink.title'),
+      label: t('basicInfo.companyLink.label'),
+      placeholder: t('basicInfo.companyLink.placeholder'),
+      noSelection: t('basicInfo.companyLink.noSelection'),
+      loading: t('basicInfo.companyLink.loading'),
+      save: t('basicInfo.companyLink.save'),
+      saving: t('basicInfo.companyLink.saving'),
+      success: t('basicInfo.companyLink.success'),
+      error: t('basicInfo.companyLink.error'),
+      currentLabel: t('basicInfo.companyLink.currentLabel'),
+    },
+  }, isEditing);
+
   return (
     <>
       <GeneralProjectHeader
@@ -254,28 +271,8 @@ export function GeneralProjectTab({
       />
 
       <section className={cn(spacing.spaceBetween.md, spacing.margin.top.md)}>
-        {/* 🏢 ENTERPRISE: Company linking — top of page, standalone EntityLinkCard */}
-        <EntityLinkCard
-          cardId="project-company-link"
-          icon={Building2}
-          currentValue={projectData.companyId || project.companyId}
-          loadOptions={loadCompanies}
-          onSave={isCreateMode ? saveCompanyLocal : saveCompanyLink}
-          isEditing={isEditing}
-          hideCurrentLabel
-          labels={{
-            title: t('basicInfo.companyLink.title'),
-            label: t('basicInfo.companyLink.label'),
-            placeholder: t('basicInfo.companyLink.placeholder'),
-            noSelection: t('basicInfo.companyLink.noSelection'),
-            loading: t('basicInfo.companyLink.loading'),
-            save: t('basicInfo.companyLink.save'),
-            saving: t('basicInfo.companyLink.saving'),
-            success: t('basicInfo.companyLink.success'),
-            error: t('basicInfo.companyLink.error'),
-            currentLabel: t('basicInfo.companyLink.currentLabel'),
-          }}
-        />
+        {/* ADR-200: Company linking via centralized useEntityLink hook */}
+        <EntityLinkCard {...companyLink.linkCardProps} />
 
         <BasicProjectInfoTab
           data={projectData}

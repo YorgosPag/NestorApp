@@ -33,6 +33,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
 import { getBuildingsList } from '@/services/units.service';
 import { FloorSelectField } from '@/components/shared/FloorSelectField';
+import { useEntityLink } from '@/hooks/useEntityLink';
 
 const logger = createModuleLogger('StorageGeneralTab');
 
@@ -120,24 +121,43 @@ export function StorageGeneralTab({
 
   // Form state — always bound to inputs (disabled when not editing)
   const [form, setForm] = useState<StorageFormState>(() => buildFormState(storage));
-  const [linkedBuildingId, setLinkedBuildingId] = useState<string | null>(storage.buildingId ?? null);
 
   // Reset form when a DIFFERENT storage is selected (not on edit mode toggle)
   useEffect(() => {
     setForm(buildFormState(storage));
-    setLinkedBuildingId(storage.buildingId ?? null);
   }, [storage.id]);
 
   // Building link callbacks
   const loadBuildings = useCallback(() => getBuildingsList(), []);
 
-  // 🏢 ENTERPRISE: No auto-save — building change is part of form, saved with Save button
-  const handleBuildingChange = useCallback((newBuildingId: string | null) => {
-    if (newBuildingId !== linkedBuildingId) {
-      setLinkedBuildingId(newBuildingId);
-      setForm(prev => ({ ...prev, floor: '' }));
-    }
-  }, [linkedBuildingId]);
+  const updateField = <K extends keyof StorageFormState>(key: K, value: StorageFormState[K]) => {
+    setForm(prev => ({ ...prev, [key]: value }));
+  };
+
+  // ADR-200: Centralized entity linking via useEntityLink
+  const buildingLink = useEntityLink({
+    relation: 'storage-building',
+    entityId: storage.id,
+    initialParentId: storage.buildingId ?? null,
+    loadOptions: loadBuildings,
+    saveMode: 'form',
+    cascadingResets: [{ resetField: 'floor' }],
+    onCascadingReset: (resets) => resets.forEach(r => updateField(r.field as keyof StorageFormState, r.value)),
+    icon: Building2,
+    cardId: 'storage-building-link',
+    labels: {
+      title: t('entityLinks.building.title'),
+      label: t('entityLinks.building.label'),
+      placeholder: t('entityLinks.building.placeholder'),
+      noSelection: t('entityLinks.building.noSelection'),
+      loading: t('entityLinks.building.loading'),
+      save: t('entityLinks.building.save'),
+      saving: t('entityLinks.building.saving'),
+      success: t('entityLinks.building.success'),
+      error: t('entityLinks.building.error'),
+      currentLabel: t('entityLinks.building.currentLabel'),
+    },
+  }, isEditing);
 
   // Register save handler with parent via ref
   const handleSave = useCallback(async (): Promise<boolean> => {
@@ -155,10 +175,8 @@ export function StorageGeneralTab({
       if (form.description.trim() !== (storage.description || '')) payload.description = form.description.trim();
       if (form.notes.trim() !== (storage.notes || '')) payload.notes = form.notes.trim();
 
-      // Include building link change
-      if (linkedBuildingId !== (storage.buildingId ?? null)) {
-        payload.buildingId = linkedBuildingId;
-      }
+      // ADR-200: Include building link change from centralized hook
+      Object.assign(payload, buildingLink.getPayload());
 
       // Nothing changed
       if (Object.keys(payload).length === 0) {
@@ -177,7 +195,7 @@ export function StorageGeneralTab({
           status: form.status,
           floor: form.floor.trim() || undefined,
           area: newArea,
-          buildingId: linkedBuildingId,
+          buildingId: buildingLink.linkedId,
         },
         timestamp: Date.now(),
       });
@@ -189,7 +207,7 @@ export function StorageGeneralTab({
       logger.error('Failed to save storage', { error: err instanceof Error ? err.message : String(err) });
       return false;
     }
-  }, [form, storage, onEditingChange, linkedBuildingId]);
+  }, [form, storage, onEditingChange, buildingLink]);
 
   // Register save ref for header delegation
   useEffect(() => {
@@ -203,36 +221,11 @@ export function StorageGeneralTab({
     };
   }, [handleSave, onSaveRef]);
 
-  const updateField = <K extends keyof StorageFormState>(key: K, value: StorageFormState[K]) => {
-    setForm(prev => ({ ...prev, [key]: value }));
-  };
-
   return (
     <div className="p-4 space-y-4">
       {/* Building Link + Floor — side by side at the top */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <EntityLinkCard
-          key={`storage-building-${storage.id}`}
-          cardId="storage-building-link"
-          icon={Building2}
-          labels={{
-            title: t('entityLinks.building.title'),
-            label: t('entityLinks.building.label'),
-            placeholder: t('entityLinks.building.placeholder'),
-            noSelection: t('entityLinks.building.noSelection'),
-            loading: t('entityLinks.building.loading'),
-            save: t('entityLinks.building.save'),
-            saving: t('entityLinks.building.saving'),
-            success: t('entityLinks.building.success'),
-            error: t('entityLinks.building.error'),
-            currentLabel: t('entityLinks.building.currentLabel'),
-          }}
-          currentValue={linkedBuildingId ?? undefined}
-          loadOptions={loadBuildings}
-          autoSave={false}
-          onValueChange={handleBuildingChange}
-          isEditing={isEditing}
-        />
+        <EntityLinkCard {...buildingLink.linkCardProps} />
         <Card>
           <CardHeader className="p-2">
             <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
@@ -242,7 +235,7 @@ export function StorageGeneralTab({
           </CardHeader>
           <CardContent className="p-2 pt-0">
             <FloorSelectField
-              buildingId={linkedBuildingId}
+              buildingId={buildingLink.linkedId}
               value={form.floor}
               onChange={(v) => updateField('floor', v)}
               label={t('general.fields.floor')}
