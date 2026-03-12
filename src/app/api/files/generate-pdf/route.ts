@@ -132,7 +132,7 @@ async function handler(
 
     const pdfBytes = await pdfDoc.save();
 
-    return new NextResponse(new Blob([pdfBytes]), {
+    return new NextResponse(new Uint8Array(pdfBytes), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${filename}"`,

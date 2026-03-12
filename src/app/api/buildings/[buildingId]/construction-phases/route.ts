@@ -67,7 +67,7 @@ export async function GET(
         .get();
 
       const phases: ConstructionPhase[] = phasesSnapshot.docs.map((doc) => {
-        const data = doc.data();
+        const data = doc.data() as Omit<ConstructionPhase, 'id'>;
         return {
           id: doc.id,
           buildingId: data.buildingId,
@@ -83,8 +83,8 @@ export async function GET(
           progress: data.progress ?? 0,
           barColor: data.barColor,
           description: data.description,
-          createdAt: normalizeToISO(data.createdAt),
-          updatedAt: normalizeToISO(data.updatedAt),
+          createdAt: normalizeToISO(data.createdAt) ?? undefined,
+          updatedAt: normalizeToISO(data.updatedAt) ?? undefined,
           createdBy: data.createdBy,
           updatedBy: data.updatedBy,
         };
@@ -98,7 +98,7 @@ export async function GET(
         .get();
 
       const tasks: ConstructionTask[] = tasksSnapshot.docs.map((doc) => {
-        const data = doc.data();
+        const data = doc.data() as Omit<ConstructionTask, 'id'>;
         return {
           id: doc.id,
           phaseId: data.phaseId,
@@ -116,8 +116,8 @@ export async function GET(
           dependencies: data.dependencies ?? [],
           barColor: data.barColor,
           description: data.description,
-          createdAt: normalizeToISO(data.createdAt),
-          updatedAt: normalizeToISO(data.updatedAt),
+          createdAt: normalizeToISO(data.createdAt) ?? undefined,
+          updatedAt: normalizeToISO(data.updatedAt) ?? undefined,
           createdBy: data.createdBy,
           updatedBy: data.updatedBy,
         };

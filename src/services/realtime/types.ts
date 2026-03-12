@@ -258,7 +258,7 @@ export interface UnitBuildingLinkPayload {
  */
 export interface ProjectUpdatedPayload {
   projectId: string;
-  updates: Partial<Omit<Project, 'id'>>;
+  updates: Partial<Project>;
   timestamp: number;
 }
 
@@ -268,7 +268,7 @@ export interface ProjectUpdatedPayload {
  */
 export interface BuildingUpdatedPayload {
   buildingId: string;
-  updates: Partial<Omit<Building, 'id'>>;
+  updates: Partial<Building>;
   timestamp: number;
 }
 

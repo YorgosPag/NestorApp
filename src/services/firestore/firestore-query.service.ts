@@ -284,7 +284,7 @@ class FirestoreQueryService implements IFirestoreQueryService {
 
     const colName = resolveCollectionName(key);
     const colRef = collection(db, colName);
-    const chunks = chunkArray(docIds, FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS);
+    const chunks = chunkArray([...docIds], FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS);
 
     const results = new Map<string, T>();
 

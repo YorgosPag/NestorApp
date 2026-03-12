@@ -110,6 +110,8 @@ export const ENTITY_TYPES = {
   STORAGE_UNIT: 'storage_unit',
   /** Parking spot entity */
   PARKING_SPOT: 'parking_spot',
+  /** Storage entity */
+  STORAGE: 'storage',
 } as const;
 
 export type EntityType = typeof ENTITY_TYPES[keyof typeof ENTITY_TYPES];

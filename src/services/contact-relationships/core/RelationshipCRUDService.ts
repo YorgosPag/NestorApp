@@ -442,6 +442,8 @@ export class RelationshipCRUDService {
       'supplier': 'customer',
       'customer': 'supplier',
       'competitor': 'competitor',
+      'friend': 'friend',
+      'family': 'family',
       'other': null
     };
 

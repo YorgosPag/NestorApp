@@ -123,9 +123,33 @@ export class FileAuditService {
     fileId: string,
     action: FileAuditAction,
     performedBy: string,
+    metadata?: Record<string, string | number | boolean | null>,
+  ): Promise<string>;
+  static async log(
+    fileId: string,
+    action: FileAuditAction,
+    performedBy: string,
     companyId?: string,
     metadata?: Record<string, string | number | boolean | null>,
+  ): Promise<string>;
+  static async log(
+    fileId: string,
+    action: FileAuditAction,
+    performedBy: string,
+    companyIdOrMetadata?: string | Record<string, string | number | boolean | null>,
+    metadata?: Record<string, string | number | boolean | null>,
   ): Promise<string> {
+    // Resolve overloaded parameters
+    let companyId: string | undefined;
+    let resolvedMetadata: Record<string, string | number | boolean | null> | undefined;
+
+    if (typeof companyIdOrMetadata === 'string') {
+      companyId = companyIdOrMetadata;
+      resolvedMetadata = metadata;
+    } else if (typeof companyIdOrMetadata === 'object' && companyIdOrMetadata !== null) {
+      resolvedMetadata = companyIdOrMetadata;
+    }
+
     try {
       const entry: FileAuditEntry = {
         fileId,
@@ -133,7 +157,7 @@ export class FileAuditService {
         performedBy,
         timestamp: serverTimestamp(),
         companyId: companyId ?? undefined,
-        metadata: metadata ?? undefined,
+        metadata: resolvedMetadata ?? undefined,
       };
 
       // Remove undefined values for Firestore

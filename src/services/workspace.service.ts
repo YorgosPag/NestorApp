@@ -26,7 +26,7 @@
  * ```
  */
 
-import { where, orderBy } from 'firebase/firestore';
+import { where, orderBy, type QueryConstraint } from 'firebase/firestore';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import {
   SPECIAL_WORKSPACE_IDS,
@@ -187,7 +187,7 @@ export class WorkspaceService {
   static async listWorkspaces(params: ListWorkspacesParams = {}): Promise<Workspace[]> {
     const { type, status, limit: limitParam } = params;
 
-    const constraints = [orderBy('displayName', 'asc')];
+    const constraints: QueryConstraint[] = [orderBy('displayName', 'asc')];
     if (type) constraints.push(where('type', '==', type));
     if (status) constraints.push(where('status', '==', status));
 

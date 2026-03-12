@@ -68,6 +68,8 @@ export function getRelationshipDisplayLabel(relationship: ContactRelationship): 
     'supplier': 'Προμηθευτής',
     'customer': 'Πελάτης',
     'competitor': 'Ανταγωνιστής',
+    'friend': 'Φίλος',
+    'family': 'Οικογένεια',
     'other': 'Άλλο'
   };
 

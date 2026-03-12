@@ -59,7 +59,7 @@ export async function GET(
         .get();
 
       const milestones: BuildingMilestone[] = snapshot.docs.map((doc) => {
-        const data = doc.data();
+        const data = doc.data() as Omit<BuildingMilestone, 'id'>;
         return {
           id: doc.id,
           buildingId: data.buildingId,
@@ -73,8 +73,8 @@ export async function GET(
           order: data.order,
           code: data.code,
           phaseId: data.phaseId,
-          createdAt: normalizeToISO(data.createdAt),
-          updatedAt: normalizeToISO(data.updatedAt),
+          createdAt: normalizeToISO(data.createdAt) ?? undefined,
+          updatedAt: normalizeToISO(data.updatedAt) ?? undefined,
           createdBy: data.createdBy,
           updatedBy: data.updatedBy,
         };

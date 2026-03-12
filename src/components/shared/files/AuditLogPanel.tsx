@@ -34,6 +34,12 @@ import {
   Share2,
   Lock,
   Unlock,
+  FolderInput,
+  Send,
+  CheckCircle,
+  XCircle,
+  Ban,
+  MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -75,6 +81,12 @@ const ACTION_ICON_MAP: Record<FileAuditAction, LucideIcon> = {
   share: Share2,
   hold_place: Lock,
   hold_release: Unlock,
+  move: FolderInput,
+  approval_request: Send,
+  approval_approve: CheckCircle,
+  approval_reject: XCircle,
+  approval_cancel: Ban,
+  comment: MessageSquare,
 };
 
 const ACTION_COLOR_MAP: Record<string, string> = {
@@ -99,6 +111,12 @@ const ACTION_COLOR_MAP: Record<string, string> = {
   share: 'text-blue-500',
   hold_place: 'text-red-600',
   hold_release: 'text-green-600',
+  move: 'text-blue-500',
+  approval_request: 'text-amber-600',
+  approval_approve: 'text-green-600',
+  approval_reject: 'text-destructive',
+  approval_cancel: 'text-orange-500',
+  comment: 'text-blue-500',
 };
 
 // ============================================================================

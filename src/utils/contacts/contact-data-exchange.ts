@@ -211,7 +211,7 @@ export async function parseContactImportFile(
     errors: result.errors.length,
   });
 
-  return result as ImportResult<ContactImportRecord>;
+  return result as unknown as ImportResult<ContactImportRecord>;
 }
 
 // ============================================================================

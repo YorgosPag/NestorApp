@@ -966,7 +966,7 @@ export class FileRecordService {
 
     RealtimeService.dispatch('FILE_UPDATED', {
       fileId,
-      updates: { description: description.trim() || null },
+      updates: { description: description.trim() || undefined },
       timestamp: Date.now(),
     });
   }

@@ -68,7 +68,14 @@ export async function GET(
 
         const [fileBuffer] = await file.download();
 
-        return new NextResponse(new Blob([fileBuffer]), {
+        const body = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new Uint8Array(fileBuffer));
+            controller.close();
+          },
+        });
+
+        return new NextResponse(body, {
           status: 200,
           headers: {
             'Content-Type': fileData.contentType || 'application/octet-stream',
@@ -80,7 +87,7 @@ export async function GET(
         return NextResponse.json({ error: errorMessage }, { status: 500 });
       }
     },
-    { permissions: 'files:files:view' }
+    { permissions: 'dxf:files:view' }
   );
 
   return handler(request);
