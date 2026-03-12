@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | IN PROGRESS — Phase 1 Complete |
+| **Status** | IN PROGRESS — Phase 2 Complete |
 | **Date** | 2026-03-12 |
 | **Category** | Data Access Layer |
 | **Priority** | P1 — Architectural Foundation |
@@ -253,6 +253,7 @@ Full collection reads:      10+ admin routes
 |-----------|--------|
 | 2026-03-12 | Initial audit + ADR creation. 400+ queries catalogued across 85+ files |
 | 2026-03-12 | **Phase 1 COMPLETE**: FirestoreQueryService foundation — 6 new files (`src/services/firestore/` + `src/utils/firestore-sanitize.ts`), 1 modified (`accounting/firestore-helpers.ts` → re-export). Singleton service with tenant-aware CRUD, real-time subscriptions, batch reads. Centralized `requireAuthContext()`, `sanitizeForFirestore()`, `getTenantConfig()`. |
+| 2026-03-12 | **Phase 2 COMPLETE**: Core Services Migration — 3 services migrated to `firestoreQueryService`. **workspace.service.ts**: 5 methods (getWorkspaceById, listWorkspaces, getWorkspaceForCompany, createWorkspace, updateWorkspace) → `getById()`, `getAll()`, `create()`, `update()`. **units.service.ts**: 7 read methods (getUnits, getUnitsByOwner, getUnitsByBuilding, getUnitsByBuildingAsModels, getUnitsByFeatures, getUnitsByOperationalStatus, getIncompleteUnits) → `getAll()` with `tenantOverride: 'skip'`. **contacts.service.ts**: 6 read methods (getContact, getAllContactIds, getOwnerContactIds, getContactStatistics, exportContacts, searchContacts) → `getById()`, `getAll()`. Post-query normalization helpers (`toWorkspace`, `toProperty`, `toUnitModel`, `toContact`) replace `withConverter()`. tenant-config.ts fixed: WORKSPACES `tenantId` → `companyId`. Write methods + pagination untouched. |
 
 ---
 

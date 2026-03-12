@@ -4,10 +4,11 @@
 |----------|-------|
 | **ADR** | ADR-214 |
 | **Phase** | 2 |
-| **Status** | PENDING |
+| **Status** | ✅ COMPLETED |
 | **Risk** | MEDIUM |
-| **Αρχεία** | 3-4 modified |
+| **Αρχεία** | 4 modified |
 | **Depends On** | SPEC-214-01 |
+| **Completed** | 2026-03-12 |
 
 ---
 
@@ -17,76 +18,86 @@ Migration των core business services (`units.service.ts`, `contacts.service.t
 
 ---
 
-## Αρχεία προς Αλλαγή
+## Αρχιτεκτονικές Αποφάσεις
 
-### 1. `src/services/units.service.ts`
+### Converter Strategy: Post-query normalization
 
-**Τρέχουσα κατάσταση**: 8 getDocs calls, inline queries, ⚠️ μόνο buildingId filter
+Αντί να προσθέσουμε `withConverter()` support στον FirestoreQueryService, κάθε service κάνει post-query normalization:
 
-**Αλλαγές**:
-```typescript
-// ΠΡΙΝ
-const q = query(
-  collection(db, UNITS_COLLECTION),
-  where('buildingId', '==', buildingId),
-  orderBy('name', 'asc')
-);
-const snapshot = await getDocs(q);
+| Service | Helper | Replaces |
+|---------|--------|----------|
+| workspace.service.ts | `toWorkspace(raw)` | `workspaceConverter.fromFirestore` |
+| units.service.ts | `toProperty(raw)` | `transformUnit(doc: DocumentSnapshot)` |
+| units.service.ts | `toUnitModel(raw)` | `normalizeUnitSnapshot(doc: DocumentSnapshot)` |
+| contacts.service.ts | `toContact(raw)` | `contactConverter.fromFirestore` (στα migrated methods) |
 
-// ΜΕΤΑ
-const result = await queryService.read<Unit>({
-  collection: 'UNITS',
-  constraints: [where('buildingId', '==', buildingId)],
-  orderByField: 'name',
-  orderDirection: 'asc'
-});
-```
+### Tenant Configuration
 
-**Κρίσιμα σημεία**:
-- 8 query locations πρέπει να αλλάξουν
-- `interiorFeatures` array-contains-any query πρέπει να δοκιμαστεί
-- Return types πρέπει να παραμείνουν ίδια (backward compatible)
+| Collection | Πριν | Μετά | Σημείωση |
+|------------|------|------|----------|
+| WORKSPACES | `tenantId` | `companyId` | Fix — documents use `companyId` |
+| WORKSPACE_MEMBERS | `tenantId` | `companyId` | Fix — consistent with WORKSPACES |
+| UNITS | default (`companyId`) | `tenantOverride: 'skip'` | Documents δεν έχουν companyId |
+| CONTACTS | default (`companyId`) | default (`companyId`) ✅ | Auto tenant filter |
 
-### 2. `src/services/contacts.service.ts`
+### Scope: Read methods only
 
-**Τρέχουσα κατάσταση**: 6 where clauses, companyId filter ✅
-
-**Αλλαγές**: Replace inline queries με `queryService.read()`. Ο tenant filter ήδη υπάρχει.
-
-### 3. `src/services/workspace.service.ts`
-
-**Τρέχουσα κατάσταση**: 2 getDocs calls, ⚠️ partial tenant filter
-
-**Αλλαγές**: Replace inline queries. Πρέπει να ελεγχθεί αν χρειάζεται explicit companyId.
+Write methods (setDoc, updateDoc, writeBatch, API calls) παραμένουν ως έχουν. Pagination (startAfter) δεν μεταφέρεται — θα γίνει σε Phase 6.
 
 ---
 
-## Testing Plan
+## Migrated Methods
 
-Μετά κάθε αρχείο:
-1. `npx tsc --noEmit` — zero errors
-2. Manual test: Φόρτωσε τη σελίδα που χρησιμοποιεί το service
-3. Verify: Τα δεδομένα εμφανίζονται σωστά
-4. Verify: Pagination δουλεύει (αν υπάρχει)
+### workspace.service.ts (5 methods)
 
----
+| Method | Πριν | Μετά |
+|--------|------|------|
+| `getWorkspaceById()` | `getDoc()` + converter | `firestoreQueryService.getById()` + `toWorkspace()` |
+| `listWorkspaces()` | `getDocs()` + query + converter | `firestoreQueryService.getAll()` + constraints + `.documents.map(toWorkspace)` |
+| `getWorkspaceForCompany()` | `getDocs()` + where + converter | `firestoreQueryService.getAll()` + constraints + `maxResults:1` |
+| `createWorkspace()` | `setDoc()` + converter | `firestoreQueryService.create()` |
+| `updateWorkspace()` | `updateDoc()` | `firestoreQueryService.update()` |
 
-## Rollback Plan
+**Removed imports**: `collection`, `doc`, `getDoc`, `getDocs`, `setDoc`, `updateDoc`, `query`, `limit`, `db`, `workspaceConverter`
 
-Κάθε αρχείο αλλάζει σε ξεχωριστό commit. Αν σπάσει κάτι:
-```bash
-git revert HEAD  # Revert τελευταίο commit
-git push origin main
-```
+### units.service.ts (7 read methods)
+
+| Method | Return Type | Normalizer |
+|--------|------------|------------|
+| `getUnits()` | `Property[]` | `toProperty()` |
+| `getUnitsByOwner()` | `Property[]` | `toProperty()` |
+| `getUnitsByBuildingAsModels()` | `UnitModel[]` | `toUnitModel()` |
+| `getUnitsByBuilding()` | `Property[]` | `toProperty()` |
+| `getUnitsByFeatures()` | `UnitModel[]` | `toUnitModel()` |
+| `getUnitsByOperationalStatus()` | `UnitModel[]` | `toUnitModel()` |
+| `getIncompleteUnits()` | `UnitModel[]` | `toUnitModel()` |
+
+All use `tenantOverride: 'skip'` (unit documents lack companyId field).
+
+**Removed imports**: `getDocs`, `collection`, `Timestamp`, `DocumentSnapshot` types (for read functions)
+
+### contacts.service.ts (6 read methods)
+
+| Method | Σημείωση |
+|--------|----------|
+| `getContact(id)` | `getById()` + `toContact()` |
+| `getAllContactIds()` | `getAll()` → `.documents.map(d => d.id)` |
+| `getOwnerContactIds()` | Queries UNITS collection with `tenantOverride: 'skip'` |
+| `getContactStatistics()` | `getAll()` → iterate + count |
+| `exportContacts(type?)` | `getAll()` + optional where constraint |
+| `searchContacts(opts)` | `getAll()` + client-side filtering |
+
+**NOT migrated**: `getAllContacts` (pagination with startAfter), `subscribeToContacts` (onSnapshot), all write methods
 
 ---
 
 ## Verification Checklist
 
-- [ ] `units.service.ts` — όλα τα 8 queries migrated
-- [ ] `contacts.service.ts` — όλα τα queries migrated
-- [ ] `workspace.service.ts` — migrated
-- [ ] Return types unchanged (backward compatible)
-- [ ] Tenant filtering maintained ή βελτιωμένο
-- [ ] No `addDoc` introduced (ADR-210 compliance)
-- [ ] `npx tsc --noEmit` clean
+- [x] `workspace.service.ts` — 5 methods migrated (3 read, 1 create, 1 update)
+- [x] `units.service.ts` — 7 read methods migrated
+- [x] `contacts.service.ts` — 6 read methods migrated
+- [x] `tenant-config.ts` — WORKSPACES/WORKSPACE_MEMBERS field fixed
+- [x] Return types unchanged (backward compatible)
+- [x] Tenant filtering maintained (contacts auto-filter, units skip, workspaces fixed)
+- [x] No `addDoc` introduced (ADR-210 compliance)
+- [x] Public API of each service unchanged — zero consumer impact
