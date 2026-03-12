@@ -23,6 +23,7 @@ import {
   MessageSquare,
   Loader2,
 } from 'lucide-react';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -94,7 +95,7 @@ export function ShareDialog({
   const [note, setNote] = useState('');
   const [creating, setCreating] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const { copy, copied } = useCopyToClipboard();
 
   const handleCreate = useCallback(async () => {
     setCreating(true);
@@ -121,10 +122,8 @@ export function ShareDialog({
 
   const handleCopy = useCallback(async () => {
     if (!shareUrl) return;
-    await navigator.clipboard.writeText(shareUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [shareUrl]);
+    await copy(shareUrl);
+  }, [shareUrl, copy]);
 
   const handleClose = useCallback(() => {
     onOpenChange(false);
@@ -134,7 +133,6 @@ export function ShareDialog({
       setPassword('');
       setNote('');
       setMaxDownloads('0');
-      setCopied(false);
     }, 200);
   }, [onOpenChange]);
 

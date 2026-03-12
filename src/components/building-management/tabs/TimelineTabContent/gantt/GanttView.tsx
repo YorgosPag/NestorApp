@@ -21,6 +21,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useClickOutside } from '@/hooks/useClickOutside';
 import { formatDateShort } from '@/lib/intl-utils';
 import { useTheme } from 'next-themes';
 import { GanttChart, ViewMode } from 'react-modern-gantt';
@@ -193,14 +194,27 @@ export function GanttView({ building }: GanttViewProps) {
   const tooltipElRef = useRef<HTMLDivElement>(null);
   const hoveredTaskRef = useRef('');
 
-  // Close context menu on outside click, Escape key, or scroll
+  // Close context menu on outside click — delayed activation to prevent
+  // the triggering right-click from immediately closing
+  const [contextMenuClickEnabled, setContextMenuClickEnabled] = useState(false);
+
+  useEffect(() => {
+    if (!contextMenu) {
+      setContextMenuClickEnabled(false);
+      return;
+    }
+    const timer = setTimeout(() => setContextMenuClickEnabled(true), 0);
+    return () => clearTimeout(timer);
+  }, [contextMenu]);
+
+  // 🏢 Centralized useClickOutside hook for mousedown outside-click detection
+  const closeContextMenu = useCallback(() => setContextMenu(null), []);
+  useClickOutside(contextMenuRef, closeContextMenu, { enabled: contextMenuClickEnabled });
+
+  // Close context menu on right-click outside, Escape key, or scroll
   useEffect(() => {
     if (!contextMenu) return;
 
-    const handleOutsideMouseDown = (e: MouseEvent) => {
-      if (contextMenuRef.current?.contains(e.target as Node)) return;
-      setContextMenu(null);
-    };
     const handleOutsideContextMenu = (e: MouseEvent) => {
       if (contextMenuRef.current?.contains(e.target as Node)) return;
       setContextMenu(null);
@@ -210,9 +224,8 @@ export function GanttView({ building }: GanttViewProps) {
       if (e.key === 'Escape') setContextMenu(null);
     };
 
-    // Delay to prevent the triggering right-click from immediately closing
+    // Same delay as click-outside to prevent immediate close
     const timer = setTimeout(() => {
-      document.addEventListener('mousedown', handleOutsideMouseDown);
       document.addEventListener('contextmenu', handleOutsideContextMenu);
       document.addEventListener('scroll', handleScroll, true);
       document.addEventListener('keydown', handleKeyDown);
@@ -220,7 +233,6 @@ export function GanttView({ building }: GanttViewProps) {
 
     return () => {
       clearTimeout(timer);
-      document.removeEventListener('mousedown', handleOutsideMouseDown);
       document.removeEventListener('contextmenu', handleOutsideContextMenu);
       document.removeEventListener('scroll', handleScroll, true);
       document.removeEventListener('keydown', handleKeyDown);

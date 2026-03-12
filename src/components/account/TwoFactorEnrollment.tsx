@@ -20,6 +20,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { formatDateShort } from '@/lib/intl-utils';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import {
   Smartphone,
   KeyRound,
@@ -94,8 +95,8 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
   const [verificationCode, setVerificationCode] = useState('');
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
-  const [copiedSecret, setCopiedSecret] = useState(false);
-  const [copiedCodes, setCopiedCodes] = useState(false);
+  const { copy: copySecret, copied: copiedSecret } = useCopyToClipboard();
+  const { copy: copyCodes, copied: copiedCodes } = useCopyToClipboard();
   const [showDisableDialog, setShowDisableDialog] = useState(false);
   const [twoFactorState, setTwoFactorState] = useState<UserTwoFactorState | null>(null);
   const [claimsSynced, setClaimsSynced] = useState(false);
@@ -237,25 +238,12 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
   // Copy secret to clipboard
   const handleCopySecret = async () => {
     if (!totpSecret) return;
-
-    try {
-      await navigator.clipboard.writeText(totpSecret.secretKey);
-      setCopiedSecret(true);
-      setTimeout(() => setCopiedSecret(false), 2000);
-    } catch (err) {
-      logger.error('Failed to copy', { error: err });
-    }
+    await copySecret(totpSecret.secretKey);
   };
 
   // Copy backup codes
   const handleCopyBackupCodes = async () => {
-    try {
-      await navigator.clipboard.writeText(backupCodes.join('\n'));
-      setCopiedCodes(true);
-      setTimeout(() => setCopiedCodes(false), 2000);
-    } catch (err) {
-      logger.error('Failed to copy', { error: err });
-    }
+    await copyCodes(backupCodes.join('\n'));
   };
 
   // Download backup codes

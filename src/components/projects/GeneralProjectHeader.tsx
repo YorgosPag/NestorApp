@@ -15,9 +15,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { createModuleLogger } from '@/lib/telemetry';
-
-const logger = createModuleLogger('GeneralProjectHeader');
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 
 interface GeneralProjectHeaderProps {
     isEditing: boolean;
@@ -43,17 +41,11 @@ export function GeneralProjectHeader({
     const colors = useSemanticColors();
     const spacing = useSpacingTokens();
     const typography = useTypography();
-    const [copied, setCopied] = React.useState(false);
+    const { copy, copied } = useCopyToClipboard();
 
     const handleCopyTechnicalId = async () => {
         if (!projectId) return;
-        try {
-            await navigator.clipboard.writeText(projectId);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        } catch (err) {
-            logger.error('Failed to copy', { error: err });
-        }
+        await copy(projectId);
     };
 
     const displayCode = projectCode || (projectId ? `ID: ${projectId.substring(0, 8)}...` : 'ID: ---');

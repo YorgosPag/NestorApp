@@ -13,6 +13,8 @@ import { useLevels } from '../../systems/levels';
 import { useDxfImport } from '../useDxfImport';
 import { useNotifications } from '../../../../providers/NotificationProvider';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// ✅ ENTERPRISE: Centralized copy-to-clipboard hook
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 // 🏢 ADR-118: Centralized Zero Point Pattern
 import { EMPTY_BOUNDS } from '../../config/geometry-constants';
 import { dlog, dwarn, derr } from '../../debug';
@@ -20,6 +22,9 @@ import { dlog, dwarn, derr } from '../../debug';
 export function useSceneState() {
   const canvasOps = useCanvasOperations();
   const notifications = useNotifications();
+  // ✅ ENTERPRISE: 2 separate copy instances for error notification actions
+  const { copy: copyErrorMessage } = useCopyToClipboard();
+  const { copy: copyImportError } = useCopyToClipboard();
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
 
   // Levels and scene management
@@ -132,9 +137,9 @@ export function useSceneState() {
           duration: 6000,
           actions: [{
             label: 'Αντιγραφή',
-            onClick: () => {
-              navigator.clipboard.writeText(errorMessage);
-              notifications.success('Αντιγράφηκε στο πρόχειρο!', { duration: 2000 });
+            onClick: async () => {
+              const success = await copyErrorMessage(errorMessage);
+              if (success) notifications.success('Αντιγράφηκε στο πρόχειρο!', { duration: 2000 });
             }
           }]
         });
@@ -147,14 +152,14 @@ export function useSceneState() {
         duration: 6000,
         actions: [{
           label: 'Αντιγραφή',
-          onClick: () => {
-            navigator.clipboard.writeText(fullMessage);
-            notifications.success('Αντιγράφηκε στο πρόχειρο!', { duration: 2000 });
+          onClick: async () => {
+            const success = await copyImportError(fullMessage);
+            if (success) notifications.success('Αντιγράφηκε στο πρόχειρο!', { duration: 2000 });
           }
         }]
       });
     }
-  }, [currentLevelId, importDxfFile, setLevelScene, addLevel, levels, setCurrentLevel, levelsSystem]);
+  }, [currentLevelId, importDxfFile, setLevelScene, addLevel, levels, setCurrentLevel, levelsSystem, copyErrorMessage, copyImportError, notifications, importError, canvasOps]);
 
   return {
     // State

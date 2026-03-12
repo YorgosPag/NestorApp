@@ -22,6 +22,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useGeoTransformation } from '../hooks/useGeoTransformation';
 import type { FloorPlanControlPoint, FloorPlanCoordinate, GeoCoordinate } from '../types/control-points';
 import type { UseFloorPlanControlPointsReturn } from '../hooks/useFloorPlanControlPoints';
@@ -67,6 +69,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
   // ===================================================================
 
   const { t } = useTranslationLazy('geo-canvas');
+  const { confirm, dialogProps } = useConfirmDialog();
   const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();  // ENTERPRISE: Background centralization - ZERO DUPLICATES
   const iconSizes = useIconSizes();
@@ -182,8 +185,13 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
   /**
    * Clear all control points
    */
-  const handleClearAll = () => {
-    if (window.confirm(t('floorPlanControlPoints.confirm.clearAll'))) {
+  const handleClearAll = async () => {
+    const confirmed = await confirm({
+      title: t('floorPlanControlPoints.confirm.clearAll'),
+      description: t('floorPlanControlPoints.confirm.clearAll'),
+      variant: 'warning',
+    });
+    if (confirmed) {
       console.debug('🗑️ Clearing all control points');
       clearAll();
     }
@@ -406,6 +414,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
       className={`floor-plan-control-point-picker ${className}`}
       style={draggablePanelContainer(position, isDragging)}
     >
+      <ConfirmDialog {...dialogProps} />
       {/* 🖱️ DRAG HANDLE */}
       <div
         onMouseDown={handleMouseDown}

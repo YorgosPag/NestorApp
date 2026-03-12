@@ -15,6 +15,8 @@ import { MOVEMENT_DETECTION } from '../config/tolerance-config';
 import { matchesShortcut } from '../config/keyboard-shortcuts';
 // 🤖 ADR-185: AI Drawing Assistant feature flag
 import { USE_AI_DRAWING_ASSISTANT } from '../config/feature-flags';
+// ✅ ENTERPRISE: Centralized copy-to-clipboard hook
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 
 // ✅ React stack suppression handled globally in layout.tsx via public/suppress-console.js
 
@@ -136,6 +138,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const notifications = useNotifications();
   const eventBus = useEventBus(); // 🔧 PHASE 3: Centralized event coordination
   const colors = useSemanticColors();
+  const { copy: copyToClipboard } = useCopyToClipboard();
 
   // ADR-176: Responsive layout + sidebar drawer state
   const { layoutMode } = useResponsiveLayout();
@@ -212,17 +215,17 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       duration: 5000,
       actions: [{
         label: 'Αντιγραφή',
-        onClick: () => {
-          navigator.clipboard.writeText(message).then(() => {
+        onClick: async () => {
+          const success = await copyToClipboard(message);
+          if (success) {
             notifications.success('Αντιγράφηκε στο πρόχειρο!', { duration: 2000 });
-          }).catch(err => {
-            console.error('Failed to copy to clipboard:', err);
+          } else {
             notifications.error('Αποτυχία αντιγραφής');
-          });
+          }
         }
       }]
     });
-  }, [notifications]);
+  }, [notifications, copyToClipboard]);
 
   // Expose showCopyableNotification to window for debug overlays
   React.useEffect(() => {

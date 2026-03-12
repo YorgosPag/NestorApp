@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 164 ADRs + 11 Accounting ADRs (ACC-xxx) | Last Updated: 2026-03-12
+**📊 Stats**: 191 ADRs | Last Updated: 2026-03-12
 
 ---
 
@@ -21,15 +21,14 @@
 | 🖼️ **Canvas & Rendering** | 39 | [View](#canvas-rendering) |
 | 📊 **Data & State** | 11 | [View](#data-state) |
 | ✏️ **Drawing System** | 16 | [View](#drawing-system) |
-| 📂 **Entity Systems** | 13 | [View](#entity-systems) |
+| 📂 **Entity Systems** | 11 | [View](#entity-systems) |
 | 🔧 **Tools & Keyboard** | 8 | [View](#tools-keyboard) |
 | 🔍 **Filters & Search** | 1 | [View](#filters-search) |
-| 🔒 **Security & Auth** | 8 | [View](#security-auth) |
-| 🔧 **Backend Systems** | 7 | [View](#backend-systems) |
+| 🔒 **Security & Auth** | 7 | [View](#security-auth) |
+| 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 12 | [View](#uncategorized) |
-| 🧮 **Accounting Subapp** | 11 | [View](#accounting-subapp-adrs-separate-numbering--acc-xxx) |
+| 📄 **Uncategorized** | 43 | [View](#uncategorized) |
 
 ---
 
@@ -52,7 +51,7 @@
 | **ADR-013** | Enterprise Card System (Atomic Design) | ✅ APPROVED | 2026-01-01 | UI Components | [📄](./adrs/ADR-013-enterprise-card-system-atomic-design.md) |
 | **ADR-014** | Navigation Entity Icons Centralization | ✅ APPROVED | 2026-01-01 | UI Components | [📄](./adrs/ADR-014-navigation-entity-icons-centralization.md) |
 | **ADR-015** | Entity List Column Container | ✅ APPROVED | 2026-01-01 | UI Components | [📄](./adrs/ADR-015-entity-list-column-container.md) |
-| **ADR-016** | Navigation Breadcrumb Path System (Entity + Module) | ✅ APPROVED | 2026-03-12 | UI Components | [📄](./adrs/ADR-016-navigation-breadcrumb-path-system.md) |
+| **ADR-016** | Navigation Breadcrumb Path System | ✅ APPROVED | 2026-01-01 | UI Components | [📄](./adrs/ADR-016-navigation-breadcrumb-path-system.md) |
 | **ADR-017** | Enterprise ID Generation | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-017-enterprise-id-generation.md) |
 | **ADR-018** | Unified Upload Service | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-018-unified-upload-service.md) |
 | **ADR-019** | Centralized Performance Thresholds | ✅ APPROVED | 2026-01-01 | Performance | [📄](./adrs/ADR-019-centralized-performance-thresholds.md) |
@@ -89,7 +88,7 @@
 | **ADR-051** | Enterprise Filter System Centralization | ✅ APPROVED | 2026-01-01 | Filters & Search | [📄](./adrs/ADR-051-enterprise-filter-system-centralization.md) |
 | **ADR-052** | DXF Export API Contract | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-052-dxf-export-api-contract.md) |
 | **ADR-053** | Drawing Context Menu | ✅ APPROVED | 2026-01-01 | Drawing System | [📄](./adrs/ADR-053-drawing-context-menu.md) |
-| **ADR-054** | Enterprise Upload System Consolidation | ✅ STABILIZED | 2026-02-13 | Entity Systems | [📄](./adrs/ADR-054-enterprise-upload-system-consolidation.md) |
+| **ADR-054** | Enterprise Upload System Consolidation | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-054-enterprise-upload-system-consolidation.md) |
 | **ADR-055** | Centralized Tool State Persistence | ✅ APPROVED | 2026-01-01 | Tools & Keyboard | [📄](./adrs/ADR-055-centralized-tool-state-persistence.md) |
 | **ADR-056** | Centralized Entity Completion Styles | ✅ APPROVED | 2026-01-01 | Drawing System | [📄](./adrs/ADR-056-centralized-entity-completion-styles.md) |
 | **ADR-057** | Unified Entity Completion Pipeline | ✅ APPROVED | 2026-01-01 | Drawing System | [📄](./adrs/ADR-057-unified-entity-completion-pipeline.md) |
@@ -125,7 +124,7 @@
 | **ADR-087** | Snap Engine Configuration Centralization | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-087-snap-engine-configuration-centralization.md) |
 | **ADR-088** | Pixel-Perfect Rendering Centralization | ✅ APPROVED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-088-pixel-perfect-rendering-centralization.md) |
 | **ADR-089** | CRM Calendar System | ✅ IMPLEMENTED | 2026-02-08 | UI Components / CRM | [📄](./adrs/ADR-089-crm-calendar-system.md) |
-| **ADR-090** | IKA/EFKA Labor Compliance System | ✅ IMPLEMENTED - Phase 1-3 + Phase 4A (QR+GPS, ADR-170) | 2026-02-09 | Backend Systems / Labor Compliance | [📄](./adrs/ADR-090-ika-efka-labor-compliance-system.md) |
+| **ADR-090** | IKA/EFKA Labor Compliance System | ✅ IMPLEMENTED - Phase 1 + Phase 2 + Phase 3 + Phase 4A Complete | 2026-02-09 | Backend Systems / Labor Compliance | [📄](./adrs/ADR-090-ika-efka-labor-compliance-system.md) |
 | **ADR-091** | Scattered Code Centralization (Fonts + Formatting) | ✅ APPROVED | 2026-01-01 | Design System | [📄](./adrs/ADR-091-scattered-code-centralization-fonts-formatting.md) |
 | **ADR-092** | Centralized localStorage Service | ✅ APPROVED | 2026-01-01 | Infrastructure | [📄](./adrs/ADR-092-centralized-localstorage-service.md) |
 | **ADR-093** | Text Label Offsets Centralization | ✅ APPROVED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-093-text-label-offsets-centralization.md) |
@@ -134,10 +133,10 @@
 | **ADR-096** | Interaction Timing Constants Centralization | ✅ APPROVED | 2026-01-31 | Tools & Keyboard | [📄](./adrs/ADR-096-interaction-timing-constants-centralization.md) |
 | **ADR-098** | Timing Delays Centralization (setTimeout/setInterval) | ✅ APPROVED | 2026-01-31 | Tools & Keyboard | [📄](./adrs/ADR-098-timing-delays-centralization-settimeout-setinterva.md) |
 | **ADR-099** | Polygon & Measurement Tolerances Centralization | ✅ APPROVED | 2026-01-31 | Drawing System | [📄](./adrs/ADR-099-polygon-measurement-tolerances-centralization.md) |
-| **ADR-100** | JIT User Profile Sync (Firestore /users/{uid}) | ✅ IMPLEMENTED | 2026-02-08 | Security & Auth | [📄](./adrs/ADR-100-user-profile-sync.md) |
+| **ADR-100** | JIT User Profile Sync (Firestore /users/{uid}) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-100-user-profile-sync.md) |
 | **ADR-101** | Deep Clone Centralization | ✅ APPROVED | 2026-01-31 | Data & State | [📄](./adrs/ADR-101-deep-clone-centralization.md) |
-| **ADR-103** | Availability Check & AI Operator Briefing | ✅ IMPLEMENTED | 2026-02-08 | AI Architecture / Pipeline Infrastructure | [📄](./adrs/ADR-103-availability-check-operator-briefing.md) |
 | **ADR-102** | Origin Markers Centralization (DXF/Layer/Debug) | ✅ APPROVED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-102-origin-markers-centralization-dxf-layer-debug.md) |
+| **ADR-103** | Availability Check & AI Operator Briefing | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-103-availability-check-operator-briefing.md) |
 | **ADR-104** | Entity Type Guards Centralization | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-104-entity-type-guards-centralization.md) |
 | **ADR-105** | Hit Test Fallback Tolerance Centralization | ✅ APPROVED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-105-hit-test-fallback-tolerance-centralization.md) |
 | **ADR-106** | Edge Grip Size Multipliers Centralization | ✅ APPROVED | 2026-01-01 | Drawing System | [📄](./adrs/ADR-106-edge-grip-size-multipliers-centralization.md) |
@@ -155,15 +154,10 @@
 | **ADR-128** | Switch Status Variant (Green ON / Red OFF) | ✅ APPROVED | 2026-02-01 | UI Components | [📄](./adrs/ADR-128-switch-status-variant-green-on-red-off.md) |
 | **ADR-129** | Layer Entity Filtering Centralization | ✅ IMPLEMENTED | 2026-02-01 | Entity Systems | [📄](./adrs/ADR-129-layer-entity-filtering-centralization.md) |
 | **ADR-130** | Default Layer Name Centralization | ✅ IMPLEMENTED | 2026-02-01 | Entity Systems | [📄](./adrs/ADR-130-default-layer-name-centralization.md) |
-| **ADR-131** | Multi-Intent Pipeline — Πολλαπλά Intents σε Ένα Μήνυμα | ✅ IMPLEMENTED | 2026-02-09 | AI Architecture / Pipeline Infrastructure | [📄](./adrs/ADR-131-multi-intent-pipeline.md) |
+| **ADR-131** | Multi-Intent Pipeline — Πολλαπλά Intents σε Ένα Μήνυμα | ✅ ✅ IMPLEMENTED | 2026-02-09 | AI Architecture / Pipeline Infrastructure | [📄](./adrs/ADR-131-multi-intent-pipeline.md) |
 | **ADR-132** | ESCO Professional Classification Integration (Occupations + Skills) | ✅ IMPLEMENTED | 2026-02-09 | Contact Management / CRM | [📄](./adrs/ADR-132-esco-professional-classification.md) |
 | **ADR-133** | SVG Stroke Width Centralization | ✅ IMPLEMENTED | 2026-02-01 | Design System | [📄](./adrs/ADR-133-svg-stroke-width-centralization.md) |
-| **ADR-134** | UC Modules Expansion + Telegram Channel — Omnichannel AI Pipeline | ✅ IMPLEMENTED | 2026-02-09 | AI Architecture / Pipeline Infrastructure | [📄](./adrs/ADR-134-uc-modules-expansion-telegram-channel.md) |
-| **ADR-145** | Super Admin AI Assistant — Omnichannel Admin Command System | ✅ IMPLEMENTED | 2026-02-09 | AI Architecture / Pipeline Infrastructure | [📄](./adrs/ADR-145-super-admin-ai-assistant.md) |
-| **ADR-171** | Autonomous AI Agent with Agentic Tool Calling | ✅ IMPLEMENTED | 2026-02-10 | AI Architecture / Pipeline Infrastructure | [📄](./adrs/ADR-171-autonomous-ai-agent.md) |
-| **ADR-172** | Pre-Production Code Quality Audit & Remediation | ✅ IN_PROGRESS | 2026-02-10 | Security & Auth / Infrastructure | [📄](./adrs/ADR-172-pre-production-audit-remediation.md) |
-| **ADR-173** | Enterprise AI Self-Improvement System | ✅ ACTIVE | 2026-02-10 | AI Architecture / Self-Improvement | [📄](./adrs/ADR-173-ai-self-improvement-system.md) |
-| **ADR-174** | Meta Omnichannel — WhatsApp + Messenger + Instagram | ✅ PHASE 1+2 OPERATIONAL (WhatsApp + Messenger live), Phase 3 code ready | 2026-02-11 | Communications / Omnichannel | [📄](./adrs/ADR-174-meta-omnichannel-whatsapp-messenger-instagram.md) |
+| **ADR-134** | UC Modules Expansion + Telegram Channel — Omnichannel AI Pipeline | ✅ ✅ IMPLEMENTED | 2026-02-09 | AI Architecture / Pipeline Infrastructure | [📄](./adrs/ADR-134-uc-modules-expansion-telegram-channel.md) |
 | **ADR-135** | Menu Icons Centralization | ✅ IMPLEMENTED | 2026-02-01 | UI Components | [📄](./adrs/ADR-135-menu-icons-centralization.md) |
 | **ADR-136** | Canvas Opacity Constants Centralization (Extended) | ✅ IMPLEMENTED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-136-canvas-opacity-constants-centralization-extended.md) |
 | **ADR-137** | Snap Icon Geometry Centralization | ✅ IMPLEMENTED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-137-snap-icon-geometry-centralization.md) |
@@ -172,55 +166,66 @@
 | **ADR-140** | Angle Measurement Visualization Constants | ✅ IMPLEMENTED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-140-angle-measurement-visualization-constants.md) |
 | **ADR-143** | Origin/Cursor Offset Constants Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-143-origin-cursor-offset-constants-centralization.md) |
 | **ADR-144** | Icon Click Sequence Colors Centralization | ✅ IMPLEMENTED | 2026-02-01 | UI Components | [📄](./adrs/ADR-144-icon-click-sequence-colors-centralization.md) |
+| **ADR-145** | Super Admin AI Assistant — Omnichannel Admin Command System | ✅ ✅ IMPLEMENTED | 2026-02-09 | AI Architecture / Pipeline Infrastructure | [📄](./adrs/ADR-145-super-admin-ai-assistant.md) |
 | **ADR-146** | Canvas Size Observer Hook Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-146-canvas-size-observer-hook-centralization.md) |
 | **ADR-150** | Arrow Head Size Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-150-arrow-head-size-centralization.md) |
 | **ADR-151** | Grip Tolerance Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-151-grip-tolerance-centralization.md) |
 | **ADR-152** | Simple Coordinate Transform Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-152-simple-coordinate-transform-centralization.md) |
 | **ADR-153** | Snap Tooltip Offset Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-153-snap-tooltip-offset-centralization.md) |
 | **ADR-154** | Grip Line Width Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-154-grip-line-width-centralization.md) |
-| **ADR-156** | Voice Message Transcription (OpenAI Whisper) | ✅ IMPLEMENTED | 2026-02-09 | Backend Systems | [📄](./adrs/ADR-156-voice-message-transcription-whisper.md) |
+| **ADR-156** | Voice Message Transcription (OpenAI Whisper) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-156-voice-message-transcription-whisper.md) |
 | **ADR-158** | Origin Axis Label Offsets Centralization (X/Y axis labels) | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-158-origin-axis-label-offsets-centralization-x-y-axis-.md) |
 | **ADR-159** | Measurement Text Colors Separation (ANGLE vs DISTANCE) | ✅ IMPLEMENTED | 2026-02-01 | Drawing System | [📄](./adrs/ADR-159-measurement-text-colors-separation-angle-vs-distan.md) |
 | **ADR-160** | Internal Angle Arc Rendering (dot product logic) | ✅ IMPLEMENTED | 2026-02-01 | Drawing System | [📄](./adrs/ADR-160-internal-angle-arc-rendering-dot-product-logic.md) |
-| **ADR-161** | Global Voice Assistant (Header Microphone) | ✅ IMPLEMENTED | 2026-02-09 | Frontend / Backend | [📄](./adrs/ADR-161-global-voice-assistant.md) |
-| **ADR-164** | In-App Voice AI Pipeline (Right-Side Chat Panel) | ✅ IMPLEMENTED | 2026-02-09 | AI Pipeline / Voice / UX | [📄](./adrs/ADR-164-in-app-voice-ai-pipeline.md) |
+| **ADR-161** | Global Voice Assistant (Header Microphone) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-161-global-voice-assistant.md) |
+| **ADR-161** | Σταδιακή Κεντρικοποίηση Διάσπαρτου Κώδικα | ✅ ✅ IMPLEMENTED | 2026-03-12 | Data & State / UI Components | [📄](./adrs/ADR-161-scattered-code-centralization.md) |
+| **ADR-164** | In-App Voice AI Pipeline — Right-Side Chat Panel | ✅ Implemented | 2026-02-09 | AI Pipeline / Voice / UX | [📄](./adrs/ADR-164-in-app-voice-ai-pipeline.md) |
 | **ADR-165** | Entity Validation Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-165-entity-validation-centralization.md) |
 | **ADR-166** | GAP_TOLERANCE, ARC_TESSELLATION & Ghost Colors Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-166-gap-tolerance-arc-ghost-centralization.md) |
 | **ADR-167** | Enterprise Project Address System | ✅ ✅ APPROVED | 2026-02-02 | Entity Systems | [📄](./adrs/ADR-167-enterprise-project-address-system.md) |
 | **ADR-168** | Multi-Agent Development Environment | ✅ IMPLEMENTED | 2026-02-05 | Infrastructure | [📄](./adrs/ADR-168-multi-agent-development-environment.md) |
 | **ADR-169** | Modular AI Architecture - Enterprise Automation Platform | ✅ DRAFT - Requirements Gathering | 2026-02-07 | AI Architecture / Enterprise Automation | [📄](./adrs/ADR-169-modular-ai-architecture.md) |
-| **ADR-170** | Construction Worker Attendance — QR Code + GPS Geofencing + Photo | ✅ IMPLEMENTED | 2026-02-09 | Backend Systems / Labor Compliance | [📄](./adrs/ADR-170-attendance-qr-gps-verification.md) |
-| **ADR-175** | Σύστημα Επιμετρήσεων (Quantity Surveying / BOQ) | ✅ PHASE_1B_IMPLEMENTED | 2026-02-12 | Construction Management / BOQ | [📄](./adrs/ADR-175-quantity-surveying-measurements-system.md) |
-| **ADR-176** | DXF Viewer Mobile Responsive Refactoring | ✅ APPROVED | 2026-02-12 | UI Components | [📄](./adrs/ADR-176-dxf-viewer-mobile-responsive.md) |
-| **ADR-177** | Employer Picker — Entity Linking with Company Contacts | ✅ IMPLEMENTED | 2026-02-13 | UI Components / Data Quality | [📄](./adrs/ADR-177-employer-picker-entity-linking.md) |
+| **ADR-170** | Construction Worker Attendance — QR Code + GPS Geofencing + Photo Verification | ✅ Accepted | 2026-02-09 | Uncategorized | [📄](./adrs/ADR-170-attendance-qr-gps-verification.md) |
+| **ADR-171** | Autonomous AI Agent with Agentic Tool Calling | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-171-autonomous-ai-agent.md) |
+| **ADR-172** | Pre-Production Code Quality Audit & Remediation | ✅ PHASE_3_COMPLETE | 2026-02-10 | Security & Code Quality / Infrastructure | [📄](./adrs/ADR-172-pre-production-audit-remediation.md) |
+| **ADR-173** | Enterprise AI Self-Improvement System | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-173-ai-self-improvement-system.md) |
+| **ADR-174** | Meta Omnichannel Integration — WhatsApp + Messenger + Instagram | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-174-meta-omnichannel-whatsapp-messenger-instagram.md) |
+| **ADR-175** | Σύστημα Επιμετρήσεων (Quantity Surveying / BOQ) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-175-quantity-surveying-measurements-system.md) |
+| **ADR-176** | DXF Viewer Mobile Responsive Refactoring | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-176-dxf-viewer-mobile-responsive.md) |
+| **ADR-177** | Employer Picker — Entity Linking with Company Contacts | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-177-employer-picker-entity-linking.md) |
 | **ADR-178** | Contact Relationship Auto-Save UX (PendingRelationshipGuard) | ✅ IMPLEMENTED | 2026-02-13 | UX / Contact Relationships | [📄](./adrs/ADR-178-contact-relationship-auto-save-ux.md) |
-| **ADR-179** | IFC-Compliant Floor Plan Import Hierarchy | ✅ IMPLEMENTED | 2026-02-14 | DXF Viewer / Import | [📄](./adrs/ADR-179-ifc-compliant-floorplan-hierarchy.md) |
-| **ADR-180** | Hybrid Navigation — Dashboard Home με Navigation Tiles | ✅ IMPLEMENTED | 2026-02-14 | Navigation / UX | [📄](./adrs/ADR-180-hybrid-navigation-dashboard-tiles.md) |
-| **ADR-181** | IFC-Compliant Floor Management System | ✅ IMPLEMENTED | 2026-02-14 | Building Management / IFC | [📄](./adrs/ADR-181-ifc-floor-management-system.md) |
-| **ADR-182** | Parking & Storage Hierarchy Audit — 5 Findings | ✅ AUDIT_COMPLETE | 2026-02-16 | Data Architecture / Real Estate | [📄](./adrs/ADR-182-parking-storage-hierarchy-audit.md) |
-| **ADR-183** | Unified Grip System — DXF + Overlay Grip Interaction | ✅ IMPLEMENTED | 2026-02-16 | DXF Viewer / Grips | [📄](./adrs/ADR-183-unified-grip-system.md) |
-| **ADR-184** | Building Spaces Tabs (Storage, Parking, Units) | ✅ IMPLEMENTED | 2026-02-16 | Building Management | [📄](./adrs/ADR-184-building-spaces-tabs.md) |
-| **ADR-185** | AI-Powered DXF Drawing Assistant | 🟡 PHASE_1_IMPLEMENTED | 2026-02-17 | AI Architecture / DXF Viewer | [📄](./adrs/ADR-185-ai-powered-dxf-drawing-assistant.md) |
-| **ADR-186** | Entity Join System — AutoCAD JOIN Semantics | ✅ IMPLEMENTED | 2026-02-17 | DXF Viewer / Entity Operations | [📄](./adrs/ADR-186-entity-join-system.md) |
-| **ADR-187** | Floor-Level Floorplans (IFC-Compliant) | ✅ IMPLEMENTED | 2026-02-19 | Building Management | [📄](./adrs/ADR-187-floor-level-floorplans.md) |
-| **ADR-188** | Angle Measurement Variants — Line-Arc, Two-Arcs, MeasureGeom, Constraint | ✅ IMPLEMENTED | 2026-02-19 | DXF Viewer / Measurement | [📄](./adrs/ADR-188-angle-measurement-variants.md) |
-| **ADR-189** | Construction Grid & Guide System — 14/14 Commands + 31 Enhancements (B1-B9/B11-B17/B19-B20/B22-B24/B28-B33/B35-B38) | ✅ PHASE_2_ENHANCEMENTS | 2026-03-06 | DXF Viewer / Construction Guides | [📄](./adrs/ADR-189-construction-grid-guide-system.md) |
-| **ADR-190** | Photo/Logo Upload System — SSoT Consolidation | ✅ ACCEPTED | 2026-03-06 | Infrastructure / File Upload | [📄](./adrs/ADR-190-photo-upload-ssot-consolidation.md) |
-| **ADR-191** | Enterprise Document Management System — Roadmap & Current State | ✅ PHASES_1-5_COMPLETE | 2026-03-09 | File Management / Document Governance | [📄](./adrs/ADR-191-enterprise-document-management.md) |
-| **ADR-192** | Master-Detail Navigation — Building Space Tabs | ✅ ACCEPTED | 2026-03-10 | UI / Navigation / Building Management | [📄](./adrs/ADR-192-master-detail-navigation.md) |
-| **ADR-193** | Field Display Domain Separation — Χώροι vs Πωλήσεις | ✅ IMPLEMENTED | 2026-03-10 | UI / Domain Architecture / Field Display | [📄](./adrs/ADR-193-field-display-domain-separation.md) |
-| **ADR-194** | Info Tab Section Consistency — Unified Section Order | ✅ IMPLEMENTED | 2026-03-10 | UI / Consistency / Space Management | [📄](./adrs/ADR-194-info-tab-section-consistency.md) |
-| **ADR-195** | Entity Audit Trail — Centralized Change History System | ✅ APPROVED | 2026-03-10 | Entity Systems | [📄](./adrs/ADR-195-entity-audit-trail.md) |
-| **ADR-196** | Unit Floorplan Enterprise FileRecord Migration | ✅ IMPLEMENTED | 2026-03-10 | Backend Systems / File Management | [📄](./adrs/ADR-196-unit-floorplan-enterprise-filerecord.md) |
-| **ADR-198** | Sales-to-Accounting Bridge (Transaction Chain Pattern) | ✅ APPROVED | 2026-03-11 | Backend Systems / Accounting Integration | [📄](./adrs/ADR-198-sales-accounting-bridge.md) |
-| **ADR-199** | Παρακολουθήματα Πωλήσεων (Parking & Storage as Sale Appurtenances) | ✅ APPROVED | 2026-03-11 | Domain / Sales Architecture | [📄](./adrs/ADR-199-sales-appurtenances.md) |
-| **ADR-200** | useEntityLink Hook — Centralized Entity Linking | ✅ IMPLEMENTED | 2026-03-12 | Hooks / Entity Systems | [📄](./adrs/ADR-200-useEntityLink-hook.md) |
-| **ADR-201** | Centralized CompanyId Resolution | ✅ APPROVED | 2026-03-12 | Backend Systems / Multi-Tenant | [📄](./adrs/ADR-201-company-id-resolver.md) |
-| **ADR-202** | Floorplan Save Orchestrator | ✅ APPROVED | 2026-03-12 | Backend Systems / File Storage | [📄](./adrs/ADR-202-floorplan-save-orchestrator.md) |
-| **ADR-161** | Scattered Code Centralization (date formatting, entity stats, empty state) | ✅ IMPLEMENTED | 2026-03-12 | Data & State / UI Components | [📄](./adrs/ADR-161-scattered-code-centralization.md) |
-| **ADR-203** | Entity Page State Centralization (useEntityPageState) | ✅ IMPLEMENTED | 2026-03-12 | Data & State / Hooks | [📄](./adrs/ADR-203-entity-page-state-centralization.md) |
+| **ADR-178** | GeoCanvas Mobile Responsive Remediation | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-178-geocanvas-mobile-responsive.md) |
+| **ADR-179** | IFC-Compliant Floor Plan Import Hierarchy | ✅ ✅ IMPLEMENTED | 2026-02-14 | DXF Viewer / Import | [📄](./adrs/ADR-179-ifc-compliant-floorplan-hierarchy.md) |
+| **ADR-180** | Hybrid Navigation — Dashboard Home με Navigation Tiles | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-180-hybrid-navigation-dashboard-tiles.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-018-1-photos-tab-base-template.md) |
+| **ADR-181** | IFC-Compliant Floor Management System | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-181-ifc-floor-management-system.md) |
+| **ADR-182** | Parking & Storage Hierarchy Audit | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-182-parking-storage-hierarchy-audit.md) |
+| **ADR-183** | Unified Grip System — Ενοποίηση DXF + Overlay Grip Interaction | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-183-unified-grip-system.md) |
+| **ADR-184** | Building Spaces Tabs (Storage, Parking, Units) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-184-building-spaces-tabs.md) |
+| **ADR-185** | AI-Powered DXF Drawing Assistant | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-185-ai-powered-dxf-drawing-assistant.md) |
+| **ADR-186** | Building Code Module — Modular Κανονισμός Δόμησης (ΝΟΚ) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-186-building-code-nok-module.md) |
+| **ADR-186** | Entity Join System — AutoCAD JOIN Semantics | ✅ IMPLEMENTED | 2026-02-17 | DXF Viewer / Entity Operations | [📄](./adrs/ADR-186-entity-join-system.md) |
+| **ADR-187** | Floor-Level Floorplans (IFC-Compliant) | ✅ Accepted | 2026-02-19 | Architecture / Building Management | [📄](./adrs/ADR-187-floor-level-floorplans.md) |
+| **ADR-188** | Angle Measurement Variants — Line-Arc, Two-Arcs, MeasureGeom, Constraint | ✅ Accepted | 2026-02-19 | DXF Viewer / Measurement System | [📄](./adrs/ADR-188-angle-measurement-variants.md) |
+| **ADR-188** | Entity Rotation System — DXF Viewer | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-188-entity-rotation-system.md) |
+| **ADR-189** | Construction Grid & Guide System (Κάνναβος & Οδηγοί) | ✅ ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements (31): B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B4 Lock ✅, B5 Drag ✅, B6 Colors ✅, B7 Groups ✅, B8 Guide from Entity ✅, B9 Polar Start Angle ✅, B11 Info Panel ✅, B12 Snap Midpoint ✅, B13 Keyboard Shortcuts ✅, B14 Multi-select ✅, B15 Toggle Visibility ✅, B16 Guide at Angle ✅, B17 Copy/Offset Pattern ✅, B19 Mirror ✅, B20 Undo/Redo ✅, B22 Context Menu ✅, B23 Structural Presets ✅, B24 Offset from Entity ✅, B28 Rotation ✅, B29 Rotate Group ✅, B30 Rotate All ✅, B31 Polar Array ✅, B32 Scale Grid ✅, B33 Equalize ✅, B35 Construction Line ✅, B36 Measure→Guide ✅, B37 Guide from Selection ✅, B38 Custom Labels ✅. 14/14 commands + 31 enhancements. | 2026-02-22 | Uncategorized | [📄](./adrs/ADR-189-construction-grid-guide-system.md) |
+| **ADR-190** | Photo/Logo Upload System — SSoT Consolidation | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-190-photo-upload-ssot-consolidation.md) |
+| **ADR-191** | Enterprise Document Management System | ✅ PHASES_1-5_COMPLETE | 2026-03-09 | File Management / Document Governance | [📄](./adrs/ADR-191-enterprise-document-management.md) |
+| **ADR-191** | Ιεραρχικό Σύστημα Upload Μελετών Οικοδομικής Άδειας | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-191-hierarchical-study-upload.md) |
+| **ADR-192** | Master-Detail Navigation — Building Space Tabs | ✅ ✅ ACCEPTED | 2026-03-10 | UI / Navigation / Building Management | [📄](./adrs/ADR-192-master-detail-navigation.md) |
+| **ADR-193** | Εμφάνιση Πεδίων ανά Domain — Χώροι vs Πωλήσεις | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-193-field-display-domain-separation.md) |
+| **ADR-194** | Info Tab Section Consistency — Unified Section Order | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-194-info-tab-section-consistency.md) |
+| **ADR-195** | Entity Audit Trail — Κεντρικοποιημένο Σύστημα Ιστορικού Αλλαγών | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-195-entity-audit-trail.md) |
+| **ADR-196** | Unit Floorplan Enterprise FileRecord Migration | ✅ ✅ IMPLEMENTED | 2026-03-10 | Backend Systems / File Management | [📄](./adrs/ADR-196-unit-floorplan-enterprise-filerecord.md) |
+| **ADR-197** | Sales Pages Implementation Plan | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-197-sales-pages-implementation-plan.md) |
+| **ADR-198** | Sales-to-Accounting Bridge (Transaction Chain Pattern) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-198-sales-accounting-bridge.md) |
+| **ADR-199** | Παρακολουθήματα Πωλήσεων (Parking & Storage as Sale Appurtenances) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-199-sales-appurtenances.md) |
+| **ADR-200** | useEntityLink Hook — Centralized Entity Linking | ✅ Accepted | 2026-03-12 | Uncategorized | [📄](./adrs/ADR-200-useEntityLink-hook.md) |
+| **ADR-200** | Utility Hooks Centralization (Phase 2) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-200-utility-hooks-centralization.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
+| **ADR-201** | Centralized CompanyId Resolution | ✅ ✅ APPROVED | 2026-03-12 | Backend Systems / Multi-Tenant | [📄](./adrs/ADR-201-company-id-resolver.md) |
+| **ADR-202** | Floorplan Save Orchestrator | ✅ ✅ APPROVED | 2026-03-12 | Backend Systems / File Storage | [📄](./adrs/ADR-202-floorplan-save-orchestrator.md) |
+| **ADR-203** | Entity Page State Centralization | ✅ ✅ IMPLEMENTED | 2026-03-12 | Data & State / Hooks | [📄](./adrs/ADR-203-entity-page-state-centralization.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -367,13 +372,7 @@
 | **ADR-129** | Layer Entity Filtering Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-129-layer-entity-filtering-centralization.md) |
 | **ADR-130** | Default Layer Name Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-130-default-layer-name-centralization.md) |
 | **ADR-167** | Enterprise Project Address System | ✅ ✅ APPROVED | [View](./adrs/ADR-167-enterprise-project-address-system.md) |
-| **ADR-177** | Employer Picker — Entity Linking with Company Contacts | ✅ IMPLEMENTED | [View](./adrs/ADR-177-employer-picker-entity-linking.md) |
-| **ADR-178** | Contact Relationship Auto-Save UX (PendingRelationshipGuard) | ✅ IMPLEMENTED | [View](./adrs/ADR-178-contact-relationship-auto-save-ux.md) |
-| **ADR-180** | Hybrid Navigation — Dashboard Home με Navigation Tiles | ✅ IMPLEMENTED | [View](./adrs/ADR-180-hybrid-navigation-dashboard-tiles.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | [View](./adrs/ADR-018-1-photos-tab-base-template.md) |
-| **ADR-191** | Enterprise Document Management System — Roadmap & Current State | ✅ PHASES_1-5_COMPLETE | [View](./adrs/ADR-191-enterprise-document-management.md) |
-| **ADR-195** | Entity Audit Trail — Centralized Change History System | ✅ APPROVED | [View](./adrs/ADR-195-entity-audit-trail.md) |
-| **ADR-196** | Unit Floorplan Enterprise FileRecord Migration | ✅ IMPLEMENTED | [View](./adrs/ADR-196-unit-floorplan-enterprise-filerecord.md) |
 
 ---
 
@@ -410,7 +409,6 @@
 | **ADR-063** | Company Isolation via Custom Claims | ✅ ✅ Active | [View](./adrs/ADR-063-company-isolation-custom-claims.md) |
 | **ADR-068** | API Rate Limiting System | ✅ APPROVED | [View](./adrs/ADR-068-api-rate-limiting-system.md) |
 | **ADR-072** | AI Inbox HTML Rendering with Enterprise Sanitization | ✅ IMPLEMENTED | [View](./adrs/ADR-072-ai-inbox-html-rendering.md) |
-| **ADR-100** | JIT User Profile Sync (Firestore /users/{uid}) | ✅ IMPLEMENTED | [View](./adrs/ADR-100-user-profile-sync.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | [View](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
 
 ---
@@ -422,13 +420,6 @@
 | **ADR-059** | Separate /api/audit/bootstrap from /api/projects/list | ✅ ✅ Active | [View](./adrs/ADR-059-separate-audit-bootstrap-from-projects-list.md) |
 | **ADR-060** | Migrate BuildingFloorplanService to Enterprise Storage Architecture | ✅ ✅ Active | [View](./adrs/ADR-060-building-floorplan-enterprise-storage.md) |
 | **ADR-070** | Email & AI Ingestion System | ✅ ✅ FULLY OPERATIONAL (OpenAI Active) | [View](./adrs/ADR-070-email-ai-ingestion-system.md) |
-| **ADR-131** | Multi-Intent Pipeline — Πολλαπλά Intents σε Ένα Μήνυμα | ✅ IMPLEMENTED | [View](./adrs/ADR-131-multi-intent-pipeline.md) |
-| **ADR-134** | UC Modules Expansion + Telegram Channel — Omnichannel AI Pipeline | ✅ IMPLEMENTED | [View](./adrs/ADR-134-uc-modules-expansion-telegram-channel.md) |
-| **ADR-145** | Super Admin AI Assistant — Omnichannel Admin Command System | ✅ IMPLEMENTED | [View](./adrs/ADR-145-super-admin-ai-assistant.md) |
-| **ADR-156** | Voice Message Transcription (OpenAI Whisper) | ✅ IMPLEMENTED | [View](./adrs/ADR-156-voice-message-transcription-whisper.md) |
-| **ADR-161** | Global Voice Assistant (Header Microphone) | ✅ IMPLEMENTED | [View](./adrs/ADR-161-global-voice-assistant.md) |
-| **ADR-164** | In-App Voice AI Pipeline (Right-Side Chat Panel) | ✅ IMPLEMENTED | [View](./adrs/ADR-164-in-app-voice-ai-pipeline.md) |
-| **ADR-198** | Sales-to-Accounting Bridge (Transaction Chain Pattern) | ✅ APPROVED | [View](./adrs/ADR-198-sales-accounting-bridge.md) |
 
 ---
 
@@ -466,8 +457,39 @@
 | **ADR-074** | AI Inbox UX Improvements - Link Visibility & Theme Colors | ✅ APPROVED | [View](./adrs/ADR-074-ai-inbox-ux-improvements.md) |
 | **ADR-078** | Server-Side Unit Creation via Admin SDK | ✅ APPROVED | [View](./adrs/ADR-078-server-side-unit-creation.md) |
 | **ADR-079** | AI Inbox Real-Time Updates via Firestore onSnapshot | ✅ APPROVED | [View](./adrs/ADR-079-ai-inbox-realtime-updates.md) |
+| **ADR-100** | JIT User Profile Sync (Firestore /users/{uid}) | ✅ APPROVED | [View](./adrs/ADR-100-user-profile-sync.md) |
+| **ADR-103** | Availability Check & AI Operator Briefing | ✅ APPROVED | [View](./adrs/ADR-103-availability-check-operator-briefing.md) |
+| **ADR-156** | Voice Message Transcription (OpenAI Whisper) | ✅ APPROVED | [View](./adrs/ADR-156-voice-message-transcription-whisper.md) |
+| **ADR-161** | Global Voice Assistant (Header Microphone) | ✅ APPROVED | [View](./adrs/ADR-161-global-voice-assistant.md) |
 | **ADR-165** | Entity Validation Centralization | ✅ APPROVED | [View](./adrs/ADR-165-entity-validation-centralization.md) |
 | **ADR-166** | GAP_TOLERANCE, ARC_TESSELLATION & Ghost Colors Centralization | ✅ APPROVED | [View](./adrs/ADR-166-gap-tolerance-arc-ghost-centralization.md) |
+| **ADR-170** | Construction Worker Attendance — QR Code + GPS Geofencing + Photo Verification | ✅ Accepted | [View](./adrs/ADR-170-attendance-qr-gps-verification.md) |
+| **ADR-171** | Autonomous AI Agent with Agentic Tool Calling | ✅ APPROVED | [View](./adrs/ADR-171-autonomous-ai-agent.md) |
+| **ADR-173** | Enterprise AI Self-Improvement System | ✅ APPROVED | [View](./adrs/ADR-173-ai-self-improvement-system.md) |
+| **ADR-174** | Meta Omnichannel Integration — WhatsApp + Messenger + Instagram | ✅ APPROVED | [View](./adrs/ADR-174-meta-omnichannel-whatsapp-messenger-instagram.md) |
+| **ADR-175** | Σύστημα Επιμετρήσεων (Quantity Surveying / BOQ) | ✅ APPROVED | [View](./adrs/ADR-175-quantity-surveying-measurements-system.md) |
+| **ADR-176** | DXF Viewer Mobile Responsive Refactoring | ✅ APPROVED | [View](./adrs/ADR-176-dxf-viewer-mobile-responsive.md) |
+| **ADR-177** | Employer Picker — Entity Linking with Company Contacts | ✅ APPROVED | [View](./adrs/ADR-177-employer-picker-entity-linking.md) |
+| **ADR-178** | GeoCanvas Mobile Responsive Remediation | ✅ APPROVED | [View](./adrs/ADR-178-geocanvas-mobile-responsive.md) |
+| **ADR-180** | Hybrid Navigation — Dashboard Home με Navigation Tiles | ✅ APPROVED | [View](./adrs/ADR-180-hybrid-navigation-dashboard-tiles.md) |
+| **ADR-181** | IFC-Compliant Floor Management System | ✅ APPROVED | [View](./adrs/ADR-181-ifc-floor-management-system.md) |
+| **ADR-182** | Parking & Storage Hierarchy Audit | ✅ APPROVED | [View](./adrs/ADR-182-parking-storage-hierarchy-audit.md) |
+| **ADR-183** | Unified Grip System — Ενοποίηση DXF + Overlay Grip Interaction | ✅ APPROVED | [View](./adrs/ADR-183-unified-grip-system.md) |
+| **ADR-184** | Building Spaces Tabs (Storage, Parking, Units) | ✅ APPROVED | [View](./adrs/ADR-184-building-spaces-tabs.md) |
+| **ADR-185** | AI-Powered DXF Drawing Assistant | ✅ APPROVED | [View](./adrs/ADR-185-ai-powered-dxf-drawing-assistant.md) |
+| **ADR-186** | Building Code Module — Modular Κανονισμός Δόμησης (ΝΟΚ) | ✅ APPROVED | [View](./adrs/ADR-186-building-code-nok-module.md) |
+| **ADR-188** | Entity Rotation System — DXF Viewer | ✅ APPROVED | [View](./adrs/ADR-188-entity-rotation-system.md) |
+| **ADR-189** | Construction Grid & Guide System (Κάνναβος & Οδηγοί) | ✅ ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements (31): B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B4 Lock ✅, B5 Drag ✅, B6 Colors ✅, B7 Groups ✅, B8 Guide from Entity ✅, B9 Polar Start Angle ✅, B11 Info Panel ✅, B12 Snap Midpoint ✅, B13 Keyboard Shortcuts ✅, B14 Multi-select ✅, B15 Toggle Visibility ✅, B16 Guide at Angle ✅, B17 Copy/Offset Pattern ✅, B19 Mirror ✅, B20 Undo/Redo ✅, B22 Context Menu ✅, B23 Structural Presets ✅, B24 Offset from Entity ✅, B28 Rotation ✅, B29 Rotate Group ✅, B30 Rotate All ✅, B31 Polar Array ✅, B32 Scale Grid ✅, B33 Equalize ✅, B35 Construction Line ✅, B36 Measure→Guide ✅, B37 Guide from Selection ✅, B38 Custom Labels ✅. 14/14 commands + 31 enhancements. | [View](./adrs/ADR-189-construction-grid-guide-system.md) |
+| **ADR-190** | Photo/Logo Upload System — SSoT Consolidation | ✅ APPROVED | [View](./adrs/ADR-190-photo-upload-ssot-consolidation.md) |
+| **ADR-191** | Ιεραρχικό Σύστημα Upload Μελετών Οικοδομικής Άδειας | ✅ APPROVED | [View](./adrs/ADR-191-hierarchical-study-upload.md) |
+| **ADR-193** | Εμφάνιση Πεδίων ανά Domain — Χώροι vs Πωλήσεις | ✅ APPROVED | [View](./adrs/ADR-193-field-display-domain-separation.md) |
+| **ADR-194** | Info Tab Section Consistency — Unified Section Order | ✅ APPROVED | [View](./adrs/ADR-194-info-tab-section-consistency.md) |
+| **ADR-195** | Entity Audit Trail — Κεντρικοποιημένο Σύστημα Ιστορικού Αλλαγών | ✅ APPROVED | [View](./adrs/ADR-195-entity-audit-trail.md) |
+| **ADR-197** | Sales Pages Implementation Plan | ✅ APPROVED | [View](./adrs/ADR-197-sales-pages-implementation-plan.md) |
+| **ADR-198** | Sales-to-Accounting Bridge (Transaction Chain Pattern) | ✅ APPROVED | [View](./adrs/ADR-198-sales-accounting-bridge.md) |
+| **ADR-199** | Παρακολουθήματα Πωλήσεων (Parking & Storage as Sale Appurtenances) | ✅ APPROVED | [View](./adrs/ADR-199-sales-appurtenances.md) |
+| **ADR-200** | useEntityLink Hook — Centralized Entity Linking | ✅ Accepted | [View](./adrs/ADR-200-useEntityLink-hook.md) |
+| **ADR-200** | Utility Hooks Centralization (Phase 2) | ✅ APPROVED | [View](./adrs/ADR-200-utility-hooks-centralization.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
@@ -479,7 +501,7 @@
 ```
 034, 065, 066, 067, 068, 070, 071, 072, 073, 074,
 077, 078, 079, 080, 089, 090, 100, 103, 121, 131,
-156, 161, 164
+132, 134, 145, 156, 161, 164
 ```
 
 > **⚠️ ΣΗΜΑΝΤΙΚΟ**: Αυτά τα IDs ενοποιήθηκαν στο ADR-GEOMETRY. Χρησιμοποίησέ τα για νέα ADRs πριν συνεχίσεις από το 167+.
@@ -507,32 +529,6 @@ Based on these ADRs, the following are **PROHIBITED**:
 - ❌ Duplicate grip rendering - Use UnifiedGripRenderer (ADR-048)
 - ❌ Debug endpoints in production (ADR-062)
 - ❌ Inline styles - Use centralized design system
-
----
-
----
-
-## 🧮 **ACCOUNTING SUBAPP ADRs** (Separate Numbering — ACC-xxx)
-
-> **📍 Location**: `src/subapps/accounting/docs/adrs/` — Portable subapp with independent ADR numbering
->
-> **Status**: Phase 1 COMPLETE (2026-02-10) — Sole Proprietor (Ατομική Επιχείρηση)
-
-| ADR | Decision | Status | Date | Link |
-|-----|----------|--------|------|------|
-| **ADR-ACC-000** | Founding Decision — Enterprise Accounting Subapp | ✅ ACTIVE | 2026-02-09 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-000-founding-decision.md) |
-| **ADR-ACC-001** | Chart of Accounts — Λογιστικό Σχέδιο ΕΛΠ (24 categories) | ✅ IMPLEMENTED | 2026-02-09 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-001-chart-of-accounts.md) |
-| **ADR-ACC-002** | Invoicing System — Σύστημα Τιμολόγησης (7 types) | ✅ IMPLEMENTED | 2026-02-09 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-002-invoicing-system.md) |
-| **ADR-ACC-003** | myDATA / ΑΑΔΕ Integration | ⏳ DRAFT | 2026-02-09 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-003-mydata-aade-integration.md) |
-| **ADR-ACC-004** | VAT Engine — Μηχανή ΦΠΑ | ✅ IMPLEMENTED | 2026-02-09 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-004-vat-engine.md) |
-| **ADR-ACC-005** | AI Document Processing — Expense Tracker (OpenAI Vision) | ✅ IMPLEMENTED | 2026-02-10 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-005-ai-document-processing.md) |
-| **ADR-ACC-006** | EFKA Contribution Tracking | ✅ IMPLEMENTED | 2026-02-09 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-006-efka-contribution-tracking.md) |
-| **ADR-ACC-007** | Fixed Assets & Depreciation | ✅ IMPLEMENTED | 2026-02-09 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-007-fixed-assets-depreciation.md) |
-| **ADR-ACC-008** | Bank Reconciliation | ✅ IMPLEMENTED | 2026-02-09 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-008-bank-reconciliation.md) |
-| **ADR-ACC-009** | Tax Engine | ✅ IMPLEMENTED | 2026-02-09 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-009-tax-engine.md) |
-| **ADR-ACC-010** | Portability & Abstraction Layers | ✅ IMPLEMENTED | 2026-02-09 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-010-portability-abstraction-layers.md) |
-| **ADR-ACC-011** | Service Presets | ✅ IMPLEMENTED | 2026-02-10 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-011-service-presets.md) |
-| **ADR-ACC-012** | OE Partnership Support (Ομόρρυθμη Εταιρεία) | ✅ IMPLEMENTED | 2026-02-10 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-012-oe-partnership-support.md) |
 
 ---
 

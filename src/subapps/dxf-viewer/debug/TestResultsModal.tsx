@@ -18,6 +18,8 @@ import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRIS
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
+// ✅ ENTERPRISE: Centralized copy-to-clipboard hook
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import {
   getTestResultsInteractiveAutoStyles
 } from '../ui/DxfViewerComponents.styles';
@@ -47,7 +49,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
   const iconSizes = useIconSizes();
   const { getStatusBorder, getDirectionalBorder, getMultiDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
-  const [copied, setCopied] = React.useState(false);
+  const { copy, copied } = useCopyToClipboard(PANEL_LAYOUT.TIMING.COPY_FEEDBACK_RESET);
   const [activeTab, setActiveTab] = React.useState<'summary' | 'details' | 'raw'>('summary');
 
   // ✅ ENTERPRISE: Tab borders με CSS variables
@@ -67,10 +69,9 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
     }
   };
 
-  // Reset copied state when modal opens
+  // Reset tab when modal opens
   React.useEffect(() => {
     if (isOpen) {
-      setCopied(false);
       setActiveTab('summary'); // Reset to summary when opening
       console.log('🧪 TestResultsModal opened');
     }
@@ -112,14 +113,8 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
   if (!isOpen || !report) return null;
 
   // Handle copy to clipboard
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(formattedReport);
-      setCopied(true);
-      setTimeout(() => setCopied(false), PANEL_LAYOUT.TIMING.COPY_FEEDBACK_RESET);
-    } catch (error) {
-      console.error('Failed to copy to clipboard:', error);
-    }
+  const handleCopy = () => {
+    copy(formattedReport);
   };
 
   // Handle download as JSON

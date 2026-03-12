@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import type { ObligationSection } from "@/types/obligations";
 import { useTranslation } from "@/i18n/hooks/useTranslation";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 export function useSectionEditorState(
   initial: ObligationSection,
@@ -10,6 +11,7 @@ export function useSectionEditorState(
   onCancel?: () => void
 ) {
   const { t } = useTranslation("obligations");
+  const { confirm, dialogProps } = useConfirmDialog();
   const [editedSection, setEditedSection] = useState<ObligationSection>(initial);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
@@ -24,16 +26,21 @@ export function useSectionEditorState(
     setHasUnsavedChanges(false);
   }, [editedSection, onSave]);
 
-  // 🌐 i18n: Confirm message converted to i18n key - 2026-01-18
-  const handleCancel = useCallback(() => {
+  const handleCancel = useCallback(async () => {
     if (hasUnsavedChanges) {
-      const confirmLeave = window.confirm(t("sectionEditor.confirmLeave"));
+      const confirmLeave = await confirm({
+        title: t("sectionEditor.confirmLeaveTitle"),
+        description: t("sectionEditor.confirmLeave"),
+        variant: 'warning',
+        confirmText: t("sectionEditor.confirmLeaveConfirm"),
+        cancelText: t("sectionEditor.confirmLeaveCancel"),
+      });
       if (!confirmLeave) return;
     }
     setEditedSection(initial);
     setHasUnsavedChanges(false);
     onCancel?.();
-  }, [hasUnsavedChanges, initial, onCancel, t]);
+  }, [hasUnsavedChanges, initial, onCancel, t, confirm]);
 
-  return { editedSection, hasUnsavedChanges, updateSection, handleSave, handleCancel };
+  return { editedSection, hasUnsavedChanges, updateSection, handleSave, handleCancel, confirmDialogProps: dialogProps };
 }

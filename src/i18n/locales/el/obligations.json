@@ -152,7 +152,10 @@
       "articlePrefix": "Άρθρο"
     },
     "unsavedBanner": "Έχετε μη αποθηκευμένες αλλαγές σε αυτό το άρθρο",
-    "confirmLeave": "Έχετε μη αποθηκευμένες αλλαγές. Θέλετε να αποχωρήσετε;"
+    "confirmLeave": "Έχετε μη αποθηκευμένες αλλαγές. Θέλετε να αποχωρήσετε;",
+    "confirmLeaveTitle": "Μη αποθηκευμένες αλλαγές",
+    "confirmLeaveConfirm": "Αποχώρηση",
+    "confirmLeaveCancel": "Παραμονή"
   },
   "richText": {
     "defaultPlaceholder": "Εισάγετε το περιεχόμενο...",

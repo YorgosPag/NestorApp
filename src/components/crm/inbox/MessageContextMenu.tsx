@@ -17,6 +17,7 @@
 
 import React, { useCallback } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 
 const logger = createModuleLogger('MessageContextMenu');
 
@@ -135,6 +136,7 @@ export function MessageContextMenu({
   const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  const { copy } = useCopyToClipboard();
 
   // ============================================================================
   // HANDLERS
@@ -144,9 +146,9 @@ export function MessageContextMenu({
     if (onCopy) {
       onCopy(messageText);
     } else {
-      navigator.clipboard.writeText(messageText).catch((err) => logger.error('Clipboard write failed', { error: err }));
+      copy(messageText).catch((err) => logger.error('Clipboard write failed', { error: err }));
     }
-  }, [messageText, onCopy]);
+  }, [messageText, onCopy, copy]);
 
   const handleDelete = useCallback(() => {
     onDelete(messageId);

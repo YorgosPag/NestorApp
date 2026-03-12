@@ -21,6 +21,8 @@ import { BOQCategoryAccordion } from './MeasurementsTabContent/BOQCategoryAccord
 import { BOQItemEditor } from './MeasurementsTabContent/BOQItemEditor';
 import { Button } from '@/components/ui/button';
 import { Ruler, Plus, AlertCircle, Loader2 } from 'lucide-react';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { Building } from '@/types/building/contracts';
 import type { BOQItem, BOQItemStatus, CreateBOQItemInput, UpdateBOQItemInput } from '@/types/boq';
 
@@ -39,6 +41,7 @@ interface MeasurementsTabContentProps {
 export function MeasurementsTabContent({ building }: MeasurementsTabContentProps) {
   const { t } = useTranslation('building');
   const { user } = useAuth();
+  const { confirm, dialogProps } = useConfirmDialog();
 
   const {
     items,
@@ -77,10 +80,15 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
 
   const handleDelete = useCallback(
     async (item: BOQItem) => {
-      if (!window.confirm(t('tabs.measurements.actions.deleteConfirm'))) return;
+      const confirmed = await confirm({
+        title: t('tabs.measurements.actions.deleteConfirm'),
+        description: t('tabs.measurements.actions.deleteConfirm'),
+        variant: 'destructive',
+      });
+      if (!confirmed) return;
       await deleteItem(item.id);
     },
-    [deleteItem, t]
+    [deleteItem, t, confirm]
   );
 
   const handleStatusChange = useCallback(
@@ -168,6 +176,7 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
 
   return (
     <section className="space-y-2 p-2">
+      <ConfirmDialog {...dialogProps} />
       {/* Summary Cards */}
       <BOQSummaryCards items={items} />
 

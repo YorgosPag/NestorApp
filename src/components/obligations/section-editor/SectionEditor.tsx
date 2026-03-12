@@ -12,7 +12,7 @@ import { ContentEditor } from './parts/ContentEditor';
 import { ActionsBar } from './parts/ActionsBar';
 import { UnsavedBanner } from './parts/UnsavedBanner';
 import type { SectionEditorProps } from './types';
-import { WarningConfirmDialog } from '@/components/ui/ConfirmDialog'; // 🏢 ENTERPRISE: Centralized modal confirmation
+import { ConfirmDialog, WarningConfirmDialog } from '@/components/ui/ConfirmDialog'; // 🏢 ENTERPRISE: Centralized modal confirmation
 import { useTranslation } from '@/i18n/hooks/useTranslation'; // 🏢 ENTERPRISE: i18n support
 
 export default function SectionEditor({
@@ -29,7 +29,8 @@ export default function SectionEditor({
     hasUnsavedChanges,
     updateSection,
     handleSave,
-    handleCancel
+    handleCancel,
+    confirmDialogProps,
   } = useSectionEditorState(section, onSave, onCancel);
 
   // =========================================================================
@@ -105,6 +106,9 @@ export default function SectionEditor({
         />
         
         <UnsavedBanner show={hasUnsavedChanges} />
+
+        {/* 🏢 ENTERPRISE: Unsaved changes confirmation (from useSectionEditorState hook) */}
+        <ConfirmDialog {...confirmDialogProps} />
 
         {/* 🏢 ENTERPRISE: Centralized Delete Confirmation Modal (center screen) */}
         <WarningConfirmDialog

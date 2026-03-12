@@ -21,6 +21,8 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Layers, Plus, Pencil, Trash2, Check, X, Loader2, ChevronDown, ChevronRight, Map } from 'lucide-react';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { FloorFloorplanInline } from './FloorFloorplanInline';
 import type { Building } from '@/types/building/contracts';
 
@@ -60,6 +62,7 @@ interface FloorsTabContentProps {
 
 export function FloorsTabContent({ building }: FloorsTabContentProps) {
   const { t } = useTranslation('building');
+  const { confirm, dialogProps } = useConfirmDialog();
 
   // Data state
   const [floors, setFloors] = useState<FloorRecord[]>([]);
@@ -190,9 +193,11 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
   // ============================================================================
 
   const handleDelete = async (floor: FloorRecord) => {
-    const confirmed = window.confirm(
-      t('tabs.floors.deleteConfirm', { name: floor.name })
-    );
+    const confirmed = await confirm({
+      title: t('tabs.floors.deleteConfirm', { name: floor.name }),
+      description: t('tabs.floors.deleteConfirm', { name: floor.name }),
+      variant: 'destructive',
+    });
     if (!confirmed) return;
 
     setDeletingId(floor.id);
@@ -251,6 +256,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
 
   return (
     <section className="flex flex-col gap-2 p-2">
+      <ConfirmDialog {...dialogProps} />
       {/* Header */}
       <header className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-lg font-semibold">

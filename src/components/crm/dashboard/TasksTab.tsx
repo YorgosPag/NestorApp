@@ -39,6 +39,8 @@ import { useAuth } from '@/auth/contexts/AuthContext';
 import { SafeHTMLContent } from '@/components/shared/email/EmailContentRenderer';
 // 🏢 ENTERPRISE: Centralized Badge component (replaces raw <span> badges)
 import { Badge } from '@/components/ui/badge';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 // 🏢 ENTERPRISE: Centralized typography & spacing tokens
 import { useTypography } from '@/hooks/useTypography';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
@@ -114,6 +116,7 @@ export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabPr
   const { isAuthenticated, loading: authLoading } = useAuth();
   const typography = useTypography();
   const sp = useSpacingTokens();
+  const { confirm, dialogProps } = useConfirmDialog();
   const formatDueDate = useMemo(() => createFormatDueDate(t), [t]);
   const [tasks, setTasks] = useState<CrmTask[]>([]);
   const [leads, setLeads] = useState<Opportunity[]>([]);
@@ -215,7 +218,12 @@ export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabPr
 
   const handleDeleteTask = useCallback(async (taskId?: string, taskTitle?: string) => {
     if (!taskId || !taskTitle) return;
-    if (window.confirm(t('tasks.messages.deleteConfirm', { title: taskTitle }))) {
+    const confirmed = await confirm({
+      title: t('tasks.messages.deleteConfirm', { title: taskTitle }),
+      description: t('tasks.messages.deleteConfirm', { title: taskTitle }),
+      variant: 'destructive',
+    });
+    if (confirmed) {
       try {
         await deleteTask(taskId);
         toast.success(t('tasks.messages.deleted', { title: taskTitle }));
@@ -224,7 +232,7 @@ export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabPr
         toast.error(t('tasks.messages.deleteError'));
       }
     }
-  }, [t]); // 🔧 FIX: Removed fetchData to prevent infinite loop
+  }, [t, confirm]); // 🔧 FIX: Removed fetchData to prevent infinite loop
 
   const getLeadName = useCallback((leadId?: string) => leads.find(l => l.id === leadId)?.fullName || null, [leads]);
 
@@ -244,6 +252,7 @@ export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabPr
 
   return (
     <section className={sp.spaceBetween.md}>
+      <ConfirmDialog {...dialogProps} />
       {/* Task List — filters handled by AdvancedFiltersPanel at page level */}
       {filteredTasks.length === 0 ? (
         <div className={`text-center ${sp.padding.y['2xl']}`}><p className={colors.text.muted}>{t('tasks.noTasks')}</p></div>

@@ -16,7 +16,8 @@
 
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
+import { useClickOutside } from '@/hooks/useClickOutside';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -90,18 +91,7 @@ export const GeoMapControls: React.FC<GeoMapControlsProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+  useClickOutside(dropdownRef, () => setIsDropdownOpen(false));
 
   // ========================================================================
   // 🎨 RENDER COORDINATE PICKING CONTROLS

@@ -412,7 +412,10 @@
       "subtitle": "Add your first lead to get started!"
     },
     "confirm": {
-      "deleteMessage": "Are you sure you want to delete lead \"{name}\"?"
+      "deleteTitle": "Delete Lead",
+      "deleteMessage": "Are you sure you want to delete lead \"{name}\"?",
+      "deleteConfirm": "Delete",
+      "deleteCancel": "Cancel"
     },
     "status": {
       "deleteSuccess": "Lead \"{name}\" was deleted successfully"

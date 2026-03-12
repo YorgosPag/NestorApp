@@ -14,6 +14,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { portalComponents, photoPreviewComponents } from '../../../styles/design-tokens';
+import { useClickOutside } from '@/hooks/useClickOutside';
 
 
 
@@ -179,27 +180,15 @@ export const EnterprisePortal: React.FC<EnterprisePortalProps> = ({
 }) => {
   const { position, portalRef } = useSmartPortalPositioning(config, isOpen);
 
-  // Handle click outside
-  useEffect(() => {
-    if (!isOpen || !config.closeOnClickOutside) return;
+  // 🏢 Centralized useClickOutside hook — tracks triggerElement as a stable ref
+  const triggerRef = useRef<HTMLElement | null>(null);
+  triggerRef.current = (config.triggerElement as HTMLElement | null) ?? null;
 
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-
-      // Don't close if click is inside portal or trigger
-      if (
-        portalRef.current?.contains(target) ||
-        config.triggerElement?.contains(target)
-      ) {
-        return;
-      }
-
-      onClose();
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen, config.closeOnClickOutside, config.triggerElement, onClose]);
+  useClickOutside(
+    [portalRef, triggerRef],
+    onClose,
+    { enabled: isOpen && (config.closeOnClickOutside ?? false) }
+  );
 
   // Handle escape key
   useEffect(() => {

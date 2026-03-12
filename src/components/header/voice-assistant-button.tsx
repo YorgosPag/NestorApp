@@ -30,6 +30,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
@@ -47,7 +48,7 @@ export function VoiceAssistantButton() {
   const { user } = useAuth();
 
   const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [copied, setCopied] = React.useState(false);
+  const { copy, copied } = useCopyToClipboard();
 
   const {
     status,
@@ -65,7 +66,6 @@ export function VoiceAssistantButton() {
     (open: boolean) => {
       if (!open) {
         reset();
-        setCopied(false);
       }
       setDialogOpen(open);
     },
@@ -94,30 +94,13 @@ export function VoiceAssistantButton() {
     // Close dialog — panel will open automatically via store
     setDialogOpen(false);
     reset();
-    setCopied(false);
   }, [transcribedText, submitCommand, reset]);
 
   // Copy transcribed text to clipboard
   const handleCopy = React.useCallback(async () => {
     if (!transcribedText) return;
-    try {
-      await navigator.clipboard.writeText(transcribedText);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback: textarea-based copy for older browsers
-      const textarea = document.createElement('textarea');
-      textarea.value = transcribedText;
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = '0';
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  }, [transcribedText]);
+    await copy(transcribedText);
+  }, [transcribedText, copy]);
 
   // Get error message from error code
   const errorMessage = React.useMemo(() => {

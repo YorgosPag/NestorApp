@@ -16,6 +16,7 @@ import { Copy, ExternalLink, Check, AlertCircle } from 'lucide-react';
 import { designSystem } from '@/lib/design-system';
 import { TRANSITION_PRESETS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -103,10 +104,10 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
   // LOCAL STATE
   // ============================================================================
 
-  const [copiedStates, setCopiedStates] = useState({
-    url: false,
-    text: false
-  });
+  const { copy: copyUrl, copied: copiedUrl } = useCopyToClipboard(finalConfig.successTimeout);
+  const { copy: copyText, copied: copiedText } = useCopyToClipboard(finalConfig.successTimeout);
+
+  const copiedStates = { url: copiedUrl, text: copiedText };
 
   const [errors, setErrors] = useState({
     url: null as string | null,
@@ -138,20 +139,13 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
         textToCopy = parts.join('\\n\\n');
       }
 
-      // Copy to clipboard
-      await navigator.clipboard.writeText(textToCopy);
+      // Copy to clipboard via centralized hook
+      const copyFn = type === 'url' ? copyUrl : copyText;
+      const success = await copyFn(textToCopy);
 
-      // Update state
-      setCopiedStates(prev => ({ ...prev, [type]: true }));
-
-      // Success callback
-      onCopySuccess?.(type);
-
-      // Auto-reset success state
-      setTimeout(() => {
-        setCopiedStates(prev => ({ ...prev, [type]: false }));
-      }, finalConfig.successTimeout);
-
+      if (success) {
+        onCopySuccess?.(type);
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : t('copy.copyError');
       setErrors(prev => ({ ...prev, [type]: errorMessage }));
@@ -162,7 +156,7 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
         setErrors(prev => ({ ...prev, [type]: null }));
       }, finalConfig.successTimeout);
     }
-  }, [copyData, onCopySuccess, onCopyError, finalConfig.successTimeout]);
+  }, [copyData, onCopySuccess, onCopyError, finalConfig.successTimeout, copyUrl, copyText, t]);
 
   /**
    * 🔗 Handle URL Copy

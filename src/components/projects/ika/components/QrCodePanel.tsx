@@ -33,6 +33,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { cn } from '@/lib/utils';
 
 // =============================================================================
@@ -64,7 +65,7 @@ export function QrCodePanel({ projectId }: QrCodePanelProps) {
   const [qrData, setQrData] = useState<QrGenerateResult | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const { copy, copied } = useCopyToClipboard();
 
   // =========================================================================
   // GENERATE QR
@@ -102,23 +103,8 @@ export function QrCodePanel({ projectId }: QrCodePanelProps) {
 
   const handleCopyUrl = useCallback(async () => {
     if (!qrData?.checkInUrl) return;
-
-    try {
-      await navigator.clipboard.writeText(qrData.checkInUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback for older browsers
-      const textarea = document.createElement('textarea');
-      textarea.value = qrData.checkInUrl;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  }, [qrData?.checkInUrl]);
+    await copy(qrData.checkInUrl);
+  }, [qrData?.checkInUrl, copy]);
 
   // =========================================================================
   // PRINT

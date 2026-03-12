@@ -16,6 +16,8 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Warehouse, Plus, Pencil, Trash2, Check, X, Loader2 } from 'lucide-react';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { Building } from '@/types/building/contracts';
 import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
 
@@ -52,6 +54,7 @@ const STORAGE_TYPES: StorageType[] = ['small', 'large', 'basement', 'ground', 's
 export function StorageTab({ building }: StorageTabProps) {
   const { t } = useTranslation('storage');
   const { t: tBuilding } = useTranslation('building');
+  const { confirm, dialogProps } = useConfirmDialog();
 
   // Data state
   const [storages, setStorages] = useState<Storage[]>([]);
@@ -177,9 +180,12 @@ export function StorageTab({ building }: StorageTabProps) {
   // ============================================================================
 
   const handleDelete = async (storage: Storage) => {
-    const confirmed = window.confirm(
-      `${t('storages.header.title')}: ${storage.name} — Delete?`
-    );
+    const confirmed = await confirm({
+      title: `${t('storages.header.title')}: ${storage.name}`,
+      description: t('storages.header.title'),
+      variant: 'destructive',
+      confirmText: 'Delete',
+    });
     if (!confirmed) return;
 
     setDeletingId(storage.id);
@@ -242,6 +248,7 @@ export function StorageTab({ building }: StorageTabProps) {
 
   return (
     <section className="flex flex-col gap-4 p-4">
+      <ConfirmDialog {...dialogProps} />
       {/* Header */}
       <header className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-lg font-semibold">

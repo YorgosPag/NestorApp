@@ -16,6 +16,8 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { clamp } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-098: Centralized Timing Constants
 import { UI_TIMING } from '../../config/timing-config';
+// 🏢 Centralized click-outside hook
+import { useClickOutside } from '@/hooks/useClickOutside';
 
 // ✅ ENTERPRISE: Type-safe state schema
 interface ColorMenuState {
@@ -108,26 +110,25 @@ export function useColorMenuState() {
     return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [state.open, close]);
 
-  // ✅ ENTERPRISE: Click outside to close
+  // ✅ ENTERPRISE: Click outside to close (delayed activation to avoid immediate close)
+  // 🏢 ADR-098: Using UI_TIMING.MENU_CLICK_GUARD for delayed guard
+  const [clickOutsideEnabled, setClickOutsideEnabled] = useState(false);
+
   useEffect(() => {
-    if (!state.open) return;
+    if (!state.open) {
+      setClickOutsideEnabled(false);
+      return;
+    }
 
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        close();
-      }
-    };
-
-    // Add listener with delay to avoid immediate close
-    // 🏢 ADR-098: Using UI_TIMING.MENU_CLICK_GUARD
-    setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside);
+    const timer = setTimeout(() => {
+      setClickOutsideEnabled(true);
     }, UI_TIMING.MENU_CLICK_GUARD);
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [state.open, close]);
+    return () => clearTimeout(timer);
+  }, [state.open]);
+
+  // 🏢 Centralized useClickOutside hook
+  useClickOutside(menuRef, close, { enabled: clickOutsideEnabled });
 
   // ✅ ENTERPRISE: Auto-close on window resize
   useEffect(() => {

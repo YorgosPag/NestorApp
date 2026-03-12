@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useClickOutside } from '@/hooks/useClickOutside';
 import { formatDateShort } from '@/lib/intl-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createPortal } from 'react-dom';
@@ -300,21 +301,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   }, [showDropdown, searchResults, highlightedIndex]);
 
   // Click outside to close
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node) &&
-        searchInputRef.current &&
-        !searchInputRef.current.contains(event.target as Node)
-      ) {
-        setShowDropdown(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  useClickOutside([dropdownRef, searchInputRef], () => setShowDropdown(false));
 
   // Update dropdown position on scroll/resize
   useEffect(() => {

@@ -152,7 +152,10 @@
       "articlePrefix": "Article"
     },
     "unsavedBanner": "You have unsaved changes in this article",
-    "confirmLeave": "You have unsaved changes. Do you want to leave?"
+    "confirmLeave": "You have unsaved changes. Do you want to leave?",
+    "confirmLeaveTitle": "Unsaved Changes",
+    "confirmLeaveConfirm": "Leave",
+    "confirmLeaveCancel": "Stay"
   },
   "richText": {
     "defaultPlaceholder": "Enter content...",

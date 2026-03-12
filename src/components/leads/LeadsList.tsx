@@ -8,6 +8,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { EditOpportunityModal } from "@/components/crm/dashboard/EditOpportunityModal";
 import SendEmailModal from "@/components/email/SendEmailModal";
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useLeadsList } from "./hooks/useLeadsList";
 import { LeadCard } from "./LeadCard";
 import { getStatusColor } from "./utils/formatters";
@@ -27,6 +28,7 @@ export default function LeadsList({ refreshTrigger }: { refreshTrigger?: number 
     editingLead, showEditModal, emailingLead, showEmailModal,
     handleEdit, handleEmail, handleViewProfile, handleDelete,
     closeEditModal, closeEmailModal,
+    confirmDialogProps,
   } = useLeadsList(refreshTrigger);
 
   if (loading) {
@@ -102,6 +104,8 @@ export default function LeadsList({ refreshTrigger }: { refreshTrigger?: number 
             onEmailSent={() => {/* ίδια ροή, optional log */}}
         />
       )}
+
+      <ConfirmDialog {...confirmDialogProps} />
     </>
   );
 }

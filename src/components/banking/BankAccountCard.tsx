@@ -28,11 +28,9 @@ import {
   Check
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { colors } from '@/styles/design-tokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { createModuleLogger } from '@/lib/telemetry';
-
-const logger = createModuleLogger('BankAccountCard');
 
 // ============================================================================
 // TYPES
@@ -88,7 +86,7 @@ export function BankAccountCard({
 }: BankAccountCardProps) {
   const { t } = useTranslation('banking');
   const iconSizes = useIconSizes();
-  const [copied, setCopied] = React.useState(false);
+  const { copy, copied } = useCopyToClipboard();
 
   // Get bank info for color
   const bankInfo = account.bankCode ? getBankByCode(account.bankCode) : null;
@@ -99,13 +97,7 @@ export function BankAccountCard({
 
   // Copy IBAN to clipboard
   const handleCopyIban = async () => {
-    try {
-      await navigator.clipboard.writeText(account.iban);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      logger.error('Failed to copy IBAN', { error: err });
-    }
+    await copy(account.iban);
   };
 
   return (

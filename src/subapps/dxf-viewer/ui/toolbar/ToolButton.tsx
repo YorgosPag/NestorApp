@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
+import { useClickOutside } from '@/hooks/useClickOutside';
 import { ToolDefinition, ActionDefinition } from './types';
 import { ChevronDown } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -41,16 +42,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
 
   const hasDropdown = tool.dropdownOptions && tool.dropdownOptions.length > 0;
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  useClickOutside(dropdownRef, () => setShowDropdown(false));
 
   const handleMainClick = () => {
     if (!hasDropdown) {

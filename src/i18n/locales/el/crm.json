@@ -412,7 +412,10 @@
       "subtitle": "Προσθέστε το πρώτο σας lead για να ξεκινήσετε!"
     },
     "confirm": {
-      "deleteMessage": "Είστε σίγουροι ότι θέλετε να διαγράψετε το lead \"{name}\";"
+      "deleteTitle": "Διαγραφή Lead",
+      "deleteMessage": "Είστε σίγουροι ότι θέλετε να διαγράψετε το lead \"{name}\";",
+      "deleteConfirm": "Διαγραφή",
+      "deleteCancel": "Ακύρωση"
     },
     "status": {
       "deleteSuccess": "Το lead \"{name}\" διαγράφηκε επιτυχώς"

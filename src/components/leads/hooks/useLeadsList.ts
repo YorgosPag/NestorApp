@@ -7,12 +7,14 @@ import toast from "react-hot-toast";
 import type { Opportunity } from "@/types/crm";
 import { createModuleLogger } from '@/lib/telemetry';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 
 const logger = createModuleLogger('useLeadsList');
 
 export function useLeadsList(refreshTrigger?: number | string | boolean | null) {
   const router = useRouter();
   const { t } = useTranslation('crm');
+  const { confirm, dialogProps } = useConfirmDialog();
   const [leads, setLeads] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string|null>(null);
@@ -48,10 +50,13 @@ export function useLeadsList(refreshTrigger?: number | string | boolean | null) 
   const handleViewProfile = (leadId: string) => { router.push(`/crm/leads/${leadId}`); };
 
   const handleDelete = async (leadId: string, leadName: string) => {
-    // 🌐 i18n: Note - confirm dialog requires runtime translation in component
-    const confirmDelete = window.confirm(
-      t("leads.confirm.deleteMessage", { name: leadName })
-    );
+    const confirmDelete = await confirm({
+      title: t("leads.confirm.deleteTitle"),
+      description: t("leads.confirm.deleteMessage", { name: leadName }),
+      variant: 'destructive',
+      confirmText: t("leads.confirm.deleteConfirm"),
+      cancelText: t("leads.confirm.deleteCancel"),
+    });
     if (!confirmDelete) return;
     try {
       await deleteOpportunity(leadId);
@@ -71,5 +76,6 @@ export function useLeadsList(refreshTrigger?: number | string | boolean | null) 
     editingLead, showEditModal, emailingLead, showEmailModal,
     handleEdit, handleEmail, handleViewProfile, handleDelete,
     closeEditModal, closeEmailModal,
+    confirmDialogProps: dialogProps,
   };
 }
