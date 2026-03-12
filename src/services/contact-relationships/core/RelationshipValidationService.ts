@@ -16,6 +16,7 @@ import {
   isEmploymentRelationship
 } from '@/types/contacts/relationships';
 import { isValidEmail as isValidEmailFn } from '@/lib/validation/email-validation';
+import { isValidPhone as isValidPhoneFn } from '@/lib/validation/phone-validation';
 import { Contact } from '@/types/contacts';
 
 // ============================================================================
@@ -350,14 +351,8 @@ export class RelationshipValidationService {
    * 📱 Validate Phone Format (Greek/International)
    */
   private static isValidPhone(phone: string): boolean {
-    // Remove spaces, dashes, parentheses
-    const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
-
-    // Greek mobile: 69XXXXXXXX or +3069XXXXXXXX
-    // Greek landline: 2XXXXXXXXX or +302XXXXXXXXX
-    // International: +XXXXXXXXXXXX
-    const phoneRegex = /^(\+30)?(69\d{8}|2\d{9})$|^\+\d{10,15}$/;
-    return phoneRegex.test(cleanPhone);
+    // ✅ ADR-212: delegate to centralized phone validation
+    return isValidPhoneFn(phone);
   }
 
   /**

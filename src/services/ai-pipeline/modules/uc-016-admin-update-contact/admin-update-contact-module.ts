@@ -19,6 +19,7 @@ import 'server-only';
 
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { extractPhoneFromText, extractEmailFromText, extractVatFromText } from '@/lib/validation/phone-validation';
 import {
   findContactByName,
   updateContactField,
@@ -489,36 +490,24 @@ function detectField(message: string): FieldMapping | null {
   return null;
 }
 
-/** Email regex */
-const EMAIL_REGEX = /[\w.+-]+@[\w.-]+\.\w{2,}/;
-
-/** Greek phone regex */
-const PHONE_REGEX = /(?:\+30)?(?:\s?)(?:69\d{8}|2\d{9})/;
-
-/** VAT number regex (9 digits in Greece) */
-const VAT_REGEX = /\b\d{9}\b/;
-
 /**
  * Extract the value for a detected field from the raw message.
- * Uses field-specific extraction logic.
+ * ✅ ADR-212: Uses centralized extraction for phone/email/VAT
  */
 function extractFieldValue(message: string, fieldMapping: FieldMapping): string | null {
   const field = fieldMapping.field;
 
-  // Field-specific extractors
+  // Field-specific extractors — ADR-212: centralized
   if (field === 'phone') {
-    const match = message.match(PHONE_REGEX);
-    return match ? match[0].replace(/\s/g, '').trim() : null;
+    return extractPhoneFromText(message);
   }
 
   if (field === 'email') {
-    const match = message.match(EMAIL_REGEX);
-    return match ? match[0].toLowerCase().trim() : null;
+    return extractEmailFromText(message);
   }
 
   if (field === 'vatNumber') {
-    const match = message.match(VAT_REGEX);
-    return match ? match[0] : null;
+    return extractVatFromText(message);
   }
 
   // Generic extraction: find value after the keyword or after ':'

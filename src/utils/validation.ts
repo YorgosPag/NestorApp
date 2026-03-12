@@ -3,6 +3,7 @@ import i18n from '@/i18n/config';
 // ✅ ENTERPRISE: Import centralized validation messages
 import { getValidationMessages } from '@/subapps/dxf-viewer/config/modal-select';
 import { formatDateForDisplay as formatDateForDisplayCentral } from '@/lib/intl-utils';
+import { PHONE_REGEX } from '@/lib/validation/phone-validation';
 
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('Validation');
@@ -91,9 +92,9 @@ export const validationRules = {
   email: (message?: string) =>
     z.string().email(message || getValidationMessage('invalidEmail')),
 
-  // Phone validation (international format)
+  // Phone validation — ADR-212: centralized
   phone: (message?: string) =>
-    z.string().regex(/^\+?[1-9]\d{1,14}$/, message || getValidationMessage('invalidPhone')),
+    z.string().regex(PHONE_REGEX, message || getValidationMessage('invalidPhone')),
 
   // URL validation
   url: (message?: string) =>

@@ -2,6 +2,7 @@ import { useForm, UseFormProps, UseFormReturn, type Path, type Resolver, type Fi
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
 import { useCallback, useMemo } from 'react';
+import { PHONE_REGEX } from '@/lib/validation/phone-validation';
 
 const zodResolver = <TSchema extends z.ZodTypeAny>(
   schema: TSchema
@@ -161,7 +162,7 @@ export const formPresets = {
   contact: {
     name: z.string().min(1, 'forms.validation.required').min(2, 'forms.validation.minLength'),
     email: z.string().email('forms.validation.invalidEmail').optional(),
-    phone: z.string().regex(/^\+?[1-9]\d{1,14}$/, 'forms.validation.invalidPhone').optional(),
+    phone: z.string().regex(PHONE_REGEX, 'forms.validation.invalidPhone').optional(),
     company: z.string().optional(),
     position: z.string().optional(),
   },

@@ -16,6 +16,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { subscribeToNotifications, markNotificationsAsRead } from '@/services/notificationService';
 import type { Notification, Severity } from '@/types/notification';
+import { formatRelativeTime } from '@/lib/intl-utils';
 import i18n from '@/i18n/config';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -86,43 +87,7 @@ function mapSeverityToCrmType(notification: Notification): CrmNotificationType {
   return severityMap[notification.severity] || 'info';
 }
 
-/**
- * Format relative time in Greek
- * @enterprise Formats ISO timestamp to human-readable Greek relative time
- */
-function formatRelativeTime(isoDate: string): string {
-  const date = new Date(isoDate);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffSeconds = Math.floor(diffMs / 1000);
-  const diffMinutes = Math.floor(diffSeconds / 60);
-  const diffHours = Math.floor(diffMinutes / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffSeconds < 60) return i18n.t('notifications.time.justNow', { ns: 'crm' });
-  if (diffMinutes < 60) {
-    return diffMinutes === 1
-      ? i18n.t('notifications.time.minute', { ns: 'crm', count: diffMinutes })
-      : i18n.t('notifications.time.minutes', { ns: 'crm', count: diffMinutes });
-  }
-  if (diffHours < 24) {
-    return diffHours === 1
-      ? i18n.t('notifications.time.hour', { ns: 'crm', count: diffHours })
-      : i18n.t('notifications.time.hours', { ns: 'crm', count: diffHours });
-  }
-  if (diffDays < 7) {
-    return diffDays === 1
-      ? i18n.t('notifications.time.day', { ns: 'crm', count: diffDays })
-      : i18n.t('notifications.time.days', { ns: 'crm', count: diffDays });
-  }
-
-  // Format as date for older notifications
-  return date.toLocaleDateString('el-GR', {
-    day: 'numeric',
-    month: 'short',
-    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
-  });
-}
+// ✅ ADR-212: formatRelativeTime imported from @/lib/intl-utils (centralized, Intl.RelativeTimeFormat)
 
 /**
  * Transform enterprise Notification to CRM NotificationData

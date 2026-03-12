@@ -5,6 +5,7 @@
  */
 
 import { isValidEmail } from '@/lib/validation/email-validation';
+import { isValidGreekPhone } from '@/lib/validation/phone-validation';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('contact-info-config');
 
@@ -132,8 +133,8 @@ export const ContactInfoUtils = {
    * Validate phone number format
    */
   validatePhone: (phone: string): boolean => {
-    const phoneRegex = new RegExp(`^\\${CONTACT_INFO.PHONE_COUNTRY_CODE}\\s[0-9]{10}$`);
-    return phoneRegex.test(phone);
+    // ✅ ADR-212: centralized phone validation
+    return isValidGreekPhone(phone);
   },
 
   /**

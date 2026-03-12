@@ -9,6 +9,7 @@
 // ============================================================================
 
 import { isValidEmail } from '@/lib/validation/email-validation';
+import { isValidPhone } from '@/lib/validation/phone-validation';
 
 // 🏢 ENTERPRISE: i18n support for validation messages
 import i18n from '@/i18n/config';
@@ -311,10 +312,9 @@ export function validateContactData(contactData: ContactDataRecord): ValidationR
     }
   }
 
-  // 📞 PHONE VALIDATION
+  // 📞 PHONE VALIDATION — ADR-212: centralized
   if (contactData.phone && typeof contactData.phone === 'string') {
-    const phoneRegex = /^[\+]?[0-9\s\-\(\)]{8,15}$/;
-    if (!phoneRegex.test(contactData.phone.replace(/\s/g, ''))) {
+    if (!isValidPhone(contactData.phone)) {
       warnings.push(t('phone.invalidFormat'));
     }
   }

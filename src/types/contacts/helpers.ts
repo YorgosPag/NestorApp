@@ -1,4 +1,5 @@
 import { Contact, ServiceContact, AddressInfo, isIndividualContact, isCompanyContact, isServiceContact } from './contracts';
+import { PHONE_REGEX } from '@/lib/validation/phone-validation';
 
 // 🏢 ENTERPRISE: Type-safe interface for legacy service contact fields
 // These fields may exist in older service contacts but are not in the standard schema
@@ -22,7 +23,7 @@ export const contactValidationRules = {
     firstName: { required: true, minLength: 2, maxLength: 50 },
     lastName: { required: true, minLength: 2, maxLength: 50 },
     email: { required: false, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
-    phone: { required: false, pattern: /^\+?[0-9\s-()]+$/ },
+    phone: { required: false, pattern: PHONE_REGEX },
     taxNumber: { required: false, length: 9, pattern: /^[0-9]{9}$/ }
   },
   company: {

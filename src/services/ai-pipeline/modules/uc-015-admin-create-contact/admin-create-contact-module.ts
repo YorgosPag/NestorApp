@@ -23,6 +23,7 @@ import {
 } from '../../shared/contact-lookup';
 import { sendChannelReply } from '../../shared/channel-reply-dispatcher';
 import { setAdminSession, buildAdminIdentifier } from '../../shared/admin-session';
+import { extractPhoneFromText, extractEmailFromText } from '@/lib/validation/phone-validation';
 import { PipelineIntentType } from '@/types/ai-pipeline';
 import type {
   IUCModule,
@@ -338,12 +339,6 @@ export class AdminCreateContactModule implements IUCModule {
 // HELPERS: Raw Message Parsing
 // ============================================================================
 
-/** Email regex — matches standard email addresses */
-const EMAIL_REGEX = /[\w.+-]+@[\w.-]+\.\w{2,}/;
-
-/** Greek phone regex — matches 69XXXXXXXX, +3069XXXXXXXX, 210XXXXXXX etc. */
-const PHONE_REGEX = /(?:\+30)?(?:\s?)(?:69\d{8}|2\d{9})/;
-
 /** Command keywords to strip when extracting the contact name */
 const COMMAND_KEYWORDS = [
   'δημιούργησε επαφή',
@@ -363,20 +358,18 @@ const COMMAND_KEYWORDS = [
 
 /**
  * Extract email address from raw message text.
- * @example extractEmail("Νέστορας nestoras@gmail.com") → "nestoras@gmail.com"
+ * ✅ ADR-212: delegates to centralized extraction
  */
 function extractEmail(message: string): string | null {
-  const match = message.match(EMAIL_REGEX);
-  return match ? match[0].toLowerCase().trim() : null;
+  return extractEmailFromText(message);
 }
 
 /**
  * Extract phone number from raw message text.
- * @example extractPhone("Νέστορας 6971234567") → "6971234567"
+ * ✅ ADR-212: delegates to centralized extraction
  */
 function extractPhone(message: string): string | null {
-  const match = message.match(PHONE_REGEX);
-  return match ? match[0].replace(/\s/g, '').trim() : null;
+  return extractPhoneFromText(message);
 }
 
 /**
