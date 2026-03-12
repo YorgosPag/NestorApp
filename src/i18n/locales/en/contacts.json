@@ -688,6 +688,23 @@
       "phoneCentral": "Central Phone",
       "emailContact": "Contact Email",
       "website": "Website"
+    },
+    "nav": {
+      "selectTitle": "Add Company to Navigation",
+      "selectDescription": "Select a company from your contacts to add it to the navigation.",
+      "companies": "Companies ({{count}})",
+      "searchPlaceholder": "Search company...",
+      "loading": "Loading companies...",
+      "loadError": "Failed to load companies",
+      "retry": "Retry",
+      "select": "Select",
+      "cancel": "Cancel",
+      "vatNumber": "VAT",
+      "notFound": "No companies found",
+      "searchNotFound": "No results for «{{term}}»",
+      "allAdded": "All companies have been added!",
+      "allAddedDescription": "You already have {{count}} companies in navigation.",
+      "existingInfo": "{{count}} companies are already in navigation."
     }
   },
   "service": {
@@ -1168,22 +1185,5 @@
   "sectionDescriptions": {
     "files": "Manage contact documents",
     "banking": "Contact bank accounts"
-  },
-  "company": {
-    "selectTitle": "Add Company to Navigation",
-    "selectDescription": "Select a company from your contacts to add it to the navigation.",
-    "companies": "Companies ({{count}})",
-    "searchPlaceholder": "Search company...",
-    "loading": "Loading companies...",
-    "loadError": "Failed to load companies",
-    "retry": "Retry",
-    "select": "Select",
-    "cancel": "Cancel",
-    "vatNumber": "VAT",
-    "notFound": "No companies found",
-    "searchNotFound": "No results for «{{term}}»",
-    "allAdded": "All companies have been added!",
-    "allAddedDescription": "You already have {{count}} companies in navigation.",
-    "existingInfo": "{{count}} companies are already in navigation."
   }
 }

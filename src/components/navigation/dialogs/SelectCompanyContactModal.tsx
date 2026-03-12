@@ -105,7 +105,7 @@ export function SelectCompanyContactModal({
       setContacts(companyContacts);
       setFilteredContacts(companyContacts);
     } catch (err) {
-      setError(t('company.loadError'));
+      setError(t('company.nav.loadError'));
     } finally {
       setIsLoading(false);
     }
@@ -128,13 +128,13 @@ export function SelectCompanyContactModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CompanyIcon className={`h-5 w-5 ${NAVIGATION_ENTITIES.company.color}`} />
-            {t('company.selectTitle')}
+            {t('company.nav.selectTitle')}
           </DialogTitle>
           <DialogDescription>
-            {t('company.selectDescription')}
+            {t('company.nav.selectDescription')}
             {existingCompanyIds.length > 0 && (
               <span className="text-muted-foreground block mt-1 text-sm">
-                {t('company.existingInfo', { count: existingCompanyIds.length })}
+                {t('company.nav.existingInfo', { count: existingCompanyIds.length })}
               </span>
             )}
           </DialogDescription>
@@ -147,7 +147,7 @@ export function SelectCompanyContactModal({
             <div className="flex items-center gap-2 flex-shrink-0">
               <CompanyIcon className={`h-4 w-4 ${NAVIGATION_ENTITIES.company.color}`} />
               <span className="font-medium text-sm whitespace-nowrap">
-                {t('company.companies', { count: filteredContacts.length })}
+                {t('company.nav.companies', { count: filteredContacts.length })}
               </span>
             </div>
 
@@ -155,7 +155,7 @@ export function SelectCompanyContactModal({
             <SearchInput
               value={searchTerm}
               onChange={setSearchTerm}
-              placeholder={t('company.searchPlaceholder')}
+              placeholder={t('company.nav.searchPlaceholder')}
               debounceMs={300}
               showClearButton
               className="h-8 text-sm flex-1"
@@ -166,7 +166,7 @@ export function SelectCompanyContactModal({
           {isLoading && (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-              <span className="ml-2 text-sm text-gray-600">{t('company.loading')}</span>
+              <span className="ml-2 text-sm text-gray-600">{t('company.nav.loading')}</span>
             </div>
           )}
 
@@ -175,7 +175,7 @@ export function SelectCompanyContactModal({
             <div className="text-center py-8">
               <p className="text-red-500 mb-4">{error}</p>
               <Button onClick={loadCompanyContacts} variant="outline" size="sm">
-                {t('company.retry')}
+                {t('company.nav.retry')}
               </Button>
             </div>
           )}
@@ -192,20 +192,20 @@ export function SelectCompanyContactModal({
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
                             <CheckCircle2 className="h-6 w-6 text-green-500" />
-                            <p className="font-medium">{t('company.allAdded')}</p>
+                            <p className="font-medium">{t('company.nav.allAdded')}</p>
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            {t('company.allAddedDescription', { count: existingCompanyIds.length })}
+                            {t('company.nav.allAddedDescription', { count: existingCompanyIds.length })}
                           </p>
                         </div>
                       ) : (
-                        <p>{t('company.notFound')}</p>
+                        <p>{t('company.nav.notFound')}</p>
                       )}
                     </div>
                   ) : (
                     <div>
                       <Search className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                      <p>{t('company.searchNotFound', { term: searchTerm })}</p>
+                      <p>{t('company.nav.searchNotFound', { term: searchTerm })}</p>
                     </div>
                   )}
                 </div>
@@ -224,7 +224,7 @@ export function SelectCompanyContactModal({
                         </div>
                         {contact.type === 'company' && contact.vatNumber && (
                           <div className="text-sm text-gray-500 dark:text-muted-foreground">
-                            {t('company.vatNumber')}: {contact.vatNumber}
+                            {t('company.nav.vatNumber')}: {contact.vatNumber}
                           </div>
                         )}
                         {contact.type === 'company' && contact.industry && (
@@ -234,7 +234,7 @@ export function SelectCompanyContactModal({
                         )}
                       </div>
                       <div className="text-xs text-gray-400 flex-shrink-0">
-                        {t('company.select')} →
+                        {t('company.nav.select')} →
                       </div>
                     </div>
                   ))}
@@ -246,7 +246,7 @@ export function SelectCompanyContactModal({
 
         <div className="flex justify-end gap-2 pt-4 border-t">
           <Button variant="outline" onClick={handleClose}>
-            {t('company.cancel')}
+            {t('company.nav.cancel')}
           </Button>
         </div>
       </DialogContent>
