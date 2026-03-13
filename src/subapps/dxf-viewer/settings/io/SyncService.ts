@@ -16,6 +16,7 @@
  *  - Module #6
  */
 
+import { safeJsonParse } from '@/lib/json-utils';
 import type { SettingsState } from '../core/types';
 import { generateTempId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -180,12 +181,12 @@ export class SyncService {
         return;
       }
 
-      try {
-        const message = JSON.parse(event.newValue) as SyncMessage;
-        this.handleMessage(message);
-      } catch (error) {
-        logger.error('Storage event parse error', { error });
+      const message = safeJsonParse<SyncMessage>(event.newValue, null as unknown as SyncMessage);
+      if (message === null) {
+        logger.error('Storage event parse error');
+        return;
       }
+      this.handleMessage(message);
     };
 
     window.addEventListener('storage', this.storageListenerBound);

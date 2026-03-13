@@ -11,6 +11,7 @@ import { useTranslation } from '@/i18n';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { generatePriceRanges } from '@/constants/property-statuses-enterprise';
+import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('LandingPage');
@@ -28,12 +29,10 @@ export function LandingPage() {
 
   // 🏢 ENTERPRISE: Configurable price ranges
   const getPriceRanges = () => {
-    try {
-      const envPriceRanges = process.env.NEXT_PUBLIC_PRICE_RANGES_JSON;
-      if (envPriceRanges) {
-        return JSON.parse(envPriceRanges);
-      }
-    } catch (error) {
+    const envPriceRanges = process.env.NEXT_PUBLIC_PRICE_RANGES_JSON;
+    if (envPriceRanges) {
+      const parsed = safeJsonParse<Record<string, unknown>[]>(envPriceRanges, null as unknown as Record<string, unknown>[]);
+      if (parsed !== null) return parsed;
       logger.warn('Failed to parse price ranges, using defaults');
     }
 

@@ -13,6 +13,7 @@
 
 'use client';
 
+import { safeJsonParse } from '@/lib/json-utils';
 import { addressResolver, type GeocodingResult } from './AddressResolver';
 
 // ============================================================================
@@ -407,15 +408,12 @@ export class WebScrapingEngine {
    * Load configuration from localStorage
    */
   private loadConfiguration(): void {
-    try {
-      const stored = localStorage.getItem('geo_alert_scraping_config');
-      if (stored) {
-        const config = JSON.parse(stored);
+    const stored = localStorage.getItem('geo_alert_scraping_config');
+    if (stored) {
+      const config = safeJsonParse<{ targets?: Record<string, unknown> }>(stored, { });
+      if (config.targets) {
         this.targets = { ...this.targets, ...config.targets };
-        // Debug logging removed - Loaded scraping configuration
       }
-    } catch (error) {
-      // Warning logging removed - Failed to load scraping configuration
     }
   }
 

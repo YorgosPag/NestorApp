@@ -6,6 +6,7 @@
 
 import { isValidEmail } from '@/lib/validation/email-validation';
 import { isValidGreekPhone } from '@/lib/validation/phone-validation';
+import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('contact-info-config');
 
@@ -106,11 +107,9 @@ export const ContactInfoUtils = {
     // 🏢 ENTERPRISE: Try to load from environment JSON first
     const envDemoContacts = process.env.NEXT_PUBLIC_DEMO_CONTACTS_JSON;
     if (envDemoContacts) {
-      try {
-        return JSON.parse(envDemoContacts);
-      } catch (error) {
-        logger.warn('Invalid DEMO_CONTACTS_JSON format, using dynamic fallback');
-      }
+      const parsed = safeJsonParse<Record<string, unknown>[]>(envDemoContacts, null as unknown as Record<string, unknown>[]);
+      if (parsed !== null) return parsed;
+      logger.warn('Invalid DEMO_CONTACTS_JSON format, using dynamic fallback');
     }
 
     // 🏢 ENTERPRISE: Dynamic demo contact generation (tenant-configurable)

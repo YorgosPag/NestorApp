@@ -20,6 +20,7 @@
  * 4. Repeat for 3+ points
  */
 
+import { safeJsonParse } from '@/lib/json-utils';
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -323,17 +324,16 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
   const handleLoadPoints = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      try {
-        const data = JSON.parse(e.target?.result as string);
-        if (data.points && Array.isArray(data.points)) {
-          // This would need to be implemented in the hook
-          console.debug('📁 Loading points:', data.points);
-          success(t('toastMessages.pointsLoaded', { count: data.points.length }));
-        } else {
-          error(t('toastMessages.invalidPointsFile'));
-        }
-      } catch (error) {
+      const data = safeJsonParse<{ points?: unknown[] }>(e.target?.result as string, null as unknown as { points?: unknown[] });
+      if (data === null) {
         error(t('toastMessages.errorLoadingFile'));
+        return;
+      }
+      if (data.points && Array.isArray(data.points)) {
+        console.debug('📁 Loading points:', data.points);
+        success(t('toastMessages.pointsLoaded', { count: data.points.length }));
+      } else {
+        error(t('toastMessages.invalidPointsFile'));
       }
     };
     reader.readAsText(file);

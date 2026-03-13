@@ -33,6 +33,7 @@ import type { AgenticContext } from './tools/agentic-tool-executor';
 import type { AgenticToolDefinition } from './tools/agentic-tool-definitions';
 // ADR-173: Prompt enhancement with learned patterns
 import { enhanceSystemPrompt } from './prompt-enhancer';
+import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
 const logger = createModuleLogger('AGENTIC_LOOP');
@@ -258,15 +259,11 @@ async function callChatCompletions(
     if (!response.ok) {
       const errorText = await response.text().catch(() => '');
       let errorMsg = `OpenAI error (${response.status})`;
-      try {
-        const errorPayload = JSON.parse(errorText) as { error?: { message?: string } };
-        if (errorPayload.error?.message) {
-          errorMsg = errorPayload.error.message;
-        }
-      } catch {
-        if (errorText.length > 0 && errorText.length < 500) {
-          errorMsg += `: ${errorText}`;
-        }
+      const errorPayload = safeJsonParse<{ error?: { message?: string } }>(errorText, null as unknown as { error?: { message?: string } });
+      if (errorPayload?.error?.message) {
+        errorMsg = errorPayload.error.message;
+      } else if (errorText.length > 0 && errorText.length < 500) {
+        errorMsg += `: ${errorText}`;
       }
       throw new Error(errorMsg);
     }
@@ -390,11 +387,7 @@ export async function executeAgenticLoop(
         const argsString = tc.function.arguments;
         let toolArgs: Record<string, unknown> = {};
 
-        try {
-          toolArgs = JSON.parse(argsString) as Record<string, unknown>;
-        } catch {
-          toolArgs = {};
-        }
+        toolArgs = safeJsonParse<Record<string, unknown>>(argsString, {});
 
         logger.info('Executing tool call', {
           requestId: context.requestId,
@@ -546,14 +539,12 @@ function cleanAITextReply(rawText: string): string {
 
   // Try to extract text from JSON wrapper
   if (candidate.startsWith('{')) {
-    try {
-      const parsed = JSON.parse(candidate) as Record<string, unknown>;
+    const parsed = safeJsonParse<Record<string, unknown>>(candidate, null as unknown as Record<string, unknown>);
+    if (parsed !== null) {
       const textValue = parsed.response ?? parsed.message ?? parsed.error ?? parsed.text;
       if (typeof textValue === 'string' && textValue.length > 0) {
         return textValue;
       }
-    } catch {
-      // Not valid JSON — return as-is
     }
   }
 

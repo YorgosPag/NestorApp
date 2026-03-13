@@ -12,6 +12,7 @@
 
 'use client';
 
+import { safeJsonParse } from '@/lib/json-utils';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Folder,
@@ -435,8 +436,8 @@ export function FolderManager({
 
       const data = e.dataTransfer.getData('application/x-file-ids');
       if (data) {
-        const fileIds = JSON.parse(data) as string[];
-        onFilesDropped?.(folderId, fileIds);
+        const fileIds = safeJsonParse<string[]>(data, []);
+        if (fileIds.length > 0) onFilesDropped?.(folderId, fileIds);
       }
     },
     [onFilesDropped]
@@ -456,8 +457,8 @@ export function FolderManager({
 
       const data = e.dataTransfer.getData('application/x-file-ids');
       if (data) {
-        const fileIds = JSON.parse(data) as string[];
-        onFilesDropped?.(null, fileIds);
+        const fileIds = safeJsonParse<string[]>(data, []);
+        if (fileIds.length > 0) onFilesDropped?.(null, fileIds);
       }
     },
     [onFilesDropped]

@@ -4,6 +4,8 @@
  * ZERO HARDCODED COORDINATES - All data από environment variables
  */
 
+import { safeJsonParse } from '@/lib/json-utils';
+
 interface GeocodingConfig {
   /** Delay between Nominatim requests (TOS: max 1 req/s) */
   readonly NOMINATIM_DELAY_MS: number;
@@ -164,16 +166,15 @@ export const GeographicUtils = {
    * Get demo administrative boundaries for testing
    */
   getDemoAdministrativeBoundaries: () => {
-    const boundaries = JSON.parse(
-      process.env.NEXT_PUBLIC_DEMO_ADMIN_BOUNDARIES ||
-      JSON.stringify([
-        GEOGRAPHIC_CONFIG.DEFAULT_CITY,
-        GEOGRAPHIC_CONFIG.DEFAULT_REGION,
-        GEOGRAPHIC_CONFIG.ALTERNATIVE_CITY
-      ])
-    );
-
-    return boundaries;
+    const defaultBoundaries = [
+      GEOGRAPHIC_CONFIG.DEFAULT_CITY,
+      GEOGRAPHIC_CONFIG.DEFAULT_REGION,
+      GEOGRAPHIC_CONFIG.ALTERNATIVE_CITY,
+    ];
+    const envBoundaries = process.env.NEXT_PUBLIC_DEMO_ADMIN_BOUNDARIES;
+    return envBoundaries
+      ? safeJsonParse<string[]>(envBoundaries, defaultBoundaries)
+      : defaultBoundaries;
   }
 } as const;
 

@@ -23,6 +23,7 @@
  * @see FileRecordService for the core file operations
  */
 
+import { safeJsonParse } from '@/lib/json-utils';
 import { doc, getDoc } from 'firebase/firestore';
 import { ref, getBytes } from 'firebase/storage';
 import pako from 'pako';
@@ -226,7 +227,11 @@ export class UnitFloorplanService {
           sceneJson = new TextDecoder().decode(compressedBytes);
         }
 
-        const scene = JSON.parse(sceneJson) as DxfSceneData;
+        const scene = safeJsonParse<DxfSceneData>(sceneJson, null as unknown as DxfSceneData);
+        if (scene === null) {
+          logger.error('Failed to parse unit floorplan JSON', { unitId, companyId });
+          return null;
+        }
 
         logger.debug('Loaded unit floorplan from FileRecord', {
           unitId,

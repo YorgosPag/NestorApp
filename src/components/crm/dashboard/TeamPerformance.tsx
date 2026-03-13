@@ -7,6 +7,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('TeamPerformance');
@@ -24,12 +25,10 @@ export function TeamPerformance() {
     const { t } = useTranslation('crm');
     // 🏢 ENTERPRISE: Configurable team performance data
     const getTeamData = () => {
-        try {
-            const envTeamData = process.env.NEXT_PUBLIC_TEAM_PERFORMANCE_JSON;
-            if (envTeamData) {
-                return JSON.parse(envTeamData);
-            }
-        } catch (error) {
+        const envTeamData = process.env.NEXT_PUBLIC_TEAM_PERFORMANCE_JSON;
+        if (envTeamData) {
+            const parsed = safeJsonParse<TeamMember[]>(envTeamData, null as unknown as TeamMember[]);
+            if (parsed !== null) return parsed;
             logger.warn('Failed to parse team performance data, using defaults');
         }
 

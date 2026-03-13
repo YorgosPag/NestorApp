@@ -8,6 +8,7 @@
 
 import 'server-only';
 
+import { safeJsonParse } from '@/lib/json-utils';
 import { isRecord } from '@/lib/type-guards';
 import { stripNullValues } from '@/utils/firestore-sanitize';
 import {
@@ -346,16 +347,15 @@ export class OpenAIAnalysisProvider implements IAIAnalysisProvider {
       return buildFallbackResult(input, model);
     }
 
-    try {
-      const parsed = JSON.parse(outputText) as Record<string, unknown>;
-      // OpenAI strict mode returns null for optional fields — strip them
-      // so Zod .optional() validation passes cleanly
-      const normalized = stripNullValues(parsed);
-      const validated = validateAIAnalysisResult(normalized);
-      return validated;
-    } catch {
+    const parsed = safeJsonParse<Record<string, unknown>>(outputText, null as unknown as Record<string, unknown>);
+    if (parsed === null) {
       return buildFallbackResult(input, model);
     }
+    // OpenAI strict mode returns null for optional fields — strip them
+    // so Zod .optional() validation passes cleanly
+    const normalized = stripNullValues(parsed);
+    const validated = validateAIAnalysisResult(normalized);
+    return validated;
   }
 
   async healthCheck(): Promise<boolean> {

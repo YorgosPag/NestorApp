@@ -9,6 +9,7 @@
  */
 
 import { SelectOption, EnterpriseOptions } from '../core/field-types';
+import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('legal-forms');
 
@@ -39,13 +40,10 @@ const getDefaultLegalForms = (): SelectOption[] => {
  * ENTERPRISE: Environment-aware loading από centralized system
  */
 export const LEGAL_FORM_OPTIONS: SelectOption[] = (() => {
-  try {
-    // Try to load from environment variable
-    const envLegalForms = process.env.NEXT_PUBLIC_LEGAL_FORMS_JSON;
-    if (envLegalForms) {
-      return JSON.parse(envLegalForms);
-    }
-  } catch (error) {
+  const envLegalForms = process.env.NEXT_PUBLIC_LEGAL_FORMS_JSON;
+  if (envLegalForms) {
+    const parsed = safeJsonParse<SelectOption[]>(envLegalForms, null as unknown as SelectOption[]);
+    if (parsed !== null) return parsed;
     logger.warn('Failed to parse NEXT_PUBLIC_LEGAL_FORMS_JSON, using defaults');
   }
   return getDefaultLegalForms();

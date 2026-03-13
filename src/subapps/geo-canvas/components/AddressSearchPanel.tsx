@@ -9,6 +9,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ✅ Enterprise Address Resolver Integration
 import { useAddressResolver, type GreekAddress, type GeocodingResult } from '@/services/real-estate-monitor/AddressResolver';
+import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('AddressSearchPanel');
 
@@ -92,14 +93,14 @@ export function AddressSearchPanel({
 
   // Load recent searches από localStorage
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('geo_alert_recent_searches');
-      if (stored) {
-        const recent: GeocodingResult[] = JSON.parse(stored);
-        setRecentSearches(recent.slice(0, 5)); // Κρατάμε τα 5 πιο πρόσφατα
+    const stored = localStorage.getItem('geo_alert_recent_searches');
+    if (stored) {
+      const recent = safeJsonParse<GeocodingResult[]>(stored, null as unknown as GeocodingResult[]);
+      if (recent !== null) {
+        setRecentSearches(recent.slice(0, 5));
+      } else {
+        logger.warn('Failed to load recent searches');
       }
-    } catch (error) {
-      logger.warn('Failed to load recent searches', { error });
     }
   }, []);
 

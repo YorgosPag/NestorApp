@@ -11,6 +11,7 @@
 
 import 'server-only';
 
+import { safeJsonParse } from '@/lib/json-utils';
 import { isRecord } from '@/lib/type-guards';
 import type { IDocumentAnalyzer } from '../../types/interfaces';
 import type {
@@ -337,7 +338,10 @@ export class OpenAIDocumentAnalyzer implements IDocumentAnalyzer {
         return buildFallbackClassification();
       }
 
-      const parsed = JSON.parse(outputText) as DocumentClassification;
+      const parsed = safeJsonParse<DocumentClassification>(outputText, null as unknown as DocumentClassification);
+      if (parsed === null) {
+        return buildFallbackClassification();
+      }
       return {
         documentType: parsed.documentType,
         suggestedCategory: parsed.suggestedCategory,
@@ -386,7 +390,10 @@ export class OpenAIDocumentAnalyzer implements IDocumentAnalyzer {
         return buildFallbackExtractedData();
       }
 
-      const parsed = JSON.parse(outputText) as ExtractedDocumentData;
+      const parsed = safeJsonParse<ExtractedDocumentData>(outputText, null as unknown as ExtractedDocumentData);
+      if (parsed === null) {
+        return buildFallbackExtractedData();
+      }
       return this.normalizeExtractedData(parsed);
     } catch (error) {
       console.error('[OpenAIDocumentAnalyzer] extractData failed:', error);

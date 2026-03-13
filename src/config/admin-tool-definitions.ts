@@ -12,6 +12,7 @@
  * @see OpenAI Responses API — Tools
  */
 
+import { safeJsonParse } from '@/lib/json-utils';
 import type { AIAnalysisResult } from '@/schemas/ai-analysis';
 
 // ============================================================================
@@ -295,11 +296,7 @@ export function mapToolCallToAnalysisResult(
 
   let args: Record<string, unknown> = {};
   if (toolCall.arguments) {
-    try {
-      args = JSON.parse(toolCall.arguments) as Record<string, unknown>;
-    } catch {
-      args = {};
-    }
+    args = safeJsonParse<Record<string, unknown>>(toolCall.arguments, {});
   }
 
   // Build entities from tool arguments, stripping null values
@@ -354,16 +351,13 @@ function cleanTextReply(rawText: string): string {
 
   // Try parsing as JSON — extract text from common wrapper patterns
   if (jsonCandidate.startsWith('{')) {
-    try {
-      const parsed = JSON.parse(jsonCandidate) as Record<string, unknown>;
-
+    const parsed = safeJsonParse<Record<string, unknown>>(jsonCandidate, null as unknown as Record<string, unknown>);
+    if (parsed !== null) {
       // Pattern: {"response": "text"} or {"message": "text"} or {"error": "text"}
       const textValue = parsed.response ?? parsed.message ?? parsed.error ?? parsed.text;
       if (typeof textValue === 'string' && textValue.length > 0) {
         return textValue;
       }
-    } catch {
-      // Not valid JSON — return as-is
     }
   }
 

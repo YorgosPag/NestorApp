@@ -16,6 +16,7 @@
 
 'use client';
 
+import { safeJsonParse } from '@/lib/json-utils';
 import React, { useMemo, useState } from 'react';
 import {
   Clock,
@@ -391,8 +392,8 @@ function formatDisplayValue(value: string | number | boolean | null): string {
 
   // Try to parse JSON objects/arrays for human-readable display
   if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
-    try {
-      const parsed = JSON.parse(value);
+    const parsed = safeJsonParse<unknown>(value, undefined);
+    if (parsed !== undefined) {
       if (Array.isArray(parsed)) {
         return parsed.length === 0 ? '—' : parsed.join(', ');
       }
@@ -401,8 +402,6 @@ function formatDisplayValue(value: string | number | boolean | null): string {
           .map(([k, v]) => `${NESTED_KEY_LABELS[k] ?? k}: ${v}`)
           .join(', ');
       }
-    } catch {
-      // Not valid JSON, fall through
     }
   }
 

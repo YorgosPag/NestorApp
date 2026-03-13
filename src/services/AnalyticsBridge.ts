@@ -15,6 +15,7 @@
 
 // TODO: EventAnalyticsEngine not implemented yet - temporarily disabled
 // import { EventAnalyticsEngine } from '@geo-alert/core/alert-engine/analytics/EventAnalyticsEngine';
+import { safeJsonParse } from '@/lib/json-utils';
 import { generateSessionId as generateEnterpriseSessionId, generateEventId as generateEnterpriseEventId } from '@/services/enterprise-id.service';
 
 // ============================================================================
@@ -190,27 +191,19 @@ export class AnalyticsBridge {
   }
 
   private getCurrentUserId(): string | undefined {
-    try {
-      const userData = localStorage.getItem('user') || localStorage.getItem('currentUser');
-      if (userData) {
-        const user = JSON.parse(userData);
-        return user.id || user.email;
-      }
-    } catch {
-      // Ignore localStorage errors
+    const userData = localStorage.getItem('user') || localStorage.getItem('currentUser');
+    if (userData) {
+      const user = safeJsonParse<{ id?: string; email?: string }>(userData, { });
+      return user.id || user.email;
     }
     return undefined;
   }
 
   private getCurrentUserType(): UserType | undefined {
-    try {
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        const user = JSON.parse(userData);
-        return user.userType;
-      }
-    } catch {
-      // Ignore localStorage errors
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      const user = safeJsonParse<{ userType?: UserType }>(userData, { });
+      return user.userType;
     }
     return undefined;
   }

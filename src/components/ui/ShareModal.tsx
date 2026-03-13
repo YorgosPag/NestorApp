@@ -10,6 +10,7 @@
 
 'use client';
 
+import { safeJsonParse } from '@/lib/json-utils';
 import React from 'react';
 import { Share2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -129,11 +130,16 @@ export function ShareModal({
           try {
             const singleDecoded = decodeURIComponent(dataParam);
             const doubleDecoded = decodeURIComponent(singleDecoded);
-            const data = JSON.parse(doubleDecoded);
-            const directUrl = data.url.replace(/\?alt=media&token=.*$/, '?alt=media');
-            url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(directUrl)}&quote=${encodeURIComponent(shareData.title + '\n' + shareData.text)}`;
+            const data = safeJsonParse<{ url: string }>(doubleDecoded, null as unknown as { url: string });
+            if (data !== null) {
+              const directUrl = data.url.replace(/\?alt=media&token=.*$/, '?alt=media');
+              url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(directUrl)}&quote=${encodeURIComponent(shareData.title + '\n' + shareData.text)}`;
+            } else {
+              logger.error('Error parsing data for Facebook');
+              url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareData.url)}`;
+            }
           } catch (e) {
-            logger.error('Error parsing data for Facebook', { error: e });
+            logger.error('Error decoding data for Facebook', { error: e });
             url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareData.url)}`;
           }
         } else {

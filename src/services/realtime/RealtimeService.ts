@@ -18,6 +18,7 @@ import {
   type Unsubscribe,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
   type RealtimeCollection,
@@ -234,28 +235,28 @@ class RealtimeServiceCore {
 
     const handleStorageEvent = (evt: StorageEvent) => {
       if (evt.key !== eventName || !evt.newValue) return;
-      try {
-        const parsed = JSON.parse(evt.newValue) as RealtimeEventMap[K];
-        logger.debug(`Cross-page ${event}`);
-        callback(parsed);
-      } catch (error) {
-        logger.error(`Failed to parse ${event}`, { error });
+      const parsed = safeJsonParse<RealtimeEventMap[K]>(evt.newValue, null as unknown as RealtimeEventMap[K]);
+      if (parsed === null) {
+        logger.error(`Failed to parse ${event}`);
+        return;
       }
+      logger.debug(`Cross-page ${event}`);
+      callback(parsed);
     };
 
     if (checkPending && typeof window !== 'undefined') {
-      try {
-        const pending = localStorage.getItem(eventName);
-        if (pending) {
-          const parsed = JSON.parse(pending) as RealtimeEventMap[K] & { timestamp: number };
-          if (Date.now() - parsed.timestamp < 5000) {
+      const pendingRaw = localStorage.getItem(eventName);
+      if (pendingRaw) {
+        const pending = safeJsonParse<RealtimeEventMap[K] & { timestamp: number }>(pendingRaw, null as unknown as RealtimeEventMap[K] & { timestamp: number });
+        if (pending === null) {
+          logger.error(`Failed to process pending ${event}`);
+        } else {
+          if (Date.now() - pending.timestamp < 5000) {
             logger.debug(`Applying pending ${event}`);
-            callback(parsed);
+            callback(pending);
           }
           localStorage.removeItem(eventName);
         }
-      } catch (error) {
-        logger.error(`Failed to process pending ${event}`, { error });
       }
     }
 

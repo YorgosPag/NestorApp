@@ -7,6 +7,7 @@
  * @module services/administrative-boundaries/SearchHistoryService
  */
 
+import { safeJsonParse } from '@/lib/json-utils';
 import type {
   SearchHistoryEntry,
   AdminSearchResult,
@@ -85,17 +86,11 @@ export class SearchHistoryService {
    * Get full search history
    */
   getHistory(): SearchHistoryEntry[] {
-    try {
-      const stored = localStorage.getItem(this.storageKey);
-      if (!stored) return [];
+    const stored = localStorage.getItem(this.storageKey);
+    if (!stored) return [];
 
-      const parsed = JSON.parse(stored) as SearchHistoryEntry[];
-      return Array.isArray(parsed) ? parsed : [];
-
-    } catch (error) {
-      console.warn('Failed to load search history:', error);
-      return [];
-    }
+    const parsed = safeJsonParse<SearchHistoryEntry[]>(stored, []);
+    return Array.isArray(parsed) ? parsed : [];
   }
 
   /**
@@ -290,17 +285,12 @@ export class SearchHistoryService {
    * Get search analytics
    */
   getAnalytics(): SearchAnalytics {
-    try {
-      const stored = localStorage.getItem(this.analyticsKey);
-      if (!stored) return this.createEmptyAnalytics();
+    const stored = localStorage.getItem(this.analyticsKey);
+    if (!stored) return this.createEmptyAnalytics();
 
-      const analytics = JSON.parse(stored) as SearchAnalytics;
-      return this.validateAnalytics(analytics);
-
-    } catch (error) {
-      console.warn('Failed to load search analytics:', error);
-      return this.createEmptyAnalytics();
-    }
+    const analytics = safeJsonParse<SearchAnalytics>(stored, null as unknown as SearchAnalytics);
+    if (analytics === null) return this.createEmptyAnalytics();
+    return this.validateAnalytics(analytics);
   }
 
   /**

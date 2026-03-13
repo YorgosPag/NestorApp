@@ -1,5 +1,6 @@
 'use client';
 
+import { safeJsonParse } from '@/lib/json-utils';
 import { generateMessageId, generateTempId } from '@/services/enterprise-id.service';
 
 // WebSocket service for real-time communication
@@ -148,7 +149,11 @@ class WebSocketService {
   // Message handling
   private handleMessage(event: MessageEvent): void {
     try {
-      const message: WebSocketMessage = JSON.parse(event.data);
+      const message: WebSocketMessage = safeJsonParse<WebSocketMessage>(event.data, null as unknown as WebSocketMessage);
+      if (message === null) {
+        this.log('Error parsing WebSocket message: invalid JSON');
+        return;
+      }
       
       // Apply middleware
       const processedMessage = this.applyMiddleware(message);

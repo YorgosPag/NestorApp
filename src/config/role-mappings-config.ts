@@ -4,6 +4,7 @@
  * ZERO HARDCODED LABELS - All labels από environment variables
  */
 
+import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('role-mappings-config');
 
@@ -32,13 +33,11 @@ interface RoleMappingsConfig {
  * 🏢 ENTERPRISE: Get role mappings from environment configuration
  */
 function getRoleMappingsConfig(): RoleMappingsConfig {
-  try {
-    // Try to load from environment variable (JSON format)
-    const envRoleMappings = process.env.NEXT_PUBLIC_ROLE_MAPPINGS;
-    if (envRoleMappings) {
-      return JSON.parse(envRoleMappings);
-    }
-  } catch (error) {
+  // Try to load from environment variable (JSON format)
+  const envRoleMappings = process.env.NEXT_PUBLIC_ROLE_MAPPINGS;
+  if (envRoleMappings) {
+    const parsed = safeJsonParse<RoleMappingsConfig>(envRoleMappings, null as unknown as RoleMappingsConfig);
+    if (parsed !== null) return parsed;
     logger.warn('Invalid ROLE_MAPPINGS format, using fallback');
   }
 

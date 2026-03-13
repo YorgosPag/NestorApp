@@ -9,6 +9,7 @@
  */
 
 import { SelectOption } from '../core/field-types';
+import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('currencies');
 
@@ -34,25 +35,23 @@ const getDefaultCurrencies = (): SelectOption[] =>
  * ENTERPRISE: Environment-aware loading από centralized system
  */
 export const CURRENCY_OPTIONS: SelectOption[] = (() => {
-  try {
-    // Try to load from environment variable
-    const envCurrencies = process.env.NEXT_PUBLIC_CURRENCIES_JSON;
-    if (envCurrencies) {
-      return JSON.parse(envCurrencies);
-    }
-
-    // Or use primary currency from environment
-    const primaryCurrency = process.env.NEXT_PUBLIC_PRIMARY_CURRENCY;
-    if (primaryCurrency) {
-      const defaults = getDefaultCurrencies();
-      const primary = defaults.find(c => c.value === primaryCurrency);
-      if (primary) {
-        return [primary, ...defaults.filter(c => c.value !== primaryCurrency)];
-      }
-    }
-  } catch (error) {
+  const envCurrencies = process.env.NEXT_PUBLIC_CURRENCIES_JSON;
+  if (envCurrencies) {
+    const parsed = safeJsonParse<SelectOption[]>(envCurrencies, null as unknown as SelectOption[]);
+    if (parsed !== null) return parsed;
     logger.warn('Failed to parse currency configuration, using defaults');
   }
+
+  // Or use primary currency from environment
+  const primaryCurrency = process.env.NEXT_PUBLIC_PRIMARY_CURRENCY;
+  if (primaryCurrency) {
+    const defaults = getDefaultCurrencies();
+    const primary = defaults.find(c => c.value === primaryCurrency);
+    if (primary) {
+      return [primary, ...defaults.filter(c => c.value !== primaryCurrency)];
+    }
+  }
+
   return getDefaultCurrencies();
 })();
 

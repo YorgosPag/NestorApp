@@ -14,6 +14,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { safeJsonParse } from '@/lib/json-utils';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -26,12 +27,10 @@ const logger = createModuleLogger('CreateForCompaniesRoute');
 
 // 🏢 ENTERPRISE: Load project templates from environment or use fallbacks
 const getProjectTemplates = () => {
-  try {
-    const envTemplates = process.env.NEXT_PUBLIC_PROJECT_TEMPLATES_JSON;
-    if (envTemplates) {
-      return JSON.parse(envTemplates);
-    }
-  } catch (error) {
+  const envTemplates = process.env.NEXT_PUBLIC_PROJECT_TEMPLATES_JSON;
+  if (envTemplates) {
+    const parsed = safeJsonParse<Record<string, unknown>[]>(envTemplates, null as unknown as Record<string, unknown>[]);
+    if (parsed !== null) return parsed;
     logger.warn('Invalid PROJECT_TEMPLATES_JSON, using fallbacks');
   }
 

@@ -4,6 +4,7 @@
  * Βασισμένο σε photogrammetric και surveying standards
  */
 
+import { safeJsonParse } from '@/lib/json-utils';
 import type {
   GeoControlPoint,
   DxfCoordinate,
@@ -524,19 +525,17 @@ export class ControlPointManager {
    * Load from localStorage
    */
   loadFromLocalStorage(key: string = 'geo-canvas-control-points'): boolean {
-    try {
-      const stored = localStorage.getItem(key);
-      if (!stored) return false;
+    const stored = localStorage.getItem(key);
+    if (!stored) return false;
 
-      const data = JSON.parse(stored);
-      this.importControlPoints(data.points || []);
-      this.nextId = data.nextId || 1;
-
-      return true;
-    } catch (error) {
-      console.error('Failed to load control points from localStorage:', error);
+    const data = safeJsonParse<{ points?: GeoControlPoint[]; nextId?: number }>(stored, null as unknown as { points?: GeoControlPoint[]; nextId?: number });
+    if (data === null) {
+      console.error('Failed to load control points from localStorage: invalid JSON');
       return false;
     }
+    this.importControlPoints(data.points || []);
+    this.nextId = data.nextId || 1;
+    return true;
   }
 
   // ========================================================================

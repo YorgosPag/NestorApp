@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('PhotoSharePage');
 
@@ -30,8 +31,12 @@ const PhotoSharePage = () => {
         let decoded = decodeURIComponent(dataParam);
         decoded = decodeURIComponent(decoded);
         decoded = decodeURIComponent(decoded);
-        const data = JSON.parse(decoded);
-        setPhotoData(data);
+        const data = safeJsonParse<PhotoData>(decoded, null as unknown as PhotoData);
+        if (data !== null) {
+          setPhotoData(data);
+        } else {
+          logger.error('Failed to parse photo data JSON');
+        }
       } catch (e) {
         logger.error('Parse error', { error: e });
       }

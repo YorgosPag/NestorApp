@@ -1,5 +1,6 @@
 'use client';
 
+import { safeJsonParse } from '@/lib/json-utils';
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -42,13 +43,10 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 
 // 🏢 ENTERPRISE: Load contact IDs από environment configuration
 const getExistingContactIds = (): string[] => {
-  try {
-    // Load from environment variable (JSON format)
-    const envContactIds = process.env.NEXT_PUBLIC_EXISTING_CONTACT_IDS;
-    if (envContactIds) {
-      return JSON.parse(envContactIds);
-    }
-  } catch (error) {
+  const envContactIds = process.env.NEXT_PUBLIC_EXISTING_CONTACT_IDS;
+  if (envContactIds) {
+    const parsed = safeJsonParse<string[]>(envContactIds, null as unknown as string[]);
+    if (parsed !== null) return parsed;
     logger.warn('Invalid EXISTING_CONTACT_IDS format, using fallback');
   }
 

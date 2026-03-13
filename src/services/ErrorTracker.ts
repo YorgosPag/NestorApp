@@ -17,6 +17,7 @@
 import { generateSessionId, generateErrorId } from '@/services/enterprise-id.service';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { safeJsonParse } from '@/lib/json-utils';
 import { safeGetItem, safeSetItem, safeRemoveItem, STORAGE_KEYS } from '@/lib/storage';
 import { sumByKey } from '@/utils/collection-utils';
 
@@ -419,14 +420,11 @@ export class ErrorTracker {
     }
 
     // From session storage (not migrated — sessionStorage is separate)
-    try {
-      const sessionUser = sessionStorage.getItem('currentUser');
-      if (sessionUser) {
-        const user = JSON.parse(sessionUser);
-        return user.id || user.email;
-      }
-    } catch {
-      // ignore
+    const sessionUser = sessionStorage.getItem('currentUser');
+    if (sessionUser) {
+      const user = safeJsonParse<{ id?: string; email?: string }>(sessionUser, { });
+      const userId = user.id || user.email;
+      if (userId) return userId;
     }
 
     return undefined;

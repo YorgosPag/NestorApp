@@ -3,6 +3,7 @@
  * ✅ ΦΑΣΗ 7: Centralized settings για όλα τα canvas instances
  */
 
+import { safeJsonParse } from '@/lib/json-utils';
 import { UI_COLORS, CANVAS_THEME } from '../../../config/color-config';
 // 🏢 ADR-094: Centralized Device Pixel Ratio
 import { getDevicePixelRatio } from '../../../systems/cursor/utils';
@@ -408,16 +409,15 @@ export class CanvasSettings {
    * Import settings από persistence
    */
   importSettings(settingsJson: string): CanvasValidationResult {
-    try {
-      const importedSettings = JSON.parse(settingsJson);
-      return this.updateSettings(importedSettings);
-    } catch (error) {
+    const importedSettings = safeJsonParse<Record<string, unknown>>(settingsJson, null as unknown as Record<string, unknown>);
+    if (importedSettings === null) {
       return {
         isValid: false,
-        errors: [`Invalid JSON: ${error}`],
+        errors: ['Invalid JSON: failed to parse settings'],
         warnings: []
       };
     }
+    return this.updateSettings(importedSettings);
   }
 
   /**

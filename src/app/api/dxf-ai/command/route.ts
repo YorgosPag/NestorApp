@@ -13,6 +13,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { safeJsonParse } from '@/lib/json-utils';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -172,15 +173,11 @@ async function callOpenAI(
     if (!response.ok) {
       const errorText = await response.text().catch(() => '');
       let errorMsg = `OpenAI error (${response.status})`;
-      try {
-        const errorPayload = JSON.parse(errorText) as { error?: { message?: string } };
-        if (errorPayload.error?.message) {
-          errorMsg = errorPayload.error.message;
-        }
-      } catch {
-        if (errorText.length > 0 && errorText.length < 500) {
-          errorMsg += `: ${errorText}`;
-        }
+      const errorPayload = safeJsonParse<{ error?: { message?: string } }>(errorText, null as unknown as { error?: { message?: string } });
+      if (errorPayload?.error?.message) {
+        errorMsg = errorPayload.error.message;
+      } else if (errorText.length > 0 && errorText.length < 500) {
+        errorMsg += `: ${errorText}`;
       }
       throw new Error(errorMsg);
     }
@@ -221,15 +218,15 @@ function extractToolCalls(rawCalls: ChatCompletionToolCall[] | undefined): DxfAi
       continue;
     }
 
-    try {
-      const args: unknown = JSON.parse(call.function.arguments);
-      result.push({
-        name,
-        arguments: args as DxfAiToolCall['arguments'],
-      });
-    } catch {
+    const args = safeJsonParse<unknown>(call.function.arguments, null);
+    if (args === null) {
       logger.error(`Failed to parse tool arguments for ${name}`);
+      continue;
     }
+    result.push({
+      name,
+      arguments: args as DxfAiToolCall['arguments'],
+    });
   }
 
   return result;
@@ -281,8 +278,8 @@ function buildToolResultMessages(
 ): Array<{ role: 'tool'; tool_call_id: string; content: string }> {
   return rawCalls.map(call => {
     let description = '';
-    try {
-      const args = JSON.parse(call.function.arguments) as Record<string, unknown>;
+    const args = safeJsonParse<Record<string, unknown>>(call.function.arguments, null as unknown as Record<string, unknown>);
+    if (args !== null) {
       if (call.function.name === 'draw_line') {
         description = ` from (${args.start_x},${args.start_y}) to (${args.end_x},${args.end_y})`;
       } else if (call.function.name === 'draw_rectangle') {
@@ -290,7 +287,7 @@ function buildToolResultMessages(
       } else if (call.function.name === 'draw_circle') {
         description = ` radius=${args.radius} at (${args.center_x},${args.center_y})`;
       }
-    } catch { /* ignore parse errors */ }
+    }
 
     return {
       role: 'tool' as const,

@@ -1,6 +1,7 @@
 'use client';
 // DEBUG FLAG - Set to false to disable performance-heavy logging
 const DEBUG_RULERS_GRID = false;
+import { safeJsonParse } from '@/lib/json-utils';
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Point2D, ViewTransform } from './config';
 import {
@@ -547,26 +548,23 @@ function useRulersGridSystemIntegration({
   }, [rulers, grid, origin, isVisible]);
 
   const importSettings = useCallback(async (data: string): Promise<RulersGridOperationResult> => {
-    try {
-      const parsed = JSON.parse(data) as {
-        rulers?: RulerSettings;
-        grid?: GridSettings;
-        origin?: Point2D;
-        isVisible?: boolean;
-      };
-      if (parsed.rulers) setRulers({ ...DEFAULT_RULER_SETTINGS, ...parsed.rulers });
-      if (parsed.grid) setGrid({ ...DEFAULT_GRID_SETTINGS, ...parsed.grid });
-      if (parsed.origin) setOrigin(parsed.origin);
-      if (parsed.isVisible !== undefined) setIsVisible(parsed.isVisible);
+    const parsed = safeJsonParse<{
+      rulers?: RulerSettings;
+      grid?: GridSettings;
+      origin?: Point2D;
+      isVisible?: boolean;
+    }>(data, null as unknown as { rulers?: RulerSettings; grid?: GridSettings; origin?: Point2D; isVisible?: boolean });
 
-      return { success: true, operation: 'import-settings' };
-    } catch (error) {
-      return {
-        success: false,
-        operation: 'import-settings',
-        error: error instanceof Error ? error.message : 'Import failed'
-      };
+    if (parsed === null) {
+      return { success: false, operation: 'import-settings', error: 'Import failed: invalid JSON' };
     }
+
+    if (parsed.rulers) setRulers({ ...DEFAULT_RULER_SETTINGS, ...parsed.rulers });
+    if (parsed.grid) setGrid({ ...DEFAULT_GRID_SETTINGS, ...parsed.grid });
+    if (parsed.origin) setOrigin(parsed.origin);
+    if (parsed.isVisible !== undefined) setIsVisible(parsed.isVisible);
+
+    return { success: true, operation: 'import-settings' };
   }, [setOrigin]);
 
   return {

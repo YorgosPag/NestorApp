@@ -22,6 +22,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { getCollectionSchemaInfo } from '@/config/firestore-schema-map';
 // ADR-173: Tool analytics
 import { getToolAnalyticsService } from '../tool-analytics-service';
+import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
 const logger = createModuleLogger('AGENTIC_TOOL_EXECUTOR');
@@ -355,13 +356,12 @@ export class AgenticToolExecutor {
     // Tool definition sends data as JSON string (strict mode); parse it
     let data: Record<string, unknown> = {};
     if (typeof args.data === 'string') {
-      try {
-        const parsed = JSON.parse(args.data) as Record<string, unknown>;
-        if (typeof parsed === 'object' && parsed !== null) {
-          data = parsed;
-        }
-      } catch {
+      const parsed = safeJsonParse<Record<string, unknown>>(args.data, null as unknown as Record<string, unknown>);
+      if (parsed === null) {
         return { success: false, error: 'Invalid JSON in data field' };
+      }
+      if (typeof parsed === 'object' && parsed !== null) {
+        data = parsed;
       }
     } else if (typeof args.data === 'object' && args.data !== null) {
       data = args.data as Record<string, unknown>;

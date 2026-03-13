@@ -19,6 +19,7 @@
  * @see FileRecordService for the core file operations
  */
 
+import { safeJsonParse } from '@/lib/json-utils';
 import { ref, getDownloadURL, getBytes } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
 import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
@@ -298,7 +299,11 @@ export class FloorFloorplanService {
       }
       const sceneJson = await response.text();
       floorplanLogger.debug('Downloaded + parsing', { bytes: sceneJson.length });
-      const scene = JSON.parse(sceneJson) as SceneModel;
+      const scene = safeJsonParse<SceneModel>(sceneJson, null as unknown as SceneModel);
+      if (scene === null) {
+        floorplanLogger.error('Failed to parse floor floorplan JSON', { floorId });
+        return null;
+      }
 
       return {
         buildingId,

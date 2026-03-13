@@ -7,6 +7,7 @@
  * @module services/administrative-boundaries/OverpassApiService
  */
 
+import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('OverpassApiService');
 
@@ -43,16 +44,15 @@ import type {
  */
 const getOverpassEndpoints = (): readonly string[] => {
   // Primary: JSON configuration από environment variable
-  try {
-    const envEndpoints = process.env.NEXT_PUBLIC_OVERPASS_ENDPOINTS_JSON;
-    if (envEndpoints) {
-      const parsed = JSON.parse(envEndpoints);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed as readonly string[];
-      }
+  const envEndpoints = process.env.NEXT_PUBLIC_OVERPASS_ENDPOINTS_JSON;
+  if (envEndpoints) {
+    const parsed = safeJsonParse<string[]>(envEndpoints, null as unknown as string[]);
+    if (parsed !== null && Array.isArray(parsed) && parsed.length > 0) {
+      return parsed as readonly string[];
     }
-  } catch (error) {
-    logger.warn('Invalid OVERPASS_ENDPOINTS_JSON, using fallbacks');
+    if (parsed === null) {
+      logger.warn('Invalid OVERPASS_ENDPOINTS_JSON, using fallbacks');
+    }
   }
 
   // Secondary: Individual endpoint configuration

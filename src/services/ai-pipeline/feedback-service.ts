@@ -18,6 +18,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { sanitizeForPromptInjection, containsPromptInjection } from './shared/prompt-sanitizer';
@@ -407,8 +408,8 @@ export class FeedbackService {
     return toolCalls.map(tc => {
       const entry: ToolChainDetailEntry = { tool: tc.name };
 
-      try {
-        const parsed = JSON.parse(tc.args) as Record<string, unknown>;
+      const parsed = safeJsonParse<Record<string, unknown>>(tc.args, null as unknown as Record<string, unknown>);
+      if (parsed !== null) {
         if (typeof parsed.collection === 'string') {
           entry.collection = parsed.collection;
         }
@@ -417,8 +418,6 @@ export class FeedbackService {
             .map(f => f.field)
             .filter((f): f is string => typeof f === 'string');
         }
-      } catch {
-        // Non-fatal: args might not be valid JSON
       }
 
       return entry;
