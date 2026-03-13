@@ -263,6 +263,102 @@ export async function notifyAccountingOffice(
 }
 
 // ============================================================================
+// BUYER NOTIFICATION — Reservation Confirmation
+// ============================================================================
+
+/**
+ * Builds a professional buyer-facing reservation confirmation email.
+ * Sent to the buyer when a deposit is made (reservation).
+ */
+function buildBuyerReservationEmail(
+  event: SalesAccountingEvent & { eventType: 'deposit_invoice' },
+  result: SalesAccountingResult,
+  buyerName: string
+): { subject: string; body: string } {
+  const invoiceRef = result.invoiceNumber ? `A-${result.invoiceNumber}` : '';
+  const netAmount = event.depositAmount / VAT_DIVISOR;
+  const vatAmount = event.depositAmount - netAmount;
+
+  return {
+    subject: `Επιβεβαίωση κράτησης — ${event.unitName}`,
+    body: [
+      `Αγαπητέ/ή ${buyerName},`,
+      ``,
+      `Σας ευχαριστούμε για την κράτηση που πραγματοποιήσατε.`,
+      `Παρακάτω θα βρείτε τα στοιχεία της συναλλαγής σας.`,
+      ``,
+      `═══════════════════════════════════════`,
+      `  ΣΤΟΙΧΕΙΑ ΚΡΑΤΗΣΗΣ`,
+      `═══════════════════════════════════════`,
+      ``,
+      `Ημερομηνία: ${formatDate(new Date())}`,
+      ...(invoiceRef ? [`Αριθμός παραστατικού: ${invoiceRef}`] : []),
+      ``,
+      `── Ακίνητο ──`,
+      ...(event.companyName ? [`Κατασκευαστική: ${event.companyName}`] : []),
+      ...(event.projectName ? [`Έργο: ${event.projectName}`] : []),
+      ...(event.buildingName ? [`Κτίριο: ${event.buildingName}`] : []),
+      `Μονάδα: ${event.unitName}${event.unitFloor !== null && event.unitFloor !== undefined ? ` — ${event.unitFloor}ος όροφος` : ''}`,
+      ...(event.projectAddress ? [`Διεύθυνση: ${event.projectAddress}`] : []),
+      ``,
+      `── Οικονομικά Στοιχεία Κράτησης ──`,
+      `Καθαρό ποσό: ${formatEuro(netAmount)}`,
+      `ΦΠΑ 24%: ${formatEuro(vatAmount)}`,
+      `Σύνολο προκαταβολής: ${formatEuro(event.depositAmount)}`,
+      `Τρόπος πληρωμής: ${formatPaymentMethod(event.paymentMethod)}`,
+      ``,
+      `═══════════════════════════════════════`,
+      ``,
+      `Για οποιαδήποτε απορία ή διευκρίνιση, μη διστάσετε να`,
+      `επικοινωνήσετε μαζί μας.`,
+      ``,
+      `Με εκτίμηση,`,
+      ...(event.companyName ? [event.companyName] : ['Nestor App']),
+    ].join('\n'),
+  };
+}
+
+/**
+ * Στέλνει email επιβεβαίωσης κράτησης στον αγοραστή.
+ *
+ * Fire-and-forget: αν αποτύχει, δεν επηρεάζει τη ροή πώλησης.
+ * Στέλνεται ΜΟΝΟ αν ο αγοραστής έχει email.
+ */
+export async function notifyBuyerReservation(
+  event: SalesAccountingEvent & { eventType: 'deposit_invoice' },
+  result: SalesAccountingResult,
+  buyerEmail: string,
+  buyerName: string
+): Promise<void> {
+  // Skip αν δεν πέτυχε η δημιουργία τιμολογίου
+  if (!result.success) {
+    console.log('[Buyer Notify] Skipping — invoice creation failed');
+    return;
+  }
+
+  console.log(`[Buyer Notify] Sending reservation confirmation to ${buyerEmail}`);
+
+  try {
+    const { subject, body } = buildBuyerReservationEmail(event, result, buyerName);
+
+    const mailResult = await sendReplyViaMailgun({
+      to: buyerEmail,
+      subject,
+      textBody: body,
+    });
+
+    if (mailResult.success) {
+      console.log(`[Buyer Notify] Reservation email sent — messageId: ${mailResult.messageId}`);
+    } else {
+      console.warn(`[Buyer Notify] Mailgun error: ${mailResult.error}`);
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(`[Buyer Notify] Failed to send buyer email: ${msg}`);
+  }
+}
+
+// ============================================================================
 // UTILITY
 // ============================================================================
 

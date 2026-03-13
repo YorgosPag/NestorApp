@@ -14,7 +14,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { getCategoryByCode } from '@/subapps/accounting/config/account-categories';
 import { generateTransactionId } from '@/services/enterprise-id.service';
-import { notifyAccountingOffice } from './accounting-notification';
+import { notifyAccountingOffice, notifyBuyerReservation } from './accounting-notification';
 import type { CreateInvoiceInput } from '@/subapps/accounting/types/invoice';
 import type { InvoiceIssuer, InvoiceCustomer } from '@/subapps/accounting/types/invoice';
 import type { MyDataIncomeType } from '@/subapps/accounting/types/common';
@@ -103,6 +103,15 @@ export class SalesAccountingBridge {
 
     // 2. Email ειδοποίηση στο λογιστήριο (fire-and-forget)
     notifyAccountingOffice(event, result).catch(() => { /* silent */ });
+
+    // 3. Email ειδοποίηση στον αγοραστή κατά την κράτηση (fire-and-forget)
+    if (event.eventType === 'deposit_invoice' && event.buyerContactId) {
+      const buyerCustomer = await this.resolveCustomer(event.buyerContactId);
+      if (buyerCustomer.email) {
+        notifyBuyerReservation(event, result, buyerCustomer.email, buyerCustomer.name)
+          .catch(() => { /* silent */ });
+      }
+    }
 
     return result;
   }
@@ -385,18 +394,24 @@ export class SalesAccountingBridge {
       const contact = snap.data() as Record<string, unknown>;
       const firstName = (contact.firstName as string) ?? '';
       const lastName = (contact.lastName as string) ?? '';
-      const name = `${firstName} ${lastName}`.trim() || 'Αγοραστής';
+      const companyName = (contact.companyName as string) ?? '';
+      const name = `${firstName} ${lastName}`.trim() || companyName || 'Αγοραστής';
+
+      // Resolve email: standard emails[] array first, then legacy field
+      const emails = contact.emails as Array<{ email?: string; isPrimary?: boolean }> | undefined;
+      const primaryEmail = emails?.find(e => e.isPrimary)?.email ?? emails?.[0]?.email ?? null;
+      const resolvedEmail = primaryEmail ?? (contact.email as string) ?? null;
 
       return {
         contactId: buyerContactId,
         name,
-        vatNumber: (contact.afm as string) ?? null,
-        taxOffice: (contact.doy as string) ?? null,
+        vatNumber: (contact.vatNumber as string) ?? (contact.afm as string) ?? null,
+        taxOffice: (contact.taxOffice as string) ?? (contact.doy as string) ?? null,
         address: (contact.address as string) ?? null,
         city: (contact.city as string) ?? null,
         postalCode: (contact.postalCode as string) ?? null,
         country: 'GR',
-        email: (contact.email as string) ?? null,
+        email: resolvedEmail,
       };
     }, this.defaultCustomer());
   }
