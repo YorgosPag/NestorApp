@@ -83,6 +83,7 @@ export function StorageDetails({ storage, onNewStorage, onDelete }: StorageDetai
           />
         ) : null
       }
+      onCreateAction={onNewStorage}
       emptyStateProps={{
         icon: Warehouse,
         ...emptyStateMessages.storage

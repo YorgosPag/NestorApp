@@ -2,12 +2,13 @@
 'use client';
 
 import React from 'react';
-import { Users } from 'lucide-react';
+import { Users, Plus } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/button';
 
 interface EmptyStateProps {
   icon?: React.ElementType;
@@ -51,6 +52,8 @@ interface DetailsContainerProps {
   tabsRenderer?: React.ReactNode;
   selectedItem?: SelectedItemBase | null;
   emptyStateProps?: EmptyStateProps;
+  /** 🏢 ENTERPRISE: Auto-generate action button in empty state when provided */
+  onCreateAction?: () => void;
 }
 
 /**
@@ -76,13 +79,22 @@ export function DetailsContainer({
   header,
   tabsRenderer,
   selectedItem,
-  emptyStateProps = {}
+  emptyStateProps = {},
+  onCreateAction
 }: DetailsContainerProps) {
   // 🏢 ENTERPRISE: Centralized spacing tokens
   const spacing = useSpacingTokens();
 
   if (!selectedItem) {
-    return <DefaultEmptyState {...emptyStateProps} />;
+    // 🏢 ENTERPRISE: Auto-generate action button if onCreateAction provided and no explicit action
+    const autoAction = !emptyStateProps.action && onCreateAction ? (
+      <Button variant="outline" onClick={onCreateAction}>
+        <Plus className="mr-2 h-4 w-4" />
+        {emptyStateProps.title}
+      </Button>
+    ) : emptyStateProps.action;
+
+    return <DefaultEmptyState {...emptyStateProps} action={autoAction} />;
   }
 
   return (

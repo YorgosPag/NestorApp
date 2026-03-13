@@ -84,6 +84,7 @@ export function ParkingDetails({ parking, onNewParking, onDelete }: ParkingDetai
           />
         ) : null
       }
+      onCreateAction={onNewParking}
       emptyStateProps={{
         icon: Car,
         ...emptyStateMessages.parking

@@ -107,6 +107,7 @@ export const BuildingDetails = React.memo(function BuildingDetails({
           onBuildingCreated={onBuildingCreated}
         />
       }
+      onCreateAction={onNewBuilding}
       emptyStateProps={{
         icon: NAVIGATION_ENTITIES.building.icon,
         ...emptyStateMessages.building

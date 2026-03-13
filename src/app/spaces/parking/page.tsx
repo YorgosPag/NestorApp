@@ -289,7 +289,7 @@ function ParkingPageContent() {
             <ParkingGridView
               parkingSpots={filteredParkingSpots}
               selectedParking={selectedParking}
-              onSelectParking={setSelectedParking}
+              onSelectParking={(p) => setSelectedParking(prev => prev?.id === p?.id ? null : p)}
             />
           ) : (
             /* 🏢 ENTERPRISE: List View with Details Panel */
@@ -297,7 +297,7 @@ function ParkingPageContent() {
               <ParkingsList
                 parkingSpots={filteredParkingSpots}
                 selectedParking={selectedParking}
-                onSelectParking={setSelectedParking}
+                onSelectParking={(p) => setSelectedParking(prev => prev?.id === p?.id ? null : p)}
                 onNewItem={() => setShowAddDialog(true)}
               />
               <ParkingDetails

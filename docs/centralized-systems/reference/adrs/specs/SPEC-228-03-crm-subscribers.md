@@ -4,6 +4,7 @@
 |-------|-------|
 | **ADR** | ADR-228 |
 | **Phase** | Tier 3 — Medium Priority (CRM) |
+| **Status** | ✅ IMPLEMENTED |
 | **Priority** | MEDIUM |
 | **Estimated Effort** | 1 session |
 | **Prerequisite** | SPEC-228-00 (Tier 0) |
@@ -170,12 +171,12 @@ ObligationDeletedPayload { obligationId, timestamp }
 
 ## 6. Verification Checklist
 
-- [ ] COMMUNICATION_* subscribers wired in appropriate triage/inbox hook
-- [ ] RELATIONSHIP_* subscribers wired in contact relationship hook/component
-- [ ] OBLIGATION_* subscribers wired in obligation hook/component
-- [ ] All follow canonical pattern
-- [ ] Cleanup functions in all useEffect blocks
-- [ ] TypeScript compiles without errors
+- [x] COMMUNICATION_* subscribers wired in `useCommunicationsHistory.ts` — scope-filtered by `contactId`
+- [x] RELATIONSHIP_* subscribers wired in `RelationshipProvider.tsx` — bidirectional scope filtering
+- [x] OBLIGATION_* subscribers wired in `useObligations.ts` — full refetch via `refreshObligations()`
+- [x] All follow canonical pattern (CREATED→refetch, UPDATED→optimistic/refetch, DELETED→filter/refetch)
+- [x] Cleanup functions in all useEffect blocks
+- [x] TypeScript compiles without errors
 
 ---
 
@@ -183,9 +184,9 @@ ObligationDeletedPayload { obligationId, timestamp }
 
 | File | Action |
 |------|--------|
-| Communication triage hook (TBD) | ADD COMMUNICATION_* subscribers |
-| Contact relationship hook (TBD) | ADD RELATIONSHIP_* subscribers |
-| Obligation hook/component (TBD) | ADD OBLIGATION_* subscribers |
+| `src/components/communications/hooks/useCommunicationsHistory.ts` | ADD COMMUNICATION_* subscribers (scope: contactId) |
+| `src/components/contacts/relationships/context/RelationshipProvider.tsx` | ADD RELATIONSHIP_* subscribers (scope: sourceId/targetId) |
+| `src/hooks/useObligations.ts` | ADD OBLIGATION_* subscribers (full refetch pattern) |
 
 ---
 

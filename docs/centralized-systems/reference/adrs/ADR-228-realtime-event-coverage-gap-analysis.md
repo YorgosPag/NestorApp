@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | 🟡 Tiers 0-2 Implemented — Tiers 3-4 Pending |
+| **Status** | 🟡 Tiers 0-3 Implemented — Tier 4 Pending |
 | **Date** | 2026-03-14 |
 | **Category** | Data Access Layer / Real-Time Architecture |
 | **Related ADRs** | ADR-227 (Real-Time Subscription Consolidation), ADR-214 (Firestore Query Centralization) |
@@ -121,9 +121,9 @@
 | **UNIT** | 3 (C/U/D) | 3 (`units.service.ts`) | 3 (`useRealtimeUnits.ts`) | **100%** ✅ | SPEC-228-01 |
 | **FILE** | 5 (C/U/D/Trashed/Restored) | 9 (`file-record.service.ts`) | 4 (`useEntityFiles.ts`) | **100%** ✅ | SPEC-228-02 |
 | **FLOORPLAN** | 3 (C/U/D) | 9 (`UnitFloorplanService`, `FloorplanService`, `FloorFloorplanService`, `BuildingFloorplanService`) | 6 (`useUnitFloorplans`, `useBuildingFloorplans`, `useFloorFloorplans`) | **100%** ✅ | SPEC-228-02 |
-| **COMMUNICATION** | 3 (C/U/D) | 3 (`communications-client.service.ts`) | 0 | **0%** ❌ | |
-| **OBLIGATION** | 3 (C/U/D) | 4 (`ObligationsService.ts`) | 0 | **0%** ❌ | |
-| **RELATIONSHIP** | 3 (C/U/D) | 3 (`FirestoreRelationshipAdapter.ts`) | 0 | **0%** ❌ | |
+| **COMMUNICATION** | 3 (C/U/D) | 3 (`communications-client.service.ts`) | 3 (`useCommunicationsHistory.ts`) | **100%** ✅ | SPEC-228-03 |
+| **OBLIGATION** | 3 (C/U/D) | 4 (`ObligationsService.ts`) | 3 (`useObligations.ts`) | **100%** ✅ | SPEC-228-03 |
+| **RELATIONSHIP** | 3 (C/U/D) | 3 (`FirestoreRelationshipAdapter.ts`) | 3 (`RelationshipProvider.tsx`) | **100%** ✅ | SPEC-228-03 |
 | **WORKSPACE** | 3 (C/U/D) | 5 (`workspace.service.ts`, `navigation-companies.service.ts`, `EnterpriseCompanySettingsService.ts`) | 2 (`WorkspaceContext.tsx`) | **100%** ✅ | SPEC-228-02 |
 | **SESSION** | 2 (C/D) | 2 (`EnterpriseSessionService.ts`) | 1 (`AuthContext.tsx`) | **100%** ✅ | SPEC-228-01 |
 | **USER_SETTINGS** | 1 (U) | 4 (`UserNotificationSettingsService.ts`, `EnterpriseUserPreferencesService.ts`) | 0 | **0%** ❌ | |
@@ -133,11 +133,11 @@
 ### 4.2 Σύνοψη Coverage
 
 ```
-Fully Covered (100%):  12 groups  — PROJECT, BUILDING, CONTACT, TASK, OPPORTUNITY, PARKING,
-                                    UNIT, SESSION, ENTITY_LINKS, FILE, FLOORPLAN, WORKSPACE
+Fully Covered (100%):  15 groups  — PROJECT, BUILDING, CONTACT, TASK, OPPORTUNITY, PARKING,
+                                    UNIT, SESSION, ENTITY_LINKS, FILE, FLOORPLAN, WORKSPACE,
+                                    COMMUNICATION, OBLIGATION, RELATIONSHIP
 Partially Covered:      1 group   — STORAGE (33%)
-Zero Coverage:          5 groups  — COMMUNICATION, OBLIGATION,
-                                    RELATIONSHIP, USER_SETTINGS, ASSOC_LINKS
+Zero Coverage:          2 groups  — USER_SETTINGS, ASSOC_LINKS
 ```
 
 ---
@@ -270,3 +270,4 @@ RealtimeService.dispatch('TASK_CREATED', {
 | 2026-03-14 | Initial ADR — full coverage gap analysis, 4-tier implementation roadmap | Claude |
 | 2026-03-14 | SPEC-228-01 implemented — UNIT/SESSION/ENTITY_LINKS subscribers wired, coverage 50%→67% | Claude |
 | 2026-03-14 | SPEC-228-02 implemented — FILE/FLOORPLAN/WORKSPACE subscribers wired (5 files), coverage 67%→83% | Claude |
+| 2026-03-14 | SPEC-228-03 implemented — COMMUNICATION/RELATIONSHIP/OBLIGATION subscribers wired (3 files), coverage 83%→94% | Claude |

@@ -150,6 +150,7 @@ export function UnitsSidebar({
           }}
         />
       }
+      onCreateAction={onNewUnit}
       emptyStateProps={{
         icon: NAVIGATION_ENTITIES.unit.icon,
         ...emptyStateMessages.unit

@@ -294,7 +294,7 @@ function StoragePageContent() {
             <StorageGridView
               storages={filteredStorages}
               selectedStorage={selectedStorage}
-              onSelectStorage={setSelectedStorage}
+              onSelectStorage={(s) => setSelectedStorage(prev => prev?.id === s?.id ? null : s)}
             />
           ) : (
             /* 🏢 ENTERPRISE: List View with Details Panel */
@@ -302,7 +302,7 @@ function StoragePageContent() {
               <StoragesList
                 storages={filteredStorages}
                 selectedStorage={selectedStorage}
-                onSelectStorage={setSelectedStorage}
+                onSelectStorage={(s) => setSelectedStorage(prev => prev?.id === s?.id ? null : s)}
                 onNewItem={() => setShowAddDialog(true)}
               />
               <StorageDetails

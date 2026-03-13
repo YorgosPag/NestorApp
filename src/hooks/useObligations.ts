@@ -7,11 +7,13 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FirestoreObligationsRepository } from '@/services/obligations/InMemoryObligationsRepository';
 import type { ObligationDocument, ObligationTemplate } from '@/types/obligations';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useAsyncData } from '@/hooks/useAsyncData';
+import { RealtimeService } from '@/services/realtime';
+import type { ObligationCreatedPayload, ObligationUpdatedPayload, ObligationDeletedPayload } from '@/services/realtime';
 
 const logger = createModuleLogger('useObligations');
 
@@ -45,6 +47,27 @@ export function useObligations() {
   });
 
   const obligations = data ?? [];
+
+  // 🏢 ENTERPRISE: Event bus subscribers for cross-tab obligation sync (ADR-228 Tier 3)
+  useEffect(() => {
+    const handleCreated = (_payload: ObligationCreatedPayload) => {
+      refreshObligations();
+    };
+
+    const handleUpdated = (_payload: ObligationUpdatedPayload) => {
+      refreshObligations();
+    };
+
+    const handleDeleted = (_payload: ObligationDeletedPayload) => {
+      refreshObligations();
+    };
+
+    const unsub1 = RealtimeService.subscribe('OBLIGATION_CREATED', handleCreated);
+    const unsub2 = RealtimeService.subscribe('OBLIGATION_UPDATED', handleUpdated);
+    const unsub3 = RealtimeService.subscribe('OBLIGATION_DELETED', handleDeleted);
+
+    return () => { unsub1(); unsub2(); unsub3(); };
+  }, [refreshObligations]);
 
   const deleteObligation = async (id: string): Promise<boolean> => {
     try {

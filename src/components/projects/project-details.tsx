@@ -140,6 +140,7 @@ export function ProjectDetails({
           />
         ) : null
       }
+      onCreateAction={onNewProject}
       emptyStateProps={{
         icon: Briefcase,
         title: t('emptyState.title'),

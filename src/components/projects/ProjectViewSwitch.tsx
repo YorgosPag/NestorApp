@@ -99,7 +99,7 @@ export function ProjectViewSwitch({
                 project={project}
                 isSelected={selectedProject?.id === project.id}
                 isFavorite={favorites.includes(project.id)}
-                onSelect={() => onSelectProject(project)}
+                onSelect={() => onSelectProject(selectedProject?.id === project.id ? null : project)}
                 onToggleFavorite={() => toggleFavorite(project.id)}
               />
             ))}
@@ -147,7 +147,7 @@ export function ProjectViewSwitch({
         <ProjectsList
             projects={projects}
             selectedProject={selectedProject}
-            onSelectProject={onSelectProject}
+            onSelectProject={(p) => onSelectProject(selectedProject?.id === p?.id ? null : p)}
             companies={companies}
             onNewProject={onNewProject}
             onEditProject={selectedProject ? handleEditProject : undefined}
@@ -171,7 +171,7 @@ export function ProjectViewSwitch({
         <ProjectsList
             projects={projects}
             selectedProject={selectedProject}
-            onSelectProject={onSelectProject}
+            onSelectProject={(p) => onSelectProject(selectedProject?.id === p?.id ? null : p)}
             companies={companies}
             onNewProject={onNewProject}
             onEditProject={selectedProject ? handleEditProject : undefined}

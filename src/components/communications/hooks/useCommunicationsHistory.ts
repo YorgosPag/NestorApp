@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { getCommunicationsByContact } from '@/services/communications-client.service';
 import type { Communication } from '@/types/crm';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { RealtimeService } from '@/services/realtime';
+import type { CommunicationCreatedPayload, CommunicationUpdatedPayload, CommunicationDeletedPayload } from '@/services/realtime';
 
 export function useCommunicationsHistory(contactId?: string) {
   // 🏢 ENTERPRISE: Proper type instead of any[]
@@ -37,6 +39,35 @@ export function useCommunicationsHistory(contactId?: string) {
   }, [contactId, t]);
 
   useEffect(() => { fetchCommunications(); }, [fetchCommunications]);
+
+  // 🏢 ENTERPRISE: Event bus subscribers for cross-tab communication sync (ADR-228 Tier 3)
+  useEffect(() => {
+    if (!contactId) return;
+
+    const handleCreated = (payload: CommunicationCreatedPayload) => {
+      if (payload.communication.contactId === contactId) {
+        fetchCommunications();
+      }
+    };
+
+    const handleUpdated = (payload: CommunicationUpdatedPayload) => {
+      setCommunications(prev => prev.map(comm =>
+        comm.id === payload.communicationId
+          ? { ...comm, ...payload.updates }
+          : comm
+      ));
+    };
+
+    const handleDeleted = (payload: CommunicationDeletedPayload) => {
+      setCommunications(prev => prev.filter(c => c.id !== payload.communicationId));
+    };
+
+    const unsub1 = RealtimeService.subscribe('COMMUNICATION_CREATED', handleCreated);
+    const unsub2 = RealtimeService.subscribe('COMMUNICATION_UPDATED', handleUpdated);
+    const unsub3 = RealtimeService.subscribe('COMMUNICATION_DELETED', handleDeleted);
+
+    return () => { unsub1(); unsub2(); unsub3(); };
+  }, [contactId, fetchCommunications]);
 
   return { communications, loading, error, fetchCommunications };
 }

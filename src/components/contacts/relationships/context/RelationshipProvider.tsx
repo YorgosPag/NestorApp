@@ -14,6 +14,8 @@ import type { ContactRelationship } from '@/types/contacts/relationships';
 import type { ContactType } from '@/types/contacts';
 import { RequestDeduplicator } from '../hooks/useRelationshipListOptimized';
 import { createModuleLogger } from '@/lib/telemetry';
+import { RealtimeService } from '@/services/realtime';
+import type { RelationshipCreatedPayload, RelationshipUpdatedPayload, RelationshipDeletedPayload } from '@/services/realtime';
 const logger = createModuleLogger('RelationshipProvider');
 
 // ============================================================================
@@ -205,6 +207,40 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
       setExpandedRelationships(new Set());
     }
   }, [contactId, loadRelationships]);
+
+  // 🏢 ENTERPRISE: Event bus subscribers for cross-tab relationship sync (ADR-228 Tier 3)
+  useEffect(() => {
+    if (!contactId || contactId === 'new-contact') return;
+
+    const handleCreated = (payload: RelationshipCreatedPayload) => {
+      if (payload.relationship.sourceId === contactId || payload.relationship.targetId === contactId) {
+        RequestDeduplicator.invalidate(contactId);
+        loadRelationships(true);
+      }
+    };
+
+    const handleUpdated = (payload: RelationshipUpdatedPayload) => {
+      setRelationships(prev => prev.map(rel =>
+        rel.id === payload.relationshipId
+          ? { ...rel, ...payload.updates }
+          : rel
+      ));
+    };
+
+    const handleDeleted = (payload: RelationshipDeletedPayload) => {
+      setRelationships(prev => {
+        const updated = prev.filter(r => r.id !== payload.relationshipId);
+        onRelationshipsChange?.(updated);
+        return updated;
+      });
+    };
+
+    const unsub1 = RealtimeService.subscribe('RELATIONSHIP_CREATED', handleCreated);
+    const unsub2 = RealtimeService.subscribe('RELATIONSHIP_UPDATED', handleUpdated);
+    const unsub3 = RealtimeService.subscribe('RELATIONSHIP_DELETED', handleDeleted);
+
+    return () => { unsub1(); unsub2(); unsub3(); };
+  }, [contactId, loadRelationships, onRelationshipsChange]);
 
   // ============================================================================
   // CONTEXT VALUE

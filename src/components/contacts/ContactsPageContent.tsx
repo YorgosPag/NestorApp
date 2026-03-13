@@ -722,7 +722,7 @@ export function ContactsPageContent() {
                 <ContactsList
                   contacts={filteredContacts}
                   selectedContact={selectedContact}
-                  onSelectContact={setSelectedContact}
+                  onSelectContact={(c) => setSelectedContact(prev => prev?.id === c?.id ? null : c)}
                   isLoading={isLoading}
                   onNewContact={handleNewContact}
                   onDeleteContact={handleDeleteContacts}
@@ -761,7 +761,7 @@ export function ContactsPageContent() {
                 <ContactsList
                   contacts={filteredContacts}
                   selectedContact={selectedContact}
-                  onSelectContact={setSelectedContact}
+                  onSelectContact={(c) => setSelectedContact(prev => prev?.id === c?.id ? null : c)}
                   isLoading={isLoading}
                   onNewContact={handleNewContact}
                   onDeleteContact={handleDeleteContacts}
@@ -827,7 +827,7 @@ export function ContactsPageContent() {
                     contact={contact}
                     isSelected={selectedContact?.id === contact.id}
                     isFavorite={contact.isFavorite}
-                    onSelect={() => setSelectedContact(contact)}
+                    onSelect={() => setSelectedContact(prev => prev?.id === contact.id ? null : contact)}
                     onToggleFavorite={async () => {
                       // 🏢 ENTERPRISE: Toggle favorite via service
                       await ContactsService.updateContact(contact.id!, { isFavorite: !contact.isFavorite });
