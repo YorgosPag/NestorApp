@@ -130,6 +130,7 @@ function buildContentSection(
       </tr>
     </table>
 
+    ${data.depositAmount > 0 ? `
     <!-- Info card: Financial -->
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;border:1px solid ${BRAND.border};border-radius:6px;overflow:hidden;">
       <tr>
@@ -150,6 +151,12 @@ function buildContentSection(
         </td>
       </tr>
     </table>
+    ` : `
+    <!-- No deposit — reservation without financial details -->
+    <p style="margin:0 0 20px;font-size:14px;color:${BRAND.gray};line-height:1.6;padding:12px 16px;background-color:${BRAND.bgLight};border-radius:6px;border:1px solid ${BRAND.border};">
+      Η κράτηση δεν συνοδεύεται από προκαταβολή. Τα οικονομικά στοιχεία θα καθοριστούν σε επόμενο στάδιο.
+    </p>
+    `}
 
     <!-- Closing -->
     <p style="margin:0 0 8px;font-size:14px;color:${BRAND.gray};line-height:1.6;">
@@ -220,17 +227,28 @@ function buildPlainText(
   if (data.projectAddress) lines.push(`Διεύθυνση: ${data.projectAddress}`);
   if (data.companyName) lines.push(`Κατασκευαστική: ${data.companyName}`);
 
+  if (data.depositAmount > 0) {
+    lines.push(
+      ``,
+      `═══ ΟΙΚΟΝΟΜΙΚΑ ΣΤΟΙΧΕΙΑ ═══`,
+      `Ημερομηνία: ${formatDateGreek(new Date())}`,
+    );
+    if (data.invoiceRef) lines.push(`Παραστατικό: ${data.invoiceRef}`);
+    lines.push(
+      `Καθαρό ποσό: ${formatEuro(netAmount)}`,
+      `ΦΠΑ 24%: ${formatEuro(vatAmount)}`,
+      `Σύνολο: ${formatEuro(data.depositAmount)}`,
+      `Τρόπος πληρωμής: ${formatPaymentMethod(data.paymentMethod)}`,
+    );
+  } else {
+    lines.push(
+      ``,
+      `Η κράτηση δεν συνοδεύεται από προκαταβολή.`,
+      `Τα οικονομικά στοιχεία θα καθοριστούν σε επόμενο στάδιο.`,
+    );
+  }
+
   lines.push(
-    ``,
-    `═══ ΟΙΚΟΝΟΜΙΚΑ ΣΤΟΙΧΕΙΑ ═══`,
-    `Ημερομηνία: ${formatDateGreek(new Date())}`,
-  );
-  if (data.invoiceRef) lines.push(`Παραστατικό: ${data.invoiceRef}`);
-  lines.push(
-    `Καθαρό ποσό: ${formatEuro(netAmount)}`,
-    `ΦΠΑ 24%: ${formatEuro(vatAmount)}`,
-    `Σύνολο: ${formatEuro(data.depositAmount)}`,
-    `Τρόπος πληρωμής: ${formatPaymentMethod(data.paymentMethod)}`,
     ``,
     `Για οποιαδήποτε απορία, επικοινωνήστε μαζί μας.`,
     ``,

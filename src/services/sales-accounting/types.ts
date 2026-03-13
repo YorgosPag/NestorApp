@@ -18,7 +18,8 @@ import type { PaymentMethod } from '@/subapps/accounting/types/common';
 export type SalesAccountingEventType =
   | 'deposit_invoice'
   | 'final_sale_invoice'
-  | 'credit_invoice';
+  | 'credit_invoice'
+  | 'reservation_notify';
 
 // ============================================================================
 // SALE LINE ITEM (ADR-199 — Multi-line invoices for appurtenances)
@@ -101,11 +102,19 @@ export interface CreditInvoiceEvent extends SalesAccountingEventBase {
   reason: string;
 }
 
-/** Discriminated union — 3 τύποι events */
+/** Ειδοποίηση κράτησης χωρίς τιμολόγιο (email-only) */
+export interface ReservationNotifyEvent extends SalesAccountingEventBase {
+  eventType: 'reservation_notify';
+  /** Ποσό προκαταβολής — μπορεί να είναι 0 */
+  depositAmount: number;
+}
+
+/** Discriminated union — 4 τύποι events */
 export type SalesAccountingEvent =
   | DepositInvoiceEvent
   | FinalSaleInvoiceEvent
-  | CreditInvoiceEvent;
+  | CreditInvoiceEvent
+  | ReservationNotifyEvent;
 
 // ============================================================================
 // RESULT TYPE

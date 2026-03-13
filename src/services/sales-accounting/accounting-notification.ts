@@ -243,6 +243,10 @@ export async function notifyAccountingOffice(
         body = notification.body;
         break;
       }
+      case 'reservation_notify':
+        // Reservation notify δεν στέλνει email στο λογιστήριο — μόνο buyer email
+        console.log('[ADR-198 Notify] Skipping accounting email for reservation_notify');
+        return;
     }
 
     const mailResult = await sendReplyViaMailgun({
@@ -275,13 +279,13 @@ export async function notifyAccountingOffice(
  * Χρησιμοποιεί το κεντρικοποιημένο email template system (Pagonis Energo branding).
  */
 export async function notifyBuyerReservation(
-  event: SalesAccountingEvent & { eventType: 'deposit_invoice' },
-  result: SalesAccountingResult,
+  event: SalesAccountingEvent & { eventType: 'deposit_invoice' | 'reservation_notify' },
+  result: SalesAccountingResult | null,
   buyerEmail: string,
   buyerName: string
 ): Promise<void> {
-  // Skip αν δεν πέτυχε η δημιουργία τιμολογίου
-  if (!result.success) {
+  // Skip αν result υπάρχει αλλά δεν πέτυχε
+  if (result !== null && !result.success) {
     console.log('[Buyer Notify] Skipping — invoice creation failed');
     return;
   }
@@ -289,6 +293,7 @@ export async function notifyBuyerReservation(
   console.log(`[Buyer Notify] Sending branded reservation confirmation to ${buyerEmail}`);
 
   try {
+    const invoiceRef = result?.invoiceNumber ? `A-${result.invoiceNumber}` : null;
     const { subject, html, text } = buildReservationConfirmationEmail({
       buyerName,
       unitName: event.unitName,
@@ -299,7 +304,7 @@ export async function notifyBuyerReservation(
       companyName: event.companyName,
       depositAmount: event.depositAmount,
       paymentMethod: event.paymentMethod,
-      invoiceRef: result.invoiceNumber ? `A-${result.invoiceNumber}` : null,
+      invoiceRef,
     });
 
     const mailResult = await sendReplyViaMailgun({

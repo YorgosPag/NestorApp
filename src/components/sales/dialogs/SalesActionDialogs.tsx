@@ -251,7 +251,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
       onOpenChange(false);
       onSuccess?.();
 
-      // ADR-198: Fire-and-forget — δημιουργία τιμολογίου προκαταβολής
+      // ADR-198: Fire-and-forget — email + τιμολόγιο
       const depositAmount = Number(deposit);
       const unitName = unit.name ?? unit.unitName ?? '';
 
@@ -261,6 +261,30 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
         ? linkedSpaces.buildLineItems(depositAmount, unitName)
         : undefined;
 
+      // 1. ΠΑΝΤΑ: Email κράτησης στον αγοραστή (αν έχει buyerContactId)
+      if (buyerContactId) {
+        apiClient.post(`/api/sales/${unit.id}/accounting-event`, {
+          eventType: 'reservation_notify',
+          unitId: unit.id,
+          unitName,
+          projectId: unit.project ?? null,
+          buyerContactId,
+          buyerName: buyerName || null,
+          projectName: null,
+          permitTitle: null,
+          companyName: null,
+          buildingName: null,
+          unitFloor: unit.floor ?? null,
+          projectAddress: null,
+          paymentMethod: 'bank_transfer',
+          notes: null,
+          depositAmount: depositAmount || 0,
+        }).catch((err: unknown) => {
+          logger.warn('Reservation notify fire-and-forget failed', { error: err });
+        });
+      }
+
+      // 2. ΜΟΝΟ αν deposit > 0: Τιμολόγιο προκαταβολής
       if (depositAmount > 0) {
         apiClient.post(`/api/sales/${unit.id}/accounting-event`, {
           eventType: 'deposit_invoice',

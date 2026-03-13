@@ -25,11 +25,11 @@ import type { SalesAccountingEvent } from '@/services/sales-accounting';
 // VALIDATION
 // =============================================================================
 
-const VALID_EVENT_TYPES = ['deposit_invoice', 'final_sale_invoice', 'credit_invoice'] as const;
+const VALID_EVENT_TYPES = ['deposit_invoice', 'final_sale_invoice', 'credit_invoice', 'reservation_notify'] as const;
 
 function validateEvent(body: Partial<SalesAccountingEvent>): string | null {
   if (!body.eventType || !VALID_EVENT_TYPES.includes(body.eventType as typeof VALID_EVENT_TYPES[number])) {
-    return 'eventType must be one of: deposit_invoice, final_sale_invoice, credit_invoice';
+    return 'eventType must be one of: deposit_invoice, final_sale_invoice, credit_invoice, reservation_notify';
   }
   if (!body.unitId?.trim()) return 'unitId is required';
   if (!body.unitName?.trim()) return 'unitName is required';
@@ -59,6 +59,12 @@ function validateEvent(body: Partial<SalesAccountingEvent>): string | null {
       }
       if (!ev.reason?.trim()) {
         return 'reason is required for credit invoices';
+      }
+      break;
+    }
+    case 'reservation_notify': {
+      if (!body.buyerContactId?.trim()) {
+        return 'buyerContactId is required for reservation notifications';
       }
       break;
     }

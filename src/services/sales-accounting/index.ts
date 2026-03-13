@@ -11,5 +11,6 @@ export type {
   DepositInvoiceEvent,
   FinalSaleInvoiceEvent,
   CreditInvoiceEvent,
+  ReservationNotifyEvent,
 } from './types';
 export { notifyAccountingOffice } from './accounting-notification';

@@ -26,6 +26,7 @@ import type {
   DepositInvoiceEvent,
   FinalSaleInvoiceEvent,
   CreditInvoiceEvent,
+  ReservationNotifyEvent,
 } from './types';
 
 // ============================================================================
@@ -87,6 +88,11 @@ export class SalesAccountingBridge {
     // 1c. Resolve hierarchy server-side (building → project → company)
     await this.resolveHierarchy(event);
 
+    // Handle reservation_notify — email-only, no invoice
+    if (event.eventType === 'reservation_notify') {
+      return this.handleReservationNotify(event);
+    }
+
     let result: SalesAccountingResult;
 
     switch (event.eventType) {
@@ -104,16 +110,30 @@ export class SalesAccountingBridge {
     // 2. Email ειδοποίηση στο λογιστήριο (fire-and-forget)
     notifyAccountingOffice(event, result).catch(() => { /* silent */ });
 
-    // 3. Email ειδοποίηση στον αγοραστή κατά την κράτηση (fire-and-forget)
-    if (event.eventType === 'deposit_invoice' && event.buyerContactId) {
-      const buyerCustomer = await this.resolveCustomer(event.buyerContactId);
-      if (buyerCustomer.email) {
-        notifyBuyerReservation(event, result, buyerCustomer.email, buyerCustomer.name)
+    return result;
+  }
+
+  // ── Reservation Notify (email-only, no invoice) ─────────────────────────
+
+  private async handleReservationNotify(
+    event: ReservationNotifyEvent
+  ): Promise<SalesAccountingResult> {
+    if (event.buyerContactId) {
+      const buyer = await this.resolveCustomer(event.buyerContactId);
+      if (buyer.email) {
+        notifyBuyerReservation(event, null, buyer.email, buyer.name)
           .catch(() => { /* silent */ });
       }
     }
 
-    return result;
+    return {
+      success: true,
+      invoiceId: null,
+      invoiceNumber: null,
+      journalEntryId: null,
+      transactionChainId: `notify_${event.unitId}`,
+      error: null,
+    };
   }
 
   // ── Deposit Invoice ──────────────────────────────────────────────────────
