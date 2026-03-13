@@ -13,10 +13,9 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { firestoreQueryService } from '@/services/firestore';
+import type { QueryResult } from '@/services/firestore';
+import type { DocumentData } from 'firebase/firestore';
 import type { RealtimeUnit, SubscriptionStatus } from '../types';
 import { REALTIME_EVENTS } from '../types';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -137,72 +136,44 @@ export function useRealtimeUnits(): UseRealtimeUnitsReturn {
     setStatus('connecting');
     setLoading(true);
 
-    const auth = getAuth();
-    let firestoreUnsubscribe: (() => void) | null = null;
+    // 🔐 ENTERPRISE: firestoreQueryService.subscribe() handles auth internally
+    // and auto-injects companyId tenant filter — SECURITY FIX for cross-tenant data leak
+    const unsubscribe = firestoreQueryService.subscribe<DocumentData>(
+      'UNITS',
+      (result: QueryResult<DocumentData>) => {
+        const units: RealtimeUnit[] = result.documents.map(doc => ({
+          id: doc.id,
+          name: (doc.name as string) || '',
+          buildingId: (doc.buildingId as string) || null,
+          type: doc.type as string | undefined,
+          status: doc.status as string | undefined,
+          area: doc.area as number | undefined,
+          floor: doc.floor as number | undefined,
+          createdAt: doc.createdAt as string | undefined,
+          updatedAt: doc.updatedAt as string | undefined,
+        }));
 
-    // 🔐 ENTERPRISE: Wait for authentication before subscribing to Firestore
-    const authUnsubscribe = onAuthStateChanged(auth, (user) => {
-      // Cleanup previous Firestore subscription if exists
-      if (firestoreUnsubscribe) {
-        firestoreUnsubscribe();
-        firestoreUnsubscribe = null;
-      }
+        logger.debug('Received units in real-time', { count: units.length });
 
-      if (!user) {
-        logger.info('Waiting for authentication');
-        setStatus('idle');
+        setAllUnits(units);
+        setUnitsByBuilding(groupUnitsByBuilding(units));
         setLoading(false);
-        setAllUnits([]);
-        setUnitsByBuilding({});
-        return;
+        setError(null);
+        setStatus('active');
+      },
+      (err: Error) => {
+        logger.error('Firestore error', { error: err.message });
+        setError(err.message);
+        setLoading(false);
+        setStatus('error');
       }
+    );
 
-      logger.info('User authenticated, setting up real-time listener');
+    unsubscribeRef.current = unsubscribe;
 
-      const unitsRef = collection(db, COLLECTIONS.UNITS);
-
-      firestoreUnsubscribe = onSnapshot(
-        unitsRef,
-        (snapshot) => {
-          const units: RealtimeUnit[] = snapshot.docs.map((docSnapshot) => ({
-            id: docSnapshot.id,
-            name: docSnapshot.data().name || '',
-            buildingId: docSnapshot.data().buildingId || null,
-            type: docSnapshot.data().type,
-            status: docSnapshot.data().status,
-            area: docSnapshot.data().area,
-            floor: docSnapshot.data().floor,
-            createdAt: docSnapshot.data().createdAt,
-            updatedAt: docSnapshot.data().updatedAt,
-          }));
-
-          logger.debug('Received units in real-time', { count: units.length });
-
-          // Update state
-          setAllUnits(units);
-          setUnitsByBuilding(groupUnitsByBuilding(units));
-          setLoading(false);
-          setError(null);
-          setStatus('active');
-        },
-        (err) => {
-          logger.error('Firestore error', { error: err.message });
-          setError(err.message);
-          setLoading(false);
-          setStatus('error');
-        }
-      );
-
-      unsubscribeRef.current = firestoreUnsubscribe;
-    });
-
-    // Cleanup both subscriptions
     return () => {
-      logger.debug('Cleaning up subscriptions');
-      authUnsubscribe();
-      if (firestoreUnsubscribe) {
-        firestoreUnsubscribe();
-      }
+      logger.debug('Cleaning up subscription');
+      unsubscribe();
     };
   }, [refreshTriggerRef.current, groupUnitsByBuilding]);
 
