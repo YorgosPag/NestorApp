@@ -71,13 +71,16 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   const dataHook = useNavigationData();
   const actions = useNavigationActions();
 
+  // 🔐 ENTERPRISE: Gate realtime subscriptions on auth — prevents AUTHENTICATION_ERROR on page load
+  const isAuthReady = !!user && !authLoading;
+
   // 🏢 ENTERPRISE: Real-time buildings for live counts
   const {
     buildingsByProject,
     getBuildingCount,
     getBuildingsForProject,
     loading: realtimeBuildingsLoading,
-  } = useRealtimeBuildings();
+  } = useRealtimeBuildings(isAuthReady);
 
   // 🏢 ENTERPRISE: Real-time units for live counts per building
   const {
@@ -85,7 +88,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     getUnitCount,
     getUnitsForBuilding,
     loading: realtimeUnitsLoading,
-  } = useRealtimeUnits();
+  } = useRealtimeUnits(isAuthReady);
 
   // Helper to update state
   const updateState = (updates: Partial<NavigationState>) => {

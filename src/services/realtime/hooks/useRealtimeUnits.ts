@@ -70,11 +70,11 @@ interface UseRealtimeUnitsReturn {
  * const units = unitsByBuilding['buildingId123']; // Returns Unit[]
  * ```
  */
-export function useRealtimeUnits(): UseRealtimeUnitsReturn {
+export function useRealtimeUnits(enabled = true): UseRealtimeUnitsReturn {
   // State
   const [allUnits, setAllUnits] = useState<RealtimeUnit[]>([]);
   const [unitsByBuilding, setUnitsByBuilding] = useState<UnitsByBuilding>({});
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<SubscriptionStatus>('idle');
 
@@ -133,6 +133,13 @@ export function useRealtimeUnits(): UseRealtimeUnitsReturn {
   // ==========================================================================
 
   useEffect(() => {
+    // 🔐 ENTERPRISE: Skip subscription when disabled (no auth yet)
+    if (!enabled) {
+      setStatus('idle');
+      setLoading(false);
+      return;
+    }
+
     setStatus('connecting');
     setLoading(true);
 
@@ -175,7 +182,7 @@ export function useRealtimeUnits(): UseRealtimeUnitsReturn {
       logger.debug('Cleaning up subscription');
       unsubscribe();
     };
-  }, [refreshTriggerRef.current, groupUnitsByBuilding]);
+  }, [enabled, refreshTriggerRef.current, groupUnitsByBuilding]);
 
   // ==========================================================================
   // LISTEN FOR EXTERNAL EVENTS

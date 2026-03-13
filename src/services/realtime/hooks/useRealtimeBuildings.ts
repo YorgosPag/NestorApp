@@ -65,11 +65,11 @@ interface UseRealtimeBuildingsReturn {
  * const buildings = buildingsByProject['projectId123']; // Returns Building[]
  * ```
  */
-export function useRealtimeBuildings(): UseRealtimeBuildingsReturn {
+export function useRealtimeBuildings(enabled = true): UseRealtimeBuildingsReturn {
   // State
   const [allBuildings, setAllBuildings] = useState<RealtimeBuilding[]>([]);
   const [buildingsByProject, setBuildingsByProject] = useState<BuildingsByProject>({});
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<SubscriptionStatus>('idle');
 
@@ -128,6 +128,13 @@ export function useRealtimeBuildings(): UseRealtimeBuildingsReturn {
   // ==========================================================================
 
   useEffect(() => {
+    // 🔐 ENTERPRISE: Skip subscription when disabled (no auth yet)
+    if (!enabled) {
+      setStatus('idle');
+      setLoading(false);
+      return;
+    }
+
     setStatus('connecting');
     setLoading(true);
 
@@ -172,7 +179,7 @@ export function useRealtimeBuildings(): UseRealtimeBuildingsReturn {
       logger.info('Cleaning up subscription');
       unsubscribe();
     };
-  }, [refreshTriggerRef.current, groupBuildingsByProject]);
+  }, [enabled, refreshTriggerRef.current, groupBuildingsByProject]);
 
   // ==========================================================================
   // LISTEN FOR EXTERNAL EVENTS
