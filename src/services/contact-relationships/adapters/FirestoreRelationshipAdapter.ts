@@ -27,6 +27,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { normalizeToMillis } from '@/lib/date-local';
 import { generateRelationshipId } from '@/services/enterprise-id.service';
 import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -227,21 +228,7 @@ export class FirestoreRelationshipAdapter {
       });
 
       // Sort by createdAt manually (since we can't use orderBy with OR)
-      const resolveMillis = (value: ContactRelationship['createdAt']): number => {
-        if (!value) return 0;
-        if (value instanceof Date) return value.getTime();
-        if (typeof value === 'object' && 'toDate' in value) {
-          const dateValue = (value as { toDate?: () => Date }).toDate?.();
-          return dateValue instanceof Date ? dateValue.getTime() : 0;
-        }
-        return 0;
-      };
-
-      relationships.sort((a, b) => {
-        const aTime = resolveMillis(a.createdAt);
-        const bTime = resolveMillis(b.createdAt);
-        return bTime - aTime; // Descending
-      });
+      relationships.sort((a, b) => normalizeToMillis(b.createdAt) - normalizeToMillis(a.createdAt));
 
       return relationships;
     } catch (error) {

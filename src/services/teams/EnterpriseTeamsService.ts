@@ -26,6 +26,7 @@ import { getFirestore, doc, getDoc, collection, getDocs, query, where, orderBy }
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import { normalizeToDate } from '@/lib/date-local';
 const logger = createModuleLogger('EnterpriseTeamsService');
 
 // ============================================================================
@@ -725,8 +726,8 @@ class EnterpriseTeamsService {
         directReports: data.directReports || [],
         isActive: data.isActive !== false,
         availabilityStatus: data.availabilityStatus || 'available',
-        startDate: data.startDate?.toDate() || new Date(),
-        lastUpdated: data.lastUpdated?.toDate() || new Date(),
+        startDate: normalizeToDate(data.startDate) ?? new Date(),
+        lastUpdated: normalizeToDate(data.lastUpdated) ?? new Date(),
         updatedBy: data.updatedBy || 'system',
         privacyLevel: data.privacyLevel || 'internal',
         gdprConsent: data.gdprConsent !== false,
@@ -827,7 +828,7 @@ class EnterpriseTeamsService {
       teams,
       positions,
       reportingStructure: chartData.reportingStructure || [],
-      effectiveDate: chartData.effectiveDate?.toDate() || new Date(),
+      effectiveDate: normalizeToDate(chartData.effectiveDate) ?? new Date(),
       isActive: chartData.isActive !== false,
       complianceStatus: chartData.complianceStatus || 'compliant',
       organizationId,

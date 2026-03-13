@@ -13,6 +13,7 @@ import { VersionDetails } from './version-history/VersionDetails';
 import { BUILDING_IDS } from '@/config/building-ids-config';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { normalizeToDate, normalizeToMillis } from '@/lib/date-local';
 
 // 🏢 ENTERPRISE: Version interface instead of any
 interface FloorplanVersion {
@@ -34,7 +35,7 @@ const toVersionHistoryItem = (v: FloorplanVersion): VersionHistoryItem => ({
     id: v.id,
     message: v.message,
     type: v.type,
-    timestamp: v.timestamp.toDate(),
+    timestamp: normalizeToDate(v.timestamp) ?? new Date(),
     author: v.author,
     stats: v.stats,
     size: v.size,
@@ -102,7 +103,7 @@ export function VersionHistoryPanel({ buildingId, isOpen, onClose }: { buildingI
             setTimeout(() => {
                 // 🏢 ENTERPRISE: Convert FloorplanVersion to VersionHistoryItem for display
                 const converted = mockVersions
-                    .sort((a,b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime())
+                    .sort((a,b) => normalizeToMillis(b.timestamp) - normalizeToMillis(a.timestamp))
                     .map(toVersionHistoryItem);
                 setVersions(converted);
                 setLoading(false);

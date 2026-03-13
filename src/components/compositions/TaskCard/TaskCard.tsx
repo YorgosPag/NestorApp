@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { BaseCard } from '@/components/core/BaseCard/BaseCard';
 import { HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { formatFlexibleDateTime } from '@/lib/intl-utils';
+import { normalizeToDate } from '@/lib/date-local';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { getStatusBadgeClass } from '@/lib/design-system';
 import { badgeVariants } from '@/components/ui/badge';
@@ -64,17 +65,10 @@ const getPriorityColor = (priority: string): BadgeVariant => {
   }
 };
 
-/** Date value that could be string, Date, or Firestore Timestamp */
-type TaskDateValue = string | Date | { toDate: () => Date } | null | undefined;
-
-const isOverdue = (dueDate: TaskDateValue, status: string) => {
+const isOverdue = (dueDate: unknown, status: string) => {
   if (!dueDate || status === 'completed' || status === 'cancelled') return false;
-  const due = typeof dueDate === 'string'
-    ? new Date(dueDate)
-    : (dueDate && typeof dueDate === 'object' && 'toDate' in dueDate)
-      ? dueDate.toDate()
-      : dueDate as Date;
-  return due < new Date();
+  const due = normalizeToDate(dueDate);
+  return due ? due < new Date() : false;
 };
 
 export function TaskCard({

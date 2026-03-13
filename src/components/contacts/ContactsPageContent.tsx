@@ -17,15 +17,7 @@ const hasMultiplePhotoURLs = (contact: Contact): contact is IndividualContact & 
   return 'multiplePhotoURLs' in contact && Array.isArray((contact as IndividualContact).multiplePhotoURLs);
 };
 
-// 🏢 ENTERPRISE: Type-safe Firestore timestamp to Date conversion
-const toDate = (timestamp: Date | { toDate: () => Date } | undefined | null): Date | null => {
-  if (!timestamp) return null;
-  if (timestamp instanceof Date) return timestamp;
-  if (typeof timestamp === 'object' && 'toDate' in timestamp && typeof timestamp.toDate === 'function') {
-    return timestamp.toDate();
-  }
-  return null;
-};
+import { normalizeToDate } from '@/lib/date-local';
 import { ContactsService } from '@/services/contacts.service';
 import { CONTACT_TYPES } from '@/constants/contacts';
 import { ContactsHeader } from './page/ContactsHeader';
@@ -484,7 +476,7 @@ export function ContactsPageContent() {
         case recentAdditionsTitle:
           const oneMonthAgo = new Date();
           oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-          const createdDate = toDate(contact.createdAt);
+          const createdDate = normalizeToDate(contact.createdAt);
           if (!createdDate || createdDate <= oneMonthAgo) return false;
           break;
         case favoritesTitle:
@@ -571,7 +563,7 @@ export function ContactsPageContent() {
       value: contacts.filter(c => {
         const oneMonthAgo = new Date();
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-        const createdDate = toDate(c.createdAt);
+        const createdDate = normalizeToDate(c.createdAt);
         return createdDate && createdDate > oneMonthAgo;
       }).length,
       icon: Calendar,

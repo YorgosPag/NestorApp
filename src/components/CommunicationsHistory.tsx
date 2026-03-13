@@ -7,7 +7,7 @@ import {
   getTypeIcon, getTypeColor, getStatusIcon, getStatusColor,
   getDirectionLabel, getRelativeTime
 } from './communications/utils/formatters';
-import { formatDateTime as formatDate } from '@/lib/intl-utils';
+import { formatFlexibleDateTime, formatDateTime as formatDate } from '@/lib/intl-utils';
 import { useCommunicationsHistory } from './communications/hooks/useCommunicationsHistory';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: Import from canonical location
@@ -92,9 +92,7 @@ export default function CommunicationsHistory({ contactId }: CommunicationsHisto
                         <dt className="sr-only">{t('history.srOnly.participants')}</dt>
                         <dd>{comm.from} → {comm.to}</dd>
                         <dt className="sr-only">{t('history.srOnly.date')}</dt>
-                        <dd>{comm.createdAt && typeof comm.createdAt === 'object' && comm.createdAt !== null && 'toDate' in comm.createdAt && typeof (comm.createdAt as { toDate?: () => Date }).toDate === 'function'
-                          ? formatDate((comm.createdAt as { toDate: () => Date }).toDate())
-                          : formatDate(comm.createdAt as string | number | Date)}</dd>
+                        <dd>{formatFlexibleDateTime(comm.createdAt)}</dd>
                         <dt className="sr-only">{t('history.srOnly.relativeTime')}</dt>
                         <dd className={`text-xs ${colors.text.muted}`}>{getRelativeTime(comm.createdAt)}</dd>
                       </dl>

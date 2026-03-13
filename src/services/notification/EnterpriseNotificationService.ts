@@ -24,6 +24,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { createModuleLogger } from '@/lib/telemetry';
+import { normalizeToDate } from '@/lib/date-local';
 
 const notifLogger = createModuleLogger('EnterpriseNotificationService');
 
@@ -400,7 +401,7 @@ class EnterpriseNotificationService {
       version: configData.version || '1.0.0',
       tenantId,
       environment,
-      lastUpdated: configData.lastUpdated?.toDate() || new Date(),
+      lastUpdated: normalizeToDate(configData.lastUpdated) ?? new Date(),
       priorities,
       severityMappings,
       channels,

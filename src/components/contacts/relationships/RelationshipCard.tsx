@@ -13,7 +13,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { formatDate } from '@/lib/intl-utils';
+import { formatDate, formatFlexibleDate } from '@/lib/intl-utils';
 import {
   Edit,
   Trash2,
@@ -271,14 +271,14 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
               <span>
                 {t('relationships.card.createdAt')} {
                   relationship.createdAt
-                    ? formatDate('toDate' in relationship.createdAt ? relationship.createdAt.toDate() : relationship.createdAt)
+                    ? formatFlexibleDate(relationship.createdAt)
                     : t('relationships.card.recently')
                 }
               </span>
               {relationship.updatedAt && relationship.updatedAt !== relationship.createdAt && (
                 <span className="ml-4">
                   {t('relationships.card.updatedAt')} {
-                    formatDate('toDate' in relationship.updatedAt ? relationship.updatedAt.toDate() : relationship.updatedAt)
+                    formatFlexibleDate(relationship.updatedAt)
                   }
                 </span>
               )}

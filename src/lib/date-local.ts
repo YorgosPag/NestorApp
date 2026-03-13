@@ -54,6 +54,16 @@ export function fieldToISO(
  * Replaces `getNestedTimestamp()` in conversations/route.ts.
  * @see ADR-218
  */
+/**
+ * Timestamp / Date / string / number → epoch millis, or 0.
+ * Replaces scattered `getTime()` / `resolveMillis()` helpers in sort comparators.
+ * @see ADR-218 Phase 2
+ */
+export function normalizeToMillis(val: unknown): number {
+  const d = normalizeToDate(val);
+  return d ? d.getTime() : 0;
+}
+
 export function getNestedTimestampISO(data: Record<string, unknown>, path: string): string {
   const parts = path.split('.');
   let current: unknown = data;

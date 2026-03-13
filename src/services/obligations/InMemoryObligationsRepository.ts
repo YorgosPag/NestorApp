@@ -39,49 +39,15 @@ import { DEFAULT_TEMPLATE_SECTIONS } from '@/types/obligation-services';
 import type { IObligationsRepository, SearchFilters, ObligationStats } from './contracts';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { normalizeToDate } from '@/lib/date-local';
 import { validateObligationStatusTransition } from './workflow-rules';
 import { exportObligationToPDF } from '@/services/pdf';
 
 const logger = createModuleLogger('FirestoreObligationsRepository');
 
-const toDateValue = (value: unknown): Date => {
-  if (value instanceof Date) return value;
-
-  if (value && typeof value === 'object') {
-    const candidate = value as {
-      toDate?: () => Date;
-      toMillis?: () => number;
-      seconds?: number;
-      nanoseconds?: number;
-    };
-
-    try {
-      if (typeof candidate.toDate === 'function') {
-        return candidate.toDate();
-      }
-
-      if (typeof candidate.toMillis === 'function') {
-        return new Date(candidate.toMillis());
-      }
-    } catch {
-      // Ignore malformed timestamp shapes and continue with fallbacks.
-    }
-
-    if (typeof candidate.seconds === 'number') {
-      const millis = candidate.seconds * 1000 + Math.floor((candidate.nanoseconds ?? 0) / 1000000);
-      return new Date(millis);
-    }
-  }
-
-  return new Date();
-};
-
-const toOptionalDate = (value: unknown): Date | undefined => {
-  if (value === undefined || value === null) {
-    return undefined;
-  }
-  return toDateValue(value);
-};
+// ADR-218 Phase 2: Delegate to centralized normalizeToDate
+const toDateValue = (value: unknown): Date => normalizeToDate(value) ?? new Date();
+const toOptionalDate = (value: unknown): Date | undefined => normalizeToDate(value) ?? undefined;
 
 const createAuditEvent = (
   action: ObligationAuditEvent['action'],

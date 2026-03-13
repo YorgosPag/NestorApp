@@ -9,6 +9,7 @@ import { isRoleBypass } from '@/lib/auth/roles';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
+import { normalizeToMillis } from '@/lib/date-local';
 
 const logger = createModuleLogger('BuildingsRoute');
 
@@ -83,19 +84,7 @@ export const GET = withStandardRateLimit(
     })) as BuildingDocument[];
 
     // 🔄 ENTERPRISE: Server-side sort by createdAt (desc order)
-    buildings.sort((a, b) => {
-      const getTime = (val: BuildingDocument['createdAt']): number => {
-        if (!val) return 0;
-        if (typeof val === 'string') return new Date(val).getTime();
-        if (val instanceof Date) return val.getTime();
-        // Admin SDK returns Timestamp as { seconds, nanoseconds }
-        if (typeof val === 'object' && 'seconds' in val) {
-          return val.seconds * 1000 + val.nanoseconds / 1000000;
-        }
-        return 0;
-      };
-      return getTime(b.createdAt) - getTime(a.createdAt);
-    });
+    buildings.sort((a, b) => normalizeToMillis(b.createdAt) - normalizeToMillis(a.createdAt));
 
     logger.info('[Buildings] Found buildings for tenant', { count: buildings.length, tenantCompanyId, projectId: projectId || undefined });
 

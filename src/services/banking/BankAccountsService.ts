@@ -34,6 +34,7 @@ import {
 } from 'firebase/firestore';
 
 import { db } from '@/lib/firebase';
+import { normalizeToDate } from '@/lib/date-local';
 import type {
   BankAccount,
   BankAccountInput,
@@ -80,8 +81,8 @@ function docToBankAccount(
     holderName: data.holderName,
     notes: data.notes,
     isActive: data.isActive ?? true,
-    createdAt: data.createdAt?.toDate() ?? new Date(),
-    updatedAt: data.updatedAt?.toDate() ?? new Date()
+    createdAt: normalizeToDate(data.createdAt) ?? new Date(),
+    updatedAt: normalizeToDate(data.updatedAt) ?? new Date()
   };
 }
 

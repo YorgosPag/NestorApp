@@ -24,6 +24,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { createModuleLogger } from '@/lib/telemetry';
+import { normalizeToDate } from '@/lib/date-local';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 const logger = createModuleLogger('useRelationshipStatistics');
 
@@ -176,16 +177,8 @@ export function useRelationshipStatistics(
         const oneMonthAgo = new Date();
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
-        let relCreatedAt: Date;
-        if (typeof rel.createdAt === 'string') {
-          relCreatedAt = new Date(rel.createdAt);
-        } else if (rel.createdAt && typeof rel.createdAt === 'object' && 'toDate' in rel.createdAt) {
-          relCreatedAt = rel.createdAt.toDate();
-        } else if (rel.createdAt instanceof Date) {
-          relCreatedAt = rel.createdAt;
-        } else {
-          return;
-        }
+        const relCreatedAt = normalizeToDate(rel.createdAt);
+        if (!relCreatedAt) return;
 
         const isRecent = relCreatedAt > oneMonthAgo;
         logger.info('RECENT RESULT:', { data: {

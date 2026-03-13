@@ -22,15 +22,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatFileSize } from '@/utils/file-validation';
-import { formatDate } from '@/lib/intl-utils';
+import { formatDate, formatFlexibleDate } from '@/lib/intl-utils';
 import { FileVersionService, type FileVersionSnapshot } from '@/services/file-version.service';
-
-/** Convert Firestore Timestamp | Date | string to Date-compatible value */
-function toDateValue(value: Date | string | { toDate(): Date }): Date | string {
-  if (typeof value === 'string' || value instanceof Date) return value;
-  if (typeof value === 'object' && 'toDate' in value) return value.toDate();
-  return String(value);
-}
 
 // ============================================================================
 // TYPES
@@ -191,7 +184,7 @@ export function VersionHistory({
             <div className={cn('flex items-center gap-2 text-xs', colors.text.muted)}>
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                {formatDate(toDateValue(version.createdAt))}
+                {formatFlexibleDate(version.createdAt)}
               </span>
               <span>{formatFileSize(version.sizeBytes)}</span>
               {version.changeNote && (

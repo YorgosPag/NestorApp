@@ -1,5 +1,6 @@
 import { Mail, Phone, MessageSquare, Send, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { formatDateTime } from '@/lib/intl-utils';
+import { normalizeToDate } from '@/lib/date-local';
 
 export const getTypeIcon = (type: string) => ({
   email: Mail, sms: MessageSquare, call: Phone, whatsapp: MessageSquare, telegram: Send,
@@ -33,25 +34,17 @@ export const getDirectionLabel = (direction: string) =>
 export const getRelativeTime = (timestamp: Date | string | number | { toDate?: () => Date } | null | undefined) => {
   if (!timestamp) return '';
   try {
-    // 🏢 ENTERPRISE: Type-safe Firestore timestamp handling
-    const date = typeof timestamp === 'object' && timestamp !== null && 'toDate' in timestamp && typeof timestamp.toDate === 'function'
-      ? timestamp.toDate()
-      : new Date(timestamp as string | number | Date);
-    if(isNaN(date.getTime())) return '';
+    const date = normalizeToDate(timestamp);
+    if (!date) return '';
     const now = new Date();
     const diffInMinutes = Math.floor((+now - +date) / (1000 * 60));
-    // 🌐 i18n: Relative time keys - components should use t() function with interpolation
     if (diffInMinutes < 1) return 'common.time.justNow';
     if (diffInMinutes < 60) return 'common.time.minutesAgo';
     const diffInHours = Math.floor(diffInMinutes / 60);
     if (diffInHours < 24) return 'common.time.hoursAgo';
     const diffInDays = Math.floor(diffInHours / 24);
     if (diffInDays < 7) return 'common.time.daysAgo';
-    // 🏢 ENTERPRISE: Type-safe date conversion before formatting
-    const dateValue = typeof timestamp === 'object' && timestamp !== null && 'toDate' in timestamp && typeof timestamp.toDate === 'function'
-      ? timestamp.toDate()
-      : new Date(timestamp as string | number | Date);
-    return formatDateTime(dateValue);
+    return formatDateTime(date);
   } catch {
     return '';
   }

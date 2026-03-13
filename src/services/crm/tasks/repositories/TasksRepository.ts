@@ -2,6 +2,7 @@
 
 import { db } from '@/lib/firebase';
 import { doc, updateDoc, deleteDoc, setDoc, Timestamp, serverTimestamp, where, orderBy, type DocumentData } from 'firebase/firestore';
+import { normalizeToTimestamp } from '@/lib/firestore/utils';
 import { generateTaskId } from '@/services/enterprise-id.service';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { firestoreQueryService } from '@/services/firestore';
@@ -24,19 +25,8 @@ export class TasksRepository implements ITasksRepository {
       throw new Error('VALIDATION_ERROR: companyId is required to create a task');
     }
 
-    // Proper FirestoreishTimestamp → Timestamp conversion
-    let dueDateTimestamp: Timestamp | null = null;
-    if (data.dueDate) {
-      if (data.dueDate instanceof Timestamp) {
-        dueDateTimestamp = data.dueDate;
-      } else if (data.dueDate instanceof Date) {
-        dueDateTimestamp = Timestamp.fromDate(data.dueDate);
-      } else if (typeof data.dueDate === 'string') {
-        dueDateTimestamp = Timestamp.fromDate(new Date(data.dueDate));
-      } else if (typeof data.dueDate === 'object' && 'toDate' in data.dueDate) {
-        dueDateTimestamp = Timestamp.fromDate(data.dueDate.toDate());
-      }
-    }
+    // ADR-218 Phase 2: Centralized timestamp conversion
+    const dueDateTimestamp = data.dueDate ? normalizeToTimestamp(data.dueDate) : null;
 
     const payload: Record<string, unknown> = {
       ...data,
@@ -120,17 +110,7 @@ export class TasksRepository implements ITasksRepository {
     const updatePayload: Record<string, unknown> = { ...updates, updatedAt: serverTimestamp() };
 
     if (updates.dueDate !== undefined) {
-      if (updates.dueDate === null) {
-        updatePayload.dueDate = null;
-      } else if (updates.dueDate instanceof Timestamp) {
-        updatePayload.dueDate = updates.dueDate;
-      } else if (updates.dueDate instanceof Date) {
-        updatePayload.dueDate = Timestamp.fromDate(updates.dueDate);
-      } else if (typeof updates.dueDate === 'string') {
-        updatePayload.dueDate = Timestamp.fromDate(new Date(updates.dueDate));
-      } else if (typeof updates.dueDate === 'object' && 'toDate' in updates.dueDate) {
-        updatePayload.dueDate = Timestamp.fromDate(updates.dueDate.toDate());
-      }
+      updatePayload.dueDate = updates.dueDate === null ? null : normalizeToTimestamp(updates.dueDate);
     }
 
     await updateDoc(doc(db, this.collectionName, id), updatePayload);

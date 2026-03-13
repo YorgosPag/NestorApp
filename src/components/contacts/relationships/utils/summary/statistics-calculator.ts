@@ -8,6 +8,7 @@
 // ============================================================================
 
 import type { ContactRelationship } from '@/types/contacts/relationships';
+import { normalizeToDate } from '@/lib/date-local';
 
 // ============================================================================
 // TYPES
@@ -121,23 +122,8 @@ export function calculateRecentRelationships(relationships: ContactRelationship[
   oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
   return relationships.filter(rel => {
-    if (!rel.createdAt) return false;
-
-    let relCreatedAt: Date;
-
-    // Handle different createdAt formats
-    if (typeof rel.createdAt === 'string') {
-      relCreatedAt = new Date(rel.createdAt);
-    } else if (rel.createdAt && typeof rel.createdAt === 'object' && 'toDate' in rel.createdAt) {
-      // Firestore Timestamp object
-      relCreatedAt = rel.createdAt.toDate();
-    } else if (rel.createdAt instanceof Date) {
-      relCreatedAt = rel.createdAt;
-    } else {
-      return false;
-    }
-
-    return relCreatedAt > oneMonthAgo;
+    const relCreatedAt = normalizeToDate(rel.createdAt);
+    return relCreatedAt ? relCreatedAt > oneMonthAgo : false;
   }).length;
 }
 

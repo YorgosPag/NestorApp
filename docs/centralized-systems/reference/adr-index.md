@@ -517,8 +517,8 @@
 ### ADR-218: Timestamp Conversion Centralization
 - **Status**: ✅ Implemented
 - **File**: `docs/centralized-systems/reference/adrs/ADR-218-timestamp-conversion-centralization.md`
-- **SSoT**: `src/lib/date-local.ts` — `normalizeToISO()`, `fieldToISO()`, `getNestedTimestampISO()`
-- **Summary**: Centralized all Firestore Timestamp→ISO string conversions. Eliminated 80+ scattered occurrences across 20 files. Extended `date-local.ts` with 3 new functions. Also fixed `chunkArray` duplicate in `firestore-query.service.ts`.
+- **SSoT**: `src/lib/date-local.ts` — `normalizeToDate()`, `normalizeToISO()`, `normalizeToMillis()`, `fieldToISO()`, `getNestedTimestampISO()`; `src/lib/firestore/utils.ts` — `normalizeToTimestamp()`; `src/lib/intl-utils.ts` — `formatFlexibleDate()`, `formatFlexibleDateTime()`
+- **Summary**: Phase 1 (2026-03-12): Centralized Firestore Timestamp→ISO conversions, 80+ occurrences across 20 files. Phase 2 (2026-03-13): Added `normalizeToMillis`, `normalizeToTimestamp`, `formatFlexibleDate`; migrated 22 more files, deleted 6 local duplicate functions, ~180 lines boilerplate eliminated.
 
 ### ADR-219: Notification/Toast System Consolidation
 - **Status**: ✅ Implemented

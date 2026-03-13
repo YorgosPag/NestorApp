@@ -108,3 +108,4 @@ export function getNestedTimestampISO(data: Record<string, unknown>, path: strin
 |------|--------|
 | 2026-03-12 | Initial implementation — Phases 1-6 complete |
 | 2026-03-12 | Phase 7: Added `getNestedTimestampISO`, eliminated remaining 7 duplicate functions (milestones, construction-phases, InboxView, conversations nested) |
+| 2026-03-13 | **Phase 2**: Added 3 new functions (`normalizeToMillis` in date-local.ts, `normalizeToTimestamp` in firestore/utils.ts, `formatFlexibleDate` in intl-utils.ts). Migrated 22 files across 5 categories: deleted 6 local duplicate functions (~90 lines), replaced inline `.toDate()` patterns in 7 components and 6 services, replaced 2 sort helpers with `normalizeToMillis`, replaced `instanceof Timestamp` chains with `normalizeToTimestamp` in TasksRepository. Total ~180 lines boilerplate eliminated. |

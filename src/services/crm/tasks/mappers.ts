@@ -12,15 +12,16 @@
 
 import type { CrmTask } from '@/types/crm';
 import type { QueryDocumentSnapshot, DocumentSnapshot, DocumentData } from 'firebase/firestore';
+import { normalizeToDate } from '@/lib/date-local';
 
 /** Intermediate type for task transformation */
 type TaskTransformOutput = Partial<CrmTask> & { id: string; [key: string]: unknown };
 
-/** Convert a Firestore Timestamp-like value to a Date */
-const toDateIfTimestamp = (v: unknown): unknown =>
-  v && typeof v === 'object' && 'toDate' in v && typeof (v as { toDate: unknown }).toDate === 'function'
-    ? (v as { toDate: () => Date }).toDate()
-    : v;
+/** Convert a Firestore Timestamp-like value to a Date; pass non-timestamp values through */
+const toDateIfTimestamp = (v: unknown): unknown => {
+  if (v && typeof v === 'object' && 'toDate' in v) return normalizeToDate(v);
+  return v;
+};
 
 /** Transform a Firestore DocumentSnapshot to CrmTask (legacy — used by write-adjacent reads) */
 export const transformTask = (snap: QueryDocumentSnapshot | DocumentSnapshot): CrmTask => {

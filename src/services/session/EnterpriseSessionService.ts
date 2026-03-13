@@ -35,6 +35,7 @@ import {
 } from 'firebase/firestore';
 import type { Firestore } from 'firebase/firestore';
 import { SUBCOLLECTIONS, COLLECTIONS } from '@/config/firestore-collections';
+import { normalizeToDate } from '@/lib/date-local';
 import type {
   UserSession,
   SessionDeviceInfo,
@@ -724,18 +725,10 @@ export class EnterpriseSessionService {
       deviceInfo: data.deviceInfo as SessionDeviceInfo,
       location: data.location as SessionLocation,
       timestamps: {
-        createdAt: (data.timestamps as Record<string, unknown>).createdAt instanceof Timestamp
-          ? ((data.timestamps as Record<string, unknown>).createdAt as Timestamp).toDate()
-          : new Date((data.timestamps as Record<string, unknown>).createdAt as string),
-        lastActiveAt: (data.timestamps as Record<string, unknown>).lastActiveAt instanceof Timestamp
-          ? ((data.timestamps as Record<string, unknown>).lastActiveAt as Timestamp).toDate()
-          : new Date((data.timestamps as Record<string, unknown>).lastActiveAt as string),
-        expiresAt: (data.timestamps as Record<string, unknown>).expiresAt instanceof Timestamp
-          ? ((data.timestamps as Record<string, unknown>).expiresAt as Timestamp).toDate()
-          : new Date((data.timestamps as Record<string, unknown>).expiresAt as string),
-        revokedAt: (data.timestamps as Record<string, unknown>).revokedAt instanceof Timestamp
-          ? ((data.timestamps as Record<string, unknown>).revokedAt as Timestamp).toDate()
-          : undefined
+        createdAt: normalizeToDate((data.timestamps as Record<string, unknown>).createdAt) ?? new Date(),
+        lastActiveAt: normalizeToDate((data.timestamps as Record<string, unknown>).lastActiveAt) ?? new Date(),
+        expiresAt: normalizeToDate((data.timestamps as Record<string, unknown>).expiresAt) ?? new Date(),
+        revokedAt: normalizeToDate((data.timestamps as Record<string, unknown>).revokedAt) ?? undefined
       },
       status: data.status as SessionStatus,
       isCurrent: data.isCurrent as boolean,

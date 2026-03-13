@@ -9,9 +9,10 @@
  * @module services/calendar/mappers
  */
 
-import type { CrmTask, FirestoreishTimestamp } from '@/types/crm';
+import type { CrmTask } from '@/types/crm';
 import type { AppointmentDocument } from '@/types/appointment';
 import type { CalendarEvent, CalendarEventType } from '@/types/calendar-event';
+import { normalizeToDate } from '@/lib/date-local';
 
 // ============================================================================
 // HELPERS
@@ -38,26 +39,7 @@ function stripHtmlToPlainText(html: string): string {
     .trim();
 }
 
-/**
- * Normalize FirestoreishTimestamp to a Date object.
- * Returns null if the value cannot be converted.
- */
-function normalizeTimestamp(value: FirestoreishTimestamp | null | undefined): Date | null {
-  if (!value) return null;
-
-  if (value instanceof Date) return value;
-
-  if (typeof value === 'string') {
-    const parsed = new Date(value);
-    return isNaN(parsed.getTime()) ? null : parsed;
-  }
-
-  if (typeof value === 'object' && 'toDate' in value) {
-    return value.toDate();
-  }
-
-  return null;
-}
+// ADR-218 Phase 2: normalizeTimestamp → centralised normalizeToDate
 
 /**
  * Map CrmTask.type to CalendarEventType
@@ -75,7 +57,7 @@ function taskTypeToEventType(taskType: CrmTask['type']): CalendarEventType {
  * Returns null if the task has no dueDate (cannot be placed on calendar).
  */
 export function taskToCalendarEvent(task: CrmTask): CalendarEvent | null {
-  const start = normalizeTimestamp(task.dueDate);
+  const start = normalizeToDate(task.dueDate);
   if (!start) return null;
 
   const taskId = task.id ?? '';

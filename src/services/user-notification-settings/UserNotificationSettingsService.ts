@@ -26,6 +26,7 @@ import {
   Timestamp,
   Firestore,
 } from 'firebase/firestore';
+import { normalizeToDate } from '@/lib/date-local';
 
 import {
   UserNotificationSettings,
@@ -417,14 +418,8 @@ class UserNotificationSettingsService {
         ...defaults.quietHours,
         ...((data.quietHours as Record<string, unknown>) ?? {}),
       },
-      createdAt:
-        data.createdAt instanceof Timestamp
-          ? data.createdAt.toDate()
-          : defaults.createdAt,
-      updatedAt:
-        data.updatedAt instanceof Timestamp
-          ? data.updatedAt.toDate()
-          : defaults.updatedAt,
+      createdAt: normalizeToDate(data.createdAt) ?? defaults.createdAt,
+      updatedAt: normalizeToDate(data.updatedAt) ?? defaults.updatedAt,
     };
   }
 

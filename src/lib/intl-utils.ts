@@ -576,6 +576,18 @@ export const formatFlexibleDateTime = (value: unknown, options?: Intl.DateTimeFo
  * @param value - FlexibleDateInput
  * @returns "HH:mm" string or '' for invalid/missing input
  */
+/**
+ * Format any flexible date input into a localized date-only string.
+ * Bridge: normalizeToDate() → formatDate()
+ * Replaces inline `typeof ts === 'object' && 'toDate' in ts ? ...` ternaries in JSX.
+ * @see ADR-218 Phase 2
+ */
+export const formatFlexibleDate = (value: unknown, options?: Intl.DateTimeFormatOptions): string => {
+  const date = normalizeToDate(value);
+  if (!date) return '-';
+  return formatDate(date, options);
+};
+
 export const formatFlexibleTimeOnly = (value: unknown): string => {
   const date = normalizeToDate(value);
   if (!date) return '';
