@@ -14,6 +14,7 @@ import { GREEK_VAT_RATES } from '@/subapps/accounting/services/config/vat-config
 import {
   buildReservationConfirmationEmail,
   buildCancellationConfirmationEmail,
+  buildSaleConfirmationEmail,
   wrapInBrandedTemplate,
   BRAND,
   escapeHtml,
@@ -295,6 +296,68 @@ function buildCreditNotification(
   return { subject, html, text };
 }
 
+function buildReservationNotifyNotification(
+  event: SalesAccountingEvent & { eventType: 'reservation_notify' }
+): AccountingNotification {
+  const netAmount = event.depositAmount > 0 ? event.depositAmount / VAT_DIVISOR : 0;
+  const vatAmount = event.depositAmount > 0 ? event.depositAmount - netAmount : 0;
+
+  const subject = event.depositAmount > 0
+    ? `Νέα κράτηση — ${event.unitName} (${formatEuro(event.depositAmount)})`
+    : `Νέα κράτηση — ${event.unitName} (χωρίς προκαταβολή)`;
+
+  const financialSection = event.depositAmount > 0
+    ? htmlCard('ΟΙΚΟΝΟΜΙΚΑ ΣΤΟΙΧΕΙΑ', [
+        htmlInfoRow('Καθαρό ποσό', formatEuro(netAmount)),
+        htmlInfoRow('ΦΠΑ 24%', formatEuro(vatAmount)),
+        htmlTotalRow('Σύνολο (με ΦΠΑ)', formatEuro(event.depositAmount)),
+        htmlInfoRow('Τρόπος πληρωμής', formatPaymentMethod(event.paymentMethod)),
+      ].join(''))
+    : `<p style="margin:0 0 20px;font-size:14px;color:${BRAND.gray};padding:12px 16px;background-color:${BRAND.bgLight};border-radius:6px;border:1px solid ${BRAND.border};">
+        Η κράτηση δεν συνοδεύεται από προκαταβολή.
+      </p>`;
+
+  const contentHtml = `
+    <p style="margin:0 0 16px;font-size:16px;color:${BRAND.navyDark};">
+      <strong>Νέα Κράτηση Μονάδας</strong>
+    </p>
+    <p style="margin:0 0 24px;font-size:14px;color:${BRAND.gray};">
+      Ημερομηνία: ${formatDate(new Date())}
+    </p>
+
+    ${htmlCard('ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ', buildPropertyRows(event))}
+
+    ${htmlCard('ΣΤΟΙΧΕΙΑ ΑΓΟΡΑΣΤΗ', htmlInfoRow('Αγοραστής', escapeHtml(event.buyerName ?? 'Μη καταχωρημένος')))}
+
+    ${financialSection}
+  `;
+
+  const html = wrapInBrandedTemplate({ contentHtml });
+
+  const textLines = [
+    `ΝΕΑ ΚΡΑΤΗΣΗ ΜΟΝΑΔΑΣ`,
+    `Ημερομηνία: ${formatDate(new Date())}`,
+    ``,
+    `Μονάδα: ${event.unitName}`,
+    ...(event.companyName ? [`Εταιρεία: ${event.companyName}`] : []),
+    ...(event.projectName ? [`Έργο: ${event.projectName}`] : []),
+    `Αγοραστής: ${event.buyerName ?? 'Μη καταχωρημένος'}`,
+  ];
+
+  if (event.depositAmount > 0) {
+    textLines.push(
+      ``,
+      `Καθαρό ποσό: ${formatEuro(netAmount)}`,
+      `ΦΠΑ 24%: ${formatEuro(vatAmount)}`,
+      `Σύνολο: ${formatEuro(event.depositAmount)}`,
+    );
+  } else {
+    textLines.push(``, `Χωρίς προκαταβολή.`);
+  }
+
+  return { subject, html, text: textLines.join('\n') };
+}
+
 // ============================================================================
 // MAIN FUNCTION
 // ============================================================================
@@ -307,10 +370,10 @@ function buildCreditNotification(
  */
 export async function notifyAccountingOffice(
   event: SalesAccountingEvent,
-  result: SalesAccountingResult
+  result: SalesAccountingResult | null
 ): Promise<void> {
-  // Skip αν δεν πέτυχε η δημιουργία τιμολογίου
-  if (!result.success) {
+  // Skip αν result υπάρχει αλλά δεν πέτυχε
+  if (result !== null && !result.success) {
     console.log('[ADR-198 Notify] Skipping — invoice creation failed');
     return;
   }
@@ -329,18 +392,17 @@ export async function notifyAccountingOffice(
 
     switch (event.eventType) {
       case 'deposit_invoice':
-        notification = buildDepositNotification(event, result);
+        notification = buildDepositNotification(event, result!);
         break;
       case 'final_sale_invoice':
-        notification = buildFinalSaleNotification(event, result);
+        notification = buildFinalSaleNotification(event, result!);
         break;
       case 'credit_invoice':
-        notification = buildCreditNotification(event, result);
+        notification = buildCreditNotification(event, result!);
         break;
       case 'reservation_notify':
-        // Reservation notify δεν στέλνει email στο λογιστήριο — μόνο buyer email
-        console.log('[ADR-198 Notify] Skipping accounting email for reservation_notify');
-        return;
+        notification = buildReservationNotifyNotification(event);
+        break;
     }
 
     const mailResult = await sendReplyViaMailgun({
@@ -474,6 +536,63 @@ export async function notifyBuyerCancellation(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.warn(`[Buyer Notify] Failed to send cancellation email: ${msg}`);
+  }
+}
+
+// ============================================================================
+// BUYER NOTIFICATION — Branded HTML Sale Confirmation
+// ============================================================================
+
+/**
+ * Στέλνει branded HTML email επιβεβαίωσης πώλησης στον αγοραστή.
+ *
+ * Fire-and-forget: αν αποτύχει, δεν επηρεάζει τη ροή πώλησης.
+ * Στέλνεται ΜΟΝΟ αν ο αγοραστής έχει email.
+ */
+export async function notifyBuyerSale(
+  event: SalesAccountingEvent & { eventType: 'final_sale_invoice' },
+  result: SalesAccountingResult,
+  buyerEmail: string,
+  buyerName: string
+): Promise<void> {
+  if (!result.success) {
+    console.log('[Buyer Notify] Skipping sale — invoice creation failed');
+    return;
+  }
+
+  console.log(`[Buyer Notify] Sending branded sale confirmation to ${buyerEmail}`);
+
+  try {
+    const invoiceRef = result.invoiceNumber ? `A-${result.invoiceNumber}` : null;
+    const { subject, html, text } = buildSaleConfirmationEmail({
+      buyerName,
+      unitName: event.unitName,
+      unitFloor: event.unitFloor,
+      buildingName: event.buildingName,
+      projectName: event.projectName,
+      projectAddress: event.projectAddress,
+      companyName: event.companyName,
+      finalPrice: event.finalPrice,
+      depositAlreadyInvoiced: event.depositAlreadyInvoiced,
+      paymentMethod: event.paymentMethod,
+      invoiceRef,
+    });
+
+    const mailResult = await sendReplyViaMailgun({
+      to: buyerEmail,
+      subject,
+      textBody: text,
+      htmlBody: html,
+    });
+
+    if (mailResult.success) {
+      console.log(`[Buyer Notify] Sale email sent — messageId: ${mailResult.messageId}`);
+    } else {
+      console.warn(`[Buyer Notify] Mailgun sale error: ${mailResult.error}`);
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(`[Buyer Notify] Failed to send sale email: ${msg}`);
   }
 }
 

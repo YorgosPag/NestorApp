@@ -14,7 +14,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { getCategoryByCode } from '@/subapps/accounting/config/account-categories';
 import { generateTransactionId } from '@/services/enterprise-id.service';
-import { notifyAccountingOffice, notifyBuyerReservation, notifyBuyerCancellation } from './accounting-notification';
+import { notifyAccountingOffice, notifyBuyerReservation, notifyBuyerCancellation, notifyBuyerSale } from './accounting-notification';
 import type { CreateInvoiceInput } from '@/subapps/accounting/types/invoice';
 import type { InvoiceIssuer, InvoiceCustomer } from '@/subapps/accounting/types/invoice';
 import type { MyDataIncomeType } from '@/subapps/accounting/types/common';
@@ -110,7 +110,16 @@ export class SalesAccountingBridge {
     // 2. Email ειδοποίηση στο λογιστήριο (fire-and-forget)
     notifyAccountingOffice(event, result).catch(() => { /* silent */ });
 
-    // 3. Email ειδοποίηση ακύρωσης στον αγοραστή (fire-and-forget)
+    // 3. Email ειδοποίηση πώλησης στον αγοραστή (fire-and-forget)
+    if (event.eventType === 'final_sale_invoice' && event.buyerContactId) {
+      const buyerCustomer = await this.resolveCustomer(event.buyerContactId);
+      if (buyerCustomer.email) {
+        notifyBuyerSale(event, result, buyerCustomer.email, buyerCustomer.name)
+          .catch(() => { /* silent */ });
+      }
+    }
+
+    // 4. Email ειδοποίηση ακύρωσης στον αγοραστή (fire-and-forget)
     if (event.eventType === 'credit_invoice' && event.buyerContactId) {
       const buyerCustomer = await this.resolveCustomer(event.buyerContactId);
       if (buyerCustomer.email) {
@@ -127,6 +136,7 @@ export class SalesAccountingBridge {
   private async handleReservationNotify(
     event: ReservationNotifyEvent
   ): Promise<SalesAccountingResult> {
+    // Email στον αγοραστή
     if (event.buyerContactId) {
       const buyer = await this.resolveCustomer(event.buyerContactId);
       if (buyer.email) {
@@ -134,6 +144,9 @@ export class SalesAccountingBridge {
           .catch(() => { /* silent */ });
       }
     }
+
+    // Email στο λογιστήριο (fire-and-forget)
+    notifyAccountingOffice(event, null).catch(() => { /* silent */ });
 
     return {
       success: true,
