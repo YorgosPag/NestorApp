@@ -194,3 +194,4 @@ SalesAccountingBridge (Server Service)
 | 2026-03-11 | TransactionChainCard fix — apiClient unwraps canonical response |
 | 2026-03-11 | Firestore composite indexes deployed |
 | 2026-03-11 | VERIFIED in production — invoices, emails, UI card all working |
+| 2026-03-13 | Centralization audit: accounting-notification.ts — replaced hardcoded `/ 1.24` with `VAT_DIVISOR` derived from `GREEK_VAT_RATES` (vat-config.ts SSoT). Tax compliance fix. |

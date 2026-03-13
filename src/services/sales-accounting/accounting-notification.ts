@@ -8,8 +8,19 @@
 import 'server-only';
 
 import { sendReplyViaMailgun } from '@/services/ai-pipeline/shared/mailgun-sender';
+import { GREEK_VAT_RATES } from '@/subapps/accounting/services/config/vat-config';
 // Server-safe: avoids @/lib/intl-utils → react-i18next → createContext
+// formatEuro/formatDate kept local intentionally (server-only + 2-decimal financial formatting)
 import type { SalesAccountingEvent, SalesAccountingResult } from './types';
+
+// ============================================================================
+// VAT — derived from centralized vat-config (SSoT)
+// ============================================================================
+
+/** Standard Greek VAT rate, derived from GREEK_VAT_RATES (vat-config.ts SSoT) */
+const STANDARD_VAT_RATE = GREEK_VAT_RATES.find(r => r.code === 'standard_24')!.rate;
+/** Divisor for extracting net amount from gross: grossAmount / VAT_DIVISOR = netAmount */
+const VAT_DIVISOR = 1 + STANDARD_VAT_RATE / 100;
 
 // ============================================================================
 // CONFIGURATION
@@ -38,7 +49,7 @@ function buildDepositNotification(
 ): { subject: string; body: string } {
   const invoiceRef = result.invoiceNumber ? `A-${result.invoiceNumber}` : '—';
   const appUrl = getAppBaseUrl();
-  const netAmount = event.depositAmount / 1.24;
+  const netAmount = event.depositAmount / VAT_DIVISOR;
   const vatAmount = event.depositAmount - netAmount;
 
   return {
@@ -85,7 +96,7 @@ function buildFinalSaleNotification(
 ): { subject: string; body: string } {
   const invoiceRef = result.invoiceNumber ? `A-${result.invoiceNumber}` : '—';
   const remaining = event.finalPrice - event.depositAlreadyInvoiced;
-  const netRemaining = remaining / 1.24;
+  const netRemaining = remaining / VAT_DIVISOR;
   const vatRemaining = remaining - netRemaining;
   const appUrl = getAppBaseUrl();
 
@@ -136,7 +147,7 @@ function buildCreditNotification(
 ): { subject: string; body: string } {
   const invoiceRef = result.invoiceNumber ? `A-${result.invoiceNumber}` : '—';
   const appUrl = getAppBaseUrl();
-  const netAmount = event.creditAmount / 1.24;
+  const netAmount = event.creditAmount / VAT_DIVISOR;
   const vatAmount = event.creditAmount - netAmount;
 
   return {
@@ -255,11 +266,20 @@ export async function notifyAccountingOffice(
 // UTILITY
 // ============================================================================
 
-/** Server-safe currency formatter (avoids react-i18next dependency) */
+/**
+ * Server-safe currency formatter — kept local intentionally.
+ * Cannot import @/lib/intl-utils (pulls react-i18next → createContext in server-only context).
+ * Uses minimumFractionDigits: 2 (financial emails always show cents), unlike formatCurrency(0-2).
+ * @see @/lib/intl-utils formatCurrency — client-side equivalent
+ */
 function formatEuro(amount: number): string {
   return new Intl.NumberFormat('el', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
 }
 
+/**
+ * Server-safe date formatter — kept local for same server-only constraint as formatEuro.
+ * @see @/lib/intl-utils formatDateTime — client-side equivalent
+ */
 function formatDate(date: Date): string {
   return new Intl.DateTimeFormat('el-GR', {
     day: '2-digit',

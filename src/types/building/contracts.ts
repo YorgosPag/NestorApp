@@ -4,26 +4,9 @@ import type { BuildingFeatureKey } from './features';
 import type { BuildingAddressReference, ProjectAddress } from '../project/addresses';
 
 // Building hierarchy interfaces
-export interface Contact {
-    id: string;
-    name: string;
-    type: 'individual' | 'company' | 'government';
-    email?: string;
-    phone?: string;
-    address?: string;
-  }
-  
-  export interface Project {
-    id: string;
-    name: string;
-    contactId: string; // References Contact
-    description?: string;
-    startDate?: string;
-    expectedCompletionDate?: string;
-    status: 'planning' | 'active' | 'completed' | 'cancelled';
-    totalValue?: number;
-  }
-  
+// NOTE: Contact → @/types/contacts, Project → @/types/project (canonical types)
+// Dead Contact/Project interfaces removed 2026-03-13 (centralization audit)
+
   /** 🏢 ENTERPRISE: Building types for construction industry */
   export type BuildingType = 'residential' | 'commercial' | 'industrial' | 'mixed' | 'office' | 'warehouse';
 
@@ -129,7 +112,7 @@ export interface Contact {
     id: string;
     floorId: string; // References Floor
     code: string;
-    type: 'studio' | 'apartment_1br' | 'apartment_2br' | 'apartment_3br' | 'maisonette' | 'store';
+    type: 'studio' | 'apartment_1br' | 'apartment_2br' | 'apartment_3br' | 'maisonette' | 'store' | 'shop';
     area: number;
     price: number;
     status: 'available' | 'sold' | 'reserved';
