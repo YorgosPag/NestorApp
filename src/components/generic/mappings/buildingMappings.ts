@@ -67,6 +67,12 @@ import { ParkingTabContent } from '@/components/building-management/tabs/Parking
 import { UnitsTabContent } from '@/components/building-management/tabs/UnitsTabContent';
 
 // ============================================================================
+// AUDIT & HISTORY (ADR-195)
+// ============================================================================
+
+import { ActivityTab } from '@/components/shared/audit/ActivityTab';
+
+// ============================================================================
 // BUILDING COMPONENT MAPPING
 // 🏢 ENTERPRISE: Explicit type for UniversalTabsRenderer compatibility
 // ============================================================================
@@ -98,6 +104,9 @@ export const BUILDING_COMPONENT_MAPPING: Record<string, ComponentType<TabCompone
   'BuildingVideosTab': BuildingVideosTab as ComponentType<TabComponentProps>, // 🏢 EntityFilesManager
   'BuildingActivityTab': AnalyticsTabContent as ComponentType<TabComponentProps>,
   'BuildingMeasurementsTab': MeasurementsTabContent as ComponentType<TabComponentProps>,
+
+  // 🏢 AUDIT & HISTORY (ADR-195)
+  'ActivityTab': ActivityTab as ComponentType<TabComponentProps>,
 };
 
 // ============================================================================

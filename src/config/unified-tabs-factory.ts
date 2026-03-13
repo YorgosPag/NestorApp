@@ -534,7 +534,22 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             order: 15,
             enabled: true,
             component: 'VideosTabContent'
-          }
+          },
+          // ===============================================================
+          // ΕΛΕΓΧΟΣ — Audit & History (ADR-195)
+          // ===============================================================
+          {
+            id: 'history',
+            value: 'history',
+            icon: 'clock',
+            description: 'tabs.descriptions.history',
+            order: 16,
+            enabled: true,
+            component: 'ActivityTab',
+            componentProps: {
+              entityType: 'building',
+            },
+          },
         ],
         defaultEnabled: true
       };
