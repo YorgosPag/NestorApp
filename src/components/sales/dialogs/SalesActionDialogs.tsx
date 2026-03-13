@@ -158,6 +158,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
   const [buyerName, setBuyerName] = useState<string>('');
   const [buyerHasEmail, setBuyerHasEmail] = useState<boolean>(true);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string>('');
 
   // ADR-199: Linked spaces (appurtenances)
   const linkedSpaces = useLinkedSpacesForSale(unit);
@@ -200,6 +201,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
 
   const handleSave = useCallback(async () => {
     setSaving(true);
+    setSaveError('');
     try {
       await apiClient.patch(`/api/units/${unit.id}`, {
         commercialStatus: 'reserved',
@@ -264,12 +266,15 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
           logger.warn('Appurtenance sync fire-and-forget failed', { error: err });
         });
       }
-    } catch {
-      // Error handled by service
+    } catch (err: unknown) {
+      const errorObj = err as { message?: string; error?: string };
+      const msg = errorObj?.error ?? errorObj?.message ?? t('common.unknownError', { defaultValue: 'Σφάλμα κατά την κράτηση' });
+      setSaveError(msg);
+      logger.warn('Reserve failed', { error: msg });
     } finally {
       setSaving(false);
     }
-  }, [deposit, buyerContactId, buyerName, unit, onOpenChange, onSuccess, linkedSpaces]);
+  }, [deposit, buyerContactId, buyerName, unit, onOpenChange, onSuccess, linkedSpaces, t]);
 
   return (
     <>
@@ -350,6 +355,13 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
             )}
           </section>
 
+          {saveError && (
+            <p className="flex items-center gap-1.5 text-sm text-destructive px-1">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              {saveError}
+            </p>
+          )}
+
           <DialogFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
               {t('common.cancel', { defaultValue: 'Ακύρωση' })}
@@ -384,6 +396,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
     unit.commercial?.askingPrice?.toString() ?? ''
   );
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string>('');
 
   // Buyer state: initialized from existing commercial data (if reserved → sell flow)
   const existingBuyerId = unit.commercial?.buyerContactId ?? '';
@@ -417,6 +430,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
     if (isNaN(price) || price <= 0 || !buyerContactId) return;
 
     setSaving(true);
+    setSaveError('');
     try {
       await apiClient.patch(`/api/units/${unit.id}`, {
         commercialStatus: 'sold',
@@ -477,12 +491,15 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
           logger.warn('Appurtenance sync fire-and-forget failed', { error: err });
         });
       }
-    } catch {
-      // Error handled by service
+    } catch (err: unknown) {
+      const errorObj = err as { message?: string; error?: string };
+      const msg = errorObj?.error ?? errorObj?.message ?? t('common.unknownError', { defaultValue: 'Σφάλμα κατά την πώληση' });
+      setSaveError(msg);
+      logger.warn('Sell failed', { error: msg });
     } finally {
       setSaving(false);
     }
-  }, [finalPrice, buyerContactId, buyerName, unit, onOpenChange, onSuccess, linkedSpaces]);
+  }, [finalPrice, buyerContactId, buyerName, unit, onOpenChange, onSuccess, linkedSpaces, t]);
 
   const askingPrice = unit.commercial?.askingPrice;
   const discount = askingPrice && Number(finalPrice) > 0
@@ -584,6 +601,13 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
             })}
           </p>
         </section>
+
+        {saveError && (
+          <p className="flex items-center gap-1.5 text-sm text-destructive px-1">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            {saveError}
+          </p>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
