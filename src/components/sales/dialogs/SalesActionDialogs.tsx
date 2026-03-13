@@ -27,6 +27,7 @@ import { ContactSearchManager } from '@/components/contacts/relationships/Contac
 import { TabbedAddNewContactDialog } from '@/components/contacts/dialogs/TabbedAddNewContactDialog';
 import { AppurtenancesSection } from './AppurtenancesSection';
 import { useLinkedSpacesForSale } from '@/hooks/sales/useLinkedSpacesForSale';
+import { useContactEmailWatch } from '@/hooks/sales/useContactEmailWatch';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('SalesActionDialogs');
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
@@ -156,9 +157,11 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
   const [deposit, setDeposit] = useState<string>('');
   const [buyerContactId, setBuyerContactId] = useState<string>('');
   const [buyerName, setBuyerName] = useState<string>('');
-  const [buyerHasEmail, setBuyerHasEmail] = useState<boolean>(true);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string>('');
+
+  // Real-time email watch — updates live when contact card is edited in another tab
+  const { hasEmail: buyerHasEmail } = useContactEmailWatch(buyerContactId);
 
   // ADR-199: Linked spaces (appurtenances)
   const linkedSpaces = useLinkedSpacesForSale(unit);
@@ -179,7 +182,6 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
   const handleContactSelect = useCallback((contact: ContactSummary | null) => {
     setBuyerContactId(contact?.id ?? '');
     setBuyerName(contact?.name ?? '');
-    setBuyerHasEmail(!!contact?.email);
   }, []);
 
   // 🏢 ENTERPRISE: Switch to new contact dialog — hides Reserve, shows Contact form
@@ -403,7 +405,9 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
   const existingBuyerName = unit.commercial?.buyerName ?? '';
   const [buyerContactId, setBuyerContactId] = useState<string>(existingBuyerId);
   const [buyerName, setBuyerName] = useState<string>(existingBuyerName);
-  const [buyerHasEmail, setBuyerHasEmail] = useState<boolean>(true);
+
+  // Real-time email watch — updates live when contact card is edited in another tab
+  const { hasEmail: buyerHasEmail } = useContactEmailWatch(buyerContactId);
 
   // ADR-199: Linked spaces (appurtenances)
   const linkedSpaces = useLinkedSpacesForSale(unit);
@@ -414,15 +418,12 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
       setFinalPrice(unit.commercial?.askingPrice?.toString() ?? '');
       setBuyerContactId(unit.commercial?.buyerContactId ?? '');
       setBuyerName(unit.commercial?.buyerName ?? '');
-      // Reset — email status unknown for existing buyers from reserve flow
-      setBuyerHasEmail(true);
     }
   }, [open, unit.commercial?.askingPrice, unit.commercial?.buyerContactId, unit.commercial?.buyerName]);
 
   const handleBuyerSelect = useCallback((contact: ContactSummary | null) => {
     setBuyerContactId(contact?.id ?? '');
     setBuyerName(contact?.name ?? '');
-    setBuyerHasEmail(!!contact?.email);
   }, []);
 
   const handleSave = useCallback(async () => {
