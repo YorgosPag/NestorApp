@@ -1,6 +1,6 @@
 # ADR-195: Entity Audit Trail — Κεντρικοποιημένο Σύστημα Ιστορικού Αλλαγών
 
-> **Status**: APPROVED — Phase 4 Building + Unit Integration DONE (2026-03-13)
+> **Status**: APPROVED — Phase 5 Parking + Storage Integration DONE (2026-03-14)
 > **Date**: 2026-03-10
 > **Author**: Claude Agent + Γιώργος Παγώνης
 > **Category**: Entity Systems
@@ -475,3 +475,4 @@ async function updateContact(contactId: string, updates: Partial<Contact>, actor
 | 2026-03-13 | **Phase 3 Contact Integration DONE**: Added "Ιστορικό" tab to individual contacts. Wired centralized `ActivityTab` via config-driven pattern (individual-config.ts section #10, custom renderer in UnifiedContactTabbedSection.tsx). i18n keys added (el/en). Zero new code — pure wire-up of existing centralized system. | Claude Agent |
 | 2026-03-13 | **Phase 3 Project Integration DONE**: Added "Ιστορικό" tab (#14) to projects. Config-driven wire-up: `project-tabs-config.ts` (order 14), `projectMappings.ts` (ActivityTab mapping), `property-statuses-enterprise.ts` (HISTORY labels). `componentProps: { entityType: 'project' }` ensures correct entity filtering. i18n description added (el/en). | Claude Agent |
 | 2026-03-13 | **Phase 4 Building Integration DONE**: Added "Ιστορικό" tab (#16, order 16) to buildings via Unified Factory pattern. Wire-up: `unified-tabs-factory.ts` (history tab after videos), `buildingMappings.ts` (ActivityTab mapping). `componentProps: { entityType: 'building' }` ensures correct entity filtering. i18n descriptions fixed to generic text (removed "του έργου"/"Project"). Unit already had History tab (order 6) — no changes needed. | Claude Agent |
+| 2026-03-14 | **Phase 5 Parking + Storage Integration DONE**: Added "Ιστορικό" tab (order 6) to both Parking and Storage in `unified-tabs-factory.ts`. Added `ActivityTab` component mapping to `parkingMappings.ts` and `storageMappings.ts`. `componentProps: { entityType: 'parking' | 'storage' }` ensures correct entity filtering. Sales Sidebars already had inline History — no changes needed. | Claude Agent |

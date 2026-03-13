@@ -31,6 +31,7 @@ import { StorageVideosTab } from '@/components/space-management/StoragesPage/Sto
 
 import PlaceholderTab from '@/components/building-management/tabs/PlaceholderTab';
 import { FloorplanViewerTab } from '@/components/projects/tabs/FloorplanViewerTab';
+import { ActivityTab } from '@/components/shared/audit/ActivityTab';
 
 // ============================================================================
 // STORAGE COMPONENT MAPPING
@@ -43,6 +44,7 @@ export const STORAGE_COMPONENT_MAPPING = {
   'StorageVideosTab': StorageVideosTab,
   'PlaceholderTab': PlaceholderTab,
   'FloorplanViewerTab': FloorplanViewerTab,
+  'ActivityTab': ActivityTab,
 } as const;
 
 // ============================================================================

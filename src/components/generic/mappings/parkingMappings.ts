@@ -30,6 +30,7 @@ import { ParkingVideosTab } from '@/components/space-management/ParkingPage/Park
 // ============================================================================
 
 import PlaceholderTab from '@/components/building-management/tabs/PlaceholderTab';
+import { ActivityTab } from '@/components/shared/audit/ActivityTab';
 
 // ============================================================================
 // PARKING COMPONENT MAPPING
@@ -42,6 +43,7 @@ export const PARKING_COMPONENT_MAPPING = {
   'ParkingPhotosTab': ParkingPhotosTab,
   'ParkingVideosTab': ParkingVideosTab,
   'PlaceholderTab': PlaceholderTab,
+  'ActivityTab': ActivityTab,
 } as const;
 
 // ============================================================================

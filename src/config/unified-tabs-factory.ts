@@ -302,6 +302,16 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             order: 5,
             enabled: true,
             component: 'StorageVideosTab'
+          },
+          {
+            id: 'history',
+            value: 'history',
+            icon: 'clock',
+            description: 'Ιστορικό αλλαγών αποθήκης',
+            order: 6,
+            enabled: true,
+            component: 'ActivityTab',
+            componentProps: { entityType: 'storage' },
           }
         ],
         defaultEnabled: true
@@ -355,6 +365,16 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             order: 5,
             enabled: true,
             component: 'ParkingVideosTab'
+          },
+          {
+            id: 'history',
+            value: 'history',
+            icon: 'clock',
+            description: 'Ιστορικό αλλαγών θέσης στάθμευσης',
+            order: 6,
+            enabled: true,
+            component: 'ActivityTab',
+            componentProps: { entityType: 'parking' },
           }
         ],
         defaultEnabled: true
