@@ -3,7 +3,7 @@
 // DEBUG FLAG - Set to false to disable performance-heavy logging
 const DEBUG_PROJECT_HIERARCHY = false;
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 // 🏢 ENTERPRISE: Centralized debug system
 import { dlog, dwarn, derr } from '../debug';
@@ -13,7 +13,7 @@ import type { CompanyContact } from '../../../types/contacts';
 // 🔐 ENTERPRISE: Auth hook for authentication-ready gating
 import { useAuth } from '@/auth/hooks/useAuth';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
-import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
+import { RealtimeService, type ProjectUpdatedPayload, type ContactCreatedPayload } from '@/services/realtime';
 import type { ParkingSpot as CanonicalParkingSpot } from '@/types/parking';
 import { applyUpdates } from '@/lib/utils';
 
@@ -118,7 +118,8 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
   const companiesLoadedRef = React.useRef(false);
 
   // Load companies first
-  const loadCompanies = async () => {
+  // forceRefresh: bypasses the "already loaded" guard — used by real-time events
+  const loadCompanies = useCallback(async (forceRefresh = false) => {
     // 🔐 ENTERPRISE: Auth-ready gating - don't attempt API calls without authentication
     if (authLoading) {
       dlog('ProjectHierarchy', 'Waiting for auth state...');
@@ -130,8 +131,8 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
       return; // User not logged in - don't attempt API call
     }
 
-    // Prevent duplicate loading
-    if (companiesLoadingRef.current || companiesLoadedRef.current) {
+    // Prevent duplicate loading (unless force-refreshing)
+    if (companiesLoadingRef.current || (!forceRefresh && companiesLoadedRef.current)) {
 
       return;
     }
@@ -214,7 +215,7 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
     } finally {
       companiesLoadingRef.current = false;
     }
-  };
+  }, [authLoading, user]);
 
   // Select company and load its projects
   const selectCompany = (companyId: string) => {
@@ -460,6 +461,22 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
 
     return unsubscribe;
   }, []);
+
+  // 🏢 ENTERPRISE: Real-time company creation sync
+  // When a new company contact is created anywhere in the app, auto-refresh the dropdown
+  useEffect(() => {
+    const handleContactCreated = (payload: ContactCreatedPayload) => {
+      // Only refresh when a COMPANY contact is created (not individual/service)
+      if (payload.contact.type === 'company') {
+        dlog('ProjectHierarchy', 'New company created — refreshing companies list:', payload.contactId);
+        loadCompanies(true);
+      }
+    };
+
+    const unsubscribe = RealtimeService.subscribe('CONTACT_CREATED', handleContactCreated);
+
+    return unsubscribe;
+  }, [loadCompanies]);
 
   const contextValue: ProjectHierarchyContextType = {
     ...hierarchy,
