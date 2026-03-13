@@ -17,6 +17,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { db } from '@/lib/firebase';
+import { getString, getNumber, getBoolean, getStringArray } from '@/lib/firestore/field-extractors';
 import {
   collection,
   query,
@@ -30,7 +31,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { TRIAGE_STATUSES, type TriageStatus } from '@/constants/triage-statuses';
 import type { Communication, FirestoreishTimestamp } from '@/types/crm';
 import type { MessageIntentAnalysis } from '@/schemas/ai-analysis';
-import toast from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useRealtimeTriageCommunications');
@@ -73,33 +74,7 @@ interface UseRealtimeTriageCommunicationsResult {
 // TYPE-SAFE EXTRACTORS (proven pattern from useRealtimeMessages)
 // ============================================================================
 
-function getString(data: Record<string, unknown>, field: string, defaultValue = ''): string {
-  const value = data[field];
-  return typeof value === 'string' ? value : defaultValue;
-}
-
-function getStringOrUndefined(data: Record<string, unknown>, field: string): string | undefined {
-  const value = data[field];
-  return typeof value === 'string' ? value : undefined;
-}
-
-function getNumber(data: Record<string, unknown>, field: string): number | undefined {
-  const value = data[field];
-  return typeof value === 'number' ? value : undefined;
-}
-
-function getBoolean(data: Record<string, unknown>, field: string): boolean | undefined {
-  const value = data[field];
-  return typeof value === 'boolean' ? value : undefined;
-}
-
-function getStringArray(data: Record<string, unknown>, field: string): string[] | undefined {
-  const value = data[field];
-  if (Array.isArray(value) && value.every((item) => typeof item === 'string')) {
-    return value as string[];
-  }
-  return undefined;
-}
+// ADR-219: getString, getNumber, getBoolean, getStringArray centralized to @/lib/firestore/field-extractors
 
 function getTimestamp(data: Record<string, unknown>, field: string): FirestoreishTimestamp | undefined {
   const value = data[field];
@@ -156,21 +131,21 @@ function docToTriageCommunication(doc: { id: string; data: () => unknown }): Com
 
   return {
     id: doc.id,
-    companyId: getStringOrUndefined(data, 'companyId'),
+    companyId: getString(data, 'companyId'),
     contactId: getString(data, 'contactId'),
-    projectId: getStringOrUndefined(data, 'projectId'),
-    unitId: getStringOrUndefined(data, 'unitId'),
-    opportunityId: getStringOrUndefined(data, 'opportunityId'),
+    projectId: getString(data, 'projectId'),
+    unitId: getString(data, 'unitId'),
+    opportunityId: getString(data, 'opportunityId'),
     type: getString(data, 'type', 'email') as Communication['type'],
     direction: getString(data, 'direction', 'inbound') as Communication['direction'],
-    from: getStringOrUndefined(data, 'from'),
-    to: getStringOrUndefined(data, 'to'),
-    subject: getStringOrUndefined(data, 'subject'),
+    from: getString(data, 'from'),
+    to: getString(data, 'to'),
+    subject: getString(data, 'subject'),
     content: getString(data, 'content'),
     attachments: getStringArray(data, 'attachments'),
     duration: getNumber(data, 'duration'),
     meetingDate: getTimestamp(data, 'meetingDate'),
-    location: getStringOrUndefined(data, 'location'),
+    location: getString(data, 'location'),
     attendees: getStringArray(data, 'attendees'),
     createdBy: getString(data, 'createdBy'),
     createdAt: getTimestamp(data, 'createdAt') ?? '',
@@ -181,7 +156,7 @@ function docToTriageCommunication(doc: { id: string; data: () => unknown }): Com
     metadata: getMetadata(data),
     intentAnalysis: getIntentAnalysis(data),
     triageStatus: getTriageStatus(data),
-    linkedTaskId: getStringOrUndefined(data, 'linkedTaskId'),
+    linkedTaskId: getString(data, 'linkedTaskId'),
   };
 }
 
@@ -211,6 +186,7 @@ export function useRealtimeTriageCommunications(
   options: UseRealtimeTriageCommunicationsOptions
 ): UseRealtimeTriageCommunicationsResult {
   const { companyId, statusFilter, enabled = true } = options;
+  const { success } = useNotifications();
 
   const [communications, setCommunications] = useState<Array<Communication & { id: string }>>([]);
   const [loading, setLoading] = useState(true);
@@ -272,11 +248,10 @@ export function useRealtimeTriageCommunications(
             const newIds = [...currentIds].filter((id) => !previousIdsRef.current.has(id));
 
             if (newIds.length > 0) {
-              toast.success(
+              success(
                 newIds.length === 1
-                  ? '📧 New email received!'
-                  : `📧 ${newIds.length} new emails received!`,
-                { duration: 4000 }
+                  ? 'New email received!'
+                  : `${newIds.length} new emails received!`
               );
             }
 

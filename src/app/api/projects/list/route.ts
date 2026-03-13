@@ -28,6 +28,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { fieldToISO } from '@/lib/date-local';
+import { getString, getNumber, getArray } from '@/lib/firestore/field-extractors';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { FieldValue } from 'firebase-admin/firestore';
 import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -84,29 +85,7 @@ function getTenantCacheKey(companyId: string, isSuperAdmin: boolean): string {
 // TYPE-SAFE FIELD EXTRACTORS
 // ============================================================================
 
-/**
- * 🔒 ENTERPRISE: Type-safe string extraction (no type assertions)
- */
-function getString(data: Record<string, unknown>, field: string, defaultValue: string = ''): string {
-  const value = data[field];
-  return typeof value === 'string' ? value : defaultValue;
-}
-
-/**
- * 🔒 ENTERPRISE: Type-safe number extraction
- */
-function getNumber(data: Record<string, unknown>, field: string, defaultValue: number = 0): number {
-  const value = data[field];
-  return typeof value === 'number' ? value : defaultValue;
-}
-
-/**
- * 🔒 ENTERPRISE: Type-safe array extraction
- */
-function getArray(data: Record<string, unknown>, field: string): unknown[] | undefined {
-  const value = data[field];
-  return Array.isArray(value) ? value : undefined;
-}
+// ADR-219: Field extractors centralized to @/lib/firestore/field-extractors
 
 // ADR-218: getTimestampString replaced by centralized fieldToISO from @/lib/date-local
 

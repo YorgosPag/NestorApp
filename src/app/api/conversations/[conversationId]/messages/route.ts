@@ -23,6 +23,7 @@ type MessagesCanonicalResponse = ApiSuccessResponse<MessagesListResponse>;
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateRequestId } from '@/services/enterprise-id.service';
 import { fieldToISO } from '@/lib/date-local';
+import { getString, getObject } from '@/lib/firestore/field-extractors';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { type MessageDirection, type DeliveryStatus } from '@/types/conversations';
 import { type CommunicationChannel } from '@/types/communications';
@@ -87,19 +88,7 @@ const CACHE_TTL_MS = 5 * 1000; // 5 seconds for near-realtime messages
 // TYPE-SAFE EXTRACTORS
 // ============================================================================
 
-function getString(data: Record<string, unknown>, field: string, defaultValue = ''): string {
-  const value = data[field];
-  return typeof value === 'string' ? value : defaultValue;
-}
-
-function getObject<T extends Record<string, unknown>>(
-  data: Record<string, unknown>,
-  field: string,
-  defaultValue: T
-): T {
-  const value = data[field];
-  return typeof value === 'object' && value !== null ? (value as T) : defaultValue;
-}
+// ADR-219: Field extractors centralized to @/lib/firestore/field-extractors
 
 // ADR-218: getTimestampString replaced by centralized fieldToISO from @/lib/date-local
 

@@ -22,6 +22,7 @@ import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 // 🔒 RATE LIMITING: STANDARD category (60 req/min)
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { fieldToISO, getNestedTimestampISO } from '@/lib/date-local';
+import { getString, getNumber, getArray } from '@/lib/firestore/field-extractors';
 
 // Type alias for canonical response
 type ConversationsCanonicalResponse = ApiSuccessResponse<ConversationsListResponse>;
@@ -87,20 +88,7 @@ const CACHE_TTL_MS = 10 * 1000; // 10 seconds for near-realtime
 // TYPE-SAFE EXTRACTORS
 // ============================================================================
 
-function getString(data: Record<string, unknown>, field: string, defaultValue = ''): string {
-  const value = data[field];
-  return typeof value === 'string' ? value : defaultValue;
-}
-
-function getNumber(data: Record<string, unknown>, field: string, defaultValue = 0): number {
-  const value = data[field];
-  return typeof value === 'number' ? value : defaultValue;
-}
-
-function getArray<T>(data: Record<string, unknown>, field: string, defaultValue: T[] = []): T[] {
-  const value = data[field];
-  return Array.isArray(value) ? (value as T[]) : defaultValue;
-}
+// ADR-219: Field extractors centralized to @/lib/firestore/field-extractors
 
 // ADR-218: getTimestampString → fieldToISO, getNestedTimestamp → getNestedTimestampISO from @/lib/date-local
 

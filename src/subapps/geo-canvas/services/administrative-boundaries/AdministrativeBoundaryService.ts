@@ -40,6 +40,7 @@ import type {
   BoundingBox
 } from '../../types/administrative-types';
 import type { ViewportContext } from '../geometry/GeometrySimplificationEngine';
+import { getString, getStringOrNumber } from '@/lib/firestore/field-extractors';
 
 // ============================================================================
 // ADMINISTRATIVE BOUNDARY SERVICE
@@ -105,10 +106,10 @@ export class AdministrativeBoundaryService {
 
         if (boundary) {
           const properties = (boundary.properties ?? null) as Record<string, unknown> | null;
-          const boundaryId = this.getIdProperty(properties, 'id') ?? 'unknown';
-          const boundaryName = this.getStringProperty(properties, 'name') ?? municipalityName;
-          const boundaryRegion = this.getStringProperty(properties, 'region') ?? 'Unknown';
-          const boundaryNameEn = this.getStringProperty(properties, 'nameEn');
+          const boundaryId = getStringOrNumber(properties, 'id') ?? 'unknown';
+          const boundaryName = getString(properties, 'name') ?? municipalityName;
+          const boundaryRegion = getString(properties, 'region') ?? 'Unknown';
+          const boundaryNameEn = getString(properties, 'nameEn');
           results = [{
             id: boundaryId,
             name: boundaryName,
@@ -132,9 +133,9 @@ export class AdministrativeBoundaryService {
 
         if (boundary) {
           const properties = (boundary.properties ?? null) as Record<string, unknown> | null;
-          const boundaryId = this.getIdProperty(properties, 'id') ?? 'unknown';
-          const boundaryName = this.getStringProperty(properties, 'name') ?? regionName;
-          const boundaryNameEn = this.getStringProperty(properties, 'nameEn');
+          const boundaryId = getStringOrNumber(properties, 'id') ?? 'unknown';
+          const boundaryName = getString(properties, 'name') ?? regionName;
+          const boundaryNameEn = getString(properties, 'nameEn');
           results = [{
             id: boundaryId,
             name: boundaryName,
@@ -915,17 +916,7 @@ export class AdministrativeBoundaryService {
   }
 
 
-  private getStringProperty(properties: Record<string, unknown> | null, key: string): string | undefined {
-    const value = properties?.[key];
-    return typeof value === 'string' ? value : undefined;
-  }
-
-  private getIdProperty(properties: Record<string, unknown> | null, key: string): string | undefined {
-    const value = properties?.[key];
-    if (typeof value === 'string') return value;
-    if (typeof value === 'number') return String(value);
-    return undefined;
-  }
+  // ADR-219: getStringProperty, getIdProperty centralized to @/lib/firestore/field-extractors
 
   private getPolygonRings(geometry: Geometry): Position[][] | null {
     if (geometry.type !== 'Polygon') return null;

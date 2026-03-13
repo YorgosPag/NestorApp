@@ -25,6 +25,7 @@ import type { MessageDirection, DeliveryStatus } from '@/types/conversations';
 import type { CommunicationChannel } from '@/types/communications';
 import type { SenderType } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getString, getObject } from '@/lib/firestore/field-extractors';
 import { fieldToISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('useRealtimeMessages');
@@ -49,19 +50,7 @@ interface UseRealtimeMessagesResult {
 // TYPE-SAFE EXTRACTORS (από API route)
 // ============================================================================
 
-function getString(data: Record<string, unknown>, field: string, defaultValue = ''): string {
-  const value = data[field];
-  return typeof value === 'string' ? value : defaultValue;
-}
-
-function getObject<T extends Record<string, unknown>>(
-  data: Record<string, unknown>,
-  field: string,
-  defaultValue: T
-): T {
-  const value = data[field];
-  return typeof value === 'object' && value !== null ? (value as T) : defaultValue;
-}
+// ADR-219: Field extractors centralized to @/lib/firestore/field-extractors
 
 // ADR-218: getTimestampString replaced by centralized fieldToISO (import at top of file)
 

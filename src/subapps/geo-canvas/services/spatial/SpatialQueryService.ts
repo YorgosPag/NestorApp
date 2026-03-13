@@ -13,6 +13,7 @@ import type {
   AdminSearchResult,
   BoundingBox
 } from '../../types/administrative-types';
+import { getString } from '@/lib/firestore/field-extractors';
 import { administrativeBoundaryService } from '../administrative-boundaries/AdministrativeBoundaryService';
 
 // ============================================================================
@@ -382,15 +383,12 @@ export class SpatialQueryService {
     collection: FeatureCollectionLike,
     adminLevel: GreekAdminLevel
   ): AdminSearchResult[] {
-    const getStringProp = (props: Record<string, unknown>, key: string): string | undefined => {
-      const value = props[key];
-      return typeof value === 'string' ? value : undefined;
-    };
+    // ADR-219: getStringProp replaced by centralized getString
 
     return collection.features.map((feature, index) => {
       const props = (feature.properties ?? {}) as Record<string, unknown>;
-      const name = getStringProp(props, 'name')
-        ?? getStringProp(props, 'postal_code')
+      const name = getString(props, 'name')
+        ?? getString(props, 'postal_code')
         ?? `Unknown ${adminLevel}`;
 
       // Calculate bounds
@@ -404,13 +402,13 @@ export class SpatialQueryService {
       }
 
       return {
-        id: getStringProp(props, 'id') ?? `spatial-${adminLevel}-${index}`,
+        id: getString(props, 'id') ?? `spatial-${adminLevel}-${index}`,
         name,
-        nameEn: getStringProp(props, 'nameEn'),
+        nameEn: getString(props, 'nameEn'),
         adminLevel,
         hierarchy: {
           country: 'Ελλάδα',
-          region: getStringProp(props, 'region') ?? 'Unknown'
+          region: getString(props, 'region') ?? 'Unknown'
         },
         geometry: feature.geometry ?? undefined,
         bounds,

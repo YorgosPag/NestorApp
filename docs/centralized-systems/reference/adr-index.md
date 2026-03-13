@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 203 ADRs | Last Updated: 2026-03-12
+**📊 Stats**: 204 ADRs | Last Updated: 2026-03-13
 
 ---
 
@@ -515,6 +515,18 @@
 - **File**: `docs/centralized-systems/reference/adrs/ADR-218-timestamp-conversion-centralization.md`
 - **SSoT**: `src/lib/date-local.ts` — `normalizeToISO()`, `fieldToISO()`, `getNestedTimestampISO()`
 - **Summary**: Centralized all Firestore Timestamp→ISO string conversions. Eliminated 80+ scattered occurrences across 20 files. Extended `date-local.ts` with 3 new functions. Also fixed `chunkArray` duplicate in `firestore-query.service.ts`.
+
+### ADR-219: Notification/Toast System Consolidation
+- **Status**: ✅ Implemented
+- **File**: `docs/centralized-systems/reference/adrs/ADR-219-notification-toast-consolidation.md`
+- **SSoT**: `src/providers/NotificationProvider.tsx` — `useNotifications()` hook
+- **Summary**: Consolidated 2 toast libraries (react-hot-toast + sonner) σε ένα μοναδικό system μέσω `useNotifications()`. Migrated 33 αρχεία, ~151 toast calls. Αφαιρέθηκε react-hot-toast dependency. **ΚΑΝΟΝΑΣ**: ΑΠΑΓΟΡΕΥΕΤΑΙ direct import sonner/react-hot-toast.
+
+### ADR-220: Firestore Field Extractor Centralization
+- **Status**: ✅ Implemented
+- **File**: `docs/centralized-systems/reference/adrs/ADR-220-field-extractor-centralization.md`
+- **SSoT**: `src/lib/firestore/field-extractors.ts` — `getString()`, `getNumber()`, `getBoolean()`, `getArray()`, `getStringArray()`, `getObject()`, `getStringOrNumber()`
+- **Summary**: Centralized 18+ local field extractor definitions from 7 files. Overloaded signatures (with/without default). Null-safe DataRecord type. Eliminated `getStringOrUndefined`, `getStringProp`, `getStringProperty`, `getIdProperty`.
 
 ---
 
