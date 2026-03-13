@@ -19,7 +19,7 @@ interface PermitsAndStatusTabProps {
     isEditing: boolean;
 }
 
-export function PermitsAndStatusTab({ data, setData, isEditing }: PermitsAndStatusTabProps) {
+export const PermitsAndStatusTab = React.memo(function PermitsAndStatusTab({ data, setData, isEditing }: PermitsAndStatusTabProps) {
     const { t } = useTranslation('projects');
     const iconSizes = useIconSizes();
     const typography = useTypography();
@@ -88,4 +88,4 @@ export function PermitsAndStatusTab({ data, setData, isEditing }: PermitsAndStat
             </CardContent>
         </Card>
     );
-}
+});

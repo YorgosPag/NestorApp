@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Briefcase, FolderPlus } from 'lucide-react';
 import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import type { Project } from '@/types/project';
@@ -17,7 +17,7 @@ interface ProjectDetailsHeaderProps {
     hideEditControls?: boolean;
 }
 
-export function ProjectDetailsHeader({
+export const ProjectDetailsHeader = React.memo(function ProjectDetailsHeader({
     project,
     isEditing,
     onStartEdit,
@@ -29,7 +29,7 @@ export function ProjectDetailsHeader({
 }: ProjectDetailsHeaderProps) {
     const { t } = useTranslation('projects');
 
-    const actions = [
+    const actions = useMemo(() => [
         // New Project button
         ...(onNewProject ? [
             createEntityAction('new', t('detailsHeader.actions.new'), () => onNewProject(), { icon: FolderPlus })
@@ -47,7 +47,7 @@ export function ProjectDetailsHeader({
         ...(!hideEditControls && onDeleteProject ? [
             createEntityAction('delete', t('detailsHeader.actions.delete'), () => onDeleteProject())
         ] : [])
-    ];
+    ], [isEditing, onStartEdit, onSaveEdit, onCancelEdit, onNewProject, onDeleteProject, hideEditControls, t]);
 
     return (
         <>
@@ -64,4 +64,4 @@ export function ProjectDetailsHeader({
             {/* Mobile: Hidden (no header duplication) */}
         </>
     );
-}
+});

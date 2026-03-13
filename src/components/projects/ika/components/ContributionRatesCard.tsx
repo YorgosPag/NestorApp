@@ -12,7 +12,7 @@
  * @enterprise ADR-090 — IKA/EFKA Labor Compliance System
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Table,
   TableBody,
@@ -45,11 +45,11 @@ interface RateRow {
   getUpdated: (rates: ContributionRates, field: 'employer' | 'employee', value: number) => ContributionRates;
 }
 
-export function ContributionRatesCard({ rates, isEditing, onRateChange }: ContributionRatesCardProps) {
+export const ContributionRatesCard = React.memo(function ContributionRatesCard({ rates, isEditing, onRateChange }: ContributionRatesCardProps) {
   const { t } = useTranslation('projects');
   const typography = useTypography();
 
-  const rows: RateRow[] = [
+  const rows = useMemo<RateRow[]>(() => [
     {
       key: 'mainPension',
       labelKey: 'mainPension',
@@ -110,7 +110,7 @@ export function ContributionRatesCard({ rates, isEditing, onRateChange }: Contri
         oncePayment: { employee: value },
       }),
     },
-  ];
+  ], [rates]);
 
   const handleChange = (row: RateRow, field: 'employer' | 'employee', rawValue: string) => {
     const parsed = parseFloat(rawValue);
@@ -177,4 +177,4 @@ export function ContributionRatesCard({ rates, isEditing, onRateChange }: Contri
       </TableBody>
     </Table>
   );
-}
+});

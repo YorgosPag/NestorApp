@@ -20,7 +20,7 @@ interface BasicProjectInfoTabProps {
     projectId: string;
 }
 
-export function BasicProjectInfoTab({ data, setData, isEditing }: BasicProjectInfoTabProps) {
+export const BasicProjectInfoTab = React.memo(function BasicProjectInfoTab({ data, setData, isEditing }: BasicProjectInfoTabProps) {
     const { t } = useTranslation('projects');
     const iconSizes = useIconSizes();
     const typography = useTypography();
@@ -71,4 +71,4 @@ export function BasicProjectInfoTab({ data, setData, isEditing }: BasicProjectIn
             </CardContent>
         </Card>
     );
-}
+});

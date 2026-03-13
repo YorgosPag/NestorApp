@@ -17,7 +17,7 @@
 
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
 import type { Project } from '@/types/project';
 import { ProjectDetailsHeader } from './ProjectDetailsHeader';
 import { Briefcase } from 'lucide-react';
@@ -101,6 +101,16 @@ export function ProjectDetails({
   // Get project tabs from centralized config
   const projectTabs = getSortedProjectTabs();
 
+  // Memoize globalProps to prevent re-render cascade on ALL tabs
+  const globalProps = useMemo(() => ({
+    projectId: project!.id,
+    isEditing,
+    onSetEditing: setIsEditing,
+    registerSaveCallback,
+    isCreateMode,
+    onProjectCreated,
+  }), [project?.id, isEditing, setIsEditing, registerSaveCallback, isCreateMode, onProjectCreated]);
+
   return (
     <DetailsContainer
       selectedItem={project}
@@ -123,14 +133,7 @@ export function ProjectDetails({
           defaultTab={initialTab || "general"}
           theme="default"
           translationNamespace="building"
-          globalProps={{
-            projectId: project!.id,
-            isEditing,
-            onSetEditing: setIsEditing,
-            registerSaveCallback,
-            isCreateMode,
-            onProjectCreated,
-          }}
+          globalProps={globalProps}
         />
       }
       emptyStateProps={{

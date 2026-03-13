@@ -37,7 +37,7 @@ interface InsuranceClassesTableProps {
   onClassChange: (index: number, field: keyof Pick<InsuranceClass, 'minDailyWage' | 'maxDailyWage' | 'imputedDailyWage'>, value: number) => void;
 }
 
-export function InsuranceClassesTable({ classes, isEditing, onClassChange }: InsuranceClassesTableProps) {
+export const InsuranceClassesTable = React.memo(function InsuranceClassesTable({ classes, isEditing, onClassChange }: InsuranceClassesTableProps) {
   const { t } = useTranslation('projects');
   const typography = useTypography();
   const spacing = useSpacingTokens();
@@ -122,4 +122,4 @@ export function InsuranceClassesTable({ classes, isEditing, onClassChange }: Ins
       </TableBody>
     </Table>
   );
-}
+});
