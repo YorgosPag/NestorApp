@@ -336,7 +336,7 @@ export function BuildingsPageContent() {
                   selectedBuilding={selectedBuilding!}
                   onSelectBuilding={(building) => {
                     startTransition(() => {
-                      setSelectedBuilding(prev => prev?.id === building?.id ? null : building);
+                      setSelectedBuilding(selectedBuilding?.id === building?.id ? null : building);
                       setStartInEditMode(false);
                     });
                   }}
@@ -364,7 +364,7 @@ export function BuildingsPageContent() {
                   selectedBuilding={selectedBuilding!}
                   onSelectBuilding={(building) => {
                     startTransition(() => {
-                      setSelectedBuilding(prev => prev?.id === building?.id ? null : building);
+                      setSelectedBuilding(selectedBuilding?.id === building?.id ? null : building);
                       setStartInEditMode(false);
                     });
                   }}
