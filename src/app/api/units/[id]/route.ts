@@ -117,21 +117,26 @@ export const PATCH = withStandardRateLimit(
           body.commercialStatus === 'reserved' || body.commercialStatus === 'sold';
 
         if (isCommercialTransaction) {
+          // 1. Unit must be assigned to a building + floor
           const buildingId = (existing.buildingId as string) ?? null;
+          const floorId = (existing.floorId as string) ?? null;
+
+          if (!buildingId || !floorId) {
+            throw new ApiError(400, 'Unit must be assigned to a building and floor before reservation or sale');
+          }
+
+          // 2. Full hierarchy check: building → project → company
+          const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
+          const projectId = buildingDoc.exists
+            ? (buildingDoc.data()?.projectId as string) ?? null
+            : null;
+
           let companyId: string | null = null;
-
-          if (buildingId) {
-            const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
-            const projectId = buildingDoc.exists
-              ? (buildingDoc.data()?.projectId as string) ?? null
+          if (projectId) {
+            const projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
+            companyId = projectDoc.exists
+              ? (projectDoc.data()?.companyId as string) ?? null
               : null;
-
-            if (projectId) {
-              const projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
-              companyId = projectDoc.exists
-                ? (projectDoc.data()?.companyId as string) ?? null
-                : null;
-            }
           }
 
           if (!companyId) {

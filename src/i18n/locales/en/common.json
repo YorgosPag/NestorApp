@@ -1354,7 +1354,8 @@
       "history": "History"
     },
     "errors": {
-      "noCompany": "The unit does not belong to a project with a company. Reservation or sale is not allowed."
+      "noCompany": "The unit does not belong to a project with a company. Reservation or sale is not allowed.",
+      "noFloor": "The unit must be assigned to a building and floor before reservation or sale."
     }
   },
   "salesStorage": {
