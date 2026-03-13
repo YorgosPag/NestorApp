@@ -38,9 +38,10 @@ import { normalizeToDate } from '@/lib/date-local';
 import type {
   BankAccount,
   BankAccountInput,
-  BankAccountUpdate
+  BankAccountUpdate,
+  CurrencyCode,
 } from '@/types/contacts/banking';
-import { validateIBAN, cleanIBAN } from '@/types/contacts/banking';
+import { validateIBAN, cleanIBAN, isCurrencyCode } from '@/types/contacts/banking';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('BankAccountsService');
 
@@ -120,7 +121,7 @@ function recordToBankAccount(data: Record<string, unknown>): BankAccount {
     accountNumber: data.accountNumber as string | undefined,
     branch: data.branch as string | undefined,
     accountType: (data.accountType as BankAccount['accountType']) ?? 'checking',
-    currency: (data.currency as string) ?? 'EUR',
+    currency: isCurrencyCode(data.currency as string) ? (data.currency as CurrencyCode) : 'EUR',
     isPrimary: (data.isPrimary as boolean) ?? false,
     holderName: data.holderName as string | undefined,
     notes: data.notes as string | undefined,
