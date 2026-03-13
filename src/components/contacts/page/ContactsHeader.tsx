@@ -23,7 +23,6 @@ interface ContactsHeaderProps {
   setViewMode: (mode: ViewMode) => void;
   showDashboard: boolean;
   setShowDashboard: (show: boolean) => void;
-  onNewContact?: () => void;
   // Mobile-only filter toggle
   showFilters?: boolean;
   setShowFilters?: (show: boolean) => void;
@@ -37,7 +36,6 @@ export function ContactsHeader({
   setViewMode,
   showDashboard,
   setShowDashboard,
-  onNewContact,
   showFilters,
   setShowFilters,
   breadcrumb,
@@ -66,10 +64,6 @@ export function ContactsHeader({
         viewMode: viewMode as CoreViewMode,
         onViewModeChange: (mode) => setViewMode(mode as ViewMode),
         viewModes: ['list', 'grid'] as CoreViewMode[],
-        addButton: {
-          label: t('header.newContact'),
-          onClick: () => onNewContact?.()
-        },
         customActions: setShowFilters ? [
           React.createElement('button', {
             key: 'mobile-filter',

@@ -662,7 +662,6 @@ export function ContactsPageContent() {
           setViewMode={setViewMode}
           showDashboard={showDashboard}
           setShowDashboard={setShowDashboard}
-          onNewContact={handleNewContact}
           showFilters={showFilters}
           setShowFilters={setShowFilters}
           breadcrumb={<ModuleBreadcrumb />}
