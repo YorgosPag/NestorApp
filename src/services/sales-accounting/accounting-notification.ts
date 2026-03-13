@@ -13,6 +13,7 @@ import { GREEK_VAT_RATES } from '@/subapps/accounting/services/config/vat-config
 // formatEuro/formatDate kept local intentionally (server-only + 2-decimal financial formatting)
 import {
   buildReservationConfirmationEmail,
+  buildCancellationConfirmationEmail,
   wrapInBrandedTemplate,
   BRAND,
   escapeHtml,
@@ -416,6 +417,63 @@ export async function notifyBuyerReservation(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.warn(`[Buyer Notify] Failed to send buyer email: ${msg}`);
+  }
+}
+
+// ============================================================================
+// BUYER NOTIFICATION — Branded HTML Cancellation Confirmation
+// ============================================================================
+
+/**
+ * Στέλνει branded HTML email ειδοποίησης ακύρωσης στον αγοραστή.
+ *
+ * Fire-and-forget: αν αποτύχει, δεν επηρεάζει τη ροή ακύρωσης.
+ * Στέλνεται ΜΟΝΟ αν ο αγοραστής έχει email.
+ */
+export async function notifyBuyerCancellation(
+  event: SalesAccountingEvent & { eventType: 'credit_invoice' },
+  result: SalesAccountingResult,
+  buyerEmail: string,
+  buyerName: string
+): Promise<void> {
+  if (!result.success) {
+    console.log('[Buyer Notify] Skipping cancellation — credit invoice creation failed');
+    return;
+  }
+
+  console.log(`[Buyer Notify] Sending branded cancellation confirmation to ${buyerEmail}`);
+
+  try {
+    const creditNoteRef = result.invoiceNumber ? `A-${result.invoiceNumber}` : null;
+    const { subject, html, text } = buildCancellationConfirmationEmail({
+      buyerName,
+      unitName: event.unitName,
+      unitFloor: event.unitFloor,
+      buildingName: event.buildingName,
+      projectName: event.projectName,
+      projectAddress: event.projectAddress,
+      companyName: event.companyName,
+      creditAmount: event.creditAmount,
+      paymentMethod: event.paymentMethod,
+      reason: event.reason,
+      creditNoteRef,
+    });
+
+    const mailResult = await sendReplyViaMailgun({
+      to: buyerEmail,
+      subject,
+      textBody: text,
+      htmlBody: html,
+    });
+
+    if (mailResult.success) {
+      console.log(`[Buyer Notify] Cancellation email sent — messageId: ${mailResult.messageId}`);
+    } else {
+      console.warn(`[Buyer Notify] Mailgun cancellation error: ${mailResult.error}`);
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(`[Buyer Notify] Failed to send cancellation email: ${msg}`);
   }
 }
 

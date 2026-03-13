@@ -14,7 +14,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { getCategoryByCode } from '@/subapps/accounting/config/account-categories';
 import { generateTransactionId } from '@/services/enterprise-id.service';
-import { notifyAccountingOffice, notifyBuyerReservation } from './accounting-notification';
+import { notifyAccountingOffice, notifyBuyerReservation, notifyBuyerCancellation } from './accounting-notification';
 import type { CreateInvoiceInput } from '@/subapps/accounting/types/invoice';
 import type { InvoiceIssuer, InvoiceCustomer } from '@/subapps/accounting/types/invoice';
 import type { MyDataIncomeType } from '@/subapps/accounting/types/common';
@@ -109,6 +109,15 @@ export class SalesAccountingBridge {
 
     // 2. Email ειδοποίηση στο λογιστήριο (fire-and-forget)
     notifyAccountingOffice(event, result).catch(() => { /* silent */ });
+
+    // 3. Email ειδοποίηση ακύρωσης στον αγοραστή (fire-and-forget)
+    if (event.eventType === 'credit_invoice' && event.buyerContactId) {
+      const buyerCustomer = await this.resolveCustomer(event.buyerContactId);
+      if (buyerCustomer.email) {
+        notifyBuyerCancellation(event, result, buyerCustomer.email, buyerCustomer.name)
+          .catch(() => { /* silent */ });
+      }
+    }
 
     return result;
   }
