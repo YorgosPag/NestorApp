@@ -732,17 +732,21 @@ export function ContactsPageContent() {
                 />
                 {/* 🏢 ENTERPRISE: Right panel — inline creation OR contact details */}
                 {creationMode === 'selecting' ? (
-                  <ContactTypeSelector
-                    onSelect={handleSelectContactType}
-                    onCancel={handleCancelCreation}
-                  />
+                  <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-card border rounded-lg shadow-sm">
+                    <ContactTypeSelector
+                      onSelect={handleSelectContactType}
+                      onCancel={handleCancelCreation}
+                    />
+                  </div>
                 ) : creationMode ? (
-                  <InlineContactCreation
-                    contactType={creationMode}
-                    onContactAdded={handleContactAdded}
-                    onCancel={handleCancelCreation}
-                    onBack={handleBackToTypeSelection}
-                  />
+                  <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-card border rounded-lg shadow-sm">
+                    <InlineContactCreation
+                      contactType={creationMode}
+                      onContactAdded={handleContactAdded}
+                      onCancel={handleCancelCreation}
+                      onBack={handleBackToTypeSelection}
+                    />
+                  </div>
                 ) : (
                   <ContactDetails
                     contact={selectedContact}

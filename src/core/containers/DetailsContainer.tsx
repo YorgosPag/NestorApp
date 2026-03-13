@@ -13,12 +13,14 @@ interface EmptyStateProps {
   icon?: React.ElementType;
   title?: string;
   description?: string;
+  action?: React.ReactNode;
 }
 
 function DefaultEmptyState({
   icon: Icon = Users,
   title,
-  description
+  description,
+  action
 }: EmptyStateProps) {
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
@@ -32,6 +34,7 @@ function DefaultEmptyState({
       <Icon className={`${iconSizes.xl4} text-muted-foreground ${spacing.margin.bottom.md}`} />
       <h2 className="text-xl font-semibold text-foreground">{displayTitle}</h2>
       <p className="text-muted-foreground">{displayDescription}</p>
+      {action && <div className="mt-4">{action}</div>}
     </div>
   );
 }
