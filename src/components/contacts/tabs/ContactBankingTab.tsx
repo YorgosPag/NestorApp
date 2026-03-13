@@ -21,13 +21,6 @@ import { BankAccountForm } from '@/components/banking/BankAccountForm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription
-} from '@/components/ui/dialog';
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -275,22 +268,24 @@ export function ContactBankingTab({
           </CardContent>
         </Card>
 
-        {/* Form Dialog */}
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Νέος Λογαριασμός</DialogTitle>
-              <DialogDescription>
-                Προσθέστε τα στοιχεία του τραπεζικού λογαριασμού.
-              </DialogDescription>
-            </DialogHeader>
-            <BankAccountForm
-              onSubmit={handleFormSubmit}
-              onCancel={handleFormCancel}
-              loading={actionLoading}
-            />
-          </DialogContent>
-        </Dialog>
+        {/* Inline Form */}
+        {isFormOpen && (
+          <Card>
+            <CardContent className="pt-6">
+              <header className="mb-4">
+                <h3 className="text-lg font-medium">Νέος Λογαριασμός</h3>
+                <p className="text-sm text-muted-foreground">
+                  Προσθέστε τα στοιχεία του τραπεζικού λογαριασμού.
+                </p>
+              </header>
+              <BankAccountForm
+                onSubmit={handleFormSubmit}
+                onCancel={handleFormCancel}
+                loading={actionLoading}
+              />
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   }
@@ -340,27 +335,29 @@ export function ContactBankingTab({
         ))}
       </div>
 
-      {/* Form Dialog */}
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {editingAccount ? 'Επεξεργασία Λογαριασμού' : 'Νέος Λογαριασμός'}
-            </DialogTitle>
-            <DialogDescription>
-              {editingAccount
-                ? 'Τροποποιήστε τα στοιχεία του τραπεζικού λογαριασμού.'
-                : 'Προσθέστε τα στοιχεία του τραπεζικού λογαριασμού.'}
-            </DialogDescription>
-          </DialogHeader>
-          <BankAccountForm
-            account={editingAccount}
-            onSubmit={handleFormSubmit}
-            onCancel={handleFormCancel}
-            loading={actionLoading}
-          />
-        </DialogContent>
-      </Dialog>
+      {/* Inline Form */}
+      {isFormOpen && (
+        <Card className="border-primary/30">
+          <CardContent className="pt-6">
+            <header className="mb-4">
+              <h3 className="text-lg font-medium">
+                {editingAccount ? 'Επεξεργασία Λογαριασμού' : 'Νέος Λογαριασμός'}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {editingAccount
+                  ? 'Τροποποιήστε τα στοιχεία του τραπεζικού λογαριασμού.'
+                  : 'Προσθέστε τα στοιχεία του τραπεζικού λογαριασμού.'}
+              </p>
+            </header>
+            <BankAccountForm
+              account={editingAccount}
+              onSubmit={handleFormSubmit}
+              onCancel={handleFormCancel}
+              loading={actionLoading}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog
