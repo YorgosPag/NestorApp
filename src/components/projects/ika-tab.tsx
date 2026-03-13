@@ -5,12 +5,13 @@
  * IKA Tab — Parent component for IKA/ΕΦΚΑ sub-tabs
  * =============================================================================
  *
- * Contains 5 sub-tabs:
+ * Contains 6 sub-tabs:
  * 1. Εργατοτεχνίτες (Workers)
  * 2. Παρουσιολόγιο (Timesheet)
  * 3. Υπολογισμός Ενσήμων (Stamps Calculation)
  * 4. ΑΠΔ & Πληρωμές (APD & Payments)
  * 5. Αναγγελία Έργου (EFKA Declaration)
+ * 6. Ρυθμίσεις ΕΦΚΑ (EFKA Settings — Insurance Classes Admin)
  *
  * Receives `project` prop from UniversalTabsRenderer.
  *
@@ -20,12 +21,13 @@
 import React from 'react';
 import { TabsContent } from "@/components/ui/tabs";
 import { TabsOnlyTriggers } from "@/components/ui/navigation/TabsComponents";
-import { Users, Clock, Calculator, CreditCard, Landmark } from 'lucide-react';
+import { Users, Clock, Calculator, CreditCard, Landmark, Settings } from 'lucide-react';
 import { WorkersTabContent } from './ika/WorkersTabContent';
 import { TimesheetTabContent } from './ika/TimesheetTabContent';
 import { StampsCalculationTabContent } from './ika/StampsCalculationTabContent';
 import { ApdPaymentsTabContent } from './ika/ApdPaymentsTabContent';
 import { EfkaDeclarationTabContent } from './ika/EfkaDeclarationTabContent';
+import { LaborComplianceSettingsTabContent } from './ika/LaborComplianceSettingsTabContent';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
@@ -75,6 +77,12 @@ export function IkaTab({ project, data }: IkaTabProps) {
       label: t('ika.apdPayments'),
       icon: CreditCard,
       content: <ApdPaymentsTabContent projectId={projectId} />,
+    },
+    {
+      id: 'efka-settings',
+      label: t('ika.efkaSettings'),
+      icon: Settings,
+      content: <LaborComplianceSettingsTabContent projectId={projectId} />,
     },
   ];
 

@@ -13,9 +13,10 @@
  * @enterprise ADR-090 — IKA/EFKA Labor Compliance System (Phase 3)
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
 import type { LaborComplianceConfig } from '../contracts';
 import { DEFAULT_LABOR_COMPLIANCE_CONFIG } from '../contracts';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -29,18 +30,28 @@ interface UseLaborComplianceConfigReturn {
   isLoading: boolean;
   /** Error message */
   error: string | null;
+  /** Whether data comes from Firestore (true) or hardcoded defaults (false) */
+  isFromFirestore: boolean;
+  /** Re-fetch from Firestore */
+  refetch: () => void;
 }
 
 /**
  * Hook for reading labor compliance configuration.
  *
- * Reads from `system/settings` document, field `laborCompliance`.
+ * Reads from `settings/labor_compliance` document (dedicated document).
  * If not found, returns DEFAULT_LABOR_COMPLIANCE_CONFIG with KPK 781 rates.
  */
 export function useLaborComplianceConfig(): UseLaborComplianceConfigReturn {
   const [config, setConfig] = useState<LaborComplianceConfig>(DEFAULT_LABOR_COMPLIANCE_CONFIG);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isFromFirestore, setIsFromFirestore] = useState(false);
+  const [fetchTrigger, setFetchTrigger] = useState(0);
+
+  const refetch = useCallback(() => {
+    setFetchTrigger(prev => prev + 1);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -50,19 +61,21 @@ export function useLaborComplianceConfig(): UseLaborComplianceConfigReturn {
         setIsLoading(true);
         setError(null);
 
-        const settingsRef = doc(db, 'system', 'settings');
+        const settingsRef = doc(db, COLLECTIONS.SETTINGS, SYSTEM_DOCS.LABOR_COMPLIANCE_SETTINGS);
         const snapshot = await getDoc(settingsRef);
 
         if (!mounted) return;
 
         if (snapshot.exists()) {
           const data = snapshot.data();
-          const laborConfig = data?.laborCompliance as LaborComplianceConfig | undefined;
-
-          if (laborConfig && laborConfig.insuranceClasses && laborConfig.contributionRates) {
-            setConfig(laborConfig);
+          if (data?.insuranceClasses && data?.contributionRates) {
+            setConfig({
+              insuranceClasses: data.insuranceClasses,
+              contributionRates: data.contributionRates,
+              lastUpdated: data.lastUpdated ?? DEFAULT_LABOR_COMPLIANCE_CONFIG.lastUpdated,
+            });
+            setIsFromFirestore(true);
           }
-          // If no laborCompliance field, keep defaults
         }
         // If document doesn't exist, keep defaults
       } catch (err) {
@@ -80,7 +93,7 @@ export function useLaborComplianceConfig(): UseLaborComplianceConfigReturn {
 
     fetchConfig();
     return () => { mounted = false; };
-  }, []);
+  }, [fetchTrigger]);
 
-  return { config, isLoading, error };
+  return { config, isLoading, error, isFromFirestore, refetch };
 }

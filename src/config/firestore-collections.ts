@@ -303,7 +303,11 @@ export const SYSTEM_DOCS = {
 
   // 🛡️ SUPER ADMIN REGISTRY (ADR-145: Super Admin AI Assistant)
   // Path: settings/super_admin_registry
-  SUPER_ADMIN_REGISTRY: process.env.NEXT_PUBLIC_SUPER_ADMIN_REGISTRY_DOC || 'super_admin_registry'
+  SUPER_ADMIN_REGISTRY: process.env.NEXT_PUBLIC_SUPER_ADMIN_REGISTRY_DOC || 'super_admin_registry',
+
+  // 👷 LABOR COMPLIANCE SETTINGS (ADR-090: IKA/EFKA — Insurance Classes & Contribution Rates)
+  // Path: settings/labor_compliance
+  LABOR_COMPLIANCE_SETTINGS: process.env.NEXT_PUBLIC_LABOR_COMPLIANCE_SETTINGS_DOC || 'labor_compliance'
 } as const;
 
 // ============================================================================
