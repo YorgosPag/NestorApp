@@ -196,20 +196,23 @@ export const POST = withStandardRateLimit(
 
         logger.info('Creating parking spot', { number: body.number, buildingId: body.buildingId, companyId: ctx.companyId });
 
-        const docRef = await adminDb.collection(COLLECTIONS.PARKING_SPACES).add(cleanData);
+        // 🏗️ ADR-210: Enterprise ID for parking spots
+        const { generateParkingId } = await import('@/services/enterprise-id.service');
+        const parkingSpotId = generateParkingId();
+        await adminDb.collection(COLLECTIONS.PARKING_SPACES).doc(parkingSpotId).set(cleanData);
 
-        logger.info('Parking spot created', { parkingSpotId: docRef.id });
+        logger.info('Parking spot created', { parkingSpotId });
 
         await logAuditEvent(ctx, 'data_created', 'parking_spot', 'api', {
           newValue: {
             type: 'status',
-            value: { parkingSpotId: docRef.id, number: body.number, buildingId: body.buildingId },
+            value: { parkingSpotId, number: body.number, buildingId: body.buildingId },
           },
           metadata: { reason: 'Parking spot created via API' },
         });
 
         return apiSuccess<ParkingCreateResponse>(
-          { parkingSpotId: docRef.id },
+          { parkingSpotId },
           'Parking spot created successfully'
         );
       } catch (error) {

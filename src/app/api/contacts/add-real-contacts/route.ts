@@ -127,11 +127,13 @@ export const POST = withStandardRateLimit(
           websites: contact.websites || []
         };
 
-        // Δημιουργία contact με auto-generated ID
-        const docRef = await getAdminFirestore().collection(COLLECTIONS.CONTACTS).add(contactData);
-        addedContactIds.push(docRef.id);
+        // 🏗️ ADR-210: Enterprise ID for contacts
+        const { generateContactId } = await import('@/services/enterprise-id.service');
+        const contactId = generateContactId();
+        await getAdminFirestore().collection(COLLECTIONS.CONTACTS).doc(contactId).set(contactData);
+        addedContactIds.push(contactId);
 
-        logger.info('Added contact', { name: contact.firstName || contact.companyName, id: docRef.id });
+        logger.info('Added contact', { name: contact.firstName || contact.companyName, id: contactId });
 
       } catch (contactError) {
         logger.error(`Error adding contact ${i + 1}`, { error: contactError });

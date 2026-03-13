@@ -338,20 +338,23 @@ export const POST = withStandardRateLimit(
 
         logger.info('Creating storage unit', { name: body.name, buildingId: body.buildingId, companyId: ctx.companyId });
 
-        const docRef = await adminDb.collection(COLLECTIONS.STORAGE).add(cleanData);
+        // 🏗️ ADR-210: Enterprise ID for storage units
+        const { generateStorageId } = await import('@/services/enterprise-id.service');
+        const storageId = generateStorageId();
+        await adminDb.collection(COLLECTIONS.STORAGE).doc(storageId).set(cleanData);
 
-        logger.info('Storage unit created', { storageId: docRef.id });
+        logger.info('Storage unit created', { storageId });
 
         await logAuditEvent(ctx, 'data_created', 'storage', 'api', {
           newValue: {
             type: 'status',
-            value: { storageId: docRef.id, name: body.name, buildingId: body.buildingId },
+            value: { storageId, name: body.name, buildingId: body.buildingId },
           },
           metadata: { reason: 'Storage unit created via API' },
         });
 
         return apiSuccess<StorageCreateResponse>(
-          { storageId: docRef.id },
+          { storageId },
           'Storage unit created successfully'
         );
       } catch (error) {

@@ -407,3 +407,4 @@ grep -rn "from.*enterprise-id" src/ --include="*.ts" --include="*.tsx" | wc -l
 |------|--------|--------|
 | 2026-03-12 | Initial full codebase audit — 36 collections, 8 violations, 24 addDoc patterns, remediation roadmap | Claude Code (Anthropic AI) |
 | 2026-03-12 | **Phase 1 + P1/P2 IMPLEMENTED**: 4 new generators (ws, addr, opp, xmit), 8 violations fixed, 7 collections migrated addDoc→setDoc. Compliance: 33%→53% | Claude Code (Anthropic AI) |
+| 2026-03-13 | **Phase 2: 6 core API endpoints migrated** — projects (.add→.doc(proj_).set + projectCode PRJ-xxx), buildings (bldg_), units (unit_), parking (park_), storages (stor_), contacts (cont_). All server-side entity creation now uses enterprise IDs. | Claude Code (Anthropic AI) |

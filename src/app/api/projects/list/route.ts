@@ -32,6 +32,8 @@ import { getString, getNumber, getArray } from '@/lib/firestore/field-extractors
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { FieldValue } from 'firebase-admin/firestore';
 import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
+import { generateProjectId } from '@/services/enterprise-id.service';
+import { projectCodeService } from '@/services/project-code.service';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ProjectsListRoute');
@@ -296,17 +298,25 @@ export const POST = withHighRateLimit(
 
         logger.info('[Projects] Creating new project for tenant', { companyId: ctx.companyId });
 
-        // 🏗️ CREATE: Use Admin SDK (bypasses Firestore rules)
-        const docRef = await getAdminFirestore().collection(COLLECTIONS.PROJECTS).add(cleanData);
+        // 🏗️ ADR-210: Enterprise ID + sequential projectCode (PRJ-001, PRJ-002, ...)
+        const projectId = generateProjectId();
+        const adminDb = getAdminFirestore();
+        const { code: projectCode } = await projectCodeService.generateNextCode(adminDb);
 
-        logger.info('[Projects] Project created', { projectId: docRef.id });
+        await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).set({
+          ...cleanData,
+          projectCode,
+        });
+
+        logger.info('[Projects] Project created', { projectId, projectCode });
 
         // 📊 Audit log
         await logAuditEvent(ctx, 'data_created', 'projects', 'api', {
           newValue: {
             type: 'project_create',
             value: {
-              projectId: docRef.id,
+              projectId,
+              projectCode,
               projectName: body.name,
             },
           },
@@ -314,7 +324,6 @@ export const POST = withHighRateLimit(
         });
 
         // 🏢 AUTO-REGISTER: Ensure company exists in navigation_companies
-        const adminDb = getAdminFirestore();
         const navQuery = await adminDb
           .collection(COLLECTIONS.NAVIGATION)
           .where('contactId', '==', ctx.companyId)
@@ -338,8 +347,8 @@ export const POST = withHighRateLimit(
 
         return apiSuccess<ProjectCreateResponse>(
           {
-            projectId: docRef.id,
-            project: { ...body, id: docRef.id }
+            projectId,
+            project: { ...body, id: projectId }
           },
           'Project created successfully'
         );

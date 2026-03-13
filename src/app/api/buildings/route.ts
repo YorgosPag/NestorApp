@@ -165,16 +165,18 @@ export const POST = withStandardRateLimit(
 
       logger.info('[Buildings] Creating new building for tenant', { companyId: ctx.companyId });
 
-      // 🏗️ CREATE: Use Admin SDK (bypasses Firestore rules)
-      const docRef = await adminDb.collection(COLLECTIONS.BUILDINGS).add(cleanData);
+      // 🏗️ CREATE: Use Admin SDK with enterprise ID (ADR-210)
+      const { generateBuildingId } = await import('@/services/enterprise-id.service');
+      const buildingId = generateBuildingId();
+      await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).set(cleanData);
 
-      logger.info('[Buildings] Building created', { buildingId: docRef.id });
+      logger.info('[Buildings] Building created', { buildingId });
 
       // 🏢 ENTERPRISE: Return created building with ID
       return apiSuccess<BuildingCreateResponse>(
         {
-          buildingId: docRef.id,
-          building: { ...body, id: docRef.id }
+          buildingId,
+          building: { ...body, id: buildingId }
         },
         'Building created successfully'
       );

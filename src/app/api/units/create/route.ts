@@ -106,17 +106,19 @@ export const POST = withStandardRateLimit(
 
         logger.info('[Units] Creating new unit', { name: body.name, companyId: resolvedCompanyId, buildingId: body.buildingId || 'none' });
 
-        // 🏗️ CREATE: Use Admin SDK (bypasses Firestore rules)
-        const docRef = await adminDb.collection(COLLECTIONS.UNITS).add(cleanData);
+        // 🏗️ CREATE: Use Admin SDK with enterprise ID (ADR-210)
+        const { generateUnitId } = await import('@/services/enterprise-id.service');
+        const unitId = generateUnitId();
+        await adminDb.collection(COLLECTIONS.UNITS).doc(unitId).set(cleanData);
 
-        logger.info('[Units] Unit created', { unitId: docRef.id });
+        logger.info('[Units] Unit created', { unitId });
 
         // 📊 Audit log
         await logAuditEvent(ctx, 'data_created', 'unit', 'api', {
           newValue: {
             type: 'status',
             value: {
-              unitId: docRef.id,
+              unitId,
               name: body.name,
               buildingId: body.buildingId || null,
             },
@@ -126,7 +128,7 @@ export const POST = withStandardRateLimit(
 
         // 🏢 ENTERPRISE: Return created unit ID
         return apiSuccess<UnitCreateResponse>(
-          { unitId: docRef.id },
+          { unitId },
           'Unit created successfully'
         );
 
