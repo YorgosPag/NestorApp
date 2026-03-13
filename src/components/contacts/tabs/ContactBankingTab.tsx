@@ -14,6 +14,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Contact } from '@/types/contacts';
+import { getContactDisplayName } from '@/types/contacts/helpers';
 import type { BankAccount, BankAccountInput } from '@/types/contacts/banking';
 import { BankAccountsService } from '@/services/banking';
 import { BankAccountCard } from '@/components/banking/BankAccountCard';
@@ -282,6 +283,7 @@ export function ContactBankingTab({
                 onSubmit={handleFormSubmit}
                 onCancel={handleFormCancel}
                 loading={actionLoading}
+                contactName={getContactDisplayName(data)}
               />
             </CardContent>
           </Card>
@@ -353,6 +355,7 @@ export function ContactBankingTab({
               account={editingAccount}
               onSubmit={handleFormSubmit}
               onCancel={handleFormCancel}
+              contactName={getContactDisplayName(data)}
               loading={actionLoading}
             />
           </CardContent>

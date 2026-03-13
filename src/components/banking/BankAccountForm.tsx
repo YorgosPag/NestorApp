@@ -59,6 +59,8 @@ interface BankAccountFormProps {
   onCancel: () => void;
   /** Whether the form is in loading state */
   loading?: boolean;
+  /** Contact display name — used to pre-fill holder name */
+  contactName?: string;
   /** Custom className */
   className?: string;
 }
@@ -92,6 +94,7 @@ export function BankAccountForm({
   onSubmit,
   onCancel,
   loading = false,
+  contactName,
   className
 }: BankAccountFormProps) {
   const { t } = useTranslation('banking');
@@ -130,6 +133,13 @@ export function BankAccountForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   // Track whether bank was auto-detected from IBAN (locks the selector)
   const [bankDetectedFromIBAN, setBankDetectedFromIBAN] = useState(false);
+
+  // Pre-fill holder name with contact name for new accounts
+  useEffect(() => {
+    if (!isEditing && contactName && !formData.holderName) {
+      setFormData(prev => ({ ...prev, holderName: contactName }));
+    }
+  }, [isEditing, contactName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-detect bank + account number from IBAN
   useEffect(() => {
@@ -312,7 +322,8 @@ export function BankAccountForm({
             id="accountNumber"
             value={formData.accountNumber || ''}
             onChange={(e) => handleFieldChange('accountNumber', e.target.value)}
-            disabled={loading}
+            disabled={loading || bankDetectedFromIBAN}
+            className={bankDetectedFromIBAN ? 'bg-muted' : ''}
             placeholder={t('form.accountNumberPlaceholder')}
           />
         </div>
@@ -326,7 +337,8 @@ export function BankAccountForm({
             id="branch"
             value={formData.branch || ''}
             onChange={(e) => handleFieldChange('branch', e.target.value)}
-            disabled={loading}
+            disabled={loading || bankDetectedFromIBAN}
+            className={bankDetectedFromIBAN ? 'bg-muted' : ''}
             placeholder={t('form.branchPlaceholder')}
           />
         </div>
@@ -391,8 +403,13 @@ export function BankAccountForm({
           value={formData.holderName || ''}
           onChange={(e) => handleFieldChange('holderName', e.target.value)}
           disabled={loading}
-          placeholder={t('form.holderPlaceholder')}
+          placeholder={contactName || t('form.holderPlaceholder')}
         />
+        {contactName && !formData.holderName && (
+          <p className="text-xs text-muted-foreground">
+            {t('form.holderHint', { name: contactName })}
+          </p>
+        )}
       </div>
 
       {/* Notes (optional) */}
