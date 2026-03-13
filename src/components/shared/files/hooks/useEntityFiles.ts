@@ -25,6 +25,8 @@ import { FileRecordService } from '@/services/file-record.service';
 import type { FileRecord } from '@/types/file-record';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import { RealtimeService } from '@/services/realtime';
+import type { FileCreatedPayload, FileUpdatedPayload, FileTrashedPayload, FileRestoredPayload } from '@/services/realtime';
 
 // ============================================================================
 // MODULE LOGGER
@@ -328,6 +330,45 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
       fetchFiles();
     }
   }, [autoFetch, entityId, fetchFiles]);
+
+  // =========================================================================
+  // 🏢 ENTERPRISE: Event bus subscribers for cross-tab file sync (ADR-228 Tier 2)
+  // =========================================================================
+
+  useEffect(() => {
+    if (!entityId) return;
+
+    const handleCreated = (payload: FileCreatedPayload) => {
+      if (payload.file.entityId === entityId && payload.file.entityType === entityType) {
+        logger.info('File created for current entity — refetching', { fileId: payload.fileId });
+        fetchFiles();
+      }
+    };
+
+    const handleUpdated = (payload: FileUpdatedPayload) => {
+      setFiles(prev => prev.map(file =>
+        file.id === payload.fileId
+          ? { ...file, ...payload.updates }
+          : file
+      ));
+    };
+
+    const handleTrashed = (payload: FileTrashedPayload) => {
+      setFiles(prev => prev.filter(file => file.id !== payload.fileId));
+    };
+
+    const handleRestored = (payload: FileRestoredPayload) => {
+      logger.info('File restored — refetching', { fileId: payload.fileId });
+      fetchFiles();
+    };
+
+    const unsub1 = RealtimeService.subscribe('FILE_CREATED', handleCreated);
+    const unsub2 = RealtimeService.subscribe('FILE_UPDATED', handleUpdated);
+    const unsub3 = RealtimeService.subscribe('FILE_TRASHED', handleTrashed);
+    const unsub4 = RealtimeService.subscribe('FILE_RESTORED', handleRestored);
+
+    return () => { unsub1(); unsub2(); unsub3(); unsub4(); };
+  }, [entityId, entityType, fetchFiles]);
 
   // =========================================================================
   // RETURN

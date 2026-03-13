@@ -37,6 +37,8 @@ import type { Workspace, ActiveWorkspaceContext } from '@/types/workspace';
 import { useAuth } from '@/auth/contexts/AuthContext';
 
 import { createModuleLogger } from '@/lib/telemetry';
+import { RealtimeService } from '@/services/realtime';
+import type { WorkspaceCreatedPayload, WorkspaceUpdatedPayload } from '@/services/realtime';
 import { safeGetItem, safeSetItem, STORAGE_KEYS } from '@/lib/storage';
 const logger = createModuleLogger('WorkspaceContext');
 
@@ -143,6 +145,29 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       return; // Skip if not activated (lazy initialization)
     }
     loadWorkspaces();
+  }, [activated, loadWorkspaces]);
+
+  // ==========================================================================
+  // 🏢 ENTERPRISE: Event bus subscribers for workspace sync (ADR-228 Tier 2)
+  // ==========================================================================
+
+  useEffect(() => {
+    if (!activated) return;
+
+    const handleCreated = (_payload: WorkspaceCreatedPayload) => {
+      logger.info('[WorkspaceContext] Workspace created — refreshing list');
+      loadWorkspaces();
+    };
+
+    const handleUpdated = (payload: WorkspaceUpdatedPayload) => {
+      logger.info('[WorkspaceContext] Workspace updated', { workspaceId: payload.workspaceId });
+      loadWorkspaces();
+    };
+
+    const unsub1 = RealtimeService.subscribe('WORKSPACE_CREATED', handleCreated);
+    const unsub2 = RealtimeService.subscribe('WORKSPACE_UPDATED', handleUpdated);
+
+    return () => { unsub1(); unsub2(); };
   }, [activated, loadWorkspaces]);
 
   // ==========================================================================

@@ -22,6 +22,8 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { FloorFloorplanService, type FloorFloorplanData } from '@/services/floorplans/FloorFloorplanService';
 import { createModuleLogger } from '@/lib/telemetry';
+import { RealtimeService } from '@/services/realtime';
+import type { FloorplanCreatedPayload, FloorplanDeletedPayload } from '@/services/realtime';
 
 const logger = createModuleLogger('useFloorFloorplans');
 
@@ -281,6 +283,27 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
   useEffect(() => {
     fetchFloorplans();
   }, [fetchFloorplans]);
+
+  // 🏢 ENTERPRISE: Event bus subscribers for cross-tab floorplan sync (ADR-228 Tier 2)
+  useEffect(() => {
+    if (!floorId && (!buildingId || floorNumber === null)) return;
+
+    const handleCreated = (payload: FloorplanCreatedPayload) => {
+      if (payload.floorplan.entityId === floorId) {
+        logger.info('Floorplan created for current floor — refetching');
+        fetchFloorplans();
+      }
+    };
+
+    const handleDeleted = (_payload: FloorplanDeletedPayload) => {
+      fetchFloorplans();
+    };
+
+    const unsub1 = RealtimeService.subscribe('FLOORPLAN_CREATED', handleCreated);
+    const unsub2 = RealtimeService.subscribe('FLOORPLAN_DELETED', handleDeleted);
+
+    return () => { unsub1(); unsub2(); };
+  }, [floorId, buildingId, floorNumber, fetchFloorplans]);
 
   return {
     floorFloorplan,

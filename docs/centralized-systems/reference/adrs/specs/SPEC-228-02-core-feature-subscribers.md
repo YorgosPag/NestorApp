@@ -5,10 +5,11 @@
 | **ADR** | ADR-228 |
 | **Phase** | Tier 2 — High Priority (Core Features) |
 | **Priority** | HIGH |
+| **Status** | ✅ IMPLEMENTED (2026-03-14) |
 | **Estimated Effort** | 1 session |
 | **Prerequisite** | SPEC-228-00 (Tier 0), SPEC-228-01 (Tier 1) |
 | **Files Created** | 0 |
-| **Files Modified** | 3-4 |
+| **Files Modified** | 5 |
 
 ---
 
@@ -197,12 +198,12 @@ WorkspaceDeletedPayload { workspaceId, timestamp }
 
 ## 6. Verification Checklist
 
-- [ ] FILE_* subscribers wired — FILE_CREATED, FILE_UPDATED, FILE_TRASHED, FILE_RESTORED
-- [ ] FLOORPLAN_* subscribers wired — FLOORPLAN_CREATED, FLOORPLAN_DELETED
-- [ ] WORKSPACE_* subscribers wired — WORKSPACE_CREATED, WORKSPACE_UPDATED
-- [ ] Scope filtering applied (entityId check) where applicable
-- [ ] Cleanup functions in all useEffect blocks
-- [ ] TypeScript compiles without errors
+- [x] FILE_* subscribers wired — FILE_CREATED, FILE_UPDATED, FILE_TRASHED, FILE_RESTORED ✅ `useEntityFiles.ts`
+- [x] FLOORPLAN_* subscribers wired — FLOORPLAN_CREATED, FLOORPLAN_DELETED ✅ `useUnitFloorplans.ts`, `useBuildingFloorplans.ts`, `useFloorFloorplans.ts`
+- [x] WORKSPACE_* subscribers wired — WORKSPACE_CREATED, WORKSPACE_UPDATED ✅ `WorkspaceContext.tsx`
+- [x] Scope filtering applied (entityId check) where applicable
+- [x] Cleanup functions in all useEffect blocks
+- [x] TypeScript compiles without errors
 
 ---
 
@@ -210,9 +211,11 @@ WorkspaceDeletedPayload { workspaceId, timestamp }
 
 | File | Action |
 |------|--------|
-| File list hook/component (TBD after research) | ADD FILE_* event bus subscribers |
-| Floorplan list hook/component (TBD after research) | ADD FLOORPLAN_* event bus subscribers |
-| Workspace/company switcher (TBD after research) | ADD WORKSPACE_* event bus subscribers |
+| `src/components/shared/files/hooks/useEntityFiles.ts` | ADD FILE_CREATED/UPDATED/TRASHED/RESTORED subscribers with entityId+entityType scope filtering |
+| `src/hooks/useUnitFloorplans.ts` | WRAP fetchFloorplans in useCallback + ADD FLOORPLAN_CREATED/DELETED subscribers |
+| `src/hooks/useBuildingFloorplans.ts` | ADD FLOORPLAN_CREATED/DELETED subscribers (entityId scope filtering) |
+| `src/hooks/useFloorFloorplans.ts` | ADD FLOORPLAN_CREATED/DELETED subscribers (floorId scope filtering) |
+| `src/contexts/WorkspaceContext.tsx` | ADD WORKSPACE_CREATED/UPDATED subscribers (lazy activation guard) |
 
 ---
 
