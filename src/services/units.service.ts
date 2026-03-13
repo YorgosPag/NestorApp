@@ -55,36 +55,9 @@ function toUnitModel(raw: DocumentData): UnitModel {
   return normalizeUnit({ ...data, id: raw.id as string });
 }
 
-// Add a single unit
-export async function addUnit(unitData: Omit<Property, 'id'>): Promise<{ id: string; success: boolean }> {
-  try {
-    // 🏢 ADR-210: Enterprise ID generation — setDoc with pre-generated ID
-    const id = generateUnitId();
-    await setDoc(doc(db, UNITS_COLLECTION, id), {
-      ...unitData,
-      id,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-
-    // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    // Dispatch event for all components to add the unit to their local state
-    RealtimeService.dispatch('UNIT_CREATED',{
-      unitId: id,
-      unit: {
-        name: unitData.name,
-        type: unitData.type,
-        buildingId: unitData.buildingId ?? null,
-      },
-      timestamp: Date.now()
-    });
-
-    return { id, success: true };
-  } catch (error) {
-    // Error logging removed
-    throw error;
-  }
-}
+// addUnit() DELETED — was dead code (0 consumers).
+// Client-side setDoc blocked by Firestore rules (allow create: if false).
+// All unit creation goes through createUnit() → server API + Admin SDK.
 
 /**
  * 🏢 ENTERPRISE: Create unit via server-side API (Admin SDK)
