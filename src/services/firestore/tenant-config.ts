@@ -49,6 +49,10 @@ const TENANT_OVERRIDES: Partial<Record<CollectionKey, TenantFieldConfig>> = {
   SECURITY_ROLES:            { mode: 'none', fieldName: '' },
   EMAIL_DOMAIN_POLICIES:     { mode: 'none', fieldName: '' },
   COUNTRY_SECURITY_POLICIES: { mode: 'none', fieldName: '' },
+
+  // --- DXF / CAD Viewer (no tenant filter — files are project-scoped) ---
+  CAD_FILES:              { mode: 'none', fieldName: '' },
+  DXF_OVERLAY_LEVELS:     { mode: 'none', fieldName: '' },
 } as const;
 
 /** Default tenant configuration for collections not in the override map */

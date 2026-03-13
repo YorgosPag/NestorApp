@@ -1,7 +1,8 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { db } from '../../../lib/firebase';
-import { collection, doc, onSnapshot, addDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { generateOverlayId } from '@/services/enterprise-id.service';
 import { useAuth } from '@/auth/hooks/useAuth';
 import type { Overlay, CreateOverlayData, UpdateOverlayData, Status, OverlayKind } from './types';
 // 🏢 ENTERPRISE: Debug system for production-silent logging
@@ -139,14 +140,16 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     if (overlayData.label !== undefined) newOverlay.label = overlayData.label;
     if (overlayData.linked !== undefined) newOverlay.linked = overlayData.linked;
 
-    const collectionRef = collection(db, `${COLLECTION_PREFIX}/${state.currentLevelId}/items`);
-    const docRef = await addDoc(collectionRef, {
+    // 🏢 ADR-210: Enterprise ID generation — deterministic, prefixed IDs
+    const overlayId = generateOverlayId();
+    const docRef = doc(db, `${COLLECTION_PREFIX}/${state.currentLevelId}/items`, overlayId);
+    await setDoc(docRef, {
       ...newOverlay,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
 
-    return docRef.id;
+    return overlayId;
   }, [state.currentLevelId, user]);
 
   const update = useCallback(async (id: string, patch: UpdateOverlayData): Promise<void> => {

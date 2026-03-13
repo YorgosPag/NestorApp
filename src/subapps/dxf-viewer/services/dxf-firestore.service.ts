@@ -1,8 +1,9 @@
 import { getErrorMessage } from '@/lib/error-utils';
 import { db, storage } from '../../../lib/firebase';
-import { doc, setDoc, getDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, getBytes } from 'firebase/storage';
 import { COLLECTIONS } from '../../../config/firestore-collections';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import type { SceneModel } from '../types/scene';
 import {
   DxfSecurityValidator,
@@ -362,27 +363,21 @@ export class DxfFirestoreService {
 
   /**
    * Get file metadata only (without scene data)
+   * 🏢 ADR-214 Phase 10: Migrated to firestoreQueryService.getById
    */
   static async getFileMetadata(fileId: string): Promise<DxfFileMetadata | null> {
-    const docRef = doc(db, this.COLLECTION_NAME, fileId);
-    const docSnap = await getDoc(docRef);
-
-    if (docSnap.exists()) {
-      return docSnap.data() as DxfFileMetadata;
-    }
-
-    return null;
+    return firestoreQueryService.getById<DxfFileMetadata>('CAD_FILES', fileId);
   }
 
   /**
    * Check if file exists in Firestore
+   * 🏢 ADR-214 Phase 10: Migrated to firestoreQueryService.getById
    * @enterprise Silent on expected failures, returns false gracefully
    */
   static async fileExists(fileId: string): Promise<boolean> {
     try {
-      const docRef = doc(db, this.COLLECTION_NAME, fileId);
-      const docSnap = await getDoc(docRef);
-      return docSnap.exists();
+      const result = await firestoreQueryService.getById<DxfFileMetadata>('CAD_FILES', fileId);
+      return result !== null;
     } catch (error) {
       // 🏢 ENTERPRISE: Expected failures → silent, real errors → log
       if (error instanceof Error && isExpectedError(error)) {
@@ -408,16 +403,10 @@ export class DxfFirestoreService {
   
   /**
    * Internal method to get document
+   * 🏢 ADR-214 Phase 10: Migrated to firestoreQueryService.getById
    */
   private static async getFile(fileId: string): Promise<DxfFileRecord | null> {
-    const docRef = doc(db, this.COLLECTION_NAME, fileId);
-    const docSnap = await getDoc(docRef);
-    
-    if (docSnap.exists()) {
-      return docSnap.data() as DxfFileRecord;
-    }
-    
-    return null;
+    return firestoreQueryService.getById<DxfFileRecord>('CAD_FILES', fileId);
   }
 
   // ==========================================================================

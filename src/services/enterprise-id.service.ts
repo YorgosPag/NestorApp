@@ -66,6 +66,12 @@ export const ENTERPRISE_ID_PREFIXES = {
   JOB: 'job',
 
   // ==========================================================================
+  // DXF / CAD VIEWER
+  // ==========================================================================
+  OVERLAY: 'ovrl',
+  LEVEL: 'lvl',
+
+  // ==========================================================================
   // UI & VISUALIZATION
   // ==========================================================================
   LAYER: 'lyr',
@@ -437,6 +443,26 @@ export class EnterpriseIdService {
    */
   generateJobId(): string {
     return this.generateId(ENTERPRISE_ID_PREFIXES.JOB).id;
+  }
+
+  // ==========================================================================
+  // DXF / CAD VIEWER
+  // ==========================================================================
+
+  /**
+   * 🎯 Generate Overlay ID (DXF overlay items)
+   * Format: ovrl_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateOverlayId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.OVERLAY).id;
+  }
+
+  /**
+   * 📐 Generate Level ID (DXF viewer levels)
+   * Format: lvl_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateLevelId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.LEVEL).id;
   }
 
   /**
@@ -913,6 +939,12 @@ export const generateEventId = () => enterpriseIdService.generateEventId();
 export const generateRequestId = () => enterpriseIdService.generateRequestId();
 export const generateMessageId = () => enterpriseIdService.generateMessageId();
 export const generateJobId = () => enterpriseIdService.generateJobId();
+
+// =============================================================================
+// DXF / CAD VIEWER
+// =============================================================================
+export const generateOverlayId = () => enterpriseIdService.generateOverlayId();
+export const generateLevelId = () => enterpriseIdService.generateLevelId();
 
 // =============================================================================
 // UI & VISUALIZATION
