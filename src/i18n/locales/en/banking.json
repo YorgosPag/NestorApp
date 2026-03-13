@@ -31,6 +31,7 @@
   },
   "form": {
     "bankName": "Bank Name",
+    "bankAutoDetected": "Bank was auto-detected from the IBAN",
     "bankNamePlaceholder": "e.g. Deutsche Bank",
     "holderName": "Holder",
     "holderPlaceholder": "For joint accounts or different holder",

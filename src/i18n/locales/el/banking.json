@@ -31,6 +31,7 @@
   },
   "form": {
     "bankName": "Όνομα Τράπεζας",
+    "bankAutoDetected": "Η τράπεζα αναγνωρίστηκε αυτόματα από το IBAN",
     "bankNamePlaceholder": "π.χ. Deutsche Bank",
     "holderName": "Δικαιούχος",
     "holderPlaceholder": "Για κοινούς λογαριασμούς ή διαφορετικό δικαιούχο",

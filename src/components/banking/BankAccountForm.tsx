@@ -128,25 +128,46 @@ export function BankAccountForm({
     return false;
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Track whether bank was auto-detected from IBAN (locks the selector)
+  const [bankDetectedFromIBAN, setBankDetectedFromIBAN] = useState(false);
 
-  // Auto-detect bank from IBAN
+  // Auto-detect bank + account number from IBAN
   useEffect(() => {
     if (ibanValid && formData.iban) {
+      const cleaned = formData.iban.replace(/\s/g, '').toUpperCase();
       const bank = getBankByIBAN(formData.iban);
-      if (bank && !formData.bankCode) {
+      if (bank) {
+        // Greek IBAN: GR + 2 check + 3 bank + 4 branch + 16 account
+        // Account number = branch (4 digits) + account (16 digits) from position 7
+        const branchCode = cleaned.substring(7, 11);
+        const accountPart = cleaned.substring(11);
         setFormData(prev => ({
           ...prev,
           bankName: bank.name,
-          bankCode: bank.code
+          bankCode: bank.code,
+          // Auto-fill account number from IBAN (branch-account format)
+          ...(!prev.accountNumber ? { accountNumber: `${branchCode}-${accountPart}` } : {}),
+          // Auto-fill branch code
+          ...(!prev.branch ? { branch: branchCode } : {})
         }));
+        setBankDetectedFromIBAN(true);
+      } else {
+        setBankDetectedFromIBAN(false);
       }
+    } else {
+      setBankDetectedFromIBAN(false);
     }
-  }, [formData.iban, ibanValid, formData.bankCode]);
+  }, [formData.iban, ibanValid]);
 
   // Handle IBAN change
   const handleIbanChange = useCallback((value: string, isValid: boolean) => {
     setIbanValid(isValid);
-    setFormData(prev => ({ ...prev, iban: value }));
+    setFormData(prev => ({
+      ...prev,
+      iban: value,
+      // Reset bank when IBAN changes so auto-detect can re-run
+      ...(prev.iban !== value ? { bankCode: undefined, bankName: '' } : {})
+    }));
     if (isValid) {
       setErrors(prev => {
         const next = { ...prev };
@@ -230,16 +251,19 @@ export function BankAccountForm({
         showBankName
       />
 
-      {/* Bank Selector */}
+      {/* Bank Selector — locked when auto-detected from IBAN */}
       <div className="space-y-2">
         <BankSelector
           value={formData.bankCode}
           onChange={handleBankChange}
-          disabled={loading}
+          disabled={loading || bankDetectedFromIBAN}
           required
           grouped
           allowOther
         />
+        {bankDetectedFromIBAN && (
+          <p className="text-xs text-muted-foreground">{t('form.bankAutoDetected')}</p>
+        )}
         {errors.bankName && !formData.bankCode && (
           <p className="text-sm text-destructive">{errors.bankName}</p>
         )}
