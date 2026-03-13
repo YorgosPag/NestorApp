@@ -34,7 +34,6 @@ import {
   Calendar,
   Star,
   Briefcase,
-  Edit,
   Trash2,
 } from 'lucide-react';
 import { ContactsList } from './list/ContactsList';
@@ -42,17 +41,12 @@ import { ContactsList } from './list/ContactsList';
 import { ContactGridCard } from '@/domain';
 import { ContactDetails } from './details/ContactDetails';
 import { MobileDetailsSlideIn } from '@/core/layouts';
+// 🏢 ENTERPRISE: Inline contact creation (replaces modal dialogs)
+import { ContactTypeSelector, InlineContactCreation } from './creation';
+import type { ContactType } from '@/constants/contacts';
 // ⚡ ENTERPRISE PERFORMANCE: Dynamic imports for dialogs - loaded on demand
 // Pattern: Vercel, Salesforce - dialogs are loaded only when user opens them
 import dynamic from 'next/dynamic';
-const TabbedAddNewContactDialog = dynamic(
-  () => import('./dialogs/TabbedAddNewContactDialog').then(mod => ({ default: mod.TabbedAddNewContactDialog })),
-  { ssr: false }
-);
-const EditContactDialog = dynamic(
-  () => import('./dialogs/EditContactDialog').then(mod => ({ default: mod.EditContactDialog })),
-  { ssr: false }
-);
 const DeleteContactDialog = dynamic(
   () => import('./dialogs/DeleteContactDialog').then(mod => ({ default: mod.DeleteContactDialog })),
   { ssr: false }
@@ -95,8 +89,9 @@ export function ContactsPageContent() {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [showDashboard, setShowDashboard] = useState(false);
-  const [showNewContactDialog, setShowNewContactDialog] = useState(false);
-  const [showEditContactDialog, setShowEditContactDialog] = useState(false);
+  // 🏢 ENTERPRISE: Inline creation mode (replaces modal dialogs)
+  // null = no creation | 'selecting' = type picker | ContactType = inline form
+  const [creationMode, setCreationMode] = useState<null | 'selecting' | ContactType>(null);
   const [showDeleteContactDialog, setShowDeleteContactDialog] = useState(false);
   const [showArchiveContactDialog, setShowArchiveContactDialog] = useState(false);
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
@@ -111,9 +106,6 @@ export function ContactsPageContent() {
 
   // 🔥 NEW: Dashboard card filtering state
   const [activeCardFilter, setActiveCardFilter] = useState<string | null>(null);
-
-  // 🔥 NEW: Live preview state for real-time editing
-  const [livePreviewContact, setLivePreviewContact] = useState<Contact | null>(null);
 
   // Advanced Filters state (unified - contains all filters)
   const [filters, setFilters] = useState<ContactFilterState>({
@@ -349,40 +341,20 @@ export function ContactsPageContent() {
     }
   }, [contacts, selectedContact?.id]);
 
+  // 🏢 ENTERPRISE: Inline creation handlers (no modals)
   const handleNewContact = () => {
-    setShowNewContactDialog(true);
+    setCreationMode('selecting');
+    setSelectedContact(null);
   };
 
   const handleContactAdded = async () => {
-    setShowNewContactDialog(false);
+    setCreationMode(null);
     await refreshContacts();
   };
 
-  const handleEditContact = () => {
-    if (selectedContact) {
-      setShowEditContactDialog(true);
-      // 🔥 Initialize live preview with current contact data
-      setLivePreviewContact(selectedContact);
-    }
-  };
-
-  // 🔥 NEW: Handle live changes from edit form (memoized to prevent infinite loops)
-  const handleLiveChange = useCallback((updatedContact: Contact) => {
-    setLivePreviewContact(updatedContact);
-  }, []);
-
-  // 🔥 NEW: Reset live preview when edit dialog closes
-  const handleEditDialogClose = (open: boolean) => {
-    setShowEditContactDialog(open);
-    if (!open) {
-      setLivePreviewContact(null);
-    }
-  };
-
-  const handleContactUpdated = async () => {
-    setShowEditContactDialog(false);
-    await refreshContacts();
-  };
+  const handleCancelCreation = () => setCreationMode(null);
+  const handleSelectContactType = (type: ContactType) => setCreationMode(type);
+  const handleBackToTypeSelection = () => setCreationMode('selecting');
 
   const handleDeleteContacts = (ids?: string[]) => {
     if (ids && ids.length > 0) {
@@ -754,18 +726,31 @@ export function ContactsPageContent() {
                   onSelectContact={setSelectedContact}
                   isLoading={isLoading}
                   onNewContact={handleNewContact}
-                  onEditContact={handleEditContact}
                   onDeleteContact={handleDeleteContacts}
                   onArchiveContact={handleArchiveContacts}
                   onContactUpdated={refreshContacts}
                 />
-                <ContactDetails
-                  contact={livePreviewContact || selectedContact}
-                  onEditContact={handleEditContact}
-                  onDeleteContact={() => handleDeleteContacts()}
-                  onContactUpdated={refreshContacts}
-                  onNewContact={handleNewContact}
-                />
+                {/* 🏢 ENTERPRISE: Right panel — inline creation OR contact details */}
+                {creationMode === 'selecting' ? (
+                  <ContactTypeSelector
+                    onSelect={handleSelectContactType}
+                    onCancel={handleCancelCreation}
+                  />
+                ) : creationMode ? (
+                  <InlineContactCreation
+                    contactType={creationMode}
+                    onContactAdded={handleContactAdded}
+                    onCancel={handleCancelCreation}
+                    onBack={handleBackToTypeSelection}
+                  />
+                ) : (
+                  <ContactDetails
+                    contact={selectedContact}
+                    onDeleteContact={() => handleDeleteContacts()}
+                    onContactUpdated={refreshContacts}
+                    onNewContact={handleNewContact}
+                  />
+                )}
               </section>
 
               {/* 📱 MOBILE: Show only ContactsList when no contact is selected */}
@@ -776,27 +761,23 @@ export function ContactsPageContent() {
                   onSelectContact={setSelectedContact}
                   isLoading={isLoading}
                   onNewContact={handleNewContact}
-                  onEditContact={handleEditContact}
                   onDeleteContact={handleDeleteContacts}
                   onArchiveContact={handleArchiveContacts}
                   onContactUpdated={refreshContacts}
                 />
               </section>
 
-              {/* 📱 MOBILE: Slide-in ContactDetails when contact is selected */}
+              {/* 📱 MOBILE: Slide-in for contact details OR inline creation */}
               <MobileDetailsSlideIn
-                isOpen={!!selectedContact}
-                onClose={() => setSelectedContact(null)}
-                title={selectedContact ? getContactDisplayName(selectedContact) : t('page.details.title')}
+                isOpen={!!selectedContact || creationMode !== null}
+                onClose={() => { setSelectedContact(null); setCreationMode(null); }}
+                title={
+                  creationMode
+                    ? t('form.addTitle')
+                    : selectedContact ? getContactDisplayName(selectedContact) : t('page.details.title')
+                }
                 actionButtons={
-                  <>
-                    <button
-                      onClick={() => handleEditContact()}
-                      className={`p-2 rounded-md border ${colors.bg.primary} border-border ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-                      aria-label={t('page.details.editContact')}
-                    >
-                      <Edit className={iconSizes.sm} />
-                    </button>
+                  creationMode ? undefined : (
                     <button
                       onClick={() => handleDeleteContacts()}
                       className={`p-2 rounded-md border ${colors.bg.primary} border-border text-destructive ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
@@ -804,18 +785,29 @@ export function ContactsPageContent() {
                     >
                       <Trash2 className={iconSizes.sm} />
                     </button>
-                  </>
+                  )
                 }
               >
-                {selectedContact && (
+                {creationMode === 'selecting' ? (
+                  <ContactTypeSelector
+                    onSelect={handleSelectContactType}
+                    onCancel={handleCancelCreation}
+                  />
+                ) : creationMode ? (
+                  <InlineContactCreation
+                    contactType={creationMode}
+                    onContactAdded={handleContactAdded}
+                    onCancel={handleCancelCreation}
+                    onBack={handleBackToTypeSelection}
+                  />
+                ) : selectedContact ? (
                   <ContactDetails
-                    contact={livePreviewContact || selectedContact}
-                    onEditContact={handleEditContact}
+                    contact={selectedContact}
                     onDeleteContact={() => handleDeleteContacts()}
                     onContactUpdated={refreshContacts}
-                  onNewContact={handleNewContact}
+                    onNewContact={handleNewContact}
                   />
-                )}
+                ) : null}
               </MobileDetailsSlideIn>
             </>
           ) : (
@@ -848,53 +840,27 @@ export function ContactsPageContent() {
                 onClose={() => setSelectedContact(null)}
                 title={selectedContact ? getContactDisplayName(selectedContact) : t('page.details.title')}
                 actionButtons={
-                  <>
-                    <button
-                      onClick={() => handleEditContact()}
-                      className={`p-2 rounded-md border ${colors.bg.primary} border-border ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-                      aria-label={t('page.details.editContact')}
-                    >
-                      <Edit className={iconSizes.sm} />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteContacts()}
-                      className={`p-2 rounded-md border ${colors.bg.primary} border-border text-destructive ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-                      aria-label={t('page.details.deleteContact')}
-                    >
-                      <Trash2 className={iconSizes.sm} />
-                    </button>
-                  </>
+                  <button
+                    onClick={() => handleDeleteContacts()}
+                    className={`p-2 rounded-md border ${colors.bg.primary} border-border text-destructive ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                    aria-label={t('page.details.deleteContact')}
+                  >
+                    <Trash2 className={iconSizes.sm} />
+                  </button>
                 }
               >
                 {selectedContact && (
                   <ContactDetails
-                    contact={livePreviewContact || selectedContact}
-                    onEditContact={handleEditContact}
+                    contact={selectedContact}
                     onDeleteContact={() => handleDeleteContacts()}
                     onContactUpdated={refreshContacts}
-                  onNewContact={handleNewContact}
+                    onNewContact={handleNewContact}
                   />
                 )}
               </MobileDetailsSlideIn>
             </>
           )}
         </ListContainer>
-
-        {/* Dialog για νέα επαφή */}
-        <TabbedAddNewContactDialog
-          open={showNewContactDialog}
-          onOpenChange={setShowNewContactDialog}
-          onContactAdded={handleContactAdded}
-        />
-
-        {/* Dialog για επεξεργασία επαφής */}
-        <EditContactDialog
-          open={showEditContactDialog}
-          onOpenChange={handleEditDialogClose}
-          contact={selectedContact}
-          onContactUpdated={handleContactUpdated}
-          onLiveChange={handleLiveChange}
-        />
 
         {/* Dialog για διαγραφή επαφής */}
         <DeleteContactDialog

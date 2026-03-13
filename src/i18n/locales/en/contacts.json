@@ -1185,5 +1185,20 @@
   "sectionDescriptions": {
     "files": "Manage contact documents",
     "banking": "Contact bank accounts"
+  },
+  "creation": {
+    "selectType": {
+      "title": "What type of contact do you want to create?",
+      "description": "Select the type to continue.",
+      "cancel": "Cancel"
+    },
+    "typeDescription": {
+      "individual": "Individual, buyer, employee, partner",
+      "company": "Company, Ltd, LLC, employer, supplier",
+      "service": "Ministry, tax office, municipality, social security"
+    },
+    "inline": {
+      "back": "Back to type selection"
+    }
   }
 }
