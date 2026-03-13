@@ -332,7 +332,7 @@ export async function DELETE(
       // 📊 Audit log
       await logAuditEvent(ctx, 'data_deleted', 'contact', 'api', {
         newValue: {
-          type: 'contact_delete',
+          type: 'status',
           value: {
             contactId,
             displayName: contactData?.firstName
