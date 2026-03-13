@@ -37,6 +37,8 @@ export interface MailgunSendParams {
   to: string;
   subject: string;
   textBody: string;
+  /** Optional HTML body — if provided, email is sent as multipart (text + html) */
+  htmlBody?: string;
 }
 
 // ============================================================================
@@ -83,6 +85,9 @@ export async function sendReplyViaMailgun(
     formData.append('to', params.to);
     formData.append('subject', params.subject);
     formData.append('text', params.textBody);
+    if (params.htmlBody) {
+      formData.append('html', params.htmlBody);
+    }
 
     const response = await fetch(url, {
       method: 'POST',

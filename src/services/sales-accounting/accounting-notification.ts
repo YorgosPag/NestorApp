@@ -11,6 +11,7 @@ import { sendReplyViaMailgun } from '@/services/ai-pipeline/shared/mailgun-sende
 import { GREEK_VAT_RATES } from '@/subapps/accounting/services/config/vat-config';
 // Server-safe: avoids @/lib/intl-utils → react-i18next → createContext
 // formatEuro/formatDate kept local intentionally (server-only + 2-decimal financial formatting)
+import { buildReservationConfirmationEmail } from '@/services/email-templates';
 import type { SalesAccountingEvent, SalesAccountingResult } from './types';
 
 // ============================================================================
@@ -263,66 +264,15 @@ export async function notifyAccountingOffice(
 }
 
 // ============================================================================
-// BUYER NOTIFICATION — Reservation Confirmation
+// BUYER NOTIFICATION — Branded HTML Reservation Confirmation
 // ============================================================================
 
 /**
- * Builds a professional buyer-facing reservation confirmation email.
- * Sent to the buyer when a deposit is made (reservation).
- */
-function buildBuyerReservationEmail(
-  event: SalesAccountingEvent & { eventType: 'deposit_invoice' },
-  result: SalesAccountingResult,
-  buyerName: string
-): { subject: string; body: string } {
-  const invoiceRef = result.invoiceNumber ? `A-${result.invoiceNumber}` : '';
-  const netAmount = event.depositAmount / VAT_DIVISOR;
-  const vatAmount = event.depositAmount - netAmount;
-
-  return {
-    subject: `Επιβεβαίωση κράτησης — ${event.unitName}`,
-    body: [
-      `Αγαπητέ/ή ${buyerName},`,
-      ``,
-      `Σας ευχαριστούμε για την κράτηση που πραγματοποιήσατε.`,
-      `Παρακάτω θα βρείτε τα στοιχεία της συναλλαγής σας.`,
-      ``,
-      `═══════════════════════════════════════`,
-      `  ΣΤΟΙΧΕΙΑ ΚΡΑΤΗΣΗΣ`,
-      `═══════════════════════════════════════`,
-      ``,
-      `Ημερομηνία: ${formatDate(new Date())}`,
-      ...(invoiceRef ? [`Αριθμός παραστατικού: ${invoiceRef}`] : []),
-      ``,
-      `── Ακίνητο ──`,
-      ...(event.companyName ? [`Κατασκευαστική: ${event.companyName}`] : []),
-      ...(event.projectName ? [`Έργο: ${event.projectName}`] : []),
-      ...(event.buildingName ? [`Κτίριο: ${event.buildingName}`] : []),
-      `Μονάδα: ${event.unitName}${event.unitFloor !== null && event.unitFloor !== undefined ? ` — ${event.unitFloor}ος όροφος` : ''}`,
-      ...(event.projectAddress ? [`Διεύθυνση: ${event.projectAddress}`] : []),
-      ``,
-      `── Οικονομικά Στοιχεία Κράτησης ──`,
-      `Καθαρό ποσό: ${formatEuro(netAmount)}`,
-      `ΦΠΑ 24%: ${formatEuro(vatAmount)}`,
-      `Σύνολο προκαταβολής: ${formatEuro(event.depositAmount)}`,
-      `Τρόπος πληρωμής: ${formatPaymentMethod(event.paymentMethod)}`,
-      ``,
-      `═══════════════════════════════════════`,
-      ``,
-      `Για οποιαδήποτε απορία ή διευκρίνιση, μη διστάσετε να`,
-      `επικοινωνήσετε μαζί μας.`,
-      ``,
-      `Με εκτίμηση,`,
-      ...(event.companyName ? [event.companyName] : ['Nestor App']),
-    ].join('\n'),
-  };
-}
-
-/**
- * Στέλνει email επιβεβαίωσης κράτησης στον αγοραστή.
+ * Στέλνει branded HTML email επιβεβαίωσης κράτησης στον αγοραστή.
  *
  * Fire-and-forget: αν αποτύχει, δεν επηρεάζει τη ροή πώλησης.
  * Στέλνεται ΜΟΝΟ αν ο αγοραστής έχει email.
+ * Χρησιμοποιεί το κεντρικοποιημένο email template system (Pagonis Energo branding).
  */
 export async function notifyBuyerReservation(
   event: SalesAccountingEvent & { eventType: 'deposit_invoice' },
@@ -336,19 +286,31 @@ export async function notifyBuyerReservation(
     return;
   }
 
-  console.log(`[Buyer Notify] Sending reservation confirmation to ${buyerEmail}`);
+  console.log(`[Buyer Notify] Sending branded reservation confirmation to ${buyerEmail}`);
 
   try {
-    const { subject, body } = buildBuyerReservationEmail(event, result, buyerName);
+    const { subject, html, text } = buildReservationConfirmationEmail({
+      buyerName,
+      unitName: event.unitName,
+      unitFloor: event.unitFloor,
+      buildingName: event.buildingName,
+      projectName: event.projectName,
+      projectAddress: event.projectAddress,
+      companyName: event.companyName,
+      depositAmount: event.depositAmount,
+      paymentMethod: event.paymentMethod,
+      invoiceRef: result.invoiceNumber ? `A-${result.invoiceNumber}` : null,
+    });
 
     const mailResult = await sendReplyViaMailgun({
       to: buyerEmail,
       subject,
-      textBody: body,
+      textBody: text,
+      htmlBody: html,
     });
 
     if (mailResult.success) {
-      console.log(`[Buyer Notify] Reservation email sent — messageId: ${mailResult.messageId}`);
+      console.log(`[Buyer Notify] Branded email sent — messageId: ${mailResult.messageId}`);
     } else {
       console.warn(`[Buyer Notify] Mailgun error: ${mailResult.error}`);
     }
