@@ -32,7 +32,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 // ============================================================================
 
 interface ProjectDetailsProps {
-  project: Project & { companyName: string };
+  project: (Project & { companyName: string }) | null;
   /** Deep-link initial tab — overrides default "general" tab */
   initialTab?: string;
   onNewProject?: () => void;
@@ -103,7 +103,7 @@ export function ProjectDetails({
 
   // Memoize globalProps to prevent re-render cascade on ALL tabs
   const globalProps = useMemo(() => ({
-    projectId: project!.id,
+    projectId: project?.id ?? '',
     isEditing,
     onSetEditing: setIsEditing,
     registerSaveCallback,
@@ -115,26 +115,30 @@ export function ProjectDetails({
     <DetailsContainer
       selectedItem={project}
       header={
-        <ProjectDetailsHeader
-          project={project!}
-          isEditing={isEditing}
-          onStartEdit={handleStartEdit}
-          onSaveEdit={handleSaveEdit}
-          onCancelEdit={handleCancelEdit}
-          onNewProject={onNewProject}
-          onDeleteProject={onDeleteProject}
-        />
+        project ? (
+          <ProjectDetailsHeader
+            project={project}
+            isEditing={isEditing}
+            onStartEdit={handleStartEdit}
+            onSaveEdit={handleSaveEdit}
+            onCancelEdit={handleCancelEdit}
+            onNewProject={onNewProject}
+            onDeleteProject={onDeleteProject}
+          />
+        ) : null
       }
       tabsRenderer={
-        <UniversalTabsRenderer
-          tabs={projectTabs.map(convertToUniversalConfig)}
-          data={project!}
-          componentMapping={PROJECT_COMPONENT_MAPPING as unknown as Record<string, React.ComponentType<TabComponentProps>>}
-          defaultTab={initialTab || "general"}
-          theme="default"
-          translationNamespace="building"
-          globalProps={globalProps}
-        />
+        project ? (
+          <UniversalTabsRenderer
+            tabs={projectTabs.map(convertToUniversalConfig)}
+            data={project}
+            componentMapping={PROJECT_COMPONENT_MAPPING as unknown as Record<string, React.ComponentType<TabComponentProps>>}
+            defaultTab={initialTab || "general"}
+            theme="default"
+            translationNamespace="building"
+            globalProps={globalProps}
+          />
+        ) : null
       }
       emptyStateProps={{
         icon: Briefcase,

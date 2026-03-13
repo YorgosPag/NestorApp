@@ -170,8 +170,8 @@ export function UnitsSidebar({
           onEditUnit={handleToggleEditMode}
           onDeleteUnit={handleDeleteUnit}
         />
-        {/* 🏢 ENTERPRISE: Render details ONLY on desktop — prevents duplicate mount */}
-        {!isMobile && selectedUnit && detailsContent}
+        {/* 🏢 ENTERPRISE: Render details on desktop — DetailsContainer handles empty state */}
+        {!isMobile && detailsContent}
       </div>
 
       {/* 📱 MOBILE: Show only UnitsList when no unit is selected */}

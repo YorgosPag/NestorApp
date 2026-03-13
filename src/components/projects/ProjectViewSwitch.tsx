@@ -153,19 +153,17 @@ export function ProjectViewSwitch({
             onEditProject={selectedProject ? handleEditProject : undefined}
             onDeleteProject={selectedProject && onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
         />
-        {selectedProject && (
-          <ProjectDetails
-            project={getProjectWithCompanyName(selectedProject)}
-            initialTab={initialTab}
-            onNewProject={onNewProject}
-            onDeleteProject={onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
-            isEditing={isEditingProject}
-            onSetEditing={setIsEditingProject}
-            isCreateMode={isCreateMode}
-            onProjectCreated={onProjectCreated}
-            onCancelCreate={onCancelCreate}
-          />
-        )}
+        <ProjectDetails
+          project={selectedProject ? getProjectWithCompanyName(selectedProject) : null}
+          initialTab={initialTab}
+          onNewProject={onNewProject}
+          onDeleteProject={selectedProject && onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
+          isEditing={isEditingProject}
+          onSetEditing={setIsEditingProject}
+          isCreateMode={isCreateMode}
+          onProjectCreated={onProjectCreated}
+          onCancelCreate={onCancelCreate}
+        />
       </div>
 
       {/* 📱 MOBILE: Show only ProjectsList when no project is selected */}
