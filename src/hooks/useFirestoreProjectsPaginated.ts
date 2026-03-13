@@ -1,8 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { collection, query, orderBy, where, type DocumentSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { InfiniteScrollPagination, PaginatedResult } from '@/lib/pagination';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { orderBy, where, startAfter, type QueryConstraint, type DocumentSnapshot, type DocumentData } from 'firebase/firestore';
+import { firestoreQueryService } from '@/services/firestore';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -14,10 +12,10 @@ const logger = createModuleLogger('useFirestoreProjectsPaginated');
 // 🚀 PAGINATED PROJECTS HOOK - ENTERPRISE PERFORMANCE
 // =============================================================================
 //
+// ✅ ADR-214 Phase 6: Uses firestoreQueryService (tenant-aware, centralized)
 // ✅ Loads projects in pages instead of all at once
-// ❌ No more 1000+ project loading lag
 // 🛡️ Memory efficient with Firebase cursors
-// 📊 Supports filtering by company and status
+// 📊 Supports filtering by status + client-side search
 //
 // =============================================================================
 
@@ -56,6 +54,34 @@ export interface UseFirestoreProjectsPaginatedResult {
   totalShown: number;
 }
 
+// ==========================================================================
+// DOCUMENT TRANSFORM
+// ==========================================================================
+
+function toProject(raw: DocumentData & { id: string }): FirestoreProject {
+  let mappedStatus = raw.status as string;
+  if (raw.status === 'construction' || raw.status === 'active') {
+    mappedStatus = 'in_progress';
+  }
+
+  return {
+    id: raw.id,
+    name: (raw.name as string) || '',
+    title: (raw.title as string) || '',
+    status: mappedStatus as FirestoreProject['status'],
+    company: (raw.company as string) || '',
+    companyId: (raw.companyId as string) || '',
+    address: (raw.address as string) || '',
+    city: (raw.city as string) || '',
+    progress: (raw.progress as number) || 0,
+    totalValue: (raw.totalValue as number) || 0,
+    startDate: (raw.startDate as string) || '',
+    completionDate: (raw.completionDate as string) || '',
+    lastUpdate: (raw.lastUpdate as string) || '',
+    totalArea: (raw.totalArea as number) || 0,
+  };
+}
+
 export function useFirestoreProjectsPaginated(
   initialFilters: ProjectFilters = {},
   pageSize: number = 20
@@ -65,59 +91,10 @@ export function useFirestoreProjectsPaginated(
   const [error, setError] = useState<string | null>(null);
   const [hasNext, setHasNext] = useState(false);
   const [filters, setFilters] = useState<ProjectFilters>(initialFilters);
-  const [pagination, setPagination] = useState<InfiniteScrollPagination<FirestoreProject> | null>(null);
 
-  // ==========================================================================
-  // QUERY BUILDER
-  // ==========================================================================
-
-  const buildQuery = useCallback((currentFilters: ProjectFilters) => {
-    let projectsQuery = query(
-      collection(db, COLLECTIONS.PROJECTS),
-      orderBy('lastUpdate', 'desc') // Most recent first
-    );
-
-    // Add filters
-    if (currentFilters.companyId) {
-      projectsQuery = query(projectsQuery, where('companyId', '==', currentFilters.companyId));
-    }
-
-    if (currentFilters.status) {
-      projectsQuery = query(projectsQuery, where('status', '==', currentFilters.status));
-    }
-
-    return projectsQuery;
-  }, []);
-
-  // ==========================================================================
-  // DOCUMENT MAPPER
-  // ==========================================================================
-
-  const mapDocument = useCallback((doc: DocumentSnapshot): FirestoreProject => {
-    const data = (doc.data() ?? {}) as Record<string, unknown>;
-
-    let mappedStatus = data.status as string;
-    if (data.status === 'construction' || data.status === 'active') {
-      mappedStatus = 'in_progress';
-    }
-
-    return {
-      id: doc.id,
-      name: data.name as string || '',
-      title: data.title as string || '',
-      status: mappedStatus as FirestoreProject['status'],
-      company: data.company as string || '',
-      companyId: data.companyId as string || '',
-      address: data.address as string || '',
-      city: data.city as string || '',
-      progress: data.progress as number || 0,
-      totalValue: data.totalValue as number || 0,
-      startDate: data.startDate as string || '',
-      completionDate: data.completionDate as string || '',
-      lastUpdate: data.lastUpdate as string || '',
-      totalArea: data.totalArea as number || 0
-    };
-  }, []);
+  // Refs to avoid stale closure issues in loadNext/refresh callbacks
+  const allProjectsRef = useRef<FirestoreProject[]>([]);
+  const lastDocRef = useRef<DocumentSnapshot | null>(null);
 
   // ==========================================================================
   // CLIENT-SIDE SEARCH FILTER
@@ -137,75 +114,83 @@ export function useFirestoreProjectsPaginated(
   }, [filters.searchTerm]);
 
   // ==========================================================================
-  // PAGINATION SETUP
-  // ==========================================================================
-
-  const initializePagination = useCallback(() => {
-    logger.info('Initializing pagination with filters', { filters });
-
-    const projectsQuery = buildQuery(filters);
-    const newPagination = new InfiniteScrollPagination(projectsQuery, mapDocument, pageSize);
-    setPagination(newPagination);
-    setProjects([]);
-    setHasNext(false);
-
-    return newPagination;
-  }, [buildQuery, mapDocument, pageSize, filters]);
-
-  // ==========================================================================
-  // LOAD FUNCTIONS
+  // LOAD FUNCTIONS (firestoreQueryService — ADR-214)
   // ==========================================================================
 
   const loadNext = useCallback(async () => {
-    if (!pagination || loading) return;
+    if (loading) return;
+
+    setLoading(true);
+    setError(null);
 
     try {
-      setLoading(true);
-      setError(null);
+      const constraints: QueryConstraint[] = [orderBy('lastUpdate', 'desc')];
+      // companyId: auto-injected by tenant config — NOT needed explicitly
+      if (filters.status) {
+        constraints.push(where('status', '==', filters.status));
+      }
+      if (lastDocRef.current) {
+        constraints.push(startAfter(lastDocRef.current));
+      }
 
       logger.info('Loading next page');
-      const result: PaginatedResult<FirestoreProject> = await pagination.loadNext();
+      const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('PROJECTS', {
+        constraints,
+        maxResults: pageSize,
+      });
 
-      const allProjects = pagination.getAllItems();
-      const filtered = filteredProjects(allProjects);
+      const newItems = result.documents.map(toProject);
+      const accumulated = [...allProjectsRef.current, ...newItems];
+      allProjectsRef.current = accumulated;
+      setProjects(filteredProjects(accumulated));
+      lastDocRef.current = result.lastDocument;
+      setHasNext(result.size === pageSize);
 
-      setProjects(filtered);
-      setHasNext(result.hasNext);
-
-      logger.info('Loaded projects', { count: result.items.length, hasNext: result.hasNext });
+      logger.info('Loaded projects', { count: result.size, hasNext: result.size === pageSize });
     } catch (err) {
       logger.error('Load failed', { error: err });
       setError(err instanceof Error ? err.message : 'Failed to load projects');
     } finally {
       setLoading(false);
     }
-  }, [pagination, loading, filteredProjects]);
+  }, [loading, filters.status, pageSize, filteredProjects]);
 
   const refresh = useCallback(async () => {
     logger.info('Refreshing');
 
-    const newPagination = initializePagination();
-    setPagination(newPagination);
+    // Reset cursor + accumulator
+    allProjectsRef.current = [];
+    lastDocRef.current = null;
+    setHasNext(false);
 
-    // Load first page
+    setLoading(true);
+    setError(null);
+
     try {
-      setLoading(true);
-      setError(null);
+      const constraints: QueryConstraint[] = [orderBy('lastUpdate', 'desc')];
+      if (filters.status) {
+        constraints.push(where('status', '==', filters.status));
+      }
 
-      const result: PaginatedResult<FirestoreProject> = await newPagination.loadNext();
-      const filtered = filteredProjects(result.items);
+      const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('PROJECTS', {
+        constraints,
+        maxResults: pageSize,
+      });
 
-      setProjects(filtered);
-      setHasNext(result.hasNext);
+      const newItems = result.documents.map(toProject);
+      allProjectsRef.current = newItems;
+      setProjects(filteredProjects(newItems));
+      lastDocRef.current = result.lastDocument;
+      setHasNext(result.size === pageSize);
 
-      logger.info('Refresh complete', { count: result.items.length });
+      logger.info('Refresh complete', { count: result.size });
     } catch (err) {
       logger.error('Refresh failed', { error: err });
       setError(err instanceof Error ? err.message : 'Failed to refresh projects');
     } finally {
       setLoading(false);
     }
-  }, [initializePagination, filteredProjects]);
+  }, [filters.status, pageSize, filteredProjects]);
 
   // ==========================================================================
   // FILTER UPDATE
@@ -241,23 +226,51 @@ export function useFirestoreProjectsPaginated(
     return unsubscribe;
   }, []);
 
-  // Initialize pagination on mount or filter change
+  // Initialize on mount or server-side filter change (status)
+  // companyId is auto-injected by tenant config — no need to watch it
   useEffect(() => {
-    const newPagination = initializePagination();
-    setPagination(newPagination);
+    allProjectsRef.current = [];
+    lastDocRef.current = null;
+    setHasNext(false);
+    setLoading(false); // Reset loading so loadNext can proceed
 
-    // Load first page
-    loadNext();
-  }, [filters.companyId, filters.status]); // Only rebuild on server-side filters
+    // Trigger first page load
+    void (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const constraints: QueryConstraint[] = [orderBy('lastUpdate', 'desc')];
+        if (filters.status) {
+          constraints.push(where('status', '==', filters.status));
+        }
 
-  // Apply client-side search filter
+        const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('PROJECTS', {
+          constraints,
+          maxResults: pageSize,
+        });
+
+        const newItems = result.documents.map(toProject);
+        allProjectsRef.current = newItems;
+        setProjects(filteredProjects(newItems));
+        lastDocRef.current = result.lastDocument;
+        setHasNext(result.size === pageSize);
+
+        logger.info('Initial load complete', { count: result.size });
+      } catch (err) {
+        logger.error('Initial load failed', { error: err });
+        setError(err instanceof Error ? err.message : 'Failed to load projects');
+      } finally {
+        setLoading(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.status, pageSize]);
+
+  // Apply client-side search filter when searchTerm changes
   useEffect(() => {
-    if (pagination) {
-      const allProjects = pagination.getAllItems();
-      const filtered = filteredProjects(allProjects);
-      setProjects(filtered);
-    }
-  }, [pagination, filteredProjects]);
+    const filtered = filteredProjects(allProjectsRef.current);
+    setProjects(filtered);
+  }, [filteredProjects]);
 
   // ==========================================================================
   // RETURN STATE

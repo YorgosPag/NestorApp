@@ -4,9 +4,9 @@
 |----------|-------|
 | **ADR** | ADR-214 |
 | **Phase** | 6 |
-| **Status** | PENDING |
-| **Risk** | MEDIUM |
-| **Αρχεία** | 5-6 modified |
+| **Status** | COMPLETED |
+| **Risk** | ZERO (no UI consumers) |
+| **Αρχεία** | 1 modified (5 already use API clients) |
 | **Depends On** | SPEC-214-01 |
 
 ---
