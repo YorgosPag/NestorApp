@@ -15,7 +15,9 @@ import { firestoreQueryService } from '@/services/firestore';
 import type { QueryResult } from '@/services/firestore';
 import type { DocumentData } from 'firebase/firestore';
 import type { Opportunity } from '@/types/crm';
-import type { SubscriptionStatus } from '../types';
+import type { SubscriptionStatus, OpportunityCreatedPayload, OpportunityUpdatedPayload, OpportunityDeletedPayload } from '../types';
+import { RealtimeService } from '@/services/realtime';
+import { applyUpdates } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeToDate } from '@/lib/date-local';
 
@@ -106,6 +108,38 @@ export function useRealtimeOpportunities(enabled = true): UseRealtimeOpportuniti
       unsubscribe();
     };
   }, [enabled, refreshTriggerRef.current]);
+
+  // 🏢 ENTERPRISE: Event bus subscribers for optimistic UI updates (ADR-227 Phase 3)
+  useEffect(() => {
+    const handleCreated = (_payload: OpportunityCreatedPayload) => {
+      logger.info('Opportunity created, triggering refetch');
+      refetch();
+    };
+
+    const handleUpdated = (payload: OpportunityUpdatedPayload) => {
+      logger.info('Applying optimistic update for opportunity', { opportunityId: payload.opportunityId });
+      setOpportunities(prev => prev.map(opp =>
+        opp.id === payload.opportunityId
+          ? applyUpdates(opp, payload.updates)
+          : opp
+      ));
+    };
+
+    const handleDeleted = (payload: OpportunityDeletedPayload) => {
+      logger.info('Removing deleted opportunity from list', { opportunityId: payload.opportunityId });
+      setOpportunities(prev => prev.filter(opp => opp.id !== payload.opportunityId));
+    };
+
+    const unsubCreate = RealtimeService.subscribe('OPPORTUNITY_CREATED', handleCreated);
+    const unsubUpdate = RealtimeService.subscribe('OPPORTUNITY_UPDATED', handleUpdated);
+    const unsubDelete = RealtimeService.subscribe('OPPORTUNITY_DELETED', handleDeleted);
+
+    return () => {
+      unsubCreate();
+      unsubUpdate();
+      unsubDelete();
+    };
+  }, [refetch]);
 
   return { opportunities, loading, error, status, refetch };
 }

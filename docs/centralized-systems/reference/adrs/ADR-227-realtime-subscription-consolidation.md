@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | 🟡 Phases 1-2 Implemented — Phase 3 Pending |
+| **Status** | 🟢 Phases 1-3 Implemented — Phase 2 partial (4/10 blocked) |
 | **Date** | 2026-03-13 |
 | **Category** | Data Access Layer / Real-Time Architecture |
 | **Related ADRs** | ADR-214 (Firestore Query Centralization) |
@@ -199,38 +199,46 @@ const unsub = firestoreQueryService.subscribe<ContactDocument>(
 
 ---
 
-### Phase 3: Wire Event Subscribers (LOW PRIORITY)
+### Phase 3: Wire Event Subscribers (LOW PRIORITY) — ✅ IMPLEMENTED (Tasks + Opportunities, 2026-03-13)
 
 **Goal**: Τα 60+ typed events στο `RealtimeEventMap` που dispatch-άρονται χωρίς subscribers αποκτούν ακροατές.
 
 #### Event Wiring Plan
 
-| Event Group | Target Subscribers | Benefit |
-|-------------|-------------------|---------|
-| `UNIT_*` | Unit list pages, Building detail | Cross-page sync for unit changes |
-| `OPPORTUNITY_*` | CRM Dashboard, Pipeline view | Real-time pipeline updates |
-| `TASK_*` | Tasks page, Dashboard widgets | Task status sync |
-| `FILE_*` | Document management, Entity tabs | File upload/delete sync |
-| `BUILDING_*` | Building list, Project detail | Building CRUD sync |
-| `FLOORPLAN_*` | Floorplan viewer, Building tabs | Floorplan change sync |
-| `COMMUNICATION_*` | Inbox, Triage view | Message status sync |
+| Event Group | Target Subscribers | Benefit | Status |
+|-------------|-------------------|---------|--------|
+| `TASK_*` | `useRealtimeTasks` | Optimistic task CRUD | ✅ Wired |
+| `OPPORTUNITY_*` | `useRealtimeOpportunities` | Optimistic opportunity CRUD | ✅ Wired |
+| `UNIT_*` | Unit list pages, Building detail | Cross-page sync for unit changes | ⏸️ Future |
+| `FILE_*` | Document management, Entity tabs | File upload/delete sync | ⏸️ Future |
+| `BUILDING_*` | Building list, Project detail | Building CRUD sync | ⏸️ Future |
+| `FLOORPLAN_*` | Floorplan viewer, Building tabs | Floorplan change sync | ⏸️ Future |
+| `COMMUNICATION_*` | Inbox, Triage view | Message status sync | ⏸️ Future |
 
-#### Implementation Pattern
+#### Implementation Pattern (from `useFirestoreProjects.ts`)
 ```typescript
-// In useRealtimeTasks.ts — combine Firestore subscription with event bus:
+// CREATED → refetch (onSnapshot brings fresh data)
+// UPDATED → optimistic: applyUpdates() on matching item
+// DELETED → optimistic: filter out by id
 useEffect(() => {
-  const unsub = RealtimeService.subscribe('TASK_UPDATED', (payload) => {
-    // Optimistic update: apply change immediately without waiting for Firestore
-    updateTaskInCache(payload.taskId, payload.changes);
+  const unsubCreate = RealtimeService.subscribe('TASK_CREATED', () => refetch());
+  const unsubUpdate = RealtimeService.subscribe('TASK_UPDATED', (payload) => {
+    setTasks(prev => prev.map(t =>
+      t.id === payload.taskId ? applyUpdates(t, payload.updates) : t
+    ));
   });
-  return unsub;
-}, []);
+  const unsubDelete = RealtimeService.subscribe('TASK_DELETED', (payload) => {
+    setTasks(prev => prev.filter(t => t.id !== payload.taskId));
+  });
+  return () => { unsubCreate(); unsubUpdate(); unsubDelete(); };
+}, [refetch]);
 ```
 
 #### Notes
-- Phase 3 is enhancement, not critical — Firestore subscriptions already provide real-time data
-- Event bus provides **optimistic updates** (faster UI response) and **cross-page sync**
-- Not all events need subscribers — some are dispatched for future extensibility
+- Phase 3 scope: ONLY Tasks + Opportunities hooks (highest-value)
+- Remaining event groups (Units, Files, Buildings, etc.) are future work — LOW priority
+- Event bus provides **optimistic updates** (~0ms vs 200-500ms Firestore round-trip)
+- onSnapshot still serves as source of truth — event bus gives instant visual feedback
 
 ---
 
@@ -274,10 +282,12 @@ useEffect(() => {
 | `UNIT_DELETED` | units.service | — | ❌ No subscriber |
 | `BUILDING_UPDATED` | (if dispatched) | — | ❌ No subscriber |
 | `BUILDING_CREATED` | (if dispatched) | — | ❌ No subscriber |
-| `TASK_UPDATED` | (if dispatched) | — | ❌ No subscriber |
-| `TASK_CREATED` | (if dispatched) | — | ❌ No subscriber |
-| `OPPORTUNITY_UPDATED` | opportunities-client.service | — | ❌ No subscriber |
-| `OPPORTUNITY_CREATED` | opportunities-client.service | — | ❌ No subscriber |
+| `TASK_UPDATED` | (if dispatched) | useRealtimeTasks | ✅ Wired (Phase 3) |
+| `TASK_CREATED` | (if dispatched) | useRealtimeTasks | ✅ Wired (Phase 3) |
+| `TASK_DELETED` | (if dispatched) | useRealtimeTasks | ✅ Wired (Phase 3) |
+| `OPPORTUNITY_UPDATED` | opportunities-client.service | useRealtimeOpportunities | ✅ Wired (Phase 3) |
+| `OPPORTUNITY_CREATED` | opportunities-client.service | useRealtimeOpportunities | ✅ Wired (Phase 3) |
+| `OPPORTUNITY_DELETED` | (if dispatched) | useRealtimeOpportunities | ✅ Wired (Phase 3) |
 | `COMMUNICATION_UPDATED` | communications-client.service | — | ❌ No subscriber |
 | `COMMUNICATION_CREATED` | communications-client.service | — | ❌ No subscriber |
 | `FLOORPLAN_UPDATED` | BuildingFloorplanService | — | ❌ No subscriber |
@@ -390,3 +400,4 @@ All new hooks MUST expose `status: SubscriptionStatus` for UI feedback.
 | 2026-03-13 | Initial ADR creation — inventory + 3-phase plan | Claude |
 | 2026-03-13 | Phase 1 implemented — `useRealtimeTasks`, `useRealtimeOpportunities` hooks created; Tasks page, CRM Dashboard, TasksTab migrated to real-time; `useFloorFloorplans` NOT touched (complex hook, no real-time value) | Claude |
 | 2026-03-13 | Phase 2 implemented (6/10) — Migrated contacts, notifications, messages, triage, floorplanFiles, layers to canonical pattern. Remaining 4 blocked (subcollection + subscribeDoc needed) | Claude |
+| 2026-03-13 | Phase 3 implemented (Tasks + Opportunities) — Event bus subscribers wired for TASK_CREATED/UPDATED/DELETED and OPPORTUNITY_CREATED/UPDATED/DELETED. Optimistic UI updates via `applyUpdates()` pattern from `useFirestoreProjects` | Claude |

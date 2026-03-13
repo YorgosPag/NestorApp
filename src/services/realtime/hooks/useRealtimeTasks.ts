@@ -15,8 +15,10 @@ import { firestoreQueryService } from '@/services/firestore';
 import type { QueryResult } from '@/services/firestore';
 import type { DocumentData } from 'firebase/firestore';
 import type { CrmTask } from '@/types/crm';
-import type { SubscriptionStatus } from '../types';
+import type { SubscriptionStatus, TaskCreatedPayload, TaskUpdatedPayload, TaskDeletedPayload } from '../types';
+import { RealtimeService } from '@/services/realtime';
 import { toTask } from '@/services/crm/tasks/mappers';
+import { applyUpdates } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { isToday, isPast } from 'date-fns';
 
@@ -158,6 +160,38 @@ export function useRealtimeTasks(enabled = true): UseRealtimeTasksReturn {
       unsubscribe();
     };
   }, [enabled, refreshTriggerRef.current]);
+
+  // 🏢 ENTERPRISE: Event bus subscribers for optimistic UI updates (ADR-227 Phase 3)
+  useEffect(() => {
+    const handleTaskCreated = (_payload: TaskCreatedPayload) => {
+      logger.info('Task created, triggering refetch');
+      refetch();
+    };
+
+    const handleTaskUpdated = (payload: TaskUpdatedPayload) => {
+      logger.info('Applying optimistic update for task', { taskId: payload.taskId });
+      setTasks(prev => prev.map(task =>
+        task.id === payload.taskId
+          ? applyUpdates(task, payload.updates)
+          : task
+      ));
+    };
+
+    const handleTaskDeleted = (payload: TaskDeletedPayload) => {
+      logger.info('Removing deleted task from list', { taskId: payload.taskId });
+      setTasks(prev => prev.filter(task => task.id !== payload.taskId));
+    };
+
+    const unsubCreate = RealtimeService.subscribe('TASK_CREATED', handleTaskCreated);
+    const unsubUpdate = RealtimeService.subscribe('TASK_UPDATED', handleTaskUpdated);
+    const unsubDelete = RealtimeService.subscribe('TASK_DELETED', handleTaskDeleted);
+
+    return () => {
+      unsubCreate();
+      unsubUpdate();
+      unsubDelete();
+    };
+  }, [refetch]);
 
   const stats = useMemo(() => {
     if (tasks.length === 0) return EMPTY_STATS;
