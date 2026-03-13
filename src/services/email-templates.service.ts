@@ -1,5 +1,12 @@
 import type { EmailTemplate, EmailTemplateData, EmailTemplateType } from '@/types/email-templates';
-import { formatCurrency } from '@/lib/intl-utils';
+// Server-safe currency formatter (avoids @/lib/intl-utils → @/i18n/config → react-i18next → createContext)
+const formatCurrencyForEmail = (amount: number): string =>
+  new Intl.NumberFormat('el', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(amount);
 
 export class EmailTemplatesService {
   
@@ -70,7 +77,7 @@ export class EmailTemplatesService {
                     ${data.propertyPrice ? `
                     <div class="detail-item">
                         <div class="detail-icon">💰</div>
-                        <div class="detail-value">${formatCurrency(data.propertyPrice)}</div>
+                        <div class="detail-value">${formatCurrencyForEmail(data.propertyPrice)}</div>
                         <div class="detail-label">Τιμή</div>
                     </div>
                     ` : ''}
@@ -175,7 +182,7 @@ export class EmailTemplatesService {
                     ${data.propertyPrice ? `
                     <div class="business-item">
                         <strong>💰 Επένδυση</strong><br>
-                        ${formatCurrency(data.propertyPrice)}
+                        ${formatCurrencyForEmail(data.propertyPrice)}
                     </div>
                     ` : ''}
                     
@@ -283,7 +290,7 @@ export class EmailTemplatesService {
                     ${data.propertyPrice ? `
                     <div class="luxury-item">
                         <div class="luxury-icon">💎</div>
-                        <div class="luxury-value">${formatCurrency(data.propertyPrice)}</div>
+                        <div class="luxury-value">${formatCurrencyForEmail(data.propertyPrice)}</div>
                         <div class="luxury-label">Investment</div>
                     </div>
                     ` : ''}
