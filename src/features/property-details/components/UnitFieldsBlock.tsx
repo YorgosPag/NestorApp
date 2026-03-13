@@ -15,7 +15,7 @@
 
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -176,6 +176,36 @@ export function UnitFieldsBlock({
     interiorFeatures: property.interiorFeatures ?? [],
     securityFeatures: property.securityFeatures ?? []
   });
+
+  // ── Sync form data when property changes externally (e.g. floor via FloorSelectField) ──
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      name: property.name ?? '',
+      code: property.code ?? '',
+      type: property.type ?? '',
+      description: property.description ?? '',
+      floor: property.floor ?? 0,
+      bedrooms: property.layout?.bedrooms ?? 0,
+      bathrooms: property.layout?.bathrooms ?? 0,
+      wc: property.layout?.wc ?? 0,
+      areaGross: property.areas?.gross ?? 0,
+      areaNet: property.areas?.net ?? 0,
+      areaBalcony: property.areas?.balcony ?? 0,
+      areaTerrace: property.areas?.terrace ?? 0,
+      areaGarden: property.areas?.garden ?? 0,
+      orientations: property.orientations ?? [],
+      condition: property.condition ?? '',
+      energyClass: property.energy?.class ?? '',
+      heatingType: property.systemsOverride?.heatingType ?? '',
+      coolingType: property.systemsOverride?.coolingType ?? '',
+      flooring: property.finishes?.flooring ?? [],
+      windowFrames: property.finishes?.windowFrames ?? '',
+      glazing: property.finishes?.glazing ?? '',
+      interiorFeatures: property.interiorFeatures ?? [],
+      securityFeatures: property.securityFeatures ?? [],
+    }));
+  }, [property]);
 
   // ── Build updates from form data ──
   const buildUpdatesFromForm = useCallback((): Partial<Property> => {
