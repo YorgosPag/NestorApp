@@ -259,20 +259,20 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
                   {department || t('relationships.organizationTree.generalDepartment')}
                 </p>
                 <Badge variant="secondary" className="text-xs">
-                  {Array.isArray(employees) ? employees.length : 0}
+                  {employees.employees.length}
                 </Badge>
               </div>
 
-              {isNonEmptyArray(employees) && (
+              {isNonEmptyArray(employees.employees) && (
                 <div className="space-y-1">
-                  {employees.slice(0, 3).map((employee, index) => (
+                  {employees.employees.slice(0, 3).map((employee, index) => (
                     <p key={index} className={`text-xs ${colors.text.muted}`}>
-                      • {employee.position || t('relationships.organizationTree.employee')}
+                      • {employee.relationship?.position || t('relationships.organizationTree.employee')}
                     </p>
                   ))}
-                  {employees.length > 3 && (
+                  {employees.employees.length > 3 && (
                     <p className={`text-xs ${colors.text.muted} italic`}>
-                      {t('relationships.organizationTree.moreItems', { count: employees.length - 3 })}
+                      {t('relationships.organizationTree.moreItems', { count: employees.employees.length - 3 })}
                     </p>
                   )}
                 </div>

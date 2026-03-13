@@ -40,6 +40,6 @@ export function isNonEmptyTrimmedString(value: unknown): value is string {
  * Provides TypeScript type narrowing from `T[] | undefined | null` to `T[]`.
  * @see ADR-225
  */
-export function isNonEmptyArray<T>(value: T[] | readonly T[] | null | undefined): value is T[] & { length: number; 0: T } {
+export function isNonEmptyArray<T = unknown>(value: T[] | readonly T[] | null | undefined | unknown): value is T[] & { length: number; 0: T } {
   return Array.isArray(value) && value.length > 0;
 }
