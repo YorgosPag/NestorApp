@@ -127,6 +127,11 @@ export const ENTERPRISE_ID_PREFIXES = {
   SUBSCRIPTION: 'sub',
 
   // ==========================================================================
+  // NAVIGATION
+  // ==========================================================================
+  NAVIGATION: 'nav',
+
+  // ==========================================================================
   // OPTIMISTIC & TEMPORARY
   // ==========================================================================
   OPTIMISTIC: 'opt',
@@ -311,6 +316,14 @@ export class EnterpriseIdService {
    */
   generateFloorId(): string {
     return this.generateId(ENTERPRISE_ID_PREFIXES.FLOOR).id;
+  }
+
+  /**
+   * 🧭 Generate Navigation ID
+   * Format: nav_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateNavigationId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.NAVIGATION).id;
   }
 
   /**
@@ -911,6 +924,7 @@ export const generateStorageId = () => enterpriseIdService.generateStorageId();
 export const generateParkingId = () => enterpriseIdService.generateParkingId();
 export const generateContactId = () => enterpriseIdService.generateContactId();
 export const generateFloorId = () => enterpriseIdService.generateFloorId();
+export const generateNavigationId = () => enterpriseIdService.generateNavigationId();
 export const generateDocumentId = () => enterpriseIdService.generateDocumentId();
 export const generateUserId = () => enterpriseIdService.generateUserId();
 export const generateAssetId = () => enterpriseIdService.generateAssetId();

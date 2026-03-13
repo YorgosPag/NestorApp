@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { generateNavigationId } from '@/services/enterprise-id.service';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { apiSuccess } from '@/lib/api/ApiErrorHandler';
@@ -70,16 +71,17 @@ async function handleAddCompany(request: NextRequest, ctx: AuthContext): Promise
     return apiSuccess({ alreadyExists: true }, 'Company already in navigation');
   }
 
-  // Add via Admin SDK (bypasses Firestore rules)
-  const docRef = await adminDb.collection(COLLECTIONS.NAVIGATION).add({
+  // Add via Admin SDK (bypasses Firestore rules) — ADR-210: enterprise ID
+  const navId = generateNavigationId();
+  await adminDb.collection(COLLECTIONS.NAVIGATION).doc(navId).set({
     contactId,
     addedAt: new Date(),
     addedBy: ctx.uid
   });
 
-  logger.info('[NavCompany] Company added to navigation', { contactId, docId: docRef.id, by: ctx.email });
+  logger.info('[NavCompany] Company added to navigation', { contactId, docId: navId, by: ctx.email });
 
-  return apiSuccess({ id: docRef.id, contactId }, 'Company added to navigation');
+  return apiSuccess({ id: navId, contactId }, 'Company added to navigation');
 }
 
 // ============================================================================

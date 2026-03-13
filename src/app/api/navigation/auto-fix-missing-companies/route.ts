@@ -31,9 +31,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, query, getDocs, where, addDoc } from 'firebase/firestore';
+import { collection, query, getDocs, where, doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { generateNavigationId } from '@/services/enterprise-id.service';
 
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
@@ -180,7 +181,8 @@ async function handleAutoFixExecute(request: NextRequest, ctx: AuthContext): Pro
 
           // Add to navigation_companies collection
           try {
-            await addDoc(collection(db, COLLECTIONS.NAVIGATION), {
+            const navId = generateNavigationId();
+            await setDoc(doc(db, COLLECTIONS.NAVIGATION, navId), {
               contactId: companyId,
               addedAt: new Date(),
               addedBy: 'enterprise-auto-fix-system'

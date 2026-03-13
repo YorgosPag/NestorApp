@@ -28,6 +28,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { generateNavigationId } from '@/services/enterprise-id.service';
 
 // ENTERPRISE: AUTHZ Phase 2 Imports
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
@@ -92,10 +93,11 @@ async function handleAddCompaniesExecute(request: NextRequest, ctx: AuthContext)
           addedBy: 'system'
         };
 
-        const docRef = await getAdminFirestore().collection(COLLECTIONS.NAVIGATION).add(navigationEntry);
-        addedNavigationIds.push(docRef.id);
+        const navId = generateNavigationId();
+        await getAdminFirestore().collection(COLLECTIONS.NAVIGATION).doc(navId).set(navigationEntry);
+        addedNavigationIds.push(navId);
 
-        logger.info('[Navigation/AddCompanies] Added to navigation', { contactId, entryId: docRef.id });
+        logger.info('[Navigation/AddCompanies] Added to navigation', { contactId, entryId: navId });
 
       } catch (navigationError) {
         logger.error('[Navigation/AddCompanies] Error adding company to navigation', { contactId, error: navigationError instanceof Error ? navigationError.message : String(navigationError) });

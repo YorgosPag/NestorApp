@@ -32,7 +32,7 @@ import { getString, getNumber, getArray } from '@/lib/firestore/field-extractors
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { FieldValue } from 'firebase-admin/firestore';
 import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
-import { generateProjectId } from '@/services/enterprise-id.service';
+import { generateProjectId, generateNavigationId } from '@/services/enterprise-id.service';
 import { projectCodeService } from '@/services/project-code.service';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -331,13 +331,14 @@ export const POST = withHighRateLimit(
           .get();
 
         if (navQuery.empty) {
-          await adminDb.collection(COLLECTIONS.NAVIGATION).add({
+          const navId = generateNavigationId();
+          await adminDb.collection(COLLECTIONS.NAVIGATION).doc(navId).set({
             contactId: ctx.companyId,
             addedAt: FieldValue.serverTimestamp(),
             addedBy: ctx.uid,
             source: 'auto_project_create',
           });
-          logger.info('[Projects] Auto-registered company in navigation', { companyId: ctx.companyId });
+          logger.info('[Projects] Auto-registered company in navigation', { companyId: ctx.companyId, navId });
         }
 
         // 🔄 Invalidate cache for this tenant
