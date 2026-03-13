@@ -18,6 +18,7 @@ const hasMultiplePhotoURLs = (contact: Contact): contact is IndividualContact & 
 };
 
 import { normalizeToDate } from '@/lib/date-local';
+import { toggleSelect } from '@/lib/toggle-select';
 import { ContactsService } from '@/services/contacts.service';
 import { CONTACT_TYPES } from '@/constants/contacts';
 import { ContactsHeader } from './page/ContactsHeader';
@@ -722,7 +723,7 @@ export function ContactsPageContent() {
                 <ContactsList
                   contacts={filteredContacts}
                   selectedContact={selectedContact}
-                  onSelectContact={(c) => setSelectedContact(prev => prev?.id === c?.id ? null : c)}
+                  onSelectContact={(c) => setSelectedContact(toggleSelect(selectedContact, c))}
                   isLoading={isLoading}
                   onNewContact={handleNewContact}
                   onDeleteContact={handleDeleteContacts}
@@ -761,7 +762,7 @@ export function ContactsPageContent() {
                 <ContactsList
                   contacts={filteredContacts}
                   selectedContact={selectedContact}
-                  onSelectContact={(c) => setSelectedContact(prev => prev?.id === c?.id ? null : c)}
+                  onSelectContact={(c) => setSelectedContact(toggleSelect(selectedContact, c))}
                   isLoading={isLoading}
                   onNewContact={handleNewContact}
                   onDeleteContact={handleDeleteContacts}
@@ -827,7 +828,7 @@ export function ContactsPageContent() {
                     contact={contact}
                     isSelected={selectedContact?.id === contact.id}
                     isFavorite={contact.isFavorite}
-                    onSelect={() => setSelectedContact(prev => prev?.id === contact.id ? null : contact)}
+                    onSelect={() => setSelectedContact(toggleSelect(selectedContact, contact))}
                     onToggleFavorite={async () => {
                       // 🏢 ENTERPRISE: Toggle favorite via service
                       await ContactsService.updateContact(contact.id!, { isFavorite: !contact.isFavorite });

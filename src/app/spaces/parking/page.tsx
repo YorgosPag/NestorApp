@@ -53,6 +53,7 @@ import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { createModuleLogger } from '@/lib/telemetry';
+import { toggleSelect } from '@/lib/toggle-select';
 
 const logger = createModuleLogger('ParkingPage');
 
@@ -289,7 +290,7 @@ function ParkingPageContent() {
             <ParkingGridView
               parkingSpots={filteredParkingSpots}
               selectedParking={selectedParking}
-              onSelectParking={(p) => setSelectedParking(selectedParking?.id === p?.id ? null : p)}
+              onSelectParking={(p) => setSelectedParking(toggleSelect(selectedParking, p))}
             />
           ) : (
             /* 🏢 ENTERPRISE: List View with Details Panel */
@@ -297,7 +298,7 @@ function ParkingPageContent() {
               <ParkingsList
                 parkingSpots={filteredParkingSpots}
                 selectedParking={selectedParking}
-                onSelectParking={(p) => setSelectedParking(selectedParking?.id === p?.id ? null : p)}
+                onSelectParking={(p) => setSelectedParking(toggleSelect(selectedParking, p))}
                 onNewItem={() => setShowAddDialog(true)}
               />
               <ParkingDetails

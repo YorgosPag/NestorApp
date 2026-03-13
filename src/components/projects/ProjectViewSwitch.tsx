@@ -11,6 +11,7 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
+import { toggleSelect } from '@/lib/toggle-select';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
@@ -99,7 +100,7 @@ export function ProjectViewSwitch({
                 project={project}
                 isSelected={selectedProject?.id === project.id}
                 isFavorite={favorites.includes(project.id)}
-                onSelect={() => onSelectProject(selectedProject?.id === project.id ? null : project)}
+                onSelect={() => onSelectProject(toggleSelect(selectedProject, project))}
                 onToggleFavorite={() => toggleFavorite(project.id)}
               />
             ))}
@@ -147,7 +148,7 @@ export function ProjectViewSwitch({
         <ProjectsList
             projects={projects}
             selectedProject={selectedProject}
-            onSelectProject={(p) => onSelectProject(selectedProject?.id === p?.id ? null : p)}
+            onSelectProject={(p) => onSelectProject(toggleSelect(selectedProject, p))}
             companies={companies}
             onNewProject={onNewProject}
             onEditProject={selectedProject ? handleEditProject : undefined}
@@ -171,7 +172,7 @@ export function ProjectViewSwitch({
         <ProjectsList
             projects={projects}
             selectedProject={selectedProject}
-            onSelectProject={(p) => onSelectProject(selectedProject?.id === p?.id ? null : p)}
+            onSelectProject={(p) => onSelectProject(toggleSelect(selectedProject, p))}
             companies={companies}
             onNewProject={onNewProject}
             onEditProject={selectedProject ? handleEditProject : undefined}

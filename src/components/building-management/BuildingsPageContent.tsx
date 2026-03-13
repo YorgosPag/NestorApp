@@ -4,6 +4,7 @@
 import React, { useState, useCallback, useTransition } from 'react';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
+import { toggleSelect } from '@/lib/toggle-select';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // [ENTERPRISE] Import from canonical location
@@ -336,7 +337,7 @@ export function BuildingsPageContent() {
                   selectedBuilding={selectedBuilding!}
                   onSelectBuilding={(building) => {
                     startTransition(() => {
-                      setSelectedBuilding(selectedBuilding?.id === building?.id ? null : building);
+                      setSelectedBuilding(toggleSelect(selectedBuilding, building));
                       setStartInEditMode(false);
                     });
                   }}
@@ -364,7 +365,7 @@ export function BuildingsPageContent() {
                   selectedBuilding={selectedBuilding!}
                   onSelectBuilding={(building) => {
                     startTransition(() => {
-                      setSelectedBuilding(selectedBuilding?.id === building?.id ? null : building);
+                      setSelectedBuilding(toggleSelect(selectedBuilding, building));
                       setStartInEditMode(false);
                     });
                   }}

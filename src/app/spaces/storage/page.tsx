@@ -38,6 +38,7 @@ import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { createModuleLogger } from '@/lib/telemetry';
+import { toggleSelect } from '@/lib/toggle-select';
 
 const logger = createModuleLogger('StoragePage');
 
@@ -294,7 +295,7 @@ function StoragePageContent() {
             <StorageGridView
               storages={filteredStorages}
               selectedStorage={selectedStorage}
-              onSelectStorage={(s) => setSelectedStorage(selectedStorage?.id === s?.id ? null : s)}
+              onSelectStorage={(s) => setSelectedStorage(toggleSelect(selectedStorage, s))}
             />
           ) : (
             /* 🏢 ENTERPRISE: List View with Details Panel */
@@ -302,7 +303,7 @@ function StoragePageContent() {
               <StoragesList
                 storages={filteredStorages}
                 selectedStorage={selectedStorage}
-                onSelectStorage={(s) => setSelectedStorage(selectedStorage?.id === s?.id ? null : s)}
+                onSelectStorage={(s) => setSelectedStorage(toggleSelect(selectedStorage, s))}
                 onNewItem={() => setShowAddDialog(true)}
               />
               <StorageDetails
