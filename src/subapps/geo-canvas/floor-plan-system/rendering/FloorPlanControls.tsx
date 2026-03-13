@@ -98,9 +98,14 @@ export function FloorPlanControls({
 
       {/* File Name */}
       {fileName && (
-        <div className="mb-3 text-xs text-gray-600 truncate" title={fileName}>
-          📁 {fileName}
-        </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="mb-3 text-xs text-gray-600 truncate">
+              📁 {fileName}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>{fileName}</TooltipContent>
+        </Tooltip>
       )}
 
       {/* Opacity Slider */}

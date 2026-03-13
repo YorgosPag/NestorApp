@@ -468,10 +468,15 @@ export function FilesList({
 
                   {/* 🔗 Linked file indicator */}
                   {file.isLinkedFile && (
-                    <span className="flex items-center gap-1 text-blue-500" title={t('list.linkedFromProject')}>
-                      <Link2 className={iconSizes.xs} aria-hidden="true" />
-                      {t('list.linkedFromProject')}
-                    </span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="flex items-center gap-1 text-blue-500">
+                          <Link2 className={iconSizes.xs} aria-hidden="true" />
+                          {t('list.linkedFromProject')}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>{t('list.linkedFromProject')}</TooltipContent>
+                    </Tooltip>
                   )}
                 </div>
 
@@ -490,13 +495,17 @@ export function FilesList({
                     />
                   </div>
                 ) : file.description ? (
-                  <p
-                    className="text-xs text-muted-foreground mt-0.5 truncate cursor-pointer hover:text-foreground transition-colors"
-                    onClick={(e) => { e.stopPropagation(); if (onDescriptionUpdate) handleDescriptionStart(file); }}
-                    title={file.description}
-                  >
-                    {file.description}
-                  </p>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p
+                        className="text-xs text-muted-foreground mt-0.5 truncate cursor-pointer hover:text-foreground transition-colors"
+                        onClick={(e) => { e.stopPropagation(); if (onDescriptionUpdate) handleDescriptionStart(file); }}
+                      >
+                        {file.description}
+                      </p>
+                    </TooltipTrigger>
+                    <TooltipContent>{file.description}</TooltipContent>
+                  </Tooltip>
                 ) : onDescriptionUpdate ? (
                   <button
                     type="button"

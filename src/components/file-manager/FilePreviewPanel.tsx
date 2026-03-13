@@ -264,9 +264,14 @@ export function FilePreviewPanel({ file, onClose, currentUserId, currentUserName
       {/* Header */}
       <header className="flex items-center gap-2 px-3 py-2 border-b bg-muted/30 min-h-[44px]">
         <PreviewIcon className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-        <span className="text-sm font-medium truncate flex-1" title={displayName}>
-          {displayName}
-        </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="text-sm font-medium truncate flex-1">
+              {displayName}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>{displayName}</TooltipContent>
+        </Tooltip>
 
         {/* Actions */}
         <nav className="flex items-center gap-1 flex-shrink-0">
@@ -397,9 +402,14 @@ export function FilePreviewPanel({ file, onClose, currentUserId, currentUserName
           <span>{formatFlexibleDate(file.createdAt)}</span>
         )}
         {file.description && (
-          <span className="truncate ml-auto italic" title={file.description}>
-            {file.description}
-          </span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="truncate ml-auto italic">
+                {file.description}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{file.description}</TooltipContent>
+          </Tooltip>
         )}
       </div>
 

@@ -281,10 +281,14 @@ function LayerItem({
             )}
             
             {categoryInfo && (
-              <div
-                className={`${iconSizes.xs} ${radius.full} flex-shrink-0 ${getDynamicBackgroundClass(categoryInfo.color)}`}
-                title={categoryInfo.name}
-              />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    className={`${iconSizes.xs} ${radius.full} flex-shrink-0 ${getDynamicBackgroundClass(categoryInfo.color)}`}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>{categoryInfo.name}</TooltipContent>
+              </Tooltip>
             )}
             
             <div className="flex-1 min-w-0" onClick={onSelect}>
@@ -651,9 +655,19 @@ export function AdminLayerManager({
               {showSyncStatus && (
                 <div className="flex items-center gap-1">
                   {syncState.isConnected ? (
-                    <div className={`${iconSizes.xs} bg-green-500 ${radius.full}`} title={t('layerManager.sync.connectedTooltip')} />
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className={`${iconSizes.xs} bg-green-500 ${radius.full}`} />
+                      </TooltipTrigger>
+                      <TooltipContent>{t('layerManager.sync.connectedTooltip')}</TooltipContent>
+                    </Tooltip>
                   ) : (
-                    <div className={`${iconSizes.xs} bg-red-500 ${radius.full}`} title={t('layerManager.sync.disconnectedTooltip')} />
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className={`${iconSizes.xs} bg-red-500 ${radius.full}`} />
+                      </TooltipTrigger>
+                      <TooltipContent>{t('layerManager.sync.disconnectedTooltip')}</TooltipContent>
+                    </Tooltip>
                   )}
                   {syncState.pendingOperations > 0 && (
                     <CommonBadge

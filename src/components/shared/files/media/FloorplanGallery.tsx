@@ -836,9 +836,14 @@ export function FloorplanGallery({
 
             <span className="flex items-center gap-2 min-w-[200px] justify-center">
               {getFileIcon(currentFile?.ext || '')}
-              <span className="font-medium truncate max-w-[150px]" title={currentFile?.displayName}>
-                {currentFile?.displayName || t('floorplan.untitled')}
-              </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="font-medium truncate max-w-[150px]">
+                    {currentFile?.displayName || t('floorplan.untitled')}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{currentFile?.displayName}</TooltipContent>
+              </Tooltip>
               <span className={cn('text-sm', colors.text.muted)}>
                 ({currentIndex + 1}/{floorplanFiles.length})
               </span>
@@ -947,9 +952,14 @@ export function FloorplanGallery({
             {/* File Info */}
             <span className="flex items-center gap-2 px-2">
               {getFileIcon(currentFile?.ext || '')}
-              <span className="font-medium truncate max-w-[300px]" title={currentFile?.displayName}>
-                {currentFile?.displayName || t('floorplan.untitled')}
-              </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="font-medium truncate max-w-[300px]">
+                    {currentFile?.displayName || t('floorplan.untitled')}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{currentFile?.displayName}</TooltipContent>
+              </Tooltip>
             </span>
 
             {/* Zoom Controls + Close */}

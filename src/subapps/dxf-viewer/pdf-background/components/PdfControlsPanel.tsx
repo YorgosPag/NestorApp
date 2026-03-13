@@ -24,6 +24,7 @@ import { FloatingPanel } from '@/components/ui/floating';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePdfBackgroundStore } from '../stores/pdfBackgroundStore';
 import { PDF_RENDER_CONFIG } from '../types/pdf.types';
 // 🏢 ENTERPRISE: Centralized panel dimensions (ADR-029)
@@ -286,9 +287,14 @@ export const PdfControlsPanel: React.FC<PdfControlsPanelProps> = ({
               <>
                 {/* Document info */}
                 <article className="flex items-center justify-between text-sm">
-                  <span className="truncate max-w-[160px]" title={documentInfo.fileName}>
-                    {documentInfo.fileName}
-                  </span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="truncate max-w-[160px]">
+                        {documentInfo.fileName}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>{documentInfo.fileName}</TooltipContent>
+                  </Tooltip>
                   <Button
                     variant="ghost"
                     size="sm"

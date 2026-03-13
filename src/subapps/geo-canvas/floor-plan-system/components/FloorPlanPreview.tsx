@@ -6,6 +6,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { ParserResult } from '../types';
 import { layoutUtilities } from '@/styles/design-tokens';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatFileSize } from '@/utils/file-validation';
 
 /**
@@ -63,9 +64,14 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
         </h3>
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div className="text-gray-600">{t('floorPlan.preview.fileName')}:</div>
-          <div className="font-medium text-gray-900 truncate" title={file.name}>
-            {file.name}
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="font-medium text-gray-900 truncate">
+                {file.name}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>{file.name}</TooltipContent>
+          </Tooltip>
 
           <div className="text-gray-600">{t('floorPlan.preview.format')}:</div>
           <div className="font-medium text-gray-900">{result.format}</div>

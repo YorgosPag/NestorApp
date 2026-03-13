@@ -43,6 +43,7 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -567,16 +568,20 @@ export function BuildingAddressesCard({
                                 {t('address.labels.primary')}
                               </Badge>
                             ) : (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleSetPrimaryFromProject(projAddr)}
-                                title={t('address.labels.setPrimary')}
-                                className="h-7 text-xs"
-                              >
-                                <Star className="h-3 w-3 mr-1" />
-                                {t('address.labels.setPrimary')}
-                              </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleSetPrimaryFromProject(projAddr)}
+                                    className="h-7 text-xs"
+                                  >
+                                    <Star className="h-3 w-3 mr-1" />
+                                    {t('address.labels.setPrimary')}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>{t('address.labels.setPrimary')}</TooltipContent>
+                              </Tooltip>
                             )}
                           </div>
                         )}
@@ -648,17 +653,32 @@ export function BuildingAddressesCard({
                           {t('address.labels.primary')}
                         </Badge>
                       ) : (
-                        <Button variant="outline" size="sm" onClick={() => handleSetPrimary(index)} title={t('address.labels.setPrimary')}>
-                          <Star className={iconSizes.sm} />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="outline" size="sm" onClick={() => handleSetPrimary(index)}>
+                              <Star className={iconSizes.sm} />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{t('address.labels.setPrimary')}</TooltipContent>
+                        </Tooltip>
                       )}
-                      <Button variant="outline" size="sm" onClick={() => handleStartEdit(index)} title={t('address.labels.editAddress')}>
-                        <Pencil className={iconSizes.sm} />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="outline" size="sm" onClick={() => handleStartEdit(index)}>
+                            <Pencil className={iconSizes.sm} />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>{t('address.labels.editAddress')}</TooltipContent>
+                      </Tooltip>
                       {localAddresses.length > 1 && (
-                        <Button variant="destructive" size="sm" onClick={() => handleDeleteAddress(index)} title={t('address.labels.removeAddress')}>
-                          <Trash2 className={iconSizes.sm} />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="destructive" size="sm" onClick={() => handleDeleteAddress(index)}>
+                              <Trash2 className={iconSizes.sm} />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{t('address.labels.removeAddress')}</TooltipContent>
+                        </Tooltip>
                       )}
                     </div>
                     <div className="mt-2 pt-2 border-t text-xs text-muted-foreground">

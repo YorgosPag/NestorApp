@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import type { MessageListItem, ConversationListItem } from '@/hooks/inbox/useInboxApi';
 import { Spinner } from '@/components/ui/spinner';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ThreadView');
@@ -497,9 +498,14 @@ export function ThreadView({
                         {isOutbound && getStatusIcon(message.deliveryStatus, iconSizes, colors)}
                         {/* 🏢 ENTERPRISE: Pin indicator */}
                         {isPinnedFn && isPinnedFn(message.id) && (
-                          <span title={t('inbox.message.pinned', 'Καρφιτσωμένο')}>
-                            <Pin className={`${iconSizes.xs} text-amber-500`} />
-                          </span>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span>
+                                <Pin className={`${iconSizes.xs} text-amber-500`} />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>{t('inbox.message.pinned', 'Καρφιτσωμένο')}</TooltipContent>
+                          </Tooltip>
                         )}
                       </header>
 
