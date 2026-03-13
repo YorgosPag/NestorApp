@@ -84,6 +84,9 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       'units:units:view',
       'units:units:create',
       'units:units:update',
+      'units:units:delete',
+      // Floors
+      'projects:floors:delete',
       // Communications
       'comm:conversations:list',
       'comm:conversations:view',
@@ -113,6 +116,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       'units:units:view',
       'units:units:create',
       'units:units:update',
+      'units:units:delete',
+      'projects:floors:delete',
       'dxf:files:view',
       'dxf:files:upload',
       'dxf:layers:view',

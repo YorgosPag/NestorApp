@@ -80,11 +80,13 @@ export const PERMISSIONS = {
   'projects:members:view': true,
   'projects:members:manage': true,
   'projects:floors:view': true,
+  'projects:floors:delete': true,
 
   // Units
   'units:units:view': true,
   'units:units:create': true,
   'units:units:update': true,
+  'units:units:delete': true,
 
   // Buildings (Phase 2 - first vertical slice)
   'buildings:buildings:view': true,

@@ -432,7 +432,7 @@ export const DELETE = withStandardRateLimit(
           return NextResponse.json({ success: false, error: 'Failed to delete floor', details: getErrorMessage(error, 'Unknown') }, { status: 500 });
         }
       },
-      { permissions: 'projects:floors:view' }
+      { permissions: 'projects:floors:delete' }
     );
     return handler(request);
   }

@@ -149,7 +149,7 @@ export const DELETE = withStandardRateLimit(
         throw new ApiError(500, error instanceof Error ? error.message : 'Failed to delete parking spot');
       }
     },
-    { permissions: 'units:units:update' }
+    { permissions: 'units:units:delete' }
   )
 );
 

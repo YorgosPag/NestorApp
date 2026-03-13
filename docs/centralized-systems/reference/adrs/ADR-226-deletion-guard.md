@@ -1,0 +1,497 @@
+# ADR-226: Centralized Deletion Guard — Referential Integrity Protection
+
+| Metadata | Value |
+|----------|-------|
+| **Status** | PLANNING |
+| **Date** | 2026-03-13 |
+| **Category** | Backend Systems / Data & State |
+| **Canonical Location** | `src/lib/firestore/deletion-guard.ts` (proposed) |
+| **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
+
+---
+
+## 1. Context
+
+### Το Πρόβλημα
+
+Η εφαρμογή **δεν έχει κανένα μηχανισμό referential integrity** για τις DELETE operations. Κάθε entity μπορεί να σβηστεί ελεύθερα, αφήνοντας ορφανά references σε δεκάδες collections.
+
+### Τρέχουσα Κατάσταση DELETE Operations
+
+| Entity | Endpoint | Cascade | Dependency Check | Preview |
+|--------|----------|---------|-----------------|---------|
+| **Project** | `DELETE /api/projects/[id]` | buildings → units/floors/parking/storage | ❌ Κανένας | ✅ cascade-preview |
+| **Building** | `DELETE /api/buildings/[id]` | units/floors/parking/storage | ❌ Κανένας | ✅ cascade-preview |
+| **Contact** | `DELETE /api/contacts/[id]` | ❌ Κανένα | ❌ Κανένας | ❌ Κανένα |
+| **Unit** | `DELETE /api/units/[id]` | ❌ Κανένα | ❌ Κανένας | ❌ Κανένα |
+| **Floor** | `DELETE /api/floors` | ❌ Κανένα | ❌ Κανένας | ❌ Κανένα |
+| **Parking** | `DELETE /api/parking/[id]` | ❌ Κανένα | ❌ Κανένας | ❌ Κανένα |
+| **Storage** | `DELETE /api/storages/[id]` | ❌ Κανένα | ❌ Κανένας | ❌ Κανένα |
+
+### Κρίσιμα Issues
+
+- ❌ **Zero referential integrity**: Σβήνεις contact → ορφανεύονται πωλήσεις, επικοινωνίες, ραντεβού
+- ❌ **Permission inconsistencies**: Units/Parking/Storage χρησιμοποιούν `units:units:update` αντί `:delete`
+- ❌ **Floors** χρησιμοποιούν `projects:floors:view` αντί `:delete`
+- ❌ **Hard delete χωρίς ανίχνευση εξαρτήσεων**: Contacts, Units σβήνονται χωρίς κανέναν έλεγχο
+- ✅ **Accounting invoices**: Σωστά soft delete (fiscal compliance) — μόνο θετικό παράδειγμα
+
+---
+
+## 2. Decision
+
+### Αρχιτεκτονική: Centralized Deletion Guard Middleware
+
+Ένα **declarative dependency registry** που ορίζει per-entity ποια collections εξαρτώνται, ποια στρατηγική ισχύει, και ποιο UI preview εμφανίζεται πριν τη διαγραφή.
+
+### 2.1 Φιλοσοφία: BOTTOM-UP ONLY — Μηδενικό Cascade
+
+**ΑΡΧΗ**: Η διαγραφή γίνεται **ΜΟΝΟ από κάτω προς τα πάνω**. Ποτέ από πάνω προς τα κάτω.
+
+Αν ένα entity έχει τέκνα/εξαρτήσεις → **BLOCK**. Ο χρήστης πρέπει πρώτα να πάει στα τέκνα, να τα διαγράψει χειροκίνητα, και μετά να επιστρέψει στον γονέα.
+
+**Παράδειγμα — Διαγραφή Project:**
+1. Χρήστης πατάει "Διαγραφή Project" → ❌ "Έχει 2 κτίρια. Πήγαινε πρώτα σβήσε τα κτίρια."
+2. Πάει στο Building A → ❌ "Έχει 3 μονάδες. Πήγαινε πρώτα σβήσε τις μονάδες."
+3. Πάει στο Unit 1 → ❌ "Έχει 1 opportunity. Πήγαινε πρώτα σβήσε το."
+4. Σβήνει το opportunity → ✅
+5. Σβήνει Unit 1 → ✅ (πλέον χωρίς εξαρτήσεις)
+6. Σβήνει Unit 2, Unit 3 → ✅
+7. Σβήνει Building A → ✅ (πλέον χωρίς μονάδες)
+8. Σβήνει Building B (ίδια διαδικασία)
+9. Σβήνει Project → ✅ (πλέον χωρίς κτίρια)
+
+### Δύο Στρατηγικές Διαγραφής
+
+| Στρατηγική | Συμπεριφορά | Πότε χρησιμοποιείται |
+|------------|-------------|---------------------|
+| **BLOCK** | ❌ Αποτρέπει τη διαγραφή αν υπάρχουν εξαρτήσεις — preview με clickable links στα τέκνα, ο χρήστης τα διαγράφει χειροκίνητα bottom-up | Όλα τα entities (Project, Building, Contact, Unit, Floor, Company, Parking/Storage πωλημένα) |
+| **SOFT_DELETE** | 🗂️ Σημαίνει ως `deletedAt` χωρίς πραγματική διαγραφή | Fiscal/audit entities (invoices) |
+
+#### BLOCK — UX Flow
+
+1. Χρήστης πατάει "Διαγραφή" → API ελέγχει εξαρτήσεις
+2. **Αν υπάρχουν εξαρτήσεις** → Dialog εμφανίζεται:
+   - "Δεν μπορεί να διαγραφεί. Έχει τις εξής εξαρτήσεις:"
+   - Λίστα εξαρτήσεων με **clickable links** (ο χρήστης πηγαίνει κατευθείαν στο record)
+   - **Ένα κουμπί**: "Κατάλαβα" → Κλείνει dialog
+3. **Αν ΔΕΝ υπάρχουν εξαρτήσεις** → Confirmation dialog: "Είσαι σίγουρος;" → Διαγραφή
+
+### 2.2 Χαρτογράφηση Εξαρτήσεων per Entity
+
+#### CONTACT → Εξαρτήσεις (Στρατηγική: **BLOCK**)
+
+Αν σβηστεί ένα contact, ορφανεύονται:
+
+| Collection | Foreign Key | Περιγραφή |
+|------------|-------------|-----------|
+| `units` | `commercial.buyerContactId` | Μονάδες πωλημένες σε αυτόν |
+| `parking_spots` | `commercial.buyerContactId` | Parking πωλημένα |
+| `storage_units` | `commercial.buyerContactId` | Αποθήκες πωλημένες |
+| `opportunities` | `contactId` | Ευκαιρίες πώλησης |
+| `communications` | `contactId` | Ιστορικό επικοινωνιών |
+| `appointments` | `requester.contactId` | Ραντεβού |
+| `contact_relationships` | `sourceContactId` / `targetContactId` | Σχέσεις contacts |
+| `contact_links` | `sourceContactId` | Συνδέσεις entity |
+| `obligations` | `sections[].contactId` | Υποχρεώσεις (nested array) |
+| `external_identities` | `internalContactId` | Εξωτερικές ταυτότητες |
+| `employment_records` | `contactId` | Εργασιακά αρχεία |
+| `attendance_events` | `employeeId` | Παρουσίες |
+
+**Στρατηγική BLOCK**: Ο χρήστης βλέπει πλήρες preview με clickable links στις εξαρτήσεις. Πρέπει να τις διαγράψει χειροκίνητα πρώτα (bottom-up).
+
+#### UNIT → Εξαρτήσεις (Στρατηγική: **BLOCK**)
+
+| Collection | Foreign Key | Περιγραφή |
+|------------|-------------|-----------|
+| `entity_links` | `entityId` (type='unit') | Parking/storage allocations |
+| `opportunities` | `unitIds[]` | Ευκαιρίες πώλησης (array-contains) |
+| `communications` | `unitId` | Επικοινωνίες |
+| `contact_links` | `targetEntityId` (type='unit') | Συνδέσεις contact↔unit |
+| `boq_items` | `linkedUnitId` | BOQ items (επιμετρήσεις) |
+| `obligations` | `unitId` | Υποχρεώσεις |
+
+**Στρατηγική BLOCK**: Preview με clickable links — ο χρήστης διαγράφει χειροκίνητα τις εξαρτήσεις πρώτα (bottom-up).
+
+#### FLOOR → Εξαρτήσεις (Στρατηγική: **BLOCK**)
+
+| Collection | Foreign Key | Περιγραφή |
+|------------|-------------|-----------|
+| `units` | `floorId` | Μονάδες σε αυτόν τον όροφο |
+
+**Γιατί BLOCK**: Όροφος με μονάδες δεν μπορεί να σβηστεί — πρώτα μετακίνησε ή σβήσε τις μονάδες.
+
+#### PROJECT → Εξαρτήσεις (Στρατηγική: **BLOCK**)
+
+Σήμερα υπάρχει cascade (buildings → units/floors/parking/storage) — **θα αντικατασταθεί** με BLOCK. Εξαρτήσεις:
+
+| Collection | Foreign Key | Περιγραφή |
+|------------|-------------|-----------|
+| `buildings` | `projectId` | Κτίρια |
+| `opportunities` | `projectIds[]` | Ευκαιρίες πώλησης (array-contains) |
+| `communications` | `projectId` | Επικοινωνίες |
+| `contact_links` | `targetEntityId` (type='project') | Συνδέσεις contact↔project |
+| `construction_phases` | `projectId` | Φάσεις κατασκευής |
+| `obligations` | `projectId` | Υποχρεώσεις |
+
+**Στρατηγική BLOCK**: "Πήγαινε πρώτα σβήσε τα κτίρια, τις ευκαιρίες, τις φάσεις κατασκευής κλπ."
+
+#### BUILDING → Εξαρτήσεις (Στρατηγική: **BLOCK**)
+
+Σήμερα υπάρχει cascade (units/floors/parking/storage) — **θα αντικατασταθεί** με BLOCK. Εξαρτήσεις:
+
+| Collection | Foreign Key | Περιγραφή |
+|------------|-------------|-----------|
+| `units` | `buildingId` | Μονάδες |
+| `floors` | `buildingId` | Όροφοι |
+| `parking_spots` | `buildingId` | Θέσεις στάθμευσης |
+| `storage_units` | `buildingId` | Αποθήκες |
+| `building_milestones` | `buildingId` | Building timeline |
+| `floorplans` | `buildingId` | Κατόψεις |
+
+**Στρατηγική BLOCK**: "Πήγαινε πρώτα σβήσε τις μονάδες, τους ορόφους, τα parking, τις αποθήκες, τα milestones, τις κατόψεις."
+
+#### COMPANY → Εξαρτήσεις (Στρατηγική: **BLOCK — ΠΡΑΚΤΙΚΑ ΑΔΥΝΑΤΗ ΔΙΑΓΡΑΦΗ**)
+
+| Collection | Foreign Key | Περιγραφή |
+|------------|-------------|-----------|
+| `projects` | `companyId` | **ΟΛΑ** τα έργα |
+| `contacts` | `companyId` | **ΟΛΕΣ** οι επαφές |
+| `buildings` | `companyId` | **ΟΛΑ** τα κτίρια |
+
+Διαγραφή company = διαγραφή **ΟΛΗ** η βάση δεδομένων. **ΑΠΑΓΟΡΕΥΕΤΑΙ**.
+
+#### PARKING / STORAGE → Εξαρτήσεις (Στρατηγική: **BLOCK αν πωλημένο**)
+
+| Collection | Foreign Key | Περιγραφή |
+|------------|-------------|-----------|
+| `entity_links` | `entityId` (type='parking'/'storage') | Allocations σε units |
+
+Αν `commercial.buyerContactId` υπάρχει → **BLOCK** (πωλημένο). Αλλιώς → επιτρέπεται.
+
+---
+
+### 2.3 Proposed Architecture
+
+#### Canonical Files
+
+```
+src/lib/firestore/deletion-guard.ts        ← Core engine (dependency check + strategy execution)
+src/config/deletion-registry.ts             ← Declarative dependency registry per entity
+src/lib/firestore/cascade-delete.ts         ← ΥΠΑΡΧΕΙ ΗΔΗ — επέκταση
+```
+
+#### Dependency Registry (Declarative Config)
+
+```typescript
+// src/config/deletion-registry.ts
+
+import { COLLECTIONS } from '@/config/firestore-collections';
+
+interface DependencyDef {
+  /** Collection to scan for orphans */
+  collection: string;
+  /** Foreign key field pointing to the entity being deleted */
+  foreignKey: string;
+  /** Human-readable label for UI preview */
+  label: string;
+  /** How to query: 'equals' for simple FK, 'array-contains' for array fields */
+  queryType: 'equals' | 'array-contains';
+  /** Nested path for deep fields (e.g., 'commercial.buyerContactId') */
+  nestedPath?: string;
+}
+
+interface EntityDeletionConfig {
+  /** Default strategy when dependencies exist */
+  strategy: 'BLOCK' | 'SOFT_DELETE';
+  /** Dependencies to check before allowing deletion */
+  dependencies: DependencyDef[];
+  /** Conditional: override strategy based on entity state (e.g., parking πωλημένο) */
+  conditionalBlock?: {
+    field: string;
+    condition: 'exists' | 'not-null';
+    message: string;
+  };
+}
+
+const DELETION_REGISTRY: Record<string, EntityDeletionConfig> = {
+  contact: {
+    strategy: 'BLOCK',
+    dependencies: [
+      { collection: COLLECTIONS.UNITS, foreignKey: 'commercial.buyerContactId', label: 'Πωλημένες μονάδες', queryType: 'equals' },
+      { collection: COLLECTIONS.PARKING_SPACES, foreignKey: 'commercial.buyerContactId', label: 'Πωλημένα parking', queryType: 'equals' },
+      { collection: COLLECTIONS.STORAGE, foreignKey: 'commercial.buyerContactId', label: 'Πωλημένες αποθήκες', queryType: 'equals' },
+      { collection: COLLECTIONS.OPPORTUNITIES, foreignKey: 'contactId', label: 'Ευκαιρίες', queryType: 'equals' },
+      { collection: COLLECTIONS.COMMUNICATIONS, foreignKey: 'contactId', label: 'Επικοινωνίες', queryType: 'equals' },
+      { collection: COLLECTIONS.APPOINTMENTS, foreignKey: 'requester.contactId', label: 'Ραντεβού', queryType: 'equals' },
+      { collection: COLLECTIONS.CONTACT_RELATIONSHIPS, foreignKey: 'sourceContactId', label: 'Σχέσεις (source)', queryType: 'equals' },
+      { collection: COLLECTIONS.CONTACT_RELATIONSHIPS, foreignKey: 'targetContactId', label: 'Σχέσεις (target)', queryType: 'equals' },
+      { collection: COLLECTIONS.CONTACT_LINKS, foreignKey: 'sourceContactId', label: 'Συνδέσεις', queryType: 'equals' },
+      { collection: COLLECTIONS.EXTERNAL_IDENTITIES, foreignKey: 'internalContactId', label: 'Εξωτερικές ταυτότητες', queryType: 'equals' },
+      { collection: COLLECTIONS.EMPLOYMENT_RECORDS, foreignKey: 'contactId', label: 'Εργασιακά αρχεία', queryType: 'equals' },
+      { collection: COLLECTIONS.ATTENDANCE_EVENTS, foreignKey: 'employeeId', label: 'Παρουσίες', queryType: 'equals' },
+    ],
+  },
+
+  unit: {
+    strategy: 'BLOCK',
+    dependencies: [
+      { collection: COLLECTIONS.OPPORTUNITIES, foreignKey: 'unitIds', label: 'Ευκαιρίες', queryType: 'array-contains' },
+      { collection: COLLECTIONS.COMMUNICATIONS, foreignKey: 'unitId', label: 'Επικοινωνίες', queryType: 'equals' },
+      { collection: COLLECTIONS.CONTACT_LINKS, foreignKey: 'targetEntityId', label: 'Συνδέσεις contact', queryType: 'equals' },
+      { collection: COLLECTIONS.BOQ_ITEMS, foreignKey: 'linkedUnitId', label: 'BOQ items', queryType: 'equals' },
+      { collection: COLLECTIONS.OBLIGATIONS, foreignKey: 'unitId', label: 'Υποχρεώσεις', queryType: 'equals' },
+    ],
+  },
+
+  floor: {
+    strategy: 'BLOCK',
+    dependencies: [
+      { collection: COLLECTIONS.UNITS, foreignKey: 'floorId', label: 'Μονάδες', queryType: 'equals' },
+    ],
+  },
+
+  project: {
+    strategy: 'BLOCK',
+    dependencies: [
+      { collection: COLLECTIONS.BUILDINGS, foreignKey: 'projectId', label: 'Κτίρια', queryType: 'equals' },
+      { collection: COLLECTIONS.OPPORTUNITIES, foreignKey: 'projectIds', label: 'Ευκαιρίες', queryType: 'array-contains' },
+      { collection: COLLECTIONS.COMMUNICATIONS, foreignKey: 'projectId', label: 'Επικοινωνίες', queryType: 'equals' },
+      { collection: COLLECTIONS.CONTACT_LINKS, foreignKey: 'targetEntityId', label: 'Συνδέσεις', queryType: 'equals' },
+      { collection: COLLECTIONS.CONSTRUCTION_PHASES, foreignKey: 'projectId', label: 'Φάσεις κατασκευής', queryType: 'equals' },
+      { collection: COLLECTIONS.OBLIGATIONS, foreignKey: 'projectId', label: 'Υποχρεώσεις', queryType: 'equals' },
+    ],
+  },
+
+  building: {
+    strategy: 'BLOCK',
+    dependencies: [
+      { collection: COLLECTIONS.UNITS, foreignKey: 'buildingId', label: 'Μονάδες', queryType: 'equals' },
+      { collection: COLLECTIONS.FLOORS, foreignKey: 'buildingId', label: 'Όροφοι', queryType: 'equals' },
+      { collection: COLLECTIONS.PARKING_SPACES, foreignKey: 'buildingId', label: 'Parking', queryType: 'equals' },
+      { collection: COLLECTIONS.STORAGE, foreignKey: 'buildingId', label: 'Αποθήκες', queryType: 'equals' },
+      { collection: COLLECTIONS.BUILDING_MILESTONES, foreignKey: 'buildingId', label: 'Milestones', queryType: 'equals' },
+      { collection: COLLECTIONS.FLOORPLANS, foreignKey: 'buildingId', label: 'Κατόψεις', queryType: 'equals' },
+    ],
+  },
+
+  company: {
+    strategy: 'BLOCK', // ΠΡΑΚΤΙΚΑ ΑΔΥΝΑΤΗ ΔΙΑΓΡΑΦΗ
+    dependencies: [
+      { collection: COLLECTIONS.PROJECTS, foreignKey: 'companyId', label: 'Έργα', queryType: 'equals' },
+      { collection: COLLECTIONS.CONTACTS, foreignKey: 'companyId', label: 'Επαφές', queryType: 'equals' },
+      { collection: COLLECTIONS.BUILDINGS, foreignKey: 'companyId', label: 'Κτίρια', queryType: 'equals' },
+    ],
+  },
+};
+```
+
+#### Core Engine API
+
+```typescript
+// src/lib/firestore/deletion-guard.ts
+
+interface DependencyCheckResult {
+  /** Whether deletion is allowed */
+  allowed: boolean;
+  /** Dependencies found (for preview UI with clickable links) */
+  dependencies: Array<{
+    label: string;
+    collection: string;
+    count: number;
+    /** Document IDs for clickable navigation links */
+    documentIds: string[];
+  }>;
+  /** Total dependent documents */
+  totalDependents: number;
+  /** Human-readable message for the UI dialog */
+  message: string;
+}
+
+/**
+ * Checks all dependencies before allowing a delete operation.
+ * Returns a preview of what will be affected.
+ *
+ * - Αν totalDependents > 0 → allowed = false, UI δείχνει clickable links
+ * - Αν totalDependents === 0 → allowed = true, UI δείχνει confirmation
+ */
+async function checkDeletionDependencies(
+  db: FirebaseFirestore.Firestore,
+  entityType: string,
+  entityId: string
+): Promise<DependencyCheckResult>;
+
+/**
+ * Executes deletion ΜΟΝΟ αν δεν υπάρχουν εξαρτήσεις.
+ * Πρέπει πρώτα να κληθεί checkDeletionDependencies().
+ * Αν allowed === false → throws error.
+ *
+ * Μετά τη διαγραφή → γράφει audit trail entry στο entity_audit_trail.
+ */
+async function executeDeletion(
+  db: FirebaseFirestore.Firestore,
+  entityType: string,
+  entityId: string,
+  deletedBy: { uid: string; email: string }
+): Promise<{ success: boolean }>;
+
+// Audit trail entry format:
+// {
+//   entityType: 'contact',
+//   entityId: 'abc123',
+//   action: 'DELETE',
+//   deletedBy: { uid: '...', email: '...' },
+//   deletedAt: Timestamp.now(),
+//   metadata: { /* snapshot of entity before deletion */ }
+// }
+```
+
+#### Existing cascade-delete.ts — ΑΠΟΣΥΡΕΤΑΙ
+
+Το υπάρχον `cascadeDeleteChildren()` στο `src/lib/firestore/cascade-delete.ts` **θα αποσυρθεί** καθώς η νέα φιλοσοφία bottom-up δεν χρησιμοποιεί cascade. Τα υπάρχοντα cascade στα Project/Building DELETE endpoints θα αντικατασταθούν με BLOCK checks.
+
+```typescript
+// ΠΡΙΝ (cascade — ΑΠΟΣΥΡΕΤΑΙ):
+await cascadeDeleteChildren(db, buildingId, [...]);
+await db.collection('buildings').doc(buildingId).delete();
+
+// ΜΕΤΑ (bottom-up BLOCK):
+const check = await checkDeletionDependencies(db, 'building', buildingId);
+if (!check.allowed) {
+  return NextResponse.json({ error: check.message, dependencies: check.dependencies }, { status: 409 });
+}
+await db.collection('buildings').doc(buildingId).delete();
+```
+
+---
+
+## 3. Consequences
+
+### Positive
+
+- ✅ **Zero ορφανά records**: Κάθε delete ελέγχεται πριν εκτελεστεί
+- ✅ **Μέγιστη ασφάλεια**: Κανένα cascade — ο χρήστης ελέγχει πλήρως τι σβήνεται
+- ✅ **Declarative config**: Νέα dependencies προστίθενται χωρίς αλλαγή κώδικα engine
+- ✅ **Enterprise-grade**: Αντίστοιχο με FK ON DELETE RESTRICT σε relational databases
+- ✅ **Preview UI**: Ο χρήστης βλέπει clickable links στα τέκνα που εμποδίζουν τη διαγραφή
+
+### Negative
+
+- ⚠️ **Performance**: Κάθε delete κάνει N queries (ένα per dependency) — αλλά deletes είναι σπάνια operations
+- ⚠️ **Firestore limitation**: `array-contains` queries δεν επιτρέπουν compound filters — πρέπει client-side filtering για `targetEntityId` + `type`
+- ⚠️ **Nested fields**: `obligations.sections[].contactId` δεν μπορεί να ελεγχθεί με simple query — χρειάζεται dedicated handling
+
+---
+
+## 4. Prohibitions (after this ADR)
+
+- ⛔ **ΑΠΑΓΟΡΕΥΕΤΑΙ** νέο DELETE endpoint χωρίς integration με Deletion Guard
+- ⛔ **ΑΠΑΓΟΡΕΥΕΤΑΙ** cascade delete — η διαγραφή γίνεται ΜΟΝΟ bottom-up, χειροκίνητα
+- ⛔ **ΑΠΑΓΟΡΕΥΕΤΑΙ** hard delete σε entity που έχει τέκνα/εξαρτήσεις
+- ⛔ **ΑΠΑΓΟΡΕΥΕΤΑΙ** διαγραφή company — μόνο deactivation/archive
+- ⛔ **ΑΠΟΣΥΡΕΤΑΙ** η υπάρχουσα cascade delete σε Project/Building endpoints
+
+---
+
+## 5. Implementation Phases
+
+### Phase 0: Permission Fixes ✅ IMPLEMENTED (2026-03-13)
+
+| Task | Endpoint | Τρέχον Permission | Σωστό Permission | Status |
+|------|----------|-------------------|-----------------|--------|
+| 0.1 | DELETE /api/units/[id] | `units:units:update` | `units:units:delete` | ✅ |
+| 0.2 | DELETE /api/parking/[id] | `units:units:update` | `units:units:delete` | ✅ |
+| 0.3 | DELETE /api/storages/[id] | `units:units:update` | `units:units:delete` | ✅ |
+| 0.4 | DELETE /api/floors | `projects:floors:view` | `projects:floors:delete` | ✅ |
+
+**Νέα permissions**: `units:units:delete`, `projects:floors:delete` στο PERMISSIONS registry.
+**Roles ενημερωμένοι**: `company_admin` + `project_manager` έχουν και τα 2 νέα delete permissions.
+**Parking/Storage**: Χρησιμοποιούν `units:units:delete` (sub-entities του units domain).
+
+### Phase 1: Core Infrastructure (Priority: HIGH)
+
+| Task | Αρχείο | Περιγραφή |
+|------|--------|-----------|
+| 1.1 | `src/config/deletion-registry.ts` | Declarative dependency registry |
+| 1.2 | `src/lib/firestore/deletion-guard.ts` | Core engine: `checkDeletionDependencies()` + `executeDeletion()` |
+| 1.3 | Tests | Unit tests για dependency checking logic |
+
+### Phase 2: BLOCK Guard σε ΟΛΑ τα entities (Priority: CRITICAL)
+
+| Task | Αρχείο | Περιγραφή |
+|------|--------|-----------|
+| 2.1 | `src/app/api/contacts/[contactId]/route.ts` | Integrate BLOCK guard στο DELETE |
+| 2.2 | `src/app/api/units/[unitId]/route.ts` | Integrate BLOCK guard στο DELETE |
+| 2.3 | `src/app/api/floors/route.ts` | Integrate BLOCK guard στο DELETE |
+| 2.4 | `src/app/api/projects/[projectId]/route.ts` | **ΑΝΤΙΚΑΤΑΣΤΑΣΗ cascade** με BLOCK guard |
+| 2.5 | `src/app/api/buildings/[buildingId]/route.ts` | **ΑΝΤΙΚΑΤΑΣΤΑΣΗ cascade** με BLOCK guard |
+| 2.6 | `src/app/api/parking/[id]/route.ts` | Integrate conditional BLOCK (αν πωλημένο) |
+| 2.7 | `src/app/api/storages/[id]/route.ts` | Integrate conditional BLOCK (αν πωλημένο) |
+
+### Phase 3: UI — Deletion Blocked Dialog (Priority: HIGH)
+
+| Task | Αρχείο | Περιγραφή |
+|------|--------|-----------|
+| 3.1 | `src/components/shared/DeletionBlockedDialog.tsx` | Reusable dialog: λίστα εξαρτήσεων με clickable links + κουμπί "Κατάλαβα" |
+| 3.2 | Integration σε όλα τα delete buttons | Κάθε delete button καλεί πρώτα check, αν blocked → δείχνει dialog |
+
+### Phase 4: Cleanup (Priority: MEDIUM)
+
+| Task | Αρχείο | Περιγραφή |
+|------|--------|-----------|
+| 4.1 | `src/lib/firestore/cascade-delete.ts` | Deprecate/αφαίρεση — δεν χρησιμοποιείται πλέον |
+| 4.2 | cascade-preview routes | Αντικατάσταση με dependency-check routes (ίδιο concept, χωρίς cascade) |
+
+### Phase 5: Soft Delete Pattern (Priority: LOW — μελλοντικό)
+
+| Task | Αρχείο | Περιγραφή |
+|------|--------|-----------|
+| 5.1 | Soft delete utility | `softDelete()` function: sets `deletedAt`, `deletedBy`, keeps document |
+| 5.2 | Query filters | Global query filter: `where('deletedAt', '==', null)` |
+| 5.3 | Restore API | Endpoint για undo soft-deleted entities |
+
+---
+
+## 6. Στρατηγική ανά Entity — Σύνοψη
+
+| Entity | Στρατηγική | Εξαρτήσεις | Priority |
+|--------|-----------|------------|----------|
+| **Company** | 🚫 BLOCK (πάντα) | projects, contacts, buildings | Phase 2 |
+| **Project** | 🚫 BLOCK | 6 collections (buildings, opportunities, communications, contact_links, construction_phases, obligations) — **αντικατάσταση cascade** | Phase 2 |
+| **Building** | 🚫 BLOCK | 6 collections (units, floors, parking, storage, milestones, floorplans) — **αντικατάσταση cascade** | Phase 2 |
+| **Contact** | 🚫 BLOCK | 12 collections — preview + clickable links + χειροκίνητη bottom-up διαγραφή | Phase 2 |
+| **Unit** | 🚫 BLOCK | 6 collections — preview + clickable links + χειροκίνητη bottom-up διαγραφή | Phase 2 |
+| **Floor** | 🚫 BLOCK | units | Phase 2 |
+| **Parking** | 🚫 BLOCK αν πωλημένο | entity_links + conditional check `commercial.buyerContactId` | Phase 2 |
+| **Storage** | 🚫 BLOCK αν πωλημένο | entity_links + conditional check `commercial.buyerContactId` | Phase 2 |
+| **Invoice** | 🗂️ SOFT_DELETE | (fiscal compliance — ήδη υλοποιημένο) | ✅ Done |
+
+---
+
+## 7. References
+
+- **Existing**: `src/lib/firestore/cascade-delete.ts` — `cascadeDeleteChildren()` utility
+- **Existing**: `src/app/api/projects/[projectId]/cascade-preview/route.ts` — preview pattern
+- **Existing**: `src/app/api/buildings/[buildingId]/cascade-preview/route.ts` — preview pattern
+- **SSoT**: `src/config/firestore-collections.ts` — COLLECTIONS constants
+- Related: [ADR-210](./ADR-210-document-id-generation-audit.md) — Document ID patterns
+- Industry: PostgreSQL FK constraints with ON DELETE RESTRICT / CASCADE / SET NULL
+
+---
+
+## 8. Decision Log
+
+| Date | Decision | Author |
+|------|----------|--------|
+| 2026-03-13 | ADR Created — Full dependency mapping completed | Γιώργος Παγώνης + Claude Code |
+| 2026-03-13 | **ΦΙΛΟΣΟΦΙΑ BOTTOM-UP ONLY**: Καταργείται κάθε cascade delete. Ο χρήστης διαγράφει ΜΟΝΟ από κάτω προς τα πάνω, χειροκίνητα. Αντικατάσταση υπάρχοντος cascade σε Project/Building. | Γιώργος Παγώνης |
+| 2026-03-13 | ΟΛΑ τα entities → **BLOCK** strategy. Parking/Storage → conditional BLOCK (μόνο αν πωλημένα). | Γιώργος Παγώνης |
+| 2026-03-13 | Permission fixes: **Phase 0 — ✅ IMPLEMENTED**. Νέα permissions: `units:units:delete`, `projects:floors:delete`. Roles: company_admin + project_manager. Parking/Storage → `units:units:delete` (sub-entities). | Γιώργος Παγώνης + Claude Code |
+| 2026-03-13 | Υπάρχοντα cascade-preview dialogs (Project/Building) → **ΑΝΤΙΚΑΤΑΣΤΑΣΗ** με Deletion Blocked dialogs | Γιώργος Παγώνης |
+| 2026-03-13 | Μηνύματα Deletion Blocked dialog μέσω **i18n** (ελληνικά + αγγλικά) | Γιώργος Παγώνης |
+| 2026-03-13 | Κάθε επιτυχής διαγραφή → **audit trail** (`entity_audit_trail`): ποιος, πότε, τι σβήστηκε + **full JSON snapshot** των δεδομένων πριν τη διαγραφή | Γιώργος Παγώνης |
+
+---
+
+*ADR Format based on: Michael Nygard's Architecture Decision Records*
+*Enterprise standards inspired by: PostgreSQL referential integrity, Autodesk Vault deletion policies*
