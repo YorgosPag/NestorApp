@@ -18,7 +18,7 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth, logMigrationExecuted, extractRequestMetadata } from '@/lib/auth';
+import { withAuth, logMigrationExecuted } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -270,9 +270,19 @@ async function scanForLegacyDocuments(
 // GET — Dry-run report
 // ============================================================================
 
+interface DryRunResponse {
+  success: boolean;
+  message: string;
+  dryRun?: boolean;
+  report?: MigrationReport;
+  buildings?: ReadonlyArray<LegacyDocument & { subcollections: Record<string, number> }>;
+  contacts?: ReadonlyArray<LegacyDocument>;
+  totalLegacy?: number;
+}
+
 export const GET = withSensitiveRateLimit(
-  withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+  withAuth<DryRunResponse>(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       logger.info('Migration dry-run requested', { uid: ctx.uid });
 
       const db = getAdminFirestore();
@@ -303,11 +313,9 @@ export const GET = withSensitiveRateLimit(
       );
 
       await logMigrationExecuted(
-        db,
-        ctx.uid,
+        ctx,
         'migrate-enterprise-ids-dryrun',
         { totalLegacy: report.totalLegacy },
-        extractRequestMetadata(req),
       );
 
       return NextResponse.json({
@@ -327,9 +335,16 @@ export const GET = withSensitiveRateLimit(
 // POST — Execute migration
 // ============================================================================
 
+interface ExecuteResponse {
+  success: boolean;
+  message: string;
+  migrated: number;
+  results?: ReadonlyArray<MigrationResult>;
+}
+
 export const POST = withSensitiveRateLimit(
-  withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+  withAuth<ExecuteResponse>(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       logger.info('Migration execution started', { uid: ctx.uid });
 
       const db = getAdminFirestore();
@@ -435,15 +450,13 @@ export const POST = withSensitiveRateLimit(
       }
 
       await logMigrationExecuted(
-        db,
-        ctx.uid,
+        ctx,
         'migrate-enterprise-ids-execute',
         {
           totalMigrated: results.length,
           buildings: results.filter(r => r.collection === COLLECTIONS.BUILDINGS).length,
           contacts: results.filter(r => r.collection === COLLECTIONS.CONTACTS).length,
         },
-        extractRequestMetadata(req),
       );
 
       return NextResponse.json({
