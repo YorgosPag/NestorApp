@@ -163,7 +163,7 @@
 
 | Collection | Generator | Migrated From |
 |------------|-----------|---------------|
-| `contacts` | `generateContactId()` | `addDoc` auto-ID |
+| `contacts` | `generateContactId()` / `generateCompanyId()` | `addDoc` auto-ID (API + AI pipeline + create-sample) |
 | `units` | `generateUnitId()` | `addDoc` auto-ID |
 | `tasks` | `generateTaskId()` | `addDoc` auto-ID |
 | `opportunities` | `generateOpportunityId()` | `addDoc` auto-ID (2 files) |
@@ -409,3 +409,4 @@ grep -rn "from.*enterprise-id" src/ --include="*.ts" --include="*.tsx" | wc -l
 | 2026-03-12 | **Phase 1 + P1/P2 IMPLEMENTED**: 4 new generators (ws, addr, opp, xmit), 8 violations fixed, 7 collections migrated addDoc→setDoc. Compliance: 33%→53% | Claude Code (Anthropic AI) |
 | 2026-03-13 | **Phase 2: 6 core API endpoints migrated** — projects (.add→.doc(proj_).set + projectCode PRJ-xxx), buildings (bldg_), units (unit_), parking (park_), storages (stor_), contacts (cont_). All server-side entity creation now uses enterprise IDs. | Claude Code (Anthropic AI) |
 | 2026-03-13 | **Enterprise Cascade Delete**: Hard delete + cascade σε projects (→buildings→units/parking/storage/floors), buildings (→children), contacts (new DELETE endpoint + `crm:contacts:delete` permission). Contacts service migrated from client-side Firestore SDK to server API calls with audit trail. | Claude Code (Anthropic AI) |
+| 2026-03-13 | **Enterprise ID Standardization (Buildings & Contacts)**: (1) `createContactServerSide()` migrated from `addDoc()` → `setDoc()` with `generateContactId()`/`generateCompanyId()` — fixes UC-015 admin pipeline. (2) `/api/contacts/create-sample` replaced custom `generateEnterpriseSecureId()` with `generateContactId()`. (3) New migration endpoint `/api/admin/migrate-enterprise-ids` (GET dry-run, POST execute) — migrates legacy auto-ID documents to enterprise IDs, copies subcollections, updates all cross-references (contact_links, projects, buildings, units). | Claude Code (Anthropic AI) |

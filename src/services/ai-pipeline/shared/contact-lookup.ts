@@ -19,6 +19,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { fuzzyGreekMatch } from './greek-text-utils';
+import { generateContactId, generateCompanyId } from '@/services/enterprise-id.service';
 
 const logger = createModuleLogger('PIPELINE_CONTACT_LOOKUP');
 
@@ -605,13 +606,19 @@ export async function createContactServerSide(
     profession: null,
   };
 
-  // ── Step 4: Write to Firestore ──
-  const docRef = await adminDb
+  // ── Step 4: Generate enterprise ID ──
+  const contactId = params.type === 'company'
+    ? generateCompanyId()
+    : generateContactId();
+
+  // ── Step 5: Write to Firestore with enterprise ID ──
+  await adminDb
     .collection(COLLECTIONS.CONTACTS)
-    .add(contactDoc);
+    .doc(contactId)
+    .set(contactDoc);
 
   logger.info('Contact created via Admin SDK', {
-    contactId: docRef.id,
+    contactId,
     displayName,
     type: params.type,
     companyId: params.companyId,
@@ -619,7 +626,7 @@ export async function createContactServerSide(
   });
 
   return {
-    contactId: docRef.id,
+    contactId,
     displayName,
   };
 }

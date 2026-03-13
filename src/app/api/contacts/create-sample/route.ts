@@ -5,6 +5,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { generateContactId } from '@/services/enterprise-id.service';
 
 const logger = createModuleLogger('CreateSampleContactsRoute');
 
@@ -218,7 +219,7 @@ export const POST = withStandardRateLimit(
       readonly profession: string;
     }> = [];
 
-    const contactIds = Array.from({ length: 8 }, () => generateEnterpriseSecureId());
+    const contactIds = Array.from({ length: 8 }, () => generateContactId());
 
     for (let i = 0; i < sampleContacts.length && i < contactIds.length; i++) {
       const contact = sampleContacts[i];
