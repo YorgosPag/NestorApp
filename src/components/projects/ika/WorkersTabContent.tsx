@@ -6,13 +6,14 @@
  * =============================================================================
  *
  * Lists workers (individual contacts) linked to a project.
+ * Inline contact search (no modal) using ContactSearchManager.
  * Uses existing contacts/relationships system — NO new collections.
  *
  * @enterprise ADR-090 — IKA/EFKA Labor Compliance System
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { Users, UserPlus, Loader2, AlertCircle, HardHat } from 'lucide-react';
+import { Users, UserPlus, Loader2, AlertCircle, HardHat, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -21,11 +22,12 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { useTypography } from '@/hooks/useTypography';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { cn } from '@/lib/utils';
 import { useProjectWorkers } from './hooks/useProjectWorkers';
 import { WorkerCard } from './components/WorkerCard';
-import { WorkerAssignmentDialog } from './components/WorkerAssignmentDialog';
+import { ContactSearchManager, type ContactSearchManagerProps } from '@/components/contacts/relationships/ContactSearchManager';
+import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
+import { AssociationService } from '@/services/association.service';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -44,10 +46,11 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
   const colors = useSemanticColors();
   const typography = useTypography();
   const spacing = useSpacingTokens();
-  const { quick } = useBorderTokens();
 
   const { workers, isLoading, error, refetch } = useProjectWorkers(projectId);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [selectedContact, setSelectedContact] = useState<ContactSummary | null>(null);
+  const [isAssigning, setIsAssigning] = useState(false);
   const [isRemoving, setIsRemoving] = useState<string | null>(null);
 
   const excludeContactIds = useMemo(
@@ -55,12 +58,42 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
     [workers]
   );
 
+  const handleContactSelect = useCallback((contact: ContactSummary | null) => {
+    setSelectedContact(contact);
+  }, []);
+
+  const handleAssign = useCallback(async () => {
+    if (!selectedContact || !projectId) return;
+
+    try {
+      setIsAssigning(true);
+
+      const result = await AssociationService.linkContactToEntity({
+        sourceWorkspaceId: 'ws_office_directory',
+        sourceContactId: selectedContact.id,
+        targetEntityType: 'project',
+        targetEntityId: projectId,
+        reason: 'IKA worker assignment',
+        createdBy: 'current_user',
+      });
+
+      if (result.success) {
+        setShowSearch(false);
+        setSelectedContact(null);
+        refetch();
+      }
+    } catch (err) {
+      logger.error('Worker assignment failed', { error: err });
+    } finally {
+      setIsAssigning(false);
+    }
+  }, [selectedContact, projectId, refetch]);
+
   const handleRemoveWorker = useCallback(async (worker: ProjectWorker) => {
     if (!confirm(t('ika.workersTab.confirmRemove'))) return;
 
     try {
       setIsRemoving(worker.contactId);
-      // Deactivate the contact link by setting status to 'inactive'
       const linkRef = doc(db, COLLECTIONS.CONTACT_LINKS, worker.linkId);
       await updateDoc(linkRef, { status: 'inactive' });
       refetch();
@@ -70,6 +103,11 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
       setIsRemoving(null);
     }
   }, [t, refetch]);
+
+  const handleCancelSearch = useCallback(() => {
+    setShowSearch(false);
+    setSelectedContact(null);
+  }, []);
 
   // Loading state
   if (isLoading) {
@@ -95,75 +133,110 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
   }
 
   return (
-      <section className="space-y-6">
-        {/* Header card */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className={typography.card.titleCompact}>
-                  <HardHat className={cn(iconSizes.md, spacing.margin.right.sm, 'inline-block')} />
-                  {t('ika.workersTab.title')}
-                </CardTitle>
-                <CardDescription>
-                  {t('ika.workersTab.description')}
-                </CardDescription>
+    <section className="space-y-4">
+      {/* Header card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <hgroup>
+              <CardTitle className={typography.card.titleCompact}>
+                <HardHat className={cn(iconSizes.md, spacing.margin.right.sm, 'inline-block')} />
+                {t('ika.workersTab.title')}
+              </CardTitle>
+              <CardDescription>
+                {t('ika.workersTab.description')}
+              </CardDescription>
+            </hgroup>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">
+                {t('ika.workersTab.totalWorkers')}: {workers.length}
+              </span>
+              {projectId && !showSearch && (
+                <Button onClick={() => setShowSearch(true)}>
+                  <UserPlus className={cn(iconSizes.sm, spacing.margin.right.sm)} />
+                  {t('ika.workersTab.addWorker')}
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          {/* Inline search section */}
+          {showSearch && (
+            <aside className={cn(
+              'rounded-lg border p-4 space-y-3',
+              'bg-muted/30'
+            )}>
+              <div className="flex items-center justify-between">
+                <h3 className={cn(typography.label.md, 'font-semibold')}>
+                  <UserPlus className={cn(iconSizes.sm, 'inline-block mr-1')} />
+                  {t('ika.workersTab.addWorker')}
+                </h3>
+                <Button variant="ghost" size="sm" onClick={handleCancelSearch}>
+                  <X className={iconSizes.sm} />
+                </Button>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground">
-                  {t('ika.workersTab.totalWorkers')}: {workers.length}
-                </span>
-                {projectId && (
-                  <Button onClick={() => setIsDialogOpen(true)}>
-                    <UserPlus className={cn(iconSizes.sm, spacing.margin.right.sm)} />
+
+              <ContactSearchManager
+                selectedContactId={selectedContact?.id ?? ''}
+                onContactSelect={handleContactSelect}
+                excludeContactIds={excludeContactIds}
+                allowedContactTypes={['individual']}
+                placeholder="Αναζήτηση επαφής με όνομα, ειδικότητα ή ΑΜΚΑ..."
+                searchConfig={{ autoLoadContacts: true, maxResults: 20 }}
+              />
+
+              {selectedContact && (
+                <div className="flex items-center justify-between pt-2">
+                  <p className="text-sm">
+                    Επιλέχθηκε: <strong>{selectedContact.name}</strong>
+                  </p>
+                  <Button
+                    onClick={handleAssign}
+                    disabled={isAssigning}
+                    size="sm"
+                  >
+                    {isAssigning ? (
+                      <Loader2 className={cn(iconSizes.sm, spacing.margin.right.sm, 'animate-spin')} />
+                    ) : (
+                      <UserPlus className={cn(iconSizes.sm, spacing.margin.right.sm)} />
+                    )}
                     {t('ika.workersTab.addWorker')}
                   </Button>
-                )}
-              </div>
+                </div>
+              )}
+            </aside>
+          )}
+
+          {/* Workers list or empty state */}
+          {workers.length === 0 && !showSearch ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Users className={cn(iconSizes.xl, 'text-muted-foreground mb-4')} />
+              <p className="text-sm font-medium text-muted-foreground">
+                {t('ika.workersTab.noWorkers')}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {t('ika.workersTab.noWorkersHint')}
+              </p>
             </div>
-          </CardHeader>
-
-          <CardContent>
-            {workers.length === 0 ? (
-              /* Empty state */
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Users className={cn(iconSizes.xl, 'text-muted-foreground mb-4')} />
-                <p className="text-sm font-medium text-muted-foreground">
-                  {t('ika.workersTab.noWorkers')}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {t('ika.workersTab.noWorkersHint')}
-                </p>
-              </div>
-            ) : (
-              /* Workers list */
-              <div className="space-y-2">
-                {workers.map((worker) => (
-                  <WorkerCard
-                    key={worker.contactId}
-                    worker={worker}
-                    onRemove={
-                      isRemoving === worker.contactId
-                        ? undefined
-                        : handleRemoveWorker
-                    }
-                  />
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Assignment dialog */}
-        {projectId && (
-          <WorkerAssignmentDialog
-            open={isDialogOpen}
-            onOpenChange={setIsDialogOpen}
-            projectId={projectId}
-            excludeContactIds={excludeContactIds}
-            onAssigned={refetch}
-          />
-        )}
-      </section>
+          ) : (
+            <div className="space-y-2">
+              {workers.map((worker) => (
+                <WorkerCard
+                  key={worker.contactId}
+                  worker={worker}
+                  onRemove={
+                    isRemoving === worker.contactId
+                      ? undefined
+                      : handleRemoveWorker
+                  }
+                />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </section>
   );
 }
