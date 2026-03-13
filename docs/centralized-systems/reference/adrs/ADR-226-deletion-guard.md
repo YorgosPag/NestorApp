@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | IN PROGRESS (Phase 1 ✅ IMPLEMENTED) |
+| **Status** | IN PROGRESS (Phase 0 ✅, Phase 1 ✅, Phase 2 ✅ IMPLEMENTED) |
 | **Date** | 2026-03-13 |
 | **Category** | Backend Systems / Data & State |
 | **Canonical Location** | `src/lib/firestore/deletion-guard.ts` (proposed) |
@@ -425,17 +425,27 @@ await db.collection('buildings').doc(buildingId).delete();
 - Audit trail via `EntityAuditService.recordChange()` with full JSON snapshot on delete
 - Preview API at `GET /api/deletion-guard/{entityType}/{entityId}` with matching delete permissions
 
-### Phase 2: BLOCK Guard σε ΟΛΑ τα entities (Priority: CRITICAL)
+### Phase 2: BLOCK Guard σε ΟΛΑ τα entities (Priority: CRITICAL) — ✅ IMPLEMENTED (2026-03-13)
 
-| Task | Αρχείο | Περιγραφή |
-|------|--------|-----------|
-| 2.1 | `src/app/api/contacts/[contactId]/route.ts` | Integrate BLOCK guard στο DELETE |
-| 2.2 | `src/app/api/units/[unitId]/route.ts` | Integrate BLOCK guard στο DELETE |
-| 2.3 | `src/app/api/floors/route.ts` | Integrate BLOCK guard στο DELETE |
-| 2.4 | `src/app/api/projects/[projectId]/route.ts` | **ΑΝΤΙΚΑΤΑΣΤΑΣΗ cascade** με BLOCK guard |
-| 2.5 | `src/app/api/buildings/[buildingId]/route.ts` | **ΑΝΤΙΚΑΤΑΣΤΑΣΗ cascade** με BLOCK guard |
-| 2.6 | `src/app/api/parking/[id]/route.ts` | Integrate conditional BLOCK (αν πωλημένο) |
-| 2.7 | `src/app/api/storages/[id]/route.ts` | Integrate conditional BLOCK (αν πωλημένο) |
+| Task | Αρχείο | Περιγραφή | Status |
+|------|--------|-----------|--------|
+| 2.1 | `src/app/api/contacts/[contactId]/route.ts` | `contactRef.delete()` → `executeDeletion()` | ✅ |
+| 2.2 | `src/app/api/units/[id]/route.ts` | `docRef.delete()` → `executeDeletion()`, removed manual EntityAuditService | ✅ |
+| 2.3 | `src/app/api/floors/route.ts` | `floorRef.delete()` → `executeDeletion()` | ✅ |
+| 2.4 | `src/app/api/projects/[projectId]/route.ts` | **REMOVED cascade** → `executeDeletion()` (bottom-up BLOCK) | ✅ |
+| 2.5 | `src/app/api/buildings/[buildingId]/route.ts` | **REMOVED cascade** → `executeDeletion()` (bottom-up BLOCK) | ✅ |
+| 2.6 | `src/app/api/parking/[id]/route.ts` | `docRef.delete()` → `executeDeletion()` (conditional BLOCK for sold) | ✅ |
+| 2.7 | `src/app/api/storages/[id]/route.ts` | `docRef.delete()` → `executeDeletion()` (conditional BLOCK for sold) | ✅ |
+
+**Implementation Notes (Phase 2)**:
+- All 7 DELETE endpoints now use `executeDeletion()` which checks dependencies before allowing deletion
+- Projects/Buildings: **CASCADE REMOVED** — replaced with BLOCK guard (bottom-up only)
+- Removed `cascadeDeleteChildren` + `CascadeChild` imports from projects and buildings
+- Removed `BUILDING_CHILDREN` constants from both files
+- Units: Removed redundant manual `EntityAuditService.recordChange()` — `executeDeletion()` handles full snapshot audit
+- Parking/Storage: Conditional block via `commercial.buyerContactId` handled by deletion-guard engine
+- Dual audit pattern: `executeDeletion()` → entity audit trail; `logAuditEvent()` → auth audit trail (kept in all handlers)
+- Error response: 409 Conflict with dependency details when deletion is blocked
 
 ### Phase 3: UI — Deletion Blocked Dialog (Priority: HIGH)
 
@@ -500,6 +510,7 @@ await db.collection('buildings').doc(buildingId).delete();
 | 2026-03-13 | Μηνύματα Deletion Blocked dialog μέσω **i18n** (ελληνικά + αγγλικά) | Γιώργος Παγώνης |
 | 2026-03-13 | Κάθε επιτυχής διαγραφή → **audit trail** (`entity_audit_trail`): ποιος, πότε, τι σβήστηκε + **full JSON snapshot** των δεδομένων πριν τη διαγραφή | Γιώργος Παγώνης |
 | 2026-03-13 | **Phase 1 — ✅ IMPLEMENTED**: Deletion registry (8 entities, 35 deps), core engine (`checkDeletionDependencies` + `executeDeletion`), preview API (`GET /api/deletion-guard/{entityType}/{entityId}`). Parallel queries, tenant isolation, conditional blocks, safe defaults on failure. | Claude Code |
+| 2026-03-13 | **Phase 2 — ✅ IMPLEMENTED**: All 7 DELETE endpoints integrated with `executeDeletion()`. Projects/Buildings cascade **REMOVED** → bottom-up BLOCK. Units manual audit removed (executeDeletion handles it). Parking/Storage conditional BLOCK for sold items. Dual audit pattern (entity + auth). | Claude Code |
 
 ---
 

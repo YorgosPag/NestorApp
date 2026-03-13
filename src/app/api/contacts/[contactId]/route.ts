@@ -5,6 +5,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { isRoleBypass } from '@/lib/auth/roles';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { executeDeletion } from '@/lib/firestore/deletion-guard';
 import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts';
 import type { Contact } from '@/types/contacts';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -324,12 +325,12 @@ export async function DELETE(
 
       logger.info('Deleting contact', { contactId, companyId: ctx.companyId });
 
-      // 🗑️ HARD DELETE
-      await contactRef.delete();
+      // 🛡️ ADR-226: Guarded deletion (checks dependencies → blocks or deletes + audit)
+      await executeDeletion(adminDb, 'contact', contactId, ctx.uid, ctx.companyId);
 
       logger.info('Contact deleted', { contactId, email: ctx.email });
 
-      // 📊 Audit log
+      // 📊 Auth audit (dual audit — executeDeletion handles entity audit)
       await logAuditEvent(ctx, 'data_deleted', 'contact', 'api', {
         newValue: {
           type: 'status',

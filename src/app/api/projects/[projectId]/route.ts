@@ -46,15 +46,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import type { ProjectAddress } from '@/types/project/addresses';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
-import { cascadeDeleteChildren, type CascadeChild } from '@/lib/firestore/cascade-delete';
-
-// 🏢 ENTERPRISE: Building children for cascade delete
-const BUILDING_CHILDREN: readonly CascadeChild[] = [
-  { collection: COLLECTIONS.UNITS, foreignKey: 'buildingId', label: 'units' },
-  { collection: COLLECTIONS.PARKING_SPACES, foreignKey: 'buildingId', label: 'parking' },
-  { collection: COLLECTIONS.STORAGE, foreignKey: 'buildingId', label: 'storage' },
-  { collection: COLLECTIONS.FLOORS, foreignKey: 'buildingId', label: 'floors' },
-];
+import { executeDeletion } from '@/lib/firestore/deletion-guard';
 
 const logger = createModuleLogger('ProjectRoute');
 
@@ -380,7 +372,7 @@ async function handleDeleteProject(
   const startTime = Date.now();
   const db = getAdminFirestore();
 
-  logger.info('[Projects/Delete] User deleting project (hard delete + cascade)', { email: ctx.email, projectId });
+  logger.info('[Projects/Delete] User deleting project (bottom-up BLOCK guard)', { email: ctx.email, projectId });
 
   // 1. Get project document and verify ownership (tenant isolation)
   const projectRef = db.collection(COLLECTIONS.PROJECTS).doc(projectId);
@@ -403,51 +395,20 @@ async function handleDeleteProject(
     logger.info('[SUPER_ADMIN] Cross-tenant project delete', { email: ctx.email, projectId, projectCompanyId: projectData?.companyId });
   }
 
-  // 3. CASCADE DELETE: Query buildings → cascade their children → delete buildings → delete project
-  let cascadeSummary: Record<string, number> = {};
-  let totalCascaded = 0;
+  // 3. 🛡️ ADR-226: BLOCK guard — refuses deletion if dependencies exist (bottom-up only)
+  await executeDeletion(db, 'project', projectId, ctx.uid, ctx.companyId);
 
-  const buildingsSnapshot = await db
-    .collection(COLLECTIONS.BUILDINGS)
-    .where('projectId', '==', projectId)
-    .get();
-
-  if (!buildingsSnapshot.empty) {
-    // 3a. For each building, cascade-delete its children (units, parking, storage, floors)
-    for (const buildingDoc of buildingsSnapshot.docs) {
-      const result = await cascadeDeleteChildren(db, buildingDoc.id, BUILDING_CHILDREN);
-      for (const [label, count] of Object.entries(result.deleted)) {
-        cascadeSummary[label] = (cascadeSummary[label] ?? 0) + count;
-      }
-      totalCascaded += result.total;
-    }
-
-    // 3b. Batch-delete the buildings themselves
-    const buildingCount = buildingsSnapshot.docs.length;
-    const batch = db.batch();
-    for (const buildingDoc of buildingsSnapshot.docs) {
-      batch.delete(buildingDoc.ref);
-    }
-    await batch.commit();
-    cascadeSummary['buildings'] = buildingCount;
-    totalCascaded += buildingCount;
-
-    logger.info('[Projects/Delete] Cascade delete completed', { projectId, cascadeSummary, totalCascaded });
-  }
-
-  // 4. Delete the project document itself
-  await projectRef.delete();
-  logger.info('[Projects/Delete] Project HARD DELETED', { projectId });
+  logger.info('[Projects/Delete] Project DELETED (no dependencies)', { projectId });
 
   const duration = Date.now() - startTime;
 
-  // 5. Invalidate caches
+  // 4. Invalidate caches
   const cache = EnterpriseAPICache.getInstance();
   cache.delete(`${CACHE_KEY_PREFIX}:${ctx.companyId}`);
   cache.delete(`${CACHE_KEY_PREFIX}:all`);
   logger.info('[Projects/Delete] Cache invalidated for tenant', { companyId: ctx.companyId });
 
-  // 6. Audit log with cascade summary
+  // 5. Auth audit (dual audit — executeDeletion handles entity audit with full snapshot)
   await logAuditEvent(ctx, 'data_deleted', 'projects', 'api', {
     newValue: {
       type: 'status',
@@ -455,12 +416,10 @@ async function handleDeleteProject(
         projectId,
         projectName: projectData?.name,
         deleteType: 'hard',
-        cascadeSummary,
-        totalCascaded,
         duration,
       },
     },
-    metadata: { reason: 'Project hard deleted with cascade' },
+    metadata: { reason: 'Project hard deleted (bottom-up, no cascade)' },
   });
 
   return apiSuccess<ProjectDeleteResponse>(
@@ -468,6 +427,6 @@ async function handleDeleteProject(
       projectId,
       deleted: true,
     },
-    `Project permanently deleted with ${totalCascaded} cascaded children in ${duration}ms`
+    `Project permanently deleted in ${duration}ms`
   );
 }

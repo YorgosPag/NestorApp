@@ -21,6 +21,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { isRoleBypass } from '@/lib/auth/roles';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { executeDeletion } from '@/lib/firestore/deletion-guard';
 import { groupByKey } from '@/utils/collection-utils';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -423,7 +424,8 @@ export const DELETE = withStandardRateLimit(
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
           }
 
-          await floorRef.delete();
+          // 🛡️ ADR-226: Guarded deletion (checks dependencies → blocks or deletes + audit)
+          await executeDeletion(db, 'floor', floorId, ctx.uid, ctx.companyId);
           logger.info('[Floors/Delete] Floor deleted', { floorId, userId: ctx.uid });
 
           return NextResponse.json({ success: true, message: `Floor "${floorId}" deleted` });

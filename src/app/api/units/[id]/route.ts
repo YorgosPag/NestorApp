@@ -17,6 +17,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { executeDeletion } from '@/lib/firestore/deletion-guard';
 
 const logger = createModuleLogger('UnitIdRoute');
 
@@ -188,27 +189,16 @@ export const DELETE = withStandardRateLimit(
           throw new ApiError(403, 'Access denied');
         }
 
-        await docRef.delete();
+        // 🛡️ ADR-226: Guarded deletion (checks dependencies → blocks or deletes + audit)
+        await executeDeletion(adminDb, 'unit', id, ctx.uid, ctx.companyId);
 
         logger.info('Unit deleted', { id, companyId: ctx.companyId });
 
-        // Auth audit (existing — kept)
+        // Auth audit (dual audit — executeDeletion handles entity audit with full snapshot)
         await logAuditEvent(ctx, 'data_deleted', 'unit', 'api', {
           newValue: { type: 'status', value: { unitId: id, name: existing.name } },
           metadata: { reason: 'Unit deleted via API' },
         });
-
-        // Entity audit trail (fire-and-forget)
-        EntityAuditService.recordChange({
-          entityType: 'unit',
-          entityId: id,
-          entityName: (existing.name as string) ?? null,
-          action: 'deleted',
-          changes: [],
-          performedBy: ctx.uid,
-          performedByName: ctx.email ?? null,
-          companyId: ctx.companyId,
-        }).catch(() => { /* fire-and-forget */ });
 
         return apiSuccess<UnitMutationResult>({ id }, 'Unit deleted');
       } catch (error) {

@@ -16,6 +16,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FieldValue } from 'firebase-admin/firestore';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
+import { executeDeletion } from '@/lib/firestore/deletion-guard';
 
 const logger = createModuleLogger('StoragesIdRoute');
 
@@ -125,10 +126,12 @@ export const DELETE = withStandardRateLimit(
           throw new ApiError(403, 'Access denied');
         }
 
-        await docRef.delete();
+        // 🛡️ ADR-226: Guarded deletion (checks dependencies + conditional block for sold storage)
+        await executeDeletion(adminDb, 'storage', id, ctx.uid, ctx.companyId);
 
         logger.info('Storage unit deleted', { id, companyId: ctx.companyId });
 
+        // Auth audit (dual audit — executeDeletion handles entity audit)
         await logAuditEvent(ctx, 'data_deleted', 'storage', 'api', {
           newValue: { type: 'status', value: { storageId: id, name: existing.name } },
           metadata: { reason: 'Storage unit deleted via API' },

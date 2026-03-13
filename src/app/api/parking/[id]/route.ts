@@ -16,6 +16,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FieldValue } from 'firebase-admin/firestore';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
+import { executeDeletion } from '@/lib/firestore/deletion-guard';
 
 const logger = createModuleLogger('ParkingIdRoute');
 
@@ -133,10 +134,12 @@ export const DELETE = withStandardRateLimit(
           throw new ApiError(403, 'Access denied');
         }
 
-        await docRef.delete();
+        // 🛡️ ADR-226: Guarded deletion (checks dependencies + conditional block for sold parking)
+        await executeDeletion(adminDb, 'parking', id, ctx.uid, ctx.companyId);
 
         logger.info('Parking spot deleted', { id, companyId: ctx.companyId });
 
+        // Auth audit (dual audit — executeDeletion handles entity audit)
         await logAuditEvent(ctx, 'data_deleted', 'parking_spot', 'api', {
           newValue: { type: 'status', value: { parkingSpotId: id, number: existing.number } },
           metadata: { reason: 'Parking spot deleted via API' },
