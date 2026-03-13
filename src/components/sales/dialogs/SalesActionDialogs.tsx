@@ -296,6 +296,11 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
                 placeholder={t('sales.dialogs.reserve.buyerPlaceholder', { defaultValue: 'Αναζήτηση επαφής...' })}
                 allowedContactTypes={['individual', 'company']}
               />
+              {!buyerContactId && (
+                <p className="text-xs text-destructive">
+                  {t('sales.dialogs.reserve.buyerRequired', { defaultValue: 'Η επιλογή αγοραστή είναι υποχρεωτική' })}
+                </p>
+              )}
               <Button
                 type="button"
                 variant="ghost"
@@ -339,7 +344,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
               {t('common.cancel', { defaultValue: 'Ακύρωση' })}
             </Button>
-            <Button onClick={handleSave} disabled={saving}>
+            <Button onClick={handleSave} disabled={saving || !buyerContactId}>
               {saving
                 ? t('common.saving', { defaultValue: 'Αποθήκευση...' })
                 : t('sales.dialogs.reserve.confirm', { defaultValue: 'Κράτηση' })}
@@ -370,6 +375,12 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
   );
   const [saving, setSaving] = useState(false);
 
+  // Buyer state: initialized from existing commercial data (if reserved → sell flow)
+  const existingBuyerId = unit.commercial?.buyerContactId ?? '';
+  const existingBuyerName = unit.commercial?.buyerName ?? '';
+  const [buyerContactId, setBuyerContactId] = useState<string>(existingBuyerId);
+  const [buyerName, setBuyerName] = useState<string>(existingBuyerName);
+
   // ADR-199: Linked spaces (appurtenances)
   const linkedSpaces = useLinkedSpacesForSale(unit);
 
@@ -377,12 +388,19 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
   useEffect(() => {
     if (open) {
       setFinalPrice(unit.commercial?.askingPrice?.toString() ?? '');
+      setBuyerContactId(unit.commercial?.buyerContactId ?? '');
+      setBuyerName(unit.commercial?.buyerName ?? '');
     }
-  }, [open, unit.commercial?.askingPrice]);
+  }, [open, unit.commercial?.askingPrice, unit.commercial?.buyerContactId, unit.commercial?.buyerName]);
+
+  const handleBuyerSelect = useCallback((contact: ContactSummary | null) => {
+    setBuyerContactId(contact?.id ?? '');
+    setBuyerName(contact?.name ?? '');
+  }, []);
 
   const handleSave = useCallback(async () => {
     const price = Number(finalPrice);
-    if (isNaN(price) || price <= 0) return;
+    if (isNaN(price) || price <= 0 || !buyerContactId) return;
 
     setSaving(true);
     try {
@@ -392,8 +410,8 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
           askingPrice: unit.commercial?.askingPrice ?? null,
           finalPrice: price,
           reservationDeposit: unit.commercial?.reservationDeposit ?? null,
-          buyerContactId: unit.commercial?.buyerContactId ?? null,
-          buyerName: unit.commercial?.buyerName ?? null,
+          buyerContactId: buyerContactId || null,
+          buyerName: buyerName || null,
           reservationDate: unit.commercial?.reservationDate ?? null,
           saleDate: new Date().toISOString(),
           cancellationDate: unit.commercial?.cancellationDate ?? null,
@@ -416,8 +434,8 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
         unitId: unit.id,
         unitName,
         projectId: unit.project ?? null,
-        buyerContactId: unit.commercial?.buyerContactId ?? null,
-        buyerName: unit.commercial?.buyerName ?? null,
+        buyerContactId: buyerContactId || null,
+        buyerName: buyerName || null,
         projectName: null,
         permitTitle: null,
         companyName: null,
@@ -439,8 +457,8 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
         apiClient.post(`/api/sales/${unit.id}/appurtenance-sync`, {
           action: 'sell',
           spaces: syncPayload,
-          buyerContactId: unit.commercial?.buyerContactId ?? null,
-          buyerName: unit.commercial?.buyerName ?? null,
+          buyerContactId: buyerContactId || null,
+          buyerName: buyerName || null,
         }).catch((err: unknown) => {
           logger.warn('Appurtenance sync fire-and-forget failed', { error: err });
         });
@@ -450,7 +468,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
     } finally {
       setSaving(false);
     }
-  }, [finalPrice, unit, onOpenChange, onSuccess, linkedSpaces]);
+  }, [finalPrice, buyerContactId, buyerName, unit, onOpenChange, onSuccess, linkedSpaces]);
 
   const askingPrice = unit.commercial?.askingPrice;
   const discount = askingPrice && Number(finalPrice) > 0
@@ -472,7 +490,32 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
           </DialogDescription>
         </DialogHeader>
 
-        <fieldset className="space-y-3 py-2">
+        <section className="space-y-3 py-2">
+          {/* Buyer selection — read-only if already set from reserve, editable otherwise */}
+          <fieldset className="space-y-1">
+            {existingBuyerId ? (
+              <p className="text-sm">
+                <span className="font-medium">{t('sales.dialogs.reserve.buyerName', { defaultValue: 'Αγοραστής' })}:</span>{' '}
+                <span className="text-foreground">{buyerName || existingBuyerId}</span>
+              </p>
+            ) : (
+              <>
+                <ContactSearchManager
+                  selectedContactId={buyerContactId}
+                  onContactSelect={handleBuyerSelect}
+                  label={t('sales.dialogs.reserve.buyerName', { defaultValue: 'Αγοραστής' })}
+                  placeholder={t('sales.dialogs.reserve.buyerPlaceholder', { defaultValue: 'Αναζήτηση επαφής...' })}
+                  allowedContactTypes={['individual', 'company']}
+                />
+                {!buyerContactId && (
+                  <p className="text-xs text-destructive">
+                    {t('sales.dialogs.reserve.buyerRequired', { defaultValue: 'Η επιλογή αγοραστή είναι υποχρεωτική' })}
+                  </p>
+                )}
+              </>
+            )}
+          </fieldset>
+
           {askingPrice && (
             <p className="text-sm text-muted-foreground">
               {t('sales.dialogs.sell.askingWas', { defaultValue: 'Ζητούμενη τιμή' })}:{' '}
@@ -518,7 +561,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
               defaultValue: 'Η μονάδα θα μεταβεί σε κατάσταση "Πωλήθηκε" και δεν θα εμφανίζεται πλέον στις διαθέσιμες.',
             })}
           </p>
-        </fieldset>
+        </section>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
@@ -526,7 +569,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
           </Button>
           <Button
             onClick={handleSave}
-            disabled={saving || !finalPrice || Number(finalPrice) <= 0}
+            disabled={saving || !finalPrice || Number(finalPrice) <= 0 || !buyerContactId}
             className="bg-green-600 hover:bg-green-700 text-white"
           >
             {saving

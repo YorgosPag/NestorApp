@@ -20,6 +20,9 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
 import { createDefaultPersonaData, findActivePersona } from '@/types/contacts/personas';
 import type { PersonaData, ClientPersona } from '@/types/contacts/personas';
+import { validateContactForSale, isServiceContact } from '@/types/contacts/helpers';
+import type { Contact } from '@/types/contacts/contracts';
+import type { CommercialTransactionType } from '@/types/contacts/helpers';
 
 const logger = createModuleLogger('UnitIdRoute');
 
@@ -141,6 +144,33 @@ export const PATCH = withStandardRateLimit(
 
           if (!companyId) {
             throw new ApiError(400, 'Unit must belong to a project with a company before reservation or sale');
+          }
+
+          // 3. Buyer contact validation (enterprise-grade)
+          const commercialPayload = body.commercial as Record<string, unknown> | undefined;
+          const buyerContactId = (commercialPayload?.buyerContactId as string) ?? null;
+
+          if (!buyerContactId) {
+            throw new ApiError(400, 'Buyer contact is required');
+          }
+
+          const buyerDoc = await adminDb.collection(COLLECTIONS.CONTACTS).doc(buyerContactId).get();
+          if (!buyerDoc.exists) {
+            throw new ApiError(400, 'Buyer contact not found');
+          }
+
+          const buyerData = buyerDoc.data() as Contact;
+
+          if (isServiceContact(buyerData)) {
+            throw new ApiError(400, 'Service contacts cannot be buyers');
+          }
+
+          const transactionType: CommercialTransactionType =
+            body.commercialStatus === 'reserved' ? 'reserve' : 'sell';
+          const readiness = validateContactForSale(buyerData, transactionType);
+
+          if (!readiness.valid) {
+            throw new ApiError(400, `Buyer missing required fields: ${readiness.missingFields.join(', ')}`);
           }
         }
 

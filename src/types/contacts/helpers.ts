@@ -113,5 +113,73 @@ export function getPrimaryAddress(contact: Contact): AddressInfo | undefined {
   return primaryAddress || addresses[0];
 }
 
+// =============================================================================
+// 🏢 ENTERPRISE: Sale Readiness Rules — SSoT for buyer validation
+// =============================================================================
+
+/** Enterprise sale readiness rules — SSoT for buyer validation */
+export const saleReadinessRules = {
+  reserve: {
+    individual: { requireName: true, requireContact: false, requireVat: false },
+    company:    { requireName: true, requireContact: false, requireVat: false },
+  },
+  sell: {
+    individual: { requireName: true, requireContact: true, requireVat: false },
+    company:    { requireName: true, requireContact: true, requireVat: true },
+  },
+} as const;
+
+export type CommercialTransactionType = keyof typeof saleReadinessRules;
+
+interface SaleReadinessResult {
+  valid: boolean;
+  missingFields: string[];
+}
+
+/**
+ * Validate a contact's readiness for a commercial transaction (reserve/sell).
+ * Uses centralized saleReadinessRules as SSoT.
+ */
+export function validateContactForSale(
+  contact: Contact,
+  transactionType: CommercialTransactionType
+): SaleReadinessResult {
+  const missingFields: string[] = [];
+
+  // Service contacts can never be buyers
+  if (isServiceContact(contact)) {
+    return { valid: false, missingFields: ['serviceContactNotAllowed'] };
+  }
+
+  const contactCategory = isCompanyContact(contact) ? 'company' : 'individual';
+  const rules = saleReadinessRules[transactionType][contactCategory];
+
+  // Check name
+  if (rules.requireName) {
+    const displayName = getContactDisplayName(contact);
+    if (!displayName || displayName.trim().length === 0) {
+      missingFields.push('name');
+    }
+  }
+
+  // Check contact info (email OR phone)
+  if (rules.requireContact) {
+    const hasEmail = !!getPrimaryEmail(contact);
+    const hasPhone = !!getPrimaryPhone(contact);
+    if (!hasEmail && !hasPhone) {
+      missingFields.push('emailOrPhone');
+    }
+  }
+
+  // Check VAT number (companies only on sell)
+  if (rules.requireVat) {
+    if (isCompanyContact(contact) && !contact.vatNumber) {
+      missingFields.push('vatNumber');
+    }
+  }
+
+  return { valid: missingFields.length === 0, missingFields };
+}
+
 // Re-export type guards to be available from the barrel file
 export { isIndividualContact, isCompanyContact, isServiceContact };
