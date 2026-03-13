@@ -43,9 +43,9 @@ interface ContactDetailsProps {
   onNewContact?: () => void;
 }
 
-// 🏢 ENTERPRISE: Subcollection tabs that save independently (Salesforce/SAP/Dynamics pattern)
-// Note: 'relationships' removed - it uses the main edit mode for contact relationships
-const SUBCOLLECTION_TABS = ['banking', 'files'];
+// 🏢 ENTERPRISE: Header buttons always visible on all tabs
+// Previously banking/files tabs hid edit controls — removed for consistent UX
+const SUBCOLLECTION_TABS: string[] = [];
 
 export function ContactDetails({ contact, onEditContact, onDeleteContact, onContactUpdated, onNewContact }: ContactDetailsProps) {
   const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = useState(false);

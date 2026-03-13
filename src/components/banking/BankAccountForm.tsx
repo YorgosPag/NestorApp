@@ -105,6 +105,7 @@ export function BankAccountForm({
         bankCode: account.bankCode,
         iban: account.iban,
         accountNumber: account.accountNumber,
+        branch: account.branch,
         accountType: account.accountType,
         currency: account.currency,
         isPrimary: account.isPrimary,
@@ -255,6 +256,37 @@ export function BankAccountForm({
           )}
         </div>
       )}
+
+      {/* Account Number and Branch - Side by Side */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* Account Number */}
+        <div className="space-y-2">
+          <Label htmlFor="accountNumber">
+            {t('form.accountNumber')} <span className="text-muted-foreground">{t('form.optional')}</span>
+          </Label>
+          <Input
+            id="accountNumber"
+            value={formData.accountNumber || ''}
+            onChange={(e) => handleFieldChange('accountNumber', e.target.value)}
+            disabled={loading}
+            placeholder={t('form.accountNumberPlaceholder')}
+          />
+        </div>
+
+        {/* Branch */}
+        <div className="space-y-2">
+          <Label htmlFor="branch">
+            {t('form.branch')} <span className="text-muted-foreground">{t('form.optional')}</span>
+          </Label>
+          <Input
+            id="branch"
+            value={formData.branch || ''}
+            onChange={(e) => handleFieldChange('branch', e.target.value)}
+            disabled={loading}
+            placeholder={t('form.branchPlaceholder')}
+          />
+        </div>
+      </div>
 
       {/* Account Type and Currency - Side by Side */}
       <div className="grid grid-cols-2 gap-4">

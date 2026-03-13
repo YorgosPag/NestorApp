@@ -25,13 +25,19 @@
     "edit": "Edit",
     "delete": "Delete",
     "primaryAccount": "Primary account",
-    "activeAccount": "Active account"
+    "activeAccount": "Active account",
+    "accountNumber": "Account No.",
+    "branch": "Branch"
   },
   "form": {
     "bankName": "Bank Name",
     "bankNamePlaceholder": "e.g. Deutsche Bank",
     "holderName": "Holder",
     "holderPlaceholder": "For joint accounts or different holder",
+    "accountNumber": "Account Number",
+    "accountNumberPlaceholder": "e.g. 125-000000123-00",
+    "branch": "Branch",
+    "branchPlaceholder": "e.g. Main branch Athens",
     "notes": "Notes",
     "notesPlaceholder": "Additional information...",
     "optional": "(optional)",

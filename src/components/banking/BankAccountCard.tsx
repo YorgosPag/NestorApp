@@ -178,6 +178,22 @@ export function BankAccountCard({
               </div>
             )}
 
+            {/* Account number and branch */}
+            {(account.accountNumber || account.branch) && (
+              <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
+                {account.accountNumber && (
+                  <span>
+                    <span className="font-medium">{t('account.accountNumber')}:</span> {account.accountNumber}
+                  </span>
+                )}
+                {account.branch && (
+                  <span>
+                    <span className="font-medium">{t('account.branch')}:</span> {account.branch}
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* Account type and currency */}
             <div className="flex items-center gap-2 flex-wrap">
               <Badge variant="outline">

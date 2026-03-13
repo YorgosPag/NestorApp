@@ -25,13 +25,19 @@
     "edit": "Επεξεργασία",
     "delete": "Διαγραφή",
     "primaryAccount": "Κύριος λογαριασμός",
-    "activeAccount": "Ενεργός λογαριασμός"
+    "activeAccount": "Ενεργός λογαριασμός",
+    "accountNumber": "Αρ. Λογαριασμού",
+    "branch": "Υποκατάστημα"
   },
   "form": {
     "bankName": "Όνομα Τράπεζας",
     "bankNamePlaceholder": "π.χ. Deutsche Bank",
     "holderName": "Δικαιούχος",
     "holderPlaceholder": "Για κοινούς λογαριασμούς ή διαφορετικό δικαιούχο",
+    "accountNumber": "Αριθμός Λογαριασμού",
+    "accountNumberPlaceholder": "π.χ. 125-000000123-00",
+    "branch": "Υποκατάστημα",
+    "branchPlaceholder": "π.χ. Κεντρικό Αθηνών",
     "notes": "Σημειώσεις",
     "notesPlaceholder": "Επιπλέον πληροφορίες...",
     "optional": "(προαιρετικό)",

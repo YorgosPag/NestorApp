@@ -104,6 +104,9 @@ export interface BankAccount {
   /** Legacy account number (optional, for reference) */
   accountNumber?: string;
 
+  /** Branch name or code (optional) */
+  branch?: string;
+
   /** Account type */
   accountType: AccountType;
 

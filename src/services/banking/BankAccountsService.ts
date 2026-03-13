@@ -75,6 +75,7 @@ function docToBankAccount(
     bankCode: data.bankCode,
     iban: data.iban ?? '',
     accountNumber: data.accountNumber,
+    branch: data.branch,
     accountType: data.accountType ?? 'checking',
     currency: data.currency ?? 'EUR',
     isPrimary: data.isPrimary ?? false,
@@ -97,6 +98,7 @@ function bankAccountToDoc(
     bankCode: account.bankCode ?? null,
     iban: cleanIBAN(account.iban),
     accountNumber: account.accountNumber ?? null,
+    branch: account.branch ?? null,
     accountType: account.accountType,
     currency: account.currency,
     isPrimary: account.isPrimary,
@@ -357,6 +359,7 @@ export class BankAccountsService {
       if (updates.bankCode !== undefined) updateData.bankCode = updates.bankCode ?? null;
       if (updates.iban !== undefined) updateData.iban = cleanIBAN(updates.iban);
       if (updates.accountNumber !== undefined) updateData.accountNumber = updates.accountNumber ?? null;
+      if (updates.branch !== undefined) updateData.branch = updates.branch ?? null;
       if (updates.accountType !== undefined) updateData.accountType = updates.accountType;
       if (updates.currency !== undefined) updateData.currency = updates.currency;
       if (updates.isPrimary !== undefined) updateData.isPrimary = updates.isPrimary;
