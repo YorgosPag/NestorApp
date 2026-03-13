@@ -8,7 +8,7 @@
 import 'server-only';
 
 import { sendReplyViaMailgun } from '@/services/ai-pipeline/shared/mailgun-sender';
-import { formatCurrency } from '@/lib/intl-utils';
+// Server-safe: avoids @/lib/intl-utils → react-i18next → createContext
 import type { SalesAccountingEvent, SalesAccountingResult } from './types';
 
 // ============================================================================
@@ -255,9 +255,9 @@ export async function notifyAccountingOffice(
 // UTILITY
 // ============================================================================
 
-/** Delegate to centralized formatCurrency (ADR-215) */
+/** Server-safe currency formatter (avoids react-i18next dependency) */
 function formatEuro(amount: number): string {
-  return formatCurrency(amount, 'EUR', { minimumFractionDigits: 2 });
+  return new Intl.NumberFormat('el', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
 }
 
 function formatDate(date: Date): string {
