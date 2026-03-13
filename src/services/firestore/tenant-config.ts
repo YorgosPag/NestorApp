@@ -46,6 +46,9 @@ const TENANT_OVERRIDES: Partial<Record<CollectionKey, TenantFieldConfig>> = {
   AUDIT:            { mode: 'none', fieldName: '' },
   TRANSLATIONS:     { mode: 'none', fieldName: '' },
   LOCALES:          { mode: 'none', fieldName: '' },
+  SECURITY_ROLES:            { mode: 'none', fieldName: '' },
+  EMAIL_DOMAIN_POLICIES:     { mode: 'none', fieldName: '' },
+  COUNTRY_SECURITY_POLICIES: { mode: 'none', fieldName: '' },
 } as const;
 
 /** Default tenant configuration for collections not in the override map */

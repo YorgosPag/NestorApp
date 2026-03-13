@@ -19,8 +19,9 @@
  */
 
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, where } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -275,12 +276,13 @@ class EnterpriseUserPreferencesService {
       logger.info('🔄 Loading user preferences from Firebase:', { userId, tenantId });
 
       // Try to load user-specific preferences
-      const userDoc = await getDoc(doc(db, this.USER_PREFERENCES_COLLECTION, `${userId}_${tenantId || 'default'}`));
+      const userData = await firestoreQueryService.getById<EnterpriseUserPreferencesConfig>(
+        'USER_PREFERENCES', `${userId}_${tenantId || 'default'}`
+      );
 
       let userPrefs: UserPreferences | null = null;
 
-      if (userDoc.exists()) {
-        const userData = userDoc.data() as EnterpriseUserPreferencesConfig;
+      if (userData) {
         userPrefs = userData.preferences;
       }
 
@@ -386,7 +388,7 @@ class EnterpriseUserPreferencesService {
         'metadata.lastSyncedAt': new Date()
       };
 
-      await updateDoc(doc(db, this.USER_PREFERENCES_COLLECTION, docId), updateData);
+      await firestoreQueryService.update('USER_PREFERENCES', docId, updateData);
 
       // Invalidate cache για this user
       this.clearCacheForUser(userId);
@@ -443,14 +445,14 @@ class EnterpriseUserPreferencesService {
         constraints.push(where('tenantId', '==', tenantId));
       }
 
-      // Query Firestore
-      const q = query(collection(db, this.CONFIG_COLLECTION), ...constraints);
-      const querySnapshot = await getDocs(q);
+      // Query Firestore via centralized service
+      const result = await firestoreQueryService.getAll<CompanyDefaultPreferencesConfig>(
+        'CONFIG', { constraints, tenantOverride: 'skip' }
+      );
 
       const defaults: Record<string, unknown> = {};
 
-      querySnapshot.forEach((doc) => {
-        const config = doc.data() as CompanyDefaultPreferencesConfig;
+      result.documents.forEach((config) => {
         if (config.category && config.defaults) {
           defaults[config.category] = config.defaults;
         }

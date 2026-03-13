@@ -22,14 +22,9 @@
  * @created 2025-12-16
  */
 
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-  orderBy
-} from 'firebase/firestore';
+import { where, orderBy } from 'firebase/firestore';
 import { SYSTEM_IDENTITY } from '@/config/domain-constants';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 
 // ============================================================================
 // TYPES & INTERFACES - SECURITY CRITICAL
@@ -324,16 +319,12 @@ interface EnterpriseSecurityCache {
  * Enterprise Security Service
  * Singleton service για διαχείριση security από database
  */
-// 🏢 ENTERPRISE: Import Firestore type for proper typing
-import type { Firestore } from 'firebase/firestore';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('EnterpriseSecurityService');
 
 export class EnterpriseSecurityService {
   private static instance: EnterpriseSecurityService;
   private cache: EnterpriseSecurityCache;
-  private initialized: boolean = false;
-  private db: Firestore | null = null; // Firestore instance
 
   private constructor() {
     this.cache = {
@@ -353,32 +344,6 @@ export class EnterpriseSecurityService {
       EnterpriseSecurityService.instance = new EnterpriseSecurityService();
     }
     return EnterpriseSecurityService.instance;
-  }
-
-  /**
-   * Initialize service with Firestore instance
-   */
-  async initialize(firestore: Firestore): Promise<void> {
-    this.db = firestore;
-    this.initialized = true;
-  }
-
-  /**
-   * Ensure service is initialized
-   */
-  private ensureInitialized(): void {
-    if (!this.initialized || !this.db) {
-      throw new Error('EnterpriseSecurityService not initialized. Call initialize(firestore) first.');
-    }
-  }
-
-  private getDb(): Firestore {
-    this.ensureInitialized();
-    const db = this.db;
-    if (!db) {
-      throw new Error('EnterpriseSecurityService not initialized. Call initialize(firestore) first.');
-    }
-    return db;
   }
 
   // ============================================================================
@@ -463,8 +428,6 @@ export class EnterpriseSecurityService {
     tenantId: string = 'default',
     environment: string = 'production'
   ): Promise<SecurityRole[]> {
-    this.ensureInitialized();
-
     const cacheKey = `roles-${tenantId}-${environment}`;
 
     // Check cache first
@@ -475,27 +438,25 @@ export class EnterpriseSecurityService {
     }
 
     try {
-      // Query database for roles
-      const rolesQuery = query(
-        collection(this.getDb(), 'security_roles'),
-        where('tenantId', '==', tenantId),
-        where('environment', '==', environment),
-        where('isActive', '==', true),
-        orderBy('level', 'asc')
+      // Query database for roles via centralized service
+      const result = await firestoreQueryService.getAll<SecurityRole>(
+        'SECURITY_ROLES', {
+          constraints: [
+            where('tenantId', '==', tenantId),
+            where('environment', '==', environment),
+            where('isActive', '==', true),
+            orderBy('level', 'asc')
+          ],
+          tenantOverride: 'skip'
+        }
       );
 
-      const rolesSnapshot = await getDocs(rolesQuery);
-      const roles: SecurityRole[] = [];
-
-      rolesSnapshot.forEach(doc => {
-        const data = doc.data();
-        roles.push({
-          ...data,
-          createdAt: data.createdAt?.toDate?.() || new Date(),
-          lastUpdated: data.lastUpdated?.toDate?.() || new Date(),
-          expiryDate: data.expiryDate?.toDate?.() || undefined
-        } as SecurityRole);
-      });
+      const roles: SecurityRole[] = result.documents.map(data => ({
+        ...data,
+        createdAt: (data.createdAt as Record<string, unknown> & { toDate?: () => Date })?.toDate?.() || new Date(),
+        lastUpdated: (data.lastUpdated as Record<string, unknown> & { toDate?: () => Date })?.toDate?.() || new Date(),
+        expiryDate: (data.expiryDate as Record<string, unknown> & { toDate?: () => Date })?.toDate?.() || undefined
+      }));
 
       // Cache the roles (high security level)
       this.setSecurityCacheEntry(this.cache.roles, cacheKey, roles, 'high', 120);
@@ -546,8 +507,6 @@ export class EnterpriseSecurityService {
     tenantId: string = 'default',
     environment: string = 'production'
   ): Promise<'admin' | 'authenticated' | 'public'> {
-    this.ensureInitialized();
-
     if (!email) {
       return 'public';
     }
@@ -625,8 +584,6 @@ export class EnterpriseSecurityService {
     tenantId: string = 'default',
     environment: string = 'production'
   ): Promise<EmailDomainPolicy[]> {
-    this.ensureInitialized();
-
     const cacheKey = `email-policies-${tenantId}-${environment}`;
 
     // Check cache first
@@ -637,27 +594,25 @@ export class EnterpriseSecurityService {
     }
 
     try {
-      // Query database for email policies
-      const policiesQuery = query(
-        collection(this.getDb(), 'email_domain_policies'),
-        where('tenantId', '==', tenantId),
-        where('environment', '==', environment),
-        where('isActive', '==', true),
-        orderBy('riskLevel', 'desc')
+      // Query database for email policies via centralized service
+      const result = await firestoreQueryService.getAll<EmailDomainPolicy>(
+        'EMAIL_DOMAIN_POLICIES', {
+          constraints: [
+            where('tenantId', '==', tenantId),
+            where('environment', '==', environment),
+            where('isActive', '==', true),
+            orderBy('riskLevel', 'desc')
+          ],
+          tenantOverride: 'skip'
+        }
       );
 
-      const policiesSnapshot = await getDocs(policiesQuery);
-      const policies: EmailDomainPolicy[] = [];
-
-      policiesSnapshot.forEach(doc => {
-        const data = doc.data();
-        policies.push({
-          ...data,
-          effectiveDate: data.effectiveDate?.toDate?.() || new Date(),
-          expiryDate: data.expiryDate?.toDate?.() || undefined,
-          lastVerified: data.lastVerified?.toDate?.() || undefined
-        } as EmailDomainPolicy);
-      });
+      const policies: EmailDomainPolicy[] = result.documents.map(data => ({
+        ...data,
+        effectiveDate: (data.effectiveDate as Record<string, unknown> & { toDate?: () => Date })?.toDate?.() || new Date(),
+        expiryDate: (data.expiryDate as Record<string, unknown> & { toDate?: () => Date })?.toDate?.() || undefined,
+        lastVerified: (data.lastVerified as Record<string, unknown> & { toDate?: () => Date })?.toDate?.() || undefined
+      }));
 
       // Cache the policies (high security level)
       this.setSecurityCacheEntry(this.cache.emailPolicies, cacheKey, policies, 'high', 180);
@@ -739,8 +694,6 @@ export class EnterpriseSecurityService {
     tenantId: string = 'default',
     environment: string = 'production'
   ): Promise<CountrySecurityPolicy[]> {
-    this.ensureInitialized();
-
     const cacheKey = `country-policies-${tenantId}-${environment}`;
 
     // Check cache first
@@ -751,26 +704,24 @@ export class EnterpriseSecurityService {
     }
 
     try {
-      // Query database for country policies
-      const policiesQuery = query(
-        collection(this.getDb(), 'country_security_policies'),
-        where('tenantId', '==', tenantId),
-        where('environment', '==', environment),
-        where('isActive', '==', true),
-        orderBy('securityClass', 'desc')
+      // Query database for country policies via centralized service
+      const result = await firestoreQueryService.getAll<CountrySecurityPolicy>(
+        'COUNTRY_SECURITY_POLICIES', {
+          constraints: [
+            where('tenantId', '==', tenantId),
+            where('environment', '==', environment),
+            where('isActive', '==', true),
+            orderBy('securityClass', 'desc')
+          ],
+          tenantOverride: 'skip'
+        }
       );
 
-      const policiesSnapshot = await getDocs(policiesQuery);
-      const policies: CountrySecurityPolicy[] = [];
-
-      policiesSnapshot.forEach(doc => {
-        const data = doc.data();
-        policies.push({
-          ...data,
-          lastReviewed: data.lastReviewed?.toDate?.() || new Date(),
-          nextReview: data.nextReview?.toDate?.() || new Date()
-        } as CountrySecurityPolicy);
-      });
+      const policies: CountrySecurityPolicy[] = result.documents.map(data => ({
+        ...data,
+        lastReviewed: (data.lastReviewed as Record<string, unknown> & { toDate?: () => Date })?.toDate?.() || new Date(),
+        nextReview: (data.nextReview as Record<string, unknown> & { toDate?: () => Date })?.toDate?.() || new Date()
+      }));
 
       // Cache the policies
       this.setSecurityCacheEntry(this.cache.countryPolicies, cacheKey, policies, 'medium', 300);

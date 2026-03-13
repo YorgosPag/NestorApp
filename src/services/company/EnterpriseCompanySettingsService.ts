@@ -14,9 +14,10 @@
  * - Performance-optimized caching
  */
 
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, query, where, orderBy, limit } from 'firebase/firestore';
+import { doc, setDoc, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
@@ -335,28 +336,23 @@ export class EnterpriseCompanySettingsService {
     try {
       // Try tenant-specific document first
       if (tenantId) {
-        const tenantDocRef = doc(db, COLLECTIONS.SYSTEM, `company-${tenantId}`);
-        const tenantDoc = await getDoc(tenantDocRef);
+        const tenantData = await firestoreQueryService.getById<EnterpriseCompanySettings>(
+          'SYSTEM', `company-${tenantId}`
+        );
 
-        if (tenantDoc.exists()) {
-          const data = tenantDoc.data();
-          if (this.isValidForEnvironment(data, environment)) {
-            return { id: tenantDoc.id, ...data } as EnterpriseCompanySettings;
-          }
+        if (tenantData && this.isValidForEnvironment(tenantData, environment)) {
+          return tenantData;
         }
       }
 
       // Try default company document
-      const defaultDocRef = doc(db, COLLECTIONS.SYSTEM,
-        process.env.NEXT_PUBLIC_COMPANY_CONFIG_DOC || 'company'
+      const defaultDocId = process.env.NEXT_PUBLIC_COMPANY_CONFIG_DOC || 'company';
+      const defaultData = await firestoreQueryService.getById<EnterpriseCompanySettings>(
+        'SYSTEM', defaultDocId
       );
-      const defaultDoc = await getDoc(defaultDocRef);
 
-      if (defaultDoc.exists()) {
-        const data = defaultDoc.data();
-        if (this.isValidForEnvironment(data, environment)) {
-          return { id: defaultDoc.id, ...data } as EnterpriseCompanySettings;
-        }
+      if (defaultData && this.isValidForEnvironment(defaultData, environment)) {
+        return defaultData;
       }
 
       return null;
@@ -381,12 +377,13 @@ export class EnterpriseCompanySettingsService {
         constraints.unshift(where('tenantId', '==', tenantId));
       }
 
-      const companiesQuery = query(collection(db, COLLECTIONS.CONTACTS), ...constraints);
-      const companiesSnapshot = await getDocs(companiesQuery);
+      const result = await firestoreQueryService.getAll<Record<string, unknown>>(
+        'CONTACTS', { constraints, tenantOverride: 'skip' }
+      );
 
-      if (!companiesSnapshot.empty) {
-        const companyData = companiesSnapshot.docs[0].data();
-        return this.convertLegacyContactToSettings(companyData, companiesSnapshot.docs[0].id);
+      if (!result.isEmpty && result.documents.length > 0) {
+        const companyDoc = result.documents[0];
+        return this.convertLegacyContactToSettings(companyDoc, companyDoc.id);
       }
 
       return null;
@@ -616,7 +613,6 @@ export class EnterpriseCompanySettingsService {
   ): Promise<boolean> {
     try {
       const docId = tenantId ? `company-${tenantId}` : (process.env.NEXT_PUBLIC_COMPANY_CONFIG_DOC || 'company');
-      const docRef = doc(db, COLLECTIONS.SYSTEM, docId);
 
       const updateData = {
         ...updates,
@@ -627,7 +623,7 @@ export class EnterpriseCompanySettingsService {
         }
       };
 
-      await updateDoc(docRef, updateData);
+      await firestoreQueryService.update('SYSTEM', docId, updateData);
 
       // Invalidate cache
       this.invalidateCache(tenantId);

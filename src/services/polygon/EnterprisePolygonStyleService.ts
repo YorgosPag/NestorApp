@@ -14,9 +14,8 @@
  * - Performance-optimized caching
  */
 
-import { collection, doc, getDocs, setDoc, updateDoc, query, where, orderBy, type QueryConstraint } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { where, orderBy, type QueryConstraint } from 'firebase/firestore';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -369,23 +368,13 @@ export class EnterprisePolygonStyleService {
     const currentEnv = environment || process.env.NODE_ENV || 'development';
     constraints.push(where('environment', 'in', ['all', currentEnv]));
 
-    const configQuery = query(
-      collection(db, COLLECTIONS.CONFIG),
-      ...constraints
+    const result = await firestoreQueryService.getAll<EnterprisePolygonStyleConfig>(
+      'CONFIG', { constraints, tenantOverride: 'skip' }
     );
 
-    const snapshot = await getDocs(configQuery);
-    const configs: EnterprisePolygonStyleConfig[] = [];
-
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      if (data.polygonType && data.style && data.isEnabled) {
-        configs.push({
-          id: doc.id,
-          ...data
-        } as EnterprisePolygonStyleConfig);
-      }
-    });
+    const configs: EnterprisePolygonStyleConfig[] = result.documents.filter(
+      data => data.polygonType && data.style && data.isEnabled
+    );
 
     // Cache configurations
     this.configCache.set(cacheKey, configs);
@@ -490,11 +479,10 @@ export class EnterprisePolygonStyleService {
     updates: Partial<EnterprisePolygonStyleConfig>
   ): Promise<boolean> {
     try {
-      const docRef = doc(db, COLLECTIONS.CONFIG, configId);
-      await updateDoc(docRef, {
+      await firestoreQueryService.update('CONFIG', configId, {
         ...updates,
         updatedAt: new Date()
-      });
+      } as Record<string, unknown>);
 
       // Invalidate cache
       this.invalidateCache();
@@ -514,10 +502,10 @@ export class EnterprisePolygonStyleService {
     config: Omit<EnterprisePolygonStyleConfig, 'id'>
   ): Promise<string | null> {
     try {
-      const docRef = doc(collection(db, COLLECTIONS.CONFIG));
+      const docId = `polygon-style-${config.polygonType}-${config.theme || 'default'}-${Date.now()}`;
       const newConfig = {
         ...config,
-        id: docRef.id,
+        id: docId,
         metadata: {
           ...config.metadata,
           createdAt: new Date(),
@@ -525,13 +513,17 @@ export class EnterprisePolygonStyleService {
         }
       };
 
-      await setDoc(docRef, newConfig);
+      await firestoreQueryService.create('CONFIG', newConfig as Record<string, unknown>, {
+        documentId: docId,
+        addTimestamps: false,
+        addTenantContext: false
+      });
 
       // Invalidate cache
       this.invalidateCache();
 
-      logger.info('Added new polygon style config', { configId: docRef.id });
-      return docRef.id;
+      logger.info('Added new polygon style config', { configId: docId });
+      return docId;
     } catch (error) {
       logger.error('Error adding style config', { error });
       return null;

@@ -19,8 +19,9 @@
  */
 
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, where } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('EnterpriseFileSystemService');
 
@@ -216,17 +217,15 @@ class EnterpriseFileSystemService {
         constraints.push(where('environment', '==', environment));
       }
 
-      // Query Firestore
-      const q = query(collection(db, this.CONFIG_COLLECTION), ...constraints);
-      const querySnapshot = await getDocs(q);
+      // Query Firestore via centralized service
+      const result = await firestoreQueryService.getAll<EnterpriseFileSystemConfig>(
+        'CONFIG', { constraints, tenantOverride: 'skip' }
+      );
 
       let configuration: FileSystemConfiguration | null = null;
 
-      if (!querySnapshot.empty) {
-        // Use the first configuration found (highest priority)
-        const configDoc = querySnapshot.docs[0];
-        const configData = configDoc.data() as EnterpriseFileSystemConfig;
-        configuration = configData.configuration;
+      if (!result.isEmpty && result.documents.length > 0) {
+        configuration = result.documents[0].configuration;
       }
 
       // Fallback to default configuration if not found

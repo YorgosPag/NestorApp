@@ -18,7 +18,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 import { EnterpriseSecurityService } from '@/services/security/EnterpriseSecurityService';
-import { db } from '@/lib/firebase';
 import type { User, FirebaseAuthUser, UserRoleContextType, SignUpData } from '../types/auth.types';
 
 import { createModuleLogger } from '@/lib/telemetry';
@@ -56,29 +55,6 @@ export function UserRoleProvider({ children }: UserRoleProviderProps) {
 
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [securityInitialized, setSecurityInitialized] = useState(false);
-
-  // ==========================================================================
-  // INITIALIZE SECURITY SERVICE
-  // ==========================================================================
-
-  useEffect(() => {
-    const initSecurity = async () => {
-      if (!securityInitialized && db) {
-        try {
-          await securityService.initialize(db);
-          setSecurityInitialized(true);
-          logger.info('[UserRoleContext] Security service initialized');
-        } catch (error) {
-          logger.error('[UserRoleContext] Failed to initialize security', { error });
-          // Continue without security service - will use fallback role
-          setSecurityInitialized(true);
-        }
-      }
-    };
-
-    initSecurity();
-  }, [securityInitialized]);
 
   // ==========================================================================
   // DETERMINE USER ROLE
@@ -86,8 +62,8 @@ export function UserRoleProvider({ children }: UserRoleProviderProps) {
 
   useEffect(() => {
     const determineRole = async () => {
-      // 🏢 ENTERPRISE: Critical - Wait for both Firebase auth AND security initialization
-      if (authLoading || !securityInitialized) {
+      // 🏢 ENTERPRISE: Wait for Firebase auth to resolve
+      if (authLoading) {
         setIsLoading(true);
         return;
       }
@@ -136,7 +112,7 @@ export function UserRoleProvider({ children }: UserRoleProviderProps) {
     };
 
     determineRole();
-  }, [firebaseUser, authLoading, securityInitialized]);
+  }, [firebaseUser, authLoading]);
 
   // ==========================================================================
   // AUTH METHODS

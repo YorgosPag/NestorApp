@@ -19,8 +19,8 @@
  */
 
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, setDoc, updateDoc } from 'firebase/firestore';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { where } from 'firebase/firestore';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { designTokens } from '@/styles/design-tokens';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -117,7 +117,6 @@ export interface EnterpriseLayerCategoryConfig {
 // ============================================================================
 
 class EnterpriseLayerStyleService {
-  private readonly CONFIG_COLLECTION = COLLECTIONS.CONFIG;
   private readonly styleCache = new Map<string, Record<LayerElementType, EnterpriseLayerStyle>>();
   private readonly categoryCache = new Map<string, Record<LayerCategory, LayerCategoryConfig>>();
   private readonly cacheTTL = 10 * 60 * 1000; // 10 minutes
@@ -218,14 +217,14 @@ class EnterpriseLayerStyleService {
         constraints.push(where('environment', '==', environment));
       }
 
-      // Query Firestore
-      const q = query(collection(db, this.CONFIG_COLLECTION), ...constraints);
-      const querySnapshot = await getDocs(q);
+      // Query Firestore via centralized service
+      const result = await firestoreQueryService.getAll<EnterpriseLayerStyleConfig>(
+        'CONFIG', { constraints, tenantOverride: 'skip' }
+      );
 
       const styles: Record<LayerElementType, EnterpriseLayerStyle> = {} as Record<LayerElementType, EnterpriseLayerStyle>;
 
-      querySnapshot.forEach((doc) => {
-        const config = doc.data() as EnterpriseLayerStyleConfig;
+      result.documents.forEach((config) => {
         if (config.layerElementType && config.style) {
           styles[config.layerElementType] = config.style;
         }
@@ -309,14 +308,14 @@ class EnterpriseLayerStyleService {
         constraints.push(where('environment', '==', environment));
       }
 
-      // Query Firestore
-      const q = query(collection(db, this.CONFIG_COLLECTION), ...constraints);
-      const querySnapshot = await getDocs(q);
+      // Query Firestore via centralized service
+      const result = await firestoreQueryService.getAll<EnterpriseLayerCategoryConfig>(
+        'CONFIG', { constraints, tenantOverride: 'skip' }
+      );
 
       const categories: Record<LayerCategory, LayerCategoryConfig> = {} as Record<LayerCategory, LayerCategoryConfig>;
 
-      querySnapshot.forEach((doc) => {
-        const config = doc.data() as EnterpriseLayerCategoryConfig;
+      result.documents.forEach((config) => {
         if (config.category && config.config) {
           categories[config.category] = config.config;
         }
@@ -355,7 +354,7 @@ class EnterpriseLayerStyleService {
   async addStyleConfig(config: Omit<EnterpriseLayerStyleConfig, 'id'>): Promise<string> {
     try {
       const id = `layer-style-${config.layerElementType}-${config.theme}-${Date.now()}`;
-      const fullConfig: EnterpriseLayerStyleConfig = {
+      const fullConfig = {
         ...config,
         id,
         type: 'layer-style',
@@ -364,9 +363,13 @@ class EnterpriseLayerStyleService {
           createdAt: new Date(),
           updatedAt: new Date()
         }
-      } as EnterpriseLayerStyleConfig & { type: string };
+      };
 
-      await setDoc(doc(db, this.CONFIG_COLLECTION, id), fullConfig);
+      await firestoreQueryService.create('CONFIG', fullConfig as Record<string, unknown>, {
+        documentId: id,
+        addTimestamps: false,
+        addTenantContext: false
+      });
 
       // Invalidate relevant caches
       this.clearCacheForTenant(config.tenantId || 'default');
@@ -389,7 +392,7 @@ class EnterpriseLayerStyleService {
         'metadata.updatedAt': new Date()
       };
 
-      await updateDoc(doc(db, this.CONFIG_COLLECTION, configId), updateData);
+      await firestoreQueryService.update('CONFIG', configId, updateData as Record<string, unknown>);
 
       // Invalidate all caches (we don't know which tenant this affects)
       this.invalidateCache();
@@ -407,7 +410,7 @@ class EnterpriseLayerStyleService {
   async addCategoryConfig(config: Omit<EnterpriseLayerCategoryConfig, 'id'>): Promise<string> {
     try {
       const id = `layer-category-${config.category}-${config.theme}-${Date.now()}`;
-      const fullConfig: EnterpriseLayerCategoryConfig = {
+      const fullConfig = {
         ...config,
         id,
         type: 'layer-category',
@@ -416,9 +419,13 @@ class EnterpriseLayerStyleService {
           createdAt: new Date(),
           updatedAt: new Date()
         }
-      } as EnterpriseLayerCategoryConfig & { type: string };
+      };
 
-      await setDoc(doc(db, this.CONFIG_COLLECTION, id), fullConfig);
+      await firestoreQueryService.create('CONFIG', fullConfig as Record<string, unknown>, {
+        documentId: id,
+        addTimestamps: false,
+        addTenantContext: false
+      });
 
       // Invalidate relevant caches
       this.clearCacheForTenant(config.tenantId || 'default');
@@ -446,12 +453,12 @@ class EnterpriseLayerStyleService {
         constraints.push(where('tenantId', '==', tenantId));
       }
 
-      const q = query(collection(db, this.CONFIG_COLLECTION), ...constraints);
-      const querySnapshot = await getDocs(q);
+      const result = await firestoreQueryService.getAll<EnterpriseLayerStyleConfig>(
+        'CONFIG', { constraints, tenantOverride: 'skip' }
+      );
 
       const themes = new Set<string>();
-      querySnapshot.forEach((doc) => {
-        const config = doc.data() as EnterpriseLayerStyleConfig;
+      result.documents.forEach((config) => {
         themes.add(config.theme);
       });
 
