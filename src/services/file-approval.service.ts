@@ -21,11 +21,13 @@ import {
   updateDoc,
   serverTimestamp,
   onSnapshot,
+  type DocumentData,
   type Unsubscribe,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FileAuditService } from './file-audit.service';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 
 // ============================================================================
 // TYPES
@@ -120,29 +122,31 @@ export const FileApprovalService = {
 
   /**
    * Get all approvals for a file
+   * 🏢 ADR-214 Phase 3: via FirestoreQueryService
    */
   async getFileApprovals(fileId: string): Promise<FileApproval[]> {
-    const q = query(
-      collection(db, COLLECTIONS.FILE_APPROVALS),
-      where('fileId', '==', fileId),
-      orderBy('createdAt', 'desc')
-    );
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as FileApproval[];
+    const result = await firestoreQueryService.getAll<DocumentData>('FILE_APPROVALS', {
+      constraints: [
+        where('fileId', '==', fileId),
+        orderBy('createdAt', 'desc'),
+      ],
+    });
+    return result.documents as unknown as FileApproval[];
   },
 
   /**
    * Get pending approvals for a user (across all files)
+   * 🏢 ADR-214 Phase 3: via FirestoreQueryService (auto tenant filter replaces manual companyId)
    */
   async getPendingForUser(userId: string, companyId: string): Promise<FileApproval[]> {
-    const q = query(
-      collection(db, COLLECTIONS.FILE_APPROVALS),
-      where('companyId', '==', companyId),
-      where('status', '==', 'pending')
-    );
-    const snapshot = await getDocs(q);
+    const result = await firestoreQueryService.getAll<DocumentData>('FILE_APPROVALS', {
+      constraints: [
+        // companyId auto-injected by tenant filter
+        where('status', '==', 'pending'),
+      ],
+    });
     // Filter client-side: current step's approver === userId
-    return (snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as FileApproval[])
+    return (result.documents as unknown as FileApproval[])
       .filter((a) => {
         const currentStep = a.steps.find((s) => s.status === 'pending');
         return currentStep?.approverId === userId;
