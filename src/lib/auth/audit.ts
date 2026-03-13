@@ -17,6 +17,7 @@ import 'server-only';
 import { getAdminFirestore, isFirebaseAdminAvailable, FieldValue } from '@/lib/firebaseAdmin';
 import type { Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { validateCompanyExists } from '@/services/company-document.service';
 
 import type {
   AuthContext,
@@ -160,6 +161,19 @@ export async function logAuditEvent(
   }
 
   try {
+    // 🏢 ENTERPRISE: Validate company document exists before writing audit logs.
+    // Prevents phantom document creation (ADR-210 Phase 3).
+    // Uses cached check (5-min TTL) to avoid Firestore read on every audit event.
+    const companyExists = await validateCompanyExists(ctx.companyId);
+    if (!companyExists) {
+      logger.error('[AUDIT] Company document not found — skipping to prevent phantom creation', {
+        companyId: ctx.companyId,
+        action,
+        actorId: ctx.uid,
+      });
+      return;
+    }
+
     // Write to tenant-scoped collection: /companies/{companyId}/audit_logs/{autoId}
     await db
       .collection(COLLECTIONS.COMPANIES)

@@ -175,7 +175,7 @@ export default function NewObligationPage() {
         const mapping = new Map<string, string>();
 
         // Map κάθε company ID (από contacts) στο αντίστοιχο contactId (για projects API)
-        // Η λογική είναι: στο navigation_companies η εταιρεία αποθηκεύεται με contactId="pzNUy8ksddGCtcQMqumR"
+        // Η λογική είναι: στο navigation_companies η εταιρεία αποθηκεύεται με contactId=LEGACY_TENANT_COMPANY_ID (ADR-210)
         // αλλά στο contacts dropdown εμφανίζεται με ID από contacts collection
         // Το projects API περιμένει το contactId από navigation_companies
         companyContacts.forEach(company => {

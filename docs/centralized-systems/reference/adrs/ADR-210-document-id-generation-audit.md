@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ✅ APPROVED — Phase 1 + P1/P2 IMPLEMENTED |
+| **Status** | ✅ APPROVED — Phase 1 + P1/P2 + Phase 3 IMPLEMENTED |
 | **Date** | 2026-03-12 |
 | **Category** | Security / Data Integrity |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
@@ -410,3 +410,4 @@ grep -rn "from.*enterprise-id" src/ --include="*.ts" --include="*.tsx" | wc -l
 | 2026-03-13 | **Phase 2: 6 core API endpoints migrated** — projects (.add→.doc(proj_).set + projectCode PRJ-xxx), buildings (bldg_), units (unit_), parking (park_), storages (stor_), contacts (cont_). All server-side entity creation now uses enterprise IDs. | Claude Code (Anthropic AI) |
 | 2026-03-13 | **Enterprise Cascade Delete**: Hard delete + cascade σε projects (→buildings→units/parking/storage/floors), buildings (→children), contacts (new DELETE endpoint + `crm:contacts:delete` permission). Contacts service migrated from client-side Firestore SDK to server API calls with audit trail. | Claude Code (Anthropic AI) |
 | 2026-03-13 | **Enterprise ID Standardization (Buildings & Contacts)**: (1) `createContactServerSide()` migrated from `addDoc()` → `setDoc()` with `generateContactId()`/`generateCompanyId()` — fixes UC-015 admin pipeline. (2) `/api/contacts/create-sample` replaced custom `generateEnterpriseSecureId()` with `generateContactId()`. (3) New migration endpoint `/api/admin/migrate-enterprise-ids` (GET dry-run, POST execute) — migrates legacy auto-ID documents to enterprise IDs, copies subcollections, updates all cross-references (contact_links, projects, buildings, units). | Claude Code (Anthropic AI) |
+| 2026-03-13 | **Phase 3: Company Document Materialization** — (1) `src/config/tenant.ts` SSoT for legacy tenant ID (replaces 4 hardcoded occurrences in src/). (2) `src/types/company.ts` CompanyDocument interface. (3) `src/services/company-document.service.ts` server-only service with `ensureCompanyDocument()`, `createCompanyDocument()`, `validateCompanyExists()` (cached 5-min TTL). (4) `POST /api/admin/bootstrap-company` materializes phantom → real document. (5) Audit guard in `logAuditEvent()` prevents phantom document creation. | Claude Code (Anthropic AI) |

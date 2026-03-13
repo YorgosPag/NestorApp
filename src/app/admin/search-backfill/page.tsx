@@ -226,8 +226,8 @@ export default function SearchBackfillPage() {
     addLog(`Starting Contact Migration ${mode}...`);
 
     try {
-      // 🏢 ENTERPRISE: Default companyId for orphan contacts
-      const DEFAULT_COMPANY_ID = 'pzNUy8ksddGCtcQMqumR';
+      // 🏢 ENTERPRISE: Default companyId for orphan contacts (ADR-210: SSoT)
+      const { LEGACY_TENANT_COMPANY_ID: DEFAULT_COMPANY_ID } = await import('@/config/tenant');
 
       // 🏢 ENTERPRISE: Extended timeout (120s) for admin migration operations
       const response = await apiClient.patch<MigrationResponse>(

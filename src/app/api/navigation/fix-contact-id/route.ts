@@ -129,7 +129,7 @@ async function handleFixContactIdExecute(request: NextRequest, ctx: AuthContext)
 
     // STEP 2: Verify that the target company exists
     logger.info('[Navigation/FixContactId] Step 2: Verifying target company exists');
-    const targetContactId = 'pzNUy8ksddGCtcQMqumR';
+    const { LEGACY_TENANT_COMPANY_ID: targetContactId } = await import('@/config/tenant');
 
     const contactsQuery = query(
       collection(db, COLLECTIONS.CONTACTS),
@@ -234,7 +234,7 @@ async function handleFixContactIdExecute(request: NextRequest, ctx: AuthContext)
         documentsChecked: result.stats.documentsChecked,
         documentsFixed: result.stats.documentsFixed,
         errors: result.stats.errors,
-        targetContactId: 'pzNUy8ksddGCtcQMqumR',
+        targetContactId,
         executionTimeMs: duration,
         result: result.success ? 'success' : 'failed',
         metadata,

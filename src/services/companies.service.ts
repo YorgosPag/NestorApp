@@ -6,6 +6,7 @@ import { getNavigationCompanyIds } from './navigation-companies.service';
 // 🏢 ENTERPRISE: Removed server action import - use direct Firestore queries instead
 // Server actions cannot be imported into client-side services
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { LEGACY_TENANT_COMPANY_ID } from '@/config/tenant';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('CompaniesService');
 
@@ -205,7 +206,7 @@ export class CompaniesService {
       // Φιλτράρουμε μόνο τις εταιρείες που είναι relevant
       const relevantCompanies = allCompanies.filter(company => {
         const isRelevant = allRelevantCompanyIds.includes(company.id!);
-        if (DEBUG_COMPANIES_SERVICE && company.id === 'pzNUy8ksddGCtcQMqumR') {
+        if (DEBUG_COMPANIES_SERVICE && company.id === LEGACY_TENANT_COMPANY_ID) {
           logger.info(`🔍 ΠΑΓΩΝΗΣ filtering check:`, {
             companyId: company.id,
             companyName: isCompanyContact(company) ? company.companyName : 'Unknown Company',

@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 208 ADRs | Last Updated: 2026-03-13
+**📊 Stats**: 209 ADRs | Last Updated: 2026-03-13
 
 ---
 
@@ -232,7 +232,7 @@
 | **ADR-207** | Scattered Code Centralization — Phase 6 (Collection Utilities) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-207-phase6-collection-utilities.md) |
 | **ADR-208** | Phase 7 — Date Formatting Deduplication | ✅ ✅ Implemented | 2026-01-01 | Centralization / Deduplication | [📄](./adrs/ADR-208-phase7-date-formatting-dedup.md) |
 | **ADR-209** | ID Consistency Audit & Remediation Roadmap | ✅ ✅ APPROVED | 2026-03-12 | Security / Data Integrity | [📄](./adrs/ADR-209-id-consistency-audit.md) |
-| **ADR-210** | Document ID Generation — Full Codebase Audit & Compliance (Phase 2: 6 API endpoints migrated to enterprise IDs) | ✅ ✅ APPROVED | 2026-03-13 | Security / Data Integrity | [📄](./adrs/ADR-210-document-id-generation-audit.md) |
+| **ADR-210** | Document ID Generation — Full Codebase Audit & Compliance (Phase 3: Company Document Materialization) | ✅ ✅ APPROVED | 2026-03-13 | Security / Data Integrity | [📄](./adrs/ADR-210-document-id-generation-audit.md) |
 | **ADR-211** | Phase 8 — Small Utility Deduplication | ✅ Implemented | 2026-03-12 | Centralization / Deduplication | [📄](./adrs/ADR-211-phase8-small-utility-dedup.md) |
 | **ADR-212** | Phase 9 — Async/Clone/Validation/FileSize/Currency Deduplication | ✅ Implemented | 2026-03-12 | Centralization / Deduplication | [📄](./adrs/ADR-212-phase9-async-clone-url-filesize.md) |
 | **ADR-213** | Phone/Email/VAT Validation Centralization | ✅ Implemented | 2026-03-12 | Centralization / Validation | [📄](./adrs/ADR-213-validation-centralization.md) |
@@ -245,6 +245,7 @@
 | **ADR-223** | useAsyncData — Data Fetching Centralization (10 files, 15 hooks) | ✅ Implemented (Phase 1) | 2026-03-13 | Centralization / React Hooks | [📄](./adrs/ADR-223-use-async-data-centralization.md) |
 | **ADR-224** | safeJsonParse Centralization — `json-utils.ts` (~35 files, ~50 patterns) | ✅ Implemented (Phase 1) | 2026-03-13 | Centralization / Utilities | [📄](./adrs/ADR-224-safe-json-parse-centralization.md) |
 | **ADR-225** | Type Guards Centralization — `isNonEmptyString`, `isNonEmptyArray` (~17 files, ~30 patterns) | ✅ Implemented (Phase 1) | 2026-03-13 | Centralization / Type Safety | [📄](./adrs/ADR-225-type-guards-centralization.md) |
+| **ADR-226** | Centralized Deletion Guard — Referential Integrity Protection | 📋 Planning | 2026-03-13 | Backend Systems / Data & State | [📄](./adrs/ADR-226-deletion-guard.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
