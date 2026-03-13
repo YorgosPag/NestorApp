@@ -11,7 +11,7 @@
  */
 
 import type { PersonaType } from '@/types/contacts/personas';
-import type { IndividualSectionConfig, IndividualFieldConfig } from './individual-config';
+import type { IndividualSectionConfig, IndividualFieldConfig, SelectOption } from './individual-config';
 import {
   PERSONA_FIELD_LABELS,
   PERSONA_SECTION_LABELS,
@@ -19,6 +19,7 @@ import {
   PERSONA_TYPE_ICONS,
 } from '@/constants/property-statuses-enterprise';
 import { getIndividualSortedSections } from './individual-config';
+import { DEFAULT_INSURANCE_CLASSES } from '@/components/projects/ika/contracts';
 
 // ============================================================================
 // PERSONA SECTION CONFIG TYPE
@@ -103,6 +104,15 @@ const SUPPLIER_CATEGORY_OPTIONS = [
   { value: 'other',          label: 'persona.options.supplierCategory.other' },
 ];
 
+/**
+ * Insurance class options (KPK 781) — generated from DEFAULT_INSURANCE_CLASSES.
+ * Format: "Κλάση X (€MIN - €MAX) → Τεκμ. €IMPUTED"
+ */
+const INSURANCE_CLASS_OPTIONS: SelectOption[] = DEFAULT_INSURANCE_CLASSES.map((cls) => ({
+  value: String(cls.classNumber),
+  label: `Κλάση ${cls.classNumber}  (€${cls.minDailyWage.toFixed(2)} – €${cls.maxDailyWage >= 999999 ? '∞' : cls.maxDailyWage.toFixed(2)})  →  €${cls.imputedDailyWage.toFixed(2)}`,
+}));
+
 // ============================================================================
 // PERSONA SECTIONS REGISTRY — Single Source of Truth
 // ============================================================================
@@ -137,8 +147,9 @@ export const PERSONA_SECTIONS: Record<PersonaType, PersonaSectionConfig[]> = {
         {
           id: 'insuranceClassId',
           label: PERSONA_FIELD_LABELS.INSURANCE_CLASS,
-          type: 'number',
-          placeholder: '1-28',
+          type: 'select',
+          options: INSURANCE_CLASS_OPTIONS,
+          placeholder: 'persona.placeholders.insuranceClass',
           helpText: 'persona.helpTexts.insuranceClass',
           icon: 'shield',
         },

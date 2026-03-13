@@ -32,6 +32,8 @@ import type { EscoPickerValue, EscoSkillValue } from '@/types/contacts/esco-type
 // 🏢 ENTERPRISE: Employer Entity Linking (ADR-177)
 import { EmployerPicker } from '@/components/shared/EmployerPicker';
 import type { EmployerPickerValue } from '@/components/shared/EmployerPicker';
+// 🏗️ ENTERPRISE: Insurance class auto-fill (ADR-090)
+import { DEFAULT_INSURANCE_CLASSES } from '@/components/projects/ika/contracts';
 // 🏢 ENTERPRISE: Multi-KAD Section — primary + N secondary activities
 import { ContactKadSection } from '@/components/contacts/dynamic/ContactKadSection';
 import type { KadActivity, CompanyAddress } from '@/types/ContactFormTypes';
@@ -275,6 +277,17 @@ export function UnifiedContactTabbedSection({
       if (pt && setFormData) {
         const currentPD = formData.personaData ?? {};
         const currentFields = currentPD[pt] ?? {};
+
+        // 🏗️ ADR-090: Auto-fill dailyWage when insuranceClassId changes
+        const extraFields: Record<string, string | number | null> = {};
+        if (name === 'insuranceClassId' && pt === 'construction_worker') {
+          const classNum = parseInt(value, 10);
+          const matched = DEFAULT_INSURANCE_CLASSES.find(c => c.classNumber === classNum);
+          if (matched) {
+            extraFields.dailyWage = matched.imputedDailyWage;
+          }
+        }
+
         setFormData({
           ...formData,
           personaData: {
@@ -282,6 +295,7 @@ export function UnifiedContactTabbedSection({
             [pt]: {
               ...currentFields,
               [name]: value || null,
+              ...extraFields,
             },
           },
         });

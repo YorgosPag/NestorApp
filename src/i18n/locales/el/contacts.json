@@ -1127,6 +1127,7 @@
     },
     "placeholders": {
       "ikaNumber": "π.χ. 12345678901",
+      "insuranceClass": "Επιλέξτε ασφαλιστική κλάση",
       "specialtyCode": "π.χ. SKY",
       "teeRegistryNumber": "π.χ. 98765",
       "ptdeNumber": "π.χ. 12345",
