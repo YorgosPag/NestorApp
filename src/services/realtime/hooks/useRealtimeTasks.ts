@@ -172,7 +172,7 @@ export function useRealtimeTasks(enabled = true): UseRealtimeTasksReturn {
       logger.info('Applying optimistic update for task', { taskId: payload.taskId });
       setTasks(prev => prev.map(task =>
         task.id === payload.taskId
-          ? applyUpdates(task, payload.updates)
+          ? applyUpdates(task, payload.updates as Partial<CrmTask>)
           : task
       ));
     };

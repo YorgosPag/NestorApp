@@ -120,7 +120,7 @@ export function useRealtimeOpportunities(enabled = true): UseRealtimeOpportuniti
       logger.info('Applying optimistic update for opportunity', { opportunityId: payload.opportunityId });
       setOpportunities(prev => prev.map(opp =>
         opp.id === payload.opportunityId
-          ? applyUpdates(opp, payload.updates)
+          ? applyUpdates(opp, payload.updates as Partial<Opportunity>)
           : opp
       ));
     };
