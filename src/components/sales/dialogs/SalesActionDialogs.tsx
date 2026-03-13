@@ -34,6 +34,34 @@ import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown
 import type { Unit } from '@/types/unit';
 
 // =============================================================================
+// 🏢 SERVER ERROR → i18n TRANSLATION MAP
+// =============================================================================
+
+/** Maps known server error messages to i18n keys for localized display */
+function translateServerError(serverMsg: string, t: (key: string, opts?: Record<string, string>) => string): string {
+  const errorMap: Record<string, string> = {
+    'Unit must be assigned to a building and floor before reservation or sale': 'sales.errors.noFloor',
+    'Unit must belong to a project with a company before reservation or sale': 'sales.errors.noCompany',
+    'Buyer contact is required': 'sales.errors.noBuyer',
+    'Buyer contact not found': 'sales.errors.buyerNotFound',
+    'Service contacts cannot be buyers': 'sales.errors.serviceNotBuyer',
+  };
+
+  // Check for exact match
+  const i18nKey = errorMap[serverMsg];
+  if (i18nKey) return t(i18nKey);
+
+  // Check for partial match (e.g. "Buyer missing required fields: vatNumber")
+  if (serverMsg.startsWith('Buyer missing required fields:')) {
+    const fields = serverMsg.replace('Buyer missing required fields: ', '');
+    return t('sales.errors.buyerMissingFields', { fields });
+  }
+
+  // Fallback — return original message
+  return serverMsg;
+}
+
+// =============================================================================
 // 🏢 SHARED TYPES
 // =============================================================================
 
@@ -270,9 +298,10 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
       }
     } catch (err: unknown) {
       const errorObj = err as { message?: string; error?: string };
-      const msg = errorObj?.error ?? errorObj?.message ?? t('common.unknownError', { defaultValue: 'Σφάλμα κατά την κράτηση' });
+      const rawMsg = errorObj?.error ?? errorObj?.message ?? '';
+      const msg = rawMsg ? translateServerError(rawMsg, t) : t('common.unknownError', { defaultValue: 'Σφάλμα κατά την κράτηση' });
       setSaveError(msg);
-      logger.warn('Reserve failed', { error: msg });
+      logger.warn('Reserve failed', { error: rawMsg });
     } finally {
       setSaving(false);
     }
@@ -494,9 +523,10 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
       }
     } catch (err: unknown) {
       const errorObj = err as { message?: string; error?: string };
-      const msg = errorObj?.error ?? errorObj?.message ?? t('common.unknownError', { defaultValue: 'Σφάλμα κατά την πώληση' });
+      const rawMsg = errorObj?.error ?? errorObj?.message ?? '';
+      const msg = rawMsg ? translateServerError(rawMsg, t) : t('common.unknownError', { defaultValue: 'Σφάλμα κατά την πώληση' });
       setSaveError(msg);
-      logger.warn('Sell failed', { error: msg });
+      logger.warn('Sell failed', { error: rawMsg });
     } finally {
       setSaving(false);
     }
