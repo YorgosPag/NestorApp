@@ -197,6 +197,58 @@ export async function deleteProject(
   }
 }
 
+// ============================================================================
+// CASCADE DELETE PREVIEW
+// ============================================================================
+
+interface CascadeChildItem {
+  id: string;
+  name: string;
+}
+
+export interface CascadePreviewData {
+  projectId: string;
+  projectName: string;
+  buildings: Array<CascadeChildItem & {
+    units: CascadeChildItem[];
+    parking: CascadeChildItem[];
+    storage: CascadeChildItem[];
+    floors: CascadeChildItem[];
+  }>;
+  totals: {
+    buildings: number;
+    units: number;
+    parking: number;
+    storage: number;
+    floors: number;
+    total: number;
+  };
+}
+
+/**
+ * 🏢 ENTERPRISE: Fetch cascade delete preview for a project
+ *
+ * Returns all child entities (buildings, units, parking, storage, floors)
+ * that would be cascade-deleted if this project is deleted.
+ * Used by the confirmation dialog to show full impact.
+ */
+export async function getProjectCascadePreview(
+  projectId: string
+): Promise<{ success: boolean; data?: CascadePreviewData; error?: string }> {
+  try {
+    const response = await apiClient.get<{ data: CascadePreviewData }>(
+      `/api/projects/${projectId}/cascade-preview`
+    );
+    return { success: true, data: response.data };
+  } catch (error) {
+    logger.error('Error fetching cascade preview', { projectId, error });
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
 /**
  * 🎯 ENTERPRISE: Λίστα έργων από Firebase (Client-side)
  * Για περιπτώσεις που χρειάζεται client-side fetch

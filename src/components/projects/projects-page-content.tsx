@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, startTransition } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, startTransition } from 'react';
 
 import type { Project } from '@/types/project';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -29,7 +29,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { deleteProject } from '@/services/projects-client.service';
+import { deleteProject, getProjectCascadePreview, type CascadePreviewData } from '@/services/projects-client.service';
 import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -131,9 +131,32 @@ export function ProjectsPageContent() {
     }
   }, [isCreateMode, setSelectedProject]);
 
-  // 🏢 ENTERPRISE: Delete project — centralized DeleteConfirmDialog (not browser confirm)
+  // 🏢 ENTERPRISE: Delete project — centralized DeleteConfirmDialog with cascade preview
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [cascadePreview, setCascadePreview] = useState<CascadePreviewData | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+
+  // Fetch cascade preview when user selects a project to delete
+  useEffect(() => {
+    if (!projectToDelete) {
+      setCascadePreview(null);
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoadingPreview(true);
+
+    getProjectCascadePreview(projectToDelete.id).then((result) => {
+      if (cancelled) return;
+      if (result.success && result.data) {
+        setCascadePreview(result.data);
+      }
+      setIsLoadingPreview(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [projectToDelete]);
 
   const handleDeleteProject = React.useCallback((project: Project) => {
     setProjectToDelete(project);
@@ -145,8 +168,6 @@ export function ProjectsPageContent() {
     const result = await deleteProject(projectToDelete.id);
     if (result.success) {
       logger.info('Project deleted', { projectId: projectToDelete.id });
-      // 🏢 ENTERPRISE: Real-time update — RealtimeService dispatches PROJECT_DELETED
-      // from deleteProject(), useFirestoreProjects listens and removes from list
       setSelectedProject(null);
       setProjectToDelete(null);
     } else {
@@ -154,6 +175,66 @@ export function ProjectsPageContent() {
     }
     setIsDeleting(false);
   }, [projectToDelete, setSelectedProject]);
+
+  // Build cascade preview description for the dialog
+  const cascadeDescription = useMemo(() => {
+    const confirmText = t('detailsHeader.actions.confirmDelete', { name: projectToDelete?.name ?? '' });
+
+    if (isLoadingPreview) {
+      return (
+        <section>
+          <p>{confirmText}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{t('detailsHeader.actions.cascadeLoading')}</p>
+        </section>
+      );
+    }
+
+    if (!cascadePreview || cascadePreview.totals.total === 0) {
+      return (
+        <section>
+          <p>{confirmText}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{t('detailsHeader.actions.cascadeNoChildren')}</p>
+          <p className="mt-2 text-sm font-medium text-destructive">{t('detailsHeader.actions.cascadeIrreversible')}</p>
+        </section>
+      );
+    }
+
+    const { totals, buildings } = cascadePreview;
+
+    return (
+      <section>
+        <p>{confirmText}</p>
+        <p className="mt-3 text-sm font-semibold text-destructive">
+          {t('detailsHeader.actions.cascadeWarning')}
+        </p>
+        <ul className="mt-2 space-y-2 text-sm">
+          {buildings.map((building) => (
+            <li key={building.id} className="rounded-md border border-border bg-muted/50 p-2">
+              <p className="font-medium">{t('detailsHeader.actions.cascadeBuildings')}: {building.name}</p>
+              <ul className="mt-1 ml-4 space-y-0.5 text-muted-foreground">
+                {building.units.length > 0 && (
+                  <li>{t('detailsHeader.actions.cascadeUnits')}: {building.units.map(u => u.name).join(', ')}</li>
+                )}
+                {building.parking.length > 0 && (
+                  <li>{t('detailsHeader.actions.cascadeParking')}: {building.parking.map(p => p.name).join(', ')}</li>
+                )}
+                {building.storage.length > 0 && (
+                  <li>{t('detailsHeader.actions.cascadeStorage')}: {building.storage.map(s => s.name).join(', ')}</li>
+                )}
+                {building.floors.length > 0 && (
+                  <li>{t('detailsHeader.actions.cascadeFloors')}: {building.floors.map(f => f.name).join(', ')}</li>
+                )}
+              </ul>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-3 text-sm font-semibold text-destructive">
+          {t('detailsHeader.actions.cascadeTotal', { count: totals.total })}
+        </p>
+        <p className="mt-1 text-sm font-medium text-destructive">{t('detailsHeader.actions.cascadeIrreversible')}</p>
+      </section>
+    );
+  }, [cascadePreview, isLoadingPreview, projectToDelete, t]);
 
   // 🏢 ENTERPRISE: Memoized dashboard stats — avoids array recreation on every render (INP optimization)
   const dashboardStats = useMemo<DashboardStat[]>(() => [
@@ -315,9 +396,10 @@ export function ProjectsPageContent() {
           open={!!projectToDelete}
           onOpenChange={(open) => { if (!open) setProjectToDelete(null); }}
           title={t('detailsHeader.actions.delete')}
-          description={t('detailsHeader.actions.confirmDelete', { name: projectToDelete?.name ?? '' })}
+          description={cascadeDescription}
           onConfirm={handleConfirmDelete}
           loading={isDeleting}
+          disabled={isLoadingPreview}
         />
       </PageContainer>
   );

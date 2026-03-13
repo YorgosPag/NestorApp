@@ -194,7 +194,17 @@
       "save": "Save",
       "cancel": "Cancel",
       "delete": "Delete",
-      "confirmDelete": "Are you sure you want to delete the project \"{{name}}\"?"
+      "confirmDelete": "Are you sure you want to delete the project \"{{name}}\"?",
+      "cascadeWarning": "Deleting this project will PERMANENTLY delete the following:",
+      "cascadeBuildings": "Buildings",
+      "cascadeUnits": "Units / Apartments",
+      "cascadeParking": "Parking Spaces",
+      "cascadeStorage": "Storage Units",
+      "cascadeFloors": "Floors",
+      "cascadeTotal": "Total records to be deleted: {{count}}",
+      "cascadeNoChildren": "This project has no buildings or other records.",
+      "cascadeLoading": "Loading data...",
+      "cascadeIrreversible": "This action is irreversible."
     }
   },
   "listCard": {
