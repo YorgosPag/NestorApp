@@ -16,18 +16,11 @@
  */
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { db } from '@/lib/firebase';
 import { getString, getNumber, getBoolean, getStringArray } from '@/lib/firestore/field-extractors';
-import {
-  collection,
-  query,
-  where,
-  orderBy,
-  onSnapshot,
-  type Unsubscribe,
-  type QueryConstraint,
-} from 'firebase/firestore';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { where, orderBy, type QueryConstraint } from 'firebase/firestore';
+import type { DocumentData } from 'firebase/firestore';
+import { firestoreQueryService } from '@/services/firestore';
+import type { QueryResult } from '@/services/firestore';
 import { TRIAGE_STATUSES, type TriageStatus } from '@/constants/triage-statuses';
 import type { Communication, FirestoreishTimestamp } from '@/types/crm';
 import type { MessageIntentAnalysis } from '@/schemas/ai-analysis';
@@ -123,11 +116,11 @@ function getMetadata(data: Record<string, unknown>): Record<string, unknown> | u
 // ============================================================================
 
 /**
- * Convert Firestore document to Communication with id
- * Type-safe extraction following useRealtimeMessages proven pattern
+ * Convert flat DocumentData to Communication with id
+ * ADR-227 Phase 2: Adapted for firestoreQueryService.subscribe() output
  */
-function docToTriageCommunication(doc: { id: string; data: () => unknown }): Communication & { id: string } {
-  const data = doc.data() as Record<string, unknown>;
+function docToTriageCommunication(doc: DocumentData & { id: string }): Communication & { id: string } {
+  const data = doc as Record<string, unknown>;
 
   return {
     id: doc.id,
@@ -193,12 +186,11 @@ export function useRealtimeTriageCommunications(
   const [error, setError] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
 
-  const unsubscribeRef = useRef<Unsubscribe | null>(null);
   const previousIdsRef = useRef<Set<string>>(new Set());
   const isInitialLoadRef = useRef(true);
 
   // =========================================================================
-  // REALTIME LISTENER
+  // REALTIME LISTENER (ADR-227 Phase 2: Canonical pattern)
   // =========================================================================
 
   useEffect(() => {
@@ -210,7 +202,6 @@ export function useRealtimeTriageCommunications(
     isInitialLoadRef.current = true;
 
     // Guard: companyId is required for Firestore security rules
-    // Super admin (companyId === undefined) uses server actions fallback
     if (!enabled || !companyId) {
       setLoading(false);
       return;
@@ -218,76 +209,56 @@ export function useRealtimeTriageCommunications(
 
     setLoading(true);
 
-    try {
-      const messagesRef = collection(db, COLLECTIONS.MESSAGES);
+    // Build constraints — companyId auto-injected by firestoreQueryService
+    const constraints: QueryConstraint[] = [];
+    if (statusFilter) {
+      constraints.push(where('triageStatus', '==', statusFilter));
+    }
+    constraints.push(orderBy('createdAt', 'desc'));
 
-      // Build query constraints
-      const constraints: QueryConstraint[] = [
-        where('companyId', '==', companyId),
-      ];
+    // 🏢 ENTERPRISE: Canonical pattern via firestoreQueryService.subscribe (ADR-227 Phase 2)
+    const unsubscribe = firestoreQueryService.subscribe<DocumentData>(
+      'MESSAGES',
+      (result: QueryResult<DocumentData>) => {
+        const docs = result.documents.map(doc =>
+          docToTriageCommunication(doc as DocumentData & { id: string })
+        );
 
-      // Optional status filter
-      if (statusFilter) {
-        constraints.push(where('triageStatus', '==', statusFilter));
-      }
+        // 🔔 NEW MESSAGE DETECTION (after initial load)
+        if (!isInitialLoadRef.current) {
+          const currentIds = new Set(result.documents.map(doc => doc.id));
+          const newIds = [...currentIds].filter((id) => !previousIdsRef.current.has(id));
 
-      // Order by createdAt DESC (newest first)
-      constraints.push(orderBy('createdAt', 'desc'));
-
-      const q = query(messagesRef, ...constraints);
-
-      // 🔥 REALTIME LISTENER
-      const unsubscribe = onSnapshot(
-        q,
-        (snapshot) => {
-          const docs = snapshot.docs.map(docToTriageCommunication);
-
-          // 🔔 NEW MESSAGE DETECTION (after initial load)
-          if (!isInitialLoadRef.current) {
-            const currentIds = new Set(snapshot.docs.map((doc) => doc.id));
-            const newIds = [...currentIds].filter((id) => !previousIdsRef.current.has(id));
-
-            if (newIds.length > 0) {
-              success(
-                newIds.length === 1
-                  ? 'New email received!'
-                  : `${newIds.length} new emails received!`
-              );
-            }
-
-            previousIdsRef.current = currentIds;
-          } else {
-            // Initial load - store IDs without notification
-            isInitialLoadRef.current = false;
-            previousIdsRef.current = new Set(snapshot.docs.map((doc) => doc.id));
+          if (newIds.length > 0) {
+            success(
+              newIds.length === 1
+                ? 'New email received!'
+                : `${newIds.length} new emails received!`
+            );
           }
 
-          setCommunications(docs);
-          setConnected(true);
-          setLoading(false);
-          setError(null);
-        },
-        (err) => {
-          logger.error('Firestore listener error', { error: err });
-          setError(err.message || 'Real-time connection failed');
-          setConnected(false);
-          setLoading(false);
+          previousIdsRef.current = currentIds;
+        } else {
+          isInitialLoadRef.current = false;
+          previousIdsRef.current = new Set(result.documents.map(doc => doc.id));
         }
-      );
 
-      unsubscribeRef.current = unsubscribe;
-    } catch (err) {
-      logger.error('Failed to start listener', { error: err });
-      setError(err instanceof Error ? err.message : 'Failed to start real-time listener');
-      setLoading(false);
-    }
+        setCommunications(docs);
+        setConnected(true);
+        setLoading(false);
+        setError(null);
+      },
+      (err: Error) => {
+        logger.error('Firestore listener error', { error: err });
+        setError(err.message || 'Real-time connection failed');
+        setConnected(false);
+        setLoading(false);
+      },
+      { constraints }
+    );
 
-    // Cleanup
     return () => {
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
-        unsubscribeRef.current = null;
-      }
+      unsubscribe();
     };
   }, [companyId, statusFilter, enabled]);
 

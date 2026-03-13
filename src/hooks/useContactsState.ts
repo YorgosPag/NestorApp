@@ -82,8 +82,8 @@ export function useContactsState() {
         const units = await getUnits();
         setAllUnits(units);
 
-        // Contacts: real-time subscription via onSnapshot
-        unsubContacts = await ContactsService.subscribeToContacts(
+        // Contacts: real-time subscription (ADR-227 Phase 2: canonical pattern)
+        unsubContacts = ContactsService.subscribeToContacts(
           (contacts) => {
             setAllContacts(contacts);
             setIsLoading(false);

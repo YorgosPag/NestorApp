@@ -14,10 +14,11 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, query, where, orderBy, limit, onSnapshot, type Unsubscribe } from 'firebase/firestore';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { where, orderBy } from 'firebase/firestore';
+import type { DocumentData } from 'firebase/firestore';
 import { useAuth } from '@/auth/hooks/useAuth';
+import { firestoreQueryService } from '@/services/firestore';
+import type { QueryResult } from '@/services/firestore';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { MessageListItem } from './useInboxApi';
@@ -55,25 +56,26 @@ interface UseRealtimeMessagesResult {
 // ADR-218: getTimestampString replaced by centralized fieldToISO (import at top of file)
 
 /**
- * Convert Firestore document to MessageListItem
+ * Convert flat DocumentData to MessageListItem
+ * ADR-227 Phase 2: Adapted for firestoreQueryService.subscribe() output
  */
-function docToMessage(doc: { id: string; data: () => unknown }): MessageListItem {
-  const data = doc.data() as Record<string, unknown>;
+function docToMessage(data: DocumentData & { id: string }): MessageListItem {
+  const record = data as Record<string, unknown>;
 
   return {
-    id: doc.id,
-    conversationId: getString(data, 'conversationId'),
-    direction: getString(data, 'direction') as MessageDirection,
-    channel: getString(data, 'channel', 'telegram') as CommunicationChannel,
-    senderId: getString(data, 'senderId'),
-    senderName: getString(data, 'senderName'),
-    senderType: getString(data, 'senderType', 'customer') as SenderType,
-    content: getObject(data, 'content', { text: '' }),
-    providerMessageId: getString(data, 'providerMessageId'),
-    deliveryStatus: getString(data, 'deliveryStatus', 'sent') as DeliveryStatus,
-    providerMetadata: getObject(data, 'providerMetadata', {}),
-    createdAt: fieldToISO(data, 'createdAt'),
-    updatedAt: fieldToISO(data, 'updatedAt'),
+    id: data.id,
+    conversationId: getString(record, 'conversationId'),
+    direction: getString(record, 'direction') as MessageDirection,
+    channel: getString(record, 'channel', 'telegram') as CommunicationChannel,
+    senderId: getString(record, 'senderId'),
+    senderName: getString(record, 'senderName'),
+    senderType: getString(record, 'senderType', 'customer') as SenderType,
+    content: getObject(record, 'content', { text: '' }),
+    providerMessageId: getString(record, 'providerMessageId'),
+    deliveryStatus: getString(record, 'deliveryStatus', 'sent') as DeliveryStatus,
+    providerMetadata: getObject(record, 'providerMetadata', {}),
+    createdAt: fieldToISO(record, 'createdAt'),
+    updatedAt: fieldToISO(record, 'updatedAt'),
   };
 }
 
@@ -110,7 +112,6 @@ export function useRealtimeMessages(
   const [error, setError] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
 
-  const unsubscribeRef = useRef<Unsubscribe | null>(null);
   const previousMessageIdsRef = useRef<Set<string>>(new Set());
   const isInitialLoadRef = useRef(true);
 
@@ -131,97 +132,74 @@ export function useRealtimeMessages(
 
     setLoading(true);
 
-    try {
-      // 🏢 ENTERPRISE: Firestore realtime query
-      // Messages are in ROOT collection, NOT subcollection!
-      const messagesRef = collection(db, COLLECTIONS.MESSAGES);
+    // 🏢 ENTERPRISE: Canonical pattern via firestoreQueryService.subscribe (ADR-227 Phase 2)
+    const unsubscribe = firestoreQueryService.subscribe<DocumentData>(
+      'MESSAGES',
+      (result: QueryResult<DocumentData>) => {
+        logger.info('Received messages', { count: result.documents.length, conversationId });
 
-      // 🏢 ENTERPRISE FIX: Use 'desc' to get LATEST messages, then reverse for UI display
-      // This ensures new messages appear even when conversation has >50 messages
-      const q = query(
-        messagesRef,
-        where('conversationId', '==', conversationId),
-        orderBy('createdAt', 'desc'),
-        limit(limitCount)
-      );
+        // Convert + reverse for chronological display (query is DESC)
+        const newMessages = result.documents.map(doc =>
+          docToMessage(doc as DocumentData & { id: string })
+        ).reverse();
 
-      // 🔥 REALTIME LISTENER
-      const unsubscribe = onSnapshot(
-        q,
-        async (snapshot) => {
-          logger.info('Received messages', { count: snapshot.docs.length, conversationId });
+        // 🔔 NOTIFICATION DISPATCH: Detect new inbound messages
+        if (!isInitialLoadRef.current && user) {
+          const currentMessageIds = new Set(result.documents.map(doc => doc.id));
 
-          // Convert Firestore docs to MessageListItem
-          // 🏢 ENTERPRISE: Reverse to display chronologically (oldest first)
-          const newMessages = snapshot.docs.map(docToMessage).reverse();
+          const newInboundMessages = newMessages.filter((msg) => {
+            const isNew = !previousMessageIdsRef.current.has(msg.id);
+            const isInbound = msg.direction === 'inbound';
+            return isNew && isInbound;
+          });
 
-          // 🔔 NOTIFICATION DISPATCH: Detect new inbound messages
-          if (!isInitialLoadRef.current && user) {
-            const currentMessageIds = new Set(snapshot.docs.map((doc) => doc.id));
-
-            // Find NEW messages (not in previous set)
-            const newInboundMessages = newMessages.filter((msg) => {
-              const isNew = !previousMessageIdsRef.current.has(msg.id);
-              const isInbound = msg.direction === 'inbound';
-              return isNew && isInbound;
+          // Dispatch notifications for new inbound messages (fire-and-forget)
+          for (const message of newInboundMessages) {
+            apiClient.post('/api/notifications/dispatch', {
+              messageId: message.id,
+              conversationId: message.conversationId,
+              recipientId: user.uid,
+              tenantId: user.uid,
+              direction: message.direction,
+              content: message.content,
+              channel: message.channel,
+            }).catch(err => {
+              logger.error('Failed to dispatch notification', { error: err });
             });
-
-            // Dispatch notifications για νέα inbound messages
-            for (const message of newInboundMessages) {
-              try {
-                // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
-                await apiClient.post('/api/notifications/dispatch', {
-                  messageId: message.id,
-                  conversationId: message.conversationId,
-                  recipientId: user.uid,
-                  tenantId: user.uid, // TODO: Replace with actual tenantId from conversation
-                  direction: message.direction,
-                  content: message.content,
-                  channel: message.channel,
-                });
-              } catch (err) {
-                logger.error('Failed to dispatch notification', { error: err });
-              }
-            }
-
-            // Update previous message IDs
-            previousMessageIdsRef.current = currentMessageIds;
-          } else {
-            // Initial load - store IDs without dispatching
-            isInitialLoadRef.current = false;
-            previousMessageIdsRef.current = new Set(snapshot.docs.map((doc) => doc.id));
           }
 
-          setMessages(newMessages);
-          setConnected(true);
-          setLoading(false);
-          setError(null);
-        },
-        (err) => {
-          logger.error('Firestore listener error', { error: err });
-          setError(err.message || 'Realtime connection failed');
-          setConnected(false);
-          setLoading(false);
+          previousMessageIdsRef.current = currentMessageIds;
+        } else {
+          // Initial load - store IDs without dispatching
+          isInitialLoadRef.current = false;
+          previousMessageIdsRef.current = new Set(result.documents.map(doc => doc.id));
         }
-      );
 
-      // Store unsubscribe function
-      unsubscribeRef.current = unsubscribe;
-
-      logger.info('Started listening', { conversationId });
-    } catch (err) {
-      logger.error('Failed to start listener', { error: err });
-      setError(err instanceof Error ? err.message : 'Failed to start realtime listener');
-      setLoading(false);
-    }
-
-    // Cleanup: unsubscribe when conversation changes or component unmounts
-    return () => {
-      if (unsubscribeRef.current) {
-        logger.info('Unsubscribed', { conversationId });
-        unsubscribeRef.current();
-        unsubscribeRef.current = null;
+        setMessages(newMessages);
+        setConnected(true);
+        setLoading(false);
+        setError(null);
+      },
+      (err: Error) => {
+        logger.error('Firestore listener error', { error: err });
+        setError(err.message || 'Realtime connection failed');
+        setConnected(false);
+        setLoading(false);
+      },
+      {
+        constraints: [
+          where('conversationId', '==', conversationId),
+          orderBy('createdAt', 'desc'),
+        ],
+        maxResults: limitCount,
       }
+    );
+
+    logger.info('Started listening', { conversationId });
+
+    return () => {
+      logger.info('Unsubscribed', { conversationId });
+      unsubscribe();
     };
   }, [conversationId, enabled, limitCount]);
 

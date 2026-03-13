@@ -13,7 +13,6 @@ import {
   setDoc,
   updateDoc,
   doc,
-  onSnapshot,
   Timestamp,
   type QueryConstraint,
   startAfter,
@@ -165,44 +164,40 @@ export function subscribeToNotifications(
   onUpdate: (notifications: Notification[]) => void,
   onError?: (error: Error) => void
 ): () => void {
-  const q = query(
-    collection(db, COLLECTION_NAME),
-    where('userId', '==', userId),
-    orderBy('createdAt', 'desc'),
-    firestoreLimit(50)
-  );
-
-  const unsubscribe = onSnapshot(
-    q,
-    (snapshot) => {
-      const notifications: Notification[] = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          tenantId: data.tenantId || 'default',
-          userId: data.userId,
-          createdAt: fieldToISO(data, 'createdAt') || data.createdAt,
-          severity: data.severity as Severity,
-          title: data.title,
-          body: data.body,
-          channel: data.channel || 'inapp',
-          delivery: data.delivery || { state: 'delivered', attempts: 1 },
-          source: data.source,
-          actions: data.actions,
-          meta: data.meta,
-          ...(data.titleKey ? { titleKey: data.titleKey, titleParams: data.titleParams } : {}),
-        } as Notification;
-      });
+  // 🏢 ENTERPRISE: Canonical pattern via firestoreQueryService.subscribe (ADR-227 Phase 2)
+  // Auto tenant isolation + consistent subscription management
+  return firestoreQueryService.subscribe<DocumentData>(
+    'NOTIFICATIONS',
+    (result) => {
+      const notifications: Notification[] = result.documents.map(doc => ({
+        id: doc.id,
+        tenantId: (doc.tenantId as string) || 'default',
+        userId: doc.userId as string,
+        createdAt: fieldToISO(doc, 'createdAt') || doc.createdAt,
+        severity: doc.severity as Severity,
+        title: doc.title as string,
+        body: doc.body as string,
+        channel: (doc.channel as string) || 'inapp',
+        delivery: (doc.delivery as Notification['delivery']) || { state: 'delivered', attempts: 1 },
+        source: doc.source as Notification['source'],
+        actions: doc.actions as Notification['actions'],
+        meta: doc.meta as Notification['meta'],
+        ...(doc.titleKey ? { titleKey: doc.titleKey as string, titleParams: doc.titleParams as Record<string, string> } : {}),
+      } as Notification));
 
       onUpdate(notifications);
     },
     (error) => {
-      // Error logging removed
       if (onError) onError(error);
+    },
+    {
+      constraints: [
+        where('userId', '==', userId),
+        orderBy('createdAt', 'desc'),
+      ],
+      maxResults: 50,
     }
   );
-
-  return unsubscribe;
 }
 
 /**

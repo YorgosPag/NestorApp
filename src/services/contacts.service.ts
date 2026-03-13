@@ -1,7 +1,7 @@
 import {
   collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc, query, where,
   orderBy, limit, startAfter, DocumentSnapshot, QueryConstraint,
-  writeBatch, serverTimestamp, onSnapshot, Unsubscribe, deleteField, FieldValue,
+  writeBatch, serverTimestamp, deleteField, FieldValue,
   QuerySnapshot,
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
@@ -705,22 +705,31 @@ export class ContactsService {
     }
   }
 
-  // Realtime
-  static async subscribeToContacts(
+  // Realtime — ADR-227 Phase 2: Canonical pattern via firestoreQueryService.subscribe
+  static subscribeToContacts(
     callback: (contacts: Contact[]) => void,
     options?: { type?: ContactType; onlyFavorites?: boolean; limitCount?: number }
-  ): Promise<Unsubscribe> {
-    const q = await buildContactsQuery({
-      type: options?.type,
-      onlyFavorites: options?.onlyFavorites,
-      orderByField: 'updatedAt',
-      orderDirection: 'desc',
-      limitCount: options?.limitCount ?? BATCH_SIZE,
-    });
-    return onSnapshot(q, (snapshot) => {
-      // Type assertion: converter ensures data is Contact type
-      callback(mapDocs<Contact>(snapshot as unknown as QuerySnapshot<Contact>));
-    });
+  ): () => void {
+    const constraints: QueryConstraint[] = [];
+    if (options?.type) constraints.push(where('type', '==', options.type));
+    if (options?.onlyFavorites) constraints.push(where('isFavorite', '==', true));
+    constraints.push(orderBy('updatedAt', 'desc'));
+
+    return firestoreQueryService.subscribe<DocumentData>(
+      'CONTACTS',
+      (result) => {
+        // Map flat DocumentData to Contact (same fields, auto-spread by subscribe)
+        const contacts = result.documents.map(doc => ({ ...doc } as unknown as Contact));
+        callback(contacts);
+      },
+      (err) => {
+        logger.error('Contact subscription error', { error: err.message });
+      },
+      {
+        constraints,
+        maxResults: options?.limitCount ?? BATCH_SIZE,
+      }
+    );
   }
 
   // Stats — ADR-214 Phase 2: via FirestoreQueryService

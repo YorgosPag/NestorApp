@@ -18,15 +18,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-  orderBy,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { where, orderBy } from 'firebase/firestore';
+import type { DocumentData } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
+import { firestoreQueryService } from '@/services/firestore';
+import type { QueryResult } from '@/services/firestore';
 import type { FileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
 import { FILE_CATEGORIES, FILE_DOMAINS, FILE_LIFECYCLE_STATES } from '@/config/domain-constants';
@@ -66,8 +62,6 @@ export interface UseFloorplanFilesReturn {
 // ============================================================================
 
 const logger = createModuleLogger('useFloorplanFiles');
-
-const FILES_COLLECTION = 'files';
 
 // ============================================================================
 // HOOK
@@ -191,34 +185,15 @@ export function useFloorplanFiles(config: UseFloorplanFilesConfig): UseFloorplan
 
     logger.info('Setting up listener', { companyId, entityType, entityId, purposeFilter });
 
-    // Build query for floorplan files
-    const filesRef = collection(db, FILES_COLLECTION);
-    const constraints = [
-      where('companyId', '==', companyId),
-      where('entityType', '==', entityType),
-      where('entityId', '==', entityId),
-      where('domain', '==', FILE_DOMAINS.CONSTRUCTION),
-      where('category', '==', FILE_CATEGORIES.FLOORPLANS),
-      where('lifecycleState', '==', FILE_LIFECYCLE_STATES.ACTIVE),
-      orderBy('createdAt', 'desc'),
-    ];
-
-    const q = query(filesRef, ...constraints);
-
-    // Subscribe to real-time updates
-    const unsubscribe = onSnapshot(
-      q,
-      async (snapshot) => {
+    // 🏢 ENTERPRISE: Canonical pattern via firestoreQueryService.subscribe (ADR-227 Phase 2)
+    // companyId auto-injected by firestoreQueryService — no manual where('companyId') needed
+    const unsubscribe = firestoreQueryService.subscribe<DocumentData>(
+      'FILES',
+      (result: QueryResult<DocumentData>) => {
         try {
-          const fileRecords: FileRecord[] = [];
-
-          snapshot.forEach((doc) => {
-            const data = doc.data();
-            fileRecords.push({
-              id: doc.id,
-              ...data,
-            } as FileRecord);
-          });
+          const fileRecords = result.documents.map(doc => ({
+            ...doc,
+          } as unknown as FileRecord));
 
           logger.info(`Received ${fileRecords.length} files`);
 
@@ -226,9 +201,7 @@ export function useFloorplanFiles(config: UseFloorplanFilesConfig): UseFloorplan
           let filteredFiles = fileRecords;
           if (purposeFilter) {
             filteredFiles = fileRecords.filter(f => {
-              // Check entryPointId or purpose field
               const entryPoint = f.entryPointId || '';
-              // Purpose may be stored in custom metadata
               const fileData = f as unknown as { purpose?: string };
               const purpose = fileData.purpose || '';
               return entryPoint.includes(purposeFilter) || purpose.includes(purposeFilter);
@@ -248,10 +221,20 @@ export function useFloorplanFiles(config: UseFloorplanFilesConfig): UseFloorplan
           setLoading(false);
         }
       },
-      (err) => {
+      (err: Error) => {
         logger.error('Listener error', { error: err });
         setError(err.message);
         setLoading(false);
+      },
+      {
+        constraints: [
+          where('entityType', '==', entityType),
+          where('entityId', '==', entityId),
+          where('domain', '==', FILE_DOMAINS.CONSTRUCTION),
+          where('category', '==', FILE_CATEGORIES.FLOORPLANS),
+          where('lifecycleState', '==', FILE_LIFECYCLE_STATES.ACTIVE),
+          orderBy('createdAt', 'desc'),
+        ],
       }
     );
 

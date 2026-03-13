@@ -11,8 +11,9 @@ import {
   query,
   where,
   orderBy,
-  onSnapshot
 } from 'firebase/firestore';
+import type { DocumentData } from 'firebase/firestore';
+import { firestoreQueryService } from '@/services/firestore';
 import { SYSTEM_LAYERS, DEFAULT_LAYER_STYLES, SYSTEM_LAYER_COLORS } from '@/types/layers';
 import { generateHistoryId, generateLayerId, generateElementId } from '@/services/enterprise-id.service';
 import type {
@@ -232,24 +233,29 @@ export function useLayerManagement({
     }
   };
 
-  // Setup real-time synchronization
+  // Setup real-time synchronization (ADR-227 Phase 2: canonical pattern)
   const setupRealtimeSync = () => {
-    const layersQuery = query(
-      collection(db, COLLECTIONS.LAYERS),
-      where('floorId', '==', floorId)
+    unsubscribeRef.current = firestoreQueryService.subscribe<DocumentData>(
+      'LAYERS',
+      (result) => {
+        const updatedLayers: Layer[] = result.documents.map(d => ({
+          ...d,
+        } as unknown as Layer));
+
+        setState(prev => ({
+          ...prev,
+          layers: updatedLayers
+        }));
+      },
+      (err) => {
+        logger.error('Layer subscription error', { error: err.message });
+      },
+      {
+        constraints: [
+          where('floorId', '==', floorId)
+        ],
+      }
     );
-    
-    unsubscribeRef.current = onSnapshot(layersQuery, (snapshot) => {
-      const updatedLayers: Layer[] = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Layer));
-      
-      setState(prev => ({
-        ...prev,
-        layers: updatedLayers
-      }));
-    });
   };
 
   // Ensure system layers exist
