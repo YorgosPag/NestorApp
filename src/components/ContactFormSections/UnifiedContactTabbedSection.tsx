@@ -14,6 +14,8 @@ import { DynamicContactArrays } from '@/components/contacts/dynamic/DynamicConta
 import { EntityFilesManager } from '@/components/shared/files';
 // 🏢 ENTERPRISE: Banking System (ADR-126)
 import { ContactBankingTab } from '@/components/contacts/tabs/ContactBankingTab';
+// 🏢 ENTERPRISE: Audit Trail / Activity History (ADR-195)
+import { ActivityTab } from '@/components/shared/audit/ActivityTab';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { useWorkspace } from '@/contexts/WorkspaceContext'; // 🏢 ENTERPRISE: Workspace context για company name display
@@ -766,6 +768,25 @@ export function UnifiedContactTabbedSection({
                 ...(formData as unknown as Record<string, unknown>)
               } as Parameters<typeof ContactBankingTab>[0]['data']}
               additionalData={{ disabled: false }} // 🏢 ENTERPRISE: Always editable - subcollections save independently
+            />
+          );
+        },
+
+        // 🏢 ENTERPRISE: Custom renderer for history tab — ADR-195 Centralized Audit Trail
+        // Read-only timeline of all changes to this contact
+        history: () => {
+          const contactId = formData.id;
+          if (!contactId) {
+            return (
+              <div className="p-8 text-center text-muted-foreground">
+                <p>{t('individual.sections.history.description')}</p>
+              </div>
+            );
+          }
+          return (
+            <ActivityTab
+              entityType="contact"
+              entityId={contactId}
             />
           );
         },

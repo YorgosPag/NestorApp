@@ -467,6 +467,27 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
       }
     ],
   },
+
+  // -------------------------------------------------------------------------
+  // 10. ΙΣΤΟΡΙΚΟ - 🏢 ENTERPRISE AUDIT TRAIL (ADR-195)
+  // -------------------------------------------------------------------------
+  {
+    id: 'history',
+    title: 'individual.sections.history.title',
+    icon: 'clock',
+    description: 'individual.sections.history.description',
+    order: 10,
+    fields: [
+      // 🎯 DUMMY FIELD για custom renderer triggering
+      // Fields are handled by ActivityTab component (centralized audit trail)
+      {
+        id: 'history',
+        label: 'contacts.individual.sections.history.title',
+        type: 'input'
+        // Dummy field - actual UI rendered by ActivityTab
+      }
+    ],
+  },
 ];
 
 // ============================================================================

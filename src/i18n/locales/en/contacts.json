@@ -934,6 +934,10 @@
       "banking": {
         "title": "Banking",
         "description": "Contact bank accounts"
+      },
+      "history": {
+        "title": "History",
+        "description": "Contact change history"
       }
     },
     "fields": {
