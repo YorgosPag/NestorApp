@@ -13,19 +13,19 @@
 import {
   collection,
   addDoc,
-  query,
   where,
   orderBy,
-  getDocs,
   deleteDoc,
   doc,
   updateDoc,
   writeBatch,
   serverTimestamp,
+  type DocumentData,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FileAuditService } from './file-audit.service';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 
 // ============================================================================
 // TYPES
@@ -68,17 +68,17 @@ export interface CreateFolderInput {
 export const FileFolderService = {
   /**
    * Create a new virtual folder
+   * 🏢 ADR-214 Phase 3: siblings query via FirestoreQueryService (auto tenant filter)
    */
   async createFolder(input: CreateFolderInput): Promise<string> {
-    // Get current max sortOrder for siblings
-    const siblingsQuery = query(
-      collection(db, COLLECTIONS.FILE_FOLDERS),
-      where('companyId', '==', input.companyId),
-      where('parentId', '==', input.parentId ?? null)
-    );
-    const siblings = await getDocs(siblingsQuery);
-    const maxOrder = siblings.docs.reduce(
-      (max, d) => Math.max(max, (d.data().sortOrder as number) || 0),
+    // Get current max sortOrder for siblings — auto tenant filter replaces manual companyId
+    const siblingsResult = await firestoreQueryService.getAll<DocumentData>('FILE_FOLDERS', {
+      constraints: [
+        where('parentId', '==', input.parentId ?? null),
+      ],
+    });
+    const maxOrder = siblingsResult.documents.reduce(
+      (max, d) => Math.max(max, (d.sortOrder as number) || 0),
       0
     );
 
@@ -98,19 +98,15 @@ export const FileFolderService = {
 
   /**
    * Get all folders for a company (flat list — client builds tree)
+   * 🏢 ADR-214 Phase 3: via FirestoreQueryService (auto tenant filter replaces manual companyId)
    */
   async getFolders(companyId: string): Promise<FileFolder[]> {
-    const q = query(
-      collection(db, COLLECTIONS.FILE_FOLDERS),
-      where('companyId', '==', companyId),
-      orderBy('sortOrder', 'asc')
-    );
-
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    })) as FileFolder[];
+    const result = await firestoreQueryService.getAll<DocumentData>('FILE_FOLDERS', {
+      constraints: [
+        orderBy('sortOrder', 'asc'),
+      ],
+    });
+    return result.documents as unknown as FileFolder[];
   },
 
   /**
