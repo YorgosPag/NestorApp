@@ -160,6 +160,55 @@ export async function createBuilding(
 }
 
 /**
+ * 🏢 ENTERPRISE: Building cascade preview data
+ * Returned by the cascade-preview endpoint before deletion
+ */
+export interface BuildingCascadePreviewData {
+  buildingId: string;
+  buildingName: string;
+  children: {
+    units: Array<{ id: string; name: string }>;
+    parking: Array<{ id: string; name: string }>;
+    storage: Array<{ id: string; name: string }>;
+    floors: Array<{ id: string; name: string }>;
+  };
+  totals: {
+    units: number;
+    parking: number;
+    storage: number;
+    floors: number;
+    total: number;
+  };
+}
+
+/**
+ * 🏢 ENTERPRISE: Fetch cascade delete preview for a building
+ *
+ * Returns all child entities (units, parking, storage, floors)
+ * that would be cascade-deleted if this building is deleted.
+ * Used by the confirmation dialog to show full impact.
+ */
+export async function getBuildingCascadePreview(
+  buildingId: string
+): Promise<{ success: boolean; data?: BuildingCascadePreviewData; error?: string }> {
+  try {
+    interface CascadePreviewApiResponse {
+      data: BuildingCascadePreviewData;
+    }
+    const response = await apiClient.get<CascadePreviewApiResponse>(
+      `/api/buildings/${buildingId}/cascade-preview`
+    );
+    return { success: true, data: response.data };
+  } catch (error) {
+    logger.error('Error fetching building cascade preview', { buildingId, error });
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
  * 🏗️ ENTERPRISE: Διαγραφή κτιρίου μέσω API (Admin SDK)
  *
  * 🔒 SECURITY: Firestore rules απαγορεύουν client-side writes (allow write: if false)
