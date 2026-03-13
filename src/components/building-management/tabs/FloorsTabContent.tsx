@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Layers, Plus, Pencil, Trash2, Check, X, Loader2, ChevronDown, ChevronRight, Map } from 'lucide-react';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { FloorFloorplanInline } from './FloorFloorplanInline';
 import type { Building } from '@/types/building/contracts';
 
@@ -63,6 +64,9 @@ interface FloorsTabContentProps {
 export function FloorsTabContent({ building }: FloorsTabContentProps) {
   const { t } = useTranslation('building');
   const { confirm, dialogProps } = useConfirmDialog();
+
+  // 🛡️ ADR-226 Phase 3: Deletion Guard
+  const { checkBeforeDelete, BlockedDialog } = useDeletionGuard('floor');
 
   // Data state
   const [floors, setFloors] = useState<FloorRecord[]>([]);
@@ -193,6 +197,10 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
   // ============================================================================
 
   const handleDelete = async (floor: FloorRecord) => {
+    // 🛡️ ADR-226: Pre-check for dependencies
+    const allowed = await checkBeforeDelete(floor.id);
+    if (!allowed) return;
+
     const confirmed = await confirm({
       title: t('tabs.floors.deleteConfirm', { name: floor.name }),
       description: t('tabs.floors.deleteConfirm', { name: floor.name }),
@@ -257,6 +265,8 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
   return (
     <section className="flex flex-col gap-2 p-2">
       <ConfirmDialog {...dialogProps} />
+      {/* 🛡️ ADR-226: Deletion Guard blocked dialog */}
+      {BlockedDialog}
       {/* Header */}
       <header className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-lg font-semibold">

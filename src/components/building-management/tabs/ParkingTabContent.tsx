@@ -38,6 +38,7 @@ import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog } from '../shared';
 import type { SpaceColumn, SpaceCardField, LinkableItem } from '../shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
+import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 
 // ============================================================================
 // CONFIRM ACTION TYPE
@@ -118,6 +119,9 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
   const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<ParkingConfirmAction | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
+
+  // 🛡️ ADR-226 Phase 3: Deletion Guard
+  const { checkBeforeDelete, BlockedDialog } = useDeletionGuard('parking');
 
   // Link dialog state
   const [showLinkDialog, setShowLinkDialog] = useState(false);
@@ -267,8 +271,11 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
   // DELETE
   // ============================================================================
 
-  const handleDeleteClick = (spot: ParkingSpot) => {
-    setConfirmAction({ type: 'delete', item: spot });
+  const handleDeleteClick = async (spot: ParkingSpot) => {
+    const allowed = await checkBeforeDelete(spot.id);
+    if (allowed) {
+      setConfirmAction({ type: 'delete', item: spot });
+    }
   };
 
   // ============================================================================
@@ -790,6 +797,9 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
         fetchUnlinked={fetchUnlinkedParking}
         onLink={handleLinkParking}
       />
+
+      {/* 🛡️ ADR-226: Deletion Guard blocked dialog */}
+      {BlockedDialog}
 
       {/* Centralized Confirm Dialog (delete / unlink) */}
       <BuildingSpaceConfirmDialog

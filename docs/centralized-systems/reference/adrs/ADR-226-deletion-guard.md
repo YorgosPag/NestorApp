@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | IN PROGRESS (Phase 0 ✅, Phase 1 ✅, Phase 2 ✅ IMPLEMENTED) |
+| **Status** | IN PROGRESS (Phase 0 ✅, Phase 1 ✅, Phase 2 ✅, Phase 3 ✅ IMPLEMENTED) |
 | **Date** | 2026-03-13 |
 | **Category** | Backend Systems / Data & State |
 | **Canonical Location** | `src/lib/firestore/deletion-guard.ts` (proposed) |
@@ -447,12 +447,29 @@ await db.collection('buildings').doc(buildingId).delete();
 - Dual audit pattern: `executeDeletion()` → entity audit trail; `logAuditEvent()` → auth audit trail (kept in all handlers)
 - Error response: 409 Conflict with dependency details when deletion is blocked
 
-### Phase 3: UI — Deletion Blocked Dialog (Priority: HIGH)
+### Phase 3: UI — Deletion Blocked Dialog + Integration — ✅ IMPLEMENTED (2026-03-13)
 
-| Task | Αρχείο | Περιγραφή |
-|------|--------|-----------|
-| 3.1 | `src/components/shared/DeletionBlockedDialog.tsx` | Reusable dialog: λίστα εξαρτήσεων με clickable links + κουμπί "Κατάλαβα" |
-| 3.2 | Integration σε όλα τα delete buttons | Κάθε delete button καλεί πρώτα check, αν blocked → δείχνει dialog |
+| Task | Αρχείο | Περιγραφή | Status |
+|------|--------|-----------|--------|
+| 3.1 | `src/components/shared/DeletionBlockedDialog.tsx` | Reusable AlertDialog: λίστα εξαρτήσεων (label + count) + κουμπί "Κατάλαβα" | ✅ |
+| 3.2 | `src/hooks/useDeletionGuard.ts` | Custom hook: pre-check fetch + state + blocked dialog rendering | ✅ |
+| 3.3 | `src/i18n/locales/{el,en}/common.json` | i18n keys: `deletionGuard.*` (blocked, understood, count, deleteFirst) | ✅ |
+| 3.4 | `BuildingsPageContent.tsx` | Cascade preview → `useDeletionGuard('building')` | ✅ |
+| 3.5 | `projects-page-content.tsx` | Cascade preview → `useDeletionGuard('project')` | ✅ |
+| 3.6 | `UnitsTabContent.tsx` | Pre-check before delete via `useDeletionGuard('unit')` | ✅ |
+| 3.7 | `ParkingTabContent.tsx` | Pre-check before delete via `useDeletionGuard('parking')` | ✅ |
+| 3.8 | `StorageTab.tsx` | Pre-check before delete via `useDeletionGuard('storage')` | ✅ |
+| 3.9 | `DeleteContactDialog.tsx` | Pre-check on open via `useDeletionGuard('contact')` | ✅ |
+| 3.10 | `FloorsTabContent.tsx` | Pre-check before delete via `useDeletionGuard('floor')` | ✅ |
+
+**Implementation Notes (Phase 3)**:
+- `DeletionBlockedDialog`: AlertDialog (Radix) with ShieldAlert icon, dependency list (label + count), single "Κατάλαβα" button
+- `useDeletionGuard(entityType)`: Returns `{ checking, blocked, checkBeforeDelete, resetCheck, BlockedDialog }` — encapsulates entire pre-check flow
+- Buildings/Projects: **REMOVED** entire cascade preview flow (states, useEffect, useMemo cascadeDescription) — replaced with single hook call
+- Units/Parking/Storage/Floors: Pre-check added before delete confirmation dialog
+- Contacts (SmartDialog): Wrapper runs pre-check on dialog open; if blocked → closes SmartDialog, shows BlockedDialog
+- Server-side 409 guard remains as fallback for any bypass
+- i18n: `common.deletionGuard.*` namespace (el + en)
 
 ### Phase 4: Cleanup (Priority: MEDIUM)
 
@@ -511,6 +528,7 @@ await db.collection('buildings').doc(buildingId).delete();
 | 2026-03-13 | Κάθε επιτυχής διαγραφή → **audit trail** (`entity_audit_trail`): ποιος, πότε, τι σβήστηκε + **full JSON snapshot** των δεδομένων πριν τη διαγραφή | Γιώργος Παγώνης |
 | 2026-03-13 | **Phase 1 — ✅ IMPLEMENTED**: Deletion registry (8 entities, 35 deps), core engine (`checkDeletionDependencies` + `executeDeletion`), preview API (`GET /api/deletion-guard/{entityType}/{entityId}`). Parallel queries, tenant isolation, conditional blocks, safe defaults on failure. | Claude Code |
 | 2026-03-13 | **Phase 2 — ✅ IMPLEMENTED**: All 7 DELETE endpoints integrated with `executeDeletion()`. Projects/Buildings cascade **REMOVED** → bottom-up BLOCK. Units manual audit removed (executeDeletion handles it). Parking/Storage conditional BLOCK for sold items. Dual audit pattern (entity + auth). | Claude Code |
+| 2026-03-13 | **Phase 3 — ✅ IMPLEMENTED**: `DeletionBlockedDialog` (AlertDialog + ShieldAlert), `useDeletionGuard` hook (pre-check + state + BlockedDialog). Integrated in 7 components: Buildings, Projects (replaced cascade preview), Units, Parking, Storage, Contacts (SmartDialog wrapper), Floors. i18n keys in `common.deletionGuard.*`. | Claude Code |
 
 ---
 

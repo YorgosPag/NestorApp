@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useCallback, useTransition, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useTransition } from 'react';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -28,13 +28,14 @@ import { BuildingsGroupedView } from './BuildingsPage/BuildingsGroupedView';
 import { useBuildingsPageState } from '@/hooks/useBuildingsPageState';
 import { useBuildingStats } from '@/hooks/useBuildingStats';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
-import { createBuilding, deleteBuilding, getBuildingCascadePreview, type BuildingCascadePreviewData } from './building-services';
+import { createBuilding, deleteBuilding } from './building-services';
 import { AdvancedFiltersPanel, buildingFiltersConfig } from '@/components/core/AdvancedFilters';
 import { ListContainer, PageContainer } from '@/core/containers';
 // [ENTERPRISE] i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { Building as BuildingType } from '@/types/building/contracts';
+import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('BuildingsPageContent');
@@ -126,38 +127,18 @@ export function BuildingsPageContent() {
     }
   }, [isCreateMode, setSelectedBuilding]);
 
-  // 🏢 ENTERPRISE: Delete building — centralized DeleteConfirmDialog with cascade preview
+  // 🛡️ ADR-226 Phase 3: Deletion Guard — replaces cascade preview
+  const { checking: checkingDeletion, checkBeforeDelete, BlockedDialog } = useDeletionGuard('building');
   const [buildingToDelete, setBuildingToDelete] = useState<BuildingType | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [cascadePreview, setCascadePreview] = useState<BuildingCascadePreviewData | null>(null);
-  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
 
-  // Fetch cascade preview when user selects a building to delete
-  useEffect(() => {
-    if (!buildingToDelete) {
-      setCascadePreview(null);
-      return;
-    }
-
-    let cancelled = false;
-    setIsLoadingPreview(true);
-
-    getBuildingCascadePreview(buildingToDelete.id).then((result) => {
-      if (cancelled) return;
-      if (result.success && result.data) {
-        setCascadePreview(result.data);
-      }
-      setIsLoadingPreview(false);
-    });
-
-    return () => { cancelled = true; };
-  }, [buildingToDelete]);
-
-  const handleDeleteBuilding = useCallback(() => {
-    if (selectedBuilding) {
+  const handleDeleteBuilding = useCallback(async () => {
+    if (!selectedBuilding) return;
+    const allowed = await checkBeforeDelete(selectedBuilding.id);
+    if (allowed) {
       setBuildingToDelete(selectedBuilding as BuildingType);
     }
-  }, [selectedBuilding]);
+  }, [selectedBuilding, checkBeforeDelete]);
 
   const handleConfirmDelete = useCallback(async () => {
     if (!buildingToDelete) return;
@@ -172,71 +153,6 @@ export function BuildingsPageContent() {
     }
     setIsDeleting(false);
   }, [buildingToDelete, setSelectedBuilding]);
-
-  // Build cascade preview description for the dialog
-  const cascadeDescription = useMemo(() => {
-    const confirmText = t('details.confirmDelete', { name: buildingToDelete?.name ?? '' });
-
-    if (isLoadingPreview) {
-      return (
-        <section>
-          <p>{confirmText}</p>
-          <p className="mt-2 text-sm text-muted-foreground">{t('details.cascadeLoading')}</p>
-        </section>
-      );
-    }
-
-    if (!cascadePreview || cascadePreview.totals.total === 0) {
-      return (
-        <section>
-          <p>{confirmText}</p>
-          <p className="mt-2 text-sm text-muted-foreground">{t('details.cascadeNoChildren')}</p>
-          <p className="mt-2 text-sm font-medium text-destructive">{t('details.cascadeIrreversible')}</p>
-        </section>
-      );
-    }
-
-    const { totals, children } = cascadePreview;
-
-    return (
-      <section>
-        <p>{confirmText}</p>
-        <p className="mt-3 text-sm font-semibold text-destructive">
-          {t('details.cascadeWarning')}
-        </p>
-        <ul className="mt-2 space-y-1 text-sm">
-          {children.units.length > 0 && (
-            <li className="rounded-md border border-border bg-muted/50 p-2">
-              <span className="font-medium">{t('details.cascadeUnits')}: </span>
-              <span className="text-muted-foreground">{children.units.map(u => u.name).join(', ')}</span>
-            </li>
-          )}
-          {children.parking.length > 0 && (
-            <li className="rounded-md border border-border bg-muted/50 p-2">
-              <span className="font-medium">{t('details.cascadeParking')}: </span>
-              <span className="text-muted-foreground">{children.parking.map(p => p.name).join(', ')}</span>
-            </li>
-          )}
-          {children.storage.length > 0 && (
-            <li className="rounded-md border border-border bg-muted/50 p-2">
-              <span className="font-medium">{t('details.cascadeStorage')}: </span>
-              <span className="text-muted-foreground">{children.storage.map(s => s.name).join(', ')}</span>
-            </li>
-          )}
-          {children.floors.length > 0 && (
-            <li className="rounded-md border border-border bg-muted/50 p-2">
-              <span className="font-medium">{t('details.cascadeFloors')}: </span>
-              <span className="text-muted-foreground">{children.floors.map(f => f.name).join(', ')}</span>
-            </li>
-          )}
-        </ul>
-        <p className="mt-3 text-sm font-semibold text-destructive">
-          {t('details.cascadeTotal', { count: totals.total })}
-        </p>
-        <p className="mt-1 text-sm font-medium text-destructive">{t('details.cascadeIrreversible')}</p>
-      </section>
-    );
-  }, [cascadePreview, isLoadingPreview, buildingToDelete, t]);
 
   // [PERF] Stable callback refs to prevent child re-renders
   const handleCloseMobileDetails = useCallback(() => setSelectedBuilding(null), [setSelectedBuilding]);
@@ -503,15 +419,18 @@ export function BuildingsPageContent() {
           )}
         </ListContainer>
 
-        {/* 🏢 ENTERPRISE: Centralized delete confirmation with cascade preview (ADR-003) */}
+        {/* 🛡️ ADR-226 Phase 3: Deletion Guard — blocked dialog */}
+        {BlockedDialog}
+
+        {/* 🏢 ENTERPRISE: Delete confirmation (shown only when guard allows) */}
         <DeleteConfirmDialog
           open={!!buildingToDelete}
           onOpenChange={(open) => { if (!open) setBuildingToDelete(null); }}
           title={t('details.deleteBuilding')}
-          description={cascadeDescription}
+          description={t('details.confirmDelete', { name: buildingToDelete?.name ?? '' })}
           onConfirm={handleConfirmDelete}
           loading={isDeleting}
-          disabled={isLoadingPreview}
+          disabled={checkingDeletion}
         />
       </PageContainer>
   );

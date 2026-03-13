@@ -1878,5 +1878,13 @@
     "addFavorite": "Add to favorites",
     "removeFavorite": "Remove from favorites",
     "cardActions": "Card actions"
+  },
+  "deletionGuard": {
+    "blocked": "Deletion is not allowed",
+    "understood": "I understand",
+    "dependencies": "Dependent records",
+    "checking": "Checking dependencies...",
+    "count": "{{count}} records",
+    "deleteFirst": "Please delete the following dependencies first:"
   }
 }

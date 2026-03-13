@@ -44,6 +44,7 @@ import {
 import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog } from './shared';
 import type { SpaceColumn, SpaceCardField, LinkableItem } from './shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
+import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 
 const logger = createModuleLogger('StorageTab');
 
@@ -113,6 +114,9 @@ export function StorageTab({ building }: StorageTabProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<StorageUnit | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
+
+  // 🛡️ ADR-226 Phase 3: Deletion Guard
+  const { checkBeforeDelete, BlockedDialog } = useDeletionGuard('storage');
 
   // Link dialog state
   const [showLinkDialog, setShowLinkDialog] = useState(false);
@@ -277,8 +281,11 @@ export function StorageTab({ building }: StorageTabProps) {
   // DELETE
   // ============================================================================
 
-  const handleDeleteClick = (unit: StorageUnit) => {
-    setConfirmDelete(unit);
+  const handleDeleteClick = async (unit: StorageUnit) => {
+    const allowed = await checkBeforeDelete(unit.id);
+    if (allowed) {
+      setConfirmDelete(unit);
+    }
   };
 
   const handleDeleteConfirm = async () => {
@@ -656,6 +663,9 @@ export function StorageTab({ building }: StorageTabProps) {
         fetchUnlinked={fetchUnlinkedStorages}
         onLink={handleLinkStorage}
       />
+
+      {/* 🛡️ ADR-226: Deletion Guard blocked dialog */}
+      {BlockedDialog}
 
       {/* Centralized Confirm Dialog (delete) */}
       <BuildingSpaceConfirmDialog

@@ -37,6 +37,7 @@ import type { Unit, UnitType } from '@/types/unit';
 import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog } from '../shared';
 import type { SpaceColumn, SpaceCardField, LinkableItem } from '../shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
+import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 
 // ============================================================================
 // CONFIRM ACTION TYPE
@@ -144,6 +145,9 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<UnitConfirmAction | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
+
+  // 🛡️ ADR-226 Phase 3: Deletion Guard
+  const { checkBeforeDelete, BlockedDialog } = useDeletionGuard('unit');
 
   // Link dialog state
   const [showLinkDialog, setShowLinkDialog] = useState(false);
@@ -337,8 +341,11 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   // DELETE & UNLINK
   // ============================================================================
 
-  const handleDeleteClick = (unit: Unit) => {
-    setConfirmAction({ type: 'delete', item: unit });
+  const handleDeleteClick = async (unit: Unit) => {
+    const allowed = await checkBeforeDelete(unit.id);
+    if (allowed) {
+      setConfirmAction({ type: 'delete', item: unit });
+    }
   };
 
   const handleUnlinkClick = (unit: Unit) => {
@@ -822,6 +829,9 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
         fetchUnlinked={fetchUnlinkedUnits}
         onLink={handleLinkUnit}
       />
+
+      {/* 🛡️ ADR-226: Deletion Guard blocked dialog */}
+      {BlockedDialog}
 
       {/* Centralized Confirm Dialog (delete / unlink) */}
       <BuildingSpaceConfirmDialog
