@@ -17,6 +17,7 @@ import {
 } from '@/types/contacts/relationships';
 import { isValidEmail as isValidEmailFn } from '@/lib/validation/email-validation';
 import { isValidPhone as isValidPhoneFn } from '@/lib/validation/phone-validation';
+import { isNonEmptyTrimmedString } from '@/lib/type-guards';
 import { Contact } from '@/types/contacts';
 
 // ============================================================================
@@ -360,7 +361,7 @@ export class RelationshipValidationService {
    */
   static isValidContactId(contactId: string): boolean {
     if (contactId === 'new-contact') return false;
-    return typeof contactId === 'string' && contactId.trim().length > 0;
+    return isNonEmptyTrimmedString(contactId);
   }
 
   /**

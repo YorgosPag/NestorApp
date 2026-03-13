@@ -6,6 +6,7 @@
  */
 
 import type { UniversalPolygon } from '@geo-alert/core';
+import { isNonEmptyArray } from '@/lib/type-guards';
 import { GEO_COLORS } from '../../../config/color-config';
 
 // ============================================================================
@@ -108,7 +109,7 @@ export function extractLegacyData(source: LegacySourceData): LegacyPolygonData |
   }
 
   // Check for direct control points array
-  if (Array.isArray(source) && source.length > 0) {
+  if (isNonEmptyArray(source)) {
     const firstPoint = source[0] as Record<string, unknown>;
     if (firstPoint && typeof firstPoint === 'object' && 'geoPoint' in firstPoint) {
       return {
@@ -159,7 +160,7 @@ export function isLegacyFormat(data: LegacySourceData): boolean {
   }
 
   // Direct control points array
-  if (Array.isArray(data) && data.length > 0) {
+  if (isNonEmptyArray(data)) {
     const firstItem = data[0] as Record<string, unknown>;
     if (firstItem && typeof firstItem === 'object' && 'geoPoint' in firstItem) {
       return true;

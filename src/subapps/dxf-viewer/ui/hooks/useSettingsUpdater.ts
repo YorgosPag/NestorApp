@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { isNonEmptyTrimmedString } from '@/lib/type-guards';
 // 🏢 ADR: Centralized Clamp Function
 import { clamp } from '../../rendering/entities/shared/geometry-utils';
 
@@ -189,6 +190,6 @@ export const commonValidators = {
 
   // Non-empty string validation
   nonEmptyString: (value: SettingsValue) => {
-    return typeof value === 'string' && value.trim().length > 0;
+    return isNonEmptyTrimmedString(value);
   }
 };

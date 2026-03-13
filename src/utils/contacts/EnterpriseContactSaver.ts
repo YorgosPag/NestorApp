@@ -15,6 +15,7 @@ import type { ContactFormData, CompanyAddress, KadActivity } from '@/types/Conta
 import type { Contact, AddressInfo, WebsiteInfo, PhoneInfo, EmailInfo, SocialMediaInfo } from '@/types/contacts';
 
 import { createModuleLogger } from '@/lib/telemetry';
+import { isNonEmptyArray } from '@/lib/type-guards';
 const logger = createModuleLogger('EnterpriseContactSaver');
 
 // ============================================================================
@@ -151,7 +152,7 @@ export class EnterpriseContactSaver {
 
       // Multi-address: companyAddresses → customFields + top-level addresses[]
       const companyAddresses = formData.companyAddresses;
-      if (Array.isArray(companyAddresses) && companyAddresses.length > 0) {
+      if (isNonEmptyArray(companyAddresses)) {
         customFields.companyAddresses = companyAddresses;
 
         // Override top-level addresses[] with converted company addresses
@@ -211,7 +212,7 @@ export class EnterpriseContactSaver {
     // ΚΡΙΣΙΜΟ: Στο UPDATE path, αυτή είναι η ΜΟΝΑΔΙΚΗ ευκαιρία εξαγωγής URLs
     // (Στο CREATE path, οι mappers κάνουν αυτή τη δουλειά μέσω extractMultiplePhotoURLs)
     const rawPhotos = formData.multiplePhotos;
-    if (Array.isArray(rawPhotos) && rawPhotos.length > 0) {
+    if (isNonEmptyArray(rawPhotos)) {
       const extractedURLs = rawPhotos
         .map(slot => slot.uploadUrl)
         .filter((url): url is string =>

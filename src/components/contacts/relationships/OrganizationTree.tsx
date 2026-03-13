@@ -27,6 +27,7 @@ import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effect
 
 // 🪝 Import contact name hook
 import { useContactName } from './hooks/useContactName';
+import { isNonEmptyArray } from '@/lib/type-guards';
 
 const logger = createModuleLogger('OrganizationTree');
 
@@ -262,7 +263,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
                 </Badge>
               </div>
 
-              {Array.isArray(employees) && employees.length > 0 && (
+              {isNonEmptyArray(employees) && (
                 <div className="space-y-1">
                   {employees.slice(0, 3).map((employee, index) => (
                     <p key={index} className={`text-xs ${colors.text.muted}`}>

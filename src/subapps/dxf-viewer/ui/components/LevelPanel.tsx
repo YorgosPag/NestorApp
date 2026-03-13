@@ -28,6 +28,7 @@ import { useNotifications } from '../../../../providers/NotificationProvider';
 import { createOverlayHandlers } from '../../overlays/types';
 // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
 import { useUniversalSelection } from '../../systems/selection';
+import { isNonEmptyArray } from '@/lib/type-guards';
 
 interface LevelPanelProps {
   currentTool?: ToolType;
@@ -275,7 +276,7 @@ export function LevelPanel({
         {t('panels.levels.projectLevels')}
       </h3>
 
-      {Array.isArray(levels) && levels.length > 0 ? (
+      {isNonEmptyArray(levels) ? (
         <div className={PANEL_TOKENS.LEVEL_PANEL.CONTAINER.SECTION}>
           {levels.map((level) => {
             const scene = levelScenes[level.id];

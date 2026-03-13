@@ -20,7 +20,7 @@
 
 import 'server-only';
 
-import { isRecord } from '@/lib/type-guards';
+import { isRecord, isNonEmptyTrimmedString } from '@/lib/type-guards';
 import { AI_ANALYSIS_DEFAULTS } from '@/config/ai-analysis-config';
 import { PIPELINE_REPLY_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
@@ -226,7 +226,7 @@ function extractOutputText(payload: unknown): string | null {
 
   // Direct output_text field (shortcut in newer API versions)
   const outputText = payload.output_text;
-  if (typeof outputText === 'string' && outputText.trim().length > 0) {
+  if (isNonEmptyTrimmedString(outputText)) {
     return outputText.trim();
   }
 
@@ -244,7 +244,7 @@ function extractOutputText(payload: unknown): string | null {
       if (!isRecord(entry)) continue;
       if (entry.type !== 'output_text') continue;
       const text = entry.text;
-      if (typeof text === 'string' && text.trim().length > 0) {
+      if (isNonEmptyTrimmedString(text)) {
         return text.trim();
       }
     }

@@ -13,6 +13,7 @@
  */
 
 import { safeJsonParse } from '@/lib/json-utils';
+import { isNonEmptyString } from '@/lib/type-guards';
 import type { AIAnalysisResult } from '@/schemas/ai-analysis';
 
 // ============================================================================
@@ -355,7 +356,7 @@ function cleanTextReply(rawText: string): string {
     if (parsed !== null) {
       // Pattern: {"response": "text"} or {"message": "text"} or {"error": "text"}
       const textValue = parsed.response ?? parsed.message ?? parsed.error ?? parsed.text;
-      if (typeof textValue === 'string' && textValue.length > 0) {
+      if (isNonEmptyString(textValue)) {
         return textValue;
       }
     }

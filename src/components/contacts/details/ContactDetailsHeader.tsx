@@ -13,6 +13,7 @@ import type {
   ContactType
 } from '@/types/contacts';
 import type { ContactStatus } from '@/core/types/BadgeTypes';
+import { isNonEmptyString } from '@/lib/type-guards';
 import { getContactDisplayName, getContactInitials, isIndividualContact, isCompanyContact, isServiceContact } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
 import { CONTACT_TYPES, getContactIcon } from '@/constants/contacts';
@@ -117,7 +118,7 @@ export function ContactDetailsHeader({
 
     // 🎯 SMART LOGIC: Gallery navigation για Individual με multiplePhotoURLs
     if (type === 'individual' && multiplePhotoURLs && multiplePhotoURLs.length > 0) {
-      const validPhotos = multiplePhotoURLs.filter((url): url is string => typeof url === 'string' && url.length > 0);
+      const validPhotos = multiplePhotoURLs.filter(isNonEmptyString);
       const currentPhotoIndex = validPhotos.findIndex((url) => url === avatarImageUrl);
       const photoIndex = currentPhotoIndex >= 0 ? currentPhotoIndex : 0;
 
@@ -131,7 +132,7 @@ export function ContactDetailsHeader({
       const galleryPhotos = [logoURL, photoURL].filter(Boolean); // Remove null/undefined
 
       // 🏢 ENTERPRISE: Type-safe photo filtering
-      const validPhotos = galleryPhotos.filter((url): url is string => typeof url === 'string' && url.length > 0);
+      const validPhotos = galleryPhotos.filter(isNonEmptyString);
       if (validPhotos.length > 1) {
         // Multiple photos available - use gallery navigation
         const currentPhotoIndex = validPhotos.findIndex((url) => url === avatarImageUrl);
@@ -153,7 +154,7 @@ export function ContactDetailsHeader({
       const galleryPhotos = [logoURL, photoURL].filter(Boolean); // Remove null/undefined
 
       // 🏢 ENTERPRISE: Type-safe photo filtering
-      const validPhotos = galleryPhotos.filter((url): url is string => typeof url === 'string' && url.length > 0);
+      const validPhotos = galleryPhotos.filter(isNonEmptyString);
       if (validPhotos.length > 1) {
         // Multiple photos available - use gallery navigation
         const currentPhotoIndex = validPhotos.findIndex((url) => url === avatarImageUrl);

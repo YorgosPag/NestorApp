@@ -13,6 +13,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { isNonEmptyArray } from '@/lib/type-guards';
 
 /** Range value for filter fields */
 interface RangeValue {
@@ -342,7 +343,7 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
           >
             <SelectTrigger className="h-9 w-full" aria-label={config.ariaLabel}>
               <SelectValue placeholder={
-                Array.isArray(value) && value.length > 0
+                isNonEmptyArray(value)
                   ? t('filters.selectedCount', { count: value.length })
                   : translateLabel(typeof config.placeholder === 'string' ? config.placeholder : '')
               } />

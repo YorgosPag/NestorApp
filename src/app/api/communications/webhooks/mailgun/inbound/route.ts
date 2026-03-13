@@ -18,6 +18,7 @@
 import 'server-only';
 
 import { getErrorMessage } from '@/lib/error-utils';
+import { isNonEmptyTrimmedString } from '@/lib/type-guards';
 import { NextRequest, NextResponse } from 'next/server';
 import { after } from 'next/server';
 
@@ -51,7 +52,7 @@ const MAILGUN_WEBHOOK_SIGNING_KEY = process.env.MAILGUN_WEBHOOK_SIGNING_KEY;
 function getFormString(formData: FormData, keys: string[]): string | undefined {
   for (const key of keys) {
     const value = formData.get(key);
-    if (typeof value === 'string' && value.trim().length > 0) {
+    if (isNonEmptyTrimmedString(value)) {
       return value.trim();
     }
   }

@@ -8,6 +8,7 @@
  */
 
 import { safeJsonParse } from '@/lib/json-utils';
+import { isNonEmptyArray } from '@/lib/type-guards';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('OverpassApiService');
 
@@ -47,7 +48,7 @@ const getOverpassEndpoints = (): readonly string[] => {
   const envEndpoints = process.env.NEXT_PUBLIC_OVERPASS_ENDPOINTS_JSON;
   if (envEndpoints) {
     const parsed = safeJsonParse<string[]>(envEndpoints, null as unknown as string[]);
-    if (parsed !== null && Array.isArray(parsed) && parsed.length > 0) {
+    if (parsed !== null && isNonEmptyArray(parsed)) {
       return parsed as readonly string[];
     }
     if (parsed === null) {

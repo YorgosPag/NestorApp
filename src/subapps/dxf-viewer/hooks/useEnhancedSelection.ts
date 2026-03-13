@@ -41,6 +41,7 @@
  */
 
 import { useCallback, useMemo, useRef } from 'react';
+import { isNonEmptyString } from '@/lib/type-guards';
 import { useSelection } from '../systems/selection';
 import { useLevels } from '../systems/levels';
 
@@ -317,7 +318,7 @@ export function useEnhancedSelection(): UseEnhancedSelectionReturn {
     }
 
     // Filter valid IDs
-    const validIds = entityIds.filter(id => typeof id === 'string' && id.length > 0);
+    const validIds = entityIds.filter((id): id is string => isNonEmptyString(id));
 
     if (validIds.length === 0) {
       console.warn('[EnhancedSelection] No valid entity IDs to add');

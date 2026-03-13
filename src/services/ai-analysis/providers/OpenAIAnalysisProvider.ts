@@ -9,7 +9,7 @@
 import 'server-only';
 
 import { safeJsonParse } from '@/lib/json-utils';
-import { isRecord } from '@/lib/type-guards';
+import { isRecord, isNonEmptyTrimmedString } from '@/lib/type-guards';
 import { stripNullValues } from '@/utils/firestore-sanitize';
 import {
   AI_ANALYSIS_DEFAULTS,
@@ -88,7 +88,7 @@ function extractOutputText(payload: unknown): string | null {
   if (!isRecord(payload)) return null;
 
   const outputText = payload.output_text;
-  if (typeof outputText === 'string' && outputText.trim().length > 0) {
+  if (isNonEmptyTrimmedString(outputText)) {
     return outputText.trim();
   }
 
@@ -105,7 +105,7 @@ function extractOutputText(payload: unknown): string | null {
       if (!isRecord(entry)) continue;
       if (entry.type !== 'output_text') continue;
       const text = entry.text;
-      if (typeof text === 'string' && text.trim().length > 0) {
+      if (isNonEmptyTrimmedString(text)) {
         return text.trim();
       }
     }

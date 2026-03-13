@@ -244,6 +244,7 @@
 | **ADR-222** | console.error/warn → createModuleLogger Migration | ✅ Implemented (Phase 1) | 2026-03-13 | Centralization / Logging | [📄](./adrs/ADR-222-console-to-logger-migration.md) |
 | **ADR-223** | useAsyncData — Data Fetching Centralization (10 files, 15 hooks) | ✅ Implemented (Phase 1) | 2026-03-13 | Centralization / React Hooks | [📄](./adrs/ADR-223-use-async-data-centralization.md) |
 | **ADR-224** | safeJsonParse Centralization — `json-utils.ts` (~35 files, ~50 patterns) | ✅ Implemented (Phase 1) | 2026-03-13 | Centralization / Utilities | [📄](./adrs/ADR-224-safe-json-parse-centralization.md) |
+| **ADR-225** | Type Guards Centralization — `isNonEmptyString`, `isNonEmptyArray` (~17 files, ~30 patterns) | ✅ Implemented (Phase 1) | 2026-03-13 | Centralization / Type Safety | [📄](./adrs/ADR-225-type-guards-centralization.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

@@ -7,6 +7,7 @@ import type { Overlay, CreateOverlayData, UpdateOverlayData, Status, OverlayKind
 // 🏢 ENTERPRISE: Debug system for production-silent logging
 import { dlog, dwarn, derr } from '../debug';
 import { SYSTEM_IDENTITY } from '@/config/domain-constants';
+import { isNonEmptyArray } from '@/lib/type-guards';
 
 interface OverlayStoreState {
   overlays: Record<string, Overlay>;
@@ -74,7 +75,7 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
         let polygon = data.polygon;
 
         // 🔧 FIX (2026-01-24): Normalize polygon format from various storage formats
-        if (Array.isArray(polygon) && polygon.length > 0) {
+        if (isNonEmptyArray(polygon)) {
           const firstElement = (polygon as unknown[])[0];
 
           // Format 1: Array of {x, y} objects (new Firebase-compatible format)

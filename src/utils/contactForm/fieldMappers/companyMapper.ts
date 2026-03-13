@@ -1,6 +1,7 @@
 import type { Contact, CompanyContact, SocialMediaInfo } from '@/types/contacts';
 import type { ContactFormData, KadActivity, CompanyAddress } from '@/types/ContactFormTypes';
 import { initialFormData } from '@/types/ContactFormTypes';
+import { isNonEmptyArray } from '@/lib/type-guards';
 import { getSafeFieldValue } from '../contactMapper';
 
 /** Extended company contact with custom fields access */
@@ -33,13 +34,13 @@ function getContactValue(contact: ExtendedCompanyContact, fieldName: string): st
 function resolveActivities(contact: ExtendedCompanyContact): KadActivity[] {
   // Primary: customFields.activities
   const stored = contact.customFields?.activities;
-  if (Array.isArray(stored) && stored.length > 0) {
+  if (isNonEmptyArray(stored)) {
     return stored as KadActivity[];
   }
 
   // Secondary fallback: root-level activities (legacy data from EnterpriseContactSaver)
   const rootActivities = (contact as unknown as Record<string, unknown>).activities;
-  if (Array.isArray(rootActivities) && rootActivities.length > 0) {
+  if (isNonEmptyArray(rootActivities)) {
     return rootActivities as KadActivity[];
   }
 
@@ -64,19 +65,19 @@ function resolveActivities(contact: ExtendedCompanyContact): KadActivity[] {
 function resolveCompanyAddresses(contact: ExtendedCompanyContact): CompanyAddress[] {
   // Primary: customFields.companyAddresses
   const stored = contact.customFields?.companyAddresses;
-  if (Array.isArray(stored) && stored.length > 0) {
+  if (isNonEmptyArray(stored)) {
     return stored as CompanyAddress[];
   }
 
   // Secondary fallback: root-level companyAddresses (legacy data from EnterpriseContactSaver)
   const rootAddresses = (contact as unknown as Record<string, unknown>).companyAddresses;
-  if (Array.isArray(rootAddresses) && rootAddresses.length > 0) {
+  if (isNonEmptyArray(rootAddresses)) {
     return rootAddresses as CompanyAddress[];
   }
 
   // Tertiary fallback: build from Contact.addresses[]
   const contactAddresses = contact.addresses;
-  if (Array.isArray(contactAddresses) && contactAddresses.length > 0) {
+  if (isNonEmptyArray(contactAddresses)) {
     return contactAddresses.map((addr, i) => ({
       type: (i === 0 ? 'headquarters' : 'branch') as 'headquarters' | 'branch',
       street: addr.street || '',

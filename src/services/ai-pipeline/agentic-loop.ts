@@ -34,6 +34,7 @@ import type { AgenticToolDefinition } from './tools/agentic-tool-definitions';
 // ADR-173: Prompt enhancement with learned patterns
 import { enhanceSystemPrompt } from './prompt-enhancer';
 import { safeJsonParse } from '@/lib/json-utils';
+import { isNonEmptyString } from '@/lib/type-guards';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
 const logger = createModuleLogger('AGENTIC_LOOP');
@@ -542,7 +543,7 @@ function cleanAITextReply(rawText: string): string {
     const parsed = safeJsonParse<Record<string, unknown>>(candidate, null as unknown as Record<string, unknown>);
     if (parsed !== null) {
       const textValue = parsed.response ?? parsed.message ?? parsed.error ?? parsed.text;
-      if (typeof textValue === 'string' && textValue.length > 0) {
+      if (isNonEmptyString(textValue)) {
         return textValue;
       }
     }
