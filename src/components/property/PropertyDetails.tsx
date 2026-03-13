@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { toast } from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,7 @@ interface PropertyDetailsProps {
 
 export function PropertyDetails({ property }: PropertyDetailsProps) {
   const { t } = useTranslation('properties');
+  const { success, error } = useNotifications();
   const statusInfo = (PROPERTY_STATUS_CONFIG as Record<string, { label: string; color: string }>)[property.status] || PROPERTY_STATUS_CONFIG.default;
 
   // 🏢 ENTERPRISE: Centralized systems
@@ -59,16 +60,16 @@ export function PropertyDetails({ property }: PropertyDetailsProps) {
       const success = await shareProperty(propertyShareData, 'property_details');
 
       if (success) {
-        toast.success(`🎉 ${t('details.shareSuccess')}`);
+        success(`🎉 ${t('details.shareSuccess')}`);
 
         // Track the share event
         trackShareEvent('native_share', 'property', property.id);
       } else {
-        toast.error(`❌ ${t('details.shareError')}`);
+        error(`❌ ${t('details.shareError')}`);
       }
-    } catch (error) {
-      logger.error('Share error', { error });
-      toast.error(`❌ ${t('details.shareError')}`);
+    } catch (err) {
+      logger.error('Share error', { error: err });
+      error(`❌ ${t('details.shareError')}`);
     }
   };
 

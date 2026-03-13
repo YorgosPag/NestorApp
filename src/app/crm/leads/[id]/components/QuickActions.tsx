@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { toast } from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { Send, PhoneCall, Plus, Edit3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
@@ -22,6 +22,7 @@ interface QuickActionsProps {
 
 export function QuickActions({ lead, onEdit, onNewTask, onSendEmail }: QuickActionsProps) {
   const iconSizes = useIconSizes();
+  const { error: notifyError } = useNotifications();
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
   const { t } = useTranslation('crm');
@@ -29,7 +30,7 @@ export function QuickActions({ lead, onEdit, onNewTask, onSendEmail }: QuickActi
 
   const handleCall = () => {
     if (!lead.phone) {
-      toast.error(t('leadDetails.errors.noPhone'));
+      notifyError(t('leadDetails.errors.noPhone'));
       return;
     }
     window.location.href = `tel:${lead.phone}`;
@@ -37,7 +38,7 @@ export function QuickActions({ lead, onEdit, onNewTask, onSendEmail }: QuickActi
 
   const handleSendEmail = () => {
     if (!lead.email) {
-      toast.error(t('leadDetails.errors.noEmail'));
+      notifyError(t('leadDetails.errors.noEmail'));
       return;
     }
 

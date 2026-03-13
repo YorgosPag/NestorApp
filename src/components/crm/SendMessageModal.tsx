@@ -28,7 +28,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('SendMessageModal');
 import communicationsService from '../../lib/communications';
 import { MESSAGE_TYPES, MESSAGE_TEMPLATES } from '../../lib/config/communications.config';
-import { toast } from 'sonner';
+import { useNotifications } from '@/providers/NotificationProvider';
 // 🏢 ENTERPRISE: Type imports
 import type { CommunicationChannel } from '@/types/communications';
 // 🏢 ENTERPRISE: Centralized Select clear value (Radix forbids empty string in SelectItem)
@@ -94,6 +94,7 @@ const SendMessageModal: React.FC<SendMessageModalProps> = ({
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('crm');
+  const { success, error: notifyError } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<CommunicationChannel>(defaultChannel);
@@ -248,12 +249,12 @@ const SendMessageModal: React.FC<SendMessageModalProps> = ({
 
       // Validation
       if (!formData.to.trim()) {
-        toast.error(t('sendMessage.validation.recipientRequired'));
+        notifyError(t('sendMessage.validation.recipientRequired'));
         return;
       }
 
       if (!formData.content.trim()) {
-        toast.error(t('sendMessage.validation.contentRequired'));
+        notifyError(t('sendMessage.validation.contentRequired'));
         return;
       }
 
@@ -326,7 +327,7 @@ const SendMessageModal: React.FC<SendMessageModalProps> = ({
       }
 
       if (result.success) {
-        toast.success(t('sendMessage.toasts.success', { channel: selectedChannel.toUpperCase() }));
+        success(t('sendMessage.toasts.success', { channel: selectedChannel.toUpperCase() }));
         
         // Reset form
         setFormData({
@@ -347,12 +348,12 @@ const SendMessageModal: React.FC<SendMessageModalProps> = ({
           onMessageSent(result);
         }
       } else {
-        toast.error(t('sendMessage.toasts.error', { error: result.error }));
+        notifyError(t('sendMessage.toasts.error', { error: result.error }));
       }
 
     } catch (error) {
       logger.error('Error sending message', { error });
-      toast.error(t('sendMessage.toasts.genericError'));
+      notifyError(t('sendMessage.toasts.genericError'));
     } finally {
       setSending(false);
     }

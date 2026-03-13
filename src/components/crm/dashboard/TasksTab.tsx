@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { format, isToday, isPast, isTomorrow } from 'date-fns';
 import { el } from 'date-fns/locale';
-import toast from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { Button } from '@/components/ui/button';
 import CreateTaskModal from './dialogs/CreateTaskModal';
 import type { CrmTask, Opportunity, FirestoreishTimestamp } from '@/types/crm';
@@ -109,6 +109,7 @@ interface TasksTabProps {
 export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabProps) {
   // 🏢 ENTERPRISE: Use externally provided filters or defaults
   const filters = externalFilters ?? defaultTaskFilters;
+  const { success, error: notifyError } = useNotifications();
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { t } = useTranslation('crm');
@@ -209,10 +210,10 @@ export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabPr
     if (!taskId || !taskTitle) return;
     try {
       await completeTask(taskId);
-      toast.success(t('tasks.messages.completed', { title: taskTitle }));
+      success(t('tasks.messages.completed', { title: taskTitle }));
       fetchData();
     } catch (error) {
-      toast.error(t('tasks.messages.completeError'));
+      notifyError(t('tasks.messages.completeError'));
     }
   }, [t]); // 🔧 FIX: Removed fetchData to prevent infinite loop
 
@@ -226,10 +227,10 @@ export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabPr
     if (confirmed) {
       try {
         await deleteTask(taskId);
-        toast.success(t('tasks.messages.deleted', { title: taskTitle }));
+        success(t('tasks.messages.deleted', { title: taskTitle }));
         fetchData();
       } catch (error) {
-        toast.error(t('tasks.messages.deleteError'));
+        notifyError(t('tasks.messages.deleteError'));
       }
     }
   }, [t, confirm]); // 🔧 FIX: Removed fetchData to prevent infinite loop

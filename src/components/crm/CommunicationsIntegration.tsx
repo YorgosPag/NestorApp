@@ -32,7 +32,7 @@ import {
   getCommunicationsStats 
 } from '../../lib/communications';
 import { MESSAGE_TYPES } from '../../lib/config/communications.config';
-import { toast } from 'sonner';
+import { useNotifications } from '@/providers/NotificationProvider';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -64,6 +64,7 @@ const CommunicationsIntegration: React.FC<CommunicationsIntegrationProps> = ({ l
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('communications');
+  const { success, error: notifyError } = useNotifications();
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [channelsStatus, setChannelsStatus] = useState<Record<string, unknown>>({});
   const [stats, setStats] = useState<CommunicationsStats | null>(null);
@@ -94,14 +95,14 @@ const CommunicationsIntegration: React.FC<CommunicationsIntegrationProps> = ({ l
 
       if (initResult.success) {
         setInitialized(true);
-        toast.success(t('center.initSuccess'));
+        success(t('center.initSuccess'));
       } else {
-        toast.error(t('center.initError'));
+        notifyError(t('center.initError'));
       }
 
     } catch (error) {
       logger.error('Error initializing communications', { error });
-      toast.error(t('center.initErrorGeneric'));
+      notifyError(t('center.initErrorGeneric'));
     } finally {
       setLoading(false);
     }
@@ -143,11 +144,11 @@ const CommunicationsIntegration: React.FC<CommunicationsIntegrationProps> = ({ l
         .map(([channel]) => channel);
 
       if (successfulChannels.length > 0) {
-        toast.success(t('center.channelsSuccess', { channels: successfulChannels.join(', ') }));
+        success(t('center.channelsSuccess', { channels: successfulChannels.join(', ') }));
       }
 
       if (failedChannels.length > 0) {
-        toast.error(t('center.channelsFailed', { channels: failedChannels.join(', ') }));
+        notifyError(t('center.channelsFailed', { channels: failedChannels.join(', ') }));
       }
 
       // Refresh channels status
@@ -155,7 +156,7 @@ const CommunicationsIntegration: React.FC<CommunicationsIntegrationProps> = ({ l
 
     } catch (error) {
       logger.error('Error testing channels', { error });
-      toast.error(t('center.channelsTestError'));
+      notifyError(t('center.channelsTestError'));
     } finally {
       setTesting(false);
     }
@@ -166,7 +167,7 @@ const CommunicationsIntegration: React.FC<CommunicationsIntegrationProps> = ({ l
    */
   const handleRefresh = async () => {
     await loadData();
-    toast.success(t('center.dataRefreshed'));
+    success(t('center.dataRefreshed'));
   };
 
   /**

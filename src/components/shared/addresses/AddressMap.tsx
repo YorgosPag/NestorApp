@@ -28,7 +28,7 @@
 import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { Marker } from 'react-map-gl/maplibre';
 import { Loader2, AlertTriangle, MapPin, Locate } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { LngLatBounds, Marker as MapLibreMarker } from 'maplibre-gl';
 
 
@@ -210,6 +210,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   // ===========================================================================
 
   const { t } = useTranslation('addresses');
+  const { error: notifyError } = useNotifications();
 
   // User location (GPS) — "Βρες τη θέση μου"
   const {
@@ -238,9 +239,9 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
 
   useEffect(() => {
     if (geoStatus === 'denied') {
-      toast.error(t('map.locationDenied'));
+      notifyError(t('map.locationDenied'));
     } else if (geoStatus === 'error') {
-      toast.error(t('map.locationError'));
+      notifyError(t('map.locationError'));
     }
   }, [geoStatus, t]);
 

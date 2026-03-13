@@ -39,7 +39,7 @@ import {
   formatAddressLine,
 } from '@/types/project/address-helpers';
 import { updateBuilding, getProjectAddresses } from '../../building-services';
-import toast from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -74,6 +74,7 @@ export function BuildingAddressesCard({
   const iconSizes = useIconSizes();
   const typography = useTypography();
   const { t } = useTranslation('building');
+  const { success, error: notifyError } = useNotifications();
   const router = useRouter();
 
   // ============================================================
@@ -153,7 +154,7 @@ export function BuildingAddressesCard({
       return true;
     }
 
-    toast.error(result.error || t('address.labels.saveError'));
+    notifyError(result.error || t('address.labels.saveError'));
     return false;
   }, [buildingId, t]);
 
@@ -195,7 +196,7 @@ export function BuildingAddressesCard({
 
       const saved = await persistAddresses(newAddresses);
       if (saved) {
-        toast.success(
+        success(
           isCurrentlySelected
             ? t('address.labels.addressRemoved')
             : t('address.labels.addressLinked')
@@ -215,7 +216,7 @@ export function BuildingAddressesCard({
 
     const saved = await persistAddresses(newAddresses);
     if (saved) {
-      toast.success(t('address.labels.primaryUpdated'));
+      success(t('address.labels.primaryUpdated'));
     }
   };
 
@@ -229,12 +230,12 @@ export function BuildingAddressesCard({
       isPrimary: i === index,
     }));
     const saved = await persistAddresses(newAddresses);
-    if (saved) toast.success(t('address.labels.primaryUpdated'));
+    if (saved) success(t('address.labels.primaryUpdated'));
   };
 
   const handleDeleteAddress = async (index: number) => {
     if (localAddresses.length === 1) {
-      toast.error(t('address.labels.cannotDeleteLast'));
+      notifyError(t('address.labels.cannotDeleteLast'));
       return;
     }
     if (!confirm(t('address.labels.confirmDelete'))) return;
@@ -245,12 +246,12 @@ export function BuildingAddressesCard({
     }
 
     const saved = await persistAddresses(newAddresses);
-    if (saved) toast.success(t('address.labels.addressDeleted'));
+    if (saved) success(t('address.labels.addressDeleted'));
   };
 
   const handleSaveNewAddress = async () => {
     if (!tempAddress || !tempAddress.street || !tempAddress.city) {
-      toast.error(t('address.validation.streetRequired'));
+      notifyError(t('address.validation.streetRequired'));
       return;
     }
     setIsSaving(true);
@@ -265,7 +266,7 @@ export function BuildingAddressesCard({
       if (saved) {
         setTempAddress(null);
         setIsAddFormOpen(false);
-        toast.success(t('address.labels.addressAdded'));
+        success(t('address.labels.addressAdded'));
       }
     } finally {
       setIsSaving(false);
@@ -279,7 +280,7 @@ export function BuildingAddressesCard({
 
   const handleSaveEdit = async () => {
     if (editingIndex === null || !editedAddress?.street || !editedAddress?.city) {
-      toast.error(t('address.validation.streetRequired'));
+      notifyError(t('address.validation.streetRequired'));
       return;
     }
     setIsSaving(true);
@@ -293,7 +294,7 @@ export function BuildingAddressesCard({
       if (saved) {
         setEditingIndex(null);
         setEditedAddress(null);
-        toast.success(t('address.labels.addressUpdated'));
+        success(t('address.labels.addressUpdated'));
       }
     } finally {
       setIsSaving(false);

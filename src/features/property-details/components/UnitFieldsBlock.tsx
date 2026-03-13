@@ -16,7 +16,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { toast } from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -146,6 +146,7 @@ export function UnitFieldsBlock({
   const { quick } = useBorderTokens();
   const typography = useTypography();
 
+  const { success, error: notifyError } = useNotifications();
   const [localEditing, setLocalEditing] = useState(false);
   const isEditing = isEditMode || localEditing;
   const [isSaving, setIsSaving] = useState(false);
@@ -251,19 +252,19 @@ export function UnitFieldsBlock({
         if (result.success && onUnitCreated) {
           onUnitCreated(result.id);
         }
-        toast.success(t('save.createSuccess', { defaultValue: 'Η μονάδα δημιουργήθηκε επιτυχώς' }));
+        success(t('save.createSuccess', { defaultValue: 'Η μονάδα δημιουργήθηκε επιτυχώς' }));
       } else {
         // Normal update
         await onUpdateProperty(property.id, updates);
         if (onExitEditMode) { onExitEditMode(); } else { setLocalEditing(false); }
-        toast.success(t('save.success', 'Οι αλλαγές αποθηκεύτηκαν'));
+        success(t('save.success', 'Οι αλλαγές αποθηκεύτηκαν'));
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (errorMessage.includes('permission') || errorMessage.includes('PERMISSION_DENIED')) {
-        toast.error(t('save.permissionDenied', 'Δεν έχετε δικαίωμα επεξεργασίας αυτής της μονάδας'));
+        notifyError(t('save.permissionDenied', 'Δεν έχετε δικαίωμα επεξεργασίας αυτής της μονάδας'));
       } else {
-        toast.error(t('save.error', 'Σφάλμα κατά την αποθήκευση'));
+        notifyError(t('save.error', 'Σφάλμα κατά την αποθήκευση'));
       }
       logger.error('UnitFieldsBlock save error:', { error });
     } finally {

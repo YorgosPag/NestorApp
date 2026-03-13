@@ -8,7 +8,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
-import { Toaster } from 'react-hot-toast';
+
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn, getResponsiveClass } from '@/lib/design-system';
@@ -103,7 +103,6 @@ export default function LeadProfilePage() {
 
   return (
     <>
-      <Toaster position="top-right" />
       <main className={cn('min-h-screen', colors.bg.secondary)}>
         <header className={cn(colors.bg.primary, 'shadow-sm border-b')}>
           <div className={cn(spacing.padding.x.lg, spacing.padding.y.md)}>

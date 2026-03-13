@@ -55,7 +55,7 @@ import {
 } from '@/types/project/address-helpers';
 import { updateProjectClient } from '@/services/projects-client.service';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import toast from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
@@ -211,6 +211,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
   const typography = useTypography();
   const spacing = useSpacingTokens();
   const colors = useSemanticColors();
+  const { success, error } = useNotifications();
 
   // State management — derive addresses from project prop
   const [localAddresses, setLocalAddresses] = useState<ProjectAddress[]>(() =>
@@ -277,14 +278,14 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
 
       if (result.success) {
         setLocalAddresses(newAddresses);
-        toast.success('Η κύρια διεύθυνση ενημερώθηκε επιτυχώς!');
+        success('Η κύρια διεύθυνση ενημερώθηκε επιτυχώς!');
         // Reload to refresh UI
         // Local state is already updated — no need to reload
       } else {
-        toast.error(result.error || 'Σφάλμα ενημέρωσης διεύθυνσης');
+        error(result.error || 'Σφάλμα ενημέρωσης διεύθυνσης');
       }
     } catch (error) {
-      toast.error('Σφάλμα ενημέρωσης διεύθυνσης');
+      error('Σφάλμα ενημέρωσης διεύθυνσης');
     }
   };
 
@@ -338,12 +339,12 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
 
       if (result.success) {
         setLocalAddresses(newAddresses);
-        toast.success('Η διεύθυνση διαγράφηκε επιτυχώς!');
+        success('Η διεύθυνση διαγράφηκε επιτυχώς!');
       } else {
-        toast.error(result.error || 'Σφάλμα διαγραφής διεύθυνσης');
+        error(result.error || 'Σφάλμα διαγραφής διεύθυνσης');
       }
     } catch {
-      toast.error('Σφάλμα διαγραφής διεύθυνσης');
+      error('Σφάλμα διαγραφής διεύθυνσης');
     } finally {
       setDeleteDialogOpen(false);
       setDeleteTargetIndex(null);
@@ -375,12 +376,12 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
 
       if (result.success) {
         setLocalAddresses(newAddresses);
-        toast.success('Η διεύθυνση καθαρίστηκε επιτυχώς!');
+        success('Η διεύθυνση καθαρίστηκε επιτυχώς!');
       } else {
-        toast.error(result.error || 'Σφάλμα καθαρισμού διεύθυνσης');
+        error(result.error || 'Σφάλμα καθαρισμού διεύθυνσης');
       }
     } catch {
-      toast.error('Σφάλμα καθαρισμού διεύθυνσης');
+      error('Σφάλμα καθαρισμού διεύθυνσης');
     }
   };
 
@@ -390,7 +391,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
   const handleSaveNewAddress = async () => {
     const addressFields = fromHierarchyValue({ ...({ street: '', number: '', postalCode: '', settlementName: '', settlementId: null, communityName: '', communityId: null, municipalUnitName: '', municipalUnitId: null, municipalityName: '', municipalityId: null, regionalUnitName: '', regionalUnitId: null, regionName: '', regionId: null, decentAdminName: '', decentAdminId: null, majorGeoName: '', majorGeoId: null }), ...addHierarchy } as AddressWithHierarchyValue);
     if (!addressFields.city) {
-      toast.error('Παρακαλώ συμπληρώστε τουλάχιστον τον Οικισμό/Πόλη');
+      error('Παρακαλώ συμπληρώστε τουλάχιστον τον Οικισμό/Πόλη');
       return;
     }
 
@@ -418,13 +419,13 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
       if (result.success) {
         setLocalAddresses(newAddresses);
         handleCancelAdd();
-        toast.success('Η διεύθυνση προστέθηκε επιτυχώς!');
+        success('Η διεύθυνση προστέθηκε επιτυχώς!');
         // Local state is already updated — no need to reload
       } else {
-        toast.error(result.error || 'Σφάλμα αποθήκευσης διεύθυνσης');
+        error(result.error || 'Σφάλμα αποθήκευσης διεύθυνσης');
       }
     } catch {
-      toast.error('Σφάλμα αποθήκευσης διεύθυνσης');
+      error('Σφάλμα αποθήκευσης διεύθυνσης');
     } finally {
       setIsSaving(false);
     }
@@ -453,7 +454,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
     if (editingIndex === null) return;
     const addressFields = fromHierarchyValue({ ...({ street: '', number: '', postalCode: '', settlementName: '', settlementId: null, communityName: '', communityId: null, municipalUnitName: '', municipalUnitId: null, municipalityName: '', municipalityId: null, regionalUnitName: '', regionalUnitId: null, regionName: '', regionId: null, decentAdminName: '', decentAdminId: null, majorGeoName: '', majorGeoId: null }), ...editHierarchy } as AddressWithHierarchyValue);
     if (!addressFields.city) {
-      toast.error('Παρακαλώ συμπληρώστε τουλάχιστον τον Οικισμό/Πόλη');
+      error('Παρακαλώ συμπληρώστε τουλάχιστον τον Οικισμό/Πόλη');
       return;
     }
 
@@ -485,13 +486,13 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
       if (result.success) {
         setLocalAddresses(newAddresses);
         handleCancelEdit();
-        toast.success('Η διεύθυνση ενημερώθηκε επιτυχώς!');
+        success('Η διεύθυνση ενημερώθηκε επιτυχώς!');
         // Local state is already updated — no need to reload
       } else {
-        toast.error(result.error || 'Σφάλμα ενημέρωσης διεύθυνσης');
+        error(result.error || 'Σφάλμα ενημέρωσης διεύθυνσης');
       }
     } catch {
-      toast.error('Σφάλμα ενημέρωσης διεύθυνσης');
+      error('Σφάλμα ενημέρωσης διεύθυνσης');
     } finally {
       setIsSaving(false);
     }

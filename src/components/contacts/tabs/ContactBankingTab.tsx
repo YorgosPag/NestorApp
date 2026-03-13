@@ -39,7 +39,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Plus, Building2, CreditCard, Loader2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import toast from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { createModuleLogger } from '@/lib/telemetry';
 import { groupByKey } from '@/utils/collection-utils';
 const logger = createModuleLogger('ContactBankingTab');
@@ -85,6 +85,7 @@ export function ContactBankingTab({
   additionalData
 }: ContactBankingTabProps) {
   const iconSizes = useIconSizes();
+  const { success, error: notifyError } = useNotifications();
   const disabled = additionalData?.disabled ?? false;
 
   // State
@@ -165,10 +166,10 @@ export function ContactBankingTab({
     try {
       setActionLoading(true);
       await BankAccountsService.deleteAccount(contactId, deletingAccount.id);
-      toast.success(`Ο λογαριασμός ${deletingAccount.bankName} διαγράφηκε επιτυχώς.`);
+      success(`Ο λογαριασμός ${deletingAccount.bankName} διαγράφηκε επιτυχώς.`);
     } catch (err) {
       logger.error('[ContactBankingTab] Error deleting account:', { error: err });
-      toast.error('Δεν ήταν δυνατή η διαγραφή του λογαριασμού.');
+      notifyError('Δεν ήταν δυνατή η διαγραφή του λογαριασμού.');
     } finally {
       setActionLoading(false);
       setDeletingAccount(null);
@@ -182,10 +183,10 @@ export function ContactBankingTab({
     try {
       setActionLoading(true);
       await BankAccountsService.setPrimaryAccount(contactId, account.id);
-      toast.success(`Ο λογαριασμός ${account.bankName} ορίστηκε ως κύριος.`);
+      success(`Ο λογαριασμός ${account.bankName} ορίστηκε ως κύριος.`);
     } catch (err) {
       logger.error('[ContactBankingTab] Error setting primary:', { error: err });
-      toast.error('Δεν ήταν δυνατός ο ορισμός κύριου λογαριασμού.');
+      notifyError('Δεν ήταν δυνατός ο ορισμός κύριου λογαριασμού.');
     } finally {
       setActionLoading(false);
     }
@@ -201,11 +202,11 @@ export function ContactBankingTab({
       if (editingAccount) {
         // Update existing
         await BankAccountsService.updateAccount(contactId, editingAccount.id, formData);
-        toast.success(`Ο λογαριασμός ${formData.bankName} ενημερώθηκε επιτυχώς.`);
+        success(`Ο λογαριασμός ${formData.bankName} ενημερώθηκε επιτυχώς.`);
       } else {
         // Create new
         await BankAccountsService.addAccount(contactId, formData);
-        toast.success(`Ο λογαριασμός ${formData.bankName} προστέθηκε επιτυχώς.`);
+        success(`Ο λογαριασμός ${formData.bankName} προστέθηκε επιτυχώς.`);
       }
 
       setIsFormOpen(false);

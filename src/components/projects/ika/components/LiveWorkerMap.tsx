@@ -40,7 +40,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
-import toast from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import type {
   AttendanceEvent,
   GeofenceConfig,
@@ -259,6 +259,7 @@ export function LiveWorkerMap({
 }: LiveWorkerMapProps) {
   const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
+  const { error } = useNotifications();
 
   // Geofence config (loaded from server)
   const [geofence, setGeofence] = useState<GeofenceConfig | null>(null);
@@ -403,9 +404,8 @@ export function LiveWorkerMap({
 
     if (distance > geofence.radiusMeters) {
       const name = workerNameMap.get(latestEvent.contactId) ?? latestEvent.contactId;
-      toast.error(
-        `${name}: ${eventTypeLabel(latestEvent.eventType)} ${t('ika.attendance.liveMap.outsideAlert')} (${Math.round(distance)}m)`,
-        { duration: 6000 }
+      error(
+        `${name}: ${eventTypeLabel(latestEvent.eventType)} ${t('ika.attendance.liveMap.outsideAlert')} (${Math.round(distance)}m)`
       );
     }
   }, [latestEvent, geofence, workerNameMap, t]);

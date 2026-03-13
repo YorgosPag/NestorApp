@@ -1,6 +1,6 @@
 "use client";
 import { useState, useCallback } from "react";
-import toast from "react-hot-toast";
+import { useNotifications } from '@/providers/NotificationProvider';
 import { emailTemplates, getTemplateContent } from "../utils/emailTemplates";
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
@@ -14,6 +14,7 @@ type Lead = { id?: string; fullName?: string; email?: string };
 
 export function useSendEmailModal(lead?: Lead | null, onClose?: () => void, onEmailSent?: () => void) {
   const { t } = useTranslation('crm');
+  const { success, error: notifyError } = useNotifications();
   const [formData, setFormData] = useState({
     templateType: "custom",
     subject: "",
@@ -77,15 +78,15 @@ export function useSendEmailModal(lead?: Lead | null, onClose?: () => void, onEm
     // 🌐 i18n: Validation messages converted to i18n keys - 2026-01-18
     // Note: Components using this hook should translate these keys with t()
     if (!formData.subject.trim()) {
-      toast.error(t("email.validation.subjectRequired"));
+      notifyError(t("email.validation.subjectRequired"));
       return;
     }
     if (!formData.message.trim()) {
-      toast.error(t("email.validation.messageRequired"));
+      notifyError(t("email.validation.messageRequired"));
       return;
     }
     if (!lead?.email) {
-      toast.error(t("email.validation.leadNoEmail"));
+      notifyError(t("email.validation.leadNoEmail"));
       return;
     }
 
@@ -107,7 +108,7 @@ export function useSendEmailModal(lead?: Lead | null, onClose?: () => void, onEm
       const result = await sendEmailViaAPI(emailPayload);
       
       if (result.success) {
-        toast.success(t("email.status.sentSuccess"));
+        success(t("email.status.sentSuccess"));
         
         // Reset form
         setFormData({
@@ -124,7 +125,7 @@ export function useSendEmailModal(lead?: Lead | null, onClose?: () => void, onEm
     } catch (error: unknown) {
       // 🌐 i18n: Error messages converted to i18n keys - 2026-01-18
       const errorMessage = error instanceof Error ? error.message : t("email.errors.unknown");
-      toast.error(t("email.errors.sendFailed", { error: errorMessage }));
+      notifyError(t("email.errors.sendFailed", { error: errorMessage }));
       logger.error('Email send error', { error });
     } finally {
       setLoading(false);

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useCallback } from 'react';
-import toast from 'react-hot-toast';
 import { z } from 'zod';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { FieldErrors, FieldValues } from 'react-hook-form';
 
 import { createModuleLogger } from '@/lib/telemetry';
@@ -30,11 +30,17 @@ export interface FormErrorContext {
 // Enhanced error handler hook
 export function useFormErrorHandler() {
   const { t } = useTranslation('forms');
-  const getToastSeverityClass = (severity: ErrorSeverity) => `toast-status toast-${severity}`;
-  const buildToastOptions = (severity: ErrorSeverity, duration: number) => ({
-    duration,
-    className: getToastSeverityClass(severity),
-  });
+  const notifications = useNotifications();
+
+  // 🏢 ENTERPRISE: Maps severity to centralized notification method
+  const showBySeverity = useCallback((message: string, severity: ErrorSeverity, duration?: number) => {
+    const opts = duration ? { duration } : undefined;
+    switch (severity) {
+      case 'error': notifications.error(message, opts); break;
+      case 'warning': notifications.warning(message, opts); break;
+      case 'info': notifications.info(message, opts); break;
+    }
+  }, [notifications]);
 
   // Handle single field error
   const handleFieldError = useCallback((
@@ -57,25 +63,7 @@ export function useFormErrorHandler() {
 
     if (showToast) {
       const displayMessage = title ? `${title}: ${errorMessage}` : errorMessage;
-      const toastOptions = buildToastOptions(severity, toastDuration);
-      
-      switch (severity) {
-        case 'error':
-          toast.error(displayMessage, toastOptions);
-          break;
-        case 'warning':
-          toast(displayMessage, { 
-            ...toastOptions,
-            icon: '⚠️',
-          });
-          break;
-        case 'info':
-          toast(displayMessage, { 
-            ...toastOptions,
-            icon: 'ℹ️',
-          });
-          break;
-      }
+      showBySeverity(displayMessage, severity, toastDuration);
     }
 
     // Log error for debugging
@@ -131,25 +119,7 @@ export function useFormErrorHandler() {
         toastMessage = t('validation.fillAllRequired', { count: errorCount });
       }
 
-      const groupedToastOptions = buildToastOptions(severity, toastDuration);
-
-      switch (severity) {
-        case 'error':
-          toast.error(toastMessage, groupedToastOptions);
-          break;
-        case 'warning':
-          toast(toastMessage, { 
-            ...groupedToastOptions,
-            icon: '⚠️',
-          });
-          break;
-        case 'info':
-          toast(toastMessage, { 
-            ...groupedToastOptions,
-            icon: 'ℹ️',
-          });
-          break;
-      }
+      showBySeverity(toastMessage, severity, toastDuration);
     } else if (showToast && !groupErrors) {
       // Show individual toasts for each error
       errorEntries.forEach(([field, error], index) => {
@@ -225,25 +195,7 @@ export function useFormErrorHandler() {
     }
 
     if (showToast) {
-      const serverToastOptions = buildToastOptions(severity, toastDuration);
-
-      switch (severity) {
-        case 'error':
-          toast.error(errorMessage, serverToastOptions);
-          break;
-        case 'warning':
-          toast(errorMessage, { 
-            ...serverToastOptions,
-            icon: '⚠️',
-          });
-          break;
-        case 'info':
-          toast(errorMessage, { 
-            ...serverToastOptions,
-            icon: 'ℹ️',
-          });
-          break;
-      }
+      showBySeverity(errorMessage, severity, toastDuration);
     }
 
     // Log server error for debugging
@@ -265,17 +217,13 @@ export function useFormErrorHandler() {
   ) => {
     const { duration = 4000, title } = options || {};
     const displayMessage = title ? `${title}: ${message}` : message;
-    
-    toast.success(displayMessage, { 
-      duration,
-      className: 'toast-status toast-success',
-    });
-  }, []);
+    notifications.success(displayMessage, { duration });
+  }, [notifications]);
 
   // Clear all toasts
   const clearAllToasts = useCallback(() => {
-    toast.dismiss();
-  }, []);
+    notifications.dismissAll();
+  }, [notifications]);
 
   return {
     handleFieldError,

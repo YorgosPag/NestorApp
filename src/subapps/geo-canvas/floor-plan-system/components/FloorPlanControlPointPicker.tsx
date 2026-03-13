@@ -27,7 +27,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useGeoTransformation } from '../hooks/useGeoTransformation';
 import type { FloorPlanControlPoint, FloorPlanCoordinate, GeoCoordinate } from '../types/control-points';
 import type { UseFloorPlanControlPointsReturn } from '../hooks/useFloorPlanControlPoints';
-import { toast } from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { layoutUtilities } from '@/styles/design-tokens';
@@ -73,6 +73,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
   const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();  // ENTERPRISE: Background centralization - ZERO DUPLICATES
   const iconSizes = useIconSizes();
+  const { success, error } = useNotifications();
 
   // ❗ CRITICAL: Use the passed instance, NOT a new hook call
   const {
@@ -241,7 +242,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
 
       // Validate inputs
       if (isNaN(dxfPoint.x) || isNaN(dxfPoint.y) || isNaN(geoPoint.lng) || isNaN(geoPoint.lat)) {
-        toast.error(t('toastMessages.invalidCoordinates'));
+        error(t('toastMessages.invalidCoordinates'));
         return;
       }
 
@@ -258,7 +259,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
       // Add to points via the hook's internal state
       // Note: We need to access the addPoint method from the hook
       console.debug('🔧 Manual point to add:', newPoint);
-      toast.success(t('toastMessages.pointAddedManually'));
+      success(t('toastMessages.pointAddedManually'));
 
       // Reset form
       setManualInput({
@@ -272,7 +273,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
 
     } catch (error) {
       console.error('Error adding manual point:', error);
-      toast.error(t('toastMessages.errorAddingPoint'));
+      error(t('toastMessages.errorAddingPoint'));
     }
   };
 
@@ -281,11 +282,11 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
    */
   const handleCalibrate = () => {
     if (!transformation.isValid) {
-      toast.error(t('toastMessages.needMinimumPoints'));
+      error(t('toastMessages.needMinimumPoints'));
       return;
     }
 
-    toast.success(t('toastMessages.calibrationComplete', { quality: transformation.quality?.toUpperCase() }));
+    success(t('toastMessages.calibrationComplete', { quality: transformation.quality?.toUpperCase() }));
     console.debug('🎯 Calibration completed:', transformation);
   };
 
@@ -294,7 +295,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
    */
   const handleSavePoints = () => {
     if (points.length === 0) {
-      toast.error(t('toastMessages.noPointsToSave'));
+      error(t('toastMessages.noPointsToSave'));
       return;
     }
 
@@ -313,7 +314,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
     link.click();
 
     URL.revokeObjectURL(url);
-    toast.success(t('toastMessages.pointsSaved'));
+    success(t('toastMessages.pointsSaved'));
   };
 
   /**
@@ -327,12 +328,12 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
         if (data.points && Array.isArray(data.points)) {
           // This would need to be implemented in the hook
           console.debug('📁 Loading points:', data.points);
-          toast.success(t('toastMessages.pointsLoaded', { count: data.points.length }));
+          success(t('toastMessages.pointsLoaded', { count: data.points.length }));
         } else {
-          toast.error(t('toastMessages.invalidPointsFile'));
+          error(t('toastMessages.invalidPointsFile'));
         }
       } catch (error) {
-        toast.error(t('toastMessages.errorLoadingFile'));
+        error(t('toastMessages.errorLoadingFile'));
       }
     };
     reader.readAsText(file);

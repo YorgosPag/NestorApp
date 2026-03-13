@@ -17,7 +17,7 @@
 import { useState, useCallback } from 'react';
 import { startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { CalendarDays, Plus } from 'lucide-react';
-import { Toaster } from 'react-hot-toast';
+
 import { cn, getSpacingClass, getResponsiveClass } from '@/lib/design-system';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -87,8 +87,6 @@ export default function CrmCalendarPage() {
 
   return (
     <>
-      <Toaster position="top-right" />
-
       <main className={cn('min-h-screen', colors.bg.secondary)}>
         {/* Header */}
         <header className={cn(colors.bg.primary, 'shadow-sm border-b')}>

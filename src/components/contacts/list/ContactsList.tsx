@@ -15,7 +15,7 @@ import type { Contact } from '@/types/contacts';
 import { Users } from 'lucide-react';
 import { getContactDisplayName } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
-import toast from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { EntityListColumn } from '@/core/containers';
 import { matchesSearchTerm } from '@/lib/search/search';
 // 🏢 ENTERPRISE: Centralized sharing system (SSoT)
@@ -54,6 +54,7 @@ export function ContactsList({
 }: ContactsListProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('contacts');
+  const { success, error } = useNotifications();
   // 🏢 ENTERPRISE: Sort state via centralized hook (ADR-205 Phase 4)
   const { sortBy, sortOrder, onSortChange } = useSortState<'name' | 'date' | 'status' | 'type'>('name');
   const [togglingFavorites, setTogglingFavorites] = useState<Set<string>>(new Set());
@@ -88,14 +89,14 @@ export function ContactsList({
       const message = contact.isFavorite
         ? t('list.favorites.removed', { name: contactName })
         : t('list.favorites.added', { name: contactName });
-      toast.success(message);
+      success(message);
 
       // Refresh contacts list
       onContactUpdated?.();
 
     } catch (error) {
       // Error logging removed
-      toast.error(t('list.favorites.error'));
+      error(t('list.favorites.error'));
     } finally {
       // Remove from loading set
       setTogglingFavorites(prev => {
@@ -144,14 +145,14 @@ export function ContactsList({
   // 🏢 ENTERPRISE: Export handler using centralized DataExportService (SSoT)
   const handleExportContact = async () => {
     if (!selectedContact) {
-      toast.error(t('export.noContactSelected'));
+      error(t('export.noContactSelected'));
       return;
     }
     try {
       await exportContacts([selectedContact], 'csv');
-      toast.success(t('export.success'));
+      success(t('export.success'));
     } catch {
-      toast.error('Export failed');
+      error('Export failed');
     }
   };
 
@@ -215,7 +216,7 @@ export function ContactsList({
       }
     }
     if (saved > 0) {
-      toast.success(t('import.success', { count: saved }));
+      success(t('import.success', { count: saved }));
       onContactUpdated?.();
     }
   };
@@ -224,7 +225,7 @@ export function ContactsList({
   // Builds formatted TEXT content (name, profession, email, phone) instead of URL link
   const handleShareContact = () => {
     if (!selectedContact) {
-      toast.error(t('list.share.noContactSelected'));
+      error(t('list.share.noContactSelected'));
       return;
     }
     const contactName = getContactDisplayName(selectedContact);
@@ -390,8 +391,8 @@ export function ContactsList({
           onClose={() => setShareModalOpen(false)}
           shareData={shareData}
           modalTitle={t('list.share.modalTitle')}
-          onCopySuccess={() => toast.success(t('list.share.copied'))}
-          onShareSuccess={(platform) => toast.success(t('list.share.success', { platform }))}
+          onCopySuccess={() => success(t('list.share.copied'))}
+          onShareSuccess={(platform) => success(t('list.share.success', { platform }))}
         />
       )}
 

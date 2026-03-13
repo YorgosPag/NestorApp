@@ -21,7 +21,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import toast from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { createUnit } from '@/services/units.service';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { UnitType, OperationalStatus } from '@/types/unit';
@@ -76,6 +76,7 @@ export function useUnitForm({
   onOpenChange,
 }: UseUnitFormProps) {
   const { t } = useTranslation('units');
+  const { success, error } = useNotifications();
 
   const [formData, setFormData] = useState<UnitFormData>(INITIAL_FORM_DATA);
   const [loading, setLoading] = useState(false);
@@ -148,15 +149,15 @@ export function useUnitForm({
         const result = await createUnit(unitData);
 
         if (result.success) {
-          toast.success(t('dialog.addUnit.messages.success'));
+          success(t('dialog.addUnit.messages.success'));
           setFormData(INITIAL_FORM_DATA);
           onUnitAdded?.();
           onOpenChange(false);
         } else {
-          toast.error(result.error || t('dialog.addUnit.messages.error'));
+          error(result.error || t('dialog.addUnit.messages.error'));
         }
       } catch {
-        toast.error(t('dialog.addUnit.messages.error'));
+        error(t('dialog.addUnit.messages.error'));
       } finally {
         setLoading(false);
       }

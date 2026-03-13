@@ -2,7 +2,7 @@
  * Advanced Usage Example - TestsModal
  *
  * This example demonstrates advanced features:
- * - Custom notification system (toast library)
+ * - Custom notification system (useNotifications)
  * - Keyboard shortcuts (Ctrl+T to open)
  * - Auto-run tests on mount
  * - Test results history
@@ -20,9 +20,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens'; // Enterprise border 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'; // Enterprise semantic colors
 import { PANEL_LAYOUT } from '../../../../config/panel-tokens'; // 🏢 ENTERPRISE: Centralized typography tokens
 
-// Example: Using react-hot-toast for notifications
-// npm install react-hot-toast
-import toast, { Toaster } from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { INTERACTIVE_PATTERNS, GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 
 interface TestResult {
@@ -36,6 +34,7 @@ interface TestResult {
 export function AdvancedUsageExample() {
   const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  const { success, error: notifyError, info } = useNotifications();
 
   // 1. Modal state
   const [isTestsOpen, setIsTestsOpen] = useState(false);
@@ -45,24 +44,19 @@ export function AdvancedUsageExample() {
 
   // 3. Custom notification handler with toast library
   const showNotification = useCallback((message: string, type?: 'success' | 'info' | 'warning' | 'error') => {
-    const toastOptions = {
-      duration: 4000,
-      position: 'bottom-right' as const,
-    };
-
     switch (type) {
       case 'success':
-        toast.success(message, toastOptions);
+        success(message);
         break;
       case 'error':
-        toast.error(message, toastOptions);
+        notifyError(message);
         break;
       case 'warning':
-        toast(message, { icon: '⚠️', ...toastOptions });
+        info(message);
         break;
       case 'info':
       default:
-        toast(message, { icon: 'ℹ️', ...toastOptions });
+        info(message);
         break;
     }
 
@@ -86,7 +80,7 @@ export function AdvancedUsageExample() {
         }
       ]);
     }
-  }, []);
+  }, [success, notifyError, info]);
 
   // 4. Keyboard shortcut: Ctrl+T to open modal
   useEffect(() => {
@@ -117,8 +111,8 @@ export function AdvancedUsageExample() {
   // 6. Clear test history
   const clearHistory = useCallback(() => {
     setTestHistory([]);
-    toast.success('Test history cleared!');
-  }, []);
+    success('Test history cleared!');
+  }, [success]);
 
   // 7. Export test history as JSON
   const exportHistory = useCallback(() => {
@@ -129,14 +123,11 @@ export function AdvancedUsageExample() {
     a.href = url;
     a.download = `test-history-${Date.now()}.json`;
     a.click();
-    toast.success('Test history exported!');
-  }, [testHistory]);
+    success('Test history exported!');
+  }, [testHistory, success]);
 
   return (
     <div className={`min-h-screen ${colors.bg.primary} text-white p-4`}>
-      {/* Toast container */}
-      <Toaster />
-
       <div className="max-w-6xl mx-auto">
         <header className="mb-8">
           <h1 className={`${PANEL_LAYOUT.TYPOGRAPHY['3XL']} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>DXF Viewer - Advanced Testing</h1>
@@ -275,7 +266,7 @@ function extractTestName(message: string): string {
  * Advanced Features Explained:
  *
  * 1. **Custom Notification System**
- *    - Uses react-hot-toast for beautiful notifications
+ *    - Uses useNotifications() from NotificationProvider
  *    - Different icons for success/error/warning/info
  *    - Positioned at bottom-right
  *    - Auto-dismiss after 4 seconds

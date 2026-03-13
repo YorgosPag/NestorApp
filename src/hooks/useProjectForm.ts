@@ -20,7 +20,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import toast from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { createProject } from '@/services/projects-client.service';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type {
@@ -115,6 +115,7 @@ interface UseProjectFormProps {
 
 export function useProjectForm({ onProjectAdded, onOpenChange }: UseProjectFormProps) {
   const { t } = useTranslation('projects');
+  const { success, error } = useNotifications();
 
   const [formData, setFormData] = useState<ProjectFormData>(INITIAL_FORM_DATA);
   const [loading, setLoading] = useState(false);
@@ -164,15 +165,15 @@ export function useProjectForm({ onProjectAdded, onOpenChange }: UseProjectFormP
       });
 
       if (result.success) {
-        toast.success(t('dialog.messages.success'));
+        success(t('dialog.messages.success'));
         setFormData(INITIAL_FORM_DATA);
         onProjectAdded?.();
         onOpenChange(false);
       } else {
-        toast.error(result.error || t('dialog.messages.error'));
+        error(result.error || t('dialog.messages.error'));
       }
     } catch {
-      toast.error(t('dialog.messages.error'));
+      error(t('dialog.messages.error'));
     } finally {
       setLoading(false);
     }

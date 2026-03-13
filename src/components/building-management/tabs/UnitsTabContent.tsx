@@ -16,7 +16,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { createUnit } from '@/services/units.service';
-import toast from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -108,6 +108,7 @@ const UNIT_STATUSES_FOR_FILTER = ['for-sale', 'for-rent', 'sold', 'reserved', 'r
 
 export function UnitsTabContent({ building }: UnitsTabContentProps) {
   const { t } = useTranslation('building');
+  const { success, error: notifyError } = useNotifications();
   const router = useRouter();
 
   // Data state
@@ -244,7 +245,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
 
   const handleCreate = async () => {
     if (!createName.trim()) {
-      toast.error('Το όνομα είναι υποχρεωτικό');
+      notifyError('Το όνομα είναι υποχρεωτικό');
       return;
     }
 
@@ -279,15 +280,15 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
       const result = await createUnit(unitData);
 
       if (result.success) {
-        toast.success('Η μονάδα δημιουργήθηκε');
+        success('Η μονάδα δημιουργήθηκε');
         resetCreateForm();
         await fetchUnits();
       } else {
-        toast.error(result.error || 'Σφάλμα δημιουργίας');
+        notifyError(result.error || 'Σφάλμα δημιουργίας');
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Σφάλμα δημιουργίας';
-      toast.error(msg);
+      notifyError(msg);
     } finally {
       setCreating(false);
     }
@@ -321,12 +322,12 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
         area: editArea ? parseFloat(editArea) : undefined,
         status: editStatus || undefined,
       });
-      toast.success('Η μονάδα ενημερώθηκε');
+      success('Η μονάδα ενημερώθηκε');
       setEditingId(null);
       await fetchUnits();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Σφάλμα ενημέρωσης';
-      toast.error(msg);
+      notifyError(msg);
     } finally {
       setSaving(false);
     }
@@ -354,16 +355,16 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
       if (type === 'delete') {
         setDeletingId(item.id);
         await apiClient.delete(`/api/units/${item.id}`);
-        toast.success('Η μονάδα διαγράφηκε');
+        success('Η μονάδα διαγράφηκε');
       } else {
         setUnlinkingId(item.id);
         await apiClient.patch(`/api/units/${item.id}`, { buildingId: null });
-        toast.success('Η μονάδα αποσυνδέθηκε');
+        success('Η μονάδα αποσυνδέθηκε');
       }
       await fetchUnits();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Σφάλμα';
-      toast.error(msg);
+      notifyError(msg);
     } finally {
       setConfirmLoading(false);
       setConfirmAction(null);
@@ -390,7 +391,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
 
   const handleLinkUnit = useCallback(async (itemId: string) => {
     await apiClient.patch(`/api/units/${itemId}`, { buildingId: building.id });
-    toast.success('Η μονάδα συνδέθηκε');
+    success('Η μονάδα συνδέθηκε');
     await fetchUnits();
   }, [building.id, fetchUnits]);
 

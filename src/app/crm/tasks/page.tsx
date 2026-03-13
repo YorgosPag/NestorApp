@@ -11,7 +11,7 @@ import {
   TrendingUp,
   Calendar
 } from 'lucide-react';
-import { Toaster } from 'react-hot-toast';
+
 import { getTasksStats } from '@/services/tasks.service';
 import CreateTaskModal from '@/components/crm/dashboard/dialogs/CreateTaskModal';
 import { TasksTab } from '@/components/crm/dashboard/TasksTab';
@@ -128,8 +128,6 @@ export default function CrmTasksPage() {
 
   return (
     <PageContainer ariaLabel={t('tasks.title')}>
-      <Toaster position="top-right" />
-
       {/* 🏢 ENTERPRISE: Centralized PageHeader with dashboard toggle */}
       <PageHeader
         variant="sticky-rounded"

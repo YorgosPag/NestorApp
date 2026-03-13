@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getOpportunities, deleteOpportunity } from "@/services/opportunities.service";
-import toast from "react-hot-toast";
+import { useNotifications } from '@/providers/NotificationProvider';
 import type { Opportunity } from "@/types/crm";
 import { createModuleLogger } from '@/lib/telemetry';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -15,6 +15,7 @@ const logger = createModuleLogger('useLeadsList');
 export function useLeadsList(refreshTrigger?: number | string | boolean | null) {
   const router = useRouter();
   const { t } = useTranslation('crm');
+  const { success, error: notifyError } = useNotifications();
   const { confirm, dialogProps } = useConfirmDialog();
   const [leads, setLeads] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,7 +45,7 @@ export function useLeadsList(refreshTrigger?: number | string | boolean | null) 
   const handleEdit = (lead: Opportunity) => { setEditingLead(lead); setShowEditModal(true); };
 
   const handleEmail = (lead: Opportunity) => {
-    if (!lead?.email) { toast.error(t("leads.errors.noEmail")); return; }
+    if (!lead?.email) { notifyError(t("leads.errors.noEmail")); return; }
     setEmailingLead(lead); setShowEmailModal(true);
   };
 
@@ -61,10 +62,10 @@ export function useLeadsList(refreshTrigger?: number | string | boolean | null) 
     if (!confirmDelete) return;
     try {
       await deleteOpportunity(leadId);
-      toast.success(t("leads.status.deleteSuccess", { name: leadName }));
+      success(t("leads.status.deleteSuccess", { name: leadName }));
       setLeads(prev => prev.filter(l => l.id !== leadId));
     } catch (error) {
-      toast.error(t("leads.errors.deleteFailed"));
+      notifyError(t("leads.errors.deleteFailed"));
       logger.error('Error deleting lead', { error });
     }
   };

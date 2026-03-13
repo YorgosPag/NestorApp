@@ -24,7 +24,7 @@ import { Inbox, CheckCircle, XCircle, Eye, AlertTriangle, Paperclip, FileText, F
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { EmailContentWithSignature } from '@/components/shared/email/EmailContentRenderer';
-import toast from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { useRealtimeTriageCommunications } from '@/hooks/inbox/useRealtimeTriageCommunications';
 import type { Communication, FirestoreishTimestamp, TriageStatus } from '@/types/crm';
 import { TRIAGE_STATUSES } from '@/types/crm';
@@ -291,6 +291,7 @@ const AttachmentDisplay = ({ attachments }: { attachments: string[] }) => {
 export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
   const router = useRouter();
   const { t } = useTranslation('admin');
+  const { success, error: notifyError } = useNotifications();
   const layout = useLayoutClasses();
   const spacing = useSpacingTokens();
   const typography = useTypography();
@@ -434,7 +435,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
   const handleRefresh = useCallback(async () => {
     if (isRealtimeEnabled) {
       // Real-time: no manual refresh needed, but toast to confirm
-      toast.success('Live data is already up-to-date!', { duration: 2000 });
+      success('Live data is already up-to-date!');
       return;
     }
     await Promise.all([loadTriageCommunications(), loadTriageStats()]);
@@ -452,7 +453,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
       const commCompanyId = comm?.companyId || adminContext.companyId;
 
       if (!commCompanyId) {
-        toast.error('Cannot approve: missing company context');
+        notifyError('Cannot approve: missing company context');
         return;
       }
 
@@ -465,7 +466,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
       );
 
       if (!result.ok) {
-        toast.error(t('aiInbox.approveFailedWithErrorId', { errorId: result.errorId }));
+        notifyError(t('aiInbox.approveFailedWithErrorId', { errorId: result.errorId }));
         return;
       }
 
@@ -495,7 +496,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
         });
       }
 
-      toast.success(t('aiInbox.approveSuccess'));
+      success(t('aiInbox.approveSuccess'));
       logger.info('Communication approved', {
         communicationId: commId,
         taskId: result.taskId,
@@ -503,7 +504,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
       });
     } catch (err) {
       logger.error('Approve failed', { communicationId: commId, error: err });
-      toast.error(t('aiInbox.approveFailed'));
+      notifyError(t('aiInbox.approveFailed'));
     } finally {
       setActionLoading(null);
     }
@@ -517,7 +518,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
       const commCompanyId = comm?.companyId || adminContext.companyId;
 
       if (!commCompanyId) {
-        toast.error('Cannot reject: missing company context');
+        notifyError('Cannot reject: missing company context');
         return;
       }
 
@@ -530,7 +531,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
       );
 
       if (!result.ok) {
-        toast.error(t('aiInbox.rejectFailedWithErrorId', { errorId: result.errorId }));
+        notifyError(t('aiInbox.rejectFailedWithErrorId', { errorId: result.errorId }));
         return;
       }
 
@@ -559,14 +560,14 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
         });
       }
 
-      toast.success(t('aiInbox.rejectSuccess'));
+      success(t('aiInbox.rejectSuccess'));
       logger.info('Communication rejected', {
         communicationId: commId,
         adminUid: adminContext.uid
       });
     } catch (err) {
       logger.error('Reject failed', { communicationId: commId, error: err });
-      toast.error(t('aiInbox.rejectFailed'));
+      notifyError(t('aiInbox.rejectFailed'));
     } finally {
       setActionLoading(null);
     }

@@ -45,7 +45,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
-import toast from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import type { AdminContext } from '@/server/admin/admin-guards';
 import { PageContainer, ListContainer } from '@/core/containers';
 import { PageHeader } from '@/core/headers';
@@ -118,6 +118,7 @@ const getIntentBadgeVariant = (intent?: PipelineIntentTypeValue): IntentBadgeVar
 
 export default function OperatorInboxClient({ adminContext }: OperatorInboxClientProps) {
   const { t } = useTranslation('admin');
+  const { success, error: notifyError } = useNotifications();
   const layout = useLayoutClasses();
   const spacing = useSpacingTokens();
   const typography = useTypography();
@@ -195,11 +196,10 @@ export default function OperatorInboxClient({ adminContext }: OperatorInboxClien
         const addedIds = [...currentIds].filter(id => !previousItemIdsRef.current.has(id));
 
         if (addedIds.length > 0) {
-          toast.success(
+          success(
             addedIds.length === 1
-              ? '📩 Νέο αίτημα στο Operator Inbox!'
-              : `📩 ${addedIds.length} νέα αιτήματα στο Operator Inbox!`,
-            { duration: 5000 }
+              ? 'Νέο αίτημα στο Operator Inbox!'
+              : `${addedIds.length} νέα αιτήματα στο Operator Inbox!`
           );
         }
       }
@@ -246,14 +246,14 @@ export default function OperatorInboxClient({ adminContext }: OperatorInboxClien
       const data = await response.json() as { success: boolean; error?: string };
 
       if (data.success) {
-        toast.success(t('operatorInbox.approveSuccess'));
+        success(t('operatorInbox.approveSuccess'));
         await fetchData();
       } else {
-        toast.error(data.error ?? t('operatorInbox.approveFailed'));
+        notifyError(data.error ?? t('operatorInbox.approveFailed'));
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
-      toast.error(message);
+      notifyError(message);
       logger.error('Approve failed', { queueId, error: message });
     } finally {
       setProcessingId(null);
@@ -274,14 +274,14 @@ export default function OperatorInboxClient({ adminContext }: OperatorInboxClien
       const data = await response.json() as { success: boolean; error?: string };
 
       if (data.success) {
-        toast.success(t('operatorInbox.rejectSuccess'));
+        success(t('operatorInbox.rejectSuccess'));
         await fetchData();
       } else {
-        toast.error(data.error ?? t('operatorInbox.rejectFailed'));
+        notifyError(data.error ?? t('operatorInbox.rejectFailed'));
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
-      toast.error(message);
+      notifyError(message);
       logger.error('Reject failed', { queueId, error: message });
     } finally {
       setProcessingId(null);

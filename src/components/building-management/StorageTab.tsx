@@ -19,7 +19,7 @@ import type { Building } from '@/types/building/contracts';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
-import toast from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -81,6 +81,7 @@ interface StorageMutationResult {
 
 export function StorageTab({ building }: StorageTabProps) {
   const { t } = useTranslation('building');
+  const { success, error: notifyError } = useNotifications();
   const router = useRouter();
 
   // Data state
@@ -218,13 +219,13 @@ export function StorageTab({ building }: StorageTabProps) {
         building: building.name,
       });
 
-      toast.success('Η αποθήκη δημιουργήθηκε');
+      success('Η αποθήκη δημιουργήθηκε');
       resetCreateForm();
       await fetchStorageUnits();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Σφάλμα δημιουργίας';
       logger.error('Create storage error', { error: msg });
-      toast.error(`Αποτυχία: ${msg}`);
+      notifyError(`Αποτυχία: ${msg}`);
     } finally {
       setCreating(false);
     }
@@ -260,13 +261,13 @@ export function StorageTab({ building }: StorageTabProps) {
         area: editArea ? parseFloat(editArea) : null,
         price: editPrice ? parseFloat(editPrice) : null,
       });
-      toast.success('Η αποθήκη ενημερώθηκε');
+      success('Η αποθήκη ενημερώθηκε');
       setEditingId(null);
       await fetchStorageUnits();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Σφάλμα ενημέρωσης';
       logger.error('Edit storage error', { error: msg });
-      toast.error(`Αποτυχία: ${msg}`);
+      notifyError(`Αποτυχία: ${msg}`);
     } finally {
       setSaving(false);
     }
@@ -286,12 +287,12 @@ export function StorageTab({ building }: StorageTabProps) {
     setDeletingId(confirmDelete.id);
     try {
       await apiClient.delete(`/api/storages/${confirmDelete.id}`);
-      toast.success('Η αποθήκη διαγράφηκε');
+      success('Η αποθήκη διαγράφηκε');
       await fetchStorageUnits();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Σφάλμα διαγραφής';
       logger.error('Delete storage error', { error: msg });
-      toast.error(`Αποτυχία: ${msg}`);
+      notifyError(`Αποτυχία: ${msg}`);
     } finally {
       setConfirmLoading(false);
       setConfirmDelete(null);
@@ -317,7 +318,7 @@ export function StorageTab({ building }: StorageTabProps) {
 
   const handleLinkStorage = useCallback(async (itemId: string) => {
     await apiClient.patch(`/api/storages/${itemId}`, { buildingId: building.id });
-    toast.success('Η αποθήκη συνδέθηκε');
+    success('Η αποθήκη συνδέθηκε');
     await fetchStorageUnits();
   }, [building.id, fetchStorageUnits]);
 

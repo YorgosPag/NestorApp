@@ -19,7 +19,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import toast from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { createBuilding, updateBuilding } from '../building-services';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Building } from '@/types/building/contracts';
@@ -113,6 +113,7 @@ export function useBuildingForm({
   editBuilding,
 }: UseBuildingFormProps) {
   const { t } = useTranslation('building');
+  const { success, error: notifyError } = useNotifications();
 
   // 🏢 ENTERPRISE: Edit mode detection (ADR-087)
   const isEditMode = !!editBuilding;
@@ -197,12 +198,12 @@ export function useBuildingForm({
           });
 
           if (result.success) {
-            toast.success(t('dialog.messages.updateSuccess'));
+            success(t('dialog.messages.updateSuccess'));
             setFormData(INITIAL_FORM_DATA);
             onBuildingAdded?.();
             onOpenChange(false);
           } else {
-            toast.error(result.error || t('dialog.messages.updateError'));
+            notifyError(result.error || t('dialog.messages.updateError'));
           }
         } else {
           // Create new building
@@ -225,16 +226,16 @@ export function useBuildingForm({
           });
 
           if (result.success) {
-            toast.success(t('dialog.messages.success'));
+            success(t('dialog.messages.success'));
             setFormData(INITIAL_FORM_DATA);
             onBuildingAdded?.();
             onOpenChange(false);
           } else {
-            toast.error(result.error || t('dialog.messages.error'));
+            notifyError(result.error || t('dialog.messages.error'));
           }
         }
       } catch {
-        toast.error(isEditMode ? t('dialog.messages.updateError') : t('dialog.messages.error'));
+        notifyError(isEditMode ? t('dialog.messages.updateError') : t('dialog.messages.error'));
       } finally {
         setLoading(false);
       }

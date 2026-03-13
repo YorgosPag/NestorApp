@@ -16,7 +16,7 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { Calendar as CalendarIcon, Plus } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('CalendarCreateDialog');
@@ -92,6 +92,7 @@ export function CalendarCreateDialog({
   onCreated,
 }: CalendarCreateDialogProps) {
   const { t } = useTranslation('crm');
+  const { success, error: notifyError } = useNotifications();
   const iconSizes = useIconSizes();
   const sp = useSpacingTokens();
 
@@ -130,13 +131,13 @@ export function CalendarCreateDialog({
         assignedTo: '',
       });
 
-      toast.success(t('calendarPage.dialog.actions.save'));
+      success(t('calendarPage.dialog.actions.save'));
       resetForm();
       onOpenChange(false);
       onCreated?.();
     } catch (err) {
       logger.error('Error creating event', { error: err });
-      toast.error(err instanceof Error ? err.message : 'Error creating event');
+      notifyError(err instanceof Error ? err.message : 'Error creating event');
     } finally {
       setSubmitting(false);
     }
