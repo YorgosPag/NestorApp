@@ -190,7 +190,8 @@ async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promi
     // =========================================================================
     // 🔒 TENANT ISOLATION: Cache key includes role for proper separation
     const tenantCacheKey = isAdmin ? 'companies:admin' : `companies:tenant:${ctx.companyId}`;
-    const cachedCompanies = CacheHelpers.getCachedCompanies(tenantCacheKey);
+    const skipCache = req.nextUrl.searchParams.get('refresh') === 'true';
+    const cachedCompanies = skipCache ? null : CacheHelpers.getCachedCompanies(tenantCacheKey);
     if (cachedCompanies) {
       logger.info('[Companies/List] Cache hit', { cacheKey: tenantCacheKey, count: cachedCompanies.length });
       // 🏢 ENTERPRISE: Type-safe cache return with proper cast

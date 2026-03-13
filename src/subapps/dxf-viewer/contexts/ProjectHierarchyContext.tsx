@@ -155,7 +155,8 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
         cached: boolean;
       }
 
-      const result = await apiClient.get<CompaniesApiResponse>('/api/companies');
+      const url = forceRefresh ? '/api/companies?refresh=true' : '/api/companies';
+      const result = await apiClient.get<CompaniesApiResponse>(url);
 
       // apiClient.get() unwraps the canonical { success: true, data: T } response automatically
       const companies = result?.companies || [];

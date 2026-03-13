@@ -160,18 +160,14 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
   };
 
   // 🏢 ENTERPRISE: Auto-load companies when dialog opens
-  // CRITICAL: Include error in dependencies to prevent infinite loop on authentication errors
+  // Force-refresh on every open to pick up companies created while dialog was closed
   useEffect(() => {
-    // Only attempt to load if:
-    // 1. Dialog is open
-    // 2. No companies loaded yet
-    // 3. Not currently loading
-    // 4. No previous error (prevents infinite retry loop)
-    if (isOpen && (!companies || companies.length === 0) && !loading && !error) {
-      dlog('ProjectDialog', '🔄 Loading companies - dialog opened');
-      loadCompanies();
-    }
-  }, [isOpen, companies?.length, loading, error, loadCompanies]);
+    if (!isOpen || loading) return;
+    // First open with no companies: normal load. Re-open: force-refresh to bypass server cache.
+    const needsForceRefresh = companies && companies.length > 0;
+    dlog('ProjectDialog', `🔄 Loading companies - dialog opened (force=${!!needsForceRefresh})`);
+    loadCompanies(!!needsForceRefresh);
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps -- intentional: only trigger on dialog open
 
   // Reset selection when dialog closes
   useEffect(() => {
