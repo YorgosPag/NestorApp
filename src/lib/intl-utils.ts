@@ -3,16 +3,29 @@
  * Provides consistent formatting across the application
  */
 
-import i18n from '@/i18n/config';
+// Lazy-load i18n to avoid pulling react-i18next → React.createContext into server routes
+let _i18n: { language?: string } | null = null;
+function getI18n(): { language?: string } {
+  if (_i18n === null) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      _i18n = require('@/i18n/config').default ?? { language: 'el' };
+    } catch {
+      _i18n = { language: 'el' };
+    }
+  }
+  return _i18n;
+}
+
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeToDate } from '@/lib/date-local';
 const logger = createModuleLogger('intl-utils');
 
 /**
- * Get current locale from i18n instance
+ * Get current locale from i18n instance (server-safe: falls back to 'el')
  */
 export const getCurrentLocale = (): string => {
-  return i18n.language || 'el';
+  return getI18n().language || 'el';
 };
 
 /**
