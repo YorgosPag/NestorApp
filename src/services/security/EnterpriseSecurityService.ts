@@ -25,6 +25,7 @@
 import { where, orderBy } from 'firebase/firestore';
 import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
+import { normalizeToDate } from '@/lib/date-local';
 
 // ============================================================================
 // TYPES & INTERFACES - SECURITY CRITICAL
@@ -453,9 +454,9 @@ export class EnterpriseSecurityService {
 
       const roles: SecurityRole[] = result.documents.map(data => ({
         ...data,
-        createdAt: (data.createdAt as Record<string, unknown> & { toDate?: () => Date })?.toDate?.() || new Date(),
-        lastUpdated: (data.lastUpdated as Record<string, unknown> & { toDate?: () => Date })?.toDate?.() || new Date(),
-        expiryDate: (data.expiryDate as Record<string, unknown> & { toDate?: () => Date })?.toDate?.() || undefined
+        createdAt: normalizeToDate(data.createdAt) ?? new Date(),
+        lastUpdated: normalizeToDate(data.lastUpdated) ?? new Date(),
+        expiryDate: normalizeToDate(data.expiryDate) ?? undefined
       }));
 
       // Cache the roles (high security level)
@@ -609,9 +610,9 @@ export class EnterpriseSecurityService {
 
       const policies: EmailDomainPolicy[] = result.documents.map(data => ({
         ...data,
-        effectiveDate: (data.effectiveDate as Record<string, unknown> & { toDate?: () => Date })?.toDate?.() || new Date(),
-        expiryDate: (data.expiryDate as Record<string, unknown> & { toDate?: () => Date })?.toDate?.() || undefined,
-        lastVerified: (data.lastVerified as Record<string, unknown> & { toDate?: () => Date })?.toDate?.() || undefined
+        effectiveDate: normalizeToDate(data.effectiveDate) ?? new Date(),
+        expiryDate: normalizeToDate(data.expiryDate) ?? undefined,
+        lastVerified: normalizeToDate(data.lastVerified) ?? undefined
       }));
 
       // Cache the policies (high security level)
@@ -719,8 +720,8 @@ export class EnterpriseSecurityService {
 
       const policies: CountrySecurityPolicy[] = result.documents.map(data => ({
         ...data,
-        lastReviewed: (data.lastReviewed as Record<string, unknown> & { toDate?: () => Date })?.toDate?.() || new Date(),
-        nextReview: (data.nextReview as Record<string, unknown> & { toDate?: () => Date })?.toDate?.() || new Date()
+        lastReviewed: normalizeToDate(data.lastReviewed) ?? new Date(),
+        nextReview: normalizeToDate(data.nextReview) ?? new Date()
       }));
 
       // Cache the policies

@@ -383,7 +383,8 @@ export class EnterpriseCompanySettingsService {
 
       if (!result.isEmpty && result.documents.length > 0) {
         const companyDoc = result.documents[0];
-        return this.convertLegacyContactToSettings(companyDoc, companyDoc.id);
+        const docId = typeof companyDoc.id === 'string' ? companyDoc.id : '';
+        return this.convertLegacyContactToSettings(companyDoc, docId);
       }
 
       return null;
