@@ -32,12 +32,14 @@ interface ParkingsListProps {
   parkingSpots: ParkingSpot[];
   selectedParking: ParkingSpot | null;
   onSelectParking?: (parking: ParkingSpot) => void;
+  onNewItem?: () => void;
 }
 
 export function ParkingsList({
   parkingSpots,
   selectedParking,
   onSelectParking,
+  onNewItem,
 }: ParkingsListProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('building');
@@ -150,7 +152,7 @@ export function ParkingsList({
           onFiltersChange={setActiveFilters}
           sortBy={sortBy}
           onSortChange={onSortChange}
-          onNewItem={() => logger.info('New parking')}
+          onNewItem={() => onNewItem?.()}
           onEditItem={(id) => logger.info('Edit parking', { id })}
           onDeleteItems={(ids) => logger.info('Delete parking', { ids })}
           onExport={() => logger.info('Export parking')}
@@ -171,7 +173,7 @@ export function ParkingsList({
             onFiltersChange={setActiveFilters}
             sortBy={sortBy}
             onSortChange={onSortChange}
-            onNewItem={() => logger.info('New parking')}
+            onNewItem={() => onNewItem?.()}
             onEditItem={(id) => logger.info('Edit parking', { id })}
             onDeleteItems={(ids) => logger.info('Delete parking', { ids })}
             onExport={() => logger.info('Export parking')}

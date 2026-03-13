@@ -12,10 +12,6 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { createModuleLogger } from '@/lib/telemetry';
-
-const logger = createModuleLogger('StoragesHeader');
-
 // 🏢 ENTERPRISE: Type for Storages view modes (avoids `as any`)
 type StoragesViewMode = 'list' | 'grid' | 'byType' | 'byStatus';
 
@@ -26,7 +22,6 @@ interface StoragesHeaderProps {
   setShowDashboard: (show: boolean) => void;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
-  onNewStorage?: () => void;
   // Mobile-only filter toggle
   showFilters?: boolean;
   setShowFilters?: (show: boolean) => void;
@@ -39,7 +34,6 @@ export function StoragesHeader({
   setShowDashboard,
   searchTerm,
   setSearchTerm,
-  onNewStorage,
   showFilters,
   setShowFilters,
 }: StoragesHeaderProps) {
@@ -71,10 +65,6 @@ export function StoragesHeader({
         viewMode: viewMode as ViewMode,
         onViewModeChange: (mode) => setViewMode(mode as StoragesViewMode),
         viewModes: ['list', 'grid', 'byType', 'byStatus'] as ViewMode[],
-        addButton: {
-          label: t('storages.header.newStorage'),
-          onClick: () => onNewStorage?.() || logger.info('Add storage')
-        },
         // Mobile-only filter button
         customActions: setShowFilters ? [
           <button

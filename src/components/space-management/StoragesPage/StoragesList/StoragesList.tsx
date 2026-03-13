@@ -25,12 +25,14 @@ interface StoragesListProps {
   storages: Storage[];
   selectedStorage: Storage | null;
   onSelectStorage?: (storage: Storage) => void;
+  onNewItem?: () => void;
 }
 
 export function StoragesList({
   storages,
   selectedStorage,
   onSelectStorage,
+  onNewItem,
 }: StoragesListProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('storage');
@@ -144,7 +146,7 @@ export function StoragesList({
           onFiltersChange={setActiveFilters}
           sortBy={sortBy}
           onSortChange={onSortChange}
-          onNewItem={() => logger.info('New storage')}
+          onNewItem={() => onNewItem?.()}
           onEditItem={(id) => logger.info('Edit storage', { id })}
           onDeleteItems={(ids) => logger.info('Delete storages', { ids })}
           onExport={() => logger.info('Export storages')}
@@ -165,7 +167,7 @@ export function StoragesList({
             onFiltersChange={setActiveFilters}
             sortBy={sortBy}
             onSortChange={onSortChange}
-            onNewItem={() => logger.info('New storage')}
+            onNewItem={() => onNewItem?.()}
             onEditItem={(id) => logger.info('Edit storage', { id })}
             onDeleteItems={(ids) => logger.info('Delete storages', { ids })}
             onExport={() => logger.info('Export storages')}

@@ -4,7 +4,7 @@
  * 🔧 Next.js 15: useStoragesPageState uses useSearchParams, requires Suspense
  */
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useCallback, useState } from 'react';
 
 import { StoragesHeader } from '@/components/space-management/StoragesPage/StoragesHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -33,6 +33,13 @@ import { AdvancedFiltersPanel, storageFiltersConfig } from '@/components/core/Ad
 import { ListContainer, PageContainer } from '@/core/containers';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { AddStorageDialog } from '@/components/space-management/StoragesPage/AddStorageDialog';
+import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { apiClient } from '@/lib/api/enterprise-api-client';
+import { RealtimeService } from '@/services/realtime/RealtimeService';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('StoragePage');
 
 // Re-export Storage type for backward compatibility
 export type { Storage } from '@/types/storage/contracts';
@@ -64,6 +71,33 @@ function StoragePageContent() {
   } = useStoragesPageState(storages);
 
   const stats = useStorageStats(filteredStorages);
+
+  // Add/Delete dialog state
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteStorage = useCallback(async () => {
+    if (!selectedStorage) return;
+    setIsDeleting(true);
+    try {
+      const result = await apiClient.delete<{ id: string }>(
+        `/api/storages/${selectedStorage.id}`
+      );
+      if (result?.id) {
+        RealtimeService.dispatch('STORAGE_DELETED', {
+          storageId: selectedStorage.id,
+          timestamp: Date.now(),
+        });
+        setSelectedStorage(null);
+      }
+    } catch (err) {
+      logger.error('Failed to delete storage', { error: err });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  }, [selectedStorage, setSelectedStorage]);
 
   // 🏢 ENTERPRISE: Sync selectedStorage with NavigationContext for breadcrumb display
   React.useEffect(() => {
@@ -269,8 +303,13 @@ function StoragePageContent() {
                 storages={filteredStorages}
                 selectedStorage={selectedStorage}
                 onSelectStorage={setSelectedStorage}
+                onNewItem={() => setShowAddDialog(true)}
               />
-              <StorageDetails storage={selectedStorage} />
+              <StorageDetails
+                storage={selectedStorage}
+                onNewStorage={() => setShowAddDialog(true)}
+                onDelete={() => setShowDeleteDialog(true)}
+              />
             </>
           )}
         </ListContainer>
@@ -287,6 +326,22 @@ function StoragePageContent() {
             onFiltersChange={setFilters}
           />
         </MobileDetailsSlideIn>
+
+        {/* Add Storage Dialog */}
+        <AddStorageDialog
+          open={showAddDialog}
+          onOpenChange={setShowAddDialog}
+        />
+
+        {/* Delete Storage Confirmation */}
+        <DeleteConfirmDialog
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
+          title={t('pages.storage.deleteDialog.title', 'Διαγραφή Αποθήκης')}
+          description={t('pages.storage.deleteDialog.description', { name: selectedStorage?.name ?? '' })}
+          onConfirm={handleDeleteStorage}
+          loading={isDeleting}
+        />
       </PageContainer>
   );
 }

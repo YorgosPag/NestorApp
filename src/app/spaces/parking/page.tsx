@@ -298,6 +298,7 @@ function ParkingPageContent() {
                 parkingSpots={filteredParkingSpots}
                 selectedParking={selectedParking}
                 onSelectParking={setSelectedParking}
+                onNewItem={() => setShowAddDialog(true)}
               />
               <ParkingDetails
                 parking={selectedParking}
