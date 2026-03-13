@@ -19,7 +19,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DollarSign, UserCheck, CheckCircle, Undo2, UserPlus } from 'lucide-react';
+import { DollarSign, UserCheck, CheckCircle, Undo2, UserPlus, AlertTriangle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
@@ -156,6 +156,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
   const [deposit, setDeposit] = useState<string>('');
   const [buyerContactId, setBuyerContactId] = useState<string>('');
   const [buyerName, setBuyerName] = useState<string>('');
+  const [buyerHasEmail, setBuyerHasEmail] = useState<boolean>(true);
   const [saving, setSaving] = useState(false);
 
   // ADR-199: Linked spaces (appurtenances)
@@ -177,6 +178,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
   const handleContactSelect = useCallback((contact: ContactSummary | null) => {
     setBuyerContactId(contact?.id ?? '');
     setBuyerName(contact?.name ?? '');
+    setBuyerHasEmail(!!contact?.email);
   }, []);
 
   // 🏢 ENTERPRISE: Switch to new contact dialog — hides Reserve, shows Contact form
@@ -301,6 +303,14 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
                   {t('sales.dialogs.reserve.buyerRequired', { defaultValue: 'Η επιλογή αγοραστή είναι υποχρεωτική' })}
                 </p>
               )}
+              {buyerContactId && !buyerHasEmail && (
+                <p className="flex items-center gap-1.5 text-xs text-orange-600">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                  {t('sales.dialogs.reserve.noEmailWarning', {
+                    defaultValue: 'Ο αγοραστής δεν έχει email — δεν θα σταλεί επιβεβαίωση κράτησης. Ενημερώστε την καρτέλα του.',
+                  })}
+                </p>
+              )}
               <Button
                 type="button"
                 variant="ghost"
@@ -380,6 +390,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
   const existingBuyerName = unit.commercial?.buyerName ?? '';
   const [buyerContactId, setBuyerContactId] = useState<string>(existingBuyerId);
   const [buyerName, setBuyerName] = useState<string>(existingBuyerName);
+  const [buyerHasEmail, setBuyerHasEmail] = useState<boolean>(true);
 
   // ADR-199: Linked spaces (appurtenances)
   const linkedSpaces = useLinkedSpacesForSale(unit);
@@ -390,12 +401,15 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
       setFinalPrice(unit.commercial?.askingPrice?.toString() ?? '');
       setBuyerContactId(unit.commercial?.buyerContactId ?? '');
       setBuyerName(unit.commercial?.buyerName ?? '');
+      // Reset — email status unknown for existing buyers from reserve flow
+      setBuyerHasEmail(true);
     }
   }, [open, unit.commercial?.askingPrice, unit.commercial?.buyerContactId, unit.commercial?.buyerName]);
 
   const handleBuyerSelect = useCallback((contact: ContactSummary | null) => {
     setBuyerContactId(contact?.id ?? '');
     setBuyerName(contact?.name ?? '');
+    setBuyerHasEmail(!!contact?.email);
   }, []);
 
   const handleSave = useCallback(async () => {
@@ -510,6 +524,14 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
                 {!buyerContactId && (
                   <p className="text-xs text-destructive">
                     {t('sales.dialogs.reserve.buyerRequired', { defaultValue: 'Η επιλογή αγοραστή είναι υποχρεωτική' })}
+                  </p>
+                )}
+                {buyerContactId && !buyerHasEmail && (
+                  <p className="flex items-center gap-1.5 text-xs text-orange-600">
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                    {t('sales.dialogs.reserve.noEmailWarning', {
+                      defaultValue: 'Ο αγοραστής δεν έχει email — δεν θα σταλεί επιβεβαίωση κράτησης. Ενημερώστε την καρτέλα του.',
+                    })}
                   </p>
                 )}
               </>
