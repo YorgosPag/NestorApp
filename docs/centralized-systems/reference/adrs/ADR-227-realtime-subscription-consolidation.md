@@ -5,7 +5,7 @@
 | **Status** | 🟢 Phases 1-3 Implemented — Phase 2 partial (4/10 blocked) |
 | **Date** | 2026-03-13 |
 | **Category** | Data Access Layer / Real-Time Architecture |
-| **Related ADRs** | ADR-214 (Firestore Query Centralization) |
+| **Related ADRs** | ADR-214 (Firestore Query Centralization), ADR-228 (Event Coverage Gap Analysis & Roadmap) |
 
 ---
 
@@ -401,3 +401,4 @@ All new hooks MUST expose `status: SubscriptionStatus` for UI feedback.
 | 2026-03-13 | Phase 1 implemented — `useRealtimeTasks`, `useRealtimeOpportunities` hooks created; Tasks page, CRM Dashboard, TasksTab migrated to real-time; `useFloorFloorplans` NOT touched (complex hook, no real-time value) | Claude |
 | 2026-03-13 | Phase 2 implemented (6/10) — Migrated contacts, notifications, messages, triage, floorplanFiles, layers to canonical pattern. Remaining 4 blocked (subcollection + subscribeDoc needed) | Claude |
 | 2026-03-13 | Phase 3 implemented (Tasks + Opportunities) — Event bus subscribers wired for TASK_CREATED/UPDATED/DELETED and OPPORTUNITY_CREATED/UPDATED/DELETED. Optimistic UI updates via `applyUpdates()` pattern from `useFirestoreProjects` | Claude |
+| 2026-03-14 | Cross-reference: ADR-228 created with full coverage gap analysis (50% event coverage, 4 blocked hooks, 4-tier roadmap) | Claude |
