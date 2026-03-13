@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | PLANNING |
+| **Status** | IN PROGRESS (Phase 1 ✅ IMPLEMENTED) |
 | **Date** | 2026-03-13 |
 | **Category** | Backend Systems / Data & State |
 | **Canonical Location** | `src/lib/firestore/deletion-guard.ts` (proposed) |
@@ -408,13 +408,22 @@ await db.collection('buildings').doc(buildingId).delete();
 **Roles ενημερωμένοι**: `company_admin` + `project_manager` έχουν και τα 2 νέα delete permissions.
 **Parking/Storage**: Χρησιμοποιούν `units:units:delete` (sub-entities του units domain).
 
-### Phase 1: Core Infrastructure (Priority: HIGH)
+### Phase 1: Core Infrastructure (Priority: HIGH) — ✅ IMPLEMENTED (2026-03-13)
 
-| Task | Αρχείο | Περιγραφή |
-|------|--------|-----------|
-| 1.1 | `src/config/deletion-registry.ts` | Declarative dependency registry |
-| 1.2 | `src/lib/firestore/deletion-guard.ts` | Core engine: `checkDeletionDependencies()` + `executeDeletion()` |
-| 1.3 | Tests | Unit tests για dependency checking logic |
+| Task | Αρχείο | Περιγραφή | Status |
+|------|--------|-----------|--------|
+| 1.1 | `src/config/deletion-registry.ts` | Declarative dependency registry (8 entity types, 35 dependencies) | ✅ |
+| 1.2 | `src/lib/firestore/deletion-guard.ts` | Core engine: `checkDeletionDependencies()` + `executeDeletion()` | ✅ |
+| 1.3 | `src/app/api/deletion-guard/[entityType]/[entityId]/route.ts` | Preview API endpoint (GET) with permission checks | ✅ |
+
+**Implementation Notes (Phase 1)**:
+- Registry covers: contact (12 deps), unit (5), floor (1), project (6), building (6), company (3), parking (1 + conditional), storage (1 + conditional)
+- Parallel `Promise.all` queries for all dependencies (max 12 for contacts)
+- Tenant isolation: every query includes `companyId` filter
+- Conditional blocks: parking/storage check `commercial.buyerContactId` before dependency scan
+- On query failure → safe default (treated as blocking)
+- Audit trail via `EntityAuditService.recordChange()` with full JSON snapshot on delete
+- Preview API at `GET /api/deletion-guard/{entityType}/{entityId}` with matching delete permissions
 
 ### Phase 2: BLOCK Guard σε ΟΛΑ τα entities (Priority: CRITICAL)
 
@@ -490,6 +499,7 @@ await db.collection('buildings').doc(buildingId).delete();
 | 2026-03-13 | Υπάρχοντα cascade-preview dialogs (Project/Building) → **ΑΝΤΙΚΑΤΑΣΤΑΣΗ** με Deletion Blocked dialogs | Γιώργος Παγώνης |
 | 2026-03-13 | Μηνύματα Deletion Blocked dialog μέσω **i18n** (ελληνικά + αγγλικά) | Γιώργος Παγώνης |
 | 2026-03-13 | Κάθε επιτυχής διαγραφή → **audit trail** (`entity_audit_trail`): ποιος, πότε, τι σβήστηκε + **full JSON snapshot** των δεδομένων πριν τη διαγραφή | Γιώργος Παγώνης |
+| 2026-03-13 | **Phase 1 — ✅ IMPLEMENTED**: Deletion registry (8 entities, 35 deps), core engine (`checkDeletionDependencies` + `executeDeletion`), preview API (`GET /api/deletion-guard/{entityType}/{entityId}`). Parallel queries, tenant isolation, conditional blocks, safe defaults on failure. | Claude Code |
 
 ---
 
