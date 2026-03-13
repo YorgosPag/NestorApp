@@ -275,6 +275,98 @@ class FirestoreQueryService implements IFirestoreQueryService {
     };
   }
 
+  // --- SUBSCRIBE: Single Document -----------------------------------------------
+
+  subscribeDoc<T extends DocumentData>(
+    key: CollectionKey,
+    docId: string,
+    onData: (document: T | null) => void,
+    onError: (error: Error) => void,
+    options: SubscribeOptions = {}
+  ): Unsubscribe {
+    if (options.enabled === false) {
+      return () => { /* noop */ };
+    }
+
+    const colName = resolveCollectionName(key);
+    const docRef = doc(db, colName, docId);
+
+    let unsubscribe: Unsubscribe = () => { /* noop */ };
+    let cancelled = false;
+
+    void requireAuthContext().then(() => {
+      if (cancelled) return;
+
+      unsubscribe = onSnapshot(docRef,
+        snapshot => {
+          onData(extractDoc<T>(snapshot));
+        },
+        onError
+      );
+    }).catch(onError);
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }
+
+  // --- SUBSCRIBE: Subcollection -----------------------------------------------
+
+  subscribeSubcollection<T extends DocumentData>(
+    parentKey: CollectionKey,
+    parentId: string,
+    subcollectionName: string,
+    onData: (result: QueryResult<T>) => void,
+    onError: (error: Error) => void,
+    options: SubscribeOptions = {}
+  ): Unsubscribe {
+    if (options.enabled === false) {
+      return () => { /* noop */ };
+    }
+
+    const parentColName = resolveCollectionName(parentKey);
+    const subColRef = collection(db, parentColName, parentId, subcollectionName);
+
+    let unsubscribe: Unsubscribe = () => { /* noop */ };
+    let cancelled = false;
+
+    void requireAuthContext().then(() => {
+      if (cancelled) return;
+
+      const allConstraints: QueryConstraint[] = [
+        ...(options.constraints ?? []),
+      ];
+
+      if (options.maxResults) {
+        allConstraints.push(firestoreLimit(options.maxResults));
+      }
+
+      const q = allConstraints.length > 0
+        ? query(subColRef, ...allConstraints)
+        : query(subColRef);
+
+      unsubscribe = onSnapshot(q,
+        snapshot => {
+          const documents = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as unknown as T));
+          const lastDocument = snapshot.docs[snapshot.docs.length - 1] ?? null;
+          onData({
+            documents,
+            size: snapshot.size,
+            isEmpty: snapshot.empty,
+            lastDocument,
+          });
+        },
+        onError
+      );
+    }).catch(onError);
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }
+
   // --- BATCH: Multiple IDs -----------------------------------------------------
 
   async batchGet<T extends DocumentData>(

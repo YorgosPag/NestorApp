@@ -1,17 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { type FloorplanData } from '@/services/floorplans/FloorplanService';
 import { useAuth } from '@/hooks/useAuth';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import pako from 'pako';
 
 const logger = createModuleLogger('useProjectFloorplans');
-
-/** 🏢 ENTERPRISE: Firestore collection name - Single source of truth */
-const FLOORPLANS_COLLECTION = 'project_floorplans';
 
 /** 🏢 ENTERPRISE: File type discriminator */
 type FloorplanFileType = 'dxf' | 'pdf';
@@ -158,19 +154,6 @@ export function useProjectFloorplans(projectId: string | number): UseProjectFloo
 
   // ✅ ENTERPRISE: Real-time Firestore listener for PROJECT floorplan
   useEffect(() => {
-    // 🏢 ENTERPRISE: Wait for authentication before setting up Firestore listeners
-    // This prevents "Missing or insufficient permissions" errors
-    if (authLoading) {
-      return; // Wait for auth state to be determined
-    }
-
-    if (!user) {
-      // User not authenticated - don't attempt Firestore operations
-      setLoading(false);
-      setProjectFloorplan(null);
-      return;
-    }
-
     if (!projectIdStr) {
       setLoading(false);
       return;
@@ -181,29 +164,30 @@ export function useProjectFloorplans(projectId: string | number): UseProjectFloo
 
     logger.info('Setting up real-time listener for project floorplan', { docId });
 
-    const unsubscribe = onSnapshot(
-      doc(db, FLOORPLANS_COLLECTION, docId),
-      (snapshot) => {
-        if (snapshot.exists()) {
+    const unsubscribe = firestoreQueryService.subscribeDoc<FirestoreFloorplanData>(
+      'PROJECT_FLOORPLANS',
+      docId,
+      (data) => {
+        if (data) {
           try {
-            const rawData = snapshot.data();
+            const rawData = data as unknown as Record<string, unknown>;
             logger.info('Raw Firestore data received', {
               docId,
-              fileType: rawData.fileType,
-              hasCompressedScene: !!rawData.compressedScene,
-              hasPdfImageUrl: !!rawData.pdfImageUrl,
-              fileName: rawData.fileName,
-              compressed: rawData.compressed
+              fileType: data.fileType,
+              hasCompressedScene: !!data.compressedScene,
+              hasPdfImageUrl: !!data.pdfImageUrl,
+              fileName: data.fileName,
+              compressed: data.compressed
             });
-            const data = processFloorplanData(rawData);
+            const processed = processFloorplanData(rawData);
             logger.info('Processed data', {
               docId,
-              hasData: !!data,
-              fileType: data?.fileType,
-              hasPdfImageUrl: !!data?.pdfImageUrl,
-              timestamp: data?.timestamp
+              hasData: !!processed,
+              fileType: processed?.fileType,
+              hasPdfImageUrl: !!processed?.pdfImageUrl,
+              timestamp: processed?.timestamp
             });
-            setProjectFloorplan(data);
+            setProjectFloorplan(processed);
           } catch (err) {
             logger.error('Error processing project floorplan', { error: err });
             setProjectFloorplan(null);
@@ -218,7 +202,8 @@ export function useProjectFloorplans(projectId: string | number): UseProjectFloo
         logger.error('Firestore listener error (project)', { error: err });
         setError(err.message);
         setLoading(false);
-      }
+      },
+      { enabled: !authLoading && !!user }
     );
 
     return () => {
@@ -229,16 +214,6 @@ export function useProjectFloorplans(projectId: string | number): UseProjectFloo
 
   // ✅ ENTERPRISE: Real-time Firestore listener for PARKING floorplan
   useEffect(() => {
-    // 🏢 ENTERPRISE: Wait for authentication before setting up Firestore listeners
-    if (authLoading) {
-      return;
-    }
-
-    if (!user) {
-      setParkingFloorplan(null);
-      return;
-    }
-
     if (!projectIdStr) {
       return;
     }
@@ -247,18 +222,20 @@ export function useProjectFloorplans(projectId: string | number): UseProjectFloo
 
     logger.info('Setting up real-time listener for parking floorplan', { docId });
 
-    const unsubscribe = onSnapshot(
-      doc(db, FLOORPLANS_COLLECTION, docId),
-      (snapshot) => {
-        if (snapshot.exists()) {
+    const unsubscribe = firestoreQueryService.subscribeDoc<FirestoreFloorplanData>(
+      'PROJECT_FLOORPLANS',
+      docId,
+      (data) => {
+        if (data) {
           try {
-            const data = processFloorplanData(snapshot.data());
+            const rawData = data as unknown as Record<string, unknown>;
+            const processed = processFloorplanData(rawData);
             logger.info('Real-time update received for parking floorplan', {
               docId,
-              hasData: !!data,
-              timestamp: data?.timestamp
+              hasData: !!processed,
+              timestamp: processed?.timestamp
             });
-            setParkingFloorplan(data);
+            setParkingFloorplan(processed);
           } catch (err) {
             logger.error('Error processing parking floorplan', { error: err });
             setParkingFloorplan(null);
@@ -271,7 +248,8 @@ export function useProjectFloorplans(projectId: string | number): UseProjectFloo
       (err) => {
         logger.error('Firestore listener error (parking)', { error: err });
         setError(err.message);
-      }
+      },
+      { enabled: !authLoading && !!user }
     );
 
     return () => {

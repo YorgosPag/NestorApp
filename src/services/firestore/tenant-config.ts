@@ -53,6 +53,7 @@ const TENANT_OVERRIDES: Partial<Record<CollectionKey, TenantFieldConfig>> = {
   // --- DXF / CAD Viewer (no tenant filter — files are project-scoped) ---
   CAD_FILES:              { mode: 'none', fieldName: '' },
   DXF_OVERLAY_LEVELS:     { mode: 'none', fieldName: '' },
+  PROJECT_FLOORPLANS:     { mode: 'none', fieldName: '' },
 } as const;
 
 /** Default tenant configuration for collections not in the override map */

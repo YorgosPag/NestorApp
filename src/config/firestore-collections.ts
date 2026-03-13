@@ -92,6 +92,7 @@ export const COLLECTIONS = {
 
   // 📐 FLOORPLANS (Enterprise Unified)
   FLOORPLANS: process.env.NEXT_PUBLIC_FLOORPLANS_COLLECTION || 'floorplans',
+  PROJECT_FLOORPLANS: process.env.NEXT_PUBLIC_PROJECT_FLOORPLANS_COLLECTION || 'project_floorplans',
 
   // 🅿️ PARKING & SPACES
   // 📍 Collection name: parking_spots (με underscore - όπως στη Firestore)

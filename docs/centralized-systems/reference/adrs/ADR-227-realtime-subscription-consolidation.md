@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | 🟢 Phases 1-3 Implemented — Phase 2 partial (4/10 blocked) |
+| **Status** | 🟢 Phases 1-3 Implemented — Phase 2 complete (10/10 hooks migrated) |
 | **Date** | 2026-03-13 |
 | **Category** | Data Access Layer / Real-Time Architecture |
 | **Related ADRs** | ADR-214 (Firestore Query Centralization), ADR-228 (Event Coverage Gap Analysis & Roadmap) |

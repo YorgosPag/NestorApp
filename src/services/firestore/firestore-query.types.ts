@@ -123,6 +123,23 @@ export interface IFirestoreQueryService {
     options?: SubscribeOptions
   ): Unsubscribe;
 
+  subscribeDoc<T extends DocumentData>(
+    key: CollectionKey,
+    docId: string,
+    onData: (document: T | null) => void,
+    onError: (error: Error) => void,
+    options?: SubscribeOptions
+  ): Unsubscribe;
+
+  subscribeSubcollection<T extends DocumentData>(
+    parentKey: CollectionKey,
+    parentId: string,
+    subcollectionName: string,
+    onData: (result: QueryResult<T>) => void,
+    onError: (error: Error) => void,
+    options?: SubscribeOptions
+  ): Unsubscribe;
+
   batchGet<T extends DocumentData>(
     key: CollectionKey,
     docIds: readonly string[]

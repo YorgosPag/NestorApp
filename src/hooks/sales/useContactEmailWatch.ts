@@ -9,9 +9,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 
 interface EmailInfo {
   email?: string;
@@ -43,17 +41,14 @@ export function useContactEmailWatch(contactId: string): ContactEmailState {
       return;
     }
 
-    const contactRef = doc(db, COLLECTIONS.CONTACTS, contactId);
-
-    const unsubscribe = onSnapshot(
-      contactRef,
-      (snapshot) => {
-        if (!snapshot.exists()) {
+    const unsubscribe = firestoreQueryService.subscribeDoc<Record<string, unknown>>(
+      'CONTACTS',
+      contactId,
+      (data) => {
+        if (!data) {
           setState({ hasEmail: false, email: null });
           return;
         }
-
-        const data = snapshot.data();
 
         // Check emails[] array (standard structure) first, then legacy email field
         const emails = data.emails as EmailInfo[] | undefined;

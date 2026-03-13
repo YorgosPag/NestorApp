@@ -27,13 +27,13 @@ import {
   orderBy,
   writeBatch,
   serverTimestamp,
-  onSnapshot,
   type Unsubscribe,
   type DocumentData,
   type QueryDocumentSnapshot
 } from 'firebase/firestore';
 
 import { db } from '@/lib/firebase';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { normalizeToDate } from '@/lib/date-local';
 import type {
   BankAccount,
@@ -105,6 +105,28 @@ function bankAccountToDoc(
     holderName: account.holderName ?? null,
     notes: account.notes ?? null,
     isActive: account.isActive
+  };
+}
+
+/**
+ * Convert flat record (from firestoreQueryService) to BankAccount
+ */
+function recordToBankAccount(data: Record<string, unknown>): BankAccount {
+  return {
+    id: (data.id as string) ?? '',
+    bankName: (data.bankName as string) ?? '',
+    bankCode: data.bankCode as string | undefined,
+    iban: (data.iban as string) ?? '',
+    accountNumber: data.accountNumber as string | undefined,
+    branch: data.branch as string | undefined,
+    accountType: (data.accountType as BankAccount['accountType']) ?? 'checking',
+    currency: (data.currency as string) ?? 'EUR',
+    isPrimary: (data.isPrimary as boolean) ?? false,
+    holderName: data.holderName as string | undefined,
+    notes: data.notes as string | undefined,
+    isActive: (data.isActive as boolean) ?? true,
+    createdAt: normalizeToDate(data.createdAt) ?? new Date(),
+    updatedAt: normalizeToDate(data.updatedAt) ?? new Date()
   };
 }
 
@@ -500,27 +522,29 @@ export class BankAccountsService {
     contactId: string,
     callback: (accounts: BankAccount[]) => void
   ): Unsubscribe {
-    const accountsRef = this.getAccountsCollection(contactId);
-    const q = query(
-      accountsRef,
-      where('isActive', '==', true),
-      orderBy('createdAt', 'desc')
+    return firestoreQueryService.subscribeSubcollection<DocumentData>(
+      'CONTACTS',
+      contactId,
+      'bankAccounts',
+      (result) => {
+        const accounts = result.documents.map(d => recordToBankAccount(d as Record<string, unknown>));
+
+        // Sort: primary first, then by creation date
+        const sortedAccounts = accounts.sort((a, b) => {
+          if (a.isPrimary && !b.isPrimary) return -1;
+          if (!a.isPrimary && b.isPrimary) return 1;
+          return b.createdAt.getTime() - a.createdAt.getTime();
+        });
+
+        callback(sortedAccounts);
+      },
+      (error) => {
+        logger.error('[BankAccountsService] Subscription error:', error);
+      },
+      {
+        constraints: [where('isActive', '==', true), orderBy('createdAt', 'desc')],
+      }
     );
-
-    return onSnapshot(q, (snapshot) => {
-      const accounts = snapshot.docs.map(docToBankAccount);
-
-      // Sort: primary first, then by creation date
-      const sortedAccounts = accounts.sort((a, b) => {
-        if (a.isPrimary && !b.isPrimary) return -1;
-        if (!a.isPrimary && b.isPrimary) return 1;
-        return b.createdAt.getTime() - a.createdAt.getTime();
-      });
-
-      callback(sortedAccounts);
-    }, (error) => {
-      logger.error('[BankAccountsService] Subscription error:', error);
-    });
   }
 
   // ==========================================================================

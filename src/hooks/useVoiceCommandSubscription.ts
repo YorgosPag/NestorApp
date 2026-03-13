@@ -13,9 +13,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { useVoiceCommandStore } from '@/stores/voiceCommandStore';
 import type { VoiceCommandDoc, VoiceCommandStatus } from '@/types/voice-command';
 
@@ -57,14 +55,11 @@ export function useVoiceCommandSubscription(
   useEffect(() => {
     if (!commandId) return;
 
-    const docRef = doc(db, COLLECTIONS.VOICE_COMMANDS, commandId);
-
-    const unsubscribe = onSnapshot(
-      docRef,
-      (snapshot) => {
-        if (!snapshot.exists()) return;
-
-        const data = snapshot.data() as VoiceCommandDoc;
+    const unsubscribe = firestoreQueryService.subscribeDoc<VoiceCommandDoc>(
+      'VOICE_COMMANDS',
+      commandId,
+      (data) => {
+        if (!data) return;
 
         updateCommand(commandId, {
           status: data.status,
