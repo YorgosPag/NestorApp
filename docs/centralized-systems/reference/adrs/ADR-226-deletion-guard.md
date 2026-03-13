@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | IN PROGRESS (Phase 0 ✅, Phase 1 ✅, Phase 2 ✅, Phase 3 ✅ IMPLEMENTED) |
+| **Status** | IN PROGRESS (Phase 0 ✅, Phase 1 ✅, Phase 2 ✅, Phase 3 ✅, Phase 4 ✅ IMPLEMENTED) |
 | **Date** | 2026-03-13 |
 | **Category** | Backend Systems / Data & State |
 | **Canonical Location** | `src/lib/firestore/deletion-guard.ts` (proposed) |
@@ -346,22 +346,9 @@ async function executeDeletion(
 // }
 ```
 
-#### Existing cascade-delete.ts — ΑΠΟΣΥΡΕΤΑΙ
+#### cascade-delete.ts — ✅ ΑΠΟΣΥΡΘΗΚΕ (Phase 4)
 
-Το υπάρχον `cascadeDeleteChildren()` στο `src/lib/firestore/cascade-delete.ts` **θα αποσυρθεί** καθώς η νέα φιλοσοφία bottom-up δεν χρησιμοποιεί cascade. Τα υπάρχοντα cascade στα Project/Building DELETE endpoints θα αντικατασταθούν με BLOCK checks.
-
-```typescript
-// ΠΡΙΝ (cascade — ΑΠΟΣΥΡΕΤΑΙ):
-await cascadeDeleteChildren(db, buildingId, [...]);
-await db.collection('buildings').doc(buildingId).delete();
-
-// ΜΕΤΑ (bottom-up BLOCK):
-const check = await checkDeletionDependencies(db, 'building', buildingId);
-if (!check.allowed) {
-  return NextResponse.json({ error: check.message, dependencies: check.dependencies }, { status: 409 });
-}
-await db.collection('buildings').doc(buildingId).delete();
-```
+Το `cascadeDeleteChildren()` στο `src/lib/firestore/cascade-delete.ts` **διαγράφηκε** — αντικαταστάθηκε πλήρως από `executeDeletion()` στο `deletion-guard.ts`. Τα cascade-preview routes επίσης διαγράφηκαν — αντικαταστάθηκαν από `/api/deletion-guard/{entityType}/{entityId}`.
 
 ---
 
@@ -471,12 +458,21 @@ await db.collection('buildings').doc(buildingId).delete();
 - Server-side 409 guard remains as fallback for any bypass
 - i18n: `common.deletionGuard.*` namespace (el + en)
 
-### Phase 4: Cleanup (Priority: MEDIUM)
+### Phase 4: Cleanup — Deprecate Cascade Delete & Preview — ✅ IMPLEMENTED (2026-03-13)
 
-| Task | Αρχείο | Περιγραφή |
-|------|--------|-----------|
-| 4.1 | `src/lib/firestore/cascade-delete.ts` | Deprecate/αφαίρεση — δεν χρησιμοποιείται πλέον |
-| 4.2 | cascade-preview routes | Αντικατάσταση με dependency-check routes (ίδιο concept, χωρίς cascade) |
+| Task | Αρχείο | Περιγραφή | Status |
+|------|--------|-----------|--------|
+| 4.1 | `src/lib/firestore/cascade-delete.ts` | **DELETED** — αντικαταστάθηκε πλήρως από `deletion-guard.ts` | ✅ |
+| 4.2 | `src/app/api/buildings/[buildingId]/cascade-preview/route.ts` | **DELETED** — αντικαταστάθηκε από `/api/deletion-guard/building/{id}` | ✅ |
+| 4.3 | `src/app/api/projects/[projectId]/cascade-preview/route.ts` | **DELETED** — αντικαταστάθηκε από `/api/deletion-guard/project/{id}` | ✅ |
+| 4.4 | `src/components/building-management/building-services.ts` | **EDIT** — αφαίρεση `BuildingCascadePreviewData` + `getBuildingCascadePreview()` | ✅ |
+| 4.5 | `src/services/projects-client.service.ts` | **EDIT** — αφαίρεση `CascadeChildItem` + `CascadePreviewData` + `getProjectCascadePreview()` | ✅ |
+
+**Implementation Notes (Phase 4)**:
+- Deleted 3 files: cascade-delete engine, buildings cascade-preview route, projects cascade-preview route
+- Removed dead code from 2 service files (interfaces + functions no longer imported anywhere)
+- References in `useEnterpriseRelationships.ts` and `RelationshipCRUDService.ts` are UNRELATED (relationship cascade, different system) — kept as-is
+- Zero production risk: all deleted code was already unused after Phases 2-3 replaced it
 
 ### Phase 5: Soft Delete Pattern (Priority: LOW — μελλοντικό)
 
@@ -506,9 +502,9 @@ await db.collection('buildings').doc(buildingId).delete();
 
 ## 7. References
 
-- **Existing**: `src/lib/firestore/cascade-delete.ts` — `cascadeDeleteChildren()` utility
-- **Existing**: `src/app/api/projects/[projectId]/cascade-preview/route.ts` — preview pattern
-- **Existing**: `src/app/api/buildings/[buildingId]/cascade-preview/route.ts` — preview pattern
+- **DELETED (Phase 4)**: ~~`src/lib/firestore/cascade-delete.ts`~~ — αντικαταστάθηκε από `deletion-guard.ts`
+- **DELETED (Phase 4)**: ~~`src/app/api/projects/[projectId]/cascade-preview/route.ts`~~ — αντικαταστάθηκε από `/api/deletion-guard/project/{id}`
+- **DELETED (Phase 4)**: ~~`src/app/api/buildings/[buildingId]/cascade-preview/route.ts`~~ — αντικαταστάθηκε από `/api/deletion-guard/building/{id}`
 - **SSoT**: `src/config/firestore-collections.ts` — COLLECTIONS constants
 - Related: [ADR-210](./ADR-210-document-id-generation-audit.md) — Document ID patterns
 - Industry: PostgreSQL FK constraints with ON DELETE RESTRICT / CASCADE / SET NULL
@@ -529,6 +525,7 @@ await db.collection('buildings').doc(buildingId).delete();
 | 2026-03-13 | **Phase 1 — ✅ IMPLEMENTED**: Deletion registry (8 entities, 35 deps), core engine (`checkDeletionDependencies` + `executeDeletion`), preview API (`GET /api/deletion-guard/{entityType}/{entityId}`). Parallel queries, tenant isolation, conditional blocks, safe defaults on failure. | Claude Code |
 | 2026-03-13 | **Phase 2 — ✅ IMPLEMENTED**: All 7 DELETE endpoints integrated with `executeDeletion()`. Projects/Buildings cascade **REMOVED** → bottom-up BLOCK. Units manual audit removed (executeDeletion handles it). Parking/Storage conditional BLOCK for sold items. Dual audit pattern (entity + auth). | Claude Code |
 | 2026-03-13 | **Phase 3 — ✅ IMPLEMENTED**: `DeletionBlockedDialog` (AlertDialog + ShieldAlert), `useDeletionGuard` hook (pre-check + state + BlockedDialog). Integrated in 7 components: Buildings, Projects (replaced cascade preview), Units, Parking, Storage, Contacts (SmartDialog wrapper), Floors. i18n keys in `common.deletionGuard.*`. | Claude Code |
+| 2026-03-13 | **Phase 4 — ✅ IMPLEMENTED**: Cleanup — deleted `cascade-delete.ts`, buildings + projects `cascade-preview/route.ts`. Removed dead code: `BuildingCascadePreviewData` + `getBuildingCascadePreview()` from building-services, `CascadeChildItem` + `CascadePreviewData` + `getProjectCascadePreview()` from projects-client.service. Zero risk — all code was already unused. | Claude Code |
 
 ---
 
