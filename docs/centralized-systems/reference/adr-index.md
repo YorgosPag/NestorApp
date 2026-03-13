@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 209 ADRs | Last Updated: 2026-03-13
+**📊 Stats**: 210 ADRs | Last Updated: 2026-03-13
 
 ---
 
@@ -246,6 +246,7 @@
 | **ADR-224** | safeJsonParse Centralization — `json-utils.ts` (~35 files, ~50 patterns) | ✅ Implemented (Phase 1) | 2026-03-13 | Centralization / Utilities | [📄](./adrs/ADR-224-safe-json-parse-centralization.md) |
 | **ADR-225** | Type Guards Centralization — `isNonEmptyString`, `isNonEmptyArray` (~17 files, ~30 patterns) | ✅ Implemented (Phase 1) | 2026-03-13 | Centralization / Type Safety | [📄](./adrs/ADR-225-type-guards-centralization.md) |
 | **ADR-226** | Centralized Deletion Guard — Referential Integrity Protection | 📋 Planning | 2026-03-13 | Backend Systems / Data & State | [📄](./adrs/ADR-226-deletion-guard.md) |
+| **ADR-227** | Real-Time Subscription Consolidation & Coverage Expansion (3 patterns → 1 canonical) | 📋 Planning | 2026-03-13 | Data Access Layer / Real-Time Architecture | [📄](./adrs/ADR-227-realtime-subscription-consolidation.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
