@@ -47,7 +47,8 @@
     "validation": {
       "ibanRequired": "IBAN is required",
       "ibanInvalid": "Invalid IBAN",
-      "bankNameRequired": "Bank name is required"
+      "bankNameRequired": "Bank name is required",
+      "fixErrors": "Please fill in the required fields before saving"
     }
   }
 }

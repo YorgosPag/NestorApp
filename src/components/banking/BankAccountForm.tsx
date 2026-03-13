@@ -41,6 +41,7 @@ import { BankSelector } from './BankSelector';
 import { Loader2, Save, X } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('BankAccountForm');
@@ -95,6 +96,7 @@ export function BankAccountForm({
 }: BankAccountFormProps) {
   const { t } = useTranslation('banking');
   const iconSizes = useIconSizes();
+  const { warning } = useNotifications();
   const isEditing = !!account;
 
   // Form state
@@ -199,6 +201,7 @@ export function BankAccountForm({
 
     if (!validateForm()) {
       logger.warn('Validation failed', { errors });
+      warning(t('form.validation.fixErrors'));
       return;
     }
 
@@ -228,14 +231,31 @@ export function BankAccountForm({
       />
 
       {/* Bank Selector */}
-      <BankSelector
-        value={formData.bankCode}
-        onChange={handleBankChange}
-        disabled={loading}
-        required
-        grouped
-        allowOther
-      />
+      <div className="space-y-2">
+        <BankSelector
+          value={formData.bankCode}
+          onChange={handleBankChange}
+          disabled={loading}
+          required
+          grouped
+          allowOther
+        />
+        {errors.bankName && !formData.bankCode && (
+          <p className="text-sm text-destructive">{errors.bankName}</p>
+        )}
+      </div>
+
+      {/* BIC/SWIFT display */}
+      {formData.bankCode && (
+        <div className="space-y-2">
+          <Label>BIC / SWIFT</Label>
+          <Input
+            value={formData.bankCode}
+            disabled
+            className="font-mono bg-muted"
+          />
+        </div>
+      )}
 
       {/* Bank Name (for other banks or override) */}
       {(!formData.bankCode || formData.bankCode === '') && (

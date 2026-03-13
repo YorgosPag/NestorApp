@@ -47,7 +47,8 @@
     "validation": {
       "ibanRequired": "Το IBAN είναι υποχρεωτικό",
       "ibanInvalid": "Μη έγκυρο IBAN",
-      "bankNameRequired": "Το όνομα τράπεζας είναι υποχρεωτικό"
+      "bankNameRequired": "Το όνομα τράπεζας είναι υποχρεωτικό",
+      "fixErrors": "Συμπληρώστε τα υποχρεωτικά πεδία πριν την αποθήκευση"
     }
   }
 }
