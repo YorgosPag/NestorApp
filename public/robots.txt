@@ -1,0 +1,29 @@
+# Pagonis — Private enterprise application
+# No pages should be indexed by search engines
+
+User-agent: *
+Disallow: /
+
+# Explicitly block aggressive crawlers
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: BLEXBot
+Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
+User-agent: ByteSpider
+Disallow: /
+
+# No sitemap — private application
