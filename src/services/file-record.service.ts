@@ -20,17 +20,16 @@ import {
   setDoc,
   getDoc,
   updateDoc,
-  collection,
-  query,
   where,
-  getDocs,
   serverTimestamp,
   arrayUnion,
   arrayRemove,
+  type DocumentData,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { fieldToISO } from '@/lib/date-local';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import {
   type EntityType,
   type FileDomain,
@@ -76,6 +75,24 @@ import { FileAuditService } from '@/services/file-audit.service';
  * Uses canonical logger from src/lib/telemetry
  */
 const logger = createModuleLogger('FILE_RECORD');
+
+// ============================================================================
+// POST-QUERY NORMALIZATION HELPER (ADR-214 Phase 3)
+// ============================================================================
+
+/**
+ * Normalize raw Firestore document data into a typed FileRecord.
+ * Converts Firestore Timestamps to ISO strings and validates shape.
+ */
+function toFileRecord(raw: DocumentData): FileRecord | null {
+  const record = {
+    ...raw,
+    id: raw.id as string,
+    createdAt: fieldToISO(raw as Record<string, unknown>, 'createdAt') || raw.createdAt,
+    updatedAt: fieldToISO(raw as Record<string, unknown>, 'updatedAt') || raw.updatedAt,
+  };
+  return isFileRecord(record) ? record : null;
+}
 
 // ============================================================================
 // FILE RECORD SERVICE
@@ -325,28 +342,15 @@ export class FileRecordService {
 
   /**
    * Get a single FileRecord by ID
-   * 🏢 ENTERPRISE: Uses isFileRecord() type guard for boundary validation
+   * 🏢 ADR-214 Phase 3: via FirestoreQueryService
    */
   static async getFileRecord(fileId: string): Promise<FileRecord | null> {
-    const docRef = doc(db, COLLECTIONS.FILES, fileId);
-    const docSnap = await getDoc(docRef);
+    const raw = await firestoreQueryService.getById<DocumentData>('FILES', fileId);
+    if (!raw) return null;
 
-    if (!docSnap.exists()) {
-      return null;
-    }
-
-    const data = docSnap.data();
-    const record = {
-      ...data,
-      id: docSnap.id,
-      // Convert Firestore Timestamp to ISO string if needed
-      createdAt: fieldToISO(data, 'createdAt') || data.createdAt,
-      updatedAt: fieldToISO(data, 'updatedAt') || data.updatedAt,
-    };
-
-    // 🏢 ENTERPRISE: Validate data shape at Firestore boundary
-    if (!isFileRecord(record)) {
-      logger.warn('Invalid FileRecord data from Firestore', { fileId, data: record });
+    const record = toFileRecord(raw);
+    if (!record) {
+      logger.warn('Invalid FileRecord data from Firestore', { fileId });
       return null;
     }
 
@@ -355,6 +359,7 @@ export class FileRecordService {
 
   /**
    * Query FileRecords by entity
+   * 🏢 ADR-214 Phase 3: via FirestoreQueryService (auto tenant filter replaces manual companyId)
    */
   static async getFilesByEntity(
     entityType: EntityType,
@@ -362,9 +367,9 @@ export class FileRecordService {
     options?: {
       domain?: FileDomain;
       category?: FileCategory;
-      purpose?: string; // 🏢 ENTERPRISE: Filter by purpose (e.g., 'project-floorplan' vs 'parking-floorplan')
+      purpose?: string;
       includeDeleted?: boolean;
-      companyId?: string; // 🏢 ENTERPRISE: Required for Firestore Rules query authorization
+      companyId?: string; // kept for API compat — auto-injected by FirestoreQueryService
     }
   ): Promise<FileRecord[]> {
     const constraints = [
@@ -373,11 +378,7 @@ export class FileRecordService {
       where('status', '==', FILE_STATUS.READY),
     ];
 
-    // 🏢 ENTERPRISE: Add companyId constraint for Firestore Rules authorization
-    // This enables query execution - without it, Firestore Rules block the query
-    if (options?.companyId) {
-      constraints.push(where('companyId', '==', options.companyId));
-    }
+    // companyId is now auto-injected by FirestoreQueryService tenant filter
 
     if (options?.domain) {
       constraints.push(where('domain', '==', options.domain));
@@ -387,8 +388,6 @@ export class FileRecordService {
       constraints.push(where('category', '==', options.category));
     }
 
-    // 🏢 ENTERPRISE: Filter by purpose (critical for Floorplan tab separation)
-    // Requires Firestore composite index (standard enterprise practice)
     if (options?.purpose) {
       constraints.push(where('purpose', '==', options.purpose));
     }
@@ -397,24 +396,15 @@ export class FileRecordService {
       constraints.push(where('isDeleted', '==', false));
     }
 
-    const q = query(collection(db, COLLECTIONS.FILES), ...constraints);
-    const querySnapshot = await getDocs(q);
+    const result = await firestoreQueryService.getAll<DocumentData>('FILES', { constraints });
 
-    // 🏢 ENTERPRISE: Filter out invalid records with type guard validation
     const validRecords: FileRecord[] = [];
-    for (const docSnap of querySnapshot.docs) {
-      const data = docSnap.data();
-      const record = {
-        ...data,
-        id: docSnap.id,
-        createdAt: fieldToISO(data, 'createdAt') || data.createdAt,
-        updatedAt: fieldToISO(data, 'updatedAt') || data.updatedAt,
-      };
-
-      if (isFileRecord(record)) {
+    for (const raw of result.documents) {
+      const record = toFileRecord(raw);
+      if (record) {
         validRecords.push(record);
       } else {
-        logger.warn('Skipping invalid FileRecord in query results', { docId: docSnap.id });
+        logger.warn('Skipping invalid FileRecord in query results', { docId: raw.id });
       }
     }
 
@@ -423,16 +413,14 @@ export class FileRecordService {
 
   /**
    * Query FileRecords with flexible parameters
-   * 🏢 ENTERPRISE: Uses isFileRecord() type guard for boundary validation
+   * 🏢 ADR-214 Phase 3: via FirestoreQueryService (auto tenant filter replaces manual companyId)
    */
   static async queryFileRecords(
     queryParams: FileRecordQuery
   ): Promise<FileRecord[]> {
     const constraints = [];
 
-    if (queryParams.companyId) {
-      constraints.push(where('companyId', '==', queryParams.companyId));
-    }
+    // companyId is now auto-injected by FirestoreQueryService tenant filter
 
     if (queryParams.projectId) {
       constraints.push(where('projectId', '==', queryParams.projectId));
@@ -462,24 +450,15 @@ export class FileRecordService {
       constraints.push(where('isDeleted', '==', false));
     }
 
-    const q = query(collection(db, COLLECTIONS.FILES), ...constraints);
-    const querySnapshot = await getDocs(q);
+    const result = await firestoreQueryService.getAll<DocumentData>('FILES', { constraints });
 
-    // 🏢 ENTERPRISE: Filter out invalid records with type guard validation
     const validRecords: FileRecord[] = [];
-    for (const docSnap of querySnapshot.docs) {
-      const data = docSnap.data();
-      const record = {
-        ...data,
-        id: docSnap.id,
-        createdAt: fieldToISO(data, 'createdAt') || data.createdAt,
-        updatedAt: fieldToISO(data, 'updatedAt') || data.updatedAt,
-      };
-
-      if (isFileRecord(record)) {
+    for (const raw of result.documents) {
+      const record = toFileRecord(raw);
+      if (record) {
         validRecords.push(record);
       } else {
-        logger.warn('Skipping invalid FileRecord in queryFileRecords', { docId: docSnap.id });
+        logger.warn('Skipping invalid FileRecord in queryFileRecords', { docId: raw.id });
       }
     }
 
@@ -637,15 +616,15 @@ export class FileRecordService {
 
   /**
    * 📂 Get files in Trash for an entity
-   * @enterprise Used in Trash view component
+   * 🏢 ADR-214 Phase 3: via FirestoreQueryService (auto tenant filter replaces manual companyId)
    */
   static async getTrashedFiles(options: {
-    companyId: string;
+    companyId: string; // kept for API compat — auto-injected by FirestoreQueryService
     entityType?: EntityType;
     entityId?: string;
   }): Promise<FileRecord[]> {
     const constraints = [
-      where('companyId', '==', options.companyId),
+      // companyId auto-injected by tenant filter
       where('isDeleted', '==', true),
     ];
 
@@ -657,21 +636,19 @@ export class FileRecordService {
       constraints.push(where('entityId', '==', options.entityId));
     }
 
-    const q = query(collection(db, COLLECTIONS.FILES), ...constraints);
-    const querySnapshot = await getDocs(q);
+    const result = await firestoreQueryService.getAll<DocumentData>('FILES', { constraints });
 
     const trashedFiles: FileRecord[] = [];
-    for (const docSnap of querySnapshot.docs) {
-      const data = docSnap.data();
-      const record = {
-        ...data,
-        id: docSnap.id,
-        createdAt: fieldToISO(data, 'createdAt') || data.createdAt,
-        trashedAt: fieldToISO(data, 'trashedAt') || data.trashedAt,
+    for (const raw of result.documents) {
+      const normalized = {
+        ...raw,
+        id: raw.id as string,
+        createdAt: fieldToISO(raw as Record<string, unknown>, 'createdAt') || raw.createdAt,
+        trashedAt: fieldToISO(raw as Record<string, unknown>, 'trashedAt') || raw.trashedAt,
       };
 
-      if (isFileRecord(record)) {
-        trashedFiles.push(record);
+      if (isFileRecord(normalized)) {
+        trashedFiles.push(normalized);
       }
     }
 
@@ -680,7 +657,7 @@ export class FileRecordService {
 
   /**
    * 📋 Get files eligible for purge
-   * @enterprise Used by server-side scheduler (Cloud Function)
+   * 🏢 ADR-214 Phase 3: via FirestoreQueryService (tenantOverride: 'skip' — server-side, sees ALL files)
    *
    * Returns files where:
    * - lifecycleState = 'trashed' OR isDeleted = true
@@ -691,42 +668,34 @@ export class FileRecordService {
   static async getFilesEligibleForPurge(): Promise<FileRecord[]> {
     const now = new Date().toISOString();
 
-    // Query trashed files with expired purgeAt
-    // Note: Firestore doesn't support complex OR queries, so we use isDeleted
     const constraints = [
       where('isDeleted', '==', true),
       where('purgeAt', '<=', now),
     ];
 
-    const q = query(collection(db, COLLECTIONS.FILES), ...constraints);
-    const querySnapshot = await getDocs(q);
+    const result = await firestoreQueryService.getAll<DocumentData>('FILES', {
+      constraints,
+      tenantOverride: 'skip', // Server-side function — must see ALL files across tenants
+    });
 
     const eligibleFiles: FileRecord[] = [];
-    for (const docSnap of querySnapshot.docs) {
-      const data = docSnap.data();
-
+    for (const raw of result.documents) {
       // Additional filtering in code (Firestore limitations)
-      // Check hold status
-      if (data.hold && data.hold !== HOLD_TYPES.NONE) {
-        logger.info('Skipping file with active hold', { fileId: docSnap.id, hold: data.hold });
+      if (raw.hold && raw.hold !== HOLD_TYPES.NONE) {
+        logger.info('Skipping file with active hold', { fileId: raw.id, hold: raw.hold });
         continue;
       }
 
-      // Check retention policy
-      if (data.retentionUntil) {
-        const retentionDate = new Date(data.retentionUntil);
+      if (raw.retentionUntil) {
+        const retentionDate = new Date(raw.retentionUntil as string);
         if (retentionDate > new Date()) {
-          logger.info('Skipping file with active retention', { fileId: docSnap.id, retentionUntil: data.retentionUntil });
+          logger.info('Skipping file with active retention', { fileId: raw.id, retentionUntil: raw.retentionUntil });
           continue;
         }
       }
 
-      const record = {
-        ...data,
-        id: docSnap.id,
-      };
-
-      if (isFileRecord(record)) {
+      const record = toFileRecord(raw);
+      if (record) {
         eligibleFiles.push(record);
       }
     }
@@ -857,41 +826,31 @@ export class FileRecordService {
 
   /**
    * 🔗 Get files linked to a specific entity
-   *
-   * Uses Firestore array-contains query on linkedTo field.
-   * Returns files from ANY entity that have been linked to the target.
+   * 🏢 ADR-214 Phase 3: via FirestoreQueryService (auto tenant filter replaces manual companyId)
    */
   static async getLinkedFiles(
     targetEntityType: EntityType,
     targetEntityId: string,
-    companyId: string
+    companyId: string // kept for API compat — auto-injected by FirestoreQueryService
   ): Promise<FileRecord[]> {
     const linkTag = `${targetEntityType}:${targetEntityId}`;
 
     const constraints = [
-      where('companyId', '==', companyId),
+      // companyId auto-injected by tenant filter
       where('linkedTo', 'array-contains', linkTag),
       where('status', '==', FILE_STATUS.READY),
       where('isDeleted', '==', false),
     ];
 
-    const q = query(collection(db, COLLECTIONS.FILES), ...constraints);
-    const querySnapshot = await getDocs(q);
+    const result = await firestoreQueryService.getAll<DocumentData>('FILES', { constraints });
 
     const validRecords: FileRecord[] = [];
-    for (const docSnap of querySnapshot.docs) {
-      const data = docSnap.data();
-      const record = {
-        ...data,
-        id: docSnap.id,
-        createdAt: fieldToISO(data, 'createdAt') || data.createdAt,
-        updatedAt: fieldToISO(data, 'updatedAt') || data.updatedAt,
-      };
-
-      if (isFileRecord(record)) {
+    for (const raw of result.documents) {
+      const record = toFileRecord(raw);
+      if (record) {
         validRecords.push(record);
       } else {
-        logger.warn('Skipping invalid FileRecord in getLinkedFiles', { docId: docSnap.id });
+        logger.warn('Skipping invalid FileRecord in getLinkedFiles', { docId: raw.id });
       }
     }
 
@@ -993,12 +952,11 @@ export class FileRecordService {
 
   /**
    * Check if a file with the same hash already exists
-   * Useful for deduplication
-   * 🏢 ENTERPRISE: Uses isFileRecord() type guard for boundary validation
+   * 🏢 ADR-214 Phase 3: via FirestoreQueryService (auto tenant filter — always scoped to current tenant)
    */
   static async findByHash(
     hash: string,
-    companyId?: string
+    companyId?: string // kept for API compat — auto-injected by FirestoreQueryService
   ): Promise<FileRecord | null> {
     const constraints = [
       where('hash', '==', hash),
@@ -1006,27 +964,16 @@ export class FileRecordService {
       where('isDeleted', '==', false),
     ];
 
-    if (companyId) {
-      constraints.push(where('companyId', '==', companyId));
-    }
+    const result = await firestoreQueryService.getAll<DocumentData>('FILES', {
+      constraints,
+      maxResults: 1,
+    });
 
-    const q = query(collection(db, COLLECTIONS.FILES), ...constraints);
-    const querySnapshot = await getDocs(q);
+    if (result.isEmpty) return null;
 
-    if (querySnapshot.empty) {
-      return null;
-    }
-
-    const docSnap = querySnapshot.docs[0];
-    const data = docSnap.data();
-    const record = {
-      ...data,
-      id: docSnap.id,
-    };
-
-    // 🏢 ENTERPRISE: Validate data shape at Firestore boundary
-    if (!isFileRecord(record)) {
-      logger.warn('Invalid FileRecord data from findByHash', { hash, docId: docSnap.id });
+    const record = toFileRecord(result.documents[0]);
+    if (!record) {
+      logger.warn('Invalid FileRecord data from findByHash', { hash, docId: result.documents[0].id });
       return null;
     }
 
