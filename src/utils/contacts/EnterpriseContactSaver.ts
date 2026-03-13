@@ -222,9 +222,10 @@ export class EnterpriseContactSaver {
           (url.includes('firebasestorage.googleapis.com') || url.startsWith('data:'))
         );
 
-      if (extractedURLs.length > 0) {
-        enterpriseData.multiplePhotoURLs = extractedURLs;
+      // Always set multiplePhotoURLs — empty array clears deleted photos from Firestore
+      enterpriseData.multiplePhotoURLs = extractedURLs;
 
+      if (extractedURLs.length > 0) {
         // 🏢 SERVICE/COMPANY: If contact is service or company, first photo = logoURL
         const contactType = formData.type || enterpriseData.type;
         if (contactType === 'service' || contactType === 'company') {
@@ -242,6 +243,15 @@ export class EnterpriseContactSaver {
         logger.info('ENTERPRISE SAVER: Extracted photo URLs from multiplePhotos', {
           count: extractedURLs.length,
         });
+      } else {
+        // All photos deleted — clear derived fields too
+        const contactType = formData.type || enterpriseData.type;
+        if (contactType === 'service' || contactType === 'company') {
+          enterpriseData.logoURL = '';
+        } else {
+          enterpriseData.photoURL = '';
+        }
+        logger.info('ENTERPRISE SAVER: All photos removed — cleared multiplePhotoURLs');
       }
     }
 

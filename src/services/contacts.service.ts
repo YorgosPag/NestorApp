@@ -27,6 +27,7 @@ import { generateContactId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { PhotoUploadService } from '@/services/photo-upload.service';
 
 const logger = createModuleLogger('ContactsService');
 
@@ -440,6 +441,24 @@ export class ContactsService {
       // The rule requires: request.resource.data.companyId == resource.data.companyId
       if (existingContact.companyId && !enterpriseData.companyId) {
         enterpriseData.companyId = existingContact.companyId;
+      }
+
+      // 🗑️ ENTERPRISE: Cleanup removed photos from Firebase Storage
+      // Compare old vs new multiplePhotoURLs to find deleted URLs
+      const oldURLs = (existingContact as Record<string, unknown>).multiplePhotoURLs;
+      const newURLs = enterpriseData.multiplePhotoURLs;
+      if (Array.isArray(oldURLs) && oldURLs.length > 0) {
+        const newURLSet = new Set(Array.isArray(newURLs) ? newURLs : []);
+        const deletedURLs = oldURLs.filter(
+          (url): url is string => typeof url === 'string' && !newURLSet.has(url)
+        );
+        if (deletedURLs.length > 0) {
+          logger.info('Cleaning up removed photos from Storage', { count: deletedURLs.length });
+          // Fire-and-forget — don't block the save on Storage cleanup
+          PhotoUploadService.cleanupMultiplePhotos(deletedURLs).catch((err) => {
+            logger.warn('Storage cleanup failed (non-blocking)', { error: err });
+          });
+        }
       }
 
       // Save using standard method
