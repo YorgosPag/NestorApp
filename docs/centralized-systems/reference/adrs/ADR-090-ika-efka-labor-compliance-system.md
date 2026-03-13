@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | IMPLEMENTED - Phase 1 + Phase 2 + Phase 3 + Phase 4A Complete |
+| **Status** | IMPLEMENTED - Phase 1 + Phase 2 + Phase 3 + Phase 4A + Phase 5 (EFKA Settings) Complete |
 | **Date** | 2026-02-09 |
 | **Category** | Backend Systems / Labor Compliance |
 | **Canonical Location** | `src/components/projects/ika/` |
@@ -29,6 +29,7 @@ Greek labor law requires construction projects to maintain proper worker registr
 | Attendance (Παρουσιολόγιο) | Timesheet | Phase 2 | IMPLEMENTED |
 | Stamps & APD (Ένσημα & ΑΠΔ) | Stamps Calculation + APD Payments | Phase 3 | IMPLEMENTED |
 | QR + GPS + Photo Verification | Timesheet (enhanced) | Phase 4A | IMPLEMENTED (ADR-170) |
+| EFKA Settings (Ρυθμίσεις ΕΦΚΑ) | EFKA Settings | Phase 5 | IMPLEMENTED |
 | ERGANI II (Ψηφιακή Κάρτα) | — | Phase 4B | Planned |
 
 ### 2.2 Data Model — No New Worker Registry
@@ -65,6 +66,7 @@ The IKA tab already existed in Projects with 4 placeholder sub-tabs. Phase 1 imp
 - Sub-tab 1: **Workers** (full implementation)
 - Sub-tab 2: **EFKA Declaration** (new 5th sub-tab, moved to 2nd position)
 - Sub-tabs 3-5: Timesheet, Stamps, APD (placeholders for future phases)
+- Sub-tab 6: **EFKA Settings** (Ρυθμίσεις ΕΦΚΑ — admin panel for insurance classes + contribution rates)
 
 ## 3. File Structure
 
@@ -76,12 +78,13 @@ src/components/projects/ika/
 ├── TimesheetTabContent.tsx               # Phase 2: Enterprise attendance UI
 ├── StampsCalculationTabContent.tsx       # Phase 3: Enterprise stamps calculator
 ├── ApdPaymentsTabContent.tsx             # Phase 3: APD tracking & management
+├── LaborComplianceSettingsTabContent.tsx # Phase 5: EFKA Settings admin panel
 ├── hooks/
 │   ├── useProjectWorkers.ts              # Fetch workers via contact_links
 │   ├── useEfkaDeclaration.ts             # Read/write EFKA declaration
 │   ├── useAttendanceEvents.ts            # Phase 2: Query + create immutable events
 │   ├── useAttendanceSummary.ts           # Phase 2: Computed summaries & anomalies
-│   ├── useLaborComplianceConfig.ts       # Phase 3: Insurance classes + contribution rates
+│   ├── useLaborComplianceConfig.ts       # Phase 3+5: Insurance classes + rates (reads settings/labor_compliance)
 │   ├── useStampsCalculation.ts           # Phase 3: Pure computation (stamps → contributions)
 │   └── useEmploymentRecords.ts           # Phase 3: CRUD employment records (Firestore)
 └── components/
@@ -100,7 +103,12 @@ src/components/projects/ika/
     ├── StampsSummaryDashboard.tsx         # Phase 3: 4 summary cards (stamps/contributions)
     ├── WorkerStampsTable.tsx              # Phase 3: Per-worker stamps table with totals
     ├── InsuranceClassBadge.tsx            # Phase 3: Insurance class badge
-    └── EmploymentRecordDialog.tsx         # Phase 3: Edit insurance class dialog
+    ├── EmploymentRecordDialog.tsx         # Phase 3: Edit insurance class dialog
+    ├── InsuranceClassesTable.tsx          # Phase 5: Editable table of 28 insurance classes
+    └── ContributionRatesCard.tsx          # Phase 5: Editable contribution rates table
+
+src/services/labor-compliance/
+└── LaborComplianceService.ts             # Phase 5: CRUD + validation + seed defaults
 ```
 
 ## 4. Key Interfaces
@@ -163,6 +171,7 @@ export interface ProjectWorker {
 - `attendance_qr_tokens` — Daily HMAC-signed QR tokens (Phase 4A — ADR-170 — IMPLEMENTED)
 - `employment_records` — Monthly employment records per worker/project (Phase 3)
 - `digital_work_cards` — ERGANI II digital work cards (Phase 4B)
+- `settings/labor_compliance` — Dedicated document for insurance classes + contribution rates config (Phase 5, registered as `SYSTEM_DOCS.LABOR_COMPLIANCE_SETTINGS` in `firestore-collections.ts`)
 
 ## 7. Phase 2: Enterprise Attendance System (IMPLEMENTED)
 
@@ -252,7 +261,7 @@ Employment records (the output of computation) are persisted to `employment_reco
 | Εφάπαξ (Once Payment) | — | 4.00 | 4.00 |
 | **ΣΥΝΟΛΟ ΚΠΚ 781** | **24.397** | **20.790** | **45.187** |
 
-Rates are stored as `DEFAULT_CONTRIBUTION_RATES` in `contracts.ts` and can be overridden via `system/settings.laborCompliance` Firestore document.
+Rates are stored as `DEFAULT_CONTRIBUTION_RATES` in `contracts.ts` and can be overridden via `settings/labor_compliance` dedicated Firestore document (managed through the EFKA Settings admin panel).
 
 ### 8.3 Insurance Classes (Config-Driven)
 
@@ -276,7 +285,7 @@ attendance_events (Phase 2, immutable)
   │    → Count unique working days per worker
   │
   └─ useLaborComplianceConfig()
-       → Read: system/settings.laborCompliance (Firestore)
+       → Read: settings/labor_compliance (dedicated Firestore doc)
        → Fallback: DEFAULT_LABOR_COMPLIANCE_CONFIG
        │
        └─ useStampsCalculation(workers, attendanceDays, config)
@@ -326,7 +335,7 @@ ApdPaymentsTabContent (APD tracking)
 
 | Hook | Type | Purpose |
 |------|------|---------|
-| `useLaborComplianceConfig` | Firestore read | Insurance classes + contribution rates from `system/settings` |
+| `useLaborComplianceConfig` | Firestore read | Insurance classes + contribution rates from `settings/labor_compliance` (with `refetch()` + `isFromFirestore`) |
 | `useStampsCalculation` | Pure computation | Derives StampsMonthSummary from workers + attendance + config |
 | `useEmploymentRecords` | Firestore CRUD | Batch save/update employment records, APD status tracking |
 
@@ -367,6 +376,58 @@ All text from `useTranslation('projects')`:
 - 2 client hooks: `useGeolocation`, `usePhotoCapture`
 - See: **[ADR-170](ADR-170-attendance-qr-gps-verification.md)**
 
+## 11. Phase 5: EFKA Settings Admin Panel (IMPLEMENTED)
+
+### 11.1 Architecture — Admin-Managed Configuration
+
+The EFKA Settings panel provides a dedicated admin UI for managing insurance classes and contribution rates. Configuration is stored in a **dedicated Firestore document** (`settings/labor_compliance`) instead of a field within `system/settings`, enabling independent access control and simpler CRUD operations.
+
+**Service**: `LaborComplianceService` handles CRUD, validation, and seeding from `DEFAULT_LABOR_COMPLIANCE_CONFIG` defaults.
+
+### 11.2 UI Architecture
+
+```
+LaborComplianceSettingsTabContent (main orchestrator — 6th sub-tab "Ρυθμίσεις ΕΦΚΑ")
+├── Card: General Settings       — Year selector, last updated info
+├── Card: Insurance Classes      — InsuranceClassesTable (editable table of 28 classes)
+│   └── InsuranceClassesTable    — Columns: class number, description, imputed daily wage, year
+└── Card: Contribution Rates     — ContributionRatesCard (editable rates)
+    └── ContributionRatesCard    — Columns: category, employer %, employee %, total %
+```
+
+### 11.3 Firestore Storage
+
+**Document path**: `settings/labor_compliance`
+**Registered as**: `SYSTEM_DOCS.LABOR_COMPLIANCE_SETTINGS` in `firestore-collections.ts`
+
+Previously, labor compliance config was stored as a field within `system/settings.laborCompliance`. Phase 5 migrates to a dedicated document for:
+- Independent access control
+- Simpler CRUD without affecting other system settings
+- Clear ownership by `LaborComplianceService`
+
+### 11.4 Data Flow
+
+```
+LaborComplianceService (server-side)
+  │
+  ├─ seed()          → Write DEFAULT_LABOR_COMPLIANCE_CONFIG to Firestore (if empty)
+  ├─ getConfig()     → Read settings/labor_compliance
+  ├─ updateConfig()  → Validate + write (insurance classes + contribution rates)
+  └─ validate()      → Business rules (class numbers, rate ranges, required fields)
+  │
+  └─ useLaborComplianceConfig() (client hook)
+       → Read: settings/labor_compliance (dedicated Firestore doc)
+       → Fallback: DEFAULT_LABOR_COMPLIANCE_CONFIG
+       → Exposes: refetch(), isFromFirestore
+       → Used by: StampsCalculationTabContent (computation), LaborComplianceSettingsTabContent (admin)
+```
+
+### 11.5 i18n
+
+All text from `useTranslation('projects')` — new keys added for `ika.efkaSettingsTab.*` (el + en).
+
+---
+
 ### Phase 4B: ERGANI II
 - Digital work card integration
 - Cross-checks: Attendance ↔ ERGANI ↔ APD
@@ -377,7 +438,7 @@ All text from `useTranslation('projects')`:
 - Push notifications for clock reminders
 - Offline check-in with sync
 
-## 11. Consequences
+## 12. Consequences
 
 ### Positive
 - No new worker registry — reuses existing contacts/relationships system
@@ -389,6 +450,8 @@ All text from `useTranslation('projects')`:
 - Batch save for employment records — atomic writes for all workers in a month
 - APD status preserved on re-save — doesn't overwrite submitted/accepted records
 - Enterprise patterns throughout — all 5 design token hooks, i18n, proper TypeScript, Radix Select
+- Dedicated EFKA Settings admin panel — insurance classes + rates editable without code changes
+- Dedicated Firestore document (`settings/labor_compliance`) — independent from `system/settings`, cleaner CRUD
 
 ### Negative
 - `contact_links` needs Firestore rules (resolved — rules deployed)
@@ -400,3 +463,10 @@ All text from `useTranslation('projects')`:
 ### Risks
 - Insurance class rates change annually — mitigated by config-driven approach (Phase 3 ✅)
 - Real-time geofence/QR integration requires mobile app — **MITIGATED** by ADR-170: web-based QR + GPS (Phase 4A ✅)
+
+## 13. Changelog
+
+| Date | Change | Author |
+|------|--------|--------|
+| 2026-02-09 | Initial ADR: Phase 1 (Workers + EFKA Declaration) + Phase 2 (Attendance) + Phase 3 (Stamps & APD) + Phase 4A (QR + GPS, ADR-170) | Georgios Pagonis + Claude |
+| 2026-03-13 | Phase 5: EFKA Settings admin panel — new 6th sub-tab "Ρυθμίσεις ΕΦΚΑ" with `LaborComplianceSettingsTabContent` orchestrator, `InsuranceClassesTable` (28 classes), `ContributionRatesCard`, `LaborComplianceService` (CRUD + validation + seed). Migrated Firestore storage from `system/settings.laborCompliance` field to dedicated `settings/labor_compliance` document (`SYSTEM_DOCS.LABOR_COMPLIANCE_SETTINGS`). Updated `useLaborComplianceConfig` hook with `refetch()` and `isFromFirestore`. Added i18n keys (el/en). | Georgios Pagonis + Claude |
