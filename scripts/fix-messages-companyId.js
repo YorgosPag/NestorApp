@@ -29,7 +29,7 @@ const { loadEnvLocal } = require('./_shared/loadEnvLocal');
 const SCRIPT_NAME = 'fix-messages-companyId.js';
 
 // The correct companyId (Firestore document ID)
-const CORRECT_COMPANY_ID = 'pzNUy8ksddGCtcQMqumR';
+const CORRECT_COMPANY_ID = 'comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757';
 
 // Wrong companyIds to fix
 const WRONG_COMPANY_IDS = ['pagonis-company'];

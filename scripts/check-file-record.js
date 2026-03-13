@@ -54,7 +54,7 @@ async function main() {
     console.log('=' .repeat(60));
 
     // Compare with user
-    const USER_COMPANY_ID = 'pzNUy8ksddGCtcQMqumR';
+    const USER_COMPANY_ID = 'comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757';
     const USER_UID = 'ITjmw0syn7WiYuskqaGtzLPuN852';
 
     console.log('\n🔐 PERMISSION CHECK:');

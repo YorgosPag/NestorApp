@@ -10,9 +10,11 @@
  * @enterprise Zero Duplicates - Shared Utilities
  */
 
-// 🔒 ENTERPRISE: Firestore auto-generated document ID pattern
-// Auto-IDs are exactly 20 alphanumeric characters (no dashes, no special chars)
+// 🔒 ENTERPRISE: Valid company ID patterns
+// Legacy: Firestore auto-ID (20 alphanumeric chars)
+// Enterprise: comp_uuid-v4 format
 const FIRESTORE_AUTO_ID_REGEX = /^[A-Za-z0-9]{20}$/;
+const ENTERPRISE_COMPANY_ID_REGEX = /^comp_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
  * Validate and get COMPANY_ID from env/argv
@@ -41,18 +43,19 @@ function getCompanyId(scriptName) {
     process.exit(1);
   }
 
-  // 🔒 ENTERPRISE: Strict validation for Firestore auto-ID
+  // 🔒 ENTERPRISE: Accept both legacy auto-ID and enterprise comp_xxx format
   const isAutoId = FIRESTORE_AUTO_ID_REGEX.test(companyId);
+  const isEnterpriseId = ENTERPRISE_COMPANY_ID_REGEX.test(companyId);
 
-  if (!isAutoId && !allowCustom) {
-    console.error(`❌ [${scriptName}] ERROR: COMPANY_ID does not match Firestore auto-ID format`);
+  if (!isAutoId && !isEnterpriseId && !allowCustom) {
+    console.error(`❌ [${scriptName}] ERROR: COMPANY_ID does not match expected format`);
     console.error(`📍 [${scriptName}] Received: "${companyId}"`);
-    console.error(`💡 [${scriptName}] Expected: Firestore auto-ID (20 alphanumeric chars, e.g., "pzNUy8ksddGCtcQMqumR")`);
+    console.error(`💡 [${scriptName}] Expected: Enterprise ID (e.g., "comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757") or legacy auto-ID (20 chars)`);
     console.error('');
     console.error('   Common mistakes:');
-    console.error('   ❌ "my-company" - This is a slug, not a Firestore document ID');
-    console.error('   ❌ "pagonis" - Too short, auto-IDs are exactly 20 characters');
-    console.error('   ❌ "abc-123-xyz" - Contains dashes, auto-IDs are alphanumeric only');
+    console.error('   ❌ "my-company" - This is a slug, not a valid company ID');
+    console.error('   ❌ "pagonis" - Too short');
+    console.error('   ❌ Missing "comp_" prefix for enterprise IDs');
     console.error('');
     console.error('   If you have a custom/legacy document ID, set override:');
     console.error(`   ALLOW_CUSTOM_COMPANY_ID=true COMPANY_ID="${companyId}" node scripts/${scriptName}`);

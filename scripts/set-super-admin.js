@@ -23,7 +23,7 @@ const path = require('path');
 // =============================================================================
 
 const TARGET_EMAIL = 'georgios.pagonis@gmail.com';
-const TARGET_COMPANY_ID = 'pzNUy8ksddGCtcQMqumR';
+const TARGET_COMPANY_ID = 'comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757';
 const TARGET_ROLE = 'super_admin';
 
 // =============================================================================

@@ -12,7 +12,7 @@ This guide executes **Section 1** (Tenant Model Fix) and **Section 2** (Data Mig
 
 **Problem:**
 - User claim: `companyId: "pagonis-company"` (string slug)
-- Firestore data: `companyId: "pzNUy8ksddGCtcQMqumR"` (doc ID)
+- Firestore data: `companyId: "comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757"` (doc ID)
 - → Backend tenant isolation returns 0 results
 
 **Solution:**
@@ -31,7 +31,7 @@ Before setting claims, verify the company document exists in Firestore.
 **Manual Check:**
 1. Go to Firebase Console → Firestore
 2. Navigate to `contacts` collection
-3. Verify document `pzNUy8ksddGCtcQMqumR` exists with `type='company'`
+3. Verify document `comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757` exists with `type='company'`
 
 If the company doc doesn't exist, create it manually in Firestore before proceeding.
 
@@ -45,10 +45,10 @@ This updates your Firebase Auth token claim using the **canonical script**.
 
 ```bash
 # Set the companyId claim (Firestore doc ID - NOT slug!)
-COMPANY_ID=pzNUy8ksddGCtcQMqumR USER_UID=<YOUR_USER_UID> node scripts/claims.setCompanyId.js
+COMPANY_ID=comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757 USER_UID=<YOUR_USER_UID> node scripts/claims.setCompanyId.js
 
 # Optional: Also set GLOBAL_ROLE if needed
-COMPANY_ID=pzNUy8ksddGCtcQMqumR USER_UID=<YOUR_USER_UID> GLOBAL_ROLE=company_admin node scripts/claims.setCompanyId.js
+COMPANY_ID=comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757 USER_UID=<YOUR_USER_UID> GLOBAL_ROLE=company_admin node scripts/claims.setCompanyId.js
 ```
 
 **Expected Output:**
@@ -76,7 +76,7 @@ COMPANY_ID=pzNUy8ksddGCtcQMqumR USER_UID=<YOUR_USER_UID> GLOBAL_ROLE=company_adm
 **After running the script:**
 1. In the app, call `await refreshToken()` via useAuth hook
 2. Or logout/login to refresh the token
-3. Verify at `/debug/token-info`: `companyId: "pzNUy8ksddGCtcQMqumR"`
+3. Verify at `/debug/token-info`: `companyId: "comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757"`
 
 ---
 
@@ -88,7 +88,7 @@ This shows what would be changed WITHOUT making changes.
 
 ```bash
 # DRY RUN (default - preview only, no changes)
-COMPANY_ID=pzNUy8ksddGCtcQMqumR COLLECTION_BUILDINGS=buildings node scripts/migrations.buildings.backfillCompanyId.js
+COMPANY_ID=comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757 COLLECTION_BUILDINGS=buildings node scripts/migrations.buildings.backfillCompanyId.js
 ```
 
 **Expected Output:**
@@ -97,7 +97,7 @@ COMPANY_ID=pzNUy8ksddGCtcQMqumR COLLECTION_BUILDINGS=buildings node scripts/migr
 🔧 BUILDINGS COMPANYID BACKFILL MIGRATION
 ═══════════════════════════════════════════════════════════════
 
-🎯 Target Company: pzNUy8ksddGCtcQMqumR
+🎯 Target Company: comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757
 🔧 Mode: DRY-RUN (preview only)
 📁 Collection: buildings
 
@@ -108,8 +108,8 @@ COMPANY_ID=pzNUy8ksddGCtcQMqumR COLLECTION_BUILDINGS=buildings node scripts/migr
    📄 Page 1: Fetching 100 documents...
       Scanned: 10, Need update: 10, Already OK: 0
       🔍 DRY-RUN - Would update:
-         - Building A (docId1): (none) → pzNUy8ksddGCtcQMqumR [missing]
-         - Building B (docId2): (none) → pzNUy8ksddGCtcQMqumR [missing]
+         - Building A (docId1): (none) → comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757 [missing]
+         - Building B (docId2): (none) → comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757 [missing]
          ...
 
 ℹ️  DRY-RUN: No changes were made to the database
@@ -125,7 +125,7 @@ This ACTUALLY updates Firestore.
 
 ```bash
 # EXECUTE MIGRATION (writes to database)
-COMPANY_ID=pzNUy8ksddGCtcQMqumR COLLECTION_BUILDINGS=buildings DRY_RUN=false node scripts/migrations.buildings.backfillCompanyId.js
+COMPANY_ID=comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757 COLLECTION_BUILDINGS=buildings DRY_RUN=false node scripts/migrations.buildings.backfillCompanyId.js
 ```
 
 **Expected Output:**
@@ -155,7 +155,7 @@ After running all steps, verify:
 
 ### 1. **Token Info**
 - URL: https://nestor-app.vercel.app/debug/token-info
-- Should show: `companyId: "pzNUy8ksddGCtcQMqumR"`
+- Should show: `companyId: "comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757"`
 
 ### 2. **Bootstrap API**
 - Open DevTools → Network tab
@@ -172,7 +172,7 @@ After running all steps, verify:
 ### 4. **Projects List**
 - Network tab: `/api/projects/list` request
 - Should see: **200 OK** (not 401)
-- Should return projects with `companyId: "pzNUy8ksddGCtcQMqumR"`
+- Should return projects with `companyId: "comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757"`
 
 ---
 
@@ -245,7 +245,7 @@ Once all steps are complete:
 
 All 4 verifications must pass:
 
-1. ✅ `/debug/token-info` shows `companyId: "pzNUy8ksddGCtcQMqumR"`
+1. ✅ `/debug/token-info` shows `companyId: "comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757"`
 2. ✅ `/api/audit/bootstrap` returns **200 OK** (no "company not found")
 3. ✅ `/api/projects/list` returns **200 OK** with projects
 4. ✅ `/api/buildings` returns **200 OK** with buildings (if buildings exist)

@@ -10,7 +10,7 @@
  * - Comprehensive building data based on complete schema research
  *
  * COMPANY: Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.
- * COMPANY_ID: pzNUy8ksddGCtcQMqumR
+ * COMPANY_ID: comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757 (migrated from pzNUy8ksddGCtcQMqumR)
  *
  * @author Γιώργος Παγώνης + Claude Code (Anthropic AI)
  * @date 2025-12-21
@@ -31,7 +31,7 @@ const BUILDING_CATEGORIES = ['residential', 'commercial', 'mixed', 'industrial']
 const BUILDING_STATUSES = ['active', 'construction', 'planned', 'completed'];
 
 // 👥 COMPANY DATA
-const PAGONIS_COMPANY_ID = 'pzNUy8ksddGCtcQMqumR';
+const PAGONIS_COMPANY_ID = 'comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757';
 const COMPANY_NAME = 'Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.';
 
 // 🏗️ COMPREHENSIVE BUILDING DATA - Based on Complete Schema Research

@@ -1,26 +1,32 @@
 /**
  * @fileoverview Tenant Configuration — Single Source of Truth
- * @version 1.0.0
+ * @version 2.0.0
  * @since 2026-03-13
  *
- * Centralizes the legacy tenant company ID that was previously hardcoded
- * across 21+ files. New companies will use enterprise IDs (comp_xxx).
+ * Enterprise company ID for the ΠΑΓΩΝΗΣ tenant.
+ * Migrated from legacy Firestore auto-ID to enterprise format on 2026-03-13.
  *
- * @see ADR-210 Phase 3: Company Document Materialization
+ * @see ADR-210 Phase 4: Legacy Company ID Migration
  */
 
 /**
- * Legacy tenant company ID — Single Source of Truth.
+ * Tenant company ID — Single Source of Truth.
  *
- * This is the Firestore document ID for the ΠΑΓΩΝΗΣ company in the
- * `contacts` collection (type='company'). It also serves as the
- * `companyId` in Firebase custom claims for all existing users.
+ * This is the enterprise ID for the ΠΑΓΩΝΗΣ company document
+ * at `companies/{TENANT_COMPANY_ID}` in Firestore.
  *
- * **Why not change it?**
- * - Firebase custom claims of ALL users reference this ID
- * - Subcollections (audit_logs, RBAC) already exist under `companies/{this_id}`
- * - Changing it would require re-seeding claims for every user
+ * Also stored in:
+ * - Firebase custom claims: `token.companyId`
+ * - Firestore `/users/{uid}.companyId`
  *
- * **New companies** will use enterprise IDs via `generateCompanyId()` → `comp_xxx`
+ * Migration history:
+ * - Pre-2026-03-13: `pzNUy8ksddGCtcQMqumR` (Firestore auto-ID)
+ * - Post-2026-03-13: `comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757` (enterprise ID)
  */
-export const LEGACY_TENANT_COMPANY_ID = 'pzNUy8ksddGCtcQMqumR';
+export const TENANT_COMPANY_ID = 'comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757';
+
+/**
+ * @deprecated Use TENANT_COMPANY_ID instead. Kept for backward compatibility
+ * during transition period. Will be removed in a future cleanup.
+ */
+export const LEGACY_TENANT_COMPANY_ID = TENANT_COMPANY_ID;

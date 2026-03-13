@@ -34,7 +34,7 @@ const SCRIPT_NAME = 'fix-conversation-companyId.js';
 const WRONG_COMPANY_ID = 'pagonis-company';
 
 // The correct companyId (Firestore document ID)
-const CORRECT_COMPANY_ID = 'pzNUy8ksddGCtcQMqumR';
+const CORRECT_COMPANY_ID = 'comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757';
 
 // Confirmation required to execute
 const CONFIRM_MIGRATION = process.env.CONFIRM_MIGRATION === 'true';

@@ -46,7 +46,7 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 // Configuration
-const DEFAULT_COMPANY_ID = 'pzNUy8ksddGCtcQMqumR';
+const DEFAULT_COMPANY_ID = 'comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757';
 const COLLECTION = 'opportunities';
 
 async function migrate(dryRun = true) {

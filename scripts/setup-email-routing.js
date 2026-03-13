@@ -58,7 +58,7 @@ loadEnvFile(path.join(__dirname, '..', '.env'));
 const EMAIL_ROUTING_RULES = [
   {
     pattern: 'inbound@nestorconstruct.gr',
-    companyId: 'pzNUy8ksddGCtcQMqumR',
+    companyId: 'comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757',
     isActive: true,
     description: 'Primary inbound email for Nestor Construct'
   },

@@ -16,7 +16,7 @@
 ```json
 {
   "requestId": "req_1707300000_a1b2c3",
-  "companyId": "pzNUy8ksddGCtcQMqumR",
+  "companyId": "comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757",
   "messageId": "msg_email_12345",
   "module": "UnderstandingModule",
   "action": "intent_detected",
