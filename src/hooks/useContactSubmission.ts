@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import type React from 'react';
 import { useNotifications } from '@/providers/NotificationProvider';
 import type { Contact } from '@/types/contacts';
@@ -43,6 +43,11 @@ export interface UseContactSubmissionReturn {
     buttonText: string;
     statusMessage?: string;
   };
+
+  // 🏢 GOOGLE-STYLE: Deferred save — event-driven, zero polling
+  attemptPendingSave: (formData: ContactFormData) => void;
+  clearPendingSave: () => void;
+  isPendingSave: boolean;
 }
 
 // ============================================================================
@@ -189,6 +194,12 @@ export function useContactSubmission({
   const [loading, setLoading] = useState(false);
   const notifications = useNotifications();
 
+  // 🏢 GOOGLE-STYLE: Deferred save — event-driven, zero polling
+  // When user presses Save but uploads are pending, we remember the intent.
+  // Upload completion → formData change → effect in useContactForm → auto-submit.
+  const [pendingSave, setPendingSave] = useState(false);
+  const handleSubmitRef = useRef<((fd: ContactFormData) => Promise<void>) | null>(null);
+
   // ========================================================================
   // VALIDATION
   // ========================================================================
@@ -267,19 +278,14 @@ export function useContactSubmission({
           { duration: 3000 }
         );
 
-        // 🔥✅ ENTERPRISE SOLUTION: Auto-retry submission after uploads complete
-        // 🎯 CRITICAL SUCCESS: formDataRef fix για Representative Photo upload - 2025-12-05
-        // ⚠️ WARNING: ΜΗΝ ΑΛΛΑΞΕΙΣ αυτό το setTimeout logic! Λύνει stale closure race condition
-        setTimeout(() => {
-          logger.info('SUBMISSION: Auto-retrying after upload delay');
-          // 🎯 CRITICAL FIX: Use formDataRef to get FRESH formData and avoid stale closure
-          const freshFormData = formDataRef?.current || formData;
-          logger.info('RETRY: Using fresh formData from ref to avoid stale closure', {
-            hasRef: !!formDataRef,
-            isRefFresh: formDataRef ? freshFormData !== formData : 'No ref available'
-          });
-          handleSubmit(freshFormData); // Recursive retry with FRESH data
-        }, 500);
+        // 🏢 GOOGLE-STYLE: Deferred save — event-driven, zero polling
+        // Remember user intent. When uploads complete → formData changes →
+        // useEffect in useContactForm calls attemptPendingSave → auto-submit.
+        // No setTimeout, no recursive retry, no stale closure, no notification spam.
+        logger.info('DEFERRED SAVE: Uploads in progress — will auto-save on completion', {
+          pendingUploads: uploadValidation.pendingUploads
+        });
+        setPendingSave(true);
 
         return;
       }
@@ -473,6 +479,47 @@ export function useContactSubmission({
     }
   }, [loading, validateFormData, editContact, onContactAdded, onOpenChange, notifications]); // 🔧 FIX: Added notifications dependency
 
+  // Keep ref in sync for deferred save (avoids circular useCallback dependency)
+  handleSubmitRef.current = handleSubmit;
+
+  // ========================================================================
+  // 🏢 GOOGLE-STYLE: EVENT-DRIVEN DEFERRED SAVE
+  // ========================================================================
+
+  /**
+   * Called by useContactForm's useEffect when formData changes.
+   * If user had pressed Save (pendingSave=true) and all uploads are now complete → auto-submit.
+   * Pure event-driven: upload complete → state change → effect → this function → save.
+   */
+  const attemptPendingSave = useCallback((formData: ContactFormData) => {
+    if (!pendingSave || loading) return;
+
+    const uploadValidation = validateUploadState(formData as unknown as Record<string, unknown>);
+
+    // If uploads failed, cancel the deferred save
+    if (uploadValidation.failedUploads > 0) {
+      logger.info('DEFERRED SAVE: Cancelled — failed uploads detected');
+      setPendingSave(false);
+      notifications.error("contacts.submission.failedUploads");
+      return;
+    }
+
+    // If all uploads complete, auto-submit
+    if (uploadValidation.isValid) {
+      logger.info('DEFERRED SAVE: All uploads complete — auto-submitting');
+      setPendingSave(false);
+      handleSubmitRef.current?.(formData);
+    }
+    // Otherwise: still pending — wait for next formData change
+  }, [pendingSave, loading, notifications]);
+
+  /**
+   * Clear deferred save intent (modal close, form reset, etc.)
+   */
+  const clearPendingSave = useCallback(() => {
+    setPendingSave(false);
+  }, []);
+
   // ========================================================================
   // UI/UX COORDINATION (Layer 3)
   // ========================================================================
@@ -494,6 +541,10 @@ export function useContactSubmission({
 
     if (loading) {
       buttonText = editContact ? 'contacts.button.updating' : 'contacts.button.creating';
+    } else if (pendingSave) {
+      // 🏢 GOOGLE-STYLE: User pressed Save, waiting for uploads to finish
+      buttonText = 'contacts.button.waitingUploads';
+      statusMessage = 'contacts.status.waitingPhotos';
     } else if (isUploading) {
       buttonText = 'contacts.button.waitingUploads';
       statusMessage = 'contacts.status.waitingPhotos';
@@ -504,7 +555,7 @@ export function useContactSubmission({
       buttonText = 'contacts.button.fillRequired';
     }
 
-    const canSubmit = !loading && uploadValidation.isValid && isValidForm;
+    const canSubmit = !loading && !pendingSave && uploadValidation.isValid && isValidForm;
 
     return {
       canSubmit,
@@ -513,7 +564,7 @@ export function useContactSubmission({
       buttonText,
       statusMessage
     };
-  }, [loading, validateFormData, editContact, notifications]);
+  }, [loading, pendingSave, validateFormData, editContact, notifications]);
 
   // ========================================================================
   // RETURN API
@@ -530,6 +581,11 @@ export function useContactSubmission({
     validateFormData,
 
     // UI/UX Coordination
-    getSubmissionState
+    getSubmissionState,
+
+    // 🏢 GOOGLE-STYLE: Deferred save — event-driven, zero polling
+    attemptPendingSave,
+    clearPendingSave,
+    isPendingSave: pendingSave,
   };
 }

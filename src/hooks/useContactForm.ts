@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import React from 'react';
 import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
@@ -85,7 +85,11 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
     loading,
     handleSubmit: submitFormData,
     validateFormData,
-    getSubmissionState
+    getSubmissionState,
+    // 🏢 GOOGLE-STYLE: Event-driven deferred save
+    attemptPendingSave,
+    clearPendingSave,
+    isPendingSave,
   } = useContactSubmission({
     editContact,
     onContactAdded,
@@ -93,6 +97,21 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
     resetForm,
     formDataRef // 🔥 CRITICAL FIX: Pass formDataRef for fresh state access
   });
+
+  // 🏢 GOOGLE-STYLE: Event-driven auto-save
+  // When formData changes (e.g. upload completes) AND user had pressed Save → auto-submit.
+  // This is the core of the event-driven pattern: no polling, no setTimeout.
+  // Chain: upload completes → formData.multiplePhotos updated → this effect → attemptPendingSave → save
+  useEffect(() => {
+    attemptPendingSave(formData);
+  }, [formData, attemptPendingSave]);
+
+  // Clear deferred save intent when modal closes (user cancelled)
+  useEffect(() => {
+    if (!isModalOpen) {
+      clearPendingSave();
+    }
+  }, [isModalOpen, clearPendingSave]);
 
   // 3️⃣ Live preview functionality (extracted)
   useContactLivePreview({
