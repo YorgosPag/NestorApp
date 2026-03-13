@@ -14,8 +14,10 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: Viewport detection for conditional rendering (avoid duplicate mount)
 import { useIsMobile } from '@/hooks/useMobile';
 import { useTranslation } from 'react-i18next';
-// 🏢 ENTERPRISE: Centralized confirmation dialog (replaces window.confirm)
-import { useNotifications } from '@/providers/NotificationProvider';
+// 🛡️ ADR-226: Deletion Guard (pre-check + blocked dialog)
+import { useDeletionGuard } from '@/hooks/useDeletionGuard';
+// 🏢 ENTERPRISE: Centralized confirmation dialog (AlertDialog, centered)
+import { BuildingSpaceConfirmDialog } from '@/components/building-management/shared/BuildingSpaceConfirmDialog';
 
 import { UnitsList } from '@/components/units/UnitsList';
 // 🏢 ENTERPRISE: Direct imports to avoid barrel (reduces module graph)
@@ -82,23 +84,31 @@ export function UnitsSidebar({
     }
   }, [isCreatingNewUnit, onCancelCreate]);
 
-  // 🏢 ENTERPRISE: Centralized confirmation dialog (replaces window.confirm)
-  const { showConfirmDialog } = useNotifications();
+  // 🛡️ ADR-226: Deletion Guard — pre-check dependencies before allowing delete
+  const { checkBeforeDelete, BlockedDialog } = useDeletionGuard('unit');
+
+  // Confirmation state for centered AlertDialog (NOT toast)
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const handleDeleteUnit = useCallback(async () => {
     if (!selectedUnit || !onDeleteUnit) return;
-    await showConfirmDialog(
-      t('navigation.actions.delete.confirmMessage', { name: selectedUnit.name }),
-      () => onDeleteUnit(selectedUnit.id),
-      undefined,
-      {
-        title: t('navigation.actions.delete.confirmTitle', { defaultValue: 'Διαγραφή Μονάδας' }),
-        confirmText: t('navigation.actions.delete.label', { defaultValue: 'Διαγραφή' }),
-        cancelText: t('dialog.cancel', { ns: 'common', defaultValue: 'Ακύρωση' }),
-        type: 'warning'
-      }
-    );
-  }, [selectedUnit, onDeleteUnit, t, showConfirmDialog]);
+    const allowed = await checkBeforeDelete(selectedUnit.id);
+    if (allowed) {
+      setConfirmDelete(true);
+    }
+  }, [selectedUnit, onDeleteUnit, checkBeforeDelete]);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!selectedUnit || !onDeleteUnit) return;
+    setDeleteLoading(true);
+    try {
+      await onDeleteUnit(selectedUnit.id);
+    } finally {
+      setDeleteLoading(false);
+      setConfirmDelete(false);
+    }
+  }, [selectedUnit, onDeleteUnit]);
 
   // Get units tabs from centralized config
   const unitsTabs = getSortedUnitsTabs();
@@ -204,6 +214,27 @@ export function UnitsSidebar({
       >
         {isMobile && selectedUnit && detailsContent}
       </MobileDetailsSlideIn>
+
+      {/* 🛡️ ADR-226: Deletion Guard blocked dialog */}
+      {BlockedDialog}
+
+      {/* Centered confirmation dialog (NOT toast) */}
+      <BuildingSpaceConfirmDialog
+        open={confirmDelete}
+        onOpenChange={(open) => { if (!open) setConfirmDelete(false); }}
+        title={t('navigation.actions.delete.confirmTitle', { defaultValue: 'Διαγραφή Μονάδας' })}
+        description={
+          <>
+            {t('navigation.actions.delete.confirmMessage', { name: selectedUnit?.name })}{' '}
+            <br /><br />
+            {t('navigation.actions.delete.confirmWarning', { defaultValue: 'Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.' })}
+          </>
+        }
+        confirmLabel={t('navigation.actions.delete.label', { defaultValue: 'Διαγραφή' })}
+        onConfirm={handleConfirmDelete}
+        loading={deleteLoading}
+        variant="destructive"
+      />
     </>
   );
 }
