@@ -4,20 +4,18 @@
  * =============================================================================
  *
  * Custom React hook for fetching and managing calendar events.
- * Follows the auth-guard pattern from `app/crm/tasks/page.tsx`.
+ * Uses centralized useAsyncData hook (ADR-223).
  *
  * @module hooks/useCalendarEvents
  */
 
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { getCalendarEvents } from '@/services/calendar/CalendarEventService';
 import type { CalendarEvent, CalendarEventType } from '@/types/calendar-event';
-import { createModuleLogger } from '@/lib/telemetry';
-
-const logger = createModuleLogger('useCalendarEvents');
+import { useAsyncData } from '@/hooks/useAsyncData';
 
 // ============================================================================
 // TYPES
@@ -52,17 +50,9 @@ export interface UseCalendarEventsReturn {
 
 export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalendarEventsReturn {
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const fetchEvents = useCallback(async () => {
-    if (!isAuthenticated) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
+  const { data, loading, error, refetch } = useAsyncData({
+    fetcher: async () => {
       const result = await getCalendarEvents(
         options.dateRange.start,
         options.dateRange.end,
@@ -70,33 +60,21 @@ export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalenda
       );
 
       // Filter by event types if specified
-      const filtered = options.eventTypes && options.eventTypes.length > 0
-        ? result.filter((e) => options.eventTypes!.includes(e.eventType))
-        : result;
+      if (options.eventTypes && options.eventTypes.length > 0) {
+        return result.filter((e) => options.eventTypes!.includes(e.eventType));
+      }
+      return result;
+    },
+    deps: [
+      options.dateRange.start.getTime(),
+      options.dateRange.end.getTime(),
+      options.userId,
+      options.eventTypes?.join(','),
+    ],
+    enabled: !authLoading && isAuthenticated,
+  });
 
-      setEvents(filtered);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load calendar events';
-      setError(message);
-      logger.error('Error fetching calendar events', { error: err });
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    isAuthenticated,
-    options.dateRange.start.getTime(),
-    options.dateRange.end.getTime(),
-    options.userId,
-    // Serialize eventTypes for dependency comparison
-    options.eventTypes?.join(','),
-  ]);
-
-  // Fetch when authenticated and dependencies change
-  useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      fetchEvents();
-    }
-  }, [authLoading, isAuthenticated, fetchEvents]);
+  const events = data ?? [];
 
   // Compute stats
   const stats = useMemo<CalendarEventStats>(() => ({
@@ -109,7 +87,7 @@ export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalenda
     events,
     loading,
     error,
-    refresh: fetchEvents,
+    refresh: refetch,
     stats,
   };
 }

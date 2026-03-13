@@ -3,11 +3,11 @@
 /**
  * useBuildingMilestones — Data hook for building milestones CRUD
  *
- * Loads milestones from Firestore via API, provides CRUD handlers.
- * Pattern follows: src/components/building-management/hooks/useConstructionGantt.ts
+ * Uses centralized useAsyncData hook for data fetching (ADR-223).
+ * CRUD operations trigger refetch for server-consistent state.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { BuildingMilestone, MilestoneCreatePayload, MilestoneUpdatePayload } from '@/types/building/milestone';
 import {
@@ -16,6 +16,7 @@ import {
   updateMilestone,
   deleteMilestone,
 } from '@/services/milestone-service';
+import { useAsyncData } from '@/hooks/useAsyncData';
 
 const logger = createModuleLogger('useBuildingMilestones');
 
@@ -30,32 +31,13 @@ interface UseBuildingMilestonesReturn {
 }
 
 export function useBuildingMilestones(buildingId: string): UseBuildingMilestonesReturn {
-  const [milestones, setMilestones] = useState<BuildingMilestone[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, loading, error, refetch } = useAsyncData({
+    fetcher: () => getMilestones(buildingId),
+    deps: [buildingId],
+    enabled: !!buildingId,
+  });
 
-  // ─── Load Data ──────────────────────────────────────────────────────
-
-  const loadData = useCallback(async () => {
-    if (!buildingId) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const data = await getMilestones(buildingId);
-      setMilestones(data);
-    } catch (err) {
-      logger.error('Error loading milestones', { error: err });
-      setError(err instanceof Error ? err.message : 'Failed to load milestones');
-    } finally {
-      setLoading(false);
-    }
-  }, [buildingId]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const milestones = data ?? [];
 
   // ─── CRUD Operations ───────────────────────────────────────────────
 
@@ -63,33 +45,33 @@ export function useBuildingMilestones(buildingId: string): UseBuildingMilestones
     async (payload: MilestoneCreatePayload): Promise<boolean> => {
       const result = await createMilestone(buildingId, payload);
       if (result.success) {
-        await loadData();
+        await refetch();
       }
       return result.success;
     },
-    [buildingId, loadData]
+    [buildingId, refetch]
   );
 
   const handleUpdate = useCallback(
     async (id: string, payload: MilestoneUpdatePayload): Promise<boolean> => {
       const result = await updateMilestone(buildingId, id, payload);
       if (result.success) {
-        await loadData();
+        await refetch();
       }
       return result.success;
     },
-    [buildingId, loadData]
+    [buildingId, refetch]
   );
 
   const handleDelete = useCallback(
     async (id: string): Promise<boolean> => {
       const result = await deleteMilestone(buildingId, id);
       if (result.success) {
-        await loadData();
+        await refetch();
       }
       return result.success;
     },
-    [buildingId, loadData]
+    [buildingId, refetch]
   );
 
   return {
@@ -99,6 +81,6 @@ export function useBuildingMilestones(buildingId: string): UseBuildingMilestones
     createMilestone: handleCreate,
     updateMilestone: handleUpdate,
     deleteMilestone: handleDelete,
-    reload: loadData,
+    reload: refetch,
   };
 }

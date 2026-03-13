@@ -5,23 +5,16 @@
  *
  * React hook for Firestore storage units data.
  * Supports optional buildingId filtering (ADR-184 — Building Spaces Tabs).
- *
- * USAGE:
- * ```tsx
- * // Get storages for specific building
- * const { storages, loading, error } = useFirestoreStorages({ buildingId: 'bldg_xxx' });
- *
- * // Get all storages
- * const { storages, loading, error } = useFirestoreStorages();
- * ```
+ * Uses centralized useAsyncData hook (ADR-223).
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import type { Storage } from '@/types/storage/contracts';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useAsyncData } from '@/hooks/useAsyncData';
 
 const logger = createModuleLogger('useFirestoreStorages');
 
@@ -56,69 +49,37 @@ export function useFirestoreStorages(
   options: UseFirestoreStoragesOptions = {}
 ): UseFirestoreStoragesReturn {
   const { buildingId, autoFetch = true } = options;
-
   const { user, loading: authLoading } = useAuth();
 
-  const [storages, setStorages] = useState<Storage[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchStorages = useCallback(async () => {
-    if (authLoading) {
-      logger.info('Waiting for auth state');
-      return;
-    }
-
-    if (!user) {
-      setLoading(false);
-      setError('User not authenticated');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Build API URL with optional buildingId filter
+  const { data, loading, error, refetch } = useAsyncData({
+    fetcher: async () => {
       const url = buildingId
         ? `/api/storages?buildingId=${encodeURIComponent(buildingId)}`
         : '/api/storages';
 
       logger.info('Fetching storages', { buildingId });
+      const result = await apiClient.get<StoragesApiResponse>(url);
+      logger.info(`Loaded ${result?.storages?.length || 0} storages`, { buildingId });
 
-      const data = await apiClient.get<StoragesApiResponse>(url);
+      return result?.storages || [];
+    },
+    deps: [buildingId, user?.uid],
+    enabled: autoFetch && !authLoading && !!user,
+  });
 
-      setStorages(data?.storages || []);
-      logger.info(`Loaded ${data?.storages?.length || 0} storages`, { buildingId });
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      logger.error('Error fetching storages', { error: err });
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  }, [buildingId, user, authLoading]);
-
-  useEffect(() => {
-    if (autoFetch && !authLoading && user) {
-      fetchStorages();
-    }
-  }, [fetchStorages, autoFetch, authLoading, user]);
-
-  // 🏢 ENTERPRISE: Real-time sync — refetch on storage CRUD events
+  // Real-time sync — refetch on storage CRUD events
   useEffect(() => {
     const unsubCreated = RealtimeService.subscribe('STORAGE_CREATED', () => {
       logger.debug('Storage created event — refetching list');
-      fetchStorages();
+      refetch();
     });
     const unsubUpdated = RealtimeService.subscribe('STORAGE_UPDATED', () => {
       logger.debug('Storage updated event — refetching list');
-      fetchStorages();
+      refetch();
     });
     const unsubDeleted = RealtimeService.subscribe('STORAGE_DELETED', () => {
       logger.debug('Storage deleted event — refetching list');
-      fetchStorages();
+      refetch();
     });
 
     return () => {
@@ -126,13 +87,13 @@ export function useFirestoreStorages(
       unsubUpdated();
       unsubDeleted();
     };
-  }, [fetchStorages]);
+  }, [refetch]);
 
   return {
-    storages,
+    storages: data ?? [],
     loading,
     error,
-    refetch: fetchStorages
+    refetch,
   };
 }
 

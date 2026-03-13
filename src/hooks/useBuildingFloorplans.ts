@@ -1,10 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { BuildingFloorplanService, type BuildingFloorplanData } from '@/services/floorplans/BuildingFloorplanService';
-import { createModuleLogger } from '@/lib/telemetry';
+/**
+ * useBuildingFloorplans — Fetches building + storage floorplan data
+ *
+ * Uses centralized useAsyncData hook (ADR-223).
+ */
 
-const logger = createModuleLogger('useBuildingFloorplans');
+import { BuildingFloorplanService, type BuildingFloorplanData } from '@/services/floorplans/BuildingFloorplanService';
+import { useAsyncData } from '@/hooks/useAsyncData';
+
+interface FloorplanResult {
+  building: BuildingFloorplanData | null;
+  storage: BuildingFloorplanData | null;
+}
 
 interface UseBuildingFloorplansReturn {
   buildingFloorplan: BuildingFloorplanData | null;
@@ -15,47 +23,25 @@ interface UseBuildingFloorplansReturn {
 }
 
 export function useBuildingFloorplans(buildingId: string | number): UseBuildingFloorplansReturn {
-  const [buildingFloorplan, setBuildingFloorplan] = useState<BuildingFloorplanData | null>(null);
-  const [storageFloorplan, setStorageFloorplan] = useState<BuildingFloorplanData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   const buildingIdStr = buildingId.toString();
 
-  const fetchFloorplans = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Load both building floorplan types in parallel
+  const { data, loading, error, refetch } = useAsyncData<FloorplanResult>({
+    fetcher: async () => {
       const [buildingData, storageData] = await Promise.all([
         BuildingFloorplanService.loadFloorplan(buildingIdStr, 'building'),
-        BuildingFloorplanService.loadFloorplan(buildingIdStr, 'storage')
+        BuildingFloorplanService.loadFloorplan(buildingIdStr, 'storage'),
       ]);
-
-      setBuildingFloorplan(buildingData);
-      setStorageFloorplan(storageData);
-      
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      logger.error('Error fetching building floorplans', { error: err });
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (buildingIdStr) {
-      fetchFloorplans();
-    }
-  }, [buildingIdStr]);
+      return { building: buildingData, storage: storageData };
+    },
+    deps: [buildingIdStr],
+    enabled: !!buildingIdStr,
+  });
 
   return {
-    buildingFloorplan,
-    storageFloorplan,
+    buildingFloorplan: data?.building ?? null,
+    storageFloorplan: data?.storage ?? null,
     loading,
     error,
-    refetch: fetchFloorplans
+    refetch,
   };
 }

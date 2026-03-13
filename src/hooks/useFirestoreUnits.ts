@@ -5,22 +5,14 @@
  *
  * React hook for Firestore units data.
  * Supports optional buildingId/floorId filtering (ADR-184 — Building Spaces Tabs).
- *
- * USAGE:
- * ```tsx
- * // Get units for specific building
- * const { units, loading, error } = useFirestoreUnits({ buildingId: 'bldg_xxx' });
- *
- * // Get all units
- * const { units, loading, error } = useFirestoreUnits();
- * ```
+ * Uses centralized useAsyncData hook (ADR-223).
  */
 
-import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { Unit } from '@/types/unit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useAsyncData } from '@/hooks/useAsyncData';
 
 const logger = createModuleLogger('useFirestoreUnits');
 
@@ -57,30 +49,10 @@ export function useFirestoreUnits(
   options: UseFirestoreUnitsOptions = {}
 ): UseFirestoreUnitsReturn {
   const { buildingId, floorId, autoFetch = true } = options;
-
   const { user, loading: authLoading } = useAuth();
 
-  const [units, setUnits] = useState<Unit[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchUnits = useCallback(async () => {
-    if (authLoading) {
-      logger.info('Waiting for auth state');
-      return;
-    }
-
-    if (!user) {
-      setLoading(false);
-      setError('User not authenticated');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Build API URL with optional filters
+  const { data, loading, error, refetch } = useAsyncData({
+    fetcher: async () => {
       const params = new URLSearchParams();
       if (buildingId) params.set('buildingId', buildingId);
       if (floorId) params.set('floorId', floorId);
@@ -89,32 +61,20 @@ export function useFirestoreUnits(
       const url = queryString ? `/api/units?${queryString}` : '/api/units';
 
       logger.info('Fetching units', { buildingId, floorId });
+      const result = await apiClient.get<UnitsApiResponse>(url);
+      logger.info(`Loaded ${result?.units?.length || 0} units`, { buildingId });
 
-      const data = await apiClient.get<UnitsApiResponse>(url);
-
-      setUnits(data?.units || []);
-      logger.info(`Loaded ${data?.units?.length || 0} units`, { buildingId });
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      logger.error('Error fetching units', { error: err });
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  }, [buildingId, floorId, user, authLoading]);
-
-  useEffect(() => {
-    if (autoFetch && !authLoading && user) {
-      fetchUnits();
-    }
-  }, [fetchUnits, autoFetch, authLoading, user]);
+      return result?.units || [];
+    },
+    deps: [buildingId, floorId, user?.uid],
+    enabled: autoFetch && !authLoading && !!user,
+  });
 
   return {
-    units,
+    units: data ?? [],
     loading,
     error,
-    refetch: fetchUnits
+    refetch,
   };
 }
 

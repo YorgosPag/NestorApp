@@ -1,174 +1,100 @@
 'use client';
 
 /**
- * 🅿️ ENTERPRISE PARKING HOOK
+ * ENTERPRISE PARKING HOOK
  *
- * React hook για Firestore parking spots data
- * Ακολουθεί το exact pattern από useFirestoreStorages.ts
- *
- * ΑΡΧΙΤΕΚΤΟΝΙΚΗ (local_4.log):
- * - Parking ανήκει στο Building context
- * - Είναι parallel category με Units/Storage
- * - Δεν είναι children των Units
- *
- * 🏢 ENTERPRISE: Uses centralized apiClient for automatic authentication
- *
- * USAGE:
- * ```tsx
- * // Get parking for specific building
- * const { parkingSpots, loading, error } = useFirestoreParkingSpots({ buildingId: 'bldg_xxx' });
- *
- * // Get all parking spots
- * const { parkingSpots, loading, error } = useFirestoreParkingSpots();
- * ```
+ * React hook for Firestore parking spots data.
+ * Uses centralized useAsyncData hook (ADR-223).
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-// 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import type { ParkingSpot } from '@/types/parking';
+import { useAsyncData } from '@/hooks/useAsyncData';
 
 // =============================================================================
-// 🅿️ TYPE RE-EXPORTS — Canonical SSoT from @/types/parking (ADR-191)
+// TYPE RE-EXPORTS — Canonical SSoT from @/types/parking (ADR-191)
 // =============================================================================
 
 export type { ParkingSpot, ParkingSpotType, ParkingSpotStatus, ParkingLocationZone } from '@/types/parking';
 
-/**
- * Hook options
- */
 interface UseFirestoreParkingOptions {
-  /** Filter by building ID (RECOMMENDED per local_4.log architecture) */
+  /** Filter by building ID */
   buildingId?: string;
-  /** Filter by project ID — returns all parking spots across all buildings of the project (ADR-191) */
+  /** Filter by project ID (ADR-191) */
   projectId?: string;
   /** Auto-fetch on mount (default: true) */
   autoFetch?: boolean;
 }
 
-/**
- * Hook return type
- */
 interface UseFirestoreParkingReturn {
-  /** Array of parking spots */
   parkingSpots: ParkingSpot[];
-  /** Loading state */
   loading: boolean;
-  /** Error message if any */
   error: string | null;
-  /** Manual refetch function */
   refetch: () => Promise<void>;
-  /** Whether data was loaded from cache */
   cached: boolean;
 }
 
-// =============================================================================
-// 🅿️ ENTERPRISE API RESPONSE TYPE
-// =============================================================================
-
-/**
- * 🏢 ENTERPRISE: Response data type (apiClient returns unwrapped data)
- */
 interface ParkingApiResponse {
   parkingSpots: ParkingSpot[];
   count?: number;
   cached?: boolean;
 }
 
+interface ParkingFetchResult {
+  spots: ParkingSpot[];
+  cached: boolean;
+}
+
 const logger = createModuleLogger('useFirestoreParkingSpots');
 
 // =============================================================================
-// 🅿️ HOOK IMPLEMENTATION
+// HOOK IMPLEMENTATION
 // =============================================================================
 
-/**
- * useFirestoreParkingSpots
- *
- * Enterprise-grade hook για parking spots data
- * Supports filtering by buildingId (per local_4.log architecture)
- *
- * 🏢 ENTERPRISE: Uses apiClient for automatic authentication
- */
 export function useFirestoreParkingSpots(
   options: UseFirestoreParkingOptions = {}
 ): UseFirestoreParkingReturn {
   const { buildingId, projectId, autoFetch = true } = options;
-
-  // 🔐 ENTERPRISE: Auth-ready gating - wait for user to be authenticated
   const { user, loading: authLoading } = useAuth();
 
-  const [parkingSpots, setParkingSpots] = useState<ParkingSpot[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [cached, setCached] = useState(false);
-
-  const fetchParkingSpots = useCallback(async () => {
-    // 🔐 ENTERPRISE: Wait for auth before fetching
-    if (authLoading) {
-      logger.info('Waiting for auth state');
-      return;
-    }
-
-    if (!user) {
-      logger.info('User not authenticated, skipping fetch');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
+  const { data, loading, error, refetch } = useAsyncData<ParkingFetchResult>({
+    fetcher: async () => {
       logger.info('Fetching parking spots');
 
-      // Build API URL with optional filters
       const params = new URLSearchParams();
       if (buildingId) params.set('buildingId', buildingId);
       if (projectId) params.set('projectId', projectId);
       const url = params.toString() ? `/api/parking?${params.toString()}` : '/api/parking';
 
-      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
-      const data = await apiClient.get<ParkingApiResponse>(url);
+      const result = await apiClient.get<ParkingApiResponse>(url);
+      logger.info(`Loaded ${result?.parkingSpots?.length || 0} parking spots`, { buildingId });
 
-      setParkingSpots(data?.parkingSpots || []);
-      setCached(data?.cached ?? false);
+      return {
+        spots: result?.parkingSpots || [],
+        cached: result?.cached ?? false,
+      };
+    },
+    deps: [buildingId, projectId, user?.uid],
+    enabled: autoFetch && !authLoading && !!user,
+  });
 
-      logger.info(`Loaded ${data?.parkingSpots?.length || 0} parking spots`, { buildingId });
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      logger.error('Error fetching parking spots', { error: err });
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  }, [buildingId, projectId, user, authLoading]);
-
-  // Auto-fetch on mount and when buildingId/auth changes
-  useEffect(() => {
-    if (autoFetch && !authLoading && user) {
-      fetchParkingSpots();
-    }
-  }, [fetchParkingSpots, autoFetch, authLoading, user]);
-
-  // Real-time sync: auto-refetch when parking events are dispatched
+  // Real-time sync
   useEffect(() => {
     const unsubCreate = RealtimeService.subscribe('PARKING_CREATED', () => {
       logger.debug('Parking created event received, refetching');
-      fetchParkingSpots();
+      refetch();
     });
-
     const unsubUpdate = RealtimeService.subscribe('PARKING_UPDATED', () => {
       logger.debug('Parking updated event received, refetching');
-      fetchParkingSpots();
+      refetch();
     });
-
     const unsubDelete = RealtimeService.subscribe('PARKING_DELETED', () => {
       logger.debug('Parking deleted event received, refetching');
-      fetchParkingSpots();
+      refetch();
     });
 
     return () => {
@@ -176,25 +102,21 @@ export function useFirestoreParkingSpots(
       unsubUpdate();
       unsubDelete();
     };
-  }, [fetchParkingSpots]);
+  }, [refetch]);
 
   return {
-    parkingSpots,
+    parkingSpots: data?.spots ?? [],
     loading,
     error,
-    refetch: fetchParkingSpots,
-    cached
+    refetch,
+    cached: data?.cached ?? false,
   };
 }
 
 // =============================================================================
-// 🅿️ CONVENIENCE EXPORTS
+// CONVENIENCE EXPORTS
 // =============================================================================
 
-/**
- * Get parking spots for a specific building
- * Shorthand για common use case per local_4.log architecture
- */
 export function useBuildingParkingSpots(buildingId: string): UseFirestoreParkingReturn {
   return useFirestoreParkingSpots({ buildingId });
 }

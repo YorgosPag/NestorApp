@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 206 ADRs | Last Updated: 2026-03-13
+**📊 Stats**: 207 ADRs | Last Updated: 2026-03-13
 
 ---
 
@@ -242,6 +242,7 @@
 | **ADR-217** | Phase 11 — Object Sanitization, Greek Text Normalization, Debounce Callback Deduplication | ✅ Implemented | 2026-03-12 | Centralization / Deduplication | [📄](./adrs/ADR-217-phase11-sanitize-greek-debounce.md) |
 | **ADR-221** | Error Message Extraction Centralization — `getErrorMessage()` | ✅ Implemented (Phase 1) | 2026-03-13 | Centralization / Error Handling | [📄](./adrs/ADR-221-error-message-extraction.md) |
 | **ADR-222** | console.error/warn → createModuleLogger Migration | ✅ Implemented (Phase 1) | 2026-03-13 | Centralization / Logging | [📄](./adrs/ADR-222-console-to-logger-migration.md) |
+| **ADR-223** | useAsyncData — Data Fetching Centralization (10 files, 15 hooks) | ✅ Implemented (Phase 1) | 2026-03-13 | Centralization / React Hooks | [📄](./adrs/ADR-223-use-async-data-centralization.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -541,6 +542,12 @@
 - **File**: `docs/centralized-systems/reference/adrs/ADR-222-console-to-logger-migration.md`
 - **SSoT**: `src/lib/telemetry/Logger.ts` — `createModuleLogger(moduleName)`
 - **Summary**: Migrated ~180 raw `console.error`/`console.warn` calls from 30 files to structured `createModuleLogger` pattern. Adoption: 82% → 87%+. Phase 1 targeted files with 3+ raw console calls.
+
+### ADR-223: useAsyncData — Data Fetching Centralization
+- **Status**: ✅ Implemented (Phase 1)
+- **File**: `docs/centralized-systems/reference/adrs/ADR-223-use-async-data-centralization.md`
+- **SSoT**: `src/hooks/useAsyncData.ts` — `useAsyncData<T>(options)`
+- **Summary**: Centralized repeated loading/error/data fetching boilerplate from 112+ files. Phase 1 migrated 10 files (15 hooks). Features: stale-closure prevention, unmount safety, auth gating via `enabled`, auto-refetch on deps change.
 
 ---
 

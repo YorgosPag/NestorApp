@@ -1,6 +1,14 @@
 
 "use client";
-import { useState, useEffect, useCallback } from "react";
+
+/**
+ * useLeadsList — Leads list management hook
+ *
+ * Uses centralized useAsyncData hook for data fetching (ADR-223).
+ * CRUD operations trigger refetch for server-consistent state.
+ */
+
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { getOpportunities, deleteOpportunity } from "@/services/opportunities.service";
 import { useNotifications } from '@/providers/NotificationProvider';
@@ -9,6 +17,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ENTITY_ROUTES } from '@/lib/routes';
+import { useAsyncData } from '@/hooks/useAsyncData';
 
 const logger = createModuleLogger('useLeadsList');
 
@@ -17,30 +26,18 @@ export function useLeadsList(refreshTrigger?: number | string | boolean | null) 
   const { t } = useTranslation('crm');
   const { success, error: notifyError } = useNotifications();
   const { confirm, dialogProps } = useConfirmDialog();
-  const [leads, setLeads] = useState<Opportunity[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string|null>(null);
+
+  const { data, loading, error, refetch: fetchLeads } = useAsyncData({
+    fetcher: () => getOpportunities(),
+    deps: [refreshTrigger],
+  });
+
+  const leads = data ?? [];
+
   const [editingLead, setEditingLead] = useState<Opportunity | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [emailingLead, setEmailingLead] = useState<Opportunity | null>(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
-
-  // 🌐 i18n: All messages converted to i18n keys - 2026-01-18
-  const fetchLeads = useCallback(async () => {
-    try {
-      setLoading(true);
-      const leadsData = await getOpportunities();
-      setLeads(leadsData);
-      setError(null);
-    } catch (err) {
-      setError(t("leads.errors.loadFailed"));
-      logger.error('Error fetching leads', { error: err });
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
-
-  useEffect(() => { fetchLeads(); }, [fetchLeads, refreshTrigger]);
 
   const handleEdit = (lead: Opportunity) => { setEditingLead(lead); setShowEditModal(true); };
 
@@ -63,10 +60,10 @@ export function useLeadsList(refreshTrigger?: number | string | boolean | null) 
     try {
       await deleteOpportunity(leadId);
       success(t("leads.status.deleteSuccess", { name: leadName }));
-      setLeads(prev => prev.filter(l => l.id !== leadId));
-    } catch (error) {
+      await fetchLeads();
+    } catch (err) {
       notifyError(t("leads.errors.deleteFailed"));
-      logger.error('Error deleting lead', { error });
+      logger.error('Error deleting lead', { error: err });
     }
   };
 

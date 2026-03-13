@@ -2,7 +2,8 @@
  * useBOQItems — Custom Hook for BOQ Data Management
  *
  * Fetches, filters, and manages BOQ items for a building.
- * Provides CRUD operations, client-side filtering, and real-time cost summaries.
+ * Uses centralized useAsyncData for data fetching (ADR-223).
+ * CRUD operations trigger refetch for server-consistent state.
  *
  * @module hooks/useBOQItems
  * @see ADR-175 (Quantity Surveying / BOQ)
@@ -10,7 +11,7 @@
 
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { getErrorMessage } from '@/lib/error-utils';
 import type {
   BOQItem,
@@ -21,8 +22,9 @@ import type {
 } from '@/types/boq';
 import type { MasterBOQCategory } from '@/config/boq-categories';
 import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
-import { boqService, computeBuildingSummary, computeItemCost } from '@/services/measurements';
+import { boqService, computeBuildingSummary } from '@/services/measurements';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useAsyncData } from '@/hooks/useAsyncData';
 
 const logger = createModuleLogger('useBOQItems');
 
@@ -89,35 +91,22 @@ export function useBOQItems(
   companyId: string,
   userId: string
 ): UseBOQItemsReturn {
-  const [items, setItems] = useState<BOQItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [filters, setFiltersState] = useState<BOQUIFilters>(DEFAULT_FILTERS);
+  const [crudError, setCrudError] = useState<string | null>(null);
 
   // Categories — static fallback (ATOE master)
   const categories = ATOE_MASTER_CATEGORIES;
 
-  // --- FETCH ---
+  // --- FETCH via useAsyncData ---
 
-  const fetchItems = useCallback(async () => {
-    if (!buildingId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const fetched = await boqService.getByBuilding(buildingId);
-      setItems(fetched);
-    } catch (err) {
-      const message = getErrorMessage(err, 'Σφάλμα φόρτωσης');
-      logger.error('Failed to fetch BOQ items', { buildingId, error: err });
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  }, [buildingId]);
+  const { data, loading, error: fetchError, refetch: refreshItems } = useAsyncData({
+    fetcher: () => boqService.getByBuilding(buildingId),
+    deps: [buildingId],
+    enabled: !!buildingId,
+  });
 
-  useEffect(() => {
-    void fetchItems();
-  }, [fetchItems]);
+  const items = data ?? [];
+  const error = crudError ?? fetchError;
 
   // --- CLIENT-SIDE FILTERING ---
 
@@ -171,78 +160,78 @@ export function useBOQItems(
     setFiltersState(DEFAULT_FILTERS);
   }, []);
 
-  // --- CRUD ---
+  // --- CRUD (trigger refetch after success) ---
 
   const createItem = useCallback(
-    async (data: CreateBOQItemInput): Promise<BOQItem | null> => {
+    async (input: CreateBOQItemInput): Promise<BOQItem | null> => {
       try {
-        const created = await boqService.create(data, userId, companyId);
-        setItems((prev) => [...prev, created]);
+        setCrudError(null);
+        const created = await boqService.create(input, userId, companyId);
+        await refreshItems();
         return created;
       } catch (err) {
-        const message = getErrorMessage(err, 'Σφάλμα δημιουργίας');
+        const message = getErrorMessage(err);
         logger.error('Failed to create BOQ item', { error: err });
-        setError(message);
+        setCrudError(message);
         return null;
       }
     },
-    [userId, companyId]
+    [userId, companyId, refreshItems]
   );
 
   const updateItem = useCallback(
-    async (id: string, data: UpdateBOQItemInput): Promise<boolean> => {
+    async (id: string, input: UpdateBOQItemInput): Promise<boolean> => {
       try {
-        const updated = await boqService.update(id, data);
+        setCrudError(null);
+        const updated = await boqService.update(id, input);
         if (updated) {
-          setItems((prev) => prev.map((item) => (item.id === id ? updated : item)));
+          await refreshItems();
           return true;
         }
         return false;
       } catch (err) {
-        const message = getErrorMessage(err, 'Σφάλμα ενημέρωσης');
+        const message = getErrorMessage(err);
         logger.error('Failed to update BOQ item', { id, error: err });
-        setError(message);
+        setCrudError(message);
         return false;
       }
     },
-    []
+    [refreshItems]
   );
 
   const deleteItem = useCallback(async (id: string): Promise<boolean> => {
     try {
+      setCrudError(null);
       const success = await boqService.delete(id);
       if (success) {
-        setItems((prev) => prev.filter((item) => item.id !== id));
+        await refreshItems();
       }
       return success;
     } catch (err) {
-      const message = getErrorMessage(err, 'Σφάλμα διαγραφής');
+      const message = getErrorMessage(err);
       logger.error('Failed to delete BOQ item', { id, error: err });
-      setError(message);
+      setCrudError(message);
       return false;
     }
-  }, []);
+  }, [refreshItems]);
 
   const updateStatus = useCallback(
     async (id: string, status: BOQItemStatus): Promise<boolean> => {
       try {
+        setCrudError(null);
         const success = await boqService.transition(id, status, userId);
         if (success) {
-          setItems((prev) =>
-            prev.map((item) =>
-              item.id === id ? { ...item, status, updatedAt: new Date().toISOString() } : item
-            )
-          );
+          await refreshItems();
         }
         return success;
       } catch (err) {
-        const message = getErrorMessage(err, 'Σφάλμα αλλαγής κατάστασης');
+        const message = getErrorMessage(err);
         logger.error('Failed to transition BOQ item', { id, status, error: err });
-        setError(message);
+        setCrudError(message);
         return false;
       }
     },
-    [userId]
+    [userId, refreshItems]
   );
 
   return {
@@ -259,6 +248,6 @@ export function useBOQItems(
     updateItem,
     deleteItem,
     updateStatus,
-    refreshItems: fetchItems,
+    refreshItems,
   };
 }
