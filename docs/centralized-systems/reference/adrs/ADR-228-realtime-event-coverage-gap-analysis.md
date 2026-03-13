@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | 🟡 Tier 0 Implemented — Tiers 1-4 Pending |
+| **Status** | 🟡 Tiers 0-1 Implemented — Tiers 2-4 Pending |
 | **Date** | 2026-03-14 |
 | **Category** | Data Access Layer / Real-Time Architecture |
 | **Related ADRs** | ADR-227 (Real-Time Subscription Consolidation), ADR-214 (Firestore Query Centralization) |
@@ -16,8 +16,8 @@
 | Metric | Value |
 |--------|-------|
 | **Events ορισμένα στο RealtimeEventMap** | 61 |
-| **Event groups με dispatchers + subscribers** | 9/18 (50%) |
-| **Event groups μόνο με dispatchers (no subscribers)** | 8 |
+| **Event groups με dispatchers + subscribers** | 12/18 (67%) |
+| **Event groups μόνο με dispatchers (no subscribers)** | 5 |
 | **Event groups μόνο με subscribers (no dispatchers)** | 1 (STORAGE anomaly) |
 | **Infrastructure gaps (firestoreQueryService)** | 2 (`subscribeDoc`, `subscribeSubcollection`) |
 | **Blocked Phase 2 hooks (ADR-227)** | 4 |
@@ -118,26 +118,26 @@
 | **OPPORTUNITY** | 3 (C/U/D) | 3 (`opportunities-client.service.ts`) | 3 (`useRealtimeOpportunities.ts`) | **100%** ✅ | ADR-227 Phase 3 |
 | **PARKING** | 3 (C/U/D) | 8 (`AddParkingDialog`, `ParkingGeneralTab`, `ParkingTabContent`, `page.tsx`) | 3 (`useFirestoreParkingSpots.ts`) | **100%** ✅ | |
 | **STORAGE** | 3 (C/U/D) | 1 (`StorageGeneralTab.tsx` — UPDATED μόνο) | 3 (`useFirestoreStorages.ts`) | **33%** ⚠️ | CREATED/DELETED dispatch missing |
-| **UNIT** | 3 (C/U/D) | 3 (`units.service.ts`) | 0 | **0%** ❌ | Dispatchers exist, no subscribers |
+| **UNIT** | 3 (C/U/D) | 3 (`units.service.ts`) | 3 (`useRealtimeUnits.ts`) | **100%** ✅ | SPEC-228-01 |
 | **FILE** | 5 (C/U/D/Trashed/Restored) | 9 (`file-record.service.ts`) | 0 | **0%** ❌ | |
 | **FLOORPLAN** | 3 (C/U/D) | 9 (`UnitFloorplanService`, `FloorplanService`, `FloorFloorplanService`, `BuildingFloorplanService`) | 0 | **0%** ❌ | |
 | **COMMUNICATION** | 3 (C/U/D) | 3 (`communications-client.service.ts`) | 0 | **0%** ❌ | |
 | **OBLIGATION** | 3 (C/U/D) | 4 (`ObligationsService.ts`) | 0 | **0%** ❌ | |
 | **RELATIONSHIP** | 3 (C/U/D) | 3 (`FirestoreRelationshipAdapter.ts`) | 0 | **0%** ❌ | |
 | **WORKSPACE** | 3 (C/U/D) | 5 (`workspace.service.ts`, `navigation-companies.service.ts`, `EnterpriseCompanySettingsService.ts`) | 0 | **0%** ❌ | |
-| **SESSION** | 2 (C/D) | 2 (`EnterpriseSessionService.ts`) | 0 | **0%** ❌ | |
+| **SESSION** | 2 (C/D) | 2 (`EnterpriseSessionService.ts`) | 1 (`AuthContext.tsx`) | **100%** ✅ | SPEC-228-01 |
 | **USER_SETTINGS** | 1 (U) | 4 (`UserNotificationSettingsService.ts`, `EnterpriseUserPreferencesService.ts`) | 0 | **0%** ❌ | |
 | **ASSOC_LINKS** | 3 (C_LINK_C/C_LINK_R/F_LINK_C) | 3 (`association.service.ts`) | 0 | **0%** ❌ | |
-| **ENTITY_LINKS** | 2 (LINKED/UNLINKED) | 2 (`EntityLinkingService.ts`) | 0 | **0%** ❌ | |
+| **ENTITY_LINKS** | 2 (LINKED/UNLINKED) | 2 (`EntityLinkingService.ts`) | 2 (`NavigationContext.tsx`) | **100%** ✅ | SPEC-228-01 |
 
 ### 4.2 Σύνοψη Coverage
 
 ```
-Fully Covered (100%):   6 groups  — PROJECT, BUILDING, CONTACT, TASK, OPPORTUNITY, PARKING
+Fully Covered (100%):   9 groups  — PROJECT, BUILDING, CONTACT, TASK, OPPORTUNITY, PARKING,
+                                    UNIT, SESSION, ENTITY_LINKS
 Partially Covered:      1 group   — STORAGE (33%)
-Zero Coverage:         11 groups  — UNIT, FILE, FLOORPLAN, COMMUNICATION, OBLIGATION,
-                                    RELATIONSHIP, WORKSPACE, SESSION, USER_SETTINGS,
-                                    ASSOC_LINKS, ENTITY_LINKS
+Zero Coverage:          8 groups  — FILE, FLOORPLAN, COMMUNICATION, OBLIGATION,
+                                    RELATIONSHIP, WORKSPACE, USER_SETTINGS, ASSOC_LINKS
 ```
 
 ---
@@ -268,3 +268,4 @@ RealtimeService.dispatch('TASK_CREATED', {
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-03-14 | Initial ADR — full coverage gap analysis, 4-tier implementation roadmap | Claude |
+| 2026-03-14 | SPEC-228-01 implemented — UNIT/SESSION/ENTITY_LINKS subscribers wired, coverage 50%→67% | Claude |

@@ -33,7 +33,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { sessionService } from '@/services/session';
+import { sessionService, EnterpriseSessionService } from '@/services/session';
 import { twoFactorService } from '@/services/two-factor/EnterpriseTwoFactorService';
 import { API_ROUTES, AUTH_EVENTS } from '@/config/domain-constants';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -579,6 +579,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     return () => unsubscribe();
   }, []);
+
+  // 🔐 ENTERPRISE: Cross-tab session revocation listener (ADR-228 Tier 1)
+  useEffect(() => {
+    const sid = typeof sessionStorage !== 'undefined'
+      ? sessionStorage.getItem('currentSessionId')
+      : null;
+    if (!sid || !user) return;
+
+    return EnterpriseSessionService.subscribeToSessionEvents(sid, () => {
+      logger.warn('[AuthContext] Session revoked remotely — signing out');
+      signOut();
+    });
+  }, [user]);
 
   // 🔐 ENTERPRISE: External session refresh trigger (e.g., after MFA claim sync)
   useEffect(() => {

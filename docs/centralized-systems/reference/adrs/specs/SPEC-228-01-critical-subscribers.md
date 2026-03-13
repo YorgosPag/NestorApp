@@ -5,10 +5,11 @@
 | **ADR** | ADR-228 |
 | **Phase** | Tier 1 — Critical (Security & Navigation) |
 | **Priority** | HIGH |
+| **Status** | ✅ IMPLEMENTED (2026-03-14) |
 | **Estimated Effort** | 1 session |
 | **Prerequisite** | SPEC-228-00 (Tier 0) |
 | **Files Created** | 0 |
-| **Files Modified** | 3 |
+| **Files Modified** | 4 |
 
 ---
 
@@ -180,12 +181,12 @@ EntityUnlinkedPayload { entityId, entityType, previousParentId, timestamp }
 
 ## 5. Verification Checklist
 
-- [ ] `useRealtimeUnits.ts` — UNIT_* event subscribers added
-- [ ] `EnterpriseSessionService.ts` — SESSION_* subscriber method added
-- [ ] Auth consumer — SESSION subscriber wired
-- [ ] `NavigationContext.tsx` — ENTITY_LINKED/UNLINKED subscribers added
-- [ ] All subscribers follow canonical pattern (CREATED→refetch, UPDATED→applyUpdates, DELETED→filter)
-- [ ] Cleanup functions returned in all useEffect blocks
+- [x] `useRealtimeUnits.ts` — UNIT_* event subscribers added ✅
+- [x] `EnterpriseSessionService.ts` — SESSION_* subscriber method added ✅
+- [x] Auth consumer — SESSION subscriber wired in `AuthContext.tsx` ✅
+- [x] `NavigationContext.tsx` — ENTITY_LINKED/UNLINKED subscribers added ✅
+- [x] All subscribers follow canonical pattern (CREATED→refetch, UPDATED→applyUpdates, DELETED→filter) ✅
+- [x] Cleanup functions returned in all useEffect blocks ✅
 - [ ] TypeScript compiles without errors
 
 ---
@@ -196,6 +197,7 @@ EntityUnlinkedPayload { entityId, entityType, previousParentId, timestamp }
 |------|--------|
 | `src/services/realtime/hooks/useRealtimeUnits.ts` | ADD UNIT_* event bus subscribers |
 | `src/services/session/EnterpriseSessionService.ts` | ADD `subscribeToSessionEvents()` static method |
+| `src/auth/contexts/AuthContext.tsx` | ADD session revocation consumer useEffect |
 | `src/components/navigation/core/NavigationContext.tsx` | ADD ENTITY_LINKED/UNLINKED subscribers |
 
 ---

@@ -9,7 +9,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useNavigationData } from './hooks/useNavigationData';
 import { useNavigationActions } from './hooks/useNavigationActions';
-import { useRealtimeBuildings, useRealtimeUnits, REALTIME_EVENTS, RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
+import { useRealtimeBuildings, useRealtimeUnits, REALTIME_EVENTS, RealtimeService, type ProjectUpdatedPayload, type EntityLinkedPayload, type EntityUnlinkedPayload } from '@/services/realtime';
 import { NavigationApiService } from './services/navigationApi';
 // 🔐 ENTERPRISE: Auth hook for bootstrap gating
 import { useAuth } from '@/auth/hooks/useAuth';
@@ -248,6 +248,33 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
     return unsubscribe;
   }, []);
+
+  // 🏢 ENTERPRISE: Entity linking — refresh navigation hierarchy (ADR-228 Tier 1)
+  useEffect(() => {
+    const handleLinked = (payload: EntityLinkedPayload) => {
+      logger.info('Entity linked — refreshing navigation', {
+        entityType: payload.entityType,
+        parentType: payload.parentType
+      });
+      refreshNavigation();
+    };
+
+    const handleUnlinked = (payload: EntityUnlinkedPayload) => {
+      logger.info('Entity unlinked — refreshing navigation', {
+        entityType: payload.entityType
+      });
+      refreshNavigation();
+    };
+
+    const unsubLinked = RealtimeService.subscribe('ENTITY_LINKED', handleLinked, {
+      checkPendingOnMount: false
+    });
+    const unsubUnlinked = RealtimeService.subscribe('ENTITY_UNLINKED', handleUnlinked, {
+      checkPendingOnMount: false
+    });
+
+    return () => { unsubLinked(); unsubUnlinked(); };
+  }, [refreshNavigation]);
 
   // 🏢 ENTERPRISE: Listen for auth:logout event to reset navigation state
   useEffect(() => {

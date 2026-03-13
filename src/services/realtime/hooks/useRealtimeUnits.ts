@@ -16,8 +16,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { firestoreQueryService } from '@/services/firestore';
 import type { QueryResult } from '@/services/firestore';
 import type { DocumentData } from 'firebase/firestore';
-import type { RealtimeUnit, SubscriptionStatus } from '../types';
+import type { RealtimeUnit, SubscriptionStatus, UnitCreatedPayload, UnitUpdatedPayload, UnitDeletedPayload } from '../types';
 import { REALTIME_EVENTS } from '../types';
+import { RealtimeService } from '../RealtimeService';
+import { applyUpdates } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useRealtimeUnits');
@@ -200,6 +202,42 @@ export function useRealtimeUnits(enabled = true): UseRealtimeUnitsReturn {
       window.removeEventListener(REALTIME_EVENTS.NAVIGATION_REFRESH, handleNavigationRefresh);
     };
   }, []);
+
+  // 🏢 ENTERPRISE: Event bus subscribers for optimistic UI updates (ADR-228 Tier 1)
+  useEffect(() => {
+    const handleCreated = (_payload: UnitCreatedPayload) => {
+      logger.info('Unit created — triggering refetch');
+      refetch();
+    };
+
+    const handleUpdated = (payload: UnitUpdatedPayload) => {
+      logger.info('Applying optimistic update for unit', { unitId: payload.unitId });
+      setAllUnits(prev => {
+        const updated = prev.map(unit =>
+          unit.id === payload.unitId
+            ? applyUpdates(unit, payload.updates as Partial<RealtimeUnit>)
+            : unit
+        );
+        setUnitsByBuilding(groupUnitsByBuilding(updated));
+        return updated;
+      });
+    };
+
+    const handleDeleted = (payload: UnitDeletedPayload) => {
+      logger.info('Removing deleted unit', { unitId: payload.unitId });
+      setAllUnits(prev => {
+        const filtered = prev.filter(unit => unit.id !== payload.unitId);
+        setUnitsByBuilding(groupUnitsByBuilding(filtered));
+        return filtered;
+      });
+    };
+
+    const unsubCreate = RealtimeService.subscribe('UNIT_CREATED', handleCreated);
+    const unsubUpdate = RealtimeService.subscribe('UNIT_UPDATED', handleUpdated);
+    const unsubDelete = RealtimeService.subscribe('UNIT_DELETED', handleDeleted);
+
+    return () => { unsubCreate(); unsubUpdate(); unsubDelete(); };
+  }, [refetch, groupUnitsByBuilding]);
 
   return {
     unitsByBuilding,

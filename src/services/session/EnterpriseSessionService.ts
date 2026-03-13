@@ -679,6 +679,24 @@ export class EnterpriseSessionService {
   }
 
   /**
+   * Subscribe to session events for cross-tab sync (ADR-228 Tier 1).
+   * When a session is revoked (e.g., admin force-logout), other tabs react.
+   */
+  static subscribeToSessionEvents(
+    currentSessionId: string,
+    onSessionRevoked: () => void
+  ): () => void {
+    const unsubDeleted = RealtimeService.subscribe('SESSION_DELETED', (payload) => {
+      if (payload.sessionId === currentSessionId) {
+        logger.warn('Current session revoked — triggering logout');
+        onSessionRevoked();
+      }
+    });
+
+    return unsubDeleted;
+  }
+
+  /**
    * Set current session ID (for restoring from storage)
    */
   setCurrentSessionId(sessionId: string): void {
