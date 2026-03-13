@@ -103,10 +103,10 @@ export function PersonaSelector({
                 className={cn(
                   'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5',
                   'text-sm font-medium transition-all duration-200',
-                  'border focus-visible:outline-none focus-visible:ring-2',
+                  'border-2 focus-visible:outline-none focus-visible:ring-2',
                   'focus-visible:ring-ring focus-visible:ring-offset-2',
                   isActive
-                    ? 'border-primary bg-primary/10 text-primary hover:bg-primary/20'
+                    ? 'border-primary bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm'
                     : 'border-border bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground',
                   isButtonDisabled && 'cursor-not-allowed opacity-50'
                 )}
@@ -115,14 +115,14 @@ export function PersonaSelector({
                   <IconComponent
                     className={cn(
                       'h-3.5 w-3.5',
-                      isActive ? 'text-primary' : 'text-muted-foreground'
+                      isActive ? 'text-primary-foreground' : 'text-muted-foreground'
                     )}
                   />
                 )}
                 <span>{t(persona.label)}</span>
                 {isActive && (
                   <X
-                    className="h-3.5 w-3.5 ml-0.5 text-primary/60 hover:text-destructive transition-colors"
+                    className="h-3.5 w-3.5 ml-0.5 text-primary-foreground/80 hover:text-destructive-foreground transition-colors"
                     aria-label={t('persona.selector.remove', { defaultValue: 'Remove' })}
                   />
                 )}
