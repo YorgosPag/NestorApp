@@ -7,21 +7,21 @@
 
 import {
   collection,
-  getDocs,
   doc,
-  getDoc,
   setDoc,
   updateDoc,
   deleteDoc,
   query,
   where,
   orderBy,
-  QueryConstraint,
+  type DocumentData,
+  type QueryConstraint,
 } from 'firebase/firestore';
 import { generateObligationId, generateTransmittalId } from '@/services/enterprise-id.service';
 import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 import { auth, db } from '@/lib/firebase';
 import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
+import { firestoreQueryService } from '@/services/firestore';
 import type {
   ObligationDocument,
   ObligationTemplate,
@@ -293,16 +293,15 @@ const normalizeObligationDocumentSafe = (
 };
 
 export class FirestoreObligationsRepository implements IObligationsRepository {
+  // ADR-214 Phase 4: READ methods delegated to firestoreQueryService
+
   async getAll(): Promise<ObligationDocument[]> {
     try {
-      const obligationsQuery = query(
-        collection(db, COLLECTIONS.OBLIGATIONS),
-        orderBy('updatedAt', 'desc')
-      );
-
-      const snapshot = await getDocs(obligationsQuery);
-      return snapshot.docs
-        .map((document) => normalizeObligationDocumentSafe(document.id, document.data() as Partial<ObligationDocument>))
+      const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('OBLIGATIONS', {
+        constraints: [orderBy('updatedAt', 'desc')],
+      });
+      return result.documents
+        .map((raw) => normalizeObligationDocumentSafe(raw.id, raw as Partial<ObligationDocument>))
         .filter((document): document is ObligationDocument => document !== null);
     } catch (error) {
       logger.error('Error fetching obligations from Firebase', { error });
@@ -312,14 +311,9 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
 
   async getById(id: string): Promise<ObligationDocument | null> {
     try {
-      const docRef = doc(db, COLLECTIONS.OBLIGATIONS, id);
-      const snapshot = await getDoc(docRef);
-
-      if (!snapshot.exists()) {
-        return null;
-      }
-
-      return normalizeObligationDocumentSafe(snapshot.id, snapshot.data() as Partial<ObligationDocument>);
+      const raw = await firestoreQueryService.getById<DocumentData & { id: string }>('OBLIGATIONS', id);
+      if (!raw) return null;
+      return normalizeObligationDocumentSafe(raw.id, raw as Partial<ObligationDocument>);
     } catch (error) {
       logger.error('Error fetching obligation by ID from Firebase', { error });
       return null;
@@ -696,15 +690,14 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
 
   async getTransmittalsForObligation(obligationId: string): Promise<ObligationTransmittal[]> {
     try {
-      const transmittalsQuery = query(
-        collection(db, COLLECTIONS.OBLIGATION_TRANSMITTALS),
-        where('obligationId', '==', obligationId),
-        orderBy('issuedAt', 'desc')
-      );
-
-      const snapshot = await getDocs(transmittalsQuery);
-      return snapshot.docs
-        .map((transmittalDoc) => normalizeTransmittalDocumentSafe(transmittalDoc.id, transmittalDoc.data() as Partial<ObligationTransmittal>))
+      const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('OBLIGATION_TRANSMITTALS', {
+        constraints: [
+          where('obligationId', '==', obligationId),
+          orderBy('issuedAt', 'desc'),
+        ],
+      });
+      return result.documents
+        .map((raw) => normalizeTransmittalDocumentSafe(raw.id, raw as Partial<ObligationTransmittal>))
         .filter((transmittal): transmittal is ObligationTransmittal => transmittal !== null);
     } catch (error) {
       logger.error('Error fetching obligation transmittals from Firebase', { error, obligationId });
@@ -714,17 +707,13 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
 
   async getTemplates(): Promise<ObligationTemplate[]> {
     try {
-      const templatesQuery = query(
-        collection(db, COLLECTIONS.OBLIGATION_TEMPLATES),
-        orderBy('isDefault', 'desc')
-      );
+      // Templates = system data — skip tenant filter
+      const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('OBLIGATION_TEMPLATES', {
+        constraints: [orderBy('isDefault', 'desc')],
+        tenantOverride: 'skip',
+      });
 
-      const snapshot = await getDocs(templatesQuery);
-
-      const templates = snapshot.docs.map((document) => ({
-        id: document.id,
-        ...document.data(),
-      })) as ObligationTemplate[];
+      const templates = result.documents as unknown as ObligationTemplate[];
 
       if (templates.length === 0) {
         return [
@@ -762,7 +751,6 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
 
   async search(searchText: string, filters?: SearchFilters): Promise<ObligationDocument[]> {
     try {
-      const baseQuery = collection(db, COLLECTIONS.OBLIGATIONS);
       const constraints: QueryConstraint[] = [];
 
       if (filters?.status && filters.status !== 'all') {
@@ -778,11 +766,12 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
 
       constraints.push(orderBy('updatedAt', 'desc'));
 
-      const searchQuery = query(baseQuery, ...constraints);
+      const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('OBLIGATIONS', {
+        constraints,
+      });
 
-      const snapshot = await getDocs(searchQuery);
-      let results = snapshot.docs
-        .map((document) => normalizeObligationDocumentSafe(document.id, document.data() as Partial<ObligationDocument>))
+      let results = result.documents
+        .map((raw) => normalizeObligationDocumentSafe(raw.id, raw as Partial<ObligationDocument>))
         .filter((document): document is ObligationDocument => document !== null);
 
       if (searchText.trim()) {

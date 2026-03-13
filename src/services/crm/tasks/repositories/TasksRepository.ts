@@ -1,59 +1,30 @@
 'use client';
 
-import { auth, db } from '@/lib/firebase';
-import { collection, setDoc, getDoc, getDocs, updateDoc, deleteDoc, doc, query, where, orderBy, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { doc, updateDoc, deleteDoc, setDoc, Timestamp, serverTimestamp, where, orderBy, type DocumentData } from 'firebase/firestore';
 import { generateTaskId } from '@/services/enterprise-id.service';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { firestoreQueryService } from '@/services/firestore';
 import type { CrmTask } from '@/types/crm';
 import type { ITasksRepository } from '../contracts';
-import { transformTask } from '../mappers';
+import { toTask } from '../mappers';
 import { isToday, isPast } from 'date-fns';
 
 const TASKS_COLLECTION = COLLECTIONS.TASKS;
-const BATCH_SIZE = 500;
 
 export class TasksRepository implements ITasksRepository {
   private collectionName = TASKS_COLLECTION;
 
-  // 🏢 ENTERPRISE: Auth context with super_admin support
-  private async requireAuthContext(): Promise<{ uid: string; companyId: string | null; isSuperAdmin: boolean }> {
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      throw new Error('AUTHENTICATION_ERROR: User must be logged in to access tasks');
-    }
-
-    const tokenResult = await currentUser.getIdTokenResult();
-    const companyId = tokenResult.claims?.companyId as string | undefined;
-    const globalRole = tokenResult.claims?.globalRole as string | undefined;
-    const isSuperAdmin = globalRole === 'super_admin';
-
-    // 🔍 DEBUG: Log claims for troubleshooting
-    console.debug('🔍 [TasksRepository] Auth claims:', {
-      uid: currentUser.uid,
-      companyId,
-      globalRole,
-      isSuperAdmin,
-      allClaims: tokenResult.claims
-    });
-
-    // 🏢 ENTERPRISE: Super admins can access without companyId
-    if (!companyId && !isSuperAdmin) {
-      throw new Error('AUTHORIZATION_ERROR: User is not assigned to a company');
-    }
-
-    return { uid: currentUser.uid, companyId: companyId || null, isSuperAdmin };
-  }
-
   async add(data: Omit<CrmTask, 'id' | 'createdAt' | 'updatedAt' | 'completedAt' | 'reminderSent'>): Promise<{ id: string; }> {
-    const { uid, companyId, isSuperAdmin } = await this.requireAuthContext();
+    const { uid, companyId } = await firestoreQueryService.requireAuthContext();
 
-    // 🏢 ENTERPRISE: Super admin must specify companyId when creating tasks
+    // Super admin must specify companyId when creating tasks
     const taskCompanyId = (data as Record<string, unknown>).companyId as string | undefined || companyId;
     if (!taskCompanyId) {
       throw new Error('VALIDATION_ERROR: companyId is required to create a task');
     }
 
-    // 🏢 ENTERPRISE: Proper FirestoreishTimestamp → Timestamp conversion
+    // Proper FirestoreishTimestamp → Timestamp conversion
     let dueDateTimestamp: Timestamp | null = null;
     if (data.dueDate) {
       if (data.dueDate instanceof Timestamp) {
@@ -66,7 +37,7 @@ export class TasksRepository implements ITasksRepository {
         dueDateTimestamp = Timestamp.fromDate(data.dueDate.toDate());
       }
     }
-    
+
     const payload: Record<string, unknown> = {
       ...data,
       dueDate: dueDateTimestamp,
@@ -78,145 +49,76 @@ export class TasksRepository implements ITasksRepository {
       reminderSent: false,
     };
 
-    // 🏢 ADR-210: Enterprise ID generation — setDoc with pre-generated ID
+    // ADR-210: Enterprise ID generation — setDoc with pre-generated ID
     const id = generateTaskId();
     await setDoc(doc(db, this.collectionName, id), { ...payload, id });
     return { id };
   }
 
+  // --- ADR-214 Phase 4: READ methods delegated to firestoreQueryService ---
+
   async getById(taskId: string): Promise<CrmTask | null> {
-    const snapshot = await getDoc(doc(db, this.collectionName, taskId));
-    if (!snapshot.exists()) {
-      return null;
-    }
-    return transformTask(snapshot);
+    const raw = await firestoreQueryService.getById<DocumentData & { id: string }>('TASKS', taskId);
+    if (!raw) return null;
+    return toTask(raw);
   }
 
   async getAll(): Promise<CrmTask[]> {
-    const { companyId, isSuperAdmin } = await this.requireAuthContext();
-
-    // 🔍 DEBUG: Log query parameters
-    console.debug('🔍 [TasksRepository.getAll] Query params:', { companyId, isSuperAdmin });
-
-    // 🏢 ENTERPRISE: Super admin can see all tasks, regular users see only their company's
-    let q;
-    if (isSuperAdmin && !companyId) {
-      // Super admin without company - get all tasks
-      console.debug('🔍 [TasksRepository.getAll] Using super admin query (no companyId filter)');
-      q = query(
-        collection(db, this.collectionName),
-        orderBy('dueDate', 'asc')
-      );
-    } else {
-      // Regular user or super admin with company - filter by companyId
-      console.debug('🔍 [TasksRepository.getAll] Using companyId filter:', companyId);
-      q = query(
-        collection(db, this.collectionName),
-        where('companyId', '==', companyId),
-        orderBy('dueDate', 'asc')
-      );
-    }
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(transformTask);
+    const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('TASKS', {
+      constraints: [orderBy('dueDate', 'asc')],
+    });
+    return result.documents.map(toTask);
   }
 
   async getByUser(userId: string): Promise<CrmTask[]> {
-    const { companyId, isSuperAdmin } = await this.requireAuthContext();
-
-    let q;
-    if (isSuperAdmin && !companyId) {
-      q = query(
-        collection(db, this.collectionName),
+    const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('TASKS', {
+      constraints: [
         where('assignedTo', '==', userId),
-        orderBy('dueDate', 'asc')
-      );
-    } else {
-      q = query(
-        collection(db, this.collectionName),
-        where('companyId', '==', companyId),
-        where('assignedTo', '==', userId),
-        orderBy('dueDate', 'asc')
-      );
-    }
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(transformTask);
+        orderBy('dueDate', 'asc'),
+      ],
+    });
+    return result.documents.map(toTask);
   }
 
   async getByLead(leadId: string): Promise<CrmTask[]> {
-    const { companyId, isSuperAdmin } = await this.requireAuthContext();
-
-    let q;
-    if (isSuperAdmin && !companyId) {
-      q = query(
-        collection(db, this.collectionName),
+    const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('TASKS', {
+      constraints: [
         where('leadId', '==', leadId),
-        orderBy('dueDate', 'asc')
-      );
-    } else {
-      q = query(
-        collection(db, this.collectionName),
-        where('companyId', '==', companyId),
-        where('leadId', '==', leadId),
-        orderBy('dueDate', 'asc')
-      );
-    }
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(transformTask);
+        orderBy('dueDate', 'asc'),
+      ],
+    });
+    return result.documents.map(toTask);
   }
 
   async getByStatus(status: CrmTask['status']): Promise<CrmTask[]> {
-    const { companyId, isSuperAdmin } = await this.requireAuthContext();
-
-    let q;
-    if (isSuperAdmin && !companyId) {
-      q = query(
-        collection(db, this.collectionName),
+    const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('TASKS', {
+      constraints: [
         where('status', '==', status),
-        orderBy('dueDate', 'asc')
-      );
-    } else {
-      q = query(
-        collection(db, this.collectionName),
-        where('companyId', '==', companyId),
-        where('status', '==', status),
-        orderBy('dueDate', 'asc')
-      );
-    }
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(transformTask);
+        orderBy('dueDate', 'asc'),
+      ],
+    });
+    return result.documents.map(toTask);
   }
 
   async getOverdue(): Promise<CrmTask[]> {
-    const { companyId, isSuperAdmin } = await this.requireAuthContext();
     const today = new Date();
     today.setHours(23, 59, 59, 999);
 
-    let q;
-    if (isSuperAdmin && !companyId) {
-      q = query(
-        collection(db, this.collectionName),
+    const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('TASKS', {
+      constraints: [
         where('status', 'in', ['pending', 'in_progress']),
         where('dueDate', '<=', Timestamp.fromDate(today)),
-        orderBy('dueDate', 'asc')
-      );
-    } else {
-      q = query(
-        collection(db, this.collectionName),
-        where('companyId', '==', companyId),
-        where('status', 'in', ['pending', 'in_progress']),
-        where('dueDate', '<=', Timestamp.fromDate(today)),
-        orderBy('dueDate', 'asc')
-      );
-    }
-
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(transformTask);
+        orderBy('dueDate', 'asc'),
+      ],
+    });
+    return result.documents.map(toTask);
   }
+
+  // --- WRITE methods remain unchanged ---
 
   async update(id: string, updates: Partial<CrmTask>): Promise<void> {
     const updatePayload: Record<string, unknown> = { ...updates, updatedAt: serverTimestamp() };
 
-    // 🏢 ENTERPRISE: Proper FirestoreishTimestamp → Timestamp conversion for updates
     if (updates.dueDate !== undefined) {
       if (updates.dueDate === null) {
         updatePayload.dueDate = null;
@@ -233,64 +135,40 @@ export class TasksRepository implements ITasksRepository {
 
     await updateDoc(doc(db, this.collectionName, id), updatePayload);
   }
-  
+
   async delete(id: string): Promise<void> {
     await deleteDoc(doc(db, this.collectionName, id));
   }
 
   async deleteAll(): Promise<number> {
-    const { companyId, isSuperAdmin } = await this.requireAuthContext();
-
-    // 🏢 ENTERPRISE: Super admin can delete all, regular users only their company's
-    let q;
-    if (isSuperAdmin && !companyId) {
-      // Super admin without company - this is dangerous, require explicit companyId
+    // Safety: super admin without companyId must NOT bulk-delete
+    const ctx = await firestoreQueryService.requireAuthContext();
+    if (ctx.isSuperAdmin && !ctx.companyId) {
       throw new Error('SAFETY_ERROR: Super admin must specify companyId to delete tasks');
-    } else {
-      q = query(
-        collection(db, this.collectionName),
-        where('companyId', '==', companyId)
-      );
     }
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) return 0;
 
-    // Simple delete all for client-side (no batch operations for simplicity)
-    const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+    // Tenant-aware read via firestoreQueryService
+    const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('TASKS');
+    if (result.isEmpty) return 0;
+
+    const deletePromises = result.documents.map(d =>
+      deleteDoc(doc(db, this.collectionName, d.id))
+    );
     await Promise.all(deletePromises);
     return deletePromises.length;
   }
 
   async getStats(userId?: string | null) {
-    const { companyId, isSuperAdmin } = await this.requireAuthContext();
+    // Build constraints: exclude cancelled, optionally filter by user
+    const statsConstraints = [
+      where('status', '!=', 'cancelled'),
+      ...(userId ? [where('assignedTo', '==', userId)] : []),
+    ];
 
-    // 🔍 DEBUG: Log query parameters
-    console.debug('🔍 [TasksRepository.getStats] Query params:', { companyId, isSuperAdmin, userId });
-
-    // 🏢 ENTERPRISE: Build query based on role
-    let q;
-    if (isSuperAdmin && !companyId) {
-      // Super admin without company - get all tasks stats
-      console.debug('🔍 [TasksRepository.getStats] Using super admin query (no companyId filter)');
-      q = query(
-        collection(db, this.collectionName),
-        where('status', '!=', 'cancelled')
-      );
-    } else {
-      // Regular user or super admin with company - filter by companyId
-      console.debug('🔍 [TasksRepository.getStats] Using companyId filter:', companyId);
-      q = query(
-        collection(db, this.collectionName),
-        where('companyId', '==', companyId),
-        where('status', '!=', 'cancelled')
-      );
-    }
-    if (userId) {
-      q = query(q, where('assignedTo', '==', userId));
-    }
-    
-    const snapshot = await getDocs(q);
-    const tasks = snapshot.docs.map(transformTask);
+    const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('TASKS', {
+      constraints: statsConstraints,
+    });
+    const tasks = result.documents.map(toTask);
 
     const stats = {
       total: 0, pending: 0, inProgress: 0, completed: 0, cancelled: 0, overdue: 0,

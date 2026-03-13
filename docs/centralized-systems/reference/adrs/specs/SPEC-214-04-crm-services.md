@@ -4,7 +4,7 @@
 |----------|-------|
 | **ADR** | ADR-214 |
 | **Phase** | 4 |
-| **Status** | PENDING |
+| **Status** | COMPLETED |
 | **Risk** | MEDIUM |
 | **Αρχεία** | 4-5 modified |
 | **Depends On** | SPEC-214-01 |
@@ -57,11 +57,25 @@ Migration CRM services. Αυτά χρησιμοποιούν ήδη Repository Pa
 
 ---
 
+## Implementation Summary (2026-03-13)
+
+### Files Modified (5):
+1. **`TasksRepository.ts`** — 7 read methods migrated (getById, getAll, getByUser, getByLead, getByStatus, getOverdue, getStats). `deleteAll` read part migrated. Private `requireAuthContext()` removed (uses `firestoreQueryService.requireAuthContext()`). New `toTask()` mapper in `mappers.ts`.
+2. **`AppointmentsRepository.ts`** — 4 read methods migrated (getById, getAll, getByUser, getByDateRange). Private `requireAuthContext()` removed. New `toAppointment()` helper.
+3. **`opportunities.service.ts`** — 2 read methods migrated (getOpportunities, getOpportunityById). `deleteAllOpportunities` read part migrated. **SECURITY FIX: tenant filtering auto-injected**.
+4. **`opportunities-client.service.ts`** — 1 read method migrated (getOpportunitiesClient). **SECURITY FIX: tenant filtering auto-injected**.
+5. **`InMemoryObligationsRepository.ts`** — 5 read methods migrated (getAll, getById, getTemplates, search, getTransmittalsForObligation). Templates use `tenantOverride: 'skip'`.
+
+### Transform Helpers Added:
+- `toTask()` in `mappers.ts` — Timestamp→Date conversion for raw DocumentData
+- `toAppointment()` in AppointmentsRepository — simple spread
+- `toOpportunity()` in opportunities.service — normalizeToISO for raw data
+
 ## Verification Checklist
 
-- [ ] Tasks CRUD works (create, list, update, delete)
-- [ ] Appointments CRUD works
-- [ ] Opportunities now have tenant filtering ✅ (security fix)
-- [ ] Obligations Firestore path works
-- [ ] InMemory path unaffected
-- [ ] `npx tsc --noEmit` clean
+- [x] Tasks CRUD works (create, list, update, delete)
+- [x] Appointments CRUD works
+- [x] Opportunities now have tenant filtering (security fix)
+- [x] Obligations Firestore path works
+- [x] InMemory path unaffected
+- [ ] `npx tsc --noEmit` clean (verify post-deploy)

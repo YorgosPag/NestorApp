@@ -1,7 +1,10 @@
 'use client';
 
 /**
- * 🏢 ENTERPRISE: Client-side Opportunities Service
+ * ENTERPRISE: Client-side Opportunities Service
+ *
+ * ADR-214 Phase 4: READ method delegated to firestoreQueryService.
+ * SECURITY FIX: tenant filtering auto-injected (was previously MISSING).
  *
  * Provides client-side CRUD operations for Opportunities with real-time sync.
  * Uses Firebase client SDK for direct Firestore operations.
@@ -11,20 +14,20 @@
  * This file is for client-side operations that need immediate real-time dispatch.
  */
 
-import { collection, getDocs, query, orderBy, limit, doc, updateDoc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, setDoc, deleteDoc, serverTimestamp, orderBy, type DocumentData } from 'firebase/firestore';
 import { generateOpportunityId } from '@/services/enterprise-id.service';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { firestoreQueryService } from '@/services/firestore';
 import type { Opportunity } from '@/types/crm';
-// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+// Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('OpportunitiesClientService');
 
 /**
- * 🏢 ENTERPRISE: Opportunity create payload type
- * Type-safe data for opportunity creation
+ * Opportunity create payload type
  */
 export interface OpportunityCreatePayload {
   name: string;
@@ -38,8 +41,7 @@ export interface OpportunityCreatePayload {
 }
 
 /**
- * 🏢 ENTERPRISE: Opportunity update payload type
- * Type-safe updates for opportunity modifications
+ * Opportunity update payload type
  */
 export interface OpportunityUpdatePayload {
   name?: string;
@@ -53,8 +55,7 @@ export interface OpportunityUpdatePayload {
 }
 
 /**
- * 🎯 ENTERPRISE: Δημιουργία νέας ευκαιρίας στο Firebase (Client-side)
- * Αποθηκεύει τα δεδομένα στη βάση και ενημερώνει το real-time service
+ * Δημιουργία νέας ευκαιρίας στο Firebase (Client-side)
  */
 export async function createOpportunityClient(
   data: OpportunityCreatePayload
@@ -62,7 +63,7 @@ export async function createOpportunityClient(
   try {
     logger.info('Creating new opportunity');
 
-    // 🏢 ADR-210: Enterprise ID generation — setDoc with pre-generated ID
+    // ADR-210: Enterprise ID generation — setDoc with pre-generated ID
     const id = generateOpportunityId();
     const opportunityRef = doc(db, COLLECTIONS.OPPORTUNITIES, id);
     await setDoc(opportunityRef, {
@@ -74,7 +75,7 @@ export async function createOpportunityClient(
 
     logger.info('Opportunity created', { opportunityId: id });
 
-    // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+    // Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatch('OPPORTUNITY_CREATED', {
       opportunityId: id,
       opportunity: {
@@ -99,11 +100,7 @@ export async function createOpportunityClient(
 }
 
 /**
- * 🎯 ENTERPRISE: Ενημέρωση ευκαιρίας στο Firebase (Client-side)
- * Αποθηκεύει τα δεδομένα στη βάση και ενημερώνει το real-time service
- *
- * NOTE: Prefer using server action updateOpportunity() from opportunities.service.ts
- * Use this only when you need immediate client-side dispatch
+ * Ενημέρωση ευκαιρίας στο Firebase (Client-side)
  */
 export async function updateOpportunityClient(
   opportunityId: string,
@@ -120,7 +117,7 @@ export async function updateOpportunityClient(
 
     logger.info('Opportunity updated successfully', { opportunityId });
 
-    // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+    // Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatch('OPPORTUNITY_UPDATED', {
       opportunityId,
       updates: {
@@ -147,8 +144,7 @@ export async function updateOpportunityClient(
 }
 
 /**
- * 🎯 ENTERPRISE: Διαγραφή ευκαιρίας από το Firebase (Client-side)
- * Διαγράφει τα δεδομένα από τη βάση και ενημερώνει το real-time service
+ * Διαγραφή ευκαιρίας από το Firebase (Client-side)
  */
 export async function deleteOpportunityClient(
   opportunityId: string
@@ -161,7 +157,7 @@ export async function deleteOpportunityClient(
 
     logger.info('Opportunity deleted successfully', { opportunityId });
 
-    // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+    // Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatch('OPPORTUNITY_DELETED', {
       opportunityId,
       timestamp: Date.now()
@@ -179,24 +175,19 @@ export async function deleteOpportunityClient(
 }
 
 /**
- * 🎯 ENTERPRISE: Λίστα ευκαιριών από Firebase (Client-side)
- * Για περιπτώσεις που χρειάζεται client-side fetch
+ * Λίστα ευκαιριών από Firebase (Client-side)
+ * ADR-214 Phase 4: Tenant-aware via firestoreQueryService (SECURITY FIX)
  */
 export async function getOpportunitiesClient(limitCount: number = 100): Promise<Opportunity[]> {
   try {
     logger.info('Starting Firestore query');
 
-    const opportunitiesQuery = query(
-      collection(db, COLLECTIONS.OPPORTUNITIES),
-      orderBy('createdAt', 'desc'),
-      limit(limitCount)
-    );
-    const snapshot = await getDocs(opportunitiesQuery);
+    const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('OPPORTUNITIES', {
+      constraints: [orderBy('createdAt', 'desc')],
+      maxResults: limitCount,
+    });
 
-    const opportunities = snapshot.docs.map(docSnap => ({
-      id: docSnap.id,
-      ...docSnap.data()
-    })) as Opportunity[];
+    const opportunities = result.documents as unknown as Opportunity[];
 
     logger.info('Loaded opportunities from Firebase', { count: opportunities.length });
     return opportunities;
