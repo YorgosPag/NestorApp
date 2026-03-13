@@ -1,25 +1,35 @@
 {
   "category": "FEATURE",
-  "shortDescription": "ADR-199 — Παρακολουθήματα Πωλήσεων (Parking & Storage as Sale Appurtenances)",
-  "problem": "Η ροή πωλήσεων αφορά ΜΟΝΟ μονάδες. Parking/Storage δεν συμμετέχουν στην πώληση ως παρακολουθήματα, παρόλο που στην ελληνική αγορά ακινήτων πωλούνται μαζί με τη μονάδα.",
-  "cause": "Δεν υπήρχε αρχιτεκτονική σχεδίαση για ένταξη parking/storage στη ροή πώλησης. Τα types δεν είχαν millesimalShares, commercialStatus ή commercial data.",
+  "shortDescription": "ADR-226 Phase 3 — Deletion Guard UI (DeletionBlockedDialog + useDeletionGuard hook)",
+  "problem": "Οι χρήστες μπορούσαν να πατήσουν delete χωρίς να δουν τις εξαρτήσεις. Τα παλιά cascade preview dialogs (Buildings/Projects) ΔΕΝ μπλοκάρανε — δείχνανε preview αλλά επέτρεπαν cascade delete.",
+  "cause": "Phase 2 ενσωμάτωσε server-side BLOCK guard αλλά το UI δεν είχε ακόμα pre-check. Ο server ρίχνει 409 αλλά χωρίς proper UI ο χρήστης δεν ξέρει γιατί.",
   "filesChanged": [
-    "docs/centralized-systems/reference/adrs/ADR-199-sales-appurtenances.md",
-    "docs/centralized-systems/reference/adr-index.md"
+    "src/components/shared/DeletionBlockedDialog.tsx — NEW: Reusable AlertDialog με dependency list",
+    "src/hooks/useDeletionGuard.ts — NEW: Custom hook (pre-check + state + BlockedDialog)",
+    "src/i18n/locales/el/common.json — +deletionGuard keys",
+    "src/i18n/locales/en/common.json — +deletionGuard keys",
+    "src/components/building-management/BuildingsPageContent.tsx — Cascade preview → useDeletionGuard",
+    "src/components/projects/projects-page-content.tsx — Cascade preview → useDeletionGuard",
+    "src/components/building-management/tabs/UnitsTabContent.tsx — Pre-check before delete",
+    "src/components/building-management/tabs/ParkingTabContent.tsx — Pre-check before delete",
+    "src/components/building-management/StorageTab.tsx — Pre-check before delete",
+    "src/components/contacts/dialogs/DeleteContactDialog.tsx — Pre-check on open",
+    "src/components/building-management/tabs/FloorsTabContent.tsx — Pre-check before delete",
+    "docs/centralized-systems/reference/adrs/ADR-226-deletion-guard.md — Phase 3 → IMPLEMENTED"
   ],
-  "solution": "Πλήρες ADR-199 με: 1. Ανάλυση ελληνικού δικαίου (Ν.3741/1929, χιλιοστά οικοπέδου). 2. Data model αποφάσεις (millesimalShares, SpaceCommercialData, SaleableAsset). 3. UI/UX σχεδίαση (dialogs με section παρακολουθημάτων). 4. Invoice multi-line items. 5. Server-side status sync. 6. 7 complete σενάρια πώλησης. 7. 4-phase implementation plan.",
-  "testing": "Documentation only — no code changes",
-  "notes": "ADR ΜΟΝΟ, ΟΧΙ κώδικας. Backward compatible — όλα τα νέα πεδία είναι optional. Zero migration needed.",
+  "solution": "1. DeletionBlockedDialog: AlertDialog (Radix) with ShieldAlert icon, dependency list (label+count), μόνο κουμπί Κατάλαβα. 2. useDeletionGuard hook: GET /api/deletion-guard/{entityType}/{entityId}, returns checking/blocked/BlockedDialog. 3. Buildings/Projects: αφαίρεση cascade preview (states, useEffect, useMemo), αντικατάσταση με hook. 4. Units/Parking/Storage/Floors: async pre-check πριν confirmation dialog. 5. Contacts: SmartDialog wrapper με pre-check on open.",
+  "testing": "TypeScript check στο background. Vercel auto-deploy triggered.",
+  "notes": "Server-side 409 guard παραμένει ως fallback. Clickable links στις εξαρτήσεις αφήνονται για Phase 4.",
   "contributors": {
     "user": "Γιώργος Παγώνης",
     "assistant": "Claude Opus 4.6",
-    "sessionDate": "2026-03-11"
+    "sessionDate": "2026-03-13"
   },
   "relatedBackups": [],
   "commits": [
     {
-      "hash": "6b5d6104",
-      "message": "docs(adr): add ADR-199 — Παρακολουθήματα Πωλήσεων (Parking & Storage as Sale Appurtenances)"
+      "hash": "3b356db8",
+      "message": "feat(deletion-guard): implement Phase 3 UI — DeletionBlockedDialog + useDeletionGuard hook — ADR-226"
     }
   ]
 }
