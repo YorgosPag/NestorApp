@@ -3,13 +3,14 @@
 /**
  * FloorSelectField — Reusable floor dropdown (Radix Select — ADR-001 canonical)
  *
- * Fetches floors for a given buildingId and renders a Radix Select dropdown.
+ * Real-time Firestore subscription for floors of a given buildingId.
  * When no building is linked, shows a disabled state with a hint.
  *
  * @module components/shared/FloorSelectField
+ * @pattern onSnapshot — same as useContactEmailWatch, useRealtimeBuildings
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Select,
   SelectContent,
@@ -20,30 +21,31 @@ import {
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { apiClient } from '@/lib/api/enterprise-api-client';
+import { collection, query, where, onSnapshot, type QueryConstraint } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import { formatFloorLabel } from '@/lib/intl-utils';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/auth/contexts/AuthContext';
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
 interface FloorOption {
+  /** Floor document ID (Firestore doc ID) */
+  id: string;
   /** Floor number as string (value for Select) */
   value: string;
   /** Human-readable label */
   label: string;
 }
 
-interface FloorDocument {
-  id: string;
-  number: number;
-  name?: string;
-}
-
-interface FloorsAPIResponse {
-  success: boolean;
-  floors: FloorDocument[];
+export interface FloorChangePayload {
+  /** Floor number (persisted on unit document) */
+  floor: number;
+  /** Floor document ID (foreign key on unit document) */
+  floorId: string;
 }
 
 export interface FloorSelectFieldProps {
@@ -51,8 +53,8 @@ export interface FloorSelectFieldProps {
   buildingId: string | null | undefined;
   /** Current floor value (string representation of floor number) */
   value: string;
-  /** Callback when floor selection changes */
-  onChange: (floorValue: string) => void;
+  /** Callback when floor selection changes — returns both floor number and floorId */
+  onChange: (floorValue: string, payload?: FloorChangePayload) => void;
   /** Field label */
   label: string;
   /** Hint shown when no building is linked */
@@ -81,41 +83,82 @@ export function FloorSelectField({
   const iconSizes = useIconSizes();
   const [floors, setFloors] = useState<FloorOption[]>([]);
   const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
 
-  // Fetch floors when buildingId changes
+  // Keep floors ref for lookup in onChange
+  const floorsRef = useRef<FloorOption[]>([]);
+  floorsRef.current = floors;
+
+  // Real-time Firestore subscription for floors
   useEffect(() => {
-    if (!buildingId) {
+    if (!buildingId || !user) {
       setFloors([]);
+      setLoading(false);
       return;
     }
 
-    let cancelled = false;
-    const fetchFloors = async () => {
-      setLoading(true);
-      try {
-        const data = await apiClient.get<FloorsAPIResponse>(
-          `/api/floors?buildingId=${encodeURIComponent(buildingId)}`
-        );
-        if (!cancelled && data?.floors) {
-          const options: FloorOption[] = data.floors.map((f) => ({
-            value: String(f.number),
-            label: f.name || formatFloorLabel(f.number),
-          }));
-          setFloors(options);
-        }
-      } catch {
-        if (!cancelled) setFloors([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
+    setLoading(true);
 
-    fetchFloors();
-    return () => { cancelled = true; };
-  }, [buildingId]);
+    const floorsCol = collection(db, COLLECTIONS.FLOORS);
+    const constraints: QueryConstraint[] = [
+      where('buildingId', '==', buildingId),
+    ];
+
+    // Add companyId filter if available (tenant isolation)
+    if (user.companyId) {
+      constraints.push(where('companyId', '==', user.companyId));
+    }
+
+    const q = query(floorsCol, ...constraints);
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const options: FloorOption[] = snapshot.docs
+          .map((doc) => {
+            const data = doc.data();
+            const num = typeof data.number === 'number' ? data.number : 0;
+            return {
+              id: doc.id,
+              value: String(num),
+              label: (data.name as string) || formatFloorLabel(num),
+            };
+          })
+          .sort((a, b) => Number(a.value) - Number(b.value));
+
+        setFloors(options);
+        setLoading(false);
+      },
+      () => {
+        // On error, clear floors (non-blocking)
+        setFloors([]);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [buildingId, user]);
 
   const isDisabled = disabled || !buildingId;
   const selectValue = value || NONE_VALUE;
+
+  const handleValueChange = (v: string) => {
+    if (v === NONE_VALUE) {
+      onChange('');
+      return;
+    }
+
+    // Find the floor option to get the floorId
+    const selectedFloor = floorsRef.current.find((f) => f.value === v);
+    if (selectedFloor) {
+      onChange(v, {
+        floor: Number(v),
+        floorId: selectedFloor.id,
+      });
+    } else {
+      onChange(v);
+    }
+  };
 
   return (
     <fieldset className="space-y-1.5">
@@ -132,7 +175,7 @@ export function FloorSelectField({
       ) : (
         <Select
           value={selectValue}
-          onValueChange={(v) => onChange(v === NONE_VALUE ? '' : v)}
+          onValueChange={handleValueChange}
           disabled={isDisabled}
         >
           <SelectTrigger className="h-8 text-sm">
@@ -141,7 +184,7 @@ export function FloorSelectField({
           <SelectContent>
             <SelectItem value={NONE_VALUE}>—</SelectItem>
             {floors.map((f) => (
-              <SelectItem key={f.value} value={f.value}>
+              <SelectItem key={f.id} value={f.value}>
                 {f.label}
               </SelectItem>
             ))}

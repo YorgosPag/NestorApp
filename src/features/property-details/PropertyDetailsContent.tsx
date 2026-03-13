@@ -29,6 +29,7 @@ const logger = createModuleLogger('PropertyDetailsContent');
 import { UnitEntityLinks } from './components/UnitEntityLinks';
 import { LinkedSpacesCard } from './components/LinkedSpacesCard';
 import { FloorSelectField } from '@/components/shared/FloorSelectField';
+import type { FloorChangePayload } from '@/components/shared/FloorSelectField';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MapPin } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -152,9 +153,17 @@ export function PropertyDetailsContent({
               <FloorSelectField
                 buildingId={resolvedProperty?.buildingId ?? null}
                 value={String(resolvedProperty?.floor ?? '')}
-                onChange={(v) => {
+                onChange={(v: string, payload?: FloorChangePayload) => {
                   if (safeOnUpdateProperty && resolvedProperty?.id) {
-                    safeOnUpdateProperty(resolvedProperty.id, { floor: v ? parseInt(v) || 0 : 0 });
+                    if (payload) {
+                      // Save both floor number AND floorId for data consistency
+                      safeOnUpdateProperty(resolvedProperty.id, {
+                        floor: payload.floor,
+                        floorId: payload.floorId,
+                      });
+                    } else {
+                      safeOnUpdateProperty(resolvedProperty.id, { floor: v ? parseInt(v) || 0 : 0 });
+                    }
                   }
                 }}
                 label={t('units:fields.location.floor', { defaultValue: 'Όροφος' })}

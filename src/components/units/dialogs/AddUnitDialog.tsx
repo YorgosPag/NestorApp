@@ -22,7 +22,7 @@
  * @see ADR-034
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -54,8 +54,11 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // ENTERPRISE: Form state management hook
 import { useUnitForm } from '../hooks/useUnitForm';
-// ENTERPRISE: API client for floor fetching
-import { apiClient } from '@/lib/api/enterprise-api-client';
+// ENTERPRISE: Real-time floor subscription (Firestore onSnapshot)
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
+import { useAuth } from '@/auth/contexts/AuthContext';
 // ENTERPRISE: Navigation entities for icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { UnitType, OperationalStatus } from '@/types/unit';
@@ -128,46 +131,53 @@ export function AddUnitDialog({
     resetForm,
   } = useUnitForm({ onUnitAdded, onOpenChange });
 
-  // ENTERPRISE: Floor options loaded from API based on selected building
+  // ENTERPRISE: Real-time floor subscription via Firestore onSnapshot
   const [floorOptions, setFloorOptions] = useState<Array<{ id: string; number: number; name: string }>>([]);
   const [floorsLoading, setFloorsLoading] = useState(false);
+  const { user } = useAuth();
 
-  // Fetch floors when buildingId changes
-  const fetchFloorsForBuilding = useCallback(async (buildingId: string) => {
-    if (!buildingId) {
+  // Real-time floors subscription when buildingId changes
+  useEffect(() => {
+    if (!formData.buildingId || !user) {
       setFloorOptions([]);
+      setFloorsLoading(false);
       return;
     }
-    setFloorsLoading(true);
-    try {
-      interface FloorsApiResult {
-        success: boolean;
-        floors: Array<{ id: string; number: number; name: string }>;
-      }
-      const result = await apiClient.get<FloorsApiResult>(
-        `/api/floors?buildingId=${buildingId}`
-      );
-      if (result?.floors) {
-        const sorted = [...result.floors].sort((a, b) => a.number - b.number);
-        setFloorOptions(sorted);
-      } else {
-        setFloorOptions([]);
-      }
-    } catch {
-      setFloorOptions([]);
-    } finally {
-      setFloorsLoading(false);
-    }
-  }, []);
 
-  // Watch buildingId changes to reload floors
-  useEffect(() => {
-    if (formData.buildingId) {
-      fetchFloorsForBuilding(formData.buildingId);
-    } else {
-      setFloorOptions([]);
-    }
-  }, [formData.buildingId, fetchFloorsForBuilding]);
+    setFloorsLoading(true);
+
+    const floorsCol = collection(db, COLLECTIONS.FLOORS);
+    const constraints = [
+      where('buildingId', '==', formData.buildingId),
+      ...(user.companyId ? [where('companyId', '==', user.companyId)] : []),
+    ];
+    const q = query(floorsCol, ...constraints);
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const floors = snapshot.docs
+          .map((doc) => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              number: typeof data.number === 'number' ? data.number : 0,
+              name: (data.name as string) || '',
+            };
+          })
+          .sort((a, b) => a.number - b.number);
+
+        setFloorOptions(floors);
+        setFloorsLoading(false);
+      },
+      () => {
+        setFloorOptions([]);
+        setFloorsLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [formData.buildingId, user]);
 
   // ENTERPRISE: Active tab state
   const [activeTab, setActiveTab] = useState('basic');
