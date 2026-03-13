@@ -11,7 +11,10 @@
  * Firestore updates will be reflected via real-time listeners.
  */
 
+import { createModuleLogger } from '@/lib/telemetry';
 import type { ICommand, SerializedCommand } from '../interfaces';
+
+const logger = createModuleLogger('MoveOverlayVertexCommand');
 import type { Overlay } from '../../../overlays/types';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { DEFAULT_MERGE_CONFIG } from '../interfaces';
@@ -63,7 +66,7 @@ export class MoveOverlayVertexCommand implements ICommand {
    */
   execute(): void {
     this.overlayStore.updateVertex(this.overlayId, this.vertexIndex, this.newPosition).catch((error: unknown) => {
-      console.error('❌ MoveOverlayVertexCommand.execute failed:', error);
+      logger.error('Execute failed', { error });
     });
   }
 
@@ -72,7 +75,7 @@ export class MoveOverlayVertexCommand implements ICommand {
    */
   undo(): void {
     this.overlayStore.updateVertex(this.overlayId, this.vertexIndex, this.oldPosition).catch((error: unknown) => {
-      console.error('❌ MoveOverlayVertexCommand.undo failed:', error);
+      logger.error('Undo failed', { error });
     });
   }
 
@@ -198,7 +201,7 @@ export class MoveMultipleOverlayVerticesCommand implements ICommand {
   execute(): void {
     for (const { overlayId, vertexIndex, newPosition } of this.movements) {
       this.overlayStore.updateVertex(overlayId, vertexIndex, newPosition).catch((error: unknown) => {
-        console.error(`❌ MoveMultipleOverlayVerticesCommand.execute failed for ${overlayId}:${vertexIndex}:`, error);
+        logger.error(`Execute failed for ${overlayId}:${vertexIndex}`, { error });
       });
     }
     console.log(`🔄 MoveMultipleOverlayVerticesCommand: Moved ${this.movements.length} vertices`);
@@ -210,7 +213,7 @@ export class MoveMultipleOverlayVerticesCommand implements ICommand {
   undo(): void {
     for (const { overlayId, vertexIndex, oldPosition } of this.movements) {
       this.overlayStore.updateVertex(overlayId, vertexIndex, oldPosition).catch((error: unknown) => {
-        console.error(`❌ MoveMultipleOverlayVerticesCommand.undo failed for ${overlayId}:${vertexIndex}:`, error);
+        logger.error(`Undo failed for ${overlayId}:${vertexIndex}`, { error });
       });
     }
     console.log(`↩️ MoveMultipleOverlayVerticesCommand: Undo - restored ${this.movements.length} vertices`);

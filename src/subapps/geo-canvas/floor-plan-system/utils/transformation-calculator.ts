@@ -16,6 +16,9 @@
  * - Affine Transformations: https://en.wikipedia.org/wiki/Affine_transformation
  */
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('TransformationCalculator');
+
 import type {
   FloorPlanControlPoint,
   AffineTransformMatrix,
@@ -81,7 +84,7 @@ export function calculateAffineTransformation(
       const { floor, geo } = point;
 
       if (!floor || !geo) {
-        console.warn('⚠️ Skipping incomplete control point:', point);
+        logger.warn('Skipping incomplete control point', { point });
         continue;
       }
 
@@ -131,7 +134,7 @@ export function calculateAffineTransformation(
     };
 
   } catch (error) {
-    console.error('❌ Transformation calculation failed:', error);
+    logger.error('Transformation calculation failed', { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -153,7 +156,7 @@ function calculateQualityMetrics(
     const { floor, geo } = point;
 
     if (!floor || !geo) {
-      console.warn('⚠️ Skipping incomplete control point in quality calculation:', point);
+      logger.warn('Skipping incomplete control point in quality calculation', { point });
       continue;
     }
 
@@ -246,7 +249,7 @@ export function inverseTransformPoint(
   const det = matrix.a * matrix.e - matrix.b * matrix.d;
 
   if (Math.abs(det) < 1e-10) {
-    console.warn('⚠️ Matrix is singular, inverse transformation may be inaccurate');
+    logger.warn('Matrix is singular, inverse transformation may be inaccurate');
     return [0, 0];
   }
 
@@ -329,7 +332,7 @@ function solveLinearSystem(A: number[][], b: number[]): number[] | null {
 
     // Check for singular matrix
     if (Math.abs(augmented[i][i]) < 1e-10) {
-      console.error('❌ Singular matrix detected');
+      logger.error('Singular matrix detected');
       return null;
     }
 

@@ -12,7 +12,10 @@
  * - High-quality antialiasing
  */
 
+import { createModuleLogger } from '@/lib/telemetry';
 import { GEO_COLORS } from '../../config/color-config';
+
+const logger = createModuleLogger('DxfThumbnailGenerator');
 
 /**
  * Thumbnail generation options
@@ -94,7 +97,7 @@ export async function generateDxfThumbnail(
   const drawingHeight = bounds.maxY - bounds.minY;
 
   if (drawingWidth === 0 || drawingHeight === 0) {
-    console.warn('⚠️ Empty drawing bounds - returning blank thumbnail');
+    logger.warn('Empty drawing bounds - returning blank thumbnail');
     return canvas.toDataURL('image/png', opts.quality);
   }
 
@@ -163,7 +166,7 @@ export async function generateDxfThumbnail(
       renderFeature(ctx, feature, scale, adaptiveLineWidth, isSmallArc);
       renderedCount++;
     } catch (error) {
-      console.warn('⚠️ Failed to render feature:', error);
+      logger.warn('Failed to render feature', { error });
     }
   });
 
@@ -244,7 +247,7 @@ function renderFeature(
       break;
 
     default:
-      console.warn(`⚠️ Unsupported geometry type: ${geometry.type}`);
+      logger.warn(`Unsupported geometry type: ${geometry.type}`);
   }
 }
 
@@ -410,7 +413,7 @@ export async function generateDxfThumbnailWithLayers(
       }
       renderFeature(ctx, feature, scale, adaptiveLineWidth, isSmallArc);
     } catch (error) {
-      console.warn('⚠️ Failed to render feature:', error);
+      logger.warn('Failed to render feature', { error });
     }
   });
 

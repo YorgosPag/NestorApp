@@ -12,6 +12,8 @@ import { geoAlertBundleOptimizer } from '../optimization/BundleOptimizer';
 import { geoAlertMemoryLeakDetector } from '../optimization/MemoryLeakDetector';
 import { geoAlertPerformanceProfiler } from '../profiling/PerformanceProfiler';
 import { generatePipelineId } from '@/services/enterprise-id.service';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('TestingPipeline');
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -918,7 +920,7 @@ export class GeoAlertTestingPipeline {
       execution.endTime = performance.now();
       execution.duration = execution.endTime - execution.startTime;
 
-      console.error(`❌ Pipeline execution failed: ${executionId}`, error);
+      logger.error(`Pipeline execution failed: ${executionId}`, { error });
 
       // Send failure notifications
       await this.sendFailureNotifications(execution, error);
@@ -987,7 +989,7 @@ export class GeoAlertTestingPipeline {
       stageExecution.endTime = performance.now();
       stageExecution.duration = stageExecution.endTime - stageExecution.startTime;
 
-      console.error(`❌ Stage failed: ${stageConfig.name}`, error);
+      logger.error(`Stage failed: ${stageConfig.name}`, { error });
 
       // Handle retries
       if (stageExecution.retryCount < stageConfig.retryCount) {
@@ -1057,7 +1059,7 @@ export class GeoAlertTestingPipeline {
       taskExecution.endTime = performance.now();
       taskExecution.duration = taskExecution.endTime - taskExecution.startTime;
 
-      console.error(`  ❌ Task failed: ${task.name}`, error);
+      logger.error(`Task failed: ${task.name}`, { error });
 
       if (!task.allowFailure) {
         throw error;
@@ -1597,7 +1599,7 @@ export class GeoAlertTestingPipeline {
         );
         execution.notifications.push(notification);
       } catch (error) {
-        console.error(`Failed to send notification via ${channel.type}:`, error);
+        logger.error(`Failed to send notification via ${channel.type}`, { error });
       }
     }
   }
@@ -1617,7 +1619,7 @@ export class GeoAlertTestingPipeline {
         );
         execution.notifications.push(notification);
       } catch (notificationError) {
-        console.error(`Failed to send failure notification via ${channel.type}:`, notificationError);
+        logger.error(`Failed to send failure notification via ${channel.type}`, { error: notificationError });
       }
     }
   }

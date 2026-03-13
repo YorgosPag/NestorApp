@@ -1,4 +1,6 @@
 import { useCallback, useRef } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('UseLayersCallbacks');
 import { publishHighlight } from '../../../../events/selection-bus';
 import type { SceneModel } from '../../../../types/scene';
 import { setSelection } from './selection';
@@ -239,17 +241,17 @@ export function useLayersCallbacks({
   const mergeSelectedEntities = useCallback(() => {
 
     if (selectedEntitiesForMerge.size < 2) {
-      console.warn('Χρειάζονται τουλάχιστον 2 entities για merge');
+      logger.warn('Χρειάζονται τουλάχιστον 2 entities για merge');
       return;
     }
-    
+
     if (!scene) {
-      console.warn('Δεν υπάρχει scene για merge');
+      logger.warn('Δεν υπάρχει scene για merge');
       return;
     }
-    
+
     if (!onEntitiesMerge) {
-      console.warn('⚠️ Δεν υπάρχει callback onEntitiesMerge! Το parent component πρέπει να το παράσχει.');
+      logger.warn('Δεν υπάρχει callback onEntitiesMerge! Το parent component πρέπει να το παράσχει.');
       // Προσωρινά θα κάνουμε sample merge
       const entitiesArray = Array.from(selectedEntitiesForMerge);
       const firstEntityId = entitiesArray[0];
@@ -279,7 +281,7 @@ export function useLayersCallbacks({
 
   const mergeSelectedLayers = useCallback(() => {
     if (selectedLayersForMerge.size < 2) {
-      console.warn('Χρειάζονται τουλάχιστον 2 layers για merge');
+      logger.warn('Χρειάζονται τουλάχιστον 2 layers για merge');
       return;
     }
     
@@ -299,7 +301,7 @@ export function useLayersCallbacks({
   const mergeSelectedColorGroups = useCallback(() => {
     const groups = Array.from(selectedColorGroupsForMerge);
     if (groups.length < 2 || !scene) {
-      console.warn('Χρειάζονται τουλάχιστον 2 color groups για merge');
+      logger.warn('Χρειάζονται τουλάχιστον 2 color groups για merge');
       return;
     }
     

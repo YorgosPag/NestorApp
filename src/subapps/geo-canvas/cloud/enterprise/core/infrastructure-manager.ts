@@ -10,6 +10,9 @@
  * @updated 2025-12-28 - Split from CloudInfrastructure.ts
  */
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('InfrastructureManager');
+
 // ✅ ENTERPRISE FIX: Import existing Alert Engine - Use canonical path alias
 // TODO: Verify correct path to alert engine
 // import { geoAlertEngine } from '@core/alert-engine';
@@ -68,7 +71,7 @@ export class InfrastructureManager {
   // TODO: Connect to real alert engine when available
   // 🏢 ENTERPRISE: Properly typed mock alert engine
   private alertEngine = {
-    reportAlert: (alert: MockAlert) => console.warn('Alert Engine not connected:', alert),
+    reportAlert: (alert: MockAlert) => logger.warn('Alert Engine not connected', { alert }),
     createAlert: async (
       type: ActiveAlert['type'],
       title: string,
@@ -77,7 +80,7 @@ export class InfrastructureManager {
       source: string,
       metadata?: Record<string, unknown>
     ) => {
-      console.warn('Alert Engine not connected - createAlert:', { type, title, description, severity, source, metadata });
+      logger.warn('Alert Engine not connected - createAlert', { type, title, description, severity, source, metadata });
     },
     generateQuickReport: async () => ({ alerts: { active: [] as MockAlert[] } })
   };
@@ -140,7 +143,7 @@ export class InfrastructureManager {
 
         console.debug(`✅ Infrastructure Manager initialized με ${providersInitialized} providers`);
       } else {
-        console.error('❌ No providers initialized successfully');
+        logger.error('No providers initialized successfully');
       }
 
       return {
@@ -151,7 +154,7 @@ export class InfrastructureManager {
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Infrastructure initialization failed';
-      console.error('❌ Infrastructure Manager initialization failed:', errorMessage);
+      logger.error('Infrastructure Manager initialization failed', { errorMessage });
 
       return {
         success: false,
@@ -209,7 +212,7 @@ export class InfrastructureManager {
       console.debug('📊 Infrastructure monitoring enabled');
 
     } catch (error) {
-      console.error('Failed to enable monitoring:', error);
+      logger.error('Failed to enable monitoring', { error });
     }
   }
 
@@ -256,7 +259,7 @@ export class InfrastructureManager {
       return status;
 
     } catch (error) {
-      console.error('Status check failed:', error);
+      logger.error('Status check failed', { error });
       throw error;
     }
   }
@@ -278,7 +281,7 @@ export class InfrastructureManager {
         components.push(...providerComponents);
 
       } catch (error) {
-        console.error(`Failed to get components for ${providerName}:`, error);
+        logger.error(`Failed to get components for ${providerName}`, { error });
       }
     }
 
@@ -507,7 +510,7 @@ export class InfrastructureManager {
       }
 
     } catch (error) {
-      console.error('Failed to process status alerts:', error);
+      logger.error('Failed to process status alerts', { error });
     }
   }
 
@@ -523,7 +526,7 @@ export class InfrastructureManager {
       return report.alerts?.active || [];
 
     } catch (error) {
-      console.error('Failed to get active alerts:', error);
+      logger.error('Failed to get active alerts', { error });
       return [];
     }
   }

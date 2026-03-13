@@ -15,6 +15,8 @@ import type {
 } from '../../types/administrative-types';
 import { getString } from '@/lib/firestore/field-extractors';
 import { administrativeBoundaryService } from '../administrative-boundaries/AdministrativeBoundaryService';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('SpatialQueryService');
 
 // ============================================================================
 // SPATIAL UTILITIES
@@ -212,7 +214,7 @@ export class SpatialQueryService {
       return results;
 
     } catch (error) {
-      console.error('Spatial query error:', error);
+      logger.error('Spatial query error', { error });
       return [];
     }
   }
@@ -346,7 +348,7 @@ export class SpatialQueryService {
       return matchingResults;
 
     } catch (error) {
-      console.warn(`Error querying admin level ${adminLevel}:`, error);
+      logger.warn(`Error querying admin level ${adminLevel}`, { error });
       return [];
     }
   }
@@ -366,13 +368,13 @@ export class SpatialQueryService {
           return this.convertGeoJSONToSearchResults(postalCollection, adminLevel);
         }
       } catch (error) {
-        console.warn('Error getting postal codes:', error);
+        logger.warn('Error getting postal codes', { error });
       }
     }
 
     // For other admin levels, we would need more sophisticated spatial indexing
     // For now, return empty array - this could be enhanced with proper spatial database
-    console.warn(`Spatial query for admin level ${adminLevel} not fully implemented`);
+    logger.warn(`Spatial query for admin level ${adminLevel} not fully implemented`);
     return [];
   }
 
@@ -397,7 +399,7 @@ export class SpatialQueryService {
         try {
           bounds = getBoundingBox(feature.geometry);
         } catch (error) {
-          console.warn('Error calculating bounds:', error);
+          logger.warn('Error calculating bounds', { error });
         }
       }
 
@@ -457,7 +459,7 @@ export class SpatialQueryService {
       // for precise spatial relationship testing
 
     } catch (error) {
-      console.warn('Spatial relationship test error:', error);
+      logger.warn('Spatial relationship test error', { error });
       return false;
     }
   }

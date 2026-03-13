@@ -27,6 +27,8 @@ import { ContactSearchManager } from '@/components/contacts/relationships/Contac
 import { TabbedAddNewContactDialog } from '@/components/contacts/dialogs/TabbedAddNewContactDialog';
 import { AppurtenancesSection } from './AppurtenancesSection';
 import { useLinkedSpacesForSale } from '@/hooks/sales/useLinkedSpacesForSale';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('SalesActionDialogs');
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
 import type { Unit } from '@/types/unit';
 
@@ -244,7 +246,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
           depositAmount,
           lineItems,
         }).catch((err: unknown) => {
-          console.warn('[ADR-198] Deposit invoice fire-and-forget failed:', err);
+          logger.warn('Deposit invoice fire-and-forget failed', { error: err });
         });
       }
 
@@ -257,7 +259,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
           buyerContactId: buyerContactId || null,
           buyerName: buyerName || null,
         }).catch((err: unknown) => {
-          console.warn('[ADR-199] Appurtenance sync fire-and-forget failed:', err);
+          logger.warn('Appurtenance sync fire-and-forget failed', { error: err });
         });
       }
     } catch {
@@ -428,7 +430,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
         depositAlreadyInvoiced: unit.commercial?.reservationDeposit ?? 0,
         lineItems,
       }).catch((err: unknown) => {
-        console.warn('[ADR-198] Final sale invoice fire-and-forget failed:', err);
+        logger.warn('Final sale invoice fire-and-forget failed', { error: err });
       });
 
       // ADR-199: Sync appurtenance commercial status
@@ -440,7 +442,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
           buyerContactId: unit.commercial?.buyerContactId ?? null,
           buyerName: unit.commercial?.buyerName ?? null,
         }).catch((err: unknown) => {
-          console.warn('[ADR-199] Appurtenance sync fire-and-forget failed:', err);
+          logger.warn('Appurtenance sync fire-and-forget failed', { error: err });
         });
       }
     } catch {
@@ -616,7 +618,7 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
           reason: creditReason,
           lineItems,
         }).catch((err: unknown) => {
-          console.warn('[ADR-198] Credit invoice fire-and-forget failed:', err);
+          logger.warn('Credit invoice fire-and-forget failed', { error: err });
         });
       }
 
@@ -630,7 +632,7 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
             buyerContactId: null,
             buyerName: null,
           }).catch((err: unknown) => {
-            console.warn('[ADR-199] Appurtenance revert sync failed:', err);
+            logger.warn('Appurtenance revert sync failed', { error: err });
           });
         }
       }

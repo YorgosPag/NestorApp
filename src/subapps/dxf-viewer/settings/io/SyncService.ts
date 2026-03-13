@@ -18,6 +18,9 @@
 
 import type { SettingsState } from '../core/types';
 import { generateTempId } from '@/services/enterprise-id.service';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('SyncService');
 
 // ============================================================================
 // SYNC MESSAGE TYPES
@@ -74,7 +77,7 @@ export class SyncService {
       try {
         this.channel.postMessage(message);
       } catch (error) {
-        console.error('[SyncService] BroadcastChannel send failed:', error);
+        logger.error('BroadcastChannel send failed', { error });
       }
     }
 
@@ -147,12 +150,12 @@ export class SyncService {
         };
 
         this.channel.onmessageerror = (error) => {
-          console.error('[SyncService] BroadcastChannel message error:', error);
+          logger.error('BroadcastChannel message error', { error });
         };
 
         console.info('[SyncService] BroadcastChannel initialized');
       } catch (error) {
-        console.warn('[SyncService] BroadcastChannel failed, using storage fallback');
+        logger.warn('BroadcastChannel failed, using storage fallback');
         this.channel = null;
       }
     }
@@ -181,7 +184,7 @@ export class SyncService {
         const message = JSON.parse(event.newValue) as SyncMessage;
         this.handleMessage(message);
       } catch (error) {
-        console.error('[SyncService] Storage event parse error:', error);
+        logger.error('Storage event parse error', { error });
       }
     };
 
@@ -220,7 +223,7 @@ export class SyncService {
       try {
         listener(changes);
       } catch (error) {
-        console.error('[SyncService] Listener error:', error);
+        logger.error('Listener error', { error });
       }
     });
   }

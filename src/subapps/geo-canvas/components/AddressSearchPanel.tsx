@@ -9,6 +9,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ✅ Enterprise Address Resolver Integration
 import { useAddressResolver, type GreekAddress, type GeocodingResult } from '@/services/real-estate-monitor/AddressResolver';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('AddressSearchPanel');
 
 // ✅ Administrative Boundaries Integration
 import { useAdministrativeBoundaries } from '../hooks/useAdministrativeBoundaries';
@@ -97,7 +99,7 @@ export function AddressSearchPanel({
         setRecentSearches(recent.slice(0, 5)); // Κρατάμε τα 5 πιο πρόσφατα
       }
     } catch (error) {
-      console.warn('Failed to load recent searches:', error);
+      logger.warn('Failed to load recent searches', { error });
     }
   }, []);
 
@@ -111,7 +113,7 @@ export function AddressSearchPanel({
       setRecentSearches(updated);
       localStorage.setItem('geo_alert_recent_searches', JSON.stringify(updated));
     } catch (error) {
-      console.warn('Failed to save recent search:', error);
+      logger.warn('Failed to save recent search', { error });
     }
   }, [recentSearches]);
 
@@ -143,7 +145,7 @@ export function AddressSearchPanel({
           setSearchResults([]);
         }
       } catch (error) {
-        console.error('❌ Address search error:', error);
+        logger.error('Address search error', { error });
         setSearchError('Σφάλμα κατά την αναζήτηση. Δοκιμάστε ξανά.');
         setSearchResults([]);
       } finally {
@@ -155,7 +157,7 @@ export function AddressSearchPanel({
         console.debug('🏛️ Searching for boundaries:', searchQuery);
         await searchBoundaries(searchQuery.trim());
       } catch (error) {
-        console.error('❌ Boundaries search error:', error);
+        logger.error('Boundaries search error', { error });
       }
     }
   }, [activeTab, searchQuery, resolve, searchBoundaries]);
@@ -225,7 +227,7 @@ export function AddressSearchPanel({
         }
 
         setGpsError(errorMessage);
-        console.error('❌ GPS error:', error);
+        logger.error('GPS error', { error });
       },
       options
     );
@@ -276,7 +278,7 @@ export function AddressSearchPanel({
         onAdminBoundarySelected(boundary, result);
       }
     } catch (error) {
-      console.error('❌ Error loading boundary:', error);
+      logger.error('Error loading boundary', { error });
     }
   }, [getMunicipalityBoundary, getRegionBoundary, onAdminBoundarySelected]);
 

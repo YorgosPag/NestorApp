@@ -11,6 +11,8 @@ import { adminBoundariesAnalytics } from '../performance/AdminBoundariesPerforma
 import type {
   GreekAdminLevel
 } from '../../types/administrative-types';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('AdminBoundariesCacheManager');
 
 // ============================================================================
 // CACHE TYPES & INTERFACES
@@ -167,7 +169,7 @@ export class AdminBoundariesCacheManager {
       console.debug('🏛️ AdminBoundariesCacheManager initialized');
 
     } catch (error) {
-      console.error('Cache initialization error:', error);
+      logger.error('Cache initialization error', { error });
       // Fallback to memory-only mode
       this.config.enablePersistence = false;
     }
@@ -258,7 +260,7 @@ export class AdminBoundariesCacheManager {
       return null;
 
     } catch (error) {
-      console.error('Cache get error:', error);
+      logger.error('Cache get error', { error });
       this.stats.misses++;
       return null;
     }
@@ -288,7 +290,7 @@ export class AdminBoundariesCacheManager {
 
       // Check size limits
       if (size > this.config.maxSize * 1024 * 1024 * 0.1) { // Max 10% of cache per entry
-        console.warn(`Cache entry too large: ${key} (${this.formatBytes(size)})`);
+        logger.warn(`Cache entry too large: ${key} (${this.formatBytes(size)})`);
         return;
       }
 
@@ -330,7 +332,7 @@ export class AdminBoundariesCacheManager {
       console.debug(`💾 Cache SET: ${key} (${this.formatBytes(size)}, TTL: ${entry.ttl / 1000}s)`);
 
     } catch (error) {
-      console.error('Cache set error:', error);
+      logger.error('Cache set error', { error });
     }
   }
 
@@ -370,7 +372,7 @@ export class AdminBoundariesCacheManager {
 
       return existed;
     } catch (error) {
-      console.error('Cache delete error:', error);
+      logger.error('Cache delete error', { error });
       return false;
     }
   }
@@ -400,7 +402,7 @@ export class AdminBoundariesCacheManager {
 
       console.debug('🧹 Cache cleared completely');
     } catch (error) {
-      console.error('Cache clear error:', error);
+      logger.error('Cache clear error', { error });
     }
   }
 

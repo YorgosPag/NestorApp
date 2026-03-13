@@ -10,6 +10,9 @@
  * @updated 2025-12-28 - Split from CloudInfrastructure.ts
  */
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('AlertService');
+
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
 // ============================================================================
@@ -175,7 +178,7 @@ export class AlertService {
       );
 
     } catch (error) {
-      console.error('Failed to send health alert:', error);
+      logger.error('Failed to send health alert', { error });
     }
   }
 
@@ -211,7 +214,7 @@ export class AlertService {
       );
 
     } catch (error) {
-      console.error('Failed to send component alert:', error);
+      logger.error('Failed to send component alert', { error });
     }
   }
 
@@ -246,7 +249,7 @@ export class AlertService {
       );
 
     } catch (error) {
-      console.error('Failed to send cost alert:', error);
+      logger.error('Failed to send cost alert', { error });
     }
   }
 
@@ -277,7 +280,7 @@ export class AlertService {
       );
 
     } catch (error) {
-      console.error('Failed to send security alert:', error);
+      logger.error('Failed to send security alert', { error });
     }
   }
 
@@ -316,7 +319,7 @@ export class AlertService {
       );
 
     } catch (error) {
-      console.error('Failed to send performance alert:', error);
+      logger.error('Failed to send performance alert', { error });
     }
   }
 
@@ -349,7 +352,7 @@ export class AlertService {
       );
 
     } catch (error) {
-      console.error('Failed to send availability alert:', error);
+      logger.error('Failed to send availability alert', { error });
     }
   }
 
@@ -480,7 +483,7 @@ export class AlertService {
       }));
 
     } catch (error) {
-      console.error('Failed to get active alerts:', error);
+      logger.error('Failed to get active alerts', { error });
       return [];
     }
   }
@@ -587,7 +590,7 @@ export class AlertService {
       };
 
     } catch (error) {
-      console.error('Failed to get alert statistics:', error);
+      logger.error('Failed to get alert statistics', { error });
       return {
         total: 0,
         bySeverity: {},

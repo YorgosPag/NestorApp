@@ -11,6 +11,9 @@
  */
 
 import type { Point2D, ViewTransform, Viewport } from '../types/Types';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('CoordinateTransforms');
 
 // ✅ MARGINS SYSTEM - Single Source of Truth για ruler dimensions
 // 🏢 ENTERPRISE FIX (2026-01-06): Synchronized with actual ruler settings (30px)
@@ -46,14 +49,14 @@ export class CoordinateTransforms {
     // ✅ RESTORED: Margins για σωστή τοποθέτηση relative σε rulers
     const { left, top } = COORDINATE_LAYOUT.MARGINS;
     if (!worldPoint) {
-      console.warn("worldToScreen received undefined point. Returning (0,0)");
+      logger.warn('worldToScreen received undefined point. Returning (0,0)');
       return { x: left, y: viewport?.height ? viewport.height - top : top };
     }
 
     // 🏢 ENTERPRISE FIX (2026-01-27): Viewport validation
     // Αν το viewport δεν είναι έτοιμο, χρησιμοποιεί fallback υπολογισμό
     if (!viewport || viewport.height <= 0 || viewport.width <= 0) {
-      console.warn("worldToScreen: Invalid viewport dimensions", viewport);
+      logger.warn('worldToScreen: Invalid viewport dimensions', { viewport });
       // Fallback: Use simple conversion without Y-inversion
       return {
         x: left + worldPoint.x * transform.scale + transform.offsetX,
@@ -88,7 +91,7 @@ export class CoordinateTransforms {
     // ✅ RESTORED: Margins για σωστή μετατροπή relative από rulers
     const { left, top } = COORDINATE_LAYOUT.MARGINS;
     if (!screenPoint) {
-      console.warn("screenToWorld received undefined point. Returning origin offset");
+      logger.warn('screenToWorld received undefined point. Returning origin offset');
       return { x: -transform.offsetX / transform.scale, y: -transform.offsetY / transform.scale };
     }
 
@@ -97,7 +100,7 @@ export class CoordinateTransforms {
     // που βασίζεται μόνο στο X coordinate (Y θα είναι 0)
     // Αυτό αποτρέπει λανθασμένες μετατροπές πριν το layout stabilize
     if (!viewport || viewport.height <= 0 || viewport.width <= 0) {
-      console.warn("screenToWorld: Invalid viewport dimensions", viewport);
+      logger.warn('screenToWorld: Invalid viewport dimensions', { viewport });
       // Fallback: Use screen position as world position (1:1 mapping)
       // This is better than returning wildly incorrect values
       return {
@@ -362,13 +365,13 @@ export function logViewportForRender(viewport: Viewport, rendererName: string): 
   const heightDiff = Math.abs(viewport.height - lastInputViewport.height);
 
   if (widthDiff > VIEWPORT_MISMATCH_THRESHOLD || heightDiff > VIEWPORT_MISMATCH_THRESHOLD) {
-    console.warn(
-      `🚨 [Viewport MISMATCH] ${rendererName}:`,
-      `\n  Input used: ${lastInputViewport.width}x${lastInputViewport.height}`,
-      `\n  Render uses: ${viewport.width}x${viewport.height}`,
-      `\n  Diff: ${widthDiff.toFixed(1)}px x ${heightDiff.toFixed(1)}px`,
-      `\n  Time since input: ${now - lastInputTimestamp}ms`,
-      `\n  ACTION: Check if render is using stale React state instead of fresh ref`
+    logger.warn(
+      `Viewport MISMATCH ${rendererName}: ` +
+      `Input used: ${lastInputViewport.width}x${lastInputViewport.height}, ` +
+      `Render uses: ${viewport.width}x${viewport.height}, ` +
+      `Diff: ${widthDiff.toFixed(1)}px x ${heightDiff.toFixed(1)}px, ` +
+      `Time since input: ${now - lastInputTimestamp}ms. ` +
+      `ACTION: Check if render is using stale React state instead of fresh ref`
     );
   }
 }

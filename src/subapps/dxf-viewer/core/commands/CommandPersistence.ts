@@ -15,6 +15,8 @@ import type { ICommandPersistence, SerializedCommand, PersistenceConfig } from '
 import { DEFAULT_PERSISTENCE_CONFIG } from './interfaces';
 // 🏢 ADR-092: Centralized localStorage Service
 import { storageGet, storageSet, storageRemove } from '../../utils/storage-utils';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('CommandPersistence');
 
 const DB_NAME = 'dxf-viewer-commands';
 const STORE_NAME = 'command-history';
@@ -52,7 +54,7 @@ export class CommandPersistence implements ICommandPersistence {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
       request.onerror = () => {
-        console.warn('[CommandPersistence] IndexedDB error, falling back to localStorage');
+        logger.warn('IndexedDB error, falling back to localStorage');
         resolve();
       };
 
@@ -125,7 +127,7 @@ export class CommandPersistence implements ICommandPersistence {
         await this.saveToIndexedDB(data);
         return;
       } catch (error) {
-        console.warn('[CommandPersistence] IndexedDB save failed, trying localStorage:', error);
+        logger.warn('IndexedDB save failed, trying localStorage', { error });
       }
     }
 
@@ -166,7 +168,7 @@ export class CommandPersistence implements ICommandPersistence {
   private saveToLocalStorage(data: PersistenceData): void {
     const success = storageSet(this.config.keyPrefix, data);
     if (!success) {
-      console.error('[CommandPersistence] localStorage save failed');
+      logger.error('localStorage save failed');
     }
   }
 
@@ -182,7 +184,7 @@ export class CommandPersistence implements ICommandPersistence {
           return { undoStack: data.undoStack, redoStack: data.redoStack };
         }
       } catch (error) {
-        console.warn('[CommandPersistence] IndexedDB load failed, trying localStorage:', error);
+        logger.warn('IndexedDB load failed, trying localStorage', { error });
       }
     }
 
@@ -248,7 +250,7 @@ export class CommandPersistence implements ICommandPersistence {
       try {
         await this.clearIndexedDB();
       } catch (error) {
-        console.warn('[CommandPersistence] IndexedDB clear failed:', error);
+        logger.warn('IndexedDB clear failed', { error });
       }
     }
 
@@ -318,7 +320,7 @@ export function createDebouncedSave(
 
     timeout = setTimeout(() => {
       persistence.save(undoStack, redoStack).catch((error) => {
-        console.error('[CommandPersistence] Auto-save failed:', error);
+        logger.error('Auto-save failed', { error });
       });
     }, debounceMs);
   };

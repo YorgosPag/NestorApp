@@ -27,6 +27,9 @@
  * @see src/types/contacts/esco-types.ts
  */
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('EscoService');
+
 import {
   collection,
   query,
@@ -318,7 +321,7 @@ export class EscoService {
         language,
       };
     } catch (error) {
-      console.error('[EscoService] Search error:', error);
+      logger.error('Search error', { error });
       return {
         results: [],
         total: 0,
@@ -360,7 +363,7 @@ export class EscoService {
         description: data.description,
       };
     } catch (error) {
-      console.error('[EscoService] Get by URI error:', error);
+      logger.error('Get by URI error', { error });
       return null;
     }
   }
@@ -405,7 +408,7 @@ export class EscoService {
 
       return occupations;
     } catch (error) {
-      console.error('[EscoService] Get by ISCO group error:', error);
+      logger.error('Get by ISCO group error', { error });
       return [];
     }
   }
@@ -543,7 +546,7 @@ export class EscoService {
         language,
       };
     } catch (error) {
-      console.error('[EscoService] Skill search error:', error);
+      logger.error('Skill search error', { error });
       return { results: [], total: 0, query: searchQuery, language };
     }
   }
@@ -576,7 +579,7 @@ export class EscoService {
           : undefined,
       };
     } catch (error) {
-      console.error('[EscoService] Get skill by URI error:', error);
+      logger.error('Get skill by URI error', { error });
       return null;
     }
   }

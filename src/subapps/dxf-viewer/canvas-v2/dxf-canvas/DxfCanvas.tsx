@@ -5,6 +5,9 @@
 
 'use client';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('DxfCanvas');
+
 import React, { useRef, useEffect, useCallback, useImperativeHandle } from 'react';
 import { DxfRenderer } from './DxfRenderer';
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
@@ -236,7 +239,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     fitToView: () => {
       // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση κεντρικής υπηρεσίας αντί για διάσπαρτο κώδικα
       if (!onTransformChange) {
-        console.warn('🎯 DxfCanvas.fitToView: No onTransformChange callback provided');
+        logger.warn('fitToView: No onTransformChange callback provided');
         return;
       }
 
@@ -251,7 +254,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
       );
 
       if (!success) {
-        console.warn('🎯 DxfCanvas.fitToView: FitToViewService failed');
+        logger.warn('fitToView: FitToViewService failed');
       }
     },
     zoomAtScreenPoint: (factor: number, screenPoint: Point2D) => {
@@ -304,7 +307,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
 
         return result.entityId;
       } catch (error) {
-        console.error('🔥 DxfCanvas ΚΕΝΤΡΙΚΟ hitTest failed:', error);
+        logger.error('hitTest failed', { error });
         return null;
       }
     }
@@ -341,7 +344,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
         guideRendererRef.current = new GuideRenderer();
       }
     } catch (error) {
-      console.error('Failed to initialize DXF renderer:', error);
+      logger.error('Failed to initialize DXF renderer', { error });
     }
   }, []);
 
@@ -349,13 +352,13 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   const setupCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) {
-      console.warn('🚨 DxfCanvas.setupCanvas: canvas ref is null');
+      logger.warn('setupCanvas: canvas ref is null');
       return;
     }
 
     // ✅ DEFENSIVE: Validate canvas is HTMLCanvasElement
     if (!(canvas instanceof HTMLCanvasElement)) {
-      console.error('🚨 DxfCanvas.setupCanvas: canvas ref is not HTMLCanvasElement:', typeof canvas, canvas);
+      logger.error('setupCanvas: canvas ref is not HTMLCanvasElement', { type: typeof canvas });
       return;
     }
 
@@ -375,7 +378,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
       // But coordinate transforms use viewportRef, not this state
       setInternalViewport(newViewport);
     } catch (error) {
-      console.error('Failed to setup DXF canvas:', error);
+      logger.error('Failed to setup DXF canvas', { error });
     }
   }, []); // Removed canvasConfig dependency to prevent infinite loops
 
@@ -605,7 +608,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
         );
       }
     } catch (error) {
-      console.error('Failed to render DXF scene:', error);
+      logger.error('Failed to render DXF scene', { error });
     }
   // 🏢 FIX (2026-02-01): REMOVED transform, viewport from dependencies - using refs instead
   // ADR-189: guides/ghostGuide use refs, no need in deps

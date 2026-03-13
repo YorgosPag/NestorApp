@@ -22,6 +22,9 @@
  */
 
 import { sleep } from '@/lib/async-utils';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('LocalStorageDriver');
 import type { StorageDriver } from './StorageDriver';
 import { StorageError, StorageQuotaError, StorageUnavailableError } from './StorageDriver';
 import { validateSettingsState } from './schema';
@@ -132,7 +135,7 @@ export class LocalStorageDriver implements StorageDriver {
       return result;
     } catch (error) {
       this.trackError(error);
-      console.error(`[LocalStorageDriver] Failed to get key "${key}":`, error);
+      logger.error(`Failed to get key "${key}"`, { error });
       return null;
     }
   }
@@ -218,7 +221,7 @@ export class LocalStorageDriver implements StorageDriver {
       }
     } catch (error) {
       this.trackError(error);
-      console.error(`[LocalStorageDriver] Failed to delete key "${key}":`, error);
+      logger.error(`Failed to delete key "${key}"`, { error });
     }
   }
 
@@ -243,7 +246,7 @@ export class LocalStorageDriver implements StorageDriver {
       });
     } catch (error) {
       this.trackError(error);
-      console.error('[LocalStorageDriver] Failed to get keys:', error);
+      logger.error('Failed to get keys', { error });
       return [];
     }
   }
@@ -262,7 +265,7 @@ export class LocalStorageDriver implements StorageDriver {
       });
     } catch (error) {
       this.trackError(error);
-      console.error('[LocalStorageDriver] Failed to clear:', error);
+      logger.error('Failed to clear', { error });
     }
   }
 
@@ -404,7 +407,7 @@ export class LocalStorageDriver implements StorageDriver {
 
       return `LZ:${compressed}`; // Prefix to indicate compression
     } catch (error) {
-      console.warn('[LocalStorageDriver] Compression failed, using raw:', error);
+      logger.warn('Compression failed, using raw', { error });
       return `RAW:${data}`;
     }
   }
@@ -431,7 +434,7 @@ export class LocalStorageDriver implements StorageDriver {
 
         return decompressed;
       } catch (error) {
-        console.error('[LocalStorageDriver] Decompression failed:', error);
+        logger.error('Decompression failed', { error });
         throw new StorageError('Failed to decompress data', error);
       }
     }

@@ -15,6 +15,7 @@
  * @see centralized_systems.md for enterprise patterns
  */
 
+import { createModuleLogger } from '@/lib/telemetry';
 import {
   PDF_RENDER_CONFIG,
   type PdfRenderOptions,
@@ -72,6 +73,8 @@ type PdfjsModule = typeof import('pdfjs-dist');
 // ============================================================================
 // CONSTANTS (from centralized PDF_RENDER_CONFIG)
 // ============================================================================
+
+const logger = createModuleLogger('PdfRenderer');
 
 const { DEFAULT_RENDER_SCALE, MAX_RENDER_SCALE, MIN_RENDER_SCALE } = PDF_RENDER_CONFIG;
 
@@ -146,7 +149,7 @@ class PdfRendererService {
 
       console.log('✅ [PdfRenderer] Initialized with pdfjs-dist@4.5.136');
     } catch (error) {
-      console.error('❌ [PdfRenderer] Failed to initialize:', error);
+      logger.error('Failed to initialize', { error });
       throw new Error('Failed to initialize PDF renderer');
     }
   }
@@ -204,7 +207,7 @@ class PdfRendererService {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error loading PDF';
-      console.error('❌ [PdfRenderer] Load error:', errorMessage);
+      logger.error('Load error', { error: errorMessage });
 
       return {
         success: false,
@@ -222,7 +225,7 @@ class PdfRendererService {
         await this.pdfDocument.destroy();
         console.log('✅ [PdfRenderer] Document unloaded');
       } catch (error) {
-        console.warn('⚠️ [PdfRenderer] Error during unload:', error);
+        logger.warn('Error during unload', { error });
       }
       this.pdfDocument = null;
 
@@ -312,7 +315,7 @@ class PdfRendererService {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error rendering page';
-      console.error('❌ [PdfRenderer] Render error:', errorMessage);
+      logger.error('Render error', { error: errorMessage });
 
       return {
         success: false,

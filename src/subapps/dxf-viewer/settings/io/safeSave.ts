@@ -22,6 +22,9 @@ import { validateSettingsState } from './schema';
 import { StorageError } from './StorageDriver';
 import type { SyncService } from './SyncService';
 import { getErrorMessage } from '@/lib/error-utils';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('SafeSave');
 
 // ============================================================================
 // SAFE SAVE
@@ -94,7 +97,7 @@ export async function safeSave(
     } catch (writeError) {
       // Step 4: Write failed - attempt rollback
       if (oldData !== null) {
-        console.error('[safeSave] Write failed, attempting rollback');
+        logger.error('Write failed, attempting rollback');
         try {
           await driver.set(key, oldData);
           warnings.push('Write failed, successfully rolled back');
@@ -139,7 +142,7 @@ export async function safeSave(
       } catch (syncError) {
         // Don't fail the save if sync fails
         warnings.push('Sync broadcast failed (non-critical)');
-        console.warn('[safeSave] Sync failed:', syncError);
+        logger.warn('Sync failed', { error: syncError });
       }
     }
 
@@ -218,7 +221,7 @@ export async function safeSaveOrThrow(
 
   // Log warnings
   if (result.warnings.length > 0) {
-    console.warn('[safeSave] Warnings:', result.warnings);
+    logger.warn('Warnings', { warnings: result.warnings });
   }
 }
 
@@ -283,7 +286,7 @@ export async function safeBatchSave(
         }
       } catch (syncError) {
         warnings.push('Sync broadcast failed (non-critical)');
-        console.warn('[safeBatchSave] Sync failed:', syncError);
+        logger.warn('Sync failed', { error: syncError });
       }
     }
 
@@ -293,7 +296,7 @@ export async function safeBatchSave(
     };
   } catch (error) {
     // Step 4: Rollback all writes
-    console.error('[safeBatchSave] Batch write failed, rolling back');
+    logger.error('Batch write failed, rolling back');
 
     for (const [key, oldData] of backups) {
       try {

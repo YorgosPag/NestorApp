@@ -3,6 +3,7 @@
  * Manages all entity-specific renderers and delegates rendering to appropriate renderer
  */
 
+import { createModuleLogger } from '@/lib/telemetry';
 import { BaseEntityRenderer } from '../entities/BaseEntityRenderer';
 import type { Entity, GripInfo, RenderOptions, ViewTransform, Point2D, GripSettings, GripInteractionState, Viewport } from '../types/Types';
 import { CoordinateTransforms } from './CoordinateTransforms';
@@ -22,6 +23,8 @@ import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 // 🏢 ADR-151: Centralized grip tolerance
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { hitTestingService } from '../../services/HitTestingService';
+
+const logger = createModuleLogger('EntityRendererComposite');
 
 export class EntityRendererComposite {
   private renderers: Map<string, BaseEntityRenderer>;
@@ -90,7 +93,7 @@ export class EntityRendererComposite {
     if (renderer) {
       renderer.render(entity, options);
     } else {
-      console.warn(`No renderer found for entity type: ${entity.type}`);
+      logger.warn(`No renderer found for entity type: ${entity.type}`);
       this.renderFallback(entity, options);
     }
   }
@@ -137,7 +140,7 @@ export class EntityRendererComposite {
 
       return result.entityId === entity.id;
     } catch (error) {
-      console.error('🔥 EntityRendererComposite hitTestEntity failed:', error);
+      logger.error('hitTestEntity failed', { error });
       return false;
     }
   }
@@ -160,7 +163,7 @@ export class EntityRendererComposite {
 
       return null;
     } catch (error) {
-      console.error('🔥 EntityRendererComposite hitTest failed:', error);
+      logger.error('hitTest failed', { error });
       return null;
     }
   }
@@ -197,7 +200,7 @@ export class EntityRendererComposite {
       this.ctx.restore();
     } catch (error) {
       // Silently handle any rendering errors to prevent crashes
-      console.warn(`Fallback rendering failed for entity ${entity.id}:`, error);
+      logger.warn(`Fallback rendering failed for entity ${entity.id}`, { error });
     }
   }
 

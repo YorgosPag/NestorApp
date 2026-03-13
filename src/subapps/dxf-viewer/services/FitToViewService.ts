@@ -16,6 +16,9 @@ import { ColorLayerUtils } from '../utils/ColorLayerUtils';
 import { FIT_TO_VIEW_DEFAULTS } from '../config/transform-config';
 // 🏢 ADR-071: Centralized clamp function
 import { clamp } from '../rendering/entities/shared/geometry-utils';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FitToViewService');
 
 interface FitToViewOptions {
   padding?: number; // Default: 0.1 (10% padding)
@@ -92,7 +95,7 @@ export class FitToViewService {
 
     // 🛡️ GUARD: Check for zero/negative padded viewport (would cause Infinity/NaN)
     if (paddedViewportWidth <= 0 || paddedViewportHeight <= 0) {
-      console.error('🚨 [1] Invalid padded viewport:', { viewport, padding: safePadding, paddedViewportWidth, paddedViewportHeight });
+      logger.error('Invalid padded viewport', { viewport, padding: safePadding, paddedViewportWidth, paddedViewportHeight });
       return {
         transform: null,
         success: false,
@@ -108,7 +111,7 @@ export class FitToViewService {
     // 🛡️ FINAL GUARD: Check for NaN/Infinity in scale
     // 🏢 ADR-161: Use Number.isFinite() for strict type checking (no coercion)
     if (!Number.isFinite(scale) || scale <= 0) {
-      console.error('🚨 [1] Invalid scale calculated:', { scale, scaleX, scaleY, boundsWidth, boundsHeight });
+      logger.error('Invalid scale calculated', { scale, scaleX, scaleY, boundsWidth, boundsHeight });
       return {
         transform: null,
         success: false,
@@ -173,7 +176,7 @@ export class FitToViewService {
       return true;
     }
 
-    console.warn('🎯 FitToViewService.performFitToView failed:', result.reason);
+    logger.warn('performFitToView failed', { reason: result.reason });
     return false;
   }
 
@@ -248,7 +251,7 @@ export class FitToViewService {
 
     // 🛡️ GUARD: Check for zero/negative padded viewport (would cause Infinity/NaN)
     if (paddedViewportWidth <= 0 || paddedViewportHeight <= 0) {
-      console.error('🚨 [2] Invalid padded viewport:', { viewport, padding: safePadding, paddedViewportWidth, paddedViewportHeight });
+      logger.error('Invalid padded viewport', { viewport, padding: safePadding, paddedViewportWidth, paddedViewportHeight });
       return {
         transform: null,
         success: false,
@@ -264,7 +267,7 @@ export class FitToViewService {
     // 🛡️ FINAL GUARD: Check for NaN/Infinity in scale
     // 🏢 ADR-161: Use Number.isFinite() for strict type checking (no coercion)
     if (!Number.isFinite(scale) || scale <= 0) {
-      console.error('🚨 [2] Invalid scale calculated:', { scale, scaleX, scaleY, boundsWidth, boundsHeight });
+      logger.error('Invalid scale calculated', { scale, scaleX, scaleY, boundsWidth, boundsHeight });
       return {
         transform: null,
         success: false,

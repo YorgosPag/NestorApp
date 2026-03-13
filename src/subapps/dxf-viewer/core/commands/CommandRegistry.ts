@@ -10,7 +10,10 @@
  * - Support for custom command types (plugins)
  */
 
+import { createModuleLogger } from '@/lib/telemetry';
 import type { ICommandRegistry, CommandFactory, SerializedCommand, ISceneManager, ICommand } from './interfaces';
+
+const logger = createModuleLogger('CommandRegistry');
 
 /**
  * Command Registry implementation
@@ -24,7 +27,7 @@ export class CommandRegistry implements ICommandRegistry {
    */
   register(type: string, factory: CommandFactory): void {
     if (this.factories.has(type)) {
-      console.warn(`[CommandRegistry] Overwriting factory for type: ${type}`);
+      logger.warn(`Overwriting factory for type: ${type}`);
     }
     this.factories.set(type, factory);
   }
@@ -43,14 +46,14 @@ export class CommandRegistry implements ICommandRegistry {
     const factory = this.factories.get(serialized.type);
 
     if (!factory) {
-      console.warn(`[CommandRegistry] No factory registered for type: ${serialized.type}`);
+      logger.warn(`No factory registered for type: ${serialized.type}`);
       return null;
     }
 
     try {
       return factory(serialized, sceneManager);
     } catch (error) {
-      console.error(`[CommandRegistry] Failed to deserialize command:`, error);
+      logger.error('Failed to deserialize command', { error });
       return null;
     }
   }
@@ -184,6 +187,6 @@ export function registerBuiltInCommands(registry: ICommandRegistry): void {
 
   // Execute registration
   registerFactories().catch((error) => {
-    console.error('[CommandRegistry] Failed to register built-in commands:', error);
+    logger.error('Failed to register built-in commands', { error });
   });
 }

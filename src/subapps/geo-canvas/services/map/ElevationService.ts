@@ -14,6 +14,9 @@
  * @module ElevationService
  */
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('ElevationService');
+
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
 // ============================================================================
@@ -74,7 +77,7 @@ export class ElevationService {
   async getElevation(lng: number, lat: number): Promise<number | null> {
     // Validate coordinates
     if (!this.isValidCoordinate(lat, lng)) {
-      console.warn('🚨 Invalid coordinates:', { lat, lng });
+      logger.warn('Invalid coordinates', { lat, lng });
       return null;
     }
 
@@ -202,18 +205,18 @@ export class ElevationService {
         return elevation;
       }
 
-      console.warn('⚠️ No elevation results in API response');
+      logger.warn('No elevation results in API response');
       return null;
 
     } catch (error) {
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
-          console.warn('⏰ Elevation request timeout for:', cacheKey);
+          logger.warn('Elevation request timeout', { cacheKey });
         } else {
-          console.warn('❌ Elevation fetch failed:', error.message);
+          logger.warn('Elevation fetch failed', { message: error.message });
         }
       } else {
-        console.warn('❌ Unknown elevation fetch error:', error);
+        logger.warn('Unknown elevation fetch error', { error });
       }
       return null;
     }

@@ -23,6 +23,9 @@ interface SuggestionCategories {
 }
 
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('AdministrativeBoundaryService');
+
 import { overpassApiService } from './OverpassApiService';
 import { adminBoundariesAnalytics } from '../performance/AdminBoundariesPerformanceAnalytics';
 import { adminBoundariesCache } from '../cache/AdminBoundariesCacheManager';
@@ -182,7 +185,7 @@ export class AdministrativeBoundaryService {
       return searchResult;
 
     } catch (error) {
-      console.error('Smart search error:', error);
+      logger.error('Smart search error', { error });
 
       // 🚀 Phase 7.1: End performance tracking (error)
       adminBoundariesAnalytics.endSearchTracking(searchId, 0, cacheHit, error as Error);
@@ -222,7 +225,7 @@ export class AdministrativeBoundaryService {
       return filteredResults;
 
     } catch (error) {
-      console.error('Advanced search error:', error);
+      logger.error('Advanced search error', { error });
       return [];
     }
   }
@@ -274,7 +277,7 @@ export class AdministrativeBoundaryService {
       return results;
 
     } catch (error) {
-      console.error('Enhanced advanced search error:', error);
+      logger.error('Enhanced advanced search error', { error });
       return [];
     }
   }
@@ -312,7 +315,7 @@ export class AdministrativeBoundaryService {
       return boundary;
 
     } catch (error) {
-      console.error(`Error fetching municipality boundary for ${municipalityName}:`, error);
+      logger.error(`Error fetching municipality boundary for ${municipalityName}`, { error });
       return null;
     }
   }
@@ -346,7 +349,7 @@ export class AdministrativeBoundaryService {
       return boundary;
 
     } catch (error) {
-      console.error(`Error fetching region boundary for ${regionName}:`, error);
+      logger.error(`Error fetching region boundary for ${regionName}`, { error });
       return null;
     }
   }
@@ -380,7 +383,7 @@ export class AdministrativeBoundaryService {
       return municipalities;
 
     } catch (error) {
-      console.error(`Error fetching municipalities in ${regionName}:`, error);
+      logger.error(`Error fetching municipalities in ${regionName}`, { error });
       return null;
     }
   }
@@ -401,7 +404,7 @@ export class AdministrativeBoundaryService {
       return results;
 
     } catch (error) {
-      console.error('Postal codes search error:', error);
+      logger.error('Postal codes search error', { error });
       return [];
     }
   }
@@ -435,7 +438,7 @@ export class AdministrativeBoundaryService {
       return boundary;
 
     } catch (error) {
-      console.error(`Error fetching postal code boundary for ${postalCode}:`, error);
+      logger.error(`Error fetching postal code boundary for ${postalCode}`, { error });
       return null;
     }
   }
@@ -469,7 +472,7 @@ export class AdministrativeBoundaryService {
       return postalCodes;
 
     } catch (error) {
-      console.error(`Error fetching postal codes in ${municipalityName}:`, error);
+      logger.error(`Error fetching postal codes in ${municipalityName}`, { error });
       return null;
     }
   }
@@ -503,7 +506,7 @@ export class AdministrativeBoundaryService {
       return postalCodes;
 
     } catch (error) {
-      console.error(`Error fetching postal codes in bounds:`, error);
+      logger.error('Error fetching postal codes in bounds', { error });
       return null;
     }
   }
@@ -785,7 +788,7 @@ export class AdministrativeBoundaryService {
       };
 
     } catch (error) {
-      console.error('Enhanced suggestions error:', error);
+      logger.error('Enhanced suggestions error', { error });
 
       // Fallback to basic suggestions
       const basicSuggestions = this.getGeneralSuggestions(partialQuery);
@@ -888,7 +891,7 @@ export class AdministrativeBoundaryService {
     // Preload municipalities (parallel)
     const municipalityPromises = popularMunicipalities.map(name =>
       this.getMunicipalityBoundary(name).catch(error => {
-        console.warn(`Failed to preload municipality ${name}:`, error);
+        logger.warn(`Failed to preload municipality ${name}`, { error });
         return null;
       })
     );
@@ -896,7 +899,7 @@ export class AdministrativeBoundaryService {
     // Preload regions (parallel)
     const regionPromises = popularRegions.map(name =>
       this.getRegionBoundary(name).catch(error => {
-        console.warn(`Failed to preload region ${name}:`, error);
+        logger.warn(`Failed to preload region ${name}`, { error });
         return null;
       })
     );
@@ -1532,7 +1535,7 @@ export class AdministrativeBoundaryService {
       return simplifiedBoundaries;
 
     } catch (error) {
-      console.error('Batch simplification error:', error);
+      logger.error('Batch simplification error', { error });
       return boundaries; // Return original on error
     }
   }

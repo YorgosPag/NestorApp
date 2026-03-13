@@ -22,7 +22,10 @@
 
 'use client';
 
+import { createModuleLogger } from '@/lib/telemetry';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+
+const logger = createModuleLogger('FloorPlanCanvasLayer');
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { ParserResult } from '../types';
 import type { UseSnapEngineReturn } from '../snapping/hooks/useSnapEngine';
@@ -177,7 +180,7 @@ export function FloorPlanCanvasLayer({
     }
 
     if (!floorPlan.success || !floorPlan.geoJSON) {
-      console.warn('⚠️ FloorPlanCanvasLayer: No GeoJSON data to render');
+      logger.warn('No GeoJSON data to render');
       return;
     }
 
@@ -216,7 +219,7 @@ export function FloorPlanCanvasLayer({
         renderFeature(ctx, feature, map, floorPlan.bounds!, transformMatrix);
         renderedCount++;
       } catch (error) {
-        console.warn(`⚠️ Failed to render feature ${index}:`, error);
+        logger.warn(`Failed to render feature ${index}`, { error });
       }
     });
 
@@ -372,7 +375,7 @@ export function FloorPlanCanvasLayer({
       // This requires solving the linear system (not trivial)
       // For now, fallback to simple scaling (same as rendering fallback)
       // TODO: Implement proper inverse affine transformation
-      console.warn('⚠️ handleMouseMove: Inverse affine transformation not implemented yet');
+      logger.warn('handleMouseMove: Inverse affine transformation not implemented yet');
 
       // Fallback: Use simple scaling
       const scale = Math.min(
@@ -551,7 +554,7 @@ function renderFeature(
       break;
 
     default:
-      console.warn(`⚠️ Unsupported geometry type: ${geometry.type}`);
+      logger.warn(`Unsupported geometry type: ${geometry.type}`);
   }
 }
 

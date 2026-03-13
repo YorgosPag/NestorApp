@@ -41,6 +41,8 @@ import { useTranslation } from '@/i18n';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ADR: Centralized DEFAULT_GRIP_SETTINGS - Single Source of Truth
 import { DEFAULT_GRIP_SETTINGS } from '../../../../../types/gripSettings';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('EntitiesSettings');
 
 // Mock data για UI-only functionality - αντιγράφουμε τη δομή από dxf-viewer-kalo
 interface DropdownOption {
@@ -127,7 +129,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
   // Αν checkbox OFF → pure General | Αν checkbox ON → Effective (merged)
   const previewLineDraftSettings = useMemo(() => {
     if (!globalLineSettings) {
-      console.warn('⚠️ [previewLineDraftSettings] globalLineSettings is undefined!');
+      logger.warn('globalLineSettings is undefined in previewLineDraftSettings');
       return effectiveLineDraftSettings;
     }
     return draftSettings.overrideGlobalSettings ? effectiveLineDraftSettings : globalLineSettings;
@@ -135,7 +137,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
 
   const previewLineHoverSettings = useMemo(() => {
     if (!globalLineSettings) {
-      console.warn('⚠️ [previewLineHoverSettings] globalLineSettings is undefined!');
+      logger.warn('globalLineSettings is undefined in previewLineHoverSettings');
       return effectiveLineHoverSettings;
     }
     return hoverSettings.overrideGlobalSettings ? effectiveLineHoverSettings : globalLineSettings;
@@ -143,7 +145,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
 
   const previewLineSelectionSettings = useMemo(() => {
     if (!globalLineSettings) {
-      console.warn('⚠️ [previewLineSelectionSettings] globalLineSettings is undefined!');
+      logger.warn('globalLineSettings is undefined in previewLineSelectionSettings');
       return effectiveLineSelectionSettings;
     }
     return selectionSettings.overrideGlobalSettings ? effectiveLineSelectionSettings : globalLineSettings;
@@ -151,7 +153,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
 
   const previewLineCompletionSettings = useMemo(() => {
     if (!globalLineSettings) {
-      console.warn('⚠️ [previewLineCompletionSettings] globalLineSettings is undefined!');
+      logger.warn('globalLineSettings is undefined in previewLineCompletionSettings');
       return effectiveLineCompletionSettings;
     }
     return completionSettings.overrideGlobalSettings ? effectiveLineCompletionSettings : globalLineSettings;
@@ -159,7 +161,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
 
   const previewTextSettings = useMemo(() => {
     if (!globalTextSettings || !globalTextSettings.settings) {
-      console.warn('⚠️ [previewTextSettings] globalTextSettings is undefined!');
+      logger.warn('globalTextSettings is undefined in previewTextSettings');
       return effectiveTextSettings;
     }
     return specificTextSettings.overrideGlobalSettings ? effectiveTextSettings : globalTextSettings.settings;
@@ -168,12 +170,12 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
   const previewGripSettings = useMemo(() => {
     // 🛡️ Null guard: Ensure all values are defined
     if (!specificGripSettings || specificGripSettings.overrideGlobalSettings === undefined) {
-      console.warn('⚠️ [previewGripSettings] specificGripSettings invalid:', specificGripSettings);
+      logger.warn('specificGripSettings invalid', { specificGripSettings });
       return globalGripSettings || DEFAULT_GRIP_SETTINGS;
     }
 
     if (!globalGripSettings) {
-      console.warn('⚠️ [previewGripSettings] globalGripSettings is undefined!');
+      logger.warn('globalGripSettings is undefined in previewGripSettings');
       return effectiveGripSettings || DEFAULT_GRIP_SETTINGS;
     }
 

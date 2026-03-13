@@ -25,6 +25,9 @@
  */
 
 import { sleep } from '@/lib/async-utils';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('IndexedDbDriver');
 import type { StorageDriver } from './StorageDriver';
 import { StorageError, StorageQuotaError, StorageUnavailableError } from './StorageDriver';
 import { validateSettingsState } from './schema';
@@ -144,7 +147,7 @@ export class IndexedDbDriver implements StorageDriver {
       return result;
     } catch (error) {
       this.trackError(error);
-      console.error(`[IndexedDbDriver] Failed to get key "${key}":`, error);
+      logger.error(`Failed to get key "${key}"`, { error });
       return null;
     }
   }
@@ -244,7 +247,7 @@ export class IndexedDbDriver implements StorageDriver {
       }
     } catch (error) {
       this.trackError(error);
-      console.error(`[IndexedDbDriver] Failed to delete key "${key}":`, error);
+      logger.error(`Failed to delete key "${key}"`, { error });
     }
   }
 
@@ -279,7 +282,7 @@ export class IndexedDbDriver implements StorageDriver {
       });
     } catch (error) {
       this.trackError(error);
-      console.error('[IndexedDbDriver] Failed to get keys:', error);
+      logger.error('Failed to get keys', { error });
       return [];
     }
   }
@@ -314,7 +317,7 @@ export class IndexedDbDriver implements StorageDriver {
       });
     } catch (error) {
       this.trackError(error);
-      console.error('[IndexedDbDriver] Failed to clear:', error);
+      logger.error('Failed to clear', { error });
     }
   }
 
@@ -480,7 +483,7 @@ export class IndexedDbDriver implements StorageDriver {
       };
 
       request.onblocked = () => {
-        console.warn('[IndexedDbDriver] Database upgrade blocked by other tabs');
+        logger.warn('Database upgrade blocked by other tabs');
       };
     });
   }
@@ -564,8 +567,8 @@ export class IndexedDbDriver implements StorageDriver {
 
       // Warn if approaching quota limit
       if (percentage > this.config.quotaWarningThreshold) {
-        console.warn(
-          `[IndexedDbDriver] Storage quota usage at ${percentage.toFixed(1)}% ` +
+        logger.warn(
+          `Storage quota usage at ${percentage.toFixed(1)}% ` +
           `(${(usage / 1024 / 1024).toFixed(2)}MB / ${(limit / 1024 / 1024).toFixed(2)}MB)`
         );
       }

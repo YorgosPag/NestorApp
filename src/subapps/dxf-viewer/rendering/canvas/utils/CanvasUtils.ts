@@ -4,6 +4,9 @@
  * 🏢 ENTERPRISE (2026-01-27): Uses CanvasBoundsService for cached getBoundingClientRect
  */
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('CanvasUtils');
+
 import type { CanvasConfig, Point2D } from '../../types/Types';
 import { UI_COLORS } from '../../../config/color-config';
 // 🏢 ENTERPRISE: Centralized bounds service για performance optimization
@@ -92,7 +95,7 @@ export class CanvasUtils {
     } else {
       // ✅ SAFETY: Check if canvas is valid before proceeding
       if (!canvas || typeof canvas.getBoundingClientRect !== 'function') {
-        console.error('CanvasUtils.clearCanvas: Invalid canvas element provided');
+        logger.error('clearCanvas: Invalid canvas element provided');
         return;
       }
       // 🏢 ENTERPRISE: Use cached bounds service (OK for non-render-loop callers)
@@ -117,7 +120,7 @@ export class CanvasUtils {
     // ✅ SAFETY: Check if canvas is valid before proceeding
     // 🏢 ADR-118: Use centralized ZERO_VECTOR pattern for error fallback
     if (!canvas || typeof canvas.getBoundingClientRect !== 'function') {
-      console.error('CanvasUtils.getCanvasDimensions: Invalid canvas element provided');
+      logger.error('getCanvasDimensions: Invalid canvas element provided');
       return { width: 0, height: 0 }; // Keeps { width, height } format, not Point2D
     }
     // 🏢 ENTERPRISE: Use cached bounds service
@@ -168,7 +171,7 @@ export class CanvasUtils {
     // ✅ SAFETY: Check if canvas is valid before proceeding
     // 🏢 ADR-118: Use centralized ZERO_VECTOR for error fallback
     if (!canvas || typeof canvas.getBoundingClientRect !== 'function') {
-      console.error('CanvasUtils.screenToCanvas: Invalid canvas element provided');
+      logger.error('screenToCanvas: Invalid canvas element provided');
       return ZERO_VECTOR;
     }
     // 🏢 ENTERPRISE: Use cached bounds service
@@ -190,7 +193,7 @@ export class CanvasUtils {
     // ✅ SAFETY: Check if canvas is valid before proceeding
     // 🏢 ADR-118: Use centralized ZERO_VECTOR for error fallback
     if (!canvas || typeof canvas.getBoundingClientRect !== 'function') {
-      console.error('CanvasUtils.canvasToScreen: Invalid canvas element provided');
+      logger.error('canvasToScreen: Invalid canvas element provided');
       return ZERO_VECTOR;
     }
     // 🏢 ENTERPRISE: Use cached bounds service
@@ -211,7 +214,7 @@ export class CanvasUtils {
   ): boolean {
     // ✅ SAFETY: Check if canvas is valid before proceeding
     if (!canvas || typeof canvas.getBoundingClientRect !== 'function') {
-      console.error('CanvasUtils.isPointInCanvas: Invalid canvas element provided');
+      logger.error('isPointInCanvas: Invalid canvas element provided');
       return false;
     }
     // 🏢 ENTERPRISE: Use cached bounds service
@@ -232,7 +235,7 @@ export class CanvasUtils {
     // ✅ SAFETY: Check if canvas is valid before proceeding
     // 🏢 ADR-118: Use centralized ZERO_VECTOR for error fallback
     if (!canvas || typeof canvas.getBoundingClientRect !== 'function') {
-      console.error('CanvasUtils.getCanvasCenter: Invalid canvas element provided');
+      logger.error('getCanvasCenter: Invalid canvas element provided');
       return ZERO_VECTOR;
     }
     // 🏢 ENTERPRISE: Use cached bounds service
@@ -274,7 +277,7 @@ export class CanvasUtils {
   ): void {
     // ✅ SAFETY: Check if canvas is valid before proceeding
     if (!canvas || typeof canvas.getBoundingClientRect !== 'function') {
-      console.error('CanvasUtils.resizeCanvas: Invalid canvas element provided');
+      logger.error('resizeCanvas: Invalid canvas element provided');
       return;
     }
 
@@ -366,7 +369,7 @@ export class CanvasUtils {
       const imageData = ctx.getImageData(point.x, point.y, 1, 1);
       return imageData.data;
     } catch (error) {
-      console.error('Error getting pixel data:', error);
+      logger.error('Error getting pixel data', { error });
       return null;
     }
   }
@@ -389,7 +392,7 @@ export class CanvasUtils {
 
       return true;
     } catch (error) {
-      console.error('Error checking canvas blank state:', error);
+      logger.error('Error checking canvas blank state', { error });
       return false;
     }
   }

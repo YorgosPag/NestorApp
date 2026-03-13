@@ -15,6 +15,8 @@
  */
 
 import { useCallback } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('UseMapInteractions');
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import { mapStyleManager, type MapStyleType } from '../../services/map/MapStyleManager';
 import type { GeoCoordinate } from '../../types';
@@ -383,7 +385,7 @@ export const useMapInteractions = (config: MapInteractionConfig): MapInteraction
 
       const map = event?.target;
       if (!map) {
-        console.warn('⚠️ Map instance not found in event.target');
+        logger.warn('Map instance not found in event.target');
         return;
       }
 
@@ -416,7 +418,7 @@ export const useMapInteractions = (config: MapInteractionConfig): MapInteraction
         console.debug('📣 Calling onMapReady callback');
         onMapReady(map);
       } else {
-        console.warn('⚠️ No onMapReady callback provided');
+        logger.warn('No onMapReady callback provided');
       }
     };
   }, []);
@@ -431,7 +433,7 @@ export const useMapInteractions = (config: MapInteractionConfig): MapInteraction
     setCurrentMapStyle: (style: MapStyleType) => void,
     setMapLoaded: (loaded: boolean) => void
   ) => {
-    console.error('🗺️ MapLibre GL JS Error:', error);
+    logger.error('MapLibre GL JS Error', { error });
 
     // Log structured error for debugging
     const errorInfo = {
@@ -443,7 +445,7 @@ export const useMapInteractions = (config: MapInteractionConfig): MapInteraction
       failureReason: error?.message?.includes('Failed to fetch') ? 'Network/CORS' : 'Unknown'
     };
 
-    console.error('🔍 MapLibre Error Details:', errorInfo);
+    logger.error('MapLibre Error Details', { errorInfo });
 
     // 🔧 FIX: Don't fallback for tile loading errors (404s at high zoom)
     // These are normal when zoom level exceeds maxzoom
@@ -468,7 +470,7 @@ export const useMapInteractions = (config: MapInteractionConfig): MapInteraction
       }, 1500);
     } else {
       // Final fallback failed - show user notification
-      console.error('❌ All map styles failed. Using emergency fallback.');
+      logger.error('All map styles failed. Using emergency fallback.');
       setTimeout(() => {
         // Emergency: Try to load with minimal OSM style
         setCurrentMapStyle('osm');

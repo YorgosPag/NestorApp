@@ -7,6 +7,9 @@
  * @module services/administrative-boundaries/OverpassApiService
  */
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('OverpassApiService');
+
 import { sleep } from '@/lib/async-utils';
 import { adminBoundariesAnalytics } from '../performance/AdminBoundariesPerformanceAnalytics';
 import { adminBoundariesCache } from '../cache/AdminBoundariesCacheManager';
@@ -49,7 +52,7 @@ const getOverpassEndpoints = (): readonly string[] => {
       }
     }
   } catch (error) {
-    console.warn('⚠️ Invalid OVERPASS_ENDPOINTS_JSON, using fallbacks');
+    logger.warn('Invalid OVERPASS_ENDPOINTS_JSON, using fallbacks');
   }
 
   // Secondary: Individual endpoint configuration
@@ -363,7 +366,7 @@ export class OverpassApiService {
 
       } catch (error) {
         lastError = error as Error;
-        console.warn(`⚠️ Overpass: Endpoint ${this.currentEndpointIndex} failed:`, error);
+        logger.warn(`Endpoint ${this.currentEndpointIndex} failed`, { error });
         this.currentEndpointIndex = (this.currentEndpointIndex + 1) % OVERPASS_ENDPOINTS.length;
 
         // Wait before retry
@@ -440,7 +443,7 @@ export class OverpassApiService {
       return this.convertToGeoJSON(response, municipalityName);
 
     } catch (error) {
-      console.error('Error fetching municipality boundary:', error);
+      logger.error('Error fetching municipality boundary', { error });
       return null;
     }
   }
@@ -458,7 +461,7 @@ export class OverpassApiService {
       return this.convertToGeoJSON(response, regionName);
 
     } catch (error) {
-      console.error('Error fetching region boundary:', error);
+      logger.error('Error fetching region boundary', { error });
       return null;
     }
   }
@@ -476,7 +479,7 @@ export class OverpassApiService {
       return this.convertToFeatureCollection(response);
 
     } catch (error) {
-      console.error('Error fetching municipalities in region:', error);
+      logger.error('Error fetching municipalities in region', { error });
       return null;
     }
   }
@@ -497,7 +500,7 @@ export class OverpassApiService {
       return this.convertToSearchResults(response, searchTerm);
 
     } catch (error) {
-      console.error('Error searching administrative:', error);
+      logger.error('Error searching administrative', { error });
       return [];
     }
   }
@@ -515,7 +518,7 @@ export class OverpassApiService {
       return this.convertToGeoJSON(response, postalCode);
 
     } catch (error) {
-      console.error('Error fetching postal code boundary:', error);
+      logger.error('Error fetching postal code boundary', { error });
       return null;
     }
   }
@@ -533,7 +536,7 @@ export class OverpassApiService {
       return this.convertToFeatureCollection(response);
 
     } catch (error) {
-      console.error('Error fetching postal codes in municipality:', error);
+      logger.error('Error fetching postal codes in municipality', { error });
       return null;
     }
   }
@@ -551,7 +554,7 @@ export class OverpassApiService {
       return this.convertToPostalCodeSearchResults(response, searchTerm);
 
     } catch (error) {
-      console.error('Error searching postal codes:', error);
+      logger.error('Error searching postal codes', { error });
       return [];
     }
   }
@@ -569,7 +572,7 @@ export class OverpassApiService {
       return this.convertToFeatureCollection(response);
 
     } catch (error) {
-      console.error('Error fetching postal codes in bounds:', error);
+      logger.error('Error fetching postal codes in bounds', { error });
       return null;
     }
   }
@@ -583,14 +586,14 @@ export class OverpassApiService {
    */
   private convertToGeoJSON(response: OverpassAdminResponse, name: string): Feature | null {
     if (!response.elements || response.elements.length === 0) {
-      console.warn('No boundary data found for:', name);
+      logger.warn('No boundary data found for: ' + name);
       return null;
     }
 
     const relation = response.elements[0];
 
     if (!relation.geometry || relation.geometry.length === 0) {
-      console.warn('No geometry found for:', name);
+      logger.warn('No geometry found for: ' + name);
       return null;
     }
 
