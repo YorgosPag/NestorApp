@@ -18,6 +18,8 @@ import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErro
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
+import { createDefaultPersonaData, findActivePersona } from '@/types/contacts/personas';
+import type { PersonaData, ClientPersona } from '@/types/contacts/personas';
 
 const logger = createModuleLogger('UnitIdRoute');
 
@@ -108,6 +110,35 @@ export const PATCH = withStandardRateLimit(
 
         const body: UnitPatchPayload = await request.json();
 
+        // ================================================================
+        // VALIDATION: Company chain check for reserve/sell operations
+        // ================================================================
+        const isCommercialTransaction =
+          body.commercialStatus === 'reserved' || body.commercialStatus === 'sold';
+
+        if (isCommercialTransaction) {
+          const buildingId = (existing.buildingId as string) ?? null;
+          let companyId: string | null = null;
+
+          if (buildingId) {
+            const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
+            const projectId = buildingDoc.exists
+              ? (buildingDoc.data()?.projectId as string) ?? null
+              : null;
+
+            if (projectId) {
+              const projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
+              companyId = projectDoc.exists
+                ? (projectDoc.data()?.companyId as string) ?? null
+                : null;
+            }
+          }
+
+          if (!companyId) {
+            throw new ApiError(400, 'Unit must belong to a project with a company before reservation or sale');
+          }
+        }
+
         const updateData: Record<string, unknown> = {
           updatedAt: FieldValue.serverTimestamp(),
           updatedBy: ctx.uid,
@@ -138,6 +169,24 @@ export const PATCH = withStandardRateLimit(
           newValue: { type: 'status', value: { unitId: id, updates: Object.keys(updateData) } },
           metadata: { reason: 'Unit updated via API' },
         });
+
+        // ================================================================
+        // AUTO-PERSONA: Activate "client" persona on buyer contact
+        // ================================================================
+        if (isCommercialTransaction) {
+          const buyerContactId =
+            (updateData.commercial as Record<string, unknown> | undefined)?.buyerContactId as string | null
+            ?? (body.commercial as Record<string, unknown> | undefined)?.buyerContactId as string | null;
+
+          if (buyerContactId) {
+            activateClientPersona(adminDb, buyerContactId).catch((err) => {
+              logger.warn('Auto-persona activation failed (non-blocking)', {
+                buyerContactId,
+                error: err instanceof Error ? err.message : String(err),
+              });
+            });
+          }
+        }
 
         // Entity audit trail (fire-and-forget)
         if (auditChanges.length > 0) {
@@ -218,4 +267,39 @@ export const DELETE = withStandardRateLimit(
 function extractIdFromUrl(url: string): string | null {
   const segments = new URL(url).pathname.split('/');
   return segments[segments.length - 1] || null;
+}
+
+/**
+ * Activate "client" persona on a contact if not already active.
+ * Fire-and-forget — errors are logged but never block the response.
+ */
+async function activateClientPersona(
+  db: FirebaseFirestore.Firestore,
+  contactId: string
+): Promise<void> {
+  const contactRef = db.collection(COLLECTIONS.CONTACTS).doc(contactId);
+  const contactDoc = await contactRef.get();
+
+  if (!contactDoc.exists) {
+    logger.warn('activateClientPersona: contact not found', { contactId });
+    return;
+  }
+
+  const contactData = contactDoc.data() as { personas?: PersonaData[] };
+  const personas = contactData.personas ?? [];
+
+  // Already has active client persona — skip
+  const existingClient = findActivePersona<ClientPersona>(personas, 'client');
+  if (existingClient) return;
+
+  // Create new client persona with clientSince = today
+  const newPersona = createDefaultPersonaData('client') as ClientPersona;
+  newPersona.clientSince = new Date().toISOString();
+
+  await contactRef.update({
+    personas: [...personas, newPersona],
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+
+  logger.info('Client persona auto-activated', { contactId });
 }
