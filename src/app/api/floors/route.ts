@@ -23,6 +23,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { groupByKey } from '@/utils/collection-utils';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('FloorsRoute');
 
@@ -168,7 +169,7 @@ export const GET = withStandardRateLimit(
 
       } catch (error) {
         logger.error('[Floors/List] Error', {
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: getErrorMessage(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });
@@ -176,7 +177,7 @@ export const GET = withStandardRateLimit(
         return NextResponse.json({
           success: false,
           error: 'Failed to fetch floors',
-          details: error instanceof Error ? error.message : 'Unknown error'
+          details: getErrorMessage(error)
         }, { status: 500 });
       }
     },
@@ -306,7 +307,7 @@ export const POST = withStandardRateLimit(
 
       } catch (error) {
         logger.error('[Floors/Create] Error', {
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: getErrorMessage(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });
@@ -314,7 +315,7 @@ export const POST = withStandardRateLimit(
         return NextResponse.json({
           success: false,
           error: 'Failed to create floor',
-          details: error instanceof Error ? error.message : 'Unknown error'
+          details: getErrorMessage(error)
         }, { status: 500 });
       }
     },
@@ -380,8 +381,8 @@ export const PATCH = withStandardRateLimit(
 
           return NextResponse.json({ success: true, message: `Floor "${body.floorId}" updated` });
         } catch (error) {
-          logger.error('[Floors/Update] Error', { error: error instanceof Error ? error.message : 'Unknown' });
-          return NextResponse.json({ success: false, error: 'Failed to update floor', details: error instanceof Error ? error.message : 'Unknown' }, { status: 500 });
+          logger.error('[Floors/Update] Error', { error: getErrorMessage(error, 'Unknown') });
+          return NextResponse.json({ success: false, error: 'Failed to update floor', details: getErrorMessage(error, 'Unknown') }, { status: 500 });
         }
       },
       { permissions: 'projects:floors:view' }
@@ -427,8 +428,8 @@ export const DELETE = withStandardRateLimit(
 
           return NextResponse.json({ success: true, message: `Floor "${floorId}" deleted` });
         } catch (error) {
-          logger.error('[Floors/Delete] Error', { error: error instanceof Error ? error.message : 'Unknown' });
-          return NextResponse.json({ success: false, error: 'Failed to delete floor', details: error instanceof Error ? error.message : 'Unknown' }, { status: 500 });
+          logger.error('[Floors/Delete] Error', { error: getErrorMessage(error, 'Unknown') });
+          return NextResponse.json({ success: false, error: 'Failed to delete floor', details: getErrorMessage(error, 'Unknown') }, { status: 500 });
         }
       },
       { permissions: 'projects:floors:view' }

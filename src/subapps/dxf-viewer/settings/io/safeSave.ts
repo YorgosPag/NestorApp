@@ -21,6 +21,7 @@ import type { SettingsState } from '../core/types';
 import { validateSettingsState } from './schema';
 import { StorageError } from './StorageDriver';
 import type { SyncService } from './SyncService';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // ============================================================================
 // SAFE SAVE
@@ -98,7 +99,7 @@ export async function safeSave(
           await driver.set(key, oldData);
           warnings.push('Write failed, successfully rolled back');
         } catch (rollbackError) {
-          const rollbackMsg = rollbackError instanceof Error ? rollbackError.message : String(rollbackError);
+          const rollbackMsg = getErrorMessage(rollbackError);
           return {
             success: false,
             error: `Write failed AND rollback failed: ${rollbackMsg}`
@@ -106,7 +107,7 @@ export async function safeSave(
         }
       }
 
-      const writeMsg = writeError instanceof Error ? writeError.message : String(writeError);
+      const writeMsg = getErrorMessage(writeError);
       return {
         success: false,
         error: `Write failed: ${writeMsg}`
@@ -148,7 +149,7 @@ export async function safeSave(
     };
 
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorMsg = getErrorMessage(error);
     return {
       success: false,
       error: `Unexpected error: ${errorMsg}`
@@ -185,7 +186,7 @@ export async function safeSaveWithBackup(
     // Proceed with normal save
     return await safeSave(driver, data, key);
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorMsg = getErrorMessage(error);
     return {
       success: false,
       error: `Backup creation failed: ${errorMsg}`
@@ -302,7 +303,7 @@ export async function safeBatchSave(
       }
     }
 
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorMsg = getErrorMessage(error);
     return {
       success: false,
       error: `Batch save failed: ${errorMsg}`

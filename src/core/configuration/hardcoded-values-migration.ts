@@ -25,6 +25,7 @@
  * ============================================================================
  */
 
+import { getErrorMessage } from '@/lib/error-utils';
 import {
   doc,
   setDoc,
@@ -380,7 +381,7 @@ export class HardcodedValuesMigrationEngine {
       return result;
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown migration error';
+      const errorMessage = getErrorMessage(error, 'Unknown migration error');
       errors.push(errorMessage);
 
       return {
@@ -437,7 +438,7 @@ export class HardcodedValuesMigrationEngine {
       return { success: true };
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Company migration failed';
+      const errorMessage = getErrorMessage(error, 'Company migration failed');
       logger.error('Company migration error', { error });
       return { success: false, error: errorMessage };
     }
@@ -489,7 +490,7 @@ export class HardcodedValuesMigrationEngine {
       return { success: true };
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'System migration failed';
+      const errorMessage = getErrorMessage(error, 'System migration failed');
       logger.error('System migration error', { error });
       return { success: false, error: errorMessage };
     }
@@ -549,7 +550,7 @@ export class HardcodedValuesMigrationEngine {
       logger.info(`Project templates migration completed: ${itemsMigrated} succeeded, ${itemsFailed} failed`);
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Project templates migration failed';
+      const errorMessage = getErrorMessage(error, 'Project templates migration failed');
       errors.push(errorMessage);
       logger.error('Project templates batch error', { error });
     }
@@ -610,7 +611,7 @@ export class HardcodedValuesMigrationEngine {
       return { success: true };
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Validation failed';
+      const errorMessage = getErrorMessage(error, 'Validation failed');
       return { success: false, error: errorMessage };
     }
   }

@@ -21,6 +21,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('FloorsDiagnosticRoute');
 
@@ -142,7 +143,7 @@ const getHandler = async (request: NextRequest) => {
 
         } catch (error) {
           result.connection.status = 'FAILED';
-          result.connection.errorMessage = error instanceof Error ? error.message : 'Unknown connection error';
+          result.connection.errorMessage = getErrorMessage(error, 'Unknown connection error');
           result.summary.criticalIssues.push(`Firestore connection failed: ${result.connection.errorMessage}`);
           logger.error('Connection failed', { error: result.connection.errorMessage });
         }
@@ -182,7 +183,7 @@ const getHandler = async (request: NextRequest) => {
             result.collections[collectionName] = {
               accessible: false,
               latency: testLatency,
-              errorMessage: error instanceof Error ? error.message : 'Unknown error'
+              errorMessage: getErrorMessage(error)
             };
 
             logger.error('Collection inaccessible', { collectionName, latencyMs: testLatency, error: result.collections[collectionName].errorMessage });
@@ -221,7 +222,7 @@ const getHandler = async (request: NextRequest) => {
 
           result.specificTests.floorsNormalized = {
             status: error instanceof Error && error.message.includes('Timeout') ? 'TIMEOUT' : 'FAIL',
-            details: error instanceof Error ? error.message : 'Unknown error',
+            details: getErrorMessage(error),
             latency: floorsLatency
           };
 
@@ -279,7 +280,7 @@ const getHandler = async (request: NextRequest) => {
 
               result.specificTests.floorsSubcollections = {
                 status: error instanceof Error && error.message.includes('Timeout') ? 'TIMEOUT' : 'FAIL',
-                details: error instanceof Error ? error.message : 'Unknown error',
+                details: getErrorMessage(error),
                 latency: subcollectionLatency
               };
 
@@ -292,7 +293,7 @@ const getHandler = async (request: NextRequest) => {
 
           result.specificTests.buildingsAccess = {
             status: error instanceof Error && error.message.includes('Timeout') ? 'TIMEOUT' : 'FAIL',
-            details: error instanceof Error ? error.message : 'Unknown error',
+            details: getErrorMessage(error),
             latency: buildingsLatency
           };
 
@@ -350,13 +351,13 @@ const getHandler = async (request: NextRequest) => {
 
       } catch (error) {
         logger.error('[Floors/Diagnostic] Error', {
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: getErrorMessage(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });
 
         result.summary.overallHealth = 'FAILED';
-        result.summary.criticalIssues.push(`Diagnostic system failure: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        result.summary.criticalIssues.push(`Diagnostic system failure: ${getErrorMessage(error)}`);
         result.summary.recommendedActions.push('🚨 EMERGENCY: Fix diagnostic system before proceeding');
 
         return NextResponse.json(result, { status: 500 });

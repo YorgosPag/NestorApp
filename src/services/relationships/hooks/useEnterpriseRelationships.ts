@@ -12,6 +12,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
+import { getErrorMessage } from '@/lib/error-utils';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import type {
@@ -247,7 +248,7 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
       return result;
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = getErrorMessage(error);
       setState(prevState => ({
         ...prevState,
         loading: false,
@@ -301,7 +302,7 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
       return result;
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = getErrorMessage(error);
       setState(prevState => ({
         ...prevState,
         loading: false,
@@ -366,7 +367,7 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
       return children;
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = getErrorMessage(error);
       setState(prevState => ({
         ...prevState,
         loading: false,
@@ -411,7 +412,7 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
       return parent;
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = getErrorMessage(error);
       setState(prevState => ({
         ...prevState,
         loading: false,
@@ -457,7 +458,7 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
       return hierarchy;
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = getErrorMessage(error);
       setState(prevState => ({
         ...prevState,
         loading: false,
@@ -489,7 +490,7 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
       return result;
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = getErrorMessage(error);
       setState(prevState => ({
         ...prevState,
         loading: false,
@@ -539,7 +540,7 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
       return result;
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = getErrorMessage(error);
       setState(prevState => ({
         ...prevState,
         loading: false,
@@ -586,7 +587,7 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
       return auditTrail;
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = getErrorMessage(error);
       setState(prevState => ({
         ...prevState,
         loading: false,

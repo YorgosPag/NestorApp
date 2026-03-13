@@ -26,6 +26,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { getErrorMessage } from '@/lib/error-utils';
 import {
   CompanyConfiguration,
   SystemConfiguration,
@@ -192,7 +193,7 @@ export function useCompanyConfig(
       retryCountRef.current = 0;
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load company configuration';
+      const errorMessage = getErrorMessage(error, 'Failed to load company configuration');
 
       retryCountRef.current++;
 
@@ -231,7 +232,7 @@ export function useCompanyConfig(
       await loadCompanyConfig();
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update company configuration';
+      const errorMessage = getErrorMessage(error, 'Failed to update company configuration');
       setState(prev => ({
         ...prev,
         isLoading: false,
@@ -348,7 +349,7 @@ export function useSystemConfig(
       }));
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load system configuration';
+      const errorMessage = getErrorMessage(error, 'Failed to load system configuration');
       setState(prev => ({
         ...prev,
         isLoading: false,
@@ -374,7 +375,7 @@ export function useSystemConfig(
       await loadSystemConfig();
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update system configuration';
+      const errorMessage = getErrorMessage(error, 'Failed to update system configuration');
       setState(prev => ({
         ...prev,
         isLoading: false,
@@ -462,7 +463,7 @@ export function useProjectTemplates(
       }));
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load project templates';
+      const errorMessage = getErrorMessage(error, 'Failed to load project templates');
       setState(prev => ({
         ...prev,
         isLoading: false,
@@ -543,7 +544,7 @@ export function useConfigQuickAccess(): UseConfigQuickAccessResult {
       }));
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load configuration';
+      const errorMessage = getErrorMessage(error, 'Failed to load configuration');
       setState(prev => ({
         ...prev,
         isLoading: false,

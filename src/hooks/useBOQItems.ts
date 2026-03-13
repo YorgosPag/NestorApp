@@ -11,6 +11,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { getErrorMessage } from '@/lib/error-utils';
 import type {
   BOQItem,
   BOQItemStatus,
@@ -106,7 +107,7 @@ export function useBOQItems(
       const fetched = await boqService.getByBuilding(buildingId);
       setItems(fetched);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Σφάλμα φόρτωσης';
+      const message = getErrorMessage(err, 'Σφάλμα φόρτωσης');
       logger.error('Failed to fetch BOQ items', { buildingId, error: err });
       setError(message);
     } finally {
@@ -179,7 +180,7 @@ export function useBOQItems(
         setItems((prev) => [...prev, created]);
         return created;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Σφάλμα δημιουργίας';
+        const message = getErrorMessage(err, 'Σφάλμα δημιουργίας');
         logger.error('Failed to create BOQ item', { error: err });
         setError(message);
         return null;
@@ -198,7 +199,7 @@ export function useBOQItems(
         }
         return false;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Σφάλμα ενημέρωσης';
+        const message = getErrorMessage(err, 'Σφάλμα ενημέρωσης');
         logger.error('Failed to update BOQ item', { id, error: err });
         setError(message);
         return false;
@@ -215,7 +216,7 @@ export function useBOQItems(
       }
       return success;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Σφάλμα διαγραφής';
+      const message = getErrorMessage(err, 'Σφάλμα διαγραφής');
       logger.error('Failed to delete BOQ item', { id, error: err });
       setError(message);
       return false;
@@ -235,7 +236,7 @@ export function useBOQItems(
         }
         return success;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Σφάλμα αλλαγής κατάστασης';
+        const message = getErrorMessage(err, 'Σφάλμα αλλαγής κατάστασης');
         logger.error('Failed to transition BOQ item', { id, status, error: err });
         setError(message);
         return false;

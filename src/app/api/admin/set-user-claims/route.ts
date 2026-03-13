@@ -25,6 +25,7 @@ import { FieldValue as AdminFieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { withSensitiveRateLimit, withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // ============================================================================
 // LOGGER
@@ -214,13 +215,13 @@ async function handleSetUserClaims(
       }
     } catch (error) {
       logger.error('User not found in Firebase Auth', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
       });
       return NextResponse.json(
         {
           success: false,
           message: 'User not found in Firebase Auth',
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: getErrorMessage(error)
         },
         { status: 404 }
       );
@@ -267,19 +268,19 @@ async function handleSetUserClaims(
         `Claims updated by ${ctx.globalRole} ${ctx.email}`
       ).catch((err) => {
         logger.warn('Audit logging failed (non-blocking)', {
-          error: err instanceof Error ? err.message : 'Unknown error',
+          error: getErrorMessage(err),
         });
       });
 
     } catch (error) {
       logger.error('Failed to set custom claims', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
       });
       return NextResponse.json(
         {
           success: false,
           message: 'Failed to set custom claims',
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: getErrorMessage(error)
         },
         { status: 500 }
       );
@@ -323,7 +324,7 @@ async function handleSetUserClaims(
     } catch (error) {
       logger.error('Failed to create/update user document', {
         targetUid: uid,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
       });
       firestoreSuccess = false;
       // Don't fail the entire request - custom claims are already set
@@ -363,13 +364,13 @@ async function handleSetUserClaims(
     const duration = Date.now() - startTime;
     logger.error('Unexpected error', {
       durationMs: duration,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: getErrorMessage(error),
     });
     return NextResponse.json(
       {
         success: false,
         message: 'Internal server error',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: getErrorMessage(error)
       },
       { status: 500 }
     );

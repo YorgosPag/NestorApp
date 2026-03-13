@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { getErrorMessage } from '@/lib/error-utils';
 import type {
   GeoControlPoint,
   DxfCoordinate,
@@ -124,7 +125,7 @@ export function useGeoTransform(): [GeoTransformState, GeoTransformActions] {
       if (mountedRef.current) {
         setState(prev => ({
           ...prev,
-          error: error instanceof Error ? error.message : 'Failed to add control point',
+          error: getErrorMessage(error, 'Failed to add control point'),
           lastOperation: null
         }));
       }
@@ -152,7 +153,7 @@ export function useGeoTransform(): [GeoTransformState, GeoTransformActions] {
       if (mountedRef.current) {
         setState(prev => ({
           ...prev,
-          error: error instanceof Error ? error.message : 'Failed to update control point',
+          error: getErrorMessage(error, 'Failed to update control point'),
           lastOperation: null
         }));
       }
@@ -179,7 +180,7 @@ export function useGeoTransform(): [GeoTransformState, GeoTransformActions] {
       if (mountedRef.current) {
         setState(prev => ({
           ...prev,
-          error: error instanceof Error ? error.message : 'Failed to remove control point',
+          error: getErrorMessage(error, 'Failed to remove control point'),
           lastOperation: null
         }));
       }
@@ -213,7 +214,7 @@ export function useGeoTransform(): [GeoTransformState, GeoTransformActions] {
       if (mountedRef.current) {
         setState(prev => ({
           ...prev,
-          error: error instanceof Error ? error.message : 'Failed to clear control points',
+          error: getErrorMessage(error, 'Failed to clear control points'),
           lastOperation: null
         }));
       }
@@ -261,7 +262,7 @@ export function useGeoTransform(): [GeoTransformState, GeoTransformActions] {
           ...prev,
           isCalibrating: false,
           isCalibrated: false,
-          error: error instanceof Error ? error.message : 'Calibration failed',
+          error: getErrorMessage(error, 'Calibration failed'),
           lastOperation: null
         }));
       }
@@ -277,7 +278,7 @@ export function useGeoTransform(): [GeoTransformState, GeoTransformActions] {
     } catch (error) {
       setState(prev => ({
         ...prev,
-        error: error instanceof Error ? error.message : 'Point transformation failed'
+        error: getErrorMessage(error, 'Point transformation failed')
       }));
       return null;
     }
@@ -292,7 +293,7 @@ export function useGeoTransform(): [GeoTransformState, GeoTransformActions] {
     } catch (error) {
       setState(prev => ({
         ...prev,
-        error: error instanceof Error ? error.message : 'Batch transformation failed'
+        error: getErrorMessage(error, 'Batch transformation failed')
       }));
       return [];
     }
@@ -371,7 +372,7 @@ export function useGeoTransform(): [GeoTransformState, GeoTransformActions] {
       if (mountedRef.current) {
         setState(prev => ({
           ...prev,
-          error: error instanceof Error ? error.message : 'Failed to import georeferencing',
+          error: getErrorMessage(error, 'Failed to import georeferencing'),
           lastOperation: null
         }));
       }
@@ -388,7 +389,7 @@ export function useGeoTransform(): [GeoTransformState, GeoTransformActions] {
     } catch (error) {
       setState(prev => ({
         ...prev,
-        error: error instanceof Error ? error.message : 'Failed to suggest optimal points'
+        error: getErrorMessage(error, 'Failed to suggest optimal points')
       }));
       return [];
     }

@@ -3,6 +3,7 @@
  * Production-grade migration system with rollback, validation, and monitoring
  */
 
+import { getErrorMessage } from '@/lib/error-utils';
 import {
   Migration,
   MigrationResult,
@@ -83,7 +84,7 @@ export class MigrationEngine {
           logger.info(`   ✅ Step completed successfully`);
 
         } catch (stepError) {
-          const errorMessage = `Step ${i + 1} failed: ${stepError instanceof Error ? stepError.message : 'Unknown error'}`;
+          const errorMessage = `Step ${i + 1} failed: ${getErrorMessage(stepError)}`;
           logger.error(`   ❌ ${errorMessage}`);
           result.errors!.push(errorMessage);
 
@@ -94,7 +95,7 @@ export class MigrationEngine {
               await step.rollback();
               logger.info(`   ✅ Rollback successful`);
             } catch (rollbackError) {
-              const rollbackMessage = `Rollback failed: ${rollbackError instanceof Error ? rollbackError.message : 'Unknown rollback error'}`;
+              const rollbackMessage = `Rollback failed: ${getErrorMessage(rollbackError, 'Unknown rollback error')}`;
               logger.error(`   ❌ ${rollbackMessage}`);
               result.errors!.push(rollbackMessage);
             }
@@ -118,7 +119,7 @@ export class MigrationEngine {
       logger.info(`📊 Affected records: ${result.affectedRecords}`);
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown migration error';
+      const errorMessage = getErrorMessage(error, 'Unknown migration error');
       logger.error(`❌ Migration failed: ${errorMessage}`);
       result.errors!.push(errorMessage);
 
@@ -130,7 +131,7 @@ export class MigrationEngine {
           logger.info('✅ Full rollback completed');
           result.warnings!.push('Migration was rolled back due to failure');
         } catch (rollbackError) {
-          const rollbackMessage = `Full rollback failed: ${rollbackError instanceof Error ? rollbackError.message : 'Unknown rollback error'}`;
+          const rollbackMessage = `Full rollback failed: ${getErrorMessage(rollbackError, 'Unknown rollback error')}`;
           logger.error(`❌ ${rollbackMessage}`);
           result.errors!.push(rollbackMessage);
         }
@@ -175,7 +176,7 @@ export class MigrationEngine {
       };
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Dry run validation failed';
+      const errorMessage = getErrorMessage(error, 'Dry run validation failed');
       logger.error(`❌ Dry run failed: ${errorMessage}`);
 
       return {

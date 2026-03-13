@@ -23,6 +23,7 @@
  * - Multi-tenant aware: Filters data based on user's company context
  */
 
+import { getErrorMessage } from '@/lib/error-utils';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -312,12 +313,12 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
   } catch (error) {
     logger.error('[Bootstrap] Failed to fetch companies from Firestore', {
       mode: isAdmin ? 'Admin (navigation_companies)' : 'Tenant Isolation',
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
       stack: error instanceof Error ? error.stack : undefined,
     });
 
     throw new Error(
-      `Failed to fetch companies from Firestore: ${error instanceof Error ? error.message : 'Unknown error'}. ` +
+      `Failed to fetch companies from Firestore: ${getErrorMessage(error)}. ` +
       `Mode: ${isAdmin ? 'Admin' : 'Tenant'}. ` +
       `Check Firestore security rules and Admin SDK permissions.`
     );
@@ -367,12 +368,12 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
       logger.error('[Bootstrap] Failed to fetch projects from Firestore', {
         collection: COLLECTIONS.PROJECTS,
         companyIdsCount: companyIds.length,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
         stack: error instanceof Error ? error.stack : undefined,
       });
 
       throw new Error(
-        `Failed to fetch projects from Firestore: ${error instanceof Error ? error.message : 'Unknown error'}. ` +
+        `Failed to fetch projects from Firestore: ${getErrorMessage(error)}. ` +
         `Collection: ${COLLECTIONS.PROJECTS}. ` +
         `Check Firestore security rules and indexes.`
       );
@@ -418,7 +419,7 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
       logger.error('[Bootstrap] Failed to fetch buildings from Firestore', {
         collection: COLLECTIONS.BUILDINGS,
         projectIdsCount: projectIds.length,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
         stack: error instanceof Error ? error.stack : undefined,
       });
 

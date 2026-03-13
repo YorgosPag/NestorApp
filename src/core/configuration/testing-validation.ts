@@ -26,6 +26,7 @@
  * ============================================================================
  */
 
+import { getErrorMessage } from '@/lib/error-utils';
 import { isValidEmail, isValidUrl } from '@/lib/validation/email-validation';
 import {
   EnterpriseConfigurationManager,
@@ -185,7 +186,7 @@ export class ConfigurationTestingSuite {
 
     } catch (error) {
       const duration = Date.now() - startTime;
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = getErrorMessage(error);
 
       return {
         testName: 'Company Configuration Validation',
@@ -251,7 +252,7 @@ export class ConfigurationTestingSuite {
 
     } catch (error) {
       const duration = Date.now() - startTime;
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = getErrorMessage(error);
 
       return {
         testName: 'System Configuration Validation',
@@ -316,7 +317,7 @@ export class ConfigurationTestingSuite {
 
     } catch (error) {
       const duration = Date.now() - startTime;
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = getErrorMessage(error);
 
       return {
         testName: 'Project Templates Validation',
@@ -367,7 +368,7 @@ export class ConfigurationTestingSuite {
 
     } catch (error) {
       const duration = Date.now() - startTime;
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = getErrorMessage(error);
 
       return {
         testName: 'Migration System Test',
@@ -720,7 +721,7 @@ export const ConfigurationTestingAPI = {
       };
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Validation failed';
+      const errorMessage = getErrorMessage(error, 'Validation failed');
       return {
         isValid: false,
         errors: [errorMessage],

@@ -18,6 +18,7 @@
  * @since 2025-10-09
  */
 
+import { getErrorMessage } from '@/lib/error-utils';
 import { UI_COLORS } from '../config/color-config';
 import type { LineSettings, TextSettings, ViewerMode } from '../settings-core/types';
 import type { GripSettings } from '../types/gripSettings';
@@ -80,13 +81,11 @@ async function measureTest(
     };
   } catch (err: unknown) {
     const durationMs = Math.round(performance.now() - startTime);
-    const errorMessage = err instanceof Error ? err.message : "Unknown error";
-
     return {
       category,
       test,
       status: "failed",
-      message: errorMessage,
+      message: getErrorMessage(err),
       durationMs
     };
   }
@@ -137,8 +136,7 @@ async function testPortsModuleExists(): Promise<TestResult> {
         }
       };
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      return { status: "failed", message: `❌ Ports module error: ${errorMessage}` };
+      return { status: "failed", message: `❌ Ports module error: ${getErrorMessage(err)}` };
     }
   });
 }
@@ -197,8 +195,7 @@ async function testPortInterfacesValid(): Promise<TestResult> {
         }
       };
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      return { status: "failed", message: `❌ Port validation error: ${errorMessage}` };
+      return { status: "failed", message: `❌ Port validation error: ${getErrorMessage(err)}` };
     }
   });
 }
@@ -230,8 +227,7 @@ async function testToolStyleAdapterExists(): Promise<TestResult> {
         details: { methods: ['getCurrent', 'apply', 'onChange'] }
       };
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      return { status: "failed", message: `❌ ToolStyle adapter error: ${errorMessage}` };
+      return { status: "failed", message: `❌ ToolStyle adapter error: ${getErrorMessage(err)}` };
     }
   });
 }
@@ -259,8 +255,7 @@ async function testTextStyleAdapterExists(): Promise<TestResult> {
         details: { methods: ['getCurrent', 'apply', 'onChange'] }
       };
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      return { status: "failed", message: `❌ TextStyle adapter error: ${errorMessage}` };
+      return { status: "failed", message: `❌ TextStyle adapter error: ${getErrorMessage(err)}` };
     }
   });
 }
@@ -288,8 +283,7 @@ async function testGripStyleAdapterExists(): Promise<TestResult> {
         details: { methods: ['getCurrent', 'apply', 'onChange'] }
       };
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      return { status: "failed", message: `❌ GripStyle adapter error: ${errorMessage}` };
+      return { status: "failed", message: `❌ GripStyle adapter error: ${getErrorMessage(err)}` };
     }
   });
 }
@@ -325,8 +319,7 @@ async function testAdaptersCentralExport(): Promise<TestResult> {
         }
       };
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      return { status: "failed", message: `❌ Adapters export error: ${errorMessage}` };
+      return { status: "failed", message: `❌ Adapters export error: ${getErrorMessage(err)}` };
     }
   });
 }
@@ -354,8 +347,7 @@ async function testCompositionRootExists(): Promise<TestResult> {
         details: { factory: "createSyncDependencies" }
       };
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      return { status: "failed", message: `❌ Composition root error: ${errorMessage}` };
+      return { status: "failed", message: `❌ Composition root error: ${getErrorMessage(err)}` };
     }
   });
 }
@@ -415,8 +407,7 @@ async function testCompositionRootCreation(): Promise<TestResult> {
         }
       };
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      return { status: "failed", message: `❌ DI creation error: ${errorMessage}` };
+      return { status: "failed", message: `❌ DI creation error: ${getErrorMessage(err)}` };
     }
   });
 }
@@ -445,8 +436,7 @@ async function testFeatureFlagDisable(): Promise<TestResult> {
         details: { enableSync: false, result: "undefined" }
       };
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      return { status: "failed", message: `❌ Feature flag error: ${errorMessage}` };
+      return { status: "failed", message: `❌ Feature flag error: ${getErrorMessage(err)}` };
     }
   });
 }
@@ -479,8 +469,7 @@ async function testStoreSyncPureFunctions(): Promise<TestResult> {
         }
       };
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      return { status: "failed", message: `❌ Pure function error: ${errorMessage}` };
+      return { status: "failed", message: `❌ Pure function error: ${getErrorMessage(err)}` };
     }
   });
 }
@@ -504,8 +493,7 @@ async function testMapperFunctions(): Promise<TestResult> {
         }
       };
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      return { status: "failed", message: `❌ Mapper functions error: ${errorMessage}` };
+      return { status: "failed", message: `❌ Mapper functions error: ${getErrorMessage(err)}` };
     }
   });
 }
@@ -551,8 +539,7 @@ async function testStoreSyncCreation(): Promise<TestResult> {
         details: { methods: ['start'] }
       };
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      return { status: "failed", message: `❌ Sync creation error: ${errorMessage}` };
+      return { status: "failed", message: `❌ Sync creation error: ${getErrorMessage(err)}` };
     }
   });
 }
@@ -596,8 +583,7 @@ async function testGracefulDegradation(): Promise<TestResult> {
         details: { note: "Errors logged, not thrown" }
       };
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      return { status: "failed", message: `❌ Error handling error: ${errorMessage}` };
+      return { status: "failed", message: `❌ Error handling error: ${getErrorMessage(err)}` };
     }
   });
 }
@@ -627,8 +613,7 @@ async function testFeatureFlagEnabled(): Promise<TestResult> {
         };
       }
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      return { status: "failed", message: `❌ Feature flag error: ${errorMessage}` };
+      return { status: "failed", message: `❌ Feature flag error: ${getErrorMessage(err)}` };
     }
   });
 }
@@ -781,8 +766,7 @@ async function testSubscriptionCleanup(): Promise<TestResult> {
         }
       };
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      return { status: "failed", message: `❌ Subscription cleanup error: ${errorMessage}` };
+      return { status: "failed", message: `❌ Subscription cleanup error: ${getErrorMessage(err)}` };
     }
   });
 }

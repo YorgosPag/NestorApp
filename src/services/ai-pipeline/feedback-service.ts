@@ -19,6 +19,7 @@ import 'server-only';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 import { sanitizeForPromptInjection, containsPromptInjection } from './shared/prompt-sanitizer';
 
 const logger = createModuleLogger('FEEDBACK_SERVICE');
@@ -150,7 +151,7 @@ export class FeedbackService {
       // Non-fatal: feedback failure must never break the pipeline
       logger.warn('Failed to save feedback snapshot', {
         requestId: params.requestId,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       return null;
     }
@@ -181,7 +182,7 @@ export class FeedbackService {
     } catch (error) {
       logger.warn('Failed to update feedback rating', {
         feedbackDocId,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       return false;
     }
@@ -216,7 +217,7 @@ export class FeedbackService {
     } catch (error) {
       logger.warn('Failed to update negative feedback category', {
         feedbackDocId,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       return false;
     }
@@ -257,7 +258,7 @@ export class FeedbackService {
     } catch (error) {
       logger.warn('Failed to get latest feedback for channel', {
         channelSenderId,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       return null;
     }
@@ -282,7 +283,7 @@ export class FeedbackService {
       }));
     } catch (error) {
       logger.warn('Failed to get unprocessed feedback', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       return [];
     }
@@ -306,7 +307,7 @@ export class FeedbackService {
       logger.info('Marked feedback as processed', { count: docIds.length });
     } catch (error) {
       logger.warn('Failed to mark feedback as processed', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
     }
   }
@@ -333,7 +334,7 @@ export class FeedbackService {
     } catch (error) {
       logger.warn('Failed to get suggested actions', {
         feedbackDocId,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       return [];
     }
@@ -367,7 +368,7 @@ export class FeedbackService {
       return staleDocs.size;
     } catch (error) {
       logger.warn('Failed to cleanup stale feedback', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       return 0;
     }

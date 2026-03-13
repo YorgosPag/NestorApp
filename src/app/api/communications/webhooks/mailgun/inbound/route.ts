@@ -17,6 +17,7 @@
 
 import 'server-only';
 
+import { getErrorMessage } from '@/lib/error-utils';
 import { NextRequest, NextResponse } from 'next/server';
 import { after } from 'next/server';
 
@@ -341,14 +342,14 @@ async function handleMailgunInbound(request: NextRequest): Promise<Response> {
             } catch (pipelineError) {
               // Non-blocking: daily cron will retry pipeline items
               logger.warn('after(): AI pipeline processing failed (cron will retry)', {
-                error: pipelineError instanceof Error ? pipelineError.message : String(pipelineError),
+                error: getErrorMessage(pipelineError),
               });
             }
           }
         } catch (afterError) {
           // Non-fatal: daily cron will retry failed items
           logger.warn('after(): Immediate processing failed (cron will retry)', {
-            error: afterError instanceof Error ? afterError.message : 'Unknown',
+            error: getErrorMessage(afterError),
           });
         }
       });
@@ -367,7 +368,7 @@ async function handleMailgunInbound(request: NextRequest): Promise<Response> {
 
   } catch (error) {
     const elapsed = Date.now() - startTime;
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = getErrorMessage(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
 
     logger.error('Mailgun inbound webhook error', {
@@ -454,7 +455,7 @@ export async function GET(): Promise<Response> {
         recovered: batchResult.recovered,
       };
     } catch (batchError) {
-      diagnostic.batchProcessError = batchError instanceof Error ? batchError.message : 'Unknown batch error';
+      diagnostic.batchProcessError = getErrorMessage(batchError, 'Unknown batch error');
       // Firestore missing index errors include a URL to create the index
       if (batchError instanceof Error && batchError.message.includes('index')) {
         diagnostic.missingIndexUrl = batchError.message;
@@ -462,7 +463,7 @@ export async function GET(): Promise<Response> {
     }
 
   } catch (diagError) {
-    diagnostic.error = diagError instanceof Error ? diagError.message : 'Unknown';
+    diagnostic.error = getErrorMessage(diagError);
   }
 
   return NextResponse.json({

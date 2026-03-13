@@ -13,6 +13,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
+import { getErrorMessage } from '@/lib/error-utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -162,7 +163,7 @@ export default function SearchBackfillPage() {
       setStatus(response);
       addLog(`Index has ${response.currentIndex.totalDocuments} documents`);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch status';
+      const message = getErrorMessage(err, 'Failed to fetch status');
       setError(message);
       addLog(`Error: ${message}`);
     } finally {
@@ -204,7 +205,7 @@ export default function SearchBackfillPage() {
         await fetchStatus();
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Backfill failed';
+      const message = getErrorMessage(err, 'Backfill failed');
       setError(message);
       addLog(`Error: ${message}`);
     } finally {
@@ -243,7 +244,7 @@ export default function SearchBackfillPage() {
         await fetchStatus();
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Migration failed';
+      const message = getErrorMessage(err, 'Migration failed');
       setError(message);
       addLog(`Error: ${message}`);
     } finally {
@@ -277,7 +278,7 @@ export default function SearchBackfillPage() {
         await fetchStatus();
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Parking FK Migration failed';
+      const message = getErrorMessage(err, 'Parking FK Migration failed');
       setError(message);
       addLog(`Error: ${message}`);
     } finally {
@@ -325,7 +326,7 @@ export default function SearchBackfillPage() {
       // Refresh status
       await fetchStatus();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Parking Re-seed failed';
+      const message = getErrorMessage(err, 'Parking Re-seed failed');
       setError(message);
       addLog(`Error: ${message}`);
     } finally {

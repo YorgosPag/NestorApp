@@ -33,6 +33,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('EnterpriseTwoFactorService');
 import { API_ROUTES } from '@/config/domain-constants';
+import { getErrorMessage } from '@/lib/error-utils';
 import { designTokens } from '@/styles/design-tokens';
 import type {
   TotpSecretInfo,
@@ -162,7 +163,7 @@ export class EnterpriseTwoFactorService {
 
       return { success: true };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Failed to sync MFA' };
+      return { success: false, error: getErrorMessage(error, 'Failed to sync MFA') };
     }
   }
 
@@ -331,7 +332,7 @@ export class EnterpriseTwoFactorService {
       logger.error('❌ [2FA] Failed to start enrollment:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to generate TOTP secret'
+        error: getErrorMessage(error, 'Failed to generate TOTP secret')
       };
     }
   }
@@ -397,7 +398,7 @@ export class EnterpriseTwoFactorService {
       logger.error('❌ [2FA] Failed to complete enrollment:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to verify code'
+        error: getErrorMessage(error, 'Failed to verify code')
       };
     }
   }
@@ -491,7 +492,7 @@ export class EnterpriseTwoFactorService {
 
       return {
         result: 'error',
-        error: error instanceof Error ? error.message : 'Verification failed'
+        error: getErrorMessage(error, 'Verification failed')
       };
     }
   }
@@ -546,7 +547,7 @@ export class EnterpriseTwoFactorService {
       logger.error('❌ [2FA] Backup code verification failed:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Verification failed'
+        error: getErrorMessage(error, 'Verification failed')
       };
     }
   }
@@ -608,7 +609,7 @@ export class EnterpriseTwoFactorService {
 
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to disable 2FA'
+        error: getErrorMessage(error, 'Failed to disable 2FA')
       };
     }
   }
@@ -642,7 +643,7 @@ export class EnterpriseTwoFactorService {
       logger.error('❌ [2FA] Failed to regenerate backup codes:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to regenerate codes'
+        error: getErrorMessage(error, 'Failed to regenerate codes')
       };
     }
   }

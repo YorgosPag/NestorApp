@@ -15,6 +15,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-077-firebase-admin-unified-lazy-init.md
  */
 
+import { getErrorMessage } from '@/lib/error-utils';
 import { getApps, initializeApp, cert, type App, type ServiceAccount } from 'firebase-admin/app';
 import { getFirestore, FieldValue, Timestamp, FieldPath, type Firestore } from 'firebase-admin/firestore';
 import { getAuth, type Auth } from 'firebase-admin/auth';
@@ -296,7 +297,7 @@ function initializeWithCredentialChain(): App {
       return app;
     } catch (err) {
       logger.warn('[Firebase Admin] B64 credential failed', {
-        error: err instanceof Error ? err.message : String(err)
+        error: getErrorMessage(err)
       });
       // Fall through to next priority
     }
@@ -331,7 +332,7 @@ function initializeWithCredentialChain(): App {
       return app;
     } catch (err) {
       logger.warn('[Firebase Admin] JSON credential failed', {
-        error: err instanceof Error ? err.message : String(err)
+        error: getErrorMessage(err)
       });
       // Fall through to next priority
     }
@@ -349,7 +350,7 @@ function initializeWithCredentialChain(): App {
       return app;
     } catch (err) {
       logger.warn('[Firebase Admin] Default credentials failed', {
-        error: err instanceof Error ? err.message : String(err)
+        error: getErrorMessage(err)
       });
     }
   }
@@ -389,7 +390,7 @@ function ensureInitialized(): void {
       _initError = err;
     } else {
       _initError = new FirebaseAdminInitError(
-        err instanceof Error ? err.message : 'Unknown initialization error',
+        getErrorMessage(err, 'Unknown initialization error'),
         'NONE',
         getCurrentRuntimeEnvironment(),
         err instanceof Error ? err : undefined
@@ -563,7 +564,7 @@ export async function safeFirestoreOperation<T>(
     return await operation(db);
   } catch (error) {
     logger.error('[Firebase Admin] Operation failed', {
-      error: error instanceof Error ? error.message : String(error)
+      error: getErrorMessage(error)
     });
     return fallback;
   }

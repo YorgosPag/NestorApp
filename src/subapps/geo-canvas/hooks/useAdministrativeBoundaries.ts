@@ -10,6 +10,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { getErrorMessage } from '@/lib/error-utils';
 import { administrativeBoundaryService } from '../services/administrative-boundaries/AdministrativeBoundaryService';
 import { searchHistoryService } from '../services/administrative-boundaries/SearchHistoryService';
 import { adminBoundariesCache } from '../services/cache/AdminBoundariesCacheManager';
@@ -112,7 +113,7 @@ export function useAdministrativeBoundaries(
         );
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
+      const message = getErrorMessage(err);
       setError(message);
       setSearchResults([]);
       setDetectedType(null);
@@ -131,7 +132,7 @@ export function useAdministrativeBoundaries(
       setCurrentBoundary(boundary);
       return boundary;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
+      const message = getErrorMessage(err);
       setError(message);
       return null;
     } finally {
@@ -148,7 +149,7 @@ export function useAdministrativeBoundaries(
       setCurrentBoundary(boundary);
       return boundary;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
+      const message = getErrorMessage(err);
       setError(message);
       return null;
     } finally {
@@ -164,7 +165,7 @@ export function useAdministrativeBoundaries(
       setSearchResults(results.slice(0, maxResults));
       updateSuggestions(query.query, []);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
+      const message = getErrorMessage(err);
       setError(message);
       setSearchResults([]);
     } finally {
@@ -180,7 +181,7 @@ export function useAdministrativeBoundaries(
       setSearchResults(results.slice(0, maxResults));
       updateSuggestions(query, []);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
+      const message = getErrorMessage(err);
       setError(message);
       setSearchResults([]);
     } finally {
@@ -196,7 +197,7 @@ export function useAdministrativeBoundaries(
       setSearchResults(results.slice(0, maxResults));
       updateSuggestions(query, []);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
+      const message = getErrorMessage(err);
       setError(message);
       setSearchResults([]);
     } finally {
@@ -213,7 +214,7 @@ export function useAdministrativeBoundaries(
       setCurrentBoundary(boundary);
       return boundary;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
+      const message = getErrorMessage(err);
       setError(message);
       return null;
     } finally {
@@ -229,7 +230,7 @@ export function useAdministrativeBoundaries(
       setCurrentBoundary(boundary);
       return boundary;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
+      const message = getErrorMessage(err);
       setError(message);
       return null;
     } finally {

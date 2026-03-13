@@ -1,3 +1,4 @@
+import { getErrorMessage } from '@/lib/error-utils';
 import { db, storage } from '../../../lib/firebase';
 import { doc, setDoc, getDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, getBytes } from 'firebase/storage';
@@ -96,7 +97,7 @@ export class DxfFirestoreService {
       dxfLogger.debug('Auto-save complete', { fileId, version: newVersion });
       return true;
     } catch (error) {
-      dxfLogger.error('Auto-save failed', { fileId, error: error instanceof Error ? error.message : String(error) });
+      dxfLogger.error('Auto-save failed', { fileId, error: getErrorMessage(error) });
       return false;
     }
   }
@@ -113,7 +114,7 @@ export class DxfFirestoreService {
       if (error instanceof Error && isExpectedError(error)) {
         return null;
       }
-      dxfLogger.error('Load failed', { fileId, error: error instanceof Error ? error.message : String(error) });
+      dxfLogger.error('Load failed', { fileId, error: getErrorMessage(error) });
       return null;
     }
   }
@@ -255,7 +256,7 @@ export class DxfFirestoreService {
         fileId,
         fileName,
         entityCount: scene.entities.length,
-        error: error instanceof Error ? error.message : String(error)
+        error: getErrorMessage(error)
       };
 
       // Classify error and use appropriate log level
@@ -352,7 +353,7 @@ export class DxfFirestoreService {
       // Unknown errors → ERROR level
       dxfLogger.error('Unexpected storage load error', {
         fileId,
-        error: error instanceof Error ? error.message : String(error)
+        error: getErrorMessage(error)
       });
 
       return null;
@@ -387,7 +388,7 @@ export class DxfFirestoreService {
       if (error instanceof Error && isExpectedError(error)) {
         return false;
       }
-      dxfLogger.warn('File existence check failed', { fileId, error: error instanceof Error ? error.message : String(error) });
+      dxfLogger.warn('File existence check failed', { fileId, error: getErrorMessage(error) });
       return false;
     }
   }
@@ -467,11 +468,11 @@ export class DxfFirestoreService {
     } catch (error: unknown) {
       dxfLogger.error('Enterprise auto-save V3 failed', {
         fileName,
-        error: error instanceof Error ? error.message : String(error)
+        error: getErrorMessage(error)
       });
       return {
         success: false,
-        errorMessage: error instanceof Error ? error.message : 'Unknown error occurred'
+        errorMessage: getErrorMessage(error)
       };
     }
   }
@@ -528,7 +529,7 @@ export class DxfFirestoreService {
       // Real errors → log at ERROR level
       dxfLogger.error('Load V2 failed', {
         fileId,
-        error: error instanceof Error ? error.message : String(error)
+        error: getErrorMessage(error)
       });
       return null;
     }
@@ -555,7 +556,7 @@ export class DxfFirestoreService {
     } catch (error) {
       dxfLogger.error('Migration failed', {
         fileId,
-        error: error instanceof Error ? error.message : String(error)
+        error: getErrorMessage(error)
       });
       return false;
     }

@@ -12,6 +12,7 @@
 import { TAU } from '../rendering/primitives/canvasPaths';
 // 🏢 ADR-XXX: Centralized viewport defaults
 import { TRANSFORM_SCALE_LIMITS } from '../config/transform-config';
+import { getErrorMessage } from '@/lib/error-utils';
 
 interface PerformanceTestResult {
   testName: string;
@@ -113,7 +114,7 @@ export class DxfPerformanceTestRunner {
         ],
       });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
+      const errorMessage = getErrorMessage(err);
       this.testResults.push({
         testName,
         duration: performance.now() - startTime,
@@ -163,7 +164,7 @@ export class DxfPerformanceTestRunner {
         ],
       });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
+      const errorMessage = getErrorMessage(err);
       this.testResults.push({
         testName,
         duration: performance.now() - startTime,
@@ -200,7 +201,7 @@ export class DxfPerformanceTestRunner {
         ],
       });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
+      const errorMessage = getErrorMessage(err);
       this.testResults.push({
         testName,
         duration: performance.now() - startTime,
@@ -236,7 +237,7 @@ export class DxfPerformanceTestRunner {
         ],
       });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
+      const errorMessage = getErrorMessage(err);
       this.testResults.push({
         testName,
         duration: performance.now() - startTime,
@@ -273,7 +274,7 @@ export class DxfPerformanceTestRunner {
         ],
       });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
+      const errorMessage = getErrorMessage(err);
       this.testResults.push({
         testName,
         duration: performance.now() - startTime,
@@ -309,7 +310,7 @@ export class DxfPerformanceTestRunner {
         ],
       });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
+      const errorMessage = getErrorMessage(err);
       this.testResults.push({
         testName,
         duration: performance.now() - startTime,
@@ -350,7 +351,7 @@ export class DxfPerformanceTestRunner {
         ],
       });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
+      const errorMessage = getErrorMessage(err);
       this.testResults.push({
         testName,
         duration: performance.now() - startTime,

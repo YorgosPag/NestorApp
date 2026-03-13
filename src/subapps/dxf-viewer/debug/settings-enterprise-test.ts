@@ -1,6 +1,7 @@
 // 🎯 ENTERPRISE SETTINGS TESTING SUITE
 // Based on Enterprise Architecture Standards (TOGAF, Zachman Framework)
 
+import { getErrorMessage } from '@/lib/error-utils';
 import { UI_COLORS } from '../config/color-config';
 //
 // TEST CATEGORIES (Enterprise Quality Assurance):
@@ -87,7 +88,7 @@ async function measureTest(
       category,
       test,
       status: "failed",
-      message: err instanceof Error ? err.message : "Unknown error",
+      message: getErrorMessage(err),
       durationMs
     };
   }
@@ -212,7 +213,7 @@ async function testLegacyMigrationFunction(): Promise<TestResult> {
         }
       };
     } catch (err: unknown) {
-      return { status: "failed", message: `❌ Migration error: ${err instanceof Error ? err.message : String(err)}` };
+      return { status: "failed", message: `❌ Migration error: ${getErrorMessage(err)}` };
     }
   });
 }
@@ -260,7 +261,7 @@ async function testPreviewToDraftAlias(): Promise<TestResult> {
         };
       }
     } catch (err: unknown) {
-      return { status: "failed", message: `❌ Alias test error: ${err instanceof Error ? err.message : String(err)}` };
+      return { status: "failed", message: `❌ Alias test error: ${getErrorMessage(err)}` };
     }
   });
 }
@@ -308,7 +309,7 @@ async function testZodValidation(): Promise<TestResult> {
         details: { validDataAccepted: true, invalidDataRejected: true }
       };
     } catch (err: unknown) {
-      return { status: "failed", message: `❌ Validation error: ${err instanceof Error ? err.message : String(err)}` };
+      return { status: "failed", message: `❌ Validation error: ${getErrorMessage(err)}` };
     }
   });
 }
@@ -376,7 +377,7 @@ async function testSaveLoadRoundTrip(): Promise<TestResult> {
         };
       }
     } catch (err: unknown) {
-      return { status: "failed", message: `❌ Round-trip error: ${err instanceof Error ? err.message : String(err)}` };
+      return { status: "failed", message: `❌ Round-trip error: ${getErrorMessage(err)}` };
     }
   });
 }
@@ -405,7 +406,7 @@ async function testCompressionThreshold(): Promise<TestResult> {
         };
       }
     } catch (err: unknown) {
-      return { status: "failed", message: `❌ Compression test error: ${err instanceof Error ? err.message : String(err)}` };
+      return { status: "failed", message: `❌ Compression test error: ${getErrorMessage(err)}` };
     }
   });
 }
@@ -433,7 +434,7 @@ async function testShadowModeEnabled(): Promise<TestResult> {
         };
       }
     } catch (err: unknown) {
-      return { status: "failed", message: `❌ Feature flag error: ${err instanceof Error ? err.message : String(err)}` };
+      return { status: "failed", message: `❌ Feature flag error: ${getErrorMessage(err)}` };
     }
   });
 }
@@ -467,7 +468,7 @@ async function testDualProviderArchitecture(): Promise<TestResult> {
         }
       };
     } catch (err: unknown) {
-      return { status: "failed", message: `❌ Provider integration error: ${err instanceof Error ? err.message : String(err)}` };
+      return { status: "failed", message: `❌ Provider integration error: ${getErrorMessage(err)}` };
     }
   });
 }
@@ -518,7 +519,7 @@ async function testFactoryDefaults(): Promise<TestResult> {
         }
       };
     } catch (err: unknown) {
-      return { status: "failed", message: `❌ Factory defaults error: ${err instanceof Error ? err.message : String(err)}` };
+      return { status: "failed", message: `❌ Factory defaults error: ${getErrorMessage(err)}` };
     }
   });
 }
@@ -539,7 +540,7 @@ async function testMetricsTracking(): Promise<TestResult> {
         details: { module: "Metrics" }
       };
     } catch (err: unknown) {
-      return { status: "failed", message: `❌ Metrics error: ${err instanceof Error ? err.message : String(err)}` };
+      return { status: "failed", message: `❌ Metrics error: ${getErrorMessage(err)}` };
     }
   });
 }
@@ -556,7 +557,7 @@ async function testLoggerAvailable(): Promise<TestResult> {
         details: { module: "Logger" }
       };
     } catch (err: unknown) {
-      return { status: "failed", message: `❌ Logger error: ${err instanceof Error ? err.message : String(err)}` };
+      return { status: "failed", message: `❌ Logger error: ${getErrorMessage(err)}` };
     }
   });
 }

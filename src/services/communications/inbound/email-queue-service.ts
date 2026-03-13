@@ -13,6 +13,7 @@
  */
 
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 import { getAdminFirestore } from '@/server/admin/admin-guards';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import {
@@ -121,7 +122,7 @@ async function serializeAttachment(
   } catch (error) {
     logger.error('Error serializing attachment', {
       filename: attachment.filename,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: getErrorMessage(error),
     });
     return null;
   }
@@ -323,7 +324,7 @@ export async function enqueueInboundEmail(params: {
     logger.error('Failed to enqueue email', {
       provider: params.provider,
       providerMessageId: params.providerMessageId,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: getErrorMessage(error),
       elapsedMs: elapsed,
     });
     return { queueId: null, status: 'error' };
@@ -395,7 +396,7 @@ async function fetchDeferredAttachment(
   } catch (error) {
     logger.error('Error fetching deferred attachment', {
       filename,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: getErrorMessage(error),
     });
     return null;
   }
@@ -516,7 +517,7 @@ export async function claimNextQueueItems(
     return claimedItems;
   } catch (error) {
     logger.error('Error claiming queue items', {
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: getErrorMessage(error),
     });
     return [];
   }
@@ -610,7 +611,7 @@ export async function claimRetryableItems(
     return claimedItems;
   } catch (error) {
     logger.error('Error claiming retryable items', {
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: getErrorMessage(error),
     });
     return [];
   }
@@ -688,7 +689,7 @@ export async function processQueueItem(item: EmailIngestionQueueItem): Promise<{
           // Pipeline enqueue failure is non-blocking — email was already processed
           logger.warn('Failed to enqueue to AI pipeline (non-blocking)', {
             queueId: item.id,
-            error: pipelineError instanceof Error ? pipelineError.message : String(pipelineError),
+            error: getErrorMessage(pipelineError),
           });
         }
       }
@@ -711,7 +712,7 @@ export async function processQueueItem(item: EmailIngestionQueueItem): Promise<{
     };
   } catch (error) {
     const elapsed = Date.now() - startTime;
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = getErrorMessage(error);
 
     logger.error('Error processing queue item', {
       queueId: item.id,
@@ -857,7 +858,7 @@ export async function recoverStaleItems(): Promise<number> {
     return recoveredCount;
   } catch (error) {
     logger.error('Error recovering stale items', {
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: getErrorMessage(error),
     });
     return 0;
   }

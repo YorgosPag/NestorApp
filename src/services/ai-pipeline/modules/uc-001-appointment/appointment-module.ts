@@ -19,6 +19,7 @@
 
 import 'server-only';
 
+import { getErrorMessage } from '@/lib/error-utils';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
@@ -195,7 +196,7 @@ export class AppointmentModule implements IUCModule {
       try {
         senderContact = await findContactByEmail(senderEmail, ctx.companyId);
       } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
+        const msg = getErrorMessage(error);
         logger.warn('UC-001 LOOKUP: Contact search failed (non-fatal)', {
           requestId: ctx.requestId,
           error: msg,
@@ -218,7 +219,7 @@ export class AppointmentModule implements IUCModule {
         requestId: ctx.requestId,
       });
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
+      const msg = getErrorMessage(error);
       logger.warn('UC-001 LOOKUP: Availability check failed (non-fatal)', {
         requestId: ctx.requestId,
         error: msg,
@@ -234,7 +235,7 @@ export class AppointmentModule implements IUCModule {
         ctx.intake.id,
       );
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
+      const msg = getErrorMessage(error);
       logger.warn('UC-001 LOOKUP: Sender history query failed (non-fatal)', {
         requestId: ctx.requestId,
         error: msg,
@@ -464,7 +465,7 @@ export class AppointmentModule implements IUCModule {
         sideEffects,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error);
 
       logger.error('UC-001 EXECUTE: Failed to create appointment', {
         requestId: ctx.requestId,
@@ -510,7 +511,7 @@ export class AppointmentModule implements IUCModule {
       await adminDb.collection(COLLECTIONS.APPOINTMENTS).limit(1).get();
       return true;
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
+      const msg = getErrorMessage(error);
       logger.error('UC-001 HEALTH CHECK: Failed', { error: msg });
       return false;
     }

@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 204 ADRs | Last Updated: 2026-03-13
+**📊 Stats**: 205 ADRs | Last Updated: 2026-03-13
 
 ---
 
@@ -240,6 +240,7 @@
 | **ADR-215** | Phase 10 — chunkArray/isRecord/formatBytes/formatDate/formatCurrency Deduplication | ✅ Implemented | 2026-03-12 | Centralization / Deduplication | [📄](./adrs/ADR-215-phase10-chunk-typeguards-formatters.md) |
 | **ADR-216** | formatCurrency Centralization — 0% → 100% Adoption (29 patterns, 23 files) | ✅ Implemented | 2026-03-12 | Centralization / Currency Formatting | [📄](./adrs/ADR-216-formatCurrency-centralization.md) |
 | **ADR-217** | Phase 11 — Object Sanitization, Greek Text Normalization, Debounce Callback Deduplication | ✅ Implemented | 2026-03-12 | Centralization / Deduplication | [📄](./adrs/ADR-217-phase11-sanitize-greek-debounce.md) |
+| **ADR-221** | Error Message Extraction Centralization — `getErrorMessage()` | ✅ Implemented (Phase 1) | 2026-03-13 | Centralization / Error Handling | [📄](./adrs/ADR-221-error-message-extraction.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -527,6 +528,12 @@
 - **File**: `docs/centralized-systems/reference/adrs/ADR-220-field-extractor-centralization.md`
 - **SSoT**: `src/lib/firestore/field-extractors.ts` — `getString()`, `getNumber()`, `getBoolean()`, `getArray()`, `getStringArray()`, `getObject()`, `getStringOrNumber()`
 - **Summary**: Centralized 18+ local field extractor definitions from 7 files. Overloaded signatures (with/without default). Null-safe DataRecord type. Eliminated `getStringOrUndefined`, `getStringProp`, `getStringProperty`, `getIdProperty`.
+
+### ADR-221: Error Message Extraction Centralization
+- **Status**: ✅ Implemented (Phase 1)
+- **File**: `docs/centralized-systems/reference/adrs/ADR-221-error-message-extraction.md`
+- **SSoT**: `src/lib/error-utils.ts` — `getErrorMessage(error, fallback?)`
+- **Summary**: Centralized 874 scattered `err instanceof Error ? err.message : '...'` patterns. Phase 1 migrated 30 files (~210 occurrences). `ApiErrorHandler.extractErrorMessage()` now delegates to centralized function.
 
 ---
 

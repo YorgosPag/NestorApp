@@ -12,6 +12,7 @@
 
 import 'server-only';
 
+import { getErrorMessage } from '@/lib/error-utils';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { findContactByName, type ContactNameSearchResult } from '../../shared/contact-lookup';
@@ -134,7 +135,7 @@ export class AdminSendEmailModule implements IUCModule {
         const results = await findContactByName(recipientName, ctx.companyId, 1);
         targetContact = results.length > 0 ? results[0] : null;
       } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
+        const msg = getErrorMessage(error);
         logger.warn('UC-012 LOOKUP: Contact search failed', {
           requestId: ctx.requestId,
           error: msg,
@@ -169,7 +170,7 @@ export class AdminSendEmailModule implements IUCModule {
           });
         }
       } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
+        const msg = getErrorMessage(error);
         logger.warn('UC-012 LOOKUP: Contact card AI entity lookup failed', {
           requestId: ctx.requestId,
           includeCardOf: includeCardOfEntity,
@@ -195,7 +196,7 @@ export class AdminSendEmailModule implements IUCModule {
             });
           }
         } catch (error) {
-          const msg = error instanceof Error ? error.message : String(error);
+          const msg = getErrorMessage(error);
           logger.warn('UC-012 LOOKUP: Compound find+send lookup failed', {
             requestId: ctx.requestId,
             compoundContactName,
@@ -218,7 +219,7 @@ export class AdminSendEmailModule implements IUCModule {
               });
             }
           } catch (error) {
-            const msg = error instanceof Error ? error.message : String(error);
+            const msg = getErrorMessage(error);
             logger.warn('UC-012 LOOKUP: Contact card lookup failed', {
               requestId: ctx.requestId,
               cardContactName,
@@ -368,7 +369,7 @@ export class AdminSendEmailModule implements IUCModule {
 
       return { success: true, sideEffects };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error);
       logger.error('UC-012 EXECUTE: Failed', { requestId: ctx.requestId, error: errorMessage });
       return { success: false, sideEffects: [], error: errorMessage };
     }

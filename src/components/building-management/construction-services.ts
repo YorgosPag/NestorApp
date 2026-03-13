@@ -11,6 +11,7 @@
 
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('ConstructionServices');
 import type {
@@ -87,7 +88,7 @@ export async function createConstructionPhase(
     logger.error('createConstructionPhase failed', { error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: getErrorMessage(error),
     };
   }
 }
@@ -110,7 +111,7 @@ export async function updateConstructionPhase(
     logger.error('updateConstructionPhase failed', { error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: getErrorMessage(error),
     };
   }
 }
@@ -131,7 +132,7 @@ export async function deleteConstructionPhase(
     logger.error('deleteConstructionPhase failed', { error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: getErrorMessage(error),
     };
   }
 }
@@ -153,7 +154,7 @@ export async function createConstructionTask(
     logger.error('createConstructionTask failed', { error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: getErrorMessage(error),
     };
   }
 }
@@ -176,7 +177,7 @@ export async function updateConstructionTask(
     logger.error('updateConstructionTask failed', { error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: getErrorMessage(error),
     };
   }
 }
@@ -197,7 +198,7 @@ export async function deleteConstructionTask(
     logger.error('deleteConstructionTask failed', { error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: getErrorMessage(error),
     };
   }
 }

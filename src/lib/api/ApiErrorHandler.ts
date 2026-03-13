@@ -20,6 +20,7 @@ import { errorTracker, type ErrorSeverity, type ErrorCategory, type ErrorContext
 import { getErrorConfig } from '@/config/error-reporting';
 import { generateRequestId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 const logger = createModuleLogger('ApiErrorHandler');
 
 // ============================================================================
@@ -459,21 +460,7 @@ export class ApiErrorHandler {
   // ============================================================================
 
   private extractErrorMessage(error: unknown): string {
-    if (typeof error === 'string') return error;
-    if (error instanceof Error) return error.message;
-
-    // Type guard for objects with message property
-    if (error !== null && typeof error === 'object') {
-      const errorObj = error as Record<string, unknown>;
-      if (typeof errorObj.message === 'string') return errorObj.message;
-      if (typeof errorObj.error === 'string') return errorObj.error;
-    }
-
-    try {
-      return JSON.stringify(error);
-    } catch {
-      return 'Unknown error occurred';
-    }
+    return getErrorMessage(error, 'Unknown error occurred');
   }
 
   private mapErrorToRule(errorMessage: string): ErrorMappingRule {

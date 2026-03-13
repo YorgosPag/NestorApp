@@ -26,6 +26,7 @@ import { Logger, LogLevel, DevNullOutput } from '@/subapps/dxf-viewer/settings/t
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 import { ENTITY_TYPES } from '@/config/domain-constants';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // 🏢 ENTERPRISE LOGGER CONFIGURATION
@@ -241,7 +242,7 @@ export class BuildingFloorplanService {
     } catch (error) {
       floorplanLogger.error(`Error saving ${type} floorplan`, {
         buildingId,
-        error: error instanceof Error ? error.message : String(error)
+        error: getErrorMessage(error)
       });
       return false;
     }
@@ -305,7 +306,7 @@ export class BuildingFloorplanService {
       });
     } catch (error) {
       floorplanLogger.error(`FileRecord creation FAILED for building ${buildingId}`,
-        { error: error instanceof Error ? error.message : String(error) }
+        { error: getErrorMessage(error) }
       );
     }
   }
@@ -372,7 +373,7 @@ export class BuildingFloorplanService {
       }
       floorplanLogger.error(`Error loading ${type} floorplan`, {
         buildingId,
-        error: error instanceof Error ? error.message : String(error)
+        error: getErrorMessage(error)
       });
       return null;
     }
@@ -421,7 +422,7 @@ export class BuildingFloorplanService {
       floorplanLogger.warn('Legacy load failed', {
         buildingId,
         type,
-        error: error instanceof Error ? error.message : String(error)
+        error: getErrorMessage(error)
       });
       return null;
     }
@@ -459,7 +460,7 @@ export class BuildingFloorplanService {
       }
       floorplanLogger.warn(`Error checking ${type} floorplan`, {
         buildingId,
-        error: error instanceof Error ? error.message : String(error)
+        error: getErrorMessage(error)
       });
       return false;
     }
@@ -492,7 +493,7 @@ export class BuildingFloorplanService {
     } catch (error) {
       floorplanLogger.error(`Error deleting ${type} floorplan`, {
         buildingId,
-        error: error instanceof Error ? error.message : String(error)
+        error: getErrorMessage(error)
       });
       return false;
     }
@@ -533,7 +534,7 @@ export class BuildingFloorplanService {
       floorplanLogger.error('Migration failed', {
         buildingId,
         type,
-        error: error instanceof Error ? error.message : String(error)
+        error: getErrorMessage(error)
       });
       return false;
     }

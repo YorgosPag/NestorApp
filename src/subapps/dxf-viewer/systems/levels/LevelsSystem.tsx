@@ -16,6 +16,7 @@ import { useAutoSaveSceneManager } from '../../hooks/scene/useAutoSaveSceneManag
 import type { SceneModel } from '../../types/scene';
 import { useImportWizard } from '../../hooks/common/useImportWizard';
 import { StorageErrorHandler, withStorageErrorHandling } from '../../utils/storage-utils';
+import { getErrorMessage } from '@/lib/error-utils';
 import { db } from '../../../../lib/firebase';
 import {
   collection,
@@ -154,7 +155,7 @@ function useLevelsSystemState({
           setIsLoading(false);
           setError(null);
         } catch (err) {
-          handleError(err instanceof Error ? err.message : 'Failed to load levels');
+          handleError(getErrorMessage(err, 'Failed to load levels'));
           setIsLoading(false);
         }
       },
@@ -212,7 +213,7 @@ function useLevelsSystemState({
         return newLevelId;
       }
     } catch (err) {
-      handleError(err instanceof Error ? err.message : 'Failed to add level');
+      handleError(getErrorMessage(err, 'Failed to add level'));
       return null;
     } finally {
       setIsLoading(false);
@@ -239,7 +240,7 @@ function useLevelsSystemState({
         onLevelChange?.(newCurrentLevel);
       }
     } catch (err) {
-      handleError(err instanceof Error ? err.message : 'Failed to remove level');
+      handleError(getErrorMessage(err, 'Failed to remove level'));
     } finally {
       setIsLoading(false);
     }
@@ -268,7 +269,7 @@ function useLevelsSystemState({
       setCurrentLevelId(null);
       onLevelChange?.(null);
     } catch (err) {
-      handleError(err instanceof Error ? err.message : 'Failed to clear levels');
+      handleError(getErrorMessage(err, 'Failed to clear levels'));
     } finally {
       setIsLoading(false);
     }
@@ -286,7 +287,7 @@ function useLevelsSystemState({
         setLevels(prev => LevelOperations.reorderLevels(prev, levelIds));
       }
     } catch (err) {
-      handleError(err instanceof Error ? err.message : 'Failed to reorder levels');
+      handleError(getErrorMessage(err, 'Failed to reorder levels'));
     }
   }, [enableFirestore, firestoreCollection, handleError]);
 
@@ -304,7 +305,7 @@ function useLevelsSystemState({
         setLevels(prev => LevelOperations.renameLevel(prev, levelId, name));
       }
     } catch (err) {
-      handleError(err instanceof Error ? err.message : 'Failed to rename level');
+      handleError(getErrorMessage(err, 'Failed to rename level'));
     }
   }, [levels, enableFirestore, firestoreCollection, handleError]);
 
@@ -324,7 +325,7 @@ function useLevelsSystemState({
         setLevels(prev => LevelOperations.toggleLevelVisibility(prev, levelId));
       }
     } catch (err) {
-      handleError(err instanceof Error ? err.message : 'Failed to toggle level visibility');
+      handleError(getErrorMessage(err, 'Failed to toggle level visibility'));
     }
   }, [levels, enableFirestore, firestoreCollection, handleError]);
 
@@ -340,7 +341,7 @@ function useLevelsSystemState({
         setLevels(prev => LevelOperations.setDefaultLevel(prev, levelId));
       }
     } catch (err) {
-      handleError(err instanceof Error ? err.message : 'Failed to set default level');
+      handleError(getErrorMessage(err, 'Failed to set default level'));
     }
   }, [levels, enableFirestore, firestoreCollection, handleError]);
 
@@ -504,7 +505,7 @@ function useLevelsSystemState({
         setSettings(prev => ({ ...prev, ...importData.settings }));
       }
     } catch (err) {
-      handleError(err instanceof Error ? err.message : 'Failed to import levels data');
+      handleError(getErrorMessage(err, 'Failed to import levels data'));
     } finally {
       setIsLoading(false);
     }

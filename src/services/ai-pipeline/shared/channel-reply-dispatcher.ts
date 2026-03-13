@@ -22,6 +22,7 @@ import { sendReplyViaMailgun } from './mailgun-sender';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('CHANNEL_REPLY_DISPATCHER');
 
@@ -210,7 +211,7 @@ async function dispatchTelegram(params: ChannelReplyParams): Promise<ChannelRepl
       channel: PipelineChannel.TELEGRAM,
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = getErrorMessage(error);
     logger.error('Telegram dispatch error', {
       requestId,
       error: errorMessage,
@@ -271,7 +272,7 @@ async function dispatchWhatsApp(params: ChannelReplyParams): Promise<ChannelRepl
       channel: PipelineChannel.WHATSAPP,
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = getErrorMessage(error);
     logger.error('WhatsApp dispatch error', {
       requestId,
       error: errorMessage,
@@ -331,7 +332,7 @@ async function dispatchMessenger(params: ChannelReplyParams): Promise<ChannelRep
       channel: PipelineChannel.MESSENGER,
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = getErrorMessage(error);
     logger.error('Messenger dispatch error', {
       requestId,
       error: errorMessage,
@@ -391,7 +392,7 @@ async function dispatchInstagram(params: ChannelReplyParams): Promise<ChannelRep
       channel: PipelineChannel.INSTAGRAM,
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = getErrorMessage(error);
     logger.error('Instagram dispatch error', {
       requestId,
       error: errorMessage,
@@ -442,7 +443,7 @@ async function dispatchInApp(params: ChannelReplyParams): Promise<ChannelReplyRe
       channel: PipelineChannel.IN_APP,
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = getErrorMessage(error);
     logger.error('In-app dispatch error', {
       requestId,
       commandId: inAppCommandId,

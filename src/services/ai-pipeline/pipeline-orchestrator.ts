@@ -60,6 +60,7 @@ import { sendChannelReply } from './shared/channel-reply-dispatcher';
 import { getFeedbackService } from './feedback-service';
 import { createFeedbackKeyboard, createSuggestedActionsKeyboard } from './feedback-keyboard';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const orchestratorLogger = createModuleLogger('PIPELINE_ORCHESTRATOR');
 
@@ -112,7 +113,7 @@ export class PipelineOrchestrator {
 
       return result;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error);
 
       ctx.errors.push({
         step: 'orchestrator',
@@ -561,7 +562,7 @@ export class PipelineOrchestrator {
         auditId,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error);
 
       orchestratorLogger.error('Agentic path failed', {
         requestId: ctx.requestId,
@@ -688,7 +689,7 @@ export class PipelineOrchestrator {
         auditId,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error);
       ctx.errors.push({
         step: 'admin_fallback',
         error: errorMessage,
@@ -745,7 +746,7 @@ export class PipelineOrchestrator {
       ctx = this.transitionState(ctx, PipelineState.UNDERSTOOD);
       return ctx;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error);
       ctx.errors.push({
         step: 'understand',
         error: errorMessage,
@@ -765,7 +766,7 @@ export class PipelineOrchestrator {
       return ctx;
     } catch (error) {
       // Acknowledgment failure is non-fatal — pipeline still succeeds
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error);
       ctx.errors.push({
         step: 'acknowledge',
         error: errorMessage,
@@ -801,7 +802,7 @@ export class PipelineOrchestrator {
       } catch (error) {
         // Primary module (first) failure is fatal
         if (module === modules[0]) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
+          const errorMessage = getErrorMessage(error);
           ctx.errors.push({
             step: `lookup_${module.moduleId}`,
             error: errorMessage,
@@ -811,7 +812,7 @@ export class PipelineOrchestrator {
           throw error;
         }
         // Secondary module failure is non-fatal — log and continue
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage = getErrorMessage(error);
         ctx.errors.push({
           step: `lookup_${module.moduleId}`,
           error: `Secondary module lookup failed: ${errorMessage}`,
@@ -850,7 +851,7 @@ export class PipelineOrchestrator {
       } catch (error) {
         // Primary module (first) failure is fatal
         if (module === modules[0]) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
+          const errorMessage = getErrorMessage(error);
           ctx.errors.push({
             step: `propose_${module.moduleId}`,
             error: errorMessage,
@@ -860,7 +861,7 @@ export class PipelineOrchestrator {
           throw error;
         }
         // Secondary module failure — log and skip
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage = getErrorMessage(error);
         ctx.errors.push({
           step: `propose_${module.moduleId}`,
           error: `Secondary module propose failed: ${errorMessage}`,
@@ -976,7 +977,7 @@ export class PipelineOrchestrator {
           return ctx;
         }
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage = getErrorMessage(error);
         ctx.errors.push({
           step: `execute_${module.moduleId}`,
           error: errorMessage,
@@ -1205,7 +1206,7 @@ export class PipelineOrchestrator {
         auditId,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error);
 
       ctx.errors.push({
         step: 'resume_from_approval',
