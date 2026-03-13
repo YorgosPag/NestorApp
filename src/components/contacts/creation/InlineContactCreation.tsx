@@ -90,28 +90,35 @@ export function InlineContactCreation({ contactType, onContactAdded, onCancel, o
 
   return (
     <section className="flex flex-col h-full min-h-0">
-      {/* Sticky header */}
-      <header className="flex items-center gap-3 px-4 py-3 border-b bg-card shrink-0">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onBack}
-          className="gap-1.5 text-muted-foreground"
-        >
-          <ArrowLeft className={iconSizes.sm} />
-          <span className="hidden sm:inline">{t('creation.inline.back')}</span>
-        </Button>
-        <span className={`${typeColors.primary} ${typeColors.bg} p-1.5 rounded-full`}>
-          <TypeIcon className={iconSizes.sm} />
-        </span>
-        <h2 className="font-medium text-foreground">
-          {t('form.addTitle')} — {getTypeLabel(contactType)}
-        </h2>
-      </header>
+      {/* Sticky header with actions */}
+      <form id="inline-contact-form" onSubmit={handleSubmit} className="contents">
+        <header className="flex items-center gap-3 px-4 py-3 border-b bg-card shrink-0">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="gap-1.5 text-muted-foreground"
+          >
+            <ArrowLeft className={iconSizes.sm} />
+            <span className="hidden sm:inline">{t('creation.inline.back')}</span>
+          </Button>
+          <span className={`${typeColors.primary} ${typeColors.bg} p-1.5 rounded-full`}>
+            <TypeIcon className={iconSizes.sm} />
+          </span>
+          <h2 className="font-medium text-foreground flex-1">
+            {t('form.addTitle')} — {getTypeLabel(contactType)}
+          </h2>
+          <nav className="flex items-center gap-2">
+            <CancelButton onClick={onCancel} disabled={loading} />
+            <SaveButton loading={loading}>
+              {t('form.saveContact')}
+            </SaveButton>
+          </nav>
+        </header>
 
-      {/* Scrollable form body */}
-      <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-        <div className="flex-1 overflow-y-auto px-4 py-4">
+        {/* Scrollable form body */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 min-h-0">
           <RelationshipProvider
             contactId={formData.id || preGeneratedContactId}
             contactType={contactType}
@@ -134,14 +141,6 @@ export function InlineContactCreation({ contactType, onContactAdded, onCancel, o
             />
           </RelationshipProvider>
         </div>
-
-        {/* Sticky footer */}
-        <footer className="flex items-center justify-end gap-2 px-4 py-3 border-t bg-card shrink-0">
-          <CancelButton onClick={onCancel} disabled={loading} />
-          <SaveButton loading={loading}>
-            {t('form.saveContact')}
-          </SaveButton>
-        </footer>
       </form>
     </section>
   );
