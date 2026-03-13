@@ -1520,35 +1520,39 @@
   "emptyState": {
     "selectItem": {
       "title": "Make a selection",
-      "description": "Select an item from the list to view its details."
+      "description": "Select an item or create a new one."
     },
     "contact": {
-      "title": "Select a contact",
-      "description": "Select a contact from the list to view its details."
+      "title": "Create Contact",
+      "description": "Select a contact from the list or create a new one."
     },
     "project": {
-      "title": "Select a project",
-      "description": "Select a project from the list to view its details."
+      "title": "Create Project",
+      "description": "Select a project from the list or create a new one."
     },
     "building": {
-      "title": "Select a building",
-      "description": "Select a building from the list to view its details."
+      "title": "Create Building",
+      "description": "Select a building from the list or create a new one."
     },
     "storage": {
-      "title": "Select a storage",
-      "description": "Select a storage from the list to view its details."
+      "title": "Create Storage",
+      "description": "Select a storage from the list or create a new one."
     },
     "unit": {
-      "title": "Select a unit",
-      "description": "Select a unit from the list to view its details."
+      "title": "Create Unit",
+      "description": "Select a unit from the list or create a new one."
+    },
+    "parking": {
+      "title": "Create Parking Spot",
+      "description": "Select a parking spot from the list or create a new one."
     },
     "property": {
-      "title": "Select a property",
-      "description": "Select a property from the list to view its details."
+      "title": "Create Property",
+      "description": "Select a property from the list or create a new one."
     },
     "generic": {
-      "title": "Select an item",
-      "description": "Select an item from the list to view its details."
+      "title": "Create",
+      "description": "Select an item from the list or create a new one."
     }
   },
   "confirmations": {

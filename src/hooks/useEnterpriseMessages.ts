@@ -56,6 +56,7 @@ export interface UseEnterpriseMessagesReturn {
     readonly building: { title: string; description: string };
     readonly storage: { title: string; description: string };
     readonly unit: { title: string; description: string };
+    readonly parking: { title: string; description: string };
     readonly property: { title: string; description: string };
     readonly generic: { title: string; description: string };
   };
@@ -143,7 +144,7 @@ export interface UseEnterpriseMessagesReturn {
   };
 
   // 🔧 Utility methods
-  readonly getEmptyStateFor: (entityType: 'contact' | 'project' | 'building' | 'storage' | 'unit' | 'property' | 'generic') => { title: string; description: string };
+  readonly getEmptyStateFor: (entityType: 'contact' | 'project' | 'building' | 'storage' | 'unit' | 'parking' | 'property' | 'generic') => { title: string; description: string };
   readonly getActionButton: (action: 'save' | 'cancel' | 'delete' | 'edit' | 'create' | 'close' | 'confirm' | 'back' | 'next' | 'finish') => string;
 }
 
@@ -188,6 +189,10 @@ export function useEnterpriseMessages(): UseEnterpriseMessagesReturn {
         unit: {
           title: t('emptyState.unit.title'),
           description: t('emptyState.unit.description'),
+        },
+        parking: {
+          title: t('emptyState.parking.title'),
+          description: t('emptyState.parking.description'),
         },
         property: {
           title: t('emptyState.property.title'),
@@ -323,6 +328,7 @@ export function useEmptyStateMessages() {
     building: messages.emptyState.building,
     storage: messages.emptyState.storage,
     unit: messages.emptyState.unit,
+    parking: messages.emptyState.parking,
     property: messages.emptyState.property,
     generic: messages.emptyState.generic,
     getFor: messages.getEmptyStateFor,

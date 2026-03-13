@@ -1705,8 +1705,8 @@
     }
   },
   "emptyState": {
-    "selectBuilding": "Select a building",
-    "selectBuildingDescription": "Select a building from the list to view its details."
+    "selectBuilding": "Create Building",
+    "selectBuildingDescription": "Select a building from the list or create a new one."
   },
   "emptyList": {
     "noUnitsFound": "No units found",

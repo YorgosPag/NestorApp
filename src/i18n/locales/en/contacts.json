@@ -1,7 +1,7 @@
 {
   "emptyState": {
-    "title": "Select a contact",
-    "description": "Select a contact from the list to view its details."
+    "title": "Create Contact",
+    "description": "Select a contact from the list or create a new one."
   },
   "export": {
     "noContactSelected": "Select a contact to export",

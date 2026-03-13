@@ -1705,8 +1705,8 @@
     }
   },
   "emptyState": {
-    "selectBuilding": "Επιλέξτε ένα κτίριο",
-    "selectBuildingDescription": "Επιλέξτε ένα κτίριο από τη λίστα για να δείτε τις λεπτομέρειές του."
+    "selectBuilding": "Δημιουργία Κτιρίου",
+    "selectBuildingDescription": "Επιλέξτε ένα κτίριο από τη λίστα ή δημιουργήστε νέο."
   },
   "emptyList": {
     "noUnitsFound": "Δεν βρέθηκαν μονάδες",

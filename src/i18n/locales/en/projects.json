@@ -11,8 +11,8 @@
     "approved": "Approved"
   },
   "emptyState": {
-    "title": "Select a project",
-    "description": "Select a project from the list to view its details."
+    "title": "Create Project",
+    "description": "Select a project from the list or create a new one."
   },
   "projectHeader": {
     "technicalIdLabel": "Technical ID (for support):",

@@ -11,8 +11,8 @@
     "approved": "Εγκεκριμένο"
   },
   "emptyState": {
-    "title": "Επιλέξτε ένα έργο",
-    "description": "Επιλέξτε ένα έργο από τη λίστα για να δείτε τις λεπτομέρειές του."
+    "title": "Δημιουργία Έργου",
+    "description": "Επιλέξτε ένα έργο από τη λίστα ή δημιουργήστε νέο."
   },
   "projectHeader": {
     "technicalIdLabel": "Technical ID (για support):",

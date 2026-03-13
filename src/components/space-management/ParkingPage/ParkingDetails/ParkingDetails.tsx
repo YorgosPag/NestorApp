@@ -27,12 +27,6 @@ interface ParkingDetailsProps {
 export function ParkingDetails({ parking, onNewParking, onDelete }: ParkingDetailsProps) {
   const emptyStateMessages = useEmptyStateMessages();
 
-  // Custom empty state message for parking
-  const parkingEmptyState = {
-    title: 'Επιλέξτε θέση στάθμευσης',
-    description: 'Επιλέξτε μια θέση από τη λίστα για να δείτε τις λεπτομέρειες'
-  };
-
   // Inline editing state (lifted for header ↔ tab coordination)
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -92,7 +86,7 @@ export function ParkingDetails({ parking, onNewParking, onDelete }: ParkingDetai
       }
       emptyStateProps={{
         icon: Car,
-        ...parkingEmptyState
+        ...emptyStateMessages.parking
       }}
     />
   );
