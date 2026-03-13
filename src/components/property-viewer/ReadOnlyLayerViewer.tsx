@@ -43,9 +43,9 @@ import { layoutUtilities } from '@/styles/design-tokens';
 import type { Property } from '@/types/property-viewer';
 import { LAYER_CATEGORIES } from '@/types/layers';
 import type { Layer, LayerCategory } from '@/types/layers';
-import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { firestoreQueryService } from '@/services/firestore';
+import type { QueryResult } from '@/services/firestore';
+import { where, orderBy, type DocumentData } from 'firebase/firestore';
 
 type LayerCategoryKey = Exclude<LayerCategory, undefined>;
 
@@ -283,24 +283,18 @@ export function ReadOnlyLayerViewer({
   // Local visibility state (user can control what they see)
   const [visibilityState, setVisibilityState] = useState<LayerVisibilityState>({});
 
-  // Real-time sync with Firestore
+  // 🔐 ENTERPRISE: Real-time sync via firestoreQueryService (auto tenant filter)
   useEffect(() => {
     if (!floorId) return;
 
     setLayerState(prev => ({ ...prev, isLoading: true }));
 
-    const layersQuery = query(
-      collection(db, COLLECTIONS.LAYERS),
-      where('floorId', '==', floorId),
-      orderBy('zIndex', 'asc')
-    );
-
-    const unsubscribe = onSnapshot(
-      layersQuery,
-      (snapshot) => {
-        const layers: Layer[] = snapshot.docs.map(doc => ({
+    const unsubscribe = firestoreQueryService.subscribe<DocumentData>(
+      'LAYERS',
+      (result: QueryResult<DocumentData>) => {
+        const layers: Layer[] = result.documents.map(doc => ({
           id: doc.id,
-          ...doc.data()
+          ...doc,
         } as Layer));
 
         // Initialize visibility state for new layers
@@ -323,18 +317,23 @@ export function ReadOnlyLayerViewer({
         });
         setVisibilityState(newVisibilityState);
       },
-      (error) => {
-        logger.error('Error syncing layers', { error });
+      (error: Error) => {
+        logger.error('Error syncing layers', { error: error.message });
         setLayerState(prev => ({
           ...prev,
           isLoading: false,
           isConnected: false,
           error: t('layerManager.readOnly.dbConnectionError')
         }));
+      },
+      {
+        constraints: [
+          where('floorId', '==', floorId),
+          orderBy('zIndex', 'asc'),
+        ],
       }
     );
 
-    // Cleanup subscription
     return () => unsubscribe();
   }, [floorId]);
 
