@@ -168,6 +168,16 @@ export function BankAccountCard({
               </Button>
             </div>
 
+            {/* BIC/SWIFT code */}
+            {account.bankCode && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground font-medium">BIC/SWIFT:</span>
+                <code className="font-mono text-xs text-foreground bg-muted px-2 py-0.5 rounded">
+                  {account.bankCode}
+                </code>
+              </div>
+            )}
+
             {/* Account type and currency */}
             <div className="flex items-center gap-2 flex-wrap">
               <Badge variant="outline">
