@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getAllTasks as getTasks, completeTask, deleteTask } from '@/services/tasks.service';
+import { completeTask, deleteTask } from '@/services/tasks.service';
 // 🏢 ENTERPRISE: Use CLIENT service - Server Action has NO auth context!
 import { getOpportunitiesClient as getOpportunities } from '@/services/opportunities-client.service';
+// 🏢 ENTERPRISE: Real-time tasks (ADR-227 Phase 1)
+import { useRealtimeTasks } from '@/services/realtime';
 import {
   Clock,
   CheckCircle,
@@ -119,50 +121,34 @@ export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabPr
   const sp = useSpacingTokens();
   const { confirm, dialogProps } = useConfirmDialog();
   const formatDueDate = useMemo(() => createFormatDueDate(t), [t]);
-  const [tasks, setTasks] = useState<CrmTask[]>([]);
+  // 🏢 ENTERPRISE: Real-time tasks (ADR-227 Phase 1) — replaces one-time getTasks()
+  const { tasks, loading: tasksLoading, error: tasksError } = useRealtimeTasks(!authLoading && isAuthenticated);
   const [leads, setLeads] = useState<Opportunity[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [leadsLoading, setLeadsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    // 🏢 ENTERPRISE: Skip fetch if not authenticated (race condition prevention)
-    if (!isAuthenticated) {
-      logger.info('Waiting for authentication');
-      setLoading(false);
-      return;
-    }
-    let isMounted = true;
-    setLoading(true);
+  // Leads remain one-time fetch (no real-time needed for lead name lookup)
+  const fetchLeads = useCallback(async () => {
+    if (!isAuthenticated) return;
     try {
-      const [tasksData, leadsData] = await Promise.all([
-        getTasks(),
-        getOpportunities()
-      ]);
-      if(isMounted) {
-        setTasks(tasksData);
-        setLeads(leadsData);
-        setError(null);
-      }
+      setLeadsLoading(true);
+      const leadsData = await getOpportunities();
+      setLeads(leadsData);
     } catch (err) {
-      if(isMounted) {
-        setError(t('tasks.messages.loadError'));
-        logger.error('Error fetching tasks', { error: err });
-      }
+      logger.error('Error fetching leads', { error: err });
     } finally {
-      if(isMounted) {
-        setLoading(false);
-      }
+      setLeadsLoading(false);
     }
-    return () => { isMounted = false; };
-  }, [isAuthenticated, t]);
+  }, [isAuthenticated]);
 
-  // 🏢 ENTERPRISE: Wait for auth before fetching data (race condition prevention)
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      fetchData();
+      fetchLeads();
     }
-  }, [authLoading, isAuthenticated, fetchData]);
+  }, [authLoading, isAuthenticated, fetchLeads]);
+
+  const loading = tasksLoading || leadsLoading;
+  const error = tasksError;
 
   const filteredTasks = useMemo(() => {
     let list = [...tasks];
@@ -211,11 +197,11 @@ export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabPr
     try {
       await completeTask(taskId);
       success(t('tasks.messages.completed', { title: taskTitle }));
-      fetchData();
-    } catch (error) {
+      // Real-time subscription auto-updates — no manual refetch needed
+    } catch {
       notifyError(t('tasks.messages.completeError'));
     }
-  }, [t]); // 🔧 FIX: Removed fetchData to prevent infinite loop
+  }, [t, success, notifyError]);
 
   const handleDeleteTask = useCallback(async (taskId?: string, taskTitle?: string) => {
     if (!taskId || !taskTitle) return;
@@ -228,12 +214,12 @@ export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabPr
       try {
         await deleteTask(taskId);
         success(t('tasks.messages.deleted', { title: taskTitle }));
-        fetchData();
-      } catch (error) {
+        // Real-time subscription auto-updates — no manual refetch needed
+      } catch {
         notifyError(t('tasks.messages.deleteError'));
       }
     }
-  }, [t, confirm]); // 🔧 FIX: Removed fetchData to prevent infinite loop
+  }, [t, confirm, success, notifyError]);
 
   const getLeadName = useCallback((leadId?: string) => leads.find(l => l.id === leadId)?.fullName || null, [leads]);
 
@@ -293,7 +279,7 @@ export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabPr
           );
         })
       )}
-      <CreateTaskModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onTaskCreated={() => { fetchData(); onTaskCreated?.(); }} />
+      <CreateTaskModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onTaskCreated={() => { onTaskCreated?.(); }} />
     </section>
   );
 }

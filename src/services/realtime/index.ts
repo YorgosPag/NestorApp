@@ -106,3 +106,6 @@ export {
 export { useRealtimeQuery } from './hooks/useRealtimeQuery';
 export { useRealtimeBuildings } from './hooks/useRealtimeBuildings';
 export { useRealtimeUnits } from './hooks/useRealtimeUnits';
+export { useRealtimeTasks } from './hooks/useRealtimeTasks';
+export type { TaskStats } from './hooks/useRealtimeTasks';
+export { useRealtimeOpportunities } from './hooks/useRealtimeOpportunities';

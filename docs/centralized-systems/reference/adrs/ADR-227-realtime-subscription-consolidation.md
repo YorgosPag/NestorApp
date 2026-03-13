@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | 📋 Planning |
+| **Status** | 🟡 Phase 1 Implemented — Phases 2-3 Pending |
 | **Date** | 2026-03-13 |
 | **Category** | Data Access Layer / Real-Time Architecture |
 | **Related ADRs** | ADR-214 (Firestore Query Centralization) |
@@ -112,7 +112,7 @@ RealtimeService
 
 ## 3. Decision: 3-Phase Migration Plan
 
-### Phase 1: Eliminate One-Time Fetches → Real-Time (HIGH PRIORITY)
+### Phase 1: Eliminate One-Time Fetches → Real-Time (HIGH PRIORITY) — ✅ IMPLEMENTED (2026-03-13)
 
 **Goal**: Σελίδες που δείχνουν ξεπερασμένα δεδομένα γίνονται real-time.
 
@@ -248,8 +248,8 @@ useEffect(() => {
 | `messages` | AI Inbox, Operator Inbox | 🟡 LEGACY (raw onSnapshot) | CANONICAL | Phase 2 |
 | `communications` | Triage view | 🟡 LEGACY (raw onSnapshot) | CANONICAL | Phase 2 |
 | `files` | Document tabs, Floorplan files | 🟡 LEGACY (raw onSnapshot) | CANONICAL | Phase 2 |
-| `tasks` | Tasks page, Dashboard | 🔴 STALE (one-time fetch) | CANONICAL | Phase 1 |
-| `opportunities` | CRM Dashboard, Pipeline | 🔴 STALE (one-time fetch) | CANONICAL | Phase 1 |
+| `tasks` | Tasks page, Dashboard | ✅ CANONICAL | ✅ Done | Phase 1 |
+| `opportunities` | CRM Dashboard, Pipeline | ✅ CANONICAL | ✅ Done | Phase 1 |
 | `floor_floorplans` | Floor detail | 🔴 STALE (one-time fetch) | CANONICAL | Phase 1 |
 | `project_floorplans` | Project floorplan view | 🟡 LEGACY (raw onSnapshot doc) | CANONICAL | Phase 2 |
 | `voice_commands` | Voice command UI | 🟡 LEGACY (raw onSnapshot doc) | CANONICAL | Phase 2 |
@@ -388,3 +388,4 @@ All new hooks MUST expose `status: SubscriptionStatus` for UI feedback.
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-03-13 | Initial ADR creation — inventory + 3-phase plan | Claude |
+| 2026-03-13 | Phase 1 implemented — `useRealtimeTasks`, `useRealtimeOpportunities` hooks created; Tasks page, CRM Dashboard, TasksTab migrated to real-time; `useFloorFloorplans` NOT touched (complex hook, no real-time value) | Claude |

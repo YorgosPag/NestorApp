@@ -2,7 +2,7 @@
 // PageContainer + PageHeader + UnifiedDashboard + AdvancedFiltersPanel + Tabs
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Plus, LayoutDashboard, Users, Target, Calendar, Clock } from 'lucide-react';
 // 🏢 ENTERPRISE: Centralized systems
 import { PageContainer, ListContainer } from '@/core/containers';
@@ -17,41 +17,19 @@ import { GenericCRMDashboardTabsRenderer } from '@/components/generic/GenericCRM
 import { getSortedCRMDashboardTabs } from '@/config/crm-dashboard-tabs-config';
 import { TelegramNotifications } from './TelegramNotifications';
 import { useAuth } from '@/auth/contexts/AuthContext';
-import { getOpportunitiesClient } from '@/services/opportunities-client.service';
 import type { Opportunity } from '@/types/crm';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { createModuleLogger } from '@/lib/telemetry';
-
-const logger = createModuleLogger('CRMDashboardPageContent');
+// 🏢 ENTERPRISE: Real-time opportunities (ADR-227 Phase 1)
+import { useRealtimeOpportunities } from '@/services/realtime';
 
 export function CRMDashboardPageContent() {
   const layout = useLayoutClasses();
   const { t } = useTranslation('crm');
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [filters, setFilters] = useState<CrmDashboardFilterState>(defaultCrmDashboardFilters);
-  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
-  const [loadingStats, setLoadingStats] = useState(true);
+  // 🏢 ENTERPRISE: Real-time opportunities (ADR-227 Phase 1)
+  const { opportunities, loading: loadingStats } = useRealtimeOpportunities(!authLoading && isAuthenticated);
   const crmDashboardTabs = getSortedCRMDashboardTabs();
-
-  // 🏢 ENTERPRISE: Fetch opportunities for global stats (Salesforce pattern)
-  const fetchOpportunities = useCallback(async () => {
-    if (!isAuthenticated) return;
-    try {
-      setLoadingStats(true);
-      const data = await getOpportunitiesClient();
-      setOpportunities(data);
-    } catch (error) {
-      logger.error('Error fetching CRM stats', { error });
-    } finally {
-      setLoadingStats(false);
-    }
-  }, [isAuthenticated]);
-
-  useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      fetchOpportunities();
-    }
-  }, [authLoading, isAuthenticated, fetchOpportunities]);
 
   // 🏢 ENTERPRISE: Filtered opportunities based on global AdvancedFilters
   const filteredOpportunities = useMemo(() => {
