@@ -6,17 +6,9 @@ import { randomUUID } from 'crypto';
 import {
   collection,
   addDoc,
-  getDocs,
   doc,
   updateDoc,
-  query,
-  where,
-  orderBy,
   serverTimestamp,
-  Timestamp,
-  writeBatch,
-  QueryDocumentSnapshot,
-  DocumentData
 } from 'firebase/firestore';
 import { FieldValue as AdminFieldValue, Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
 import type { Communication } from '@/types/crm';
@@ -75,18 +67,8 @@ function buildActionErrorMetadata(params: {
   };
 }
 
-// 🏢 ENTERPRISE: Type-safe document transformation
-const transformCommunication = (docSnapshot: QueryDocumentSnapshot<DocumentData>): Communication => {
-    const data = docSnapshot.data();
-    const communication: Partial<Communication> & { id: string } = { id: docSnapshot.id };
-
-    for (const key in data) {
-        const value = data[key];
-        const iso = normalizeToISO(value);
-        (communication as Record<string, unknown>)[key] = iso ?? value;
-    }
-    return communication as Communication;
-};
+// ADR-214 Phase 5: transformCommunication removed — was only used by getCommunicationsByContact
+// which has been relocated to communications-client.service.ts
 
 const resolveDateValue = (value: unknown): Date => {
   if (value instanceof Date) {
@@ -197,21 +179,9 @@ export async function addCommunication(communicationData: Omit<Communication, 'i
   }
 }
 
-export async function getCommunicationsByContact(contactId: string): Promise<Communication[]> {
-  try {
-    const q = query(
-      collection(db, COMMUNICATIONS_COLLECTION),
-      where('contactId', '==', contactId),
-      orderBy('createdAt', 'desc')
-    );
-    const querySnapshot = await getDocs(q);
-    
-    return querySnapshot.docs.map(transformCommunication);
-  } catch (error) {
-    // Error logging removed //('Σφάλμα κατά την ανάκτηση επικοινωνιών:', error);
-    throw error;
-  }
-}
+// ADR-214 Phase 5: getCommunicationsByContact relocated to communications-client.service.ts
+// SECURITY FIX: Was missing companyId tenant filter. Now auto-injected via firestoreQueryService.
+// Import from '@/services/communications-client.service' instead.
 
 export async function updateCommunicationStatus(communicationId: string, status: Communication['status']) {
   try {
@@ -228,25 +198,10 @@ export async function updateCommunicationStatus(communicationId: string, status:
   }
 }
 
-// ΝΕΑ ΣΥΝΑΡΤΗΣΗ: Διαγραφή όλων των επικοινωνιών
-export async function deleteAllCommunications(): Promise<{ success: boolean; deletedCount: number }> {
-    try {
-        const querySnapshot = await getDocs(collection(db, COMMUNICATIONS_COLLECTION));
-        const batch = writeBatch(db);
-        let deletedCount = 0;
-
-        querySnapshot.forEach((doc) => {
-            batch.delete(doc.ref);
-            deletedCount++;
-        });
-
-        await batch.commit();
-        return { success: true, deletedCount };
-    } catch (error) {
-        // Error logging removed //('Σφάλμα κατά τη μαζική διαγραφή επικοινωνιών:', error);
-        throw error;
-    }
-}
+// ADR-214 Phase 5: deleteAllCommunications relocated to communications-client.service.ts
+// SECURITY FIX: Was deleting ENTIRE collection without companyId filter!
+// Now auto-scoped to current company via firestoreQueryService.
+// Import from '@/services/communications-client.service' instead.
 
 // ============================================================================
 // 🏢 ENTERPRISE: AI INBOX SERVER ACTIONS (Stage 2)

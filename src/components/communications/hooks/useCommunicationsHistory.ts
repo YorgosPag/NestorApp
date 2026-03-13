@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { getCommunicationsByContact } from '@/services/communications.service';
+// ADR-214 Phase 5: Relocated to client service (firestoreQueryService + auto tenant filter)
+import { getCommunicationsByContact } from '@/services/communications-client.service';
 import type { Communication } from '@/types/crm';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 

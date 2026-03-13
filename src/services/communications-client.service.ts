@@ -3,6 +3,9 @@
 /**
  * 🏢 ENTERPRISE: Client-side Communications Service
  *
+ * ADR-214 Phase 5: READ methods delegated to firestoreQueryService.
+ * SECURITY FIX: tenant filtering auto-injected (companyId was previously MISSING).
+ *
  * Provides client-side CRUD operations for Communications with real-time sync.
  * Uses Firebase client SDK for direct Firestore operations.
  * Dispatches events via RealtimeService for cross-page synchronization.
@@ -11,17 +14,33 @@
  * This file is for client-side operations that need immediate real-time dispatch.
  *
  * 🔄 2026-01-17: Uses MESSAGES collection (COMMUNICATIONS collection deprecated)
+ * 🔄 2026-03-13: ADR-214 Phase 5 — READ methods via firestoreQueryService (auto companyId)
+ *                + getCommunicationsByContact, deleteAllCommunications relocated from server file
  */
 
-import { collection, getDocs, query, orderBy, limit, where, doc, updateDoc, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { orderBy, where, doc, updateDoc, addDoc, deleteDoc, serverTimestamp, writeBatch, type DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { Communication } from '@/types/crm';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
+import { firestoreQueryService } from '@/services/firestore';
+import { normalizeToISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('CommunicationsClientService');
+
+// --- ADR-214 Phase 5: Transform helper (same pattern as Phase 4) ---
+
+/** Transform raw DocumentData (from firestoreQueryService) to Communication */
+const toCommunication = (raw: DocumentData & { id: string }): Communication => {
+  const communication: Record<string, unknown> = {};
+  for (const key in raw) {
+    const iso = normalizeToISO(raw[key]);
+    communication[key] = iso ?? raw[key];
+  }
+  return communication as unknown as Communication;
+};
 
 /**
  * 🏢 ENTERPRISE: Communication create payload type
@@ -172,26 +191,22 @@ export async function deleteCommunicationClient(
   }
 }
 
+// --- READ methods: ADR-214 Phase 5 (tenant-aware via firestoreQueryService) ---
+// SECURITY FIX: Auto companyId filter — previously MISSING
+
 /**
- * 🎯 ENTERPRISE: Λίστα επικοινωνιών από Firebase (Client-side)
- * Για περιπτώσεις που χρειάζεται client-side fetch
+ * 🎯 ENTERPRISE: Λίστα επικοινωνιών (Client-side, tenant-aware)
  */
 export async function getCommunicationsClient(limitCount: number = 100): Promise<Communication[]> {
   try {
     logger.info('Starting Firestore query');
 
-    const communicationsQuery = query(
-      collection(db, COLLECTIONS.MESSAGES),
-      orderBy('createdAt', 'desc'),
-      limit(limitCount)
-    );
-    const snapshot = await getDocs(communicationsQuery);
+    const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('MESSAGES', {
+      constraints: [orderBy('createdAt', 'desc')],
+      maxResults: limitCount,
+    });
 
-    const communications = snapshot.docs.map(docSnap => ({
-      id: docSnap.id,
-      ...docSnap.data()
-    })) as Communication[];
-
+    const communications = result.documents.map(toCommunication);
     logger.info('Loaded communications from Firebase', { count: communications.length });
     return communications;
 
@@ -202,7 +217,7 @@ export async function getCommunicationsClient(limitCount: number = 100): Promise
 }
 
 /**
- * 🎯 ENTERPRISE: Λίστα επικοινωνιών ανά επαφή (Client-side)
+ * 🎯 ENTERPRISE: Λίστα επικοινωνιών ανά επαφή (Client-side, tenant-aware)
  */
 export async function getCommunicationsByContactClient(
   contactId: string,
@@ -211,19 +226,12 @@ export async function getCommunicationsByContactClient(
   try {
     logger.info('Fetching communications for contact', { contactId });
 
-    const communicationsQuery = query(
-      collection(db, COLLECTIONS.MESSAGES),
-      where('contactId', '==', contactId),
-      orderBy('createdAt', 'desc'),
-      limit(limitCount)
-    );
-    const snapshot = await getDocs(communicationsQuery);
+    const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('MESSAGES', {
+      constraints: [where('contactId', '==', contactId), orderBy('createdAt', 'desc')],
+      maxResults: limitCount,
+    });
 
-    const communications = snapshot.docs.map(docSnap => ({
-      id: docSnap.id,
-      ...docSnap.data()
-    })) as Communication[];
-
+    const communications = result.documents.map(toCommunication);
     logger.info('Loaded communications for contact', { contactId, count: communications.length });
     return communications;
 
@@ -231,4 +239,40 @@ export async function getCommunicationsByContactClient(
     logger.error('Error loading communications for contact', { contactId, error });
     return [];
   }
+}
+
+// --- Relocated from communications.service.ts (ADR-214 Phase 5 — SECURITY FIX) ---
+// These were client SDK reads inside a 'use server' file. Moved here where
+// firestoreQueryService.requireAuthContext() can resolve auth.currentUser.
+
+/**
+ * 🎯 ENTERPRISE: Επικοινωνίες ανά επαφή (tenant-aware)
+ * Relocated from communications.service.ts — was server action using client SDK
+ * SECURITY FIX: Auto companyId filter (was previously MISSING)
+ */
+export async function getCommunicationsByContact(contactId: string): Promise<Communication[]> {
+  const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('MESSAGES', {
+    constraints: [where('contactId', '==', contactId), orderBy('createdAt', 'desc')],
+  });
+  return result.documents.map(toCommunication);
+}
+
+/**
+ * 🎯 ENTERPRISE: Διαγραφή όλων των επικοινωνιών (tenant-aware)
+ * Relocated from communications.service.ts — was server action using client SDK
+ * SECURITY FIX: Only deletes current company's messages (was deleting ENTIRE collection!)
+ */
+export async function deleteAllCommunications(): Promise<{ success: boolean; deletedCount: number }> {
+  // Read: firestoreQueryService (tenant-aware — only current company's messages)
+  const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('MESSAGES');
+  const batch = writeBatch(db);
+  let deletedCount = 0;
+
+  for (const document of result.documents) {
+    batch.delete(doc(db, COLLECTIONS.MESSAGES, document.id));
+    deletedCount++;
+  }
+
+  await batch.commit();
+  return { success: true, deletedCount };
 }

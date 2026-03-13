@@ -1,7 +1,8 @@
 // services/notificationService.ts
 // ✅ Firestore-based Notification Service
+// 🔄 ADR-214 Phase 5: fetchNotifications migrated to firestoreQueryService (auto userId filter)
 
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import {
   collection,
   query,
@@ -14,16 +15,37 @@ import {
   doc,
   onSnapshot,
   Timestamp,
-  QueryConstraint,
+  type QueryConstraint,
   startAfter,
-  DocumentSnapshot
+  type DocumentSnapshot,
+  type DocumentData,
 } from 'firebase/firestore';
 import type { Notification, Severity } from '@/types/notification';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateNotificationId } from '@/services/enterprise-id.service';
 import { fieldToISO } from '@/lib/date-local';
+import { firestoreQueryService } from '@/services/firestore';
 
 const COLLECTION_NAME = COLLECTIONS.NOTIFICATIONS;
+
+// --- ADR-214 Phase 5: Transform helper ---
+
+/** Transform raw DocumentData to Notification */
+const toNotification = (raw: DocumentData & { id: string }): Notification => ({
+  id: raw.id,
+  tenantId: (raw.tenantId as string) || 'default',
+  userId: raw.userId as string,
+  createdAt: fieldToISO(raw as Record<string, unknown>, 'createdAt') || raw.createdAt,
+  severity: raw.severity as Severity,
+  title: raw.title as string,
+  body: raw.body as string,
+  channel: (raw.channel as string) || 'inapp',
+  delivery: (raw.delivery as Notification['delivery']) || { state: 'delivered', attempts: 1 },
+  source: raw.source as Notification['source'],
+  actions: raw.actions as Notification['actions'],
+  meta: raw.meta as Notification['meta'],
+  ...(raw.titleKey ? { titleKey: raw.titleKey as string, titleParams: raw.titleParams as Record<string, string> } : {}),
+} as Notification);
 
 export interface NotificationQuery {
   userId: string;
@@ -39,52 +61,46 @@ export interface NotificationListResult {
 
 /**
  * Fetch notifications from Firestore
+ *
+ * ADR-214 Phase 5: Uses firestoreQueryService when client auth is available
+ * (auto userId filter via NOTIFICATIONS tenant config, mode: 'userId').
+ * Falls back to direct query for server contexts (API routes) where auth.currentUser is null.
  */
 export async function fetchNotifications(params: NotificationQuery): Promise<NotificationListResult> {
   const { userId, limit = 50, unseenOnly = false, cursor } = params;
 
-  const constraints: QueryConstraint[] = [
+  const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc')];
+  if (unseenOnly) constraints.push(where('delivery.state', '!=', 'seen'));
+  if (cursor) constraints.push(startAfter(cursor));
+
+  // ADR-214 Phase 5: firestoreQueryService path (auto userId filter via tenant config)
+  if (auth.currentUser) {
+    const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('NOTIFICATIONS', {
+      constraints,
+      maxResults: limit,
+    });
+
+    const items = result.documents.map(toNotification);
+    return { items, cursor: result.lastDocument ?? undefined };
+  }
+
+  // Server context fallback: explicit userId filter (API routes where auth.currentUser is null)
+  const serverConstraints: QueryConstraint[] = [
     where('userId', '==', userId),
-    orderBy('createdAt', 'desc'),
-    firestoreLimit(limit)
+    ...constraints,
+    firestoreLimit(limit),
   ];
 
-  if (unseenOnly) {
-    constraints.push(where('delivery.state', '!=', 'seen'));
-  }
-
-  if (cursor) {
-    constraints.push(startAfter(cursor));
-  }
-
-  const q = query(collection(db, COLLECTION_NAME), ...constraints);
+  const q = query(collection(db, COLLECTION_NAME), ...serverConstraints);
   const snapshot = await getDocs(q);
 
-  const items: Notification[] = snapshot.docs.map(doc => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      tenantId: data.tenantId || 'default',
-      userId: data.userId,
-      createdAt: fieldToISO(data, 'createdAt') || data.createdAt,
-      severity: data.severity as Severity,
-      title: data.title,
-      body: data.body,
-      channel: data.channel || 'inapp',
-      delivery: data.delivery || { state: 'delivered', attempts: 1 },
-      source: data.source,
-      actions: data.actions,
-      meta: data.meta,
-      ...(data.titleKey ? { titleKey: data.titleKey, titleParams: data.titleParams } : {}),
-    } as Notification;
+  const items: Notification[] = snapshot.docs.map(d => {
+    const data = d.data();
+    return toNotification({ id: d.id, ...data });
   });
 
   const lastDoc = snapshot.docs[snapshot.docs.length - 1];
-
-  return {
-    items,
-    cursor: lastDoc
-  };
+  return { items, cursor: lastDoc };
 }
 
 /**
