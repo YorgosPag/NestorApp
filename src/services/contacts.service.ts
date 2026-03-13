@@ -26,6 +26,7 @@ import { mapActivePersonas } from '@/utils/contactForm/mappers/individual';
 import { generateContactId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 
 const logger = createModuleLogger('ContactsService');
 
@@ -662,16 +663,15 @@ export class ContactsService {
     }
   }
 
-  // Delete
+  // Delete — via server API for audit trail + tenant isolation
   static async deleteContact(id: string): Promise<void> {
     try {
-      await deleteDoc(doc(getCol<Contact>(CONTACTS_COLLECTION, contactConverter), id));
+      await apiClient.delete(`/api/contacts/${id}`);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      // Dispatch event for all components to remove the contact from their local state
-      RealtimeService.dispatch('CONTACT_DELETED',{
+      RealtimeService.dispatch('CONTACT_DELETED', {
         contactId: id,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     } catch (error) {
       throw new Error('Failed to delete contact');
@@ -680,11 +680,7 @@ export class ContactsService {
 
   static async deleteMultipleContacts(ids: string[]): Promise<void> {
     try {
-      for (const group of chunk(ids, MAX_BATCH)) {
-        const batch = writeBatch(db);
-        group.forEach((id) => batch.delete(doc(db, CONTACTS_COLLECTION, id)));
-        await batch.commit();
-      }
+      await Promise.all(ids.map(id => apiClient.delete(`/api/contacts/${id}`)));
     } catch (error) {
       throw new Error('Failed to delete contacts');
     }

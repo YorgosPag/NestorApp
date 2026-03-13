@@ -7,6 +7,15 @@ import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErro
 import { isRoleBypass } from '@/lib/auth/roles';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { cascadeDeleteChildren, type CascadeChild } from '@/lib/firestore/cascade-delete';
+
+// 🏢 ENTERPRISE: Building children for cascade delete
+const BUILDING_CHILDREN: readonly CascadeChild[] = [
+  { collection: COLLECTIONS.UNITS, foreignKey: 'buildingId', label: 'units' },
+  { collection: COLLECTIONS.PARKING_SPACES, foreignKey: 'buildingId', label: 'parking' },
+  { collection: COLLECTIONS.STORAGE, foreignKey: 'buildingId', label: 'storage' },
+  { collection: COLLECTIONS.FLOORS, foreignKey: 'buildingId', label: 'floors' },
+];
 
 const logger = createModuleLogger('BuildingByIdRoute');
 
@@ -59,20 +68,29 @@ export const DELETE = withStandardRateLimit(
         throw new ApiError(403, 'Unauthorized: Building belongs to different company');
       }
 
-      logger.info('Deleting building', { buildingId, companyId: ctx.companyId });
+      logger.info('Deleting building with cascade', { buildingId, companyId: ctx.companyId });
+
+      // 🏗️ CASCADE DELETE: Delete children (units, parking, storage, floors) first
+      const cascadeResult = await cascadeDeleteChildren(adminDb, buildingId, BUILDING_CHILDREN);
+      logger.info('Building cascade delete completed', { buildingId, cascadeResult });
 
       // 🏗️ DELETE: Use Admin SDK (bypasses Firestore rules)
       await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).delete();
 
       logger.info('Building deleted', { buildingId, email: ctx.email });
 
-      // 📊 Audit log
+      // 📊 Audit log with cascade summary
       await logAuditEvent(ctx, 'data_deleted', 'buildings', 'api', {
         newValue: {
           type: 'building_delete',
-          value: { buildingId, name: buildingData?.name ?? '' },
+          value: {
+            buildingId,
+            name: buildingData?.name ?? '',
+            cascadeSummary: cascadeResult.deleted,
+            totalCascaded: cascadeResult.total,
+          },
         },
-        metadata: { reason: 'Building deleted' },
+        metadata: { reason: 'Building hard deleted with cascade' },
       });
 
       return apiSuccess<BuildingDeleteResponse>(

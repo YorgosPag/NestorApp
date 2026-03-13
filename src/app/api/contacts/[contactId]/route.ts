@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { withAuth } from '@/lib/auth';
+import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+import { isRoleBypass } from '@/lib/auth/roles';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts';
 import type { Contact } from '@/types/contacts';
@@ -269,5 +271,85 @@ export async function GET(
   ));
 
   // Execute authenticated handler
+  return handler(request);
+}
+
+// =============================================================================
+// DELETE /api/contacts/[contactId]
+// =============================================================================
+
+interface ContactDeleteResponse {
+  contactId: string;
+  deleted: boolean;
+}
+
+/**
+ * 🏢 ENTERPRISE: DELETE /api/contacts/[contactId]
+ *
+ * Hard-deletes a contact using Admin SDK (bypasses Firestore rules).
+ * Includes tenant isolation and audit logging.
+ *
+ * @route DELETE /api/contacts/[contactId]
+ * @permission crm:contacts:delete
+ * @security Admin SDK + withAuth + Tenant Isolation
+ */
+export async function DELETE(
+  request: NextRequest,
+  segmentData: { params: Promise<{ contactId: string }> }
+) {
+  const { contactId } = await segmentData.params;
+
+  const handler = withStandardRateLimit(withAuth<ApiSuccessResponse<ContactDeleteResponse>>(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+      if (!contactId) {
+        throw new ApiError(400, 'Contact ID is required');
+      }
+
+      const adminDb = getAdminFirestore();
+      const contactRef = adminDb.collection(COLLECTIONS.CONTACTS).doc(contactId);
+      const contactDoc = await contactRef.get();
+
+      if (!contactDoc.exists) {
+        throw new ApiError(404, 'Contact not found');
+      }
+
+      const contactData = contactDoc.data();
+
+      // 🔒 TENANT ISOLATION: Check ownership (unless super_admin)
+      const isSuperAdmin = isRoleBypass(ctx.globalRole);
+      if (!isSuperAdmin && contactData?.companyId !== ctx.companyId) {
+        logger.warn('Unauthorized contact delete attempt', { email: ctx.email, contactId });
+        throw new ApiError(403, 'Unauthorized: Contact belongs to different company');
+      }
+
+      logger.info('Deleting contact', { contactId, companyId: ctx.companyId });
+
+      // 🗑️ HARD DELETE
+      await contactRef.delete();
+
+      logger.info('Contact deleted', { contactId, email: ctx.email });
+
+      // 📊 Audit log
+      await logAuditEvent(ctx, 'data_deleted', 'contact', 'api', {
+        newValue: {
+          type: 'contact_delete',
+          value: {
+            contactId,
+            displayName: contactData?.firstName
+              ? `${contactData.firstName} ${contactData.lastName ?? ''}`.trim()
+              : contactData?.companyName ?? '',
+          },
+        },
+        metadata: { reason: 'Contact hard deleted' },
+      });
+
+      return apiSuccess<ContactDeleteResponse>(
+        { contactId, deleted: true },
+        'Contact deleted successfully'
+      );
+    },
+    { permissions: 'crm:contacts:delete' }
+  ));
+
   return handler(request);
 }

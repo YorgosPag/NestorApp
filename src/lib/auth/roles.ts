@@ -191,6 +191,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       'crm:contacts:view',
       'crm:contacts:create',
       'crm:contacts:update',
+      'crm:contacts:delete',
       'units:units:view',
       'comm:conversations:list',
       'comm:conversations:view',

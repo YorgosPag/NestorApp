@@ -103,6 +103,7 @@ export const PERMISSIONS = {
   'crm:contacts:view': true,
   'crm:contacts:create': true,
   'crm:contacts:update': true,
+  'crm:contacts:delete': true,
   'crm:contacts:export': true,
   // CRM - Opportunities (ADR-029 Global Search v1 Phase 2)
   'crm:opportunities:view': true,
