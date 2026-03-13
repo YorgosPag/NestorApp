@@ -835,7 +835,8 @@
       "photos": "Progress and completed project photos",
       "videos": "Presentation and documentation videos",
       "measurements": "Quantity surveying and cost tracking per building",
-      "floorsManagement": "Building floor management — level number, elevation"
+      "floorsManagement": "Building floor management — level number, elevation",
+      "history": "Project change history"
     },
     "floors": {
       "title": "Building Floors",

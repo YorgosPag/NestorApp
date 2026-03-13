@@ -1,6 +1,6 @@
 # ADR-195: Entity Audit Trail — Κεντρικοποιημένο Σύστημα Ιστορικού Αλλαγών
 
-> **Status**: APPROVED — Phase 3 Contact Integration DONE (2026-03-13)
+> **Status**: APPROVED — Phase 3 Contact + Project Integration DONE (2026-03-13)
 > **Date**: 2026-03-10
 > **Author**: Claude Agent + Γιώργος Παγώνης
 > **Category**: Entity Systems
@@ -473,3 +473,4 @@ async function updateContact(contactId: string, updates: Partial<Contact>, actor
 |------|--------|--------|
 | 2026-03-10 | ADR created — documentation only | Claude Agent |
 | 2026-03-13 | **Phase 3 Contact Integration DONE**: Added "Ιστορικό" tab to individual contacts. Wired centralized `ActivityTab` via config-driven pattern (individual-config.ts section #10, custom renderer in UnifiedContactTabbedSection.tsx). i18n keys added (el/en). Zero new code — pure wire-up of existing centralized system. | Claude Agent |
+| 2026-03-13 | **Phase 3 Project Integration DONE**: Added "Ιστορικό" tab (#14) to projects. Config-driven wire-up: `project-tabs-config.ts` (order 14), `projectMappings.ts` (ActivityTab mapping), `property-statuses-enterprise.ts` (HISTORY labels). `componentProps: { entityType: 'project' }` ensures correct entity filtering. i18n description added (el/en). | Claude Agent |

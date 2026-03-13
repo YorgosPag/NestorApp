@@ -1946,7 +1946,8 @@ export const PROJECT_TAB_LABELS = {
   DOCUMENTS: 'tabs.labels.projectDocuments',
   IKA: 'tabs.labels.ika',
   PHOTOS: 'tabs.labels.photos',
-  VIDEOS: 'tabs.labels.videos'
+  VIDEOS: 'tabs.labels.videos',
+  HISTORY: 'tabs.labels.history',
 } as const;
 
 /**
@@ -1968,7 +1969,8 @@ export const PROJECT_TAB_DESCRIPTIONS = {
   DOCUMENTS: 'tabs.descriptions.projectDocuments',
   IKA: 'tabs.descriptions.ika',
   PHOTOS: 'tabs.descriptions.photos',
-  VIDEOS: 'tabs.descriptions.videos'
+  VIDEOS: 'tabs.descriptions.videos',
+  HISTORY: 'tabs.descriptions.history',
 } as const;
 
 /**
