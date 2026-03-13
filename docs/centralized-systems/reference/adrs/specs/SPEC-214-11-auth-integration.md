@@ -4,72 +4,45 @@
 |----------|-------|
 | **ADR** | ADR-214 |
 | **Phase** | 11 |
-| **Status** | PENDING |
-| **Risk** | MEDIUM |
-| **Αρχεία** | 2-3 modified |
-| **Depends On** | SPEC-214-01 + Phases 2-10 (ή αρκετές από αυτές) |
+| **Status** | ✅ SUPERSEDED |
+| **Risk** | — |
+| **Αρχεία** | 2 modified |
+| **Depends On** | Phases 1-10 (all complete) |
 
 ---
 
-## Στόχος
+## Αποτέλεσμα
 
-Integration του ήδη υπάρχοντος `AuthorizedQueryService` (`src/lib/auth/query-middleware.ts`) με τον νέο `FirestoreQueryService`.
+**SUPERSEDED** — Ο `FirestoreQueryService` (ADR-214 Phases 1-10) απορρόφησε πλήρως όλη τη λειτουργικότητα που χρειαζόταν:
 
----
+| AuthorizedQueryService Feature | FirestoreQueryService Equivalent |
+|-------------------------------|----------------------------------|
+| `readOwnedDocuments()` | `getAll()` with automatic tenant filtering |
+| `readPublicDocuments()` | `getAll()` with `tenantOverride: 'skip'` |
+| Authentication context | `requireAuthContext()` (TenantContext — companyId/tenantId/userId) |
+| Cache (5-min TTL) | Not needed — React Query / SWR handle client caching |
+| Audit logging | Deferred to Phase 12+ if needed |
+| Error types | Re-exported from `@/services/firestore` |
 
-## Τι Υπάρχει Ήδη
+### Γιατί SUPERSEDED αντί για Integration
 
-Ο `AuthorizedQueryService` (v1.0.0, 2025-12-15) παρέχει:
-- ✅ Authentication context extraction
-- ✅ Ownership-scoped queries (`readOwnedDocuments`)
-- ✅ Public document reading (`readPublicDocuments`)
-- ✅ Cache (5-min TTL)
-- ✅ Audit logging capabilities
-- ✅ Error types (`AuthorizationError`, `QueryExecutionError`)
+1. **Inferior auth model**: AuthorizedQueryService χρησιμοποιεί μόνο `uid` — δεν υποστηρίζει `companyId`/`tenantId` isolation
+2. **Read-only**: Δεν υποστηρίζει writes, subscriptions, ή batch operations
+3. **0 consumers**: Κανένα service δεν το χρησιμοποιεί σε production
+4. **Redundant**: Όλα τα 85+ αρχεία μεταφέρθηκαν στον FirestoreQueryService (Phases 2-10)
 
-**Πρόβλημα**: Κανένα service δεν το χρησιμοποιεί ακόμα (υποχρησιμοποιημένο).
+### Τι Έγινε (Phase 11)
 
----
-
-## Σχέδιο Integration
-
-```typescript
-// FirestoreQueryService θα χρησιμοποιεί AuthorizedQueryService εσωτερικά:
-
-class FirestoreQueryService {
-  private authService: AuthorizedQueryService;
-
-  async read<T>(options: QueryOptions<T>): Promise<QueryResult<T>> {
-    if (options.skipTenantFilter) {
-      // System collections → use authService.readPublicDocuments()
-      return this.authService.readPublicDocuments(collection, constraints);
-    } else {
-      // Tenant-scoped → use authService.readOwnedDocuments()
-      return this.authService.readOwnedDocuments(collection, {
-        ownerField: this.getTenantField(collection),
-        additionalConstraints: constraints
-      });
-    }
-  }
-}
-```
-
----
-
-## Benefits
-
-- **Αυτόματο auth context** — δεν χρειάζεται manual `auth.currentUser`
-- **Cache** — 5-min TTL για repeated queries
-- **Audit trail** — ποιος, πότε, τι
-- **Error handling** — enterprise-grade errors αντί για generic Firebase errors
+- `@deprecated` JSDoc στο `AuthorizedQueryService` class + `QueryServiceFactory`
+- Διαγραφή 3 dead functions: `readProjects`, `readUserContacts`, `logQueryContext`
+- Κρατήθηκαν: `AuthorizationError`, `QueryExecutionError` (re-exported), interfaces
+- ADR-214 Status → **COMPLETED**
 
 ---
 
 ## Verification Checklist
 
-- [ ] Auth context extracted correctly
-- [ ] Cache works (repeated queries faster)
-- [ ] Unauthenticated requests → proper error
-- [ ] Audit metadata available
-- [ ] All existing flows still work
-- [ ] `npx tsc --noEmit` clean
+- [x] `grep -r "readProjects\|readUserContacts\|logQueryContext" src/` → 0 hits
+- [x] `AuthorizationError` / `QueryExecutionError` → still importable via `@/services/firestore`
+- [x] `npx tsc --noEmit` → 0 new errors
+- [x] ADR-214 status → COMPLETED

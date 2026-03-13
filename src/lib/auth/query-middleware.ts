@@ -194,6 +194,12 @@ export class QueryExecutionError extends Error {
  * - Comprehensive error handling
  * - Performance monitoring
  * - Audit logging
+ *
+ * @deprecated Superseded by {@link FirestoreQueryService} (ADR-214 Phases 1-10).
+ * FirestoreQueryService provides superior tenant isolation (companyId/tenantId/userId),
+ * write support, real-time subscriptions, and batch operations.
+ * This class is retained for backward compatibility — do NOT use in new code.
+ * @see src/services/firestore/firestore-query.service.ts
  */
 export class AuthorizedQueryService {
   private readonly firestore: Firestore;
@@ -604,6 +610,9 @@ export class AuthorizedQueryService {
 
 /**
  * Factory for creating collection-specific query services
+ *
+ * @deprecated Superseded by {@link firestoreQueryService} singleton (ADR-214).
+ * Use `import { firestoreQueryService } from '@/services/firestore'` instead.
  */
 export class QueryServiceFactory {
   private static instance: AuthorizedQueryService | null = null;
@@ -622,63 +631,10 @@ export class QueryServiceFactory {
   }
 }
 
-// ============================================================================
-// CONVENIENCE FUNCTIONS FOR BACKWARD COMPATIBILITY
-// ============================================================================
+// Legacy convenience functions (readProjects, readUserContacts, logQueryContext)
+// DELETED in ADR-214 Phase 11 — 0 consumers, fully superseded by FirestoreQueryService.
 
 /**
- * Legacy function for reading projects - maintains backward compatibility
- *
- * @deprecated Use AuthorizedQueryService.readPublicDocuments instead
- * @param db - Firestore instance
- * @param constraints - Additional constraints
- * @returns Query result
+ * @deprecated Use {@link firestoreQueryService} from `@/services/firestore` instead.
  */
-export async function readProjects(
-  db: Firestore,
-  constraints: QueryConstraint[] = []
-): Promise<AuthorizedQueryResult> {
-  const service = QueryServiceFactory.getService(db);
-  return service.readPublicDocuments('projects', constraints);
-}
-
-/**
- * Legacy function for reading user contacts
- *
- * @deprecated Use AuthorizedQueryService.readOwnedDocuments instead
- * @param db - Firestore instance
- * @param constraints - Additional constraints
- * @returns Query result
- */
-export async function readUserContacts(
-  db: Firestore,
-  constraints: QueryConstraint[] = []
-): Promise<AuthorizedQueryResult> {
-  const service = QueryServiceFactory.getService(db);
-  return service.readOwnedDocuments('contacts', {
-    additionalConstraints: constraints
-  });
-}
-
-/**
- * Development utility for logging query context
- *
- * @param result - Query result
- * @param queryName - Name of query for logging
- */
-export function logQueryContext(
-  result: AuthorizedQueryResult,
-  queryName: string
-): void {
-  if (process.env.NODE_ENV === 'development') {
-    logger.info(`${queryName}:`, {
-      authContext: result.authenticationContext,
-      resultCount: result.size,
-      fromCache: result.cacheInfo.fromCache,
-      executionTime: result.executionMetadata.executionDuration
-    });
-  }
-}
-
-// Export the main service for direct use
 export default AuthorizedQueryService;

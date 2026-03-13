@@ -48,7 +48,8 @@ import type {
   IFirestoreQueryService,
 } from './firestore-query.types';
 
-// Re-export error classes from AuthorizedQueryService (no duplication)
+// Canonical error types — originally defined in query-middleware.ts, re-exported here
+// as the single import point for all consumers (ADR-214 Phase 11).
 export { AuthorizationError, QueryExecutionError } from '@/lib/auth/query-middleware';
 
 // ============================================================================
