@@ -101,7 +101,7 @@ export function TaskCard({
   };
 
   // 🏢 ENTERPRISE: Localized date formatting (ADR-208 — centralized)
-  const formatLocalizedTaskDate = (date: TaskDateValue): string => {
+  const formatLocalizedTaskDate = (date: unknown): string => {
     if (!date) return t('card.notDefined');
     const result = formatFlexibleDateTime(date, { year: 'numeric', month: '2-digit', day: '2-digit' });
     return result === '-' ? t('card.notDefined') : result;
