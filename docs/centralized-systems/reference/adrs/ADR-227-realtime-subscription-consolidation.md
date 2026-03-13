@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | 🟡 Phase 1 Implemented — Phases 2-3 Pending |
+| **Status** | 🟡 Phases 1-2 Implemented — Phase 3 Pending |
 | **Date** | 2026-03-13 |
 | **Category** | Data Access Layer / Real-Time Architecture |
 | **Related ADRs** | ADR-214 (Firestore Query Centralization) |
@@ -156,24 +156,24 @@ RealtimeService
 
 ---
 
-### Phase 2: Migrate Raw onSnapshot → Centralized (MEDIUM PRIORITY)
+### Phase 2: Migrate Raw onSnapshot → Centralized (MEDIUM PRIORITY) — ✅ 6/10 MIGRATED (2026-03-13)
 
 **Goal**: Όλα τα raw `onSnapshot()` calls μεταναστεύουν στο `firestoreQueryService.subscribe()` για automatic tenant isolation.
 
 #### Migration Candidates (by priority)
 
-| # | Hook/Service | Complexity | Reason for Priority |
-|---|-------------|-----------|-------------------|
-| 1 | `contacts.service.ts` → `subscribeToContacts()` | Medium | High-traffic, tenant isolation gap |
-| 2 | `notificationService.ts` → `subscribeToNotifications()` | Low | Simple query, easy migration |
-| 3 | `useRealtimeMessages.ts` | Medium | Already named "realtime", should use canonical |
-| 4 | `useRealtimeTriageCommunications.ts` | Medium | Stats computation, similar to useRealtimeUnits |
-| 5 | `useFloorplanFiles.ts` | Low | Simple entity filter |
-| 6 | `useLayerManagement.ts` | Low | Already using LAYERS collection |
-| 7 | `BankAccountsService.ts` | High | Subcollection — needs `firestoreQueryService` subcollection support |
-| 8 | `useVoiceCommandSubscription.ts` | Low | Single doc — needs `subscribeDoc()` method |
-| 9 | `useContactEmailWatch.ts` | Low | Single doc — needs `subscribeDoc()` method |
-| 10 | `useProjectFloorplans.ts` | Medium | Single doc + decompression |
+| # | Hook/Service | Complexity | Status |
+|---|-------------|-----------|--------|
+| 1 | `contacts.service.ts` → `subscribeToContacts()` | Medium | ✅ Migrated (2026-03-13) |
+| 2 | `notificationService.ts` → `subscribeToNotifications()` | Low | ✅ Migrated (2026-03-13) |
+| 3 | `useRealtimeMessages.ts` | Medium | ✅ Migrated (2026-03-13) |
+| 4 | `useRealtimeTriageCommunications.ts` | Medium | ✅ Migrated (2026-03-13) |
+| 5 | `useFloorplanFiles.ts` | Low | ✅ Migrated (2026-03-13) |
+| 6 | `useLayerManagement.ts` | Low | ✅ Migrated (2026-03-13) |
+| 7 | `BankAccountsService.ts` | High | ⏸️ Blocked — subcollection needs `firestoreQueryService` support |
+| 8 | `useVoiceCommandSubscription.ts` | Low | ⏸️ Blocked — single doc needs `subscribeDoc()` method |
+| 9 | `useContactEmailWatch.ts` | Low | ⏸️ Blocked — single doc needs `subscribeDoc()` method |
+| 10 | `useProjectFloorplans.ts` | Medium | ⏸️ Blocked — single doc + decompression |
 
 #### Prerequisites
 - `firestoreQueryService` may need `subscribeDoc()` method for single-document subscriptions (#8, #9, #10)
@@ -243,11 +243,11 @@ useEffect(() => {
 | `buildings` | Building list, Project detail | ✅ CANONICAL | ✅ Done | — |
 | `units` | Unit list, Building detail | ✅ CANONICAL | ✅ Done | — |
 | `layers` | ReadOnlyLayerViewer | ✅ CANONICAL | ✅ Done | — |
-| `contacts` | Contact list, CRM | 🟡 LEGACY (raw onSnapshot) | CANONICAL | Phase 2 |
-| `notifications` | Header bell, Notification panel | 🟡 LEGACY (raw onSnapshot) | CANONICAL | Phase 2 |
-| `messages` | AI Inbox, Operator Inbox | 🟡 LEGACY (raw onSnapshot) | CANONICAL | Phase 2 |
-| `communications` | Triage view | 🟡 LEGACY (raw onSnapshot) | CANONICAL | Phase 2 |
-| `files` | Document tabs, Floorplan files | 🟡 LEGACY (raw onSnapshot) | CANONICAL | Phase 2 |
+| `contacts` | Contact list, CRM | ✅ CANONICAL | ✅ Done | Phase 2 |
+| `notifications` | Header bell, Notification panel | ✅ CANONICAL | ✅ Done | Phase 2 |
+| `messages` | AI Inbox, Operator Inbox | ✅ CANONICAL | ✅ Done | Phase 2 |
+| `communications` | Triage view | ✅ CANONICAL | ✅ Done | Phase 2 |
+| `files` | Document tabs, Floorplan files | ✅ CANONICAL | ✅ Done | Phase 2 |
 | `tasks` | Tasks page, Dashboard | ✅ CANONICAL | ✅ Done | Phase 1 |
 | `opportunities` | CRM Dashboard, Pipeline | ✅ CANONICAL | ✅ Done | Phase 1 |
 | `floor_floorplans` | Floor detail | 🔴 STALE (one-time fetch) | CANONICAL | Phase 1 |
@@ -389,3 +389,4 @@ All new hooks MUST expose `status: SubscriptionStatus` for UI feedback.
 |------|--------|--------|
 | 2026-03-13 | Initial ADR creation — inventory + 3-phase plan | Claude |
 | 2026-03-13 | Phase 1 implemented — `useRealtimeTasks`, `useRealtimeOpportunities` hooks created; Tasks page, CRM Dashboard, TasksTab migrated to real-time; `useFloorFloorplans` NOT touched (complex hook, no real-time value) | Claude |
+| 2026-03-13 | Phase 2 implemented (6/10) — Migrated contacts, notifications, messages, triage, floorplanFiles, layers to canonical pattern. Remaining 4 blocked (subcollection + subscribeDoc needed) | Claude |
