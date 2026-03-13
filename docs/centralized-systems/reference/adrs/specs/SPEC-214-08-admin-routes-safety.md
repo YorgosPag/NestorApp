@@ -1,95 +1,70 @@
-# SPEC-214-08: Admin Routes Safety
+# SPEC-214-08: Admin Routes Safety — Batch Processing
 
 | Metadata | Value |
 |----------|-------|
 | **ADR** | ADR-214 |
 | **Phase** | 8 |
-| **Status** | PENDING |
+| **Status** | ✅ COMPLETED |
+| **Completed** | 2026-03-13 |
 | **Risk** | LOW |
-| **Αρχεία** | 10+ modified |
-| **Depends On** | Ανεξάρτητο (μπορεί να γίνει οποιαδήποτε στιγμή) |
+| **Αρχεία** | 11 modified (1 new + 10 routes) |
+| **Depends On** | Ανεξάρτητο (καμία dependency σε Phase 1-7) |
 
 ---
 
 ## Στόχος
 
-Προσθήκη safety mechanisms σε admin/migration routes που κάνουν **unbounded collection reads**. Αυτές οι routes μπορούν να κάνουν timeout ή memory exhaustion σε μεγάλα datasets.
+Προσθήκη safety mechanisms σε 10 admin routes που κάνουν **unbounded Firestore collection reads** — `getDocs()` / `.get()` χωρίς `limit()`. Ρίσκο: timeout / memory exhaustion σε μεγάλα datasets.
 
 ---
 
-## Πρόβλημα
+## Υλοποίηση
 
-```typescript
-// ΤΡΕΧΟΝ — ΕΠΙΚΙΝΔΥΝΟ
-const snapshot = await getDocs(query(collection(db, COLLECTIONS.UNITS)));
-// Αν υπάρχουν 50,000 units → Memory exhaustion → 500 error
-```
+### Shared Batch Utility
 
----
+Δημιουργήθηκε `src/lib/admin-batch-utils.ts` με:
+- `processClientBatch()` — Client SDK (`firebase/firestore`)
+- `processAdminBatch()` — Admin SDK (`firebase-admin/firestore`)
+- `BATCH_SIZE_READ = 500` — Read-only analysis (GET)
+- `BATCH_SIZE_WRITE = 200` — Read + writes (POST migrate/fix)
 
-## Routes προς Αλλαγή
+### Routes Αλλαγμένα
 
-| Route | Collection | Fix |
-|-------|-----------|-----|
-| `/api/admin/migrate-units` | UNITS | + limit(500) + pagination |
-| `/api/admin/migrate-dxf` | CAD_FILES | + limit(500) + pagination |
-| `/api/admin/cleanup-duplicates` | UNITS | + limit(500) + pagination |
-| `/api/admin/migrate-building-features` | BUILDINGS | + limit(500) + pagination |
-| `/api/admin/create-clean-projects` | PROJECTS, BUILDINGS, FLOORS | + limit(500) + pagination |
-| `/api/admin/fix-projects-direct` | PROJECTS | + limit(500) + pagination |
-| `/api/admin/seed-floors` | FLOORS | + limit(100) |
-| `/api/admin/seed-parking` | PARKING_SPACES | + limit(100) |
-| `/api/admin/search-backfill` | Multiple | + limit(500) + pagination |
-| `/api/units/force-update` | UNITS | + limit(500) + pagination |
+| # | Route | SDK | Fix |
+|---|-------|-----|-----|
+| 1 | `migrate-units` | Client | `processClientBatch()` GET+POST |
+| 2 | `migrate-dxf` | Client | `processClientBatch()` + **N+1 bug fix** |
+| 3 | `cleanup-duplicates` | Client | `processClientBatch()` GET+DELETE |
+| 4 | `migrate-building-features` | Client | `processClientBatch()` GET+POST |
+| 5 | `create-clean-projects` | Admin | Verification `.get()` → `.count().get()` |
+| 6 | `fix-projects-direct` | Admin | `processAdminBatch()` + verification batched |
+| 7 | `seed-floors` | Admin | `processAdminBatch()` GET+POST+DELETE |
+| 8 | `seed-parking` | Admin | `processAdminBatch()` GET+POST+DELETE+PATCH |
+| 9 | `search-backfill` | Admin | Default `limit(500)` on POST + PATCH |
+| 10 | `force-update` | Admin | `processAdminBatch()` |
 
----
+### N+1 Bug Fix (migrate-dxf)
 
-## Migration Pattern
-
-```typescript
-// ΠΡΙΝ
-const snapshot = await getDocs(query(collection(db, COLLECTIONS.UNITS)));
-const allUnits = snapshot.docs.map(d => d.data());
-
-// ΜΕΤΑ — Batch processing pattern
-const BATCH_SIZE = 500;
-let lastDoc: DocumentSnapshot | undefined;
-let processed = 0;
-
-while (true) {
-  const constraints = [limit(BATCH_SIZE)];
-  if (lastDoc) constraints.push(startAfter(lastDoc));
-
-  const snapshot = await getDocs(
-    query(collection(db, COLLECTIONS.UNITS), ...constraints)
-  );
-
-  if (snapshot.empty) break;
-
-  for (const doc of snapshot.docs) {
-    // Process document
-    processed++;
-  }
-
-  lastDoc = snapshot.docs[snapshot.docs.length - 1];
-
-  // Safety: Log progress
-  console.log(`Processed ${processed} documents...`);
-}
-```
+**Πριν**: Μέσα στο loop, για κάθε legacy file → `getDocs(collection(db, COLLECTIONS.CAD_FILES))` full scan + `.find(id)`
+**Μετά**: `getDoc(doc(db, COLLECTIONS.CAD_FILES, fileInfo.id))` — O(1) αντί O(N)
 
 ---
 
-## Σημείωση
+## Τι ΔΕΝ Αλλάζει
 
-Αυτές οι routes χρησιμοποιούν **Admin SDK** (server-side). Δεν χρησιμοποιούν tenant filtering intentionally — είναι admin operations. Η αλλαγή αφορά ΜΟΝΟ safety (limits + batching), ΟΧΙ tenant isolation.
+- Auth/permission checks (ήδη `withAuth` + super_admin)
+- Rate limiting (ήδη `withSensitiveRateLimit`)
+- Audit logging (`logDataFix()`, `logMigrationExecuted()`)
+- Business logic μετά το fetch
+- HTTP response format
 
 ---
 
 ## Verification Checklist
 
-- [ ] Κάθε route έχει `limit()` σε κάθε query
-- [ ] Pagination pattern εφαρμόστηκε σωστά
-- [ ] Progress logging added
-- [ ] Timeout handling (Vercel 60s limit)
-- [ ] `npx tsc --noEmit` clean
+- [x] Κάθε route έχει `limit()` σε κάθε query
+- [x] Pagination/batch pattern εφαρμόστηκε σωστά
+- [x] Shared utility `admin-batch-utils.ts` for DRY
+- [x] N+1 bug fix σε migrate-dxf
+- [x] Verification queries → `.count().get()` where applicable
+- [x] `npx tsc --noEmit` clean (background check)

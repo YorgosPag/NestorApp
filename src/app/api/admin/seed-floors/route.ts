@@ -38,6 +38,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateFloorId } from '@/services/enterprise-id.service';
 import { FieldValue } from 'firebase-admin/firestore';
 import { createModuleLogger } from '@/lib/telemetry';
+import { processAdminBatch, BATCH_SIZE_READ } from '@/lib/admin-batch-utils';
 
 const logger = createModuleLogger('SeedFloorsRoute');
 
@@ -192,14 +193,18 @@ async function handleSeedFloorsPreview(
   try {
     // 🏢 ENTERPRISE: Ensure Admin SDK is initialized
 
-    // Fetch existing floors (Admin SDK syntax)
+    // ADR-214 Phase 8: Batch processing for safety
     const floorsRef = getAdminFirestore().collection(COLLECTIONS.FLOORS);
-    const snapshot = await floorsRef.get();
-
-    const existingFloors = snapshot.docs.map(docSnap => ({
-      id: docSnap.id,
-      ...docSnap.data()
-    }));
+    const existingFloors: Array<Record<string, unknown>> = [];
+    await processAdminBatch(
+      floorsRef,
+      BATCH_SIZE_READ,
+      (docs) => {
+        for (const docSnap of docs) {
+          existingFloors.push({ id: docSnap.id, ...docSnap.data() });
+        }
+      },
+    );
 
     // Generate preview of new IDs
     const previewIds = FLOOR_TEMPLATES.map((template) => ({
@@ -273,18 +278,22 @@ async function handleSeedFloorsExecute(
     const floorsRef = getAdminFirestore().collection(COLLECTIONS.FLOORS);
 
     // =======================================================================
-    // STEP 1: Διαγραφή υπαρχόντων floors
+    // STEP 1: Διαγραφή υπαρχόντων floors (ADR-214 Phase 8: batched)
     // =======================================================================
     logger.info('Deleting existing floors...');
 
-    const existingSnapshot = await floorsRef.get();
     const deletedIds: string[] = [];
-
-    for (const docSnapshot of existingSnapshot.docs) {
-      await getAdminFirestore().collection(COLLECTIONS.FLOORS).doc(docSnapshot.id).delete();
-      deletedIds.push(docSnapshot.id);
-      logger.info('Deleted floor', { id: docSnapshot.id });
-    }
+    await processAdminBatch(
+      floorsRef,
+      BATCH_SIZE_READ,
+      async (docs) => {
+        for (const docSnapshot of docs) {
+          await getAdminFirestore().collection(COLLECTIONS.FLOORS).doc(docSnapshot.id).delete();
+          deletedIds.push(docSnapshot.id);
+          logger.info('Deleted floor', { id: docSnapshot.id });
+        }
+      },
+    );
 
     logger.info('Deleted floors', { count: deletedIds.length });
 
@@ -410,15 +419,20 @@ async function handleSeedFloorsDelete(
   try {
     // 🏢 ENTERPRISE: Ensure Admin SDK is initialized
 
+    // ADR-214 Phase 8: Batch processing for safety
     const floorsRef = getAdminFirestore().collection(COLLECTIONS.FLOORS);
-    const snapshot = await floorsRef.get();
 
     const deletedIds: string[] = [];
-
-    for (const docSnapshot of snapshot.docs) {
-      await getAdminFirestore().collection(COLLECTIONS.FLOORS).doc(docSnapshot.id).delete();
-      deletedIds.push(docSnapshot.id);
-    }
+    await processAdminBatch(
+      floorsRef,
+      BATCH_SIZE_READ,
+      async (docs) => {
+        for (const docSnapshot of docs) {
+          await getAdminFirestore().collection(COLLECTIONS.FLOORS).doc(docSnapshot.id).delete();
+          deletedIds.push(docSnapshot.id);
+        }
+      },
+    );
 
     const duration = Date.now() - startTime;
 

@@ -20,6 +20,7 @@ import { UNIT_SALE_STATUS } from '@/constants/property-statuses-enterprise';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { processAdminBatch, BATCH_SIZE_WRITE } from '@/lib/admin-batch-utils';
 
 const logger = createModuleLogger('UnitsForceUpdateRoute');
 
@@ -64,25 +65,32 @@ export async function POST(request: NextRequest) {
         // STEP 1: FIND SOLD UNITS THAT NEED UPDATE (Admin SDK)
         // ============================================================================
 
+        // ADR-214 Phase 8: Batch processing to prevent unbounded reads
         logger.info('[Units/ForceUpdate] Finding sold units without customers');
-        const unitsSnapshot = await getAdminFirestore().collection(COLLECTIONS.UNITS).get();
-
-        // 🏢 ENTERPRISE: Explicit type annotation to avoid implicit any[]
         const unitsToUpdate: Array<{ id: string; name: string; currentSoldTo: string }> = [];
-        unitsSnapshot.docs.forEach((doc, index) => {
-          const fields = doc.data();
-          const status = fields.status;
-          const soldTo = fields.soldTo;
-          const name = fields.name;
+        let docIndex = 0;
 
-          if (status === 'sold' && (!soldTo || soldTo === UNIT_SALE_STATUS.NOT_SOLD)) {
-            unitsToUpdate.push({
-              id: doc.id,
-              name: (name as string) || `Unit ${index + 1}`,
-              currentSoldTo: (soldTo as string) || 'null'
-            });
-          }
-        });
+        await processAdminBatch(
+          getAdminFirestore().collection(COLLECTIONS.UNITS),
+          BATCH_SIZE_WRITE,
+          (docs) => {
+            for (const docSnap of docs) {
+              const fields = docSnap.data();
+              const status = fields.status;
+              const soldTo = fields.soldTo;
+              const name = fields.name;
+
+              if (status === 'sold' && (!soldTo || soldTo === UNIT_SALE_STATUS.NOT_SOLD)) {
+                unitsToUpdate.push({
+                  id: docSnap.id,
+                  name: (name as string) || `Unit ${docIndex + 1}`,
+                  currentSoldTo: (soldTo as string) || 'null'
+                });
+              }
+              docIndex++;
+            }
+          },
+        );
 
         logger.info('[Units/ForceUpdate] Found units to update', { count: unitsToUpdate.length });
 

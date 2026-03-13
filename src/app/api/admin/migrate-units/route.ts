@@ -26,9 +26,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, getDocs, deleteDoc, doc, addDoc, query } from 'firebase/firestore';
+import { collection, deleteDoc, doc, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { processClientBatch, BATCH_SIZE_READ, BATCH_SIZE_WRITE } from '@/lib/admin-batch-utils';
 
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
@@ -162,19 +163,24 @@ async function handleMigrateUnitsPreview(request: NextRequest, ctx: AuthContext)
   try {
     logger.info('Analyzing units for migration...');
 
-    const unitsQuery = query(collection(db, COLLECTIONS.UNITS));
-    const snapshot = await getDocs(unitsQuery);
-
+    // ADR-214 Phase 8: Batch processing to prevent unbounded reads
     const units: UnitData[] = [];
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      units.push({
-        id: docSnap.id,
-        name: data.name || 'UNNAMED',
-        buildingId: data.buildingId,
-        ...data,
-      });
-    });
+    await processClientBatch(
+      collection(db, COLLECTIONS.UNITS),
+      [],
+      BATCH_SIZE_READ,
+      (docs) => {
+        for (const docSnap of docs) {
+          const data = docSnap.data();
+          units.push({
+            id: docSnap.id,
+            name: data.name || 'UNNAMED',
+            buildingId: data.buildingId,
+            ...data,
+          });
+        }
+      },
+    );
 
     // Find legacy units (buildingId starts with "building_")
     const legacyUnits = units.filter((u) => {
@@ -258,20 +264,24 @@ async function handleMigrateUnitsExecute(request: NextRequest, ctx: AuthContext)
   try {
     logger.info('Starting unit migration...');
 
-    // Step 1: Get all units
-    const unitsQuery = query(collection(db, COLLECTIONS.UNITS));
-    const snapshot = await getDocs(unitsQuery);
-
+    // Step 1: Get all units (ADR-214 Phase 8: batched)
     const units: UnitData[] = [];
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      units.push({
-        id: docSnap.id,
-        name: data.name || 'UNNAMED',
-        buildingId: data.buildingId,
-        ...data,
-      });
-    });
+    await processClientBatch(
+      collection(db, COLLECTIONS.UNITS),
+      [],
+      BATCH_SIZE_WRITE,
+      (docs) => {
+        for (const docSnap of docs) {
+          const data = docSnap.data();
+          units.push({
+            id: docSnap.id,
+            name: data.name || 'UNNAMED',
+            buildingId: data.buildingId,
+            ...data,
+          });
+        }
+      },
+    );
 
     // Step 2: Find and delete legacy units
     const legacyUnits = units.filter((u) => {

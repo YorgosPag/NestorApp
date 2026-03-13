@@ -223,12 +223,12 @@ async function handleCreateCleanProjectsExecute(request: NextRequest, ctx: AuthC
       logger.info('Successfully created project', { projectId: project.id, projectName: project.name });
     }
 
-    // Verification: Count all created documents
+    // ADR-214 Phase 8: Use .count() instead of .get() for verification (no need to fetch full docs)
     logger.info('Verifying created documents...');
-    const [projectsSnapshot, buildingsSnapshot, floorsSnapshot] = await Promise.all([
-      adminDb.collection(COLLECTIONS.PROJECTS).get(),
-      adminDb.collection(COLLECTIONS.BUILDINGS).get(),
-      adminDb.collection(COLLECTIONS.FLOORS).get()
+    const [projectsCount, buildingsCount, floorsCount] = await Promise.all([
+      adminDb.collection(COLLECTIONS.PROJECTS).count().get(),
+      adminDb.collection(COLLECTIONS.BUILDINGS).count().get(),
+      adminDb.collection(COLLECTIONS.FLOORS).count().get()
     ]);
 
     const totalExecutionTime = Date.now() - startTime;
@@ -239,9 +239,9 @@ async function handleCreateCleanProjectsExecute(request: NextRequest, ctx: AuthC
         projectsCreated: results.length,
         buildingsCreated: results.reduce((total, r) => total + r.buildingsCreated, 0),
         floorsCreated: results.reduce((total, r) => total + r.floorsCreated, 0),
-        totalProjectsInDb: projectsSnapshot.size,
-        totalBuildingsInDb: buildingsSnapshot.size,
-        totalFloorsInDb: floorsSnapshot.size
+        totalProjectsInDb: projectsCount.data().count,
+        totalBuildingsInDb: buildingsCount.data().count,
+        totalFloorsInDb: floorsCount.data().count
       },
       execution: {
         startedAt: new Date(startTime).toISOString(),

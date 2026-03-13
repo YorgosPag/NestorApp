@@ -38,6 +38,7 @@ import { generateParkingId } from '@/services/enterprise-id.service';
 import { FieldValue } from 'firebase-admin/firestore';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { processAdminBatch, BATCH_SIZE_READ } from '@/lib/admin-batch-utils';
 
 const logger = createModuleLogger('SeedParkingRoute');
 
@@ -268,15 +269,18 @@ async function handleSeedParkingPreview(
   logger.info('Seed parking preview request', { email: ctx.email, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
   try {
-    // 🏢 ENTERPRISE: Ensure Admin SDK is initialized
-    // Fetch existing parking spots (Admin SDK syntax)
+    // ADR-214 Phase 8: Batch processing for safety
     const parkingRef = getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES);
-    const snapshot = await parkingRef.get();
-
-    const existingSpots = snapshot.docs.map(docSnap => ({
-      id: docSnap.id,
-      ...docSnap.data()
-    }));
+    const existingSpots: Array<Record<string, unknown>> = [];
+    await processAdminBatch(
+      parkingRef,
+      BATCH_SIZE_READ,
+      (docs) => {
+        for (const docSnap of docs) {
+          existingSpots.push({ id: docSnap.id, ...docSnap.data() });
+        }
+      },
+    );
 
     // Generate preview of new IDs
     const previewIds = PARKING_TEMPLATES.map((template, index) => ({
@@ -344,22 +348,26 @@ async function handleSeedParkingExecute(
   logger.info('Seed parking execute request', { email: ctx.email, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
   try {
-    // 🏢 ENTERPRISE: Ensure Admin SDK is initialized
+    // ADR-214 Phase 8: Batch processing for safety
     const parkingRef = getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES);
 
     // =======================================================================
-    // STEP 1: Διαγραφή υπαρχόντων parking spots
+    // STEP 1: Διαγραφή υπαρχόντων parking spots (batched)
     // =======================================================================
     logger.info('Deleting existing parking spots...');
 
-    const existingSnapshot = await parkingRef.get();
     const deletedIds: string[] = [];
-
-    for (const docSnapshot of existingSnapshot.docs) {
-      await getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES).doc(docSnapshot.id).delete();
-      deletedIds.push(docSnapshot.id);
-      logger.info('Deleted parking spot', { id: docSnapshot.id });
-    }
+    await processAdminBatch(
+      parkingRef,
+      BATCH_SIZE_READ,
+      async (docs) => {
+        for (const docSnapshot of docs) {
+          await getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES).doc(docSnapshot.id).delete();
+          deletedIds.push(docSnapshot.id);
+          logger.info('Deleted parking spot', { id: docSnapshot.id });
+        }
+      },
+    );
 
     logger.info('Deleted parking spots', { count: deletedIds.length });
 
@@ -475,16 +483,20 @@ async function handleSeedParkingDelete(
   logger.info('Seed parking delete request', { email: ctx.email, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
   try {
-    // 🏢 ENTERPRISE: Ensure Admin SDK is initialized
+    // ADR-214 Phase 8: Batch processing for safety
     const parkingRef = getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES);
-    const snapshot = await parkingRef.get();
 
     const deletedIds: string[] = [];
-
-    for (const docSnapshot of snapshot.docs) {
-      await getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES).doc(docSnapshot.id).delete();
-      deletedIds.push(docSnapshot.id);
-    }
+    await processAdminBatch(
+      parkingRef,
+      BATCH_SIZE_READ,
+      async (docs) => {
+        for (const docSnapshot of docs) {
+          await getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES).doc(docSnapshot.id).delete();
+          deletedIds.push(docSnapshot.id);
+        }
+      },
+    );
 
     const duration = Date.now() - startTime;
 
@@ -668,13 +680,15 @@ async function handleForeignKeyValidation(
     // ========================================================================
     logger.info('PHASE 1: Validation (NO-OP)');
 
+    // ADR-214 Phase 8: Batch processing for safety
     const parkingRef = getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES);
-    const snapshot = await parkingRef.get();
-    stats.total = snapshot.size;
 
-    logger.info('Found parking spots to validate', { count: stats.total });
-
-    for (const docSnapshot of snapshot.docs) {
+    await processAdminBatch(
+      parkingRef,
+      BATCH_SIZE_READ,
+      (docs) => {
+        stats.total += docs.length;
+        for (const docSnapshot of docs) {
       const data = docSnapshot.data() as Record<string, unknown>;
       const currentBuildingId = data.buildingId as string | undefined;
       const currentProjectId = data.projectId as string | undefined;
@@ -710,7 +724,11 @@ async function handleForeignKeyValidation(
         });
         logger.info('Parking spot missing buildingId/projectId', { id: docSnapshot.id });
       }
-    }
+        }
+      },
+    );
+
+    logger.info('Found parking spots to validate', { count: stats.total });
 
     const duration = Date.now() - startTime;
 

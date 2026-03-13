@@ -25,9 +25,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, getDocs, doc, updateDoc, query } from 'firebase/firestore';
+import { collection, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { processClientBatch, BATCH_SIZE_READ, BATCH_SIZE_WRITE } from '@/lib/admin-batch-utils';
 import { isBuildingFeatureKey, type BuildingFeatureKey } from '@/types/building/features';
 
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
@@ -279,18 +280,23 @@ async function handleMigrateBuildingFeaturesPreview(request: NextRequest, ctx: A
   try {
     logger.info('Analyzing buildings for feature migration...');
 
-    const buildingsQuery = query(collection(db, COLLECTIONS.BUILDINGS));
-    const snapshot = await getDocs(buildingsQuery);
-
+    // ADR-214 Phase 8: Batch processing to prevent unbounded reads
     const buildings: BuildingDoc[] = [];
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      buildings.push({
-        id: docSnap.id,
-        name: data.name || 'UNNAMED',
-        features: data.features || [],
-      });
-    });
+    await processClientBatch(
+      collection(db, COLLECTIONS.BUILDINGS),
+      [],
+      BATCH_SIZE_READ,
+      (docs) => {
+        for (const docSnap of docs) {
+          const data = docSnap.data();
+          buildings.push({
+            id: docSnap.id,
+            name: data.name || 'UNNAMED',
+            features: data.features || [],
+          });
+        }
+      },
+    );
 
     const previews = buildings.map(analyzeBuilding);
     const needsMigration = previews.filter(p => p.needsMigration);
@@ -375,18 +381,23 @@ async function handleMigrateBuildingFeaturesExecute(request: NextRequest, ctx: A
     const { searchParams } = new URL(request.url);
     const force = searchParams.get('force') === 'true';
 
-    const buildingsQuery = query(collection(db, COLLECTIONS.BUILDINGS));
-    const snapshot = await getDocs(buildingsQuery);
-
+    // ADR-214 Phase 8: Batch processing to prevent unbounded reads
     const buildings: BuildingDoc[] = [];
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      buildings.push({
-        id: docSnap.id,
-        name: data.name || 'UNNAMED',
-        features: data.features || [],
-      });
-    });
+    await processClientBatch(
+      collection(db, COLLECTIONS.BUILDINGS),
+      [],
+      BATCH_SIZE_WRITE,
+      (docs) => {
+        for (const docSnap of docs) {
+          const data = docSnap.data();
+          buildings.push({
+            id: docSnap.id,
+            name: data.name || 'UNNAMED',
+            features: data.features || [],
+          });
+        }
+      },
+    );
 
     const previews = buildings.map(analyzeBuilding);
 

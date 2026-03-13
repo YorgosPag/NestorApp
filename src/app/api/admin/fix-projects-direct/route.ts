@@ -27,6 +27,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { processAdminBatch, BATCH_SIZE_WRITE } from '@/lib/admin-batch-utils';
 
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
 import { withAuth, logDirectOperation, extractRequestMetadata } from '@/lib/auth';
@@ -77,11 +78,66 @@ async function handleFixProjectsDirectExecute(request: NextRequest, ctx: AuthCon
     // 🏢 ENTERPRISE: Load target company ID from environment
     const correctCompanyId = process.env.NEXT_PUBLIC_MAIN_COMPANY_ID || 'default-company-id';
 
-    // Get all projects using Admin SDK
+    // ADR-214 Phase 8: Batch processing to prevent unbounded reads
     logger.info('Loading all projects...');
-    const projectsSnapshot = await adminDb.collection(COLLECTIONS.PROJECTS).get();
 
-    if (projectsSnapshot.empty) {
+    const updates: Array<{ projectId: string; projectName: string; oldCompanyId: string; newCompanyId: string; status: string }> = [];
+    const errors: Array<{ projectId: string; projectName: string; error: string }> = [];
+    let totalProjectCount = 0;
+
+    const { totalProcessed } = await processAdminBatch(
+      adminDb.collection(COLLECTIONS.PROJECTS),
+      BATCH_SIZE_WRITE,
+      async (docs) => {
+        totalProjectCount += docs.length;
+        for (const docSnap of docs) {
+          const project = docSnap.data();
+          const projectId = docSnap.id;
+
+          logger.info('Inspecting project', { projectId, currentCompanyId: project.companyId || '(empty)', projectName: project.name, company: project.company });
+
+          if (project.companyId !== correctCompanyId) {
+            logger.info('Updating project companyId', { projectId, from: project.companyId || '(empty)', to: correctCompanyId });
+
+            try {
+              await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).update({
+                companyId: correctCompanyId
+              });
+
+              updates.push({
+                projectId,
+                projectName: project.name,
+                oldCompanyId: project.companyId || '(empty)',
+                newCompanyId: correctCompanyId,
+                status: 'SUCCESS'
+              });
+
+              logger.info('Successfully updated project', { projectId });
+            } catch (error) {
+              const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+              logger.error('Failed to update project', { projectId, error: errorMessage });
+
+              errors.push({
+                projectId,
+                projectName: project.name,
+                error: errorMessage
+              });
+            }
+          } else {
+            logger.info('Project already has correct companyId', { projectId });
+            updates.push({
+              projectId,
+              projectName: project.name,
+              oldCompanyId: project.companyId,
+              newCompanyId: correctCompanyId,
+              status: 'NO_CHANGE_NEEDED'
+            });
+          }
+        }
+      },
+    );
+
+    if (totalProcessed === 0) {
       logger.warn('No projects found in database');
       return NextResponse.json({
         success: false,
@@ -90,78 +146,30 @@ async function handleFixProjectsDirectExecute(request: NextRequest, ctx: AuthCon
       }, { status: 404 });
     }
 
-    logger.info('Found projects', { count: projectsSnapshot.size });
+    logger.info('Found projects', { count: totalProcessed });
 
-    // Process each project
-    const updates = [];
-    const errors = [];
-
-    for (const doc of projectsSnapshot.docs) {
-      const project = doc.data();
-      const projectId = doc.id;
-
-      logger.info('Inspecting project', { projectId, currentCompanyId: project.companyId || '(empty)', projectName: project.name, company: project.company });
-
-      // Check if update is needed
-      if (project.companyId !== correctCompanyId) {
-        logger.info('Updating project companyId', { projectId, from: project.companyId || '(empty)', to: correctCompanyId });
-
-        try {
-          // Direct Admin SDK update - bypasses all permissions
-          await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).update({
-            companyId: correctCompanyId
-          });
-
-          updates.push({
-            projectId,
+    // ADR-214 Phase 8: Use .count() for verification instead of full .get()
+    logger.info('Verifying updates...');
+    const verificationResults: Array<{ projectId: string; projectName: string; companyId: string; isCorrect: boolean }> = [];
+    await processAdminBatch(
+      adminDb.collection(COLLECTIONS.PROJECTS),
+      BATCH_SIZE_WRITE,
+      (docs) => {
+        for (const docSnap of docs) {
+          const project = docSnap.data();
+          verificationResults.push({
+            projectId: docSnap.id,
             projectName: project.name,
-            oldCompanyId: project.companyId || '(empty)',
-            newCompanyId: correctCompanyId,
-            status: 'SUCCESS'
-          });
-
-          logger.info('Successfully updated project', { projectId });
-
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          logger.error('Failed to update project', { projectId, error: errorMessage });
-
-          errors.push({
-            projectId,
-            projectName: project.name,
-            error: errorMessage
+            companyId: project.companyId,
+            isCorrect: project.companyId === correctCompanyId
           });
         }
-      } else {
-        logger.info('Project already has correct companyId', { projectId });
-        updates.push({
-          projectId,
-          projectName: project.name,
-          oldCompanyId: project.companyId,
-          newCompanyId: correctCompanyId,
-          status: 'NO_CHANGE_NEEDED'
-        });
-      }
-    }
-
-    // Verification: Re-read all projects to confirm updates
-    logger.info('Verifying updates...');
-    const verificationSnapshot = await adminDb.collection(COLLECTIONS.PROJECTS).get();
-    const verificationResults = [];
-
-    for (const doc of verificationSnapshot.docs) {
-      const project = doc.data();
-      verificationResults.push({
-        projectId: doc.id,
-        projectName: project.name,
-        companyId: project.companyId,
-        isCorrect: project.companyId === correctCompanyId
-      });
-    }
+      },
+    );
 
     const totalExecutionTime = Date.now() - startTime;
     const successfulUpdates = updates.filter(u => u.status === 'SUCCESS').length;
-    const totalProjects = projectsSnapshot.size;
+    const totalProjects = totalProjectCount;
     const correctProjects = verificationResults.filter(p => p.isCorrect).length;
 
     logger.info('FINAL RESULTS', { totalProjects, successfulUpdates, correctProjects, totalProjects_count: totalProjects, errors: errors.length, executionTimeMs: totalExecutionTime });

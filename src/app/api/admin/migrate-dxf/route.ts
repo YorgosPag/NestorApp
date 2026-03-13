@@ -26,9 +26,10 @@ import { withAuth, logMigrationExecuted, extractRequestMetadata } from '@/lib/au
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { db, storage } from '@/lib/firebase';
-import { collection, getDocs, doc, setDoc, Timestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { processClientBatch, BATCH_SIZE_READ } from '@/lib/admin-batch-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('MigrateDxfRoute');
@@ -107,11 +108,11 @@ class DxfMigrationAPI {
   async analyzeLegacyData() {
     logger.info('Analyzing DXF data in Firestore', { collection: COLLECTIONS.CAD_FILES });
 
+    // ADR-214 Phase 8: Batch processing to prevent unbounded reads
     const cadFilesRef = collection(db, COLLECTIONS.CAD_FILES);
-    const snapshot = await getDocs(cadFilesRef);
 
     const analysis: AnalysisResult = {
-      totalDocs: snapshot.docs.length,
+      totalDocs: 0,
       legacyFiles: [],
       properFiles: [],
       problemFiles: [],
@@ -119,9 +120,13 @@ class DxfMigrationAPI {
       logs: []
     };
 
-    analysis.logs.push(`📊 Found ${snapshot.docs.length} documents in CAD_FILES collection`);
-
-    for (const docSnap of snapshot.docs) {
+    await processClientBatch(
+      cadFilesRef,
+      [],
+      BATCH_SIZE_READ,
+      (docs) => {
+        analysis.totalDocs += docs.length;
+        for (const docSnap of docs) {
       const data = docSnap.data() as LegacyDxfData;
       const docId = docSnap.id;
       const fileName = data.fileName || docId;
@@ -160,7 +165,11 @@ class DxfMigrationAPI {
       } else {
         analysis.logs.push(`      ❓ UNKNOWN: No scene or storageUrl`);
       }
-    }
+        }
+      },
+    );
+
+    analysis.logs.unshift(`📊 Found ${analysis.totalDocs} documents in CAD_FILES collection`);
 
     return analysis;
   }
@@ -194,12 +203,11 @@ class DxfMigrationAPI {
         logs.push(`🔄 Processing: ${fileInfo.fileName} (${fileInfo.sizeKB}KB)`);
 
         if (!this.dryRun) {
-          // Get the actual document
+          // ADR-214 Phase 8: Fixed N+1 bug — getDoc by ID instead of full collection scan
           const docRef = doc(db, COLLECTIONS.CAD_FILES, fileInfo.id);
-          const allDocsSnapshot = await getDocs(collection(db, COLLECTIONS.CAD_FILES));
-          const actualDoc = allDocsSnapshot.docs.find(d => d.id === fileInfo.id);
+          const actualDoc = await getDoc(docRef);
 
-          if (!actualDoc) {
+          if (!actualDoc.exists()) {
             throw new Error('Document not found');
           }
 

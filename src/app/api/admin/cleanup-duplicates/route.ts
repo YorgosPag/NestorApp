@@ -26,9 +26,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, getDocs, deleteDoc, doc, query } from 'firebase/firestore';
+import { collection, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { processClientBatch, BATCH_SIZE_READ, BATCH_SIZE_WRITE } from '@/lib/admin-batch-utils';
 
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
@@ -83,19 +84,24 @@ async function handleCleanupDuplicatesPreview(request: NextRequest, ctx: AuthCon
   try {
     logger.info('Analyzing duplicate units...');
 
-    const unitsQuery = query(collection(db, COLLECTIONS.UNITS));
-    const snapshot = await getDocs(unitsQuery);
-
+    // ADR-214 Phase 8: Batch processing to prevent unbounded reads
     const units: UnitRecord[] = [];
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      units.push({
-        id: doc.id,
-        name: data.name || 'UNNAMED',
-        buildingId: data.buildingId,
-        floorId: data.floorId,
-      });
-    });
+    await processClientBatch(
+      collection(db, COLLECTIONS.UNITS),
+      [],
+      BATCH_SIZE_READ,
+      (docs) => {
+        for (const docSnap of docs) {
+          const data = docSnap.data();
+          units.push({
+            id: docSnap.id,
+            name: data.name || 'UNNAMED',
+            buildingId: data.buildingId,
+            floorId: data.floorId,
+          });
+        }
+      },
+    );
 
     // Group by name
     const groupedByName = new Map<string, UnitRecord[]>();
@@ -191,19 +197,24 @@ async function handleCleanupDuplicatesExecute(request: NextRequest, ctx: AuthCon
   try {
     logger.info('Starting duplicate cleanup...');
 
-    const unitsQuery = query(collection(db, COLLECTIONS.UNITS));
-    const snapshot = await getDocs(unitsQuery);
-
+    // ADR-214 Phase 8: Batch processing to prevent unbounded reads
     const units: UnitRecord[] = [];
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      units.push({
-        id: doc.id,
-        name: data.name || 'UNNAMED',
-        buildingId: data.buildingId,
-        floorId: data.floorId,
-      });
-    });
+    await processClientBatch(
+      collection(db, COLLECTIONS.UNITS),
+      [],
+      BATCH_SIZE_WRITE,
+      (docs) => {
+        for (const docSnap of docs) {
+          const data = docSnap.data();
+          units.push({
+            id: docSnap.id,
+            name: data.name || 'UNNAMED',
+            buildingId: data.buildingId,
+            floorId: data.floorId,
+          });
+        }
+      },
+    );
 
     // Group by name
     const groupedByName = new Map<string, UnitRecord[]>();

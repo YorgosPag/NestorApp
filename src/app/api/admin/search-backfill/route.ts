@@ -706,9 +706,9 @@ async function backfillEntityType(
     query = query.where('companyId', '==', options.companyId);
   }
 
-  if (options.limit) {
-    query = query.limit(options.limit);
-  }
+  // ADR-214 Phase 8: Default limit(500) to prevent unbounded reads
+  const effectiveLimit = options.limit || 500;
+  query = query.limit(effectiveLimit);
 
   const snapshot = await query.get();
   logger.info('Found documents', { count: snapshot.size });
@@ -1033,12 +1033,9 @@ export const PATCH = withAuth<MigrationApiResponse>(
         noCreator: 0,
       };
 
-      // Query contacts without companyId
+      // ADR-214 Phase 8: Default limit(500) to prevent unbounded reads
       let query = adminDb.collection(COLLECTIONS.CONTACTS) as Query<DocumentData>;
-
-      if (limit) {
-        query = query.limit(limit);
-      }
+      query = query.limit(limit || 500);
 
       const snapshot = await query.get();
       stats.total = snapshot.size;
