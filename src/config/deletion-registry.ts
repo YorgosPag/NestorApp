@@ -32,6 +32,8 @@ export interface DependencyDef {
   label: string;
   /** Query strategy */
   queryType: QueryType;
+  /** Skip companyId filter — for collections without tenant isolation (e.g. accounting_invoices) */
+  skipCompanyFilter?: boolean;
 }
 
 /** Deletion strategy for an entity type */
@@ -170,7 +172,19 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
   // ─── UNIT ───────────────────────────────────────────────────────────
   unit: {
     strategy: 'BLOCK',
+    conditionalBlock: {
+      field: 'commercial.buyerContactId',
+      condition: 'not-null',
+      message: 'Η μονάδα έχει αγοραστή (κράτηση ή πώληση) και δεν μπορεί να διαγραφεί. Ακυρώστε πρώτα την κράτηση/πώληση.',
+    },
     dependencies: [
+      {
+        collection: COLLECTIONS.ACCOUNTING_INVOICES,
+        foreignKey: 'unitId',
+        label: 'Τιμολόγια',
+        queryType: 'equals',
+        skipCompanyFilter: true,
+      },
       {
         collection: COLLECTIONS.OPPORTUNITIES,
         foreignKey: 'unitIds',

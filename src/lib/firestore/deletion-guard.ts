@@ -205,9 +205,12 @@ async function checkSingleDependency(
   documentIds: string[];
 }> {
   try {
-    let query = db
-      .collection(dep.collection)
-      .where('companyId', '==', companyId);
+    let query: FirebaseFirestore.Query = db.collection(dep.collection);
+
+    // Tenant isolation — skip for collections without companyId (e.g. accounting_invoices)
+    if (!dep.skipCompanyFilter) {
+      query = query.where('companyId', '==', companyId);
+    }
 
     if (dep.queryType === 'array-contains') {
       query = query.where(dep.foreignKey, 'array-contains', entityId);
