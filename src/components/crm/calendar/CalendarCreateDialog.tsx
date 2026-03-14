@@ -51,6 +51,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 
 import { addTask } from '@/services/tasks.service';
+import { useAuth } from '@/auth/contexts/AuthContext';
 import type { CrmTask } from '@/types/crm';
 
 // ============================================================================
@@ -94,6 +95,7 @@ export function CalendarCreateDialog({
 }: CalendarCreateDialogProps) {
   const { t } = useTranslation('crm');
   const { success, error: notifyError } = useNotifications();
+  const { user } = useAuth();
   const iconSizes = useIconSizes();
   const sp = useSpacingTokens();
   const layout = useLayoutClasses();
@@ -130,7 +132,7 @@ export function CalendarCreateDialog({
         description: description.trim() || undefined,
         status: 'pending',
         priority: 'medium',
-        assignedTo: '',
+        assignedTo: user?.uid ?? '',
       });
 
       success(t('calendarPage.dialog.actions.save'));
