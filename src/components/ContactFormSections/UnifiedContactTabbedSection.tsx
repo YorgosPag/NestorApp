@@ -603,17 +603,18 @@ export function UnifiedContactTabbedSection({
             );
           },
 
-          // 🏢 ENTERPRISE: Tax Office (DOY) — κεντρικοποιημένος DoyPicker (ADR-ACC-013)
-          taxOffice: (_field: CustomRendererField, _fieldFormData: Record<string, unknown>, _fieldOnChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, _fieldOnSelectChange: (name: string, value: string) => void, fieldDisabled: boolean) => (
-            <DoyPicker
-              value={formData.taxOffice ?? ''}
-              onValueChange={(value) => {
-                handleSelectChange('taxOffice', value);
-              }}
-              disabled={fieldDisabled ?? disabled}
-            />
-          ),
         } : {}),
+
+        // 🏢 ENTERPRISE: Tax Office (DOY) — κεντρικοποιημένος DoyPicker για ΟΛΟΥΣ τους τύπους επαφών (ADR-ACC-013)
+        taxOffice: (_field: CustomRendererField, _fieldFormData: Record<string, unknown>, _fieldOnChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, _fieldOnSelectChange: (name: string, value: string) => void, fieldDisabled: boolean) => (
+          <DoyPicker
+            value={formData.taxOffice ?? ''}
+            onValueChange={(value) => {
+              handleSelectChange('taxOffice', value);
+            }}
+            disabled={fieldDisabled ?? disabled}
+          />
+        ),
 
         // 🏢 ENTERPRISE: Custom renderer for relationships tab - for ALL contact types
         // ⚠️ NOTE: Called as section-level (no args) by GenericFormTabRenderer — use `disabled` from closure
