@@ -93,6 +93,7 @@ export function CrmCalendar({
   const [currentDate, setCurrentDate] = useState(new Date());
 
   // i18n messages for react-big-calendar
+  // i18n.language as dependency ensures re-compute on language switch
   const messages = useMemo(() => ({
     today: t('calendarPage.today'),
     previous: '‹',
@@ -102,7 +103,7 @@ export function CrmCalendar({
     day: t('calendarPage.views.day'),
     agenda: t('calendarPage.views.agenda'),
     noEventsInRange: t('calendarPage.noEvents'),
-  }), [t]);
+  }), [t, i18n.language]);
 
   // Color coding via eventStyleGetter (official react-big-calendar API)
   // Uses raw design token CSS values because react-big-calendar requires CSSProperties
