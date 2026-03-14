@@ -18,7 +18,7 @@
 
 'use client';
 
-import { useState, useCallback, useMemo, type CSSProperties } from 'react';
+import { useState, useCallback, useMemo, type CSSProperties, type ComponentType } from 'react';
 import {
   Calendar as BigCalendar,
   dateFnsLocalizer,
@@ -27,12 +27,13 @@ import {
   type EventPropGetter,
   type SlotInfo,
 } from 'react-big-calendar';
-import { format, parse, startOfWeek, getDay } from 'date-fns';
+import { format, parse, startOfWeek, getDay, isBefore, startOfDay, isWeekend } from 'date-fns';
 import { el, enUS } from 'date-fns/locale';
 import { useTranslation } from 'react-i18next';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 import type { CalendarEvent } from '@/types/calendar-event';
+import type { DateCellWrapperProps } from 'react-big-calendar';
 import { CALENDAR_EVENT_COLORS } from './calendar-event-colors';
 import { CalendarEventDialog } from './CalendarEventDialog';
 import { CalendarCreateDialog } from './CalendarCreateDialog';
@@ -41,6 +42,32 @@ import { CalendarCreateDialog } from './CalendarCreateDialog';
 import { coreBorderRadius, borderWidth } from '@/styles/design-tokens';
 import { typography as typographyTokens } from '@/styles/design-tokens';
 import { spacing as spacingTokens } from '@/styles/design-tokens/core/spacing';
+
+// ============================================================================
+// DAY CELL HELPERS — weekend/past detection
+// ============================================================================
+
+const today = startOfDay(new Date());
+
+/** Adds CSS classes to day background cells for weekend/past styling */
+function dayPropGetter(date: Date) {
+  const classes: string[] = [];
+  if (isWeekend(date)) classes.push('rbc-calendar-weekend');
+  if (isBefore(date, today)) classes.push('rbc-calendar-past');
+  return { className: classes.join(' ') };
+}
+
+/** Adds CSS class to date cell numbers for past date styling */
+function DateCellWrapper({ children, value }: DateCellWrapperProps) {
+  if (isBefore(value, today)) {
+    return (
+      <div className="rbc-calendar-past-date">
+        {children}
+      </div>
+    );
+  }
+  return <>{children}</>;
+}
 
 // ============================================================================
 // LOCALIZER SETUP
@@ -175,6 +202,10 @@ export function CrmCalendar({
           onSelectSlot={handleSelectSlot}
           selectable
           eventPropGetter={eventStyleGetter}
+          dayPropGetter={dayPropGetter}
+          components={{
+            dateCellWrapper: DateCellWrapper as ComponentType,
+          }}
           messages={messages}
           culture={culture}
           views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}

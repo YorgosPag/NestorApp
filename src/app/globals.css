@@ -425,6 +425,8 @@
     color: hsl(var(--card-foreground));
     border-color: hsl(var(--border));
     background: hsl(var(--secondary));
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    cursor: pointer;
   }
 
   .rbc-wrapper .rbc-toolbar button:hover {
@@ -443,10 +445,10 @@
     color: hsl(var(--primary-foreground));
   }
 
-  /* Month view */
+  /* Month view — no extra border, the wrapper card handles it */
   .rbc-wrapper .rbc-month-view {
     background: hsl(var(--secondary));
-    border: 1px solid hsl(var(--border));
+    border: none;
     border-radius: var(--radius);
     overflow: hidden;
   }
@@ -456,31 +458,57 @@
     background: hsl(var(--muted));
     color: hsl(var(--muted-foreground));
     border-color: hsl(var(--border));
-    padding: 0.5rem;
+    padding: 0.625rem 0.5rem;
     font-weight: 600;
+    font-size: 0.8125rem;
+    text-transform: capitalize;
   }
 
   .rbc-wrapper .rbc-header + .rbc-header {
     border-left-color: hsl(var(--border));
   }
 
+  /* Weekend header columns (Sat=6th, Sun=7th — week starts Monday) */
+  .rbc-wrapper .rbc-row > .rbc-header:nth-child(6),
+  .rbc-wrapper .rbc-row > .rbc-header:nth-child(7) {
+    background: hsl(var(--primary) / 0.08);
+    color: hsl(var(--primary) / 0.7);
+  }
+
   /* Day cells — use secondary background (dark blue-grey, same as app) */
   .rbc-wrapper .rbc-day-bg {
     background: hsl(var(--secondary));
+    transition: background 0.15s ease;
   }
 
   .rbc-wrapper .rbc-day-bg + .rbc-day-bg {
     border-left-color: hsl(var(--border));
   }
 
-  /* Off-range days (previous/next month) — slightly darker/muted */
-  .rbc-wrapper .rbc-off-range-bg {
-    background: hsl(var(--muted));
+  /* Weekend day cells — subtle warm tint */
+  .rbc-wrapper .rbc-day-bg.rbc-calendar-weekend {
+    background: hsl(var(--primary) / 0.04);
   }
 
-  /* Today highlight — subtle primary tint */
+  /* Past day cells — slightly dimmed */
+  .rbc-wrapper .rbc-day-bg.rbc-calendar-past {
+    background: hsl(var(--muted) / 0.5);
+  }
+
+  /* Past + weekend */
+  .rbc-wrapper .rbc-day-bg.rbc-calendar-past.rbc-calendar-weekend {
+    background: hsl(var(--muted) / 0.6);
+  }
+
+  /* Off-range days (previous/next month) — slightly darker/muted */
+  .rbc-wrapper .rbc-off-range-bg {
+    background: hsl(var(--muted) / 0.7);
+  }
+
+  /* Today highlight — strong primary accent */
   .rbc-wrapper .rbc-today {
-    background: hsl(var(--primary) / 0.12);
+    background: hsl(var(--primary) / 0.15);
+    box-shadow: inset 0 0 0 2px hsl(var(--primary) / 0.3);
   }
 
   /* Month row borders */
@@ -498,13 +526,37 @@
     padding: 0.25rem 0.5rem;
   }
 
-  .rbc-wrapper .rbc-off-range {
+  /* Today's date number — badge-style highlight */
+  .rbc-wrapper .rbc-date-cell.rbc-now {
+    font-weight: 700;
+  }
+
+  .rbc-wrapper .rbc-date-cell.rbc-now > * {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    border-radius: 9999px;
+    padding: 0.125rem 0.5rem;
+    display: inline-block;
+  }
+
+  /* Past date numbers — muted via DateCellWrapper */
+  .rbc-wrapper .rbc-calendar-past-date {
     color: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  .rbc-wrapper .rbc-off-range {
+    color: hsl(var(--muted-foreground) / 0.35);
   }
 
   /* Events inside cells */
   .rbc-wrapper .rbc-event {
     border-radius: calc(var(--radius) - 4px);
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+  }
+
+  .rbc-wrapper .rbc-event:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   }
 
   .rbc-wrapper .rbc-event:focus {
@@ -548,8 +600,27 @@
     border-top-color: hsl(var(--border) / 0.3);
   }
 
+  /* Current time indicator — thicker, more visible */
   .rbc-wrapper .rbc-current-time-indicator {
-    background-color: hsl(var(--primary));
+    background-color: hsl(var(--status-error));
+    height: 2px;
+  }
+
+  .rbc-wrapper .rbc-current-time-indicator::before {
+    content: '';
+    position: absolute;
+    left: -5px;
+    top: -4px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: hsl(var(--status-error));
+  }
+
+  /* Current time label in gutter */
+  .rbc-wrapper .rbc-time-gutter .rbc-timeslot-group.rbc-calendar-current-hour .rbc-time-slot .rbc-label {
+    color: hsl(var(--status-error));
+    font-weight: 700;
   }
 
   /* Agenda view */

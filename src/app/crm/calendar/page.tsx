@@ -176,17 +176,13 @@ export default function CrmCalendarPage() {
 
         {/* Calendar */}
         <section className="flex-1 overflow-auto p-4">
-          <article className={cn(colors.bg.primary, borders.quick.card, 'shadow p-4')}>
-            {loading ? (
-              <Skeleton className={cn('h-[600px] w-full', borders.radiusClass.lg)} />
-            ) : (
-              <CrmCalendar
-                events={events}
-                loading={loading}
-                onRangeChange={handleRangeChange}
-                onEventCreated={handleEventCreated}
-              />
-            )}
+          <article className={cn(colors.bg.primary, borders.radiusClass.lg, 'p-4')}>
+            <CrmCalendar
+              events={events}
+              loading={loading}
+              onRangeChange={handleRangeChange}
+              onEventCreated={handleEventCreated}
+            />
           </article>
         </section>
       </PageContainer>
