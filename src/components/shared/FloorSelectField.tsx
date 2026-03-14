@@ -102,8 +102,9 @@ export function FloorSelectField({
       where('buildingId', '==', buildingId),
     ];
 
-    // Add companyId filter if available (tenant isolation)
-    if (user.companyId) {
+    // 🏢 ADR-232: Skip companyId filter for super admin (entities may have null companyId)
+    const isSuperAdmin = user.globalRole === 'super_admin';
+    if (!isSuperAdmin && user.companyId) {
       constraints.push(where('companyId', '==', user.companyId));
     }
 
