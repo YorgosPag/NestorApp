@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | 🟡 Tiers 0-3 Implemented — Tier 4 Pending |
+| **Status** | ✅ All Tiers Implemented (100% Coverage) |
 | **Date** | 2026-03-14 |
 | **Category** | Data Access Layer / Real-Time Architecture |
 | **Related ADRs** | ADR-227 (Real-Time Subscription Consolidation), ADR-214 (Firestore Query Centralization) |
@@ -117,7 +117,7 @@
 | **TASK** | 3 (C/U/D) | 4 (`tasks.service.ts`) | 3 (`useRealtimeTasks.ts`) | **100%** ✅ | ADR-227 Phase 3 |
 | **OPPORTUNITY** | 3 (C/U/D) | 3 (`opportunities-client.service.ts`) | 3 (`useRealtimeOpportunities.ts`) | **100%** ✅ | ADR-227 Phase 3 |
 | **PARKING** | 3 (C/U/D) | 8 (`AddParkingDialog`, `ParkingGeneralTab`, `ParkingTabContent`, `page.tsx`) | 3 (`useFirestoreParkingSpots.ts`) | **100%** ✅ | |
-| **STORAGE** | 3 (C/U/D) | 1 (`StorageGeneralTab.tsx` — UPDATED μόνο) | 3 (`useFirestoreStorages.ts`) | **33%** ⚠️ | CREATED/DELETED dispatch missing |
+| **STORAGE** | 3 (C/U/D) | 3 (`AddStorageDialog.tsx`, `StorageGeneralTab.tsx`, `page.tsx`) | 3 (`useFirestoreStorages.ts`) | **100%** ✅ | Already fixed |
 | **UNIT** | 3 (C/U/D) | 3 (`units.service.ts`) | 3 (`useRealtimeUnits.ts`) | **100%** ✅ | SPEC-228-01 |
 | **FILE** | 5 (C/U/D/Trashed/Restored) | 9 (`file-record.service.ts`) | 4 (`useEntityFiles.ts`) | **100%** ✅ | SPEC-228-02 |
 | **FLOORPLAN** | 3 (C/U/D) | 9 (`UnitFloorplanService`, `FloorplanService`, `FloorFloorplanService`, `BuildingFloorplanService`) | 6 (`useUnitFloorplans`, `useBuildingFloorplans`, `useFloorFloorplans`) | **100%** ✅ | SPEC-228-02 |
@@ -126,18 +126,19 @@
 | **RELATIONSHIP** | 3 (C/U/D) | 3 (`FirestoreRelationshipAdapter.ts`) | 3 (`RelationshipProvider.tsx`) | **100%** ✅ | SPEC-228-03 |
 | **WORKSPACE** | 3 (C/U/D) | 5 (`workspace.service.ts`, `navigation-companies.service.ts`, `EnterpriseCompanySettingsService.ts`) | 2 (`WorkspaceContext.tsx`) | **100%** ✅ | SPEC-228-02 |
 | **SESSION** | 2 (C/D) | 2 (`EnterpriseSessionService.ts`) | 1 (`AuthContext.tsx`) | **100%** ✅ | SPEC-228-01 |
-| **USER_SETTINGS** | 1 (U) | 4 (`UserNotificationSettingsService.ts`, `EnterpriseUserPreferencesService.ts`) | 0 | **0%** ❌ | |
-| **ASSOC_LINKS** | 3 (C_LINK_C/C_LINK_R/F_LINK_C) | 3 (`association.service.ts`) | 0 | **0%** ❌ | |
+| **USER_SETTINGS** | 1 (U) | 4 (`UserNotificationSettingsService.ts`, `EnterpriseUserPreferencesService.ts`) | 1 (`AuthContext.tsx`) | **100%** ✅ | SPEC-228-04 |
+| **ASSOC_LINKS** | 3 (C_LINK_C/C_LINK_R/F_LINK_C) | 3 (`association.service.ts`) | 5 (`useEntityAssociations.ts` 4x, `useEntityFiles.ts` 1x) | **100%** ✅ | SPEC-228-04 |
 | **ENTITY_LINKS** | 2 (LINKED/UNLINKED) | 2 (`EntityLinkingService.ts`) | 2 (`NavigationContext.tsx`) | **100%** ✅ | SPEC-228-01 |
 
 ### 4.2 Σύνοψη Coverage
 
 ```
-Fully Covered (100%):  15 groups  — PROJECT, BUILDING, CONTACT, TASK, OPPORTUNITY, PARKING,
+Fully Covered (100%):  18 groups  — PROJECT, BUILDING, CONTACT, TASK, OPPORTUNITY, PARKING,
                                     UNIT, SESSION, ENTITY_LINKS, FILE, FLOORPLAN, WORKSPACE,
-                                    COMMUNICATION, OBLIGATION, RELATIONSHIP
-Partially Covered:      1 group   — STORAGE (33%)
-Zero Coverage:          2 groups  — USER_SETTINGS, ASSOC_LINKS
+                                    COMMUNICATION, OBLIGATION, RELATIONSHIP, STORAGE,
+                                    USER_SETTINGS, ASSOC_LINKS
+Partially Covered:      0 groups
+Zero Coverage:          0 groups
 ```
 
 ---
@@ -271,3 +272,4 @@ RealtimeService.dispatch('TASK_CREATED', {
 | 2026-03-14 | SPEC-228-01 implemented — UNIT/SESSION/ENTITY_LINKS subscribers wired, coverage 50%→67% | Claude |
 | 2026-03-14 | SPEC-228-02 implemented — FILE/FLOORPLAN/WORKSPACE subscribers wired (5 files), coverage 67%→83% | Claude |
 | 2026-03-14 | SPEC-228-03 implemented — COMMUNICATION/RELATIONSHIP/OBLIGATION subscribers wired (3 files), coverage 83%→94% | Claude |
+| 2026-03-14 | SPEC-228-04 implemented — USER_SETTINGS/ASSOC_LINKS subscribers wired (3 files), STORAGE already fixed, coverage 94%→100% ✅ | Claude |

@@ -5,190 +5,113 @@
 | **ADR** | ADR-228 |
 | **Phase** | Tier 4 — Low Priority (Enhancements & Cleanup) |
 | **Priority** | LOW |
+| **Status** | ✅ IMPLEMENTED |
+| **Implemented** | 2026-03-14 |
 | **Estimated Effort** | 1 session |
 | **Prerequisite** | SPEC-228-00 (Tier 0) |
 | **Files Created** | 0 |
-| **Files Modified** | 4-6 |
+| **Files Modified** | 3 |
 
 ---
 
 ## 1. Objective
 
-Fix anomalies, cleanup dead code, wire remaining low-priority subscribers:
-- **STORAGE dispatch gap** — fix missing CREATED/DELETED dispatchers
-- **USER_SETTINGS_*** → cross-tab preference sync
+Wire remaining low-priority subscribers and close coverage gaps:
+- **STORAGE dispatch gap** — Already implemented (no changes needed)
+- **USER_SETTINGS_*** → cross-tab preference sync via cache invalidation
 - **ASSOC_LINKS** → contact/file link change subscribers
-- **Dead code cleanup** — NOTIFICATION_*, NAVIGATION_REFRESH
+- **Dead code cleanup** — NAVIGATION_REFRESH kept (active), NOTIFICATION_* types kept (no cost)
 
 ---
 
-## 2. Task A: Fix STORAGE Dispatch Gap (ANOMALY)
+## 2. Task A: STORAGE Dispatch Gap — ✅ Already Implemented
 
-### Problem
-- `useFirestoreStorages.ts` subscribes σε `STORAGE_CREATED`, `STORAGE_UPDATED`, `STORAGE_DELETED`
-- **Μόνο `STORAGE_UPDATED`** dispatch-άρεται (από `StorageGeneralTab.tsx:190`)
-- `STORAGE_CREATED` και `STORAGE_DELETED`: **0 dispatch calls** → subscribers are dead code
-
-### Fix
-Ψάξε τα σημεία δημιουργίας/διαγραφής storage spaces και πρόσθεσε dispatch calls.
-
-**Πιθανά σημεία:**
-- Storage creation dialog/form — πρόσθεσε:
-```typescript
-RealtimeService.dispatch('STORAGE_CREATED', {
-  storageId: newStorageId,
-  storage: { name: storageName, buildingId, type: storageType },
-  timestamp: Date.now(),
-});
-```
-
-- Storage deletion handler — πρόσθεσε:
-```typescript
-RealtimeService.dispatch('STORAGE_DELETED', {
-  storageId: deletedId,
-  timestamp: Date.now(),
-});
-```
-
-### Research
-`Grep` for storage creation/deletion logic to find exact files.
-
-### Payload Types (already defined)
-```typescript
-StorageCreatedPayload { storageId, storage: { name?, buildingId?, type? }, timestamp }
-StorageDeletedPayload { storageId, timestamp }
-```
+### Research Findings
+- `AddStorageDialog.tsx:118` already dispatches `STORAGE_CREATED`
+- `page.tsx:88` (storage management) already dispatches `STORAGE_DELETED`
+- **No changes needed** — gap was already fixed in prior work
 
 ---
 
-## 3. Task B: USER_SETTINGS Event Subscribers
+## 3. Task B: USER_SETTINGS Event Subscriber — ✅ Implemented
 
-### Context
-- **Dispatchers (4 sites)**:
-  - `UserNotificationSettingsService.ts` — 2x USER_SETTINGS_UPDATED
-  - `EnterpriseUserPreferencesService.ts` — 2x USER_SETTINGS_UPDATED
-- **Use Case**: Cross-tab preference sync — αν αλλάξεις theme/language σε ένα tab, ενημερώνεται και το άλλο
+### Implementation
+- **File**: `src/auth/contexts/AuthContext.tsx`
+- **Strategy**: Subscribe to `USER_SETTINGS_UPDATED` in AuthContext (global scope, guaranteed activation, always has userId)
+- **Action**: Cache invalidation via `userPreferencesService.clearCacheForUser(userId)` — next read fetches fresh data
 
-### Target
-Ψάξε hook/component που κρατάει user settings state (π.χ. `useUserPreferences`, theme context).
-
-### Implementation Pattern
 ```typescript
 useEffect(() => {
+  if (!user) return;
   const handleSettingsUpdated = (payload: UserSettingsUpdatedPayload) => {
-    // Only react to own settings changes
-    if (payload.userId === currentUserId) {
-      refetchSettings();
+    if (payload.userId === user.uid) {
+      userPreferencesService.clearCacheForUser(user.uid);
     }
   };
-
   const unsub = RealtimeService.subscribe('USER_SETTINGS_UPDATED', handleSettingsUpdated);
   return () => unsub();
-}, [currentUserId, refetchSettings]);
-```
-
-### Payload Type (already defined)
-```typescript
-UserSettingsUpdatedPayload { userId, updates: { settingKey?, value? }, timestamp }
+}, [user]);
 ```
 
 ---
 
-## 4. Task C: ASSOC_LINKS Subscribers
+## 4. Task C: ASSOC_LINKS Subscribers — ✅ Implemented
 
-### Context
-- **Dispatchers**: `association.service.ts` dispatches:
-  - `CONTACT_LINK_CREATED` (:140)
-  - `FILE_LINK_CREATED` (:315)
-  - `CONTACT_LINK_REMOVED` (:471)
-- **Note**: `CONTACT_LINK_DELETED` και `FILE_LINK_DELETED` are defined in types but NOT dispatched
+### Contact Link Subscribers
+- **File**: `src/hooks/useEntityAssociations.ts`
+- **Two hooks wired**:
+  - `useEntityContactLinks` — subscribes to `CONTACT_LINK_CREATED` (filtered by entityType+entityId) + `CONTACT_LINK_REMOVED` (full refresh)
+  - `useContactEntityLinks` — subscribes to `CONTACT_LINK_CREATED` (filtered by sourceContactId) + `CONTACT_LINK_REMOVED` (full refresh)
 
-### Target
-Ψάξε components που δείχνουν linked contacts/files σε entity pages.
-
-### Implementation Pattern
-```typescript
-useEffect(() => {
-  const handleContactLinked = (_payload: ContactLinkCreatedPayload) => {
-    refetchLinkedContacts();
-  };
-
-  const handleContactUnlinked = (_payload: ContactLinkRemovedPayload) => {
-    refetchLinkedContacts();
-  };
-
-  const handleFileLinked = (_payload: FileLinkCreatedPayload) => {
-    refetchLinkedFiles();
-  };
-
-  const unsubCL = RealtimeService.subscribe('CONTACT_LINK_CREATED', handleContactLinked);
-  const unsubCR = RealtimeService.subscribe('CONTACT_LINK_REMOVED', handleContactUnlinked);
-  const unsubFL = RealtimeService.subscribe('FILE_LINK_CREATED', handleFileLinked);
-
-  return () => { unsubCL(); unsubCR(); unsubFL(); };
-}, [refetchLinkedContacts, refetchLinkedFiles]);
-```
+### File Link Subscriber
+- **File**: `src/components/shared/files/hooks/useEntityFiles.ts`
+- Extended existing ADR-228 Tier 2 useEffect with `FILE_LINK_CREATED` handler
+- Filtered by `targetEntityType` + `targetEntityId`
 
 ---
 
-## 5. Task D: Dead Code Cleanup
+## 5. Task D: Dead Code Assessment — No Changes
 
-### NOTIFICATION_* Events
-- Types ορισμένα στο `RealtimeEventMap`: NOTIFICATION_CREATED, NOTIFICATION_UPDATED, NOTIFICATION_DELETED
-- **0 dispatch calls, 0 subscribe calls**
-- Notifications ήδη δουλεύουν μέσω `firestoreQueryService.subscribe()` (ADR-227 Phase 2)
+### NAVIGATION_REFRESH
+- Research found **3 dispatch sites** and **4 active subscribers** — NOT dead code
+- **Decision**: Keep as-is
 
-**Decision**: Κρατήσου τους types (δεν κοστίζουν τίποτα) — μπορεί να χρειαστούν αν θέλουμε optimistic updates μελλοντικά.
-
-### NAVIGATION_REFRESH Event
-- Type ορισμένο στο `RealtimeEventMap`
-- **0 dispatch calls, 0 subscribe calls**
-- Πιθανώς legacy remnant
-
-**Decision**: Αφαίρεσε αν δεν χρησιμοποιείται πουθενά. Κάνε `Grep` για safety.
+### NOTIFICATION_*
+- Types defined but 0 dispatches / 0 subscribers
+- Notifications work via `firestoreQueryService.subscribe()` (ADR-227 Phase 2)
+- **Decision**: Keep types (zero cost, may be needed for optimistic updates)
 
 ---
 
-## 6. Research Required Before Implementation
+## 6. Verification Checklist
 
-1. **STORAGE creation/deletion**: `Grep` for storage create/delete handlers
-2. **USER_SETTINGS target**: `Grep` for user preferences hook/context
-3. **ASSOC_LINKS target**: `Grep` for linked contacts/files display components
-4. **NAVIGATION_REFRESH usage**: `Grep` to confirm zero references before removal
-
----
-
-## 7. Verification Checklist
-
-- [ ] STORAGE_CREATED dispatch added to storage creation point
-- [ ] STORAGE_DELETED dispatch added to storage deletion point
-- [ ] USER_SETTINGS_UPDATED subscriber wired in user preferences hook
-- [ ] CONTACT_LINK_CREATED/REMOVED subscribers wired
-- [ ] FILE_LINK_CREATED subscriber wired
-- [ ] NAVIGATION_REFRESH cleaned up (if confirmed unused)
-- [ ] TypeScript compiles without errors
+- [x] STORAGE_CREATED/DELETED — already dispatched (no changes needed)
+- [x] USER_SETTINGS_UPDATED subscriber wired in AuthContext
+- [x] CONTACT_LINK_CREATED/REMOVED subscribers wired in useEntityAssociations
+- [x] FILE_LINK_CREATED subscriber wired in useEntityFiles
+- [x] NAVIGATION_REFRESH — kept (active, not dead code)
+- [x] NOTIFICATION_* — types kept (no cost)
+- [x] TypeScript compiles without errors
 
 ---
 
-## 8. Files Touched
+## 7. Files Touched
 
 | File | Action |
 |------|--------|
-| Storage creation component (TBD) | ADD STORAGE_CREATED dispatch |
-| Storage deletion handler (TBD) | ADD STORAGE_DELETED dispatch |
-| User preferences hook (TBD) | ADD USER_SETTINGS_UPDATED subscriber |
-| Entity linked contacts/files component (TBD) | ADD ASSOC_LINKS subscribers |
-| `src/services/realtime/types.ts` | REMOVE NAVIGATION_REFRESH (if unused) |
+| `src/auth/contexts/AuthContext.tsx` | ADD USER_SETTINGS_UPDATED subscriber + imports |
+| `src/hooks/useEntityAssociations.ts` | ADD CONTACT_LINK_CREATED/REMOVED subscribers (2 hooks) + imports |
+| `src/components/shared/files/hooks/useEntityFiles.ts` | EXTEND existing useEffect with FILE_LINK_CREATED + import |
 
 ---
 
-## 9. Coverage Impact
+## 8. Coverage Impact
 
 | Entity Group | Before | After |
 |-------------|--------|-------|
-| STORAGE | 33% ⚠️ | 100% ✅ |
+| STORAGE | 33% ⚠️ | 100% ✅ (already fixed) |
 | USER_SETTINGS | 0% ❌ | 100% ✅ |
 | ASSOC_LINKS | 0% ❌ | 100% ✅ |
-| NOTIFICATION | 0% (types only) | — (no action) |
-| NAVIGATION_REFRESH | Dead code | Removed |
+| NOTIFICATION | 0% (types only) | — (no action, kept) |
+| NAVIGATION_REFRESH | Active (not dead) | — (no action) |
 | **Total Coverage** | 94% (after Tier 3) | **100%** ✅ |

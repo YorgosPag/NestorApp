@@ -17,6 +17,8 @@ import { AssociationService } from '@/services/association.service';
 import { ContactsService } from '@/services/contacts.service';
 import { ContactNameResolver } from '@/services/contacts/ContactNameResolver';
 import { useAuth } from '@/auth/hooks/useAuth';
+import { RealtimeService } from '@/services/realtime';
+import type { ContactLinkCreatedPayload, ContactLinkDeletedPayload } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { EntityType } from '@/config/domain-constants';
 import type { ContactLink } from '@/types/associations';
@@ -137,6 +139,26 @@ export function useEntityContactLinks(
     fetchLinks();
     return () => { cancelled = true; };
   }, [entityType, entityId, parentProjectId, user, refreshKey]);
+
+  // 🏢 ENTERPRISE: Event bus subscribers for cross-tab contact link sync (ADR-228 Tier 4)
+  useEffect(() => {
+    if (!entityId) return;
+
+    const handleLinkCreated = (payload: ContactLinkCreatedPayload) => {
+      if (payload.link.targetEntityType === entityType && payload.link.targetEntityId === entityId) {
+        refresh();
+      }
+    };
+
+    const handleLinkRemoved = (_payload: ContactLinkDeletedPayload) => {
+      refresh();
+    };
+
+    const unsub1 = RealtimeService.subscribe('CONTACT_LINK_CREATED', handleLinkCreated);
+    const unsub2 = RealtimeService.subscribe('CONTACT_LINK_REMOVED', handleLinkRemoved);
+
+    return () => { unsub1(); unsub2(); };
+  }, [entityType, entityId, refresh]);
 
   // Add a new contact link
   const addLink = useCallback(async (contactId: string, role: string): Promise<boolean> => {
@@ -279,6 +301,26 @@ export function useContactEntityLinks(
     fetchLinks();
     return () => { cancelled = true; };
   }, [contactId, user, refreshKey]);
+
+  // 🏢 ENTERPRISE: Event bus subscribers for cross-tab contact link sync (ADR-228 Tier 4)
+  useEffect(() => {
+    if (!contactId) return;
+
+    const handleLinkCreated = (payload: ContactLinkCreatedPayload) => {
+      if (payload.link.sourceContactId === contactId) {
+        refresh();
+      }
+    };
+
+    const handleLinkRemoved = (_payload: ContactLinkDeletedPayload) => {
+      refresh();
+    };
+
+    const unsub1 = RealtimeService.subscribe('CONTACT_LINK_CREATED', handleLinkCreated);
+    const unsub2 = RealtimeService.subscribe('CONTACT_LINK_REMOVED', handleLinkRemoved);
+
+    return () => { unsub1(); unsub2(); };
+  }, [contactId, refresh]);
 
   return { grouped, isLoading, error, refresh };
 }

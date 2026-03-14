@@ -26,7 +26,7 @@ import type { FileRecord } from '@/types/file-record';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime';
-import type { FileCreatedPayload, FileUpdatedPayload, FileTrashedPayload, FileRestoredPayload } from '@/services/realtime';
+import type { FileCreatedPayload, FileUpdatedPayload, FileTrashedPayload, FileRestoredPayload, FileLinkCreatedPayload } from '@/services/realtime';
 
 // ============================================================================
 // MODULE LOGGER
@@ -362,12 +362,20 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
       fetchFiles();
     };
 
+    const handleFileLinked = (payload: FileLinkCreatedPayload) => {
+      if (payload.link.targetEntityType === entityType && payload.link.targetEntityId === entityId) {
+        logger.info('File linked to current entity — refetching', { linkId: payload.linkId });
+        fetchFiles();
+      }
+    };
+
     const unsub1 = RealtimeService.subscribe('FILE_CREATED', handleCreated);
     const unsub2 = RealtimeService.subscribe('FILE_UPDATED', handleUpdated);
     const unsub3 = RealtimeService.subscribe('FILE_TRASHED', handleTrashed);
     const unsub4 = RealtimeService.subscribe('FILE_RESTORED', handleRestored);
+    const unsub5 = RealtimeService.subscribe('FILE_LINK_CREATED', handleFileLinked);
 
-    return () => { unsub1(); unsub2(); unsub3(); unsub4(); };
+    return () => { unsub1(); unsub2(); unsub3(); unsub4(); unsub5(); };
   }, [entityId, entityType, fetchFiles]);
 
   // =========================================================================

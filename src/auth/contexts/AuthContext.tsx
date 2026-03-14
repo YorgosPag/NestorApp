@@ -45,6 +45,9 @@ import type {
   UserProfileDocument
 } from '../types/auth.types';
 
+import { RealtimeService } from '@/services/realtime';
+import type { UserSettingsUpdatedPayload } from '@/services/realtime';
+import { userPreferencesService } from '@/services/user/EnterpriseUserPreferencesService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { safeGetItem, safeSetItem, safeRemoveItem, STORAGE_KEYS } from '@/lib/storage';
 const logger = createModuleLogger('AuthContext');
@@ -622,6 +625,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
       window.removeEventListener(AUTH_EVENTS.REFRESH_SESSION, handleRefreshSession);
     };
   }, []);
+
+  // 🏢 ENTERPRISE: Event bus subscriber for cross-tab user settings sync (ADR-228 Tier 4)
+  useEffect(() => {
+    if (!user) return;
+
+    const handleSettingsUpdated = (payload: UserSettingsUpdatedPayload) => {
+      if (payload.userId === user.uid) {
+        userPreferencesService.clearCacheForUser(user.uid);
+      }
+    };
+
+    const unsub = RealtimeService.subscribe('USER_SETTINGS_UPDATED', handleSettingsUpdated);
+    return () => unsub();
+  }, [user]);
 
   // ==========================================================================
   // ERROR HANDLING
