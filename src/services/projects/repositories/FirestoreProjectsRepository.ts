@@ -148,8 +148,10 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
       }
 
       // 🏢 ENTERPRISE: Prepare update data with serverTimestamp
+      // 🔒 ADR-232: companyId is IMMUTABLE (tenant key) — strip from updates
+      const { companyId: _immutable, ...safeUpdates } = updates;
       const updateData: Record<string, unknown> = {
-        ...updates,
+        ...safeUpdates,
         updatedAt: FieldValue.serverTimestamp()
       };
 

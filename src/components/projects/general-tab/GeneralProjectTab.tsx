@@ -208,13 +208,12 @@ export function GeneralProjectTab({
         // 🏢 ENTERPRISE: Standard update flow (PATCH)
         logger.info('Updating project...', { data: projectData });
 
+        // 🔒 ADR-232: companyId is IMMUTABLE (tenant key) — NEVER send in update payload
         const updatePayload: Parameters<typeof updateProject>[1] = {
           name: projectData.name,
           title: projectData.licenseTitle,
           status: projectData.status,
           description: projectData.description,
-          companyId: projectData.companyId || undefined,
-          company: projectData.companyName || undefined,
           client: projectData.client || undefined,
           location: projectData.location || undefined,
           type: projectData.type || undefined,
