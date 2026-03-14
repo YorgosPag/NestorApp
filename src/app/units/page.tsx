@@ -25,7 +25,7 @@ import { ListContainer, PageContainer } from '@/core/containers';
 import { UnitsSidebar } from '@/components/units/UnitsSidebar';
 import { PropertyGridViewCompatible as PropertyGridView } from '@/components/property-viewer/PropertyGrid';
 // 🏢 ENTERPRISE: Import from canonical location
-import { StaticPageLoading } from '@/core/states';
+import { PageLoadingState, StaticPageLoading } from '@/core/states';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -72,6 +72,7 @@ function UnitsPageContent() {
 
   const {
     properties,
+    loading,
     setProperties,
     selectedPropertyIds,
     hoveredPropertyId,
@@ -125,6 +126,15 @@ function UnitsPageContent() {
     handleDelete,
     forceDataRefresh,
   } = useUnitsViewerState();
+
+  // ADR-229 Phase 2: Data-level loading guard
+  if (loading) {
+    return (
+      <PageContainer ariaLabel={t('page.pageLabel')}>
+        <PageLoadingState icon={Building2} message={t('page.loading', { defaultValue: 'Φόρτωση μονάδων...' })} layout="contained" />
+      </PageContainer>
+    );
+  }
 
   // 🏢 ENTERPRISE: Inline new unit creation state (replaces AddUnitDialog modal)
   const [isCreatingNewUnit, setIsCreatingNewUnit] = useState(false);

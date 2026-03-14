@@ -63,6 +63,7 @@ export function useUnitsViewerState() {
     filters,
     setFilters,
     filteredProperties,
+    isLoading,
     forceDataRefresh,
   } = usePropertyViewer();
 
@@ -291,6 +292,7 @@ export function useUnitsViewerState() {
 
   return {
     properties: safeProperties,
+    loading: isLoading,
     setProperties: setProperties || noop,
     selectedPropertyIds: Array.isArray(selectedPropertyIds) ? selectedPropertyIds : [],
     hoveredPropertyId: hoveredPropertyId || null,
