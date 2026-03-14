@@ -13,8 +13,8 @@ import { collection, addDoc, deleteDoc, doc, Timestamp } from 'firebase/firestor
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PageLoadingState } from '@/core/states';
 import { createModuleLogger } from '@/lib/telemetry';
-import { getSpacingClass } from '@/lib/design-system';
 import { PageHeader } from '@/core/headers';
+import { PageContainer } from '@/core/containers';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 
@@ -34,8 +34,6 @@ export default function CrmNotificationsPage() {
     unreadCount,
     markAllAsRead,
   } = useNotifications();
-
-  const contentPadding = getSpacingClass('p', 'lg');
 
   // 🧪 Create test notification (for development testing)
   const createTestNotification = useCallback(async () => {
@@ -143,7 +141,7 @@ export default function CrmNotificationsPage() {
   }
 
   return (
-    <section className={contentPadding}>
+    <PageContainer ariaLabel={t('notifications.title')}>
       {/* 🏢 ENTERPRISE: PageHeader with breadcrumb, icon, title, dashboard toggle */}
       <PageHeader
         variant="sticky-rounded"
@@ -171,7 +169,7 @@ export default function CrmNotificationsPage() {
       )}
 
       {/* Notification content */}
-      <div className={getSpacingClass('pt', 'md')}>
+      <div>
         {/* ADR-229 Phase 2: Centralized loading state */}
         {loading && (
           <PageLoadingState icon={Bell} message={t('notifications.loading')} layout="contained" />
@@ -203,6 +201,6 @@ export default function CrmNotificationsPage() {
           </div>
         )}
       </div>
-    </section>
+    </PageContainer>
   );
 }

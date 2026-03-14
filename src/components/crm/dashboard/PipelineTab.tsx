@@ -50,11 +50,11 @@ export function PipelineTab() {
   const [viewMode, setViewMode] = useState<'pipeline' | 'list'>('pipeline');
 
   return (
-    <div className={`${colors.bg.primary} rounded-lg shadow`}>
-        <div className="p-6 border-b">
+    <div className={colors.bg.primary}>
+        <div>
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">{t('pipeline.title')}</h2>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => setViewMode(viewMode === 'pipeline' ? 'list' : 'pipeline')}>
                 {viewMode === 'pipeline' ? t('pipeline.viewList') : t('pipeline.viewPipeline')}
               </Button>
@@ -70,7 +70,7 @@ export function PipelineTab() {
           </div>
         </div>
 
-        <div className="p-6">
+        <div className="flex-1">
           {loading ? (
               <PageLoadingState icon={GitBranch} message={t('pipeline.loading')} layout="contained" />
           ) : error ? (

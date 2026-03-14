@@ -404,6 +404,13 @@
   },
   "leads": {
     "title": "Leads",
+    "description": "Manage leads and sales opportunities",
+    "stats": {
+      "totalLeads": "Total Leads",
+      "activeLeads": "Active Leads",
+      "inNegotiation": "In Negotiation",
+      "won": "Won"
+    },
     "loading": "Loading leads...",
     "retry": "Try again",
     "refresh": "Refresh",

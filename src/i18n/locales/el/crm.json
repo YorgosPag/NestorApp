@@ -404,6 +404,13 @@
   },
   "leads": {
     "title": "Leads",
+    "description": "Διαχείριση leads και ευκαιριών πωλήσεων",
+    "stats": {
+      "totalLeads": "Σύνολο Leads",
+      "activeLeads": "Ενεργά Leads",
+      "inNegotiation": "Σε Διαπραγμάτευση",
+      "won": "Κερδισμένα"
+    },
     "loading": "Φόρτωση leads...",
     "retry": "Δοκιμή ξανά",
     "refresh": "Ανανέωση",

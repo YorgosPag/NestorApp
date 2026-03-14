@@ -148,11 +148,10 @@ export default function CrmTeamsPage() {
 
       {/* Collapsible Dashboard Stats */}
       {showDashboard && (
-        <section className="w-full overflow-hidden" role="region" aria-label={t('teams.stats.totalTeams')}>
+        <section className="w-full" role="region" aria-label={t('teams.stats.totalTeams')}>
           <UnifiedDashboard
             stats={dashboardStats}
             columns={2}
-            className="px-1 py-4 sm:px-4 sm:py-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 overflow-hidden"
           />
         </section>
       )}
