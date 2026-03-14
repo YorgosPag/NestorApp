@@ -36,6 +36,9 @@ export interface DependencyDef {
   skipCompanyFilter?: boolean;
 }
 
+/** A dependency that gets auto-deleted (cascade) before blocking check */
+export type CascadeDependencyDef = DependencyDef;
+
 /** Deletion strategy for an entity type */
 type DeletionStrategy = 'BLOCK' | 'SOFT_DELETE';
 
@@ -53,6 +56,8 @@ interface ConditionalBlock {
 export interface EntityDeletionConfig {
   strategy: DeletionStrategy;
   dependencies: readonly DependencyDef[];
+  /** Junction-record dependencies: auto-deleted BEFORE blocking check */
+  cascadeDependencies?: readonly CascadeDependencyDef[];
   conditionalBlock?: ConditionalBlock;
 }
 
@@ -93,6 +98,31 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
   // ─── CONTACT ────────────────────────────────────────────────────────
   contact: {
     strategy: 'BLOCK',
+    // Junction records — auto-deleted BEFORE blocking check
+    cascadeDependencies: [
+      {
+        collection: COLLECTIONS.CONTACT_RELATIONSHIPS,
+        foreignKey: 'sourceContactId',
+        label: 'Σχέσεις (ως πηγή)',
+        queryType: 'equals',
+        skipCompanyFilter: true,
+      },
+      {
+        collection: COLLECTIONS.CONTACT_RELATIONSHIPS,
+        foreignKey: 'targetContactId',
+        label: 'Σχέσεις (ως στόχος)',
+        queryType: 'equals',
+        skipCompanyFilter: true,
+      },
+      {
+        collection: COLLECTIONS.CONTACT_LINKS,
+        foreignKey: 'sourceContactId',
+        label: 'Συνδέσεις επαφής',
+        queryType: 'equals',
+        skipCompanyFilter: true,
+      },
+    ],
+    // Blocking dependencies — user must delete manually
     dependencies: [
       {
         collection: COLLECTIONS.UNITS,
@@ -131,40 +161,25 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
         queryType: 'equals',
       },
       {
-        collection: COLLECTIONS.CONTACT_RELATIONSHIPS,
-        foreignKey: 'sourceContactId',
-        label: 'Σχέσεις (ως πηγή)',
-        queryType: 'equals',
-      },
-      {
-        collection: COLLECTIONS.CONTACT_RELATIONSHIPS,
-        foreignKey: 'targetContactId',
-        label: 'Σχέσεις (ως στόχος)',
-        queryType: 'equals',
-      },
-      {
-        collection: COLLECTIONS.CONTACT_LINKS,
-        foreignKey: 'sourceContactId',
-        label: 'Συνδέσεις επαφής',
-        queryType: 'equals',
-      },
-      {
         collection: COLLECTIONS.EXTERNAL_IDENTITIES,
         foreignKey: 'internalContactId',
         label: 'Εξωτερικές ταυτότητες',
         queryType: 'equals',
+        skipCompanyFilter: true,
       },
       {
         collection: COLLECTIONS.EMPLOYMENT_RECORDS,
         foreignKey: 'contactId',
         label: 'Εγγραφές απασχόλησης',
         queryType: 'equals',
+        skipCompanyFilter: true,
       },
       {
         collection: COLLECTIONS.ATTENDANCE_EVENTS,
         foreignKey: 'employeeId',
         label: 'Συμβάντα παρουσίας',
         queryType: 'equals',
+        skipCompanyFilter: true,
       },
     ],
   },

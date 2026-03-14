@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | IN PROGRESS (Phase 0 ✅, Phase 1 ✅, Phase 2 ✅, Phase 3 ✅, Phase 4 ✅ IMPLEMENTED) |
+| **Status** | IN PROGRESS (Phase 0 ✅, Phase 1 ✅, Phase 2 ✅, Phase 3 ✅, Phase 4 ✅, Phase 5 ✅ IMPLEMENTED) |
 | **Date** | 2026-03-13 |
 | **Category** | Backend Systems / Data & State |
 | **Canonical Location** | `src/lib/firestore/deletion-guard.ts` (proposed) |
@@ -474,13 +474,48 @@ async function executeDeletion(
 - References in `useEnterpriseRelationships.ts` and `RelationshipCRUDService.ts` are UNRELATED (relationship cascade, different system) — kept as-is
 - Zero production risk: all deleted code was already unused after Phases 2-3 replaced it
 
-### Phase 5: Soft Delete Pattern (Priority: LOW — μελλοντικό)
+### Phase 5: Cascade Dependencies for Junction Records — ✅ IMPLEMENTED (2026-03-14)
+
+| Task | Αρχείο | Περιγραφή | Status |
+|------|--------|-----------|--------|
+| 5.1 | `src/config/deletion-registry.ts` | Νέο `CascadeDependencyDef` type + `cascadeDependencies` στο `EntityDeletionConfig` | ✅ |
+| 5.2 | `src/config/deletion-registry.ts` | Μετακίνηση `contact_relationships` (x2) + `contact_links` σε `cascadeDependencies` | ✅ |
+| 5.3 | `src/config/deletion-registry.ts` | Bug fix: `skipCompanyFilter: true` σε 6 entries χωρίς `companyId` | ✅ |
+| 5.4 | `src/lib/firestore/deletion-guard.ts` | Νέα `executeCascadeDeletions()` — batched delete (450/batch) | ✅ |
+| 5.5 | `src/lib/firestore/deletion-guard.ts` | `executeDeletion()` flow: CHECK → CASCADE → DELETE → AUDIT | ✅ |
+| 5.6 | `src/lib/firestore/deletion-guard.ts` | Cascade info στο audit trail (`_cascade_deletions` field) | ✅ |
+
+**Implementation Notes (Phase 5)**:
+
+#### Bug Fix: `skipCompanyFilter`
+5 collections δεν έχουν `companyId` field: `contact_relationships`, `contact_links`, `external_identities`, `employment_records`, `attendance_events`. Χωρίς `skipCompanyFilter: true`, η query πρόσθετε `.where('companyId', '==', companyId)` → 0 results → ο guard **ποτέ δεν μπλόκαρε** τη διαγραφή λόγω αυτών. FIXED.
+
+#### Cascade vs Block
+- **Cascade** (auto-delete): Junction records χωρίς ανεξάρτητη αξία — `contact_relationships`, `contact_links`
+- **Block** (manual delete): Child entities με ανεξάρτητη αξία — units, opportunities, external_identities, employment_records, attendance_events
+
+#### Execution Order
+```
+1. checkDeletionDependencies()  → Αν BLOCK deps υπάρχουν → abort (409)
+2. executeCascadeDeletions()    → Auto-delete junction records (batched)
+3. docRef.delete()              → Delete entity
+4. Audit trail                  → Full snapshot + cascade details
+```
+
+**ΚΡΙΣΙΜΟ**: Cascade εκτελείται ΜΟΝΟ αν ΔΕΝ υπάρχουν blocking dependencies. Αν αποτύχει cascade → throw 500, ΔΕΝ σβήνεται η parent entity.
+
+#### Reciprocal Handling
+Τα reciprocal relationships καλύπτονται αυτόματα:
+- Σχέση A→B: `sourceContactId == A` → cascade
+- Reciprocal B→A: `targetContactId == A` → cascade
+
+### Phase 6: Soft Delete Pattern (Priority: LOW — μελλοντικό)
 
 | Task | Αρχείο | Περιγραφή |
 |------|--------|-----------|
-| 5.1 | Soft delete utility | `softDelete()` function: sets `deletedAt`, `deletedBy`, keeps document |
-| 5.2 | Query filters | Global query filter: `where('deletedAt', '==', null)` |
-| 5.3 | Restore API | Endpoint για undo soft-deleted entities |
+| 6.1 | Soft delete utility | `softDelete()` function: sets `deletedAt`, `deletedBy`, keeps document |
+| 6.2 | Query filters | Global query filter: `where('deletedAt', '==', null)` |
+| 6.3 | Restore API | Endpoint για undo soft-deleted entities |
 
 ---
 
@@ -526,6 +561,8 @@ async function executeDeletion(
 | 2026-03-13 | **Phase 2 — ✅ IMPLEMENTED**: All 7 DELETE endpoints integrated with `executeDeletion()`. Projects/Buildings cascade **REMOVED** → bottom-up BLOCK. Units manual audit removed (executeDeletion handles it). Parking/Storage conditional BLOCK for sold items. Dual audit pattern (entity + auth). | Claude Code |
 | 2026-03-13 | **Phase 3 — ✅ IMPLEMENTED**: `DeletionBlockedDialog` (AlertDialog + ShieldAlert), `useDeletionGuard` hook (pre-check + state + BlockedDialog). Integrated in 7 components: Buildings, Projects (replaced cascade preview), Units, Parking, Storage, Contacts (SmartDialog wrapper), Floors. i18n keys in `common.deletionGuard.*`. | Claude Code |
 | 2026-03-13 | **Phase 4 — ✅ IMPLEMENTED**: Cleanup — deleted `cascade-delete.ts`, buildings + projects `cascade-preview/route.ts`. Removed dead code: `BuildingCascadePreviewData` + `getBuildingCascadePreview()` from building-services, `CascadeChildItem` + `CascadePreviewData` + `getProjectCascadePreview()` from projects-client.service. Zero risk — all code was already unused. | Claude Code |
+| 2026-03-14 | **ΚΡΙΣΙΜΟ BUG FIX**: `skipCompanyFilter` — 5 collections χωρίς `companyId` (contact_relationships, contact_links, external_identities, employment_records, attendance_events) δεν ελέγχονταν ποτέ σωστά. Query με `.where('companyId', '==', companyId)` σε collection χωρίς `companyId` → πάντα 0 results → guard δεν μπλόκαρε ποτέ. | Γιώργος Παγώνης + Claude Code |
+| 2026-03-14 | **Phase 5 — ✅ IMPLEMENTED**: Cascade dependencies for junction records. `contact_relationships` (x2) + `contact_links` → auto-delete πριν τον blocking check. Νέο `CascadeDependencyDef` type, `executeCascadeDeletions()` (batched 450/batch), audit trail με cascade details. Execution order: CHECK → CASCADE → DELETE → AUDIT. | Claude Code |
 
 ---
 

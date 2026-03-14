@@ -19,6 +19,7 @@ import {
   getEntityCollection,
   type EntityType,
   type DependencyDef,
+  type CascadeDependencyDef,
   type DependencyCheckResult,
 } from '@/config/deletion-registry';
 import { EntityAuditService } from '@/services/entity-audit.service';
@@ -108,11 +109,107 @@ export async function checkDeletionDependencies(
 }
 
 // ============================================================================
+// CASCADE DELETIONS (Junction Records)
+// ============================================================================
+
+/** Result of cascade deletion for audit purposes */
+interface CascadeDeletionDetail {
+  collection: string;
+  count: number;
+  documentIds: string[];
+}
+
+/** Firestore batch write limit (using 450 for safety margin) */
+const BATCH_SIZE = 450;
+
+/**
+ * Auto-delete junction records before blocking dependency check.
+ *
+ * Cascade dependencies are "owned" records (e.g., contact_relationships,
+ * contact_links) that should be cleaned up automatically when the parent
+ * entity is deleted — NOT blocking records like opportunities or units.
+ *
+ * @param db - Firestore Admin instance
+ * @param cascadeDeps - Cascade dependency definitions
+ * @param entityId - ID of the entity being deleted
+ * @param companyId - Tenant ID (used only if skipCompanyFilter is false)
+ * @returns Total deleted count and per-collection details
+ */
+async function executeCascadeDeletions(
+  db: FirebaseFirestore.Firestore,
+  cascadeDeps: readonly CascadeDependencyDef[],
+  entityId: string,
+  companyId: string
+): Promise<{ totalDeleted: number; details: CascadeDeletionDetail[] }> {
+  const details: CascadeDeletionDetail[] = [];
+  let totalDeleted = 0;
+
+  for (const dep of cascadeDeps) {
+    try {
+      let query: FirebaseFirestore.Query = db.collection(dep.collection);
+
+      if (!dep.skipCompanyFilter) {
+        query = query.where('companyId', '==', companyId);
+      }
+
+      if (dep.queryType === 'array-contains') {
+        query = query.where(dep.foreignKey, 'array-contains', entityId);
+      } else {
+        query = query.where(dep.foreignKey, '==', entityId);
+      }
+
+      const snapshot = await query.get();
+
+      if (snapshot.empty) continue;
+
+      const docIds = snapshot.docs.map((doc) => doc.id);
+
+      // Batched delete in chunks of BATCH_SIZE
+      for (let i = 0; i < snapshot.docs.length; i += BATCH_SIZE) {
+        const batch = db.batch();
+        const chunk = snapshot.docs.slice(i, i + BATCH_SIZE);
+        for (const doc of chunk) {
+          batch.delete(doc.ref);
+        }
+        await batch.commit();
+      }
+
+      details.push({
+        collection: dep.collection,
+        count: snapshot.size,
+        documentIds: docIds.slice(0, MAX_PREVIEW_IDS),
+      });
+      totalDeleted += snapshot.size;
+
+      logger.info(`[DeletionGuard] Cascade deleted ${snapshot.size} docs from ${dep.collection}`, {
+        foreignKey: dep.foreignKey,
+        entityId,
+      });
+    } catch (err) {
+      logger.error(`[DeletionGuard] Cascade deletion failed for ${dep.collection}.${dep.foreignKey}`, {
+        error: err instanceof Error ? err.message : String(err),
+        entityId,
+      });
+      // On cascade failure → throw to prevent orphan parent deletion
+      throw new ApiError(
+        500,
+        `Αποτυχία cascade διαγραφής στο ${dep.collection}. Η διαγραφή ακυρώθηκε.`,
+        'CASCADE_DELETION_FAILED'
+      );
+    }
+  }
+
+  return { totalDeleted, details };
+}
+
+// ============================================================================
 // EXECUTE DELETION
 // ============================================================================
 
 /**
- * Execute a guarded deletion: check dependencies, delete, audit.
+ * Execute a guarded deletion: check dependencies, cascade junctions, delete, audit.
+ *
+ * Flow: CHECK BLOCKING → CASCADE JUNCTIONS → DELETE ENTITY → AUDIT
  *
  * @param db - Firestore Admin instance
  * @param entityType - Type of entity to delete
@@ -122,6 +219,7 @@ export async function checkDeletionDependencies(
  * @returns Success result
  * @throws ApiError(409) if dependencies block deletion
  * @throws ApiError(404) if entity not found
+ * @throws ApiError(500) if cascade deletion fails
  */
 export async function executeDeletion(
   db: FirebaseFirestore.Firestore,
@@ -130,7 +228,9 @@ export async function executeDeletion(
   deletedBy: string,
   companyId: string
 ): Promise<{ success: true; entityId: string }> {
-  // ── Step 1: Double-check dependencies ──
+  const config = DELETION_REGISTRY[entityType];
+
+  // ── Step 1: Check blocking dependencies ──
   const check = await checkDeletionDependencies(db, entityType, entityId, companyId);
 
   if (!check.allowed) {
@@ -148,7 +248,14 @@ export async function executeDeletion(
 
   const entityData = docSnap.data() ?? {};
 
-  // ── Step 3: Delete document ──
+  // ── Step 3: Cascade delete junction records (if any) ──
+  let cascadeResult: { totalDeleted: number; details: CascadeDeletionDetail[] } | null = null;
+
+  if (config.cascadeDependencies && config.cascadeDependencies.length > 0) {
+    cascadeResult = await executeCascadeDeletions(db, config.cascadeDependencies, entityId, companyId);
+  }
+
+  // ── Step 4: Delete entity document ──
   await docRef.delete();
 
   logger.info(`[DeletionGuard] Deleted ${entityType}/${entityId}`, {
@@ -156,22 +263,35 @@ export async function executeDeletion(
     entityId,
     companyId,
     deletedBy,
+    cascadeDeleted: cascadeResult?.totalDeleted ?? 0,
   });
 
-  // ── Step 4: Audit trail (fire-and-forget) ──
+  // ── Step 5: Audit trail (fire-and-forget) ──
+  const auditChanges: Array<{ field: string; oldValue: string | null; newValue: string | null; label: string }> = [
+    {
+      field: '_snapshot',
+      oldValue: JSON.stringify(entityData),
+      newValue: null,
+      label: 'Πλήρες snapshot πριν τη διαγραφή',
+    },
+  ];
+
+  // Add cascade info to audit if any records were auto-deleted
+  if (cascadeResult && cascadeResult.totalDeleted > 0) {
+    auditChanges.push({
+      field: '_cascade_deletions',
+      oldValue: JSON.stringify(cascadeResult.details),
+      newValue: null,
+      label: `Cascade: ${cascadeResult.totalDeleted} εγγραφές διαγράφηκαν αυτόματα`,
+    });
+  }
+
   EntityAuditService.recordChange({
     entityType,
     entityId,
     entityName: extractEntityName(entityData),
     action: 'deleted',
-    changes: [
-      {
-        field: '_snapshot',
-        oldValue: JSON.stringify(entityData),
-        newValue: null,
-        label: 'Πλήρες snapshot πριν τη διαγραφή',
-      },
-    ],
+    changes: auditChanges,
     performedBy: deletedBy,
     performedByName: null,
     companyId,
