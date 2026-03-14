@@ -264,10 +264,11 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
       setEditedData({});
 
       // 🔄 TRIGGER REFRESH: Notify parent component to refresh data
+      // 🔧 FIX: Delay refresh to prevent selectedContact flicker → remount → tab reset
       logger.info('Contact updated successfully with enterprise structure');
       if (onContactUpdated) {
-        logger.info('Triggering parent refresh after save');
-        onContactUpdated();
+        logger.info('Triggering parent refresh after save (delayed to prevent tab reset)');
+        setTimeout(() => onContactUpdated(), 300);
       }
     } catch (error) {
       logger.error('Failed to update contact', { error });
