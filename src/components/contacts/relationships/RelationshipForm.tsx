@@ -177,6 +177,16 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
       </CardHeader>
       <CardContent>
         <form onSubmit={preventFormSubmit} className={designSystem.getSpacingClass('p', 'md')}>
+          {/* Hint: select contact first — positioned at top for visibility */}
+          {!hasContact && (
+            <Alert className="mb-4 border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-950/30">
+              <Info className={designSystem.cn(iconSizes.sm, "text-blue-600 dark:text-blue-400")} />
+              <AlertDescription className="text-blue-700 dark:text-blue-300 text-sm">
+                {t('relationships.form.selectContactFirst')}
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Contact Search */}
           <div className="mb-6">
             <ContactSearchManager
@@ -217,16 +227,6 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
               }
             }}
           />
-
-          {/* Hint: select contact first */}
-          {!hasContact && (
-            <Alert className="mt-4 border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-950/30">
-              <Info className={designSystem.cn(iconSizes.sm, "text-blue-600 dark:text-blue-400")} />
-              <AlertDescription className="text-blue-700 dark:text-blue-300 text-sm">
-                {t('relationships.form.selectContactFirst')}
-              </AlertDescription>
-            </Alert>
-          )}
 
           {/* Error Display */}
           {displayError && (
