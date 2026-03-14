@@ -30,6 +30,8 @@ import { Badge } from '@/components/ui/badge';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTypography } from '@/hooks/useTypography';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 
 import type { CalendarEvent } from '@/types/calendar-event';
 import { SafeHTMLContent } from '@/components/shared/email/EmailContentRenderer';
@@ -54,6 +56,8 @@ export function CalendarEventDialog({ event, open, onOpenChange }: CalendarEvent
   const iconSizes = useIconSizes();
   const sp = useSpacingTokens();
   const typo = useTypography();
+  const borders = useBorderTokens();
+  const layout = useLayoutClasses();
   const locale = i18n.language === 'el' ? el : enUS;
 
   if (!event) return null;
@@ -67,7 +71,7 @@ export function CalendarEventDialog({ event, open, onOpenChange }: CalendarEvent
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className={`flex items-center ${sp.gap.sm}`}>
+          <DialogTitle className={layout.flexCenterGap2}>
             <Calendar className={iconSizes.md} />
             {t('calendarPage.dialog.viewTitle')}
           </DialogTitle>
@@ -79,7 +83,7 @@ export function CalendarEventDialog({ event, open, onOpenChange }: CalendarEvent
         <article className={sp.spaceBetween.md}>
           {/* Title & Type Badge */}
           <header className={`flex items-start justify-between ${sp.gap.sm}`}>
-            <h3 className={`${typo.heading.md} leading-tight`}>{event.title}</h3>
+            <h3 className={typo.heading.md}>{event.title}</h3>
             <Badge
               variant="outline"
               className="calendar-event-badge"
@@ -90,7 +94,7 @@ export function CalendarEventDialog({ event, open, onOpenChange }: CalendarEvent
           </header>
 
           {/* Date & Time */}
-          <section className={`flex items-center ${sp.gap.sm} ${typo.special.secondary}`}>
+          <section className={`${layout.flexCenterGap2} ${typo.special.secondary}`}>
             <Clock className={`${iconSizes.sm} shrink-0`} />
             <time dateTime={event.start.toISOString()}>
               {format(event.start, 'EEEE, d MMMM yyyy', { locale })}
@@ -124,12 +128,12 @@ export function CalendarEventDialog({ event, open, onOpenChange }: CalendarEvent
             )}
             <Badge variant="secondary">
               <User className={`${iconSizes.xs} ${sp.margin.right.xs}`} />
-              {event.source === 'task' ? 'Task' : 'Appointment'}
+              {event.source === 'task' ? t('calendarPage.source.task') : t('calendarPage.source.appointment')}
             </Badge>
           </section>
 
           {/* Actions */}
-          <footer className={`flex justify-end ${sp.gap.sm} ${sp.padding.top.sm} border-t`}>
+          <footer className={`flex justify-end ${sp.gap.sm} ${sp.padding.top.sm} ${borders.quick.borderT}`}>
             {originalLink && (
               <Button variant="outline" size="sm" asChild>
                 <Link href={originalLink}>

@@ -592,9 +592,15 @@
       "document": "Document",
       "other": "Other"
     },
+    "source": {
+      "task": "Task",
+      "appointment": "Appointment"
+    },
     "dialog": {
       "viewTitle": "Event Details",
       "createTitle": "New Calendar Event",
+      "submitting": "Saving...",
+      "createError": "Error creating event",
       "fields": {
         "title": "Title",
         "type": "Type",

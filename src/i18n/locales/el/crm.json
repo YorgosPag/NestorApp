@@ -592,9 +592,15 @@
       "document": "Έγγραφο",
       "other": "Άλλο"
     },
+    "source": {
+      "task": "Εργασία",
+      "appointment": "Ραντεβού"
+    },
     "dialog": {
       "viewTitle": "Λεπτομέρειες Γεγονότος",
       "createTitle": "Νέο Γεγονός Ημερολογίου",
+      "submitting": "Αποθήκευση...",
+      "createError": "Σφάλμα δημιουργίας γεγονότος",
       "fields": {
         "title": "Τίτλος",
         "type": "Τύπος",

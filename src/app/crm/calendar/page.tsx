@@ -28,6 +28,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTypography } from '@/hooks/useTypography';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCalendarEvents } from '@/hooks/useCalendarEvents';
@@ -45,6 +46,7 @@ export default function CrmCalendarPage() {
   const sp = useSpacingTokens();
   const typo = useTypography();
   const borders = useBorderTokens();
+  const layout = useLayoutClasses();
   const pageGap = getSpacingClass('m', 'lg', 'b');
   const { loading: authLoading } = useAuth();
 
@@ -89,11 +91,11 @@ export default function CrmCalendarPage() {
     <>
       <main className={cn('min-h-screen', colors.bg.secondary)}>
         {/* Header */}
-        <header className={cn(colors.bg.primary, 'shadow-sm border-b')}>
+        <header className={cn(colors.bg.primary, borders.quick.borderB, 'shadow-sm')}>
           <div className={cn(sp.padding.x.lg, sp.padding.y.md)}>
             <ModuleBreadcrumb className="mb-2" />
-            <div className={cn('flex items-center justify-between')}>
-              <div className={cn('flex items-center', sp.gap.sm)}>
+            <div className={layout.flexCenterBetween}>
+              <div className={layout.flexCenterGap2}>
                 <CalendarDays className={cn(iconSizes.lg, colors.text.info)} />
                 <div>
                   <h1 className={typo.special.containerTitle}>
@@ -105,7 +107,7 @@ export default function CrmCalendarPage() {
                 </div>
               </div>
 
-              <div className={cn('flex items-center', sp.gap.sm)}>
+              <div className={layout.flexCenterGap2}>
                 {/* Stats badges */}
                 {!loading && (
                   <nav
@@ -129,7 +131,7 @@ export default function CrmCalendarPage() {
 
         {/* Calendar */}
         <section className={cn(sp.padding.x.lg, sp.padding.y.lg, pageGap)}>
-          <article className={cn(colors.bg.primary, borders.radiusClass.lg, 'shadow', sp.padding.md)}>
+          <article className={cn(colors.bg.primary, borders.quick.card, 'shadow', sp.padding.md)}>
             {loading ? (
               <Skeleton className={cn('h-[600px] w-full', borders.radiusClass.lg)} />
             ) : (

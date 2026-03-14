@@ -48,6 +48,7 @@ import {
 
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 
 import { addTask } from '@/services/tasks.service';
 import type { CrmTask } from '@/types/crm';
@@ -95,6 +96,7 @@ export function CalendarCreateDialog({
   const { success, error: notifyError } = useNotifications();
   const iconSizes = useIconSizes();
   const sp = useSpacingTokens();
+  const layout = useLayoutClasses();
 
   const [title, setTitle] = useState('');
   const [type, setType] = useState<TaskType>('meeting');
@@ -137,7 +139,7 @@ export function CalendarCreateDialog({
       onCreated?.();
     } catch (err) {
       logger.error('Error creating event', { error: err });
-      notifyError(err instanceof Error ? err.message : 'Error creating event');
+      notifyError(err instanceof Error ? err.message : t('calendarPage.dialog.createError'));
     } finally {
       setSubmitting(false);
     }
@@ -147,7 +149,7 @@ export function CalendarCreateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className={`flex items-center ${sp.gap.sm}`}>
+          <DialogTitle className={layout.flexCenterGap2}>
             <Plus className={iconSizes.md} />
             {t('calendarPage.dialog.createTitle')}
           </DialogTitle>
@@ -252,7 +254,7 @@ export function CalendarCreateDialog({
               {t('calendarPage.dialog.actions.cancel')}
             </Button>
             <Button type="submit" disabled={submitting || !title.trim()}>
-              {submitting ? '...' : t('calendarPage.dialog.actions.save')}
+              {submitting ? t('calendarPage.dialog.submitting') : t('calendarPage.dialog.actions.save')}
             </Button>
           </footer>
         </form>
