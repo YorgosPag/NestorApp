@@ -32,8 +32,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('TasksTab');
-// 🏢 ENTERPRISE: Import from canonical location
-import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
+// ADR-229 Phase 2: Centralized loading/error states
+import { PageLoadingState, PageErrorState } from '@/core/states';
 import type { CrmTaskType, CrmTaskPriority, CrmTaskStatus } from '@/types/crm-extra';
 import { HOVER_SHADOWS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: Auth hook for race condition prevention
@@ -223,18 +223,13 @@ export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabPr
 
   const getLeadName = useCallback((leadId?: string) => leads.find(l => l.id === leadId)?.fullName || null, [leads]);
 
+  // ADR-229 Phase 2: Centralized loading/error states
   if (loading) {
-    return (
-      <div className={`flex items-center justify-center ${sp.padding.y['2xl']}`}>
-        <AnimatedSpinner size="large" />
-      </div>
-    );
+    return <PageLoadingState icon={Clock} message={t('tasks.loading', { defaultValue: 'Φόρτωση εργασιών...' })} layout="contained" />;
   }
-  
+
   if (error) {
-    return (
-        <div className={`${sp.padding.lg} text-center ${colors.text.error}`}>{error}</div>
-    )
+    return <PageErrorState title={t('tasks.errorTitle', { defaultValue: 'Σφάλμα φόρτωσης' })} message={error} layout="contained" />;
   }
 
   return (

@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/accordion';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Spinner } from '@/components/ui/spinner';
+import { PageLoadingState } from '@/core/states';
 import {
   Inbox,
   RefreshCw,
@@ -359,13 +360,11 @@ export default function OperatorInboxClient({ adminContext }: OperatorInboxClien
   // 🏢 ENTERPRISE: Direct use of centralized formatDateTime (ADR-208)
   const formatDate = formatDateTime;
 
-  // ── Loading ──
+  // ADR-229 Phase 2: Centralized loading state
   if (loading) {
     return (
-      <PageContainer>
-        <section className="flex items-center justify-center py-20">
-          <Spinner />
-        </section>
+      <PageContainer ariaLabel={t('operatorInbox.title')}>
+        <PageLoadingState icon={Inbox} message={t('operatorInbox.loading', { defaultValue: 'Φόρτωση εισερχομένων...' })} layout="contained" />
       </PageContainer>
     );
   }

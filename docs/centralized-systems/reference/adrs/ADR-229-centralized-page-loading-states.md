@@ -137,10 +137,22 @@ if (loading) {
 | `src/subapps/accounting/components/reports/ReportsPageContent.tsx` | `FileBarChart` | Early-exit guard (δεν είχε loading UI) |
 | `src/subapps/accounting/components/documents/DocumentsPageContent.tsx` | `FileText` | Spinner → PageLoadingState+PageErrorState |
 
-### Σελίδες που ΔΕΝ χρειάστηκαν αλλαγή
+### Αρχεία Phase 2b — CRM & Admin (8)
 
-- `src/app/admin/ai-inbox/page.tsx` — Server Component, auth server-side
-- `src/app/admin/operator-inbox/page.tsx` — Server Component, auth server-side
+| Αρχείο | Icon | Pattern |
+|--------|------|---------|
+| `src/app/crm/teams/page.tsx` | `Users2` | Custom Spinner+error → PageLoadingState+PageErrorState |
+| `src/app/crm/leads/[id]/page.tsx` | `User` | AnimatedSpinner+error → PageLoadingState+PageErrorState (fullscreen) |
+| `src/app/crm/notifications/page.tsx` | `Bell` | Inline Spinner → PageLoadingState (contained) |
+| `src/app/crm/tasks/[taskId]/page.tsx` | `ClipboardList` | AnimatedSpinner → PageLoadingState (contained) |
+| `src/app/crm/communications/page.tsx` | `Inbox` | 2x Spinner → PageLoadingState (contained) |
+| `src/app/admin/ai-inbox/AIInboxClient.tsx` | `Inbox` | Data-loading Spinner → PageLoadingState (button Spinner kept) |
+| `src/app/admin/operator-inbox/OperatorInboxClient.tsx` | `Inbox` | Data-loading Spinner → PageLoadingState (button Spinner kept) |
+| `src/components/crm/dashboard/TasksTab.tsx` | `Clock` | AnimatedSpinner+error div → PageLoadingState+PageErrorState |
+
+### Σελίδες CRM που ΔΕΝ χρειάστηκαν αλλαγή
+
+- `src/app/crm/email-analytics/page.tsx` — Δεν έχει data loading spinner
 
 ---
 
@@ -161,8 +173,9 @@ if (loading) {
 | Suspense fallback patterns | 4 διαφορετικά | 1 (`StaticPageLoading`) |
 | Αρχεία Phase 1 | — | 12 migrated |
 | Αρχεία Phase 2 | — | 16 migrated (data-level guards) |
+| Αρχεία Phase 2b (CRM/Admin) | — | 8 migrated |
 | Νέα αρχεία | — | 4 (`src/core/states/`) |
-| Σελίδες με loading guard | 5 (Phase 1) | 21 (Phase 1 + Phase 2) |
+| Σελίδες με loading guard | 5 (Phase 1) | 29 (Phase 1 + Phase 2 + Phase 2b) |
 
 ---
 
@@ -173,3 +186,4 @@ if (loading) {
 | 2026-03-14 | ADR created — research complete, pending implementation decision |
 | 2026-03-14 | Phase 1 IMPLEMENTED — 4 νέα components, 12 pages migrated |
 | 2026-03-14 | Phase 2 IMPLEMENTED — Data-level loading guards σε 16 σελίδες, αφαίρεση inline Spinner patterns |
+| 2026-03-14 | Phase 2b IMPLEMENTED — CRM & Admin migration: 8 σελίδες (teams, leads, notifications, tasks, communications, ai-inbox, operator-inbox, TasksTab) |

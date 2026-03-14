@@ -12,7 +12,7 @@ import { useAuth } from '@/auth/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { Spinner } from '@/components/ui/spinner';
+import { PageLoadingState } from '@/core/states';
 import { createModuleLogger } from '@/lib/telemetry';
 import { cn, getSpacingClass } from '@/lib/design-system';
 
@@ -131,12 +131,9 @@ export default function CrmNotificationsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {/* Loading State */}
+          {/* ADR-229 Phase 2: Centralized loading state */}
           {loading && (
-            <div className="flex items-center justify-center py-12">
-              <Spinner size="large" className={cn('mr-3', 'text-muted-foreground')} />
-              <span className="text-muted-foreground">{t('notifications.loading')}</span>
-            </div>
+            <PageLoadingState icon={Bell} message={t('notifications.loading')} layout="contained" />
           )}
 
           {/* Error State */}

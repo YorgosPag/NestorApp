@@ -7,7 +7,7 @@ import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effect
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
+import { PageLoadingState, PageErrorState } from '@/core/states';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
@@ -61,43 +61,20 @@ export default function LeadProfilePage() {
     }
   };
 
+  // ADR-229 Phase 2: Centralized loading/error states
   if (loadingLead) {
-    return (
-      <div className={cn('min-h-screen flex items-center justify-center', colors.bg.secondary)}>
-        <div className="text-center">
-          <AnimatedSpinner size="large" className={cn('mx-auto', spacing.margin.bottom.sm)} />
-          <p className={colors.text.muted}>{t('leadDetails.loading')}</p>
-        </div>
-      </div>
-    );
+    return <PageLoadingState icon={User} message={t('leadDetails.loading')} layout="fullscreen" />;
   }
 
   if (leadError || !lead) {
     return (
-      <div className={cn('min-h-screen', colors.bg.secondary)}>
-        <div className={cn('container mx-auto', spacing.padding.x.lg, spacing.padding.y.lg)}>
-          <div className={cn(colors.bg.errorLight, getStatusBorder('error'), 'rounded-lg text-center', spacing.padding.x.lg, spacing.padding.y.lg)}>
-            <h2 className={cn('text-xl font-semibold', colors.text.error, spacing.margin.bottom.sm)}>
-              {t('leadDetails.errorTitle')}
-            </h2>
-            <p className={cn(colors.text.error, spacing.margin.bottom.md)}>
-              {leadError || t('leadDetails.notFound')}
-            </p>
-            <button
-              onClick={() => router.push('/crm/leads')}
-              className={cn(
-                spacing.padding.x.md,
-                spacing.padding.y.sm,
-                colors.bg.info,
-                'text-white rounded-lg',
-                INTERACTIVE_PATTERNS.PRIMARY_HOVER
-              )}
-            >
-              {t('leadDetails.backToLeads')}
-            </button>
-          </div>
-        </div>
-      </div>
+      <PageErrorState
+        title={t('leadDetails.errorTitle')}
+        message={leadError || t('leadDetails.notFound')}
+        onRetry={() => router.push('/crm/leads')}
+        retryLabel={t('leadDetails.backToLeads')}
+        layout="fullscreen"
+      />
     );
   }
 

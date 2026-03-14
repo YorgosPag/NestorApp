@@ -12,7 +12,7 @@ import type { EnterpriseTeamMember } from '@/services/teams/EnterpriseTeamsServi
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCompanyId } from '@/hooks/useCompanyId';
-import { Spinner } from '@/components/ui/spinner';
+import { PageLoadingState, PageErrorState } from '@/core/states';
 import { cn, getSpacingClass } from '@/lib/design-system';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getAvatarPlaceholderUrl } from '@/config/media-constants';
@@ -84,43 +84,20 @@ export default function CrmTeamsPage() {
     loadTeamsData();
   }, []);
 
-  // Show loading state
+  // ADR-229 Phase 2: Centralized loading/error states
   if (loading) {
-    return (
-      <div className={pagePadding}>
-        <div className={cn('flex items-center justify-center min-h-[400px]')}>
-          <div className={cn('text-center space-y-4')}>
-            <Spinner size="large" className={cn(iconSizes.xl, 'mx-auto text-primary')} />
-            <p className="text-muted-foreground">{t('teams.loading')}</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <PageLoadingState icon={Users2} message={t('teams.loading')} layout="contained" />;
   }
 
-  // Show error state
   if (error) {
     return (
-      <div className={pagePadding}>
-        <div className={cn('flex items-center justify-center min-h-[400px]')}>
-          <div className={cn('text-center space-y-4')}>
-            <div className={`${iconSizes.xl} bg-destructive/20 rounded-full flex items-center justify-center mx-auto`}>
-              <Shield className={`${iconSizes.sm} text-destructive`} />
-            </div>
-            <div className="space-y-2">
-              <p className="font-medium text-destructive">{t('teams.error.title')}</p>
-              <p className="text-sm text-muted-foreground">{error}</p>
-              <Button
-                variant="outline"
-                onClick={() => window.location.reload()}
-                className="mt-4"
-              >
-                {t('teams.error.reload')}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <PageErrorState
+        title={t('teams.error.title')}
+        message={error}
+        onRetry={() => window.location.reload()}
+        retryLabel={t('teams.error.reload')}
+        layout="contained"
+      />
     );
   }
 

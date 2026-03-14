@@ -34,6 +34,7 @@ import { PageContainer, ListContainer } from '@/core/containers';
 import AIInboxHeader from '@/components/admin/ai-inbox/AIInboxHeader';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import { Spinner } from '@/components/ui/spinner';
+import { PageLoadingState } from '@/core/states';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { AdvancedFiltersPanel, aiInboxFiltersConfig, defaultAIInboxFilters, type AIInboxFilterState } from '@/components/core/AdvancedFilters';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
@@ -726,9 +727,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className={`flex items-center justify-center ${spacing.padding.y.lg}`}>
-                  <Spinner size="large" />
-                </div>
+                <PageLoadingState icon={Inbox} message={t('inbox.loading', { defaultValue: 'Φόρτωση εισερχομένων...' })} layout="contained" />
               ) : filteredCommunications.length === 0 ? (
                 <div className={`${layout.textCenter} ${spacing.padding.y.lg}`}>
                   <Inbox className={`${iconSizes.xl2} ${layout.centerHorizontal} text-muted-foreground ${spacing.margin.bottom.md}`} />

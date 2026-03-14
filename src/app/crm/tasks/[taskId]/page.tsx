@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, AlertTriangle, Calendar, ClipboardList, Filter, Folder, Home, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
+import { PageLoadingState, PageErrorState } from '@/core/states';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -215,13 +215,11 @@ export default function TaskDetailPage() {
     ];
   }, [assignedToName, formatTaskDate, priorityLabel, statusLabel, t, tFilters, task]);
 
+  // ADR-229 Phase 2: Centralized loading state
   if (loading) {
     return (
       <PageContainer ariaLabel={t('detail.title')} className={layout.minHeightScreen}>
-        <section className={`${layout.flex1} ${layout.centerContent} ${layout.textCenter}`} aria-live="polite">
-          <AnimatedSpinner size="large" className={`${layout.centerHorizontal} ${spacing.margin.bottom.sm}`} />
-          <p className={colors.text.muted}>{t('detail.loading')}</p>
-        </section>
+        <PageLoadingState icon={ClipboardList} message={t('detail.loading')} layout="contained" />
       </PageContainer>
     );
   }

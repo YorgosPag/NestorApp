@@ -69,7 +69,7 @@ import { useMessageReactions } from '@/hooks/inbox/useMessageReactions';
 // 🏢 ENTERPRISE: Centralized constants
 import { CONVERSATION_STATUS, type MessageAttachment } from '@/types/conversations';
 import { COMMUNICATION_CHANNELS } from '@/types/communications';
-import { Spinner } from '@/components/ui/spinner';
+import { PageLoadingState } from '@/core/states';
 // 🏢 ADR-055: Attachment upload support
 import { PhotoUploadService } from '@/services/photo-upload.service';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
@@ -480,12 +480,9 @@ export default function CrmCommunicationsPage() {
             <ScrollArea className="flex-1">
               {/* 🏢 ENTERPRISE: Centralized spacing tokens (same as UnitsList) */}
               <div className={cn(spacing.padding.sm, spacing.spaceBetween.sm, listPadding)}>
-                {/* 🔐 State 1: Auth loading */}
+                {/* 🔐 State 1: Auth loading (ADR-229) */}
                 {!authReady ? (
-                  <div className="flex items-center justify-center p-8">
-                    <Spinner size="medium" className="mr-2" />
-                    <span>{t('inbox.loading')}</span>
-                  </div>
+                  <PageLoadingState icon={Inbox} message={t('inbox.loading')} layout="contained" />
                 ) : /* 🔐 State 2: Not authenticated */
                 !isAuthenticated ? (
                   <div className="text-center py-8">
@@ -502,10 +499,7 @@ export default function CrmCommunicationsPage() {
                   </div>
                 ) : /* 🔄 State 4: Loading conversations */
                 conversationsLoading && conversations.length === 0 ? (
-                  <div className="flex items-center justify-center p-8">
-                    <Spinner size="medium" className="mr-2" />
-                    <span>{t('inbox.loadingConversations')}</span>
-                  </div>
+                  <PageLoadingState icon={Inbox} message={t('inbox.loadingConversations')} layout="contained" />
                 ) : /* ❌ State 5: API error */
                 conversationsError ? (
                   <div className={`p-3 rounded ${colors.bg.errorSubtle} ${colors.text.error}`} role="alert">
