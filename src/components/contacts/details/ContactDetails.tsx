@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
-import { Users, Edit, Check, X, UserPlus } from 'lucide-react';
+import { Users, Edit, Check, X } from 'lucide-react';
 import { useActionMessages } from '@/hooks/useEnterpriseMessages';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
@@ -413,16 +413,11 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
             hideEditControls={isSubcollectionTab} // 🏢 ENTERPRISE: Hide save/cancel on subcollection tabs
           />
         }
+        onCreateAction={onNewContact}
         emptyStateProps={{
           icon: Users,
           title: t('emptyState.title'),
-          description: t('emptyState.description'),
-          action: onNewContact ? (
-            <Button onClick={onNewContact} className="gap-2">
-              <UserPlus className={iconSizes.sm} />
-              {t('header.newContact')}
-            </Button>
-          ) : undefined
+          description: t('emptyState.description')
         }}
       >
         {/* 🎯 EDIT MODE TOOLBAR - Μόνο για Mobile (Desktop κουμπιά στην επικεφαλίδα) */}
