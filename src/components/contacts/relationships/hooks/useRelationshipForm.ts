@@ -353,12 +353,17 @@ export const useRelationshipForm = (
       }
 
       // Handle actual errors
-      if (err instanceof Error && err.message.includes('already exists')) {
-        setError(t('relationships.errors.alreadyExists', { defaultValue: t('relationships.manager.errors.formError') }));
-      } else if (err instanceof Error && err.message.includes('not found')) {
-        setError(t('relationships.errors.contactsNotFound', { defaultValue: t('relationships.manager.errors.formError') }));
+      // 🔧 FIX: Show the ACTUAL error message, not a generic one
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      logger.error('SAVE FAILED — actual error:', { error: errorMessage });
+
+      if (errorMessage.includes('already exists')) {
+        setError(t('relationships.errors.alreadyExists', { defaultValue: errorMessage }));
+      } else if (errorMessage.includes('not found')) {
+        setError(t('relationships.errors.contactsNotFound', { defaultValue: errorMessage }));
       } else {
-        setError(t('relationships.errors.saveFailed', { defaultValue: t('relationships.manager.errors.formError') }));
+        // Show actual error for debugging — not generic "σφάλμα φόρμας"
+        setError(errorMessage);
       }
     } finally {
       setLoading(false);
