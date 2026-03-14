@@ -7,7 +7,7 @@
 //
 // ============================================================================
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type {
   ContactRelationship,
@@ -69,6 +69,8 @@ export const useRelationshipForm = (
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  // 🛡️ Ref-based lock to prevent double submission (survives re-renders)
+  const isSubmittingRef = useRef(false);
 
   // ============================================================================
   // VALIDATION
@@ -207,6 +209,13 @@ export const useRelationshipForm = (
       e.preventDefault();
       e.stopPropagation();
     }
+
+    // 🛡️ DOUBLE-SUBMIT GUARD: Prevent concurrent saves
+    if (isSubmittingRef.current) {
+      logger.warn('SUBMIT BLOCKED: Already submitting — ignoring duplicate call');
+      return;
+    }
+    isSubmittingRef.current = true;
 
     try {
       setLoading(true);
@@ -353,6 +362,7 @@ export const useRelationshipForm = (
       }
     } finally {
       setLoading(false);
+      isSubmittingRef.current = false;
     }
   }, [contactId, formData, editingId, validateFormData, onSuccess, t]);
 
