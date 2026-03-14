@@ -212,7 +212,7 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
                 <SelectTrigger className="h-9 w-full" aria-label={config.ariaLabel}>
                   <SelectValue placeholder={t('filters.areaPresets.all', { ns: 'units' })} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="min-w-[14rem]">
                   <SelectItem value="all">{t('filters.areaPresets.all', { ns: 'units' })}</SelectItem>
                   <SelectItem value="small">{t('filters.areaPresets.small', { ns: 'units' })}</SelectItem>
                   <SelectItem value="medium">{t('filters.areaPresets.medium', { ns: 'units' })}</SelectItem>
