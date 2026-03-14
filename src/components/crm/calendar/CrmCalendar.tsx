@@ -18,7 +18,7 @@
 
 'use client';
 
-import { useState, useCallback, useMemo, type CSSProperties, type ComponentType } from 'react';
+import { useState, useCallback, useMemo, useEffect, type CSSProperties, type ComponentType } from 'react';
 import {
   Calendar as BigCalendar,
   dateFnsLocalizer,
@@ -123,6 +123,7 @@ interface CrmCalendarProps {
   onEventCreated?: () => void;
   onNewEvent?: () => void;
   onEventUpdated?: () => void;
+  navigateToDate?: Date;
 }
 
 // ============================================================================
@@ -136,6 +137,7 @@ export function CrmCalendar({
   onEventCreated,
   onNewEvent,
   onEventUpdated,
+  navigateToDate,
 }: CrmCalendarProps) {
   const { t, i18n } = useTranslation('crm');
   const { success: notifySuccess, error: notifyError } = useNotifications();
@@ -149,6 +151,13 @@ export function CrmCalendar({
   // View state
   const [currentView, setCurrentView] = useState<View>(Views.MONTH);
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  // Navigate when sidebar date changes
+  useEffect(() => {
+    if (navigateToDate) {
+      setCurrentDate(navigateToDate);
+    }
+  }, [navigateToDate]);
 
   // i18n messages for react-big-calendar
   // i18n.language as dependency ensures re-compute on language switch

@@ -207,7 +207,7 @@ export default function CrmCalendarPage() {
         <section className="flex flex-1 gap-4 overflow-auto p-2">
           {/* Mini Calendar Sidebar */}
           <CalendarSidebar
-            events={events}
+            events={displayEvents}
             selectedDate={sidebarDate}
             onDateSelect={handleSidebarDateSelect}
           />
@@ -220,6 +220,7 @@ export default function CrmCalendarPage() {
               onRangeChange={handleRangeChange}
               onEventCreated={handleEventCreated}
               onEventUpdated={handleEventCreated}
+              navigateToDate={sidebarDate}
             />
           </article>
         </section>

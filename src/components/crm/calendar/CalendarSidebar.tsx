@@ -39,6 +39,7 @@ export function CalendarSidebar({ events, selectedDate, onDateSelect }: Calendar
         mode="single"
         selected={selectedDate}
         onSelect={handleSelect}
+        showWeekNumber={false}
         modifiers={{ hasEvent: eventDates }}
         modifiersClassNames={{ hasEvent: 'calendar-sidebar-has-event' }}
         className="rounded-lg border"
