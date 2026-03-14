@@ -159,6 +159,22 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
   const anyLoading = listLoading || formLoading || treeLoading;
   const hasAnyError = listError || formError || treeError;
 
+  // 🏢 ENTERPRISE: Compute used relationship types for the selected target contact
+  // Prevents duplicate selections by filtering out already-used types from the dropdown
+  const usedRelationshipTypes = React.useMemo(() => {
+    const targetId = formData.targetContactId;
+    if (!targetId) return [];
+
+    return relationships
+      .filter(rel =>
+        // Match relationships involving the target contact
+        (rel.sourceContactId === targetId || rel.targetContactId === targetId) &&
+        // Exclude the relationship being edited (so its type remains selectable)
+        rel.id !== editingId
+      )
+      .map(rel => rel.relationshipType);
+  }, [relationships, formData.targetContactId, editingId]);
+
   // ============================================================================
   // EVENT HANDLERS
   // ============================================================================
@@ -329,6 +345,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
             loading={formLoading}
             error={formError}
             editingId={editingId}
+            usedRelationshipTypes={usedRelationshipTypes}
             onSubmit={handleSubmit}
             onCancel={handleHideForm}
           />

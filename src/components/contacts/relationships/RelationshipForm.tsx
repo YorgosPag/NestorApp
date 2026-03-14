@@ -26,6 +26,7 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
   loading,
   error,
   editingId,
+  usedRelationshipTypes,
   onSubmit,
   onCancel
 }) => {
@@ -177,6 +178,7 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
             contactType={contactType}
             loading={loading || !hasContact}
             errors={validationErrors}
+            usedRelationshipTypes={usedRelationshipTypes}
             fieldConfig={{
               showNotes: true,
               showDates: true,

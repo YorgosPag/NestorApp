@@ -48,6 +48,8 @@ export interface RelationshipFormFieldsProps {
   contactType: ContactType;
   loading?: boolean;
   errors?: Partial<Record<keyof RelationshipFormData, string>>;
+  /** Relationship types already used for the selected target contact — excluded from dropdown */
+  usedRelationshipTypes?: string[];
   className?: string;
   fieldConfig?: {
     showNotes?: boolean;
@@ -110,6 +112,7 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
   contactType,
   loading = false,
   errors = {},
+  usedRelationshipTypes = [],
   className,
   fieldConfig = {}
 }) => {
@@ -143,8 +146,12 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
 
   const relationshipTypeOptions = useMemo(() => {
     const presets = getRelationshipTypeOptions(contactType, t);
-    return [...presets, ...customRelTypes];
-  }, [contactType, t, customRelTypes]);
+    const allOptions = [...presets, ...customRelTypes];
+    // 🏢 ENTERPRISE: Filter out types already used for the selected target contact
+    // Prevents duplicate relationship creation at the UI level (Google-level UX)
+    if (usedRelationshipTypes.length === 0) return allOptions;
+    return allOptions.filter(option => !usedRelationshipTypes.includes(option.value));
+  }, [contactType, t, customRelTypes, usedRelationshipTypes]);
 
   const positionOptions = useMemo(() => {
     const presets = getPositionOptions(t);

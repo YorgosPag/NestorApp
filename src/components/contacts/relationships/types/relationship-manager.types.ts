@@ -82,6 +82,9 @@ export interface RelationshipFormProps {
   /** Whether we're editing an existing relationship */
   editingId: string | null;
 
+  /** Relationship types already used for the selected target contact — excluded from dropdown */
+  usedRelationshipTypes?: string[];
+
   /** Form submit handler */
   onSubmit: (e?: React.FormEvent | React.MouseEvent) => Promise<void>;
 
