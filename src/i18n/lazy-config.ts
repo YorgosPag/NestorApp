@@ -381,7 +381,7 @@ export async function preloadCriticalNamespaces(language: Language = 'el') {
     'parking',       // 🏢 Parking management module - added 2026-01-24
     'dxf-viewer',    // ?? DXF viewer UI - avoids fallback-to-keys after language switch
     'accounting',    // 🏢 Accounting subapp - all financial modules
-    // Note: 'crm' loads on-demand via useTranslation('crm')
+    'crm',           // 🏢 CRM module - calendar, teams, pipeline, contacts
   ];
 
   await Promise.all(

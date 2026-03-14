@@ -35,7 +35,7 @@
     "bankNamePlaceholder": "e.g. Deutsche Bank",
     "holderName": "Holder",
     "holderPlaceholder": "For joint accounts or different holder",
-    "holderHint": "If the holder is not \"{{name}}\", modify this field.",
+    "holderHint": "If the holder is not \"{name}\", modify this field.",
     "accountNumber": "Account Number",
     "accountNumberPlaceholder": "e.g. 125-000000123-00",
     "branch": "Branch",

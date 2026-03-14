@@ -35,7 +35,7 @@
     "bankNamePlaceholder": "π.χ. Deutsche Bank",
     "holderName": "Δικαιούχος",
     "holderPlaceholder": "Για κοινούς λογαριασμούς ή διαφορετικό δικαιούχο",
-    "holderHint": "Αν ο δικαιούχος δεν είναι «{{name}}», τροποποιήστε το πεδίο.",
+    "holderHint": "Αν ο δικαιούχος δεν είναι «{name}», τροποποιήστε το πεδίο.",
     "accountNumber": "Αριθμός Λογαριασμού",
     "accountNumberPlaceholder": "π.χ. 125-000000123-00",
     "branch": "Υποκατάστημα",

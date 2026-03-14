@@ -304,7 +304,7 @@
   "to": "To",
   "minimum": "Minimum",
   "maximum": "Maximum",
-  "selectedCount": "{{count}} selected",
+  "selectedCount": "{count} selected",
   "riskComplexity": {
     "low": "Low",
     "medium": "Medium",

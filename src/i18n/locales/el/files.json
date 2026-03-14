@@ -442,7 +442,7 @@
     "selectGroup": "Επιλέξτε κατηγορία μελέτης",
     "backToGroups": "Πίσω στις κατηγορίες",
     "noFloorsWarning": "Πρέπει πρώτα να δημιουργήσετε ορόφους στο κτίριο για τα σχέδια ανά όροφο",
-    "entriesCount": "{{count}} έγγραφα",
+    "entriesCount": "{count} έγγραφα",
     "searchAcrossAll": "Αναζήτηση σε όλες τις κατηγορίες...",
     "generalDocuments": "Γενικά Έγγραφα",
     "generalDocumentsDescription": "Βασικά έγγραφα χωρίς κατηγορία μελέτης",
@@ -465,7 +465,7 @@
   },
   "batch": {
     "toolbar": "Μαζικές ενέργειες",
-    "selected": "{{num}} / {{of}} επιλεγμένα",
+    "selected": "{num} / {of} επιλεγμένα",
     "selectAll": "Επιλογή όλων",
     "deselectAll": "Αποεπιλογή",
     "delete": "Διαγραφή",

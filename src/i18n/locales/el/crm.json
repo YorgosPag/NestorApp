@@ -730,7 +730,7 @@
     "subtitle": "Διαχείριση ομάδων, μελών και δικαιωμάτων",
     "newTeam": "Νέα Ομάδα",
     "createTeam": "Δημιουργία Ομάδας",
-    "members": "{{count}} Μέλη",
+    "members": "{count} Μέλη",
     "managePermissions": "Διαχείριση Δικαιωμάτων",
     "loading": "Φόρτωση ομάδων...",
     "empty": {

@@ -304,7 +304,7 @@
   "to": "Έως",
   "minimum": "Ελάχιστο",
   "maximum": "Μέγιστο",
-  "selectedCount": "{{count}} επιλεγμένα",
+  "selectedCount": "{count} επιλεγμένα",
   "riskComplexity": {
     "low": "Χαμηλός",
     "medium": "Μέτριος",

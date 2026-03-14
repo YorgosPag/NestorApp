@@ -264,8 +264,8 @@
     "articles": "Άρθρα",
     "paragraphs": "Παράγραφοι",
     "pageShort": "σελ.",
-    "expandAria": "Επέκταση ενότητας {{title}}",
-    "collapseAria": "Σύμπτυξη ενότητας {{title}}",
+    "expandAria": "Επέκταση ενότητας {title}",
+    "collapseAria": "Σύμπτυξη ενότητας {title}",
     "short": {
       "section": "ΕΝ",
       "article": "ΑΡ",

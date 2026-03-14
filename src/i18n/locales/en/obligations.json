@@ -264,8 +264,8 @@
     "articles": "Articles",
     "paragraphs": "Paragraphs",
     "pageShort": "p.",
-    "expandAria": "Expand section {{title}}",
-    "collapseAria": "Collapse section {{title}}",
+    "expandAria": "Expand section {title}",
+    "collapseAria": "Collapse section {title}",
     "short": {
       "section": "SEC",
       "article": "ART",

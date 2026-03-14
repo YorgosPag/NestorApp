@@ -730,7 +730,7 @@
     "subtitle": "Manage teams, members and permissions",
     "newTeam": "New Team",
     "createTeam": "Create Team",
-    "members": "{{count}} Members",
+    "members": "{count} Members",
     "managePermissions": "Manage Permissions",
     "loading": "Loading teams...",
     "empty": {

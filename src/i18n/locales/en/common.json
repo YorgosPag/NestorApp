@@ -1358,7 +1358,7 @@
       "noFloor": "The unit must be assigned to a building and floor before reservation or sale.",
       "noBuyer": "Buyer contact is required",
       "buyerNotFound": "Buyer contact not found",
-      "buyerMissingFields": "Buyer missing required fields: {{fields}}",
+      "buyerMissingFields": "Buyer missing required fields: {fields}",
       "serviceNotBuyer": "Service contacts cannot be buyers"
     }
   },
