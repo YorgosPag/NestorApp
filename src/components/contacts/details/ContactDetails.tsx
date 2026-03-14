@@ -264,11 +264,10 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
       setEditedData({});
 
       // 🔄 TRIGGER REFRESH: Notify parent component to refresh data
-      // 🔧 FIX: Delay refresh to prevent selectedContact flicker → remount → tab reset
       logger.info('Contact updated successfully with enterprise structure');
       if (onContactUpdated) {
-        logger.info('Triggering parent refresh after save (delayed to prevent tab reset)');
-        setTimeout(() => onContactUpdated(), 300);
+        logger.info('Triggering parent refresh after save');
+        onContactUpdated();
       }
     } catch (error) {
       logger.error('Failed to update contact', { error });
@@ -479,6 +478,7 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
           disabled={!isEditing} // 🎯 Enable editing when in edit mode
           relationshipsMode={isEditing ? "full" : "summary"} // 🎯 KEY: Full mode when editing, summary when viewing
           onPhotoClick={handlePhotoClick} // 🖼️ Photo click handler για gallery preview
+          initialTab={activeTab} // 🏢 ENTERPRISE: Preserved tab (survives remounts via sessionStorage)
           onActiveTabChange={setActiveTab} // 🏢 ENTERPRISE: Track active tab for hiding header controls
           handleUploadedLogoURL={isEditing ? handleUploadedLogoURL : undefined}
           handleUploadedPhotoURL={isEditing ? handleUploadedPhotoURL : undefined}

@@ -68,6 +68,8 @@ export interface IndividualFormTabRendererProps {
   onPhotoClick?: (index: number) => void;
   /** 🏢 ENTERPRISE: Callback when active tab changes (for parent state management) */
   onActiveTabChange?: (tabId: string) => void;
+  /** 🏢 ENTERPRISE: Initial tab from sessionStorage (survives remounts) */
+  initialTab?: string;
 }
 
 // ============================================================================
@@ -197,7 +199,8 @@ export function IndividualFormTabRenderer({
   customRenderers,
   sectionFooterRenderers,
   onPhotoClick,
-  onActiveTabChange
+  onActiveTabChange,
+  initialTab
 }: IndividualFormTabRendererProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('contacts');
@@ -232,7 +235,7 @@ export function IndividualFormTabRenderer({
     <div className="w-full">
       <TabsOnlyTriggers
         tabs={tabs}
-        defaultTab={tabs[0]?.id || "basicInfo"}
+        defaultTab={initialTab || tabs[0]?.id || "basicInfo"}
         theme="clean"
         onTabChange={onActiveTabChange}
       >

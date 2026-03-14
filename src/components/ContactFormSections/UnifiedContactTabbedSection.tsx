@@ -113,6 +113,8 @@ interface UnifiedContactTabbedSectionProps {
 
   // 🏢 ENTERPRISE: Callback when active tab changes (for hiding save controls on subcollection tabs)
   onActiveTabChange?: (tabId: string) => void;
+  // 🏢 ENTERPRISE: Initial tab (from sessionStorage — survives remounts)
+  initialTab?: string;
 
   // 🎭 ENTERPRISE: Dedicated persona toggle callback (ADR-121)
   // Works in both view and edit mode — in view mode, saves directly to Firestore
@@ -140,6 +142,7 @@ export function UnifiedContactTabbedSection({
   onPhotoClick,
   canonicalUploadContext,
   onActiveTabChange,
+  initialTab,
   onPersonaToggle,
 }: UnifiedContactTabbedSectionProps) {
 
@@ -325,6 +328,7 @@ export function UnifiedContactTabbedSection({
       onSelectChange: wrappedHandleSelectChange,
       disabled,
       onActiveTabChange, // 🏢 ENTERPRISE: Pass tab change callback for hiding header save controls
+      initialTab, // 🏢 ENTERPRISE: Preserved tab from sessionStorage
       customRenderers: {
         // 🚀 DYNAMIC COMMUNICATION: Custom renderer for communication & social media
         communication: (_field: CustomRendererField, _fieldFormData: Record<string, unknown>, _fieldOnChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, _fieldOnSelectChange: (name: string, value: string) => void, fieldDisabled: boolean) => (
