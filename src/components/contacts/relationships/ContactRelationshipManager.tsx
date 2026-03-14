@@ -177,11 +177,11 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
     };
   }, [handleSubmit]);
 
-  // 🛡️ Track dirty state — form has data when targetContactId is set and form is visible
+  // 🛡️ Track dirty state — form is ready to submit ONLY when both contact AND type are set
   React.useEffect(() => {
-    const hasPending = showFormCard && !!formData.targetContactId;
+    const hasPending = showFormCard && !!formData.targetContactId && !!formData.relationshipType;
     PendingRelationshipGuard.setHasPendingData(hasPending);
-  }, [showFormCard, formData.targetContactId]);
+  }, [showFormCard, formData.targetContactId, formData.relationshipType]);
 
   // ============================================================================
   // RENDER HELPERS

@@ -80,15 +80,15 @@ export const useRelationshipForm = (
    */
   const validateFormData = async (): Promise<string | null> => {
     if (!contactId || contactId === 'new-contact') {
-      return 'relationships.validation.saveContactFirst';
+      return 'relationships.form.validation.contactRequired';
     }
 
     if (!formData.targetContactId) {
-      return 'relationships.validation.selectContact';
+      return 'relationships.form.validation.contactRequired';
     }
 
     if (!formData.relationshipType) {
-      return 'relationships.validation.selectType';
+      return 'relationships.form.validation.relationshipTypeRequired';
     }
 
     // 🏢 Business Logic Validation using CENTRALIZED RelationshipValidationService
