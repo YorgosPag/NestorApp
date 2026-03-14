@@ -48,25 +48,25 @@ export const MODAL_SELECT_GEMI_STATUSES = [
  * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_SERVICE_CATEGORIES = [
-  { value: 'ministry', label: 'contacts.options.serviceCategories.ministry' },
-  { value: 'region', label: 'contacts.options.serviceCategories.region' },
-  { value: 'municipality', label: 'contacts.options.serviceCategories.municipality' },
-  { value: 'public_entity', label: 'contacts.options.serviceCategories.publicEntity' },
-  { value: 'independent_authority', label: 'contacts.options.serviceCategories.independentAuthority' },
-  { value: 'tax_office', label: 'contacts.options.serviceCategories.taxOffice' },
-  { value: 'social_security', label: 'contacts.options.serviceCategories.socialSecurity' },
-  { value: 'urban_planning', label: 'contacts.options.serviceCategories.urbanPlanning' },
-  { value: 'land_registry', label: 'contacts.options.serviceCategories.landRegistry' },
-  { value: 'fire_department', label: 'contacts.options.serviceCategories.fireDepartment' },
-  { value: 'police', label: 'contacts.options.serviceCategories.police' },
-  { value: 'court', label: 'contacts.options.serviceCategories.court' },
-  { value: 'chamber', label: 'contacts.options.serviceCategories.chamber' },
-  { value: 'utility', label: 'contacts.options.serviceCategories.utility' },
-  { value: 'military', label: 'contacts.options.serviceCategories.military' },
-  { value: 'university', label: 'contacts.options.serviceCategories.university' },
-  { value: 'hospital', label: 'contacts.options.serviceCategories.hospital' },
-  { value: 'school', label: 'contacts.options.serviceCategories.school' },
-  { value: 'other', label: 'contacts.options.serviceCategories.other' }
+  { value: 'ministry', label: 'options.serviceCategories.ministry' },
+  { value: 'region', label: 'options.serviceCategories.region' },
+  { value: 'municipality', label: 'options.serviceCategories.municipality' },
+  { value: 'public_entity', label: 'options.serviceCategories.publicEntity' },
+  { value: 'independent_authority', label: 'options.serviceCategories.independentAuthority' },
+  { value: 'tax_office', label: 'options.serviceCategories.taxOffice' },
+  { value: 'social_security', label: 'options.serviceCategories.socialSecurity' },
+  { value: 'urban_planning', label: 'options.serviceCategories.urbanPlanning' },
+  { value: 'land_registry', label: 'options.serviceCategories.landRegistry' },
+  { value: 'fire_department', label: 'options.serviceCategories.fireDepartment' },
+  { value: 'police', label: 'options.serviceCategories.police' },
+  { value: 'court', label: 'options.serviceCategories.court' },
+  { value: 'chamber', label: 'options.serviceCategories.chamber' },
+  { value: 'utility', label: 'options.serviceCategories.utility' },
+  { value: 'military', label: 'options.serviceCategories.military' },
+  { value: 'university', label: 'options.serviceCategories.university' },
+  { value: 'hospital', label: 'options.serviceCategories.hospital' },
+  { value: 'school', label: 'options.serviceCategories.school' },
+  { value: 'other', label: 'options.serviceCategories.other' }
 ] as const;
 
 /**
@@ -74,11 +74,11 @@ export const MODAL_SELECT_SERVICE_CATEGORIES = [
  * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_LEGAL_STATUSES = [
-  { value: 'npdd', label: 'contacts.options.legalStatuses.npdd' },
-  { value: 'npid', label: 'contacts.options.legalStatuses.npid' },
-  { value: 'public_service', label: 'contacts.options.legalStatuses.publicService' },
-  { value: 'independent_authority', label: 'contacts.options.legalStatuses.independentAuthority' },
-  { value: 'decentralized_admin', label: 'contacts.options.legalStatuses.decentralizedAdmin' }
+  { value: 'npdd', label: 'options.legalStatuses.npdd' },
+  { value: 'npid', label: 'options.legalStatuses.npid' },
+  { value: 'public_service', label: 'options.legalStatuses.publicService' },
+  { value: 'independent_authority', label: 'options.legalStatuses.independentAuthority' },
+  { value: 'decentralized_admin', label: 'options.legalStatuses.decentralizedAdmin' }
 ] as const;
 
 /**
@@ -104,8 +104,8 @@ export const MODAL_SELECT_ADDRESS_TYPES = [
  * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_SHAREHOLDER_TYPES = [
-  { value: 'individual', label: 'contacts.options.shareholderTypes.individual' },
-  { value: 'legal', label: 'contacts.options.shareholderTypes.legal' }
+  { value: 'individual', label: 'options.shareholderTypes.individual' },
+  { value: 'legal', label: 'options.shareholderTypes.legal' }
 ] as const;
 
 // ====================================================================

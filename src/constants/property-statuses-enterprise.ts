@@ -1274,10 +1274,10 @@ export const resolveLegacyDropdownString = (hardcodedString: string): string => 
  * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const GENDER_LABELS = {
-  male: 'contacts.options.gender.male',
-  female: 'contacts.options.gender.female',
-  other: 'contacts.options.gender.other',
-  prefer_not_to_say: 'contacts.options.gender.preferNotToSay'
+  male: 'options.gender.male',
+  female: 'options.gender.female',
+  other: 'options.gender.other',
+  prefer_not_to_say: 'options.gender.preferNotToSay'
 } as const;
 
 // Note: IDENTITY_TYPE_LABELS merged with main definition above (line ~727)

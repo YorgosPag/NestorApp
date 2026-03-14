@@ -305,22 +305,6 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         icon: 'target',
       },
       {
-        id: 'employer',
-        label: PROFESSIONAL_INFO_FIELD_LABELS.EMPLOYER,
-        type: 'input',
-        placeholder: 'individual.placeholders.employer',
-        helpText: 'individual.helpTexts.employer',
-        icon: 'factory',
-      },
-      {
-        id: 'position',
-        label: PROFESSIONAL_INFO_FIELD_LABELS.POSITION,
-        type: 'input',
-        placeholder: 'individual.placeholders.position',
-        helpText: 'individual.helpTexts.position',
-        icon: 'briefcase',
-      },
-      {
         // 🎯 DUMMY FIELD για custom renderer triggering (ADR-132)
         // Actual UI rendered by EscoSkillPicker component
         id: 'skills',

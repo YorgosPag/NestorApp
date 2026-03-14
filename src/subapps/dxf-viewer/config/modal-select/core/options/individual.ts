@@ -18,10 +18,10 @@
  * 🌐 i18n: Uses keys from contacts.json namespace
  */
 export const MODAL_SELECT_GENDER_OPTIONS = [
-  { value: 'male', label: 'contacts.options.gender.male' },
-  { value: 'female', label: 'contacts.options.gender.female' },
-  { value: 'other', label: 'contacts.options.gender.other' },
-  { value: 'prefer_not_to_say', label: 'contacts.options.gender.preferNotToSay' }
+  { value: 'male', label: 'options.gender.male' },
+  { value: 'female', label: 'options.gender.female' },
+  { value: 'other', label: 'options.gender.other' },
+  { value: 'prefer_not_to_say', label: 'options.gender.preferNotToSay' }
 ] as const;
 
 /**
@@ -29,10 +29,10 @@ export const MODAL_SELECT_GENDER_OPTIONS = [
  * 🌐 i18n: Uses keys from contacts.json namespace
  */
 export const MODAL_SELECT_IDENTITY_TYPES = [
-  { value: 'identity_card', label: 'contacts.options.identity.identityCard' },
-  { value: 'passport', label: 'contacts.options.identity.passport' },
-  { value: 'drivers_license', label: 'contacts.options.identity.driversLicense' },
-  { value: 'other', label: 'contacts.options.identity.other' }
+  { value: 'identity_card', label: 'options.identity.identityCard' },
+  { value: 'passport', label: 'options.identity.passport' },
+  { value: 'drivers_license', label: 'options.identity.driversLicense' },
+  { value: 'other', label: 'options.identity.other' }
 ] as const;
 
 /**
@@ -40,17 +40,17 @@ export const MODAL_SELECT_IDENTITY_TYPES = [
  * 🌐 i18n: Uses keys from common.json namespace
  */
 export const MODAL_SELECT_COUNTRY_OPTIONS = [
-  { value: 'GR', label: 'common.countries.greece' },
-  { value: 'CY', label: 'common.countries.cyprus' },
-  { value: 'US', label: 'common.countries.usa' },
-  { value: 'DE', label: 'common.countries.germany' },
-  { value: 'FR', label: 'common.countries.france' },
-  { value: 'IT', label: 'common.countries.italy' },
-  { value: 'ES', label: 'common.countries.spain' },
-  { value: 'UK', label: 'common.countries.uk' },
-  { value: 'AU', label: 'common.countries.australia' },
-  { value: 'CA', label: 'common.countries.canada' },
-  { value: 'OTHER', label: 'common.countries.other' }
+  { value: 'GR', label: 'common:countries.greece' },
+  { value: 'CY', label: 'common:countries.cyprus' },
+  { value: 'US', label: 'common:countries.usa' },
+  { value: 'DE', label: 'common:countries.germany' },
+  { value: 'FR', label: 'common:countries.france' },
+  { value: 'IT', label: 'common:countries.italy' },
+  { value: 'ES', label: 'common:countries.spain' },
+  { value: 'UK', label: 'common:countries.uk' },
+  { value: 'AU', label: 'common:countries.australia' },
+  { value: 'CA', label: 'common:countries.canada' },
+  { value: 'OTHER', label: 'common:countries.other' }
 ] as const;
 
 /**
@@ -58,9 +58,9 @@ export const MODAL_SELECT_COUNTRY_OPTIONS = [
  * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_CURRENCY_OPTIONS = [
-  { value: 'EUR', label: 'contacts.options.currencies.eur' },
-  { value: 'USD', label: 'contacts.options.currencies.usd' },
-  { value: 'GBP', label: 'contacts.options.currencies.gbp' }
+  { value: 'EUR', label: 'options.currencies.eur' },
+  { value: 'USD', label: 'options.currencies.usd' },
+  { value: 'GBP', label: 'options.currencies.gbp' }
 ] as const;
 
 // ====================================================================

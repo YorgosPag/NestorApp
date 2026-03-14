@@ -11,17 +11,15 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles, semantic HTML
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { SearchableCombobox } from '@/components/ui/searchable-combobox';
-import type { ComboboxOption } from '@/components/ui/searchable-combobox';
 import { ContactSearchManager } from '@/components/contacts/relationships/ContactSearchManager';
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
 import { ContactsService } from '@/services/contacts.service';
-import { GREEK_TAX_OFFICES } from '../../data/greek-tax-offices';
+import { DoyPicker } from '@/components/ui/doy-picker';
 import {
   isIndividualContact,
   isCompanyContact,
@@ -119,17 +117,6 @@ export function BasicInfoSection({ data, onChange, errors }: BasicInfoSectionPro
   const { t } = useTranslation('accounting');
   const [selectedContactId, setSelectedContactId] = useState('');
   const [autoFillMessage, setAutoFillMessage] = useState<string | null>(null);
-
-  // ΔΟΥ options — memoized from static data
-  const taxOfficeOptions = useMemo<ComboboxOption[]>(
-    () =>
-      GREEK_TAX_OFFICES.map((office) => ({
-        value: office.name,
-        label: office.name,
-        secondaryLabel: `${office.code} · ${office.region}`,
-      })),
-    [],
-  );
 
   /**
    * Handle ESCO profession picker change → update profession field
@@ -231,12 +218,9 @@ export function BasicInfoSection({ data, onChange, errors }: BasicInfoSectionPro
             </div>
             <div className="space-y-2">
               <Label>{t('setup.taxOffice')} *</Label>
-              <SearchableCombobox
+              <DoyPicker
                 value={data.taxOffice}
                 onValueChange={(value) => onChange({ taxOffice: value })}
-                options={taxOfficeOptions}
-                placeholder={t('setup.searchTaxOffice')}
-                emptyMessage={t('setup.noTaxOfficeFound')}
                 error={errors.taxOffice}
               />
               {errors.taxOffice && (

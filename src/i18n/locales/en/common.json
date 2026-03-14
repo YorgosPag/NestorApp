@@ -1898,5 +1898,18 @@
     "checking": "Checking dependencies...",
     "count": "{count, plural, one {# record} other {# records}}",
     "deleteFirst": "Please delete the following dependencies first:"
+  },
+  "doyPicker": {
+    "search": "Search Tax Office...",
+    "notFound": "No tax office found — add new",
+    "notFoundSimple": "No tax office found",
+    "addNew": "Add new Tax Office",
+    "addNewTitle": "Add new Tax Office",
+    "codeLabel": "Code (4-digit)",
+    "nameLabel": "Name",
+    "namePlaceholder": "e.g. A' Athens",
+    "regionLabel": "Region",
+    "regionPlaceholder": "e.g. Attica",
+    "customRegion": "Custom"
   }
 }

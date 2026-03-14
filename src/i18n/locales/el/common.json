@@ -1897,5 +1897,18 @@
     "checking": "Έλεγχος εξαρτήσεων...",
     "count": "{count, plural, one {# εγγραφή} other {# εγγραφές}}",
     "deleteFirst": "Διαγράψτε πρώτα τις παρακάτω εξαρτήσεις:"
+  },
+  "doyPicker": {
+    "search": "Αναζήτηση Δ.Ο.Υ...",
+    "notFound": "Δεν βρέθηκε Δ.Ο.Υ. — προσθέστε νέα",
+    "notFoundSimple": "Δεν βρέθηκε Δ.Ο.Υ.",
+    "addNew": "Προσθήκη νέας Δ.Ο.Υ.",
+    "addNewTitle": "Προσθήκη νέας Δ.Ο.Υ.",
+    "codeLabel": "Κωδικός (4ψήφιος)",
+    "nameLabel": "Ονομασία",
+    "namePlaceholder": "π.χ. Α' Αθηνών",
+    "regionLabel": "Περιφέρεια",
+    "regionPlaceholder": "π.χ. Αττική",
+    "customRegion": "Προσαρμοσμένη"
   }
 }
