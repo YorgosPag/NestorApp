@@ -30,7 +30,7 @@ const logger = createModuleLogger('useRelationshipForm');
  */
 const createInitialFormData = (): RelationshipFormData => ({
   targetContactId: '',
-  relationshipType: 'employee' as RelationshipType,
+  relationshipType: '',
   position: '',
   department: '',
   startDate: '',
@@ -238,8 +238,8 @@ export const useRelationshipForm = (
         ...formData.contactInfo,
         businessPhone: primaryPhone
           ? `${primaryPhone.countryCode || '+30'} ${primaryPhone.number}`.trim()
-          : formData.contactInfo?.businessPhone || undefined,
-        businessEmail: primaryEmail?.email || formData.contactInfo?.businessEmail || undefined
+          : formData.contactInfo?.businessPhone || null,
+        businessEmail: primaryEmail?.email || formData.contactInfo?.businessEmail || null
       };
 
       const hasContactInfo = builtContactInfo.businessPhone || builtContactInfo.businessEmail;

@@ -180,11 +180,12 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
           </div>
 
           {/* 📝 FORM FIELDS SECTION - Κεντρικοποιημένο */}
+          {/* 🛡️ GUARD: Fields disabled until a contact is selected */}
           <RelationshipFormFields
             formData={formData}
             setFormData={setFormData}
             contactType={contactType}
-            loading={loading}
+            loading={loading || !formData.targetContactId}
             errors={validationErrors}
             fieldConfig={{
               showNotes: true,
@@ -198,6 +199,18 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
               }
             }}
           />
+
+          {/* Hint: select contact first */}
+          {!formData.targetContactId && (
+            <Alert className="mt-4 border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-950/30">
+              <Info className={designSystem.cn(iconSizes.sm, "text-blue-600 dark:text-blue-400")} />
+              <AlertDescription className="text-blue-700 dark:text-blue-300 text-sm">
+                {t('relationships.form.selectContactFirst', {
+                  defaultValue: 'Επιλέξτε πρώτα μία επαφή για να συμπληρώσετε τα υπόλοιπα πεδία.'
+                })}
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Backend Validation Error Display */}
           {error && (
@@ -237,7 +250,7 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
             </Button>
             <Button
               type="button"
-              disabled={loading || Object.keys(validationErrors).length > 0}
+              disabled={loading}
               onClick={handleSubmit}
               className={designSystem.presets.button.primary}
             >

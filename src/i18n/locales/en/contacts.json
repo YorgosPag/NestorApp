@@ -325,6 +325,7 @@
         "add": "Add",
         "update": "Update"
       },
+      "selectContactFirst": "Please select a contact first to fill in the remaining fields.",
       "pendingReminder": "Click \"Add\" to save the relationship. It will also be saved automatically when you save the contact."
     },
     "card": {
