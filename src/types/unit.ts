@@ -465,7 +465,10 @@ export interface UnitDoc {
   status?: LegacySalesStatus;
   price?: number;
   area?: number;
+  /** @deprecated Use projectId. Some code still references this alias. */
   project?: string;
+  /** Project ID (Firestore field name) */
+  projectId?: string;
   description?: string;
   building?: string;
   buildingId?: string;

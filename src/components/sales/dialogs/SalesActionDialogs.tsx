@@ -44,6 +44,11 @@ const logger = createModuleLogger('SalesActionDialogs');
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
 import type { Unit } from '@/types/unit';
 
+/** Resolve projectId — Firestore uses `projectId`, legacy code uses `project` */
+function resolveProjectId(unit: Unit): string | undefined {
+  return unit.projectId ?? unit.project;
+}
+
 // =============================================================================
 // 🏢 SERVER ERROR → i18n TRANSLATION MAP
 // =============================================================================
@@ -299,7 +304,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
           eventType: 'reservation_notify',
           unitId: unit.id,
           unitName,
-          projectId: unit.project ?? null,
+          projectId: resolveProjectId(unit) ?? null,
           buyerContactId,
           buyerName: buyerName || null,
           projectName: null,
@@ -322,7 +327,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
           eventType: 'deposit_invoice',
           unitId: unit.id,
           unitName,
-          projectId: unit.project ?? null,
+          projectId: resolveProjectId(unit) ?? null,
           buyerContactId: buyerContactId || null,
           buyerName: buyerName || null,
           projectName: null,
@@ -548,11 +553,11 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
       setSelectedBrokerId('none');
 
       // Fetch active brokerage agreements
-      BrokerageService.getAgreements(unit.project, unit.id, 'active')
+      BrokerageService.getAgreements(resolveProjectId(unit), unit.id, 'active')
         .then(setBrokerAgreements)
         .catch(() => setBrokerAgreements([]));
     }
-  }, [open, unit.commercial?.askingPrice, unit.commercial?.buyerContactId, unit.commercial?.buyerName, unit.project, unit.id]);
+  }, [open, unit.commercial?.askingPrice, unit.commercial?.buyerContactId, unit.commercial?.buyerName, unit.projectId, unit.project, unit.id]);
 
   const handleBuyerSelect = useCallback((contact: ContactSummary | null) => {
     setBuyerContactId(contact?.id ?? '');
@@ -595,7 +600,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
         eventType: 'final_sale_invoice',
         unitId: unit.id,
         unitName,
-        projectId: unit.project ?? null,
+        projectId: resolveProjectId(unit) ?? null,
         buyerContactId: buyerContactId || null,
         buyerName: buyerName || null,
         projectName: null,
@@ -623,7 +628,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
               agentContactId: agreement.agentContactId,
               agentName: agreement.agentName,
               unitId: unit.id,
-              projectId: unit.project,
+              projectId: resolveProjectId(unit),
               buyerContactId: buyerContactId || '',
               salePrice: price,
               commissionType: agreement.commissionType,
@@ -919,7 +924,7 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
           eventType: 'credit_invoice',
           unitId: unit.id,
           unitName,
-          projectId: unit.project ?? null,
+          projectId: resolveProjectId(unit) ?? null,
           buyerContactId: refundBuyerContactId,
           buyerName: unit.commercial?.buyerName ?? null,
           projectName: null,

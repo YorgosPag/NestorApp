@@ -60,7 +60,7 @@ export function LegalTabContent({ unit, associations }: LegalTabContentProps) {
     error,
     createContract,
     transitionStatus,
-  } = useLegalContracts(unit.id, unit.project);
+  } = useLegalContracts(unit.id, unit.projectId ?? unit.project);
 
   const [selectedPhase, setSelectedPhase] = useState<ContractPhase>('preliminary');
   const [creating, setCreating] = useState(false);
@@ -79,7 +79,8 @@ export function LegalTabContent({ unit, associations }: LegalTabContentProps) {
       toast.error(t('sales.errors.noBuilding', { defaultValue: 'Η μονάδα δεν είναι συνδεδεμένη με κτίριο' }));
       return;
     }
-    if (!unit.project) {
+    const resolvedProjectId = unit.projectId ?? unit.project;
+    if (!resolvedProjectId) {
       toast.error(t('sales.errors.noProject', { defaultValue: 'Η μονάδα δεν ανήκει σε έργο' }));
       return;
     }
@@ -87,7 +88,7 @@ export function LegalTabContent({ unit, associations }: LegalTabContentProps) {
     setCreating(true);
     const result = await createContract({
       unitId: unit.id,
-      projectId: unit.project,
+      projectId: resolvedProjectId,
       buildingId: unit.buildingId,
       buyerContactId: unit.commercial.buyerContactId,
       phase: selectedPhase,
