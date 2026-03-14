@@ -56,6 +56,7 @@ export const GET = withStandardRateLimit(
     }
 
     // 🎯 ENTERPRISE: Build query — projectId + fallback to companyId
+    // 🏢 ADR-232: Super admin sees ALL buildings (companyId may be null)
     let snapshot;
     if (projectId) {
       // 🏢 ADR-209: Single query with normalized projectId (handles string/number mismatch)
@@ -71,6 +72,10 @@ export const GET = withStandardRateLimit(
           .where('companyId', '==', tenantCompanyId);
         snapshot = await fallbackQuery.get();
       }
+    } else if (isSuperAdmin) {
+      // 🏢 ADR-232: Super admin without projectId → load ALL buildings
+      const queryRef = adminDb.collection(COLLECTIONS.BUILDINGS);
+      snapshot = await queryRef.get();
     } else {
       // Without projectId, use tenant companyId to list all buildings
       const queryRef = adminDb.collection(COLLECTIONS.BUILDINGS)
