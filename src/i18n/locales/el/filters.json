@@ -266,6 +266,45 @@
     "isActive": "Ενεργό",
     "isEcological": "Οικολογικό"
   },
+  "from": "Από",
+  "to": "Έως",
+  "minimum": "Ελάχιστο",
+  "maximum": "Μέγιστο",
+  "selectedCount": "{{count}} επιλεγμένα",
+  "riskComplexity": {
+    "low": "Χαμηλός",
+    "medium": "Μέτριος",
+    "high": "Υψηλός",
+    "simple": "Απλή",
+    "complex": "Πολύπλοκη",
+    "veryComplex": "Πολύ Πολύπλοκη"
+  },
+  "sampleCompanies": {
+    "companyA": "Εταιρεία Α",
+    "companyB": "Εταιρεία Β",
+    "companyC": "Εταιρεία Γ",
+    "companyD": "Εταιρεία Δ"
+  },
+  "sampleCities": {
+    "athens": "Αθήνα",
+    "thessaloniki": "Θεσσαλονίκη",
+    "patras": "Πάτρα",
+    "heraklion": "Ηράκλειο",
+    "volos": "Βόλος",
+    "kavala": "Καβάλα",
+    "lamia": "Λαμία",
+    "rhodes": "Ρόδος"
+  },
+  "ranges": {
+    "unitsAll": "Όλες οι μονάδες",
+    "units1to2": "1-2 μονάδες",
+    "units3to5": "3-5 μονάδες",
+    "units6Plus": "6+ μονάδες",
+    "areasAll": "Όλα τα εμβαδά",
+    "areaUpTo100": "Έως 100 τ.μ.",
+    "area101to300": "101-300 τ.μ.",
+    "area301Plus": "301+ τ.μ."
+  },
   "advancedOptions": {
     "isFavoriteContacts": "Αγαπημένες επαφές",
     "hasEmail": "Με email",

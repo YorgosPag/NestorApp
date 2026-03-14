@@ -266,6 +266,45 @@
     "isActive": "Active",
     "isEcological": "Ecological"
   },
+  "from": "From",
+  "to": "To",
+  "minimum": "Minimum",
+  "maximum": "Maximum",
+  "selectedCount": "{{count}} selected",
+  "riskComplexity": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "simple": "Simple",
+    "complex": "Complex",
+    "veryComplex": "Very Complex"
+  },
+  "sampleCompanies": {
+    "companyA": "Company A",
+    "companyB": "Company B",
+    "companyC": "Company C",
+    "companyD": "Company D"
+  },
+  "sampleCities": {
+    "athens": "Athens",
+    "thessaloniki": "Thessaloniki",
+    "patras": "Patras",
+    "heraklion": "Heraklion",
+    "volos": "Volos",
+    "kavala": "Kavala",
+    "lamia": "Lamia",
+    "rhodes": "Rhodes"
+  },
+  "ranges": {
+    "unitsAll": "All units",
+    "units1to2": "1-2 units",
+    "units3to5": "3-5 units",
+    "units6Plus": "6+ units",
+    "areasAll": "All areas",
+    "areaUpTo100": "Up to 100 sqm",
+    "area101to300": "101-300 sqm",
+    "area301Plus": "301+ sqm"
+  },
   "advancedOptions": {
     "isFavoriteContacts": "Favorite contacts",
     "hasEmail": "With email",

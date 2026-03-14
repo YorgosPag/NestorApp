@@ -72,10 +72,7 @@ export function ProjectsHeader({
         onViewModeChange: (mode) => setViewMode(mode as ProjectsViewMode),
         // 🏢 ENTERPRISE: Added 'grid' for card grid layout (PR: Projects Grid View)
         viewModes: ['list', 'grid', 'byType', 'byStatus'] as ViewMode[],
-        addButton: {
-          label: t('header.newProject'),
-          onClick: () => onNewProject?.() || logger.info('Add project')
-        },
+        // addButton removed — project creation is not available from this page
         // Mobile-only filter button
         customActions: setShowFilters ? [
           <button
