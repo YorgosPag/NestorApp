@@ -53,15 +53,6 @@ function SalesParkingContent() {
     dashboardStats,
   } = useSalesParkingViewerState();
 
-  // ADR-229 Phase 2: Data-level loading guard
-  if (loading) {
-    return (
-      <PageContainer ariaLabel={t('salesParking.pageTitle', { defaultValue: 'Διαθέσιμες Θέσεις Στάθμευσης' })}>
-        <PageLoadingState icon={Car} message={t('salesParking.loading', { defaultValue: 'Φόρτωση θέσεων στάθμευσης...' })} layout="contained" />
-      </PageContainer>
-    );
-  }
-
   // Search state
   const [searchTerm, setSearchTerm] = React.useState('');
 
@@ -79,6 +70,15 @@ function SalesParkingContent() {
       status: adv.status?.[0] || 'all',
     });
   }, [handleFiltersChange]);
+
+  // ADR-229 Phase 2: Data-level loading guard (after all hooks)
+  if (loading) {
+    return (
+      <PageContainer ariaLabel={t('salesParking.pageTitle', { defaultValue: 'Διαθέσιμες Θέσεις Στάθμευσης' })}>
+        <PageLoadingState icon={Car} message={t('salesParking.loading', { defaultValue: 'Φόρτωση θέσεων στάθμευσης...' })} layout="contained" />
+      </PageContainer>
+    );
+  }
 
   // =========================================================================
   // Dashboard Stats

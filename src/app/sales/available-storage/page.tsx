@@ -54,15 +54,6 @@ function SalesStorageContent() {
     dashboardStats,
   } = useSalesStorageViewerState();
 
-  // ADR-229 Phase 2: Data-level loading guard
-  if (loading) {
-    return (
-      <PageContainer ariaLabel={t('salesStorage.pageTitle', { defaultValue: 'Διαθέσιμες Αποθήκες' })}>
-        <PageLoadingState icon={Warehouse} message={t('salesStorage.loading', { defaultValue: 'Φόρτωση αποθηκών...' })} layout="contained" />
-      </PageContainer>
-    );
-  }
-
   // Search state
   const [searchTerm, setSearchTerm] = React.useState('');
 
@@ -83,6 +74,15 @@ function SalesStorageContent() {
       },
     });
   }, [handleFiltersChange]);
+
+  // ADR-229 Phase 2: Data-level loading guard (after all hooks)
+  if (loading) {
+    return (
+      <PageContainer ariaLabel={t('salesStorage.pageTitle', { defaultValue: 'Διαθέσιμες Αποθήκες' })}>
+        <PageLoadingState icon={Warehouse} message={t('salesStorage.loading', { defaultValue: 'Φόρτωση αποθηκών...' })} layout="contained" />
+      </PageContainer>
+    );
+  }
 
   // =========================================================================
   // Dashboard Stats

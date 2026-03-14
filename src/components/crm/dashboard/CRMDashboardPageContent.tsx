@@ -32,15 +32,6 @@ export function CRMDashboardPageContent() {
   const { opportunities, loading: loadingStats } = useRealtimeOpportunities(!authLoading && isAuthenticated);
   const crmDashboardTabs = getSortedCRMDashboardTabs();
 
-  // ADR-229 Phase 2: Data-level loading guard
-  if (authLoading || loadingStats) {
-    return (
-      <PageContainer ariaLabel={t('page.title')}>
-        <PageLoadingState icon={BarChart3} message={t('page.loading', { defaultValue: 'Φόρτωση CRM...' })} layout="contained" />
-      </PageContainer>
-    );
-  }
-
   // 🏢 ENTERPRISE: Filtered opportunities based on global AdvancedFilters
   const filteredOpportunities = useMemo(() => {
     let list = [...opportunities];
@@ -80,6 +71,15 @@ export function CRMDashboardPageContent() {
       { title: t('overview.stats.pendingTasks'), value: loadingStats ? '...' : pendingTasks, icon: Clock, color: 'orange' as const }
     ];
   }, [filteredOpportunities, loadingStats, t]);
+
+  // ADR-229 Phase 2: Data-level loading guard (after all hooks)
+  if (authLoading || loadingStats) {
+    return (
+      <PageContainer ariaLabel={t('page.title')}>
+        <PageLoadingState icon={BarChart3} message={t('page.loading', { defaultValue: 'Φόρτωση CRM...' })} layout="contained" />
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer ariaLabel={t('page.title')}>

@@ -58,15 +58,6 @@ function SalesAvailableContent() {
     dashboardStats,
   } = useSalesUnitsViewerState();
 
-  // ADR-229 Phase 2: Data-level loading guard
-  if (loading) {
-    return (
-      <PageContainer ariaLabel={t('sales.available.title', { defaultValue: 'Διαθέσιμες Μονάδες' })}>
-        <PageLoadingState icon={ShoppingBag} message={t('sales.available.loading', { defaultValue: 'Φόρτωση μονάδων...' })} layout="contained" />
-      </PageContainer>
-    );
-  }
-
   // Search state (for header search)
   const [searchTerm, setSearchTerm] = React.useState('');
 
@@ -88,6 +79,15 @@ function SalesAvailableContent() {
       },
     });
   }, [handleFiltersChange]);
+
+  // ADR-229 Phase 2: Data-level loading guard (after all hooks)
+  if (loading) {
+    return (
+      <PageContainer ariaLabel={t('sales.available.title', { defaultValue: 'Διαθέσιμες Μονάδες' })}>
+        <PageLoadingState icon={ShoppingBag} message={t('sales.available.loading', { defaultValue: 'Φόρτωση μονάδων...' })} layout="contained" />
+      </PageContainer>
+    );
+  }
 
   // =========================================================================
   // Dashboard Stats (ADR-197 §2.5)

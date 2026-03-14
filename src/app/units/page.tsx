@@ -127,15 +127,6 @@ function UnitsPageContent() {
     forceDataRefresh,
   } = useUnitsViewerState();
 
-  // ADR-229 Phase 2: Data-level loading guard
-  if (loading) {
-    return (
-      <PageContainer ariaLabel={t('page.pageLabel')}>
-        <PageLoadingState icon={Building2} message={t('page.loading', { defaultValue: 'Φόρτωση μονάδων...' })} layout="contained" />
-      </PageContainer>
-    );
-  }
-
   // 🏢 ENTERPRISE: Inline new unit creation state (replaces AddUnitDialog modal)
   const [isCreatingNewUnit, setIsCreatingNewUnit] = useState(false);
   const [newUnitTemplate, setNewUnitTemplate] = useState<Property | null>(null);
@@ -359,6 +350,15 @@ function UnitsPageContent() {
       setSelectedProperties([]);
     }
   }, [forceDataRefresh, setSelectedProperties]);
+
+  // ADR-229 Phase 2: Data-level loading guard (after all hooks)
+  if (loading) {
+    return (
+      <PageContainer ariaLabel={t('page.pageLabel')}>
+        <PageLoadingState icon={Building2} message={t('page.loading', { defaultValue: 'Φόρτωση μονάδων...' })} layout="contained" />
+      </PageContainer>
+    );
+  }
 
   const viewerProps = {
     properties,
