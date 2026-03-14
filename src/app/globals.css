@@ -689,6 +689,114 @@
     border-bottom-color: hsl(var(--border));
   }
 
+  /* ===================================================================
+   * ENTERPRISE: Drag & Drop addon styles
+   * =================================================================== */
+
+  .rbc-wrapper .rbc-addons-dnd .rbc-addons-dnd-row-body {
+    position: relative;
+  }
+
+  .rbc-wrapper .rbc-addons-dnd .rbc-addons-dnd-drag-row {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+  }
+
+  .rbc-wrapper .rbc-addons-dnd .rbc-event {
+    transition: opacity 0.15s ease;
+  }
+
+  .rbc-wrapper .rbc-addons-dnd .rbc-addons-dnd-dragged-event {
+    opacity: 0;
+  }
+
+  .rbc-wrapper .rbc-addons-dnd .rbc-addons-dnd-drag-preview {
+    opacity: 0.65;
+    border-radius: calc(var(--radius) - 2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+
+  .rbc-wrapper .rbc-addons-dnd .rbc-addons-dnd-resize-ns-icon {
+    display: none;
+  }
+
+  .rbc-wrapper .rbc-addons-dnd .rbc-addons-dnd-resize-ew-icon {
+    display: none;
+  }
+
+  /* Week number gutter */
+  .rbc-wrapper .rbc-month-view .rbc-month-row .rbc-row-bg .rbc-day-bg:first-child {
+    position: relative;
+  }
+
+  /* Mini calendar sidebar — event dot indicator */
+  .calendar-sidebar-has-event::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    background: #10b981;
+    border-radius: 50%;
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+  }
+
+  /* ===================================================================
+   * ENTERPRISE: Print styles for calendar export
+   * =================================================================== */
+
+  @media print {
+    /* Hide non-essential UI elements */
+    nav, aside, header, footer,
+    .rbc-toolbar button:not(.rbc-active),
+    .no-print {
+      display: none !important;
+    }
+
+    /* Full width calendar */
+    .rbc-wrapper {
+      width: 100% !important;
+      min-height: auto !important;
+    }
+
+    .rbc-wrapper .rbc-calendar {
+      background: white !important;
+      color: black !important;
+    }
+
+    .rbc-wrapper .rbc-toolbar {
+      background: white !important;
+      border-bottom: 2px solid #333 !important;
+    }
+
+    .rbc-wrapper .rbc-toolbar .rbc-toolbar-label {
+      color: black !important;
+    }
+
+    .rbc-wrapper .rbc-event {
+      border-left-width: 3px !important;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+
+    .rbc-wrapper .rbc-day-bg {
+      background: white !important;
+    }
+
+    .rbc-wrapper .rbc-today {
+      background: #f0f7ff !important;
+      box-shadow: none !important;
+    }
+
+    .rbc-wrapper .rbc-header {
+      color: black !important;
+    }
+  }
+
   .toast-error {
     background-color: hsl(var(--bg-error));
     color: hsl(var(--text-error));

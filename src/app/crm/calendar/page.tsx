@@ -28,8 +28,12 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCalendarEvents } from '@/hooks/useCalendarEvents';
+import type { CalendarEvent } from '@/types/calendar-event';
 import { CrmCalendar } from '@/components/crm/calendar/CrmCalendar';
 import { CalendarCreateDialog } from '@/components/crm/calendar/CalendarCreateDialog';
+import { CalendarSidebar } from '@/components/crm/calendar/CalendarSidebar';
+import { CalendarSearchInput } from '@/components/crm/calendar/CalendarSearchInput';
+import { CalendarExportButton } from '@/components/crm/calendar/CalendarExportButton';
 
 // Enterprise centralized components
 import { PageHeader } from '@/core/headers';
@@ -67,6 +71,12 @@ export default function CrmCalendarPage() {
 
   // Advanced filters state
   const [filters, setFilters] = useState<TaskFilterState>(defaultTaskFilters);
+
+  // Search-filtered events
+  const [filteredEvents, setFilteredEvents] = useState<CalendarEvent[]>([]);
+
+  // Sidebar selected date
+  const [sidebarDate, setSidebarDate] = useState(new Date());
 
   // Fetch events
   const { events, loading, stats, refresh } = useCalendarEvents({
@@ -123,6 +133,19 @@ export default function CrmCalendarPage() {
     refresh();
   }, [refresh]);
 
+  // Handle sidebar date selection → navigate main calendar
+  const handleSidebarDateSelect = useCallback((date: Date) => {
+    setSidebarDate(date);
+  }, []);
+
+  // Handle filtered events from search
+  const handleFilteredEvents = useCallback((filtered: CalendarEvent[]) => {
+    setFilteredEvents(filtered);
+  }, []);
+
+  // Use filtered events if search is active, otherwise all events
+  const displayEvents = filteredEvents.length !== events.length ? filteredEvents : events;
+
   // Auth loading state
   if (authLoading) {
     return (
@@ -165,6 +188,12 @@ export default function CrmCalendarPage() {
           </section>
         )}
 
+        {/* Search + Export toolbar */}
+        <nav className="flex items-center justify-between gap-3 px-2" aria-label="Calendar tools">
+          <CalendarSearchInput events={events} onFilteredEvents={handleFilteredEvents} />
+          <CalendarExportButton />
+        </nav>
+
         {/* AdvancedFiltersPanel — desktop only */}
         <aside className="hidden md:block" role="complementary">
           <AdvancedFiltersPanel
@@ -174,14 +203,23 @@ export default function CrmCalendarPage() {
           />
         </aside>
 
-        {/* Calendar */}
-        <section className="flex-1 overflow-auto p-2">
-          <article className={cn(colors.bg.primary, borders.radiusClass.lg)}>
+        {/* Calendar + Sidebar layout */}
+        <section className="flex flex-1 gap-4 overflow-auto p-2">
+          {/* Mini Calendar Sidebar */}
+          <CalendarSidebar
+            events={events}
+            selectedDate={sidebarDate}
+            onDateSelect={handleSidebarDateSelect}
+          />
+
+          {/* Main Calendar */}
+          <article className={cn('flex-1', colors.bg.primary, borders.radiusClass.lg)}>
             <CrmCalendar
-              events={events}
+              events={displayEvents}
               loading={loading}
               onRangeChange={handleRangeChange}
               onEventCreated={handleEventCreated}
+              onEventUpdated={handleEventCreated}
             />
           </article>
         </section>

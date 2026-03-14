@@ -27,16 +27,23 @@ import {
   type EventPropGetter,
   type SlotInfo,
 } from 'react-big-calendar';
-import { format, parse, startOfWeek, getDay, isBefore, startOfDay, isSameDay } from 'date-fns';
+import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
+import { format, parse, startOfWeek, getDay, isBefore, startOfDay, isSameDay, getISOWeek, subMonths, addMonths } from 'date-fns';
 import { el, enUS } from 'date-fns/locale';
 import { useTranslation } from 'react-i18next';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
+import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 
 import type { CalendarEvent } from '@/types/calendar-event';
 import type { DateCellWrapperProps } from 'react-big-calendar';
 import { CALENDAR_EVENT_COLORS } from './calendar-event-colors';
 import { CalendarEventDialog } from './CalendarEventDialog';
 import { CalendarCreateDialog } from './CalendarCreateDialog';
+import { CalendarEventTooltip } from './CalendarEventTooltip';
+import { useCalendarKeyboardShortcuts } from './useCalendarKeyboardShortcuts';
+import { updateTask } from '@/services/tasks.service';
+import { useNotifications } from '@/providers/NotificationProvider';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 // Enterprise design tokens — raw CSS values for CSSProperties usage
 import { coreBorderRadius, borderWidth } from '@/styles/design-tokens';
@@ -93,6 +100,19 @@ const localizer = dateFnsLocalizer({
 });
 
 // ============================================================================
+// DnD CALENDAR WRAPPER
+// ============================================================================
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- withDragAndDrop has no exported type
+const DnDCalendar = withDragAndDrop<CalendarEvent>(BigCalendar as React.ComponentType<any>);
+
+interface DnDEventArgs {
+  event: CalendarEvent;
+  start: string | Date;
+  end: string | Date;
+}
+
+// ============================================================================
 // TYPES
 // ============================================================================
 
@@ -101,6 +121,8 @@ interface CrmCalendarProps {
   loading: boolean;
   onRangeChange: (range: { start: Date; end: Date }) => void;
   onEventCreated?: () => void;
+  onNewEvent?: () => void;
+  onEventUpdated?: () => void;
 }
 
 // ============================================================================
@@ -112,8 +134,11 @@ export function CrmCalendar({
   loading,
   onRangeChange,
   onEventCreated,
+  onNewEvent,
+  onEventUpdated,
 }: CrmCalendarProps) {
   const { t, i18n } = useTranslation('crm');
+  const { success: notifySuccess, error: notifyError } = useNotifications();
 
   // Dialog state
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
@@ -189,39 +214,132 @@ export function CrmCalendar({
   // Current locale
   const culture = i18n.language === 'el' ? 'el' : 'en';
 
+  // Week number formats for month view headers
+  const formats = useMemo(() => ({
+    weekGutterFormat: (date: Date) => `W${getISOWeek(date)}`,
+  }), []);
+
+  // Keyboard shortcuts
+  const handleNavigateToday = useCallback(() => setCurrentDate(new Date()), []);
+  const handleNavigateBack = useCallback(() => {
+    setCurrentDate((prev) => {
+      if (currentView === Views.MONTH) return subMonths(prev, 1);
+      if (currentView === Views.WEEK) return new Date(prev.getTime() - 7 * 24 * 60 * 60 * 1000);
+      return new Date(prev.getTime() - 24 * 60 * 60 * 1000);
+    });
+  }, [currentView]);
+  const handleNavigateNext = useCallback(() => {
+    setCurrentDate((prev) => {
+      if (currentView === Views.MONTH) return addMonths(prev, 1);
+      if (currentView === Views.WEEK) return new Date(prev.getTime() + 7 * 24 * 60 * 60 * 1000);
+      return new Date(prev.getTime() + 24 * 60 * 60 * 1000);
+    });
+  }, [currentView]);
+  const handleNewEvent = useCallback(() => {
+    if (onNewEvent) {
+      onNewEvent();
+    } else {
+      setCreateInitialDate(new Date());
+      setCreateDialogOpen(true);
+    }
+  }, [onNewEvent]);
+
+  useCalendarKeyboardShortcuts({
+    onViewChange: setCurrentView,
+    onNavigateToday: handleNavigateToday,
+    onNavigateBack: handleNavigateBack,
+    onNavigateNext: handleNavigateNext,
+    onNewEvent: handleNewEvent,
+  });
+
+  // Drag & Drop handler — update task date in Firestore
+  const handleEventDrop = useCallback(
+    async ({ event, start, end }: DnDEventArgs) => {
+      if (event.source === 'appointment') {
+        notifyError(t('calendarPage.dragDrop.appointmentReadOnly'));
+        return;
+      }
+      try {
+        const newStart = start instanceof Date ? start : new Date(start);
+        const newEnd = end instanceof Date ? end : new Date(end);
+        await updateTask(event.entityId, {
+          dueDate: newStart.toISOString(),
+          ...(event.allDay || newStart.toDateString() !== newEnd.toDateString()
+            ? { endDate: newEnd.toISOString() }
+            : {}),
+        });
+        notifySuccess(t('calendarPage.dragDrop.moved'));
+        onEventUpdated?.();
+      } catch {
+        notifyError(t('calendarPage.dialog.createError'));
+      }
+    },
+    [t, notifySuccess, notifyError, onEventUpdated]
+  );
+
+  // Resize handler — same logic as drop
+  const handleEventResize = useCallback(
+    async ({ event, start, end }: DnDEventArgs) => {
+      if (event.source === 'appointment') {
+        notifyError(t('calendarPage.dragDrop.appointmentReadOnly'));
+        return;
+      }
+      try {
+        const newStart = start instanceof Date ? start : new Date(start);
+        const newEnd = end instanceof Date ? end : new Date(end);
+        await updateTask(event.entityId, {
+          dueDate: newStart.toISOString(),
+          endDate: newEnd.toISOString(),
+        });
+        notifySuccess(t('calendarPage.dragDrop.resized'));
+        onEventUpdated?.();
+      } catch {
+        notifyError(t('calendarPage.dialog.createError'));
+      }
+    },
+    [t, notifySuccess, notifyError, onEventUpdated]
+  );
+
   return (
     <>
-      <section
-        className="rbc-wrapper"
-        aria-label={t('calendarPage.title')}
-        aria-busy={loading}
-      >
-        <BigCalendar<CalendarEvent>
-          localizer={localizer}
-          events={events}
-          startAccessor="start"
-          endAccessor="end"
-          titleAccessor="title"
-          view={currentView}
-          onView={setCurrentView}
-          date={currentDate}
-          onNavigate={setCurrentDate}
-          onRangeChange={handleRangeChange}
-          onSelectEvent={handleSelectEvent}
-          onSelectSlot={handleSelectSlot}
-          selectable
-          eventPropGetter={eventStyleGetter}
-          dayPropGetter={dayPropGetter}
-          components={{
-            dateCellWrapper: DateCellWrapper as ComponentType,
-          }}
-          messages={messages}
-          culture={culture}
-          views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
-          popup
-          className="min-h-[600px]"
-        />
-      </section>
+      <TooltipProvider>
+        <section
+          className="rbc-wrapper"
+          aria-label={t('calendarPage.title')}
+          aria-busy={loading}
+        >
+          <DnDCalendar
+            localizer={localizer}
+            events={events}
+            startAccessor="start"
+            endAccessor="end"
+            titleAccessor="title"
+            view={currentView}
+            onView={setCurrentView}
+            date={currentDate}
+            onNavigate={setCurrentDate}
+            onRangeChange={handleRangeChange}
+            onSelectEvent={handleSelectEvent}
+            onSelectSlot={handleSelectSlot}
+            onEventDrop={handleEventDrop}
+            onEventResize={handleEventResize}
+            selectable
+            resizable
+            eventPropGetter={eventStyleGetter}
+            dayPropGetter={dayPropGetter}
+            components={{
+              dateCellWrapper: DateCellWrapper as ComponentType,
+              event: CalendarEventTooltip as ComponentType,
+            }}
+            messages={messages}
+            culture={culture}
+            views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
+            popup
+            formats={formats}
+            className="min-h-[600px]"
+          />
+        </section>
+      </TooltipProvider>
 
       {/* Event Detail Dialog */}
       <CalendarEventDialog

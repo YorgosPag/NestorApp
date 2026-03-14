@@ -142,4 +142,7 @@ export interface CrmTask {
   updatedAt: FirestoreishTimestamp;
   reminderSent?: boolean;
   metadata?: Record<string, unknown>;
+  endDate?: string; // ISO date for multi-day events
+  recurrence?: import('./recurrence').RecurrencePattern; // For recurring events (Phase 3)
+  attendees?: string[]; // User IDs for attendees (Phase 3)
 }

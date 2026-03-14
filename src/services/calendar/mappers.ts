@@ -62,12 +62,30 @@ export function taskToCalendarEvent(task: CrmTask): CalendarEvent | null {
 
   const taskId = task.id ?? '';
 
+  // Multi-day support: use endDate if provided
+  let end: Date;
+  let allDay = false;
+  if (task.endDate) {
+    const parsedEnd = normalizeToDate(task.endDate);
+    if (parsedEnd) {
+      end = parsedEnd;
+      // If end is a different day, mark as all-day
+      if (start.toDateString() !== parsedEnd.toDateString()) {
+        allDay = true;
+      }
+    } else {
+      end = new Date(start.getTime() + DEFAULT_EVENT_DURATION_MS);
+    }
+  } else {
+    end = new Date(start.getTime() + DEFAULT_EVENT_DURATION_MS);
+  }
+
   return {
     id: `task_${taskId}`,
     title: task.title,
     start,
-    end: new Date(start.getTime() + DEFAULT_EVENT_DURATION_MS),
-    allDay: false,
+    end,
+    allDay,
     source: 'task',
     eventType: taskTypeToEventType(task.type),
     entityId: taskId,
@@ -76,6 +94,8 @@ export function taskToCalendarEvent(task: CrmTask): CalendarEvent | null {
     status: task.status,
     priority: task.priority,
     companyId: task.companyId ?? null,
+    contactId: task.contactId,
+    projectId: task.projectId,
   };
 }
 

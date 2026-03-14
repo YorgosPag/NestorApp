@@ -80,4 +80,16 @@ export interface CalendarEvent {
 
   /** Company ID for tenant isolation */
   companyId: string | null;
+
+  /** Contact ID (from task source) */
+  contactId?: string;
+
+  /** Project ID (from task source) */
+  projectId?: string;
+
+  /** Contact display name (resolved from contactId) */
+  contactName?: string;
+
+  /** Project display name (resolved from projectId) */
+  projectName?: string;
 }

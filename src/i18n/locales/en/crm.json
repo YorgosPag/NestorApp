@@ -614,7 +614,14 @@
         "date": "Date",
         "time": "Time",
         "description": "Description",
-        "assignedTo": "Assigned To"
+        "assignedTo": "Assigned To",
+        "endDate": "End Date",
+        "endDatePlaceholder": "Select end date (optional)",
+        "allDay": "All day",
+        "contact": "Contact",
+        "contactPlaceholder": "Contact ID (optional)",
+        "project": "Project",
+        "projectPlaceholder": "Project ID (optional)"
       },
       "actions": {
         "save": "Save",
@@ -627,6 +634,68 @@
       "ariaLabel": "Event statistics",
       "separator": "•",
       "totalEvents": "Total Events"
+    },
+    "search": {
+      "placeholder": "Search events...",
+      "noResults": "No events found",
+      "resultsCount": "{{count}} events found"
+    },
+    "shortcuts": {
+      "title": "Keyboard Shortcuts",
+      "today": "T — Go to today",
+      "month": "M — Month view",
+      "week": "W — Week view",
+      "day": "D — Day view",
+      "agenda": "A — Agenda view",
+      "navigate": "← → — Navigate",
+      "newEvent": "N — New event"
+    },
+    "dragDrop": {
+      "moved": "Event moved successfully",
+      "resized": "Event resized successfully",
+      "appointmentReadOnly": "Appointments cannot be moved"
+    },
+    "conflicts": {
+      "title": "Scheduling Conflict",
+      "message": "This event overlaps with existing events:",
+      "continue": "Continue anyway",
+      "changeTime": "Change time"
+    },
+    "reminders": {
+      "label": "Reminder",
+      "none": "No reminder",
+      "15min": "15 minutes before",
+      "1hour": "1 hour before",
+      "1day": "1 day before"
+    },
+    "attendees": {
+      "label": "Attendees",
+      "add": "Add attendee",
+      "remove": "Remove"
+    },
+    "recurrence": {
+      "label": "Recurrence",
+      "none": "Does not repeat",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "every": "Every",
+      "endType": "End",
+      "never": "Never",
+      "onDate": "On date",
+      "afterCount": "After {{count}} occurrences"
+    },
+    "export": {
+      "print": "Print",
+      "pdf": "Export PDF"
+    },
+    "nlp": {
+      "badge": "Smart Input",
+      "placeholder": "e.g. \"Meeting tomorrow at 11am with John about project review\"",
+      "analyze": "Analyze",
+      "error": "Could not parse the event",
+      "toggle": "Smart input"
     }
   },
   "sections": {
