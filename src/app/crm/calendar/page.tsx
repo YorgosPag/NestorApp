@@ -138,6 +138,11 @@ export default function CrmCalendarPage() {
     setSidebarDate(date);
   }, []);
 
+  // Handle main calendar navigation → sync mini calendar
+  const handleMainCalendarDateChange = useCallback((date: Date) => {
+    setSidebarDate(date);
+  }, []);
+
   // Handle filtered events from search
   const handleFilteredEvents = useCallback((filtered: CalendarEvent[]) => {
     setFilteredEvents(filtered);
@@ -210,6 +215,8 @@ export default function CrmCalendarPage() {
             events={displayEvents}
             selectedDate={sidebarDate}
             onDateSelect={handleSidebarDateSelect}
+            displayMonth={sidebarDate}
+            onMonthChange={handleSidebarDateSelect}
           />
 
           {/* Main Calendar */}
@@ -221,6 +228,7 @@ export default function CrmCalendarPage() {
               onEventCreated={handleEventCreated}
               onEventUpdated={handleEventCreated}
               navigateToDate={sidebarDate}
+              onDateChange={handleMainCalendarDateChange}
             />
           </article>
         </section>

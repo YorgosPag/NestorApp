@@ -731,22 +731,24 @@
     position: relative;
   }
 
-  /* Mini calendar sidebar — event dot indicator */
-  .calendar-sidebar-has-event {
+  /* Mini calendar sidebar — event dot indicator (targets button inside td) */
+  .calendar-sidebar-has-event button {
     position: relative;
   }
 
-  .calendar-sidebar-has-event::after {
+  .calendar-sidebar-has-event button::after {
     content: '';
     position: absolute;
-    bottom: 2px;
+    bottom: 1px;
     left: 50%;
     transform: translateX(-50%);
-    width: 4px;
-    height: 4px;
+    width: 5px;
+    height: 5px;
     background: #10b981;
     border-radius: 50%;
     box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+    pointer-events: none;
+    z-index: 10;
   }
 
   /* ===================================================================

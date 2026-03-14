@@ -1,5 +1,11 @@
 /**
  * Calendar sidebar with mini calendar for date navigation.
+ *
+ * Navigation arrows are positioned BELOW the month caption
+ * (not left/right absolute) to avoid overflow clipping in the narrow sidebar.
+ *
+ * The `month` prop controls which month is displayed — synced bidirectionally
+ * with the main calendar via `onMonthChange`.
  */
 
 'use client';
@@ -13,9 +19,19 @@ interface CalendarSidebarProps {
   events: CalendarEvent[];
   selectedDate: Date;
   onDateSelect: (date: Date) => void;
+  /** Currently displayed month — synced from main calendar */
+  displayMonth: Date;
+  /** Called when user navigates months in the mini calendar */
+  onMonthChange: (month: Date) => void;
 }
 
-export function CalendarSidebar({ events, selectedDate, onDateSelect }: CalendarSidebarProps) {
+export function CalendarSidebar({
+  events,
+  selectedDate,
+  onDateSelect,
+  displayMonth,
+  onMonthChange,
+}: CalendarSidebarProps) {
   // Dates that have events for highlighting
   const eventDates = useMemo(() => {
     const dates: Date[] = [];
@@ -38,10 +54,18 @@ export function CalendarSidebar({ events, selectedDate, onDateSelect }: Calendar
         required
         selected={selectedDate}
         onSelect={handleSelect}
+        month={displayMonth}
+        onMonthChange={onMonthChange}
         showWeekNumber={false}
         modifiers={{ hasEvent: eventDates }}
         modifiersClassNames={{ hasEvent: 'calendar-sidebar-has-event' }}
         className="rounded-lg border"
+        classNames={{
+          month_caption: "flex justify-center pt-1 relative items-center mb-1",
+          nav: "flex items-center justify-center gap-4 pb-2",
+          button_previous: "relative left-auto",
+          button_next: "relative right-auto",
+        }}
       />
     </aside>
   );

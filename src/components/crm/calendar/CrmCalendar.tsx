@@ -126,6 +126,8 @@ interface CrmCalendarProps {
   onNewEvent?: () => void;
   onEventUpdated?: () => void;
   navigateToDate?: Date;
+  /** Called when the main calendar date changes (navigation arrows, today button) */
+  onDateChange?: (date: Date) => void;
 }
 
 // ============================================================================
@@ -140,6 +142,7 @@ export function CrmCalendar({
   onNewEvent,
   onEventUpdated,
   navigateToDate,
+  onDateChange,
 }: CrmCalendarProps) {
   const { t, i18n } = useTranslation('crm');
   const { success: notifySuccess, error: notifyError } = useNotifications();
@@ -352,7 +355,10 @@ export function CrmCalendar({
             view={currentView}
             onView={setCurrentView}
             date={currentDate}
-            onNavigate={setCurrentDate}
+            onNavigate={(date: Date) => {
+              setCurrentDate(date);
+              onDateChange?.(date);
+            }}
             onRangeChange={handleRangeChange}
             onSelectEvent={handleSelectEvent}
             onSelectSlot={handleSelectSlot}
