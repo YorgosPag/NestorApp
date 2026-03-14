@@ -134,7 +134,7 @@ export function CalendarCreateDialog({
       dueDate.setHours(hours, minutes, 0, 0);
 
       // Compute reminderDate from offset
-      let reminderDate: string | undefined;
+      let reminderDate: string | null = null;
       if (reminderOffset !== 'none') {
         const offsets: Record<string, number> = {
           '15min': 15 * 60 * 1000,

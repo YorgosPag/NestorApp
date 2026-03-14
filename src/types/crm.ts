@@ -128,7 +128,7 @@ export interface CrmTask {
   assignedTo: string; // User ID
   assignedBy?: string; // User ID
   dueDate?: FirestoreishTimestamp | null;
-  reminderDate?: FirestoreishTimestamp;
+  reminderDate?: FirestoreishTimestamp | null;
   completedAt?: FirestoreishTimestamp;
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
   priority: 'low' | 'medium' | 'high' | 'urgent';
