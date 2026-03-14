@@ -319,17 +319,19 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
               {selectedContact && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button
-                      type="button"
+                    <span
+                      role="button"
+                      tabIndex={0}
                       onClick={clearSelection}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') clearSelection(); }}
                       className={cn(
-                        `${iconSizes.sm} rounded-sm flex items-center justify-center text-muted-foreground`,
+                        `${iconSizes.sm} rounded-sm flex items-center justify-center text-muted-foreground cursor-pointer`,
                         INTERACTIVE_PATTERNS.SUBTLE_HOVER,
                         TRANSITION_PRESETS.STANDARD_COLORS
                       )}
                     >
                       <X className={iconSizes.xs} />
-                    </button>
+                    </span>
                   </TooltipTrigger>
                   <TooltipContent>{t('dropdown.clearSelection')}</TooltipContent>
                 </Tooltip>
