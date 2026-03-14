@@ -161,9 +161,8 @@ export function ProjectsPageContent() {
   // 🏢 ENTERPRISE: Dynamic filter config — populate company/location/client options from real Firestore data
   const dynamicProjectConfig = useMemo<FilterPanelConfig>(() => {
     const projects = firestoreProjects ?? [];
-    const companies = [...new Set(projects.map(p => p.company).filter(Boolean))].sort();
-    const cities = [...new Set(projects.map(p => p.city).filter(Boolean))].sort();
-    const clients = [...new Set(projects.map(p => p.client).filter(Boolean))].sort();
+    const companyValues = [...new Set(projects.map(p => p.company).filter(Boolean))].sort();
+    const cityValues = [...new Set(projects.map(p => p.city).filter(Boolean))].sort();
 
     return {
       ...projectFiltersConfig,
@@ -177,7 +176,7 @@ export function ProjectsPageContent() {
                 ...field,
                 options: [
                   field.options[0], // "All Companies"
-                  ...companies.map(c => ({ value: c, label: c }))
+                  ...companyValues.map(c => ({ value: c, label: c }))
                 ]
               };
             }
@@ -186,16 +185,7 @@ export function ProjectsPageContent() {
                 ...field,
                 options: [
                   field.options[0], // "All Locations"
-                  ...cities.map(c => ({ value: c, label: c }))
-                ]
-              };
-            }
-            if (field.id === 'client' && field.options) {
-              return {
-                ...field,
-                options: [
-                  field.options[0], // "All Clients"
-                  ...clients.map(c => ({ value: c, label: c }))
+                  ...cityValues.map(c => ({ value: c, label: c }))
                 ]
               };
             }
