@@ -15,7 +15,7 @@ import { ContractCard } from '@/components/sales/legal/ContractCard';
 import { ProfessionalsCard } from '@/components/sales/legal/ProfessionalsCard';
 import { BrokerageCard } from '@/components/sales/brokerage/BrokerageCard';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import {
   Select,
   SelectContent,
@@ -53,7 +53,6 @@ const CREATABLE_PHASES: { value: ContractPhase; label: string }[] = [
 
 export function LegalTabContent({ unit, associations }: LegalTabContentProps) {
   const { t } = useTranslation('common');
-  const { toast } = useToast();
   const {
     contracts,
     agreements,
@@ -73,11 +72,7 @@ export function LegalTabContent({ unit, associations }: LegalTabContentProps) {
 
   const handleCreate = useCallback(async () => {
     if (!unit.commercial?.buyerContactId) {
-      toast({
-        title: t('sales.legal.noBuyer', { defaultValue: 'Δεν υπάρχει αγοραστής' }),
-        description: t('sales.legal.noBuyerDesc', { defaultValue: 'Πρέπει πρώτα να ορίσετε αγοραστή (Κράτηση/Πώληση)' }),
-        variant: 'destructive',
-      });
+      toast.error(t('sales.legal.noBuyer', { defaultValue: 'Δεν υπάρχει αγοραστής' }));
       return;
     }
 
@@ -92,16 +87,9 @@ export function LegalTabContent({ unit, associations }: LegalTabContentProps) {
     setCreating(false);
 
     if (result.success) {
-      toast({
-        title: t('sales.legal.created', { defaultValue: 'Δημιουργήθηκε' }),
-        description: CREATABLE_PHASES.find((p) => p.value === selectedPhase)?.label,
-      });
+      toast.success(CREATABLE_PHASES.find((p) => p.value === selectedPhase)?.label ?? t('sales.legal.created', { defaultValue: 'Δημιουργήθηκε' }));
     } else {
-      toast({
-        title: t('sales.legal.createError', { defaultValue: 'Σφάλμα' }),
-        description: result.error,
-        variant: 'destructive',
-      });
+      toast.error(result.error ?? t('sales.legal.createError', { defaultValue: 'Σφάλμα' }));
     }
   }, [unit, selectedPhase, createContract, toast, t]);
 

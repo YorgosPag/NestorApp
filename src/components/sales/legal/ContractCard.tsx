@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import type { LegalContract, ContractStatus } from '@/types/legal-contracts';
 import { CONTRACT_STATUS_TRANSITIONS } from '@/types/legal-contracts';
 
@@ -80,7 +80,6 @@ function formatCurrency(amount: number | null): string {
 
 export function ContractCard({ contract, onTransition }: ContractCardProps) {
   const { t } = useTranslation('common');
-  const { toast } = useToast();
   const [expanded, setExpanded] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
 
@@ -92,9 +91,9 @@ export function ContractCard({ contract, onTransition }: ContractCardProps) {
     setTransitioning(false);
 
     if (result.success) {
-      toast({ title: 'Επιτυχία', description: `Μετάβαση σε ${STATUS_LABELS[target].default}` });
+      toast.success(`Μετάβαση σε ${STATUS_LABELS[target].default}`);
     } else {
-      toast({ title: 'Σφάλμα', description: result.error ?? 'Αποτυχία μετάβασης', variant: 'destructive' });
+      toast.error(result.error ?? 'Αποτυχία μετάβασης');
     }
   }, [contract.id, onTransition, toast]);
 

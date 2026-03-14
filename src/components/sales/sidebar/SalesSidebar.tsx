@@ -65,18 +65,26 @@ interface SalesSidebarProps {
 // 🏢 TAB CONFIG (ADR-197 §2.7)
 // =============================================================================
 
+/** Tab config shape */
+interface SalesTabConfig {
+  id: string;
+  icon: React.ElementType;
+  labelKey: string;
+  defaultLabel: string;
+}
+
 /** Base tabs — always visible */
-const BASE_SALES_TABS = [
+const BASE_SALES_TABS: SalesTabConfig[] = [
   { id: 'sale-info', icon: DollarSign, labelKey: 'sales.tabs.saleInfo', defaultLabel: 'Πώληση' },
   { id: 'unit-summary', icon: Home, labelKey: 'sales.tabs.unitSummary', defaultLabel: 'Μονάδα' },
   { id: 'documents', icon: FileText, labelKey: 'sales.tabs.documents', defaultLabel: 'Έγγραφα' },
   { id: 'photos', icon: Camera, labelKey: 'sales.tabs.photos', defaultLabel: 'Φωτογραφίες' },
   { id: 'videos', icon: Video, labelKey: 'sales.tabs.videos', defaultLabel: 'Βίντεο' },
   { id: 'history', icon: Clock, labelKey: 'sales.tabs.history', defaultLabel: 'Ιστορικό' },
-] as const;
+];
 
 /** Legal tab — conditional, visible ONLY for reserved/sold units (ADR-230) */
-const LEGAL_TAB = { id: 'legal', icon: Scale, labelKey: 'sales.tabs.legal', defaultLabel: 'Νομικά' } as const;
+const LEGAL_TAB: SalesTabConfig = { id: 'legal', icon: Scale, labelKey: 'sales.tabs.legal', defaultLabel: 'Νομικά' };
 
 /** Check if unit has reserved/sold status → show legal tab */
 function shouldShowLegalTab(unit: Unit | null): boolean {
@@ -85,7 +93,7 @@ function shouldShowLegalTab(unit: Unit | null): boolean {
 }
 
 /** Build dynamic tabs array */
-function buildTabs(unit: Unit | null) {
+function buildTabs(unit: Unit | null): SalesTabConfig[] {
   const tabs = [...BASE_SALES_TABS];
   if (shouldShowLegalTab(unit)) {
     // Insert legal tab after sale-info (position 1)
