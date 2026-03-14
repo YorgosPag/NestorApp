@@ -618,7 +618,8 @@
     },
     "stats": {
       "ariaLabel": "Event statistics",
-      "separator": "•"
+      "separator": "•",
+      "totalEvents": "Total Events"
     }
   },
   "sections": {
@@ -717,6 +718,11 @@
     "loading": "Loading notifications...",
     "empty": "No notifications",
     "emptyDescription": "You are all caught up.",
+    "stats": {
+      "total": "Total",
+      "unread": "Unread",
+      "read": "Read"
+    },
     "test": {
       "create": "Test",
       "creating": "Creating...",
@@ -732,6 +738,10 @@
     "createTeam": "Create Team",
     "members": "{count} Members",
     "managePermissions": "Manage Permissions",
+    "stats": {
+      "totalTeams": "Total Teams",
+      "totalMembers": "Total Members"
+    },
     "loading": "Loading teams...",
     "empty": {
       "title": "No teams found",

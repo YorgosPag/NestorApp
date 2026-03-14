@@ -58,7 +58,7 @@ const ArchiveContactDialog = dynamic(
 );
 import { AdvancedFiltersPanel, type ContactFilterState, contactFiltersConfig } from '@/components/core/AdvancedFilters';
 import { ListContainer, PageContainer } from '@/core/containers';
-import { PageErrorState } from '@/core/states';
+import { PageLoadingState, PageErrorState } from '@/core/states';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
@@ -654,6 +654,15 @@ export function ContactsPageContent() {
 
     return null;
   };
+
+  // Page-level loading state (ADR-229)
+  if (isLoading) {
+    return (
+      <PageContainer ariaLabel={t('page.pageLabel')}>
+        <PageLoadingState icon={Users} message={t('page.loadingMessage', { defaultValue: 'Φόρτωση επαφών...' })} layout="contained" />
+      </PageContainer>
+    );
+  }
 
   return (
       <PageContainer ariaLabel={t('page.pageLabel')}>

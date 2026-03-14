@@ -1,10 +1,10 @@
-// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
+// 🏢 ENTERPRISE: CRM Teams Page with centralized PageHeader + UnifiedDashboard
 'use client';
 
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Users2, Plus, Settings, Shield } from 'lucide-react';
+import { Users2, Plus, Settings, Shield, UserCheck } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { enterpriseTeamsService } from '@/services/teams/EnterpriseTeamsService';
@@ -13,10 +13,14 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { PageLoadingState, PageErrorState } from '@/core/states';
-import { cn, getSpacingClass } from '@/lib/design-system';
+import { cn } from '@/lib/design-system';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getAvatarPlaceholderUrl } from '@/config/media-constants';
 import { getInitials } from '@/types/contacts/helpers';
+import { PageHeader } from '@/core/headers';
+import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
+import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
+import { PageContainer } from '@/core/containers';
 
 interface DisplayTeam {
   id: string;
@@ -32,13 +36,12 @@ export default function CrmTeamsPage() {
   const logger = createModuleLogger('crm/teams');
   const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
-  const pagePadding = getSpacingClass('p', 'lg');
-  const sectionMargin = getSpacingClass('m', 'lg', 'b');
   const { user } = useAuth();
   const resolvedCompanyId = useCompanyId()?.companyId;
   const [teams, setTeams] = useState<DisplayTeam[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showDashboard, setShowDashboard] = useState(false);
 
   // Load teams data from the database
   useEffect(() => {
@@ -84,6 +87,24 @@ export default function CrmTeamsPage() {
     loadTeamsData();
   }, []);
 
+  // Computed stats
+  const totalMembers = teams.reduce((sum, team) => sum + team.members.length, 0);
+
+  const dashboardStats: DashboardStat[] = [
+    {
+      title: t('teams.stats.totalTeams'),
+      value: teams.length,
+      icon: Users2,
+      color: 'blue'
+    },
+    {
+      title: t('teams.stats.totalMembers'),
+      value: totalMembers,
+      icon: UserCheck,
+      color: 'green'
+    },
+  ];
+
   // ADR-229 Phase 2: Centralized loading/error states
   if (loading) {
     return <PageLoadingState icon={Users2} message={t('teams.loading')} layout="contained" />;
@@ -101,24 +122,44 @@ export default function CrmTeamsPage() {
     );
   }
 
-  // Show empty state
-  if (teams.length === 0) {
-    return (
-      <div className={pagePadding}>
-        <div className={cn('flex items-center justify-between', sectionMargin)}>
-          <div>
-            <div className={cn('flex items-center gap-2')}>
-              <Users2 className={cn(iconSizes.xl, 'text-primary')} />
-              <h1 className="text-3xl font-bold">{t('teams.title')}</h1>
-            </div>
-            <p className="text-muted-foreground">{t('teams.subtitle')}</p>
-          </div>
-          <Button>
-            <Plus className={cn(iconSizes.sm, 'mr-2')} />
-            {t('teams.newTeam')}
-          </Button>
-        </div>
-        <div className={cn('flex items-center justify-center min-h-[400px]')}>
+  return (
+    <PageContainer ariaLabel={t('teams.title')}>
+      {/* Centralized PageHeader */}
+      <PageHeader
+        variant="sticky-rounded"
+        layout="compact"
+        spacing="compact"
+        breadcrumb={<ModuleBreadcrumb />}
+        title={{
+          icon: Users2,
+          title: t('teams.title'),
+          subtitle: t('teams.subtitle')
+        }}
+        actions={{
+          showDashboard,
+          onDashboardToggle: () => setShowDashboard(!showDashboard),
+          addButton: {
+            label: t('teams.newTeam'),
+            onClick: () => {/* TODO: implement team creation */},
+            icon: Plus
+          }
+        }}
+      />
+
+      {/* Collapsible Dashboard Stats */}
+      {showDashboard && (
+        <section className="w-full overflow-hidden" role="region" aria-label={t('teams.stats.totalTeams')}>
+          <UnifiedDashboard
+            stats={dashboardStats}
+            columns={2}
+            className="px-1 py-4 sm:px-4 sm:py-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 overflow-hidden"
+          />
+        </section>
+      )}
+
+      {/* Empty state */}
+      {teams.length === 0 ? (
+        <section className={cn('flex items-center justify-center min-h-[400px]')} role="region" aria-label={t('teams.empty.title')}>
           <div className={cn('text-center space-y-4')}>
             <Users2 className={cn(iconSizes.xl2, 'text-muted-foreground/50 mx-auto')} />
             <div className="space-y-2">
@@ -132,65 +173,55 @@ export default function CrmTeamsPage() {
               </Button>
             </div>
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={pagePadding}>
-      <div className={cn('flex items-center justify-between', sectionMargin)}>
-        <div>
-            <div className={cn('flex items-center gap-2')}>
-                <Users2 className={cn(iconSizes.xl, 'text-primary')} />
-                <h1 className="text-3xl font-bold">{t('teams.title')}</h1>
-            </div>
-          <p className="text-muted-foreground">{t('teams.subtitle')}</p>
-        </div>
-        <Button>
-          <Plus className={cn(iconSizes.sm, 'mr-2')} />
-          {t('teams.newTeam')}
-        </Button>
-      </div>
-
-      <div className={cn('grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6')}>
-        {teams.map((team) => (
-          <Card key={team.id} className={cn('flex flex-col')}>
-            <CardHeader>
-              <div className={cn('flex items-center justify-between')}>
-                <CardTitle>{team.name}</CardTitle>
-                <Button variant="ghost" size="sm">
-                  <Settings className={iconSizes.sm} />
-                </Button>
-              </div>
-              <CardDescription>{team.description}</CardDescription>
-            </CardHeader>
-            <CardContent className={cn('flex-1 space-y-4')}>
-              <h4 className="text-sm font-medium text-muted-foreground">{t('teams.members', { count: team.members.length })}</h4>
-              <div className={cn('space-y-3')}>
-                {team.members.map((member) => (
-                  <div key={member.id} className={cn('flex items-center gap-3')}>
-                    <Avatar>
-                      <AvatarImage data-ai-hint="avatar person" src={getAvatarPlaceholderUrl(getInitials(member.displayName))} />
-                      <AvatarFallback>{getInitials(member.displayName)}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm font-medium">{member.displayName}</p>
-                      <p className="text-xs text-muted-foreground">{member.position?.title || member.role}</p>
+        </section>
+      ) : (
+        /* Teams grid */
+        <section className={cn('grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4')} role="region" aria-label={t('teams.title')}>
+          {teams.map((team) => (
+            <Card key={team.id} className={cn('flex flex-col')}>
+              <CardHeader>
+                <div className={cn('flex items-center justify-between')}>
+                  <CardTitle>{team.name}</CardTitle>
+                  <Button variant="ghost" size="sm">
+                    <Settings className={iconSizes.sm} />
+                  </Button>
+                </div>
+                <CardDescription>{team.description}</CardDescription>
+              </CardHeader>
+              <CardContent className={cn('flex-1 space-y-4')}>
+                <h4 className="text-sm font-medium text-muted-foreground">
+                  {t('teams.members', { count: team.members.length })}
+                </h4>
+                <div className={cn('space-y-3')}>
+                  {team.members.map((member) => (
+                    <div key={member.id} className={cn('flex items-center gap-3')}>
+                      <Avatar>
+                        <AvatarImage
+                          data-ai-hint="avatar person"
+                          src={getAvatarPlaceholderUrl(getInitials(member.displayName))}
+                        />
+                        <AvatarFallback>{getInitials(member.displayName)}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-medium">{member.displayName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {member.position?.title || member.role}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-               <div className={cn('pt-4')}>
-                 <Button variant="outline" size="sm" className={cn('w-full')}>
-                    <Shield className={`${iconSizes.sm} mr-2`} />
+                  ))}
+                </div>
+                <div className={cn('pt-4')}>
+                  <Button variant="outline" size="sm" className={cn('w-full')}>
+                    <Shield className={cn(iconSizes.sm, 'mr-2')} />
                     {t('teams.managePermissions')}
-                </Button>
-               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </section>
+      )}
+    </PageContainer>
   );
 }

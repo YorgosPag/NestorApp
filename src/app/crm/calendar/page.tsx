@@ -6,7 +6,7 @@
  * Full-page calendar view with Month/Week/Day/Agenda views.
  * Displays Tasks + Appointments from Firestore.
  *
- * Pattern: Same as `app/crm/tasks/page.tsx`.
+ * Pattern: PageHeader + UnifiedDashboard + AdvancedFiltersPanel (ADR-229)
  * All values from centralized design system hooks — zero hardcoded values.
  *
  * @route /crm/calendar
@@ -14,26 +14,33 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
-import { startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
-import { CalendarDays, Plus } from 'lucide-react';
+import { useState, useCallback, useMemo } from 'react';
+import { startOfMonth, endOfMonth, addMonths, subMonths, isToday } from 'date-fns';
+import { CalendarDays, Plus, CheckSquare, Clock, CalendarClock } from 'lucide-react';
 
-import { cn, getSpacingClass, getResponsiveClass } from '@/lib/design-system';
+import { cn } from '@/lib/design-system';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { useSpacingTokens } from '@/hooks/useSpacingTokens';
-import { useTypography } from '@/hooks/useTypography';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCalendarEvents } from '@/hooks/useCalendarEvents';
 import { CrmCalendar } from '@/components/crm/calendar/CrmCalendar';
 import { CalendarCreateDialog } from '@/components/crm/calendar/CalendarCreateDialog';
+
+// Enterprise centralized components
+import { PageHeader } from '@/core/headers';
+import { PageContainer } from '@/core/containers';
+import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
+import {
+  AdvancedFiltersPanel,
+  taskFiltersConfig,
+  defaultTaskFilters,
+  type TaskFilterState,
+} from '@/components/core/AdvancedFilters';
 
 // ============================================================================
 // PAGE COMPONENT
@@ -43,11 +50,7 @@ export default function CrmCalendarPage() {
   const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const sp = useSpacingTokens();
-  const typo = useTypography();
   const borders = useBorderTokens();
-  const layout = useLayoutClasses();
-  const pageGap = getSpacingClass('m', 'lg', 'b');
   const { loading: authLoading } = useAuth();
 
   // Date range state — default to current month ± 1 month buffer
@@ -59,10 +62,53 @@ export default function CrmCalendarPage() {
   // Create dialog state
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
+  // Dashboard toggle state
+  const [showDashboard, setShowDashboard] = useState(false);
+
+  // Advanced filters state
+  const [filters, setFilters] = useState<TaskFilterState>(defaultTaskFilters);
+
   // Fetch events
   const { events, loading, stats, refresh } = useCalendarEvents({
     dateRange,
   });
+
+  // Compute today's event count
+  const todayCount = useMemo(
+    () => events.filter((event) => isToday(event.start)).length,
+    [events]
+  );
+
+  // Dashboard stats
+  const dashboardStats: DashboardStat[] = useMemo(
+    () => [
+      {
+        title: t('calendarPage.stats.totalEvents'),
+        value: events.length,
+        icon: CalendarDays,
+        color: 'blue' as const,
+      },
+      {
+        title: t('tasks.title'),
+        value: stats.tasks,
+        icon: CheckSquare,
+        color: 'purple' as const,
+      },
+      {
+        title: t('calendarPage.eventTypes.appointment'),
+        value: stats.appointments,
+        icon: Clock,
+        color: 'green' as const,
+      },
+      {
+        title: t('calendarPage.today'),
+        value: todayCount,
+        icon: CalendarClock,
+        color: 'orange' as const,
+      },
+    ],
+    [events.length, stats.tasks, stats.appointments, todayCount, t]
+  );
 
   // Handle range change from calendar navigation
   const handleRangeChange = useCallback((range: { start: Date; end: Date }) => {
@@ -80,58 +126,57 @@ export default function CrmCalendarPage() {
   // Auth loading state
   if (authLoading) {
     return (
-      <main className={cn('min-h-screen', colors.bg.secondary, sp.padding.lg)}>
-        <Skeleton className={cn(iconSizes.xl, 'w-48', sp.margin.bottom.md)} />
+      <PageContainer ariaLabel={t('calendarPage.title')}>
+        <Skeleton className={cn(iconSizes.xl, 'w-48 mb-4')} />
         <Skeleton className={cn('h-[600px] w-full', borders.radiusClass.lg)} />
-      </main>
+      </PageContainer>
     );
   }
 
   return (
     <>
-      <main className={cn('min-h-screen', colors.bg.secondary)}>
-        {/* Header */}
-        <header className={cn(colors.bg.primary, borders.quick.borderB, 'shadow-sm')}>
-          <div className={cn(sp.padding.x.lg, sp.padding.y.md)}>
-            <ModuleBreadcrumb className="mb-2" />
-            <div className={layout.flexCenterBetween}>
-              <div className={layout.flexCenterGap2}>
-                <CalendarDays className={cn(iconSizes.lg, colors.text.info)} />
-                <div>
-                  <h1 className={typo.special.containerTitle}>
-                    {t('calendarPage.title')}
-                  </h1>
-                  <p className={cn(typo.special.secondary, sp.margin.top.xs)}>
-                    {t('calendarPage.description')}
-                  </p>
-                </div>
-              </div>
+      <PageContainer ariaLabel={t('calendarPage.title')}>
+        {/* Enterprise PageHeader */}
+        <PageHeader
+          variant="sticky-rounded"
+          layout="compact"
+          spacing="compact"
+          breadcrumb={<ModuleBreadcrumb />}
+          title={{
+            icon: CalendarDays,
+            title: t('calendarPage.title'),
+            subtitle: t('calendarPage.description'),
+          }}
+          actions={{
+            showDashboard,
+            onDashboardToggle: () => setShowDashboard(!showDashboard),
+            addButton: {
+              label: t('calendarPage.newEvent'),
+              onClick: () => setCreateDialogOpen(true),
+              icon: Plus,
+            },
+          }}
+        />
 
-              <div className={layout.flexCenterGap2}>
-                {/* Stats badges */}
-                {!loading && (
-                  <nav
-                    className={cn('hidden', getResponsiveClass('md', 'flex'), 'items-center', sp.gap.sm, typo.special.secondary)}
-                    aria-label={t('calendarPage.stats.ariaLabel')}
-                  >
-                    <span>{stats.tasks} {t('tasks.title').toLowerCase()}</span>
-                    <span aria-hidden="true">·</span>
-                    <span>{stats.appointments} {t('calendarPage.eventTypes.appointment').toLowerCase()}</span>
-                  </nav>
-                )}
+        {/* UnifiedDashboard — toggleable */}
+        {showDashboard && (
+          <section role="region" aria-label={t('calendarPage.stats.ariaLabel')}>
+            <UnifiedDashboard stats={dashboardStats} columns={4} />
+          </section>
+        )}
 
-                <Button onClick={() => setCreateDialogOpen(true)}>
-                  <Plus className={cn(iconSizes.sm, sp.margin.right.sm)} />
-                  {t('calendarPage.newEvent')}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </header>
+        {/* AdvancedFiltersPanel — desktop only */}
+        <aside className="hidden md:block" role="complementary">
+          <AdvancedFiltersPanel
+            config={taskFiltersConfig}
+            filters={filters}
+            onFiltersChange={setFilters}
+          />
+        </aside>
 
         {/* Calendar */}
-        <section className={cn(sp.padding.x.lg, sp.padding.y.lg, pageGap)}>
-          <article className={cn(colors.bg.primary, borders.quick.card, 'shadow', sp.padding.md)}>
+        <section className="flex-1 overflow-auto p-4">
+          <article className={cn(colors.bg.primary, borders.quick.card, 'shadow p-4')}>
             {loading ? (
               <Skeleton className={cn('h-[600px] w-full', borders.radiusClass.lg)} />
             ) : (
@@ -144,7 +189,7 @@ export default function CrmCalendarPage() {
             )}
           </article>
         </section>
-      </main>
+      </PageContainer>
 
       {/* Create dialog from header button */}
       <CalendarCreateDialog

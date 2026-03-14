@@ -618,7 +618,8 @@
     },
     "stats": {
       "ariaLabel": "Στατιστικά γεγονότων",
-      "separator": "•"
+      "separator": "•",
+      "totalEvents": "Σύνολο Γεγονότων"
     }
   },
   "sections": {
@@ -717,6 +718,11 @@
     "loading": "Φόρτωση ειδοποιήσεων...",
     "empty": "Δεν υπάρχουν ειδοποιήσεις",
     "emptyDescription": "Είστε ενημερωμένοι.",
+    "stats": {
+      "total": "Σύνολο",
+      "unread": "Μη Αναγνωσμένες",
+      "read": "Αναγνωσμένες"
+    },
     "test": {
       "create": "Δοκιμή",
       "creating": "Δημιουργία...",
@@ -732,6 +738,10 @@
     "createTeam": "Δημιουργία Ομάδας",
     "members": "{count} Μέλη",
     "managePermissions": "Διαχείριση Δικαιωμάτων",
+    "stats": {
+      "totalTeams": "Σύνολο Ομάδων",
+      "totalMembers": "Σύνολο Μελών"
+    },
     "loading": "Φόρτωση ομάδων...",
     "empty": {
       "title": "Δεν βρέθηκαν ομάδες",
