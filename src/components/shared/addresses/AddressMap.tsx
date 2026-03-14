@@ -31,6 +31,8 @@ import { AlertTriangle, MapPin, Locate } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { LngLatBounds, Marker as MapLibreMarker } from 'maplibre-gl';
+// 🔧 FIX: MapLibre CSS required for Marker positioning — was missing, causing invisible pins
+import 'maplibre-gl/dist/maplibre-gl.css';
 
 
 import { InteractiveMap } from '@/subapps/geo-canvas/components/InteractiveMap';
