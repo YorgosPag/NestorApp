@@ -6,22 +6,13 @@
  * Core contract lifecycle service: CRUD, FSM transitions, professional
  * snapshots, legalPhase sync στο unit document.
  *
+ * Uses Admin SDK — this service is called exclusively from API routes.
+ *
  * @module services/legal-contract.service
  * @enterprise ADR-230 - Contract Workflow & Legal Process
  */
 
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  updateDoc,
-  query,
-  where,
-  orderBy,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { AssociationService } from '@/services/association.service';
@@ -43,6 +34,16 @@ import {
 } from '@/types/legal-contracts';
 
 const logger = createModuleLogger('LegalContractService');
+
+// ============================================================================
+// ADMIN DB HELPER
+// ============================================================================
+
+function getDb() {
+  const db = getAdminFirestore();
+  if (!db) throw new Error('Admin Firestore unavailable');
+  return db;
+}
 
 // ============================================================================
 // ID GENERATION
@@ -120,7 +121,8 @@ export class LegalContractService {
         completedAt: null,
       };
 
-      await setDoc(doc(db, COLLECTIONS.LEGAL_CONTRACTS, id), contract);
+      const db = getDb();
+      await db.collection(COLLECTIONS.LEGAL_CONTRACTS).doc(id).set(contract);
 
       // Sync legalPhase to unit
       await this.syncLegalPhase(input.unitId);
@@ -144,12 +146,12 @@ export class LegalContractService {
    */
   static async getContractsForUnit(unitId: string): Promise<LegalContract[]> {
     try {
-      const q = query(
-        collection(db, COLLECTIONS.LEGAL_CONTRACTS),
-        where('unitId', '==', unitId),
-        orderBy('createdAt', 'asc')
-      );
-      const snapshot = await getDocs(q);
+      const db = getDb();
+      const snapshot = await db
+        .collection(COLLECTIONS.LEGAL_CONTRACTS)
+        .where('unitId', '==', unitId)
+        .orderBy('createdAt', 'asc')
+        .get();
       return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as LegalContract);
     } catch (error) {
       logger.error('[LegalContractService] Failed to get contracts:', error);
@@ -165,12 +167,12 @@ export class LegalContractService {
     phase: ContractPhase
   ): Promise<LegalContract | null> {
     try {
-      const q = query(
-        collection(db, COLLECTIONS.LEGAL_CONTRACTS),
-        where('unitId', '==', unitId),
-        where('phase', '==', phase)
-      );
-      const snapshot = await getDocs(q);
+      const db = getDb();
+      const snapshot = await db
+        .collection(COLLECTIONS.LEGAL_CONTRACTS)
+        .where('unitId', '==', unitId)
+        .where('phase', '==', phase)
+        .get();
       if (snapshot.empty) return null;
       const d = snapshot.docs[0];
       return { id: d.id, ...d.data() } as LegalContract;
@@ -185,8 +187,9 @@ export class LegalContractService {
    */
   static async getContractById(id: string): Promise<LegalContract | null> {
     try {
-      const snap = await getDoc(doc(db, COLLECTIONS.LEGAL_CONTRACTS, id));
-      if (!snap.exists()) return null;
+      const db = getDb();
+      const snap = await db.collection(COLLECTIONS.LEGAL_CONTRACTS).doc(id).get();
+      if (!snap.exists) return null;
       return { id: snap.id, ...snap.data() } as LegalContract;
     } catch (error) {
       logger.error('[LegalContractService] Failed to get contract:', error);
@@ -212,7 +215,8 @@ export class LegalContractService {
       if (input.notes !== undefined) updates.notes = input.notes;
       if (input.fileIds !== undefined) updates.fileIds = input.fileIds;
 
-      await updateDoc(doc(db, COLLECTIONS.LEGAL_CONTRACTS, id), updates);
+      const db = getDb();
+      await db.collection(COLLECTIONS.LEGAL_CONTRACTS).doc(id).update(updates);
 
       logger.info(`[LegalContractService] Updated contract ${id}`);
       return { success: true };
@@ -264,7 +268,8 @@ export class LegalContractService {
         updates.completedAt = now;
       }
 
-      await updateDoc(doc(db, COLLECTIONS.LEGAL_CONTRACTS, id), updates);
+      const db = getDb();
+      await db.collection(COLLECTIONS.LEGAL_CONTRACTS).doc(id).update(updates);
 
       // Sync legalPhase
       await this.syncLegalPhase(contract.unitId);
@@ -323,10 +328,10 @@ export class LegalContractService {
 
         // If not found via associations, create a minimal snapshot from contact
         if (!snapshot) {
-          const contactRef = doc(db, COLLECTIONS.CONTACTS, contactId);
-          const contactSnap = await getDoc(contactRef);
-          if (contactSnap.exists()) {
-            const data = contactSnap.data();
+          const db = getDb();
+          const contactSnap = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
+          if (contactSnap.exists) {
+            const data = contactSnap.data() as Record<string, string | null | undefined>;
             snapshot = {
               contactId,
               displayName: [data.firstName, data.lastName].filter(Boolean).join(' ')
@@ -351,7 +356,8 @@ export class LegalContractService {
         notary: 'notary',
       };
 
-      await updateDoc(doc(db, COLLECTIONS.LEGAL_CONTRACTS, contractId), {
+      const db = getDb();
+      await db.collection(COLLECTIONS.LEGAL_CONTRACTS).doc(contractId).update({
         [fieldMap[role]]: snapshot,
         updatedAt: new Date().toISOString(),
       });
@@ -439,11 +445,11 @@ export class LegalContractService {
 
     if (phase === 'payoff') {
       // Payoff: απαιτεί signed final
-      const final = await this.getContractByPhase(unitId, 'final');
-      if (!final) {
+      const finalContract = await this.getContractByPhase(unitId, 'final');
+      if (!finalContract) {
         return 'Δεν υπάρχει Οριστικό Συμβόλαιο — δημιουργήστε πρώτα Οριστικό';
       }
-      if (final.status !== 'signed' && final.status !== 'completed') {
+      if (finalContract.status !== 'signed' && finalContract.status !== 'completed') {
         return 'Το Οριστικό Συμβόλαιο πρέπει να είναι υπογεγραμμένο πριν δημιουργηθεί Εξοφλητήριο';
       }
       return null;
@@ -460,7 +466,8 @@ export class LegalContractService {
     legalPhase: LegalPhase
   ): Promise<void> {
     try {
-      await updateDoc(doc(db, COLLECTIONS.UNITS, unitId), {
+      const db = getDb();
+      await db.collection(COLLECTIONS.UNITS).doc(unitId).update({
         'commercial.legalPhase': legalPhase,
       });
       logger.info(`[LegalContractService] Unit ${unitId} legalPhase → ${legalPhase}`);
