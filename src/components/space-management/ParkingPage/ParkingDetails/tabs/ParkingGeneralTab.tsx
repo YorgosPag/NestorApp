@@ -238,9 +238,7 @@ export function ParkingGeneralTab({
               value={form.floorId}
               onChange={(v: string, payload?: FloorChangePayload) => {
                 updateField('floor', v);
-                if (payload) {
-                  updateField('floorId', payload.floorId);
-                }
+                updateField('floorId', payload ? payload.floorId : '');
               }}
               label={t('general.fields.floor')}
               noBuildingHint={t('entityLinks.building.noFloorHint')}

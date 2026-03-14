@@ -162,7 +162,8 @@ export function PropertyDetailsContent({
                         floorId: payload.floorId,
                       });
                     } else {
-                      safeOnUpdateProperty(resolvedProperty.id, { floor: v ? parseInt(v) || 0 : 0 });
+                      // Clear both floor and floorId when deselecting
+                      safeOnUpdateProperty(resolvedProperty.id, { floor: 0, floorId: null });
                     }
                   }
                 }}
