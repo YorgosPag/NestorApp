@@ -277,7 +277,7 @@ export const POST = withStandardRateLimit(
         const isSuperAdmin = isRoleBypass(ctx.globalRole);
 
         const now = new Date().toISOString();
-        const floorDocument: FloorDocument & { createdAt: string; createdBy: string } = {
+        const floorDocument: Record<string, unknown> = {
           id: floorId,
           number: body.number,
           name: body.name,
@@ -285,7 +285,7 @@ export const POST = withStandardRateLimit(
           buildingName: body.buildingName || '',
           ...(body.projectId ? { projectId: String(body.projectId) } : {}),
           ...(body.projectName ? { projectName: body.projectName } : {}),
-          companyId: isSuperAdmin ? undefined : ctx.companyId,  // 🔒 ADR-232: null for super admin
+          ...(isSuperAdmin ? {} : { companyId: ctx.companyId }),  // 🔒 ADR-232: omit for super admin
           units: body.units || 0,
           elevation: body.elevation ?? null,  // 🏢 ADR-180: IFC elevation (metres)
           createdAt: now,
