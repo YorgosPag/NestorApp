@@ -20,6 +20,7 @@ export function useUnitsSidebar(floors: FloorData[]|undefined, viewerProps: View
   // 🏢 ENTERPRISE: Firestore persistence handler for unit field updates
   const handleUpdateProperty = React.useCallback(async (propertyId: string, updates: Partial<Property>) => {
     try {
+      logger.info(`[DEBUG ADR-232] handleUpdateProperty CALLED`, { propertyId, updateKeys: Object.keys(updates), hasFloorId: 'floorId' in updates });
       await updateUnit(propertyId, updates);
       logger.info(`Unit ${propertyId} updated in Firestore:`, { data: Object.keys(updates) });
     } catch (error) {

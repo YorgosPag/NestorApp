@@ -148,13 +148,16 @@ export function FloorSelectField({
     }
 
     // Find the floor option to get the floorId
+    console.log('[DEBUG FloorSelectField] handleValueChange:', { v, floorsCount: floorsRef.current.length, floorValues: floorsRef.current.map(f => f.value) });
     const selectedFloor = floorsRef.current.find((f) => f.value === v);
+    console.log('[DEBUG FloorSelectField] selectedFloor:', selectedFloor);
     if (selectedFloor) {
       onChange(v, {
         floor: Number(v),
         floorId: selectedFloor.id,
       });
     } else {
+      console.warn('[DEBUG FloorSelectField] NO MATCH — sending without floorId!');
       onChange(v);
     }
   };

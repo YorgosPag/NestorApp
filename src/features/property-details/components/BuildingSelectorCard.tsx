@@ -265,18 +265,17 @@ export function BuildingSelectorCard({
     setSaveStatus('idle');
 
     try {
-      const unitRef = doc(db, COLLECTIONS.UNITS, unitId);
-
       // 🏢 ENTERPRISE: Use draft values directly (undefined → null for Firestore)
       const buildingIdToSave = draftBuildingId || null;
       const floorIdToSave = draftFloorId || null;
 
-      // 🏢 ENTERPRISE: Update both buildingId and floorId (Phase 1.1)
-      await updateDoc(unitRef, {
+      // 🔒 ADR-232: Use Admin SDK PATCH (Client SDK blocked by Firestore rules
+      // which treat buildingId/floorId as structural invariants)
+      const { updateUnit } = await import('@/services/units.service');
+      await updateUnit(unitId, {
         buildingId: buildingIdToSave,
         floorId: floorIdToSave,
-        updatedAt: new Date().toISOString(),
-      });
+      } as Record<string, unknown>);
 
       logger.info(`[BuildingSelectorCard] Unit ${unitId} linked to building ${buildingIdToSave}, floor ${floorIdToSave}`);
       setSaveStatus('success');
