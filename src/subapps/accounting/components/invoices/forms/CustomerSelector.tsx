@@ -12,6 +12,7 @@ import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DoyPicker } from '@/components/ui/doy-picker';
 import { ContactSearchManager } from '@/components/contacts/relationships/ContactSearchManager';
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
 import { ContactsService } from '@/services/contacts.service';
@@ -173,10 +174,10 @@ export function CustomerSelector({ customer, onCustomerChange }: CustomerSelecto
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <fieldset>
           <Label htmlFor="customerTaxOffice">ΔΟΥ</Label>
-          <Input
-            id="customerTaxOffice"
+          <DoyPicker
             value={customer.taxOffice ?? ''}
-            onChange={(e) => updateField('taxOffice', e.target.value)}
+            onValueChange={(val) => updateField('taxOffice', val)}
+            showAddNew={false}
           />
         </fieldset>
 
