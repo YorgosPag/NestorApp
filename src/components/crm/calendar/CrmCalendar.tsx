@@ -215,6 +215,8 @@ export function CrmCalendar({
       assignedTo: event.assignedTo ?? '',
       contactId: event.contactId ?? null,
       projectId: event.projectId ?? null,
+      createdAt: event.start.toISOString(),
+      updatedAt: event.start.toISOString(),
     };
     setEditingTask(taskForEdit);
     setEditDialogOpen(true);
