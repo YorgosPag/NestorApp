@@ -130,6 +130,9 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
                     {relationship.position && (
                       <span className={`text-xs ${colors.text.muted}`}>• {relationship.position}</span>
                     )}
+                    {relationship.department && (
+                      <span className={`text-xs ${colors.text.muted}`}>• {relationship.department}</span>
+                    )}
                   </>
                 ) : (
                   <>
