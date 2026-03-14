@@ -403,55 +403,56 @@
 
   /* ===================================================================
    * ENTERPRISE: react-big-calendar theme overrides
-   * Uses CSS variables so it works in both light and dark mode.
-   * Background: --card for cells, --muted for off-range/weekends.
+   * Uses .rbc-wrapper parent for higher specificity than the library CSS.
+   * Background: --secondary for cells, --muted for off-range.
    * =================================================================== */
 
-  /* Main calendar container — inherit theme background */
-  .rbc-calendar {
-    background: hsl(var(--card));
+  /* Main calendar container */
+  .rbc-wrapper .rbc-calendar {
+    background: hsl(var(--secondary));
     color: hsl(var(--card-foreground));
     border-radius: var(--radius);
   }
 
   /* Toolbar */
-  .rbc-toolbar {
+  .rbc-wrapper .rbc-toolbar {
     border-bottom: 1px solid hsl(var(--border));
     padding-bottom: 0.75rem;
     margin-bottom: 0.75rem;
   }
 
-  .rbc-toolbar button {
+  .rbc-wrapper .rbc-toolbar button {
     color: hsl(var(--card-foreground));
     border-color: hsl(var(--border));
-    background: transparent;
+    background: hsl(var(--secondary));
   }
 
-  .rbc-toolbar button:hover {
+  .rbc-wrapper .rbc-toolbar button:hover {
     background: hsl(var(--muted));
     color: hsl(var(--card-foreground));
   }
 
-  .rbc-toolbar button.rbc-active {
+  .rbc-wrapper .rbc-toolbar button.rbc-active {
     background: hsl(var(--primary));
     color: hsl(var(--primary-foreground));
     border-color: hsl(var(--primary));
   }
 
-  .rbc-toolbar button.rbc-active:hover {
+  .rbc-wrapper .rbc-toolbar button.rbc-active:hover {
     background: hsl(var(--primary));
     color: hsl(var(--primary-foreground));
   }
 
   /* Month view */
-  .rbc-month-view {
-    border-color: hsl(var(--border));
+  .rbc-wrapper .rbc-month-view {
+    background: hsl(var(--secondary));
+    border: 1px solid hsl(var(--border));
     border-radius: var(--radius);
     overflow: hidden;
   }
 
   /* Day headers (Mon, Tue, etc.) */
-  .rbc-header {
+  .rbc-wrapper .rbc-header {
     background: hsl(var(--muted));
     color: hsl(var(--muted-foreground));
     border-color: hsl(var(--border));
@@ -459,119 +460,120 @@
     font-weight: 600;
   }
 
-  .rbc-header + .rbc-header {
+  .rbc-wrapper .rbc-header + .rbc-header {
     border-left-color: hsl(var(--border));
   }
 
-  /* Day cells — use card background (not white) */
-  .rbc-day-bg {
-    background: hsl(var(--card));
-    border-color: hsl(var(--border));
+  /* Day cells — use secondary background (dark blue-grey, same as app) */
+  .rbc-wrapper .rbc-day-bg {
+    background: hsl(var(--secondary));
   }
 
-  .rbc-day-bg + .rbc-day-bg {
+  .rbc-wrapper .rbc-day-bg + .rbc-day-bg {
     border-left-color: hsl(var(--border));
   }
 
-  /* Off-range days (previous/next month) — slightly muted */
-  .rbc-off-range-bg {
-    background: hsl(var(--muted) / 0.5);
+  /* Off-range days (previous/next month) — slightly darker/muted */
+  .rbc-wrapper .rbc-off-range-bg {
+    background: hsl(var(--muted));
   }
 
-  /* Today highlight */
-  .rbc-today {
-    background: hsl(var(--primary) / 0.08);
+  /* Today highlight — subtle primary tint */
+  .rbc-wrapper .rbc-today {
+    background: hsl(var(--primary) / 0.12);
   }
 
   /* Month row borders */
-  .rbc-month-row {
+  .rbc-wrapper .rbc-month-row {
     border-color: hsl(var(--border));
   }
 
-  .rbc-month-row + .rbc-month-row {
+  .rbc-wrapper .rbc-month-row + .rbc-month-row {
     border-top-color: hsl(var(--border));
   }
 
   /* Date cell numbers */
-  .rbc-date-cell {
+  .rbc-wrapper .rbc-date-cell {
     color: hsl(var(--card-foreground));
     padding: 0.25rem 0.5rem;
   }
 
-  .rbc-off-range {
+  .rbc-wrapper .rbc-off-range {
     color: hsl(var(--muted-foreground) / 0.5);
   }
 
   /* Events inside cells */
-  .rbc-event {
+  .rbc-wrapper .rbc-event {
     border-radius: calc(var(--radius) - 4px);
   }
 
-  .rbc-event:focus {
+  .rbc-wrapper .rbc-event:focus {
     outline: 2px solid hsl(var(--ring));
     outline-offset: 1px;
   }
 
-  .rbc-show-more {
+  .rbc-wrapper .rbc-show-more {
     color: hsl(var(--primary));
     font-weight: 500;
   }
 
   /* Week / Day views */
-  .rbc-time-view {
+  .rbc-wrapper .rbc-time-view {
+    background: hsl(var(--secondary));
     border-color: hsl(var(--border));
   }
 
-  .rbc-time-header {
+  .rbc-wrapper .rbc-time-header {
     border-bottom-color: hsl(var(--border));
   }
 
-  .rbc-time-content {
+  .rbc-wrapper .rbc-time-content {
     border-top-color: hsl(var(--border));
+    background: hsl(var(--secondary));
   }
 
-  .rbc-time-content > * + * > * {
+  .rbc-wrapper .rbc-time-content > * + * > * {
     border-left-color: hsl(var(--border));
   }
 
-  .rbc-timeslot-group {
+  .rbc-wrapper .rbc-timeslot-group {
     border-bottom-color: hsl(var(--border));
   }
 
-  .rbc-time-slot {
+  .rbc-wrapper .rbc-time-slot {
     color: hsl(var(--muted-foreground));
   }
 
-  .rbc-day-slot .rbc-time-slot {
+  .rbc-wrapper .rbc-day-slot .rbc-time-slot {
     border-top-color: hsl(var(--border) / 0.3);
   }
 
-  .rbc-current-time-indicator {
+  .rbc-wrapper .rbc-current-time-indicator {
     background-color: hsl(var(--primary));
   }
 
   /* Agenda view */
-  .rbc-agenda-view table.rbc-agenda-table {
+  .rbc-wrapper .rbc-agenda-view table.rbc-agenda-table {
     border-color: hsl(var(--border));
     color: hsl(var(--card-foreground));
   }
 
-  .rbc-agenda-view table.rbc-agenda-table thead > tr > th {
+  .rbc-wrapper .rbc-agenda-view table.rbc-agenda-table thead > tr > th {
     background: hsl(var(--muted));
     color: hsl(var(--muted-foreground));
     border-color: hsl(var(--border));
   }
 
-  .rbc-agenda-view table.rbc-agenda-table tbody > tr > td {
+  .rbc-wrapper .rbc-agenda-view table.rbc-agenda-table tbody > tr > td {
     border-color: hsl(var(--border));
   }
 
-  .rbc-agenda-view table.rbc-agenda-table tbody > tr + tr {
+  .rbc-wrapper .rbc-agenda-view table.rbc-agenda-table tbody > tr + tr {
     border-top-color: hsl(var(--border));
   }
 
   /* Overlay popup ("+N more" events) */
-  .rbc-overlay {
+  .rbc-wrapper .rbc-overlay {
     background: hsl(var(--popover));
     color: hsl(var(--popover-foreground));
     border: 1px solid hsl(var(--border));
@@ -579,7 +581,7 @@
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   }
 
-  .rbc-overlay-header {
+  .rbc-wrapper .rbc-overlay-header {
     border-bottom-color: hsl(var(--border));
   }
 
