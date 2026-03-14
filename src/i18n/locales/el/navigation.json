@@ -244,6 +244,7 @@
     "reports": "Αναφορές"
   },
   "crm": {
+    "overview": "Επισκόπηση",
     "dashboard": "Dashboard",
     "customers": "Διαχείριση Πελατών",
     "communications": "Επικοινωνίες",

@@ -132,6 +132,7 @@ const NAVIGATION_LABELS = {
   accounting_reports: 'accounting.reports',
 
   // CRM submenu
+  crm_overview: 'crm.overview',
   dashboard: 'crm.dashboard',
   customer_management: 'crm.customers',
   communications: 'crm.communications',
@@ -312,11 +313,20 @@ export function createNavigationConfig(
         ...itemConfig.smartConfig
       },
       // Process subItems recursively
-      subItems: itemConfig.subItems ? itemConfig.subItems.map(subItem => ({
-        ...subItem,
-        title: labels[getLabelKeyForPath(subItem.href.replace('/', '')) as keyof typeof labels] || subItem.href || 'Unknown',
-        subItems: undefined // SubItems should not have nested subItems
-      } as SmartNavigationItem)) : undefined
+      subItems: itemConfig.subItems ? itemConfig.subItems.map(subItem => {
+        const subPath = subItem.href.replace('/', '');
+        // If subItem href matches parent href, use overview label
+        const subLabelKey = subPath === labelKey
+          ? getLabelKeyForPath(subPath) + '_overview'
+          : getLabelKeyForPath(subPath);
+        return {
+          ...subItem,
+          title: labels[subLabelKey as keyof typeof labels]
+            || labels[getLabelKeyForPath(subPath) as keyof typeof labels]
+            || subItem.href || 'Unknown',
+          subItems: undefined // SubItems should not have nested subItems
+        } as SmartNavigationItem;
+      }) : undefined
     };
 
     return processedItem;
@@ -456,6 +466,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
               featureFlag: 'crm_enabled'
             },
             subItems: [
+              {  icon: Layout, href: '/crm' },
               {  icon: BarChart, href: '/crm/dashboard' },
               {  icon: Users, href: '/crm/customers' },
               {  icon: Phone, href: '/crm/communications' },

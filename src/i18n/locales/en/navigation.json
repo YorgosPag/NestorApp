@@ -244,6 +244,7 @@
     "reports": "Reports"
   },
   "crm": {
+    "overview": "Overview",
     "dashboard": "Dashboard",
     "customers": "Customer Management",
     "communications": "Communications",
