@@ -124,6 +124,17 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
   }, [refreshRelationships, refreshTree, shouldShowTree, contactId]);
 
   // 📝 Relationship form management hook
+  // 🔧 FIX: After successful save → hide form + quiet refresh (no full page re-render)
+  const handleAfterSave = React.useCallback(async () => {
+    setShowFormCard(false);
+    // Quiet refresh — only update the relationship list, without causing parent re-renders
+    try {
+      await refreshRelationships();
+    } catch (err) {
+      logger.error('Post-save refresh failed:', { error: err });
+    }
+  }, [refreshRelationships]);
+
   const {
     formData,
     setFormData,
@@ -134,7 +145,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
     handleSubmit,
     handleEdit,
     handleCancel
-  } = useRelationshipForm(contactId, contactType, handleGlobalRefresh);
+  } = useRelationshipForm(contactId, contactType, handleAfterSave);
 
   // ============================================================================
   // COMPUTED VALUES
