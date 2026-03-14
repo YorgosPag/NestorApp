@@ -20,65 +20,52 @@ type PendingSubmitFn = () => Promise<void>;
 /** Module-level singleton state */
 let _pendingSubmit: PendingSubmitFn | null = null;
 let _hasPendingData = false;
+let _isSubmitting = false;
 
-/**
- * 🛡️ PendingRelationshipGuard
- *
- * Tracks whether the relationship form has unsaved data and provides
- * a mechanism to auto-submit it when the parent contact is saved.
- *
- * Flow:
- * 1. ContactRelationshipManager registers its handleSubmit callback
- * 2. RelationshipForm marks dirty state when targetContactId is set
- * 3. ContactDetails.handleSaveEdit calls submitPending() before saving
- * 4. If pending data exists → auto-submits → then saves contact
- */
 export const PendingRelationshipGuard = {
-  /**
-   * Register the submit callback (called by ContactRelationshipManager)
-   */
   register(submitFn: PendingSubmitFn): void {
     _pendingSubmit = submitFn;
   },
 
-  /**
-   * Unregister (called on unmount)
-   */
   unregister(): void {
     _pendingSubmit = null;
     _hasPendingData = false;
+    _isSubmitting = false;
   },
 
-  /**
-   * Mark form as having unsaved data
-   */
   setHasPendingData(hasPending: boolean): void {
     _hasPendingData = hasPending;
   },
 
-  /**
-   * Check if there's unsaved relationship data
-   */
   get hasPendingData(): boolean {
     return _hasPendingData;
   },
 
   /**
-   * Auto-submit the pending relationship form
-   * Returns true if a relationship was submitted, false otherwise
+   * Auto-submit the pending relationship form.
+   * Includes a submission lock to prevent duplicate saves.
    */
   async submitPending(): Promise<boolean> {
+    // 🛡️ Prevent double submission
+    if (_isSubmitting) {
+      logger.warn('Submit already in progress — skipping duplicate call');
+      return false;
+    }
+
     if (_hasPendingData && _pendingSubmit) {
+      _isSubmitting = true;
       logger.info('Auto-submitting pending relationship...');
       try {
         await _pendingSubmit();
+        // Clear immediately to prevent any further auto-submits
         _hasPendingData = false;
         logger.info('Pending relationship auto-submitted successfully');
         return true;
       } catch (error) {
         logger.error('Auto-submit failed:', { error });
-        // Don't block the main save — the user will see the error in the form
         return false;
+      } finally {
+        _isSubmitting = false;
       }
     }
     return false;
