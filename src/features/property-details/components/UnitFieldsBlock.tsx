@@ -214,6 +214,8 @@ export function UnitFieldsBlock({
       code: formData.code || undefined,
       type: formData.type,
       floor: formData.floor,
+      // 🔒 ADR-232: Include floorId from property (set via FloorSelectField)
+      ...(property.floorId ? { floorId: property.floorId } : {}),
       layout: {
         bedrooms: formData.bedrooms,
         bathrooms: formData.bathrooms,
