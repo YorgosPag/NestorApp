@@ -147,10 +147,13 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
   const relationshipTypeOptions = useMemo(() => {
     const presets = getRelationshipTypeOptions(contactType, t);
     const allOptions = [...presets, ...customRelTypes];
-    // 🏢 ENTERPRISE: Filter out types already used for the selected target contact
-    // Prevents duplicate relationship creation at the UI level (Google-level UX)
+    // 🏢 ENTERPRISE: Mark already-used types as disabled (not removed)
+    // Shows all options but prevents re-selection — Google-level UX
     if (usedRelationshipTypes.length === 0) return allOptions;
-    return allOptions.filter(option => !usedRelationshipTypes.includes(option.value));
+    return allOptions.map(option => usedRelationshipTypes.includes(option.value)
+      ? { ...option, disabled: true, disabledHint: t('relationships.form.alreadyRegistered', { defaultValue: 'Ήδη καταχωρημένο' }) }
+      : option
+    );
   }, [contactType, t, customRelTypes, usedRelationshipTypes]);
 
   const positionOptions = useMemo(() => {

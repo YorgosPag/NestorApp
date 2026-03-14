@@ -35,6 +35,10 @@ export interface ComboboxOption {
   label: string;
   /** Optional secondary text (e.g. code, region) */
   secondaryLabel?: string;
+  /** When true, option is visible but not selectable (greyed out) */
+  disabled?: boolean;
+  /** Hint text shown next to disabled options (e.g. "Ήδη καταχωρημένο") */
+  disabledHint?: string;
 }
 
 export interface SearchableComboboxProps {
@@ -290,7 +294,8 @@ export function SearchableCombobox({
         case 'Enter':
           e.preventDefault();
           if (highlightedIndex >= 0 && highlightedIndex < filtered.length) {
-            handleSelect(filtered[highlightedIndex]);
+            const target = filtered[highlightedIndex];
+            if (!target.disabled) handleSelect(target);
           }
           break;
         case 'Escape':
@@ -396,19 +401,30 @@ export function SearchableCombobox({
                     key={option.value}
                     role="option"
                     aria-selected={highlightedIndex === index}
+                    aria-disabled={option.disabled || undefined}
                     className={cn(
-                      'flex flex-col px-3 py-1.5 cursor-pointer transition-colors text-sm',
-                      highlightedIndex === index
+                      'flex flex-col px-3 py-1.5 transition-colors text-sm',
+                      option.disabled
+                        ? 'cursor-not-allowed opacity-50'
+                        : 'cursor-pointer',
+                      !option.disabled && highlightedIndex === index
                         ? 'bg-accent text-accent-foreground'
-                        : 'hover:bg-muted',
+                        : !option.disabled ? 'hover:bg-muted' : '',
                     )}
                     onMouseDown={(e) => {
                       e.preventDefault();
-                      handleSelect(option);
+                      if (!option.disabled) handleSelect(option);
                     }}
-                    onMouseEnter={() => setHighlightedIndex(index)}
+                    onMouseEnter={() => { if (!option.disabled) setHighlightedIndex(index); }}
                   >
-                    <span className="font-medium">{option.label}</span>
+                    <span className="font-medium">
+                      {option.label}
+                      {option.disabled && option.disabledHint && (
+                        <span className="ml-2 text-xs font-normal text-muted-foreground italic">
+                          ({option.disabledHint})
+                        </span>
+                      )}
+                    </span>
                     {option.secondaryLabel && (
                       <span className="text-xs text-muted-foreground">
                         {option.secondaryLabel}
