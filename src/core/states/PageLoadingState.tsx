@@ -58,11 +58,10 @@ export function PageLoadingState({
   return (
     <section className={layoutClass} role="status" aria-live="polite">
       <div className="text-center">
-        {Icon ? (
-          <Icon className={cn(iconSizes.xl, 'animate-spin mx-auto mb-4 text-muted-foreground')} />
-        ) : (
-          <Spinner size="large" className="mx-auto mb-4" />
+        {Icon && (
+          <Icon className={cn(iconSizes.xl, 'mx-auto mb-2 text-muted-foreground')} />
         )}
+        <Spinner size="large" className="mx-auto mb-4" />
         <p className="text-muted-foreground">{message}</p>
       </div>
     </section>
