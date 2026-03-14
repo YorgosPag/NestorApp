@@ -151,13 +151,13 @@ export function CalendarCreateDialog({
         title: title.trim(),
         type,
         dueDate: dueDate.toISOString(),
-        endDate: endDate ? endDate.toISOString() : undefined,
-        description: description.trim() || undefined,
+        endDate: endDate ? endDate.toISOString() : null,
+        description: description.trim() || null,
         status: 'pending',
         priority: 'medium',
         assignedTo: user?.uid ?? '',
-        contactId: contactId || undefined,
-        projectId: projectId || undefined,
+        contactId: contactId || null,
+        projectId: projectId || null,
         reminderDate,
       });
 

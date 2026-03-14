@@ -44,10 +44,10 @@ export interface ContactRelationship {
   // ========================================================================
 
   /** 💼 Job title/position within organization */
-  position?: string;
+  position?: string | null;
 
   /** 🏢 Department/division */
-  department?: string;
+  department?: string | null;
 
   /** 🏗️ Team/unit/section */
   team?: string;
@@ -75,10 +75,10 @@ export interface ContactRelationship {
   // ========================================================================
 
   /** 📅 Relationship start date */
-  startDate?: string; // ISO date string
+  startDate?: string | null; // ISO date string
 
   /** 📅 Relationship end date (if terminated) */
-  endDate?: string; // ISO date string
+  endDate?: string | null; // ISO date string
 
   /** ⏳ Expected duration (for contracts/temporary roles) */
   expectedDuration?: string;
@@ -97,7 +97,7 @@ export interface ContactRelationship {
   // ========================================================================
 
   /** 📞 Professional contact information */
-  contactInfo?: ProfessionalContactInfo;
+  contactInfo?: ProfessionalContactInfo | null;
 
   /** 💰 Financial information */
   financialInfo?: FinancialInfo;
@@ -168,7 +168,7 @@ export interface ContactRelationship {
   relationshipNotes?: string;
 
   /** 📝 Notes shorthand alias for relationshipNotes */
-  notes?: string;
+  notes?: string | null;
 
   /** 🏷️ Tags for categorization */
   tags?: string[];

@@ -118,12 +118,12 @@ export interface CrmTask {
   id?: string;
   companyId?: string; // 🏢 ENTERPRISE: Tenant isolation
   title: string;
-  description?: string;
+  description?: string | null;
   type: 'call' | 'email' | 'meeting' | 'viewing' | 'document' | 'follow_up' | 'other';
   leadId?: string;
   opportunityId?: string;
-  contactId?: string;
-  projectId?: string;
+  contactId?: string | null;
+  projectId?: string | null;
   unitId?: string;
   assignedTo: string; // User ID
   assignedBy?: string; // User ID
@@ -142,7 +142,7 @@ export interface CrmTask {
   updatedAt: FirestoreishTimestamp;
   reminderSent?: boolean;
   metadata?: Record<string, unknown>;
-  endDate?: string; // ISO date for multi-day events
+  endDate?: string | null; // ISO date for multi-day events
   recurrence?: import('./recurrence').RecurrencePattern; // For recurring events (Phase 3)
   attendees?: string[]; // User IDs for attendees (Phase 3)
 }

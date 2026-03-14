@@ -466,8 +466,8 @@ export default function NewObligationPage() {
           projectInfo: {
             description: selectedProject.title || '',
             location: selectedProject.city || '',
-            startDate: selectedProject.startDate ? new Date(selectedProject.startDate) : undefined,
-            endDate: selectedProject.completionDate ? new Date(selectedProject.completionDate) : undefined,
+            startDate: selectedProject.startDate ? new Date(selectedProject.startDate) : null,
+            endDate: selectedProject.completionDate ? new Date(selectedProject.completionDate) : null,
             projectType: selectedProject.status || '',
             budget: selectedProject.totalValue
           }

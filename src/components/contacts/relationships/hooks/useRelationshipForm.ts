@@ -248,14 +248,14 @@ export const useRelationshipForm = (
         sourceContactId: isEmploymentRelation ? formData.targetContactId : contactId,
         targetContactId: isEmploymentRelation ? contactId : formData.targetContactId,
         relationshipType: formData.relationshipType as RelationshipType,
-        position: formData.position || undefined,
-        department: formData.department || undefined,
-        startDate: formData.startDate || undefined,
-        endDate: formData.endDate || undefined,
-        notes: formData.notes || undefined,
+        position: formData.position || null,
+        department: formData.department || null,
+        startDate: formData.startDate || null,
+        endDate: formData.endDate || null,
+        notes: formData.notes || null,
         contactInfo: hasContactInfo
           ? builtContactInfo as ProfessionalContactInfo
-          : undefined
+          : null
       };
 
       logger.info('RELATIONSHIP DIRECTION FIX:', { data: {
