@@ -27,7 +27,7 @@ import {
   type EventPropGetter,
   type SlotInfo,
 } from 'react-big-calendar';
-import { format, parse, startOfWeek, getDay, isBefore, startOfDay, isWeekend } from 'date-fns';
+import { format, parse, startOfWeek, getDay, isBefore, startOfDay, isSameDay } from 'date-fns';
 import { el, enUS } from 'date-fns/locale';
 import { useTranslation } from 'react-i18next';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -49,12 +49,18 @@ import { spacing as spacingTokens } from '@/styles/design-tokens/core/spacing';
 
 const today = startOfDay(new Date());
 
-/** Adds CSS classes to day background cells for weekend/past styling */
-function dayPropGetter(date: Date) {
-  const classes: string[] = [];
-  if (isWeekend(date)) classes.push('rbc-calendar-weekend');
-  if (isBefore(date, today)) classes.push('rbc-calendar-past');
-  return { className: classes.join(' ') };
+/** Creates dayPropGetter with event-aware dot indicators */
+function createDayPropGetter(events: CalendarEvent[]) {
+  return function dayPropGetter(date: Date) {
+    const classes: string[] = [];
+    if (isBefore(date, today)) classes.push('rbc-calendar-past');
+    // Add event indicator class for dot rendering
+    const hasEvent = events.some(
+      (e) => isSameDay(e.start, date) || (e.end && isSameDay(e.end, date))
+    );
+    if (hasEvent) classes.push('rbc-calendar-has-event');
+    return { className: classes.join(' ') };
+  };
 }
 
 /** Adds CSS class to date cell numbers for past date styling */
@@ -176,6 +182,9 @@ export function CrmCalendar({
     },
     [onRangeChange]
   );
+
+  // Event-aware dayPropGetter — memoized to avoid re-renders
+  const dayPropGetter = useMemo(() => createDayPropGetter(events), [events]);
 
   // Current locale
   const culture = i18n.language === 'el' ? 'el' : 'en';

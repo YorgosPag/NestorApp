@@ -175,7 +175,7 @@ export default function CrmCalendarPage() {
         </aside>
 
         {/* Calendar */}
-        <section className="flex-1 overflow-auto">
+        <section className="flex-1 overflow-auto p-2">
           <article className={cn(colors.bg.primary, borders.radiusClass.lg)}>
             <CrmCalendar
               events={events}
