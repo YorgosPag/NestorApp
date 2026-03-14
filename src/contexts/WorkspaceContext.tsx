@@ -123,8 +123,21 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
         logger.warn('[WorkspaceContext] No workspaces available for user');
       }
     } catch (err) {
-      logger.error('[WorkspaceContext] Failed to load workspaces', { error: err });
-      setError(err instanceof Error ? err : new Error('Failed to load workspaces'));
+      // 🔧 FIX: Downgrade to warn — workspaces are non-critical, don't block the app
+      const message = err instanceof Error ? err.message : String(err);
+      const isIndexOrPermission = message.includes('requires an index') ||
+        message.includes('FAILED_PRECONDITION') ||
+        message.includes('PERMISSION_DENIED') ||
+        message.includes('not-found');
+
+      if (isIndexOrPermission) {
+        logger.warn('[WorkspaceContext] Workspaces not available (index/collection missing) — continuing without workspaces');
+      } else {
+        logger.warn('[WorkspaceContext] Failed to load workspaces — continuing without workspaces', { error: message });
+      }
+      // Don't set error state — workspaces are optional, don't block UI
+      setAvailableWorkspaces([]);
+      setActiveWorkspace(null);
     } finally {
       setLoading(false);
     }
