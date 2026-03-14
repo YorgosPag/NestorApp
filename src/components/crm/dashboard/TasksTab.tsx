@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { completeTask, deleteTask } from '@/services/tasks.service';
 // 🏢 ENTERPRISE: Use CLIENT service - Server Action has NO auth context!
@@ -109,6 +110,7 @@ interface TasksTabProps {
 }
 
 export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabProps) {
+  const router = useRouter();
   // 🏢 ENTERPRISE: Use externally provided filters or defaults
   const filters = externalFilters ?? defaultTaskFilters;
   const { success, error: notifyError } = useNotifications();
@@ -266,7 +268,7 @@ export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabPr
                 </div>
                 <div className={`flex items-center ${sp.gap.sm} ${sp.margin.left.md}`}>
                   {task.status !== 'completed' && <Button size="sm" variant="ghost" className={colors.text.success} onClick={() => handleCompleteTask(task.id, task.title)} aria-label={t('tasks.actions.complete')}><CheckCircle className={`${iconSizes.sm} ${sp.margin.right.xs}`} />{t('tasks.actions.complete')}</Button>}
-                  <Button size="sm" variant="ghost" aria-label={t('tasks.actions.edit')}><Edit3 className={`${iconSizes.sm} ${sp.margin.right.xs}`} />{t('tasks.actions.edit')}</Button>
+                  <Button size="sm" variant="ghost" onClick={() => router.push(`/crm/tasks/${task.id}`)} aria-label={t('tasks.actions.edit')}><Edit3 className={`${iconSizes.sm} ${sp.margin.right.xs}`} />{t('tasks.actions.edit')}</Button>
                   <Button size="sm" variant="ghost" className={colors.text.error} onClick={() => handleDeleteTask(task.id, task.title)} aria-label={t('tasks.actions.delete')}><Trash2 className={`${iconSizes.sm} ${sp.margin.right.xs}`} />{t('tasks.actions.delete')}</Button>
                 </div>
               </div>
