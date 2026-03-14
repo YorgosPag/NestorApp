@@ -50,8 +50,7 @@ import {
   BUILDING_PROJECT_STATUS_LABELS,
   PROPERTY_BUILDING_TYPE_LABELS,
   PROJECT_TYPE_LABELS,
-  PRIORITY_LABELS,
-  RISK_COMPLEXITY_LABELS
+  PRIORITY_LABELS
   // Note: OPERATIONAL_STATUS_LABELS not imported - using i18n keys directly to avoid circular dependency
 } from '@/constants/property-statuses-enterprise';
 import { COMMUNICATION_CHANNELS } from '@/types/communications';
@@ -701,12 +700,12 @@ export const projectFiltersConfig: FilterPanelConfig = {
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
-            { value: 'in_progress', label: BUILDING_PROJECT_STATUS_LABELS.in_progress },
             { value: 'planning', label: UNIFIED_STATUS_FILTER_LABELS.PLANNING },
+            { value: 'in_progress', label: UNIFIED_STATUS_FILTER_LABELS.IN_PROGRESS },
             { value: 'completed', label: UNIFIED_STATUS_FILTER_LABELS.COMPLETED },
             { value: 'on_hold', label: UNIFIED_STATUS_FILTER_LABELS.ON_HOLD },
-            { value: 'cancelled', label: BUILDING_PROJECT_STATUS_LABELS.cancelled },
-            { value: 'delayed', label: BUILDING_PROJECT_STATUS_LABELS.delayed }
+            { value: 'cancelled', label: 'filters.status.cancelled' },
+            { value: 'delayed', label: 'filters.status.delayed' }
           ]
         },
         {
@@ -754,12 +753,9 @@ export const projectFiltersConfig: FilterPanelConfig = {
           placeholder: SP.company_placeholder,
           ariaLabel: 'Company filter',
           width: 1,
+          // [ENTERPRISE]: Dynamic options populated from Firestore projects data
           options: [
-            { value: 'all', label: COMMON_FILTER_LABELS.ALL_COMPANIES },
-            { value: 'company1', label: 'filters.sampleCompanies.companyA' },
-            { value: 'company2', label: 'filters.sampleCompanies.companyB' },
-            { value: 'company3', label: 'filters.sampleCompanies.companyC' },
-            { value: 'company4', label: 'filters.sampleCompanies.companyD' }
+            { value: 'all', label: COMMON_FILTER_LABELS.ALL_COMPANIES }
           ]
         },
         {
@@ -769,16 +765,9 @@ export const projectFiltersConfig: FilterPanelConfig = {
           placeholder: SP.location_placeholder,
           ariaLabel: 'Location filter',
           width: 1,
+          // [ENTERPRISE]: Dynamic options populated from Firestore projects data
           options: [
-            { value: 'all', label: COMMON_FILTER_LABELS.ALL_LOCATIONS },
-            { value: 'main-city', label: 'filters.sampleCities.athens' },
-            { value: 'alternative-city', label: 'filters.sampleCities.thessaloniki' },
-            { value: 'city3', label: 'filters.sampleCities.patras' },
-            { value: 'city4', label: 'filters.sampleCities.heraklion' },
-            { value: 'city5', label: 'filters.sampleCities.volos' },
-            { value: 'city6', label: 'filters.sampleCities.kavala' },
-            { value: 'city7', label: 'filters.sampleCities.lamia' },
-            { value: 'city8', label: 'filters.sampleCities.rhodes' }
+            { value: 'all', label: COMMON_FILTER_LABELS.ALL_LOCATIONS }
           ]
         },
         {
@@ -788,134 +777,10 @@ export const projectFiltersConfig: FilterPanelConfig = {
           placeholder: SP.client_placeholder,
           ariaLabel: 'Client filter',
           width: 1,
-          // [ENTERPRISE]: Dynamic client options from database
+          // [ENTERPRISE]: Dynamic options populated from Firestore projects data
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_CLIENTS }
-            // Dynamic client options loaded from database via useClients() hook
           ]
-        }
-      ]
-    },
-    {
-      id: 'project-ranges',
-      fields: [
-        {
-          id: 'budgetRange',
-          type: 'range',
-          label: FL.budget_range,
-          ariaLabel: 'Budget range filter',
-          width: 1,
-          min: parseInt(process.env.NEXT_PUBLIC_FILTER_BUDGET_MIN || '0'),
-          max: parseInt(process.env.NEXT_PUBLIC_FILTER_BUDGET_MAX || '50000000')
-        },
-        {
-          id: 'durationRange',
-          type: 'range',
-          label: FL.duration_range,
-          ariaLabel: 'Duration range filter',
-          width: 1,
-          min: parseInt(process.env.NEXT_PUBLIC_FILTER_DURATION_MIN || '1'),
-          max: parseInt(process.env.NEXT_PUBLIC_FILTER_DURATION_MAX || '120')
-        },
-        {
-          id: 'progressRange',
-          type: 'range',
-          label: FL.progress_range,
-          ariaLabel: 'Progress range filter',
-          width: 1,
-          min: parseInt(process.env.NEXT_PUBLIC_FILTER_PROGRESS_MIN || '0'),
-          max: parseInt(process.env.NEXT_PUBLIC_FILTER_PROGRESS_MAX || '100')
-        },
-        {
-          id: 'yearRange',
-          type: 'range',
-          label: FL.start_year_range,
-          ariaLabel: 'Start year range filter',
-          width: 1,
-          min: parseInt(process.env.NEXT_PUBLIC_FILTER_PROJECT_YEAR_MIN || '2020'),
-          max: parseInt(process.env.NEXT_PUBLIC_FILTER_PROJECT_YEAR_MAX || '2030')
-        }
-      ]
-    },
-    {
-      id: 'project-features',
-      fields: [
-        {
-          id: 'hasPermits',
-          type: 'checkbox',
-          label: FL.has_permits,
-          ariaLabel: 'Has permits filter',
-          width: 1
-        },
-        {
-          id: 'hasFinancing',
-          type: 'checkbox',
-          label: FL.has_financing,
-          ariaLabel: 'Has financing filter',
-          width: 1
-        },
-        {
-          id: 'isEcological',
-          type: 'checkbox',
-          label: FL.is_ecological,
-          ariaLabel: 'Ecological projects filter',
-          width: 1
-        },
-        {
-          id: 'hasSubcontractors',
-          type: 'checkbox',
-          label: FL.has_subcontractors,
-          ariaLabel: 'Has subcontractors filter',
-          width: 1
-        }
-      ]
-    },
-    {
-      id: 'project-advanced',
-      fields: [
-        {
-          id: 'riskLevel',
-          type: 'select',
-          label: FL.risk_level,
-          placeholder: SP.risk_level_placeholder,
-          ariaLabel: 'Risk level filter',
-          width: 1,
-          options: [
-            { value: 'all', label: COMMON_FILTER_LABELS.ALL_RISK_LEVELS },
-            { value: 'low', label: RISK_COMPLEXITY_LABELS.low },
-            { value: 'medium', label: RISK_COMPLEXITY_LABELS.medium },
-            { value: 'high', label: RISK_COMPLEXITY_LABELS.high },
-            { value: 'critical', label: PRIORITY_LABELS.critical }
-          ]
-        },
-        {
-          id: 'complexity',
-          type: 'select',
-          label: FL.complexity,
-          placeholder: SP.complexity_placeholder,
-          ariaLabel: 'Complexity filter',
-          width: 1,
-          options: [
-            { value: 'all', label: COMMON_FILTER_LABELS.ALL_COMPLEXITIES },
-            { value: 'simple', label: RISK_COMPLEXITY_LABELS.simple },
-            { value: 'medium', label: RISK_COMPLEXITY_LABELS.medium },
-            { value: 'complex', label: RISK_COMPLEXITY_LABELS.complex },
-            { value: 'very_complex', label: RISK_COMPLEXITY_LABELS.very_complex }
-          ]
-        },
-        {
-          id: 'isActive',
-          type: 'checkbox',
-          label: FL.is_active,
-          ariaLabel: 'Active projects only filter',
-          width: 1
-        },
-        {
-          id: 'hasIssues',
-          type: 'checkbox',
-          label: FL.has_issues,
-          ariaLabel: 'Projects with issues filter',
-          width: 1
         }
       ]
     }

@@ -100,13 +100,47 @@
     "rejected": "Απορρίφθηκε",
     "reviewed": "Ελέγχθηκε",
     "cancelled": "Ακυρώθηκε",
-    "construction": "Υπό Κατασκευή"
+    "construction": "Υπό Κατασκευή",
+    "delayed": "Καθυστέρηση"
   },
   "priority": {
     "low": "Χαμηλή",
     "medium": "Μέτρια",
     "high": "Υψηλή",
-    "urgent": "Επείγουσα"
+    "urgent": "Επείγουσα",
+    "critical": "Κρίσιμη"
+  },
+  "types": {
+    "residential": "Κατοικία",
+    "commercial": "Εμπορικό",
+    "industrial": "Βιομηχανικό",
+    "infrastructure": "Υποδομή",
+    "renovation": "Ανακαίνιση",
+    "mixed": "Μικτό",
+    "public": "Δημόσιο",
+    "individual": "Ιδιώτης",
+    "company": "Εταιρεία",
+    "service": "Υπηρεσία",
+    "office": "Γραφείο",
+    "warehouse": "Αποθήκη",
+    "retail": "Λιανικό",
+    "hotel": "Ξενοδοχείο"
+  },
+  "buildingStatus": {
+    "forSale": "Προς Πώληση",
+    "forRent": "Προς Ενοικίαση",
+    "rented": "Ενοικιασμένο",
+    "withdrawn": "Αποσύρθηκε",
+    "inProgress": "Σε Εξέλιξη",
+    "delayed": "Καθυστέρηση",
+    "cancelled": "Ακυρώθηκε"
+  },
+  "condition": {
+    "excellent": "Άριστη",
+    "veryGood": "Πολύ Καλή",
+    "good": "Καλή",
+    "needsRenovation": "Χρειάζεται Ανακαίνιση",
+    "underRenovation": "Υπό Ανακαίνιση"
   },
   "taskTypes": {
     "call": "Κλήση",

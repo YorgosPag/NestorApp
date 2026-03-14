@@ -100,13 +100,47 @@
     "rejected": "Rejected",
     "reviewed": "Reviewed",
     "cancelled": "Cancelled",
-    "construction": "Under Construction"
+    "construction": "Under Construction",
+    "delayed": "Delayed"
   },
   "priority": {
     "low": "Low",
     "medium": "Medium",
     "high": "High",
-    "urgent": "Urgent"
+    "urgent": "Urgent",
+    "critical": "Critical"
+  },
+  "types": {
+    "residential": "Residential",
+    "commercial": "Commercial",
+    "industrial": "Industrial",
+    "infrastructure": "Infrastructure",
+    "renovation": "Renovation",
+    "mixed": "Mixed",
+    "public": "Public",
+    "individual": "Individual",
+    "company": "Company",
+    "service": "Service",
+    "office": "Office",
+    "warehouse": "Warehouse",
+    "retail": "Retail",
+    "hotel": "Hotel"
+  },
+  "buildingStatus": {
+    "forSale": "For Sale",
+    "forRent": "For Rent",
+    "rented": "Rented",
+    "withdrawn": "Withdrawn",
+    "inProgress": "In Progress",
+    "delayed": "Delayed",
+    "cancelled": "Cancelled"
+  },
+  "condition": {
+    "excellent": "Excellent",
+    "veryGood": "Very Good",
+    "good": "Good",
+    "needsRenovation": "Needs Renovation",
+    "underRenovation": "Under Renovation"
   },
   "taskTypes": {
     "call": "Call",

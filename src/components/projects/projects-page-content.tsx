@@ -7,7 +7,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useProjectsPageState } from '@/hooks/useProjectsPageState';
 import { useFirestoreProjects } from '@/hooks/useFirestoreProjects';
-import { AdvancedFiltersPanel, projectFiltersConfig } from '@/components/core/AdvancedFilters';
+import { AdvancedFiltersPanel, projectFiltersConfig, type FilterPanelConfig } from '@/components/core/AdvancedFilters';
 import { ListContainer, PageContainer } from '@/core/containers';
 import { useProjectsStats } from '@/hooks/useProjectsStats';
 // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
@@ -25,8 +25,8 @@ import {
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { ProjectViewSwitch } from './ProjectViewSwitch';
 import { useIconSizes } from '@/hooks/useIconSizes';
-// 🏢 ENTERPRISE: Import from canonical location (not DXF Viewer)
-import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
+// 🏢 ENTERPRISE: Centralized page states (ADR-229)
+import { PageLoadingState, PageErrorState } from '@/core/states';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { deleteProject } from '@/services/projects-client.service';
@@ -158,6 +158,54 @@ export function ProjectsPageContent() {
     setIsDeleting(false);
   }, [projectToDelete, setSelectedProject]);
 
+  // 🏢 ENTERPRISE: Dynamic filter config — populate company/location/client options from real Firestore data
+  const dynamicProjectConfig = useMemo<FilterPanelConfig>(() => {
+    const projects = firestoreProjects ?? [];
+    const companies = [...new Set(projects.map(p => p.company).filter(Boolean))].sort();
+    const cities = [...new Set(projects.map(p => p.city).filter(Boolean))].sort();
+    const clients = [...new Set(projects.map(p => p.client).filter(Boolean))].sort();
+
+    return {
+      ...projectFiltersConfig,
+      rows: projectFiltersConfig.rows.map(row => {
+        if (row.id !== 'project-details') return row;
+        return {
+          ...row,
+          fields: row.fields.map(field => {
+            if (field.id === 'company' && field.options) {
+              return {
+                ...field,
+                options: [
+                  field.options[0], // "All Companies"
+                  ...companies.map(c => ({ value: c, label: c }))
+                ]
+              };
+            }
+            if (field.id === 'location' && field.options) {
+              return {
+                ...field,
+                options: [
+                  field.options[0], // "All Locations"
+                  ...cities.map(c => ({ value: c, label: c }))
+                ]
+              };
+            }
+            if (field.id === 'client' && field.options) {
+              return {
+                ...field,
+                options: [
+                  field.options[0], // "All Clients"
+                  ...clients.map(c => ({ value: c, label: c }))
+                ]
+              };
+            }
+            return field;
+          })
+        };
+      })
+    };
+  }, [firestoreProjects]);
+
   // 🏢 ENTERPRISE: Memoized dashboard stats — avoids array recreation on every render (INP optimization)
   const dashboardStats = useMemo<DashboardStat[]>(() => [
     {
@@ -227,11 +275,8 @@ export function ProjectsPageContent() {
   // Εμφάνιση loading state
   if (loading) {
     return (
-      <PageContainer ariaLabel={t('page.loading')} className="items-center justify-center">
-        <section className="text-center" role="status" aria-live="polite">
-          <AnimatedSpinner size="large" className="mx-auto mb-4" />
-          <p>{t('page.loadingMessage')}</p>
-        </section>
+      <PageContainer ariaLabel={t('page.loading')}>
+        <PageLoadingState icon={Briefcase} message={t('page.loadingMessage')} layout="contained" />
       </PageContainer>
     );
   }
@@ -239,16 +284,14 @@ export function ProjectsPageContent() {
   // Εμφάνιση error state
   if (error) {
     return (
-      <PageContainer ariaLabel={t('page.error.pageLabel')} className="items-center justify-center">
-        <section className="text-center text-red-600" role="alert" aria-label={t('page.error.ariaLabel')}>
-          <p>{t('page.error.title')} {error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className={`mt-2 px-4 py-2 bg-primary text-primary-foreground rounded ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-          >
-            {t('page.error.retry')}
-          </button>
-        </section>
+      <PageContainer ariaLabel={t('page.error.pageLabel')}>
+        <PageErrorState
+          title={t('page.error.title')}
+          message={error}
+          onRetry={() => window.location.reload()}
+          retryLabel={t('page.error.retry')}
+          layout="contained"
+        />
       </PageContainer>
     );
   }
@@ -274,7 +317,7 @@ export function ProjectsPageContent() {
         {/* Advanced Filters Panel - Desktop */}
         <aside className="hidden md:block" role="complementary" aria-label={t('page.filters.desktop')}>
           <AdvancedFiltersPanel
-            config={projectFiltersConfig}
+            config={dynamicProjectConfig}
             filters={filters}
             onFiltersChange={setFilters}
           />
@@ -284,7 +327,7 @@ export function ProjectsPageContent() {
         {showFilters && (
           <aside className="md:hidden" role="complementary" aria-label={t('page.filters.mobile')}>
             <AdvancedFiltersPanel
-              config={projectFiltersConfig}
+              config={dynamicProjectConfig}
               filters={filters}
               onFiltersChange={setFilters}
               defaultOpen
