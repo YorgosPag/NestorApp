@@ -11,7 +11,7 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { getCalendarEvents } from '@/services/calendar/CalendarEventService';
 import type { CalendarEvent, CalendarEventType } from '@/types/calendar-event';
@@ -74,7 +74,9 @@ export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalenda
     enabled: !authLoading && isAuthenticated,
   });
 
-  const events = data ?? [];
+  // Stabilize events reference — avoid creating new [] on every render when data is null
+  const EMPTY_EVENTS: CalendarEvent[] = useRef<CalendarEvent[]>([]).current;
+  const events = data ?? EMPTY_EVENTS;
 
   // Compute stats
   const stats = useMemo<CalendarEventStats>(() => ({
