@@ -712,12 +712,15 @@ service cloud.firestore {
                            && belongsToCompany(resource.data.companyId))
                      );
 
-      // ✍️ CREATE: Authenticated users with companyId from claims
-      // 🔐 SECURITY: companyId MUST match user's company claim
+      // ✍️ CREATE: Authenticated users with companyId from claims, or super admin
+      // 🔐 SECURITY: companyId MUST match user's company claim (super admin exempt)
       allow create: if isAuthenticated()
                     && isValidTaskData(request.resource.data)
-                    && request.resource.data.companyId == getUserCompanyId()
-                    && resource == null;
+                    && resource == null
+                    && (
+                         request.resource.data.companyId == getUserCompanyId()
+                         || isSuperAdminOnly()
+                       );
 
       // 📝 UPDATE: Creator, assignee, or company admin
       allow update: if isAuthenticated()
