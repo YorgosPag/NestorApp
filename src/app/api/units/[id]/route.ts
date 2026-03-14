@@ -125,9 +125,8 @@ export const PATCH = withStandardRateLimit(
           // Each check is separate so the user gets a specific error message
           const buildingId = (existing.buildingId as string) ?? null;
           const floorId = (existing.floorId as string) ?? null;
-          const floorNumber = existing.floor as number | undefined;
-          // Accept either floorId (document ref) or floor (numeric) as valid floor link
-          const hasFloor = !!floorId || (typeof floorNumber === 'number' && floorNumber >= 0);
+          // 🔒 ADR-232: Only floorId (document reference) counts as valid floor link
+          const hasFloor = !!floorId;
 
           // 1. Building check
           if (!buildingId) {

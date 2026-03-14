@@ -74,10 +74,10 @@ export function useUnitHierarchyValidation(
 ): HierarchyValidationState {
   // ── Unit-level: read directly from prop (no subscription needed) ──
   const buildingId = unit.buildingId || null;
-  // Accept either floorId (document ref) or floor (numeric) as valid floor link.
-  // Legacy units may have floor number set but no floorId document reference.
+  // 🔒 ADR-232: Only floorId (document reference) counts as valid floor link.
+  // Legacy numeric floor is NOT sufficient for sales operations.
   const floorId = unit.floorId || null;
-  const hasFloor = !!floorId || (typeof unit.floor === 'number' && unit.floor >= 0 && unit.buildingId);
+  const hasFloor = !!floorId;
 
   // ── Upstream chain state ──
   const [projectId, setProjectId] = useState<string | null>(null);
