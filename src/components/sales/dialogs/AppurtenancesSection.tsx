@@ -11,8 +11,9 @@ import React from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Car, Package, AlertTriangle } from 'lucide-react';
+import { Car, Package, AlertTriangle, Ban } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { ResolvedLinkedSpace } from '@/hooks/sales/useLinkedSpacesForSale';
 
@@ -42,6 +43,7 @@ export function AppurtenancesSection({
   readOnly = false,
 }: AppurtenancesSectionProps) {
   const iconSizes = useIconSizes();
+  const { t } = useTranslation('common');
 
   if (spaces.length === 0) return null;
 
@@ -59,50 +61,62 @@ export function AppurtenancesSection({
           const iconColor = space.spaceType === 'parking'
             ? 'text-blue-600'
             : 'text-amber-600';
+          const hasNoArea = space.area <= 0;
 
           return (
             <li
               key={space.spaceId}
-              className="flex items-center gap-3 rounded-md border p-2"
+              className={`flex flex-col gap-1 rounded-md border p-2 ${hasNoArea ? 'opacity-60 border-destructive/40' : ''}`}
             >
-              {!readOnly && (
-                <Checkbox
-                  id={`space-${space.spaceId}`}
-                  checked={space.checked}
-                  onCheckedChange={() => onToggle(space.spaceId)}
-                />
-              )}
-
-              <SpaceIcon className={`${iconSizes.sm} ${iconColor} shrink-0`} />
-
-              <label
-                htmlFor={`space-${space.spaceId}`}
-                className="flex-1 text-sm font-medium cursor-pointer"
-              >
-                {space.displayName}
-                {space.isRented && (
-                  <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs text-orange-700">
-                    <AlertTriangle className={iconSizes.xs} />
-                    Ενεργή μίσθωση
-                  </span>
+              <div className="flex items-center gap-3">
+                {!readOnly && (
+                  <Checkbox
+                    id={`space-${space.spaceId}`}
+                    checked={space.checked}
+                    onCheckedChange={() => onToggle(space.spaceId)}
+                    disabled={hasNoArea}
+                  />
                 )}
-              </label>
 
-              {readOnly ? (
-                <span className="text-sm text-muted-foreground">
-                  {space.salePrice > 0 ? formatCurrencyWhole(space.salePrice) : '—'}
-                </span>
-              ) : (
-                <Input
-                  type="number"
-                  min={0}
-                  step={500}
-                  value={space.salePrice || ''}
-                  onChange={(e) => onPriceChange(space.spaceId, Number(e.target.value) || 0)}
-                  placeholder="Τιμή €"
-                  className="w-28 text-right text-sm"
-                  disabled={!space.checked}
-                />
+                <SpaceIcon className={`${iconSizes.sm} ${iconColor} shrink-0`} />
+
+                <label
+                  htmlFor={`space-${space.spaceId}`}
+                  className={`flex-1 text-sm font-medium ${hasNoArea ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                >
+                  {space.displayName}
+                  {space.isRented && (
+                    <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs text-orange-700">
+                      <AlertTriangle className={iconSizes.xs} />
+                      {t('sales.appurtenances.activeRental', { defaultValue: 'Ενεργή μίσθωση' })}
+                    </span>
+                  )}
+                </label>
+
+                {readOnly ? (
+                  <span className="text-sm text-muted-foreground">
+                    {space.salePrice > 0 ? formatCurrencyWhole(space.salePrice) : '—'}
+                  </span>
+                ) : (
+                  <Input
+                    type="number"
+                    min={0}
+                    step={500}
+                    value={space.salePrice || ''}
+                    onChange={(e) => onPriceChange(space.spaceId, Number(e.target.value) || 0)}
+                    placeholder="Τιμή €"
+                    className="w-28 text-right text-sm"
+                    disabled={!space.checked || hasNoArea}
+                  />
+                )}
+              </div>
+              {hasNoArea && (
+                <p className="flex items-center gap-1.5 text-xs text-destructive ml-7">
+                  <Ban className="h-3 w-3 shrink-0" />
+                  {t('sales.appurtenances.noArea', {
+                    defaultValue: 'Δεν έχει εμβαδόν (τ.μ.) — δεν μπορεί να συμπεριληφθεί',
+                  })}
+                </p>
               )}
             </li>
           );

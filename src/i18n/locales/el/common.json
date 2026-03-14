@@ -1398,6 +1398,10 @@
       "buyerNotFound": "Η επαφή αγοραστή δεν βρέθηκε",
       "buyerMissingFields": "Λείπουν στοιχεία αγοραστή: {fields}",
       "serviceNotBuyer": "Δημόσιες υπηρεσίες δεν μπορούν να είναι αγοραστές"
+    },
+    "appurtenances": {
+      "activeRental": "Ενεργή μίσθωση",
+      "noArea": "Δεν έχει εμβαδόν (τ.μ.) — δεν μπορεί να συμπεριληφθεί"
     }
   },
   "salesStorage": {

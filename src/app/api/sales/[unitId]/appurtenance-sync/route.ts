@@ -98,6 +98,20 @@ async function handlePost(
         const { action, spaces, buyerContactId, buyerName } = body as SyncRequestBody;
 
         await safeFirestoreOperation(async (db) => {
+          // Validate area > 0 for reserve/sell (not revert)
+          if (action !== 'revert') {
+            for (const space of spaces) {
+              const col = getCollectionName(space.spaceType);
+              const spaceDoc = await db.collection(col).doc(space.spaceId).get();
+              const spaceArea = (spaceDoc.data()?.area as number) ?? 0;
+              if (spaceArea <= 0) {
+                throw new Error(
+                  `Space ${space.spaceId} has no area (0 sqm) — cannot include in transaction`
+                );
+              }
+            }
+          }
+
           const batch = db.batch();
           const now = new Date().toISOString();
 

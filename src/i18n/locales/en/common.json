@@ -1399,6 +1399,10 @@
       "buyerNotFound": "Buyer contact not found",
       "buyerMissingFields": "Buyer missing required fields: {fields}",
       "serviceNotBuyer": "Service contacts cannot be buyers"
+    },
+    "appurtenances": {
+      "activeRental": "Active rental",
+      "noArea": "No area (sqm) — cannot be included"
     }
   },
   "salesStorage": {

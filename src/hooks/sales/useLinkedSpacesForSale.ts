@@ -28,6 +28,8 @@ export interface ResolvedLinkedSpace {
   checked: boolean;
   salePrice: number;
   isRented: boolean;
+  /** Area in m² — 0 means space has no area set, blocks selection */
+  area: number;
 }
 
 interface SyncSpacePayload {
@@ -90,19 +92,26 @@ export function useLinkedSpacesForSale(unit: Unit): UseLinkedSpacesForSaleResult
             )
             .map(async (ls) => {
               let resolvedPrice = ls.salePrice ?? 0;
+              let resolvedArea = 0;
 
-              // Try to fetch current asking price from the space document
-              if (resolvedPrice === 0) {
-                try {
-                  const endpoint = ls.spaceType === 'parking'
-                    ? `/api/parking/${ls.spaceId}`
-                    : `/api/storage/${ls.spaceId}`;
-                  const data = await apiClient.get<{ commercial?: { askingPrice?: number } }>(endpoint);
+              // Fetch current data from the space document (price + area)
+              try {
+                const endpoint = ls.spaceType === 'parking'
+                  ? `/api/parking/${ls.spaceId}`
+                  : `/api/storage/${ls.spaceId}`;
+                const data = await apiClient.get<{
+                  area?: number;
+                  commercial?: { askingPrice?: number };
+                }>(endpoint);
+                resolvedArea = data?.area ?? 0;
+                if (resolvedPrice === 0) {
                   resolvedPrice = data?.commercial?.askingPrice ?? 0;
-                } catch {
-                  // Space might not have a price — that's OK
                 }
+              } catch {
+                // Space might not exist or have data — defaults apply
               }
+
+              const hasValidArea = resolvedArea > 0;
 
               return {
                 spaceId: ls.spaceId,
@@ -110,9 +119,11 @@ export function useLinkedSpacesForSale(unit: Unit): UseLinkedSpacesForSaleResult
                 inclusion: ls.inclusion,
                 allocationCode: ls.allocationCode ?? '',
                 displayName: buildDisplayName(ls),
-                checked: isDefaultChecked(ls.inclusion),
+                // Auto-uncheck if area is 0 — cannot include space without area
+                checked: hasValidArea && isDefaultChecked(ls.inclusion),
                 salePrice: resolvedPrice,
                 isRented: ls.inclusion === 'rented',
+                area: resolvedArea,
               };
             })
         );
@@ -131,7 +142,12 @@ export function useLinkedSpacesForSale(unit: Unit): UseLinkedSpacesForSaleResult
 
   const toggleSpace = useCallback((spaceId: string) => {
     setSpaces((prev) =>
-      prev.map((s) => (s.spaceId === spaceId ? { ...s, checked: !s.checked } : s))
+      prev.map((s) => {
+        if (s.spaceId !== spaceId) return s;
+        // Block toggle if area is 0 — cannot include space without area
+        if (s.area <= 0) return s;
+        return { ...s, checked: !s.checked };
+      })
     );
   }, []);
 
