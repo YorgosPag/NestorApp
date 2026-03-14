@@ -3,13 +3,13 @@
  * ENTERPRISE: NATURAL LANGUAGE EVENT PARSER API
  * =============================================================================
  *
- * POST: Takes natural text, returns structured event data via OpenAI.
- * Uses plain fetch (same pattern as ai-pipeline) — no openai SDK dependency.
+ * POST: Takes natural text, returns structured event data via OpenAI SDK.
  *
  * @module app/api/calendar/parse-event/route
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import OpenAI from 'openai';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
@@ -22,14 +22,6 @@ interface ParsedEventResult {
   type: 'meeting' | 'call' | 'viewing' | 'follow_up' | 'email' | 'document' | 'other';
   contactName: string | null;
   description: string | null;
-}
-
-interface OpenAIChatResponse {
-  choices: Array<{
-    message: {
-      content: string | null;
-    };
-  }>;
 }
 
 const PARSE_EVENT_SCHEMA = {
@@ -64,6 +56,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'OpenAI not configured' }, { status: 500 });
     }
 
+    const client = new OpenAI({ apiKey });
     const model = process.env.OPENAI_TEXT_MODEL ?? 'gpt-4o-mini';
 
     const systemPrompt = `You are an event parser. Extract calendar event details from natural language input.
@@ -75,41 +68,25 @@ Support both Greek and English input. Infer reasonable defaults:
 - For relative dates: "αύριο"/"tomorrow" = tomorrow, "Δευτέρα"/"Monday" = next Monday, etc.
 Return structured data in the specified JSON format.`;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: text },
-        ],
-        response_format: {
-          type: 'json_schema',
-          json_schema: {
-            name: 'parsed_event',
-            strict: true,
-            schema: PARSE_EVENT_SCHEMA,
-          },
+    const completion = await client.chat.completions.create({
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: text },
+      ],
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'parsed_event',
+          strict: true,
+          schema: PARSE_EVENT_SCHEMA,
         },
-        temperature: 0.1,
-        max_tokens: 500,
-      }),
+      },
+      temperature: 0.1,
+      max_tokens: 500,
     });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      return NextResponse.json(
-        { error: `OpenAI error (${response.status}): ${errText}` },
-        { status: 502 }
-      );
-    }
-
-    const data = (await response.json()) as OpenAIChatResponse;
-    const content = data.choices[0]?.message?.content;
+    const content = completion.choices[0]?.message?.content;
 
     if (!content) {
       return NextResponse.json({ error: 'No response from AI' }, { status: 500 });
@@ -118,6 +95,12 @@ Return structured data in the specified JSON format.`;
     const parsed = JSON.parse(content) as ParsedEventResult;
     return NextResponse.json({ result: parsed });
   } catch (error) {
+    if (error instanceof OpenAI.APIError) {
+      return NextResponse.json(
+        { error: `OpenAI error (${error.status}): ${error.message}` },
+        { status: 502 }
+      );
+    }
     const message = error instanceof Error ? error.message : 'Parse failed';
     return NextResponse.json({ error: message }, { status: 500 });
   }

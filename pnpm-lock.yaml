@@ -171,6 +171,9 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      openai:
+        specifier: 6.29.0
+        version: 6.29.0(ws@8.18.3)(zod@3.25.76)
       pako:
         specifier: ^2.1.0
         version: 2.1.0
@@ -204,9 +207,6 @@ importers:
       react-hook-form:
         specifier: ^7.54.2
         version: 7.69.0(react@19.2.1)
-      react-hot-toast:
-        specifier: ^2.6.0
-        version: 2.6.0(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       react-i18next:
         specifier: ^15.7.1
         version: 15.7.4(i18next@25.7.3(typescript@5.9.3))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(typescript@5.9.3)
@@ -421,9 +421,6 @@ importers:
       react-dom:
         specifier: ^19.2.1
         version: 19.2.1(react@19.2.1)
-      react-hot-toast:
-        specifier: ^2.5.2
-        version: 2.6.0(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
     devDependencies:
       '@eslint/js':
         specifier: ^9.33.0
@@ -4606,11 +4603,6 @@ packages:
     resolution: {integrity: sha512-DpLKbNU4WylpxJykQujfCcwYWiV/Jhm50Goo0wrVILAv5jOr9d+H+UR3PhSCD2rCCEIg0uc+G+muBTwD54JhDQ==}
     engines: {node: '>= 0.4'}
 
-  goober@2.1.18:
-    resolution: {integrity: sha512-2vFqsaDVIT9Gz7N6kAL++pLpp41l3PfDuusHcjnGLfR6+huZkl6ziX+zgVC3ZxpqWhzH6pyDdGrCeDhMIvwaxw==}
-    peerDependencies:
-      csstype: ^3.0.10
-
   google-auth-library@9.15.1:
     resolution: {integrity: sha512-Jb6Z0+nvECVz+2lzSMt9u98UsoakXxA2HGHMCxh+so3n90XgYWkq5dur19JAJV7ONiJY22yBTyJB1TSkvPq9Ng==}
     engines: {node: '>=14'}
@@ -5845,6 +5837,18 @@ packages:
     resolution: {integrity: sha512-7x81NCL719oNbsq/3mh+hVrAWmFuEYUqrq/Iw3kUzH8ReypT9QQ0BLoJS7/G9k6N81XjW4qHWtjWwe/9eLy1EQ==}
     engines: {node: '>=12'}
 
+  openai@6.29.0:
+    resolution: {integrity: sha512-YxoArl2BItucdO89/sN6edksV0x47WUTgkgVfCgX7EuEMhbirENsgYe5oO4LTjBL9PtdKtk2WqND1gSLcTd2yw==}
+    hasBin: true
+    peerDependencies:
+      ws: ^8.18.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      ws:
+        optional: true
+      zod:
+        optional: true
+
   opener@1.5.2:
     resolution: {integrity: sha512-ur5UIdyw5Y7yEj9wLzhqXiy6GZ3Mwx0yGI+5sMn2r0N0v3cKJvUmFH5yPP+WXh9e0xfyzyJX95D8l088DNFj7A==}
     hasBin: true
@@ -6199,13 +6203,6 @@ packages:
     engines: {node: '>=18.0.0'}
     peerDependencies:
       react: ^19.2.1
-
-  react-hot-toast@2.6.0:
-    resolution: {integrity: sha512-bH+2EBMZ4sdyou/DPrfgIouFpcRLCJ+HoCA32UoAYHn6T3Ur5yfcDCeSr5mwldl6pFOsiocmrXMuoCJ1vV8bWg==}
-    engines: {node: '>=10'}
-    peerDependencies:
-      react: ^19.2.1
-      react-dom: ^19.2.1
 
   react-i18next@15.7.4:
     resolution: {integrity: sha512-nyU8iKNrI5uDJch0z9+Y5XEr34b0wkyYj3Rp+tfbahxtlswxSCjcUL9H0nqXo9IR3/t5Y5PKIA3fx3MfUyR9Xw==}
@@ -12206,10 +12203,6 @@ snapshots:
       define-properties: 1.2.1
       gopd: 1.2.0
 
-  goober@2.1.18(csstype@3.2.3):
-    dependencies:
-      csstype: 3.2.3
-
   google-auth-library@9.15.1:
     dependencies:
       base64-js: 1.5.1
@@ -13930,6 +13923,11 @@ snapshots:
       is-docker: 2.2.1
       is-wsl: 2.2.0
 
+  openai@6.29.0(ws@8.18.3)(zod@3.25.76):
+    optionalDependencies:
+      ws: 8.18.3
+      zod: 3.25.76
+
   opener@1.5.2: {}
 
   optionator@0.9.4:
@@ -14302,13 +14300,6 @@ snapshots:
   react-hook-form@7.69.0(react@19.2.1):
     dependencies:
       react: 19.2.1
-
-  react-hot-toast@2.6.0(react-dom@19.2.1(react@19.2.1))(react@19.2.1):
-    dependencies:
-      csstype: 3.2.3
-      goober: 2.1.18(csstype@3.2.3)
-      react: 19.2.1
-      react-dom: 19.2.1(react@19.2.1)
 
   react-i18next@15.7.4(i18next@25.7.3(typescript@5.9.3))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(typescript@5.9.3):
     dependencies:
