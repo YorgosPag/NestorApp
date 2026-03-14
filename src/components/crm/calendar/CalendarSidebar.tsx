@@ -27,16 +27,15 @@ export function CalendarSidebar({ events, selectedDate, onDateSelect }: Calendar
     return dates;
   }, [events]);
 
-  const handleSelect = (date: Date | undefined) => {
-    if (date) {
-      onDateSelect(date);
-    }
+  const handleSelect = (date: Date) => {
+    onDateSelect(date);
   };
 
   return (
     <aside className="hidden lg:block w-[280px] shrink-0" aria-label="Mini Calendar">
       <Calendar
         mode="single"
+        required
         selected={selectedDate}
         onSelect={handleSelect}
         showWeekNumber={false}

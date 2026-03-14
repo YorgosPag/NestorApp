@@ -263,7 +263,8 @@ sections.calendar.*         -> CRM landing page card
 | Feature | Priority | Description |
 |---------|----------|-------------|
 | CalendarTab real data | Medium | Replace mock data in CRM Dashboard CalendarTab with `useCalendarEvents` |
-| Drag & drop events | Medium | Move events between dates via drag |
+| ~~Drag & drop events~~ | ~~Medium~~ | ✅ DONE — DnD implemented with `withDragAndDrop` wrapper |
+| ~~Edit task from calendar~~ | ~~Medium~~ | ✅ DONE — Edit button in CalendarEventDialog → TaskEditDialog |
 | Recurring events | Low | Weekly/monthly event recurrence |
 | User filter | Medium | Filter by assignedTo user |
 | Event type filter | Low | Show/hide specific event types |
@@ -279,6 +280,10 @@ sections.calendar.*         -> CRM landing page card
 | 2026-02-08 | ADR Created — CRM Calendar MVP implemented | Georgios Pagonis + Claude Code |
 | 2026-02-08 | Library: react-big-calendar (MIT) selected | Georgios Pagonis |
 | 2026-02-08 | All hardcoded values replaced with centralized design tokens | Claude Code |
+| 2026-03-14 | Fix: CalendarCreateDialog date sync on every open (`[open, initialDate]` deps) | Claude Code |
+| 2026-03-14 | Fix: CalendarSidebar mini calendar `required` prop — prevent deselect in react-day-picker v9 | Claude Code |
+| 2026-03-14 | Feature: Edit button in CalendarEventDialog → opens TaskEditDialog for task-source events | Claude Code |
+| 2026-03-14 | Cleanup: TaskEditDialog remove hardcoded defaultValue Greek strings, add proper i18n keys | Claude Code |
 
 ---
 

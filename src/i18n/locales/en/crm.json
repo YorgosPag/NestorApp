@@ -192,6 +192,7 @@
     "tomorrow": "Tomorrow",
     "overdue": "Overdue",
     "status": {
+      "label": "Status",
       "all": "All statuses",
       "pending": "Pending",
       "in_progress": "In Progress",
@@ -199,6 +200,7 @@
       "cancelled": "Cancelled"
     },
     "priority": {
+      "label": "Priority",
       "all": "All priorities",
       "urgent": "Urgent",
       "high": "High",
@@ -232,6 +234,8 @@
       "deleted": "✅ Task \"{title}\" deleted!",
       "completeError": "❌ Error completing task",
       "deleteError": "❌ Error deleting task",
+      "updated": "✅ Task \"{title}\" updated!",
+      "updateError": "❌ Error updating task",
       "loadError": "Error loading tasks",
       "deleteConfirm": "Are you sure you want to delete task \"{title}\"?"
     }

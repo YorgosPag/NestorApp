@@ -14,7 +14,7 @@
 
 import { format } from 'date-fns';
 import { el, enUS } from 'date-fns/locale';
-import { Calendar, Clock, User, FileText, Tag, ArrowRight } from 'lucide-react';
+import { Calendar, Clock, User, FileText, Tag, ArrowRight, Edit3 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import Link from 'next/link';
 
@@ -45,13 +45,15 @@ interface CalendarEventDialogProps {
   event: CalendarEvent | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Callback to open the edit dialog for a task-source event */
+  onEditTask?: (event: CalendarEvent) => void;
 }
 
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
-export function CalendarEventDialog({ event, open, onOpenChange }: CalendarEventDialogProps) {
+export function CalendarEventDialog({ event, open, onOpenChange, onEditTask }: CalendarEventDialogProps) {
   const { t, i18n } = useTranslation('crm');
   const iconSizes = useIconSizes();
   const sp = useSpacingTokens();
@@ -134,6 +136,19 @@ export function CalendarEventDialog({ event, open, onOpenChange }: CalendarEvent
 
           {/* Actions */}
           <footer className={`flex justify-end ${sp.gap.sm} ${sp.padding.top.sm} ${borders.quick.borderT}`}>
+            {event.source === 'task' && onEditTask && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  onEditTask(event);
+                  onOpenChange(false);
+                }}
+              >
+                <Edit3 className={`${iconSizes.sm} ${sp.margin.right.xs}`} />
+                {t('tasks.actions.edit')}
+              </Button>
+            )}
             {originalLink && (
               <Button variant="outline" size="sm" asChild>
                 <Link href={originalLink}>

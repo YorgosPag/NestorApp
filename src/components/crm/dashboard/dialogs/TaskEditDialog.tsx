@@ -163,12 +163,12 @@ export function TaskEditDialog({
         description: description.trim() || null,
       });
 
-      success(t('tasks.messages.updated', { title: title.trim(), defaultValue: 'Ενημερώθηκε' }));
+      success(t('tasks.messages.updated', { title: title.trim() }));
       onOpenChange(false);
       onUpdated?.();
     } catch (err) {
       logger.error('Error updating task', { error: err });
-      notifyError(err instanceof Error ? err.message : t('tasks.messages.updateError', { defaultValue: 'Σφάλμα ενημέρωσης' }));
+      notifyError(err instanceof Error ? err.message : t('tasks.messages.updateError'));
     } finally {
       setSubmitting(false);
     }
@@ -227,7 +227,7 @@ export function TaskEditDialog({
 
           {/* Status */}
           <fieldset className={sp.spaceBetween.sm}>
-            <Label>{t('tasks.status.label', { defaultValue: 'Κατάσταση' })}</Label>
+            <Label>{t('tasks.status.label')}</Label>
             <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
               <SelectTrigger>
                 <SelectValue />
@@ -235,7 +235,7 @@ export function TaskEditDialog({
               <SelectContent>
                 {TASK_STATUSES.map((s) => (
                   <SelectItem key={s} value={s}>
-                    {t(`tasks.status.${s}`, { defaultValue: s })}
+                    {t(`tasks.status.${s}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -244,7 +244,7 @@ export function TaskEditDialog({
 
           {/* Priority */}
           <fieldset className={sp.spaceBetween.sm}>
-            <Label>{t('tasks.priority.label', { defaultValue: 'Προτεραιότητα' })}</Label>
+            <Label>{t('tasks.priority.label')}</Label>
             <Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
               <SelectTrigger>
                 <SelectValue />
@@ -252,7 +252,7 @@ export function TaskEditDialog({
               <SelectContent>
                 {TASK_PRIORITIES.map((p) => (
                   <SelectItem key={p} value={p}>
-                    {t(`tasks.priority.${p}`, { defaultValue: p })}
+                    {t(`tasks.priority.${p}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -317,7 +317,7 @@ export function TaskEditDialog({
             </Button>
             <Button type="submit" disabled={submitting || !title.trim()}>
               {submitting
-                ? t('calendarPage.dialog.submitting', { defaultValue: 'Αποθήκευση...' })
+                ? t('calendarPage.dialog.submitting')
                 : t('calendarPage.dialog.actions.save')}
             </Button>
           </footer>

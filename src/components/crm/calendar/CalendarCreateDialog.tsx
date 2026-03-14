@@ -111,13 +111,6 @@ export function CalendarCreateDialog({
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Sync date when initialDate prop changes (e.g., user clicks different day)
-  useEffect(() => {
-    if (initialDate) {
-      setDate(initialDate);
-    }
-  }, [initialDate]);
-
   const resetForm = () => {
     setTitle('');
     setType('meeting');
@@ -129,6 +122,17 @@ export function CalendarCreateDialog({
     setProjectId('');
     setDescription('');
   };
+
+  // Sync date + reset form on EVERY dialog open (not just initialDate change)
+  useEffect(() => {
+    if (open) {
+      resetForm();
+      if (initialDate) {
+        setDate(initialDate);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resetForm is stable within render
+  }, [open, initialDate]);
 
   const handleSubmit = async () => {
     if (!title.trim() || !date) return;

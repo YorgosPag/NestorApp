@@ -42,6 +42,8 @@ import { CalendarCreateDialog } from './CalendarCreateDialog';
 import { CalendarEventTooltip } from './CalendarEventTooltip';
 import { useCalendarKeyboardShortcuts } from './useCalendarKeyboardShortcuts';
 import { updateTask } from '@/services/tasks.service';
+import { TaskEditDialog } from '@/components/crm/dashboard/dialogs/TaskEditDialog';
+import type { CrmTask } from '@/types/crm';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -148,6 +150,10 @@ export function CrmCalendar({
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createInitialDate, setCreateInitialDate] = useState<Date | undefined>();
 
+  // Edit task state
+  const [editingTask, setEditingTask] = useState<CrmTask | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+
   // View state
   const [currentView, setCurrentView] = useState<View>(Views.MONTH);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -194,6 +200,24 @@ export function CrmCalendar({
   const handleSelectEvent = useCallback((event: CalendarEvent) => {
     setSelectedEvent(event);
     setEventDialogOpen(true);
+  }, []);
+
+  // Handle edit task from event dialog
+  const handleEditTask = useCallback((event: CalendarEvent) => {
+    const taskForEdit: CrmTask = {
+      id: event.entityId,
+      title: event.title,
+      type: event.eventType as CrmTask['type'],
+      status: event.status as CrmTask['status'],
+      priority: (event.priority ?? 'medium') as CrmTask['priority'],
+      dueDate: event.start.toISOString(),
+      description: event.description ?? null,
+      assignedTo: event.assignedTo ?? '',
+      contactId: event.contactId ?? null,
+      projectId: event.projectId ?? null,
+    };
+    setEditingTask(taskForEdit);
+    setEditDialogOpen(true);
   }, []);
 
   // Handle slot selection (create new event)
@@ -355,6 +379,7 @@ export function CrmCalendar({
         event={selectedEvent}
         open={eventDialogOpen}
         onOpenChange={setEventDialogOpen}
+        onEditTask={handleEditTask}
       />
 
       {/* Create Event Dialog */}
@@ -364,6 +389,16 @@ export function CrmCalendar({
         initialDate={createInitialDate}
         onCreated={onEventCreated}
       />
+
+      {/* Edit Task Dialog */}
+      {editingTask && (
+        <TaskEditDialog
+          task={editingTask}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          onUpdated={onEventUpdated}
+        />
+      )}
     </>
   );
 }
