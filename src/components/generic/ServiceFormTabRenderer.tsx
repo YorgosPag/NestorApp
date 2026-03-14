@@ -64,6 +64,7 @@ export interface ServiceFormTabRendererProps {
   sectionFooterRenderers?: Record<string, CustomRendererFn>;
   /** 🏢 ENTERPRISE: Callback when active tab changes (for parent state management) */
   onActiveTabChange?: (tabId: string) => void;
+  activeTab?: string;
 }
 
 // ============================================================================
@@ -220,7 +221,8 @@ export function ServiceFormTabRenderer({
   onPhotosChange,
   customRenderers,
   sectionFooterRenderers,
-  onActiveTabChange
+  onActiveTabChange,
+  activeTab
 }: ServiceFormTabRendererProps) {
   // 🏢 ENTERPRISE: i18n hook for translating tab labels
   const { t } = useTranslation('contacts');
@@ -248,6 +250,7 @@ export function ServiceFormTabRenderer({
       <TabsOnlyTriggers
         tabs={tabs}
         defaultTab={tabs[0]?.id || "basicInfo"}
+        value={activeTab}
         theme="clean"
         onTabChange={onActiveTabChange}
       >

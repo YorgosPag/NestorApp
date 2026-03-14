@@ -478,6 +478,7 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
           disabled={!isEditing} // 🎯 Enable editing when in edit mode
           relationshipsMode={isEditing ? "full" : "summary"} // 🎯 KEY: Full mode when editing, summary when viewing
           onPhotoClick={handlePhotoClick} // 🖼️ Photo click handler για gallery preview
+          activeTab={activeTab} // 🏢 ENTERPRISE: Controlled tab (survives remounts via sessionStorage)
           onActiveTabChange={setActiveTab} // 🏢 ENTERPRISE: Track active tab for hiding header controls
           handleUploadedLogoURL={isEditing ? handleUploadedLogoURL : undefined}
           handleUploadedPhotoURL={isEditing ? handleUploadedPhotoURL : undefined}
