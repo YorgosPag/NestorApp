@@ -12,7 +12,7 @@ import type {
   RelationshipType,
   ProfessionalContactInfo
 } from '@/types/contacts/relationships';
-import type { ContactType } from '@/types/contacts';
+import type { ContactType, PhoneInfo, EmailInfo } from '@/types/contacts';
 
 /**
  * 🏢 Main Component Props Interface
@@ -41,13 +41,19 @@ export interface ContactRelationshipManagerProps {
  */
 export interface RelationshipFormData {
   targetContactId: string;
-  relationshipType: RelationshipType;
+  relationshipType: string;
+  /** Custom label when user adds a new relationship type not in predefined list */
+  customRelationshipLabel?: string;
   position?: string;
   department?: string;
   startDate?: string;
   endDate?: string;
   notes?: string;
   contactInfo?: Partial<ProfessionalContactInfo>;
+  /** Centralized phone entries (replaces plain-text businessPhone) */
+  phones?: PhoneInfo[];
+  /** Centralized email entries (replaces plain-text businessEmail) */
+  emails?: EmailInfo[];
 }
 
 /**

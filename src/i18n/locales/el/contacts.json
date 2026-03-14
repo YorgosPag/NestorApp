@@ -283,14 +283,14 @@
       "placeholders": {
         "searchContact": "Αναζήτηση επαφής...",
         "selectType": "Επιλέξτε τύπο σχέσης",
+        "searchType": "Αναζήτηση τύπου...",
+        "newTypeName": "Όνομα νέου τύπου...",
         "position": "π.χ. Διευθυντής Πωλήσεων",
         "department": "π.χ. Οικονομικό Τμήμα",
-        "businessPhone": "Επαγγελματικό τηλέφωνο",
-        "businessEmail": "Επαγγελματικό email",
-        "extensionNumber": "Εσωτερικό τηλέφωνο",
-        "businessAddress": "Διεύθυνση εργασίας",
         "notes": "Πρόσθετες πληροφορίες..."
       },
+      "noTypesFound": "Δεν βρέθηκαν τύποι",
+      "addCustomType": "Προσθήκη νέου τύπου",
       "validation": {
         "contactRequired": "Η επιλογή επαφής είναι υποχρεωτική",
         "relationshipTypeRequired": "Ο τύπος σχέσης είναι υποχρεωτικός",

@@ -283,14 +283,14 @@
       "placeholders": {
         "searchContact": "Search contact...",
         "selectType": "Select relationship type",
+        "searchType": "Search type...",
+        "newTypeName": "New type name...",
         "position": "e.g. Sales Director",
         "department": "e.g. Finance Department",
-        "businessPhone": "Business phone",
-        "businessEmail": "Business email",
-        "extensionNumber": "Extension number",
-        "businessAddress": "Business address",
         "notes": "Additional information..."
       },
+      "noTypesFound": "No types found",
+      "addCustomType": "Add new type",
       "validation": {
         "contactRequired": "Contact selection is required",
         "relationshipTypeRequired": "Relationship type is required",

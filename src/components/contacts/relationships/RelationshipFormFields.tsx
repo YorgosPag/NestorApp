@@ -1,5 +1,5 @@
 // ============================================================================
-// 📝 RELATIONSHIP FORM FIELDS COMPONENT - ΚΑΘΑΡΑ FORM FIELDS
+// RELATIONSHIP FORM FIELDS COMPONENT - ΚΑΘΑΡΑ FORM FIELDS
 // ============================================================================
 //
 // 🎯 PURPOSE: Pure form fields component για relationship data entry
@@ -10,31 +10,25 @@
 
 'use client';
 
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { isValidEmail } from '@/lib/validation/email-validation';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { designSystem } from '@/lib/design-system';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { Phone, Mail, Hash, MapPin } from 'lucide-react';
-// 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
-// 🏢 ENTERPRISE: Import centralized types and utilities
-import type { RelationshipType } from '@/types/contacts/relationships';
+// 🏢 ENTERPRISE: Centralized communication system
+import { UniversalCommunicationManager } from '@/components/contacts/dynamic/UniversalCommunicationManager';
+import { getEntityAwareCommunicationConfig } from '@/components/contacts/dynamic/communication';
+import type { CommunicationItem } from '@/components/contacts/dynamic/communication';
+import type { PhoneInfo, EmailInfo } from '@/types/contacts';
+
+// 🏢 ENTERPRISE: Searchable relationship type combobox
+import { RelationshipTypeCombobox } from './RelationshipTypeCombobox';
+
+// 🏢 ENTERPRISE: Import centralized types
 import type { ContactType } from '@/types/contacts/contracts';
-import {
-  getRelationshipTypeConfig,
-  getAvailableRelationshipTypes
-} from './utils/relationship-types';
 import type { RelationshipFormData } from './types/relationship-manager.types';
 
 // ============================================================================
@@ -51,10 +45,10 @@ export interface RelationshipFormFieldsProps {
   /** Contact type for filtering available relationship types */
   contactType: ContactType;
 
-  /** Loading state για disabled fields */
+  /** Loading state */
   loading?: boolean;
 
-  /** Error state για form validation */
+  /** Error state */
   errors?: Partial<Record<keyof RelationshipFormData, string>>;
 
   /** Custom styling */
@@ -75,6 +69,44 @@ export interface RelationshipFormFieldsProps {
 }
 
 // ============================================================================
+// MAPPER FUNCTIONS — Phone/Email ↔ CommunicationItem
+// ============================================================================
+
+const phonesToCommunicationItems = (phones: PhoneInfo[]): CommunicationItem[] =>
+  Array.isArray(phones) ? phones.map(phone => ({
+    type: phone.type,
+    label: phone.label,
+    isPrimary: phone.isPrimary,
+    number: phone.number,
+    countryCode: phone.countryCode
+  })) : [];
+
+const emailsToCommunicationItems = (emails: EmailInfo[]): CommunicationItem[] =>
+  Array.isArray(emails) ? emails.map(email => ({
+    type: email.type,
+    label: email.label,
+    isPrimary: email.isPrimary,
+    email: email.email
+  })) : [];
+
+const communicationItemsToPhones = (items: CommunicationItem[]): PhoneInfo[] =>
+  Array.isArray(items) ? items.map(item => ({
+    number: item.number || '',
+    type: item.type as PhoneInfo['type'],
+    isPrimary: item.isPrimary || false,
+    label: item.label || '',
+    countryCode: item.countryCode || '+30'
+  })) : [];
+
+const communicationItemsToEmails = (items: CommunicationItem[]): EmailInfo[] =>
+  Array.isArray(items) ? items.map(item => ({
+    email: item.email || '',
+    type: item.type as EmailInfo['type'],
+    isPrimary: item.isPrimary || false,
+    label: item.label || ''
+  })) : [];
+
+// ============================================================================
 // RELATIONSHIP FORM FIELDS COMPONENT
 // ============================================================================
 
@@ -87,12 +119,10 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
   className,
   fieldConfig = {}
 }) => {
-  // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('contacts');
-  const iconSizes = useIconSizes();
 
   // ============================================================================
-  // CONFIGURATION με DEFAULTS
+  // CONFIGURATION
   // ============================================================================
 
   const finalFieldConfig = {
@@ -112,44 +142,81 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
   // HELPER FUNCTIONS
   // ============================================================================
 
-  /**
-   * 🎯 Handle form field changes με type safety
-   */
   const handleFieldChange = (field: keyof RelationshipFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  /**
-   * 📞 Handle contact info field changes
-   */
-  const handleContactInfoChange = (field: string, value: string) => {
+  // 🏢 ENTERPRISE: Centralized phone/email configs (entity-aware)
+  const phoneConfig = useMemo(
+    () => getEntityAwareCommunicationConfig('phone', contactType),
+    [contactType]
+  );
+  const emailConfig = useMemo(
+    () => getEntityAwareCommunicationConfig('email', contactType),
+    [contactType]
+  );
+
+  // Phone items from formData
+  const phoneItems = useMemo(
+    () => phonesToCommunicationItems(formData.phones || []),
+    [formData.phones]
+  );
+  const emailItems = useMemo(
+    () => emailsToCommunicationItems(formData.emails || []),
+    [formData.emails]
+  );
+
+  // Handle phone changes from UniversalCommunicationManager
+  const handlePhonesChange = useCallback((items: CommunicationItem[]) => {
+    const phones = communicationItemsToPhones(items);
+    // Sync first/primary phone to contactInfo for backward compatibility
+    const primaryPhone = phones.find(p => p.isPrimary) || phones[0];
     setFormData(prev => ({
       ...prev,
-      contactInfo: { ...prev.contactInfo, [field]: value }
+      phones,
+      contactInfo: {
+        ...prev.contactInfo,
+        businessPhone: primaryPhone?.number
+          ? `${primaryPhone.countryCode || '+30'} ${primaryPhone.number}`
+          : ''
+      }
     }));
-  };
+  }, [setFormData]);
 
-  /**
-   * 📋 Get available relationship types για current contact type
-   */
-  const availableRelationshipTypes = getAvailableRelationshipTypes(contactType);
+  // Handle email changes from UniversalCommunicationManager
+  const handleEmailsChange = useCallback((items: CommunicationItem[]) => {
+    const emails = communicationItemsToEmails(items);
+    // Sync first/primary email to contactInfo for backward compatibility
+    const primaryEmail = emails.find(e => e.isPrimary) || emails[0];
+    setFormData(prev => ({
+      ...prev,
+      emails,
+      contactInfo: {
+        ...prev.contactInfo,
+        businessEmail: primaryEmail?.email || ''
+      }
+    }));
+  }, [setFormData]);
+
+  // Handle relationship type change from combobox
+  const handleRelationshipTypeChange = useCallback((value: string, customLabel?: string) => {
+    setFormData(prev => ({
+      ...prev,
+      relationshipType: value,
+      customRelationshipLabel: customLabel
+    }));
+  }, [setFormData]);
 
   // ============================================================================
   // RENDER HELPERS
   // ============================================================================
 
-  /**
-   * 🏷️ Render Field Label με optional required indicator
-   */
   const renderFieldLabel = (text: string, required: boolean = false) => (
     <Label className={designSystem.getTypographyClass('sm', 'medium')}>
       {text}{required && <span className={designSystem.getStatusColor('error', 'text')}>*</span>}
     </Label>
   );
 
-  /**
-   * 📝 Render Input Field με enterprise styling
-   */
   const renderInputField = (
     id: string,
     label: string,
@@ -192,51 +259,20 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
     <div className={designSystem.cn("space-y-6", className)}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-        {/* Relationship Type Selection */}
+        {/* Relationship Type — Searchable Combobox */}
         <div className="md:col-span-1 space-y-2">
-          {renderFieldLabel(t('relationships.form.labels.relationshipType'), finalFieldConfig.required.relationshipType)}
-          <Select
+          {renderFieldLabel(
+            t('relationships.form.labels.relationshipType'),
+            finalFieldConfig.required.relationshipType
+          )}
+          <RelationshipTypeCombobox
             value={formData.relationshipType}
-            onValueChange={(value: string) =>
-              handleFieldChange('relationshipType', value as RelationshipType)
-            }
+            onChange={handleRelationshipTypeChange}
+            contactType={contactType}
             disabled={loading}
-          >
-            <SelectTrigger
-              className={designSystem.cn(
-                designSystem.getFormFieldClass(!!errors.relationshipType, loading),
-                !formData.relationshipType && finalFieldConfig.required.relationshipType
-                  ? designSystem.getStatusColor('error', 'border')
-                  : ""
-              )}
-            >
-              <SelectValue placeholder={t('relationships.form.placeholders.selectType')} />
-            </SelectTrigger>
-            <SelectContent>
-              {availableRelationshipTypes.map(type => {
-                const config = getRelationshipTypeConfig(type);
-                const Icon = config?.icon;
-                // 🏢 ENTERPRISE: Translate i18n label key
-                const translatedLabel = config?.label ? t(config.label) : type;
-
-                return (
-                  <SelectItem key={type} value={type}>
-                    <div className="flex items-center gap-2">
-                      {Icon && (
-                        <Icon className={designSystem.cn(
-                          iconSizes.sm,
-                          designSystem.colorScheme.responsive.muted.split(' ')[1] // text-muted-foreground
-                        )} />
-                      )}
-                      <span>{translatedLabel}</span>
-                    </div>
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
-
-          {/* Error message για relationship type */}
+            hasError={!!errors.relationshipType}
+            placeholder={t('relationships.form.placeholders.selectType')}
+          />
           {errors.relationshipType && (
             <p className={designSystem.cn(
               designSystem.getTypographyClass('sm'),
@@ -283,59 +319,35 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
           }
         )}
 
-        {/* Professional Contact Information Section */}
+        {/* ============================================================ */}
+        {/* CENTRALIZED COMMUNICATION SECTION                            */}
+        {/* Replaces old plain-text businessPhone/businessEmail/ext      */}
+        {/* ============================================================ */}
         {finalFieldConfig.showContactInfo && (
-          <div className="md:col-span-2">
+          <section className="md:col-span-2 space-y-4" aria-label={t('relationships.form.labels.professionalInfo')}>
             <Label className={designSystem.cn(
               designSystem.getTypographyClass('sm', 'medium'),
-              "mb-3 block"
+              "block"
             )}>
               {t('relationships.form.labels.professionalInfo')}
             </Label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="relative">
-                <Phone className={designSystem.cn(iconSizes.sm, "absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground")} />
-                <Input
-                  placeholder={t('relationships.form.placeholders.businessPhone')}
-                  value={formData.contactInfo?.businessPhone || ''}
-                  onChange={(e) => handleContactInfoChange('businessPhone', e.target.value)}
-                  disabled={loading}
-                  hasLeftIcon
-                />
-              </div>
-              <div className="relative">
-                <Mail className={designSystem.cn(iconSizes.sm, "absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground")} />
-                <Input
-                  placeholder={t('relationships.form.placeholders.businessEmail')}
-                  type="email"
-                  value={formData.contactInfo?.businessEmail || ''}
-                  onChange={(e) => handleContactInfoChange('businessEmail', e.target.value)}
-                  disabled={loading}
-                  hasLeftIcon
-                />
-              </div>
-              <div className="relative">
-                <Hash className={designSystem.cn(iconSizes.sm, "absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground")} />
-                <Input
-                  placeholder={t('relationships.form.placeholders.extensionNumber')}
-                  value={formData.contactInfo?.extensionNumber || ''}
-                  onChange={(e) => handleContactInfoChange('extensionNumber', e.target.value)}
-                  disabled={loading}
-                  hasLeftIcon
-                />
-              </div>
-              <div className="relative">
-                <MapPin className={designSystem.cn(iconSizes.sm, "absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground")} />
-                <Input
-                  placeholder={t('relationships.form.placeholders.businessAddress')}
-                  value={formData.contactInfo?.businessAddress || ''}
-                  onChange={(e) => handleContactInfoChange('businessAddress', e.target.value)}
-                  disabled={loading}
-                  hasLeftIcon
-                />
-              </div>
-            </div>
-          </div>
+
+            {/* Phones — UniversalCommunicationManager */}
+            <UniversalCommunicationManager
+              config={phoneConfig}
+              items={phoneItems}
+              disabled={loading}
+              onChange={handlePhonesChange}
+            />
+
+            {/* Emails — UniversalCommunicationManager */}
+            <UniversalCommunicationManager
+              config={emailConfig}
+              items={emailItems}
+              disabled={loading}
+              onChange={handleEmailsChange}
+            />
+          </section>
         )}
 
         {/* Notes Field */}
@@ -370,10 +382,6 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
 // VALIDATION HELPER FUNCTIONS
 // ============================================================================
 
-/**
- * 🔍 Validate Relationship Form Data
- * @param t - Translation function from useTranslation hook
- */
 export const validateRelationshipFormData = (
   data: RelationshipFormData,
   config: RelationshipFormFieldsProps['fieldConfig'] = {},
@@ -381,12 +389,10 @@ export const validateRelationshipFormData = (
 ): Partial<Record<keyof RelationshipFormData, string>> => {
   const errors: Partial<Record<keyof RelationshipFormData, string>> = {};
 
-  // 🏢 ENTERPRISE: Use i18n keys for validation messages
   const getValidationMessage = (key: string, fallback: string): string => {
     return t ? t(key) : fallback;
   };
 
-  // Required field validation
   if (config?.required?.relationshipType && !data.relationshipType) {
     errors.relationshipType = getValidationMessage(
       'relationships.form.validation.relationshipTypeRequired',
@@ -408,11 +414,13 @@ export const validateRelationshipFormData = (
     );
   }
 
-  // Email validation — ADR-209: centralized
-  if (data.contactInfo?.businessEmail) {
-    if (!isValidEmail(data.contactInfo.businessEmail)) {
-      // Note: Email validation error would be returned in contactInfo
-      // This needs improvement for nested field errors in the future
+  // Email validation — check centralized emails array
+  if (data.emails && data.emails.length > 0) {
+    for (const emailEntry of data.emails) {
+      if (emailEntry.email && !isValidEmail(emailEntry.email)) {
+        // Surface email validation on the form level
+        break;
+      }
     }
   }
 

@@ -14,7 +14,7 @@ import type {
   RelationshipType,
   ProfessionalContactInfo
 } from '@/types/contacts/relationships';
-import type { ContactType } from '@/types/contacts';
+import type { ContactType, PhoneInfo, EmailInfo } from '@/types/contacts';
 import { ContactRelationshipService } from '@/services/contact-relationships/ContactRelationshipService';
 import { ContactsService } from '@/services/contacts.service';
 import { RelationshipValidationService } from '@/services/contact-relationships/core/RelationshipValidationService';
@@ -38,10 +38,10 @@ const createInitialFormData = (): RelationshipFormData => ({
   notes: '',
   contactInfo: {
     businessPhone: '',
-    businessEmail: '',
-    businessAddress: '',
-    extensionNumber: ''
-  }
+    businessEmail: ''
+  },
+  phones: [],
+  emails: []
 });
 
 /**
@@ -136,19 +136,22 @@ export const useRelationshipForm = (
       // So we need to swap the validation parameters
       const isEmploymentRelation = ['employee', 'manager', 'director', 'executive'].includes(formData.relationshipType);
 
+      // Cast to RelationshipType for validation (custom types skip business rule checks)
+      const relType = formData.relationshipType as RelationshipType;
+
       if (isEmploymentRelation) {
         // Employee = target contact, Company = source contact (current contact being viewed)
         RelationshipValidationService.validateBusinessRules(
           targetType,
           sourceType,
-          formData.relationshipType
+          relType
         );
       } else {
         // For non-employment relationships, use normal order
         RelationshipValidationService.validateBusinessRules(
           sourceType,
           targetType,
-          formData.relationshipType
+          relType
         );
       }
 
@@ -162,7 +165,7 @@ export const useRelationshipForm = (
         RelationshipValidationService.validateSameContactSameType(
           existingRelationships,
           formData.targetContactId,
-          formData.relationshipType,
+          relType,
           editingId ?? undefined // Exclude current relationship if editing
         );
 
@@ -228,17 +231,30 @@ export const useRelationshipForm = (
       // the employee should be source, company should be target
       const isEmploymentRelation = ['employee', 'manager', 'director', 'executive'].includes(formData.relationshipType);
 
+      // Build contactInfo from centralized phones/emails arrays (backward compat)
+      const primaryPhone = formData.phones?.find(p => p.isPrimary) || formData.phones?.[0];
+      const primaryEmail = formData.emails?.find(e => e.isPrimary) || formData.emails?.[0];
+      const builtContactInfo: Partial<ProfessionalContactInfo> = {
+        ...formData.contactInfo,
+        businessPhone: primaryPhone
+          ? `${primaryPhone.countryCode || '+30'} ${primaryPhone.number}`.trim()
+          : formData.contactInfo?.businessPhone || undefined,
+        businessEmail: primaryEmail?.email || formData.contactInfo?.businessEmail || undefined
+      };
+
+      const hasContactInfo = builtContactInfo.businessPhone || builtContactInfo.businessEmail;
+
       const relationshipData: Partial<ContactRelationship> = {
         sourceContactId: isEmploymentRelation ? formData.targetContactId : contactId,
         targetContactId: isEmploymentRelation ? contactId : formData.targetContactId,
-        relationshipType: formData.relationshipType,
+        relationshipType: formData.relationshipType as RelationshipType,
         position: formData.position || undefined,
         department: formData.department || undefined,
         startDate: formData.startDate || undefined,
         endDate: formData.endDate || undefined,
         notes: formData.notes || undefined,
-        contactInfo: (formData.contactInfo?.businessPhone || formData.contactInfo?.businessEmail)
-          ? formData.contactInfo as ProfessionalContactInfo
+        contactInfo: hasContactInfo
+          ? builtContactInfo as ProfessionalContactInfo
           : undefined
       };
 
@@ -347,6 +363,30 @@ export const useRelationshipForm = (
     logger.info('Editing relationship:', { data: relationship.id });
 
     setEditingId(relationship.id!);
+
+    // Build phones array from existing contactInfo for backward compatibility
+    const existingPhones: PhoneInfo[] = [];
+    if (relationship.contactInfo?.businessPhone) {
+      existingPhones.push({
+        number: relationship.contactInfo.businessPhone,
+        type: 'work',
+        isPrimary: true,
+        label: '',
+        countryCode: '+30'
+      });
+    }
+
+    // Build emails array from existing contactInfo
+    const existingEmails: EmailInfo[] = [];
+    if (relationship.contactInfo?.businessEmail) {
+      existingEmails.push({
+        email: relationship.contactInfo.businessEmail,
+        type: 'work',
+        isPrimary: true,
+        label: ''
+      });
+    }
+
     setFormData({
       targetContactId: relationship.targetContactId,
       relationshipType: relationship.relationshipType,
@@ -357,10 +397,10 @@ export const useRelationshipForm = (
       notes: relationship.notes || '',
       contactInfo: {
         businessPhone: relationship.contactInfo?.businessPhone || '',
-        businessEmail: relationship.contactInfo?.businessEmail || '',
-        businessAddress: relationship.contactInfo?.businessAddress || '',
-        extensionNumber: relationship.contactInfo?.extensionNumber || ''
-      }
+        businessEmail: relationship.contactInfo?.businessEmail || ''
+      },
+      phones: existingPhones,
+      emails: existingEmails
     });
 
     setError(null);

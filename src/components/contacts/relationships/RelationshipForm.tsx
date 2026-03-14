@@ -65,19 +65,33 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
    * 👤 Handle contact selection από το ContactSearchManager
    */
   const handleContactSelect = (contact: ContactSummary | null) => {
-    setFormData(prev => ({
-      ...prev,
-      targetContactId: contact?.id || '',
-      // Auto-populate professional contact info from selected contact
-      ...(contact && {
+    setFormData(prev => {
+      // Auto-populate centralized phones/emails from selected contact
+      // Only fill if currently empty — don't overwrite user edits
+      const autoPhones = (prev.phones && prev.phones.length > 0)
+        ? prev.phones
+        : (contact?.phone
+          ? [{ number: contact.phone, type: 'work' as const, isPrimary: true, label: '', countryCode: '+30' }]
+          : []);
+
+      const autoEmails = (prev.emails && prev.emails.length > 0)
+        ? prev.emails
+        : (contact?.email
+          ? [{ email: contact.email, type: 'work' as const, isPrimary: true, label: '' }]
+          : []);
+
+      return {
+        ...prev,
+        targetContactId: contact?.id || '',
+        phones: autoPhones,
+        emails: autoEmails,
         contactInfo: {
           ...prev.contactInfo,
-          // Only fill if currently empty — don't overwrite user edits
-          businessPhone: prev.contactInfo?.businessPhone || contact.phone || '',
-          businessEmail: prev.contactInfo?.businessEmail || contact.email || '',
+          businessPhone: autoPhones[0]?.number || '',
+          businessEmail: autoEmails[0]?.email || ''
         }
-      })
-    }));
+      };
+    });
 
     // Clear validation errors when contact is selected
     if (contact) {
