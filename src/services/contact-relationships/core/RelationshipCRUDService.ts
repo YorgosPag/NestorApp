@@ -293,12 +293,17 @@ export class RelationshipCRUDService {
       };
 
       // Add change history entry
+      // 🔧 FIX: Don't store full objects in oldValue/newValue — causes recursive
+      // nesting (changeHistory → oldValue → changeHistory → ...) which exceeds
+      // Firestore's max depth → "Property array contains an invalid nested entity"
+      const changedFields = Object.keys(updates).filter(
+        k => k !== 'lastModifiedBy' && k !== 'updatedAt'
+      );
       const changeEntry = {
         changeDate: new Date().toISOString(),
         changeType: 'updated' as const,
         changedBy: updates.lastModifiedBy || SYSTEM_IDENTITY.ID,
-        oldValue: existing,
-        newValue: updates,
+        changedFields,
         ...(updates.relationshipNotes ? { notes: updates.relationshipNotes } : {}),
       };
 
