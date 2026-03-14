@@ -126,6 +126,9 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
   // 📝 Relationship form management hook
   // 🔧 FIX: After successful save → hide form + quiet refresh (no full page re-render)
   const handleAfterSave = React.useCallback(async () => {
+    // 🔧 FIX: Clear guard IMMEDIATELY — prevents race condition where user clicks
+    // main "Save" before React re-renders and guard re-submits with stale formData
+    PendingRelationshipGuard.setHasPendingData(false);
     setShowFormCard(false);
     // Quiet refresh — only update the relationship list, without causing parent re-renders
     try {

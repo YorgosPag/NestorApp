@@ -195,6 +195,37 @@ export function ContactsPageContent() {
     await loadContacts();
   };
 
+  // 🏢 ENTERPRISE: In-place single-contact update — prevents full re-fetch & tab reset
+  // Instead of refreshContacts() which creates a new contacts array (causing remount),
+  // this fetches ONLY the updated contact and patches it in-place.
+  const handleContactUpdatedInPlace = useCallback(async () => {
+    const contactId = selectedContact?.id;
+    if (!contactId) {
+      // No selected contact — fall back to full refresh
+      await refreshContacts();
+      return;
+    }
+
+    try {
+      const updatedContact = await ContactsService.getContact(contactId);
+      if (!updatedContact) {
+        await refreshContacts();
+        return;
+      }
+
+      // Patch contacts array in-place — same array reference for non-updated items
+      setContacts(prev => prev.map(c =>
+        c.id === contactId ? updatedContact : c
+      ));
+
+      // Update selectedContact directly — no remount, no tab reset
+      setSelectedContact(updatedContact);
+    } catch (err) {
+      logger.error('In-place contact update failed, falling back to full refresh', { contactId, error: err });
+      await refreshContacts();
+    }
+  }, [selectedContact?.id, refreshContacts]);
+
   // 🚀 ENTERPRISE LOADING STRATEGY: Smart loading based on URL parameters
   // 🔐 Gated on auth state — prevents Firestore reads before authentication resolves
   const hasLoadedContacts = React.useRef(false);
@@ -735,7 +766,7 @@ export function ContactsPageContent() {
                   onNewContact={handleNewContact}
                   onDeleteContact={handleDeleteContacts}
                   onArchiveContact={handleArchiveContacts}
-                  onContactUpdated={refreshContacts}
+                  onContactUpdated={handleContactUpdatedInPlace}
                 />
                 {/* 🏢 ENTERPRISE: Right panel — inline creation OR contact details */}
                 {creationMode === 'selecting' ? (
@@ -758,7 +789,7 @@ export function ContactsPageContent() {
                   <ContactDetails
                     contact={selectedContact}
                     onDeleteContact={() => handleDeleteContacts()}
-                    onContactUpdated={refreshContacts}
+                    onContactUpdated={handleContactUpdatedInPlace}
                     onNewContact={handleNewContact}
                   />
                 )}
@@ -774,7 +805,7 @@ export function ContactsPageContent() {
                   onNewContact={handleNewContact}
                   onDeleteContact={handleDeleteContacts}
                   onArchiveContact={handleArchiveContacts}
-                  onContactUpdated={refreshContacts}
+                  onContactUpdated={handleContactUpdatedInPlace}
                 />
               </section>
 
@@ -815,7 +846,7 @@ export function ContactsPageContent() {
                   <ContactDetails
                     contact={selectedContact}
                     onDeleteContact={() => handleDeleteContacts()}
-                    onContactUpdated={refreshContacts}
+                    onContactUpdated={handleContactUpdatedInPlace}
                     onNewContact={handleNewContact}
                   />
                 ) : null}
@@ -864,7 +895,7 @@ export function ContactsPageContent() {
                   <ContactDetails
                     contact={selectedContact}
                     onDeleteContact={() => handleDeleteContacts()}
-                    onContactUpdated={refreshContacts}
+                    onContactUpdated={handleContactUpdatedInPlace}
                     onNewContact={handleNewContact}
                   />
                 )}

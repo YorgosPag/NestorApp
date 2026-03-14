@@ -173,7 +173,9 @@ export const useRelationshipForm = (
 
         logger.info('DUPLICATE VALIDATION: No duplicates found');
       } catch (duplicateError) {
-        logger.error('DUPLICATE VALIDATION: Duplicate relationship detected:', { error: duplicateError });
+        // 🔧 FIX: Duplicate is a business rule violation, not a system error → warn level
+        const dupMessage = duplicateError instanceof Error ? duplicateError.message : String(duplicateError);
+        logger.warn('DUPLICATE VALIDATION: Duplicate relationship detected', { data: { message: dupMessage } });
 
         if (duplicateError instanceof Error) {
           return duplicateError.message;
