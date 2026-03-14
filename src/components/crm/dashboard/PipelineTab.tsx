@@ -51,24 +51,19 @@ export function PipelineTab() {
 
   return (
     <div className={colors.bg.primary}>
-        <div>
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">{t('pipeline.title')}</h2>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setViewMode(viewMode === 'pipeline' ? 'list' : 'pipeline')}>
-                {viewMode === 'pipeline' ? t('pipeline.viewList') : t('pipeline.viewPipeline')}
-              </Button>
-              <Button variant="outline" size="sm" onClick={fetchOpportunities}>
-                <Filter className={`${iconSizes.sm} inline mr-1`} />
-                {t('pipeline.refresh')}
-              </Button>
-              <Button size="sm" onClick={() => setOpenAddDialog(true)}>
-                <Plus className={`${iconSizes.sm} mr-2`} />
-                {t('pipeline.newLead')}
-              </Button>
-            </div>
-          </div>
-        </div>
+        <nav className="flex items-center justify-end gap-2 px-2 py-1" aria-label={t('pipeline.title')}>
+          <Button variant="outline" size="sm" onClick={() => setViewMode(viewMode === 'pipeline' ? 'list' : 'pipeline')}>
+            {viewMode === 'pipeline' ? t('pipeline.viewList') : t('pipeline.viewPipeline')}
+          </Button>
+          <Button variant="outline" size="sm" onClick={fetchOpportunities}>
+            <Filter className={`${iconSizes.sm} inline mr-1`} />
+            {t('pipeline.refresh')}
+          </Button>
+          <Button size="sm" onClick={() => setOpenAddDialog(true)}>
+            <Plus className={`${iconSizes.sm} mr-2`} />
+            {t('pipeline.newLead')}
+          </Button>
+        </nav>
 
         <div className="flex-1">
           {loading ? (
