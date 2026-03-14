@@ -414,30 +414,43 @@
     border-radius: var(--radius);
   }
 
-  /* Toolbar */
+  /* Toolbar — elevated look with subtle gradient */
   .rbc-wrapper .rbc-toolbar {
-    border-bottom: 1px solid hsl(var(--border));
-    padding-bottom: 0.75rem;
-    margin-bottom: 0.75rem;
+    background: linear-gradient(to bottom, hsl(var(--card) / 0.8), hsl(var(--secondary)));
+    border-bottom: 1px solid hsl(var(--border) / 0.6);
+    padding: 0.75rem 1rem;
+    margin-bottom: 0;
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+
+  /* Toolbar title (month/year) — brighter */
+  .rbc-wrapper .rbc-toolbar .rbc-toolbar-label {
+    color: hsl(var(--card-foreground));
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.01em;
   }
 
   .rbc-wrapper .rbc-toolbar button {
     color: hsl(var(--card-foreground));
-    border-color: hsl(var(--border));
-    background: hsl(var(--secondary));
-    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    border-color: hsl(var(--border) / 0.5);
+    background: hsl(var(--secondary) / 0.6);
+    transition: all 0.15s ease;
     cursor: pointer;
+    font-weight: 500;
   }
 
   .rbc-wrapper .rbc-toolbar button:hover {
-    background: hsl(var(--muted));
-    color: hsl(var(--card-foreground));
+    background: hsl(var(--primary) / 0.15);
+    color: hsl(var(--primary-foreground));
+    border-color: hsl(var(--primary) / 0.4);
   }
 
   .rbc-wrapper .rbc-toolbar button.rbc-active {
     background: hsl(var(--primary));
     color: hsl(var(--primary-foreground));
     border-color: hsl(var(--primary));
+    box-shadow: 0 1px 4px hsl(var(--primary) / 0.3);
   }
 
   .rbc-wrapper .rbc-toolbar button.rbc-active:hover {
@@ -453,26 +466,27 @@
     overflow: hidden;
   }
 
-  /* Day headers (Mon, Tue, etc.) */
+  /* Day headers (Mon, Tue, etc.) — vivid, not muted */
   .rbc-wrapper .rbc-header {
-    background: hsl(var(--muted));
-    color: hsl(var(--muted-foreground));
-    border-color: hsl(var(--border));
+    background: hsl(var(--primary) / 0.1);
+    color: hsl(var(--card-foreground));
+    border-color: hsl(var(--border) / 0.4);
     padding: 0.625rem 0.5rem;
-    font-weight: 600;
+    font-weight: 700;
     font-size: 0.8125rem;
-    text-transform: capitalize;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
   .rbc-wrapper .rbc-header + .rbc-header {
-    border-left-color: hsl(var(--border));
+    border-left-color: hsl(var(--border) / 0.4);
   }
 
   /* Weekend header columns (Sat=6th, Sun=7th — week starts Monday) */
   .rbc-wrapper .rbc-row > .rbc-header:nth-child(6),
   .rbc-wrapper .rbc-row > .rbc-header:nth-child(7) {
-    background: hsl(var(--primary) / 0.08);
-    color: hsl(var(--primary) / 0.7);
+    background: hsl(var(--status-warning) / 0.12);
+    color: hsl(var(--status-warning));
   }
 
   /* Day cells — use secondary background (dark blue-grey, same as app) */
@@ -482,12 +496,12 @@
   }
 
   .rbc-wrapper .rbc-day-bg + .rbc-day-bg {
-    border-left-color: hsl(var(--border));
+    border-left: 1px solid hsl(var(--border) / 0.6);
   }
 
-  /* Weekend day cells — subtle warm tint */
+  /* Weekend day cells — warm tint */
   .rbc-wrapper .rbc-day-bg.rbc-calendar-weekend {
-    background: hsl(var(--primary) / 0.04);
+    background: hsl(var(--status-warning) / 0.04);
   }
 
   /* Past day cells — slightly dimmed */
@@ -511,13 +525,13 @@
     box-shadow: inset 0 0 0 2px hsl(var(--primary) / 0.3);
   }
 
-  /* Month row borders */
+  /* Month row borders — more visible grid */
   .rbc-wrapper .rbc-month-row {
-    border-color: hsl(var(--border));
+    border-color: hsl(var(--border) / 0.6);
   }
 
   .rbc-wrapper .rbc-month-row + .rbc-month-row {
-    border-top-color: hsl(var(--border));
+    border-top: 1px solid hsl(var(--border) / 0.6);
   }
 
   /* Date cell numbers */
@@ -548,15 +562,19 @@
     color: hsl(var(--muted-foreground) / 0.35);
   }
 
-  /* Events inside cells */
+  /* Events inside cells — vivid with thicker border */
   .rbc-wrapper .rbc-event {
-    border-radius: calc(var(--radius) - 4px);
-    transition: transform 0.1s ease, box-shadow 0.1s ease;
+    border-radius: calc(var(--radius) - 2px);
+    border-left-width: 3px !important;
+    transition: transform 0.1s ease, box-shadow 0.15s ease;
+    font-weight: 500;
+    padding: 0.2rem 0.4rem !important;
   }
 
   .rbc-wrapper .rbc-event:hover {
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
+    filter: brightness(1.15);
   }
 
   .rbc-wrapper .rbc-event:focus {

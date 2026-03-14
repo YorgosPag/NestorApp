@@ -26,42 +26,42 @@ export interface EventColorScheme {
  */
 export const CALENDAR_EVENT_COLORS: Record<CalendarEventType, EventColorScheme> = {
   appointment: {
-    bg: 'hsl(var(--status-info) / 0.15)',
+    bg: 'hsl(var(--status-info) / 0.25)',
     border: 'hsl(var(--status-info))',
     text: 'hsl(var(--status-info))',
   },
   call: {
-    bg: 'hsl(var(--status-success) / 0.15)',
+    bg: 'hsl(var(--status-success) / 0.25)',
     border: 'hsl(var(--status-success))',
     text: 'hsl(var(--status-success))',
   },
   meeting: {
-    bg: 'hsl(var(--chart-4) / 0.15)',
+    bg: 'hsl(var(--chart-4) / 0.25)',
     border: 'hsl(var(--chart-4))',
     text: 'hsl(var(--chart-4))',
   },
   viewing: {
-    bg: 'hsl(var(--status-warning) / 0.15)',
+    bg: 'hsl(var(--status-warning) / 0.25)',
     border: 'hsl(var(--status-warning))',
     text: 'hsl(var(--status-warning))',
   },
   follow_up: {
-    bg: 'hsl(var(--status-error) / 0.15)',
+    bg: 'hsl(var(--status-error) / 0.25)',
     border: 'hsl(var(--status-error))',
     text: 'hsl(var(--status-error))',
   },
   email: {
-    bg: 'hsl(var(--muted) / 0.5)',
+    bg: 'hsl(var(--muted) / 0.6)',
     border: 'hsl(var(--muted-foreground))',
     text: 'hsl(var(--muted-foreground))',
   },
   document: {
-    bg: 'hsl(var(--chart-3) / 0.15)',
+    bg: 'hsl(var(--chart-3) / 0.25)',
     border: 'hsl(var(--chart-3))',
     text: 'hsl(var(--chart-3))',
   },
   other: {
-    bg: 'hsl(var(--muted) / 0.3)',
+    bg: 'hsl(var(--muted) / 0.4)',
     border: 'hsl(var(--foreground) / 0.5)',
     text: 'hsl(var(--foreground))',
   },
