@@ -43,9 +43,9 @@ interface ContactDetailsProps {
   onNewContact?: () => void;
 }
 
-// 🏢 ENTERPRISE: Header buttons always visible on all tabs
-// Previously banking/files tabs hid edit controls — removed for consistent UX
-const SUBCOLLECTION_TABS: string[] = [];
+// 🏢 ENTERPRISE: Tabs where main edit controls (Αποθήκευση/Επεξεργασία) are HIDDEN
+// These tabs have their own save mechanisms — showing the contact save button causes confusion
+const SUBCOLLECTION_TABS: string[] = ['relationships'];
 
 export function ContactDetails({ contact, onEditContact, onDeleteContact, onContactUpdated, onNewContact }: ContactDetailsProps) {
   const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = useState(false);
