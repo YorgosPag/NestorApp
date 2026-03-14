@@ -140,7 +140,7 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
       "mb-6",
       "rounded-lg border bg-card text-card-foreground shadow-sm"
     )}>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <CardTitle className={designSystem.cn(
           "flex items-center space-x-2",
           designSystem.presets.text.subtitle
@@ -148,6 +148,32 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
           <Plus className={iconSizes.md} />
           <span>{editingId ? t('relationships.form.editTitle') : t('relationships.form.title')}</span>
         </CardTitle>
+        {/* 🏢 ENTERPRISE: Action buttons at header level — always visible without scrolling */}
+        <div className="flex items-center space-x-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onCancel}
+            disabled={loading}
+          >
+            {t('relationships.form.buttons.cancel')}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            disabled={loading}
+            onClick={handleSubmit}
+          >
+            {loading
+              ? t('relationships.form.buttons.save')
+              : (editingId
+                ? t('relationships.form.buttons.update')
+                : t('relationships.form.buttons.add')
+              )
+            }
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <form onSubmit={preventFormSubmit} className={designSystem.getSpacingClass('p', 'md')}>
