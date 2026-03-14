@@ -12,7 +12,7 @@
 
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Spinner } from '@/components/ui/spinner';
+import { PageLoadingState, PageErrorState } from '@/core/states';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -210,16 +210,15 @@ export function EFKAPageContent() {
       {/* Content */}
       <section className="p-6 space-y-6">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Spinner size="large" />
-          </div>
+          <PageLoadingState icon={PiggyBank} message={t('efka.loading', { defaultValue: 'Φόρτωση ΕΦΚΑ...' })} layout="contained" />
         ) : error ? (
-          <div className="text-center py-12">
-            <p className="text-destructive mb-2">{error}</p>
-            <Button variant="outline" onClick={refetch}>
-              {t('common.retry')}
-            </Button>
-          </div>
+          <PageErrorState
+            title={t('efka.loadError', { defaultValue: 'Σφάλμα φόρτωσης' })}
+            message={error}
+            onRetry={refetch}
+            retryLabel={t('common.retry')}
+            layout="contained"
+          />
         ) : entityType === 'oe' && partnershipSummary ? (
           <PartnerEFKATabs summary={partnershipSummary} />
         ) : !summary ? (

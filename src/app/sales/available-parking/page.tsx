@@ -21,7 +21,7 @@ import {
   Maximize2,
 } from 'lucide-react';
 import { ListContainer, PageContainer } from '@/core/containers';
-import { StaticPageLoading } from '@/core/states';
+import { PageLoadingState, StaticPageLoading } from '@/core/states';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyCompact, formatCurrencyWhole } from '@/lib/intl-utils';
 
@@ -34,6 +34,7 @@ function SalesParkingContent() {
 
   const {
     filteredItems,
+    loading,
     viewMode,
     setViewMode,
     showDashboard,
@@ -51,6 +52,15 @@ function SalesParkingContent() {
     setSelectedType,
     dashboardStats,
   } = useSalesParkingViewerState();
+
+  // ADR-229 Phase 2: Data-level loading guard
+  if (loading) {
+    return (
+      <PageContainer ariaLabel={t('salesParking.pageTitle', { defaultValue: 'Διαθέσιμες Θέσεις Στάθμευσης' })}>
+        <PageLoadingState icon={Car} message={t('salesParking.loading', { defaultValue: 'Φόρτωση θέσεων στάθμευσης...' })} layout="contained" />
+      </PageContainer>
+    );
+  }
 
   // Search state
   const [searchTerm, setSearchTerm] = React.useState('');

@@ -1,15 +1,13 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { Filter, Plus, User } from 'lucide-react';
+import { Filter, GitBranch, Plus, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-// 🏢 ENTERPRISE: Import from canonical location
-import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
+// 🏢 ENTERPRISE: Centralized page states (ADR-229)
+import { PageLoadingState, PageErrorState } from '@/core/states';
 // Removed: useToast import (migrated to useNotifications)
 import type { Opportunity } from '@/types/crm';
 
@@ -24,7 +22,6 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function PipelineTab() {
   const iconSizes = useIconSizes();
-  const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n support
   const { t } = useTranslation('crm');
@@ -75,22 +72,14 @@ export function PipelineTab() {
 
         <div className="p-6">
           {loading ? (
-              <div className="flex items-center justify-center py-12">
-                  <div className="text-center">
-                      <AnimatedSpinner size="large" className="mx-auto mb-2" />
-                      <p className={colors.text.secondary}>{t('pipeline.loading')}</p>
-                  </div>
-              </div>
+              <PageLoadingState icon={GitBranch} message={t('pipeline.loading')} layout="contained" />
           ) : error ? (
-              <div className={`${colors.bg.error} ${getStatusBorder('error')} rounded-lg p-4`}>
-                  <p className="text-red-600">{t(error, { defaultValue: error })}</p>
-                  <button
-                  onClick={fetchOpportunities}
-                  className={`mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
-                  >
-                  {t('pipeline.retry')}
-                  </button>
-              </div>
+              <PageErrorState
+                title={t(error, { defaultValue: error })}
+                onRetry={fetchOpportunities}
+                retryLabel={t('pipeline.retry')}
+                layout="contained"
+              />
           ) : opportunities.length === 0 ? (
               <div className="text-center py-12">
                   <User className={`${iconSizes.xl2} ${colors.text.muted} mx-auto mb-4`} />

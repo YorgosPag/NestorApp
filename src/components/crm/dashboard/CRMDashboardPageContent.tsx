@@ -3,9 +3,10 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Plus, LayoutDashboard, Users, Target, Calendar, Clock } from 'lucide-react';
+import { Plus, LayoutDashboard, BarChart3, Users, Target, Calendar, Clock } from 'lucide-react';
 // 🏢 ENTERPRISE: Centralized systems
 import { PageContainer, ListContainer } from '@/core/containers';
+import { PageLoadingState } from '@/core/states';
 import { PageHeader } from '@/core/headers';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters';
@@ -30,6 +31,15 @@ export function CRMDashboardPageContent() {
   // 🏢 ENTERPRISE: Real-time opportunities (ADR-227 Phase 1)
   const { opportunities, loading: loadingStats } = useRealtimeOpportunities(!authLoading && isAuthenticated);
   const crmDashboardTabs = getSortedCRMDashboardTabs();
+
+  // ADR-229 Phase 2: Data-level loading guard
+  if (authLoading || loadingStats) {
+    return (
+      <PageContainer ariaLabel={t('page.title')}>
+        <PageLoadingState icon={BarChart3} message={t('page.loading', { defaultValue: 'Φόρτωση CRM...' })} layout="contained" />
+      </PageContainer>
+    );
+  }
 
   // 🏢 ENTERPRISE: Filtered opportunities based on global AdvancedFilters
   const filteredOpportunities = useMemo(() => {

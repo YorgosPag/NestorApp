@@ -540,14 +540,14 @@
     "title": "Αποστολή Μηνύματος",
     "selectChannel": "Επιλογή Channel",
     "selectChannelPlaceholder": "Επιλέξτε channel",
-    "template": "Template (Προαιρετικό)",
+    "template": "Πρότυπο (Προαιρετικό)",
     "noTemplate": "Χωρίς template",
     "recipient": "Παραλήπτης",
     "subject": "Θέμα",
     "subjectPlaceholder": "Θέμα μηνύματος",
     "content": "Περιεχόμενο",
     "contentPlaceholder": "Γράψτε το μήνυμά σας εδώ...",
-    "templateVariables": "Template Variables",
+    "templateVariables": "Μεταβλητές Προτύπου",
     "availableVariables": "Διαθέσιμες μεταβλητές:",
     "variableName": "Όνομα μεταβλητής",
     "variableValue": "Τιμή",
@@ -611,7 +611,7 @@
       }
     },
     "stats": {
-      "ariaLabel": "Event statistics",
+      "ariaLabel": "Στατιστικά γεγονότων",
       "separator": "•"
     }
   },
@@ -659,70 +659,83 @@
   },
   "leadDetails": {
     "errors": {
-      "noPhone": "No phone number available",
-      "noEmail": "No email address available"
+      "noPhone": "Δεν υπάρχει αριθμός τηλεφώνου",
+      "noEmail": "Δεν υπάρχει διεύθυνση email"
     },
     "tasks": {
-      "title": "Tasks",
-      "pending": "Pending",
-      "completed": "Completed"
+      "title": "Εργασίες",
+      "pending": "Εκκρεμείς",
+      "completed": "Ολοκληρωμένες"
     },
     "upcoming": {
-      "title": "Upcoming Tasks",
-      "viewAll": "View all tasks ({count})"
+      "title": "Προσεχείς Εργασίες",
+      "viewAll": "Προβολή όλων ({count})"
     },
-    "loading": "Loading lead...",
-    "errorTitle": "Error",
-    "notFound": "Lead not found",
-    "backToLeads": "Back to Leads",
-    "navAria": "Lead profile navigation",
-    "backAria": "Back",
-    "headerTitle": "Lead Profile",
-    "contactSectionAria": "Contact details and quick actions",
-    "notesTitle": "Notes",
-    "tasksSectionAria": "Tasks and communication history",
-    "errorComponent": "Lead Details"
+    "loading": "Φόρτωση lead...",
+    "errorTitle": "Σφάλμα",
+    "notFound": "Το lead δεν βρέθηκε",
+    "backToLeads": "Πίσω στα Leads",
+    "navAria": "Πλοήγηση προφίλ lead",
+    "backAria": "Πίσω",
+    "headerTitle": "Προφίλ Lead",
+    "contactSectionAria": "Στοιχεία επικοινωνίας και γρήγορες ενέργειες",
+    "notesTitle": "Σημειώσεις",
+    "tasksSectionAria": "Εργασίες και ιστορικό επικοινωνίας",
+    "errorComponent": "Λεπτομέρειες Lead"
   },
   "notifications": {
     "types": {
-      "newLead": "New Lead",
-      "taskDue": "Task",
-      "meetingReminder": "Meeting",
-      "contractSigned": "Contract",
-      "other": "Other"
+      "newLead": "Νέο Lead",
+      "taskDue": "Εργασία",
+      "meetingReminder": "Συνάντηση",
+      "contractSigned": "Συμβόλαιο",
+      "other": "Άλλο"
     },
     "time": {
-      "justNow": "Just now",
-      "minute": "{count} minute ago",
-      "minutes": "{count} minutes ago",
-      "hour": "{count} hour ago",
-      "hours": "{count} hours ago",
-      "day": "{count} day ago",
-      "days": "{count} days ago"
+      "justNow": "Μόλις τώρα",
+      "minute": "Πριν {count} λεπτό",
+      "minutes": "Πριν {count} λεπτά",
+      "hour": "Πριν {count} ώρα",
+      "hours": "Πριν {count} ώρες",
+      "day": "Πριν {count} ημέρα",
+      "days": "Πριν {count} ημέρες"
     },
     "errors": {
-      "loadFailed": "Failed to load notifications",
-      "updateFailed": "Failed to update notifications"
+      "loadFailed": "Αποτυχία φόρτωσης ειδοποιήσεων",
+      "updateFailed": "Αποτυχία ενημέρωσης ειδοποιήσεων"
     },
-    "title": "Notifications",
-    "description": "View and manage your notifications",
-    "filters": "Filters",
-    "markAllRead": "Mark all as read",
-    "loading": "Loading notifications...",
-    "empty": "No notifications",
-    "emptyDescription": "You are all caught up.",
+    "title": "Ειδοποιήσεις",
+    "description": "Προβολή και διαχείριση των ειδοποιήσεών σας",
+    "filters": "Φίλτρα",
+    "markAllRead": "Σήμανση όλων ως αναγνωσμένα",
+    "loading": "Φόρτωση ειδοποιήσεων...",
+    "empty": "Δεν υπάρχουν ειδοποιήσεις",
+    "emptyDescription": "Είστε ενημερωμένοι.",
     "test": {
-      "create": "Test",
-      "creating": "Creating...",
-      "delete": "Delete test",
-      "title": "Test: New lead from website",
-      "body": "A test notification for CRM lead activity. (This is a development-only notification)"
+      "create": "Δοκιμή",
+      "creating": "Δημιουργία...",
+      "delete": "Διαγραφή δοκιμής",
+      "title": "Δοκιμή: Νέο lead από ιστοσελίδα",
+      "body": "Δοκιμαστική ειδοποίηση για CRM lead. (Μόνο για development)"
     }
   },
   "teams": {
+    "title": "Ομάδες & Ρόλοι",
+    "subtitle": "Διαχείριση ομάδων, μελών και δικαιωμάτων",
+    "newTeam": "Νέα Ομάδα",
+    "createTeam": "Δημιουργία Ομάδας",
+    "members": "{{count}} Μέλη",
+    "managePermissions": "Διαχείριση Δικαιωμάτων",
+    "loading": "Φόρτωση ομάδων...",
+    "empty": {
+      "title": "Δεν βρέθηκαν ομάδες",
+      "description": "Δημιουργήστε την πρώτη σας ομάδα για να οργανώσετε τα μέλη."
+    },
     "error": {
-      "missingOrg": "Missing organization context",
-      "loadFailed": "Failed to load teams. Please try again."
+      "title": "Σφάλμα φόρτωσης",
+      "missingOrg": "Λείπει το πλαίσιο οργανισμού",
+      "loadFailed": "Αποτυχία φόρτωσης ομάδων. Δοκιμάστε ξανά.",
+      "reload": "Επαναφόρτωση"
     }
   }
 }

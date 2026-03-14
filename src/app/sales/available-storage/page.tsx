@@ -22,7 +22,7 @@ import {
   Maximize2,
 } from 'lucide-react';
 import { ListContainer, PageContainer } from '@/core/containers';
-import { StaticPageLoading } from '@/core/states';
+import { PageLoadingState, StaticPageLoading } from '@/core/states';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyCompact, formatCurrencyWhole } from '@/lib/intl-utils';
 
@@ -35,6 +35,7 @@ function SalesStorageContent() {
 
   const {
     filteredItems,
+    loading,
     viewMode,
     setViewMode,
     showDashboard,
@@ -52,6 +53,15 @@ function SalesStorageContent() {
     setSelectedType,
     dashboardStats,
   } = useSalesStorageViewerState();
+
+  // ADR-229 Phase 2: Data-level loading guard
+  if (loading) {
+    return (
+      <PageContainer ariaLabel={t('salesStorage.pageTitle', { defaultValue: 'Διαθέσιμες Αποθήκες' })}>
+        <PageLoadingState icon={Warehouse} message={t('salesStorage.loading', { defaultValue: 'Φόρτωση αποθηκών...' })} layout="contained" />
+      </PageContainer>
+    );
+  }
 
   // Search state
   const [searchTerm, setSearchTerm] = React.useState('');

@@ -20,7 +20,7 @@ import {
   Send,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/spinner';
+import { PageLoadingState, PageErrorState } from '@/core/states';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters/AdvancedFiltersPanel';
@@ -256,16 +256,15 @@ export function InvoicesPageContent() {
       {/* Content */}
       <section className="p-6">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Spinner size="large" />
-          </div>
+          <PageLoadingState icon={Receipt} message={t('invoices.loading', { defaultValue: 'Φόρτωση τιμολογίων...' })} layout="contained" />
         ) : error ? (
-          <div className="text-center py-12">
-            <p className="text-destructive mb-2">{error}</p>
-            <Button variant="outline" onClick={fetchInvoices}>
-              {t('common.retry')}
-            </Button>
-          </div>
+          <PageErrorState
+            title={t('invoices.loadError', { defaultValue: 'Σφάλμα φόρτωσης' })}
+            message={error}
+            onRetry={fetchInvoices}
+            retryLabel={t('common.retry')}
+            layout="contained"
+          />
         ) : invoices.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-lg font-medium text-foreground mb-1">{t('invoices.noInvoices')}</p>

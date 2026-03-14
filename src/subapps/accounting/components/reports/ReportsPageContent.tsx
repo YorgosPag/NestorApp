@@ -24,6 +24,7 @@ import type { DashboardStat } from '@/components/property-management/dashboard/U
 import { formatCurrency } from '../../utils/format';
 import { AccountingPageHeader } from '../shared/AccountingPageHeader';
 import { FiscalYearPicker } from '../shared/FiscalYearPicker';
+import { PageLoadingState } from '@/core/states';
 import { useTaxEstimate } from '../../hooks/useTaxEstimate';
 import { VATReportCard } from './VATReportCard';
 import { TaxEstimateCard } from './TaxEstimateCard';
@@ -41,6 +42,15 @@ export function ReportsPageContent() {
   const [showDashboard, setShowDashboard] = useState(true);
 
   const { estimate, partnershipResult, entityType, loading } = useTaxEstimate({ fiscalYear: selectedYear });
+
+  // ADR-229 Phase 2: Data-level loading guard
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-background">
+        <PageLoadingState icon={FileBarChart} message={t('reports.loading', { defaultValue: 'Φόρτωση αναφορών...' })} layout="contained" />
+      </main>
+    );
+  }
 
   // Dashboard stats — entity-aware
   const dashboardStats: DashboardStat[] = useMemo(() => {

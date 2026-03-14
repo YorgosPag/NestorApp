@@ -16,6 +16,8 @@ import {
 } from '@/components/obligations/workspace';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
+import { ClipboardList } from 'lucide-react';
+import { PageLoadingState, PageErrorState } from '@/core/states';
 
 const STATUS_ALL = 'all';
 
@@ -46,12 +48,23 @@ export default function ObligationsPage() {
     await deleteObligation(id);
   };
 
-  if (!isNamespaceReady) {
+  // ADR-229 Phase 2: Data-level loading guard
+  if (!isNamespaceReady || loading) {
     return (
       <PageLayout>
-        <main className={`max-w-full mx-auto ${getSpacingClass('p', 'md')} md:p-6 lg:p-8`}>
-          <section className="rounded-lg border p-6 text-sm text-muted-foreground">...</section>
-        </main>
+        <PageLoadingState icon={ClipboardList} message={t('workspace.register.loading', { defaultValue: 'Φόρτωση υποχρεώσεων...' })} layout="contained" />
+      </PageLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <PageLayout>
+        <PageErrorState
+          title={t('workspace.register.loadError', { defaultValue: 'Σφάλμα φόρτωσης' })}
+          message={error}
+          layout="contained"
+        />
       </PageLayout>
     );
   }
@@ -98,19 +111,7 @@ export default function ObligationsPage() {
           </fieldset>
         </section>
 
-        {loading && (
-          <section className="rounded-lg border p-6 text-sm text-muted-foreground">{t('workspace.register.loading')}</section>
-        )}
-
-        {error && (
-          <section className="rounded-lg border border-destructive/40 p-6 text-sm text-destructive">
-            {t('workspace.register.loadError')}
-          </section>
-        )}
-
-        {!loading && !error && (
-          <ObligationsRegisterTable obligations={filtered} onDelete={handleDelete} />
-        )}
+        <ObligationsRegisterTable obligations={filtered} onDelete={handleDelete} />
       </main>
     </PageLayout>
   );

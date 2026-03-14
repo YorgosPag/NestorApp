@@ -46,6 +46,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
+import { PageLoadingState } from '@/core/states';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/auth/contexts/AuthContext';
@@ -723,16 +724,10 @@ export function FileManagerPageContent() {
     );
   }
 
+  // ADR-229 Phase 2: Data-level loading guard
   if (loading) {
     return (
-      <main className="flex items-center justify-center min-h-[400px]" role="status">
-        <section className="text-center">
-          <Spinner size="large" className="mx-auto mb-4" />
-          <p className="text-muted-foreground">
-            {t('manager.loading')}
-          </p>
-        </section>
-      </main>
+      <PageLoadingState icon={Files} message={t('manager.loading')} layout="contained" />
     );
   }
 

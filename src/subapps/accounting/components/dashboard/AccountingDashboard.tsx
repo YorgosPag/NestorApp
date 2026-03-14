@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/spinner';
+import { PageLoadingState } from '@/core/states';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { useAuth } from '@/hooks/useAuth';
@@ -136,10 +136,11 @@ export function AccountingDashboard() {
     },
   ];
 
+  // ADR-229 Phase 2: Data-level loading guard
   if (loading) {
     return (
-      <main className="min-h-screen bg-background flex items-center justify-center">
-        <Spinner size="large" />
+      <main className="min-h-screen bg-background">
+        <PageLoadingState icon={Receipt} message={t('dashboard.loading', { defaultValue: 'Φόρτωση dashboard...' })} layout="contained" />
       </main>
     );
   }

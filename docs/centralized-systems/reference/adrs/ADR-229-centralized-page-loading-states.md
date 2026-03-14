@@ -98,10 +98,55 @@ interface StaticPageLoadingProps {
 
 ---
 
+## Phase 2: Data-Level Loading Guards (2026-03-14)
+
+Η Phase 1 κεντρικοποίησε τα components. Η Phase 2 πρόσθεσε **data-level loading guards** σε ΟΛΕΣ τις σελίδες που φορτώνουν δεδομένα, ώστε ο χρήστης να μη βλέπει empty states / "(0)" κατά το loading.
+
+### Κανόνας
+
+Κάθε content component που κάνει data fetching, ΠΡΕΠΕΙ στην αρχή του return να έχει:
+
+```tsx
+if (loading) {
+  return (
+    <PageContainer ariaLabel="...">
+      <PageLoadingState icon={DomainIcon} message={t('page.loading')} layout="contained" />
+    </PageContainer>
+  );
+}
+```
+
+### Αρχεία Phase 2 (16)
+
+| Αρχείο | Icon | Pattern |
+|--------|------|---------|
+| `src/app/sales/available-apartments/page.tsx` | `ShoppingBag` | Early-exit guard |
+| `src/app/sales/available-parking/page.tsx` | `Car` | Early-exit guard + `loading` destructure |
+| `src/app/sales/available-storage/page.tsx` | `Warehouse` | Early-exit guard + `loading` destructure |
+| `src/components/crm/dashboard/CRMDashboardPageContent.tsx` | `BarChart3` | Early-exit guard (authLoading \|\| loadingStats) |
+| `src/components/file-manager/FileManagerPageContent.tsx` | `Files` | Spinner → PageLoadingState |
+| `src/app/obligations/page.tsx` | `ClipboardList` | PageLoadingState + PageErrorState guards |
+| `src/components/crm/dashboard/PipelineTab.tsx` | `GitBranch` | Inline Spinner+button → PageLoadingState+PageErrorState |
+| `src/subapps/accounting/components/dashboard/AccountingDashboard.tsx` | `Receipt` | Spinner → PageLoadingState |
+| `src/subapps/accounting/components/invoices/InvoicesPageContent.tsx` | `Receipt` | Spinner → PageLoadingState+PageErrorState |
+| `src/subapps/accounting/components/journal/JournalPageContent.tsx` | `BookOpen` | Spinner → PageLoadingState+PageErrorState |
+| `src/subapps/accounting/components/vat/VATPageContent.tsx` | `DollarSign` | Spinner → PageLoadingState+PageErrorState |
+| `src/subapps/accounting/components/bank/BankPageContent.tsx` | `Landmark` | Spinner → PageLoadingState+PageErrorState |
+| `src/subapps/accounting/components/efka/EFKAPageContent.tsx` | `PiggyBank` | Spinner → PageLoadingState+PageErrorState |
+| `src/subapps/accounting/components/assets/AssetsPageContent.tsx` | `HardDrive` | Spinner → PageLoadingState+PageErrorState |
+| `src/subapps/accounting/components/reports/ReportsPageContent.tsx` | `FileBarChart` | Early-exit guard (δεν είχε loading UI) |
+| `src/subapps/accounting/components/documents/DocumentsPageContent.tsx` | `FileText` | Spinner → PageLoadingState+PageErrorState |
+
+### Σελίδες που ΔΕΝ χρειάστηκαν αλλαγή
+
+- `src/app/admin/ai-inbox/page.tsx` — Server Component, auth server-side
+- `src/app/admin/operator-inbox/page.tsx` — Server Component, auth server-side
+
+---
+
 ## Τι ΔΕΝ αλλάζει
 
 - `src/components/ui/spinner/Spinner.tsx` — χρησιμοποιείται εσωτερικά από `PageLoadingState`
-- Tab-level loading states (Building tabs) — different scope, Phase 2 αν χρειαστεί
 - Button loading spinners — different scope
 - `src/components/ui/skeletons/` — skeleton components, different pattern
 
@@ -114,9 +159,10 @@ interface StaticPageLoadingProps {
 | Page loading patterns | 6 διαφορετικά | 1 (`PageLoadingState`) |
 | Page error patterns | 4 διαφορετικά | 1 (`PageErrorState`) |
 | Suspense fallback patterns | 4 διαφορετικά | 1 (`StaticPageLoading`) |
-| Αρχεία που άλλαξαν | — | 12 migrated |
+| Αρχεία Phase 1 | — | 12 migrated |
+| Αρχεία Phase 2 | — | 16 migrated (data-level guards) |
 | Νέα αρχεία | — | 4 (`src/core/states/`) |
-| Lines removed (estimated) | ~180 scattered | → ~80 centralized |
+| Σελίδες με loading guard | 5 (Phase 1) | 21 (Phase 1 + Phase 2) |
 
 ---
 
@@ -125,4 +171,5 @@ interface StaticPageLoadingProps {
 | Date | Change |
 |------|--------|
 | 2026-03-14 | ADR created — research complete, pending implementation decision |
-| 2026-03-14 | IMPLEMENTED — 4 νέα components, 12 pages migrated |
+| 2026-03-14 | Phase 1 IMPLEMENTED — 4 νέα components, 12 pages migrated |
+| 2026-03-14 | Phase 2 IMPLEMENTED — Data-level loading guards σε 16 σελίδες, αφαίρεση inline Spinner patterns |

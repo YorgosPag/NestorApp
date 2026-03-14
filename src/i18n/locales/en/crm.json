@@ -720,9 +720,22 @@
     }
   },
   "teams": {
+    "title": "Teams & Roles",
+    "subtitle": "Manage teams, members and permissions",
+    "newTeam": "New Team",
+    "createTeam": "Create Team",
+    "members": "{{count}} Members",
+    "managePermissions": "Manage Permissions",
+    "loading": "Loading teams...",
+    "empty": {
+      "title": "No teams found",
+      "description": "Create your first team to organize members."
+    },
     "error": {
+      "title": "Loading error",
       "missingOrg": "Missing organization context",
-      "loadFailed": "Failed to load teams. Please try again."
+      "loadFailed": "Failed to load teams. Please try again.",
+      "reload": "Reload"
     }
   }
 }

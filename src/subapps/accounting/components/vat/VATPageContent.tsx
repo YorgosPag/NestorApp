@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Spinner } from '@/components/ui/spinner';
+import { PageLoadingState, PageErrorState } from '@/core/states';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters/AdvancedFiltersPanel';
@@ -202,16 +202,15 @@ export function VATPageContent() {
       {/* Content Area */}
       <section className="p-6 space-y-8">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Spinner size="large" />
-          </div>
+          <PageLoadingState icon={DollarSign} message={t('vat.loading', { defaultValue: 'Φόρτωση ΦΠΑ...' })} layout="contained" />
         ) : error ? (
-          <div className="text-center py-12">
-            <p className="text-destructive mb-2">{error}</p>
-            <Button variant="outline" onClick={refetch}>
-              {t('common.retry')}
-            </Button>
-          </div>
+          <PageErrorState
+            title={t('vat.loadError', { defaultValue: 'Σφάλμα φόρτωσης' })}
+            message={error}
+            onRetry={refetch}
+            retryLabel={t('common.retry')}
+            layout="contained"
+          />
         ) : (
           <>
             {/* Quarterly Returns */}

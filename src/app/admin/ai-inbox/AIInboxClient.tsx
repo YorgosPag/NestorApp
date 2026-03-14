@@ -340,12 +340,18 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
   const stats = isRealtimeEnabled ? realtimeStats : serverStats;
   const statsLoading = isRealtimeEnabled ? realtimeLoading : serverStatsLoading;
 
-  // Propagate realtime errors
+  // Propagate realtime errors — translate known error patterns to i18n
   useEffect(() => {
     if (realtimeError && isRealtimeEnabled) {
-      setError(realtimeError);
+      if (realtimeError.includes('AUTHENTICATION_ERROR')) {
+        setError(t('aiInbox.errors.authRequired'));
+      } else if (realtimeError.includes('Firestore') || realtimeError.includes('listener')) {
+        setError(t('aiInbox.errors.firestoreListener'));
+      } else {
+        setError(t('aiInbox.errors.generic'));
+      }
     }
-  }, [realtimeError, isRealtimeEnabled]);
+  }, [realtimeError, isRealtimeEnabled, t]);
 
   useEffect(() => {
     setIsMounted(true);

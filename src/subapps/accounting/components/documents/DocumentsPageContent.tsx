@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Spinner } from '@/components/ui/spinner';
+import { PageLoadingState, PageErrorState } from '@/core/states';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   FileText,
@@ -260,18 +260,15 @@ export function DocumentsPageContent() {
       {/* Content */}
       <section className="p-6">
         {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <Spinner size="large" />
-          </div>
+          <PageLoadingState icon={FileText} message={t('documents.loading', { defaultValue: 'Φόρτωση παραστατικών...' })} layout="contained" />
         ) : error ? (
-          <Card>
-            <CardContent className="py-8 text-center">
-              <p className="text-sm text-destructive">{error}</p>
-              <Button variant="outline" onClick={refetch} className="mt-4">
-                {t('common.retry')}
-              </Button>
-            </CardContent>
-          </Card>
+          <PageErrorState
+            title={t('documents.loadError', { defaultValue: 'Σφάλμα φόρτωσης' })}
+            message={error}
+            onRetry={refetch}
+            retryLabel={t('common.retry')}
+            layout="contained"
+          />
         ) : filteredDocuments.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">

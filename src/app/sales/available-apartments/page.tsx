@@ -22,7 +22,7 @@ import {
   Maximize2,
 } from 'lucide-react';
 import { ListContainer, PageContainer } from '@/core/containers';
-import { StaticPageLoading } from '@/core/states';
+import { PageLoadingState, StaticPageLoading } from '@/core/states';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Unit } from '@/types/unit';
@@ -57,6 +57,15 @@ function SalesAvailableContent() {
     setSelectedUnitType,
     dashboardStats,
   } = useSalesUnitsViewerState();
+
+  // ADR-229 Phase 2: Data-level loading guard
+  if (loading) {
+    return (
+      <PageContainer ariaLabel={t('sales.available.title', { defaultValue: 'Διαθέσιμες Μονάδες' })}>
+        <PageLoadingState icon={ShoppingBag} message={t('sales.available.loading', { defaultValue: 'Φόρτωση μονάδων...' })} layout="contained" />
+      </PageContainer>
+    );
+  }
 
   // Search state (for header search)
   const [searchTerm, setSearchTerm] = React.useState('');
