@@ -10,22 +10,29 @@
 
 'use client';
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { isValidEmail } from '@/lib/validation/email-validation';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { designSystem } from '@/lib/design-system';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+
+// 🏢 ENTERPRISE: Centralized SearchableCombobox — single source of truth
+import { SearchableCombobox } from '@/components/ui/searchable-combobox';
+import type { ComboboxOption } from '@/components/ui/searchable-combobox';
+
+// 🏢 ENTERPRISE: Centralized presets — positions, departments, types
+import {
+  getRelationshipTypeOptions,
+  getPositionOptions,
+  getDepartmentOptions
+} from './config/relationship-form-presets';
 
 // 🏢 ENTERPRISE: Centralized communication system
 import { UniversalCommunicationManager } from '@/components/contacts/dynamic/UniversalCommunicationManager';
 import { getEntityAwareCommunicationConfig } from '@/components/contacts/dynamic/communication';
 import type { CommunicationItem } from '@/components/contacts/dynamic/communication';
 import type { PhoneInfo, EmailInfo } from '@/types/contacts';
-
-// 🏢 ENTERPRISE: Searchable relationship type combobox
-import { RelationshipTypeCombobox } from './RelationshipTypeCombobox';
 
 // 🏢 ENTERPRISE: Import centralized types
 import type { ContactType } from '@/types/contacts/contracts';
@@ -36,25 +43,12 @@ import type { RelationshipFormData } from './types/relationship-manager.types';
 // ============================================================================
 
 export interface RelationshipFormFieldsProps {
-  /** Form data object */
   formData: RelationshipFormData;
-
-  /** Form data setter function */
   setFormData: React.Dispatch<React.SetStateAction<RelationshipFormData>>;
-
-  /** Contact type for filtering available relationship types */
   contactType: ContactType;
-
-  /** Loading state */
   loading?: boolean;
-
-  /** Error state */
   errors?: Partial<Record<keyof RelationshipFormData, string>>;
-
-  /** Custom styling */
   className?: string;
-
-  /** Field configuration */
   fieldConfig?: {
     showNotes?: boolean;
     showDates?: boolean;
@@ -107,7 +101,7 @@ const communicationItemsToEmails = (items: CommunicationItem[]): EmailInfo[] =>
   })) : [];
 
 // ============================================================================
-// RELATIONSHIP FORM FIELDS COMPONENT
+// COMPONENT
 // ============================================================================
 
 export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
@@ -120,6 +114,11 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
   fieldConfig = {}
 }) => {
   const { t } = useTranslation('contacts');
+
+  // Local state for custom options added by the user (session-scoped)
+  const [customRelTypes, setCustomRelTypes] = useState<ComboboxOption[]>([]);
+  const [customPositions, setCustomPositions] = useState<ComboboxOption[]>([]);
+  const [customDepartments, setCustomDepartments] = useState<ComboboxOption[]>([]);
 
   // ============================================================================
   // CONFIGURATION
@@ -139,14 +138,54 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
   };
 
   // ============================================================================
-  // HELPER FUNCTIONS
+  // COMBOBOX OPTIONS — built from centralized presets + user custom entries
   // ============================================================================
 
-  const handleFieldChange = (field: keyof RelationshipFormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  const relationshipTypeOptions = useMemo(() => {
+    const presets = getRelationshipTypeOptions(contactType, t);
+    return [...presets, ...customRelTypes];
+  }, [contactType, t, customRelTypes]);
 
-  // 🏢 ENTERPRISE: Centralized phone/email configs (entity-aware)
+  const positionOptions = useMemo(() => {
+    const presets = getPositionOptions(t);
+    return [...presets, ...customPositions];
+  }, [t, customPositions]);
+
+  const departmentOptions = useMemo(() => {
+    const presets = getDepartmentOptions(t);
+    return [...presets, ...customDepartments];
+  }, [t, customDepartments]);
+
+  // ============================================================================
+  // "ADD NEW" HANDLERS
+  // ============================================================================
+
+  const handleAddNewRelType = useCallback((label: string) => {
+    const value = `custom_${label.toLowerCase().replace(/\s+/g, '_')}`;
+    // Check for duplicates
+    if (relationshipTypeOptions.some(o => o.label.toLowerCase() === label.toLowerCase())) return;
+    setCustomRelTypes(prev => [...prev, { value, label }]);
+    setFormData(prev => ({ ...prev, relationshipType: value }));
+  }, [relationshipTypeOptions, setFormData]);
+
+  const handleAddNewPosition = useCallback((label: string) => {
+    const value = `custom_${label.toLowerCase().replace(/\s+/g, '_')}`;
+    if (positionOptions.some(o => o.label.toLowerCase() === label.toLowerCase())) return;
+    setCustomPositions(prev => [...prev, { value, label }]);
+    setFormData(prev => ({ ...prev, position: label }));
+  }, [positionOptions, setFormData]);
+
+  const handleAddNewDepartment = useCallback((label: string) => {
+    const value = `custom_${label.toLowerCase().replace(/\s+/g, '_')}`;
+    if (departmentOptions.some(o => o.label.toLowerCase() === label.toLowerCase())) return;
+    setCustomDepartments(prev => [...prev, { value, label }]);
+    setFormData(prev => ({ ...prev, department: label }));
+  }, [departmentOptions, setFormData]);
+
+  // ============================================================================
+  // COMMUNICATION HANDLERS
+  // ============================================================================
+
   const phoneConfig = useMemo(
     () => getEntityAwareCommunicationConfig('phone', contactType),
     [contactType]
@@ -156,7 +195,6 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
     [contactType]
   );
 
-  // Phone items from formData
   const phoneItems = useMemo(
     () => phonesToCommunicationItems(formData.phones || []),
     [formData.phones]
@@ -166,10 +204,8 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
     [formData.emails]
   );
 
-  // Handle phone changes from UniversalCommunicationManager
   const handlePhonesChange = useCallback((items: CommunicationItem[]) => {
     const phones = communicationItemsToPhones(items);
-    // Sync first/primary phone to contactInfo for backward compatibility
     const primaryPhone = phones.find(p => p.isPrimary) || phones[0];
     setFormData(prev => ({
       ...prev,
@@ -183,10 +219,8 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
     }));
   }, [setFormData]);
 
-  // Handle email changes from UniversalCommunicationManager
   const handleEmailsChange = useCallback((items: CommunicationItem[]) => {
     const emails = communicationItemsToEmails(items);
-    // Sync first/primary email to contactInfo for backward compatibility
     const primaryEmail = emails.find(e => e.isPrimary) || emails[0];
     setFormData(prev => ({
       ...prev,
@@ -195,15 +229,6 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
         ...prev.contactInfo,
         businessEmail: primaryEmail?.email || ''
       }
-    }));
-  }, [setFormData]);
-
-  // Handle relationship type change from combobox
-  const handleRelationshipTypeChange = useCallback((value: string, customLabel?: string) => {
-    setFormData(prev => ({
-      ...prev,
-      relationshipType: value,
-      customRelationshipLabel: customLabel
     }));
   }, [setFormData]);
 
@@ -217,39 +242,18 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
     </Label>
   );
 
-  const renderInputField = (
-    id: string,
-    label: string,
-    value: string,
-    onChange: (value: string) => void,
-    options: {
-      type?: string;
-      placeholder?: string;
-      required?: boolean;
-      disabled?: boolean;
-    } = {}
-  ) => (
-    <div className="space-y-2">
-      {renderFieldLabel(label, options.required)}
-      <Input
-        id={id}
-        type={options.type || 'text'}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={options.placeholder}
-        disabled={loading || options.disabled}
-        className={designSystem.getFormFieldClass(!!errors[id as keyof RelationshipFormData], loading)}
-      />
-      {errors[id as keyof RelationshipFormData] && (
-        <p className={designSystem.cn(
-          designSystem.getTypographyClass('sm'),
-          designSystem.getStatusColor('error', 'text')
-        )}>
-          {errors[id as keyof RelationshipFormData]}
-        </p>
-      )}
-    </div>
-  );
+  const renderError = (field: keyof RelationshipFormData) => {
+    if (!errors[field]) return null;
+    return (
+      <p className={designSystem.cn(
+        designSystem.getTypographyClass('sm'),
+        designSystem.getStatusColor('error', 'text'),
+        "mt-1"
+      )}>
+        {errors[field]}
+      </p>
+    );
+  };
 
   // ============================================================================
   // RENDER
@@ -259,70 +263,91 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
     <div className={designSystem.cn("space-y-6", className)}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-        {/* Relationship Type — Searchable Combobox */}
+        {/* ── Relationship Type ── */}
         <div className="md:col-span-1 space-y-2">
           {renderFieldLabel(
             t('relationships.form.labels.relationshipType'),
             finalFieldConfig.required.relationshipType
           )}
-          <RelationshipTypeCombobox
+          <SearchableCombobox
             value={formData.relationshipType}
-            onChange={handleRelationshipTypeChange}
-            contactType={contactType}
-            disabled={loading}
-            hasError={!!errors.relationshipType}
+            onValueChange={(value) => setFormData(prev => ({ ...prev, relationshipType: value }))}
+            options={relationshipTypeOptions}
             placeholder={t('relationships.form.placeholders.selectType')}
+            emptyMessage={t('relationships.form.noTypesFound')}
+            disabled={loading}
+            error={errors.relationshipType}
+            allowFreeText
+            onAddNew={handleAddNewRelType}
+            addNewButtonLabel={t('relationships.form.addCustomType')}
           />
-          {errors.relationshipType && (
-            <p className={designSystem.cn(
-              designSystem.getTypographyClass('sm'),
-              designSystem.getStatusColor('error', 'text'),
-              "mt-1"
-            )}>
-              {errors.relationshipType}
-            </p>
-          )}
+          {renderError('relationshipType')}
         </div>
 
-        {/* Position Field */}
-        {renderInputField(
-          'position',
-          t('relationships.form.labels.position'),
-          formData.position || '',
-          (value) => handleFieldChange('position', value),
-          {
-            placeholder: t('relationships.form.placeholders.position'),
-            required: finalFieldConfig.required.position
-          }
+        {/* ── Position (Θέση) — SearchableCombobox ── */}
+        <div className="md:col-span-1 space-y-2">
+          {renderFieldLabel(
+            t('relationships.form.labels.position'),
+            finalFieldConfig.required.position
+          )}
+          <SearchableCombobox
+            value={formData.position || ''}
+            onValueChange={(value, option) => {
+              setFormData(prev => ({ ...prev, position: option?.label || value }));
+            }}
+            options={positionOptions}
+            placeholder={t('relationships.form.placeholders.position')}
+            emptyMessage={t('relationships.form.noTypesFound')}
+            disabled={loading}
+            error={errors.position}
+            allowFreeText
+            onAddNew={handleAddNewPosition}
+            addNewButtonLabel={t('relationships.form.addCustomType')}
+          />
+          {renderError('position')}
+        </div>
+
+        {/* ── Department (Τμήμα) — SearchableCombobox ── */}
+        <div className="md:col-span-1 space-y-2">
+          {renderFieldLabel(
+            t('relationships.form.labels.department'),
+            finalFieldConfig.required.department
+          )}
+          <SearchableCombobox
+            value={formData.department || ''}
+            onValueChange={(value, option) => {
+              setFormData(prev => ({ ...prev, department: option?.label || value }));
+            }}
+            options={departmentOptions}
+            placeholder={t('relationships.form.placeholders.department')}
+            emptyMessage={t('relationships.form.noTypesFound')}
+            disabled={loading}
+            error={errors.department}
+            allowFreeText
+            onAddNew={handleAddNewDepartment}
+            addNewButtonLabel={t('relationships.form.addCustomType')}
+          />
+          {renderError('department')}
+        </div>
+
+        {/* ── Start Date ── */}
+        {finalFieldConfig.showDates && (
+          <div className="md:col-span-1 space-y-2">
+            {renderFieldLabel(t('relationships.form.labels.startDate'))}
+            <input
+              type="date"
+              value={formData.startDate || ''}
+              onChange={e => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+              disabled={loading}
+              className={designSystem.cn(
+                designSystem.getFormFieldClass(false, loading),
+                "w-full"
+              )}
+            />
+          </div>
         )}
 
-        {/* Department Field */}
-        {renderInputField(
-          'department',
-          t('relationships.form.labels.department'),
-          formData.department || '',
-          (value) => handleFieldChange('department', value),
-          {
-            placeholder: t('relationships.form.placeholders.department'),
-            required: finalFieldConfig.required.department
-          }
-        )}
-
-        {/* Start Date Field */}
-        {finalFieldConfig.showDates && renderInputField(
-          'startDate',
-          t('relationships.form.labels.startDate'),
-          formData.startDate || '',
-          (value) => handleFieldChange('startDate', value),
-          {
-            type: 'date'
-          }
-        )}
-
-        {/* ============================================================ */}
-        {/* CENTRALIZED COMMUNICATION SECTION                            */}
-        {/* Replaces old plain-text businessPhone/businessEmail/ext      */}
-        {/* ============================================================ */}
+        {/* ── Centralized Communication Section ── */}
         {finalFieldConfig.showContactInfo && (
           <section className="md:col-span-2 space-y-4" aria-label={t('relationships.form.labels.professionalInfo')}>
             <Label className={designSystem.cn(
@@ -332,7 +357,6 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
               {t('relationships.form.labels.professionalInfo')}
             </Label>
 
-            {/* Phones — UniversalCommunicationManager */}
             <UniversalCommunicationManager
               config={phoneConfig}
               items={phoneItems}
@@ -340,7 +364,6 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
               onChange={handlePhonesChange}
             />
 
-            {/* Emails — UniversalCommunicationManager */}
             <UniversalCommunicationManager
               config={emailConfig}
               items={emailItems}
@@ -350,27 +373,19 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
           </section>
         )}
 
-        {/* Notes Field */}
+        {/* ── Notes ── */}
         {finalFieldConfig.showNotes && (
           <div className="md:col-span-2">
             {renderFieldLabel(t('relationships.form.labels.notes'))}
             <Textarea
               value={formData.notes || ''}
-              onChange={(e) => handleFieldChange('notes', e.target.value)}
+              onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
               placeholder={t('relationships.form.placeholders.notes')}
               rows={finalFieldConfig.notesRows}
               disabled={loading}
               className={designSystem.getFormFieldClass(false, loading)}
             />
-            {errors.notes && (
-              <p className={designSystem.cn(
-                designSystem.getTypographyClass('sm'),
-                designSystem.getStatusColor('error', 'text'),
-                "mt-1"
-              )}>
-                {errors.notes}
-              </p>
-            )}
+            {renderError('notes')}
           </div>
         )}
       </div>
@@ -379,7 +394,7 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
 };
 
 // ============================================================================
-// VALIDATION HELPER FUNCTIONS
+// VALIDATION HELPER
 // ============================================================================
 
 export const validateRelationshipFormData = (
@@ -389,36 +404,32 @@ export const validateRelationshipFormData = (
 ): Partial<Record<keyof RelationshipFormData, string>> => {
   const errors: Partial<Record<keyof RelationshipFormData, string>> = {};
 
-  const getValidationMessage = (key: string, fallback: string): string => {
-    return t ? t(key) : fallback;
-  };
+  const msg = (key: string, fallback: string) => (t ? t(key) : fallback);
 
   if (config?.required?.relationshipType && !data.relationshipType) {
-    errors.relationshipType = getValidationMessage(
+    errors.relationshipType = msg(
       'relationships.form.validation.relationshipTypeRequired',
       'Relationship type is required'
     );
   }
 
   if (config?.required?.position && !data.position?.trim()) {
-    errors.position = getValidationMessage(
+    errors.position = msg(
       'relationships.form.validation.positionRequired',
       'Position is required'
     );
   }
 
   if (config?.required?.department && !data.department?.trim()) {
-    errors.department = getValidationMessage(
+    errors.department = msg(
       'relationships.form.validation.departmentRequired',
       'Department is required'
     );
   }
 
-  // Email validation — check centralized emails array
   if (data.emails && data.emails.length > 0) {
     for (const emailEntry of data.emails) {
       if (emailEntry.email && !isValidEmail(emailEntry.email)) {
-        // Surface email validation on the form level
         break;
       }
     }
@@ -426,9 +437,5 @@ export const validateRelationshipFormData = (
 
   return errors;
 };
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
 
 export default RelationshipFormFields;

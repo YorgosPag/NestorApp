@@ -268,6 +268,28 @@
       "businessContact": "Επαγγελματική Επαφή",
       "other": "Άλλο"
     },
+    "presets": {
+      "positions": {
+        "director": "Διευθυντής",
+        "manager": "Προϊστάμενος",
+        "supervisor": "Επόπτης",
+        "engineer": "Μηχανικός",
+        "accountant": "Λογιστής",
+        "secretary": "Γραμματέας",
+        "technician": "Τεχνικός",
+        "salesRep": "Πωλητής"
+      },
+      "departments": {
+        "management": "Διοίκηση",
+        "finance": "Οικονομικό",
+        "hr": "Ανθρώπινο Δυναμικό",
+        "sales": "Πωλήσεις",
+        "engineering": "Τεχνικό",
+        "operations": "Λειτουργίες",
+        "legal": "Νομικό",
+        "it": "Πληροφορική"
+      }
+    },
     "form": {
       "title": "Προσθήκη Νέας Σχέσης",
       "editTitle": "Επεξεργασία Σχέσης",

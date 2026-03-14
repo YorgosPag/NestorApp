@@ -62,6 +62,14 @@ export interface SearchableComboboxProps {
   error?: string;
   /** Additional CSS classes for the wrapper */
   className?: string;
+  /**
+   * When set, shows a "+ Add new" button at the bottom of the dropdown.
+   * Callback receives the new label typed by the user.
+   * The parent is responsible for adding the new option to the options array.
+   */
+  onAddNew?: (label: string) => void;
+  /** Label for the "add new" button. Default: "+ Add new" */
+  addNewButtonLabel?: string;
 }
 
 // ============================================================================
@@ -92,11 +100,16 @@ export function SearchableCombobox({
   disabled = false,
   error,
   className,
+  onAddNew,
+  addNewButtonLabel = '+ Προσθήκη νέου',
 }: SearchableComboboxProps) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [newItemInput, setNewItemInput] = useState('');
+  const newInputRef = useRef<HTMLInputElement>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -170,6 +183,24 @@ export function SearchableCombobox({
       }
     }
   }, [highlightedIndex]);
+
+  // Focus new item input when add-new mode is activated
+  useEffect(() => {
+    if (isAddingNew && newInputRef.current) {
+      setTimeout(() => newInputRef.current?.focus(), 50);
+    }
+  }, [isAddingNew]);
+
+  // Handle submitting a new custom item
+  const handleAddNewSubmit = useCallback(() => {
+    const trimmed = newItemInput.trim();
+    if (!trimmed || !onAddNew) return;
+
+    onAddNew(trimmed);
+    setNewItemInput('');
+    setIsAddingNew(false);
+    setOpen(false);
+  }, [newItemInput, onAddNew]);
 
   // ========================================================================
   // EVENT HANDLERS
@@ -338,7 +369,7 @@ export function SearchableCombobox({
       </PopoverTrigger>
 
       <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] p-0 max-h-72 overflow-y-auto"
+        className="w-[var(--radix-popover-trigger-width)] p-0"
         align="start"
         sideOffset={4}
         onOpenAutoFocus={(e) => e.preventDefault()}
@@ -347,38 +378,104 @@ export function SearchableCombobox({
           <div className="flex items-center justify-center py-4">
             <Spinner />
           </div>
-        ) : filtered.length === 0 ? (
-          <p className="p-3 text-sm text-muted-foreground text-center">
-            {emptyMessage}
-          </p>
         ) : (
-          <ul ref={listRef} role="listbox" className="py-1">
-            {filtered.map((option, index) => (
-              <li
-                key={option.value}
-                role="option"
-                aria-selected={highlightedIndex === index}
-                className={cn(
-                  'flex flex-col px-3 py-1.5 cursor-pointer transition-colors text-sm',
-                  highlightedIndex === index
-                    ? 'bg-accent text-accent-foreground'
-                    : 'hover:bg-muted',
+          <>
+            {filtered.length === 0 && !onAddNew ? (
+              <p className="p-3 text-sm text-muted-foreground text-center">
+                {emptyMessage}
+              </p>
+            ) : (
+              <ul ref={listRef} role="listbox" className="py-1 max-h-60 overflow-y-auto">
+                {filtered.length === 0 && (
+                  <li className="px-3 py-2 text-sm text-muted-foreground text-center">
+                    {emptyMessage}
+                  </li>
                 )}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  handleSelect(option);
-                }}
-                onMouseEnter={() => setHighlightedIndex(index)}
-              >
-                <span className="font-medium">{option.label}</span>
-                {option.secondaryLabel && (
-                  <span className="text-xs text-muted-foreground">
-                    {option.secondaryLabel}
-                  </span>
+                {filtered.map((option, index) => (
+                  <li
+                    key={option.value}
+                    role="option"
+                    aria-selected={highlightedIndex === index}
+                    className={cn(
+                      'flex flex-col px-3 py-1.5 cursor-pointer transition-colors text-sm',
+                      highlightedIndex === index
+                        ? 'bg-accent text-accent-foreground'
+                        : 'hover:bg-muted',
+                    )}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      handleSelect(option);
+                    }}
+                    onMouseEnter={() => setHighlightedIndex(index)}
+                  >
+                    <span className="font-medium">{option.label}</span>
+                    {option.secondaryLabel && (
+                      <span className="text-xs text-muted-foreground">
+                        {option.secondaryLabel}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {/* Add New section — shown when onAddNew prop is provided */}
+            {onAddNew && (
+              <div className="border-t p-1">
+                {isAddingNew ? (
+                  <div className="flex items-center gap-2 px-2 py-1">
+                    <Input
+                      ref={newInputRef}
+                      type="text"
+                      value={newItemInput}
+                      onChange={e => setNewItemInput(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleAddNewSubmit();
+                        }
+                        if (e.key === 'Escape') {
+                          setIsAddingNew(false);
+                          setNewItemInput('');
+                        }
+                      }}
+                      onMouseDown={e => e.stopPropagation()}
+                      placeholder={placeholder}
+                      className="h-8 text-sm flex-1"
+                    />
+                    <button
+                      type="button"
+                      onMouseDown={e => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleAddNewSubmit();
+                      }}
+                      disabled={!newItemInput.trim()}
+                      className="h-8 px-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                    >
+                      OK
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onMouseDown={e => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsAddingNew(true);
+                    }}
+                    className={cn(
+                      'flex w-full items-center gap-2 rounded-sm px-3 py-1.5 text-sm cursor-pointer',
+                      'hover:bg-accent hover:text-accent-foreground text-primary'
+                    )}
+                  >
+                    {addNewButtonLabel}
+                  </button>
                 )}
-              </li>
-            ))}
-          </ul>
+              </div>
+            )}
+          </>
         )}
       </PopoverContent>
     </Popover>

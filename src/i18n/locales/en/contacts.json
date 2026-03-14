@@ -268,6 +268,28 @@
       "businessContact": "Business Contact",
       "other": "Other"
     },
+    "presets": {
+      "positions": {
+        "director": "Director",
+        "manager": "Manager",
+        "supervisor": "Supervisor",
+        "engineer": "Engineer",
+        "accountant": "Accountant",
+        "secretary": "Secretary",
+        "technician": "Technician",
+        "salesRep": "Sales Representative"
+      },
+      "departments": {
+        "management": "Management",
+        "finance": "Finance",
+        "hr": "Human Resources",
+        "sales": "Sales",
+        "engineering": "Engineering",
+        "operations": "Operations",
+        "legal": "Legal",
+        "it": "IT"
+      }
+    },
     "form": {
       "title": "Add New Relationship",
       "editTitle": "Edit Relationship",
