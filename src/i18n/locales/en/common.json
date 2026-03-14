@@ -1389,8 +1389,12 @@
       "noBuyerDesc": "You must assign a buyer first (Reserve/Sell)"
     },
     "errors": {
-      "noCompany": "The unit does not belong to a project with a company. Reservation or sale is not allowed.",
-      "noFloor": "The unit must be assigned to a building and floor before reservation or sale.",
+      "noBuilding": "The unit is not linked to a building. Go to Unit Management → Info and link a building.",
+      "noFloor": "The unit is not linked to a floor. Go to Unit Management → Info and select a floor.",
+      "noProject": "The building is not linked to a project. Go to Buildings → General and link a project.",
+      "noCompany": "The project is not linked to a company. Go to Projects → General and link a company.",
+      "noAskingPrice": "The unit has no asking price. Set a price before reservation or sale.",
+      "noArea": "The unit has no area (sqm). Set net or gross area before reservation or sale.",
       "noBuyer": "Buyer contact is required",
       "buyerNotFound": "Buyer contact not found",
       "buyerMissingFields": "Buyer missing required fields: {fields}",

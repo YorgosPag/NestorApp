@@ -158,8 +158,24 @@ export const PATCH = withStandardRateLimit(
             throw new ApiError(400, 'Project is not linked to a company');
           }
 
-          // 3. Buyer contact validation (enterprise-grade)
+          // 5. Asking price check — cannot reserve/sell without a price
           const commercialPayload = body.commercial as Record<string, unknown> | undefined;
+          const askingPrice = (commercialPayload?.askingPrice as number)
+            ?? (existing.commercial as Record<string, unknown> | undefined)?.askingPrice as number | undefined
+            ?? null;
+
+          if (!askingPrice || askingPrice <= 0) {
+            throw new ApiError(400, 'Unit must have an asking price before reservation or sale');
+          }
+
+          // 5b. Area check — unit must have net or gross area
+          const unitArea = (existing.area as number) ?? 0;
+          const unitGrossArea = (existing.areas as Record<string, number> | undefined)?.gross ?? 0;
+          if (unitArea <= 0 && unitGrossArea <= 0) {
+            throw new ApiError(400, 'Unit must have area (sqm) before reservation or sale');
+          }
+
+          // 6. Buyer contact validation (enterprise-grade)
           const buyerContactId = (commercialPayload?.buyerContactId as string) ?? null;
 
           if (!buyerContactId) {

@@ -28,6 +28,7 @@ import { TabbedAddNewContactDialog } from '@/components/contacts/dialogs/TabbedA
 import { AppurtenancesSection } from './AppurtenancesSection';
 import { useLinkedSpacesForSale } from '@/hooks/sales/useLinkedSpacesForSale';
 import { useContactEmailWatch } from '@/hooks/sales/useContactEmailWatch';
+import { useUnitHierarchyValidation } from '@/hooks/sales/useUnitHierarchyValidation';
 import {
   Select,
   SelectContent,
@@ -50,8 +51,18 @@ import type { Unit } from '@/types/unit';
 /** Maps known server error messages to i18n keys for localized display */
 function translateServerError(serverMsg: string, t: (key: string, opts?: Record<string, string>) => string): string {
   const errorMap: Record<string, string> = {
+    // Granular hierarchy validation errors
+    'Unit is not linked to a building': 'sales.errors.noBuilding',
+    'Unit is not linked to a floor': 'sales.errors.noFloor',
+    'Building is not linked to a project': 'sales.errors.noProject',
+    'Project is not linked to a company': 'sales.errors.noCompany',
+    // Legacy (backward compatibility)
     'Unit must be assigned to a building and floor before reservation or sale': 'sales.errors.noFloor',
     'Unit must belong to a project with a company before reservation or sale': 'sales.errors.noCompany',
+    // Price & area errors
+    'Unit must have an asking price before reservation or sale': 'sales.errors.noAskingPrice',
+    'Unit must have area (sqm) before reservation or sale': 'sales.errors.noArea',
+    // Buyer errors
     'Buyer contact is required': 'sales.errors.noBuyer',
     'Buyer contact not found': 'sales.errors.buyerNotFound',
     'Service contacts cannot be buyers': 'sales.errors.serviceNotBuyer',
@@ -200,6 +211,17 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
 
   // Real-time email watch — updates live when contact card is edited in another tab
   const { hasEmail: buyerHasEmail } = useContactEmailWatch(buyerContactId);
+
+  // Real-time hierarchy validation — updates live when unit is linked to building/floor
+  const hierarchy = useUnitHierarchyValidation(unit, open);
+
+  // Price validation — unit must have an asking price before reservation
+  const hasAskingPrice = (unit.commercial?.askingPrice ?? 0) > 0;
+
+  // Area validation — unit must have area (net or gross) before reservation
+  const netArea = unit.area ?? 0;
+  const grossArea = (unit.areas as Record<string, number> | undefined)?.gross ?? 0;
+  const hasArea = netArea > 0 || grossArea > 0;
 
   // ADR-199: Linked spaces (appurtenances)
   const linkedSpaces = useLinkedSpacesForSale(unit);
@@ -420,6 +442,36 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
             )}
           </section>
 
+          {/* Pre-requisite validations — price and area */}
+          {(!hasAskingPrice || !hasArea) && (
+            <aside className="space-y-1.5 rounded-md border border-destructive/30 bg-destructive/5 p-3">
+              {!hasAskingPrice && (
+                <p className="flex items-center gap-1.5 text-sm text-destructive">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  {t('sales.errors.noAskingPrice', { defaultValue: 'Η μονάδα δεν έχει ζητούμενη τιμή. Ορίστε τιμή πριν την κράτηση.' })}
+                </p>
+              )}
+              {!hasArea && (
+                <p className="flex items-center gap-1.5 text-sm text-destructive">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  {t('sales.errors.noArea', { defaultValue: 'Η μονάδα δεν έχει εμβαδόν (τ.μ.). Ορίστε καθαρά ή μικτά τ.μ. πριν την κράτηση.' })}
+                </p>
+              )}
+            </aside>
+          )}
+
+          {/* Real-time hierarchy validation — proactive warnings before submit */}
+          {!hierarchy.loading && hierarchy.errors.length > 0 && (
+            <aside className="space-y-1.5 rounded-md border border-destructive/30 bg-destructive/5 p-3">
+              {hierarchy.errors.map((err) => (
+                <p key={err.i18nKey} className="flex items-center gap-1.5 text-sm text-destructive">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  {t(err.i18nKey)}
+                </p>
+              ))}
+            </aside>
+          )}
+
           {saveError && (
             <p className="flex items-center gap-1.5 text-sm text-destructive px-1">
               <AlertTriangle className="h-4 w-4 shrink-0" />
@@ -431,7 +483,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
               {t('common.cancel', { defaultValue: 'Ακύρωση' })}
             </Button>
-            <Button onClick={handleSave} disabled={saving || !buyerContactId}>
+            <Button onClick={handleSave} disabled={saving || !buyerContactId || !hierarchy.isValid || !hasAskingPrice || !hasArea}>
               {saving
                 ? t('common.saving', { defaultValue: 'Αποθήκευση...' })
                 : t('sales.dialogs.reserve.confirm', { defaultValue: 'Κράτηση' })}
@@ -471,6 +523,14 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
 
   // Real-time email watch — updates live when contact card is edited in another tab
   const { hasEmail: buyerHasEmail } = useContactEmailWatch(buyerContactId);
+
+  // Real-time hierarchy validation — updates live when unit is linked to building/floor
+  const hierarchy = useUnitHierarchyValidation(unit, open);
+
+  // Area validation — unit must have area (net or gross) before sale
+  const sellNetArea = unit.area ?? 0;
+  const sellGrossArea = (unit.areas as Record<string, number> | undefined)?.gross ?? 0;
+  const sellHasArea = sellNetArea > 0 || sellGrossArea > 0;
 
   // ADR-199: Linked spaces (appurtenances)
   const linkedSpaces = useLinkedSpacesForSale(unit);
@@ -747,6 +807,28 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
           </p>
         </section>
 
+        {/* Area validation — must have sqm before sale */}
+        {!sellHasArea && (
+          <aside className="space-y-1.5 rounded-md border border-destructive/30 bg-destructive/5 p-3">
+            <p className="flex items-center gap-1.5 text-sm text-destructive">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              {t('sales.errors.noArea', { defaultValue: 'Η μονάδα δεν έχει εμβαδόν (τ.μ.). Ορίστε καθαρά ή μικτά τ.μ. πριν την πώληση.' })}
+            </p>
+          </aside>
+        )}
+
+        {/* Real-time hierarchy validation — proactive warnings before submit */}
+        {!hierarchy.loading && hierarchy.errors.length > 0 && (
+          <aside className="space-y-1.5 rounded-md border border-destructive/30 bg-destructive/5 p-3">
+            {hierarchy.errors.map((err) => (
+              <p key={err.i18nKey} className="flex items-center gap-1.5 text-sm text-destructive">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                {t(err.i18nKey)}
+              </p>
+            ))}
+          </aside>
+        )}
+
         {saveError && (
           <p className="flex items-center gap-1.5 text-sm text-destructive px-1">
             <AlertTriangle className="h-4 w-4 shrink-0" />
@@ -760,7 +842,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
           </Button>
           <Button
             onClick={handleSave}
-            disabled={saving || !finalPrice || Number(finalPrice) <= 0 || !buyerContactId}
+            disabled={saving || !finalPrice || Number(finalPrice) <= 0 || !buyerContactId || !hierarchy.isValid || !sellHasArea}
             className="bg-green-600 hover:bg-green-700 text-white"
           >
             {saving
