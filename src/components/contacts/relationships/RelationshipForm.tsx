@@ -1,42 +1,23 @@
 // ============================================================================
 // RELATIONSHIP FORM COMPONENT - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΗ ARCHITECTURE
 // ============================================================================
-//
-// 🎯 PURPOSE: Orchestrates relationship form using centralized components
-// 🔗 USES: ContactSearchManager, RelationshipFormFields, ContactNameResolver
-// 🏢 STANDARDS: Enterprise modular architecture, centralized design system
-//
-// ============================================================================
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Plus, AlertTriangle, Info } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 
-// 🏢 ENTERPRISE: Import centralized components and utilities
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
 import type { RelationshipFormProps } from './types/relationship-manager.types';
 import { ContactSearchManager } from './ContactSearchManager';
 import { RelationshipFormFields, validateRelationshipFormData } from './RelationshipFormFields';
 import { designSystem } from '@/lib/design-system';
-// 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
-/**
- * 📝 RelationshipForm Component
- *
- * Enterprise form component for creating and editing contact relationships
- *
- * Features:
- * - Dynamic relationship type filtering based on contact type
- * - Professional contact information fields
- * - Form validation and error handling
- * - Loading states and user feedback
- */
 export const RelationshipForm: React.FC<RelationshipFormProps> = ({
   formData,
   setFormData,
@@ -48,26 +29,37 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
   onSubmit,
   onCancel
 }) => {
-  // ============================================================================
-  // LOCAL STATE - SIMPLIFIED με κεντρικοποιημένα components
-  // ============================================================================
-
-  // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('contacts');
   const iconSizes = useIconSizes();
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [localError, setLocalError] = useState<string | null>(null);
 
-  // ============================================================================
-  // HELPER FUNCTIONS
-  // ============================================================================
+  // Clear validation errors when the user edits key fields
+  useEffect(() => {
+    if (formData.targetContactId && validationErrors.targetContactId) {
+      setValidationErrors(prev => {
+        const { targetContactId, ...rest } = prev;
+        return rest;
+      });
+    }
+  }, [formData.targetContactId, validationErrors.targetContactId]);
 
-  /**
-   * 👤 Handle contact selection από το ContactSearchManager
-   */
-  const handleContactSelect = (contact: ContactSummary | null) => {
+  useEffect(() => {
+    if (formData.relationshipType && validationErrors.relationshipType) {
+      setValidationErrors(prev => {
+        const { relationshipType, ...rest } = prev;
+        return rest;
+      });
+    }
+  }, [formData.relationshipType, validationErrors.relationshipType]);
+
+  // Clear local error when hook error changes
+  useEffect(() => {
+    if (error) setLocalError(null);
+  }, [error]);
+
+  const handleContactSelect = useCallback((contact: ContactSummary | null) => {
     setFormData(prev => {
-      // Auto-populate centralized phones/emails from selected contact
-      // Only fill if currently empty — don't overwrite user edits
       const autoPhones = (prev.phones && prev.phones.length > 0)
         ? prev.phones
         : (contact?.phone
@@ -93,22 +85,16 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
       };
     });
 
-    // Clear validation errors when contact is selected
-    if (contact) {
-      setValidationErrors(prev => {
-        const { targetContactId, ...rest } = prev;
-        return rest;
-      });
-    }
-  };
+    setLocalError(null);
+  }, [setFormData]);
 
   /**
-   * ✅ Handle form validation
+   * Validate + submit (async)
    */
-  const validateForm = () => {
+  const handleSubmit = useCallback(async () => {
+    setLocalError(null);
     const errors: Record<string, string> = {};
 
-    // Validate required fields
     if (!formData.targetContactId) {
       errors.targetContactId = t('relationships.form.validation.contactRequired');
     }
@@ -117,31 +103,36 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
       errors.relationshipType = t('relationships.form.validation.relationshipTypeRequired');
     }
 
-    // Add form fields validation
     const formFieldErrors = validateRelationshipFormData(formData, {
-      required: {
-        relationshipType: true
-      }
+      required: { relationshipType: true }
     });
 
     const allErrors = { ...errors, ...formFieldErrors };
     setValidationErrors(allErrors);
-    return Object.keys(allErrors).length === 0;
-  };
 
-  /**
-   * 📤 Handle form submission με validation
-   */
-  const handleSubmit = () => {
-    const isValid = validateForm();
-    if (isValid) {
-      onSubmit();
+    if (Object.keys(allErrors).length > 0) {
+      return;
     }
-  };
 
-  // ============================================================================
-  // RENDER
-  // ============================================================================
+    // Call the hook's async submit and await it
+    try {
+      await onSubmit();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setLocalError(message);
+    }
+  }, [formData, onSubmit, t]);
+
+  // Prevent native form submission (Enter key)
+  const preventFormSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+  }, []);
+
+  // Contact selected — fields unlocked
+  const hasContact = !!formData.targetContactId;
+
+  // Combined error (hook error + local error)
+  const displayError = error || localError;
 
   return (
     <Card className={designSystem.cn(
@@ -158,15 +149,15 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <form className={designSystem.getSpacingClass('p', 'md')}>
-          {/* 🔍 CONTACT SEARCH SECTION - Κεντρικοποιημένο */}
+        <form onSubmit={preventFormSubmit} className={designSystem.getSpacingClass('p', 'md')}>
+          {/* Contact Search */}
           <div className="mb-6">
             <ContactSearchManager
               selectedContactId={formData.targetContactId}
               onContactSelect={handleContactSelect}
               excludeContactIds={[currentContactId]}
               allowedContactTypes={['individual', 'company', 'service']}
-              label={`${t('relationships.form.labels.contact')}*`}
+              label={`${t('relationships.form.labels.contact')}**`}
               placeholder={t('relationships.form.placeholders.searchContact')}
               required
               error={validationErrors.targetContactId}
@@ -179,13 +170,12 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
             />
           </div>
 
-          {/* 📝 FORM FIELDS SECTION - Κεντρικοποιημένο */}
-          {/* 🛡️ GUARD: Fields disabled until a contact is selected */}
+          {/* Form Fields — disabled until contact is selected */}
           <RelationshipFormFields
             formData={formData}
             setFormData={setFormData}
             contactType={contactType}
-            loading={loading || !formData.targetContactId}
+            loading={loading || !hasContact}
             errors={validationErrors}
             fieldConfig={{
               showNotes: true,
@@ -201,43 +191,39 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
           />
 
           {/* Hint: select contact first */}
-          {!formData.targetContactId && (
+          {!hasContact && (
             <Alert className="mt-4 border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-950/30">
               <Info className={designSystem.cn(iconSizes.sm, "text-blue-600 dark:text-blue-400")} />
               <AlertDescription className="text-blue-700 dark:text-blue-300 text-sm">
-                {t('relationships.form.selectContactFirst', {
-                  defaultValue: 'Επιλέξτε πρώτα μία επαφή για να συμπληρώσετε τα υπόλοιπα πεδία.'
-                })}
+                {t('relationships.form.selectContactFirst')}
               </AlertDescription>
             </Alert>
           )}
 
-          {/* Backend Validation Error Display */}
-          {error && (
+          {/* Error Display */}
+          {displayError && (
             <Alert variant="destructive" className="mt-4">
               <AlertTriangle className={iconSizes.sm} />
               <AlertDescription className={designSystem.getTypographyClass('sm', 'medium')}>
-                {t(error, { defaultValue: error })}
+                {t(displayError, { defaultValue: displayError })}
               </AlertDescription>
             </Alert>
           )}
 
-          {/* 🛡️ ENTERPRISE: Pending data reminder — shows when form has data but not yet submitted */}
-          {formData.targetContactId && !loading && (
+          {/* Pending data reminder */}
+          {hasContact && !loading && !displayError && (
             <Alert className="mt-4 border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30">
               <Info className={designSystem.cn(iconSizes.sm, "text-amber-600 dark:text-amber-400")} />
               <AlertDescription className="text-amber-700 dark:text-amber-300 text-sm">
-                {t('relationships.form.pendingReminder', {
-                  defaultValue: 'Πάτησε "Προσθήκη" για να αποθηκεύσεις τη σχέση. Η σχέση αποθηκεύεται επίσης αυτόματα όταν αποθηκεύεις την επαφή.'
-                })}
+                {t('relationships.form.pendingReminder')}
               </AlertDescription>
             </Alert>
           )}
 
-          {/* Form Actions - με κεντρικοποιημένο styling */}
+          {/* Form Actions */}
           <div className={designSystem.cn(
             "flex justify-end space-x-2 mt-6 pt-4 border-t",
-            designSystem.colorScheme.responsive.muted.split(' ')[0] // border-muted
+            designSystem.colorScheme.responsive.muted.split(' ')[0]
           )}>
             <Button
               type="button"
@@ -254,7 +240,13 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
               onClick={handleSubmit}
               className={designSystem.presets.button.primary}
             >
-              {loading ? t('relationships.form.buttons.save') : (editingId ? t('relationships.form.buttons.update') : t('relationships.form.buttons.add'))}
+              {loading
+                ? t('relationships.form.buttons.save')
+                : (editingId
+                  ? t('relationships.form.buttons.update')
+                  : t('relationships.form.buttons.add')
+                )
+              }
             </Button>
           </div>
         </form>

@@ -277,7 +277,6 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
             emptyMessage={t('relationships.form.noTypesFound')}
             disabled={loading}
             error={errors.relationshipType}
-            allowFreeText
             onAddNew={handleAddNewRelType}
             addNewButtonLabel={t('relationships.form.addCustomType')}
           />
