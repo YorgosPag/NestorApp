@@ -15,7 +15,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import { startOfMonth, endOfMonth, addMonths, subMonths, isToday } from 'date-fns';
+import { startOfMonth, endOfMonth, addMonths, subMonths, isToday, isBefore, startOfDay, endOfDay, addDays, endOfWeek } from 'date-fns';
 import { CalendarDays, Plus, CheckSquare, Clock, CalendarClock } from 'lucide-react';
 
 import { cn } from '@/lib/design-system';
@@ -148,8 +148,68 @@ export default function CrmCalendarPage() {
     setFilteredEvents(filtered);
   }, []);
 
-  // Use filtered events if search is active, otherwise all events
-  const displayEvents = filteredEvents.length !== events.length ? filteredEvents : events;
+  // Apply advanced filters to events
+  const advancedFilteredEvents = useMemo(() => {
+    let result = events;
+
+    // Status filter
+    if (filters.status && filters.status !== 'all') {
+      result = result.filter((e) => e.status === filters.status);
+    }
+
+    // Priority filter
+    if (filters.priority && filters.priority !== 'all') {
+      result = result.filter((e) => e.priority === filters.priority);
+    }
+
+    // Type filter
+    if (filters.type && filters.type !== 'all') {
+      result = result.filter((e) => e.eventType === filters.type);
+    }
+
+    // Timeframe filter
+    if (filters.timeframe && filters.timeframe !== 'all') {
+      const now = new Date();
+      const todayStart = startOfDay(now);
+      const todayEnd = endOfDay(now);
+      const tomorrowEnd = endOfDay(addDays(now, 1));
+      const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+
+      switch (filters.timeframe) {
+        case 'overdue':
+          result = result.filter((e) => isBefore(e.start, todayStart) && e.status !== 'completed');
+          break;
+        case 'today':
+          result = result.filter((e) => e.start >= todayStart && e.start <= todayEnd);
+          break;
+        case 'tomorrow':
+          result = result.filter((e) => e.start > todayEnd && e.start <= tomorrowEnd);
+          break;
+        case 'week':
+          result = result.filter((e) => e.start >= todayStart && e.start <= weekEnd);
+          break;
+      }
+    }
+
+    // Search term filter
+    if (filters.searchTerm) {
+      const term = filters.searchTerm.toLowerCase();
+      result = result.filter((e) =>
+        e.title.toLowerCase().includes(term) ||
+        (e.description && e.description.toLowerCase().includes(term))
+      );
+    }
+
+    return result;
+  }, [events, filters]);
+
+  // Search input receives advancedFilteredEvents as base
+  const searchBase = advancedFilteredEvents;
+
+  // displayEvents: if search narrowed results further, use those; otherwise use advanced-filtered
+  const displayEvents = filteredEvents.length !== searchBase.length
+    ? filteredEvents
+    : searchBase;
 
   // Auth loading state
   if (authLoading) {
@@ -195,7 +255,7 @@ export default function CrmCalendarPage() {
 
         {/* Search + Export toolbar */}
         <nav className="flex items-center justify-between gap-3 px-2" aria-label="Calendar tools">
-          <CalendarSearchInput events={events} onFilteredEvents={handleFilteredEvents} />
+          <CalendarSearchInput events={searchBase} onFilteredEvents={handleFilteredEvents} />
           <CalendarExportButton />
         </nav>
 
