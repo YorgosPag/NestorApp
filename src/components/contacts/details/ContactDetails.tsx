@@ -56,7 +56,20 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
     activePersonas: PersonaType[];
     personaData: Record<string, Record<string, string | number | null>>;
   } | null>(null);
-  const [activeTab, setActiveTab] = useState<string>('basicInfo'); // 🏢 ENTERPRISE: Track active tab
+  // 🏢 ENTERPRISE: Track active tab — persisted in sessionStorage to survive remounts
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    if (typeof window !== 'undefined' && contact?.id) {
+      return sessionStorage.getItem(`contact-tab-${contact.id}`) || 'basicInfo';
+    }
+    return 'basicInfo';
+  });
+
+  // Persist tab changes to sessionStorage
+  useEffect(() => {
+    if (contact?.id && activeTab) {
+      sessionStorage.setItem(`contact-tab-${contact.id}`, activeTab);
+    }
+  }, [contact?.id, activeTab]);
   // 🖼️ OPTIMISTIC PHOTO STATE: Preserve photo URLs between save and contact refresh
   const [savedPhotoURLs, setSavedPhotoURLs] = useState<{ logoURL?: string; photoURL?: string }>({});
   const photoModal = useGlobalPhotoPreview();

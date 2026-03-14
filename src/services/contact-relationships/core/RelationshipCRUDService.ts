@@ -411,16 +411,19 @@ export class RelationshipCRUDService {
     targetContact: Contact
   ): Promise<void> {
     // Define reciprocal relationship mappings
+    // 🔧 FIX: Symmetric types (colleague, partner, friend, family, competitor)
+    // set to null because getContactRelationships() queries BOTH source+target
+    // so the relationship is already visible from both sides without a reciprocal.
     const reciprocalMappings: Record<RelationshipType, RelationshipType | null> = {
-      'employee': null, // Organization is employer, αλλά we don't create reverse
+      'employee': null,
       'manager': null,
       'director': null,
       'executive': null,
       'shareholder': null,
       'client': 'vendor',
       'vendor': 'client',
-      'partner': 'partner',
-      'colleague': 'colleague',
+      'partner': null,        // Symmetric — visible from both sides
+      'colleague': null,      // Symmetric — visible from both sides
       'mentor': 'protege',
       'protege': 'mentor',
       'civil_servant': null,
@@ -441,9 +444,9 @@ export class RelationshipCRUDService {
       'advisor': null,
       'supplier': 'customer',
       'customer': 'supplier',
-      'competitor': 'competitor',
-      'friend': 'friend',
-      'family': 'family',
+      'competitor': null,     // Symmetric — visible from both sides
+      'friend': null,         // Symmetric — visible from both sides
+      'family': null,         // Symmetric — visible from both sides
       'other': null
     };
 
