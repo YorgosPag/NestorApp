@@ -84,6 +84,14 @@ export async function propagateBuildingProjectLink(
       updatedAt: FieldValue.serverTimestamp(),
     };
 
+    // 🏢 ADR-232: Update the building itself with linkedCompanyId
+    await db.collection(COLLECTIONS.BUILDINGS).doc(buildingId).update({
+      linkedCompanyId: resolvedLinkedCompanyId,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    collections[COLLECTIONS.BUILDINGS] = 1;
+    totalUpdated += 1;
+
     // Query and update all child collections
     for (const collectionName of BUILDING_CHILD_COLLECTIONS) {
       const snapshot = await db
