@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { ListContainer, PageContainer } from '@/core/containers';
 import { StaticPageLoading } from '@/core/states';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Unit } from '@/types/unit';
 
