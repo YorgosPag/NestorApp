@@ -214,6 +214,8 @@ export interface ProjectListItem {
   /** License title (τίτλος αδείας) — shown in "Τρέχον έργο" label */
   licenseTitle?: string;
   companyId: string | null;
+  /** 🏢 ADR-232: Business entity link (separate from tenant companyId) */
+  linkedCompanyId: string | null;
   companyName: string;
 }
 
@@ -224,6 +226,7 @@ export async function getProjectsList(): Promise<ProjectListItem[]> {
       name: string;
       title: string;
       companyId: string;
+      linkedCompanyId: string | null;
       company: string;
     }
 
@@ -244,6 +247,7 @@ export async function getProjectsList(): Promise<ProjectListItem[]> {
       name: project.name || project.title || 'entities.project.unknown',
       licenseTitle: project.title || '',
       companyId: project.companyId || null,
+      linkedCompanyId: project.linkedCompanyId || null,
       companyName: project.company || '',
     }));
 

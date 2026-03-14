@@ -76,7 +76,7 @@ export function ProjectViewSwitch({
   };
 
   const getProjectWithCompanyName = (project: Project) => {
-    const company = companies?.find(c => c.id === project.companyId);
+    const company = companies?.find(c => c.id === project.linkedCompanyId);
     return {
       ...project,
       companyName: company?.companyName || project.company,

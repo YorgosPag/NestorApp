@@ -315,13 +315,17 @@ export const POST = withStandardRateLimit(
           throw err;
         }
 
+        // 🏢 ADR-232: Super admin entities get companyId: null
+        const isSuperAdmin = ctx.globalRole === 'super_admin';
+
         // Sanitize data
         const cleanData: Record<string, unknown> = {
           name: body.name.trim(),
           buildingId: body.buildingId,
           type: isValidStorageType(body.type || 'small') ? body.type || 'small' : 'small',
           status: isValidStorageStatus(body.status || 'available') ? body.status || 'available' : 'available',
-          companyId: ctx.companyId,
+          companyId: isSuperAdmin ? null : ctx.companyId,  // 🔒 ADR-232
+          linkedCompanyId: null,                            // 🏢 ADR-232
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),
           createdBy: ctx.uid,

@@ -119,11 +119,25 @@ export const GET = withStandardRateLimit(async function GET(
 
         const db = getAdminFirestore();
 
-        // Fetch projects
-        const snapshot = await db
-          .collection(COLLECTIONS.PROJECTS)
-          .where('companyId', '==', companyId)
-          .get();
+        // 🏢 ADR-232: Query by linkedCompanyId (business link) with fallback to companyId (tenant)
+        // This supports both new entities (linkedCompanyId) and legacy entities (companyId only)
+        const [linkedSnap, legacySnap] = await Promise.all([
+          db.collection(COLLECTIONS.PROJECTS)
+            .where('linkedCompanyId', '==', companyId)
+            .get(),
+          db.collection(COLLECTIONS.PROJECTS)
+            .where('companyId', '==', companyId)
+            .get(),
+        ]);
+
+        // Merge results, deduplicate by doc ID
+        const seenIds = new Set<string>();
+        const allDocs = [...linkedSnap.docs, ...legacySnap.docs].filter(doc => {
+          if (seenIds.has(doc.id)) return false;
+          seenIds.add(doc.id);
+          return true;
+        });
+        const snapshot = { docs: allDocs, empty: allDocs.length === 0 };
 
         // Fetch buildings for all projects in parallel
         const projectIds = snapshot.docs.map(doc => doc.id);

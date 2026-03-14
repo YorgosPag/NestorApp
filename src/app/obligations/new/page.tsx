@@ -247,6 +247,8 @@ export default function NewObligationPage() {
             name?: string;
             title?: string;
             companyId?: string;
+            /** ADR-232: Business entity link */
+            linkedCompanyId?: string | null;
             company?: string;
             status?: string;
             address?: string;
@@ -265,9 +267,11 @@ export default function NewObligationPage() {
           const candidateCompanyIds = new Set([String(contactIdForProjects), String(formData.companyId)]);
 
           const fallbackListProjects = (listResponse?.projects || []).filter((project) => {
+            // ADR-232: Use linkedCompanyId for business entity matching
+            const byLinkedCompanyId = project.linkedCompanyId ? candidateCompanyIds.has(String(project.linkedCompanyId)) : false;
             const byCompanyId = project.companyId ? candidateCompanyIds.has(String(project.companyId)) : false;
             const byCompanyName = companyName && project.company ? project.company === companyName : false;
-            return byCompanyId || byCompanyName;
+            return byLinkedCompanyId || byCompanyId || byCompanyName;
           });
 
           uniqueProjects = fallbackListProjects.map((project) => ({

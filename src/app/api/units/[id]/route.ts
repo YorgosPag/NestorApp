@@ -18,6 +18,7 @@ import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErro
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
+import { propagateUnitBuildingLink } from '@/lib/firestore/cascade-propagation.service';
 import { createDefaultPersonaData, findActivePersona } from '@/types/contacts/personas';
 import type { PersonaData, ClientPersona } from '@/types/contacts/personas';
 import { validateContactForSale, isServiceContact } from '@/types/contacts/helpers';
@@ -120,30 +121,42 @@ export const PATCH = withStandardRateLimit(
           body.commercialStatus === 'reserved' || body.commercialStatus === 'sold';
 
         if (isCommercialTransaction) {
-          // 1. Unit must be assigned to a building + floor
+          // Hierarchy validation: Unit → Building → Project → Company
+          // Each check is separate so the user gets a specific error message
           const buildingId = (existing.buildingId as string) ?? null;
           const floorId = (existing.floorId as string) ?? null;
+          const floorNumber = existing.floor as number | undefined;
+          // Accept either floorId (document ref) or floor (numeric) as valid floor link
+          const hasFloor = !!floorId || (typeof floorNumber === 'number' && floorNumber >= 0);
 
-          if (!buildingId || !floorId) {
-            throw new ApiError(400, 'Unit must be assigned to a building and floor before reservation or sale');
+          // 1. Building check
+          if (!buildingId) {
+            throw new ApiError(400, 'Unit is not linked to a building');
           }
 
-          // 2. Full hierarchy check: building → project → company
+          // 2. Floor check
+          if (!hasFloor) {
+            throw new ApiError(400, 'Unit is not linked to a floor');
+          }
+
+          // 3. Project check (building → project)
           const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
           const projectId = buildingDoc.exists
             ? (buildingDoc.data()?.projectId as string) ?? null
             : null;
 
-          let companyId: string | null = null;
-          if (projectId) {
-            const projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
-            companyId = projectDoc.exists
-              ? (projectDoc.data()?.companyId as string) ?? null
-              : null;
+          if (!projectId) {
+            throw new ApiError(400, 'Building is not linked to a project');
           }
 
-          if (!companyId) {
-            throw new ApiError(400, 'Unit must belong to a project with a company before reservation or sale');
+          // 4. Company check (project → linkedCompanyId — ADR-232 business link)
+          const projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
+          const linkedCompanyId = projectDoc.exists
+            ? (projectDoc.data()?.linkedCompanyId as string) ?? null
+            : null;
+
+          if (!linkedCompanyId) {
+            throw new ApiError(400, 'Project is not linked to a company');
           }
 
           // 3. Buyer contact validation (enterprise-grade)
@@ -198,6 +211,17 @@ export const PATCH = withStandardRateLimit(
         await docRef.update(updateData);
 
         logger.info('Unit updated', { id, companyId: ctx.companyId });
+
+        // 🔗 CASCADE: Propagate buildingId change (inherit projectId + companyId)
+        if ('buildingId' in body && body.buildingId !== existing.buildingId) {
+          const newBuildingId = (body.buildingId as string) ?? null;
+          propagateUnitBuildingLink(id, newBuildingId).catch((err) => {
+            logger.warn('Unit cascade propagation failed (non-blocking)', {
+              unitId: id,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          });
+        }
 
         // Auth audit (existing — kept)
         await logAuditEvent(ctx, 'data_updated', 'unit', 'api', {

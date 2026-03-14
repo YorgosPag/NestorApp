@@ -254,6 +254,8 @@
 | **ADR-228** | Real-Time Event Bus Coverage Gap Analysis & Implementation Roadmap | ✅ ✅ All Tiers Implemented (100% Coverage) | 2026-03-14 | Data Access Layer / Real-Time Architecture | [📄](./adrs/ADR-228-realtime-event-coverage-gap-analysis.md) |
 | **ADR-229** | Centralized Page Loading & Error States | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-229-centralized-page-loading-states.md) |
 | **ADR-230** | Contract Workflow — Legal Process (Σύστημα Συμβολαίων / Νομική Διαδικασία Πώλησης) | ✅ IMPLEMENTED — All 5 phases completed | 2026-03-14 | Entity Systems | [📄](./adrs/ADR-230-contract-workflow-legal-process.md) |
+| **ADR-231** | Cascade Entity Linking — Αυτόματη Διάδοση Ιεραρχίας | ✅ IMPLEMENTED | 2026-03-14 | Entity Systems | [📄](./adrs/ADR-231-cascade-entity-linking.md) |
+| **ADR-232** | Tenant Isolation vs Business Entity Link Separation | ✅ IMPLEMENTED | 2026-03-15 | Entity Systems / Security | [📄](./adrs/ADR-232-tenant-company-separation.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -402,6 +404,8 @@
 | **ADR-167** | Enterprise Project Address System | ✅ ✅ APPROVED | [View](./adrs/ADR-167-enterprise-project-address-system.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | [View](./adrs/ADR-018-1-photos-tab-base-template.md) |
 | **ADR-230** | Contract Workflow — Legal Process (Σύστημα Συμβολαίων / Νομική Διαδικασία Πώλησης) | ✅ IMPLEMENTED — All 5 phases completed | [View](./adrs/ADR-230-contract-workflow-legal-process.md) |
+| **ADR-231** | Cascade Entity Linking — Αυτόματη Διάδοση Ιεραρχίας | ✅ IMPLEMENTED | [View](./adrs/ADR-231-cascade-entity-linking.md) |
+| **ADR-232** | Tenant Isolation vs Business Entity Link Separation | ✅ IMPLEMENTED | [View](./adrs/ADR-232-tenant-company-separation.md) |
 
 ---
 

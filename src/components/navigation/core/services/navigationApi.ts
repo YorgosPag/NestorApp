@@ -117,6 +117,7 @@ export class NavigationApiService {
           name: project.name || 'Unnamed Project',
           company: '', // Will be filled by caller if needed
           companyId,
+          linkedCompanyId: companyId, // ADR-232: Navigation implies business link
           projectCode: project.projectCode || null,
           status: project.status || 'unknown',
           // 🚀 PERFORMANCE: Empty arrays - loaded on-demand

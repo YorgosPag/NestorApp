@@ -24,6 +24,10 @@ export interface Project {
   status: ProjectStatus;
   company: string;
   companyId: string;
+  /** 🏢 ADR-232: Business entity link (separate from tenant companyId) */
+  linkedCompanyId?: string | null;
+  /** 🏢 ADR-232: Denormalized company display name */
+  linkedCompanyName?: string | null;
 
   // 🏢 LEGACY: Backward compatibility (kept for migration)
   // Use addresses[] for new data, these for existing records
@@ -114,6 +118,9 @@ export type ProjectUpdatePayload = Partial<Omit<Project, 'id' | 'createdAt' | 'u
   /** Allow null to unlink company from project */
   companyId?: string | null;
   company?: string | null;
+  /** 🏢 ADR-232: Business entity link */
+  linkedCompanyId?: string | null;
+  linkedCompanyName?: string | null;
 };
 
 export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {

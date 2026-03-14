@@ -23,6 +23,8 @@ export interface Storage {
   buildingId?: string;
   /** 🏢 ENTERPRISE: Company ID for tenant isolation */
   companyId?: string;
+  /** 🏢 ADR-232: Business entity link (inherited from project via cascade) */
+  linkedCompanyId?: string | null;
   floor: string;
   area: number; // in square meters
   description?: string;

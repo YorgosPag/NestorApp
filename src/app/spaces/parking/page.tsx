@@ -101,7 +101,7 @@ function ParkingPageContent() {
         // Find the project and company
         const project = projects.find(p => p.id === building.projectId);
         if (project) {
-          const company = companies.find(c => c.id === project.companyId);
+          const company = companies.find(c => c.id === project.linkedCompanyId);
           if (company) {
             // Use atomic sync with names - enterprise pattern
             // 🏢 ENTERPRISE: Use 'number' property (API returns 'number', not 'code')

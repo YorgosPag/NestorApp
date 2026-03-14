@@ -160,7 +160,7 @@ export function MobileNavigation({
         {/* Projects - 🏢 ENTERPRISE: Using real-time building counts */}
         {mobileLevel === 'projects' && selectedCompany && (
           <>
-            {projects.filter(project => project.companyId === selectedCompany.id).map(project => {
+            {projects.filter(project => project.linkedCompanyId === selectedCompany.id).map(project => {
               // 🏢 ENTERPRISE: Real-time building count
               const buildingCount = getBuildingCount(project.id);
               const hasBuildings = buildingCount > 0;

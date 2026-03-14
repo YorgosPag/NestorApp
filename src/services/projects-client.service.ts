@@ -40,6 +40,8 @@ export interface ProjectCreatePayload {
   status?: ProjectStatus;
   companyId: string;
   company?: string;
+  /** 🏢 ADR-232: Business entity link (separate from tenant companyId) */
+  linkedCompanyId?: string | null;
   // Legacy fields (auto-synced from primary address)
   address?: string;
   city?: string;

@@ -273,6 +273,9 @@ export const POST = withStandardRateLimit(
         // CREATE FLOOR DOCUMENT
         // ============================================================================
 
+        // 🏢 ADR-232: Super admin entities get companyId: null
+        const isSuperAdmin = isRoleBypass(ctx.globalRole);
+
         const now = new Date().toISOString();
         const floorDocument: FloorDocument & { createdAt: string; createdBy: string } = {
           id: floorId,
@@ -280,9 +283,9 @@ export const POST = withStandardRateLimit(
           name: body.name,
           buildingId: body.buildingId,
           buildingName: body.buildingName || '',
-          projectId: body.projectId ? String(body.projectId) : undefined,
-          projectName: body.projectName || '',
-          companyId: ctx.companyId,  // 🔒 Tenant isolation
+          ...(body.projectId ? { projectId: String(body.projectId) } : {}),
+          ...(body.projectName ? { projectName: body.projectName } : {}),
+          companyId: isSuperAdmin ? undefined : ctx.companyId,  // 🔒 ADR-232: null for super admin
           units: body.units || 0,
           elevation: body.elevation ?? null,  // 🏢 ADR-180: IFC elevation (metres)
           createdAt: now,

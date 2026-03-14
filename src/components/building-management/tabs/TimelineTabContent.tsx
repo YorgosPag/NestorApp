@@ -61,8 +61,8 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
   const { companies, projects } = useNavigation();
   const { companyName, projectName } = useMemo(() => {
     const project = projects.find(p => p.id === building.projectId);
-    const company = project?.companyId
-      ? companies.find(c => c.id === project.companyId)
+    const company = project?.linkedCompanyId
+      ? companies.find(c => c.id === project.linkedCompanyId)
       : undefined;
     return {
       companyName: company?.companyName ?? (building.company as string | undefined),

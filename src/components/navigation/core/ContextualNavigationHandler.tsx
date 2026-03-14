@@ -70,8 +70,8 @@ export function ContextualNavigationHandler() {
       // Find and select the project
       const project = navigation.projects.find(p => p.id === params.projectId);
       if (project) {
-        // First select the company that owns this project
-        const company = navigation.companies.find(c => c.id === project.companyId);
+        // First select the company that owns this project (ADR-232: use linkedCompanyId)
+        const company = navigation.companies.find(c => c.id === project.linkedCompanyId);
         if (company && navigation.selectedCompany?.id !== company.id) {
           logger.info('Auto-selecting parent company', { companyName: company.companyName });
           navigation.selectCompany(company.id);

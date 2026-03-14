@@ -140,8 +140,8 @@ export const GET = withStandardRateLimit(
                     regionalUnit: primaryAddr?.regionalUnit ?? '',
                   };
 
-                  // 4. Fetch company (from project.companyId)
-                  const companyId = projectData.companyId;
+                  // 4. Fetch company (ADR-232: use linkedCompanyId)
+                  const companyId = projectData.linkedCompanyId ?? projectData.companyId;
                   if (companyId) {
                     const companyDoc = await adminDb.collection(COLLECTIONS.CONTACTS).doc(companyId).get();
                     if (companyDoc.exists) {

@@ -8,6 +8,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { isRoleBypass } from '@/lib/auth/roles';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { propagateBuildingProjectLink } from '@/lib/firestore/cascade-propagation.service';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
 import { normalizeToMillis } from '@/lib/date-local';
 
@@ -147,11 +148,13 @@ export const POST = withStandardRateLimit(
       // Parse request body
       const body: BuildingCreatePayload = await request.json();
 
-      // SECURITY: Override companyId with authenticated user's company
-      // This prevents cross-tenant building creation
+      // 🏢 ADR-232: Super admin entities get companyId: null (no tenant)
+      const isSuperAdmin = isRoleBypass(ctx.globalRole);
+
       const sanitizedData = {
         ...body,
-        companyId: ctx.companyId,  // 🔒 FORCED: Always use auth context companyId
+        companyId: isSuperAdmin ? null : ctx.companyId,  // 🔒 ADR-232: null for super admin
+        linkedCompanyId: null,                            // 🏢 ADR-232: Set via EntityLinkCard
         progress: 0,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
@@ -282,6 +285,17 @@ export const PATCH = withStandardRateLimit(
       });
 
       logger.info('[Buildings] Building updated', { buildingId, email: ctx.email });
+
+      // 🔗 CASCADE: Propagate projectId change to children (fire-and-forget)
+      if ('projectId' in cleanUpdates) {
+        const newProjectId = (cleanUpdates.projectId as string) ?? null;
+        propagateBuildingProjectLink(buildingId, newProjectId).catch((err) => {
+          logger.warn('[Buildings] Cascade propagation failed (non-blocking)', {
+            buildingId,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        });
+      }
 
       // 📊 Audit log
       await logAuditEvent(ctx, 'data_updated', 'buildings', 'api', {

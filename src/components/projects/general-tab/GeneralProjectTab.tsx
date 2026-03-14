@@ -129,18 +129,19 @@ export function GeneralProjectTab({
 
   const saveCompanyLink = useCallback(async (newId: string | null) => {
     try {
+      // 🏢 ADR-232: Save to linkedCompanyId (NOT companyId — that's tenant isolation)
       const result = await updateProject(project.id, {
-        companyId: newId || undefined,
-        company: undefined, // Clear legacy company name
+        linkedCompanyId: newId ?? null,
+        linkedCompanyName: undefined, // Will be resolved by cascade if needed
       });
       if (result.success) {
         setProjectData(prev => ({
           ...prev,
-          companyId: newId || '',
+          companyId: prev.companyId, // Keep tenant companyId unchanged
         }));
         RealtimeService.dispatch('PROJECT_UPDATED', {
           projectId: project.id,
-          updates: { companyId: newId ?? undefined },
+          updates: { linkedCompanyId: newId ?? undefined },
           timestamp: Date.now(),
         });
         return { success: true };
@@ -154,7 +155,7 @@ export function GeneralProjectTab({
   const companyLink = useEntityLink({
     relation: 'project-company',
     entityId: project.id,
-    initialParentId: project.companyId || null,
+    initialParentId: project.linkedCompanyId || null,
     loadOptions: loadCompanies,
     saveMode: isCreateMode ? 'local' : 'immediate',
     onSave: isCreateMode ? undefined : saveCompanyLink,
@@ -181,17 +182,18 @@ export function GeneralProjectTab({
       setSaveError(null);
 
       if (isCreateMode) {
-        // ADR-200: Get companyId from centralized hook in local mode
+        // ADR-232: linkedCompanyId from entity link hook, companyId from auth context
         const companyPayload = companyLink.getPayload();
-        const effectiveCompanyId = companyPayload.companyId ?? projectData.companyId ?? fallbackCompanyId;
-        logger.info('Creating new project...', { data: projectData, companyId: effectiveCompanyId });
+        const effectiveLinkedCompanyId = companyPayload.linkedCompanyId ?? null;
+        logger.info('Creating new project...', { data: projectData, linkedCompanyId: effectiveLinkedCompanyId });
 
         const result = await createProject({
           name: projectData.name || 'Νέο Έργο',
           title: projectData.licenseTitle,
           description: projectData.description,
           status: projectData.status || 'planning',
-          companyId: effectiveCompanyId,
+          companyId: fallbackCompanyId, // Tenant isolation — always from auth
+          linkedCompanyId: effectiveLinkedCompanyId, // Business link — from user selection
         });
 
         if (!result.success || !result.projectId) {
@@ -276,7 +278,7 @@ export function GeneralProjectTab({
 
       <section className={cn(spacing.spaceBetween.md, spacing.margin.top.md)}>
         {/* ADR-200: Company linking via centralized useEntityLink hook */}
-        <EntityLinkCard {...companyLink.linkCardProps} />
+        <EntityLinkCard key={companyLink.linkCardKey} {...companyLink.linkCardProps} />
 
         <BasicProjectInfoTab
           data={projectData}

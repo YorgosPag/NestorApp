@@ -74,6 +74,8 @@ export interface ParkingSpot {
   notes?: string;
   /** Tenant company ID (server-injected) */
   companyId?: string;
+  /** 🏢 ADR-232: Business entity link (inherited from project via cascade) */
+  linkedCompanyId?: string | null;
   /** User who created this record */
   createdBy?: string;
   createdAt?: Date;

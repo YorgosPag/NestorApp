@@ -34,6 +34,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
 import { generateProjectId, generateNavigationId } from '@/services/enterprise-id.service';
 import { projectCodeService } from '@/services/project-code.service';
+import { isRoleBypass } from '@/lib/auth/roles';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ProjectsListRoute');
@@ -49,6 +50,8 @@ interface ProjectListItem {
   status: string;
   company: string;
   companyId: string;
+  /** 🏢 ADR-232: Business entity link */
+  linkedCompanyId: string | null;
   address: string;
   city: string;
   // 🏢 ENTERPRISE: Multi-address support (ADR-167)
@@ -193,6 +196,7 @@ export const GET = withHighRateLimit(
       status: normalizeStatus(getString(data, 'status')),
       company: getString(data, 'company'),
       companyId: getString(data, 'companyId'),
+      linkedCompanyId: getString(data, 'linkedCompanyId') || null,
       address: getString(data, 'address'),
       city: getString(data, 'city'),
       // 🏢 ENTERPRISE: Multi-address support (ADR-167)
@@ -258,6 +262,8 @@ interface ProjectCreatePayload {
   company?: string;
   address?: string;
   city?: string;
+  /** 🏢 ADR-232: Business entity link */
+  linkedCompanyId?: string | null;
 }
 
 interface ProjectCreateResponse {
@@ -280,11 +286,14 @@ export const POST = withHighRateLimit(
         // 🏢 ENTERPRISE: Parse request body
         const body: ProjectCreatePayload = await req.json();
 
-        // 🔒 SECURITY: Override companyId with authenticated user's company
-        // This prevents cross-tenant project creation
+        // 🏢 ADR-232: Super admin entities get companyId: null (no tenant)
+        // Regular users get companyId from auth context (tenant isolation)
+        const isSuperAdmin = isRoleBypass(ctx.globalRole);
+
         const sanitizedData = {
           ...body,
-          companyId: ctx.companyId,  // 🔒 FORCED: Always use auth context companyId
+          companyId: isSuperAdmin ? null : ctx.companyId,  // 🔒 ADR-232: null for super admin
+          linkedCompanyId: body.linkedCompanyId ?? null,    // 🏢 ADR-232: Business entity link
           progress: 0,
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),
@@ -324,21 +333,24 @@ export const POST = withHighRateLimit(
         });
 
         // 🏢 AUTO-REGISTER: Ensure company exists in navigation_companies
-        const navQuery = await adminDb
-          .collection(COLLECTIONS.NAVIGATION)
-          .where('contactId', '==', ctx.companyId)
-          .limit(1)
-          .get();
+        // Skip for super admin (companyId is null)
+        if (!isSuperAdmin && ctx.companyId) {
+          const navQuery = await adminDb
+            .collection(COLLECTIONS.NAVIGATION)
+            .where('contactId', '==', ctx.companyId)
+            .limit(1)
+            .get();
 
-        if (navQuery.empty) {
-          const navId = generateNavigationId();
-          await adminDb.collection(COLLECTIONS.NAVIGATION).doc(navId).set({
-            contactId: ctx.companyId,
-            addedAt: FieldValue.serverTimestamp(),
-            addedBy: ctx.uid,
-            source: 'auto_project_create',
-          });
-          logger.info('[Projects] Auto-registered company in navigation', { companyId: ctx.companyId, navId });
+          if (navQuery.empty) {
+            const navId = generateNavigationId();
+            await adminDb.collection(COLLECTIONS.NAVIGATION).doc(navId).set({
+              contactId: ctx.companyId,
+              addedAt: FieldValue.serverTimestamp(),
+              addedBy: ctx.uid,
+              source: 'auto_project_create',
+            });
+            logger.info('[Projects] Auto-registered company in navigation', { companyId: ctx.companyId, navId });
+          }
         }
 
         // 🔄 Invalidate cache for this tenant

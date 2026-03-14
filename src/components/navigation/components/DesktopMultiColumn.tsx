@@ -784,7 +784,7 @@ export function DesktopMultiColumn({
               activeFilters={projectsFilters}
               onFiltersChange={setProjectsFilters}
               hasSelectedItems={!!selectedProject}
-              itemCount={filterData(projects.filter(project => project.companyId === selectedCompany?.id), projectsSearch, projectsFilters).length} // 🏢 Count after filtering
+              itemCount={filterData(projects.filter(project => project.linkedCompanyId === selectedCompany?.id), projectsSearch, projectsFilters).length} // 🏢 Count after filtering
               onNewItem={() => setIsProjectModalOpen(true)}
               onEditItem={() => {/* TODO: Edit project */}}
               onDeleteItem={handleDeleteProject}
@@ -803,7 +803,7 @@ export function DesktopMultiColumn({
               aria-label={t('columns.projects.listLabel')}
               data-navigation-scroll="true"
             >
-              {filterData(projects.filter(project => project.companyId === selectedCompany?.id), projectsSearch, projectsFilters).map(project => {
+              {filterData(projects.filter(project => project.linkedCompanyId === selectedCompany?.id), projectsSearch, projectsFilters).map(project => {
                 // 🏢 ENTERPRISE: Use real-time building count for live updates
                 const buildingCount = getBuildingCount(project.id);
                 const hasBuildings = buildingCount > 0;

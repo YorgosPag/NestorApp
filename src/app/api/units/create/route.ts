@@ -6,6 +6,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { FieldValue } from 'firebase-admin/firestore';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { isRoleBypass } from '@/lib/auth/roles';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('UnitsCreateRoute');
@@ -70,12 +71,12 @@ export const POST = withStandardRateLimit(
           throw new ApiError(400, 'Unit name is required');
         }
 
-        // 🏢 ENTERPRISE: companyId INHERITANCE — Unit inherits from Building
-        // A unit physically belongs to a building, so it must share the building's companyId.
-        // This prevents data inconsistency when super_admin creates units across tenants.
-        let resolvedCompanyId = ctx.companyId;  // Default: authenticated user's company
+        // 🏢 ADR-232: Super admin entities get companyId: null
+        // Regular users inherit companyId from building (or fallback to auth context)
+        const isSuperAdmin = isRoleBypass(ctx.globalRole);
+        let resolvedCompanyId: string | null = isSuperAdmin ? null : ctx.companyId;
 
-        if (body.buildingId) {
+        if (!isSuperAdmin && body.buildingId) {
           const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(body.buildingId).get();
           if (buildingDoc.exists) {
             const buildingCompanyId = buildingDoc.data()?.companyId;
@@ -93,7 +94,8 @@ export const POST = withStandardRateLimit(
         const sanitizedData = {
           ...body,
           name: body.name.trim(),
-          companyId: resolvedCompanyId,  // 🔒 INHERITED: From building (or fallback to user)
+          companyId: resolvedCompanyId,  // 🔒 ADR-232: null for super admin, inherited for regular
+          linkedCompanyId: null,          // 🏢 ADR-232: Set via cascade propagation
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),
           createdBy: ctx.uid,

@@ -16,7 +16,9 @@ export interface NavigationProject {
   id: string;
   name: string;
   company: string;
-  companyId: string; // The ID of the company that owns this project
+  companyId: string; // Tenant isolation key
+  /** 🏢 ADR-232: Business entity link (separate from tenant companyId) */
+  linkedCompanyId?: string | null;
   buildings: NavigationBuilding[];
   parkingSpots?: NavigationParkingSpot[];
   // 🏢 PERF-001: Building count from bootstrap (eliminates realtime listener)

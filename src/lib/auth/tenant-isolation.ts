@@ -104,13 +104,16 @@ export async function requireProjectInTenant(params: {
   // 🏢 ENTERPRISE: Super Admin bypasses tenant isolation (cross-tenant access)
   const isSuperAdmin = isRoleBypass(ctx.globalRole);
 
-  // Verify tenant isolation (skip for super admin)
-  if (!isSuperAdmin && (!data?.companyId || data.companyId !== ctx.companyId)) {
-    // Audit the tenant isolation violation
-    await logAuditEvent(ctx, 'access_denied', projectId, 'project', {
-      metadata: { path, reason: 'Tenant isolation violation - companyId mismatch' },
-    });
-    throw new TenantIsolationError('Access denied', 403, 'FORBIDDEN');
+  // 🏢 ADR-232: Super admin entities may have companyId: null — allow access
+  // Regular users must match companyId exactly
+  if (!isSuperAdmin) {
+    // If entity has no companyId (super admin created), deny access to regular users
+    if (!data?.companyId || data.companyId !== ctx.companyId) {
+      await logAuditEvent(ctx, 'access_denied', projectId, 'project', {
+        metadata: { path, reason: 'Tenant isolation violation - companyId mismatch' },
+      });
+      throw new TenantIsolationError('Access denied', 403, 'FORBIDDEN');
+    }
   }
 
   // Success - return validated project data
@@ -170,13 +173,14 @@ export async function requireBuildingInTenant(params: {
   // 🏢 ENTERPRISE: Super Admin bypasses tenant isolation (cross-tenant access)
   const isSuperAdmin = isRoleBypass(ctx.globalRole);
 
-  // Verify tenant isolation (skip for super admin)
-  if (!isSuperAdmin && (!data?.companyId || data.companyId !== ctx.companyId)) {
-    // Audit the tenant isolation violation
-    await logAuditEvent(ctx, 'access_denied', buildingId, 'building', {
-      metadata: { path, reason: 'Tenant isolation violation - companyId mismatch' },
-    });
-    throw new TenantIsolationError('Access denied', 403, 'FORBIDDEN');
+  // 🏢 ADR-232: Super admin entities may have companyId: null — allow access
+  if (!isSuperAdmin) {
+    if (!data?.companyId || data.companyId !== ctx.companyId) {
+      await logAuditEvent(ctx, 'access_denied', buildingId, 'building', {
+        metadata: { path, reason: 'Tenant isolation violation - companyId mismatch' },
+      });
+      throw new TenantIsolationError('Access denied', 403, 'FORBIDDEN');
+    }
   }
 
   // Success - return validated building data

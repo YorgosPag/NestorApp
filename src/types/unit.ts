@@ -269,6 +269,8 @@ export interface Unit {
   description?: string;
   buildingId: string;
   floorId: string;
+  /** 🏢 ADR-232: Business entity link (inherited from project via cascade) */
+  linkedCompanyId?: string | null;
 
   /**
    * ⚠️ DEPRECATED: Customer reference (commercial data)

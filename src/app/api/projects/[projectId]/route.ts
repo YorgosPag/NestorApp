@@ -47,6 +47,7 @@ import type { ProjectAddress } from '@/types/project/addresses';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
+import { propagateProjectCompanyLink } from '@/lib/firestore/cascade-propagation.service';
 
 const logger = createModuleLogger('ProjectRoute');
 
@@ -65,6 +66,9 @@ interface ProjectUpdatePayload {
   // Company link fields
   companyId?: string | null;
   company?: string | null;
+  /** 🏢 ADR-232: Business entity link (separate from tenant companyId) */
+  linkedCompanyId?: string | null;
+  linkedCompanyName?: string | null;
   // Legacy fields (backward compatible)
   address?: string;
   city?: string;
@@ -269,18 +273,22 @@ async function handleUpdateProject(
   const projectData = projectDoc.data();
 
   // 3. Validate tenant isolation: bypass for Super Admin, enforce for regular users
+  // 🏢 ADR-232: Super admin entities may have companyId: null
   const isSuperAdmin = isRoleBypass(ctx.globalRole);
-  if (!isSuperAdmin && projectData?.companyId !== ctx.companyId) {
-    logger.warn('[Projects/Update] TENANT ISOLATION VIOLATION: attempted to update project', { uid: ctx.uid, userCompanyId: ctx.companyId, projectId, projectCompanyId: projectData?.companyId });
-    throw new ApiError(403, 'Access denied - Project not found');
-  }
-  if (isSuperAdmin && projectData?.companyId !== ctx.companyId) {
+  if (!isSuperAdmin) {
+    if (!projectData?.companyId || projectData.companyId !== ctx.companyId) {
+      logger.warn('[Projects/Update] TENANT ISOLATION VIOLATION: attempted to update project', { uid: ctx.uid, userCompanyId: ctx.companyId, projectId, projectCompanyId: projectData?.companyId });
+      throw new ApiError(403, 'Access denied - Project not found');
+    }
+  } else if (projectData?.companyId !== ctx.companyId) {
     logger.info('[SUPER_ADMIN] Cross-tenant project update', { email: ctx.email, projectId, projectCompanyId: projectData?.companyId });
   }
 
   // 4. Build update payload
+  // 🔒 ADR-232: companyId is IMMUTABLE (tenant key) — remove from update payload
+  const { companyId: _immutableCompanyId, ...safeBody } = body;
   const updateData: Record<string, unknown> = {
-    ...body,
+    ...safeBody,
     updatedAt: FieldValue.serverTimestamp(),
     updatedBy: ctx.uid,
   };
@@ -302,7 +310,19 @@ async function handleUpdateProject(
   cache.delete(`${CACHE_KEY_PREFIX}:all`);
   logger.info('[Projects/Update] Cache invalidated for tenant', { companyId: ctx.companyId });
 
-  // 7. Audit log
+  // 7. CASCADE: Propagate linkedCompanyId change to buildings + children (fire-and-forget)
+  // 🏢 ADR-232: Cascade linkedCompanyId (business link), NOT companyId (tenant key)
+  if ('linkedCompanyId' in body && body.linkedCompanyId !== projectData?.linkedCompanyId) {
+    const newLinkedCompanyId = (body.linkedCompanyId as string) ?? null;
+    propagateProjectCompanyLink(projectId, newLinkedCompanyId).catch((err) => {
+      logger.warn('[Projects/Update] Cascade propagation failed (non-blocking)', {
+        projectId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
+  }
+
+  // 8. Audit log
   await logAuditEvent(ctx, 'data_updated', 'projects', 'api', {
     newValue: {
       type: 'status',

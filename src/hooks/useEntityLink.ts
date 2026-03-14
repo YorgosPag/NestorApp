@@ -16,6 +16,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import type { EntityLinkOption, EntityLinkLabels, EntityLinkCardProps } from '@/components/shared/EntityLinkCard';
+import { RealtimeService } from '@/services/realtime';
+import type { RealtimeEventMap } from '@/services/realtime';
 
 // =============================================================================
 // TYPES
@@ -74,8 +76,10 @@ export interface UseEntityLinkReturn {
   linkedId: string | null;
   /** Manually set the linked ID (rare — most changes go through EntityLinkCard) */
   setLinkedId: (id: string | null) => void;
-  /** Spread these on <EntityLinkCard {...linkCardProps} /> */
-  linkCardProps: EntityLinkCardProps & { key: string };
+  /** Spread these on <EntityLinkCard key={linkCardKey} {...linkCardProps} /> */
+  linkCardProps: EntityLinkCardProps;
+  /** React key — pass directly to JSX, NOT via spread */
+  linkCardKey: string;
   /** For form/local save modes — returns changed foreign key or empty object */
   getPayload: () => Record<string, string | null>;
   /** True when current value differs from initial */
@@ -93,7 +97,27 @@ const FOREIGN_KEY_MAP: Record<EntityLinkRelation, string> = {
   'parking-building': 'buildingId',
   'unit-building': 'buildingId',
   'building-project': 'projectId',
-  'project-company': 'companyId',
+  'project-company': 'linkedCompanyId',
+};
+
+// =============================================================================
+// REALTIME REFRESH — maps relation → events that invalidate options
+// =============================================================================
+
+/**
+ * Each relation type links TO a parent entity type.
+ * When that parent entity type is created, updated (name change), or deleted,
+ * the dropdown options must refresh.
+ *
+ * Example: relation 'unit-building' means the dropdown shows buildings.
+ * → subscribe to BUILDING_CREATED, BUILDING_UPDATED, BUILDING_DELETED
+ */
+const RELATION_REALTIME_EVENTS: Record<EntityLinkRelation, Array<keyof RealtimeEventMap>> = {
+  'storage-building': ['BUILDING_CREATED', 'BUILDING_UPDATED', 'BUILDING_DELETED'],
+  'parking-building': ['BUILDING_CREATED', 'BUILDING_UPDATED', 'BUILDING_DELETED'],
+  'unit-building':    ['BUILDING_CREATED', 'BUILDING_UPDATED', 'BUILDING_DELETED'],
+  'building-project': ['PROJECT_CREATED', 'PROJECT_UPDATED', 'PROJECT_DELETED'],
+  'project-company':  ['CONTACT_CREATED', 'CONTACT_UPDATED', 'CONTACT_DELETED'],
 };
 
 // =============================================================================
@@ -128,6 +152,19 @@ export function useEntityLink(
 
   const [linkedId, setLinkedId] = useState<string | null>(initialParentId);
   const prevEntityIdRef = useRef(entityId);
+
+  // Realtime refresh — increments when parent entity type changes (create/update/delete)
+  const [refreshSignal, setRefreshSignal] = useState(0);
+
+  useEffect(() => {
+    const events = RELATION_REALTIME_EVENTS[relation];
+    const unsubscribers = events.map((event) =>
+      RealtimeService.subscribe(event, () => {
+        setRefreshSignal((prev) => prev + 1);
+      })
+    );
+    return () => { unsubscribers.forEach((unsub) => unsub()); };
+  }, [relation]);
 
   // Reset when switching to a different entity (cross-entity isolation)
   useEffect(() => {
@@ -180,8 +217,7 @@ export function useEntityLink(
   const autoSave = saveMode === 'immediate';
   const key = `${relation}-${entityId}`;
 
-  const linkCardProps: EntityLinkCardProps & { key: string } = {
-    key,
+  const linkCardProps: EntityLinkCardProps = {
     cardId,
     icon,
     labels,
@@ -191,6 +227,7 @@ export function useEntityLink(
     autoSave,
     searchable,
     hideCurrentLabel,
+    refreshSignal,
     // immediate mode → onSave for auto-save
     ...(autoSave && onSave ? { onSave } : {}),
     // form/local mode → onValueChange for parent state sync
@@ -201,6 +238,7 @@ export function useEntityLink(
     linkedId,
     setLinkedId,
     linkCardProps,
+    linkCardKey: key,
     getPayload,
     isDirty,
     reset,
