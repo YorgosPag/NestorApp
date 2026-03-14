@@ -4,7 +4,8 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/auth';
 import { DashboardHome } from '@/components/dashboard/DashboardHome';
-import { Loader2 } from 'lucide-react';
+import { LayoutDashboard } from 'lucide-react';
+import { PageLoadingState } from '@/core/states';
 
 /**
  * Main Page — ADR-179: Hybrid Navigation Dashboard
@@ -22,12 +23,9 @@ export default function MainPage() {
     }
   }, [user, loading, router]);
 
+  // ADR-229 Phase 2: Data-level loading guard
   if (loading) {
-    return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <PageLoadingState icon={LayoutDashboard} message="Φόρτωση..." layout="fullscreen" />;
   }
 
   if (!user) {
