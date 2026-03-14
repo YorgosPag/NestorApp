@@ -60,8 +60,6 @@ export interface GenericFormTabRendererProps {
   sectionFooterRenderers?: Record<string, FieldRendererFn>;
   /** 🏢 ENTERPRISE: Callback when active tab changes (for parent state management) */
   onActiveTabChange?: (tabId: string) => void;
-  /** 🏢 ENTERPRISE: Controlled active tab value (survives remounts) */
-  activeTab?: string;
 }
 
 // ============================================================================
@@ -231,8 +229,7 @@ export function GenericFormTabRenderer({
   onPhotosChange,
   customRenderers,
   sectionFooterRenderers,
-  onActiveTabChange,
-  activeTab
+  onActiveTabChange
 }: GenericFormTabRendererProps) {
   // 🏢 ENTERPRISE: i18n support for tab labels
   const { t } = useTranslation('forms');
@@ -260,7 +257,6 @@ export function GenericFormTabRenderer({
       <TabsOnlyTriggers
         tabs={tabs}
         defaultTab={tabs[0]?.id || "basicInfo"}
-        value={activeTab}
         theme="clean"
         onTabChange={onActiveTabChange}
       >
