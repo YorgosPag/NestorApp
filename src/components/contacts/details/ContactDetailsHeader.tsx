@@ -211,18 +211,18 @@ export function ContactDetailsHeader({
             ...(onNewContact ? [
               createEntityAction('new', t('header.newContact'), () => onNewContact(), { icon: UserPlus })
             ] : []),
-            // 🎯 Edit Mode Actions - Μόνο για Desktop
-            // 🏢 ENTERPRISE: Hidden on subcollection tabs (banking, files, relationships) - they save independently
-            ...(!hideEditControls ? (
-              !isEditing ? [
-                createEntityAction('edit', t('header.actions.edit'), () => onStartEdit?.())
-              ] : [
-                createEntityAction('save', t('header.actions.save'), () => onSaveEdit?.()),
-                createEntityAction('cancel', t('header.actions.cancel'), () => onCancelEdit?.())
-              ]
-            ) : []),
-            // Delete Action - Κρύβεται στα subcollection tabs (banking, files, relationships)
-            ...(!hideEditControls && onDeleteContact ? [
+            // 🎯 Edit/Delete — always visible (Edit starts edit mode on contact data tabs)
+            ...(!isEditing ? [
+              createEntityAction('edit', t('header.actions.edit'), () => onStartEdit?.())
+            ] : []),
+            // 🏢 ENTERPRISE: Save/Cancel — hidden on subcollection tabs (e.g. Relationships)
+            // These tabs have their own save mechanism; showing contact Save causes confusion
+            ...(isEditing && !hideEditControls ? [
+              createEntityAction('save', t('header.actions.save'), () => onSaveEdit?.()),
+              createEntityAction('cancel', t('header.actions.cancel'), () => onCancelEdit?.())
+            ] : []),
+            // Delete — always visible
+            ...(onDeleteContact ? [
               createEntityAction('delete', t('header.actions.delete'), () => onDeleteContact?.())
             ] : [])
           ]}
