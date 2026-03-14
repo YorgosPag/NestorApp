@@ -12,7 +12,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { Calendar as CalendarIcon, Plus } from 'lucide-react';
@@ -110,6 +110,13 @@ export function CalendarCreateDialog({
   const [projectId, setProjectId] = useState<string>('');
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Sync date when initialDate prop changes (e.g., user clicks different day)
+  useEffect(() => {
+    if (initialDate) {
+      setDate(initialDate);
+    }
+  }, [initialDate]);
 
   const resetForm = () => {
     setTitle('');
