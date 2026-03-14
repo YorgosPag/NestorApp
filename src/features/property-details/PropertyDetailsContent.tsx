@@ -152,7 +152,7 @@ export function PropertyDetailsContent({
             <CardContent className="p-2 pt-0">
               <FloorSelectField
                 buildingId={resolvedProperty?.buildingId ?? null}
-                value={String(resolvedProperty?.floor ?? '')}
+                value={resolvedProperty?.floorId ?? ''}
                 onChange={(v: string, payload?: FloorChangePayload) => {
                   if (safeOnUpdateProperty && resolvedProperty?.id) {
                     if (payload) {

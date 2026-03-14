@@ -50,7 +50,7 @@ export interface FloorChangePayload {
 export interface FloorSelectFieldProps {
   /** Building ID to fetch floors for — null/undefined = disabled */
   buildingId: string | null | undefined;
-  /** Current floor value (string representation of floor number) */
+  /** Current floor document ID (Firestore doc ID) */
   value: string;
   /** Callback when floor selection changes — returns both floor number and floorId */
   onChange: (floorValue: string, payload?: FloorChangePayload) => void;
@@ -147,18 +147,14 @@ export function FloorSelectField({
       return;
     }
 
-    // Find the floor option to get the floorId
-    console.log('[DEBUG FloorSelectField] handleValueChange:', { v, floorsCount: floorsRef.current.length, floorValues: floorsRef.current.map(f => f.value) });
-    const selectedFloor = floorsRef.current.find((f) => f.value === v);
-    console.log('[DEBUG FloorSelectField] selectedFloor:', selectedFloor);
+    // v = floor doc ID (since SelectItem value={f.id})
+    // Find the floor option to get the floor number for display
+    const selectedFloor = floorsRef.current.find((f) => f.id === v);
     if (selectedFloor) {
-      onChange(v, {
-        floor: Number(v),
-        floorId: selectedFloor.id,
+      onChange(selectedFloor.value, {
+        floor: Number(selectedFloor.value),
+        floorId: v,
       });
-    } else {
-      console.warn('[DEBUG FloorSelectField] NO MATCH — sending without floorId!');
-      onChange(v);
     }
   };
 
@@ -186,7 +182,7 @@ export function FloorSelectField({
           <SelectContent>
             <SelectItem value={NONE_VALUE}>—</SelectItem>
             {floors.map((f) => (
-              <SelectItem key={f.id} value={f.value}>
+              <SelectItem key={f.id} value={f.id}>
                 {f.label}
               </SelectItem>
             ))}

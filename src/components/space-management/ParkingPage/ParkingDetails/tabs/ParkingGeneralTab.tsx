@@ -32,6 +32,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
 import { getBuildingsList } from '@/services/units.service';
 import { FloorSelectField } from '@/components/shared/FloorSelectField';
+import type { FloorChangePayload } from '@/components/shared/FloorSelectField';
 import { useEntityLink } from '@/hooks/useEntityLink';
 
 const logger = createModuleLogger('ParkingGeneralTab');
@@ -55,6 +56,7 @@ interface ParkingFormState {
   type: ParkingSpotType;
   status: ParkingSpotStatus;
   floor: string;
+  floorId: string;
   location: string;
   area: string;
   notes: string;
@@ -94,6 +96,7 @@ function buildFormState(parking: ParkingSpot): ParkingFormState {
     type: parking.type || 'standard',
     status: parking.status || 'available',
     floor: parking.floor || '',
+    floorId: parking.floorId || '',
     location: parking.location || '',
     area: parking.area !== undefined ? String(parking.area) : '',
     notes: parking.notes || '',
@@ -163,6 +166,7 @@ export function ParkingGeneralTab({
       if (form.type !== (parking.type || 'standard')) payload.type = form.type;
       if (form.status !== (parking.status || 'available')) payload.status = form.status;
       if (form.floor.trim() !== (parking.floor || '')) payload.floor = form.floor.trim();
+      if (form.floorId !== (parking.floorId || '')) payload.floorId = form.floorId || null;
       if (form.location.trim() !== (parking.location || '')) payload.location = form.location.trim();
 
       const newArea = form.area ? parseFloat(form.area) : undefined;
@@ -220,7 +224,7 @@ export function ParkingGeneralTab({
     <div className="p-4 space-y-4">
       {/* Building Link + Floor — side by side at the top */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <EntityLinkCard {...buildingLink.linkCardProps} />
+        <EntityLinkCard key={buildingLink.linkCardKey} {...buildingLink.linkCardProps} />
         <Card>
           <CardHeader className="p-2">
             <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
@@ -231,8 +235,13 @@ export function ParkingGeneralTab({
           <CardContent className="p-2 pt-0">
             <FloorSelectField
               buildingId={buildingLink.linkedId}
-              value={form.floor}
-              onChange={(v) => updateField('floor', v)}
+              value={form.floorId}
+              onChange={(v: string, payload?: FloorChangePayload) => {
+                updateField('floor', v);
+                if (payload) {
+                  updateField('floorId', payload.floorId);
+                }
+              }}
               label={t('general.fields.floor')}
               noBuildingHint={t('entityLinks.building.noFloorHint')}
               disabled={!isEditing}

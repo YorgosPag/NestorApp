@@ -64,6 +64,8 @@ export interface ParkingSpot {
   status?: ParkingSpotStatus;
   /** Floor/level identifier, e.g. "-1", "0", "pilotis" */
   floor?: string;
+  /** Floor document ID (Firestore doc reference) */
+  floorId?: string;
   /** Freeform location description */
   location?: string;
   /** Area in m^2 */

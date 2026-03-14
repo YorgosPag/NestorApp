@@ -33,6 +33,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
 import { getBuildingsList } from '@/services/units.service';
 import { FloorSelectField } from '@/components/shared/FloorSelectField';
+import type { FloorChangePayload } from '@/components/shared/FloorSelectField';
 import { useEntityLink } from '@/hooks/useEntityLink';
 
 const logger = createModuleLogger('StorageGeneralTab');
@@ -56,6 +57,7 @@ interface StorageFormState {
   type: StorageType;
   status: StorageStatus;
   floor: string;
+  floorId: string;
   area: string;
   description: string;
   notes: string;
@@ -99,6 +101,7 @@ function buildFormState(storage: Storage): StorageFormState {
     type: storage.type || 'storage',
     status: storage.status || 'available',
     floor: storage.floor || '',
+    floorId: storage.floorId || '',
     area: storage.area !== undefined ? String(storage.area) : '',
     description: storage.description || '',
     notes: storage.notes || '',
@@ -168,6 +171,7 @@ export function StorageGeneralTab({
       if (form.type !== (storage.type || 'storage')) payload.type = form.type;
       if (form.status !== (storage.status || 'available')) payload.status = form.status;
       if (form.floor.trim() !== (storage.floor || '')) payload.floor = form.floor.trim();
+      if (form.floorId !== (storage.floorId || '')) payload.floorId = form.floorId || null;
 
       const newArea = form.area ? parseFloat(form.area) : undefined;
       if (newArea !== storage.area) payload.area = newArea ?? null;
@@ -225,7 +229,7 @@ export function StorageGeneralTab({
     <div className="p-4 space-y-4">
       {/* Building Link + Floor — side by side at the top */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <EntityLinkCard {...buildingLink.linkCardProps} />
+        <EntityLinkCard key={buildingLink.linkCardKey} {...buildingLink.linkCardProps} />
         <Card>
           <CardHeader className="p-2">
             <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
@@ -236,8 +240,13 @@ export function StorageGeneralTab({
           <CardContent className="p-2 pt-0">
             <FloorSelectField
               buildingId={buildingLink.linkedId}
-              value={form.floor}
-              onChange={(v) => updateField('floor', v)}
+              value={form.floorId}
+              onChange={(v: string, payload?: FloorChangePayload) => {
+                updateField('floor', v);
+                if (payload) {
+                  updateField('floorId', payload.floorId);
+                }
+              }}
               label={t('general.fields.floor')}
               noBuildingHint={t('entityLinks.building.noFloorHint')}
               disabled={!isEditing}

@@ -26,6 +26,8 @@ export interface Storage {
   /** 🏢 ADR-232: Business entity link (inherited from project via cascade) */
   linkedCompanyId?: string | null;
   floor: string;
+  /** Floor document ID (Firestore doc reference) */
+  floorId?: string;
   area: number; // in square meters
   description?: string;
   price?: number; // in euros
