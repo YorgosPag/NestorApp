@@ -75,6 +75,14 @@ export function LegalTabContent({ unit, associations }: LegalTabContentProps) {
       toast.error(t('sales.legal.noBuyer', { defaultValue: 'Δεν υπάρχει αγοραστής' }));
       return;
     }
+    if (!unit.buildingId) {
+      toast.error(t('sales.errors.noBuilding', { defaultValue: 'Η μονάδα δεν είναι συνδεδεμένη με κτίριο' }));
+      return;
+    }
+    if (!unit.project) {
+      toast.error(t('sales.errors.noProject', { defaultValue: 'Η μονάδα δεν ανήκει σε έργο' }));
+      return;
+    }
 
     setCreating(true);
     const result = await createContract({
