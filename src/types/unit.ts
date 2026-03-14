@@ -1,6 +1,7 @@
 
 import { PropertyStatus } from '@/constants/property-statuses-enterprise';
 import type { Timestamp } from 'firebase/firestore';
+import type { LegalPhase } from '@/types/legal-contracts';
 import type { AllocationSpaceType, SpaceInclusionType } from '@/config/domain-constants';
 import type {
   OrientationType,
@@ -123,6 +124,9 @@ export interface UnitCommercialData {
 
   /** Αλυσίδα συναλλαγών — κοινό ID για deposit/final/credit invoices (ADR-198) */
   transactionChainId: string | null;
+
+  /** Νομική φάση — denormalized από LegalContractService (ADR-230) */
+  legalPhase: LegalPhase | null;
 }
 
 // =============================================================================
@@ -451,9 +455,9 @@ export interface UnitDoc {
   unitAmenities?: AmenityCodeType[];
   linkedSpaces?: LinkedSpace[];
 
-  // Commercial fields (ADR-197)
+  // Commercial fields (ADR-197, ADR-230)
   commercialStatus?: CommercialStatus;
-  commercial?: Partial<UnitCommercialData>;
+  commercial?: Partial<UnitCommercialData>; // includes legalPhase via ADR-230
 
   // Legacy fields that might exist in old documents
   status?: LegacySalesStatus;

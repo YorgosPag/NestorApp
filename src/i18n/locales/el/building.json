@@ -2095,7 +2095,9 @@
       "lawyer": "Δικηγόρος",
       "notary": "Συμβολαιογράφος",
       "realtor": "Μεσίτης",
-      "accountant": "Λογιστής"
+      "accountant": "Λογιστής",
+      "seller_lawyer": "Δικηγόρος Πωλητή",
+      "buyer_lawyer": "Δικηγόρος Αγοραστή"
     },
     "entityLinks": {
       "title": "Συνδέσεις με Entities",

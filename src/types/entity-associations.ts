@@ -41,6 +41,9 @@ export const ENTITY_ASSOCIATION_ROLES = {
     'owner',
     'tenant',
     'buyer',
+    'seller_lawyer',
+    'buyer_lawyer',
+    'notary',
   ] as const,
 } as const;
 

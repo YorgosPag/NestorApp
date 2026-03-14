@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 211 ADRs | Last Updated: 2026-03-14
+**📊 Stats**: 219 ADRs | Last Updated: 2026-03-14
 
 ---
 
@@ -21,14 +21,14 @@
 | 🖼️ **Canvas & Rendering** | 39 | [View](#canvas-rendering) |
 | 📊 **Data & State** | 11 | [View](#data-state) |
 | ✏️ **Drawing System** | 16 | [View](#drawing-system) |
-| 📂 **Entity Systems** | 11 | [View](#entity-systems) |
+| 📂 **Entity Systems** | 12 | [View](#entity-systems) |
 | 🔧 **Tools & Keyboard** | 8 | [View](#tools-keyboard) |
 | 🔍 **Filters & Search** | 1 | [View](#filters-search) |
 | 🔒 **Security & Auth** | 7 | [View](#security-auth) |
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 47 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 59 | [View](#uncategorized) |
 
 ---
 
@@ -124,7 +124,7 @@
 | **ADR-087** | Snap Engine Configuration Centralization | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-087-snap-engine-configuration-centralization.md) |
 | **ADR-088** | Pixel-Perfect Rendering Centralization | ✅ APPROVED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-088-pixel-perfect-rendering-centralization.md) |
 | **ADR-089** | CRM Calendar System | ✅ IMPLEMENTED | 2026-02-08 | UI Components / CRM | [📄](./adrs/ADR-089-crm-calendar-system.md) |
-| **ADR-090** | IKA/EFKA Labor Compliance System | ✅ IMPLEMENTED - Phase 1 + Phase 2 + Phase 3 + Phase 4A Complete | 2026-02-09 | Backend Systems / Labor Compliance | [📄](./adrs/ADR-090-ika-efka-labor-compliance-system.md) |
+| **ADR-090** | IKA/EFKA Labor Compliance System | ✅ IMPLEMENTED - Phase 1 + Phase 2 + Phase 3 + Phase 4A + Phase 5 (EFKA Settings) Complete | 2026-02-09 | Backend Systems / Labor Compliance | [📄](./adrs/ADR-090-ika-efka-labor-compliance-system.md) |
 | **ADR-091** | Scattered Code Centralization (Fonts + Formatting) | ✅ APPROVED | 2026-01-01 | Design System | [📄](./adrs/ADR-091-scattered-code-centralization-fonts-formatting.md) |
 | **ADR-092** | Centralized localStorage Service | ✅ APPROVED | 2026-01-01 | Infrastructure | [📄](./adrs/ADR-092-centralized-localstorage-service.md) |
 | **ADR-093** | Text Label Offsets Centralization | ✅ APPROVED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-093-text-label-offsets-centralization.md) |
@@ -173,6 +173,7 @@
 | **ADR-152** | Simple Coordinate Transform Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-152-simple-coordinate-transform-centralization.md) |
 | **ADR-153** | Snap Tooltip Offset Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-153-snap-tooltip-offset-centralization.md) |
 | **ADR-154** | Grip Line Width Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-154-grip-line-width-centralization.md) |
+| **ADR-156** | Centralization Gap Audit — Εκκρεμείς Κεντρικοποιήσεις | ✅ APPROVED — Audit Complete, Remediation Pending | 2026-03-12 | Architecture / Code Quality | [📄](./adrs/ADR-156-centralization-gap-audit.md) |
 | **ADR-156** | Voice Message Transcription (OpenAI Whisper) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-156-voice-message-transcription-whisper.md) |
 | **ADR-158** | Origin Axis Label Offsets Centralization (X/Y axis labels) | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-158-origin-axis-label-offsets-centralization-x-y-axis-.md) |
 | **ADR-159** | Measurement Text Colors Separation (ANGLE vs DISTANCE) | ✅ IMPLEMENTED | 2026-02-01 | Drawing System | [📄](./adrs/ADR-159-measurement-text-colors-separation-angle-vs-distan.md) |
@@ -231,24 +232,28 @@
 | **ADR-206** | Scattered Code Centralization — Phase 5 | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-206-phase5-enterprise-id-debounce-filesize.md) |
 | **ADR-207** | Scattered Code Centralization — Phase 6 (Collection Utilities) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-207-phase6-collection-utilities.md) |
 | **ADR-208** | Phase 7 — Date Formatting Deduplication | ✅ ✅ Implemented | 2026-01-01 | Centralization / Deduplication | [📄](./adrs/ADR-208-phase7-date-formatting-dedup.md) |
-| **ADR-209** | ID Consistency Audit & Remediation Roadmap | ✅ ✅ APPROVED | 2026-03-12 | Security / Data Integrity | [📄](./adrs/ADR-209-id-consistency-audit.md) |
-| **ADR-210** | Document ID Generation — Full Codebase Audit & Compliance (Phase 3: Company Document Materialization) | ✅ ✅ APPROVED | 2026-03-13 | Security / Data Integrity | [📄](./adrs/ADR-210-document-id-generation-audit.md) |
-| **ADR-211** | Phase 8 — Small Utility Deduplication | ✅ Implemented | 2026-03-12 | Centralization / Deduplication | [📄](./adrs/ADR-211-phase8-small-utility-dedup.md) |
-| **ADR-212** | Phase 9 — Async/Clone/Validation/FileSize/Currency Deduplication | ✅ Implemented | 2026-03-12 | Centralization / Deduplication | [📄](./adrs/ADR-212-phase9-async-clone-url-filesize.md) |
-| **ADR-213** | Phone/Email/VAT Validation Centralization | ✅ Implemented | 2026-03-12 | Centralization / Validation | [📄](./adrs/ADR-213-validation-centralization.md) |
-| **ADR-214** | Firestore Query Centralization — Audit & 11-Phase Plan | ✅ APPROVED — Audit Complete | 2026-03-12 | Data Access Layer / Architecture | [📄](./adrs/ADR-214-firestore-query-centralization.md) |
-| **ADR-215** | Phase 10 — chunkArray/isRecord/formatBytes/formatDate/formatCurrency Deduplication | ✅ Implemented | 2026-03-12 | Centralization / Deduplication | [📄](./adrs/ADR-215-phase10-chunk-typeguards-formatters.md) |
-| **ADR-216** | formatCurrency Centralization — 0% → 100% Adoption (29 patterns, 23 files) | ✅ Implemented | 2026-03-12 | Centralization / Currency Formatting | [📄](./adrs/ADR-216-formatCurrency-centralization.md) |
-| **ADR-217** | Phase 11 — Object Sanitization, Greek Text Normalization, Debounce Callback Deduplication | ✅ Implemented | 2026-03-12 | Centralization / Deduplication | [📄](./adrs/ADR-217-phase11-sanitize-greek-debounce.md) |
-| **ADR-221** | Error Message Extraction Centralization — `getErrorMessage()` | ✅ Implemented (Phase 1) | 2026-03-13 | Centralization / Error Handling | [📄](./adrs/ADR-221-error-message-extraction.md) |
-| **ADR-222** | console.error/warn → createModuleLogger Migration | ✅ Implemented (Phase 1) | 2026-03-13 | Centralization / Logging | [📄](./adrs/ADR-222-console-to-logger-migration.md) |
-| **ADR-223** | useAsyncData — Data Fetching Centralization (10 files, 15 hooks) | ✅ Implemented (Phase 1) | 2026-03-13 | Centralization / React Hooks | [📄](./adrs/ADR-223-use-async-data-centralization.md) |
-| **ADR-224** | safeJsonParse Centralization — `json-utils.ts` (~35 files, ~50 patterns) | ✅ Implemented (Phase 1) | 2026-03-13 | Centralization / Utilities | [📄](./adrs/ADR-224-safe-json-parse-centralization.md) |
-| **ADR-225** | Type Guards Centralization — `isNonEmptyString`, `isNonEmptyArray` (~17 files, ~30 patterns) | ✅ Implemented (Phase 1) | 2026-03-13 | Centralization / Type Safety | [📄](./adrs/ADR-225-type-guards-centralization.md) |
-| **ADR-226** | Centralized Deletion Guard — Referential Integrity Protection | 📋 Planning | 2026-03-13 | Backend Systems / Data & State | [📄](./adrs/ADR-226-deletion-guard.md) |
-| **ADR-227** | Real-Time Subscription Consolidation & Coverage Expansion (3 patterns → 1 canonical) | 🟢 Phases 1-3 Implemented — Phase 2 partial (4/10 blocked) | 2026-03-13 | Data Access Layer / Real-Time Architecture | [📄](./adrs/ADR-227-realtime-subscription-consolidation.md) |
-| **ADR-228** | Real-Time Event Bus Coverage Gap Analysis & Implementation Roadmap (50% coverage, 4-tier plan) | 📋 Analysis Complete | 2026-03-14 | Data Access Layer / Real-Time Architecture | [📄](./adrs/ADR-228-realtime-event-coverage-gap-analysis.md) |
-| **ADR-229** | Centralized Page Loading & Error States (PageLoadingState, PageErrorState, StaticPageLoading) | ✅ Implemented | 2026-03-14 | UI Components / Core States | [📄](./adrs/ADR-229-centralized-page-loading-states.md) |
+| **ADR-209** | ID Consistency Audit & Remediation Roadmap | ✅ ✅ IMPLEMENTED (Phases 1-4) | 2026-03-12 | Security / Data Integrity | [📄](./adrs/ADR-209-id-consistency-audit.md) |
+| **ADR-210** | Document ID Generation — Full Codebase Audit & Compliance Report | ✅ ✅ APPROVED — Phase 1 + P1/P2 + Phase 3 IMPLEMENTED | 2026-03-12 | Security / Data Integrity | [📄](./adrs/ADR-210-document-id-generation-audit.md) |
+| **ADR-211** | Phase 8 — Small Utility Deduplication | ✅ ✅ Implemented | 2026-03-12 | Centralization / Deduplication | [📄](./adrs/ADR-211-phase8-small-utility-dedup.md) |
+| **ADR-212** | Phase 9 — Async/Clone/Validation/FileSize/Currency Deduplication | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-212-phase9-async-clone-url-filesize.md) |
+| **ADR-213** | Validation Centralization (Phone + Text Extraction) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-213-validation-centralization.md) |
+| **ADR-214** | Firestore Query Centralization | ✅ ✅ COMPLETED — All 11 Phases Done | 2026-03-12 | Data Access Layer | [📄](./adrs/ADR-214-firestore-query-centralization.md) |
+| **ADR-215** | Phase 10 — chunkArray/isRecord/formatBytes/formatDate/formatCurrency Deduplication | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-215-phase10-chunk-typeguards-formatters.md) |
+| **ADR-216** | formatCurrency Centralization — 0% → 100% Adoption | ✅ ✅ Implemented | 2026-03-12 | Centralization / Currency Formatting | [📄](./adrs/ADR-216-formatCurrency-centralization.md) |
+| **ADR-217** | Phase 11 — Object Sanitization, Greek Text Normalization, Debounce Callback Deduplication | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-217-phase11-sanitize-greek-debounce.md) |
+| **ADR-218** | Firestore Timestamp Conversion Centralization | ✅ Implemented | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-218-timestamp-conversion-centralization.md) |
+| **ADR-219** | Notification/Toast System Consolidation | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-219-notification-toast-consolidation.md) |
+| **ADR-220** | Firestore Field Extractor Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-220-field-extractor-centralization.md) |
+| **ADR-221** | Error Message Extraction Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-221-error-message-extraction.md) |
+| **ADR-222** | console.error/warn → createModuleLogger Migration | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-222-console-to-logger-migration.md) |
+| **ADR-223** | useAsyncData — Data Fetching Centralization | ✅ ✅ Implemented (Phase 1) | 2026-03-13 | Centralization / React Hooks | [📄](./adrs/ADR-223-use-async-data-centralization.md) |
+| **ADR-224** | Safe JSON Parse Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-224-safe-json-parse-centralization.md) |
+| **ADR-225** | Type Guards Centralization — `isNonEmptyString`, `isNonEmptyArray` | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-225-type-guards-centralization.md) |
+| **ADR-226** | Centralized Deletion Guard — Referential Integrity Protection | ✅ IN PROGRESS (Phase 0 ✅, Phase 1 ✅, Phase 2 ✅, Phase 3 ✅, Phase 4 ✅ IMPLEMENTED) | 2026-03-13 | Backend Systems / Data & State | [📄](./adrs/ADR-226-deletion-guard.md) |
+| **ADR-227** | Real-Time Subscription Consolidation & Coverage Expansion | ✅ 🟢 Phases 1-3 Implemented — Phase 2 complete (10/10 hooks migrated) | 2026-03-13 | Data Access Layer / Real-Time Architecture | [📄](./adrs/ADR-227-realtime-subscription-consolidation.md) |
+| **ADR-228** | Real-Time Event Bus Coverage Gap Analysis & Implementation Roadmap | ✅ ✅ All Tiers Implemented (100% Coverage) | 2026-03-14 | Data Access Layer / Real-Time Architecture | [📄](./adrs/ADR-228-realtime-event-coverage-gap-analysis.md) |
+| **ADR-229** | Centralized Page Loading & Error States | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-229-centralized-page-loading-states.md) |
+| **ADR-230** | Contract Workflow — Legal Process (Σύστημα Συμβολαίων / Νομική Διαδικασία Πώλησης) | ✅ IMPLEMENTED — All 5 phases completed | 2026-03-14 | Entity Systems | [📄](./adrs/ADR-230-contract-workflow-legal-process.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -396,6 +401,7 @@
 | **ADR-130** | Default Layer Name Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-130-default-layer-name-centralization.md) |
 | **ADR-167** | Enterprise Project Address System | ✅ ✅ APPROVED | [View](./adrs/ADR-167-enterprise-project-address-system.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | [View](./adrs/ADR-018-1-photos-tab-base-template.md) |
+| **ADR-230** | Contract Workflow — Legal Process (Σύστημα Συμβολαίων / Νομική Διαδικασία Πώλησης) | ✅ IMPLEMENTED — All 5 phases completed | [View](./adrs/ADR-230-contract-workflow-legal-process.md) |
 
 ---
 
@@ -517,43 +523,19 @@
 | **ADR-205** | Scattered Code Centralization — Phase 4 | ✅ APPROVED | [View](./adrs/ADR-205-phase4-useInterval-useSortState-truncateText.md) |
 | **ADR-206** | Scattered Code Centralization — Phase 5 | ✅ APPROVED | [View](./adrs/ADR-206-phase5-enterprise-id-debounce-filesize.md) |
 | **ADR-207** | Scattered Code Centralization — Phase 6 (Collection Utilities) | ✅ APPROVED | [View](./adrs/ADR-207-phase6-collection-utilities.md) |
+| **ADR-212** | Phase 9 — Async/Clone/Validation/FileSize/Currency Deduplication | ✅ APPROVED | [View](./adrs/ADR-212-phase9-async-clone-url-filesize.md) |
+| **ADR-213** | Validation Centralization (Phone + Text Extraction) | ✅ APPROVED | [View](./adrs/ADR-213-validation-centralization.md) |
+| **ADR-215** | Phase 10 — chunkArray/isRecord/formatBytes/formatDate/formatCurrency Deduplication | ✅ APPROVED | [View](./adrs/ADR-215-phase10-chunk-typeguards-formatters.md) |
+| **ADR-217** | Phase 11 — Object Sanitization, Greek Text Normalization, Debounce Callback Deduplication | ✅ APPROVED | [View](./adrs/ADR-217-phase11-sanitize-greek-debounce.md) |
+| **ADR-218** | Firestore Timestamp Conversion Centralization | ✅ Implemented | [View](./adrs/ADR-218-timestamp-conversion-centralization.md) |
+| **ADR-219** | Notification/Toast System Consolidation | ✅ APPROVED | [View](./adrs/ADR-219-notification-toast-consolidation.md) |
+| **ADR-220** | Firestore Field Extractor Centralization | ✅ APPROVED | [View](./adrs/ADR-220-field-extractor-centralization.md) |
+| **ADR-221** | Error Message Extraction Centralization | ✅ APPROVED | [View](./adrs/ADR-221-error-message-extraction.md) |
+| **ADR-222** | console.error/warn → createModuleLogger Migration | ✅ APPROVED | [View](./adrs/ADR-222-console-to-logger-migration.md) |
+| **ADR-224** | Safe JSON Parse Centralization | ✅ APPROVED | [View](./adrs/ADR-224-safe-json-parse-centralization.md) |
+| **ADR-225** | Type Guards Centralization — `isNonEmptyString`, `isNonEmptyArray` | ✅ APPROVED | [View](./adrs/ADR-225-type-guards-centralization.md) |
+| **ADR-229** | Centralized Page Loading & Error States | ✅ APPROVED | [View](./adrs/ADR-229-centralized-page-loading-states.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
-
-### ADR-218: Timestamp Conversion Centralization
-- **Status**: ✅ Implemented
-- **File**: `docs/centralized-systems/reference/adrs/ADR-218-timestamp-conversion-centralization.md`
-- **SSoT**: `src/lib/date-local.ts` — `normalizeToDate()`, `normalizeToISO()`, `normalizeToMillis()`, `fieldToISO()`, `getNestedTimestampISO()`; `src/lib/firestore/utils.ts` — `normalizeToTimestamp()`; `src/lib/intl-utils.ts` — `formatFlexibleDate()`, `formatFlexibleDateTime()`
-- **Summary**: Phase 1 (2026-03-12): Centralized Firestore Timestamp→ISO conversions, 80+ occurrences across 20 files. Phase 2 (2026-03-13): Added `normalizeToMillis`, `normalizeToTimestamp`, `formatFlexibleDate`; migrated 22 more files, deleted 6 local duplicate functions, ~180 lines boilerplate eliminated.
-
-### ADR-219: Notification/Toast System Consolidation
-- **Status**: ✅ Implemented
-- **File**: `docs/centralized-systems/reference/adrs/ADR-219-notification-toast-consolidation.md`
-- **SSoT**: `src/providers/NotificationProvider.tsx` — `useNotifications()` hook
-- **Summary**: Consolidated 2 toast libraries (react-hot-toast + sonner) σε ένα μοναδικό system μέσω `useNotifications()`. Migrated 33 αρχεία, ~151 toast calls. Αφαιρέθηκε react-hot-toast dependency. **ΚΑΝΟΝΑΣ**: ΑΠΑΓΟΡΕΥΕΤΑΙ direct import sonner/react-hot-toast.
-
-### ADR-220: Firestore Field Extractor Centralization
-- **Status**: ✅ Implemented
-- **File**: `docs/centralized-systems/reference/adrs/ADR-220-field-extractor-centralization.md`
-- **SSoT**: `src/lib/firestore/field-extractors.ts` — `getString()`, `getNumber()`, `getBoolean()`, `getArray()`, `getStringArray()`, `getObject()`, `getStringOrNumber()`
-- **Summary**: Centralized 18+ local field extractor definitions from 7 files. Overloaded signatures (with/without default). Null-safe DataRecord type. Eliminated `getStringOrUndefined`, `getStringProp`, `getStringProperty`, `getIdProperty`.
-
-### ADR-221: Error Message Extraction Centralization
-- **Status**: ✅ Implemented (Phase 1)
-- **File**: `docs/centralized-systems/reference/adrs/ADR-221-error-message-extraction.md`
-- **SSoT**: `src/lib/error-utils.ts` — `getErrorMessage(error, fallback?)`
-- **Summary**: Centralized 874 scattered `err instanceof Error ? err.message : '...'` patterns. Phase 1 migrated 30 files (~210 occurrences). `ApiErrorHandler.extractErrorMessage()` now delegates to centralized function.
-
-### ADR-222: console.error/warn → createModuleLogger Migration
-- **Status**: ✅ Implemented (Phase 1)
-- **File**: `docs/centralized-systems/reference/adrs/ADR-222-console-to-logger-migration.md`
-- **SSoT**: `src/lib/telemetry/Logger.ts` — `createModuleLogger(moduleName)`
-- **Summary**: Migrated ~180 raw `console.error`/`console.warn` calls from 30 files to structured `createModuleLogger` pattern. Adoption: 82% → 87%+. Phase 1 targeted files with 3+ raw console calls.
-
-### ADR-223: useAsyncData — Data Fetching Centralization
-- **Status**: ✅ Implemented (Phase 1)
-- **File**: `docs/centralized-systems/reference/adrs/ADR-223-use-async-data-centralization.md`
-- **SSoT**: `src/hooks/useAsyncData.ts` — `useAsyncData<T>(options)`
-- **Summary**: Centralized repeated loading/error/data fetching boilerplate from 112+ files. Phase 1 migrated 10 files (15 hooks). Features: stale-closure prevention, unmount safety, auth gating via `enabled`, auto-refetch on deps change.
 
 ---
 

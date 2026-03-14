@@ -2095,7 +2095,9 @@
       "lawyer": "Lawyer",
       "notary": "Notary",
       "realtor": "Realtor",
-      "accountant": "Accountant"
+      "accountant": "Accountant",
+      "seller_lawyer": "Seller's Lawyer",
+      "buyer_lawyer": "Buyer's Lawyer"
     },
     "entityLinks": {
       "title": "Entity Links",

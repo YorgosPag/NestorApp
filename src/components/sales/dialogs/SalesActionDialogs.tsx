@@ -28,6 +28,16 @@ import { TabbedAddNewContactDialog } from '@/components/contacts/dialogs/TabbedA
 import { AppurtenancesSection } from './AppurtenancesSection';
 import { useLinkedSpacesForSale } from '@/hooks/sales/useLinkedSpacesForSale';
 import { useContactEmailWatch } from '@/hooks/sales/useContactEmailWatch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { BrokerageService } from '@/services/brokerage.service';
+import { calculateCommission } from '@/types/brokerage';
+import type { BrokerageAgreement } from '@/types/brokerage';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('SalesActionDialogs');
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
@@ -465,14 +475,24 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
   // ADR-199: Linked spaces (appurtenances)
   const linkedSpaces = useLinkedSpacesForSale(unit);
 
+  // ADR-230: Optional broker selection at sale
+  const [brokerAgreements, setBrokerAgreements] = useState<BrokerageAgreement[]>([]);
+  const [selectedBrokerId, setSelectedBrokerId] = useState<string>('none');
+
   // Sync state when dialog opens or unit asking price changes
   useEffect(() => {
     if (open) {
       setFinalPrice(unit.commercial?.askingPrice?.toString() ?? '');
       setBuyerContactId(unit.commercial?.buyerContactId ?? '');
       setBuyerName(unit.commercial?.buyerName ?? '');
+      setSelectedBrokerId('none');
+
+      // Fetch active brokerage agreements
+      BrokerageService.getAgreements(unit.project, unit.id, 'active')
+        .then(setBrokerAgreements)
+        .catch(() => setBrokerAgreements([]));
     }
-  }, [open, unit.commercial?.askingPrice, unit.commercial?.buyerContactId, unit.commercial?.buyerName]);
+  }, [open, unit.commercial?.askingPrice, unit.commercial?.buyerContactId, unit.commercial?.buyerName, unit.project, unit.id]);
 
   const handleBuyerSelect = useCallback((contact: ContactSummary | null) => {
     setBuyerContactId(contact?.id ?? '');
@@ -533,6 +553,30 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
         logger.warn('Final sale invoice fire-and-forget failed', { error: err });
       });
 
+      // ADR-230: Fire-and-forget commission recording (if broker selected)
+      if (selectedBrokerId !== 'none') {
+        const agreement = brokerAgreements.find((a) => a.id === selectedBrokerId);
+        if (agreement) {
+          BrokerageService.recordCommission(
+            {
+              brokerageAgreementId: agreement.id,
+              agentContactId: agreement.agentContactId,
+              agentName: agreement.agentName,
+              unitId: unit.id,
+              projectId: unit.project,
+              buyerContactId: buyerContactId || '',
+              salePrice: price,
+              commissionType: agreement.commissionType,
+              commissionPercentage: agreement.commissionPercentage,
+              commissionFixedAmount: agreement.commissionFixedAmount,
+            },
+            'system'
+          ).catch((err: unknown) => {
+            logger.warn('Commission recording fire-and-forget failed', { error: err });
+          });
+        }
+      }
+
       // ADR-199: Sync appurtenance commercial status
       if (selectedSpaces.length > 0) {
         const syncPayload = linkedSpaces.buildSyncPayload('sell');
@@ -554,7 +598,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
     } finally {
       setSaving(false);
     }
-  }, [finalPrice, buyerContactId, buyerName, unit, onOpenChange, onSuccess, linkedSpaces, t]);
+  }, [finalPrice, buyerContactId, buyerName, unit, onOpenChange, onSuccess, linkedSpaces, selectedBrokerId, brokerAgreements, t]);
 
   const askingPrice = unit.commercial?.askingPrice;
   const discount = askingPrice && Number(finalPrice) > 0
@@ -637,6 +681,52 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
             <p className="text-xs text-orange-600">
               {t('sales.dialogs.sell.discount', { defaultValue: 'Έκπτωση' })}: −{discount}%
             </p>
+          )}
+
+          {/* ADR-230: Optional broker selection */}
+          {brokerAgreements.length > 0 && (
+            <fieldset className="space-y-1">
+              <Label className="text-sm font-medium">
+                {t('sales.dialogs.sell.broker', { defaultValue: 'Μεσίτης (προαιρετικό)' })}
+              </Label>
+              <Select value={selectedBrokerId} onValueChange={setSelectedBrokerId}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder={t('sales.dialogs.sell.noBroker', { defaultValue: 'Χωρίς μεσίτη' })} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none" className="text-xs">
+                    {t('sales.dialogs.sell.noBroker', { defaultValue: 'Χωρίς μεσίτη' })}
+                  </SelectItem>
+                  {brokerAgreements.map((a) => (
+                    <SelectItem key={a.id} value={a.id} className="text-xs">
+                      {a.agentName}
+                      {' — '}
+                      {a.commissionType === 'percentage' && a.commissionPercentage !== null
+                        ? `${a.commissionPercentage}%`
+                        : a.commissionFixedAmount !== null
+                          ? `${a.commissionFixedAmount}€`
+                          : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedBrokerId !== 'none' && Number(finalPrice) > 0 && (() => {
+                const agr = brokerAgreements.find((a) => a.id === selectedBrokerId);
+                if (!agr) return null;
+                const comm = calculateCommission({
+                  commissionType: agr.commissionType,
+                  salePrice: Number(finalPrice),
+                  commissionPercentage: agr.commissionPercentage,
+                  commissionFixedAmount: agr.commissionFixedAmount,
+                });
+                return (
+                  <p className="text-xs text-muted-foreground">
+                    {t('sales.dialogs.sell.commissionPreview', { defaultValue: 'Προμήθεια' })}:{' '}
+                    <span className="font-medium">{formatCurrency(comm)}</span>
+                  </p>
+                );
+              })()}
+            </fieldset>
           )}
 
           {/* ADR-199: Linked parking/storage appurtenances */}

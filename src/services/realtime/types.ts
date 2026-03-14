@@ -219,6 +219,12 @@ export const REALTIME_EVENTS = {
   BUILDING_PROJECT_LINKED: 'realtime:building-project-linked',
   UNIT_BUILDING_LINKED: 'realtime:unit-building-linked',
   NAVIGATION_REFRESH: 'realtime:navigation-refresh',
+  // Legal contract events (ADR-230)
+  CONTRACT_CREATED: 'realtime:contract-created',
+  CONTRACT_UPDATED: 'realtime:contract-updated',
+  CONTRACT_STATUS_CHANGED: 'realtime:contract-status-changed',
+  CONTRACT_DELETED: 'realtime:contract-deleted',
+  CONTRACT_PROFESSIONAL_CHANGED: 'realtime:contract-professional-changed',
   // Association link events (contact_links, file_links)
   CONTACT_LINK_CREATED: 'realtime:contact-link-created',
   CONTACT_LINK_DELETED: 'realtime:contact-link-deleted',
@@ -1015,6 +1021,45 @@ export interface EntityUnlinkedPayload {
 }
 
 // ============================================================================
+// LEGAL CONTRACT EVENT PAYLOADS (ADR-230)
+// ============================================================================
+
+export interface ContractCreatedPayload {
+  contractId: string;
+  unitId: string;
+  phase: string;
+  timestamp: number;
+}
+
+export interface ContractUpdatedPayload {
+  contractId: string;
+  unitId: string;
+  timestamp: number;
+}
+
+export interface ContractStatusChangedPayload {
+  contractId: string;
+  unitId: string;
+  previousStatus: string;
+  newStatus: string;
+  timestamp: number;
+}
+
+export interface ContractDeletedPayload {
+  contractId: string;
+  unitId: string;
+  timestamp: number;
+}
+
+export interface ContractProfessionalChangedPayload {
+  contractId: string;
+  unitId: string;
+  role: string;
+  contactId: string | null;
+  timestamp: number;
+}
+
+// ============================================================================
 // EVENT MAP — type-safe mapping from event key → payload type
 // ============================================================================
 
@@ -1088,4 +1133,10 @@ export interface RealtimeEventMap {
   // Entity linking (2)
   ENTITY_LINKED: EntityLinkedPayload;
   ENTITY_UNLINKED: EntityUnlinkedPayload;
+  // Legal contracts (ADR-230)
+  CONTRACT_CREATED: ContractCreatedPayload;
+  CONTRACT_UPDATED: ContractUpdatedPayload;
+  CONTRACT_STATUS_CHANGED: ContractStatusChangedPayload;
+  CONTRACT_DELETED: ContractDeletedPayload;
+  CONTRACT_PROFESSIONAL_CHANGED: ContractProfessionalChangedPayload;
 }

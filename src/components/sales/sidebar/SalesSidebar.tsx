@@ -36,8 +36,11 @@ import {
   Video,
   FileText,
   Clock,
+  Scale,
 } from 'lucide-react';
+import { LegalTabContent } from '@/components/sales/legal/LegalTabContent';
 import type { Unit } from '@/types/unit';
+import type { EntityAssociationLink } from '@/types/entity-associations';
 
 // =============================================================================
 // 🏢 TYPES
@@ -54,13 +57,16 @@ interface SalesSidebarProps {
   /** Quick filter: selected unit type */
   selectedUnitType: string;
   onUnitTypeChange: (type: string) => void;
+  /** Unit associations — for ProfessionalsCard in Legal tab (ADR-230) */
+  unitAssociations?: EntityAssociationLink[];
 }
 
 // =============================================================================
 // 🏢 TAB CONFIG (ADR-197 §2.7)
 // =============================================================================
 
-const SALES_TABS = [
+/** Base tabs — always visible */
+const BASE_SALES_TABS = [
   { id: 'sale-info', icon: DollarSign, labelKey: 'sales.tabs.saleInfo', defaultLabel: 'Πώληση' },
   { id: 'unit-summary', icon: Home, labelKey: 'sales.tabs.unitSummary', defaultLabel: 'Μονάδα' },
   { id: 'documents', icon: FileText, labelKey: 'sales.tabs.documents', defaultLabel: 'Έγγραφα' },
@@ -68,6 +74,25 @@ const SALES_TABS = [
   { id: 'videos', icon: Video, labelKey: 'sales.tabs.videos', defaultLabel: 'Βίντεο' },
   { id: 'history', icon: Clock, labelKey: 'sales.tabs.history', defaultLabel: 'Ιστορικό' },
 ] as const;
+
+/** Legal tab — conditional, visible ONLY for reserved/sold units (ADR-230) */
+const LEGAL_TAB = { id: 'legal', icon: Scale, labelKey: 'sales.tabs.legal', defaultLabel: 'Νομικά' } as const;
+
+/** Check if unit has reserved/sold status → show legal tab */
+function shouldShowLegalTab(unit: Unit | null): boolean {
+  if (!unit) return false;
+  return unit.commercialStatus === 'reserved' || unit.commercialStatus === 'sold';
+}
+
+/** Build dynamic tabs array */
+function buildTabs(unit: Unit | null) {
+  const tabs = [...BASE_SALES_TABS];
+  if (shouldShowLegalTab(unit)) {
+    // Insert legal tab after sale-info (position 1)
+    tabs.splice(1, 0, LEGAL_TAB);
+  }
+  return tabs;
+}
 
 // =============================================================================
 // 🏢 COMPONENT
@@ -82,6 +107,7 @@ export function SalesSidebar({
   onCommercialStatusChange,
   selectedUnitType,
   onUnitTypeChange,
+  unitAssociations = [],
 }: SalesSidebarProps) {
   const { t } = useTranslation('common');
   const isMobile = useIsMobile();
@@ -118,7 +144,7 @@ export function SalesSidebar({
       tabsRenderer={
         <Tabs defaultValue="sale-info" className="flex flex-col">
           <TabsList className="flex flex-wrap gap-1 w-full h-auto min-h-fit flex-shrink-0">
-            {SALES_TABS.map(tab => (
+            {buildTabs(selectedUnit).map(tab => (
               <TabsTrigger
                 key={tab.id}
                 value={tab.id}
@@ -139,6 +165,16 @@ export function SalesSidebar({
           <TabsContent value="unit-summary" className="flex-1">
             <UnitSummaryContent data={selectedUnit} />
           </TabsContent>
+
+          {/* Legal Tab — ADR-230 (conditional, reserved/sold only) */}
+          {shouldShowLegalTab(selectedUnit) && (
+            <TabsContent value="legal" className="flex-1">
+              <LegalTabContent
+                unit={selectedUnit}
+                associations={unitAssociations}
+              />
+            </TabsContent>
+          )}
 
           {/* Documents, Photos, Videos → redirect to /units with matching tab */}
           {(['documents', 'photos', 'videos'] as const).map(tabId => {

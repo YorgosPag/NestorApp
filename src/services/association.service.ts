@@ -72,6 +72,18 @@ import type {
   ContactWithLinks,
   FileWithLinks,
 } from '@/types/associations';
+import type {
+  ProfessionalSnapshot,
+  LegalProfessionalRole,
+  LawyerSnapshotData,
+  NotarySnapshotData,
+} from '@/types/legal-contracts';
+import type { PersonaData } from '@/types/contacts/personas';
+import {
+  findActivePersona,
+  isLawyerPersona,
+  isNotaryPersona,
+} from '@/types/contacts/personas';
 
 // ============================================================================
 // ASSOCIATION SERVICE
@@ -529,6 +541,101 @@ export class AssociationService {
         error: error instanceof Error ? error.message : 'Unknown error',
         errorCode: 'UPDATE_ROLE_FAILED',
       };
+    }
+  }
+
+  // ==========================================================================
+  // PROFESSIONAL SNAPSHOTS (ADR-230: Contract Workflow)
+  // ==========================================================================
+
+  /**
+   * Δημιουργεί immutable snapshots των νομικών επαγγελματιών ενός unit.
+   * Χρησιμοποιείται κατά τη δημιουργία/υπογραφή contract.
+   *
+   * Διαβάζει live associations (contact_links) → fetch contact → persona → snapshot.
+   *
+   * @param unitId - Unit ID
+   * @param roles - Ποιους ρόλους να γυρίσει (default: όλους τους νομικούς)
+   * @returns Array of ProfessionalSnapshot
+   */
+  static async snapshotProfessionals(
+    unitId: string,
+    roles: LegalProfessionalRole[] = ['seller_lawyer', 'buyer_lawyer', 'notary']
+  ): Promise<ProfessionalSnapshot[]> {
+    try {
+      // 1. Βρες active contact links για αυτό το unit με νομικούς ρόλους
+      const links = await this.listContactLinks({
+        targetEntityType: 'unit',
+        targetEntityId: unitId,
+        status: 'active',
+      });
+
+      const legalLinks = links.filter(
+        (link) => link.role && (roles as string[]).includes(link.role)
+      );
+
+      if (legalLinks.length === 0) {
+        return [];
+      }
+
+      // 2. Fetch contact data + create snapshot
+      const snapshots: ProfessionalSnapshot[] = [];
+
+      for (const link of legalLinks) {
+        const contactRef = doc(db, COLLECTIONS.CONTACTS, link.sourceContactId);
+        const contactSnap = await getDoc(contactRef);
+
+        if (!contactSnap.exists()) continue;
+
+        const contactData = contactSnap.data();
+        const role = link.role as LegalProfessionalRole;
+        const personas: PersonaData[] = contactData.personas ?? [];
+
+        // Build role-specific data
+        let roleSpecificData: LawyerSnapshotData | NotarySnapshotData;
+
+        if (role === 'notary') {
+          const notaryPersona = findActivePersona(personas, 'notary');
+          roleSpecificData = {
+            type: 'notary',
+            notaryRegistryNumber: (notaryPersona && isNotaryPersona(notaryPersona))
+              ? notaryPersona.notaryRegistryNumber
+              : null,
+            notaryDistrict: (notaryPersona && isNotaryPersona(notaryPersona))
+              ? notaryPersona.notaryDistrict
+              : null,
+          };
+        } else {
+          const lawyerPersona = findActivePersona(personas, 'lawyer');
+          roleSpecificData = {
+            type: 'lawyer',
+            barAssociationNumber: (lawyerPersona && isLawyerPersona(lawyerPersona))
+              ? lawyerPersona.barAssociationNumber
+              : null,
+            barAssociation: (lawyerPersona && isLawyerPersona(lawyerPersona))
+              ? lawyerPersona.barAssociation
+              : null,
+          };
+        }
+
+        snapshots.push({
+          contactId: link.sourceContactId,
+          displayName: [contactData.firstName, contactData.lastName].filter(Boolean).join(' ')
+            || contactData.companyName || 'Unknown',
+          role,
+          phone: contactData.phone ?? null,
+          email: contactData.email ?? null,
+          taxId: contactData.taxId ?? null,
+          roleSpecificData,
+          snapshotAt: new Date().toISOString(),
+        });
+      }
+
+      logger.info(`[AssociationService] Snapshot ${snapshots.length} professionals for unit ${unitId}`);
+      return snapshots;
+    } catch (error) {
+      logger.error('[AssociationService] Failed to snapshot professionals:', error);
+      return [];
     }
   }
 
