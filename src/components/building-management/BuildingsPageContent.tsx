@@ -9,6 +9,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // [ENTERPRISE] Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
+import { PageLoadingState, PageErrorState } from '@/core/states';
 import { BuildingsList } from './BuildingsList';
 import { BuildingDetails } from './BuildingDetails';
 import { BuildingsHeader } from './BuildingsPage/BuildingsHeader';
@@ -264,12 +265,7 @@ export function BuildingsPageContent() {
   if (buildingsLoading) {
     return (
         <PageContainer ariaLabel={t('pages.buildings.loading')}>
-          <section className="flex-1 flex items-center justify-center" role="status" aria-live="polite">
-            <div className="text-center">
-              <AnimatedSpinner size="large" className="mx-auto mb-2" />
-              <p>{t('pages.buildings.loadingMessage')}</p>
-            </div>
-          </section>
+          <PageLoadingState icon={Building} message={t('pages.buildings.loadingMessage')} layout="contained" />
         </PageContainer>
     );
   }
@@ -278,12 +274,11 @@ export function BuildingsPageContent() {
   if (buildingsError) {
     return (
         <PageContainer ariaLabel={t('pages.buildings.error.pageLabel')}>
-          <section className="flex-1 flex items-center justify-center" role="alert" aria-label={t('pages.buildings.error.ariaLabel')}>
-            <div className={`text-center ${colors.text.error}`}>
-              <p className="mb-2">[ERROR] {t('pages.buildings.error.title')}</p>
-              <p className="text-sm">{buildingsError}</p>
-            </div>
-          </section>
+          <PageErrorState
+            title={t('pages.buildings.error.title')}
+            message={buildingsError}
+            layout="contained"
+          />
         </PageContainer>
     );
   }

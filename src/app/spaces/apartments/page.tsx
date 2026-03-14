@@ -3,8 +3,8 @@
 import React, { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-// 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
+import { StaticPageLoading } from '@/core/states';
 
 /**
  * ENTERPRISE ROUTE REDIRECT
@@ -57,16 +57,7 @@ function RedirectContent() {
  */
 export default function SpacesApartmentsRedirectPage() {
   return (
-    <Suspense fallback={
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <AnimatedSpinner size="large" className="mx-auto" />
-          <p className="text-sm text-muted-foreground">
-            Φόρτωση...
-          </p>
-        </div>
-      </div>
-    }>
+    <Suspense fallback={<StaticPageLoading />}>
       <RedirectContent />
     </Suspense>
   );

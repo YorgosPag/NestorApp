@@ -25,7 +25,7 @@ import { ListContainer, PageContainer } from '@/core/containers';
 import { UnitsSidebar } from '@/components/units/UnitsSidebar';
 import { PropertyGridViewCompatible as PropertyGridView } from '@/components/property-viewer/PropertyGrid';
 // 🏢 ENTERPRISE: Import from canonical location
-import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
+import { StaticPageLoading } from '@/core/states';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -488,23 +488,9 @@ function UnitsPageContent() {
   );
 }
 
-function UnitsPageFallback() {
-  const { t } = useTranslation('units');
-  const colors = useSemanticColors();
-
-  return (
-    <div className={`min-h-screen ${colors.bg.secondary} dark:${colors.bg.primary} flex items-center justify-center`}>
-      <div className="text-center">
-        <AnimatedSpinner size="large" className="mx-auto mb-4" />
-        <p className={`${colors.text.muted}`}>{t('page.loading')}</p>
-      </div>
-    </div>
-  );
-}
-
 export default function UnitsPage() {
   return (
-    <Suspense fallback={<UnitsPageFallback />}>
+    <Suspense fallback={<StaticPageLoading />}>
       <UnitsPageContent />
     </Suspense>
   );

@@ -58,6 +58,7 @@ const ArchiveContactDialog = dynamic(
 );
 import { AdvancedFiltersPanel, type ContactFilterState, contactFiltersConfig } from '@/components/core/AdvancedFilters';
 import { ListContainer, PageContainer } from '@/core/containers';
+import { PageErrorState } from '@/core/states';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
@@ -707,15 +708,12 @@ export function ContactsPageContent() {
 
         <ListContainer>
           {error ? (
-            <section className={`w-full text-center p-8 bg-card rounded-lg ${getStatusBorder('error')}`} role="alert" aria-label={t('page.error.ariaLabel')}>
-              <p className="text-destructive font-medium">⚠️ {error}</p>
-              <button
-                onClick={refreshContacts}
-                className={`mt-2 px-4 py-2 bg-primary text-primary-foreground rounded ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY}`}
-              >
-                {t('page.error.retry')}
-              </button>
-            </section>
+            <PageErrorState
+              title={error}
+              onRetry={refreshContacts}
+              retryLabel={t('page.error.retry')}
+              layout="contained"
+            />
           ) : viewMode === 'list' ? (
             <>
               {/* 🖥️ DESKTOP: Standard split layout - Same as Units/Projects/Buildings */}

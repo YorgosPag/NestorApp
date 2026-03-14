@@ -13,6 +13,7 @@ import { useSemanticColors } from '@/hooks/useSemanticColors';
 import useSpacingTokens from '@/hooks/useSpacingTokens';
 import useTypography from '@/hooks/useTypography';
 import { i18n } from '@/i18n';
+import { PageLoadingState, StaticPageLoading } from '@/core/states';
 
 const DxfViewerApp = dynamic(
   () => import('@/subapps/dxf-viewer/DxfViewerApp'),
@@ -23,23 +24,8 @@ const DxfViewerApp = dynamic(
 );
 
 function DxfViewerLoadingFallback() {
-  const spacing = useSpacingTokens();
-  const typography = useTypography();
-  const colors = useSemanticColors();
-
   return (
-    <main
-      className={cn('w-full h-full flex items-center justify-center')}
-      role="main"
-      aria-label={i18n.t('common:dxfViewer.loadingAriaLabel')}
-    >
-      <section className="text-center" role="status" aria-live="polite">
-        <AnimatedSpinner size="large" className={cn('mx-auto', spacing.margin.bottom.md)} />
-        <p className={cn(typography.body.base, colors.text.muted)}>
-          {i18n.t('common:dxfViewer.loading')}
-        </p>
-      </section>
-    </main>
+    <PageLoadingState message={i18n.t('common:dxfViewer.loading')} layout="contained" />
   );
 }
 
@@ -53,16 +39,7 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
   const centerLayout = 'w-full h-full flex items-center justify-center';
 
   if (isLoading) {
-    return (
-      <main className={cn(centerLayout)} role="main" aria-label={t('dxfViewer.checkingPermissionsAriaLabel')}>
-        <section className="text-center" role="status" aria-live="polite">
-          <AnimatedSpinner size="medium" className={cn('mx-auto', spacing.margin.bottom.md)} />
-          <p className={cn(typography.body.base, colors.text.muted)}>
-            {t('dxfViewer.checkingPermissions')}
-          </p>
-        </section>
-      </main>
-    );
+    return <PageLoadingState message={t('dxfViewer.checkingPermissions')} layout="contained" />;
   }
 
   if (!isAdmin) {
@@ -103,14 +80,7 @@ export default function DxfViewerPage() {
     <AdminGuard>
       <main className="w-full h-full" aria-label="DXF Viewer">
         <Suspense
-          fallback={
-            <section className={cn('w-full h-full flex items-center justify-center')} role="status" aria-live="polite">
-              <div className="text-center">
-                <AnimatedSpinner size="large" className={cn('mx-auto', spacing.margin.bottom.md)} />
-                <p className={cn(typography.body.base, colors.text.muted)}>{t('dxfViewer.loading')}</p>
-              </div>
-            </section>
-          }
+          fallback={<StaticPageLoading message={t('dxfViewer.loading')} />}
         >
           <DxfViewerApp className="w-full h-full" />
         </Suspense>

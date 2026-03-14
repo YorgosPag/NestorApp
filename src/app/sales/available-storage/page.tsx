@@ -16,13 +16,13 @@ import { UnifiedDashboard, type DashboardStat } from '@/components/property-mana
 import { AdvancedFiltersPanel, storageFiltersConfig, type StorageFilterState } from '@/components/core/AdvancedFilters';
 import {
   Package,
+  Warehouse,
   DollarSign,
   TrendingUp,
   Maximize2,
 } from 'lucide-react';
 import { ListContainer, PageContainer } from '@/core/containers';
-import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { StaticPageLoading } from '@/core/states';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyCompact, formatCurrencyWhole } from '@/lib/intl-utils';
 
@@ -230,29 +230,13 @@ function SalesStorageContent() {
 // 🏢 LOADING FALLBACK
 // =============================================================================
 
-function SalesStorageFallback() {
-  const { t } = useTranslation('common');
-  const colors = useSemanticColors();
-
-  return (
-    <div className={`min-h-screen ${colors.bg.secondary} flex items-center justify-center`}>
-      <div className="text-center">
-        <AnimatedSpinner size="large" className="mx-auto mb-4" />
-        <p className={colors.text.muted}>
-          {t('salesStorage.loading', { defaultValue: 'Φόρτωση διαθέσιμων αποθηκών...' })}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 // =============================================================================
 // 🏢 PAGE EXPORT
 // =============================================================================
 
 export default function AvailableStoragePage() {
   return (
-    <Suspense fallback={<SalesStorageFallback />}>
+    <Suspense fallback={<StaticPageLoading icon={Warehouse} message="Φόρτωση διαθέσιμων αποθηκών..." />}>
       <SalesStorageContent />
     </Suspense>
   );

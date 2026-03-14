@@ -29,6 +29,7 @@ import { useStorageStats } from '@/hooks/useStorageStats';
 import { useFirestoreStorages } from '@/hooks/useFirestoreStorages';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { PageLoadingState, PageErrorState, StaticPageLoading } from '@/core/states';
 import { AdvancedFiltersPanel, storageFiltersConfig } from '@/components/core/AdvancedFilters';
 import { ListContainer, PageContainer } from '@/core/containers';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
@@ -195,31 +196,18 @@ function StoragePageContent() {
 
   // Loading state
   if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <Warehouse className={`${iconSizes.xl} animate-spin mx-auto mb-4 text-muted-foreground`} />
-          <p className="text-muted-foreground">{t('pages.storage.loading')}</p>
-        </div>
-      </div>
-    );
+    return <PageLoadingState icon={Warehouse} message={t('pages.storage.loading')} />;
   }
 
   // Error state
   if (error) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-500 text-lg font-medium mb-2">{t('pages.storage.error.title')}</div>
-          <p className="text-muted-foreground mb-4">{error}</p>
-          <button
-            onClick={refetch}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-          >
-            {t('pages.storage.error.retry')}
-          </button>
-        </div>
-      </div>
+      <PageErrorState
+        title={t('pages.storage.error.title')}
+        message={error}
+        onRetry={refetch}
+        retryLabel={t('pages.storage.error.retry')}
+      />
     );
   }
 
@@ -353,15 +341,7 @@ function StoragePageContent() {
  */
 export default function StoragePage() {
   return (
-    <Suspense fallback={
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <Warehouse className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-          {/* Static fallback text - cannot use hooks in Suspense fallback */}
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    }>
+    <Suspense fallback={<StaticPageLoading icon={Warehouse} />}>
       <StoragePageContent />
     </Suspense>
   );

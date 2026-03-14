@@ -18,7 +18,7 @@
  * @enterprise ADR-021 - Centralized Loading States
  */
 
-import { Loader2 } from 'lucide-react';
+import { StaticPageLoading } from '@/core/states';
 
 /**
  * Static Loading Component (Server Component)
@@ -27,31 +27,5 @@ import { Loader2 } from 'lucide-react';
  * This ensures maximum compatibility with Next.js App Router
  */
 export default function Loading() {
-  return (
-    <main
-      className="min-h-screen w-full flex items-center justify-center bg-background"
-      role="main"
-      aria-label="Φόρτωση σελίδας"
-    >
-      <section
-        className="flex flex-col gap-4 text-center"
-        role="status"
-        aria-live="polite"
-        aria-busy="true"
-      >
-        {/* Spinner - Using Lucide directly for server component compatibility */}
-        <figure className="mx-auto">
-          <Loader2
-            className="h-8 w-8 animate-spin text-muted-foreground"
-            aria-hidden="true"
-          />
-        </figure>
-
-        {/* Loading text */}
-        <p className="text-base text-muted-foreground">
-          Φόρτωση...
-        </p>
-      </section>
-    </main>
-  );
+  return <StaticPageLoading />;
 }

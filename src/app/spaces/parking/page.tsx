@@ -38,6 +38,7 @@ import { useParkingStats } from '@/hooks/useParkingStats';
 import { useFirestoreParkingSpots } from '@/hooks/useFirestoreParkingSpots';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { PageLoadingState, PageErrorState, StaticPageLoading } from '@/core/states';
 import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters';
 import { parkingFiltersConfig } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
 import { ListContainer, PageContainer } from '@/core/containers';
@@ -190,31 +191,18 @@ function ParkingPageContent() {
 
   // Loading state
   if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <Car className={`${iconSizes.xl} animate-spin mx-auto mb-4 text-muted-foreground`} />
-          <p className="text-muted-foreground">{t('pages.parking.loading')}</p>
-        </div>
-      </div>
-    );
+    return <PageLoadingState icon={Car} message={t('pages.parking.loading')} />;
   }
 
   // Error state
   if (error) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-500 text-lg font-medium mb-2">{t('pages.parking.error.title')}</div>
-          <p className="text-muted-foreground mb-4">{error}</p>
-          <button
-            onClick={refetch}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-          >
-            {t('pages.parking.error.retry')}
-          </button>
-        </div>
-      </div>
+      <PageErrorState
+        title={t('pages.parking.error.title')}
+        message={error}
+        onRetry={refetch}
+        retryLabel={t('pages.parking.error.retry')}
+      />
     );
   }
 
@@ -348,15 +336,7 @@ function ParkingPageContent() {
  */
 export default function ParkingPage() {
   return (
-    <Suspense fallback={
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <Car className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-          {/* Static fallback text - cannot use hooks in Suspense fallback */}
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    }>
+    <Suspense fallback={<StaticPageLoading icon={Car} />}>
       <ParkingPageContent />
     </Suspense>
   );

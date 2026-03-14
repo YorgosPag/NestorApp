@@ -21,8 +21,7 @@ import {
   Maximize2,
 } from 'lucide-react';
 import { ListContainer, PageContainer } from '@/core/containers';
-import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { StaticPageLoading } from '@/core/states';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyCompact, formatCurrencyWhole } from '@/lib/intl-utils';
 
@@ -228,29 +227,13 @@ function SalesParkingContent() {
 // 🏢 LOADING FALLBACK
 // =============================================================================
 
-function SalesParkingFallback() {
-  const { t } = useTranslation('common');
-  const colors = useSemanticColors();
-
-  return (
-    <div className={`min-h-screen ${colors.bg.secondary} flex items-center justify-center`}>
-      <div className="text-center">
-        <AnimatedSpinner size="large" className="mx-auto mb-4" />
-        <p className={colors.text.muted}>
-          {t('salesParking.loading', { defaultValue: 'Φόρτωση διαθέσιμων θέσεων...' })}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 // =============================================================================
 // 🏢 PAGE EXPORT
 // =============================================================================
 
 export default function AvailableParkingPage() {
   return (
-    <Suspense fallback={<SalesParkingFallback />}>
+    <Suspense fallback={<StaticPageLoading icon={Car} message="Φόρτωση διαθέσιμων θέσεων..." />}>
       <SalesParkingContent />
     </Suspense>
   );

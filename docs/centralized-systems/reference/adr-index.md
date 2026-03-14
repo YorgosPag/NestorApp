@@ -248,6 +248,7 @@
 | **ADR-226** | Centralized Deletion Guard — Referential Integrity Protection | 📋 Planning | 2026-03-13 | Backend Systems / Data & State | [📄](./adrs/ADR-226-deletion-guard.md) |
 | **ADR-227** | Real-Time Subscription Consolidation & Coverage Expansion (3 patterns → 1 canonical) | 🟢 Phases 1-3 Implemented — Phase 2 partial (4/10 blocked) | 2026-03-13 | Data Access Layer / Real-Time Architecture | [📄](./adrs/ADR-227-realtime-subscription-consolidation.md) |
 | **ADR-228** | Real-Time Event Bus Coverage Gap Analysis & Implementation Roadmap (50% coverage, 4-tier plan) | 📋 Analysis Complete | 2026-03-14 | Data Access Layer / Real-Time Architecture | [📄](./adrs/ADR-228-realtime-event-coverage-gap-analysis.md) |
+| **ADR-229** | Centralized Page Loading & Error States (PageLoadingState, PageErrorState, StaticPageLoading) | ✅ Implemented | 2026-03-14 | UI Components / Core States | [📄](./adrs/ADR-229-centralized-page-loading-states.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
