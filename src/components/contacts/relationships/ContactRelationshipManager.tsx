@@ -286,7 +286,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
           <Alert variant="destructive">
             <AlertCircle className={iconSizes.sm} />
             <AlertDescription>
-              {t(formError, { defaultValue: t('relationships.manager.errors.formError') })}
+              {t(formError, { defaultValue: formError })}
             </AlertDescription>
           </Alert>
         )}
