@@ -3,7 +3,8 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Eye, Pencil, Unlink2, Trash2, Loader2 } from 'lucide-react';
+import { Eye, Pencil, Unlink2, Trash2 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import type { StorageUnit } from '@/types/storage';
 
 interface StorageRowActionsProps {
@@ -43,7 +44,7 @@ export function StorageRowActions({ unit, onEdit, onDelete, deletingId, unlinkin
             onClick={() => onUnlink?.(unit)}
             disabled={unlinkingId === unit.id}
           >
-            {unlinkingId === unit.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlink2 className="h-3.5 w-3.5" />}
+            {unlinkingId === unit.id ? <Spinner size="small" color="inherit" /> : <Unlink2 className="h-3.5 w-3.5" />}
           </Button>
         </TooltipTrigger>
         <TooltipContent>Αποσύνδεση</TooltipContent>
@@ -57,7 +58,7 @@ export function StorageRowActions({ unit, onEdit, onDelete, deletingId, unlinkin
             onClick={() => onDelete(unit.id)}
             disabled={deletingId === unit.id}
           >
-            {deletingId === unit.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+            {deletingId === unit.id ? <Spinner size="small" color="inherit" /> : <Trash2 className="h-3.5 w-3.5" />}
           </Button>
         </TooltipTrigger>
         <TooltipContent>Διαγραφή</TooltipContent>

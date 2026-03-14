@@ -43,7 +43,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { FormGrid, FormField, FormInput } from '@/components/ui/form/FormComponents';
 import { SaveButton, CancelButton } from '@/components/ui/form/ActionButtons';
-import { Home, ClipboardList, Loader2 } from 'lucide-react';
+import { Home, ClipboardList } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 // ENTERPRISE: Centralized dialog sizing tokens (ADR-031)
 import { cn } from '@/lib/utils';
 import { DIALOG_SIZES, DIALOG_HEIGHT, DIALOG_SCROLL } from '@/styles/design-tokens';
@@ -347,7 +348,7 @@ export function AddUnitDialog({
                   <FormInput>
                     {floorsLoading ? (
                       <section className="flex items-center gap-2 h-10 text-muted-foreground text-sm">
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Spinner size="small" />
                         <span>{t('dialog.addUnit.loadingFloors')}</span>
                       </section>
                     ) : floorOptions.length > 0 ? (

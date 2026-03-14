@@ -19,7 +19,8 @@
  */
 
 import * as React from 'react';
-import { Mic, MicOff, Loader2, Square, Copy, Check, Send } from 'lucide-react';
+import { Mic, MicOff, Square, Copy, Check, Send } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -204,7 +205,7 @@ export function VoiceAssistantButton() {
             {/* Transcribing Spinner */}
             {status === 'transcribing' && (
               <div className="flex flex-col items-center gap-3">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <Spinner size="large" />
                 <p className="text-sm text-muted-foreground" suppressHydrationWarning>
                   {t('voiceAssistant.processing', 'Processing audio...')}
                 </p>
@@ -283,7 +284,7 @@ export function VoiceAssistantButton() {
                     suppressHydrationWarning
                   >
                     {isSubmitting ? (
-                      <Loader2 className={cn(iconSizes.sm, 'mr-1 animate-spin')} />
+                      <Spinner size="small" color="inherit" className="mr-1" />
                     ) : (
                       <Send className={cn(iconSizes.sm, 'mr-1')} />
                     )}

@@ -13,7 +13,8 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { Users, UserPlus, Loader2, AlertCircle, HardHat, X } from 'lucide-react';
+import { Users, UserPlus, AlertCircle, HardHat, X } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -114,7 +115,7 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className={cn(iconSizes.lg, 'animate-spin text-muted-foreground')} />
+          <Spinner size="large" />
         </CardContent>
       </Card>
     );
@@ -198,7 +199,7 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
                     size="sm"
                   >
                     {isAssigning ? (
-                      <Loader2 className={cn(iconSizes.sm, spacing.margin.right.sm, 'animate-spin')} />
+                      <Spinner size="small" color="inherit" className={spacing.margin.right.sm} />
                     ) : (
                       <UserPlus className={cn(iconSizes.sm, spacing.margin.right.sm)} />
                     )}

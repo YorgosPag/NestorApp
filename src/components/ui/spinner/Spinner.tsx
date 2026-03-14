@@ -28,9 +28,13 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 
 export type SpinnerSize = 'small' | 'medium' | 'large';
 
+export type SpinnerColor = 'muted' | 'inherit';
+
 export interface SpinnerProps {
   /** Spinner size - maps to centralized icon sizes */
   size?: SpinnerSize;
+  /** Color mode: 'muted' for standalone, 'inherit' inside buttons */
+  color?: SpinnerColor;
   /** Additional CSS classes */
   className?: string;
   /** Accessibility label */
@@ -62,6 +66,7 @@ const SIZE_MAP: Record<SpinnerSize, keyof ReturnType<typeof useIconSizes>> = {
  */
 export const Spinner: React.FC<SpinnerProps> = ({
   size = 'medium',
+  color = 'muted',
   className = '',
   'aria-label': ariaLabel = 'Loading...',
 }) => {
@@ -70,7 +75,12 @@ export const Spinner: React.FC<SpinnerProps> = ({
 
   return (
     <Loader2
-      className={cn(sizeClass, 'animate-spin text-muted-foreground', className)}
+      className={cn(
+        sizeClass,
+        'animate-spin',
+        color === 'muted' && 'text-muted-foreground',
+        className,
+      )}
       aria-label={ariaLabel}
       role="status"
     />

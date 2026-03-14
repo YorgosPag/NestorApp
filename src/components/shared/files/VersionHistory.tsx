@@ -13,7 +13,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { History, RotateCcw, Download, Clock, User, Loader2 } from 'lucide-react';
+import { History, RotateCcw, Download, Clock, User } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -150,7 +151,7 @@ export function VersionHistory({
       {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center p-4">
-          <Loader2 className={cn(iconSizes.md, 'animate-spin', colors.text.muted)} />
+          <Spinner />
         </div>
       )}
 
@@ -224,7 +225,7 @@ export function VersionHistory({
                     disabled={rollingBack !== null}
                   >
                     {rollingBack === `v${version.versionNumber}` ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <Spinner size="small" color="inherit" />
                     ) : (
                       <RotateCcw className="h-3.5 w-3.5" />
                     )}

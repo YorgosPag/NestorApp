@@ -27,11 +27,11 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   MapPin,
   Save,
-  Loader2,
   AlertCircle,
   CircleDot,
   RotateCcw,
 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -323,7 +323,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <Spinner size="large" />
         </CardContent>
       </Card>
     );
@@ -492,7 +492,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
             size="sm"
           >
             {isSaving ? (
-              <Loader2 className={cn(iconSizes.sm, 'mr-2 animate-spin')} />
+              <Spinner size="small" color="inherit" className="mr-2" />
             ) : (
               <Save className={cn(iconSizes.sm, 'mr-2')} />
             )}

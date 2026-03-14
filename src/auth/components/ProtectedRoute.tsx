@@ -12,8 +12,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useUserRole } from '../contexts/UserRoleContext';
-import { Loader2 } from 'lucide-react';
-import { useIconSizes } from '@/hooks/useIconSizes';
+import { Spinner } from '@/components/ui/spinner';
 import type { ProtectedRouteProps, UserRole } from '../types/auth.types';
 
 import { createModuleLogger } from '@/lib/telemetry';
@@ -29,7 +28,6 @@ export function ProtectedRoute({
   requiredRole,
   redirectTo = '/login'
 }: ProtectedRouteProps) {
-  const iconSizes = useIconSizes();
   const { user, isLoading, isAuthenticated, isAdmin } = useUserRole();
   const router = useRouter();
 
@@ -71,7 +69,7 @@ export function ProtectedRoute({
     return (
       <div className="h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className={`${iconSizes.lg} animate-spin text-muted-foreground`} />
+          <Spinner size="large" />
           <p className="text-muted-foreground">Έλεγχος πρόσβασης...</p>
         </div>
       </div>

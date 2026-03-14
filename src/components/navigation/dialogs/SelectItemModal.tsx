@@ -14,7 +14,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Loader2 } from 'lucide-react';
+import { Search } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '../../ui/effects';
 // 🏢 ENTERPRISE: Icons/Colors από centralized config - ZERO hardcoded values
 import { NAVIGATION_ENTITIES, type NavigationEntityType } from '../config';
@@ -135,7 +136,7 @@ export function SelectItemModal({
           {/* Loading State */}
           {isLoading && (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+              <Spinner size="large" />
               <span className="ml-2 text-sm text-gray-600">{t('status.loading')}</span>
             </div>
           )}

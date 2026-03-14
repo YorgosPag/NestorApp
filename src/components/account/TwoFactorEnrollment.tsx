@@ -29,10 +29,10 @@ import {
   AlertTriangle,
   Shield,
   QrCode,
-  Loader2,
   ChevronRight,
   Download
 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -338,7 +338,7 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
         className="w-full"
       >
         {isLoading ? (
-          <Loader2 className={cn(iconSizes.sm, 'animate-spin mr-2')} aria-hidden="true" />
+          <Spinner size="small" color="inherit" className="mr-2" />
         ) : (
           <Shield className={cn(iconSizes.sm, 'mr-2')} aria-hidden="true" />
         )}
@@ -466,7 +466,7 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
           className="flex-1"
         >
           {isLoading ? (
-            <Loader2 className={cn(iconSizes.sm, 'animate-spin')} aria-hidden="true" />
+            <Spinner size="small" color="inherit" />
           ) : (
             t('twoFactor.verify')
           )}
@@ -627,7 +627,7 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
         className="w-full"
       >
         {claimsSyncing ? (
-          <Loader2 className={cn(iconSizes.sm, 'animate-spin mr-2')} aria-hidden="true" />
+          <Spinner size="small" color="inherit" className="mr-2" />
         ) : (
           <Shield className={cn(iconSizes.sm, 'mr-2')} aria-hidden="true" />
         )}
@@ -658,7 +658,7 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isLoading ? (
-                <Loader2 className={cn(iconSizes.sm, 'animate-spin')} />
+                <Spinner size="small" color="inherit" />
               ) : (
                 t('twoFactor.disable')
               )}

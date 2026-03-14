@@ -19,7 +19,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { CheckCircle, XCircle, Loader2, Mail, MessageSquare, Globe, Bot, RotateCcw, Pencil } from 'lucide-react';
+import { CheckCircle, XCircle, Mail, MessageSquare, Globe, Bot, RotateCcw, Pencil } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { EmailContentWithSignature } from '@/components/shared/email/EmailContentRenderer';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
@@ -513,7 +514,7 @@ export function ProposalReviewCard({
           disabled={isProcessing}
         >
           {isProcessing ? (
-            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+            <Spinner size="small" color="inherit" className="mr-1" />
           ) : (
             <CheckCircle className="mr-1 h-4 w-4" />
           )}

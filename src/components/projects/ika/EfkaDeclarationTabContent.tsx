@@ -17,7 +17,8 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { Landmark, Save, Loader2, AlertCircle, Plus } from 'lucide-react';
+import { Landmark, Save, AlertCircle, Plus } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -109,7 +110,7 @@ export function EfkaDeclarationTabContent({ projectId }: EfkaDeclarationTabConte
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className={cn(iconSizes.lg, 'animate-spin text-muted-foreground')} />
+          <Spinner size="large" />
         </CardContent>
       </Card>
     );
@@ -162,7 +163,7 @@ export function EfkaDeclarationTabContent({ projectId }: EfkaDeclarationTabConte
               <EfkaStatusBadge status={declaration.status} />
               <Button onClick={handleSave} disabled={isSaving}>
                 {isSaving ? (
-                  <Loader2 className={cn(iconSizes.sm, spacing.margin.right.sm, 'animate-spin')} />
+                  <Spinner size="small" color="inherit" className={spacing.margin.right.sm} />
                 ) : (
                   <Save className={cn(iconSizes.sm, spacing.margin.right.sm)} />
                 )}

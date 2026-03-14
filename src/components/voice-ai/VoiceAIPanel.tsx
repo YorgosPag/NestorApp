@@ -20,7 +20,8 @@
  */
 
 import * as React from 'react';
-import { Loader2, Mic, Bot, Trash2, MessageSquare } from 'lucide-react';
+import { Mic, Bot, Trash2, MessageSquare } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import {
   Sheet,
   SheetContent,
@@ -114,7 +115,7 @@ function ProcessingIndicator({ t }: { t: (key: string, fallback: string) => stri
         )}
       >
         <div className="flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          <Spinner size="small" />
           <span className="text-muted-foreground">
             {t('voiceAssistant.aiProcessing', 'Processing your command...')}
           </span>

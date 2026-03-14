@@ -20,7 +20,6 @@ import {
   Trash2,
   Eye,
   Copy,
-  Loader2,
   FileText,
   Receipt,
   Scale,
@@ -30,6 +29,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   DocumentTemplateService,
@@ -258,7 +258,7 @@ export function DocumentTemplatePanel({
         <nav className="w-48 border-r overflow-y-auto">
           {loading ? (
             <p className="text-center py-8">
-              <Loader2 className="h-4 w-4 animate-spin inline" />
+              <Spinner size="small" className="inline" />
             </p>
           ) : templates.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-8 px-2">

@@ -30,7 +30,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
-import { Map, Layers, Camera, Video, FileQuestion, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Map, Layers, Camera, Video, FileQuestion, AlertCircle, RefreshCw } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -480,7 +481,7 @@ function TabContentWrapper({
     return (
       <div className={cn('h-full flex items-center justify-center', spacing.padding.md)}>
         <figure className="text-center text-muted-foreground">
-          <Loader2 className={cn(iconSizes.lg, 'mx-auto mb-3 animate-spin')} aria-hidden="true" />
+          <Spinner size="large" className="mx-auto mb-3" />
           <figcaption className="text-sm">
             {t('common:loading.message')}
           </figcaption>

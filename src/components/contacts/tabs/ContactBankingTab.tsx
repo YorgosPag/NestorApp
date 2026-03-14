@@ -31,7 +31,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from '@/components/ui/alert-dialog';
-import { Plus, Building2, CreditCard, Loader2 } from 'lucide-react';
+import { Plus, Building2, CreditCard } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -226,7 +227,7 @@ export function ContactBankingTab({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 size={iconSizes.numeric.lg} className="animate-spin text-muted-foreground" />
+        <Spinner size="large" />
       </div>
     );
   }
@@ -387,7 +388,7 @@ export function ContactBankingTab({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {actionLoading ? (
-                <Loader2 size={iconSizes.numeric.sm} className="mr-2 animate-spin" />
+                <Spinner size="small" color="inherit" className="mr-2" />
               ) : null}
               Διαγραφή
             </AlertDialogAction>

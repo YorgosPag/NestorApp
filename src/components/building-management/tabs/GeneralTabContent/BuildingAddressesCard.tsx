@@ -30,7 +30,7 @@ import { AddressMap } from '@/components/shared/addresses/AddressMap';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  MapPin, Plus, Star, Trash2, X, Pencil, Check, AlertTriangle, Loader2, ExternalLink,
+  MapPin, Plus, Star, Trash2, X, Pencil, Check, AlertTriangle, ExternalLink,
 } from 'lucide-react';
 import {
   migrateLegacyAddress,
@@ -44,6 +44,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -447,7 +448,7 @@ export function BuildingAddressesCard({
           {/* MODE 1: Building WITH project — loading/empty states */}
           {hasProject && loadingProject && (
             <section className="flex items-center justify-center gap-2 py-2 text-muted-foreground">
-              <Loader2 className={cn(iconSizes.md, 'animate-spin')} />
+              <Spinner />
               <span>{t('address.labels.loadingProjectAddresses')}</span>
             </section>
           )}

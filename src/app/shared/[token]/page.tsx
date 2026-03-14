@@ -20,10 +20,10 @@ import {
   Clock,
   FileText,
   AlertTriangle,
-  Loader2,
   Eye,
   Shield,
 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -166,7 +166,7 @@ export default function SharedFilePage() {
           {/* Loading */}
           {state === 'loading' && (
             <section className="text-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+              <Spinner size="large" className="mx-auto mb-4" />
               <p className="text-sm text-muted-foreground">Φόρτωση...</p>
             </section>
           )}
@@ -261,7 +261,7 @@ export default function SharedFilePage() {
                 size="lg"
               >
                 {downloading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Spinner size="small" color="inherit" className="mr-2" />
                 ) : (
                   <Download className="h-4 w-4 mr-2" />
                 )}

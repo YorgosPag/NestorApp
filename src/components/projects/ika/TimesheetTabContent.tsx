@@ -16,7 +16,8 @@
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { ClipboardList, Plus, Loader2, AlertCircle } from 'lucide-react';
+import { ClipboardList, Plus, AlertCircle } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -128,7 +129,7 @@ export function TimesheetTabContent({ projectId }: TimesheetTabContentProps) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className={cn(iconSizes.lg, 'animate-spin text-muted-foreground')} />
+          <Spinner size="large" />
         </CardContent>
       </Card>
     );

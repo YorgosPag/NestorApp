@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { TableCell } from '@/components/ui/table';
-import { Warehouse, Plus, Layers, Table as TableIcon, Link2, Check, X, Loader2 } from 'lucide-react';
+import { Warehouse, Plus, Layers, Table as TableIcon, Link2, Check, X } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { StorageTabStats } from './StorageTab/StorageTabStats';
 import { StorageTabFilters } from './StorageTab/StorageTabFilters';
@@ -535,7 +535,7 @@ export function StorageTab({ building }: StorageTabProps) {
               size="sm"
               disabled={creating}
             >
-              {creating ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Check className="mr-1 h-4 w-4" />}
+              {creating ? <Spinner size="small" color="inherit" className="mr-1" /> : <Check className="mr-1 h-4 w-4" />}
               Αποθήκευση
             </Button>
           </nav>
@@ -635,7 +635,7 @@ export function StorageTab({ building }: StorageTabProps) {
                 <TableCell>
                   <nav className="flex justify-end gap-1">
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleSaveEdit} disabled={saving}>
-                      {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 text-green-500" />}
+                      {saving ? <Spinner size="small" color="inherit" /> : <Check className="h-3.5 w-3.5 text-green-500" />}
                     </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={cancelEdit} disabled={saving}>
                       <X className="h-3.5 w-3.5" />

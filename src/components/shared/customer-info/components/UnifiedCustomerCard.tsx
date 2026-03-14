@@ -13,7 +13,8 @@
  */
 
 import React from 'react';
-import { Users, Phone, Mail, MapPin, ArrowRight, Loader2 } from 'lucide-react';
+import { Users, Phone, Mail, MapPin, ArrowRight } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -252,7 +253,7 @@ export function UnifiedCustomerCard({
               <div className={`${iconSizes.sm} bg-muted rounded w-3/4`} />
               <div className={`${iconSizes.xs} bg-muted rounded w-1/2`} />
             </div>
-            <Loader2 className={`${iconSizes.sm} animate-spin text-muted-foreground`} />
+            <Spinner size="small" />
           </div>
         </CardContent>
       </Card>

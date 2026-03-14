@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { Search, MapPin, Navigation, X, Clock, CheckCircle, AlertCircle, Loader2, Building2 } from 'lucide-react';
+import { Search, MapPin, Navigation, X, Clock, CheckCircle, AlertCircle, Building2 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -451,7 +452,7 @@ export function AddressSearchPanel({
               disabled={isSearching || isLoadingBoundaries}
             />
             {(isSearching || isLoadingBoundaries) && (
-              <Loader2 className={`absolute right-3 top-2.5 ${iconSizes.sm} ${colors.text.muted} animate-spin`} />
+              <Spinner size="small" className="absolute right-3 top-2.5" />
             )}
           </div>
           <button
@@ -480,7 +481,7 @@ export function AddressSearchPanel({
           className={`w-full flex items-center justify-center gap-2 px-4 py-3 ${colors.bg.success} text-white rounded-lg ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} disabled:${colors.bg.muted} disabled:cursor-not-allowed transition-colors`}
         >
           {isGettingLocation ? (
-            <Loader2 className={`${iconSizes.md} animate-spin`} />
+            <Spinner color="inherit" />
           ) : (
             <Navigation className={iconSizes.md} />
           )}

@@ -25,9 +25,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import {
-  Ruler, Building2, TrendingUp, Package, Loader2, AlertTriangle,
+  Ruler, Building2, TrendingUp, Package, AlertTriangle,
   ChevronDown, ChevronRight, Layers,
 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
@@ -197,7 +198,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
   if (loading) {
     return (
       <section className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
-        <Loader2 className={cn(iconSizes.lg, 'animate-spin')} />
+        <Spinner size="large" />
         <span className={typography.body.base}>Φόρτωση επιμετρήσεων...</span>
       </section>
     );

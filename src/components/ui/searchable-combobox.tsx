@@ -17,7 +17,8 @@
  */
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { ChevronDown, Loader2, X } from 'lucide-react';
+import { ChevronDown, X } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -304,7 +305,7 @@ export function SearchableCombobox({
           />
           {/* Loading spinner */}
           {isLoading && (
-            <Loader2 className="absolute right-8 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+            <Spinner size="small" className="absolute right-8 top-1/2 -translate-y-1/2" />
           )}
           {/* Clear button */}
           {!isLoading && inputValue && !disabled && (
@@ -344,7 +345,7 @@ export function SearchableCombobox({
       >
         {isLoading ? (
           <div className="flex items-center justify-center py-4">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <Spinner />
           </div>
         ) : filtered.length === 0 ? (
           <p className="p-3 text-sm text-muted-foreground text-center">

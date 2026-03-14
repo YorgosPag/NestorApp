@@ -156,11 +156,63 @@ if (loading) {
 
 ---
 
+## Phase 3: Button/Inline Spinner Migration — Loader2 → Spinner (2026-03-14)
+
+Η Phase 3 κεντρικοποίησε **ΟΛΟΥΣ** τους inline/button spinners. Πριν, 70+ αρχεία χρησιμοποιούσαν `<Loader2 className="animate-spin" />` με 6+ size patterns, inconsistent margins, χωρίς accessibility.
+
+### Αλλαγή στο Spinner component
+
+Προστέθηκε `color` prop:
+
+```tsx
+export type SpinnerColor = 'muted' | 'inherit';
+```
+
+- `color='muted'` (default): `text-muted-foreground` — standalone spinners
+- `color='inherit'`: κληρονομεί χρώμα parent — μέσα σε buttons
+
+### Κανόνας
+
+**ΟΛΟΙ** οι spinners στην εφαρμογή χρησιμοποιούν `<Spinner />`. Μηδέν inline `<Loader2 className="animate-spin" />`.
+
+**Pattern αντικατάστασης:**
+
+```tsx
+// Button spinner:
+<Spinner size="small" color="inherit" className="mr-2" />
+
+// Standalone loading:
+<Spinner size="small" />
+```
+
+### Αρχεία Phase 3 (~65 migrated)
+
+| Batch | Αρχεία | Περιγραφή |
+|-------|--------|-----------|
+| A | `ActionButtons.tsx` | 4 Loader2 → Spinner (Save, Delete, Archive, Restore) |
+| B | 12 building-management files | FloorsTab, StorageTab, ParkingTab, UnitsTab, MeasurementsTab, BuildingSpaceActions, etc. |
+| C | 12 dialog/modal files | EditOpportunityModal, SelectCompanyContactModal, AddParkingDialog, ShareDialog, ConfirmDialog, etc. |
+| D | 15 shared/feature files | EntityLinkCard, EscoOccupationPicker, VersionHistory, CommentsPanel, FolderManager, ApprovalPanel, etc. |
+| E | 9 project/IKA files | EfkaDeclarationTab, TimesheetTab, GeofenceConfigMap, QrCodePanel, LiveWorkerMap, ProjectTimelineTab, etc. |
+| F | 24 auth/account/nav/other files | ProtectedRoute, TwoFactorEnrollment, BankAccountForm, searchable-combobox, EnterprisePhotoUpload, CheckInClient, etc. |
+
+### Εξαιρέσεις (Skip List)
+
+| Αρχείο | Λόγος |
+|--------|-------|
+| `src/core/states/StaticPageLoading.tsx` | Server component — δεν μπορεί να χρησιμοποιήσει hooks |
+| `src/components/ui/spinner/Spinner.tsx` | Το ίδιο το component |
+| `src/subapps/dxf-viewer/*` | Isolated DXF viewer subapp |
+| Domain icon spinning (RefreshCw, Globe) | Σκόπιμο spinning domain icon, όχι loading spinner |
+| CSS border spinners | Custom `border-4 border-t-transparent` spinners |
+
+---
+
 ## Τι ΔΕΝ αλλάζει
 
-- `src/components/ui/spinner/Spinner.tsx` — χρησιμοποιείται εσωτερικά από `PageLoadingState`
-- Button loading spinners — different scope
 - `src/components/ui/skeletons/` — skeleton components, different pattern
+- Domain icon animations (RefreshCw animate-spin) — intentional spinning icons
+- CSS border spinners — custom implementations
 
 ---
 
@@ -171,11 +223,14 @@ if (loading) {
 | Page loading patterns | 6 διαφορετικά | 1 (`PageLoadingState`) |
 | Page error patterns | 4 διαφορετικά | 1 (`PageErrorState`) |
 | Suspense fallback patterns | 4 διαφορετικά | 1 (`StaticPageLoading`) |
+| Inline spinner patterns | 6+ sizes, inconsistent | 1 (`Spinner` component) |
 | Αρχεία Phase 1 | — | 12 migrated |
 | Αρχεία Phase 2 | — | 16 migrated (data-level guards) |
 | Αρχεία Phase 2b (CRM/Admin) | — | 8 migrated |
+| Αρχεία Phase 3 (Button/Inline) | — | ~65 migrated (Loader2 → Spinner) |
 | Νέα αρχεία | — | 4 (`src/core/states/`) |
 | Σελίδες με loading guard | 5 (Phase 1) | 29 (Phase 1 + Phase 2 + Phase 2b) |
+| Loader2 animate-spin χρήσεις | 70+ αρχεία | 0 (εκτός skip list) |
 
 ---
 
@@ -187,3 +242,4 @@ if (loading) {
 | 2026-03-14 | Phase 1 IMPLEMENTED — 4 νέα components, 12 pages migrated |
 | 2026-03-14 | Phase 2 IMPLEMENTED — Data-level loading guards σε 16 σελίδες, αφαίρεση inline Spinner patterns |
 | 2026-03-14 | Phase 2b IMPLEMENTED — CRM & Admin migration: 8 σελίδες (teams, leads, notifications, tasks, communications, ai-inbox, operator-inbox, TasksTab) |
+| 2026-03-14 | Phase 3 IMPLEMENTED — Button/Inline Spinner migration: ~65 αρχεία, Loader2 animate-spin → Spinner component, προσθήκη `color` prop (muted/inherit) |

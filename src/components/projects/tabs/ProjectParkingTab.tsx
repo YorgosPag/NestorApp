@@ -18,7 +18,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
-import { Map, List, Car, Loader2, AlertCircle } from 'lucide-react';
+import { Map, List, Car, AlertCircle } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { formatCurrency } from '@/lib/intl-utils';
 import { ProjectFloorplanTab } from './ProjectFloorplanTab';
 import { useFirestoreParkingSpots } from '@/hooks/useFirestoreParkingSpots';
@@ -122,7 +123,7 @@ function ParkingSpotsList({ parkingSpots, loading, error, t, colors, quick, icon
   if (loading) {
     return (
       <section className="flex items-center justify-center p-12">
-        <Loader2 className={cn(iconSizes.lg, 'animate-spin', colors.text.muted)} />
+        <Spinner size="large" />
       </section>
     );
   }

@@ -14,7 +14,8 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { ClipboardEdit, Loader2 } from 'lucide-react';
+import { ClipboardEdit } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import {
   Dialog,
   DialogContent,
@@ -199,7 +200,7 @@ export function AttendanceRecordDialog({
           >
             {isSubmitting ? (
               <>
-                <Loader2 className={cn(iconSizes.sm, spacing.margin.right.sm, 'animate-spin')} />
+                <Spinner size="small" color="inherit" className={spacing.margin.right.sm} />
                 {t('ika.timesheetTab.dialog.submitting')}
               </>
             ) : (

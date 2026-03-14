@@ -14,7 +14,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ContactsService } from '@/services/contacts.service';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
-import { Loader2, CheckCircle2, Search } from 'lucide-react';
+import { CheckCircle2, Search } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { SearchInput } from '@/components/ui/search';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '../../ui/effects';
 // 🏢 ENTERPRISE: Icons από centralized config - ZERO hardcoded values
@@ -165,7 +166,7 @@ export function SelectCompanyContactModal({
           {/* Loading State */}
           {isLoading && (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+              <Spinner size="large" />
               <span className="ml-2 text-sm text-gray-600">{t('company.nav.loading')}</span>
             </div>
           )}

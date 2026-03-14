@@ -38,7 +38,8 @@ import {
 import { getBankByIBAN } from '@/constants/greek-banks';
 import { IBANInput } from './IBANInput';
 import { BankSelector } from './BankSelector';
-import { Loader2, Save, X } from 'lucide-react';
+import { Save, X } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
@@ -478,7 +479,7 @@ export function BankAccountForm({
         </Button>
         <Button type="submit" disabled={loading}>
           {loading ? (
-            <Loader2 size={iconSizes.numeric.sm} className="mr-2 animate-spin" />
+            <Spinner size="small" color="inherit" className="mr-2" />
           ) : (
             <Save size={iconSizes.numeric.sm} className="mr-2" />
           )}

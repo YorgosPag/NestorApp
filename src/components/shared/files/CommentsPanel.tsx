@@ -21,11 +21,11 @@ import {
   CheckCircle2,
   Circle,
   Send,
-  Loader2,
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   FileCommentService,
@@ -337,7 +337,7 @@ export function CommentsPanel({
       <section className="flex-1 overflow-y-auto px-3 py-2 space-y-4 max-h-[300px]">
         {loading ? (
           <p className="text-xs text-muted-foreground text-center py-4">
-            <Loader2 className="h-4 w-4 animate-spin inline mr-1" />
+            <Spinner size="small" className="inline mr-1" />
             {t('comments.loading', 'Φόρτωση σχολίων...')}
           </p>
         ) : threads.length === 0 ? (
@@ -415,7 +415,7 @@ export function CommentsPanel({
             className="h-9 px-3"
           >
             {submitting ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <Spinner size="small" color="inherit" />
             ) : (
               <Send className="h-3.5 w-3.5" />
             )}

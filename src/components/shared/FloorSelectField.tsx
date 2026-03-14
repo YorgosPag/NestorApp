@@ -19,8 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
-import { useIconSizes } from '@/hooks/useIconSizes';
+import { Spinner } from '@/components/ui/spinner';
 import { collection, query, where, onSnapshot, type QueryConstraint } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -80,7 +79,6 @@ export function FloorSelectField({
   placeholder = '—',
   disabled = false,
 }: FloorSelectFieldProps) {
-  const iconSizes = useIconSizes();
   const [floors, setFloors] = useState<FloorOption[]>([]);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
@@ -170,7 +168,7 @@ export function FloorSelectField({
         </p>
       ) : loading ? (
         <section className="flex items-center gap-2 text-muted-foreground h-8">
-          <Loader2 className={cn(iconSizes.sm, 'animate-spin')} />
+          <Spinner size="small" />
         </section>
       ) : (
         <Select

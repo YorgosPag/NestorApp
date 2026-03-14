@@ -24,7 +24,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Loader2, Building2 } from 'lucide-react';
+import { Building2 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { FileRecordService } from '@/services/file-record.service';
@@ -207,7 +208,7 @@ export function LinkToBuildingModal({
           {/* Loading state */}
           {loadingBuildings && (
             <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <Spinner />
               <span className="ml-2 text-sm text-muted-foreground">
                 {t('linkModal.loadingBuildings')}
               </span>
@@ -261,7 +262,7 @@ export function LinkToBuildingModal({
           >
             {saving ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Spinner size="small" color="inherit" className="mr-2" />
                 {t('linkModal.saving')}
               </>
             ) : (

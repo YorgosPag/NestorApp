@@ -33,7 +33,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import {
   PARKING_TYPES,
   PARKING_STATUSES,
@@ -362,7 +362,7 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
             onClick={handleCreate}
             disabled={!isValid || creating}
           >
-            {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {creating && <Spinner size="small" color="inherit" className="mr-2" />}
             {t('pages.parking.form.create')}
           </Button>
         </DialogFooter>

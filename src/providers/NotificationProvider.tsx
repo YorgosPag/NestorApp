@@ -3,7 +3,8 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { useInterval } from '@/hooks/useInterval';
 import { toast, Toaster } from 'sonner';
-import { CheckCircle, AlertCircle, AlertTriangle, Info, Loader2 } from 'lucide-react';
+import { CheckCircle, AlertCircle, AlertTriangle, Info } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n';
 import i18n from '@/i18n/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -112,7 +113,7 @@ export function NotificationProvider({
       case 'info':
         return <Info className={`${iconSizes.sm} ${COLOR_BRIDGE.text.info}`} />;         // ✅ SEMANTIC: blue -> info
       case 'loading':
-        return <Loader2 className={`${iconSizes.sm} text-gray-500 animate-spin`} />;
+        return <Spinner size="small" className="text-gray-500" />;
       default:
         return <Info className={iconSizes.sm} />;
     }

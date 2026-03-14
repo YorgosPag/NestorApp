@@ -29,11 +29,11 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   MapPin,
   Radio,
-  Loader2,
   Users,
   AlertTriangle,
   Clock,
 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -463,7 +463,7 @@ export function LiveWorkerMap({
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <Spinner size="large" />
         </CardContent>
       </Card>
     );

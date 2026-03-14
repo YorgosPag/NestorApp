@@ -15,7 +15,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Save, Loader2 } from 'lucide-react';
+import { Save } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Opportunity } from '@/types/crm';
 // 🏢 ENTERPRISE: i18n support
@@ -145,7 +146,7 @@ export function EditOpportunityModal({ opportunity, isOpen, onClose, onLeadUpdat
             <Button type="submit" disabled={loading}>
               {loading ? (
                 <>
-                  <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />
+                  <Spinner size="small" color="inherit" className="mr-2" />
                   {t('opportunities.editModal.buttons.saving')}
                 </>
               ) : (

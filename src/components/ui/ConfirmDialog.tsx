@@ -44,8 +44,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
-import { useIconSizes } from '@/hooks/useIconSizes';
+import { Spinner } from '@/components/ui/spinner';
 
 // ============================================================================
 // TYPES
@@ -120,7 +119,6 @@ export function ConfirmDialog({
   children,
 }: ConfirmDialogProps) {
   const { t } = useTranslation('common');
-  const iconSizes = useIconSizes();
 
   // Default button texts from i18n
   const resolvedConfirmText = confirmText || t('buttons.confirm', 'Confirm');
@@ -169,7 +167,7 @@ export function ConfirmDialog({
             className={cn(VARIANT_STYLES[variant])}
           >
             {loading ? (
-              <Loader2 className={cn(iconSizes.sm, 'animate-spin')} />
+              <Spinner size="small" color="inherit" />
             ) : (
               resolvedConfirmText
             )}

@@ -18,7 +18,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Save, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Save, CheckCircle, AlertCircle } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 // 🏢 ENTERPRISE: Using centralized entity config for consistent icons/colors
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
@@ -327,7 +328,7 @@ export function BuildingSelectorCard({
 
           {loading ? (
             <section className={`flex items-center ${spacing.gap.sm} text-muted-foreground`}>
-              <Loader2 className={cn(iconSizes.sm, 'animate-spin')} />
+              <Spinner size="small" />
               <span>{t('buildingSelector.loading')}</span>
             </section>
           ) : (
@@ -373,7 +374,7 @@ export function BuildingSelectorCard({
 
             {loadingFloors ? (
               <section className={`flex items-center ${spacing.gap.sm} text-muted-foreground`}>
-                <Loader2 className={cn(iconSizes.sm, 'animate-spin')} />
+                <Spinner size="small" />
                 <span>{t('buildingSelector.loadingFloors', { defaultValue: 'Φόρτωση ορόφων...' })}</span>
               </section>
             ) : floors.length === 0 ? (
@@ -435,7 +436,7 @@ export function BuildingSelectorCard({
             >
               {saving ? (
                 <>
-                  <Loader2 className={cn(iconSizes.sm, spacing.margin.right.sm, 'animate-spin')} />
+                  <Spinner size="small" color="inherit" className={spacing.margin.right.sm} />
                   {t('buildingSelector.saving')}
                 </>
               ) : (

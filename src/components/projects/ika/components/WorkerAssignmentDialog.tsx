@@ -18,7 +18,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Search, UserPlus, Loader2 } from 'lucide-react';
+import { Search, UserPlus } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
@@ -172,7 +173,7 @@ export function WorkerAssignmentDialog({
               disabled={isSearching || searchTerm.trim().length < 2}
             >
               {isSearching ? (
-                <Loader2 className={cn(iconSizes.sm, 'animate-spin')} />
+                <Spinner size="small" color="inherit" />
               ) : (
                 <Search className={iconSizes.sm} />
               )}
@@ -235,7 +236,7 @@ export function WorkerAssignmentDialog({
             disabled={!selectedContact || isAssigning}
           >
             {isAssigning ? (
-              <Loader2 className={cn(iconSizes.sm, spacing.margin.right.sm, 'animate-spin')} />
+              <Spinner size="small" color="inherit" className={spacing.margin.right.sm} />
             ) : (
               <UserPlus className={cn(iconSizes.sm, spacing.margin.right.sm)} />
             )}

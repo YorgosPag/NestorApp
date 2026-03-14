@@ -6,4 +6,4 @@
  */
 
 export { Spinner, AnimatedSpinner } from './Spinner';
-export type { SpinnerProps, SpinnerSize } from './Spinner';
+export type { SpinnerProps, SpinnerSize, SpinnerColor } from './Spinner';

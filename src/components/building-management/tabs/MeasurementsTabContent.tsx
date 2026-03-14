@@ -21,7 +21,8 @@ import { BOQFilterBar } from './MeasurementsTabContent/BOQFilterBar';
 import { BOQCategoryAccordion } from './MeasurementsTabContent/BOQCategoryAccordion';
 import { BOQItemEditor } from './MeasurementsTabContent/BOQItemEditor';
 import { Button } from '@/components/ui/button';
-import { Ruler, Plus, AlertCircle, Loader2 } from 'lucide-react';
+import { Ruler, Plus, AlertCircle } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { Building } from '@/types/building/contracts';
@@ -129,7 +130,7 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
   if (loading) {
     return (
       <section className="flex items-center justify-center py-2">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <Spinner size="large" />
       </section>
     );
   }

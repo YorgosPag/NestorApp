@@ -26,7 +26,6 @@ import {
   Sparkles,
   Clock,
   User,
-  Loader2,
   Link2,
   Unlink,
   Archive,
@@ -42,6 +41,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -203,7 +203,7 @@ export function AuditLogPanel({ fileId, className }: AuditLogPanelProps) {
       {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center p-4">
-          <Loader2 className={cn(iconSizes.md, 'animate-spin', colors.text.muted)} />
+          <Spinner />
         </div>
       )}
 

@@ -22,9 +22,9 @@ import {
   CheckSquare,
   Shield,
   Moon,
-  Loader2,
   AlertCircle,
 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -335,7 +335,7 @@ export function NotificationSettings({ userId, onSettingsChange }: NotificationS
     return (
       <Card className={borders.getElementBorder('card', 'default')}>
         <CardContent className={cn(layout.flexColGap4, layout.centerContent, layout.paddingY12)}>
-          <Loader2 className={cn(iconSizes.lg, colors.text.muted, 'animate-spin')} />
+          <Spinner size="large" />
           <p className={cn(typography.body.sm, colors.text.muted)}>
             {t('account.notificationSettings.loading')}
           </p>
@@ -372,7 +372,7 @@ export function NotificationSettings({ userId, onSettingsChange }: NotificationS
           <Bell className={iconSizes.md} aria-hidden="true" />
           {t('account.notificationSettings.title')}
           {isSaving && (
-            <Loader2 className={cn(iconSizes.sm, colors.text.muted, 'animate-spin ml-2')} />
+            <Spinner size="small" className="ml-2" />
           )}
         </CardTitle>
         <CardDescription>{t('account.notificationSettings.description')}</CardDescription>

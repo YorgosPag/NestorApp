@@ -17,7 +17,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useTypography } from '@/hooks/useTypography';
 // 🏢 ENTERPRISE: Centralized API client
 import { apiClient } from '@/lib/api/enterprise-api-client';
-import { Loader2, Building2 } from 'lucide-react';
+import { Building2 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 
 /** 🏢 ENTERPRISE: Building data from API */
 interface ProjectBuilding {
@@ -115,7 +116,7 @@ export function ProjectTimelineTab({ project }: { project: Project }) {
 
             {loading && (
               <div className="flex items-center gap-2 py-6 justify-center text-muted-foreground">
-                <Loader2 className={cn(iconSizes.sm, 'animate-spin')} />
+                <Spinner size="small" />
                 <span className="text-sm">{t('timelineTab.loading', { defaultValue: 'Φόρτωση κτιρίων...' })}</span>
               </div>
             )}

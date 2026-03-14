@@ -3,7 +3,8 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { CommonBadge } from '@/core/badges';
-import { Loader2, Save, X, Trash2, Plus, Edit, Archive, RotateCcw, Phone, Mail, MessageSquare, Download, Upload, HelpCircle, Star, RefreshCw, ArrowUpAZ, ArrowDownZA } from 'lucide-react';
+import { Save, X, Trash2, Plus, Edit, Archive, RotateCcw, Phone, Mail, MessageSquare, Download, Upload, HelpCircle, Star, RefreshCw, ArrowUpAZ, ArrowDownZA } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS } from '../effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -127,7 +128,7 @@ export function SaveButton({
     >
       {loading ? (
         <>
-          <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />
+          <Spinner size="small" color="inherit" className="mr-2" />
           {loadingText}
         </>
       ) : (
@@ -189,7 +190,7 @@ export function DeleteButton({
     >
       {loading ? (
         <>
-          <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />
+          <Spinner size="small" color="inherit" className="mr-2" />
           {loadingText}
         </>
       ) : (
@@ -273,7 +274,7 @@ export function ArchiveButton({
     >
       {loading ? (
         <>
-          <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />
+          <Spinner size="small" color="inherit" className="mr-2" />
           {actions.archive_loading}
         </>
       ) : (
@@ -307,7 +308,7 @@ export function RestoreButton({
     >
       {loading ? (
         <>
-          <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />
+          <Spinner size="small" color="inherit" className="mr-2" />
           {actions.restore_loading}
         </>
       ) : (

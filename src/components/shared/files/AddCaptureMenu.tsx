@@ -30,8 +30,8 @@ import {
   Mic,
   FileText,
   Plus,
-  Loader2,
 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -425,7 +425,7 @@ export function AddCaptureMenu({
       aria-label={buttonLabel || t('manager.addFiles')}
     >
       {loading ? (
-        <Loader2 className={`${iconSizes.sm} mr-2 animate-spin`} />
+        <Spinner size="small" color="inherit" className="mr-2" />
       ) : (
         <Plus className={`${iconSizes.sm} mr-2`} />
       )}

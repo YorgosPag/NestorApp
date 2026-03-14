@@ -26,12 +26,12 @@ import {
   Link2,
   Unlink,
   RefreshCw,
-  Loader2,
   History,
   ChevronDown,
   BarChart3,
   Filter,
 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { useEntityAudit } from '@/hooks/useEntityAudit';
 import { formatRelativeTime, formatDateTime, formatDate } from '@/lib/intl-utils';
 import type { AuditEntityType, AuditAction, EntityAuditEntry } from '@/types/audit-trail';
@@ -139,7 +139,7 @@ export function ActivityTab({ entityType, entityId, unit, data }: ActivityTabPro
       {/* ── Loading (initial) ── */}
       {isLoading && entries.length === 0 && (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <Spinner />
         </div>
       )}
 
@@ -179,7 +179,7 @@ export function ActivityTab({ entityType, entityId, unit, data }: ActivityTabPro
             className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
           >
             {isLoading ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
+              <Spinner size="small" color="inherit" />
             ) : (
               <ChevronDown className="h-3 w-3" />
             )}

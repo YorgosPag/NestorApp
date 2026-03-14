@@ -19,7 +19,8 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, CheckCircle2, XCircle, Shield, Bell, Mail } from 'lucide-react';
+import { CheckCircle2, XCircle, Shield, Bell, Mail } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('AdminSetupPage');
 
@@ -154,7 +155,7 @@ export default function AdminSetupPage() {
     return (
       <main className="container mx-auto py-10">
         <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <Spinner size="large" />
         </div>
       </main>
     );
@@ -232,7 +233,7 @@ export default function AdminSetupPage() {
           <CardContent>
             {checkingConfig ? (
               <div className="flex items-center gap-2 text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Spinner size="small" />
                 Έλεγχος ρυθμίσεων...
               </div>
             ) : currentConfig ? (
@@ -280,7 +281,7 @@ export default function AdminSetupPage() {
                     >
                       {saving ? (
                         <>
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          <Spinner size="small" color="inherit" className="mr-2" />
                           Ενημέρωση...
                         </>
                       ) : (
@@ -302,7 +303,7 @@ export default function AdminSetupPage() {
                     >
                       {saving ? (
                         <>
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          <Spinner size="small" color="inherit" className="mr-2" />
                           Αποθήκευση...
                         </>
                       ) : (
@@ -345,7 +346,7 @@ export default function AdminSetupPage() {
               >
                 {saving ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <Spinner size="small" color="inherit" className="mr-2" />
                     Αποθήκευση ρυθμίσεων...
                   </>
                 ) : (

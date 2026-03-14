@@ -35,7 +35,6 @@ import {
   BarChart3,
   Plus,
   FolderPlus,
-  Loader2,
   Pencil,
   Palette,
   Trash2,
@@ -46,6 +45,7 @@ import {
   Table2,
 } from 'lucide-react';
 
+import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { getStatusColor } from '@/lib/design-system';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -642,7 +642,7 @@ export function GanttView({ building }: GanttViewProps) {
   if (loading) {
     return (
       <section className={cn('flex items-center justify-center', spacingTokens.padding.y['2xl'])}>
-        <Loader2 className={cn(iconSizes.xl, 'animate-spin', colors.text.muted)} />
+        <Spinner size="large" />
       </section>
     );
   }

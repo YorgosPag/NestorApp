@@ -22,8 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Loader2 } from 'lucide-react';
-import { useIconSizes } from '@/hooks/useIconSizes';
+import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
@@ -79,7 +78,6 @@ export function BuildingSpaceConfirmDialog({
   loading = false,
   variant = 'destructive',
 }: BuildingSpaceConfirmDialogProps) {
-  const iconSizes = useIconSizes();
   const { t } = useTranslation('building');
 
   const resolvedConfirmLabel = confirmLabel || t('spaceActions.delete');
@@ -107,7 +105,7 @@ export function BuildingSpaceConfirmDialog({
             className={VARIANT_CLASSES[variant]}
           >
             {loading && (
-              <Loader2 size={iconSizes.numeric.sm} className="mr-2 animate-spin" />
+              <Spinner size="small" color="inherit" className="mr-2" />
             )}
             {resolvedConfirmLabel}
           </AlertDialogAction>

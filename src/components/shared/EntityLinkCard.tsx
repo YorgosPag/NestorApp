@@ -27,7 +27,8 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle, AlertCircle, ChevronsUpDown, Check, Search } from 'lucide-react';
+import { CheckCircle, AlertCircle, ChevronsUpDown, Check, Search } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import type { LucideIcon } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
@@ -367,7 +368,7 @@ export function EntityLinkCard({
 
           {loading ? (
             <section className="flex items-center gap-2 text-muted-foreground">
-              <Loader2 className={cn(iconSizes.sm, 'animate-spin')} />
+              <Spinner size="small" />
               <span>{labels.loading}</span>
             </section>
           ) : (
@@ -386,7 +387,7 @@ export function EntityLinkCard({
         {/* Auto-save status indicators */}
         {saving && (
           <p className="flex items-center gap-1 text-sm text-muted-foreground pt-1">
-            <Loader2 className={cn(iconSizes.sm, 'animate-spin')} />
+            <Spinner size="small" />
             {labels.saving}
           </p>
         )}

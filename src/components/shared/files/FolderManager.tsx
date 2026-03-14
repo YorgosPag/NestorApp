@@ -25,11 +25,11 @@ import {
   Check,
   X,
   GripVertical,
-  Loader2,
   FolderInput,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   FileFolderService,
@@ -512,7 +512,7 @@ export function FolderManager({
       <nav className="flex-1 overflow-y-auto px-1 py-1">
         {loading ? (
           <p className="text-xs text-muted-foreground text-center py-4">
-            <Loader2 className="h-4 w-4 animate-spin inline mr-1" />
+            <Spinner size="small" className="inline mr-1" />
           </p>
         ) : (
           <ul className="list-none space-y-0.5">

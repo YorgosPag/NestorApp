@@ -6,7 +6,8 @@
  */
 
 import React, { useEffect } from 'react';
-import { Camera, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { Camera, AlertCircle, CheckCircle } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { useEnterpriseFileUpload } from '@/hooks/useEnterpriseFileUpload';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -344,7 +345,7 @@ export function EnterprisePhotoUpload({
         {isLoading && (
           <div className={`absolute inset-0 ${PHOTO_COLORS.LOADING_OVERLAY} flex items-center justify-center`}>
             <div className="text-center">
-              <Loader2 className={`${iconSizes.lg} animate-spin ${PHOTO_SEMANTIC_COLORS.LOADING} mx-auto mb-2`} />
+              <Spinner size="large" className={`${PHOTO_SEMANTIC_COLORS.LOADING} mx-auto mb-2`} />
               <p className={`${PHOTO_TYPOGRAPHY.UPLOAD_TEXT} ${PHOTO_SEMANTIC_COLORS.INFO}`}>
                 {upload.uploadPhase === 'upload' && t('upload.phases.uploading')}
                 {upload.uploadPhase === 'processing' && t('upload.phases.processing')}

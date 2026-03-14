@@ -18,7 +18,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Save, Loader2, CheckCircle, AlertCircle, Plus, X, Car, Package } from 'lucide-react';
+import { Save, CheckCircle, AlertCircle, Plus, X, Car, Package } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 // 🏢 ENTERPRISE: Using centralized entity config for consistent icons/colors
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
@@ -428,7 +429,7 @@ export function LinkedSpacesCard({
               </Label>
               {loadingParking ? (
                 <section className={`flex items-center ${spacing.gap.sm} text-muted-foreground text-sm`}>
-                  <Loader2 className={cn(iconSizes.sm, 'animate-spin')} />
+                  <Spinner size="small" />
                   <span>{t('linkedSpaces.loadingParking', { defaultValue: 'Φόρτωση...' })}</span>
                 </section>
               ) : parkingOptions.length === 0 ? (
@@ -480,7 +481,7 @@ export function LinkedSpacesCard({
               </Label>
               {loadingStorage ? (
                 <section className={`flex items-center ${spacing.gap.sm} text-muted-foreground text-sm`}>
-                  <Loader2 className={cn(iconSizes.sm, 'animate-spin')} />
+                  <Spinner size="small" />
                   <span>{t('linkedSpaces.loadingStorage', { defaultValue: 'Φόρτωση...' })}</span>
                 </section>
               ) : storageOptions.length === 0 ? (
@@ -534,7 +535,7 @@ export function LinkedSpacesCard({
               >
                 {saving ? (
                   <>
-                    <Loader2 className={cn(iconSizes.sm, spacing.margin.right.sm, 'animate-spin')} />
+                    <Spinner size="small" color="inherit" className={spacing.margin.right.sm} />
                     {t('linkedSpaces.saving', { defaultValue: 'Αποθήκευση...' })}
                   </>
                 ) : (

@@ -15,10 +15,10 @@ import {
   MessageSquare,
   Mail,
   Phone,
-  Loader2,
   X
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { Spinner } from '@/components/ui/spinner';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -579,7 +579,7 @@ const SendMessageModal: React.FC<SendMessageModalProps> = ({
             >
               {sending ? (
                 <>
-                  <Loader2 className={`${iconSizes.sm} mr-2 animate-spin`} />
+                  <Spinner size="small" color="inherit" className="mr-2" />
                   {t('sendMessage.sending')}
                 </>
               ) : (

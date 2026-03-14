@@ -20,11 +20,11 @@ import {
   UserCheck,
   Plus,
   Send,
-  Loader2,
   Ban,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   FileApprovalService,
@@ -256,7 +256,7 @@ export function ApprovalPanel({
               className="h-7 text-xs"
             >
               {submitting ? (
-                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                <Spinner size="small" color="inherit" className="mr-1" />
               ) : (
                 <Send className="h-3 w-3 mr-1" />
               )}
@@ -270,7 +270,7 @@ export function ApprovalPanel({
       <section className="flex-1 overflow-y-auto px-3 py-2 space-y-3 max-h-[300px]">
         {loading ? (
           <p className="text-xs text-muted-foreground text-center py-4">
-            <Loader2 className="h-4 w-4 animate-spin inline mr-1" />
+            <Spinner size="small" className="inline mr-1" />
           </p>
         ) : approvals.length === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-4">

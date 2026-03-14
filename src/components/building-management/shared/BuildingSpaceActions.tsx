@@ -12,7 +12,8 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Eye, Pencil, Unlink2, Trash2, Loader2 } from 'lucide-react';
+import { Eye, Pencil, Unlink2, Trash2 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -85,7 +86,7 @@ export function BuildingSpaceActions({
           disabled={isUnlinking}
           title={t('spaceActions.unlink')}
         >
-          {isUnlinking ? <Loader2 className={`${iconSizes.xs} animate-spin`} /> : <Unlink2 className={iconSizes.xs} />}
+          {isUnlinking ? <Spinner size="small" color="inherit" /> : <Unlink2 className={iconSizes.xs} />}
         </Button>
       )}
 
@@ -98,7 +99,7 @@ export function BuildingSpaceActions({
           disabled={isDeleting}
           title={t('spaceActions.delete')}
         >
-          {isDeleting ? <Loader2 className={`${iconSizes.xs} animate-spin`} /> : <Trash2 className={iconSizes.xs} />}
+          {isDeleting ? <Spinner size="small" color="inherit" /> : <Trash2 className={iconSizes.xs} />}
         </Button>
       )}
     </nav>

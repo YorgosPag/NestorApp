@@ -16,8 +16,8 @@ import {
   Edit,
   CheckCircle,
   AlertTriangle,
-  Loader2
 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -442,7 +442,7 @@ export default function DatabaseUpdatePage() {
         >
           {isLoading ? (
             <>
-              <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />
+              <Spinner size="small" color="inherit" className="mr-2" />
               Εκτελείται...
             </>
           ) : (

@@ -21,10 +21,10 @@ import {
   Shield,
   ShieldAlert,
   ShieldCheck,
-  Loader2,
   Sparkles,
   Archive,
 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -180,7 +180,7 @@ export function BatchActionsBar({
               className="h-7 px-2 text-xs text-violet-600 hover:text-violet-700"
             >
               {aiClassifying ? (
-                <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                <Spinner size="small" color="inherit" className="mr-1" />
               ) : (
                 <Sparkles className="h-3.5 w-3.5 mr-1" />
               )}
@@ -206,7 +206,7 @@ export function BatchActionsBar({
               className="h-7 px-2 text-xs text-orange-600 hover:text-orange-700"
             >
               {archiving ? (
-                <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                <Spinner size="small" color="inherit" className="mr-1" />
               ) : (
                 <Archive className="h-3.5 w-3.5 mr-1" />
               )}
@@ -230,7 +230,7 @@ export function BatchActionsBar({
             className="h-7 px-2 text-xs"
           >
             {downloading ? (
-              <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+              <Spinner size="small" color="inherit" className="mr-1" />
             ) : (
               <Download className="h-3.5 w-3.5 mr-1" />
             )}
@@ -251,7 +251,7 @@ export function BatchActionsBar({
             className="h-7 px-2 text-xs text-destructive hover:text-destructive"
           >
             {deleting ? (
-              <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+              <Spinner size="small" color="inherit" className="mr-1" />
             ) : (
               <Trash2 className="h-3.5 w-3.5 mr-1" />
             )}

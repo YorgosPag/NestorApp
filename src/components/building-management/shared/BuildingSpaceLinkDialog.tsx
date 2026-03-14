@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Link2, Loader2 } from 'lucide-react';
+import { Search, Link2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Spinner } from '@/components/ui/spinner';
@@ -176,7 +176,7 @@ export function BuildingSpaceLinkDialog({
                     disabled={linkingId === item.id}
                   >
                     {linkingId === item.id ? (
-                      <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                      <Spinner size="small" color="inherit" className="mr-1" />
                     ) : (
                       <Link2 className="mr-1 h-3.5 w-3.5" />
                     )}

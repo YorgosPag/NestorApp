@@ -21,7 +21,6 @@ import {
   Lock,
   Download,
   MessageSquare,
-  Loader2,
 } from 'lucide-react';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { Button } from '@/components/ui/button';
@@ -41,6 +40,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { FileShareService } from '@/services/file-share.service';
 
@@ -238,7 +238,7 @@ export function ShareDialog({
               </Button>
               <Button type="submit" disabled={creating}>
                 {creating ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Spinner size="small" color="inherit" className="mr-2" />
                 ) : (
                   <Share2 className="h-4 w-4 mr-2" />
                 )}

@@ -12,7 +12,8 @@
  */
 
 import React from 'react';
-import { Phone, Mail, Eye, Loader2, User } from 'lucide-react';
+import { Phone, Mail, Eye, User } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -227,7 +228,7 @@ export function CustomerInfoCompact({
           </div>
           {/* Column 5: Actions */}
           <div className="flex items-center gap-1">
-            <Loader2 className={`${iconSizes.sm} animate-spin text-muted-foreground`} />
+            <Spinner size="small" />
           </div>
         </div>
       );
@@ -245,7 +246,7 @@ export function CustomerInfoCompact({
             <div className="h-2 bg-muted rounded w-16 animate-pulse" />
           )}
         </div>
-        <Loader2 className={`${iconSizes.xs} animate-spin text-muted-foreground shrink-0`} />
+        <Spinner size="small" />
       </div>
     );
   }

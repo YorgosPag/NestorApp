@@ -14,7 +14,8 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { formatDateShort } from '@/lib/intl-utils';
-import { ChevronDown, Search, Mail, Phone, Building2, Loader2, X } from 'lucide-react';
+import { ChevronDown, Search, Mail, Phone, Building2, X } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -374,7 +375,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
           >
             {isSearching ? (
               <div className="p-4 text-center text-muted-foreground">
-                <Loader2 className={`${iconSizes.lg} mx-auto mb-2 animate-spin`} />
+                <Spinner size="large" className="mx-auto mb-2" />
                 <span className="text-sm">{t('placeholders.searching')}</span>
               </div>
             ) : searchResults.length > 0 ? (

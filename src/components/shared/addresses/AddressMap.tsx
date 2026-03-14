@@ -27,7 +27,8 @@
 
 import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { Marker } from 'react-map-gl/maplibre';
-import { Loader2, AlertTriangle, MapPin, Locate } from 'lucide-react';
+import { AlertTriangle, MapPin, Locate } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { LngLatBounds, Marker as MapLibreMarker } from 'maplibre-gl';
 
@@ -609,7 +610,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
         className={`flex items-center justify-center bg-muted rounded-lg ${heightClass} ${className}`}
       >
         <div className="text-center space-y-3">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
+          <Spinner size="large" color="inherit" className="mx-auto text-primary" />
           <p className="text-sm text-muted-foreground">
             {t('map.loading')}
           </p>
@@ -765,7 +766,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
             aria-label={t('map.locateMe')}
           >
             {geoStatus === 'requesting' ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Spinner size="small" />
             ) : (
               <Locate className="w-4 h-4" />
             )}
@@ -781,7 +782,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
             >
               {isReverseGeocoding ? (
                 <>
-                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <Spinner size="small" />
                   {t('map.reverseGeocoding')}
                 </>
               ) : (

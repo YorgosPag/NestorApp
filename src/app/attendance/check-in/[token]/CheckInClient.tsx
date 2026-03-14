@@ -26,10 +26,10 @@ import {
   Camera,
   CheckCircle2,
   XCircle,
-  Loader2,
   AlertTriangle,
   Navigation,
 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { usePhotoCapture } from '@/hooks/usePhotoCapture';
@@ -190,7 +190,7 @@ export function CheckInClient({ token }: CheckInClientProps) {
         {/* VALIDATING */}
         {pageStatus === 'validating' && (
           <div className="flex flex-col items-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+            <Spinner size="large" color="inherit" className="text-blue-500" />
             <p className="mt-3 text-sm text-slate-500">Επαλήθευση QR code...</p>
           </div>
         )}
@@ -217,7 +217,7 @@ export function CheckInClient({ token }: CheckInClientProps) {
                   gpsStatus === 'granted' ? 'bg-green-100' : 'bg-slate-100'
                 )}>
                   {gpsStatus === 'requesting' ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                    <Spinner color="inherit" className="text-blue-500" />
                   ) : gpsStatus === 'granted' ? (
                     <MapPin className="h-5 w-5 text-green-600" />
                   ) : (
@@ -376,7 +376,7 @@ export function CheckInClient({ token }: CheckInClientProps) {
             >
               {pageStatus === 'submitting' ? (
                 <span className="flex items-center justify-center gap-2">
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <Spinner color="inherit" />
                   Καταχώρηση...
                 </span>
               ) : eventType === 'check_in' ? (

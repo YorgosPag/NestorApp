@@ -28,7 +28,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { TableCell } from '@/components/ui/table';
-import { Home, Plus, Loader2, Search, CheckCircle, Euro, Ruler, BarChart3, Layers, Table as TableIcon, Link2, Check, X } from 'lucide-react';
+import { Home, Plus, Search, CheckCircle, Euro, Ruler, BarChart3, Layers, Table as TableIcon, Link2, Check, X } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -454,7 +455,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   if (loading) {
     return (
       <section className="flex items-center justify-center py-2">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <Spinner size="large" />
       </section>
     );
   }
@@ -706,7 +707,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
               size="sm"
               disabled={!createName.trim() || creating}
             >
-              {creating ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Check className="mr-1 h-4 w-4" />}
+              {creating ? <Spinner size="small" color="inherit" className="mr-1" /> : <Check className="mr-1 h-4 w-4" />}
               Αποθήκευση
             </Button>
           </nav>
@@ -801,7 +802,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
                 <TableCell>
                   <nav className="flex justify-end gap-1">
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleSaveEdit} disabled={saving || !editName.trim()}>
-                      {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 text-green-500" />}
+                      {saving ? <Spinner size="small" color="inherit" /> : <Check className="h-3.5 w-3.5 text-green-500" />}
                     </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={cancelEdit} disabled={saving}>
                       <X className="h-3.5 w-3.5" />

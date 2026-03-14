@@ -30,7 +30,8 @@ import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { Loader2, Search, PenLine, X } from 'lucide-react';
+import { Search, PenLine, X } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from 'react-i18next';
 import { EscoService } from '@/services/esco.service';
 import type {
@@ -332,7 +333,7 @@ export function EscoSkillPicker({
                 role="combobox"
               />
               {isLoading && (
-                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                <Spinner size="small" className="absolute right-3 top-1/2 -translate-y-1/2" />
               )}
             </div>
           </PopoverTrigger>

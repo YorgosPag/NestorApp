@@ -29,8 +29,8 @@ import {
   Minimize,
   SkipBack,
   SkipForward,
-  Loader2,
 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -402,7 +402,7 @@ export function VideoPlayer({
       {/* Loading Overlay */}
       {state.isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-          <Loader2 className={cn(iconSizes.xl, 'animate-spin text-white')} />
+          <Spinner size="large" color="inherit" className="text-white" />
         </div>
       )}
 

@@ -20,7 +20,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Layers, Plus, Pencil, Trash2, Check, X, Loader2, ChevronDown, ChevronRight, Map } from 'lucide-react';
+import { Layers, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronRight, Map } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
@@ -246,7 +247,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
   if (loading) {
     return (
       <section className="flex items-center justify-center py-2">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <Spinner size="large" />
       </section>
     );
   }
@@ -337,7 +338,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
               disabled={!createName.trim() || creating}
               className="h-9"
             >
-              {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              {creating ? <Spinner size="small" color="inherit" /> : <Check className="h-4 w-4" />}
             </Button>
             <Button
               type="button"
@@ -443,7 +444,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                                 onClick={handleSaveEdit}
                                 disabled={saving || !editName.trim()}
                               >
-                                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 text-green-500" />}
+                                {saving ? <Spinner size="small" color="inherit" /> : <Check className="h-3.5 w-3.5 text-green-500" />}
                               </Button>
                               <Button
                                 variant="ghost"
@@ -493,7 +494,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                                 disabled={deletingId === floor.id}
                               >
                                 {deletingId === floor.id ? (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  <Spinner size="small" color="inherit" />
                                 ) : (
                                   <Trash2 className="h-3.5 w-3.5" />
                                 )}

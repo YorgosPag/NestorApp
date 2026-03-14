@@ -26,9 +26,9 @@ import {
   Copy,
   Check,
   Printer,
-  Loader2,
   AlertCircle,
 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -163,7 +163,7 @@ export function QrCodePanel({ projectId }: QrCodePanelProps) {
             size="sm"
           >
             {isGenerating ? (
-              <Loader2 className={cn(iconSizes.sm, 'mr-2 animate-spin')} />
+              <Spinner size="small" color="inherit" className="mr-2" />
             ) : (
               <RefreshCw className={cn(iconSizes.sm, 'mr-2')} />
             )}

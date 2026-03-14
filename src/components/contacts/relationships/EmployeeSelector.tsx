@@ -21,8 +21,8 @@ import {
   Search,
   X,
   User,
-  Loader2
 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 // 🏢 ENTERPRISE: Centralized entity icons (ZERO hardcoded values)
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
@@ -610,7 +610,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
               disabled={readonly}
             />
             {isSearching && (
-              <Loader2 className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${colors.text.muted} ${iconSizes.sm} animate-spin`} />
+              <Spinner size="small" className="absolute right-3 top-1/2 transform -translate-y-1/2" />
             )}
             {searchQuery && !isSearching && (
               <Button
@@ -637,7 +637,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
               <CardContent className={getEmployeeSelectorCardStyle()}>
                 {isSearching ? (
                   <div className="p-4 text-center text-muted-foreground">
-                    <Loader2 className={`${iconSizes.lg} animate-spin mx-auto mb-2`} />
+                    <Spinner size="large" className="mx-auto mb-2" />
                     <span className="text-sm">{t('placeholders.searching')}</span>
                   </div>
                 ) : searchResults.length > 0 ? (
