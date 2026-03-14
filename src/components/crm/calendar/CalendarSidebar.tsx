@@ -1,8 +1,8 @@
 /**
  * Calendar sidebar with mini calendar for date navigation.
  *
- * Navigation arrows are positioned BELOW the month caption
- * (not left/right absolute) to avoid overflow clipping in the narrow sidebar.
+ * Navigation arrows are rendered BELOW the calendar grid as custom buttons,
+ * because the built-in nav arrows overflow in the narrow 280px sidebar.
  *
  * The `month` prop controls which month is displayed — synced bidirectionally
  * with the main calendar via `onMonthChange`.
@@ -10,9 +10,12 @@
 
 'use client';
 
-import { useMemo } from 'react';
-import { isSameDay } from 'date-fns';
+import { useMemo, useCallback } from 'react';
+import { isSameDay, addMonths, subMonths } from 'date-fns';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
+import { Button } from '@/components/ui/button';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { CalendarEvent } from '@/types/calendar-event';
 
 interface CalendarSidebarProps {
@@ -32,6 +35,8 @@ export function CalendarSidebar({
   displayMonth,
   onMonthChange,
 }: CalendarSidebarProps) {
+  const iconSizes = useIconSizes();
+
   // Dates that have events for highlighting
   const eventDates = useMemo(() => {
     const dates: Date[] = [];
@@ -47,6 +52,14 @@ export function CalendarSidebar({
     onDateSelect(date);
   };
 
+  const handlePrevMonth = useCallback(() => {
+    onMonthChange(subMonths(displayMonth, 1));
+  }, [displayMonth, onMonthChange]);
+
+  const handleNextMonth = useCallback(() => {
+    onMonthChange(addMonths(displayMonth, 1));
+  }, [displayMonth, onMonthChange]);
+
   return (
     <aside className="hidden lg:block w-[280px] shrink-0" aria-label="Mini Calendar">
       <Calendar
@@ -61,12 +74,18 @@ export function CalendarSidebar({
         modifiersClassNames={{ hasEvent: 'calendar-sidebar-has-event' }}
         className="rounded-lg border"
         classNames={{
-          month_caption: "flex justify-center pt-1 relative items-center mb-1",
-          nav: "flex items-center justify-center gap-4 pb-2",
-          button_previous: "relative left-auto",
-          button_next: "relative right-auto",
+          nav: "hidden",
         }}
       />
+      {/* Navigation arrows BELOW the calendar */}
+      <nav className="flex items-center justify-center gap-6 pt-2" aria-label="Month navigation">
+        <Button variant="outline" size="icon" className="h-8 w-8" onClick={handlePrevMonth}>
+          <ChevronLeft className={iconSizes.sm} />
+        </Button>
+        <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleNextMonth}>
+          <ChevronRight className={iconSizes.sm} />
+        </Button>
+      </nav>
     </aside>
   );
 }
