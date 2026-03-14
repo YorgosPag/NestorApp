@@ -211,6 +211,12 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
         .collection(COLLECTIONS.STORAGE)
         .where('projectId', '==', requestedProjectId)
         .get();
+    } else if (ctx.globalRole === 'super_admin') {
+      // 🏢 ADR-232: Super admin — load ALL storages
+      logger.info('Querying all storages (super admin)');
+      snapshot = await getAdminFirestore()
+        .collection(COLLECTIONS.STORAGE)
+        .get();
     } else {
       // 🏢 ENTERPRISE: Fetch by companyId for tenant isolation
       logger.info('Querying all storages for company', { companyId: ctx.companyId });

@@ -70,10 +70,13 @@ export const GET = withStandardRateLimit(
         let unitsQuery;
 
         if (isSuperAdmin && buildingId) {
-          // 🏢 ENTERPRISE: Super admin querying by buildingId — skip companyId filter
-          // This handles cases where units have different companyId than their building
+          // 🏢 ADR-232: Super admin by buildingId — skip companyId filter
           unitsQuery = db.collection(COLLECTIONS.UNITS)
             .where('buildingId', '==', buildingId)
+            .orderBy('name', 'asc');
+        } else if (isSuperAdmin) {
+          // 🏢 ADR-232: Super admin without buildingId — load ALL units
+          unitsQuery = db.collection(COLLECTIONS.UNITS)
             .orderBy('name', 'asc');
         } else {
           unitsQuery = db.collection(COLLECTIONS.UNITS)

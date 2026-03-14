@@ -84,19 +84,18 @@ export const GET = withStandardRateLimit(
 
         // ============================================================================
         // TENANT-SCOPED QUERY (Admin SDK + Tenant Isolation)
+        // 🏢 ADR-232: Super admin bypasses companyId filter (entities may have null)
         // ============================================================================
 
-        let floorsQuery = getAdminFirestore()
-          .collection(COLLECTIONS.FLOORS)
-          .where('companyId', '==', tenantCompanyId);
+        const baseCollection = getAdminFirestore().collection(COLLECTIONS.FLOORS);
+        let floorsQuery: FirebaseFirestore.Query = isSuperAdmin
+          ? baseCollection
+          : baseCollection.where('companyId', '==', tenantCompanyId);
 
         // Apply additional filters
         if (buildingId) {
-          // Query floors by buildingId (most common use case)
           floorsQuery = floorsQuery.where('buildingId', '==', buildingId);
         } else if (projectId) {
-          // Query floors by projectId (for project-level floor listing)
-          // 🏢 ADR-209: Normalized projectId query (handles string/number mismatch)
           floorsQuery = floorsQuery.where('projectId', '==', normalizeProjectIdForQuery(projectId));
         }
 

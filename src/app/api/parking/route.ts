@@ -316,20 +316,21 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
     // NO filters — Return all parking for company (buildings + open space)
     // =========================================================================
 
-    // Get all buildings belonging to this company
-    const buildingsSnapshot = await getAdminFirestore()
-      .collection(COLLECTIONS.BUILDINGS)
-      .where('companyId', '==', ctx.companyId)
-      .get();
+    // 🏢 ADR-232: Super admin sees all, regular users filtered by companyId
+    const isSuperAdmin = ctx.globalRole === 'super_admin';
+
+    const buildingsSnapshot = await (isSuperAdmin
+      ? getAdminFirestore().collection(COLLECTIONS.BUILDINGS).get()
+      : getAdminFirestore().collection(COLLECTIONS.BUILDINGS)
+          .where('companyId', '==', ctx.companyId).get());
 
     const authorizedBuildingIds = new Set(buildingsSnapshot.docs.map(doc => doc.id));
     logger.info('Found authorized buildings', { buildingCount: authorizedBuildingIds.size, companyId: ctx.companyId });
 
-    // Fetch all parking for this company (includes open-space spots via companyId)
-    const snapshot = await getAdminFirestore()
-      .collection(COLLECTIONS.PARKING_SPACES)
-      .where('companyId', '==', ctx.companyId)
-      .get();
+    const snapshot = await (isSuperAdmin
+      ? getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES).get()
+      : getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES)
+          .where('companyId', '==', ctx.companyId).get());
 
     const parkingSpots = mapParkingDocs(snapshot.docs);
     logger.info('Found parking spots for company', { count: parkingSpots.length });
