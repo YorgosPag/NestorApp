@@ -726,12 +726,16 @@
     display: none;
   }
 
-  /* Week number gutter */
-  .rbc-wrapper .rbc-month-view .rbc-month-row .rbc-row-bg .rbc-day-bg:first-child {
+  /* All day cells need position:relative for ::after dot indicators */
+  .rbc-wrapper .rbc-day-bg {
     position: relative;
   }
 
   /* Mini calendar sidebar — event dot indicator */
+  .calendar-sidebar-has-event {
+    position: relative;
+  }
+
   .calendar-sidebar-has-event::after {
     content: '';
     position: absolute;
