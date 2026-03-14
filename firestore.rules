@@ -2746,13 +2746,13 @@ service cloud.firestore {
              // ⚡ Priority validation (enum)
              && data.priority in ['low', 'medium', 'high', 'urgent']
              // 🔗 Optional leadId validation
-             && (!data.keys().hasAny(['leadId']) || (data.leadId is string))
+             && (!data.keys().hasAny(['leadId']) || data.leadId is string || data.leadId == null)
              // 🔗 Optional contactId validation
-             && (!data.keys().hasAny(['contactId']) || (data.contactId is string))
+             && (!data.keys().hasAny(['contactId']) || data.contactId is string || data.contactId == null)
              // 🔗 Optional projectId validation
-             && (!data.keys().hasAny(['projectId']) || (data.projectId is string))
+             && (!data.keys().hasAny(['projectId']) || data.projectId is string || data.projectId == null)
              // 📝 Optional description validation
-             && (!data.keys().hasAny(['description']) || (data.description is string));
+             && (!data.keys().hasAny(['description']) || data.description is string || data.description == null);
     }
 
     // =========================================================================
