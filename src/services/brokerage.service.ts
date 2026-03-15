@@ -188,6 +188,35 @@ export class BrokerageService {
     }
   }
 
+  /**
+   * Ενημέρωση μεσιτικής σύμβασης.
+   */
+  static async updateAgreement(
+    id: string,
+    updates: Partial<Pick<BrokerageAgreement,
+      'exclusivity' | 'commissionType' | 'commissionPercentage' |
+      'commissionFixedAmount' | 'startDate' | 'endDate' | 'notes' | 'scope' | 'unitId'
+    >>,
+    updatedBy: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const now = new Date().toISOString();
+      await updateDoc(doc(db, COLLECTIONS.BROKERAGE_AGREEMENTS, id), {
+        ...updates,
+        updatedAt: now,
+      });
+
+      logger.info(`[BrokerageService] Updated agreement ${id}`);
+      return { success: true };
+    } catch (error) {
+      logger.error('[BrokerageService] Failed to update agreement:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
   // ==========================================================================
   // EXCLUSIVITY VALIDATION
   // ==========================================================================

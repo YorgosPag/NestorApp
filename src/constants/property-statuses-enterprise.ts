@@ -1948,6 +1948,7 @@ export const PROJECT_TAB_LABELS = {
   PHOTOS: 'tabs.labels.photos',
   VIDEOS: 'tabs.labels.videos',
   HISTORY: 'tabs.labels.history',
+  BROKERS: 'tabs.labels.brokers',
 } as const;
 
 /**
@@ -1971,6 +1972,7 @@ export const PROJECT_TAB_DESCRIPTIONS = {
   PHOTOS: 'tabs.descriptions.photos',
   VIDEOS: 'tabs.descriptions.videos',
   HISTORY: 'tabs.descriptions.history',
+  BROKERS: 'tabs.descriptions.brokers',
 } as const;
 
 /**

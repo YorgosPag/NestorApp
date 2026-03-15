@@ -40,6 +40,8 @@ import { ProjectLocationsTab } from '@/components/projects/tabs/ProjectLocations
 import { ProjectMeasurementsTab } from '@/components/projects/tabs/ProjectMeasurementsTab';
 // 🏢 ENTERPRISE: Centralized audit trail / history tab (ADR-195)
 import { ActivityTab } from '@/components/shared/audit/ActivityTab';
+// 🏢 ENTERPRISE: Brokerage agreements tab (ADR-230 / SPEC-230B)
+import { ProjectBrokersTab } from '@/components/projects/tabs/ProjectBrokersTab';
 
 // ============================================================================
 // PROJECT COMPONENT MAPPING
@@ -71,6 +73,8 @@ export const PROJECT_COMPONENT_MAPPING = {
   'ProjectMeasurementsTab': ProjectMeasurementsTab,
   // 🏢 ENTERPRISE: Centralized audit trail / history tab (ADR-195)
   'ActivityTab': ActivityTab,
+  // 🏢 ENTERPRISE: Brokerage agreements tab (ADR-230 / SPEC-230B)
+  'ProjectBrokersTab': ProjectBrokersTab,
 } as const;
 
 // ============================================================================

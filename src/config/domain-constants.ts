@@ -136,6 +136,8 @@ export const FILE_DOMAINS = {
   ACCOUNTING: 'accounting',
   /** Legal documents (contracts, agreements, legal) */
   LEGAL: 'legal',
+  /** Brokerage documents (brokerage agreements, commissions) */
+  BROKERAGE: 'brokerage',
   /** Financial documents (financial reports, statements) */
   FINANCIAL: 'financial',
   /**

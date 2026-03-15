@@ -23,6 +23,7 @@ import type {
 } from '@/types/legal-contracts';
 import { computeLegalPhase, CONTRACT_PHASE_ORDER } from '@/types/legal-contracts';
 import type { BrokerageAgreement } from '@/types/brokerage';
+import { BrokerageService } from '@/services/brokerage.service';
 
 // ============================================================================
 // TYPES
@@ -100,10 +101,27 @@ export function useLegalContracts(unitId: string | null, projectId?: string): Us
     }
   }, [unitId]);
 
+  // Fetch brokerage agreements for the project
+  const fetchAgreements = useCallback(async () => {
+    if (!projectId) return;
+
+    try {
+      const data = await BrokerageService.getAgreements(projectId);
+      setAgreements(data);
+    } catch {
+      // Non-blocking — agreements are supplementary data
+      setAgreements([]);
+    }
+  }, [projectId]);
+
   // Initial fetch
   useEffect(() => {
     fetchContracts();
   }, [fetchContracts]);
+
+  useEffect(() => {
+    fetchAgreements();
+  }, [fetchAgreements]);
 
   // Actions
   const createContract = useCallback(async (input: CreateContractInput) => {
@@ -193,7 +211,7 @@ export function useLegalContracts(unitId: string | null, projectId?: string): Us
     currentPhase,
     isLoading,
     error,
-    refetch: fetchContracts,
+    refetch: () => { fetchContracts(); fetchAgreements(); },
     createContract,
     transitionStatus,
     updateContract,

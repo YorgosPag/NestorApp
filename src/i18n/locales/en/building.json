@@ -818,7 +818,8 @@
       "measurements": "Measurements",
       "floorsManagement": "Floors",
       "buildingContacts": "Associates",
-      "buildingLocations": "Addresses"
+      "buildingLocations": "Addresses",
+      "brokers": "Brokers"
     },
     "descriptions": {
       "projectGeneral": "Basic information and project details",
@@ -836,7 +837,8 @@
       "videos": "Presentation and documentation videos",
       "measurements": "Quantity surveying and cost tracking per building",
       "floorsManagement": "Building floor management — level number, elevation",
-      "history": "Change history"
+      "history": "Change history",
+      "brokers": "Brokerage agreements and sales assignments"
     },
     "floors": {
       "title": "Building Floors",
