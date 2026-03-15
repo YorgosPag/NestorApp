@@ -139,6 +139,8 @@ export const ENTERPRISE_ID_PREFIXES = {
   ENTITY_AUDIT: 'eaud',
   CONTRACT: 'lc',
   PIPELINE_QUEUE: 'pq',
+  BROKERAGE: 'brk',
+  COMMISSION: 'com',
 
   // ==========================================================================
   // OPTIMISTIC & TEMPORARY
@@ -869,6 +871,22 @@ export class EnterpriseIdService {
     return this.generateId(ENTERPRISE_ID_PREFIXES.PIPELINE_QUEUE).id;
   }
 
+  /**
+   * 🤝 Generate Brokerage Agreement ID
+   * Format: brk_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateBrokerageId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.BROKERAGE).id;
+  }
+
+  /**
+   * 💰 Generate Commission Record ID
+   * Format: com_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateCommissionId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.COMMISSION).id;
+  }
+
   // ==========================================================================
   // UTILITY METHODS
   // ==========================================================================
@@ -1066,6 +1084,8 @@ export const generatePipelineAuditId = () => enterpriseIdService.generatePipelin
 export const generateEntityAuditId = () => enterpriseIdService.generateEntityAuditId();
 export const generateContractId = () => enterpriseIdService.generateContractId();
 export const generatePipelineQueueId = () => enterpriseIdService.generatePipelineQueueId();
+export const generateBrokerageId = () => enterpriseIdService.generateBrokerageId();
+export const generateCommissionId = () => enterpriseIdService.generateCommissionId();
 
 // =============================================================================
 // FILE & MEDIA OPERATIONS

@@ -23,6 +23,7 @@ import {
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { generateBrokerageId, generateCommissionId } from '@/services/enterprise-id.service';
 import type {
   BrokerageAgreement,
   BrokerageStatus,
@@ -38,16 +39,8 @@ import { getCompanyId } from '@/config/tenant';
 const logger = createModuleLogger('BrokerageService');
 
 // ============================================================================
-// ID GENERATION
+// ID GENERATION — delegated to enterprise-id.service.ts
 // ============================================================================
-
-function generateBrokerageId(): string {
-  return `brk_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function generateCommissionId(): string {
-  return `com_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-}
 
 // ============================================================================
 // BROKERAGE SERVICE

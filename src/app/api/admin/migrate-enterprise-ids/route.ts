@@ -44,6 +44,8 @@ import {
   generatePipelineQueueId,
   generateObligationId,
   generateContractId,
+  generateBrokerageId,
+  generateCommissionId,
   ENTERPRISE_ID_PREFIXES,
 } from '@/services/enterprise-id.service';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -135,15 +137,40 @@ const SIMPLE_COLLECTIONS: ReadonlyArray<SimpleCollectionConfig> = [
     generateId: generateContractId,
     hasInternalId: true, // LegalContract stores `id` field inside the doc
   },
+  {
+    collectionName: COLLECTIONS.BROKERAGE_AGREEMENTS,
+    validPrefixes: [ENTERPRISE_ID_PREFIXES.BROKERAGE],
+    generateId: generateBrokerageId,
+    hasInternalId: true, // BrokerageAgreement stores `id` field inside the doc
+  },
+  {
+    collectionName: COLLECTIONS.COMMISSION_RECORDS,
+    validPrefixes: [ENTERPRISE_ID_PREFIXES.COMMISSION],
+    generateId: generateCommissionId,
+    hasInternalId: true,
+  },
 ];
 
 // ============================================================================
 // HELPERS
 // ============================================================================
 
-/** Check if an ID has a known enterprise prefix */
+/** UUID v4 format check (after prefix) */
+const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * Check if an ID has proper enterprise format: prefix_uuid-v4.
+ * Rejects legacy formats like lc_1773532540279_frbrz2 that have
+ * the right prefix but wrong ID body (timestamp+random, not UUID).
+ */
 function hasEnterprisePrefix(id: string, prefixes: ReadonlyArray<string>): boolean {
-  return prefixes.some(prefix => id.startsWith(`${prefix}_`));
+  for (const prefix of prefixes) {
+    if (id.startsWith(`${prefix}_`)) {
+      const remainder = id.slice(prefix.length + 1);
+      return UUID_V4_REGEX.test(remainder);
+    }
+  }
+  return false;
 }
 
 const BUILDING_PREFIXES = [ENTERPRISE_ID_PREFIXES.BUILDING] as const;
