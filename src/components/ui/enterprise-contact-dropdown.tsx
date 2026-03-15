@@ -14,7 +14,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { formatDateShort } from '@/lib/intl-utils';
-import { ChevronDown, Search, Mail, Phone, Building2, X } from 'lucide-react';
+import { ChevronDown, Search, Mail, Phone, Building2, X, UserPlus } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,6 +57,8 @@ export interface EnterpriseContactDropdownProps {
   error?: string;
   className?: string;
   readonly?: boolean;
+  /** Callback to create a new contact — when provided, shows "+ Νέα επαφή" inside the dropdown */
+  onCreateNew?: () => void;
 }
 
 // ============================================================================
@@ -91,7 +93,8 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
   required = false,
   error,
   className,
-  readonly = false
+  readonly = false,
+  onCreateNew,
 }) => {
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
@@ -388,6 +391,20 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
                     {t('dropdown.totalContacts', { count: searchResults.length })}
                   </div>
                 )}
+                {onCreateNew && (
+                  <button
+                    type="button"
+                    onClick={() => { setIsOpen(false); onCreateNew(); }}
+                    className={cn(
+                      "w-full flex items-center gap-2 p-3 text-sm font-medium text-primary border-t border-border cursor-pointer",
+                      INTERACTIVE_PATTERNS.ACCENT_HOVER,
+                      TRANSITION_PRESETS.STANDARD_COLORS
+                    )}
+                  >
+                    <UserPlus className={iconSizes.sm} />
+                    {t('dropdown.createNewContact', { defaultValue: 'Δημιουργία νέας επαφής' })}
+                  </button>
+                )}
               </>
             ) : (
               <div className="p-4 text-center text-muted-foreground">
@@ -395,6 +412,20 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
                 <span className="text-sm">
                   {searchQuery ? t('placeholders.noResults') : t('placeholders.startTyping')}
                 </span>
+                {onCreateNew && searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => { setIsOpen(false); onCreateNew(); }}
+                    className={cn(
+                      "mt-3 mx-auto flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary rounded-md border border-primary/20 cursor-pointer",
+                      INTERACTIVE_PATTERNS.ACCENT_HOVER,
+                      TRANSITION_PRESETS.STANDARD_COLORS
+                    )}
+                  >
+                    <UserPlus className={iconSizes.sm} />
+                    {t('dropdown.createNewContact', { defaultValue: 'Δημιουργία νέας επαφής' })}
+                  </button>
+                )}
               </div>
             )}
           </div>

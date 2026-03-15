@@ -57,6 +57,9 @@ export interface ContactSearchManagerProps {
     /** Auto-load all contacts on mount */
     autoLoadContacts?: boolean;
   };
+
+  /** Callback to create a new contact — shows "+ Νέα επαφή" inside the dropdown */
+  onCreateNew?: () => void;
 }
 
 // ============================================================================
@@ -81,7 +84,8 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
   disabled = false,
   readonly = false,
   className,
-  searchConfig = {}
+  searchConfig = {},
+  onCreateNew,
 }) => {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('contacts');
@@ -242,6 +246,7 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
         required={required}
         error={error || searchError || undefined}
         readonly={readonly || disabled}
+        onCreateNew={onCreateNew}
       />
 
       {finalSearchConfig.debug && (

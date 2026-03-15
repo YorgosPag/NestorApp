@@ -31,7 +31,7 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { formatCurrency } from '@/lib/intl-utils';
 import type { BrokerageAgreement, ExclusivityType, CommissionType } from '@/types/brokerage';
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
-import { Briefcase, Plus, Pencil, XCircle, RefreshCw, X, UserPlus } from 'lucide-react';
+import { Briefcase, Plus, Pencil, XCircle, RefreshCw, X } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -396,19 +396,8 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
               label={t('sales.legal.selectAgent')}
               placeholder={t('sales.legal.selectAgent')}
               disabled={isEditMode}
+              onCreateNew={isEditMode ? undefined : () => setShowNewContactDialog(true)}
             />
-            {!isEditMode && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-2"
-                onClick={() => setShowNewContactDialog(true)}
-              >
-                <UserPlus className={`${iconSizes.xs} mr-1`} />
-                {t('contacts.newContact', { defaultValue: 'Δημιουργία νέας επαφής' })}
-              </Button>
-            )}
           </fieldset>
 
           {/* Scope */}
