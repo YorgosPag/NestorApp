@@ -40,7 +40,6 @@ import {
 } from 'lucide-react';
 import { LegalTabContent } from '@/components/sales/legal/LegalTabContent';
 import type { Unit } from '@/types/unit';
-import type { EntityAssociationLink } from '@/types/entity-associations';
 
 // =============================================================================
 // 🏢 TYPES
@@ -57,8 +56,6 @@ interface SalesSidebarProps {
   /** Quick filter: selected unit type */
   selectedUnitType: string;
   onUnitTypeChange: (type: string) => void;
-  /** Unit associations — for ProfessionalsCard in Legal tab (ADR-230) */
-  unitAssociations?: EntityAssociationLink[];
 }
 
 // =============================================================================
@@ -115,7 +112,6 @@ export function SalesSidebar({
   onCommercialStatusChange,
   selectedUnitType,
   onUnitTypeChange,
-  unitAssociations = [],
 }: SalesSidebarProps) {
   const { t } = useTranslation('common');
   const isMobile = useIsMobile();
@@ -177,10 +173,7 @@ export function SalesSidebar({
           {/* Legal Tab — ADR-230 (conditional, reserved/sold only) */}
           {shouldShowLegalTab(selectedUnit) && (
             <TabsContent value="legal" className="flex-1">
-              <LegalTabContent
-                unit={selectedUnit}
-                associations={unitAssociations}
-              />
+              <LegalTabContent unit={selectedUnit} />
             </TabsContent>
           )}
 

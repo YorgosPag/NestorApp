@@ -23,9 +23,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useEntityContactLinks } from '@/hooks/useEntityAssociations';
 import type { Unit } from '@/types/unit';
 import type { ContractPhase } from '@/types/legal-contracts';
-import type { EntityAssociationLink } from '@/types/entity-associations';
 
 // ============================================================================
 // TYPES
@@ -33,8 +33,6 @@ import type { EntityAssociationLink } from '@/types/entity-associations';
 
 interface LegalTabContentProps {
   unit: Unit;
-  /** Live associations from unit (for ProfessionalsCard) */
-  associations: EntityAssociationLink[];
 }
 
 // ============================================================================
@@ -51,7 +49,7 @@ const CREATABLE_PHASES: { value: ContractPhase; label: string }[] = [
 // COMPONENT
 // ============================================================================
 
-export function LegalTabContent({ unit, associations }: LegalTabContentProps) {
+export function LegalTabContent({ unit }: LegalTabContentProps) {
   const { t } = useTranslation('common');
   const {
     contracts,
@@ -60,7 +58,11 @@ export function LegalTabContent({ unit, associations }: LegalTabContentProps) {
     error,
     createContract,
     transitionStatus,
+    overrideProfessional,
   } = useLegalContracts(unit.id, unit.projectId ?? unit.project);
+
+  // Self-contained: load associations directly (page.tsx does NOT pass them)
+  const { links, addLink, removeLink } = useEntityContactLinks('unit', unit.id);
 
   const [selectedPhase, setSelectedPhase] = useState<ContractPhase>('preliminary');
   const [creating, setCreating] = useState(false);
@@ -182,8 +184,14 @@ export function LegalTabContent({ unit, associations }: LegalTabContentProps) {
         </p>
       )}
 
-      {/* Professionals */}
-      <ProfessionalsCard associations={associations} />
+      {/* Professionals — interactive assign/remove */}
+      <ProfessionalsCard
+        associations={links}
+        contracts={contracts}
+        onAssign={addLink}
+        onRemove={removeLink}
+        onOverrideProfessional={overrideProfessional}
+      />
 
       {/* Brokerage */}
       <BrokerageCard agreements={agreements} />
