@@ -196,9 +196,18 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<Proc
 
       // Store admin inbound message in CRM (conversations + messages collections)
       // processMessage() is skipped for admins, so we must store explicitly
-      if (isFirebaseAvailable() && webhookData.message.from) {
+      const firebaseReady = isFirebaseAvailable();
+      logger.info('[CRM-DIAG] Admin CRM store check', {
+        firebaseReady,
+        hasFrom: !!webhookData.message.from,
+        chatId: webhookData.message.chat.id,
+        messageId: webhookData.message.message_id,
+        text: effectiveMessageText.substring(0, 50),
+      });
+
+      if (firebaseReady && webhookData.message.from) {
         try {
-          await storeMessageInCRM({
+          const result = await storeMessageInCRM({
             from: {
               id: webhookData.message.from.id,
               first_name: webhookData.message.from.first_name,
@@ -208,9 +217,12 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<Proc
             text: effectiveMessageText,
             message_id: webhookData.message.message_id,
           }, 'inbound');
-          logger.info('Admin inbound message stored in CRM');
+          logger.info('[CRM-DIAG] Admin inbound CRM store result', {
+            success: result !== null,
+            docRef: result ? 'created' : 'null (failed silently)',
+          });
         } catch (error) {
-          logger.error('Failed to store admin inbound message in CRM', { error });
+          logger.error('[CRM-DIAG] Admin inbound CRM store THREW', { error });
         }
       }
     } else {
