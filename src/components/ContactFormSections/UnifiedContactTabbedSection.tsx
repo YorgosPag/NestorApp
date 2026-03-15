@@ -27,6 +27,9 @@ import { PersonaSelector } from '@/components/contacts/personas/PersonaSelector'
 import { getMergedIndividualSections, getPersonaFields } from '@/config/persona-config';
 import type { PersonaType } from '@/types/contacts/personas';
 import { createDefaultPersonaData } from '@/types/contacts/personas';
+// 🏢 ENTERPRISE: Brokerage guard — prevent persona removal when active records exist
+import { BrokerageService } from '@/services/brokerage.service';
+import { toast } from 'sonner';
 // 🇪🇺 ENTERPRISE: ESCO Professional Classification (ADR-034) + Skills (ADR-132)
 import { EscoOccupationPicker } from '@/components/shared/EscoOccupationPicker';
 import { EscoSkillPicker } from '@/components/shared/EscoSkillPicker';
@@ -701,7 +704,7 @@ export function UnifiedContactTabbedSection({
         // 🎭 ENTERPRISE: Custom renderer for personas tab — ADR-121 Contact Persona System
         // Toggle chips that activate conditional field sections
         personas: () => {
-          const handlePersonaToggle = (personaType: PersonaType) => {
+          const handlePersonaToggle = async (personaType: PersonaType) => {
             // Dedicated callback takes priority (works in both view + edit mode)
             if (onPersonaToggle) {
               onPersonaToggle(personaType);
@@ -713,6 +716,18 @@ export function UnifiedContactTabbedSection({
             const isActive = currentActive.includes(personaType);
 
             if (isActive) {
+              // 🛡️ GUARD: Prevent removal of real_estate_agent if active brokerage records exist
+              if (personaType === 'real_estate_agent' && formData.id) {
+                const { hasAgreements, hasCommissions } = await BrokerageService.hasActiveRecords(formData.id);
+                if (hasAgreements || hasCommissions) {
+                  toast.error(
+                    'Δεν μπορεί να αφαιρεθεί η ιδιότητα «Μεσίτης Ακινήτων» — υπάρχουν ενεργές συμβάσεις ή εκκρεμείς προμήθειες για αυτήν την επαφή.',
+                    { duration: 5000 }
+                  );
+                  return;
+                }
+              }
+
               // Deactivate: remove from activePersonas (data stays in personaData for re-activation)
               setFormData({
                 ...formData,

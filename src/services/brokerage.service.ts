@@ -393,6 +393,42 @@ export class BrokerageService {
       };
     }
   }
+  // ==========================================================================
+  // PERSONA GUARD — Protect persona removal when active records exist
+  // ==========================================================================
+
+  /**
+   * Ελέγχει αν ο μεσίτης (agentContactId) έχει ενεργές συμβάσεις ή εγγραφές
+   * προμηθειών. Χρησιμοποιείται για να μπλοκάρει την αφαίρεση persona.
+   */
+  static async hasActiveRecords(
+    agentContactId: string
+  ): Promise<{ hasAgreements: boolean; hasCommissions: boolean }> {
+    try {
+      const agreementsQ = query(
+        collection(db, COLLECTIONS.BROKERAGE_AGREEMENTS),
+        where('agentContactId', '==', agentContactId),
+        where('status', '==', 'active')
+      );
+      const agreementsSnap = await getDocs(agreementsQ);
+
+      const commissionsQ = query(
+        collection(db, COLLECTIONS.COMMISSION_RECORDS),
+        where('agentContactId', '==', agentContactId),
+        where('paymentStatus', '==', 'pending')
+      );
+      const commissionsSnap = await getDocs(commissionsQ);
+
+      return {
+        hasAgreements: !agreementsSnap.empty,
+        hasCommissions: !commissionsSnap.empty,
+      };
+    } catch (error) {
+      logger.warn('[BrokerageService] hasActiveRecords check failed — allowing removal:', error);
+      // Fail open: if check fails (e.g., permission issues), allow removal
+      return { hasAgreements: false, hasCommissions: false };
+    }
+  }
 }
 
 export default BrokerageService;
