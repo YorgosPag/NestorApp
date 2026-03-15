@@ -101,6 +101,14 @@ export const POST = withStandardRateLimit(
 
         // 🏢 ADR-233: Auto-generate entity code if not provided
         let entityCode = body.code?.trim() || '';
+        logger.info('[Units][ADR-233] Code generation check', {
+          receivedCode: body.code ?? '(undefined)',
+          entityCode,
+          willAutoGenerate: !entityCode && !!body.buildingId,
+          buildingId: body.buildingId ?? '(none)',
+          floor: body.floor,
+          type: body.type,
+        });
         if (!entityCode && body.buildingId) {
           try {
             const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(body.buildingId).get();
@@ -155,7 +163,12 @@ export const POST = withStandardRateLimit(
           Object.entries(sanitizedData).filter(([, value]) => value !== undefined)
         );
 
-        logger.info('[Units] Creating new unit', { name: body.name, companyId: resolvedCompanyId, buildingId: body.buildingId || 'none' });
+        logger.info('[Units] Creating new unit', {
+          name: body.name,
+          code: cleanData.code ?? '(none)',
+          companyId: resolvedCompanyId,
+          buildingId: body.buildingId || 'none',
+        });
 
         // 🏗️ CREATE: Use Admin SDK with enterprise ID (ADR-210)
         const { generateUnitId } = await import('@/services/enterprise-id.service');
