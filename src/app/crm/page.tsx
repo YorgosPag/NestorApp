@@ -48,8 +48,7 @@ export default function CrmPage() {
       </div>
       <div className={cn('grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6')}>
         {crmSectionKeys.map((section) => (
-          <Link href={section.href} key={section.titleKey} legacyBehavior>
-            <a className="block h-full">
+          <Link href={section.href} key={section.titleKey} className="block h-full">
               <Card className={cn('h-full cursor-pointer group flex flex-col', COMPLEX_HOVER_EFFECTS.FEATURE_CARD)}>
                 <CardHeader className="flex flex-row items-center gap-4 space-y-0">
                     <div className={cn('p-3 rounded-full bg-muted', TRANSITION_PRESETS.STANDARD_COLORS)}>
@@ -61,7 +60,6 @@ export default function CrmPage() {
                   <CardDescription>{t(section.descKey)}</CardDescription>
                 </CardContent>
               </Card>
-            </a>
           </Link>
         ))}
       </div>
