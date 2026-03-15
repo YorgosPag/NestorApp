@@ -207,8 +207,8 @@ async function handleAssignmentNotification(
 
     // 2. Resolve display name
     const displayName = (contactData.displayName as string)
-      ?? [contactData.firstName, contactData.lastName].filter(Boolean).join(' ')
-      || 'Κύριε/Κυρία';
+      ?? ([contactData.firstName, contactData.lastName].filter(Boolean).join(' ')
+      || 'Κύριε/Κυρία');
 
     // 3. Resolve unit hierarchy
     const hierarchy = await resolveUnitHierarchy(unitId);
