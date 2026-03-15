@@ -25,13 +25,15 @@ import {
 } from '@/components/ui/select';
 import { ContactSearchManager } from '@/components/contacts/relationships/ContactSearchManager';
 import { TabbedAddNewContactDialog } from '@/components/contacts/dialogs/TabbedAddNewContactDialog';
+import { EntityFilesManager } from '@/components/shared/files';
 import { BrokerageService } from '@/services/brokerage.service';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/auth/hooks/useAuth';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { formatCurrency } from '@/lib/intl-utils';
 import type { BrokerageAgreement, ExclusivityType, CommissionType } from '@/types/brokerage';
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
-import { Briefcase, Plus, Pencil, XCircle, RefreshCw, X } from 'lucide-react';
+import { Briefcase, Plus, Pencil, XCircle, RefreshCw, X, Paperclip } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { collection, getDocs, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -134,6 +136,11 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
   const { user } = useAuth();
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
+  const companyIdResult = useCompanyId();
+  const companyId = companyIdResult?.companyId ?? '';
+
+  // File upload — expand/collapse per agreement
+  const [expandedAgreementId, setExpandedAgreementId] = useState<string | null>(null);
 
   // Data
   const [agreements, setAgreements] = useState<BrokerageAgreement[]>([]);
@@ -608,6 +615,14 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
                 onConfirmRenew={() => handleRenew(a.id)}
                 onCancelAction={() => { setTerminatingId(null); setRenewingId(null); }}
                 isFormActive={isFormVisible}
+                companyId={companyId}
+                currentUserId={user?.uid ?? ''}
+                projectId={projectId}
+                projectName={projectName}
+                isExpanded={expandedAgreementId === a.id}
+                onToggleExpand={() => setExpandedAgreementId(
+                  expandedAgreementId === a.id ? null : a.id
+                )}
               />
             ))}
           </ul>
@@ -637,6 +652,14 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
                 onConfirmRenew={() => handleRenew(a.id)}
                 onCancelAction={() => { setTerminatingId(null); setRenewingId(null); }}
                 isFormActive={isFormVisible}
+                companyId={companyId}
+                currentUserId={user?.uid ?? ''}
+                projectId={projectId}
+                projectName={projectName}
+                isExpanded={expandedAgreementId === a.id}
+                onToggleExpand={() => setExpandedAgreementId(
+                  expandedAgreementId === a.id ? null : a.id
+                )}
               />
             ))}
           </ul>
@@ -666,6 +689,13 @@ interface AgreementCardProps {
   onConfirmRenew: () => void;
   onCancelAction: () => void;
   isFormActive: boolean;
+  // File upload props
+  companyId: string;
+  currentUserId: string;
+  projectId: string;
+  projectName: string;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
 }
 
 function AgreementCard({
@@ -684,6 +714,12 @@ function AgreementCard({
   onConfirmRenew,
   onCancelAction,
   isFormActive,
+  companyId,
+  currentUserId,
+  projectId,
+  projectName,
+  isExpanded,
+  onToggleExpand,
 }: AgreementCardProps) {
   const status = getStatusBadge(agreement, t);
   const isActive = agreement.status === 'active' &&
@@ -701,19 +737,29 @@ function AgreementCard({
             </Badge>
           )}
         </nav>
-        {isActive && !isFormActive && (
-          <nav className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" onClick={onEdit} title={t('sales.legal.editAgreement')}>
-              <Pencil className={iconSizes.xs} />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={onRenew} title={t('sales.legal.renewAgreement')}>
-              <RefreshCw className={iconSizes.xs} />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={onTerminate} title={t('sales.legal.terminateAgreement')}>
-              <XCircle className={`${iconSizes.xs} text-destructive`} />
-            </Button>
-          </nav>
-        )}
+        <nav className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onToggleExpand}
+            title={t('sales.legal.attachFiles')}
+          >
+            <Paperclip className={`${iconSizes.xs} ${isExpanded ? 'text-primary' : ''}`} />
+          </Button>
+          {isActive && !isFormActive && (
+            <>
+              <Button variant="ghost" size="sm" onClick={onEdit} title={t('sales.legal.editAgreement')}>
+                <Pencil className={iconSizes.xs} />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={onRenew} title={t('sales.legal.renewAgreement')}>
+                <RefreshCw className={iconSizes.xs} />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={onTerminate} title={t('sales.legal.terminateAgreement')}>
+                <XCircle className={`${iconSizes.xs} text-destructive`} />
+              </Button>
+            </>
+          )}
+        </nav>
       </header>
 
       <nav className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -762,6 +808,22 @@ function AgreementCard({
             {t('buttons.cancel')}
           </Button>
         </footer>
+      )}
+
+      {/* Expandable file upload section */}
+      {isExpanded && companyId && (
+        <section className="rounded border bg-muted/20 p-3">
+          <EntityFilesManager
+            companyId={companyId}
+            currentUserId={currentUserId}
+            entityType="project"
+            entityId={projectId}
+            entityLabel={`${projectName} — ${agreement.agentName}`}
+            domain="brokerage"
+            category="contracts"
+            purpose={agreement.id}
+          />
+        </section>
       )}
     </li>
   );

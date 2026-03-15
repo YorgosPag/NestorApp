@@ -1407,6 +1407,7 @@
       "terminateConfirm": "Θέλετε σίγουρα να τερματίσετε τη σύμβαση με τον/την {{name}};",
       "renewAgreement": "Ανανέωση",
       "renewEndDate": "Νέα ημερομηνία λήξης",
+      "attachFiles": "Συνημμένα σύμβασης",
       "selectAgent": "Επιλέξτε μεσίτη",
       "selectScope": "Επιλέξτε εύρος",
       "selectUnit": "Επιλέξτε μονάδα",

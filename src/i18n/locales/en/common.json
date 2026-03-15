@@ -1408,6 +1408,7 @@
       "terminateConfirm": "Are you sure you want to terminate the agreement with {{name}}?",
       "renewAgreement": "Renew",
       "renewEndDate": "New end date",
+      "attachFiles": "Agreement attachments",
       "selectAgent": "Select broker",
       "selectScope": "Select scope",
       "selectUnit": "Select unit",
