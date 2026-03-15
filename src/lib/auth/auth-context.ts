@@ -149,15 +149,20 @@ async function verifySessionCookie(sessionCookie: string): Promise<DecodedIdToke
  */
 function extractCustomClaims(token: DecodedIdToken): CustomClaims | null {
   // Extract companyId (required for multi-tenant)
-  const companyId = token.companyId as string | undefined;
+  // Fallback: NEXT_PUBLIC_DEFAULT_COMPANY_ID for single-tenant deployments
+  // where custom claims haven't been set yet
+  const companyId = (token.companyId as string | undefined)
+    || process.env.NEXT_PUBLIC_DEFAULT_COMPANY_ID;
   if (!companyId || typeof companyId !== 'string') {
-    logger.info('[AUTH_CONTEXT] Missing companyId claim');
+    logger.info('[AUTH_CONTEXT] Missing companyId claim and no DEFAULT_COMPANY_ID env var');
     return null;
   }
 
   // Extract globalRole (required)
-  const globalRoleRaw = token.globalRole as string | undefined;
-  if (!globalRoleRaw || !isValidGlobalRole(globalRoleRaw)) {
+  // Fallback: 'company_admin' for single-tenant deployments
+  // where custom claims haven't been set yet
+  const globalRoleRaw = (token.globalRole as string | undefined) || 'company_admin';
+  if (!isValidGlobalRole(globalRoleRaw)) {
     logger.info('[AUTH_CONTEXT] Invalid globalRole claim:', { globalRole: globalRoleRaw });
     return null;
   }

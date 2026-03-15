@@ -41,9 +41,11 @@ export async function getDevCompanyId(): Promise<string> {
   }
 
   // Priority 1: Environment variables (explicit override)
+  // Also check NEXT_PUBLIC_DEFAULT_COMPANY_ID — same value used by webhook/CRM storage
   const envCompanyId =
     process.env.DEV_COMPANY_ID ||
-    process.env.NEXT_PUBLIC_DEV_COMPANY_ID;
+    process.env.NEXT_PUBLIC_DEV_COMPANY_ID ||
+    process.env.NEXT_PUBLIC_DEFAULT_COMPANY_ID;
 
   if (envCompanyId) {
     _cachedDevCompanyId = envCompanyId;
