@@ -49,7 +49,8 @@ export const SUPPORTED_NAMESPACES = [
   'tool-hints', // 🏢 DXF Viewer: Step-by-step tool hints (ADR-082)
   'accounting', // 🏢 Accounting subapp (invoices, journal, VAT, tax, assets, documents)
   'banking',    // 🏢 Banking module — bank accounts, IBAN, selectors (ADR-172)
-  'addresses'   // 🏢 Shared address system — forms, cards, maps (ADR-172)
+  'addresses',  // 🏢 Shared address system — forms, cards, maps (ADR-172)
+  'payments'    // 🏢 Payment plans, installments, loans, cheques, reports (ADR-234)
 ] as const;
 export type Namespace = typeof SUPPORTED_NAMESPACES[number];
 
@@ -169,6 +170,9 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
         case 'addresses':
           translations = await import('./locales/el/addresses.json');
           break;
+        case 'payments':
+          translations = await import('./locales/el/payments.json');
+          break;
         default:
           logger.warn(`Namespace ${namespace} not found for language ${language}`);
           return {};
@@ -268,6 +272,9 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
           break;
         case 'addresses':
           translations = await import('./locales/en/addresses.json');
+          break;
+        case 'payments':
+          translations = await import('./locales/en/payments.json');
           break;
         default:
           logger.warn(`Namespace ${namespace} not found for language ${language}`);
