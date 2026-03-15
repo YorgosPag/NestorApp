@@ -366,6 +366,7 @@
         "building": "Building",
         "floor": "Floor",
         "status": "Operational Status",
+        "commercialStatus": "Commercial Status",
         "area": "Area (sq.m.)",
         "bedrooms": "Bedrooms",
         "bathrooms": "Bathrooms",
@@ -378,6 +379,7 @@
         "building": "Select building...",
         "floor": "e.g. 1",
         "status": "Select status...",
+        "commercialStatus": "Select availability...",
         "area": "e.g. 85",
         "bedrooms": "e.g. 2",
         "bathrooms": "e.g. 1",
@@ -389,6 +391,12 @@
         "inspection": "Under Inspection",
         "ready": "Ready",
         "maintenance": "Under Maintenance"
+      },
+      "commercialStatusOptions": {
+        "unavailable": "Not Available",
+        "for-sale": "For Sale",
+        "for-rent": "For Rent",
+        "for-sale-and-rent": "For Sale & Rent"
       },
       "validation": {
         "nameRequired": "Name is required",

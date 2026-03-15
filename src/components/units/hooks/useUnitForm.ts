@@ -24,7 +24,7 @@ import { useState, useCallback } from 'react';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { createUnit } from '@/services/units.service';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { UnitType, OperationalStatus } from '@/types/unit';
+import type { UnitType, OperationalStatus, CommercialStatus } from '@/types/unit';
 
 // =============================================================================
 // TYPES
@@ -39,6 +39,7 @@ export interface UnitFormData {
   floorId: string;
   floor: number | '';
   operationalStatus: OperationalStatus;
+  commercialStatus: CommercialStatus;
   // Tab 2: Details
   area: number | '';
   bedrooms: number | '';
@@ -55,6 +56,7 @@ const INITIAL_FORM_DATA: UnitFormData = {
   floorId: '',
   floor: '',
   operationalStatus: 'draft',
+  commercialStatus: 'unavailable',
   // Tab 2: Details
   area: '',
   bedrooms: '',
@@ -130,7 +132,7 @@ export function useUnitForm({
           floor: formData.floor !== '' ? formData.floor : 0,
           floorId: formData.floorId || '',
           project: '',
-          status: 'for-sale',
+          commercialStatus: formData.commercialStatus,
           operationalStatus: formData.operationalStatus,
           vertices: [],
         };

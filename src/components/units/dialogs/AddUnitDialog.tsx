@@ -62,7 +62,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { useAuth } from '@/auth/contexts/AuthContext';
 // ENTERPRISE: Navigation entities for icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-import type { UnitType, OperationalStatus } from '@/types/unit';
+import type { UnitType, OperationalStatus, CommercialStatus } from '@/types/unit';
 import type { Building } from '@/types/building/contracts';
 
 // =============================================================================
@@ -101,6 +101,14 @@ const OPERATIONAL_STATUS_OPTIONS: OperationalStatus[] = [
   'inspection',
   'ready',
   'maintenance',
+];
+
+// ADR-197: Κατά τη ΔΗΜΙΟΥΡΓΙΑ μόνο αυτές οι τιμές (reserved/sold/rented γίνονται μέσω sales flow)
+const CREATION_COMMERCIAL_STATUS_OPTIONS: CommercialStatus[] = [
+  'unavailable',
+  'for-sale',
+  'for-rent',
+  'for-sale-and-rent',
 ];
 
 // =============================================================================
@@ -409,6 +417,31 @@ export function AddUnitDialog({
                         {OPERATIONAL_STATUS_OPTIONS.map((status) => (
                           <SelectItem key={status} value={status}>
                             {t(`dialog.addUnit.statusOptions.${status}`)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormInput>
+                </FormField>
+
+                {/* Commercial Status (ADR-197) */}
+                <FormField
+                  label={t('dialog.addUnit.fields.commercialStatus')}
+                  htmlFor="commercialStatus"
+                >
+                  <FormInput>
+                    <Select
+                      value={formData.commercialStatus}
+                      onValueChange={(value) => handleSelectChange('commercialStatus', value)}
+                      disabled={loading}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('dialog.addUnit.placeholders.commercialStatus')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CREATION_COMMERCIAL_STATUS_OPTIONS.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {t(`dialog.addUnit.commercialStatusOptions.${status}`)}
                           </SelectItem>
                         ))}
                       </SelectContent>

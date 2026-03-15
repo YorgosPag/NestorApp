@@ -377,6 +377,7 @@
         "building": "Κτίριο",
         "floor": "Όροφος",
         "status": "Λειτουργική Κατάσταση",
+        "commercialStatus": "Εμπορική Κατάσταση",
         "area": "Εμβαδόν (τ.μ.)",
         "bedrooms": "Υπνοδωμάτια",
         "bathrooms": "Μπάνια",
@@ -389,6 +390,7 @@
         "building": "Επιλέξτε κτίριο...",
         "floor": "π.χ. 1",
         "status": "Επιλέξτε κατάσταση...",
+        "commercialStatus": "Επιλέξτε διαθεσιμότητα...",
         "area": "π.χ. 85",
         "bedrooms": "π.χ. 2",
         "bathrooms": "π.χ. 1",
@@ -400,6 +402,12 @@
         "inspection": "Σε επιθεώρηση",
         "ready": "Έτοιμο",
         "maintenance": "Υπό συντήρηση"
+      },
+      "commercialStatusOptions": {
+        "unavailable": "Μη διαθέσιμη",
+        "for-sale": "Προς πώληση",
+        "for-rent": "Προς ενοικίαση",
+        "for-sale-and-rent": "Πώληση & Ενοικίαση"
       },
       "validation": {
         "nameRequired": "Το όνομα είναι υποχρεωτικό",
