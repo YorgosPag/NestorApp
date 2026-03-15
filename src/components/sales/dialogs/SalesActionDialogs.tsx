@@ -39,7 +39,6 @@ import {
 import { BrokerageService } from '@/services/brokerage.service';
 import { calculateCommission } from '@/types/brokerage';
 import type { BrokerageAgreement } from '@/types/brokerage';
-import { BrokerageAgreementDialog } from '@/components/sales/brokerage/BrokerageAgreementDialog';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('SalesActionDialogs');
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
@@ -544,7 +543,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
   // ADR-230: Optional broker selection at sale
   const [brokerAgreements, setBrokerAgreements] = useState<BrokerageAgreement[]>([]);
   const [selectedBrokerId, setSelectedBrokerId] = useState<string>('none');
-  const [showQuickAddBroker, setShowQuickAddBroker] = useState(false);
+  // showQuickAddBroker removed — brokerage creation now handled inline in ProjectBrokersTab
 
   // Sync state when dialog opens or unit asking price changes
   useEffect(() => {
@@ -793,50 +792,17 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
                   </p>
                 );
               })()}
-              <Button
-                type="button"
-                variant="link"
-                size="sm"
-                className="h-auto p-0 text-xs"
-                onClick={() => setShowQuickAddBroker(true)}
-              >
-                + {t('sales.legal.newBroker', { defaultValue: 'Νέος μεσίτης' })}
-              </Button>
+              <p className="text-xs text-muted-foreground">
+                {t('sales.legal.addBrokerHint', { defaultValue: 'Προσθέστε μεσίτη από το tab Μεσίτες του έργου' })}
+              </p>
             </fieldset>
           )}
 
-          {/* Quick-add: show button when no agreements exist */}
+          {/* Hint when no agreements exist */}
           {brokerAgreements.length === 0 && (
-            <Button
-              type="button"
-              variant="link"
-              size="sm"
-              className="h-auto p-0 text-xs"
-              onClick={() => setShowQuickAddBroker(true)}
-            >
-              + {t('sales.legal.newBroker', { defaultValue: 'Νέος μεσίτης' })}
-            </Button>
-          )}
-
-          {showQuickAddBroker && (
-            <BrokerageAgreementDialog
-              open={showQuickAddBroker}
-              onOpenChange={setShowQuickAddBroker}
-              projectId={resolveProjectId(unit) ?? ''}
-              projectName=""
-              units={[{ id: unit.id, name: unit.name ?? unit.unitName ?? '' }]}
-              preSelectedUnitId={unit.id}
-              onSuccess={() => {
-                BrokerageService.getAgreements(resolveProjectId(unit) ?? '', unit.id, 'active')
-                  .then((data) => {
-                    setBrokerAgreements(data);
-                    if (data.length > 0) {
-                      setSelectedBrokerId(data[data.length - 1].id);
-                    }
-                  })
-                  .catch(() => setBrokerAgreements([]));
-              }}
-            />
+            <p className="text-xs text-muted-foreground">
+              {t('sales.legal.addBrokerHint', { defaultValue: 'Προσθέστε μεσίτη από το tab Μεσίτες του έργου' })}
+            </p>
           )}
 
           {/* ADR-199: Linked parking/storage appurtenances */}
