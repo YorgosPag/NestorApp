@@ -49,7 +49,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import type { Property } from '@/types/property-viewer';
-import type { UnitType, CommercialStatus } from '@/types/unit';
+import type { UnitType, CommercialStatus, OperationalStatus } from '@/types/unit';
 import type {
   ConditionType,
   OrientationType,
@@ -141,6 +141,10 @@ const COMMERCIAL_STATUS_OPTIONS: CommercialStatus[] = [
   'reserved', 'sold', 'rented'
 ];
 
+const OPERATIONAL_STATUS_OPTIONS: OperationalStatus[] = [
+  'draft', 'under-construction', 'inspection', 'ready', 'maintenance'
+];
+
 // =============================================================================
 // COMPONENT
 // =============================================================================
@@ -179,6 +183,7 @@ export function UnitFieldsBlock({
     name: property.name ?? '',
     code: property.code ?? '',
     type: property.type ?? '',
+    operationalStatus: ((property as Record<string, unknown>).operationalStatus as OperationalStatus) ?? 'draft',
     commercialStatus: (property.commercialStatus ?? 'unavailable') as CommercialStatus,
     description: property.description ?? '',
     floor: property.floor ?? 0,
@@ -209,6 +214,7 @@ export function UnitFieldsBlock({
       name: property.name ?? '',
       code: property.code ?? '',
       type: property.type ?? '',
+      operationalStatus: ((property as Record<string, unknown>).operationalStatus as OperationalStatus) ?? 'draft',
       commercialStatus: (property.commercialStatus ?? 'unavailable') as CommercialStatus,
       description: property.description ?? '',
       floor: property.floor ?? 0,
@@ -246,6 +252,7 @@ export function UnitFieldsBlock({
       name: formData.name,
       code: formData.code || undefined,
       type: formData.type,
+      operationalStatus: formData.operationalStatus,
       commercialStatus: formData.commercialStatus,
       floor: formData.floor,
       // 🔒 ADR-232: Include floorId from property (set via FloorSelectField)
@@ -356,6 +363,7 @@ export function UnitFieldsBlock({
       name: property.name ?? '',
       code: property.code ?? '',
       type: property.type ?? '',
+      operationalStatus: ((property as Record<string, unknown>).operationalStatus as OperationalStatus) ?? 'draft',
       commercialStatus: (property.commercialStatus ?? 'unavailable') as CommercialStatus,
       description: property.description ?? '',
       floor: property.floor ?? 0,
@@ -520,6 +528,24 @@ export function UnitFieldsBlock({
                   {COMMERCIAL_STATUS_OPTIONS.map((status) => (
                     <SelectItem key={status} value={status} className="text-xs">
                       {t(`commercialStatus.${status}`, { defaultValue: status })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </fieldset>
+            <fieldset className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                {t('dialog.addUnit.fields.status', { defaultValue: 'Λειτουργική Κατάσταση' })}
+              </Label>
+              <Select value={formData.operationalStatus} disabled={!isEditing}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, operationalStatus: value as OperationalStatus }))}>
+                <SelectTrigger className="h-7 text-xs">
+                  <SelectValue placeholder={t('dialog.addUnit.placeholders.status', { defaultValue: 'Επιλέξτε...' })} />
+                </SelectTrigger>
+                <SelectContent>
+                  {OPERATIONAL_STATUS_OPTIONS.map((status) => (
+                    <SelectItem key={status} value={status} className="text-xs">
+                      {t(`dialog.addUnit.statusOptions.${status}`, { defaultValue: status })}
                     </SelectItem>
                   ))}
                 </SelectContent>
