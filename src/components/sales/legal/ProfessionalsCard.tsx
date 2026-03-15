@@ -358,20 +358,22 @@ export function ProfessionalsCard({
               <ShieldAlert className="h-5 w-5" />
               {t('sales.legal.conflictBlockTitle', { defaultValue: 'Ασυμβίβαστο Ρόλων' })}
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2 text-sm">
-              <p>
-                {t('sales.legal.conflictBlockMessage', {
-                  defaultValue: `Ο/Η «{{name}}» έχει ήδη ανατεθεί ως {{existingRole}}. Δεν μπορεί να αναλάβει ταυτόχρονα και τον ρόλο {{targetRole}}.`,
-                  name: pendingAssignment?.contact.name ?? '',
-                  existingRole: pendingAssignment?.existingRoleLabel ?? '',
-                  targetRole: pendingAssignment?.targetRoleLabel ?? '',
-                })}
-              </p>
-              <p className="text-muted-foreground italic">
-                {t('sales.legal.conflictBlockLaw', {
-                  defaultValue: 'Ν.2830/2000, Άρ.22§2: Ο διορισμός ως συμβολαιογράφος συνεπάγεται αυτοδίκαια αποβολή της ιδιότητας του δικηγόρου. Άρ.37§1: Τα έργα του συμβολαιογράφου είναι ασυμβίβαστα με κάθε άλλη επαγγελματική δραστηριότητα.',
-                })}
-              </p>
+            <AlertDialogDescription asChild>
+              <section className="space-y-2 text-sm">
+                <p>
+                  {t('sales.legal.conflictBlockPre', { defaultValue: 'Ο/Η' })}{' '}
+                  <strong>«{pendingAssignment?.contact.name}»</strong>{' '}
+                  {t('sales.legal.conflictBlockAlready', { defaultValue: 'έχει ήδη ανατεθεί ως' })}{' '}
+                  <strong>{pendingAssignment?.existingRoleLabel}</strong>.{' '}
+                  {t('sales.legal.conflictBlockCannot', { defaultValue: 'Δεν μπορεί να αναλάβει ταυτόχρονα και τον ρόλο' })}{' '}
+                  <strong>{pendingAssignment?.targetRoleLabel}</strong>.
+                </p>
+                <p className="text-muted-foreground italic">
+                  {t('sales.legal.conflictBlockLaw', {
+                    defaultValue: 'Ν.2830/2000, Άρ.22§2: Ο διορισμός ως συμβολαιογράφος συνεπάγεται αυτοδίκαια αποβολή της ιδιότητας του δικηγόρου. Άρ.37§1: Τα έργα του συμβολαιογράφου είναι ασυμβίβαστα με κάθε άλλη επαγγελματική δραστηριότητα.',
+                  })}
+                </p>
+              </section>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -395,20 +397,22 @@ export function ProfessionalsCard({
               <AlertTriangle className="h-5 w-5" />
               {t('sales.legal.conflictWarningTitle', { defaultValue: 'Σύγκρουση Συμφερόντων' })}
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2 text-sm">
-              <p>
-                {t('sales.legal.conflictWarningMessage', {
-                  defaultValue: `Ο/Η «{{name}}» έχει ήδη ανατεθεί ως {{existingRole}}. Είστε σίγουροι ότι θέλετε να αναλάβει και τον ρόλο {{targetRole}};`,
-                  name: pendingAssignment?.contact.name ?? '',
-                  existingRole: pendingAssignment?.existingRoleLabel ?? '',
-                  targetRole: pendingAssignment?.targetRoleLabel ?? '',
-                })}
-              </p>
-              <p className="text-muted-foreground italic">
-                {t('sales.legal.conflictWarningLaw', {
-                  defaultValue: 'Κώδικας Δεοντολογίας Δικηγόρων, Άρ.37: Απαγορεύεται η παροχή βοήθειας σε αμφότερα τα μέρη. Η ταυτόχρονη εκπροσώπηση πωλητή και αγοραστή αποτελεί σύγκρουση συμφερόντων.',
-                })}
-              </p>
+            <AlertDialogDescription asChild>
+              <section className="space-y-2 text-sm">
+                <p>
+                  {t('sales.legal.conflictBlockPre', { defaultValue: 'Ο/Η' })}{' '}
+                  <strong>«{pendingAssignment?.contact.name}»</strong>{' '}
+                  {t('sales.legal.conflictBlockAlready', { defaultValue: 'έχει ήδη ανατεθεί ως' })}{' '}
+                  <strong>{pendingAssignment?.existingRoleLabel}</strong>.{' '}
+                  {t('sales.legal.conflictWarningSure', { defaultValue: 'Είστε σίγουροι ότι θέλετε να αναλάβει και τον ρόλο' })}{' '}
+                  <strong>{pendingAssignment?.targetRoleLabel}</strong>;
+                </p>
+                <p className="text-muted-foreground italic">
+                  {t('sales.legal.conflictWarningLaw', {
+                    defaultValue: 'Κώδικας Δεοντολογίας Δικηγόρων, Άρ.37: Απαγορεύεται η παροχή βοήθειας σε αμφότερα τα μέρη. Η ταυτόχρονη εκπροσώπηση πωλητή και αγοραστή αποτελεί σύγκρουση συμφερόντων.',
+                  })}
+                </p>
+              </section>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
