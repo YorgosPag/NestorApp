@@ -298,7 +298,7 @@ export function ProfessionalsCard({
                     <>
                       <Link
                         href={ENTITY_ROUTES.contacts.withId(linked.contactId)}
-                        className="font-medium truncate text-foreground hover:text-primary hover:underline"
+                        className="font-medium truncate text-foreground hover:text-blue-700 hover:underline dark:hover:text-blue-400"
                         title={t('common.viewContact', { defaultValue: 'Προβολή επαφής' })}
                       >
                         {linked.contactName}
