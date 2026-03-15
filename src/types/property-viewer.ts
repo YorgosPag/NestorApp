@@ -5,7 +5,7 @@ import type { GenericFilterState, NumericRange } from '@/components/core/Advance
 export type { PropertyStats } from './property';
 // Re-export UnitCoverage from unit.ts for property compatibility
 // Also import for local use in Property interface
-import type { UnitCoverage } from './unit';
+import type { UnitCoverage, CommercialStatus } from './unit';
 export type { UnitCoverage };
 
 // 🏢 PHASE 3-5: Import all unit feature types
@@ -60,6 +60,13 @@ export interface Property {
      * @migration PR1 - Units List Cleanup
      */
     operationalStatus?: OperationalStatus;
+
+    /**
+     * ✅ ADR-197: Commercial status (sales/rental state)
+     * Source of truth for market availability — overrides legacy `status`
+     * Populated via SharedPropertiesProvider spread from Unit data
+     */
+    commercialStatus?: CommercialStatus;
 
     /**
      * ⚠️ DEPRECATED: Price (commercial data)

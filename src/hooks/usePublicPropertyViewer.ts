@@ -17,9 +17,18 @@ import { tallyBy } from '@/utils/collection-utils';
 // which is common during data migration or when using different status systems.
 // ============================================================================
 
-// Market/sales statuses that indicate public availability
-const PUBLIC_ALLOWED_MARKET_STATUSES = ['for-sale', 'for-rent', 'reserved'] as const;
-type PublicAllowedMarketStatus = typeof PUBLIC_ALLOWED_MARKET_STATUSES[number];
+// ============================================================================
+// Commercial statuses that should appear in public property listings
+// Reserved/sold/rented are EXCLUDED — only actively available properties shown
+// ============================================================================
+const PUBLIC_ALLOWED_COMMERCIAL_STATUSES: ReadonlySet<string> = new Set([
+  'for-sale', 'for-rent', 'for-sale-and-rent',
+]);
+
+// Legacy market statuses (fallback when commercialStatus is absent)
+const PUBLIC_ALLOWED_LEGACY_STATUSES: ReadonlySet<string> = new Set([
+  'for-sale', 'for-rent',
+]);
 
 // Operational statuses that indicate the property is ready for viewing
 const PUBLIC_ALLOWED_OPERATIONAL_STATUSES: OperationalStatus[] = ['ready'];
@@ -39,7 +48,7 @@ const DEFAULT_PUBLIC_FILTERS: FilterState = {
 
 /**
  * Hook για το public Properties page - read-only mirror του Units page
- * Φιλτράρει μόνο τα διαθέσιμα ακίνητα (for-sale, for-rent, reserved)
+ * Φιλτράρει μόνο τα actively available ακίνητα (for-sale, for-rent, for-sale-and-rent)
  * Απενεργοποιεί όλες τις edit capabilities
  */
 export function usePublicPropertyViewer() {
@@ -56,24 +65,26 @@ export function usePublicPropertyViewer() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_PUBLIC_FILTERS);
 
   // Φιλτράρουμε properties για public view
-  // 🏢 ENTERPRISE: Dual-check για market status ΚΑΙ operational status
+  // 🏢 ADR-197: commercialStatus υπερισχύει του legacy status
+  // Reserved/sold/rented αποκλείονται — μόνο actively available εμφανίζονται
   const publicProperties = useMemo(() => {
     if (!Array.isArray(allProperties)) return [];
 
     return allProperties.filter((property: Property) => {
-      // Check 1: Has an allowed market status (for-sale, for-rent, reserved)
-      const hasAllowedMarketStatus = PUBLIC_ALLOWED_MARKET_STATUSES.includes(
-        property.status as PublicAllowedMarketStatus
-      );
+      // ADR-197: commercialStatus is source of truth when present
+      if (property.commercialStatus) {
+        return PUBLIC_ALLOWED_COMMERCIAL_STATUSES.has(property.commercialStatus);
+      }
 
-      // Check 2: Has an allowed operational status (ready = construction complete)
+      // Fallback: legacy status check (for-sale, for-rent only — NOT reserved)
+      const hasAllowedLegacyStatus = PUBLIC_ALLOWED_LEGACY_STATUSES.has(property.status);
+
+      // OR: operational status indicates ready
       const hasAllowedOperationalStatus = property.operationalStatus
         ? PUBLIC_ALLOWED_OPERATIONAL_STATUSES.includes(property.operationalStatus)
         : false;
 
-      // Property is eligible if EITHER condition is met
-      // This ensures properties appear even when only one status system is used
-      return hasAllowedMarketStatus || hasAllowedOperationalStatus;
+      return hasAllowedLegacyStatus || hasAllowedOperationalStatus;
     });
   }, [allProperties]);
 

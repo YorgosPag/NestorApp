@@ -16,6 +16,31 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatFloorLabel, formatCurrency } from '@/lib/intl-utils';
 // 🏢 ENTERPRISE: Use canonical Property type from property-viewer
 import type { Property } from '@/types/property-viewer';
+import type { PropertyStatus } from '@/core/types/BadgeTypes';
+import type { CommercialStatus } from '@/types/unit';
+
+/**
+ * Maps commercialStatus / legacy status to PropertyBadge status + i18n label key
+ */
+function resolvePropertyBadge(
+  commercialStatus: CommercialStatus | undefined,
+  legacyStatus: Property['status']
+): { badgeStatus: PropertyStatus; labelKey: string } {
+  const effective = commercialStatus ?? legacyStatus;
+  switch (effective) {
+    case 'for-sale':
+    case 'for-rent':
+    case 'for-sale-and-rent':
+      return { badgeStatus: 'available', labelKey: UNIFIED_STATUS_FILTER_LABELS.AVAILABLE };
+    case 'reserved':
+      return { badgeStatus: 'reserved', labelKey: UNIFIED_STATUS_FILTER_LABELS.RESERVED };
+    case 'sold':
+    case 'rented':
+      return { badgeStatus: 'sold', labelKey: UNIFIED_STATUS_FILTER_LABELS.SOLD };
+    default:
+      return { badgeStatus: 'available', labelKey: UNIFIED_STATUS_FILTER_LABELS.AVAILABLE };
+  }
+}
 
 export function PropertyCard({ property, onViewFloorPlan }: { property: Property; onViewFloorPlan: (id: string) => void; }) {
   const iconSizes = useIconSizes();
@@ -23,6 +48,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
   const { quick, radius } = useBorderTokens();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('properties');
+  const { badgeStatus, labelKey } = resolvePropertyBadge(property.commercialStatus, property.status);
 
   return (
     <article className={`w-full flex flex-col ${colors.bg.primary} ${radius.xl} shadow-md ring-1 ${colors.border.muted} overflow-hidden group cursor-pointer ${COMPLEX_HOVER_EFFECTS.FEATURE_CARD}`} itemScope itemType="https://schema.org/RealEstateProperty">
@@ -34,8 +60,8 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
         />
         <div className="absolute top-3 left-3" aria-label={t('card.aria.propertyStatus')}>
           <PropertyBadge
-            status="available"
-            customLabel={t(UNIFIED_STATUS_FILTER_LABELS.AVAILABLE, { ns: 'common' })}
+            status={badgeStatus}
+            customLabel={t(labelKey, { ns: 'common' })}
           />
         </div>
         <button
