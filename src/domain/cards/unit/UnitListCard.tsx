@@ -232,7 +232,7 @@ export function UnitListCard({
   return (
     <ListCard
       entityType="unit"
-      title={unit.name || unit.code || unit.id}
+      title={unit.code ? `${unit.code} ${unit.name || ''}`.trim() : (unit.name || unit.id)}
       badges={badges}
       stats={stats}
       isSelected={isSelected}
