@@ -88,7 +88,16 @@ export function CreatePaymentPlanWizard({
   // Compute installments from template + totalAmount
   const computeInstallments = useCallback(
     (template: PaymentPlanTemplate, total: number): CreateInstallmentInput[] => {
-      let remainingPercentage = 100;
+      // Step 1: Compute fixed amounts first to determine percentage base
+      const fixedSum = template.slots.reduce((sum, slot) => {
+        if (slot.amountType === 'fixed' && slot.fixedAmount !== null) {
+          return sum + slot.fixedAmount;
+        }
+        return sum;
+      }, 0);
+
+      // Percentage-based slots distribute the REMAINING after fixed amounts
+      const percentageBase = Math.max(0, total - fixedSum);
       let remainingAmount = total;
 
       return template.slots.map((slot, idx) => {
@@ -96,20 +105,23 @@ export function CreatePaymentPlanWizard({
         let percentage: number;
 
         if (slot.amountType === 'fixed' && slot.fixedAmount !== null) {
-          amount = slot.fixedAmount;
+          amount = Math.min(slot.fixedAmount, Math.max(0, remainingAmount));
           percentage = total > 0 ? Math.round((amount / total) * 10000) / 100 : 0;
         } else {
-          // Last slot gets remaining
-          if (idx === template.slots.length - 1) {
-            percentage = remainingPercentage;
-            amount = remainingAmount;
+          // Last percentage-based slot gets remaining
+          const isLastPercentageSlot = !template.slots.slice(idx + 1).some(
+            (s) => s.amountType !== 'fixed'
+          );
+
+          if (isLastPercentageSlot) {
+            amount = Math.max(0, remainingAmount);
+            percentage = total > 0 ? Math.round((amount / total) * 10000) / 100 : 0;
           } else {
             percentage = slot.percentage;
-            amount = Math.round((total * slot.percentage) / 100);
+            amount = Math.round((percentageBase * slot.percentage) / 100);
           }
         }
 
-        remainingPercentage -= percentage;
         remainingAmount -= amount;
 
         // Due date: spread over months from today
