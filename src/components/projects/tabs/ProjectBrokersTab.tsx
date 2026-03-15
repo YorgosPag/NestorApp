@@ -31,9 +31,14 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { formatCurrency } from '@/lib/intl-utils';
-import type { BrokerageAgreement, ExclusivityType, CommissionType } from '@/types/brokerage';
+import type {
+  BrokerageAgreement,
+  ExclusivityType,
+  CommissionType,
+  ExclusivityValidationResult,
+} from '@/types/brokerage';
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
-import { Briefcase, Plus, Pencil, XCircle, RefreshCw, X, Paperclip } from 'lucide-react';
+import { Briefcase, Plus, Pencil, XCircle, RefreshCw, X, Paperclip, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { collection, getDocs, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -153,6 +158,8 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
   const [form, setForm] = useState<InlineFormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [validationResult, setValidationResult] = useState<ExclusivityValidationResult | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
 
   // New contact dialog (dialog switching pattern — ReserveDialog reference)
   const [showNewContactDialog, setShowNewContactDialog] = useState(false);
@@ -218,6 +225,40 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
     fetchUnits();
   }, [fetchUnits]);
 
+  // Real-time exclusivity validation (debounced)
+  useEffect(() => {
+    if (!isFormVisible || !projectId) {
+      setValidationResult(null);
+      return;
+    }
+
+    // Need at least scope + exclusivity to validate
+    if (form.scope === 'unit' && !form.unitId) {
+      setValidationResult(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsValidating(true);
+      try {
+        const result = await BrokerageService.validateExclusivity({
+          projectId,
+          unitId: form.scope === 'unit' ? form.unitId : null,
+          scope: form.scope,
+          exclusivity: form.exclusivity,
+          excludeAgreementId: editingAgreement?.id,
+        });
+        setValidationResult(result);
+      } catch {
+        setValidationResult(null);
+      } finally {
+        setIsValidating(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [isFormVisible, projectId, form.scope, form.unitId, form.exclusivity, editingAgreement?.id]);
+
   // ============================================================================
   // FORM HANDLERS
   // ============================================================================
@@ -241,6 +282,7 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
     setEditingAgreement(null);
     setForm(EMPTY_FORM);
     setFormError('');
+    setValidationResult(null);
   }, []);
 
   const updateForm = useCallback(<K extends keyof InlineFormState>(
@@ -364,7 +406,10 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
     }
   }, [user, renewDate]);
 
-  const canSave = form.agentContactId && form.startDate && (form.scope === 'project' || form.unitId);
+  const hasValidationErrors = validationResult?.issues.some((i) => i.severity === 'error') ?? false;
+  const canSave = form.agentContactId && form.startDate
+    && (form.scope === 'project' || form.unitId)
+    && !hasValidationErrors;
 
   if (!projectId) return null;
 
@@ -550,6 +595,31 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
               className="resize-none"
             />
           </fieldset>
+
+          {/* Exclusivity Validation Messages */}
+          {isValidating && (
+            <p className="text-sm text-muted-foreground">{t('sales.legal.validating')}</p>
+          )}
+          {!isValidating && validationResult && validationResult.issues.length > 0 && (
+            <ul className="space-y-1">
+              {validationResult.issues.map((issue, idx) => (
+                <li
+                  key={idx}
+                  className={`flex items-start gap-2 rounded p-2 text-sm ${
+                    issue.severity === 'error'
+                      ? 'bg-destructive/10 text-destructive'
+                      : 'bg-yellow-50 text-yellow-800 dark:bg-yellow-950/30 dark:text-yellow-300'
+                  }`}
+                >
+                  {issue.severity === 'error'
+                    ? <ShieldAlert className={`${iconSizes.sm} mt-0.5 shrink-0`} />
+                    : <AlertTriangle className={`${iconSizes.sm} mt-0.5 shrink-0`} />
+                  }
+                  <span>{t(issue.messageKey, issue.messageParams)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
 
           {/* Error */}
           {formError && (

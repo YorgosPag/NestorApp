@@ -179,9 +179,47 @@ export interface RecordCommissionInput {
   commissionFixedAmount: number | null;
 }
 
-/** Αποτέλεσμα validation αποκλειστικότητας */
-export interface ExclusivityValidationResult {
-  valid: boolean;
+// ============================================================================
+// EXCLUSIVITY VALIDATION
+// ============================================================================
+
+/** Severity validation issue */
+export type ValidationSeverity = 'error' | 'warning';
+
+/** Μεμονωμένο ζήτημα που βρέθηκε κατά τον έλεγχο αποκλειστικότητας */
+export interface ExclusivityValidationIssue {
+  severity: ValidationSeverity;
+  /** i18n key (π.χ. sales.legal.exclusivityConflictProjectExclusive) */
+  messageKey: string;
+  /** interpolation params για i18n */
+  messageParams: Record<string, string>;
   conflictingAgreementId: string | null;
+  conflictingAgentName: string | null;
+}
+
+/** Input για τον έλεγχο αποκλειστικότητας */
+export interface ExclusivityValidationInput {
+  projectId: string;
+  unitId: string | null;
+  scope: 'project' | 'unit';
+  exclusivity: ExclusivityType;
+  /** Εξαίρεση εαυτού κατά update — δεν ελέγχει τη σύμβαση με αυτό το ID */
+  excludeAgreementId?: string;
+}
+
+/** Αποτέλεσμα validation αποκλειστικότητας (enhanced) */
+export interface ExclusivityValidationResult {
+  /** true αν 0 errors (warnings OK) */
+  canProceed: boolean;
+  /** Λίστα errors + warnings */
+  issues: ExclusivityValidationIssue[];
+  /** Rule 3: units που εξαιρούνται (project exclusive + existing unit agreements) */
+  excludedUnitIds: string[];
+  // --- backward compat (deprecated) ---
+  /** @deprecated Χρησιμοποίησε canProceed */
+  valid: boolean;
+  /** @deprecated Χρησιμοποίησε issues[0].conflictingAgreementId */
+  conflictingAgreementId: string | null;
+  /** @deprecated Χρησιμοποίησε issues[0].messageKey */
   reason: string | null;
 }

@@ -109,9 +109,42 @@
 | **Σταθερό (fixed)** | Προκαθορισμένο ποσό | €5,000 flat |
 
 ### Business Rules
-1. Αποκλειστικότητα σε project-level = αποκλειστικότητα σε ΟΛΑ τα units αυτού του project
-2. Αποκλειστικότητα σε unit-level = μόνο για τη συγκεκριμένη μονάδα
-4. Χωρίς αποκλειστικότητα → πολλοί μεσίτες στο ίδιο scope (project/building/unit)
+
+#### Exclusivity Validation Rules (2026-03-15 — Enhanced)
+
+| # | Κανόνας | Αποτέλεσμα |
+|---|---------|------------|
+| 1 | Αποκλειστική σε μονάδα → ΜΠΛΟΚΑΡΕΙ ΤΑ ΠΑΝΤΑ σε αυτή τη μονάδα | **ERROR** — ΚΑΜΙΑ νέα σύμβαση (exclusive ή non-exclusive) |
+| 2 | Αποκλειστική σε επίπεδο έργου → ΜΠΛΟΚΑΡΕΙ ΤΑ ΠΑΝΤΑ στο έργο | **ERROR** — ΚΑΜΙΑ νέα σύμβαση (ούτε project ούτε unit) |
+| 3 | Project exclusive + υπάρχουσες non-exclusive μονάδων | **WARNING** — Εξαιρούνται μονάδες X, Y, Z |
+| 4 | Non-exclusive μπορούν να συνυπάρχουν | **OK** — εκτός αν υπάρχει exclusive που τις μπλοκάρει |
+| 5 | Validation σε CREATE ΚΑΙ UPDATE | Re-validate αν αλλάξει exclusivity/scope/unitId |
+
+##### Decision Matrix
+| Νέα Σύμβαση | Υπάρχουσα Σύμβαση | Αποτέλεσμα |
+|---|---|---|
+| Exclusive project | Exclusive (project ή unit) | **ERROR** |
+| Exclusive project | Non-exclusive unit | **WARNING** (εξαιρούνται αυτά τα units) |
+| Exclusive unit | Exclusive project | **ERROR** |
+| Exclusive unit | Exclusive ίδιο unit | **ERROR** |
+| Exclusive unit | Non-exclusive ίδιο unit | **ERROR** |
+| Non-exclusive project | Exclusive project | **ERROR** |
+| Non-exclusive unit | Exclusive project | **ERROR** |
+| Non-exclusive unit | Exclusive ίδιο unit | **ERROR** |
+| Non-exclusive | Non-exclusive | **OK** |
+
+##### Edge Cases
+- **Self-conflict on update**: `excludeAgreementId` εξαιρεί τη σύμβαση υπό επεξεργασία
+- **Expired agreements**: `endDate < today` + `status === 'active'` → φιλτράρονται, δεν μπλοκάρουν
+- **Same agent, different units**: OK — ο ίδιος μεσίτης μπορεί σε πολλά units
+
+##### UI Integration
+- Real-time validation (debounced 300ms) κατά αλλαγή scope/unitId/exclusivity
+- Errors: κόκκινο panel (ShieldAlert icon) — Save disabled
+- Warnings: κίτρινο panel (AlertTriangle icon) — Save ενεργό
+- 9 i18n keys στο `sales.legal.*` (EL + EN)
+
+#### Legacy Rules (retained)
 5. Η αμοιβή καταγράφεται κατά τη στιγμή ολοκλήρωσης πώλησης (fire-and-forget)
 6. **Στα Νομικά (Legal Tab) εμφανίζεται ΜΟΝΟ ο μεσίτης που έφερε τον αγοραστή** — dropdown επιλογή κατά την κράτηση/πώληση
 7. **Κεντρικό σημείο εγγραφής**: Πρέπει να υπάρχει ΕΝΑ σημείο όπου καταγράφονται ΟΛΕΣ οι μεσιτικές συμβάσεις (απλές + αποκλειστικές) ΠΡΙΝ γίνει οποιαδήποτε πώληση
@@ -571,3 +604,21 @@ Compact card component that shows:
 ---
 
 *SPEC Format: Google Engineering Design Docs standard*
+
+---
+
+## Changelog
+
+### 2026-03-15 — Exclusivity Validation System (Enhanced)
+
+**Problem**: 4 critical bugs — no validation on update path, non-exclusive not checked against exclusive, expired agreements not filtered, hardcoded Greek error messages.
+
+**Changes**:
+| File | Change |
+|------|--------|
+| `src/types/brokerage.ts` | Added `ExclusivityValidationInput`, `ExclusivityValidationIssue`, `ValidationSeverity`. Enhanced `ExclusivityValidationResult` with `canProceed`, `issues[]`, `excludedUnitIds` (backward compat preserved) |
+| `src/services/brokerage.service.ts` | Rewritten `validateExclusivity()` — 5 business rules, expired agreement filtering, `excludeAgreementId` for update self-exclusion. Fixed `createAgreement()` to ALWAYS validate. Fixed `updateAgreement()` to validate when exclusivity/scope/unitId change |
+| `src/components/projects/tabs/ProjectBrokersTab.tsx` | Real-time debounced validation (300ms), error/warning UI with icons, Save button disabled on errors |
+| `src/i18n/locales/el/common.json` | +9 exclusivity validation i18n keys |
+| `src/i18n/locales/en/common.json` | +9 exclusivity validation i18n keys |
+| `SPEC-230B` | Updated Business Rules section with Decision Matrix + Edge Cases |
