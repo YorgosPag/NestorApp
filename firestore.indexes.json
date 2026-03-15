@@ -1566,6 +1566,20 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "cheques",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "context.unitId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
