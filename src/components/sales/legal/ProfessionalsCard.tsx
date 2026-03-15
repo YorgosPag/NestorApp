@@ -12,10 +12,11 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { User, Scale, Briefcase, Pencil, X, Loader2, AlertTriangle, ShieldAlert } from 'lucide-react';
+import Link from 'next/link';
+import { User, Scale, Briefcase, Pencil, X, Loader2, AlertTriangle, ShieldAlert, UserPlus } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ENTITY_ROUTES } from '@/lib/routes';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -295,7 +296,13 @@ export function ProfessionalsCard({
 
                   {linked ? (
                     <>
-                      <span className="font-medium truncate">{linked.contactName}</span>
+                      <Link
+                        href={ENTITY_ROUTES.contacts.withId(linked.contactId)}
+                        className="font-medium truncate text-primary hover:underline"
+                        title={t('common.viewContact', { defaultValue: 'Προβολή επαφής' })}
+                      >
+                        {linked.contactName}
+                      </Link>
                       <nav className="ml-auto flex items-center gap-0.5 shrink-0">
                         <Button
                           variant="ghost"
@@ -320,13 +327,16 @@ export function ProfessionalsCard({
                       </nav>
                     </>
                   ) : (
-                    <Badge
+                    <Button
                       variant="outline"
-                      className="text-[10px] text-muted-foreground/60 cursor-pointer hover:border-primary hover:text-primary transition-colors"
+                      size="sm"
+                      className="h-6 px-2 text-[11px] gap-1"
                       onClick={() => setEditingRole(isEditing ? null : slot.role)}
+                      disabled={saving}
                     >
-                      {t('sales.legal.unassigned', { defaultValue: 'Μη ανατεθ.' })}
-                    </Badge>
+                      <UserPlus className="h-3 w-3" />
+                      {t('sales.legal.assign', { defaultValue: 'Ανάθεση' })}
+                    </Button>
                   )}
                 </article>
 
