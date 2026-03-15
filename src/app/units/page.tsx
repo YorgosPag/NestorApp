@@ -10,7 +10,6 @@ import {
   TrendingUp,
   MapPin,
   Package,
-  Building2,
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
@@ -355,7 +354,7 @@ function UnitsPageContent() {
   if (loading) {
     return (
       <PageContainer ariaLabel={t('page.pageLabel')}>
-        <PageLoadingState icon={Building2} message={t('page.loading', { defaultValue: 'Φόρτωση μονάδων...' })} layout="contained" />
+        <PageLoadingState icon={NAVIGATION_ENTITIES.unit.icon} message={t('page.loading', { defaultValue: 'Φόρτωση μονάδων...' })} layout="contained" />
       </PageContainer>
     );
   }
@@ -423,7 +422,7 @@ function UnitsPageContent() {
             additionalContainers={
               <>
                 <StatusCard statsByStatus={dashboardStats.propertiesByStatus} getStatusLabel={getStatusLabel} />
-                <DetailsCard title={t('page.dashboard.unitTypes')} icon={Building2} data={dashboardStats.propertiesByType} labelFormatter={getTypeLabel} />
+                <DetailsCard title={t('page.dashboard.unitTypes')} icon={NAVIGATION_ENTITIES.unit.icon} data={dashboardStats.propertiesByType} labelFormatter={getTypeLabel} />
                 <DetailsCard title={t('page.dashboard.floorDistribution')} icon={MapPin} data={dashboardStats.propertiesByFloor} isFloorData />
                 {/* ✅ ENTERPRISE: Coverage card for documentation completeness (PR1.2) */}
                 <CoverageCard

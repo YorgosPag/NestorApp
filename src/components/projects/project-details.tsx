@@ -20,7 +20,7 @@
 import React, { useState, useCallback, useRef, useMemo } from 'react';
 import type { Project } from '@/types/project';
 import { ProjectDetailsHeader } from './ProjectDetailsHeader';
-import { Briefcase } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { UniversalTabsRenderer, convertToUniversalConfig, type TabComponentProps } from '@/components/generic/UniversalTabsRenderer';
 import { PROJECT_COMPONENT_MAPPING } from '@/components/generic/mappings/projectMappings';
 import { getSortedProjectTabs } from '@/config/project-tabs-config';
@@ -142,7 +142,7 @@ export function ProjectDetails({
       }
       onCreateAction={onNewProject}
       emptyStateProps={{
-        icon: Briefcase,
+        icon: NAVIGATION_ENTITIES.project.icon,
         title: t('emptyState.title'),
         description: t('emptyState.description')
       }}

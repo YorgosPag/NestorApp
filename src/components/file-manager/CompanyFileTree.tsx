@@ -23,14 +23,11 @@ import {
   File,
   FileText,
   FileSignature,
-  Building,
-  Briefcase,
-  Users,
-  Home,
   Camera,
   Film,
   Map as MapIcon,
 } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -93,11 +90,11 @@ interface TreeNodeData {
 // ============================================================================
 
 const ENTITY_ICONS: Record<FileEntityType, React.ReactNode> = {
-  project: <Briefcase className="h-4 w-4 text-blue-500" />,
-  building: <Building className="h-4 w-4 text-orange-500" />,
-  unit: <Home className="h-4 w-4 text-green-500" />,
-  contact: <Users className="h-4 w-4 text-purple-500" />,
-  company: <Building className="h-4 w-4 text-indigo-500" />,
+  project: React.createElement(NAVIGATION_ENTITIES.project.icon, { className: `h-4 w-4 ${NAVIGATION_ENTITIES.project.color}` }),
+  building: React.createElement(NAVIGATION_ENTITIES.building.icon, { className: `h-4 w-4 ${NAVIGATION_ENTITIES.building.color}` }),
+  unit: React.createElement(NAVIGATION_ENTITIES.unit.icon, { className: `h-4 w-4 ${NAVIGATION_ENTITIES.unit.color}` }),
+  contact: React.createElement(NAVIGATION_ENTITIES.contact.icon, { className: `h-4 w-4 ${NAVIGATION_ENTITIES.contact.color}` }),
+  company: React.createElement(NAVIGATION_ENTITIES.company.icon, { className: `h-4 w-4 ${NAVIGATION_ENTITIES.company.color}` }),
 };
 
 /**
@@ -449,7 +446,7 @@ function buildTreeByEntity(
     id: 'root',
     label: companyName,
     type: 'root' as const,
-    icon: <Building className="h-4 w-4 text-blue-600" />,
+    icon: React.createElement(NAVIGATION_ENTITIES.company.icon, { className: `h-4 w-4 ${NAVIGATION_ENTITIES.company.color}` }),
     path: [companyName],
     children: entityChildren,
   };
@@ -550,7 +547,7 @@ function buildTreeByCategory(
     id: 'root',
     label: companyName,
     type: 'root' as const,
-    icon: <Building className="h-4 w-4 text-blue-600" />,
+    icon: React.createElement(NAVIGATION_ENTITIES.company.icon, { className: `h-4 w-4 ${NAVIGATION_ENTITIES.company.color}` }),
     path: [companyName],
     children: categoryChildren,
   };

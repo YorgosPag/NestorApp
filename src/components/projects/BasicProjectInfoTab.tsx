@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Briefcase } from "lucide-react";
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
@@ -34,7 +34,7 @@ export const BasicProjectInfoTab = React.memo(function BasicProjectInfoTab({ dat
         <Card>
             <CardHeader className={spacing.padding.sm}>
                 <div className={cn("flex items-center", spacing.gap.sm)}>
-                    <Briefcase className={`${iconSizes.md} text-primary`} />
+                    <NAVIGATION_ENTITIES.project.icon className={`${iconSizes.md} ${NAVIGATION_ENTITIES.project.color}`} />
                     <CardTitle className={typography.card.titleCompact}>{t('basicInfo.title')}</CardTitle>
                 </div>
                 <CardDescription>

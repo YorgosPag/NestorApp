@@ -8,7 +8,7 @@ import type { Project } from '@/types/project';
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import { ProjectCardContent } from './ProjectCard/ProjectCardContent';
 import { ProjectCardTimeline } from './ProjectCard/ProjectCardTimeline';
-import { Briefcase } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { PROJECT_STATUS_LABELS } from '@/types/project';
 import { COMPLEX_HOVER_EFFECTS } from '@/components/ui/effects';
@@ -61,7 +61,7 @@ export function ProjectCard({
 
         {/* EntityDetailsHeader instead of complex visual header */}
         <EntityDetailsHeader
-          icon={Briefcase}
+          icon={NAVIGATION_ENTITIES.project.icon}
           title={project.name}
           subtitle={companyName}
           badges={[

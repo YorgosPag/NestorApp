@@ -16,11 +16,11 @@ import { UnifiedDashboard, type DashboardStat } from '@/components/property-mana
 import { AdvancedFiltersPanel, storageFiltersConfig, type StorageFilterState } from '@/components/core/AdvancedFilters';
 import {
   Package,
-  Warehouse,
   DollarSign,
   TrendingUp,
   Maximize2,
 } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { ListContainer, PageContainer } from '@/core/containers';
 import { PageLoadingState, StaticPageLoading } from '@/core/states';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -79,7 +79,7 @@ function SalesStorageContent() {
   if (loading) {
     return (
       <PageContainer ariaLabel={t('salesStorage.pageTitle', { defaultValue: 'Διαθέσιμες Αποθήκες' })}>
-        <PageLoadingState icon={Warehouse} message={t('salesStorage.loading', { defaultValue: 'Φόρτωση αποθηκών...' })} layout="contained" />
+        <PageLoadingState icon={NAVIGATION_ENTITIES.storage.icon} message={t('salesStorage.loading', { defaultValue: 'Φόρτωση αποθηκών...' })} layout="contained" />
       </PageContainer>
     );
   }
@@ -246,7 +246,7 @@ function SalesStorageContent() {
 
 export default function AvailableStoragePage() {
   return (
-    <Suspense fallback={<StaticPageLoading icon={Warehouse} message="Φόρτωση διαθέσιμων αποθηκών..." />}>
+    <Suspense fallback={<StaticPageLoading icon={NAVIGATION_ENTITIES.storage.icon} message="Φόρτωση διαθέσιμων αποθηκών..." />}>
       <SalesStorageContent />
     </Suspense>
   );

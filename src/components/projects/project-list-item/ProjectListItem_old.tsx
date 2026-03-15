@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import type { ProjectListItemProps } from './types';
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import { ProjectBadge } from '@/core/badges';
-import { Briefcase } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { HOVER_SHADOWS, TRANSITION_PRESETS, HOVER_BORDER_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
@@ -49,7 +49,7 @@ export function ProjectListItem({
 
                 {/* EntityDetailsHeader with centralized ProjectBadge */}
                 <EntityDetailsHeader
-                    icon={Briefcase}
+                    icon={NAVIGATION_ENTITIES.project.icon}
                     title={project.name}
                     subtitle={companyName}
                     variant="compact"

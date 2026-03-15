@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { Briefcase, FolderPlus } from 'lucide-react';
+import { FolderPlus } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import type { Project } from '@/types/project';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -54,7 +55,7 @@ export const ProjectDetailsHeader = React.memo(function ProjectDetailsHeader({
             {/* Desktop: Full header with CRUD actions */}
             <div className="hidden md:block">
                 <EntityDetailsHeader
-                    icon={Briefcase}
+                    icon={NAVIGATION_ENTITIES.project.icon}
                     title={project.name}
                     actions={actions}
                     variant="detailed"

@@ -10,7 +10,7 @@ import { GenericListHeader } from '@/components/shared/GenericListHeader';
 // 🏢 ENTERPRISE: Using centralized domain card
 import { ProjectListCard } from '@/domain';
 import { CompactToolbar, projectsConfig } from '@/components/core/CompactToolbar';
-import { Briefcase } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { EntityListColumn } from '@/core/containers';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
@@ -93,7 +93,7 @@ export function ProjectsList({
   return (
     <EntityListColumn hasBorder aria-label={t('list.ariaLabel')}>
       <GenericListHeader
-        icon={Briefcase}
+        icon={NAVIGATION_ENTITIES.project.icon}
         entityName={t('list.entityName')}
         itemCount={displayProjects.length}
         showToolbar={showToolbar}

@@ -5,7 +5,7 @@
  * Όλα τα δεδομένα προέρχονται από αυτό το αρχείο - ΜΟΝΑΔΙΚΗ ΠΗΓΗ ΑΛΗΘΕΙΑΣ.
  */
 
-import { Users, Building2, Landmark } from 'lucide-react';
+import { Users, Factory, Landmark } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { brandClasses } from '@/styles/design-tokens';
@@ -79,7 +79,7 @@ export const CONTACT_LABELS = {
 // 🎯 CONTACT ICONS - Κεντρικοποιημένα icons για κάθε τύπο επαφής
 export const CONTACT_ICONS = {
   [CONTACT_TYPES.INDIVIDUAL]: Users,
-  [CONTACT_TYPES.COMPANY]: Building2,
+  [CONTACT_TYPES.COMPANY]: Factory,
   [CONTACT_TYPES.SERVICE]: Landmark,
 } as const;
 

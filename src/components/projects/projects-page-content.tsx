@@ -16,7 +16,6 @@ import { useNavigation } from '@/components/navigation/core/NavigationContext';
 import { ProjectsHeader } from './ProjectsHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import {
-  Briefcase,
   TrendingUp,
   BarChart3,
   Calendar,
@@ -201,7 +200,7 @@ export function ProjectsPageContent() {
     {
       title: t('page.dashboard.totalProjects'),
       value: projectsStats.totalProjects,
-      icon: Briefcase,
+      icon: NAVIGATION_ENTITIES.project.icon,
       color: "blue"
     },
     {
@@ -266,7 +265,7 @@ export function ProjectsPageContent() {
   if (loading) {
     return (
       <PageContainer ariaLabel={t('page.loading')}>
-        <PageLoadingState icon={Briefcase} message={t('page.loadingMessage')} layout="contained" />
+        <PageLoadingState icon={NAVIGATION_ENTITIES.project.icon} message={t('page.loadingMessage')} layout="contained" />
       </PageContainer>
     );
   }

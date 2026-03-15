@@ -11,7 +11,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
-import { Warehouse, MapPin, StickyNote, Building2 } from 'lucide-react';
+import { MapPin, StickyNote, Building2 } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -257,7 +258,7 @@ export function StorageGeneralTab({
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <Warehouse className={cn(iconSizes.md, 'text-blue-500')} />
+            <NAVIGATION_ENTITIES.storage.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.storage.color)} />
             {t('general.identity')}
           </CardTitle>
         </CardHeader>

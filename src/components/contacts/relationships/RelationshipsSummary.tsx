@@ -13,7 +13,8 @@ import React from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Building2 } from 'lucide-react';
+import { Users } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
@@ -204,7 +205,7 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
           {shouldShowTree && (
             <div className="mt-6 mb-6">
               <div className="flex items-center space-x-2 mb-4">
-                <Building2 className={`${iconSizes.md} text-blue-600`} />
+                <NAVIGATION_ENTITIES.building.icon className={`${iconSizes.md} ${NAVIGATION_ENTITIES.building.color}`} />
                 <h4 className="text-sm font-medium text-gray-900">{t('relationships.summary.organizationChart')}</h4>
               </div>
               <div className={`${colors.bg.secondary} rounded-lg p-4 border`}>
