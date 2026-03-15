@@ -147,7 +147,8 @@ export function ShareholderRow({ shareholder, index, totalShares, onChange, onRe
           />
           {vatResult && !vatResult.isUnique && vatResult.existingContact && (
             <p className="mt-1 text-xs text-destructive font-medium" role="alert">
-              {t('setup.vatDuplicateWarning', { contactName: vatResult.existingContact.name })}
+              {t('setup.vatDuplicateWarning', { contactName: vatResult.existingContact.name })
+                .replace('{{contactName}}', vatResult.existingContact.name)}
             </p>
           )}
         </fieldset>

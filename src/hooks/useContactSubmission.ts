@@ -9,6 +9,7 @@ import {
   validateDocumentDates,
   isDatePastOrToday
 } from '@/utils/validation';
+import { isValidGreekVat } from '@/lib/validation/vat-validation';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useContactSubmission');
@@ -77,6 +78,13 @@ function validateIndividualContact(formData: ContactFormData, notifications: Not
     return false;
   }
 
+  // 🏢 VAT VALIDATION — exactly 9 digits if provided
+  const vatNumber = formData.vatNumber?.trim() ?? '';
+  if (vatNumber && !isValidGreekVat(vatNumber)) {
+    notifications.error("validation.contacts.vatInvalid");
+    return false;
+  }
+
   // 🏢 ENTERPRISE DATE VALIDATIONS με User-Friendly Notifications
   // ============================================================
 
@@ -140,6 +148,13 @@ function validateCompanyContact(formData: ContactFormData, notifications: Notifi
     notifications.error("validation.contacts.company.nameAndVatRequired");
     return false;
   }
+
+  // 🏢 VAT must be exactly 9 digits
+  if (!isValidGreekVat(vatNumber)) {
+    notifications.error("validation.contacts.vatInvalid");
+    return false;
+  }
+
   return true;
 }
 

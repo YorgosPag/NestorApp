@@ -219,7 +219,8 @@ export function BasicInfoSection({ data, onChange, errors }: BasicInfoSectionPro
               )}
               {vatResult && !vatResult.isUnique && vatResult.existingContact && (
                 <p className="mt-1 text-xs text-destructive font-medium" role="alert">
-                  {t('setup.vatDuplicateWarning', { contactName: vatResult.existingContact.name })}
+                  {t('setup.vatDuplicateWarning', { contactName: vatResult.existingContact.name })
+                    .replace('{{contactName}}', vatResult.existingContact.name)}
                 </p>
               )}
             </div>

@@ -903,7 +903,8 @@
       "invalidFormat": "Το τηλέφωνο μπορεί να έχει μη έγκυρο format"
     },
     "vatDuplicate": "Το ΑΦΜ {{vatNumber}} χρησιμοποιείται ήδη από: {{contactName}}",
-    "vatChecking": "Έλεγχος ΑΦΜ..."
+    "vatChecking": "Έλεγχος ΑΦΜ...",
+    "vatInvalid": "Το ΑΦΜ πρέπει να αποτελείται από ακριβώς 9 ψηφία"
   },
   "submission": {
     "failedUploads": "Υπάρχουν αποτυχημένα αρχεία. Παρακαλώ δοκιμάστε ξανά.",

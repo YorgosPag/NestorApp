@@ -73,7 +73,9 @@ export function VatNumberField({
           {t('validation.vatDuplicate', {
             vatNumber: value,
             contactName: result.existingContact.name,
-          })}
+          })
+            .replace('{{vatNumber}}', value)
+            .replace('{{contactName}}', result.existingContact.name)}
         </p>
       )}
     </div>
