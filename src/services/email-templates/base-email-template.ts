@@ -62,19 +62,21 @@ interface BaseEmailParams {
 export function wrapInBrandedTemplate(params: BaseEmailParams): string {
   const {
     contentHtml,
-    companyName = 'Pagonis Energo',
+    companyName,
     companyPhone,
     companyEmail,
     companyAddress,
     companyWebsite,
   } = params;
 
-  const logoUrl = `${getAppBaseUrl()}/images/pagonis-energo-logo.png`;
+  const logoUrl = `${getAppBaseUrl()}/images/nestor-app-logo.png`;
+  const brandName = 'Nestor App';
 
+  // Footer contact lines — use provided or fallback defaults
   const contactLines: string[] = [];
-  if (companyPhone) contactLines.push(`Tel: ${companyPhone}`);
-  if (companyEmail) contactLines.push(companyEmail);
-  if (companyAddress) contactLines.push(companyAddress);
+  contactLines.push(`Tel: ${companyPhone ?? '+30 2310 000 000'}`);
+  contactLines.push(companyEmail ?? 'info@nestorconstruct.gr');
+  contactLines.push(companyAddress ?? 'Θεσσαλονίκη, Ελλάδα');
   if (companyWebsite) contactLines.push(companyWebsite);
 
   return `<!DOCTYPE html>
@@ -82,7 +84,7 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${companyName}</title>
+  <title>${brandName}</title>
 </head>
 <body style="margin:0;padding:0;background-color:${BRAND.bgLight};font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased;">
   <!-- Outer wrapper -->
@@ -96,10 +98,11 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
           <!-- HEADER — Logo + brand bar -->
           <tr>
             <td style="background-color:${BRAND.navy};padding:24px 32px;text-align:center;">
-              <img src="${logoUrl}" alt="${companyName}" width="160" height="160" style="display:block;margin:0 auto;max-width:160px;height:auto;border-radius:12px;" />
-              <p style="margin:12px 0 0;font-size:14px;color:rgba(255,255,255,0.7);letter-spacing:1px;">
-                ΕΝΕΡΓΕΙΑΚΗ ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ Α.Ε.
+              <img src="${logoUrl}" alt="${brandName}" width="120" height="120" style="display:block;margin:0 auto;max-width:120px;height:auto;border-radius:12px;" />
+              <p style="margin:12px 0 0;font-size:18px;font-weight:700;color:${BRAND.white};letter-spacing:1.5px;">
+                NESTOR APP
               </p>
+              ${companyName ? `<p style="margin:4px 0 0;font-size:12px;color:rgba(255,255,255,0.6);letter-spacing:0.5px;">${escapeHtml(companyName)}</p>` : ''}
             </td>
           </tr>
 
@@ -120,14 +123,14 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
           <!-- FOOTER -->
           <tr>
             <td style="padding:20px 32px 24px;text-align:center;">
-              <p style="margin:0 0 4px;font-size:13px;font-weight:600;color:${BRAND.navyDark};">
-                ${companyName}
+              <p style="margin:0 0 8px;font-size:14px;font-weight:700;color:${BRAND.navyDark};">
+                ${brandName}
               </p>
               ${contactLines.map(line =>
-                `<p style="margin:0;font-size:12px;color:${BRAND.grayLight};line-height:1.6;">${escapeHtml(line)}</p>`
+                `<p style="margin:0;font-size:12px;color:${BRAND.gray};line-height:1.8;">${escapeHtml(line)}</p>`
               ).join('\n              ')}
-              <p style="margin:12px 0 0;font-size:11px;color:${BRAND.border};">
-                &copy; ${new Date().getFullYear()} ${companyName}. All rights reserved.
+              <p style="margin:12px 0 0;font-size:11px;color:${BRAND.grayLight};">
+                &copy; ${new Date().getFullYear()} ${brandName}. All rights reserved.
               </p>
             </td>
           </tr>
