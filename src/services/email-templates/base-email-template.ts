@@ -72,11 +72,11 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
   const logoUrl = `${getAppBaseUrl()}/images/nestor-app-logo.png`;
   const brandName = 'Nestor App';
 
-  // Footer contact lines — use provided or fallback defaults
+  // Footer contact lines — from real company data in Firestore
   const contactLines: string[] = [];
-  contactLines.push(`Tel: ${companyPhone ?? '+30 2310 000 000'}`);
-  contactLines.push(companyEmail ?? 'info@nestorconstruct.gr');
-  contactLines.push(companyAddress ?? 'Θεσσαλονίκη, Ελλάδα');
+  if (companyPhone) contactLines.push(`Tel: ${companyPhone}`);
+  if (companyEmail) contactLines.push(companyEmail);
+  if (companyAddress) contactLines.push(companyAddress);
   if (companyWebsite) contactLines.push(companyWebsite);
 
   return `<!DOCTYPE html>

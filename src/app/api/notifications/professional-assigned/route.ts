@@ -132,10 +132,10 @@ async function resolveUnitHierarchy(unitId: string): Promise<UnitHierarchy | nul
               result.companyName = (companyData.companyName as string)
                 ?? (companyData.displayName as string)
                 ?? null;
-              result.companyPhone = (companyData.phone as string) ?? null;
-              result.companyEmail = (companyData.email as string) ?? null;
-              result.companyAddress = (companyData.address as string) ?? null;
-              result.companyWebsite = (companyData.website as string) ?? null;
+              result.companyPhone = extractPrimaryPhone(companyData);
+              result.companyEmail = extractPrimaryEmail(companyData);
+              result.companyAddress = extractPrimaryAddress(companyData);
+              result.companyWebsite = extractPrimaryWebsite(companyData);
             }
           } else {
             result.companyName = (projectData.company as string) ?? null;
@@ -169,6 +169,40 @@ function extractPrimaryEmail(contactData: Record<string, unknown>): string | nul
   if (primary?.email) return primary.email;
 
   return emails[0]?.email ?? null;
+}
+
+/** Extract primary phone from phones[] array */
+function extractPrimaryPhone(contactData: Record<string, unknown>): string | null {
+  const phones = contactData.phones as Array<{ number?: string; isPrimary?: boolean }> | undefined;
+  if (!phones || phones.length === 0) return null;
+
+  const primary = phones.find(p => p.isPrimary && p.number);
+  return primary?.number ?? phones[0]?.number ?? null;
+}
+
+/** Extract formatted primary address from addresses[] array */
+function extractPrimaryAddress(contactData: Record<string, unknown>): string | null {
+  const addresses = contactData.addresses as Array<{
+    street?: string; number?: string; city?: string;
+    postalCode?: string; isPrimary?: boolean;
+  }> | undefined;
+  if (!addresses || addresses.length === 0) return null;
+
+  const addr = addresses.find(a => a.isPrimary) ?? addresses[0];
+  const parts = [
+    [addr.street, addr.number].filter(Boolean).join(' '),
+    addr.postalCode,
+    addr.city,
+  ].filter(Boolean);
+
+  return parts.length > 0 ? parts.join(', ') : null;
+}
+
+/** Extract primary website from websites[] array */
+function extractPrimaryWebsite(contactData: Record<string, unknown>): string | null {
+  const websites = contactData.websites as Array<{ url?: string }> | undefined;
+  if (!websites || websites.length === 0) return null;
+  return websites[0]?.url ?? null;
 }
 
 // ============================================================================
