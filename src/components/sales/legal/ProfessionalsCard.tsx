@@ -4,14 +4,28 @@
  * ProfessionalsCard — 3 νομικοί ρόλοι (seller_lawyer, buyer_lawyer, notary)
  * Interactive: inline assign/change/remove via ContactSearchManager.
  *
+ * Conflict validation (Greek Law):
+ * - Notary + Lawyer = HARD BLOCK (Ν.2830/2000, Άρ.22§2 + Άρ.37§1)
+ * - Seller Lawyer + Buyer Lawyer = WARNING (Κώδικας Δεοντολογίας, Άρ.37)
+ *
  * @enterprise ADR-230 (SPEC-230D Task C)
  */
 
 import React, { useState, useCallback } from 'react';
-import { User, Scale, Briefcase, Pencil, X, Loader2 } from 'lucide-react';
+import { User, Scale, Briefcase, Pencil, X, Loader2, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 import { ContactSearchManager } from '@/components/contacts/relationships/ContactSearchManager';
 import { toast } from 'sonner';
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
@@ -46,15 +60,80 @@ interface ProfessionalSlot {
   icon: React.ElementType;
 }
 
+/** Pending assignment waiting for user confirmation */
+interface PendingAssignment {
+  contact: ContactSummary;
+  targetRole: LegalProfessionalRole;
+  existingRole: LegalProfessionalRole;
+  existingRoleLabel: string;
+  targetRoleLabel: string;
+  conflictType: 'hard_block' | 'warning';
+}
+
 const SLOTS: ProfessionalSlot[] = [
   { role: 'seller_lawyer', labelKey: 'sales.legal.sellerLawyer', defaultLabel: 'Δικηγόρος Πωλητή', icon: Briefcase },
   { role: 'buyer_lawyer', labelKey: 'sales.legal.buyerLawyer', defaultLabel: 'Δικηγόρος Αγοραστή', icon: Briefcase },
   { role: 'notary', labelKey: 'sales.legal.notary', defaultLabel: 'Συμβολαιογράφος', icon: Scale },
 ];
 
+const LAWYER_ROLES: LegalProfessionalRole[] = ['seller_lawyer', 'buyer_lawyer'];
+
 /** Only draft contracts get professional overrides */
 function getDraftContracts(contracts: LegalContract[]): LegalContract[] {
   return contracts.filter((c) => c.status === 'draft');
+}
+
+// ============================================================================
+// CONFLICT VALIDATION — Greek Law
+// ============================================================================
+
+/**
+ * Check if assigning a contact to a role conflicts with their existing role.
+ *
+ * Rules (Greek Law):
+ * 1. Notary + Lawyer (either) = HARD BLOCK
+ *    Ν.2830/2000 Άρ.22§2: Ο διορισμός ως συμβολαιογράφος συνεπάγεται
+ *    αυτοδίκαια αποβολή ιδιότητας δικηγόρου.
+ *    Άρ.37§1: Ασυμβίβαστο με κάθε άλλη επαγγελματική δραστηριότητα.
+ *
+ * 2. Seller Lawyer + Buyer Lawyer = WARNING (σύγκρουση συμφερόντων)
+ *    Κώδικας Δεοντολογίας Δικηγόρων Άρ.37: Απαγορεύεται παροχή βοήθειας
+ *    σε αμφότερα τα μέρη. Conflict of interest.
+ */
+function detectConflict(
+  contactId: string,
+  targetRole: LegalProfessionalRole,
+  associations: EntityAssociationLink[]
+): { existingRole: LegalProfessionalRole; conflictType: 'hard_block' | 'warning' } | null {
+  const existingLink = associations.find((a) => a.contactId === contactId && a.role !== targetRole);
+  if (!existingLink) return null;
+
+  const existingRole = existingLink.role as LegalProfessionalRole;
+
+  // Rule 1: Notary ↔ Lawyer = HARD BLOCK
+  const isNotaryVsLawyer =
+    (targetRole === 'notary' && LAWYER_ROLES.includes(existingRole)) ||
+    (LAWYER_ROLES.includes(targetRole) && existingRole === 'notary');
+
+  if (isNotaryVsLawyer) {
+    return { existingRole, conflictType: 'hard_block' };
+  }
+
+  // Rule 2: Seller Lawyer ↔ Buyer Lawyer = WARNING
+  const isLawyerVsLawyer =
+    LAWYER_ROLES.includes(targetRole) && LAWYER_ROLES.includes(existingRole);
+
+  if (isLawyerVsLawyer) {
+    return { existingRole, conflictType: 'warning' };
+  }
+
+  return null;
+}
+
+/** Get human-readable label for a role */
+function getRoleLabel(role: LegalProfessionalRole): string {
+  const slot = SLOTS.find((s) => s.role === role);
+  return slot?.defaultLabel ?? role;
 }
 
 // ============================================================================
@@ -71,13 +150,13 @@ export function ProfessionalsCard({
   const { t } = useTranslation('common');
   const [editingRole, setEditingRole] = useState<LegalProfessionalRole | null>(null);
   const [saving, setSaving] = useState(false);
+  const [pendingAssignment, setPendingAssignment] = useState<PendingAssignment | null>(null);
 
   const drafts = getDraftContracts(contracts);
 
-  // Assign a contact to a role
-  const handleAssign = useCallback(
-    async (contact: ContactSummary | null, role: LegalProfessionalRole) => {
-      if (!contact) return;
+  // Execute the actual assignment (after validation/confirmation)
+  const executeAssign = useCallback(
+    async (contact: ContactSummary, role: LegalProfessionalRole) => {
       setSaving(true);
 
       try {
@@ -102,6 +181,59 @@ export function ProfessionalsCard({
     },
     [onAssign, onOverrideProfessional, drafts, t]
   );
+
+  // Validate before assigning — check for conflicts
+  const handleAssign = useCallback(
+    (contact: ContactSummary | null, role: LegalProfessionalRole) => {
+      if (!contact) return;
+
+      const conflict = detectConflict(contact.id, role, associations);
+
+      if (!conflict) {
+        // No conflict — assign directly
+        executeAssign(contact, role);
+        return;
+      }
+
+      const existingRoleLabel = getRoleLabel(conflict.existingRole);
+      const targetRoleLabel = getRoleLabel(role);
+
+      if (conflict.conflictType === 'hard_block') {
+        // HARD BLOCK — show error dialog, cannot proceed
+        setPendingAssignment({
+          contact,
+          targetRole: role,
+          existingRole: conflict.existingRole,
+          existingRoleLabel,
+          targetRoleLabel,
+          conflictType: 'hard_block',
+        });
+        return;
+      }
+
+      // WARNING — show confirmation dialog
+      setPendingAssignment({
+        contact,
+        targetRole: role,
+        existingRole: conflict.existingRole,
+        existingRoleLabel,
+        targetRoleLabel,
+        conflictType: 'warning',
+      });
+    },
+    [associations, executeAssign]
+  );
+
+  // Handle confirmation dialog response
+  const handleConfirmAssignment = useCallback(() => {
+    if (!pendingAssignment || pendingAssignment.conflictType === 'hard_block') return;
+    executeAssign(pendingAssignment.contact, pendingAssignment.targetRole);
+    setPendingAssignment(null);
+  }, [pendingAssignment, executeAssign]);
+
+  const handleDismissDialog = useCallback(() => {
+    setPendingAssignment(null);
+  }, []);
 
   // Remove a contact from a role
   const handleRemove = useCallback(
@@ -131,85 +263,164 @@ export function ProfessionalsCard({
   );
 
   return (
-    <section className="rounded-lg border bg-card p-3 space-y-2">
-      <h3 className="text-sm font-semibold flex items-center gap-1.5">
-        <User className="h-4 w-4 text-muted-foreground" />
-        {t('sales.legal.professionalsTitle', { defaultValue: 'Νομικοί Επαγγελματίες' })}
-      </h3>
+    <>
+      <section className="rounded-lg border bg-card p-3 space-y-2">
+        <h3 className="text-sm font-semibold flex items-center gap-1.5">
+          <User className="h-4 w-4 text-muted-foreground" />
+          {t('sales.legal.professionalsTitle', { defaultValue: 'Νομικοί Επαγγελματίες' })}
+        </h3>
 
-      <ul className="space-y-2">
-        {SLOTS.map((slot) => {
-          const linked = associations.find((a) => a.role === slot.role);
-          const isEditing = editingRole === slot.role;
+        <ul className="space-y-2">
+          {SLOTS.map((slot) => {
+            const linked = associations.find((a) => a.role === slot.role);
+            const isEditing = editingRole === slot.role;
 
-          return (
-            <li key={slot.role} className="space-y-1">
-              <article className="flex items-center gap-2 text-sm">
-                <slot.icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                <span className="text-muted-foreground min-w-0 shrink-0">
-                  {t(slot.labelKey, { defaultValue: slot.defaultLabel })}:
-                </span>
+            return (
+              <li key={slot.role} className="space-y-1">
+                <article className="flex items-center gap-2 text-sm">
+                  <slot.icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="text-muted-foreground min-w-0 shrink-0">
+                    {t(slot.labelKey, { defaultValue: slot.defaultLabel })}:
+                  </span>
 
-                {linked ? (
-                  <>
-                    <span className="font-medium truncate">{linked.contactName}</span>
-                    <nav className="ml-auto flex items-center gap-0.5 shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-5 w-5"
-                        onClick={() => setEditingRole(isEditing ? null : slot.role)}
-                        disabled={saving}
-                        title={t('common.edit', { defaultValue: 'Επεξεργασία' })}
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-5 w-5 text-destructive hover:text-destructive"
-                        onClick={() => handleRemove(linked.linkId, slot.role)}
-                        disabled={saving}
-                        title={t('sales.legal.removeProfessional', { defaultValue: 'Αφαίρεση' })}
-                      >
-                        {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <X className="h-3 w-3" />}
-                      </Button>
-                    </nav>
-                  </>
-                ) : (
-                  <Badge
-                    variant="outline"
-                    className="text-[10px] text-muted-foreground/60 cursor-pointer hover:border-primary hover:text-primary transition-colors"
-                    onClick={() => setEditingRole(isEditing ? null : slot.role)}
-                  >
-                    {t('sales.legal.unassigned', { defaultValue: 'Μη ανατεθ.' })}
-                  </Badge>
+                  {linked ? (
+                    <>
+                      <span className="font-medium truncate">{linked.contactName}</span>
+                      <nav className="ml-auto flex items-center gap-0.5 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5"
+                          onClick={() => setEditingRole(isEditing ? null : slot.role)}
+                          disabled={saving}
+                          title={t('common.edit', { defaultValue: 'Επεξεργασία' })}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5 text-destructive hover:text-destructive"
+                          onClick={() => handleRemove(linked.linkId, slot.role)}
+                          disabled={saving}
+                          title={t('sales.legal.removeProfessional', { defaultValue: 'Αφαίρεση' })}
+                        >
+                          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <X className="h-3 w-3" />}
+                        </Button>
+                      </nav>
+                    </>
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] text-muted-foreground/60 cursor-pointer hover:border-primary hover:text-primary transition-colors"
+                      onClick={() => setEditingRole(isEditing ? null : slot.role)}
+                    >
+                      {t('sales.legal.unassigned', { defaultValue: 'Μη ανατεθ.' })}
+                    </Badge>
+                  )}
+                </article>
+
+                {/* Inline contact search */}
+                {isEditing && (
+                  <aside className="pl-5">
+                    <ContactSearchManager
+                      selectedContactId=""
+                      onContactSelect={(contact) => handleAssign(contact, slot.role)}
+                      placeholder={t('sales.legal.searchProfessional', { defaultValue: 'Αναζήτηση επαγγελματία...' })}
+                      label=""
+                      className="max-w-xs"
+                    />
+                  </aside>
                 )}
-              </article>
+              </li>
+            );
+          })}
+        </ul>
 
-              {/* Inline contact search */}
-              {isEditing && (
-                <aside className="pl-5">
-                  <ContactSearchManager
-                    selectedContactId=""
-                    onContactSelect={(contact) => handleAssign(contact, slot.role)}
-                    placeholder={t('sales.legal.searchProfessional', { defaultValue: 'Αναζήτηση επαγγελματία...' })}
-                    label=""
-                    className="max-w-xs"
-                  />
-                </aside>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+        {saving && (
+          <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            {t('common.saving', { defaultValue: 'Αποθήκευση...' })}
+          </p>
+        )}
+      </section>
 
-      {saving && (
-        <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          {t('common.saving', { defaultValue: 'Αποθήκευση...' })}
-        </p>
-      )}
-    </section>
+      {/* ================================================================== */}
+      {/* Conflict Dialog — Hard Block (Notary ↔ Lawyer)                     */}
+      {/* ================================================================== */}
+      <AlertDialog
+        open={pendingAssignment?.conflictType === 'hard_block'}
+        onOpenChange={(open) => { if (!open) handleDismissDialog(); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <ShieldAlert className="h-5 w-5" />
+              {t('sales.legal.conflictBlockTitle', { defaultValue: 'Ασυμβίβαστο Ρόλων' })}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2 text-sm">
+              <p>
+                {t('sales.legal.conflictBlockMessage', {
+                  defaultValue: `Ο/Η «{{name}}» έχει ήδη ανατεθεί ως {{existingRole}}. Δεν μπορεί να αναλάβει ταυτόχρονα και τον ρόλο {{targetRole}}.`,
+                  name: pendingAssignment?.contact.name ?? '',
+                  existingRole: pendingAssignment?.existingRoleLabel ?? '',
+                  targetRole: pendingAssignment?.targetRoleLabel ?? '',
+                })}
+              </p>
+              <p className="text-muted-foreground italic">
+                {t('sales.legal.conflictBlockLaw', {
+                  defaultValue: 'Ν.2830/2000, Άρ.22§2: Ο διορισμός ως συμβολαιογράφος συνεπάγεται αυτοδίκαια αποβολή της ιδιότητας του δικηγόρου. Άρ.37§1: Τα έργα του συμβολαιογράφου είναι ασυμβίβαστα με κάθε άλλη επαγγελματική δραστηριότητα.',
+                })}
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              {t('common.understood', { defaultValue: 'Κατάλαβα' })}
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ================================================================== */}
+      {/* Conflict Dialog — Warning (Seller ↔ Buyer Lawyer)                  */}
+      {/* ================================================================== */}
+      <AlertDialog
+        open={pendingAssignment?.conflictType === 'warning'}
+        onOpenChange={(open) => { if (!open) handleDismissDialog(); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="h-5 w-5" />
+              {t('sales.legal.conflictWarningTitle', { defaultValue: 'Σύγκρουση Συμφερόντων' })}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2 text-sm">
+              <p>
+                {t('sales.legal.conflictWarningMessage', {
+                  defaultValue: `Ο/Η «{{name}}» έχει ήδη ανατεθεί ως {{existingRole}}. Είστε σίγουροι ότι θέλετε να αναλάβει και τον ρόλο {{targetRole}};`,
+                  name: pendingAssignment?.contact.name ?? '',
+                  existingRole: pendingAssignment?.existingRoleLabel ?? '',
+                  targetRole: pendingAssignment?.targetRoleLabel ?? '',
+                })}
+              </p>
+              <p className="text-muted-foreground italic">
+                {t('sales.legal.conflictWarningLaw', {
+                  defaultValue: 'Κώδικας Δεοντολογίας Δικηγόρων, Άρ.37: Απαγορεύεται η παροχή βοήθειας σε αμφότερα τα μέρη. Η ταυτόχρονη εκπροσώπηση πωλητή και αγοραστή αποτελεί σύγκρουση συμφερόντων.',
+                })}
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              {t('common.cancel', { defaultValue: 'Ακύρωση' })}
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmAssignment} className="bg-amber-600 hover:bg-amber-700">
+              {t('sales.legal.assignAnyway', { defaultValue: 'Ανάθεση παρόλα αυτά' })}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
