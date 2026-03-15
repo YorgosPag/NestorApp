@@ -2671,6 +2671,87 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 📁 BROKERAGE_AGREEMENTS COLLECTION — Μεσιτικές Συμβάσεις (ADR-230)
+    // =========================================================================
+    // Tenant-scoped: companyId must match user's company claim
+    // =========================================================================
+    match /brokerage_agreements/{agreementId} {
+
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // LEGACY: documents without companyId — creator only
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // ✍️ CREATE: companyId must match user claim
+      allow create: if isAuthenticated()
+                    && request.resource.data.keys().hasAll(['projectId', 'agentContactId', 'createdBy', 'companyId'])
+                    && (
+                         isSuperAdminOnly()
+                         || request.resource.data.companyId == getUserCompanyId()
+                       );
+
+      // 📝 UPDATE: Creator or company admin
+      allow update: if isAuthenticated()
+                    && resource != null
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || (resource.data.keys().hasAny(['companyId'])
+                             && isCompanyAdminOfCompany(resource.data.companyId))
+                         || isSuperAdminOnly()
+                       );
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isSuperAdminOnly()
+                       );
+    }
+
+    // =========================================================================
+    // 📁 COMMISSION_RECORDS COLLECTION — Εγγραφές Προμηθειών (ADR-230)
+    // =========================================================================
+    match /commission_records/{recordId} {
+
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // ✍️ CREATE: companyId must match user claim
+      allow create: if isAuthenticated()
+                    && request.resource.data.keys().hasAll(['projectId', 'agentContactId', 'createdBy', 'companyId'])
+                    && (
+                         isSuperAdminOnly()
+                         || request.resource.data.companyId == getUserCompanyId()
+                       );
+
+      // 📝 UPDATE: Creator or company admin (payment status updates)
+      allow update: if isAuthenticated()
+                    && resource != null
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || (resource.data.keys().hasAny(['companyId'])
+                             && isCompanyAdminOfCompany(resource.data.companyId))
+                         || isSuperAdminOnly()
+                       );
+
+      // 🗑️ DELETE: Super admin only
+      allow delete: if isAuthenticated() && isSuperAdminOnly();
+    }
+
+    // =========================================================================
     // 🔒 HELPER FUNCTIONS - VALIDATION & SECURITY
     // =========================================================================
 

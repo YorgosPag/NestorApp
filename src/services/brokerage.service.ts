@@ -33,6 +33,7 @@ import type {
   ExclusivityValidationResult,
 } from '@/types/brokerage';
 import { calculateCommission } from '@/types/brokerage';
+import { getCompanyId } from '@/config/tenant';
 
 const logger = createModuleLogger('BrokerageService');
 
@@ -99,6 +100,7 @@ export class BrokerageService {
         startDate: input.startDate,
         endDate: input.endDate ?? null,
         terminatedAt: null,
+        companyId: getCompanyId(),
         notes: input.notes ?? null,
         createdBy,
         createdAt: now,
@@ -323,6 +325,7 @@ export class BrokerageService {
         commissionPercentage: input.commissionPercentage,
         paymentStatus: 'pending',
         paidAt: null,
+        companyId: getCompanyId(),
         createdBy,
         createdAt: now,
         updatedAt: now,

@@ -61,6 +61,10 @@ export interface BrokerageAgreement {
   endDate: string | null; // ISO date — null = αόριστη διάρκεια
   terminatedAt: string | null; // ISO timestamp
 
+  // === Tenant ===
+  /** Company ID for tenant-scoped Firestore rules */
+  companyId: string;
+
   // === Audit ===
   notes: string | null;
   createdBy: string;
@@ -102,6 +106,10 @@ export interface CommissionRecord {
   // === Κατάσταση ===
   paymentStatus: CommissionPaymentStatus;
   paidAt: string | null; // ISO timestamp
+
+  // === Tenant ===
+  /** Company ID for tenant-scoped Firestore rules */
+  companyId: string;
 
   // === Audit ===
   createdBy: string;
