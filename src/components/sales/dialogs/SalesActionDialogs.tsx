@@ -46,8 +46,8 @@ import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown
 import type { Unit } from '@/types/unit';
 
 /** Resolve projectId — Firestore uses `projectId`, legacy code uses `project` */
-function resolveProjectId(unit: Unit): string | undefined {
-  return unit.projectId ?? unit.project;
+function resolveProjectId(unit: Record<string, unknown>): string | undefined {
+  return (unit.projectId as string | undefined) ?? (unit.project as string | undefined);
 }
 
 // =============================================================================
@@ -555,11 +555,11 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
       setSelectedBrokerId('none');
 
       // Fetch active brokerage agreements
-      BrokerageService.getAgreements(resolveProjectId(unit), unit.id, 'active')
+      BrokerageService.getAgreements(resolveProjectId(unit) ?? '', unit.id, 'active')
         .then(setBrokerAgreements)
         .catch(() => setBrokerAgreements([]));
     }
-  }, [open, unit.commercial?.askingPrice, unit.commercial?.buyerContactId, unit.commercial?.buyerName, unit.projectId, unit.project, unit.id]);
+  }, [open, unit.commercial?.askingPrice, unit.commercial?.buyerContactId, unit.commercial?.buyerName, unit.project, unit.id]);
 
   const handleBuyerSelect = useCallback((contact: ContactSummary | null) => {
     setBuyerContactId(contact?.id ?? '');
@@ -630,7 +630,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
               agentContactId: agreement.agentContactId,
               agentName: agreement.agentName,
               unitId: unit.id,
-              projectId: resolveProjectId(unit),
+              projectId: resolveProjectId(unit) ?? '',
               buyerContactId: buyerContactId || '',
               salePrice: price,
               commissionType: agreement.commissionType,
@@ -827,7 +827,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
               units={[{ id: unit.id, name: unit.name ?? unit.unitName ?? '' }]}
               preSelectedUnitId={unit.id}
               onSuccess={() => {
-                BrokerageService.getAgreements(resolveProjectId(unit), unit.id, 'active')
+                BrokerageService.getAgreements(resolveProjectId(unit) ?? '', unit.id, 'active')
                   .then((data) => {
                     setBrokerAgreements(data);
                     if (data.length > 0) {
