@@ -2752,6 +2752,24 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 📊 OWNERSHIP_TABLES COLLECTION — ADR-235 (Πίνακας Χιλιοστών)
+    // =========================================================================
+    // 🔒 Authenticated users: full CRUD (family team — same as units/projects)
+    // =========================================================================
+    match /ownership_tables/{tableId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated() && isSuperAdminOnly();
+    }
+
+    // Revisions subcollection
+    match /ownership_tables/{tableId}/revisions/{revisionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+    }
+
+    // =========================================================================
     // 🔒 HELPER FUNCTIONS - VALIDATION & SECURITY
     // =========================================================================
 
