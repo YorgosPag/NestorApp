@@ -23,6 +23,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { EntityAuditService } from '@/services/entity-audit.service';
 
 // =============================================================================
 // TYPES
@@ -82,7 +83,7 @@ async function handlePost(
   segmentData?: { params: Promise<{ unitId: string }> }
 ): Promise<NextResponse> {
   const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const { unitId } = await segmentData!.params;
         const body = (await req.json()) as Partial<SyncRequestBody>;
@@ -160,6 +161,29 @@ async function handlePost(
 
           await batch.commit();
         }, undefined);
+
+        // Audit trail: appurtenance sync
+        const actionLabels: Record<SyncAction, string> = {
+          reserve: 'Κράτηση',
+          sell: 'Πώληση',
+          revert: 'Επαναφορά',
+        };
+        const spaceTypeLabels = { parking: 'Παρκινγκ', storage: 'Αποθήκη' };
+        EntityAuditService.recordChange({
+          entityType: 'unit',
+          entityId: unitId,
+          entityName: null,
+          action: 'updated',
+          changes: spaces.map((s) => ({
+            field: s.spaceType,
+            oldValue: null,
+            newValue: `${s.spaceId.slice(0, 8)}… — ${actionLabels[action]}`,
+            label: spaceTypeLabels[s.spaceType],
+          })),
+          performedBy: ctx.uid,
+          performedByName: ctx.email ?? null,
+          companyId: ctx.companyId,
+        }).catch(() => {});
 
         return NextResponse.json({
           success: true,

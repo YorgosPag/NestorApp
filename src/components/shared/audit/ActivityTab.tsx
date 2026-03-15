@@ -30,6 +30,10 @@ import {
   ChevronDown,
   BarChart3,
   Filter,
+  UserPlus,
+  UserMinus,
+  Mail,
+  Receipt,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { useEntityAudit } from '@/hooks/useEntityAudit';
@@ -56,6 +60,10 @@ const ACTION_MAP: Record<AuditAction, ActionConfig> = {
   status_changed: { icon: RefreshCw, label: 'Αλλαγή κατάστασης', color: 'text-amber-600', bgColor: 'bg-amber-50 dark:bg-amber-950/30' },
   linked: { icon: Link2, label: 'Σύνδεση', color: 'text-purple-600', bgColor: 'bg-purple-50 dark:bg-purple-950/30' },
   unlinked: { icon: Unlink, label: 'Αποσύνδεση', color: 'text-gray-600', bgColor: 'bg-gray-50 dark:bg-gray-950/30' },
+  professional_assigned: { icon: UserPlus, label: 'Ανάθεση επαγγελματία', color: 'text-teal-600', bgColor: 'bg-teal-50 dark:bg-teal-950/30' },
+  professional_removed: { icon: UserMinus, label: 'Αφαίρεση επαγγελματία', color: 'text-orange-600', bgColor: 'bg-orange-50 dark:bg-orange-950/30' },
+  email_sent: { icon: Mail, label: 'Email εστάλη', color: 'text-sky-600', bgColor: 'bg-sky-50 dark:bg-sky-950/30' },
+  invoice_created: { icon: Receipt, label: 'Δημιουργία παραστατικού', color: 'text-green-600', bgColor: 'bg-green-50 dark:bg-green-950/30' },
 };
 
 const FILTER_OPTIONS: { value: AuditAction | 'all'; label: string }[] = [
@@ -64,6 +72,10 @@ const FILTER_OPTIONS: { value: AuditAction | 'all'; label: string }[] = [
   { value: 'created', label: 'Δημιουργίες' },
   { value: 'deleted', label: 'Διαγραφές' },
   { value: 'status_changed', label: 'Κατάσταση' },
+  { value: 'professional_assigned', label: 'Αναθέσεις' },
+  { value: 'professional_removed', label: 'Αφαιρέσεις' },
+  { value: 'email_sent', label: 'Email' },
+  { value: 'invoice_created', label: 'Παραστατικά' },
 ];
 
 // ============================================================================
@@ -201,13 +213,20 @@ interface Stats {
 }
 
 function StatsPanel({ stats }: { stats: Stats }) {
-  const visibleActions: AuditAction[] = ['updated', 'created', 'deleted', 'status_changed'];
+  const visibleActions: AuditAction[] = [
+    'updated', 'created', 'deleted', 'status_changed',
+    'professional_assigned', 'professional_removed', 'email_sent', 'invoice_created',
+  ];
 
   const actionColorMap: Record<string, string> = {
     created: 'green',
     updated: 'blue',
     deleted: 'red',
     status_changed: 'orange',
+    professional_assigned: 'teal',
+    professional_removed: 'orange',
+    email_sent: 'sky',
+    invoice_created: 'green',
   };
 
   return (

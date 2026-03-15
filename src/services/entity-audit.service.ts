@@ -21,6 +21,7 @@ import type {
   AuditAction,
   AuditFieldChange,
 } from '@/types/audit-trail';
+import { flattenForTracking } from '@/config/audit-tracked-fields';
 
 const logger = createModuleLogger('EntityAuditService');
 
@@ -105,6 +106,7 @@ export class EntityAuditService {
 
   /**
    * Compute field-level diffs between old and new document states.
+   * Supports dot-notation fields (e.g. 'commercial.askingPrice').
    *
    * @param oldDoc - Document state before update
    * @param newDoc - Fields being updated (partial)
@@ -116,14 +118,18 @@ export class EntityAuditService {
     newDoc: Record<string, unknown>,
     trackedFields: Record<string, string>,
   ): AuditFieldChange[] {
+    // Flatten both docs for dot-notation support
+    const flatOld = flattenForTracking(oldDoc, trackedFields);
+    const flatNew = flattenForTracking(newDoc, trackedFields);
+
     const changes: AuditFieldChange[] = [];
 
     for (const [field, label] of Object.entries(trackedFields)) {
       // Only process fields present in the update payload
-      if (!(field in newDoc)) continue;
+      if (!(field in flatNew)) continue;
 
-      const oldValue = oldDoc[field] ?? null;
-      const newValue = newDoc[field] ?? null;
+      const oldValue = flatOld[field] ?? null;
+      const newValue = flatNew[field] ?? null;
 
       // Normalize to comparable primitives
       const oldStr = serializeValue(oldValue);
@@ -140,6 +146,47 @@ export class EntityAuditService {
     }
 
     return changes;
+  }
+
+  /**
+   * Compute field-level diffs with async ID→name resolution.
+   * Use this when tracked fields contain IDs that need human-readable names
+   * (e.g. buildingId → "ΚΤΙΡΙΟ Α").
+   *
+   * @param oldDoc - Document state before update
+   * @param newDoc - Fields being updated (partial)
+   * @param trackedFields - Map of field name → human-readable label
+   * @param resolvers - Map of field name → async function that resolves an ID to a display name
+   * @returns Array of field changes with resolved names
+   */
+  static async diffFieldsWithResolution(
+    oldDoc: Record<string, unknown>,
+    newDoc: Record<string, unknown>,
+    trackedFields: Record<string, string>,
+    resolvers: Record<string, (id: unknown) => Promise<string | null>>,
+  ): Promise<AuditFieldChange[]> {
+    const changes = this.diffFields(oldDoc, newDoc, trackedFields);
+
+    // Resolve IDs to names for fields that have resolvers
+    const resolved = await Promise.all(
+      changes.map(async (change) => {
+        const resolver = resolvers[change.field];
+        if (!resolver) return change;
+
+        const [oldName, newName] = await Promise.all([
+          change.oldValue ? resolver(change.oldValue).catch(() => null) : Promise.resolve(null),
+          change.newValue ? resolver(change.newValue).catch(() => null) : Promise.resolve(null),
+        ]);
+
+        return {
+          ...change,
+          oldValue: oldName ?? change.oldValue,
+          newValue: newName ?? change.newValue,
+        };
+      }),
+    );
+
+    return resolved;
   }
 }
 

@@ -207,8 +207,18 @@ export function ProfessionalsCard({
         setEditingRole(null);
         toast.success(t('sales.legal.professionalAssigned', { defaultValue: 'Ανατέθηκε επιτυχώς' }));
 
-        // Ask user whether to send email notification
+        // Audit trail: professional assigned
         const roleLabel = getRoleLabel(role);
+        fetch(`/api/units/${unitId}/activity`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'professional_assigned',
+            changes: [{ field: 'professional', oldValue: null, newValue: contact.name, label: roleLabel }],
+          }),
+        }).catch(() => {});
+
+        // Ask user whether to send email notification
         setPendingEmail({
           contactId: contact.id,
           contactName: contact.name,
@@ -297,8 +307,18 @@ export function ProfessionalsCard({
 
         toast.success(t('sales.legal.professionalRemoved', { defaultValue: 'Αφαιρέθηκε' }));
 
-        // Ask user whether to send removal email
+        // Audit trail: professional removed
         const roleLabel = getRoleLabel(role);
+        fetch(`/api/units/${unitId}/activity`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'professional_removed',
+            changes: [{ field: 'professional', oldValue: contactName, newValue: null, label: roleLabel }],
+          }),
+        }).catch(() => {});
+
+        // Ask user whether to send removal email
         setPendingEmail({
           contactId,
           contactName,

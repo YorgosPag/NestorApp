@@ -190,6 +190,26 @@ export class AssociationService {
         timestamp: Date.now(),
       });
 
+      // 📜 Audit trail: contact linked (fire-and-forget)
+      if (targetEntityType && targetEntityId) {
+        fetch('/api/audit-trail/record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            entityType: targetEntityType,
+            entityId: targetEntityId,
+            entityName: null,
+            action: 'linked',
+            changes: [{
+              field: 'contact_link',
+              oldValue: null,
+              newValue: sourceContactId,
+              label: `Σύνδεση (${role ?? 'γενική'})`,
+            }],
+          }),
+        }).catch(() => {});
+      }
+
       return {
         success: true,
         linkId,
@@ -534,6 +554,26 @@ export class AssociationService {
         linkId,
         timestamp: Date.now(),
       });
+
+      // 📜 Audit trail: contact unlinked (fire-and-forget)
+      if (linkData.targetEntityType && linkData.targetEntityId) {
+        fetch('/api/audit-trail/record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            entityType: linkData.targetEntityType,
+            entityId: linkData.targetEntityId,
+            entityName: null,
+            action: 'unlinked',
+            changes: [{
+              field: 'contact_link',
+              oldValue: linkData.sourceContactId,
+              newValue: null,
+              label: `Αποσύνδεση (${linkData.role ?? 'γενική'})`,
+            }],
+          }),
+        }).catch(() => {});
+      }
 
       return {
         success: true,

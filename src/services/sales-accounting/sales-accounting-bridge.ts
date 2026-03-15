@@ -15,6 +15,7 @@ import { createAccountingServices } from '@/subapps/accounting/services/create-a
 import { getCategoryByCode } from '@/subapps/accounting/config/account-categories';
 import { generateTransactionId } from '@/services/enterprise-id.service';
 import { notifyAccountingOffice, notifyBuyerReservation, notifyBuyerCancellation, notifyBuyerSale } from './accounting-notification';
+import { EntityAuditService } from '@/services/entity-audit.service';
 import type { CreateInvoiceInput } from '@/subapps/accounting/types/invoice';
 import type { InvoiceIssuer, InvoiceCustomer } from '@/subapps/accounting/types/invoice';
 import type { MyDataIncomeType } from '@/subapps/accounting/types/common';
@@ -303,6 +304,25 @@ export class SalesAccountingBridge {
       // 3. Ενημέρωση unit.commercial.transactionChainId
       await this.updateUnitTransactionChain(unitId, transactionChainId);
 
+      // 4. Audit trail: invoice created
+      const invoiceTypeLabel = invoiceInput.type === 'credit_invoice' ? 'Πιστωτικό' : 'Τιμολόγιο';
+      const companyId = await this.resolveUnitCompanyId(unitId);
+      EntityAuditService.recordChange({
+        entityType: 'unit',
+        entityId: unitId,
+        entityName: null,
+        action: 'invoice_created',
+        changes: [{
+          field: 'invoice',
+          oldValue: null,
+          newValue: `${invoiceTypeLabel} ${invoiceNumber}`,
+          label: 'Παραστατικό',
+        }],
+        performedBy: 'system',
+        performedByName: 'Σύστημα',
+        companyId: companyId ?? 'unknown',
+      }).catch(() => {});
+
       return {
         success: true,
         invoiceId,
@@ -316,6 +336,16 @@ export class SalesAccountingBridge {
       console.error(`[SalesAccountingBridge] Error for unit ${unitId}:`, message);
       return this.errorResult(unitId, message);
     }
+  }
+
+  /**
+   * Resolve unit's companyId for audit trail
+   */
+  private async resolveUnitCompanyId(unitId: string): Promise<string | null> {
+    return safeFirestoreOperation(async (db) => {
+      const snap = await db.collection(COLLECTIONS.UNITS).doc(unitId).get();
+      return snap.exists ? (snap.data()?.companyId as string) ?? null : null;
+    }, null);
   }
 
   /**

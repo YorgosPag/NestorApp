@@ -22,6 +22,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { buildProfessionalAssignmentEmail, buildProfessionalRemovalEmail } from '@/services/email-templates/professional-assignment';
 import { sendReplyViaMailgun } from '@/services/ai-pipeline/shared/mailgun-sender';
 import { createModuleLogger } from '@/lib/telemetry';
+import { EntityAuditService } from '@/services/entity-audit.service';
 
 const logger = createModuleLogger('api/notifications/professional-assigned');
 
@@ -330,6 +331,23 @@ async function handleAssignmentNotification(
     logger.info('Professional assignment email sent', {
       contactId, email, role, unitId, messageId: result.messageId,
     });
+
+    // Audit trail: email sent
+    EntityAuditService.recordChange({
+      entityType: 'unit',
+      entityId: unitId,
+      entityName: hierarchy.unitName,
+      action: 'email_sent',
+      changes: [{
+        field: 'notification',
+        oldValue: null,
+        newValue: `${isRemoval ? 'Ακύρωση' : 'Ανάθεση'}: ${displayName} (${roleName})`,
+        label: isRemoval ? 'Email ακύρωσης' : 'Email ανάθεσης',
+      }],
+      performedBy: ctx.uid,
+      performedByName: ctx.email ?? null,
+      companyId: ctx.companyId,
+    }).catch(() => {});
 
     return NextResponse.json({ success: true, emailSent: true });
   } catch (error) {

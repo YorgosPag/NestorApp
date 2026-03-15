@@ -17,6 +17,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { UNIT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
 import { propagateUnitBuildingLink } from '@/lib/firestore/cascade-propagation.service';
 import { createDefaultPersonaData, findActivePersona } from '@/types/contacts/personas';
@@ -26,38 +27,6 @@ import type { Contact } from '@/types/contacts/contracts';
 import type { CommercialTransactionType } from '@/types/contacts/helpers';
 
 const logger = createModuleLogger('UnitIdRoute');
-
-// ============================================================================
-// AUDIT TRAIL — Tracked Fields
-// ============================================================================
-
-/** Fields tracked for entity audit trail (field → human label) */
-const UNIT_TRACKED_FIELDS: Record<string, string> = {
-  // Core fields
-  name: 'Όνομα',
-  type: 'Τύπος',
-  status: 'Κατάσταση',
-  floor: 'Όροφος',
-  area: 'Εμβαδόν',
-  price: 'Τιμή',
-  description: 'Περιγραφή',
-  buildingId: 'Κτίριο',
-  projectId: 'Έργο',
-  companyId: 'Εταιρεία',
-  // Extended fields (from UnitFieldsBlock)
-  layout: 'Διαρρύθμιση',
-  areas: 'Εμβαδά',
-  orientations: 'Προσανατολισμοί',
-  condition: 'Κατάσταση ακινήτου',
-  energy: 'Ενεργειακή κλάση',
-  finishes: 'Φινιρίσματα',
-  interiorFeatures: 'Εσωτερικά χαρακτηριστικά',
-  securityFeatures: 'Χαρακτηριστικά ασφαλείας',
-  systemsOverride: 'Εγκαταστάσεις (Θέρμανση/Ψύξη)',
-  // Commercial fields (ADR-197 §2.9)
-  commercialStatus: 'Εμπορική κατάσταση',
-  commercial: 'Εμπορικά στοιχεία',
-};
 
 /** Fields that are NEVER writable via PATCH (security) */
 const FORBIDDEN_FIELDS: ReadonlySet<string> = new Set([
@@ -220,8 +189,19 @@ export const PATCH = withStandardRateLimit(
         if (typeof updateData.floor === 'string') updateData.floor = (updateData.floor as string).trim() || null;
         if (typeof updateData.description === 'string') updateData.description = (updateData.description as string).trim() || null;
 
-        // Compute field-level diffs BEFORE the update
-        const auditChanges = EntityAuditService.diffFields(existing, updateData, UNIT_TRACKED_FIELDS);
+        // Compute field-level diffs BEFORE the update (with ID→name resolution)
+        const auditChanges = await EntityAuditService.diffFieldsWithResolution(
+          existing,
+          updateData,
+          UNIT_TRACKED_FIELDS,
+          {
+            buildingId: async (id) => {
+              if (!id || typeof id !== 'string') return null;
+              const bldgSnap = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(id).get();
+              return bldgSnap.exists ? (bldgSnap.data()?.name as string) ?? null : null;
+            },
+          },
+        );
 
         await docRef.update(updateData);
 

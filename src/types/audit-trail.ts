@@ -28,7 +28,11 @@ export type AuditAction =
   | 'deleted'
   | 'status_changed'
   | 'linked'
-  | 'unlinked';
+  | 'unlinked'
+  | 'professional_assigned'
+  | 'professional_removed'
+  | 'email_sent'
+  | 'invoice_created';
 
 // ============================================================================
 // FIELD-LEVEL DIFF
