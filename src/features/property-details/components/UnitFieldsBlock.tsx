@@ -306,9 +306,17 @@ export function UnitFieldsBlock({
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (errorMessage.includes('permission') || errorMessage.includes('PERMISSION_DENIED')) {
-        notifyError(t('save.permissionDenied', 'Δεν έχετε δικαίωμα επεξεργασίας αυτής της μονάδας'));
+        notifyError(t('save.permissionDenied', { defaultValue: 'Δεν έχετε δικαίωμα επεξεργασίας αυτής της μονάδας' }));
+      } else if (errorMessage.includes('asking price')) {
+        notifyError(t('save.askingPriceRequired', { defaultValue: 'Απαιτείται τιμή πώλησης πριν την κράτηση ή πώληση. Ορίστε τιμή μέσω "Αλλαγή Τιμής" στις Πωλήσεις.' }));
+      } else if (errorMessage.includes('Buyer contact')) {
+        notifyError(t('save.buyerRequired', { defaultValue: 'Απαιτείται επιλογή αγοραστή πριν την κράτηση ή πώληση.' }));
+      } else if (errorMessage.includes('not linked to a building')) {
+        notifyError(t('save.buildingRequired', { defaultValue: 'Η μονάδα πρέπει να ανήκει σε κτίριο πριν την κράτηση ή πώληση.' }));
+      } else if (errorMessage.includes('area')) {
+        notifyError(t('save.areaRequired', { defaultValue: 'Η μονάδα πρέπει να έχει εμβαδόν πριν την κράτηση ή πώληση.' }));
       } else {
-        notifyError(t('save.error', 'Σφάλμα κατά την αποθήκευση'));
+        notifyError(t('save.error', { defaultValue: 'Σφάλμα κατά την αποθήκευση' }));
       }
       logger.error('UnitFieldsBlock save error:', { error });
     } finally {
