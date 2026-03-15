@@ -101,10 +101,6 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
           <tr>
             <td style="background-color:${BRAND.navy};padding:24px 32px;text-align:center;">
               <img src="${companyLogoUrl}" alt="${companyName ?? appName}" width="160" height="160" style="display:block;margin:0 auto;max-width:160px;height:auto;border-radius:12px;" />
-              ${companyName ? `
-              <p style="margin:12px 0 0;font-size:14px;color:rgba(255,255,255,0.7);letter-spacing:1px;">
-                ${escapeHtml(companyName).toUpperCase()}
-              </p>` : ''}
             </td>
           </tr>
 

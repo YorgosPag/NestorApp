@@ -136,9 +136,31 @@ async function resolveUnitHierarchy(unitId: string): Promise<UnitHierarchy | nul
               result.companyEmail = extractPrimaryEmail(companyData);
               result.companyAddress = extractPrimaryAddress(companyData);
               result.companyWebsite = extractPrimaryWebsite(companyData);
+
+              logger.info('Company data resolved', {
+                companyId,
+                companyName: result.companyName,
+                hasPhones: Array.isArray(companyData.phones),
+                phonesCount: Array.isArray(companyData.phones) ? (companyData.phones as unknown[]).length : 0,
+                hasEmails: Array.isArray(companyData.emails),
+                hasAddresses: Array.isArray(companyData.addresses),
+                hasWebsites: Array.isArray(companyData.websites),
+                resolvedPhone: result.companyPhone,
+                resolvedEmail: result.companyEmail,
+                resolvedAddress: result.companyAddress,
+                // Also check legacy flat fields
+                legacyPhone: companyData.phone as string | undefined,
+                legacyEmail: companyData.email as string | undefined,
+                legacyAddress: companyData.address as string | undefined,
+                // Check contactInfo nested
+                hasContactInfo: !!companyData.contactInfo,
+              });
             }
           } else {
             result.companyName = (projectData.company as string) ?? null;
+            logger.info('No companyId on project, using company name', {
+              company: result.companyName,
+            });
           }
         }
       }
