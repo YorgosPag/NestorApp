@@ -117,7 +117,8 @@ export function useLegalContracts(unitId: string | null, projectId?: string): Us
         }
       );
       if (data.success) {
-        await fetchContracts();
+        // Refetch contracts — don't let refetch failure mask successful creation
+        fetchContracts().catch(() => {});
       }
       return { success: data.success, error: data.error };
     } catch (err) {
