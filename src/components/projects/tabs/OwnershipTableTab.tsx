@@ -144,7 +144,7 @@ function categoryLabel(cat: string, t: (key: string) => string): string {
 export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
   const resolvedProjectId = projectId ?? data.id;
   const { t } = useTranslation();
-  const { showSuccess, showError } = useNotifications();
+  const { success: showSuccess, error: showError } = useNotifications();
 
   // Building IDs from project structure (fetch from sub-documents)
   const [buildingIds] = useState<string[]>(() => []);
