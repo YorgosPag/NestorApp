@@ -446,6 +446,21 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
   const unitLevel = agreements.filter((a) => a.scope === 'unit');
   const unitNameMap = new Map(units.map((u) => [u.id, u.name]));
 
+  /** Resolve unit IDs → human-readable names in validation message params */
+  function resolveUnitNames(params: Record<string, string>): Record<string, string> {
+    const resolved = { ...params };
+    if (resolved.unitName && unitNameMap.has(resolved.unitName)) {
+      resolved.unitName = unitNameMap.get(resolved.unitName) ?? resolved.unitName;
+    }
+    if (resolved.unitNames) {
+      resolved.unitNames = resolved.unitNames
+        .split(', ')
+        .map((id) => unitNameMap.get(id) ?? id)
+        .join(', ');
+    }
+    return resolved;
+  }
+
   return (
     <section className="space-y-4">
       {/* Header */}
@@ -500,7 +515,11 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
                     ? <ShieldAlert className={`${iconSizes.sm} mt-0.5 shrink-0`} />
                     : <AlertTriangle className={`${iconSizes.sm} mt-0.5 shrink-0`} />
                   }
-                  <span>{t(issue.messageKey, issue.messageParams).replace(/\{\{(\w+)\}\}/g, (_, key) => issue.messageParams[key] ?? '')}</span>
+                  <span>{(() => {
+                    const resolved = resolveUnitNames(issue.messageParams);
+                    return t(issue.messageKey, resolved)
+                      .replace(/\{\{(\w+)\}\}/g, (_, key) => resolved[key] ?? '');
+                  })()}</span>
                 </li>
               ))}
             </ul>
