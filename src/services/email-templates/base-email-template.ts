@@ -118,26 +118,22 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
             </td>
           </tr>
 
-          <!-- FOOTER — Company contact details -->
+          <!-- FOOTER — Company contact details (no company name title — already in body) -->
+          ${contactLines.length > 0 ? `
           <tr>
             <td style="padding:20px 32px 16px;text-align:center;">
-              ${companyName ? `
-              <p style="margin:0 0 8px;font-size:14px;font-weight:700;color:${BRAND.navyDark};">
-                ${escapeHtml(companyName)}
-              </p>` : ''}
               ${contactLines.map(line =>
                 `<p style="margin:0;font-size:12px;color:${BRAND.gray};line-height:1.8;">${escapeHtml(line)}</p>`
               ).join('\n              ')}
             </td>
-          </tr>
+          </tr>` : ''}
 
-          <!-- APP BRANDING — Nestor App logo + copyright -->
+          <!-- APP BRANDING — Nestor App text-only copyright -->
           <tr>
             <td style="padding:8px 32px 20px;text-align:center;border-top:1px solid ${BRAND.border};">
-              <img src="${appLogoUrl}" alt="${appName}" width="32" height="32" style="display:inline-block;vertical-align:middle;max-width:32px;height:auto;border-radius:6px;margin-right:6px;" />
-              <span style="font-size:11px;color:${BRAND.grayLight};vertical-align:middle;">
+              <p style="margin:0;font-size:11px;color:${BRAND.grayLight};">
                 &copy; ${new Date().getFullYear()} ${appName}. All rights reserved.
-              </span>
+              </p>
             </td>
           </tr>
 
