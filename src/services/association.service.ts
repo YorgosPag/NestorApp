@@ -112,8 +112,8 @@ export class AssociationService {
         };
       }
 
-      // Generate link ID
-      const linkId = this.generateContactLinkId(sourceContactId, targetEntityType, targetEntityId);
+      // Generate link ID (includes role for multi-role support per contact-entity pair)
+      const linkId = this.generateContactLinkId(sourceContactId, targetEntityType, targetEntityId, role);
 
       // Check if link already exists
       const existing = await this.getContactLinkById(linkId);
@@ -654,9 +654,11 @@ export class AssociationService {
   private static generateContactLinkId(
     contactId: string,
     targetEntityType?: string,
-    targetEntityId?: string
+    targetEntityId?: string,
+    role?: string
   ): string {
-    return `cl_${contactId}_${targetEntityType}_${targetEntityId}`;
+    const base = `cl_${contactId}_${targetEntityType}_${targetEntityId}`;
+    return role ? `${base}_${role}` : base;
   }
 
   /**
