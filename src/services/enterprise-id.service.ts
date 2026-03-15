@@ -138,6 +138,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   PIPELINE_AUDIT: 'paud',
   ENTITY_AUDIT: 'eaud',
   CONTRACT: 'lc',
+  PIPELINE_QUEUE: 'pq',
 
   // ==========================================================================
   // OPTIMISTIC & TEMPORARY
@@ -860,6 +861,14 @@ export class EnterpriseIdService {
     return this.generateId(ENTERPRISE_ID_PREFIXES.CONTRACT).id;
   }
 
+  /**
+   * 📬 Generate Pipeline Queue Item ID
+   * Format: pq_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generatePipelineQueueId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.PIPELINE_QUEUE).id;
+  }
+
   // ==========================================================================
   // UTILITY METHODS
   // ==========================================================================
@@ -1056,6 +1065,7 @@ export const generateFeedbackId = () => enterpriseIdService.generateFeedbackId()
 export const generatePipelineAuditId = () => enterpriseIdService.generatePipelineAuditId();
 export const generateEntityAuditId = () => enterpriseIdService.generateEntityAuditId();
 export const generateContractId = () => enterpriseIdService.generateContractId();
+export const generatePipelineQueueId = () => enterpriseIdService.generatePipelineQueueId();
 
 // =============================================================================
 // FILE & MEDIA OPERATIONS

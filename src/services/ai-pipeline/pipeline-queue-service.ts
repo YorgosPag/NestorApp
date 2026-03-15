@@ -18,6 +18,7 @@
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { PIPELINE_QUEUE_CONFIG, PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
+import { generatePipelineQueueId } from '@/services/enterprise-id.service';
 import { FieldValue } from 'firebase-admin/firestore';
 import type {
   PipelineQueueItem,
@@ -118,9 +119,10 @@ export async function enqueuePipelineItem(
     }
 
     // Not found — create atomically within the same transaction
-    const newDocRef = adminDb.collection(COLLECTIONS.AI_PIPELINE_QUEUE).doc();
+    const queueId = generatePipelineQueueId();
+    const newDocRef = adminDb.collection(COLLECTIONS.AI_PIPELINE_QUEUE).doc(queueId);
     tx.set(newDocRef, queueItem);
-    return { queueId: newDocRef.id, requestId };
+    return { queueId, requestId };
   });
 
   return result;
