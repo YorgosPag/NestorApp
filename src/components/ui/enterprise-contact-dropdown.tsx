@@ -144,8 +144,8 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
   }, [onContactSelect]);
 
   // Handle clear selection
-  const clearSelection = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
+  const clearSelection = useCallback((e?: React.MouseEvent | React.KeyboardEvent) => {
+    e?.stopPropagation();
     onContactSelect(null);
     setSearchQuery('');
   }, [onContactSelect]);
