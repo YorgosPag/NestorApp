@@ -321,6 +321,24 @@
       "spreadSaved": "Το spread αποθηκεύτηκε!"
     }
   },
+  "report": {
+    "title": "Αναφορά Πληρωμών",
+    "button": "Αναφορά",
+    "exportExcel": "Εξαγωγή Excel",
+    "totalWithPlan": "Με Πρόγραμμα",
+    "totalWithoutPlan": "Χωρίς Πρόγραμμα",
+    "totalOverdue": "Ληξιπρόθεσμες",
+    "generatedAt": "Ημ/νία αναφοράς",
+    "noData": "Δεν υπάρχουν δεδομένα.",
+    "colUnit": "Μονάδα",
+    "colBuilding": "Κτίριο",
+    "colBuyer": "Αγοραστής"
+  },
+  "alerts": {
+    "overdueTitle": "Ληξιπρόθεσμη Δόση",
+    "overdueBody": "Μονάδα {unit}: {count} ληξιπρόθεσμες δόσεις ({amount})",
+    "overdueCount": "{count} ληξιπρόθεσμες"
+  },
   "errors": {
     "noBuyer": "Δεν υπάρχει αγοραστής",
     "noProject": "Η μονάδα δεν ανήκει σε έργο",

@@ -321,6 +321,24 @@
       "spreadSaved": "Spread saved!"
     }
   },
+  "report": {
+    "title": "Payment Report",
+    "button": "Report",
+    "exportExcel": "Export to Excel",
+    "totalWithPlan": "With Plan",
+    "totalWithoutPlan": "Without Plan",
+    "totalOverdue": "Overdue",
+    "generatedAt": "Report date",
+    "noData": "No data available.",
+    "colUnit": "Unit",
+    "colBuilding": "Building",
+    "colBuyer": "Buyer"
+  },
+  "alerts": {
+    "overdueTitle": "Overdue Installment",
+    "overdueBody": "Unit {unit}: {count} overdue installments ({amount})",
+    "overdueCount": "{count} overdue"
+  },
   "errors": {
     "noBuyer": "No buyer assigned",
     "noProject": "Unit is not assigned to a project",

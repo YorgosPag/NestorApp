@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { CreditCard, Plus, Loader2 } from 'lucide-react';
+import { CreditCard, Plus, Loader2, FileSpreadsheet } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePaymentPlan } from '@/hooks/usePaymentPlan';
 import { PaymentPlanOverview } from '@/components/sales/payments/PaymentPlanOverview';
@@ -18,6 +18,7 @@ import { LoanTrackingSection } from '@/components/sales/payments/LoanTrackingSec
 import { ChequeRegistrySection } from '@/components/sales/payments/ChequeRegistrySection';
 import { InterestCostSection } from '@/components/sales/payments/InterestCostSection';
 import { CreatePaymentPlanWizard } from '@/components/sales/payments/CreatePaymentPlanWizard';
+import { PaymentReportDialog } from '@/components/sales/payments/PaymentReportDialog';
 import { Button } from '@/components/ui/button';
 import type { Unit } from '@/types/unit';
 
@@ -41,6 +42,7 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
 
   const [wizardOpen, setWizardOpen] = useState(false);
   const [payDialogOpen, setPayDialogOpen] = useState(false);
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [selectedInstallmentIdx, setSelectedInstallmentIdx] = useState(0);
 
   const handlePayInstallment = useCallback((index: number) => {
@@ -124,11 +126,24 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
   return (
     <section className="space-y-4 p-3">
       {/* Header */}
-      <header className="flex items-center gap-2">
-        <CreditCard className="h-4 w-4 text-muted-foreground" />
-        <h2 className="text-sm font-semibold">
-          {t('title', { defaultValue: 'Πληρωμές' })}
-        </h2>
+      <header className="flex items-center justify-between">
+        <span className="flex items-center gap-2">
+          <CreditCard className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold">
+            {t('title', { defaultValue: 'Πληρωμές' })}
+          </h2>
+        </span>
+        {resolvedProjectId && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1 text-xs h-7"
+            onClick={() => setReportDialogOpen(true)}
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5" />
+            {t('report.button', { defaultValue: 'Αναφορά' })}
+          </Button>
+        )}
       </header>
 
       {/* Overview */}
@@ -167,6 +182,15 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
           installment={selectedInstallment}
           paymentPlanId={plan.id}
           onRecord={recordPayment}
+        />
+      )}
+
+      {/* Payment Report Dialog (Phase 5 — ADR-234) */}
+      {resolvedProjectId && (
+        <PaymentReportDialog
+          open={reportDialogOpen}
+          onOpenChange={setReportDialogOpen}
+          projectId={resolvedProjectId}
         />
       )}
     </section>
