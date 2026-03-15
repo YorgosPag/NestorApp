@@ -71,7 +71,7 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
 
   const baseUrl = getAppBaseUrl();
   const companyLogoUrl = `${baseUrl}/images/pagonis-energo-logo.png`;
-  const appLogoUrl = `${baseUrl}/images/nestor-app-logo.png`;
+  const appLogoUrl = `${baseUrl}/images/nestor-app-logo.jpg`;
   const appName = 'Nestor App';
 
   // Footer contact lines — from real company data in Firestore
@@ -128,12 +128,13 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
             </td>
           </tr>` : ''}
 
-          <!-- APP BRANDING — Nestor App text-only copyright -->
+          <!-- APP BRANDING — Nestor App logo + copyright -->
           <tr>
-            <td style="padding:8px 32px 20px;text-align:center;border-top:1px solid ${BRAND.border};">
-              <p style="margin:0;font-size:11px;color:${BRAND.grayLight};">
+            <td style="padding:12px 32px 20px;text-align:center;border-top:1px solid ${BRAND.border};">
+              <img src="${appLogoUrl}" alt="${appName}" width="28" height="28" style="display:inline-block;vertical-align:middle;max-width:28px;height:auto;border-radius:5px;margin-right:8px;" />
+              <span style="font-size:11px;color:${BRAND.grayLight};vertical-align:middle;">
                 &copy; ${new Date().getFullYear()} ${appName}. All rights reserved.
-              </p>
+              </span>
             </td>
           </tr>
 
