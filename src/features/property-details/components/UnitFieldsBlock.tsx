@@ -58,6 +58,9 @@ import type {
   SecurityFeatureCodeType
 } from '@/constants/unit-features-enterprise';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useEntityCodeSuggestion } from '@/hooks/useEntityCodeSuggestion';
+import { isValidEntityCodeFormat } from '@/services/entity-code.service';
+import type { UnitType as UnitTypeImport } from '@/types/unit';
 const logger = createModuleLogger('UnitFieldsBlock');
 
 // =============================================================================
@@ -156,6 +159,16 @@ export function UnitFieldsBlock({
   const [localEditing, setLocalEditing] = useState(false);
   const isEditing = isEditMode || localEditing;
   const [isSaving, setIsSaving] = useState(false);
+  const [codeOverridden, setCodeOverridden] = useState(!!property.code);
+
+  // ADR-233: Auto-suggest entity code when code is empty and editing
+  const { suggestedCode, isLoading: codeLoading } = useEntityCodeSuggestion({
+    entityType: 'unit',
+    buildingId: property.buildingId ?? '',
+    floorLevel: property.floor ?? 0,
+    unitType: (property.type as UnitTypeImport) || undefined,
+    disabled: codeOverridden || !isEditing,
+  });
 
   const [formData, setFormData] = useState({
     name: property.name ?? '',
@@ -214,6 +227,13 @@ export function UnitFieldsBlock({
       securityFeatures: property.securityFeatures ?? [],
     }));
   }, [property]);
+
+  // ADR-233: Auto-populate code when suggestion arrives and code is empty
+  useEffect(() => {
+    if (suggestedCode && !codeOverridden && !formData.code && isEditing) {
+      setFormData(prev => ({ ...prev, code: suggestedCode }));
+    }
+  }, [suggestedCode, codeOverridden, formData.code, isEditing]);
 
   // ── Build updates from form data ──
   const buildUpdatesFromForm = useCallback((): Partial<Property> => {
@@ -408,11 +428,26 @@ export function UnitFieldsBlock({
               <Input
                 id="unit-code"
                 value={formData.code}
-                onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value }))}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, code: e.target.value }));
+                  if (!codeOverridden && e.target.value !== suggestedCode) {
+                    setCodeOverridden(true);
+                  }
+                  if (!e.target.value) setCodeOverridden(false);
+                }}
                 className={cn('h-7 text-xs', quick.input)}
-                placeholder={t('fields.identity.codePlaceholder', { defaultValue: 'π.χ. A-DI-1.01' })}
+                placeholder={suggestedCode || t('fields.identity.codePlaceholder', { defaultValue: 'π.χ. A-DI-1.01' })}
                 disabled={!isEditing}
               />
+              {codeLoading && isEditing && (
+                <p className="text-xs text-muted-foreground">{t('entityCode.loading', { defaultValue: 'Υπολογισμός κωδικού...' })}</p>
+              )}
+              {suggestedCode && codeOverridden && formData.code !== suggestedCode && isEditing && (
+                <p className="text-xs text-muted-foreground">{t('entityCode.suggested', { code: suggestedCode, defaultValue: `Προτεινόμενος: ${suggestedCode}` })}</p>
+              )}
+              {formData.code && !isValidEntityCodeFormat(formData.code) && isEditing && (
+                <p className="text-xs text-amber-600">{t('entityCode.formatWarning', { defaultValue: 'Ο κωδικός δεν ακολουθεί το πρότυπο format' })}</p>
+              )}
             </fieldset>
             <fieldset className="space-y-1">
               <Label className="text-xs text-muted-foreground">
