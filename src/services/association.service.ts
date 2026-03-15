@@ -113,74 +113,48 @@ export class AssociationService {
       }
 
       // ================================================================
-      // QUERY-BASED duplicate detection (format-agnostic)
-      // Uses existing composite index (targetEntityType + targetEntityId + status)
-      // then filters by contactId client-side to avoid needing a 4-field index.
+      // DUPLICATE DETECTION — Direct document reads only
+      // No Firestore queries needed → no composite indexes required.
+      // Checks both canonical format (cl_X_unit_Y_role) and legacy (cl_X_unit_Y).
       // ================================================================
-      const entityLinks = await this.listContactLinks({
-        targetEntityType,
-        targetEntityId,
-        status: 'active',
-      });
-      const contactActiveLinks = entityLinks.filter((l) => l.sourceContactId === sourceContactId);
+      const linkId = this.generateContactLinkId(sourceContactId, targetEntityType, targetEntityId, role);
+      const legacyId = `cl_${sourceContactId}_${targetEntityType}_${targetEntityId}`;
 
-      // Check if an active link with the SAME role already exists
-      const duplicateLink = contactActiveLinks.find((l) => l.role === role);
-      if (duplicateLink) {
-        logger.info(`✅ [AssociationService] Active link already exists for role=${role}: ${duplicateLink.id}`);
-        return {
-          success: true,
-          linkId: duplicateLink.id,
-          message: 'Link already exists',
-        };
+      const [canonicalDoc, legacyDoc] = await Promise.all([
+        this.getContactLinkById(linkId),
+        linkId !== legacyId ? this.getContactLinkById(legacyId) : Promise.resolve(null),
+      ]);
+
+      // 1. Canonical link active → idempotent return
+      if (canonicalDoc?.status === 'active') {
+        return { success: true, linkId, message: 'Link already exists' };
       }
 
-      // Check for inactive link with same role — reactivate instead of creating new
-      const allEntityLinks = await this.listContactLinks({
-        targetEntityType,
-        targetEntityId,
-      });
-      const inactiveMatch = allEntityLinks.find(
-        (l) => l.sourceContactId === sourceContactId && l.role === role && l.status === 'inactive'
-      );
+      // 2. Legacy link active with same role → idempotent return
+      if (legacyDoc?.status === 'active' && legacyDoc.role === role) {
+        return { success: true, linkId: legacyId, message: 'Link already exists' };
+      }
 
-      if (inactiveMatch) {
-        const linkRef = doc(db, COLLECTIONS.CONTACT_LINKS, inactiveMatch.id);
-        await updateDoc(linkRef, {
-          status: 'active',
-          updatedBy: createdBy,
-          updatedAt: serverTimestamp(),
-        });
-        logger.info(`♻️ [AssociationService] Reactivated contact link: ${inactiveMatch.id}`);
+      // 3. Canonical link inactive → reactivate
+      if (canonicalDoc?.status === 'inactive') {
+        const ref = doc(db, COLLECTIONS.CONTACT_LINKS, linkId);
+        await updateDoc(ref, { status: 'active', updatedBy: createdBy, updatedAt: serverTimestamp() });
+        logger.info(`♻️ [AssociationService] Reactivated: ${linkId}`);
 
         RealtimeService.dispatch('CONTACT_LINK_CREATED', {
-          linkId: inactiveMatch.id,
+          linkId,
           link: { sourceContactId, sourceWorkspaceId, targetEntityType, targetEntityId, targetWorkspaceId },
           timestamp: Date.now(),
         });
-
-        return {
-          success: true,
-          linkId: inactiveMatch.id,
-          message: 'Contact link reactivated',
-        };
+        return { success: true, linkId, message: 'Contact link reactivated' };
       }
 
-      // Cleanup: deactivate orphaned old-format links (no role in ID)
-      const oldFormatId = `cl_${sourceContactId}_${targetEntityType}_${targetEntityId}`;
-      const orphanedLinks = contactActiveLinks.filter(
-        (l) => l.id === oldFormatId || !l.role
-      );
-      for (const orphan of orphanedLinks) {
-        const orphanRef = doc(db, COLLECTIONS.CONTACT_LINKS, orphan.id);
-        await updateDoc(orphanRef, { status: 'inactive', updatedBy: createdBy, updatedAt: serverTimestamp() });
-        logger.info(`🧹 [AssociationService] Cleaned up orphaned link: ${orphan.id}`);
+      // 4. Legacy link active without role → orphan cleanup
+      if (legacyDoc?.status === 'active' && !legacyDoc.role) {
+        const ref = doc(db, COLLECTIONS.CONTACT_LINKS, legacyId);
+        await updateDoc(ref, { status: 'inactive', updatedBy: createdBy, updatedAt: serverTimestamp() });
+        logger.info(`🧹 [AssociationService] Cleaned up orphan: ${legacyId}`);
       }
-
-      // ================================================================
-      // Create new link with canonical ID (includes role)
-      // ================================================================
-      const linkId = this.generateContactLinkId(sourceContactId, targetEntityType, targetEntityId, role);
 
       const contactLink: ContactLink = {
         id: linkId,
@@ -537,25 +511,22 @@ export class AssociationService {
 
       logger.info(`[AssociationService] Deactivated contact link: ${linkId}`);
 
-      // ================================================================
-      // Cleanup: deactivate ALL active links for the same contact+entity+role
-      // Catches old-format orphans (cl_X_unit_Y) that duplicate this link
-      // ================================================================
-      if (linkData.sourceContactId && linkData.targetEntityType && linkData.targetEntityId) {
-        const entityLinks = await this.listContactLinks({
-          targetEntityType: linkData.targetEntityType,
-          targetEntityId: linkData.targetEntityId,
-          status: 'active',
-        });
-
-        const orphans = entityLinks.filter(
-          (l) => l.id !== linkId && l.sourceContactId === linkData.sourceContactId && l.role === linkData.role
+      // Cleanup: deactivate sibling with opposite ID format (legacy ↔ canonical)
+      if (linkData.sourceContactId && linkData.targetEntityType && linkData.targetEntityId && linkData.role) {
+        const canonicalId = AssociationService.generateContactLinkId(
+          linkData.sourceContactId, linkData.targetEntityType, linkData.targetEntityId, linkData.role
         );
+        const legacyId = `cl_${linkData.sourceContactId}_${linkData.targetEntityType}_${linkData.targetEntityId}`;
+        const siblingId = linkId === canonicalId ? legacyId : canonicalId;
 
-        for (const orphan of orphans) {
-          const orphanRef = doc(db, COLLECTIONS.CONTACT_LINKS, orphan.id);
-          await updateDoc(orphanRef, { status: 'inactive', updatedBy, updatedAt: serverTimestamp() });
-          logger.info(`🧹 [AssociationService] Cleaned up orphaned sibling link: ${orphan.id}`);
+        if (siblingId !== linkId) {
+          const siblingSnap = await getDoc(doc(db, COLLECTIONS.CONTACT_LINKS, siblingId));
+          if (siblingSnap.exists() && siblingSnap.data()?.status === 'active') {
+            await updateDoc(doc(db, COLLECTIONS.CONTACT_LINKS, siblingId), {
+              status: 'inactive', updatedBy, updatedAt: serverTimestamp(),
+            });
+            logger.info(`🧹 [AssociationService] Cleaned up sibling: ${siblingId}`);
+          }
         }
       }
 
@@ -730,7 +701,7 @@ export class AssociationService {
    * @param targetEntityId - Target entity ID
    * @returns Generated link ID
    */
-  private static generateContactLinkId(
+  static generateContactLinkId(
     contactId: string,
     targetEntityType?: string,
     targetEntityId?: string,
