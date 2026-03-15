@@ -157,27 +157,22 @@ async function resolveUnitHierarchy(unitId: string): Promise<UnitHierarchy | nul
     }
   }
 
-  // 5. Buyer — from contact_links where targetEntityId=unitId, role='buyer'
-  const buyerLinksSnap = await db.collection(COLLECTIONS.CONTACT_LINKS)
-    .where('targetEntityId', '==', unitId)
-    .where('role', '==', 'buyer')
-    .where('status', '==', 'active')
-    .limit(1)
-    .get();
+  // 5. Buyer — from unit.commercial.buyerContactId (ADR-197)
+  //    Fallback: unit.soldTo (deprecated)
+  const commercial = unitData.commercial as Record<string, unknown> | undefined;
+  const buyerContactId = (commercial?.buyerContactId as string)
+    ?? (unitData.soldTo as string)
+    ?? null;
 
-  if (!buyerLinksSnap.empty) {
-    const buyerLink = buyerLinksSnap.docs[0].data() as Record<string, unknown>;
-    const buyerContactId = buyerLink.sourceContactId as string | undefined;
-    if (buyerContactId) {
-      const buyerSnap = await db.collection(COLLECTIONS.CONTACTS).doc(buyerContactId).get();
-      if (buyerSnap.exists) {
-        const buyerData = buyerSnap.data() as Record<string, unknown>;
-        result.buyerName = (buyerData.displayName as string)
-          ?? [buyerData.firstName, buyerData.lastName].filter(Boolean).join(' ')
-          || null;
-        result.buyerPhone = extractPrimaryPhone(buyerData);
-        result.buyerEmail = extractPrimaryEmail(buyerData);
-      }
+  if (buyerContactId) {
+    const buyerSnap = await db.collection(COLLECTIONS.CONTACTS).doc(buyerContactId).get();
+    if (buyerSnap.exists) {
+      const buyerData = buyerSnap.data() as Record<string, unknown>;
+      result.buyerName = (buyerData.displayName as string)
+        ?? ([buyerData.firstName, buyerData.lastName].filter(Boolean).join(' ')
+        || null);
+      result.buyerPhone = extractPrimaryPhone(buyerData);
+      result.buyerEmail = extractPrimaryEmail(buyerData);
     }
   }
 
