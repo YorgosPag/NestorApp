@@ -69,8 +69,10 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
     companyWebsite,
   } = params;
 
-  const logoUrl = `${getAppBaseUrl()}/images/nestor-app-logo.png`;
-  const brandName = 'Nestor App';
+  const baseUrl = getAppBaseUrl();
+  const companyLogoUrl = `${baseUrl}/images/pagonis-energo-logo.png`;
+  const appLogoUrl = `${baseUrl}/images/nestor-app-logo.png`;
+  const appName = 'Nestor App';
 
   // Footer contact lines — from real company data in Firestore
   const contactLines: string[] = [];
@@ -84,7 +86,7 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${brandName}</title>
+  <title>${companyName ?? appName}</title>
 </head>
 <body style="margin:0;padding:0;background-color:${BRAND.bgLight};font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased;">
   <!-- Outer wrapper -->
@@ -95,14 +97,14 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
         <!-- Email container (max 600px) -->
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:${BRAND.white};border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
 
-          <!-- HEADER — Logo + brand bar -->
+          <!-- HEADER — Company logo -->
           <tr>
             <td style="background-color:${BRAND.navy};padding:24px 32px;text-align:center;">
-              <img src="${logoUrl}" alt="${brandName}" width="120" height="120" style="display:block;margin:0 auto;max-width:120px;height:auto;border-radius:12px;" />
-              <p style="margin:12px 0 0;font-size:18px;font-weight:700;color:${BRAND.white};letter-spacing:1.5px;">
-                NESTOR APP
-              </p>
-              ${companyName ? `<p style="margin:4px 0 0;font-size:12px;color:rgba(255,255,255,0.6);letter-spacing:0.5px;">${escapeHtml(companyName)}</p>` : ''}
+              <img src="${companyLogoUrl}" alt="${companyName ?? appName}" width="160" height="160" style="display:block;margin:0 auto;max-width:160px;height:auto;border-radius:12px;" />
+              ${companyName ? `
+              <p style="margin:12px 0 0;font-size:14px;color:rgba(255,255,255,0.7);letter-spacing:1px;">
+                ${escapeHtml(companyName).toUpperCase()}
+              </p>` : ''}
             </td>
           </tr>
 
@@ -120,18 +122,26 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
             </td>
           </tr>
 
-          <!-- FOOTER -->
+          <!-- FOOTER — Company contact details -->
           <tr>
-            <td style="padding:20px 32px 24px;text-align:center;">
+            <td style="padding:20px 32px 16px;text-align:center;">
+              ${companyName ? `
               <p style="margin:0 0 8px;font-size:14px;font-weight:700;color:${BRAND.navyDark};">
-                ${brandName}
-              </p>
+                ${escapeHtml(companyName)}
+              </p>` : ''}
               ${contactLines.map(line =>
                 `<p style="margin:0;font-size:12px;color:${BRAND.gray};line-height:1.8;">${escapeHtml(line)}</p>`
               ).join('\n              ')}
-              <p style="margin:12px 0 0;font-size:11px;color:${BRAND.grayLight};">
-                &copy; ${new Date().getFullYear()} ${brandName}. All rights reserved.
-              </p>
+            </td>
+          </tr>
+
+          <!-- APP BRANDING — Nestor App logo + copyright -->
+          <tr>
+            <td style="padding:8px 32px 20px;text-align:center;border-top:1px solid ${BRAND.border};">
+              <img src="${appLogoUrl}" alt="${appName}" width="32" height="32" style="display:inline-block;vertical-align:middle;max-width:32px;height:auto;border-radius:6px;margin-right:6px;" />
+              <span style="font-size:11px;color:${BRAND.grayLight};vertical-align:middle;">
+                &copy; ${new Date().getFullYear()} ${appName}. All rights reserved.
+              </span>
             </td>
           </tr>
 
