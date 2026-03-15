@@ -13,7 +13,7 @@
 
 import React, { useState, useCallback } from 'react';
 import Link from 'next/link';
-import { User, Scale, Briefcase, Pencil, X, Loader2, AlertTriangle, ShieldAlert, UserPlus } from 'lucide-react';
+import { User, Scale, Briefcase, Pencil, X, Loader2, AlertTriangle, ShieldAlert, UserPlus, Mail } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import { ENTITY_ROUTES } from '@/lib/routes';
@@ -71,6 +71,14 @@ interface PendingAssignment {
   existingRoleLabel: string;
   targetRoleLabel: string;
   conflictType: 'hard_block' | 'warning';
+}
+
+/** Pending email notification — shown after successful assignment */
+interface PendingEmailNotification {
+  contactId: string;
+  contactName: string;
+  role: string;
+  roleLabel: string;
 }
 
 const SLOTS: ProfessionalSlot[] = [
@@ -155,8 +163,27 @@ export function ProfessionalsCard({
   const [editingRole, setEditingRole] = useState<LegalProfessionalRole | null>(null);
   const [saving, setSaving] = useState(false);
   const [pendingAssignment, setPendingAssignment] = useState<PendingAssignment | null>(null);
+  const [pendingEmail, setPendingEmail] = useState<PendingEmailNotification | null>(null);
 
   const drafts = getDraftContracts(contracts);
+
+  // Send the email notification
+  const sendEmailNotification = useCallback(
+    (notification: PendingEmailNotification) => {
+      fetch('/api/notifications/professional-assigned', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contactId: notification.contactId,
+          role: notification.role,
+          unitId,
+        }),
+      })
+        .then(() => toast.success(t('sales.legal.emailSent', { defaultValue: 'Το email στάλθηκε' })))
+        .catch(() => toast.error(t('sales.legal.emailFailed', { defaultValue: 'Αποτυχία αποστολής email' })));
+    },
+    [unitId, t]
+  );
 
   // Execute the actual assignment (after validation/confirmation)
   const executeAssign = useCallback(
@@ -178,19 +205,21 @@ export function ProfessionalsCard({
         setEditingRole(null);
         toast.success(t('sales.legal.professionalAssigned', { defaultValue: 'Ανατέθηκε επιτυχώς' }));
 
-        // Fire-and-forget: email notification to assigned professional
-        fetch('/api/notifications/professional-assigned', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contactId: contact.id, role, unitId }),
-        }).catch(() => { /* silent — email is best-effort */ });
+        // Ask user whether to send email notification
+        const roleLabel = getRoleLabel(role);
+        setPendingEmail({
+          contactId: contact.id,
+          contactName: contact.name,
+          role,
+          roleLabel,
+        });
       } catch {
         toast.error(t('common.error', { defaultValue: 'Σφάλμα' }));
       } finally {
         setSaving(false);
       }
     },
-    [onAssign, onOverrideProfessional, drafts, t, unitId]
+    [onAssign, onOverrideProfessional, drafts, t]
   );
 
   // Validate before assigning — check for conflicts
@@ -441,6 +470,44 @@ export function ProfessionalsCard({
             </AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmAssignment} className="bg-amber-600 hover:bg-amber-700">
               {t('sales.legal.assignAnyway', { defaultValue: 'Ανάθεση παρόλα αυτά' })}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ================================================================== */}
+      {/* Email Notification Dialog — after successful assignment             */}
+      {/* ================================================================== */}
+      <AlertDialog
+        open={pendingEmail !== null}
+        onOpenChange={(open) => { if (!open) setPendingEmail(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-blue-600" />
+              Αποστολή email ειδοποίησης
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <p className="text-sm">
+                Θέλετε να σταλεί email ειδοποίησης στον/στην{' '}
+                <strong>«{pendingEmail?.contactName}»</strong>{' '}
+                για την ανάθεση του ρόλου{' '}
+                <strong>{pendingEmail?.roleLabel}</strong>;
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              Όχι
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingEmail) sendEmailNotification(pendingEmail);
+                setPendingEmail(null);
+              }}
+            >
+              Ναι, αποστολή
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
