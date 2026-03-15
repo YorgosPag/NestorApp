@@ -123,10 +123,12 @@ async function resolveUnitHierarchy(unitId: string): Promise<UnitHierarchy | nul
           const city = (projectData.city as string) ?? '';
           result.projectAddress = [addr, city].filter(Boolean).join(', ') || null;
 
-          // 4. Company (from project.companyId → contacts doc)
-          const companyId = projectData.companyId as string | undefined;
-          if (companyId) {
-            const companySnap = await db.collection(COLLECTIONS.CONTACTS).doc(companyId).get();
+          // 4. Company contact — ADR-232: linkedCompanyId is the contact doc ID
+          //    project.companyId = tenant ID (comp_xxx), NOT a contact document
+          //    project.linkedCompanyId = actual contact ID (cont_xxx) in contacts collection
+          const linkedCompanyId = projectData.linkedCompanyId as string | undefined;
+          if (linkedCompanyId) {
+            const companySnap = await db.collection(COLLECTIONS.CONTACTS).doc(linkedCompanyId).get();
             if (companySnap.exists) {
               const companyData = companySnap.data() as Record<string, unknown>;
               result.companyName = (companyData.companyName as string)
@@ -136,31 +138,12 @@ async function resolveUnitHierarchy(unitId: string): Promise<UnitHierarchy | nul
               result.companyEmail = extractPrimaryEmail(companyData);
               result.companyAddress = extractPrimaryAddress(companyData);
               result.companyWebsite = extractPrimaryWebsite(companyData);
-
-              logger.info('Company data resolved', {
-                companyId,
-                companyName: result.companyName,
-                hasPhones: Array.isArray(companyData.phones),
-                phonesCount: Array.isArray(companyData.phones) ? (companyData.phones as unknown[]).length : 0,
-                hasEmails: Array.isArray(companyData.emails),
-                hasAddresses: Array.isArray(companyData.addresses),
-                hasWebsites: Array.isArray(companyData.websites),
-                resolvedPhone: result.companyPhone,
-                resolvedEmail: result.companyEmail,
-                resolvedAddress: result.companyAddress,
-                // Also check legacy flat fields
-                legacyPhone: companyData.phone as string | undefined,
-                legacyEmail: companyData.email as string | undefined,
-                legacyAddress: companyData.address as string | undefined,
-                // Check contactInfo nested
-                hasContactInfo: !!companyData.contactInfo,
-              });
             }
           } else {
-            result.companyName = (projectData.company as string) ?? null;
-            logger.info('No companyId on project, using company name', {
-              company: result.companyName,
-            });
+            // Fallback: use denormalized company name from project
+            result.companyName = (projectData.linkedCompanyName as string)
+              ?? (projectData.company as string)
+              ?? null;
           }
         }
       }
