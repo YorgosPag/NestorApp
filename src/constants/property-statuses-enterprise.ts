@@ -1949,6 +1949,7 @@ export const PROJECT_TAB_LABELS = {
   VIDEOS: 'tabs.labels.videos',
   HISTORY: 'tabs.labels.history',
   BROKERS: 'tabs.labels.brokers',
+  OWNERSHIP_TABLE: 'tabs.labels.ownershipTable',
 } as const;
 
 /**
@@ -1973,6 +1974,7 @@ export const PROJECT_TAB_DESCRIPTIONS = {
   VIDEOS: 'tabs.descriptions.videos',
   HISTORY: 'tabs.descriptions.history',
   BROKERS: 'tabs.descriptions.brokers',
+  OWNERSHIP_TABLE: 'tabs.descriptions.ownershipTable',
 } as const;
 
 /**

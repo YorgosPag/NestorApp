@@ -103,11 +103,29 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   },
 
   // =========================================================================
+  // ΝΟΜΙΚΑ — Ιδιοκτησία & Χιλιοστά
+  // =========================================================================
+
+  // -------------------------------------------------------------------------
+  // 4. ΠΙΝΑΚΑΣ ΧΙΛΙΟΣΤΩΝ (ADR-235)
+  // -------------------------------------------------------------------------
+  {
+    id: 'ownership-table',
+    label: PROJECT_TAB_LABELS.OWNERSHIP_TABLE,
+    value: 'ownership-table',
+    icon: 'percent',
+    description: PROJECT_TAB_DESCRIPTIONS.OWNERSHIP_TABLE,
+    order: 4,
+    enabled: true,
+    component: 'OwnershipTableTab',
+  },
+
+  // =========================================================================
   // ΑΝΘΡΩΠΟΙ — Ποιος εμπλέκεται
   // =========================================================================
 
   // -------------------------------------------------------------------------
-  // 4. ΣΥΝΕΡΓΑΤΕΣ & ΕΠΑΦΕΣ (αντικατέστησε τον stub ContributorsTab)
+  // 5. ΣΥΝΕΡΓΑΤΕΣ & ΕΠΑΦΕΣ (αντικατέστησε τον stub ContributorsTab)
   // -------------------------------------------------------------------------
   {
     id: 'contributors',
@@ -115,13 +133,13 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     value: 'contributors',
     icon: 'handshake',
     description: PROJECT_TAB_DESCRIPTIONS.CONTRIBUTORS,
-    order: 4,
+    order: 5,
     enabled: true,
     component: 'ProjectAssociationsTab',
   },
 
   // -------------------------------------------------------------------------
-  // 5. ΜΕΣΙΤΕΣ (ADR-230 / SPEC-230B)
+  // 6. ΜΕΣΙΤΕΣ (ADR-230 / SPEC-230B)
   // -------------------------------------------------------------------------
   {
     id: 'brokers',
@@ -129,13 +147,13 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     value: 'brokers',
     icon: 'briefcase',
     description: PROJECT_TAB_DESCRIPTIONS.BROKERS,
-    order: 5,
+    order: 6,
     enabled: true,
     component: 'ProjectBrokersTab',
   },
 
   // -------------------------------------------------------------------------
-  // 6. ΠΕΛΑΤΕΣ
+  // 7. ΠΕΛΑΤΕΣ
   // -------------------------------------------------------------------------
   {
     id: 'customers',
@@ -143,7 +161,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     value: 'customers',
     icon: 'users',
     description: PROJECT_TAB_DESCRIPTIONS.CUSTOMERS,
-    order: 6,
+    order: 7,
     enabled: true,
     component: 'ProjectCustomersTab',
   },
@@ -153,7 +171,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   // =========================================================================
 
   // -------------------------------------------------------------------------
-  // 7. TIMELINE
+  // 8. TIMELINE
   // -------------------------------------------------------------------------
   {
     id: 'timeline',
@@ -161,13 +179,13 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     value: 'timeline',
     icon: 'calendar',
     description: PROJECT_TAB_DESCRIPTIONS.TIMELINE,
-    order: 7,
+    order: 8,
     enabled: true,
     component: 'ProjectTimelineTab',
   },
 
   // -------------------------------------------------------------------------
-  // 8. ΙΚΑ
+  // 9. ΙΚΑ
   // -------------------------------------------------------------------------
   {
     id: 'ika',
@@ -175,7 +193,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     value: 'ika',
     icon: 'landmark',
     description: PROJECT_TAB_DESCRIPTIONS.IKA,
-    order: 8,
+    order: 9,
     enabled: true,
     component: 'IkaTab',
   },
@@ -185,7 +203,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   // =========================================================================
 
   // -------------------------------------------------------------------------
-  // 9. ΚΑΤΟΨΗ ΕΡΓΟΥ (ADR-033)
+  // 10. ΚΑΤΟΨΗ ΕΡΓΟΥ (ADR-033)
   // -------------------------------------------------------------------------
   {
     id: 'floorplan',
@@ -193,7 +211,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     value: 'floorplan',
     icon: 'ruler',
     description: PROJECT_TAB_DESCRIPTIONS.FLOORPLAN,
-    order: 9,
+    order: 10,
     enabled: true,
     component: 'ProjectFloorplanTab',
     componentProps: {
@@ -203,7 +221,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   },
 
   // -------------------------------------------------------------------------
-  // 10. ΘΕΣΕΙΣ ΣΤΑΘΜΕΥΣΗΣ — Κατόψεις + Λίστα (ADR-191)
+  // 11. ΘΕΣΕΙΣ ΣΤΑΘΜΕΥΣΗΣ — Κατόψεις + Λίστα (ADR-191)
   // -------------------------------------------------------------------------
   {
     id: 'parking-floorplan',
@@ -211,7 +229,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     value: 'parking-floorplan',
     icon: 'car',
     description: PROJECT_TAB_DESCRIPTIONS.PARKING_FLOORPLAN,
-    order: 10,
+    order: 11,
     enabled: true,
     component: 'ProjectParkingTab',
     componentProps: {
@@ -221,7 +239,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   },
 
   // -------------------------------------------------------------------------
-  // 11. ΕΠΙΜΕΤΡΗΣΕΙΣ ΕΡΓΟΥ (Aggregation — read-only, data entry at building level)
+  // 12. ΕΠΙΜΕΤΡΗΣΕΙΣ ΕΡΓΟΥ (Aggregation — read-only, data entry at building level)
   // -------------------------------------------------------------------------
   {
     id: 'measurements',
@@ -229,13 +247,13 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     value: 'measurements',
     icon: 'ruler',
     description: 'Συγκεντρωτικές επιμετρήσεις από όλα τα κτίρια του έργου',
-    order: 11,
+    order: 12,
     enabled: true,
     component: 'ProjectMeasurementsTab',
   },
 
   // -------------------------------------------------------------------------
-  // 12. ΕΓΓΡΑΦΑ ΕΡΓΟΥ
+  // 13. ΕΓΓΡΑΦΑ ΕΡΓΟΥ
   // -------------------------------------------------------------------------
   {
     id: 'documents',
@@ -243,13 +261,13 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     value: 'documents',
     icon: 'file-text',
     description: PROJECT_TAB_DESCRIPTIONS.DOCUMENTS,
-    order: 12,
+    order: 13,
     enabled: true,
     component: 'DocumentsProjectTab',
   },
 
   // -------------------------------------------------------------------------
-  // 13. ΦΩΤΟΓΡΑΦΙΕΣ
+  // 14. ΦΩΤΟΓΡΑΦΙΕΣ
   // -------------------------------------------------------------------------
   {
     id: 'photos',
@@ -257,13 +275,13 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     value: 'photos',
     icon: 'camera',
     description: PROJECT_TAB_DESCRIPTIONS.PHOTOS,
-    order: 13,
+    order: 14,
     enabled: true,
     component: 'PhotosTab',
   },
 
   // -------------------------------------------------------------------------
-  // 14. ΒΙΝΤΕΟ
+  // 15. ΒΙΝΤΕΟ
   // -------------------------------------------------------------------------
   {
     id: 'videos',
@@ -271,7 +289,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     value: 'videos',
     icon: 'video',
     description: PROJECT_TAB_DESCRIPTIONS.VIDEOS,
-    order: 14,
+    order: 15,
     enabled: true,
     component: 'VideosTab',
   },
@@ -281,7 +299,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   // =========================================================================
 
   // -------------------------------------------------------------------------
-  // 15. ΙΣΤΟΡΙΚΟ ΑΛΛΑΓΩΝ (ADR-195)
+  // 16. ΙΣΤΟΡΙΚΟ ΑΛΛΑΓΩΝ (ADR-195)
   // -------------------------------------------------------------------------
   {
     id: 'history',
@@ -289,7 +307,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     value: 'history',
     icon: 'clock',
     description: PROJECT_TAB_DESCRIPTIONS.HISTORY,
-    order: 15,
+    order: 16,
     enabled: true,
     component: 'ActivityTab',
     componentProps: {

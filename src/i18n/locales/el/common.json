@@ -2002,5 +2002,62 @@
     "regionLabel": "Περιφέρεια",
     "regionPlaceholder": "π.χ. Αττική",
     "customRegion": "Προσαρμοσμένη"
+  },
+  "ownership": {
+    "title": "Πίνακας Χιλιοστών Συνιδιοκτησίας",
+    "method": "Μέθοδος Υπολογισμού",
+    "methodArea": "Κατ' Εμβαδόν",
+    "methodValue": "Κατ' Αντικειμενική Αξία",
+    "methodVolume": "Κατ' Όγκον",
+    "zonePrice": "Τιμή Ζώνης (€/τ.μ.)",
+    "commercialityCoefficient": "Συντελεστής Εμπορικότητας (ΣΕ)",
+    "status": "Κατάσταση",
+    "statusDraft": "Προσχέδιο",
+    "statusFinalized": "Οριστικοποιημένος",
+    "statusRegistered": "Μεταγεγραμμένος",
+    "columns": {
+      "ordinal": "Α/Α",
+      "entityCode": "Κωδικός",
+      "description": "Περιγραφή",
+      "category": "Κατηγορία",
+      "floor": "Όροφος",
+      "areaSqm": "Εμβαδόν (τ.μ.)",
+      "millesimalShares": "Χιλιοστά (‰)",
+      "ownerParty": "Ιδιοκτήτης"
+    },
+    "categoryMain": "Κύρια",
+    "categoryAuxiliary": "Βοηθητική",
+    "ownerContractor": "Εργολάβος",
+    "ownerLandowner": "Οικοπεδούχος",
+    "ownerBuyer": "Αγοραστής",
+    "ownerUnassigned": "Αδιάθετο",
+    "actions": {
+      "autoPopulate": "Αυτόματη Συμπλήρωση",
+      "calculate": "Υπολογισμός",
+      "finalize": "Οριστικοποίηση",
+      "unlock": "Ξεκλείδωμα",
+      "exportPdf": "Εξαγωγή PDF",
+      "addRow": "Νέα Γραμμή",
+      "removeRow": "Αφαίρεση"
+    },
+    "subtotal": "Υποσύνολο",
+    "total": "ΓΕΝΙΚΟ ΣΥΝΟΛΟ",
+    "bartex": {
+      "title": "Αντιπαροχή",
+      "percentage": "Ποσοστό Αντιπαροχής (%)",
+      "contractor": "Εργολάβος",
+      "landowners": "Οικοπεδούχοι",
+      "shares": "χιλιοστά"
+    },
+    "validation": {
+      "totalMismatch": "Σύνολο χιλιοστών ≠ 1000‰",
+      "totalCorrect": "Σύνολο χιλιοστών = 1000‰",
+      "belowMinimum": "Χιλιοστά κάτω από το ελάχιστο (1‰)"
+    },
+    "empty": "Δεν υπάρχουν ιδιοκτησίες. Πατήστε «Αυτόματη Συμπλήρωση» για να ξεκινήσετε.",
+    "unlockReason": "Λόγος ξεκλειδώματος",
+    "version": "Έκδοση",
+    "revisionHistory": "Ιστορικό Εκδόσεων",
+    "noRevisions": "Δεν υπάρχουν προηγούμενες εκδόσεις"
   }
 }

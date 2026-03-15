@@ -2003,5 +2003,62 @@
     "regionLabel": "Region",
     "regionPlaceholder": "e.g. Attica",
     "customRegion": "Custom"
+  },
+  "ownership": {
+    "title": "Ownership Percentage Table",
+    "method": "Calculation Method",
+    "methodArea": "By Area",
+    "methodValue": "By Objective Value",
+    "methodVolume": "By Volume",
+    "zonePrice": "Zone Price (€/sq.m.)",
+    "commercialityCoefficient": "Commerciality Coefficient",
+    "status": "Status",
+    "statusDraft": "Draft",
+    "statusFinalized": "Finalized",
+    "statusRegistered": "Registered",
+    "columns": {
+      "ordinal": "#",
+      "entityCode": "Code",
+      "description": "Description",
+      "category": "Category",
+      "floor": "Floor",
+      "areaSqm": "Area (sq.m.)",
+      "millesimalShares": "Shares (‰)",
+      "ownerParty": "Owner"
+    },
+    "categoryMain": "Main",
+    "categoryAuxiliary": "Auxiliary",
+    "ownerContractor": "Contractor",
+    "ownerLandowner": "Landowner",
+    "ownerBuyer": "Buyer",
+    "ownerUnassigned": "Unassigned",
+    "actions": {
+      "autoPopulate": "Auto-Populate",
+      "calculate": "Calculate",
+      "finalize": "Finalize",
+      "unlock": "Unlock",
+      "exportPdf": "Export PDF",
+      "addRow": "Add Row",
+      "removeRow": "Remove"
+    },
+    "subtotal": "Subtotal",
+    "total": "GRAND TOTAL",
+    "bartex": {
+      "title": "Bartex (Land Exchange)",
+      "percentage": "Bartex Percentage (%)",
+      "contractor": "Contractor",
+      "landowners": "Landowners",
+      "shares": "shares"
+    },
+    "validation": {
+      "totalMismatch": "Total shares ≠ 1000‰",
+      "totalCorrect": "Total shares = 1000‰",
+      "belowMinimum": "Shares below minimum (1‰)"
+    },
+    "empty": "No properties found. Click \"Auto-Populate\" to start.",
+    "unlockReason": "Unlock reason",
+    "version": "Version",
+    "revisionHistory": "Revision History",
+    "noRevisions": "No previous revisions"
   }
 }
