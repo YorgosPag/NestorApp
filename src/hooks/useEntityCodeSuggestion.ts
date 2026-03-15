@@ -104,9 +104,9 @@ export function useEntityCodeSuggestion({
       if (!controller.signal.aborted && result?.suggestedCode) {
         setSuggestedCode(result.suggestedCode);
       }
-    } catch {
-      // Silently ignore errors (network, abort, etc.)
+    } catch (err) {
       if (!controller.signal.aborted) {
+        console.warn('[useEntityCodeSuggestion] API call failed:', err);
         setSuggestedCode(null);
       }
     } finally {
