@@ -8,6 +8,10 @@ export interface AddNewContactDialogProps {
   onContactAdded: () => void;
   editContact?: Contact | null; // For edit mode
   onLiveChange?: (updatedContact: Contact) => void; // 🔥 NEW: For real-time preview
+  /** Filter available contact types (default: all 3) */
+  allowedContactTypes?: ContactType[];
+  /** Personas to auto-activate on new contact creation */
+  defaultPersonas?: PersonaType[];
 }
 
 // Import Contact type

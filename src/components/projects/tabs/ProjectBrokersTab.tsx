@@ -556,6 +556,8 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
           open={showNewContactDialog}
           onOpenChange={handleNewContactCancel}
           onContactAdded={handleNewContactCreated}
+          allowedContactTypes={['individual', 'company']}
+          defaultPersonas={['real_estate_agent']}
         />
       )}
 

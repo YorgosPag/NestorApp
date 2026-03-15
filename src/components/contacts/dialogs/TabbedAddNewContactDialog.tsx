@@ -33,7 +33,7 @@ import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: Centralized dialog sizing tokens (ADR-031)
 import { DIALOG_SIZES, DIALOG_HEIGHT, DIALOG_SCROLL } from '@/styles/design-tokens';
 
-export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, editContact, onLiveChange }: AddNewContactDialogProps) {
+export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, editContact, onLiveChange, allowedContactTypes, defaultPersonas }: AddNewContactDialogProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('contacts');
   // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ ICON SIZES - ENTERPRISE PATTERN
@@ -86,6 +86,31 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
       setFormData(prev => ({ ...prev, id: preGeneratedContactId }));
     }
   }, [editContact, formData.id, preGeneratedContactId, setFormData]);
+
+  // ==========================================================================
+  // 🎭 ENTERPRISE: Auto-activate default personas (e.g. broker context)
+  // ==========================================================================
+  useEffect(() => {
+    if (!editContact && defaultPersonas && defaultPersonas.length > 0) {
+      setFormData(prev => ({
+        ...prev,
+        activePersonas: Array.from(new Set([...prev.activePersonas, ...defaultPersonas])),
+      }));
+    }
+  }, [editContact, defaultPersonas, setFormData]);
+
+  // ==========================================================================
+  // 🏢 ENTERPRISE: Filter contact types if allowedContactTypes provided
+  // ==========================================================================
+  const typeOptions = useMemo(() => {
+    const allTypes: { value: ContactType; labelKey: string; Icon: typeof User }[] = [
+      { value: CONTACT_TYPES.INDIVIDUAL as ContactType, labelKey: 'types.individual', Icon: User },
+      { value: CONTACT_TYPES.COMPANY as ContactType, labelKey: 'types.company', Icon: Building2 },
+      { value: CONTACT_TYPES.SERVICE as ContactType, labelKey: 'types.service', Icon: Landmark },
+    ];
+    if (!allowedContactTypes || allowedContactTypes.length === 0) return allTypes;
+    return allTypes.filter(opt => allowedContactTypes.includes(opt.value));
+  }, [allowedContactTypes]);
 
   // Build canonical upload context (only if user has required claims)
   const canonicalUploadContext = useMemo<CanonicalUploadContext | undefined>(() => {
@@ -153,24 +178,14 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={CONTACT_TYPES.INDIVIDUAL}>
-                        <div className="flex items-center gap-2">
-                          <User className={iconSizes.sm} />
-                          <span>{t('types.individual')}</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value={CONTACT_TYPES.COMPANY}>
-                        <div className="flex items-center gap-2">
-                          <Building2 className={iconSizes.sm} />
-                          <span>{t('types.company')}</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value={CONTACT_TYPES.SERVICE}>
-                        <div className="flex items-center gap-2">
-                          <Landmark className={iconSizes.sm} />
-                          <span>{t('types.service')}</span>
-                        </div>
-                      </SelectItem>
+                      {typeOptions.map(({ value, labelKey, Icon }) => (
+                        <SelectItem key={value} value={value}>
+                          <div className="flex items-center gap-2">
+                            <Icon className={iconSizes.sm} />
+                            <span>{t(labelKey)}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </FormInput>
