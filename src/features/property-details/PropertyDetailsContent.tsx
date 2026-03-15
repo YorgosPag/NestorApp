@@ -98,6 +98,10 @@ export function PropertyDetailsContent({
   // Resolve the actual property from all possible sources (enterprise pattern)
   const resolvedProperty = property || unit || data;
 
+  // ── Field locking: sold/rented units cannot change building, floor, linked spaces ──
+  const commercialStatus = resolvedProperty?.commercialStatus ?? 'unavailable';
+  const isSoldOrRented = commercialStatus === 'sold' || commercialStatus === 'rented';
+
   // Early return if no property data available
   if (!resolvedProperty) {
     logger.warn('PropertyDetailsContent: No property data provided');
@@ -140,7 +144,7 @@ export function PropertyDetailsContent({
           <UnitEntityLinks
             unitId={resolvedProperty?.id ?? ''}
             currentBuildingId={resolvedProperty?.buildingId}
-            isEditing={isEditMode}
+            isEditing={isEditMode && !isSoldOrRented}
           />
           <Card>
             <CardHeader className="p-2">
@@ -169,7 +173,7 @@ export function PropertyDetailsContent({
                 }}
                 label={t('units:fields.location.floor', { defaultValue: 'Όροφος' })}
                 noBuildingHint={t('units:fields.location.noFloorHint', { defaultValue: 'Συνδέστε πρώτα κτίριο' })}
-                disabled={!isEditMode}
+                disabled={!isEditMode || isSoldOrRented}
               />
             </CardContent>
           </Card>
@@ -178,7 +182,7 @@ export function PropertyDetailsContent({
               unitId={resolvedProperty.id ?? ''}
               buildingId={resolvedProperty.buildingId}
               currentLinkedSpaces={resolvedProperty.linkedSpaces ?? []}
-              isEditing={isEditMode}
+              isEditing={isEditMode && !isSoldOrRented}
             />
           )}
         </div>

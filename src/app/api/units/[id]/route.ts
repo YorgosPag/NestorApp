@@ -91,7 +91,10 @@ export const PATCH = withStandardRateLimit(
         const currentCommercialStatus = existing.commercialStatus as string | undefined;
 
         if (currentCommercialStatus === 'sold' || currentCommercialStatus === 'rented') {
-          const soldLockedFields = ['code', 'type', 'name', 'areas', 'layout', 'floor', 'commercialStatus'] as const;
+          const soldLockedFields = [
+            'code', 'type', 'name', 'areas', 'layout', 'floor', 'floorId',
+            'commercialStatus', 'buildingId', 'linkedSpaces',
+          ] as const;
           const attemptedLockedFields = soldLockedFields.filter(f => f in body);
           if (attemptedLockedFields.length > 0) {
             throw new ApiError(403, `Cannot modify locked fields on a ${currentCommercialStatus} unit: ${attemptedLockedFields.join(', ')}`);
