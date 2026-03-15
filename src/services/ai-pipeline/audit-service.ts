@@ -13,6 +13,7 @@
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { generatePipelineAuditId } from '@/services/enterprise-id.service';
 import type {
   PipelineContext,
   PipelineAuditEntry,
@@ -73,11 +74,13 @@ export class PipelineAuditService {
       intent: ctx.understanding?.intent ?? PipelineIntentType.UNKNOWN,
     };
 
-    const docRef = await adminDb
+    const auditId = generatePipelineAuditId();
+    await adminDb
       .collection(COLLECTIONS.AI_PIPELINE_AUDIT)
-      .add(entry);
+      .doc(auditId)
+      .set(entry);
 
-    return docRef.id;
+    return auditId;
   }
 
   /**

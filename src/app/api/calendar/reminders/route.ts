@@ -13,6 +13,7 @@
 import { NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { generateNotificationId } from '@/services/enterprise-id.service';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,7 +61,7 @@ export async function GET() {
       reminders.push(task);
 
       // Create notification document
-      const notifRef = adminDb.collection(COLLECTIONS.NOTIFICATIONS).doc();
+      const notifRef = adminDb.collection(COLLECTIONS.NOTIFICATIONS).doc(generateNotificationId());
       batch.set(notifRef, {
         type: 'taskDue',
         title: `Reminder: ${task.title}`,

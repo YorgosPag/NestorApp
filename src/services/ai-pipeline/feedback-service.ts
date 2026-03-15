@@ -19,6 +19,7 @@ import 'server-only';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getCompanyId } from '@/config/tenant';
+import { generateFeedbackId } from '@/services/enterprise-id.service';
 import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -143,14 +144,15 @@ export class FeedbackService {
       };
 
       const db = getAdminFirestore();
-      const docRef = await db.collection(COLLECTIONS.AI_AGENT_FEEDBACK).add(snapshot);
+      const feedbackId = generateFeedbackId();
+      await db.collection(COLLECTIONS.AI_AGENT_FEEDBACK).doc(feedbackId).set(snapshot);
 
       logger.info('Feedback snapshot saved', {
-        docId: docRef.id,
+        docId: feedbackId,
         requestId: params.requestId,
       });
 
-      return docRef.id;
+      return feedbackId;
     } catch (error) {
       // Non-fatal: feedback failure must never break the pipeline
       logger.warn('Failed to save feedback snapshot', {

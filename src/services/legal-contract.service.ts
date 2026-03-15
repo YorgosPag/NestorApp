@@ -15,6 +15,7 @@
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { generateContractId } from '@/services/enterprise-id.service';
 import { AssociationService } from '@/services/association.service';
 import type {
   LegalContract,
@@ -43,14 +44,6 @@ function getDb() {
   const db = getAdminFirestore();
   if (!db) throw new Error('Admin Firestore unavailable');
   return db;
-}
-
-// ============================================================================
-// ID GENERATION
-// ============================================================================
-
-function generateContractId(): string {
-  return `lc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
 // ============================================================================

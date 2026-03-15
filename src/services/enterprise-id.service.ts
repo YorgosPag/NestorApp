@@ -132,6 +132,14 @@ export const ENTERPRISE_ID_PREFIXES = {
   NAVIGATION: 'nav',
 
   // ==========================================================================
+  // AI PIPELINE & AUDIT
+  // ==========================================================================
+  FEEDBACK: 'fb',
+  PIPELINE_AUDIT: 'paud',
+  ENTITY_AUDIT: 'eaud',
+  CONTRACT: 'lc',
+
+  // ==========================================================================
   // OPTIMISTIC & TEMPORARY
   // ==========================================================================
   OPTIMISTIC: 'opt',
@@ -817,6 +825,42 @@ export class EnterpriseIdService {
   }
 
   // ==========================================================================
+  // AI PIPELINE & AUDIT
+  // ==========================================================================
+
+  /**
+   * 💬 Generate Feedback ID (AI agent feedback)
+   * Format: fb_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateFeedbackId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.FEEDBACK).id;
+  }
+
+  /**
+   * 📋 Generate Pipeline Audit ID
+   * Format: paud_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generatePipelineAuditId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.PIPELINE_AUDIT).id;
+  }
+
+  /**
+   * 📜 Generate Entity Audit ID
+   * Format: eaud_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateEntityAuditId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.ENTITY_AUDIT).id;
+  }
+
+  /**
+   * 📄 Generate Contract ID (legal contracts)
+   * Format: lc_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateContractId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.CONTRACT).id;
+  }
+
+  // ==========================================================================
   // UTILITY METHODS
   // ==========================================================================
 
@@ -1004,6 +1048,14 @@ export const generateDepreciationId = () => enterpriseIdService.generateDeprecia
 export const generateEfkaPaymentId = () => enterpriseIdService.generateEfkaPaymentId();
 export const generateImportBatchId = () => enterpriseIdService.generateImportBatchId();
 export const generateExpenseDocId = () => enterpriseIdService.generateExpenseDocId();
+
+// =============================================================================
+// AI PIPELINE & AUDIT
+// =============================================================================
+export const generateFeedbackId = () => enterpriseIdService.generateFeedbackId();
+export const generatePipelineAuditId = () => enterpriseIdService.generatePipelineAuditId();
+export const generateEntityAuditId = () => enterpriseIdService.generateEntityAuditId();
+export const generateContractId = () => enterpriseIdService.generateContractId();
 
 // =============================================================================
 // FILE & MEDIA OPERATIONS

@@ -15,6 +15,7 @@ import 'server-only';
 
 import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { generateEntityAuditId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import type {
   AuditEntityType,
@@ -89,11 +90,13 @@ export class EntityAuditService {
         timestamp: FieldValue.serverTimestamp(),
       });
 
-      const docRef = await db
+      const auditId = generateEntityAuditId();
+      await db
         .collection(COLLECTIONS.ENTITY_AUDIT_TRAIL)
-        .add(entry);
+        .doc(auditId)
+        .set(entry);
 
-      return docRef.id;
+      return auditId;
     } catch (err) {
       logger.error('Failed to record audit entry', {
         entityType: params.entityType,

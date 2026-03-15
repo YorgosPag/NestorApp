@@ -32,6 +32,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { adminConfigService } from '@/services/adminConfigService';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { generateNotificationId } from '@/services/enterprise-id.service';
 import type { Severity } from '@/types/notification';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -236,16 +237,18 @@ async function handleErrorReport(
     };
 
     // Create notification in Firestore using Admin SDK
-    const docRef = await getAdminFirestore()
+    const notificationId = generateNotificationId();
+    await getAdminFirestore()
       .collection(COLLECTIONS.NOTIFICATIONS)
-      .add(notificationData);
+      .doc(notificationId)
+      .set(notificationData);
 
     const duration = Date.now() - startTime;
-    logger.info('[ErrorReport] Created notification', { notificationId: docRef.id, durationMs: duration });
+    logger.info('[ErrorReport] Created notification', { notificationId, durationMs: duration });
 
     return NextResponse.json({
       success: true,
-      notificationId: docRef.id,
+      notificationId,
     });
 
   } catch (error) {
