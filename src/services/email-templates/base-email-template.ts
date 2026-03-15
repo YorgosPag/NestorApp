@@ -131,8 +131,14 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
           <!-- APP BRANDING — Nestor App logo + copyright -->
           <tr>
             <td style="padding:12px 32px 20px;text-align:center;border-top:1px solid ${BRAND.border};">
-              <img src="${appLogoUrl}" alt="${appName}" width="28" height="28" style="display:inline-block;vertical-align:middle;max-width:28px;height:auto;border-radius:5px;margin-right:8px;" />
-              <span style="font-size:11px;color:${BRAND.grayLight};vertical-align:middle;">
+              <!--[if !mso]><!-- Fallback: show logo only when hosted on production -->
+              <img src="${appLogoUrl}" alt="" width="28" height="28" style="display:inline-block;vertical-align:middle;max-width:28px;height:auto;border-radius:5px;margin-right:8px;border:0;" />
+              <!--<![endif]-->
+              <span style="font-size:11px;color:${BRAND.grayLight};vertical-align:middle;font-weight:600;">
+                ${appName}
+              </span>
+              <br/>
+              <span style="font-size:10px;color:${BRAND.border};">
                 &copy; ${new Date().getFullYear()} ${appName}. All rights reserved.
               </span>
             </td>
