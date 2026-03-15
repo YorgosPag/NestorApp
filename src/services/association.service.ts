@@ -112,21 +112,80 @@ export class AssociationService {
         };
       }
 
-      // Generate link ID (includes role for multi-role support per contact-entity pair)
-      const linkId = this.generateContactLinkId(sourceContactId, targetEntityType, targetEntityId, role);
+      // ================================================================
+      // QUERY-BASED duplicate detection (format-agnostic)
+      // Handles both old IDs (cl_X_unit_Y) and new IDs (cl_X_unit_Y_role)
+      // ================================================================
+      const existingLinks = await this.listContactLinks({
+        sourceContactId,
+        targetEntityType,
+        targetEntityId,
+        status: 'active',
+      });
 
-      // Check if link already exists
-      const existing = await this.getContactLinkById(linkId);
-      if (existing) {
-        logger.info(`✅ [AssociationService] Contact link already exists: ${linkId}`);
+      // Check if an active link with the SAME role already exists
+      const duplicateLink = existingLinks.find((l) => l.role === role);
+      if (duplicateLink) {
+        logger.info(`✅ [AssociationService] Active link already exists for role=${role}: ${duplicateLink.id}`);
         return {
           success: true,
-          linkId,
+          linkId: duplicateLink.id,
           message: 'Link already exists',
         };
       }
 
-      // Create contact link
+      // Check for inactive link with same role — reactivate instead of creating new
+      const inactiveLinks = await this.listContactLinks({
+        sourceContactId,
+        targetEntityType,
+        targetEntityId,
+      });
+      const inactiveMatch = inactiveLinks.find(
+        (l) => l.role === role && l.status === 'inactive'
+      );
+
+      if (inactiveMatch) {
+        // Reactivate the existing link
+        const linkRef = doc(db, COLLECTIONS.CONTACT_LINKS, inactiveMatch.id);
+        await updateDoc(linkRef, {
+          status: 'active',
+          updatedBy: createdBy,
+          updatedAt: serverTimestamp(),
+        });
+        logger.info(`♻️ [AssociationService] Reactivated contact link: ${inactiveMatch.id}`);
+
+        RealtimeService.dispatch('CONTACT_LINK_CREATED', {
+          linkId: inactiveMatch.id,
+          link: { sourceContactId, sourceWorkspaceId, targetEntityType, targetEntityId, targetWorkspaceId },
+          timestamp: Date.now(),
+        });
+
+        return {
+          success: true,
+          linkId: inactiveMatch.id,
+          message: 'Contact link reactivated',
+        };
+      }
+
+      // ================================================================
+      // Cleanup: deactivate orphaned old-format links for this contact+entity
+      // (links without role in the ID from before the multi-role fix)
+      // ================================================================
+      const oldFormatId = `cl_${sourceContactId}_${targetEntityType}_${targetEntityId}`;
+      const orphanedLinks = existingLinks.filter(
+        (l) => l.id === oldFormatId || (!l.role && l.id !== oldFormatId)
+      );
+      for (const orphan of orphanedLinks) {
+        const orphanRef = doc(db, COLLECTIONS.CONTACT_LINKS, orphan.id);
+        await updateDoc(orphanRef, { status: 'inactive', updatedBy: createdBy, updatedAt: serverTimestamp() });
+        logger.info(`🧹 [AssociationService] Cleaned up orphaned link: ${orphan.id}`);
+      }
+
+      // ================================================================
+      // Create new link with canonical ID (includes role)
+      // ================================================================
+      const linkId = this.generateContactLinkId(sourceContactId, targetEntityType, targetEntityId, role);
+
       const contactLink: ContactLink = {
         id: linkId,
         sourceWorkspaceId,
@@ -472,6 +531,8 @@ export class AssociationService {
         };
       }
 
+      const linkData = snapshot.data() as ContactLink;
+
       await updateDoc(linkRef, {
         status: 'inactive',
         updatedBy,
@@ -479,6 +540,29 @@ export class AssociationService {
       });
 
       logger.info(`[AssociationService] Deactivated contact link: ${linkId}`);
+
+      // ================================================================
+      // Cleanup: deactivate ALL active links for the same contact+entity+role
+      // Catches old-format orphans (cl_X_unit_Y) that duplicate this link
+      // ================================================================
+      if (linkData.sourceContactId && linkData.targetEntityType && linkData.targetEntityId) {
+        const siblingLinks = await this.listContactLinks({
+          sourceContactId: linkData.sourceContactId,
+          targetEntityType: linkData.targetEntityType,
+          targetEntityId: linkData.targetEntityId,
+          status: 'active',
+        });
+
+        const orphans = siblingLinks.filter(
+          (l) => l.id !== linkId && l.role === linkData.role
+        );
+
+        for (const orphan of orphans) {
+          const orphanRef = doc(db, COLLECTIONS.CONTACT_LINKS, orphan.id);
+          await updateDoc(orphanRef, { status: 'inactive', updatedBy, updatedAt: serverTimestamp() });
+          logger.info(`🧹 [AssociationService] Cleaned up orphaned sibling link: ${orphan.id}`);
+        }
+      }
 
       RealtimeService.dispatch('CONTACT_LINK_REMOVED', {
         linkId,
