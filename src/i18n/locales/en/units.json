@@ -331,6 +331,15 @@
     "underConstruction": "Under Construction",
     "planned": "Planned"
   },
+  "commercialStatus": {
+    "unavailable": "Unavailable",
+    "for-sale": "For Sale",
+    "for-rent": "For Rent",
+    "for-sale-and-rent": "Sale & Rent",
+    "reserved": "Reserved",
+    "sold": "Sold",
+    "rented": "Rented"
+  },
   "units": {
     "status": {
       "available": "Available",

@@ -44,7 +44,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import type { Property } from '@/types/property-viewer';
-import type { UnitType } from '@/types/unit';
+import type { UnitType, CommercialStatus } from '@/types/unit';
 import type {
   ConditionType,
   OrientationType,
@@ -127,6 +127,11 @@ const UNIT_TYPE_OPTIONS: UnitType[] = [
   'apartment_3br', 'maisonette', 'shop', 'office', 'storage'
 ];
 
+const COMMERCIAL_STATUS_OPTIONS: CommercialStatus[] = [
+  'unavailable', 'for-sale', 'for-rent', 'for-sale-and-rent',
+  'reserved', 'sold', 'rented'
+];
+
 // =============================================================================
 // COMPONENT
 // =============================================================================
@@ -155,6 +160,7 @@ export function UnitFieldsBlock({
     name: property.name ?? '',
     code: property.code ?? '',
     type: property.type ?? '',
+    commercialStatus: (property.commercialStatus ?? 'unavailable') as CommercialStatus,
     description: property.description ?? '',
     floor: property.floor ?? 0,
     bedrooms: property.layout?.bedrooms ?? 0,
@@ -184,6 +190,7 @@ export function UnitFieldsBlock({
       name: property.name ?? '',
       code: property.code ?? '',
       type: property.type ?? '',
+      commercialStatus: (property.commercialStatus ?? 'unavailable') as CommercialStatus,
       description: property.description ?? '',
       floor: property.floor ?? 0,
       bedrooms: property.layout?.bedrooms ?? 0,
@@ -213,6 +220,7 @@ export function UnitFieldsBlock({
       name: formData.name,
       code: formData.code || undefined,
       type: formData.type,
+      commercialStatus: formData.commercialStatus,
       floor: formData.floor,
       // 🔒 ADR-232: Include floorId from property (set via FloorSelectField)
       ...(property.floorId ? { floorId: property.floorId } : {}),
@@ -314,6 +322,7 @@ export function UnitFieldsBlock({
       name: property.name ?? '',
       code: property.code ?? '',
       type: property.type ?? '',
+      commercialStatus: (property.commercialStatus ?? 'unavailable') as CommercialStatus,
       description: property.description ?? '',
       floor: property.floor ?? 0,
       bedrooms: property.layout?.bedrooms ?? 0,
@@ -409,6 +418,24 @@ export function UnitFieldsBlock({
                   {UNIT_TYPE_OPTIONS.map((unitType) => (
                     <SelectItem key={unitType} value={unitType} className="text-xs">
                       {t(`types.${unitType}`, { defaultValue: unitType })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </fieldset>
+            <fieldset className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                {t('fields.identity.commercialStatus', { defaultValue: 'Εμπορική Κατάσταση' })}
+              </Label>
+              <Select value={formData.commercialStatus} disabled={!isEditing}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, commercialStatus: value as CommercialStatus }))}>
+                <SelectTrigger className="h-7 text-xs">
+                  <SelectValue placeholder={t('fields.identity.commercialStatusPlaceholder', { defaultValue: 'Επιλέξτε κατάσταση...' })} />
+                </SelectTrigger>
+                <SelectContent>
+                  {COMMERCIAL_STATUS_OPTIONS.map((status) => (
+                    <SelectItem key={status} value={status} className="text-xs">
+                      {t(`commercialStatus.${status}`, { defaultValue: status })}
                     </SelectItem>
                   ))}
                 </SelectContent>

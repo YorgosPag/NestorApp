@@ -342,6 +342,15 @@
     "underConstruction": "Υπό κατασκευή",
     "planned": "Σχεδιασμένο"
   },
+  "commercialStatus": {
+    "unavailable": "Μη Διαθέσιμη",
+    "for-sale": "Προς Πώληση",
+    "for-rent": "Προς Ενοικίαση",
+    "for-sale-and-rent": "Πώληση & Ενοικίαση",
+    "reserved": "Κρατημένη",
+    "sold": "Πωλημένη",
+    "rented": "Ενοικιασμένη"
+  },
   "units": {
     "status": {
       "available": "Διαθέσιμο",
