@@ -694,7 +694,7 @@ export function UnitFieldsBlock({
                     <Button key={orientation} type="button"
                       variant={isSelected ? 'default' : 'outline'} size="sm"
                       className="h-6 px-1.5 text-xs"
-                      disabled={!isEditing}
+                      disabled={!isEditing || isSoldOrRented}
                       onClick={() => toggleArrayItem('orientations', orientation)}>
                       {t(`orientation.short.${orientation}`)}
                     </Button>
@@ -721,7 +721,7 @@ export function UnitFieldsBlock({
                   <Wrench className={cn(iconSizes.xs, 'text-orange-600')} />
                   {t('condition.sectionTitle')}
                 </Label>
-                <Select value={formData.condition} disabled={!isEditing}
+                <Select value={formData.condition} disabled={!isEditing || isSoldOrRented}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, condition: value }))}>
                   <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={t('condition.sectionTitle')} /></SelectTrigger>
                   <SelectContent>
@@ -736,7 +736,7 @@ export function UnitFieldsBlock({
                   <Zap className={cn(iconSizes.xs, 'text-green-600')} />
                   {t('energy.class')}
                 </Label>
-                <Select value={formData.energyClass} disabled={!isEditing}
+                <Select value={formData.energyClass} disabled={!isEditing || isSoldOrRented}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, energyClass: value }))}>
                   <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={t('energy.class')} /></SelectTrigger>
                   <SelectContent>
@@ -771,7 +771,7 @@ export function UnitFieldsBlock({
                   <Flame className={cn(iconSizes.xs, 'text-orange-500')} />
                   {t('systems.heating.label')}
                 </Label>
-                <Select value={formData.heatingType} disabled={!isEditing}
+                <Select value={formData.heatingType} disabled={!isEditing || isSoldOrRented}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, heatingType: value }))}>
                   <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={t('systems.heating.label')} /></SelectTrigger>
                   <SelectContent>
@@ -786,7 +786,7 @@ export function UnitFieldsBlock({
                   <Snowflake className={cn(iconSizes.xs, 'text-blue-500')} />
                   {t('systems.cooling.label')}
                 </Label>
-                <Select value={formData.coolingType} disabled={!isEditing}
+                <Select value={formData.coolingType} disabled={!isEditing || isSoldOrRented}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, coolingType: value }))}>
                   <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={t('systems.cooling.label')} /></SelectTrigger>
                   <SelectContent>
@@ -818,7 +818,7 @@ export function UnitFieldsBlock({
                     <Button key={floor} type="button"
                       variant={isSelected ? 'default' : 'outline'} size="sm"
                       className="h-6 px-1.5 text-xs"
-                      disabled={!isEditing}
+                      disabled={!isEditing || isSoldOrRented}
                       onClick={() => toggleArrayItem('flooring', floor)}>
                       {t(`finishes.flooring.${floor}`)}
                     </Button>
@@ -831,7 +831,7 @@ export function UnitFieldsBlock({
             <div className="grid grid-cols-2 gap-2">
               <fieldset className="space-y-1">
                 <Label className="text-xs text-muted-foreground">{t('finishes.frames.label')}</Label>
-                <Select value={formData.windowFrames} disabled={!isEditing}
+                <Select value={formData.windowFrames} disabled={!isEditing || isSoldOrRented}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, windowFrames: value }))}>
                   <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={t('finishes.frames.label')} /></SelectTrigger>
                   <SelectContent>
@@ -843,7 +843,7 @@ export function UnitFieldsBlock({
               </fieldset>
               <fieldset className="space-y-1">
                 <Label className="text-xs text-muted-foreground">{t('finishes.glazing.label')}</Label>
-                <Select value={formData.glazing} disabled={!isEditing}
+                <Select value={formData.glazing} disabled={!isEditing || isSoldOrRented}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, glazing: value }))}>
                   <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={t('finishes.glazing.label')} /></SelectTrigger>
                   <SelectContent>
@@ -876,7 +876,7 @@ export function UnitFieldsBlock({
                     <Button key={feature} type="button"
                       variant={isSelected ? 'default' : 'outline'} size="sm"
                       className="h-6 px-1.5 text-xs"
-                      disabled={!isEditing}
+                      disabled={!isEditing || isSoldOrRented}
                       onClick={() => toggleArrayItem('interiorFeatures', feature)}>
                       {t(`features.interior.${feature}`)}
                     </Button>
@@ -895,7 +895,7 @@ export function UnitFieldsBlock({
                     <Button key={feature} type="button"
                       variant={isSelected ? 'default' : 'outline'} size="sm"
                       className="h-6 px-1.5 text-xs"
-                      disabled={!isEditing}
+                      disabled={!isEditing || isSoldOrRented}
                       onClick={() => toggleArrayItem('securityFeatures', feature)}>
                       {t(`features.security.${feature}`)}
                     </Button>

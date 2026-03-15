@@ -94,6 +94,8 @@ export const PATCH = withStandardRateLimit(
           const soldLockedFields = [
             'code', 'type', 'name', 'areas', 'layout', 'floor', 'floorId',
             'commercialStatus', 'buildingId', 'linkedSpaces',
+            'orientations', 'condition', 'energy', 'systemsOverride',
+            'finishes', 'interiorFeatures', 'securityFeatures',
           ] as const;
           const attemptedLockedFields = soldLockedFields.filter(f => f in body);
           if (attemptedLockedFields.length > 0) {
