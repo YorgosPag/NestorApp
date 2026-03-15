@@ -239,10 +239,16 @@ export const COLLECTIONS = {
   BOQ_PRICE_LISTS: process.env.NEXT_PUBLIC_BOQ_PRICE_LISTS_COLLECTION || 'boq_price_lists',
   BOQ_TEMPLATES: process.env.NEXT_PUBLIC_BOQ_TEMPLATES_COLLECTION || 'boq_templates',
 
+  // 🧾 CHEQUE REGISTRY (ADR-234 Phase 3 — SPEC-234A)
+  CHEQUES: process.env.NEXT_PUBLIC_CHEQUES_COLLECTION || 'cheques',
+
   // ⚖️ LEGAL CONTRACTS & BROKERAGE (ADR-230: Contract Workflow & Legal Process)
   LEGAL_CONTRACTS: process.env.NEXT_PUBLIC_LEGAL_CONTRACTS_COLLECTION || 'legal_contracts',
   BROKERAGE_AGREEMENTS: process.env.NEXT_PUBLIC_BROKERAGE_AGREEMENTS_COLLECTION || 'brokerage_agreements',
   COMMISSION_RECORDS: process.env.NEXT_PUBLIC_COMMISSION_RECORDS_COLLECTION || 'commission_records',
+
+  // 📊 OWNERSHIP PERCENTAGE TABLE (ADR-235: Πίνακας Χιλιοστών Συνιδιοκτησίας)
+  OWNERSHIP_TABLES: process.env.NEXT_PUBLIC_OWNERSHIP_TABLES_COLLECTION || 'ownership_tables',
 } as const;
 
 // ============================================================================
@@ -293,7 +299,10 @@ export const SUBCOLLECTIONS = {
   UNIT_GRANTS: process.env.NEXT_PUBLIC_UNIT_GRANTS_SUBCOL || 'grants',
 
   // File subcollections (ADR-191: Document Management)
-  FILE_VERSIONS: process.env.NEXT_PUBLIC_FILE_VERSIONS_SUBCOL || 'versions'
+  FILE_VERSIONS: process.env.NEXT_PUBLIC_FILE_VERSIONS_SUBCOL || 'versions',
+
+  // Ownership table revisions (ADR-235)
+  OWNERSHIP_REVISIONS: process.env.NEXT_PUBLIC_OWNERSHIP_REVISIONS_SUBCOL || 'revisions',
 } as const;
 
 // ============================================================================

@@ -193,6 +193,86 @@
       "dstiExceeded": "DSTI {value}% — exceeds limit {limit}%"
     }
   },
+  "chequeRegistry": {
+    "title": "Cheque Registry",
+    "noCheques": "No cheques recorded.",
+    "status": {
+      "received": "Received",
+      "in_custody": "In Custody",
+      "deposited": "Deposited",
+      "clearing": "Clearing",
+      "cleared": "Cleared",
+      "bounced": "Bounced",
+      "endorsed": "Endorsed",
+      "cancelled": "Cancelled",
+      "expired": "Expired",
+      "replaced": "Replaced"
+    },
+    "bouncedReason": {
+      "insufficient_funds": "Insufficient Funds",
+      "account_closed": "Account Closed",
+      "signature_mismatch": "Signature Mismatch",
+      "stop_payment": "Stop Payment",
+      "post_dated_early": "Post-Dated Early Deposit",
+      "technical_issue": "Technical Issue",
+      "other": "Other"
+    },
+    "fields": {
+      "chequeNumber": "Cheque No.",
+      "chequeType": "Cheque Type",
+      "amount": "Amount (€)",
+      "bankName": "Bank",
+      "bankBranch": "Branch",
+      "drawerName": "Drawer",
+      "drawerTaxId": "Drawer Tax ID",
+      "issueDate": "Issue Date",
+      "maturityDate": "Maturity Date",
+      "depositDate": "Deposit Date",
+      "clearingDate": "Clearing Date",
+      "bouncedDate": "Bounce Date",
+      "bouncedReason": "Bounce Reason",
+      "crossedCheque": "Crossed Cheque",
+      "postDated": "Post-Dated",
+      "yes": "Yes",
+      "status": "Status",
+      "endorserName": "Endorser",
+      "endorseeName": "Endorsee",
+      "teiresiasFiled": "Tiresias Filed",
+      "policeCaseFiled": "Police Case Filed"
+    },
+    "actions": {
+      "addCheque": "New Cheque",
+      "chequeCreated": "Cheque recorded",
+      "transitionTitle": "Change Status",
+      "endorse": "Endorse",
+      "endorsed": "Endorsed",
+      "bounce": "Mark as Bounced",
+      "bounced": "Bounced",
+      "save": "Save",
+      "updated": "Updated",
+      "terminal": "This cheque is in a terminal state."
+    },
+    "tabs": {
+      "details": "Details",
+      "actions": "Actions",
+      "history": "History"
+    },
+    "bouncedInfo": {
+      "title": "Bounce Details"
+    },
+    "endorsement": {
+      "title": "Endorsement Chain",
+      "empty": "No endorsements."
+    },
+    "replacement": {
+      "replaces": "Replaces cheque:",
+      "replacedBy": "Replaced by:"
+    },
+    "audit": {
+      "created": "Created:",
+      "updated": "Updated:"
+    }
+  },
   "errors": {
     "noBuyer": "No buyer assigned",
     "noProject": "Unit is not assigned to a project",

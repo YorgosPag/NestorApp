@@ -193,6 +193,86 @@
       "dstiExceeded": "DSTI {value}% — υπερβαίνει το όριο {limit}%"
     }
   },
+  "chequeRegistry": {
+    "title": "Μητρώο Επιταγών",
+    "noCheques": "Δεν υπάρχουν καταγεγραμμένες επιταγές.",
+    "status": {
+      "received": "Παραλήφθηκε",
+      "in_custody": "Σε Φύλαξη",
+      "deposited": "Κατατέθηκε",
+      "clearing": "Σε Εκκαθάριση",
+      "cleared": "Εισπράχθηκε",
+      "bounced": "Σφραγίστηκε",
+      "endorsed": "Οπισθογραφήθηκε",
+      "cancelled": "Ακυρώθηκε",
+      "expired": "Έληξε",
+      "replaced": "Αντικαταστάθηκε"
+    },
+    "bouncedReason": {
+      "insufficient_funds": "Ανεπαρκές Υπόλοιπο",
+      "account_closed": "Κλειστός Λογαριασμός",
+      "signature_mismatch": "Ασυμφωνία Υπογραφής",
+      "stop_payment": "Ανάκληση Πληρωμής",
+      "post_dated_early": "Πρόωρη Κατάθεση",
+      "technical_issue": "Τεχνικό Πρόβλημα",
+      "other": "Άλλος Λόγος"
+    },
+    "fields": {
+      "chequeNumber": "Αρ. Επιταγής",
+      "chequeType": "Τύπος Επιταγής",
+      "amount": "Ποσό (€)",
+      "bankName": "Τράπεζα",
+      "bankBranch": "Υποκατάστημα",
+      "drawerName": "Εκδότης",
+      "drawerTaxId": "ΑΦΜ Εκδότη",
+      "issueDate": "Ημ. Έκδοσης",
+      "maturityDate": "Ημ. Λήξης",
+      "depositDate": "Ημ. Κατάθεσης",
+      "clearingDate": "Ημ. Εκκαθάρισης",
+      "bouncedDate": "Ημ. Σφράγισης",
+      "bouncedReason": "Λόγος Σφράγισης",
+      "crossedCheque": "Δίγραμμη Επιταγή",
+      "postDated": "Μεταχρονολογημένη",
+      "yes": "Ναι",
+      "status": "Κατάσταση",
+      "endorserName": "Οπισθογράφος",
+      "endorseeName": "Αποδέκτης",
+      "teiresiasFiled": "Δήλωση Τειρεσία",
+      "policeCaseFiled": "Μήνυση"
+    },
+    "actions": {
+      "addCheque": "Νέα Επιταγή",
+      "chequeCreated": "Η επιταγή καταγράφηκε",
+      "transitionTitle": "Αλλαγή Κατάστασης",
+      "endorse": "Οπισθογράφηση",
+      "endorsed": "Οπισθογραφήθηκε",
+      "bounce": "Σφράγιση Επιταγής",
+      "bounced": "Σφραγίστηκε",
+      "save": "Αποθήκευση",
+      "updated": "Ενημερώθηκε",
+      "terminal": "Η επιταγή είναι σε τερματική κατάσταση."
+    },
+    "tabs": {
+      "details": "Στοιχεία",
+      "actions": "Ενέργειες",
+      "history": "Ιστορικό"
+    },
+    "bouncedInfo": {
+      "title": "Στοιχεία Σφράγισης"
+    },
+    "endorsement": {
+      "title": "Αλυσίδα Οπισθογράφησης",
+      "empty": "Δεν υπάρχουν οπισθογραφήσεις."
+    },
+    "replacement": {
+      "replaces": "Αντικαθιστά επιταγή:",
+      "replacedBy": "Αντικαταστάθηκε από:"
+    },
+    "audit": {
+      "created": "Δημιουργήθηκε:",
+      "updated": "Ενημερώθηκε:"
+    }
+  },
   "errors": {
     "noBuyer": "Δεν υπάρχει αγοραστής",
     "noProject": "Η μονάδα δεν ανήκει σε έργο",

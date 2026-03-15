@@ -15,6 +15,7 @@ import { PaymentPlanOverview } from '@/components/sales/payments/PaymentPlanOver
 import { InstallmentSchedule } from '@/components/sales/payments/InstallmentSchedule';
 import { RecordPaymentDialog } from '@/components/sales/payments/RecordPaymentDialog';
 import { LoanTrackingSection } from '@/components/sales/payments/LoanTrackingSection';
+import { ChequeRegistrySection } from '@/components/sales/payments/ChequeRegistrySection';
 import { CreatePaymentPlanWizard } from '@/components/sales/payments/CreatePaymentPlanWizard';
 import { Button } from '@/components/ui/button';
 import type { Unit } from '@/types/unit';
@@ -141,6 +142,14 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
 
       {/* Loan Tracking (Phase 2 — SPEC-234C) */}
       <LoanTrackingSection unitId={unit.id} />
+
+      {/* Cheque Registry (Phase 3 — SPEC-234A) */}
+      <ChequeRegistrySection
+        unitId={unit.id}
+        projectId={resolvedProjectId}
+        paymentPlanId={plan.id}
+        contactId={buyerContactId}
+      />
 
       {/* Record Payment Dialog */}
       {selectedInstallment && (

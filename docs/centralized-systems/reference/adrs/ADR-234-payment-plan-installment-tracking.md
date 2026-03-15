@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | ✅ IMPLEMENTED — Phase 1 (SPEC-234D) + Phase 2 (SPEC-234C) |
+| **Status** | ✅ IMPLEMENTED — Phase 1 (SPEC-234D) + Phase 2 (SPEC-234C) + Phase 3 (SPEC-234A) |
 | **Date** | 2026-03-15 |
 | **Category** | Entity Systems / Sales & Finance |
 | **Priority** | P1 — Business-Critical Process |
@@ -891,3 +891,4 @@ Predefined templates για συνηθισμένες δομές:
 | 2026-03-15 | **Ροή + Statuses**: Νέο status 'negotiation' (πριν κράτηση — διαπραγμάτευση τιμής + calculator). Plan δημιουργείται στη διαπραγμάτευση, κλειδώνει στο προσύμφωνο/οριστικό. Calculator (SPEC-234E) τρέχει ΚΑΤΑ τη διαπραγμάτευση, πριν κλείσει η τιμή. | Γιώργος + Claude |
 | 2026-03-15 | **Phase 1 IMPLEMENTED (SPEC-234D)**: 16 new files + 4 modified. Types (`payment-plan.ts`), Service (`payment-plan.service.ts`), API routes (3 endpoints), Hook (`usePaymentPlan.ts`), Templates (4 predefined), i18n (EL+EN), UI components (6: PaymentTabContent, PaymentPlanOverview, InstallmentSchedule, RecordPaymentDialog, LoanInfoCard, CreatePaymentPlanWizard), SalesSidebar integration (payment tab after legal). Firestore subcollections: `payment_plans`, `payments`. Enterprise IDs: `pp_`, `pay_`. | Claude Code |
 | 2026-03-15 | **Phase 2 IMPLEMENTED (SPEC-234C)**: Multi-bank loan tracking. 8 new files + 8 modified. Types (`loan-tracking.ts` — 15-stage FSM, LoanTracking interface ~40 fields), Service (`loan-tracking.service.ts`), 5 API routes (`/loans`, `/loans/[loanId]`, `/transition`, `/disburse`, `/comm-log`), Hook (`useLoanTracking.ts`), UI components (5: LoanTrackingSection, LoanCard, LoanStatusTimeline, LoanDetailDialog, AddLoanDialog). PaymentPlan.loans[] array (multi-bank), migration `LoanInfo→LoanTracking`, PaymentSummary extended fields, i18n (EL+EN), Enterprise ID `loan_`. Backward compatible: old `loan: LoanInfo` auto-migrated. | Claude Code |
+| 2026-03-16 | **Phase 3 IMPLEMENTED (SPEC-234A)**: Cheque Registry — enterprise cheque lifecycle management per Ν. 5960/1933. 13 new files + 7 modified (~2100 lines). Types (`cheque-registry.ts` — 10-state FSM, ChequeRecord ~35 fields, ChequeContext, EndorsementEntry), Service (`cheque-registry.service.ts` — CRUD, FSM transitions, endorsement, bounce, replacement, auto PaymentRecord on clearing), 5 API routes (`/cheques`, `/cheques/[chequeId]`, `/transition`, `/endorse`, `/bounce`), Hook (`useChequeRegistry.ts`), UI components (5: ChequeRegistrySection, ChequeTable, ChequeStatusBadge, AddChequeDialog, ChequeDetailDialog with 3 tabs). Firestore top-level `cheques` collection, Enterprise ID `chq_`, i18n (EL+EN), V-CHQ-001~008 server-enforced. Bounced workflow: Τειρεσίας + μήνυση toggles. Integrated in PaymentTabContent. | Claude Code |

@@ -144,6 +144,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   PAYMENT_PLAN: 'pp',
   PAYMENT_RECORD: 'pay',
   LOAN: 'loan',
+  CHEQUE: 'chq',
 
   // ==========================================================================
   // OPTIMISTIC & TEMPORARY
@@ -729,6 +730,14 @@ export class EnterpriseIdService {
   }
 
   /**
+   * 🧾 Generate Cheque ID (ADR-234 Phase 3)
+   * Format: chq_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateChequeId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.CHEQUE).id;
+  }
+
+  /**
    * 🔮 Generate Optimistic ID (for optimistic updates)
    * Format: opt_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
    */
@@ -1120,6 +1129,7 @@ export const generateCommissionId = () => enterpriseIdService.generateCommission
 export const generatePaymentPlanId = () => enterpriseIdService.generatePaymentPlanId();
 export const generatePaymentRecordId = () => enterpriseIdService.generatePaymentRecordId();
 export const generateLoanId = () => enterpriseIdService.generateLoanId();
+export const generateChequeId = () => enterpriseIdService.generateChequeId();
 
 // =============================================================================
 // FILE & MEDIA OPERATIONS
