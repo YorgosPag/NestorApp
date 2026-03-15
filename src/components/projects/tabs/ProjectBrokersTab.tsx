@@ -293,16 +293,44 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
   }, []);
 
   const handleAgentSelect = useCallback((contact: ContactSummary | null) => {
+    // Duplicate broker prevention: check if agent already has active agreement
+    if (contact && !isEditMode) {
+      const hasActive = agreements.some(
+        (a) => a.agentContactId === contact.id && a.status === 'active'
+          && (!a.endDate || new Date(a.endDate) >= new Date())
+      );
+      if (hasActive) {
+        const msg = t('sales.legal.duplicateAgent', { agentName: contact.name })
+          .replace(/\{\{agentName\}\}/g, contact.name);
+        setFormError(msg);
+        return;
+      }
+    }
+    setFormError('');
     setForm((prev) => ({
       ...prev,
       agentContactId: contact?.id ?? '',
       agentName: contact?.name ?? '',
     }));
-  }, []);
+  }, [agreements, isEditMode, t]);
 
   const handleSave = useCallback(async () => {
     if (!form.agentContactId || !form.startDate || !projectId) return;
     if (form.scope === 'unit' && !form.unitId) return;
+
+    // Double-check duplicate broker prevention before save
+    if (!isEditMode) {
+      const hasActive = agreements.some(
+        (a) => a.agentContactId === form.agentContactId && a.status === 'active'
+          && (!a.endDate || new Date(a.endDate) >= new Date())
+      );
+      if (hasActive) {
+        const msg = t('sales.legal.duplicateAgent', { agentName: form.agentName })
+          .replace(/\{\{agentName\}\}/g, form.agentName);
+        setFormError(msg);
+        return;
+      }
+    }
 
     setSaving(true);
     setFormError('');
@@ -453,6 +481,37 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
             </Button>
           </header>
 
+          {/* Validation Messages + Errors — top position for visibility */}
+          {isValidating && (
+            <p className="text-sm text-muted-foreground">{t('sales.legal.validating')}</p>
+          )}
+          {!isValidating && validationResult && validationResult.issues.length > 0 && (
+            <ul className="space-y-1">
+              {validationResult.issues.map((issue, idx) => (
+                <li
+                  key={idx}
+                  className={`flex items-start gap-2 rounded border p-2 text-sm ${
+                    issue.severity === 'error'
+                      ? 'border-destructive text-destructive'
+                      : 'border-yellow-500 text-yellow-800 dark:text-yellow-300'
+                  }`}
+                >
+                  {issue.severity === 'error'
+                    ? <ShieldAlert className={`${iconSizes.sm} mt-0.5 shrink-0`} />
+                    : <AlertTriangle className={`${iconSizes.sm} mt-0.5 shrink-0`} />
+                  }
+                  <span>{t(issue.messageKey, issue.messageParams).replace(/\{\{(\w+)\}\}/g, (_, key) => issue.messageParams[key] ?? '')}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {formError && (
+            <p className="flex items-center gap-2 rounded border border-destructive p-2 text-sm text-destructive">
+              <ShieldAlert className={`${iconSizes.sm} shrink-0`} />
+              {formError}
+            </p>
+          )}
+
           {/* Agent selection — disabled in edit mode */}
           <fieldset className="space-y-1">
             <ContactSearchManager
@@ -595,36 +654,6 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
               className="resize-none"
             />
           </fieldset>
-
-          {/* Exclusivity Validation Messages */}
-          {isValidating && (
-            <p className="text-sm text-muted-foreground">{t('sales.legal.validating')}</p>
-          )}
-          {!isValidating && validationResult && validationResult.issues.length > 0 && (
-            <ul className="space-y-1">
-              {validationResult.issues.map((issue, idx) => (
-                <li
-                  key={idx}
-                  className={`flex items-start gap-2 rounded p-2 text-sm ${
-                    issue.severity === 'error'
-                      ? 'bg-destructive/10 text-destructive'
-                      : 'bg-yellow-50 text-yellow-800 dark:bg-yellow-950/30 dark:text-yellow-300'
-                  }`}
-                >
-                  {issue.severity === 'error'
-                    ? <ShieldAlert className={`${iconSizes.sm} mt-0.5 shrink-0`} />
-                    : <AlertTriangle className={`${iconSizes.sm} mt-0.5 shrink-0`} />
-                  }
-                  <span>{t(issue.messageKey, issue.messageParams)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {/* Error */}
-          {formError && (
-            <p className="text-sm text-destructive">{formError}</p>
-          )}
 
           {/* Actions */}
           <footer className="flex items-center justify-end gap-2 pt-2">
@@ -882,7 +911,16 @@ function AgreementCard({
 
       {/* Expandable file upload section */}
       {isExpanded && companyId && (
-        <section className="rounded border bg-muted/20 p-3">
+        <section className="relative rounded border bg-muted/20 p-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onToggleExpand}
+            className="absolute top-1 right-1 h-7 w-7 p-0 z-10"
+            aria-label="Close"
+          >
+            <X className={iconSizes.sm} />
+          </Button>
           <EntityFilesManager
             companyId={companyId}
             currentUserId={currentUserId}

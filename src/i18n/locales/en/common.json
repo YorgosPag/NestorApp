@@ -1424,6 +1424,7 @@
       "nonExclusiveBlockedByProjectExclusive": "Project-level exclusive ({{agentName}}). No new agreements allowed",
       "nonExclusiveBlockedByUnitExclusive": "Exclusive on {{unitName}} ({{agentName}}). No new agreements allowed",
       "exclusivityWarningExcludedUnits": "Units with existing agreements excluded: {{unitNames}}",
+      "duplicateAgent": "Agent {{agentName}} already has an active agreement in this project",
       "validating": "Checking exclusivity...",
       "saveSuccess": "Agreement saved",
       "saveError": "Save failed",

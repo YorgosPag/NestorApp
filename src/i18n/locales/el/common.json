@@ -1423,6 +1423,7 @@
       "nonExclusiveBlockedByProjectExclusive": "Αποκλειστική σε επίπεδο έργου ({{agentName}}). Δεν δημιουργούνται νέες",
       "nonExclusiveBlockedByUnitExclusive": "Αποκλειστική στη μονάδα {{unitName}} ({{agentName}}). Δεν δημιουργούνται νέες",
       "exclusivityWarningExcludedUnits": "Εξαιρούνται μονάδες με υπάρχουσες συμβάσεις: {{unitNames}}",
+      "duplicateAgent": "Ο μεσίτης {{agentName}} έχει ήδη ενεργή σύμβαση σε αυτό το έργο",
       "validating": "Έλεγχος αποκλειστικότητας...",
       "saveSuccess": "Η σύμβαση αποθηκεύτηκε",
       "saveError": "Σφάλμα αποθήκευσης",
