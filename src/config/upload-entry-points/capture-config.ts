@@ -21,7 +21,7 @@ export const CATEGORY_CAPTURE_CAPABILITIES: Record<FileCategory, CaptureSource[]
   photos: ['upload', 'camera'],
   videos: ['upload', 'video'],
   documents: ['upload', 'text', 'microphone'], // Documents can include text notes and voice notes
-  contracts: ['upload'],
+  contracts: ['upload', 'camera'], // Can photograph contracts with phone camera
   permits: ['upload'],
   floorplans: ['upload'],
   invoices: ['upload', 'camera'], // Can photograph receipts

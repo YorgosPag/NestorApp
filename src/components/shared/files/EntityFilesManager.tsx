@@ -26,7 +26,7 @@
 
 import React, { useCallback, useState, useMemo } from 'react';
 import { normalizeForSearch } from '@/utils/greek-text';
-import { FileText, RefreshCw, List, Network, Eye, Code, ArrowUp, Trash2, Grid3X3, Image as ImageIcon } from 'lucide-react';
+import { FileText, RefreshCw, List, Network, Eye, Code, ArrowUp, Trash2, Grid3X3, Image as ImageIcon, X as XIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -947,7 +947,17 @@ export function EntityFilesManager({
       <CardContent className="space-y-2">
         {/* Upload Pipeline (conditional) - Only show on files tab */}
         {activeTab === 'files' && showUploadZone && (
-          <div className="space-y-2 p-2 bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
+          <div className="relative space-y-2 p-2 bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
+            {/* Close button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setShowUploadZone(false); setSelectedEntryPoint(null); }}
+              className="absolute top-1 right-1 h-7 w-7 p-0"
+              aria-label={t('common.close')}
+            >
+              <XIcon className={iconSizes.sm} />
+            </Button>
             {/* Step 1: Entry Point Selection — flat (contacts) vs hierarchical (projects/buildings) */}
             {getAvailableGroups(entityType).length > 0 ? (
               <HierarchicalEntryPointSelector

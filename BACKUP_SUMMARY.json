@@ -1,25 +1,20 @@
 {
-  "category": "FEATURE",
-  "shortDescription": "Πλήρες Audit Trail — professionals, emails, invoices, links + fix IDs→names",
-  "problem": "Το Activity Tab κατέγραφε μόνο field-level αλλαγές. Ανάθεση/αφαίρεση νομικών, emails, τιμολόγια, parking/storage sync δεν καταγράφονταν. IDs εμφανίζονταν αντί ονομάτων. commercial object γινόταν raw JSON dump.",
-  "cause": "Τα audit entries γράφονταν μόνο στο PATCH /api/units/[id]. Δεν υπήρχε integration με ProfessionalsCard, email notifications, SalesAccountingBridge, appurtenance-sync, AssociationService. UNIT_TRACKED_FIELDS ήταν τοπικό στο route, commercial ήταν ενιαίο πεδίο χωρίς sub-field tracking.",
+  "category": "REFACTOR",
+  "shortDescription": "Centralize ID generation — replace .add() and Date.now() with enterprise UUIDs",
+  "problem": "4 Firestore collections used .add() (auto-generated IDs) and 1 used Date.now()+Math.random() instead of the centralized enterprise-id.service.ts UUID system.",
+  "cause": "These services were created before the enterprise ID system was established, or the ID system hadn't yet covered these prefixes.",
   "filesChanged": [
-    "src/types/audit-trail.ts — 4 νέα AuditAction types",
-    "src/components/shared/audit/ActivityTab.tsx — ACTION_MAP + FILTER_OPTIONS + StatsPanel entries",
-    "src/config/audit-tracked-fields.ts — Centralized UNIT_TRACKED_FIELDS + flattenForTracking()",
-    "src/services/entity-audit.service.ts — diffFieldsWithResolution() async ID→name resolution",
-    "src/app/api/audit-trail/record/route.ts — VALID_ACTIONS expanded",
-    "src/app/api/units/[id]/activity/route.ts — VALID_ACTIONS expanded",
-    "src/app/api/units/[id]/route.ts — Import centralized fields + use diffFieldsWithResolution",
-    "src/components/sales/legal/ProfessionalsCard.tsx — Audit on assign/remove",
-    "src/app/api/notifications/professional-assigned/route.ts — Audit on email sent",
-    "src/services/sales-accounting/sales-accounting-bridge.ts — Audit on invoice created",
-    "src/app/api/sales/[unitId]/appurtenance-sync/route.ts — Audit on parking/storage sync",
-    "src/services/association.service.ts — Audit on contact link/unlink"
+    "src/services/enterprise-id.service.ts",
+    "src/services/ai-pipeline/feedback-service.ts",
+    "src/services/ai-pipeline/audit-service.ts",
+    "src/services/entity-audit.service.ts",
+    "src/services/legal-contract.service.ts",
+    "src/app/api/notifications/error-report/route.ts",
+    "src/app/api/calendar/reminders/route.ts"
   ],
-  "solution": "3 φάσεις: (1) Νέοι τύποι ενεργειών professional_assigned/removed, email_sent, invoice_created με icons/labels/colors στο UI. (2) Κεντρικοποίηση UNIT_TRACKED_FIELDS, commercial sub-fields σε dot-notation, flattenForTracking() helper, diffFieldsWithResolution() με async resolvers. (3) Audit entries σε 5 κρίσιμα σημεία: ProfessionalsCard, email notifications, SalesAccountingBridge, appurtenance-sync, AssociationService.",
-  "testing": "TypeScript check: 0 errors στα αλλαγμένα αρχεία. Vercel auto-deploy triggered.",
-  "notes": "12 αρχεία, 561 insertions. Όλα τα audit entries είναι fire-and-forget (.catch(() => {})). Client-side audit (AssociationService) χρησιμοποιεί POST /api/audit-trail/record. Server-side audit χρησιμοποιεί EntityAuditService.recordChange() απευθείας.",
+  "solution": "Added 4 new prefixes (fb, paud, eaud, lc) + 4 class methods + 4 convenience exports to enterprise-id.service.ts. Replaced .add() with .doc(generateXxxId()).set() in 5 files. Removed local generateContractId() from legal-contract.service.ts. Added NEXT_PUBLIC_DEFAULT_COMPANY_ID env var to Vercel production.",
+  "testing": "Grep verification: 0 .add() calls remaining in changed files. 0 Date.now()+Math.random() patterns. Vercel auto-deploy.",
+  "notes": "Vercel env var NEXT_PUBLIC_DEFAULT_COMPANY_ID set to comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757. New ID formats: fb_uuid, paud_uuid, eaud_uuid, lc_uuid, notif_uuid.",
   "contributors": {
     "user": "Γιώργος Παγώνης",
     "assistant": "Claude Opus 4.6",
@@ -28,8 +23,8 @@
   "relatedBackups": [],
   "commits": [
     {
-      "hash": "79706a87",
-      "message": "feat: complete audit trail — track professionals, emails, invoices, links + fix IDs→names"
+      "hash": "36eb39e1",
+      "message": "refactor: centralize ID generation — replace .add() and Date.now() with enterprise UUIDs"
     }
   ]
 }

@@ -383,9 +383,45 @@ if (total === 0) {
   process.exit(0);
 }
 
+// ── Fix legacy tenantId in config documents ──
+const LEGACY_COMPANY_ID = 'pzNUy8ksddGCtcQMqumR';
+const ENTERPRISE_COMPANY_ID = 'comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757';
+
+const configSnap = await db.collection('config').get();
+const legacyTenantDocs = [];
+for (const doc of configSnap.docs) {
+  const data = doc.data();
+  if (data.tenantId === LEGACY_COMPANY_ID) {
+    legacyTenantDocs.push({ id: doc.id, collection: 'config' });
+  }
+}
+
+if (legacyTenantDocs.length > 0) {
+  console.log(`\n📋 CONFIG tenantId FIX:`);
+  console.log(`   ${legacyTenantDocs.length} documents with legacy tenantId "${LEGACY_COMPANY_ID}"`);
+  for (const d of legacyTenantDocs) {
+    console.log(`     config/${d.id}`);
+  }
+  console.log(`   → Will update to "${ENTERPRISE_COMPANY_ID}"\n`);
+}
+
 if (isDryRun) {
   console.log('ℹ️  Dry-run complete. Τρέξε χωρίς --dry-run για εκτέλεση.');
   process.exit(0);
+}
+
+// ── Execute tenantId fix first ──
+if (legacyTenantDocs.length > 0) {
+  console.log('Fixing config tenantId...\n');
+  const batch = db.batch();
+  for (const d of legacyTenantDocs) {
+    batch.update(db.collection('config').doc(d.id), { tenantId: ENTERPRISE_COMPANY_ID });
+  }
+  await batch.commit();
+  for (const d of legacyTenantDocs) {
+    console.log(`  ✅ config/${d.id} tenantId → ${ENTERPRISE_COMPANY_ID}`);
+  }
+  console.log('');
 }
 
 console.log('Executing migration...\n');
