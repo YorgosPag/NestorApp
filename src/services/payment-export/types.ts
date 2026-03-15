@@ -6,7 +6,8 @@
  * @module services/payment-export/types
  */
 
-import type { PaymentPlanStatus, LoanStatus, LoanTrackingStatus } from '@/types/payment-plan';
+import type { PaymentPlanStatus, LoanStatus } from '@/types/payment-plan';
+import type { LoanTrackingStatus } from '@/types/loan-tracking';
 
 // =============================================================================
 // REPORT ROW — One row per unit
