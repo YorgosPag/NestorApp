@@ -1,0 +1,131 @@
+{
+  "title": "Payments",
+  "paymentPlan": {
+    "title": "Payment Plan",
+    "overview": "Overview",
+    "noPlan": "No payment plan exists. Create one.",
+    "createPlan": "Create Plan",
+    "status": {
+      "negotiation": "Negotiation",
+      "draft": "Draft",
+      "active": "Active",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    }
+  },
+  "installments": {
+    "title": "Installments",
+    "schedule": "Installment Schedule",
+    "addInstallment": "Add Installment",
+    "status": {
+      "pending": "Pending",
+      "due": "Due",
+      "paid": "Paid",
+      "partial": "Partially Paid",
+      "waived": "Waived"
+    }
+  },
+  "installmentType": {
+    "reservation": "Reservation",
+    "down_payment": "Down Payment",
+    "stage_payment": "Stage Payment",
+    "final_payment": "Final Payment",
+    "custom": "Custom"
+  },
+  "paymentMethod": {
+    "bank_transfer": "Bank Transfer",
+    "bank_cheque": "Bank Cheque",
+    "personal_cheque": "Personal Cheque",
+    "bank_loan": "Loan Disbursement",
+    "cash": "Cash",
+    "promissory_note": "Promissory Note",
+    "offset": "Offset"
+  },
+  "loan": {
+    "title": "Bank Loan",
+    "status": {
+      "not_applicable": "Not Applicable",
+      "pending": "Pending",
+      "applied": "Applied",
+      "pre_approved": "Pre-Approved",
+      "approved": "Approved",
+      "disbursed": "Disbursed",
+      "rejected": "Rejected"
+    },
+    "bankName": "Bank",
+    "loanAmount": "Loan Amount",
+    "financingPercentage": "Financing %",
+    "interestRate": "Interest Rate",
+    "termYears": "Term (years)"
+  },
+  "taxRegime": {
+    "vat_24": "New Build — VAT 24%",
+    "vat_suspension_3": "VAT Suspension (3% Transfer Tax)",
+    "transfer_tax_3": "3% Transfer Tax",
+    "custom": "Custom"
+  },
+  "actions": {
+    "recordPayment": "Record Payment",
+    "payInstallment": "Pay",
+    "viewDetails": "Details"
+  },
+  "labels": {
+    "totalAmount": "Total Amount",
+    "paidAmount": "Paid",
+    "remainingAmount": "Remaining",
+    "nextInstallment": "Next Installment",
+    "overdueCount": "Overdue",
+    "paidPercentage": "Paid",
+    "dueDate": "Due Date",
+    "amount": "Amount",
+    "paymentDate": "Payment Date",
+    "method": "Payment Method",
+    "notes": "Notes"
+  },
+  "milestones": {
+    "foundation": "Foundation",
+    "frame": "Frame",
+    "masonry": "Masonry",
+    "plastering": "Plastering",
+    "flooring": "Flooring",
+    "windowsDoors": "Windows & Doors",
+    "completion": "Completion"
+  },
+  "templates": {
+    "title": "Payment Templates",
+    "offPlanFull": "Off-Plan Full (9 installments)",
+    "offPlanFullDesc": "Reservation → Down Payment → 7 construction milestones",
+    "offPlanCondensed": "Off-Plan Condensed (5 installments)",
+    "offPlanCondensedDesc": "Reservation → Down Payment → Frame → Completion → Final",
+    "readyProperty": "Ready Property (3 installments)",
+    "readyPropertyDesc": "Reservation → Down Payment → Final (+ loan)",
+    "lumpSum": "Lump Sum (1 payment)",
+    "lumpSumDesc": "Full amount in a single payment",
+    "custom": "Custom"
+  },
+  "wizard": {
+    "title": "Create Payment Plan",
+    "step1": "Select Template",
+    "step2": "Configure Installments",
+    "step3": "Review & Create",
+    "selectTemplate": "Select a template",
+    "totalAmount": "Total Sale Amount",
+    "reviewAndCreate": "Create"
+  },
+  "dialog": {
+    "title": "Record Payment",
+    "bankName": "Bank",
+    "iban": "IBAN",
+    "referenceNumber": "Reference Number",
+    "chequeNumber": "Cheque Number",
+    "receiptNumber": "Receipt Number",
+    "confirm": "Record",
+    "cancel": "Cancel"
+  },
+  "errors": {
+    "noBuyer": "No buyer assigned",
+    "noProject": "Unit is not assigned to a project",
+    "createFailed": "Failed to create plan",
+    "paymentFailed": "Failed to record payment"
+  }
+}

@@ -2,6 +2,7 @@
 import { PropertyStatus } from '@/constants/property-statuses-enterprise';
 import type { Timestamp } from 'firebase/firestore';
 import type { LegalPhase } from '@/types/legal-contracts';
+import type { PaymentSummary } from '@/types/payment-plan';
 import type { AllocationSpaceType, SpaceInclusionType } from '@/config/domain-constants';
 import type {
   OrientationType,
@@ -127,6 +128,9 @@ export interface UnitCommercialData {
 
   /** Νομική φάση — denormalized από LegalContractService (ADR-230) */
   legalPhase: LegalPhase | null;
+
+  /** Σύνοψη πληρωμών — denormalized από PaymentPlanService (ADR-234) */
+  paymentSummary: PaymentSummary | null;
 }
 
 // =============================================================================

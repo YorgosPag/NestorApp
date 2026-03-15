@@ -273,6 +273,10 @@ export const SUBCOLLECTIONS = {
   UNIT_DOCUMENTS: process.env.NEXT_PUBLIC_UNIT_DOCUMENTS_SUBCOL || 'documents',
   UNIT_HISTORY: process.env.NEXT_PUBLIC_UNIT_HISTORY_SUBCOL || 'history',
 
+  // Unit payment subcollections (ADR-234: Payment Plan & Installment Tracking)
+  UNIT_PAYMENT_PLANS: process.env.NEXT_PUBLIC_UNIT_PAYMENT_PLANS_SUBCOL || 'payment_plans',
+  UNIT_PAYMENTS: process.env.NEXT_PUBLIC_UNIT_PAYMENTS_SUBCOL || 'payments',
+
   // User subcollections
   USER_PREFERENCES: process.env.NEXT_PUBLIC_USER_PREFERENCES_SUBCOL || 'preferences',
   USER_SESSIONS: process.env.NEXT_PUBLIC_USER_SESSIONS_SUBCOL || 'sessions',

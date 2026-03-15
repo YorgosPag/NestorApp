@@ -37,8 +37,10 @@ import {
   FileText,
   Clock,
   Scale,
+  CreditCard,
 } from 'lucide-react';
 import { LegalTabContent } from '@/components/sales/legal/LegalTabContent';
+import { PaymentTabContent } from '@/components/sales/payments/PaymentTabContent';
 import type { Unit } from '@/types/unit';
 
 // =============================================================================
@@ -83,8 +85,17 @@ const BASE_SALES_TABS: SalesTabConfig[] = [
 /** Legal tab — conditional, visible ONLY for reserved/sold units (ADR-230) */
 const LEGAL_TAB: SalesTabConfig = { id: 'legal', icon: Scale, labelKey: 'sales.tabs.legal', defaultLabel: 'Νομικά' };
 
+/** Payment tab — conditional, visible ONLY for reserved/sold units (ADR-234) */
+const PAYMENT_TAB: SalesTabConfig = { id: 'payments', icon: CreditCard, labelKey: 'sales.tabs.payments', defaultLabel: 'Πληρωμές' };
+
 /** Check if unit has reserved/sold status → show legal tab */
 function shouldShowLegalTab(unit: Unit | null): boolean {
+  if (!unit) return false;
+  return unit.commercialStatus === 'reserved' || unit.commercialStatus === 'sold';
+}
+
+/** Check if unit has reserved/sold status → show payment tab */
+function shouldShowPaymentTab(unit: Unit | null): boolean {
   if (!unit) return false;
   return unit.commercialStatus === 'reserved' || unit.commercialStatus === 'sold';
 }
@@ -95,6 +106,11 @@ function buildTabs(unit: Unit | null): SalesTabConfig[] {
   if (shouldShowLegalTab(unit)) {
     // Insert legal tab after sale-info (position 1)
     tabs.splice(1, 0, LEGAL_TAB);
+  }
+  if (shouldShowPaymentTab(unit)) {
+    // Insert payment tab after legal (or after sale-info if no legal)
+    const insertIdx = tabs.findIndex((t) => t.id === 'legal');
+    tabs.splice(insertIdx >= 0 ? insertIdx + 1 : 1, 0, PAYMENT_TAB);
   }
   return tabs;
 }
@@ -174,6 +190,13 @@ export function SalesSidebar({
           {shouldShowLegalTab(selectedUnit) && (
             <TabsContent value="legal" className="flex-1">
               <LegalTabContent unit={selectedUnit} />
+            </TabsContent>
+          )}
+
+          {/* Payments Tab — ADR-234 (conditional, reserved/sold only) */}
+          {shouldShowPaymentTab(selectedUnit) && (
+            <TabsContent value="payments" className="flex-1">
+              <PaymentTabContent unit={selectedUnit} />
             </TabsContent>
           )}
 

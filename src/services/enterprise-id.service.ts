@@ -141,6 +141,8 @@ export const ENTERPRISE_ID_PREFIXES = {
   PIPELINE_QUEUE: 'pq',
   BROKERAGE: 'brk',
   COMMISSION: 'com',
+  PAYMENT_PLAN: 'pp',
+  PAYMENT_RECORD: 'pay',
 
   // ==========================================================================
   // OPTIMISTIC & TEMPORARY
@@ -887,6 +889,22 @@ export class EnterpriseIdService {
     return this.generateId(ENTERPRISE_ID_PREFIXES.COMMISSION).id;
   }
 
+  /**
+   * 🏦 Generate Payment Plan ID (ADR-234)
+   * Format: pp_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generatePaymentPlanId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.PAYMENT_PLAN).id;
+  }
+
+  /**
+   * 💳 Generate Payment Record ID (ADR-234)
+   * Format: pay_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generatePaymentRecordId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.PAYMENT_RECORD).id;
+  }
+
   // ==========================================================================
   // UTILITY METHODS
   // ==========================================================================
@@ -1086,6 +1104,12 @@ export const generateContractId = () => enterpriseIdService.generateContractId()
 export const generatePipelineQueueId = () => enterpriseIdService.generatePipelineQueueId();
 export const generateBrokerageId = () => enterpriseIdService.generateBrokerageId();
 export const generateCommissionId = () => enterpriseIdService.generateCommissionId();
+
+// =============================================================================
+// PAYMENT PLAN & INSTALLMENTS (ADR-234)
+// =============================================================================
+export const generatePaymentPlanId = () => enterpriseIdService.generatePaymentPlanId();
+export const generatePaymentRecordId = () => enterpriseIdService.generatePaymentRecordId();
 
 // =============================================================================
 // FILE & MEDIA OPERATIONS

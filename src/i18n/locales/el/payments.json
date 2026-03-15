@@ -1,0 +1,131 @@
+{
+  "title": "Πληρωμές",
+  "paymentPlan": {
+    "title": "Πρόγραμμα Αποπληρωμής",
+    "overview": "Επισκόπηση",
+    "noPlan": "Δεν υπάρχει πρόγραμμα αποπληρωμής. Δημιουργήστε ένα.",
+    "createPlan": "Δημιουργία Προγράμματος",
+    "status": {
+      "negotiation": "Διαπραγμάτευση",
+      "draft": "Σχέδιο",
+      "active": "Ενεργό",
+      "completed": "Ολοκληρωμένο",
+      "cancelled": "Ακυρωμένο"
+    }
+  },
+  "installments": {
+    "title": "Δόσεις",
+    "schedule": "Πρόγραμμα Δόσεων",
+    "addInstallment": "Προσθήκη Δόσης",
+    "status": {
+      "pending": "Αναμένεται",
+      "due": "Ληξιπρόθεσμη",
+      "paid": "Πληρωμένη",
+      "partial": "Μερικώς Πληρωμένη",
+      "waived": "Χαρισμένη"
+    }
+  },
+  "installmentType": {
+    "reservation": "Κράτηση",
+    "down_payment": "Προκαταβολή",
+    "stage_payment": "Δόση Κατασκευής",
+    "final_payment": "Τελική Πληρωμή",
+    "custom": "Προσαρμοσμένη"
+  },
+  "paymentMethod": {
+    "bank_transfer": "Τραπεζική Μεταφορά",
+    "bank_cheque": "Τραπεζική Επιταγή",
+    "personal_cheque": "Προσωπική Επιταγή",
+    "bank_loan": "Εκταμίευση Δανείου",
+    "cash": "Μετρητά",
+    "promissory_note": "Συναλλαγματική",
+    "offset": "Συμψηφισμός"
+  },
+  "loan": {
+    "title": "Τραπεζικό Δάνειο",
+    "status": {
+      "not_applicable": "Δεν απαιτείται",
+      "pending": "Αναμένεται",
+      "applied": "Κατατέθηκε αίτηση",
+      "pre_approved": "Προέγκριση",
+      "approved": "Εγκρίθηκε",
+      "disbursed": "Εκταμιεύτηκε",
+      "rejected": "Απορρίφθηκε"
+    },
+    "bankName": "Τράπεζα",
+    "loanAmount": "Ποσό Δανείου",
+    "financingPercentage": "Ποσοστό Χρηματοδότησης",
+    "interestRate": "Επιτόκιο",
+    "termYears": "Διάρκεια (έτη)"
+  },
+  "taxRegime": {
+    "vat_24": "Νεόδμητο — ΦΠΑ 24%",
+    "vat_suspension_3": "Αναστολή ΦΠΑ (3% ΦΜΑ)",
+    "transfer_tax_3": "3% Φόρος Μεταβίβασης",
+    "custom": "Προσαρμοσμένο"
+  },
+  "actions": {
+    "recordPayment": "Καταγραφή Πληρωμής",
+    "payInstallment": "Πληρωμή",
+    "viewDetails": "Λεπτομέρειες"
+  },
+  "labels": {
+    "totalAmount": "Συνολικό Ποσό",
+    "paidAmount": "Πληρωμένο",
+    "remainingAmount": "Υπόλοιπο",
+    "nextInstallment": "Επόμενη Δόση",
+    "overdueCount": "Ληξιπρόθεσμες",
+    "paidPercentage": "Εξόφληση",
+    "dueDate": "Ημ. Λήξης",
+    "amount": "Ποσό",
+    "paymentDate": "Ημ. Πληρωμής",
+    "method": "Μέσο Πληρωμής",
+    "notes": "Σημειώσεις"
+  },
+  "milestones": {
+    "foundation": "Θεμελίωση",
+    "frame": "Σκελετός",
+    "masonry": "Τοιχοποιία",
+    "plastering": "Σοβάδες",
+    "flooring": "Δάπεδα",
+    "windowsDoors": "Κουφώματα",
+    "completion": "Αποπεράτωση"
+  },
+  "templates": {
+    "title": "Πρότυπα Αποπληρωμής",
+    "offPlanFull": "Off-Plan Πλήρης (9 δόσεις)",
+    "offPlanFullDesc": "Κράτηση → Προκαταβολή → 7 κατασκευαστικά milestones",
+    "offPlanCondensed": "Off-Plan Συμπυκνωμένο (5 δόσεις)",
+    "offPlanCondensedDesc": "Κράτηση → Προκαταβολή → Σκελετός → Αποπεράτωση → Οριστικό",
+    "readyProperty": "Έτοιμο Ακίνητο (3 δόσεις)",
+    "readyPropertyDesc": "Κράτηση → Προκαταβολή → Οριστικό (+ δάνειο)",
+    "lumpSum": "Εφάπαξ (1 δόση)",
+    "lumpSumDesc": "Ολόκληρο το ποσό σε μία πληρωμή",
+    "custom": "Προσαρμοσμένο"
+  },
+  "wizard": {
+    "title": "Δημιουργία Προγράμματος Αποπληρωμής",
+    "step1": "Επιλογή Προτύπου",
+    "step2": "Ρύθμιση Δόσεων",
+    "step3": "Επισκόπηση & Δημιουργία",
+    "selectTemplate": "Επιλέξτε πρότυπο",
+    "totalAmount": "Συνολικό Ποσό Πώλησης",
+    "reviewAndCreate": "Δημιουργία"
+  },
+  "dialog": {
+    "title": "Καταγραφή Πληρωμής",
+    "bankName": "Τράπεζα",
+    "iban": "IBAN",
+    "referenceNumber": "Αρ. Αναφοράς",
+    "chequeNumber": "Αρ. Επιταγής",
+    "receiptNumber": "Αρ. Απόδειξης",
+    "confirm": "Καταχώρηση",
+    "cancel": "Ακύρωση"
+  },
+  "errors": {
+    "noBuyer": "Δεν υπάρχει αγοραστής",
+    "noProject": "Η μονάδα δεν ανήκει σε έργο",
+    "createFailed": "Σφάλμα δημιουργίας",
+    "paymentFailed": "Σφάλμα καταγραφής πληρωμής"
+  }
+}
