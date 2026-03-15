@@ -70,6 +70,26 @@ export const PROJECT_ENTRY_POINTS: UploadEntryPoint[] = [
     },
 
     // ------------------------------------------------------------------------
+    // ΜΕΣΙΤΙΚΑ (Brokerage)
+    // ------------------------------------------------------------------------
+    {
+      id: 'brokerage-agreement',
+      purpose: 'brokerage-agreement',
+      domain: 'brokerage',
+      category: 'contracts',
+      label: {
+        el: 'Σύμβαση Μεσιτείας',
+        en: 'Brokerage Agreement',
+      },
+      description: {
+        el: 'Σκαναρισμένη μεσιτική σύμβαση (PDF/εικόνα)',
+        en: 'Scanned brokerage agreement (PDF/image)',
+      },
+      icon: 'Handshake',
+      order: 4,
+    },
+
+    // ------------------------------------------------------------------------
     // ΚΑΤΑΣΚΕΥΗ - ΣΧΕΔΙΑ (10_Κατασκευή/01_Σχέδια)
     // ------------------------------------------------------------------------
     {

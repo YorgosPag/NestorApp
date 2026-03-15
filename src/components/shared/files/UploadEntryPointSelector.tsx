@@ -57,6 +57,8 @@ export interface UploadEntryPointSelectorProps {
   categoryFilter?: FileCategory;
   /** 🏢 ENTERPRISE: Exclude specific categories (e.g., ['photos', 'videos'] for DocumentsTab) */
   excludeCategories?: FileCategory[];
+  /** 🏢 ENTERPRISE: Whitelist specific entry point IDs — shows ONLY these */
+  allowedEntryPointIds?: string[];
   /** 🏢 ENTERPRISE: Contact type for persona-aware filtering (individual/company/service) */
   contactType?: ContactType;
   /** 🎭 ENTERPRISE: Active personas for individual contacts (ADR-121) */
@@ -83,6 +85,7 @@ export function UploadEntryPointSelector({
   onCustomTitleChange,
   categoryFilter,
   excludeCategories,
+  allowedEntryPointIds,
   contactType,
   activePersonas,
 }: UploadEntryPointSelectorProps) {
@@ -103,6 +106,10 @@ export function UploadEntryPointSelector({
   // - categoryFilter: show ONLY entries with this category (e.g., 'photos' for PhotosTab)
   // - excludeCategories: hide entries with these categories (e.g., ['photos', 'videos'] for DocumentsTab)
   const entryPoints = baseEntryPoints.filter((ep) => {
+    // 🏢 ENTERPRISE: Whitelist mode — if allowedEntryPointIds is set, ONLY show these
+    if (allowedEntryPointIds && !allowedEntryPointIds.includes(ep.id)) {
+      return false;
+    }
     if (categoryFilter && ep.category !== categoryFilter) {
       return false;
     }

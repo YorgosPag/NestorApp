@@ -112,6 +112,8 @@ export interface EntityFilesManagerProps {
   entryPointCategoryFilter?: FileCategory;
   /** 🏢 ENTERPRISE: Exclude entry points with specific categories (e.g., ['photos', 'videos'] for DocumentsTab) */
   entryPointExcludeCategories?: FileCategory[];
+  /** 🏢 ENTERPRISE: Whitelist specific entry point IDs — shows ONLY these (e.g., brokerage tab) */
+  allowedEntryPointIds?: string[];
   /**
    * 🏢 ENTERPRISE: Display style for files (Procore/BIM360/Autodesk pattern)
    * - 'standard': Traditional list/tree view (default)
@@ -164,6 +166,7 @@ export function EntityFilesManager({
   acceptedTypes = DEFAULT_DOCUMENT_ACCEPT, // 🏢 ENTERPRISE: Built from FILE_TYPE_CONFIG
   entryPointCategoryFilter,
   entryPointExcludeCategories,
+  allowedEntryPointIds,
   displayStyle = 'standard', // 🏢 ENTERPRISE: Default to standard list/tree view
   contactType,
   activePersonas,
@@ -955,6 +958,7 @@ export function EntityFilesManager({
                 onCustomTitleChange={setCustomTitle}
                 categoryFilter={entryPointCategoryFilter}
                 excludeCategories={entryPointExcludeCategories}
+                allowedEntryPointIds={allowedEntryPointIds}
                 floors={floors}
                 onNavigateToFloors={onNavigateToFloors}
                 navigateToFloorsLabel={navigateToFloorsLabel}
@@ -968,6 +972,7 @@ export function EntityFilesManager({
                 onCustomTitleChange={setCustomTitle}
                 categoryFilter={entryPointCategoryFilter}
                 excludeCategories={entryPointExcludeCategories}
+                allowedEntryPointIds={allowedEntryPointIds}
                 contactType={contactType}
                 activePersonas={activePersonas}
               />

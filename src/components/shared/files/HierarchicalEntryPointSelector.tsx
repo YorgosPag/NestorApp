@@ -54,6 +54,8 @@ export interface HierarchicalEntryPointSelectorProps {
   onCustomTitleChange?: (title: string) => void;
   categoryFilter?: FileCategory;
   excludeCategories?: FileCategory[];
+  /** 🏢 ENTERPRISE: Whitelist specific entry point IDs — shows ONLY these in flat mode (skips groups) */
+  allowedEntryPointIds?: string[];
   floors?: FloorInfo[];
   /** Callback to navigate to the Floors tab (makes the no-floors warning clickable) */
   onNavigateToFloors?: () => void;
@@ -86,6 +88,7 @@ export function HierarchicalEntryPointSelector({
   onCustomTitleChange,
   categoryFilter,
   excludeCategories,
+  allowedEntryPointIds,
   floors = [],
   onNavigateToFloors,
   navigateToFloorsLabel,
@@ -224,6 +227,18 @@ export function HierarchicalEntryPointSelector({
 
   const selectedEntryPoint = allEntries.find((ep) => ep.id === selectedEntryPointId);
 
+  // 🏢 ENTERPRISE: Whitelist mode — flat list, no groups/search
+  const allowedEntries = useMemo(() => {
+    if (!allowedEntryPointIds) return null;
+    const idSet = new Set(allowedEntryPointIds);
+    return allEntries
+      .filter((ep) => idSet.has(ep.id))
+      .sort((a, b) => {
+        // Preserve the order from the allowedEntryPointIds array
+        return allowedEntryPointIds.indexOf(a.id) - allowedEntryPointIds.indexOf(b.id);
+      });
+  }, [allowedEntryPointIds, allEntries]);
+
   // If no groups and no ungrouped, nothing to show
   if (visibleGroups.length === 0 && ungroupedEntries.length === 0) {
     return null;
@@ -341,6 +356,61 @@ export function HierarchicalEntryPointSelector({
       </button>
     );
   };
+
+  // 🏢 ENTERPRISE: Whitelist mode — simplified flat list (no groups, no search)
+  if (allowedEntries) {
+    return (
+      <section className={cn('space-y-3', className)} role="radiogroup" aria-label={t('upload.selectDocumentType')}>
+        <h3 className="text-sm font-semibold text-foreground">
+          {t('upload.selectDocumentType')}
+        </h3>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {allowedEntries.map((ep) => renderEntryCard(ep))}
+        </div>
+
+        {/* Selected description footer */}
+        {selectedEntryPoint && (
+          <footer className="p-2 bg-muted/50 rounded-md border border-border">
+            <p className="text-xs text-muted-foreground">
+              <strong className="text-foreground">{selectedEntryPoint.label[currentLanguage]}:</strong>{' '}
+              {selectedEntryPoint.description?.[currentLanguage] || t('upload.documentForCategory')}
+            </p>
+          </footer>
+        )}
+
+        {/* Custom title input */}
+        {selectedEntryPoint?.requiresCustomTitle && (
+          <div className="space-y-2">
+            <label htmlFor="custom-title-allowed" className="block text-sm font-medium text-foreground">
+              {t('upload.documentTitle')} <span className="text-destructive">*</span>
+            </label>
+            <input
+              id="custom-title-allowed"
+              type="text"
+              value={customTitle}
+              onChange={(e) => onCustomTitleChange?.(e.target.value)}
+              placeholder={t('upload.customTitlePlaceholder')}
+              required
+              className={cn(
+                'w-full px-2 py-2 rounded-md border bg-background text-foreground',
+                'placeholder:text-muted-foreground',
+                'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+                'transition-colors',
+                customTitle.trim() === ''
+                  ? 'border-destructive/50 focus:ring-destructive'
+                  : 'border-border'
+              )}
+              aria-required="true"
+              aria-invalid={customTitle.trim() === ''}
+            />
+            <p className="text-xs text-muted-foreground">
+              {t('upload.customTitleHint')}
+            </p>
+          </div>
+        )}
+      </section>
+    );
+  }
 
   return (
     <section className={cn('space-y-3', className)} role="radiogroup" aria-label={t('upload.selectDocumentType')}>

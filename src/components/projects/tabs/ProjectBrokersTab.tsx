@@ -822,6 +822,7 @@ function AgreementCard({
             domain="brokerage"
             category="contracts"
             purpose={agreement.id}
+            allowedEntryPointIds={['brokerage-agreement', 'voice-note', 'generic-project-doc']}
           />
         </section>
       )}
