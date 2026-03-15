@@ -24,6 +24,9 @@ import type {
 import { computeLegalPhase, CONTRACT_PHASE_ORDER } from '@/types/legal-contracts';
 import type { BrokerageAgreement } from '@/types/brokerage';
 import { BrokerageService } from '@/services/brokerage.service';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 // ============================================================================
 // TYPES
@@ -101,27 +104,34 @@ export function useLegalContracts(unitId: string | null, projectId?: string): Us
     }
   }, [unitId]);
 
-  // Fetch brokerage agreements for the project
-  const fetchAgreements = useCallback(async () => {
-    if (!projectId) return;
-
-    try {
-      const data = await BrokerageService.getAgreements(projectId);
-      setAgreements(data);
-    } catch {
-      // Non-blocking — agreements are supplementary data
-      setAgreements([]);
-    }
-  }, [projectId]);
-
-  // Initial fetch
+  // Initial fetch for contracts
   useEffect(() => {
     fetchContracts();
   }, [fetchContracts]);
 
+  // 🔴 REAL-TIME: onSnapshot subscription for brokerage agreements
   useEffect(() => {
-    fetchAgreements();
-  }, [fetchAgreements]);
+    if (!projectId) return;
+
+    const q = query(
+      collection(db, COLLECTIONS.BROKERAGE_AGREEMENTS),
+      where('projectId', '==', projectId)
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as BrokerageAgreement);
+        setAgreements(data);
+      },
+      () => {
+        // Non-blocking — agreements are supplementary data
+        setAgreements([]);
+      }
+    );
+
+    return unsubscribe;
+  }, [projectId]);
 
   // Actions
   const createContract = useCallback(async (input: CreateContractInput) => {
@@ -211,7 +221,7 @@ export function useLegalContracts(unitId: string | null, projectId?: string): Us
     currentPhase,
     isLoading,
     error,
-    refetch: () => { fetchContracts(); fetchAgreements(); },
+    refetch: () => { fetchContracts(); },
     createContract,
     transitionStatus,
     updateContract,

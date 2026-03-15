@@ -33,8 +33,9 @@ import type { BrokerageAgreement, ExclusivityType, CommissionType } from '@/type
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
 import { Briefcase, Plus, Pencil, XCircle, RefreshCw, X } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 // ============================================================================
 // TYPES
@@ -162,17 +163,30 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
   // DATA FETCHING
   // ============================================================================
 
-  const fetchAgreements = useCallback(async () => {
+  // 🔴 REAL-TIME: onSnapshot subscription for brokerage agreements
+  useEffect(() => {
     if (!projectId) return;
     setIsLoading(true);
-    try {
-      const data = await BrokerageService.getAgreements(projectId);
-      setAgreements(data);
-    } catch {
-      setAgreements([]);
-    } finally {
-      setIsLoading(false);
-    }
+
+    const q = query(
+      collection(db, COLLECTIONS.BROKERAGE_AGREEMENTS),
+      where('projectId', '==', projectId)
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as BrokerageAgreement);
+        setAgreements(data);
+        setIsLoading(false);
+      },
+      () => {
+        setAgreements([]);
+        setIsLoading(false);
+      }
+    );
+
+    return unsubscribe;
   }, [projectId]);
 
   const fetchUnits = useCallback(async () => {
@@ -194,9 +208,8 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
   }, [projectId]);
 
   useEffect(() => {
-    fetchAgreements();
     fetchUnits();
-  }, [fetchAgreements, fetchUnits]);
+  }, [fetchUnits]);
 
   // ============================================================================
   // FORM HANDLERS
@@ -293,13 +306,13 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
       }
 
       handleCancel();
-      fetchAgreements();
+      // onSnapshot auto-refreshes — no manual fetch needed
     } catch {
       setFormError(t('sales.legal.saveError'));
     } finally {
       setSaving(false);
     }
-  }, [form, projectId, user, isEditMode, editingAgreement, handleCancel, fetchAgreements, t]);
+  }, [form, projectId, user, isEditMode, editingAgreement, handleCancel, t]);
 
   // ============================================================================
   // NEW CONTACT DIALOG (dialog switching)
@@ -325,9 +338,9 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
     const result = await BrokerageService.terminateAgreement(id, userId);
     if (result.success) {
       setTerminatingId(null);
-      fetchAgreements();
+      // onSnapshot auto-refreshes
     }
-  }, [user, fetchAgreements]);
+  }, [user]);
 
   const handleRenew = useCallback(async (id: string) => {
     if (!renewDate) return;
@@ -340,9 +353,9 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
     if (result.success) {
       setRenewingId(null);
       setRenewDate('');
-      fetchAgreements();
+      // onSnapshot auto-refreshes
     }
-  }, [user, renewDate, fetchAgreements]);
+  }, [user, renewDate]);
 
   const canSave = form.agentContactId && form.startDate && (form.scope === 'project' || form.unitId);
 
