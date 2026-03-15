@@ -10,7 +10,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
@@ -44,6 +44,7 @@ import type {
   ParkingSpotStatus,
   ParkingLocationZone,
 } from '@/types/parking';
+import { useEntityCodeSuggestion } from '@/hooks/useEntityCodeSuggestion';
 
 // ============================================================================
 // TYPES
@@ -80,6 +81,23 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
   const [notes, setNotes] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [codeOverridden, setCodeOverridden] = useState(false);
+
+  // ADR-233: Auto-suggest parking code
+  const { suggestedCode } = useEntityCodeSuggestion({
+    entityType: 'parking',
+    buildingId,
+    floorLevel: floor ? parseInt(floor, 10) || 0 : 0,
+    locationZone: locationZone || undefined,
+    disabled: codeOverridden,
+  });
+
+  // Auto-populate when suggestion arrives
+  useEffect(() => {
+    if (suggestedCode && !codeOverridden) {
+      setNumber(suggestedCode);
+    }
+  }, [suggestedCode, codeOverridden]);
 
   const resetForm = () => {
     setBuildingId('');
@@ -93,6 +111,7 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
     setPrice('');
     setNotes('');
     setError(null);
+    setCodeOverridden(false);
   };
 
   const handleClose = () => {
@@ -207,8 +226,14 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
               </span>
               <Input
                 value={number}
-                onChange={(e) => setNumber(e.target.value)}
-                placeholder="P-001"
+                onChange={(e) => {
+                  setNumber(e.target.value);
+                  if (!codeOverridden && e.target.value !== suggestedCode) {
+                    setCodeOverridden(true);
+                  }
+                  if (!e.target.value) setCodeOverridden(false);
+                }}
+                placeholder={suggestedCode || 'P-001'}
                 disabled={creating}
                 autoFocus
               />

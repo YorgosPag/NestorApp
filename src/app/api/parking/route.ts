@@ -24,6 +24,13 @@ import { requireBuildingInTenant, TenantIsolationError } from '@/lib/auth/tenant
 import { FieldValue } from 'firebase-admin/firestore';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
+import {
+  formatFloorCode,
+  resolveTypeCode,
+  formatEntityCode,
+  parseEntityCode,
+} from '@/services/entity-code.service';
+import { extractBuildingLetter } from '@/config/entity-code-config';
 
 const logger = createModuleLogger('ParkingRoute');
 
@@ -174,9 +181,47 @@ export const POST = withStandardRateLimit(
         // 🏢 ADR-232: Super admin entities get companyId: null
         const isSuperAdmin = ctx.globalRole === 'super_admin';
 
+        // 🏢 ADR-233: Auto-generate entity code if number looks manual (e.g. "P-001")
+        let parkingNumber = body.number.trim();
+        if (body.buildingId?.trim()) {
+          try {
+            const buildingDocForCode = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(body.buildingId).get();
+            const buildingDataForCode = buildingDocForCode.data();
+            const buildingName = (buildingDataForCode?.name as string) || '?';
+            const buildingLetter = extractBuildingLetter(buildingName);
+            const typeCode = resolveTypeCode('parking', undefined, body.locationZone ?? undefined);
+            const floorLevel = body.floor ? parseInt(body.floor, 10) : 0;
+            const floorCode = formatFloorCode(isNaN(floorLevel) ? 0 : floorLevel);
+
+            if (typeCode && !parseEntityCode(parkingNumber)) {
+              // Only auto-generate if current number is NOT already in ADR-233 format
+              const existingParking = await adminDb.collection(COLLECTIONS.PARKING_SPACES)
+                .where('buildingId', '==', body.buildingId)
+                .get();
+
+              let maxSeq = 0;
+              for (const doc of existingParking.docs) {
+                const num = doc.data().number as string | undefined;
+                if (!num) continue;
+                const parsed = parseEntityCode(num);
+                if (parsed && parsed.typeCode === typeCode && parsed.floorCode === floorCode) {
+                  if (parsed.sequence > maxSeq) maxSeq = parsed.sequence;
+                }
+              }
+
+              parkingNumber = formatEntityCode(buildingLetter, typeCode, floorCode, maxSeq + 1);
+              logger.info('Auto-generated parking code', { parkingNumber, buildingId: body.buildingId });
+            }
+          } catch (codeErr) {
+            logger.warn('Parking code auto-generation failed, using original number', {
+              error: codeErr instanceof Error ? codeErr.message : String(codeErr),
+            });
+          }
+        }
+
         // Sanitize data — force companyId from auth context
         const cleanData: Record<string, unknown> = {
-          number: body.number.trim(),
+          number: parkingNumber,
           buildingId: body.buildingId?.trim() || null,
           type: body.type || 'standard',
           status: body.status || 'available',

@@ -8,6 +8,14 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { isRoleBypass } from '@/lib/auth/roles';
 import { createModuleLogger } from '@/lib/telemetry';
+import {
+  formatFloorCode,
+  resolveTypeCode,
+  formatEntityCode,
+  parseEntityCode,
+} from '@/services/entity-code.service';
+import { extractBuildingLetter } from '@/config/entity-code-config';
+import type { UnitType } from '@/types/unit';
 
 const logger = createModuleLogger('UnitsCreateRoute');
 
@@ -91,8 +99,49 @@ export const POST = withStandardRateLimit(
           }
         }
 
+        // 🏢 ADR-233: Auto-generate entity code if not provided
+        let entityCode = body.code?.trim() || '';
+        if (!entityCode && body.buildingId) {
+          try {
+            const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(body.buildingId).get();
+            const buildingData = buildingDoc.data();
+            const buildingName = (buildingData?.name as string) || '?';
+            const buildingLetter = extractBuildingLetter(buildingName);
+            const unitType = (body.type || 'apartment') as UnitType;
+            const typeCode = resolveTypeCode('unit', unitType);
+            const floorLevel = typeof body.floor === 'number' ? body.floor : 0;
+            const floorCode = formatFloorCode(floorLevel);
+
+            if (typeCode) {
+              // Find next sequence by scanning existing codes
+              const existingUnits = await adminDb.collection(COLLECTIONS.UNITS)
+                .where('buildingId', '==', body.buildingId)
+                .where('floor', '==', floorLevel)
+                .get();
+
+              let maxSeq = 0;
+              for (const doc of existingUnits.docs) {
+                const code = doc.data().code as string | undefined;
+                if (!code) continue;
+                const parsed = parseEntityCode(code);
+                if (parsed && parsed.typeCode === typeCode && parsed.floorCode === floorCode) {
+                  if (parsed.sequence > maxSeq) maxSeq = parsed.sequence;
+                }
+              }
+
+              entityCode = formatEntityCode(buildingLetter, typeCode, floorCode, maxSeq + 1);
+              logger.info('[Units] Auto-generated entity code', { entityCode, buildingId: body.buildingId });
+            }
+          } catch (codeErr) {
+            logger.warn('[Units] Entity code auto-generation failed, proceeding without code', {
+              error: codeErr instanceof Error ? codeErr.message : String(codeErr),
+            });
+          }
+        }
+
         const sanitizedData = {
           ...body,
+          ...(entityCode ? { code: entityCode } : {}),
           name: body.name.trim(),
           companyId: resolvedCompanyId,  // 🔒 ADR-232: null for super admin, inherited for regular
           linkedCompanyId: null,          // 🏢 ADR-232: Set via cascade propagation

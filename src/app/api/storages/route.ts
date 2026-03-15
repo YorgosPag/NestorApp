@@ -10,6 +10,12 @@ import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErro
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeToDate } from '@/lib/date-local';
+import {
+  formatFloorCode,
+  formatEntityCode,
+  parseEntityCode,
+} from '@/services/entity-code.service';
+import { extractBuildingLetter } from '@/config/entity-code-config';
 
 const logger = createModuleLogger('StoragesRoute');
 
@@ -324,9 +330,45 @@ export const POST = withStandardRateLimit(
         // 🏢 ADR-232: Super admin entities get companyId: null
         const isSuperAdmin = ctx.globalRole === 'super_admin';
 
+        // 🏢 ADR-233: Auto-generate entity code if name is not already ADR-233 format
+        let storageName = body.name.trim();
+        if (!parseEntityCode(storageName)) {
+          try {
+            const buildingDocForCode = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(body.buildingId).get();
+            const buildingDataForCode = buildingDocForCode.data();
+            const buildingName = (buildingDataForCode?.name as string) || '?';
+            const buildingLetter = extractBuildingLetter(buildingName);
+            const typeCode = 'AP'; // Storage = Αποθήκη
+            const floorLevel = body.floor ? parseInt(body.floor, 10) : 0;
+            const floorCode = formatFloorCode(isNaN(floorLevel) ? 0 : floorLevel);
+
+            // Find next sequence
+            const existingStorages = await adminDb.collection(COLLECTIONS.STORAGE)
+              .where('buildingId', '==', body.buildingId)
+              .get();
+
+            let maxSeq = 0;
+            for (const doc of existingStorages.docs) {
+              const n = doc.data().name as string | undefined;
+              if (!n) continue;
+              const parsed = parseEntityCode(n);
+              if (parsed && parsed.typeCode === typeCode && parsed.floorCode === floorCode) {
+                if (parsed.sequence > maxSeq) maxSeq = parsed.sequence;
+              }
+            }
+
+            storageName = formatEntityCode(buildingLetter, typeCode, floorCode, maxSeq + 1);
+            logger.info('Auto-generated storage code', { storageName, buildingId: body.buildingId });
+          } catch (codeErr) {
+            logger.warn('Storage code auto-generation failed, using original name', {
+              error: codeErr instanceof Error ? codeErr.message : String(codeErr),
+            });
+          }
+        }
+
         // Sanitize data
         const cleanData: Record<string, unknown> = {
-          name: body.name.trim(),
+          name: storageName,
           buildingId: body.buildingId,
           type: isValidStorageType(body.type || 'small') ? body.type || 'small' : 'small',
           status: isValidStorageStatus(body.status || 'available') ? body.status || 'available' : 'available',

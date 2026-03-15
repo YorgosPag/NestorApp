@@ -9,7 +9,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
@@ -35,6 +35,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Spinner } from '@/components/ui/spinner';
 import type { StorageType, StorageStatus } from '@/types/storage/contracts';
 import { typeLabels, statusLabels } from '@/types/storage/constants';
+import { useEntityCodeSuggestion } from '@/hooks/useEntityCodeSuggestion';
 
 // ============================================================================
 // TYPES
@@ -74,6 +75,22 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
   const [notes, setNotes] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [codeOverridden, setCodeOverridden] = useState(false);
+
+  // ADR-233: Auto-suggest storage code
+  const { suggestedCode } = useEntityCodeSuggestion({
+    entityType: 'storage',
+    buildingId,
+    floorLevel: floor ? parseInt(floor, 10) || 0 : 0,
+    disabled: codeOverridden,
+  });
+
+  // Auto-populate when suggestion arrives
+  useEffect(() => {
+    if (suggestedCode && !codeOverridden) {
+      setName(suggestedCode);
+    }
+  }, [suggestedCode, codeOverridden]);
 
   const resetForm = () => {
     setBuildingId('');
@@ -86,6 +103,7 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
     setDescription('');
     setNotes('');
     setError(null);
+    setCodeOverridden(false);
   };
 
   const handleClose = () => {
@@ -185,8 +203,14 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
               </span>
               <Input
                 value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="ΑΠ-001"
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (!codeOverridden && e.target.value !== suggestedCode) {
+                    setCodeOverridden(true);
+                  }
+                  if (!e.target.value) setCodeOverridden(false);
+                }}
+                placeholder={suggestedCode || 'ΑΠ-001'}
                 disabled={creating}
                 autoFocus
               />

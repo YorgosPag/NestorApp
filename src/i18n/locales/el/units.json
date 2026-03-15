@@ -89,8 +89,12 @@
       "sectionTitle": "Ταυτότητα Μονάδας",
       "name": "Όνομα Μονάδας",
       "namePlaceholder": "π.χ. Διαμέρισμα Α1",
+      "code": "Κωδικός Μονάδας",
+      "codePlaceholder": "π.χ. A-DI-1.01",
       "type": "Τύπος Μονάδας",
       "typePlaceholder": "Επιλέξτε τύπο...",
+      "commercialStatus": "Εμπορική Κατάσταση",
+      "commercialStatusPlaceholder": "Επιλέξτε κατάσταση...",
       "description": "Περιγραφή",
       "descriptionPlaceholder": "Προσθέστε περιγραφή για τη μονάδα..."
     },
@@ -325,8 +329,13 @@
     "apartment_2br": "Διαμέρισμα 2Δ",
     "apartment_3br": "Διαμέρισμα 3Δ",
     "maisonette": "Μεζονέτα",
+    "penthouse": "Ρετιρέ",
+    "loft": "Loft",
+    "detached_house": "Μονοκατοικία",
+    "villa": "Βίλα",
     "shop": "Κατάστημα",
     "office": "Γραφείο",
+    "hall": "Αίθουσα",
     "storage": "Αποθήκη"
   },
   "status": {
@@ -394,7 +403,7 @@
       },
       "placeholders": {
         "name": "π.χ. Διαμέρισμα Α1",
-        "code": "π.χ. A-101",
+        "code": "π.χ. A-DI-1.01",
         "type": "Επιλέξτε τύπο...",
         "building": "Επιλέξτε κτίριο...",
         "floor": "π.χ. 1",
@@ -606,6 +615,12 @@
     "success": "Αποθηκεύτηκε!",
     "error": "Σφάλμα",
     "noLinkedSpaces": "Δεν υπάρχουν συνδεδεμένοι χώροι"
+  },
+  "entityCode": {
+    "suggested": "Προτεινόμενος: {code}",
+    "override": "Μπορείτε να αλλάξετε τον κωδικό",
+    "formatWarning": "Ο κωδικός δεν ακολουθεί το πρότυπο format (π.χ. A-DI-1.01)",
+    "loading": "Υπολογισμός κωδικού..."
   },
   "entityLinks": {
     "save": "Αποθήκευση",

@@ -144,8 +144,13 @@ export type UnitType =
   | 'apartment_2br'   // Διαμέρισμα 2Δ
   | 'apartment_3br'   // Διαμέρισμα 3Δ
   | 'maisonette'      // Μεζονέτα
+  | 'penthouse'       // Ρετιρέ (ADR-233)
+  | 'loft'            // Loft (ADR-233)
+  | 'detached_house'  // Μονοκατοικία (ADR-233)
+  | 'villa'           // Βίλα (ADR-233)
   | 'shop'            // Κατάστημα
   | 'office'          // Γραφείο
+  | 'hall'            // Αίθουσα (ADR-233)
   | 'storage'         // Αποθήκη
   // Legacy Greek values (backward compatibility)
   | 'Στούντιο' | 'Γκαρσονιέρα' | 'Διαμέρισμα 2Δ' | 'Διαμέρισμα 3Δ' | 'Μεζονέτα' | 'Κατάστημα' | 'Αποθήκη';

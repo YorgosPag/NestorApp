@@ -124,7 +124,8 @@ const SECURITY_FEATURE_OPTIONS: SecurityFeatureCodeType[] = [
 
 const UNIT_TYPE_OPTIONS: UnitType[] = [
   'studio', 'apartment_1br', 'apartment', 'apartment_2br',
-  'apartment_3br', 'maisonette', 'shop', 'office', 'storage'
+  'apartment_3br', 'maisonette', 'penthouse', 'loft',
+  'detached_house', 'villa', 'shop', 'office', 'hall', 'storage'
 ];
 
 const COMMERCIAL_STATUS_OPTIONS: CommercialStatus[] = [
@@ -409,7 +410,7 @@ export function UnitFieldsBlock({
                 value={formData.code}
                 onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value }))}
                 className={cn('h-7 text-xs', quick.input)}
-                placeholder={t('fields.identity.codePlaceholder', { defaultValue: 'π.χ. A_D0.1' })}
+                placeholder={t('fields.identity.codePlaceholder', { defaultValue: 'π.χ. A-DI-1.01' })}
                 disabled={!isEditing}
               />
             </fieldset>

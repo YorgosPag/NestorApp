@@ -55,6 +55,9 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // ENTERPRISE: Form state management hook
 import { useUnitForm } from '../hooks/useUnitForm';
+// ENTERPRISE: ADR-233 auto-code suggestion
+import { useEntityCodeSuggestion } from '@/hooks/useEntityCodeSuggestion';
+import { isValidEntityCodeFormat } from '@/services/entity-code.service';
 // ENTERPRISE: Real-time floor subscription (Firestore onSnapshot)
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -90,8 +93,13 @@ const UNIT_TYPE_OPTIONS: UnitType[] = [
   'apartment_2br',
   'apartment_3br',
   'maisonette',
+  'penthouse',
+  'loft',
+  'detached_house',
+  'villa',
   'shop',
   'office',
+  'hall',
   'storage',
 ];
 
@@ -188,6 +196,25 @@ export function AddUnitDialog({
     return () => unsubscribe();
   }, [formData.buildingId, user]);
 
+  // ENTERPRISE: ADR-233 — Track whether user has manually overridden the code
+  const [codeOverridden, setCodeOverridden] = useState(false);
+
+  // ENTERPRISE: ADR-233 — Auto-suggest entity code
+  const { suggestedCode, isLoading: codeLoading } = useEntityCodeSuggestion({
+    entityType: 'unit',
+    buildingId: formData.buildingId,
+    floorLevel: formData.floor,
+    unitType: formData.type || undefined,
+    disabled: codeOverridden,
+  });
+
+  // Auto-populate code when suggestion arrives and user hasn't overridden
+  useEffect(() => {
+    if (suggestedCode && !codeOverridden) {
+      handleSelectChange('code', suggestedCode);
+    }
+  }, [suggestedCode, codeOverridden, handleSelectChange]);
+
   // ENTERPRISE: Active tab state
   const [activeTab, setActiveTab] = useState('basic');
 
@@ -216,6 +243,7 @@ export function AddUnitDialog({
     if (open) {
       resetForm();
       setActiveTab('basic');
+      setCodeOverridden(false);
     }
   }, [open, resetForm]);
 
@@ -272,7 +300,7 @@ export function AddUnitDialog({
                   </FormInput>
                 </FormField>
 
-                {/* Unit Code */}
+                {/* Unit Code — ADR-233: Auto-suggestion with manual override */}
                 <FormField
                   label={t('dialog.addUnit.fields.code')}
                   htmlFor="code"
@@ -282,10 +310,35 @@ export function AddUnitDialog({
                       id="code"
                       name="code"
                       value={formData.code}
-                      onChange={handleChange}
+                      onChange={(e) => {
+                        handleChange(e);
+                        // Mark as overridden if user manually types
+                        if (!codeOverridden && e.target.value !== suggestedCode) {
+                          setCodeOverridden(true);
+                        }
+                        // Reset override if user clears the field
+                        if (!e.target.value) {
+                          setCodeOverridden(false);
+                        }
+                      }}
                       placeholder={t('dialog.addUnit.placeholders.code')}
                       disabled={loading}
                     />
+                    {codeLoading && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {t('entityCode.loading')}
+                      </p>
+                    )}
+                    {suggestedCode && codeOverridden && formData.code !== suggestedCode && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {t('entityCode.suggested', { code: suggestedCode })}
+                      </p>
+                    )}
+                    {formData.code && !isValidEntityCodeFormat(formData.code) && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        {t('entityCode.formatWarning')}
+                      </p>
+                    )}
                   </FormInput>
                 </FormField>
 
