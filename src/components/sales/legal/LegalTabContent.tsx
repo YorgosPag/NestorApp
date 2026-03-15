@@ -186,6 +186,7 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
 
       {/* Professionals — interactive assign/remove */}
       <ProfessionalsCard
+        unitId={unit.id}
         associations={links}
         contracts={contracts}
         onAssign={addLink}

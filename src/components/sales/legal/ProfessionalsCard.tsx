@@ -37,6 +37,8 @@ import type { LegalContract, LegalProfessionalRole } from '@/types/legal-contrac
 // ============================================================================
 
 interface ProfessionalsCardProps {
+  /** Unit ID — used for email notification on assignment */
+  unitId: string;
   /** All contact links for this unit */
   associations: EntityAssociationLink[];
   /** Draft contracts — to sync professional snapshots */
@@ -141,6 +143,7 @@ function getRoleLabel(role: LegalProfessionalRole): string {
 // ============================================================================
 
 export function ProfessionalsCard({
+  unitId,
   associations,
   contracts,
   onAssign,
@@ -173,13 +176,20 @@ export function ProfessionalsCard({
 
         setEditingRole(null);
         toast.success(t('sales.legal.professionalAssigned', { defaultValue: 'Ανατέθηκε επιτυχώς' }));
+
+        // Fire-and-forget: email notification to assigned professional
+        fetch('/api/notifications/professional-assigned', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contactId: contact.id, role, unitId }),
+        }).catch(() => { /* silent — email is best-effort */ });
       } catch {
         toast.error(t('common.error', { defaultValue: 'Σφάλμα' }));
       } finally {
         setSaving(false);
       }
     },
-    [onAssign, onOverrideProfessional, drafts, t]
+    [onAssign, onOverrideProfessional, drafts, t, unitId]
   );
 
   // Validate before assigning — check for conflicts
