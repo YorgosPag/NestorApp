@@ -273,6 +273,54 @@
       "updated": "Ενημερώθηκε:"
     }
   },
+  "costCalculator": {
+    "title": "Κόστος Χρήματος",
+    "dialogTitle": "Ανάλυση Κόστους Χρήματος",
+    "loadingRates": "Φόρτωση επιτοκίων...",
+    "timeCost": "Κόστος Χρόνου",
+    "recommended": "Πρόταση",
+    "detailAnalysis": "Λεπτομερής Ανάλυση",
+    "noData": "Δεν υπάρχουν δεδομένα.",
+    "tabs": {
+      "cashFlow": "Cash Flow",
+      "scenarios": "Σενάρια",
+      "pricing": "Τιμολόγηση",
+      "settings": "Ρυθμίσεις"
+    },
+    "cashFlow": {
+      "label": "Περιγραφή",
+      "amount": "Ποσό",
+      "date": "Ημερομηνία",
+      "days": "Ημέρες",
+      "nominalTotal": "Ονομαστικό σύνολο"
+    },
+    "scenarios": {
+      "scenario": "Σενάριο",
+      "cost": "Κόστος",
+      "days": "ημέρες",
+      "discountRate": "Επιτόκιο αναγωγής"
+    },
+    "pricing": {
+      "sellAtLeast": "Πουλήστε τουλάχιστον:",
+      "overNominal": "πάνω από ονομαστική",
+      "nominalPrice": "Ονομαστική Τιμή",
+      "timeCost": "Κόστος Χρόνου",
+      "wacp": "Μέσος Χρόνος Είσπραξης",
+      "effectiveRate": "Ενεργό Επιτόκιο",
+      "disclaimer": "Η πρόταση τιμολόγησης βασίζεται στην παρούσα αξία (NPV) των μελλοντικών εισπράξεων. Δεν αποτελεί χρηματοοικονομική συμβουλή."
+    },
+    "settings": {
+      "euriborRates": "Επιτόκια Euribor",
+      "refresh": "Ανανέωση",
+      "ratesRefreshed": "Τα επιτόκια ενημερώθηκαν!",
+      "discountSource": "Πηγή Επιτοκίου",
+      "manual": "Χειροκίνητο",
+      "manualRate": "Χειροκίνητο Επιτόκιο",
+      "bankSpread": "Τραπεζικό Spread",
+      "save": "Αποθήκευση",
+      "spreadSaved": "Το spread αποθηκεύτηκε!"
+    }
+  },
   "errors": {
     "noBuyer": "Δεν υπάρχει αγοραστής",
     "noProject": "Η μονάδα δεν ανήκει σε έργο",

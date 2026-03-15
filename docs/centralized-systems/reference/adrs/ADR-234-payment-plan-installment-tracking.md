@@ -757,13 +757,13 @@ Predefined templates για συνηθισμένες δομές:
 - [ ] Endorsement chain
 - [ ] Aggregate views per project, per unit, per contact
 
-### Phase 4: Υπολογιστής Κόστους — SPEC-234E
-- [ ] ECB Euribor API integration + cache
-- [ ] NPV calculation engine
-- [ ] Bank spread configuration
-- [ ] Scenario comparison UI
-- [ ] Pricing recommendation
-- [ ] Auto-populate from PaymentPlan
+### Phase 4: Υπολογιστής Κόστους — SPEC-234E ✅ IMPLEMENTED
+- [x] ECB Euribor API integration + cache (24h TTL, fallback)
+- [x] NPV calculation engine (pure math, client+server)
+- [x] Bank spread configuration (Firestore settings/bank_spreads)
+- [x] Scenario comparison UI (4 scenarios: Cash/Off-Plan/Loan 70%/Current)
+- [x] Pricing recommendation (recommendedPrice = salePrice²/NPV)
+- [x] Auto-populate from PaymentPlan installments
 
 ### Phase 5: Alerts & Reports
 - [ ] Overdue installment alerts (dashboard notification)
@@ -892,3 +892,4 @@ Predefined templates για συνηθισμένες δομές:
 | 2026-03-15 | **Phase 1 IMPLEMENTED (SPEC-234D)**: 16 new files + 4 modified. Types (`payment-plan.ts`), Service (`payment-plan.service.ts`), API routes (3 endpoints), Hook (`usePaymentPlan.ts`), Templates (4 predefined), i18n (EL+EN), UI components (6: PaymentTabContent, PaymentPlanOverview, InstallmentSchedule, RecordPaymentDialog, LoanInfoCard, CreatePaymentPlanWizard), SalesSidebar integration (payment tab after legal). Firestore subcollections: `payment_plans`, `payments`. Enterprise IDs: `pp_`, `pay_`. | Claude Code |
 | 2026-03-15 | **Phase 2 IMPLEMENTED (SPEC-234C)**: Multi-bank loan tracking. 8 new files + 8 modified. Types (`loan-tracking.ts` — 15-stage FSM, LoanTracking interface ~40 fields), Service (`loan-tracking.service.ts`), 5 API routes (`/loans`, `/loans/[loanId]`, `/transition`, `/disburse`, `/comm-log`), Hook (`useLoanTracking.ts`), UI components (5: LoanTrackingSection, LoanCard, LoanStatusTimeline, LoanDetailDialog, AddLoanDialog). PaymentPlan.loans[] array (multi-bank), migration `LoanInfo→LoanTracking`, PaymentSummary extended fields, i18n (EL+EN), Enterprise ID `loan_`. Backward compatible: old `loan: LoanInfo` auto-migrated. | Claude Code |
 | 2026-03-16 | **Phase 3 IMPLEMENTED (SPEC-234A)**: Cheque Registry — enterprise cheque lifecycle management per Ν. 5960/1933. 13 new files + 7 modified (~2100 lines). Types (`cheque-registry.ts` — 10-state FSM, ChequeRecord ~35 fields, ChequeContext, EndorsementEntry), Service (`cheque-registry.service.ts` — CRUD, FSM transitions, endorsement, bounce, replacement, auto PaymentRecord on clearing), 5 API routes (`/cheques`, `/cheques/[chequeId]`, `/transition`, `/endorse`, `/bounce`), Hook (`useChequeRegistry.ts`), UI components (5: ChequeRegistrySection, ChequeTable, ChequeStatusBadge, AddChequeDialog, ChequeDetailDialog with 3 tabs). Firestore top-level `cheques` collection, Enterprise ID `chq_`, i18n (EL+EN), V-CHQ-001~008 server-enforced. Bounced workflow: Τειρεσίας + μήνυση toggles. Integrated in PaymentTabContent. | Claude Code |
+| 2026-03-16 | **Phase 4 IMPLEMENTED (SPEC-234E)**: Interest Cost Calculator — NPV-based cost-of-money analysis. 10 new files + 7 modified (~1900 lines). Types (`interest-calculator.ts` — EuriborRatesCache, BankSpreadConfig, CostCalculationInput/Result, ScenarioComparison, CashFlowAnalysisEntry), Pure math engine (`npv-engine.ts` — calculateDiscountFactor, calculateNPV, calculateFullResult, buildComparisonScenarios), Server service (`euribor.service.ts` — ECB SDMX-JSON API fetch, 24h cache, bank spread CRUD), 4 API routes (`/euribor/rates`, `/euribor/refresh`, `/settings/bank-spreads`, `/calculator/cost`), Hook (`useInterestCalculator.ts`), UI components (2: InterestCostSection summary card + InterestCostDialog 4-tab full analysis). Tabs: Cash Flow Analysis, Scenario Comparison (4 scenarios), Pricing Recommendation, Settings (Euribor refresh, discount source, bank spread). Firestore settings docs: `euribor_rates`, `bank_spreads`. Auto-populate from plan installments. i18n (EL+EN). Radix Select, semantic HTML, zero `any`. | Claude Code |

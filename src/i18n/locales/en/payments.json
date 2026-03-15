@@ -273,6 +273,54 @@
       "updated": "Updated:"
     }
   },
+  "costCalculator": {
+    "title": "Cost of Money",
+    "dialogTitle": "Cost of Money Analysis",
+    "loadingRates": "Loading rates...",
+    "timeCost": "Time Cost",
+    "recommended": "Suggested",
+    "detailAnalysis": "Detailed Analysis",
+    "noData": "No data available.",
+    "tabs": {
+      "cashFlow": "Cash Flow",
+      "scenarios": "Scenarios",
+      "pricing": "Pricing",
+      "settings": "Settings"
+    },
+    "cashFlow": {
+      "label": "Description",
+      "amount": "Amount",
+      "date": "Date",
+      "days": "Days",
+      "nominalTotal": "Nominal total"
+    },
+    "scenarios": {
+      "scenario": "Scenario",
+      "cost": "Cost",
+      "days": "days",
+      "discountRate": "Discount rate"
+    },
+    "pricing": {
+      "sellAtLeast": "Sell at least:",
+      "overNominal": "over nominal",
+      "nominalPrice": "Nominal Price",
+      "timeCost": "Time Cost",
+      "wacp": "Weighted Average Collection Period",
+      "effectiveRate": "Effective Rate",
+      "disclaimer": "Pricing recommendation based on Net Present Value (NPV) of future cash flows. This is not financial advice."
+    },
+    "settings": {
+      "euriborRates": "Euribor Rates",
+      "refresh": "Refresh",
+      "ratesRefreshed": "Rates refreshed!",
+      "discountSource": "Discount Rate Source",
+      "manual": "Manual",
+      "manualRate": "Manual Rate",
+      "bankSpread": "Bank Spread",
+      "save": "Save",
+      "spreadSaved": "Spread saved!"
+    }
+  },
   "errors": {
     "noBuyer": "No buyer assigned",
     "noProject": "Unit is not assigned to a project",

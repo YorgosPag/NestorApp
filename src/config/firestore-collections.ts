@@ -326,7 +326,13 @@ export const SYSTEM_DOCS = {
 
   // 👷 LABOR COMPLIANCE SETTINGS (ADR-090: IKA/EFKA — Insurance Classes & Contribution Rates)
   // Path: settings/labor_compliance
-  LABOR_COMPLIANCE_SETTINGS: process.env.NEXT_PUBLIC_LABOR_COMPLIANCE_SETTINGS_DOC || 'labor_compliance'
+  LABOR_COMPLIANCE_SETTINGS: process.env.NEXT_PUBLIC_LABOR_COMPLIANCE_SETTINGS_DOC || 'labor_compliance',
+
+  // 📊 INTEREST COST CALCULATOR (ADR-234 Phase 4 — SPEC-234E)
+  // Path: settings/euribor_rates — Cached ECB Euribor rates (24h TTL)
+  EURIBOR_RATES: process.env.NEXT_PUBLIC_EURIBOR_RATES_DOC || 'euribor_rates',
+  // Path: settings/bank_spreads — Bank spread configuration
+  BANK_SPREADS: process.env.NEXT_PUBLIC_BANK_SPREADS_DOC || 'bank_spreads',
 } as const;
 
 // ============================================================================
