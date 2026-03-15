@@ -143,6 +143,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   COMMISSION: 'com',
   PAYMENT_PLAN: 'pp',
   PAYMENT_RECORD: 'pay',
+  LOAN: 'loan',
 
   // ==========================================================================
   // OPTIMISTIC & TEMPORARY
@@ -905,6 +906,14 @@ export class EnterpriseIdService {
     return this.generateId(ENTERPRISE_ID_PREFIXES.PAYMENT_RECORD).id;
   }
 
+  /**
+   * 🏦 Generate Loan Tracking ID (ADR-234 Phase 2)
+   * Format: loan_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateLoanId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.LOAN).id;
+  }
+
   // ==========================================================================
   // UTILITY METHODS
   // ==========================================================================
@@ -1110,6 +1119,7 @@ export const generateCommissionId = () => enterpriseIdService.generateCommission
 // =============================================================================
 export const generatePaymentPlanId = () => enterpriseIdService.generatePaymentPlanId();
 export const generatePaymentRecordId = () => enterpriseIdService.generatePaymentRecordId();
+export const generateLoanId = () => enterpriseIdService.generateLoanId();
 
 // =============================================================================
 // FILE & MEDIA OPERATIONS

@@ -257,7 +257,7 @@
 | **ADR-231** | Cascade Entity Linking — Αυτόματη Διάδοση Ιεραρχίας | ✅ IMPLEMENTED | 2026-03-14 | Entity Systems | [📄](./adrs/ADR-231-cascade-entity-linking.md) |
 | **ADR-232** | Tenant Isolation vs Business Entity Link Separation | ✅ IMPLEMENTED | 2026-03-15 | Entity Systems / Security | [📄](./adrs/ADR-232-tenant-company-separation.md) |
 | **ADR-233** | Entity Coding System — Κωδικοποίηση Οντοτήτων | ✅ IMPLEMENTED | 2026-03-15 | Entity Systems | [📄](./adrs/ADR-233-entity-coding-system.md) |
-| **ADR-234** | Payment Plan & Installment Tracking (Πρόγραμμα Αποπληρωμής Ακινήτου) | ✅ IMPLEMENTED (Phase 1: SPEC-234D) | 2026-03-15 | Entity Systems / Sales & Finance | [📄](./adrs/ADR-234-payment-plan-installment-tracking.md) |
+| **ADR-234** | Payment Plan & Installment Tracking (Πρόγραμμα Αποπληρωμής Ακινήτου) | ✅ IMPLEMENTED (Phase 1: SPEC-234D + Phase 2: SPEC-234C) | 2026-03-15 | Entity Systems / Sales & Finance | [📄](./adrs/ADR-234-payment-plan-installment-tracking.md) |
 | **ADR-235** | Ownership Percentage Table (Πίνακας Ποσοστών Συνιδιοκτησίας) | ✅ APPROVED | 2026-03-15 | Domain / Property Law | [📄](./adrs/ADR-235-ownership-percentage-table.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 

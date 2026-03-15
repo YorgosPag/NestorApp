@@ -11,6 +11,7 @@
  */
 
 import type { Timestamp } from 'firebase/firestore';
+import type { LoanTracking, LoanTrackingStatus } from './loan-tracking';
 
 // =============================================================================
 // 🏦 PAYMENT PLAN STATUS
@@ -298,7 +299,10 @@ export interface PaymentPlan {
   installments: Installment[];
 
   // --- Δάνειο ---
+  /** @deprecated Use `loans` array instead (Phase 2 — SPEC-234C) */
   loan: LoanInfo;
+  /** Multi-bank loan tracking (Phase 2 — SPEC-234C). Empty = no loan. */
+  loans?: LoanTracking[];
 
   // --- Config ---
   config: PaymentPlanConfig;
@@ -332,6 +336,14 @@ export interface PaymentSummary {
   nextInstallmentAmount: number | null;
   nextInstallmentDate: string | null;
   loanStatus: LoanStatus;
+  /** Primary loan status (Phase 2 — SPEC-234C) */
+  primaryLoanStatus?: LoanTrackingStatus;
+  /** Primary loan bank name */
+  primaryLoanBank?: string | null;
+  /** Total approved loan amount across all loans */
+  totalApprovedLoanAmount?: number | null;
+  /** Total disbursed amount across all loans */
+  totalDisbursedAmount?: number;
   paymentPlanId: string;
 }
 
@@ -352,6 +364,8 @@ export interface CreatePaymentPlanInput {
   installments: CreateInstallmentInput[];
   config?: Partial<PaymentPlanConfig>;
   loan?: Partial<LoanInfo>;
+  /** Phase 2 — multi-bank loan inputs */
+  loans?: import('./loan-tracking').CreateLoanInput[];
   notes?: string;
 }
 

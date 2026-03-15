@@ -37,6 +37,8 @@ import {
   DEFAULT_LOAN_INFO,
   isValidPlanTransition,
 } from '@/types/payment-plan';
+import type { LoanTracking } from '@/types/loan-tracking';
+import { migrateLoanInfoToTracking } from '@/types/loan-tracking';
 
 const logger = createModuleLogger('PaymentPlanService');
 
@@ -672,6 +674,7 @@ export class PaymentPlanService {
 
   /**
    * Update loan info on a payment plan.
+   * @deprecated Use LoanTrackingService for Phase 2 multi-bank support.
    */
   static async updateLoanInfo(
     unitId: string,
@@ -737,6 +740,22 @@ export class PaymentPlanService {
         (i) => i.status === 'pending' || i.status === 'due' || i.status === 'partial'
       );
 
+      // Resolve loans (Phase 2 — SPEC-234C)
+      const loans: LoanTracking[] = plan.loans && plan.loans.length > 0
+        ? plan.loans
+        : (plan.loan && plan.loan.status !== 'not_applicable'
+          ? [migrateLoanInfoToTracking(plan.loan, 'migrated_loan')]
+          : []);
+
+      const primaryLoan = loans.find(l => l.isPrimary) ?? loans[0] ?? null;
+
+      const totalApprovedLoanAmount = loans.reduce<number | null>((sum, l) => {
+        if (l.approvedAmount === null) return sum;
+        return (sum ?? 0) + l.approvedAmount;
+      }, null);
+
+      const totalDisbursedAmount = loans.reduce((sum, l) => sum + l.disbursedAmount, 0);
+
       const summary: PaymentSummary = {
         planStatus: plan.status,
         totalAmount: plan.totalAmount,
@@ -751,6 +770,10 @@ export class PaymentPlanService {
         nextInstallmentAmount: nextInstallment?.amount ?? null,
         nextInstallmentDate: nextInstallment?.dueDate ?? null,
         loanStatus: plan.loan.status,
+        primaryLoanStatus: primaryLoan?.status ?? 'not_applicable',
+        primaryLoanBank: primaryLoan?.bankName ?? null,
+        totalApprovedLoanAmount,
+        totalDisbursedAmount,
         paymentPlanId: planId,
       };
 

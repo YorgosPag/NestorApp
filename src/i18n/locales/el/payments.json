@@ -122,6 +122,77 @@
     "confirm": "Καταχώρηση",
     "cancel": "Ακύρωση"
   },
+  "loanTracking": {
+    "title": "Τραπεζικά Δάνεια",
+    "addLoan": "Νέο Δάνειο",
+    "addLoanDesc": "Καταγράψτε ένα νέο τραπεζικό δάνειο για αυτό το payment plan.",
+    "noLoans": "Δεν υπάρχουν καταγεγραμμένα δάνεια.",
+    "primaryLoan": "Κύριο Δάνειο",
+    "secondaryLoan": "Δευτερεύον Δάνειο",
+    "status": {
+      "not_applicable": "Δεν Απαιτείται",
+      "exploring": "Αναζήτηση Τράπεζας",
+      "applied": "Κατατέθηκε Αίτηση",
+      "pre_approved": "Προέγκριση",
+      "appraisal_pending": "Αναμένεται Εκτίμηση",
+      "appraisal_completed": "Εκτίμηση Ολοκληρώθηκε",
+      "legal_review": "Νομικός Έλεγχος",
+      "approved": "Εγκρίθηκε",
+      "collateral_pending": "Αναμένεται Προσημείωση",
+      "collateral_registered": "Προσημείωση Εγγράφηκε",
+      "disbursement_pending": "Αναμένεται Εκταμίευση",
+      "partially_disbursed": "Μερική Εκταμίευση",
+      "fully_disbursed": "Πλήρης Εκταμίευση",
+      "rejected": "Απορρίφθηκε",
+      "cancelled": "Ακυρώθηκε"
+    },
+    "disbursementType": {
+      "title": "Τύπος Εκταμίευσης",
+      "lump_sum": "Εφάπαξ",
+      "phased": "Σταδιακή (Milestones)"
+    },
+    "collateralType": {
+      "mortgage": "Υποθήκη",
+      "pre_notation": "Προσημείωση Υποθήκης",
+      "personal_guarantee": "Προσωπική Εγγύηση",
+      "other": "Άλλο"
+    },
+    "fields": {
+      "bankName": "Τράπεζα",
+      "bankBranch": "Υποκατάστημα",
+      "bankReference": "Αρ. Πρωτοκόλλου",
+      "requestedAmount": "Αιτηθέν Ποσό",
+      "approvedAmount": "Εγκεκριμένο Ποσό",
+      "disbursedAmount": "Εκταμιευθέν",
+      "ltvPercentage": "LTV (%)",
+      "interestRate": "Επιτόκιο (%)",
+      "termYears": "Διάρκεια (Έτη)",
+      "monthlyPayment": "Μηνιαία Δόση",
+      "dstiRatio": "DSTI (%)",
+      "appraisalValue": "Αξία Εκτίμησης",
+      "collateralAmount": "Ποσό Εγγύησης"
+    },
+    "actions": {
+      "recordDisbursement": "Καταγραφή Εκταμίευσης",
+      "addCommLog": "Νέα Επικοινωνία",
+      "updateStatus": "Ενημέρωση Κατάστασης"
+    },
+    "commLog": {
+      "title": "Ιστορικό Επικοινωνίας",
+      "type": {
+        "phone": "Τηλέφωνο",
+        "email": "Email",
+        "meeting": "Συνάντηση",
+        "document": "Έγγραφο",
+        "note": "Σημείωση"
+      }
+    },
+    "alerts": {
+      "preApprovalExpiring": "Η Προέγκριση λήγει σε {days} ημέρες!",
+      "ltvExceeded": "LTV {value}% — υπερβαίνει το όριο {limit}%",
+      "dstiExceeded": "DSTI {value}% — υπερβαίνει το όριο {limit}%"
+    }
+  },
   "errors": {
     "noBuyer": "Δεν υπάρχει αγοραστής",
     "noProject": "Η μονάδα δεν ανήκει σε έργο",

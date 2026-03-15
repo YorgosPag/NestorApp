@@ -14,7 +14,7 @@ import { usePaymentPlan } from '@/hooks/usePaymentPlan';
 import { PaymentPlanOverview } from '@/components/sales/payments/PaymentPlanOverview';
 import { InstallmentSchedule } from '@/components/sales/payments/InstallmentSchedule';
 import { RecordPaymentDialog } from '@/components/sales/payments/RecordPaymentDialog';
-import { LoanInfoCard } from '@/components/sales/payments/LoanInfoCard';
+import { LoanTrackingSection } from '@/components/sales/payments/LoanTrackingSection';
 import { CreatePaymentPlanWizard } from '@/components/sales/payments/CreatePaymentPlanWizard';
 import { Button } from '@/components/ui/button';
 import type { Unit } from '@/types/unit';
@@ -139,8 +139,8 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
         onPayInstallment={handlePayInstallment}
       />
 
-      {/* Loan Info */}
-      <LoanInfoCard loan={plan.loan} />
+      {/* Loan Tracking (Phase 2 — SPEC-234C) */}
+      <LoanTrackingSection unitId={unit.id} />
 
       {/* Record Payment Dialog */}
       {selectedInstallment && (

@@ -35,6 +35,7 @@ interface UsePaymentPlanReturn {
   createPlan: (input: Omit<CreatePaymentPlanInput, 'unitId'>) => Promise<{ success: boolean; error?: string }>;
   updatePlan: (planId: string, updates: UpdatePaymentPlanInput) => Promise<{ success: boolean; error?: string }>;
   recordPayment: (input: CreatePaymentInput) => Promise<{ success: boolean; error?: string }>;
+  /** @deprecated Use useLoanTracking hook instead */
   updateLoan: (planId: string, loan: Partial<LoanInfo>) => Promise<{ success: boolean; error?: string }>;
 }
 

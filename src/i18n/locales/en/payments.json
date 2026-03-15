@@ -122,6 +122,77 @@
     "confirm": "Record",
     "cancel": "Cancel"
   },
+  "loanTracking": {
+    "title": "Bank Loans",
+    "addLoan": "New Loan",
+    "addLoanDesc": "Record a new bank loan for this payment plan.",
+    "noLoans": "No loans recorded.",
+    "primaryLoan": "Primary Loan",
+    "secondaryLoan": "Secondary Loan",
+    "status": {
+      "not_applicable": "Not Applicable",
+      "exploring": "Exploring Banks",
+      "applied": "Application Submitted",
+      "pre_approved": "Pre-Approved",
+      "appraisal_pending": "Appraisal Pending",
+      "appraisal_completed": "Appraisal Completed",
+      "legal_review": "Legal Review",
+      "approved": "Approved",
+      "collateral_pending": "Collateral Pending",
+      "collateral_registered": "Collateral Registered",
+      "disbursement_pending": "Disbursement Pending",
+      "partially_disbursed": "Partially Disbursed",
+      "fully_disbursed": "Fully Disbursed",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled"
+    },
+    "disbursementType": {
+      "title": "Disbursement Type",
+      "lump_sum": "Lump Sum",
+      "phased": "Phased (Milestones)"
+    },
+    "collateralType": {
+      "mortgage": "Mortgage",
+      "pre_notation": "Pre-notation of Mortgage",
+      "personal_guarantee": "Personal Guarantee",
+      "other": "Other"
+    },
+    "fields": {
+      "bankName": "Bank",
+      "bankBranch": "Branch",
+      "bankReference": "Reference Number",
+      "requestedAmount": "Requested Amount",
+      "approvedAmount": "Approved Amount",
+      "disbursedAmount": "Disbursed",
+      "ltvPercentage": "LTV (%)",
+      "interestRate": "Interest Rate (%)",
+      "termYears": "Term (Years)",
+      "monthlyPayment": "Monthly Payment",
+      "dstiRatio": "DSTI (%)",
+      "appraisalValue": "Appraisal Value",
+      "collateralAmount": "Collateral Amount"
+    },
+    "actions": {
+      "recordDisbursement": "Record Disbursement",
+      "addCommLog": "New Communication",
+      "updateStatus": "Update Status"
+    },
+    "commLog": {
+      "title": "Communication Log",
+      "type": {
+        "phone": "Phone",
+        "email": "Email",
+        "meeting": "Meeting",
+        "document": "Document",
+        "note": "Note"
+      }
+    },
+    "alerts": {
+      "preApprovalExpiring": "Pre-approval expires in {days} days!",
+      "ltvExceeded": "LTV {value}% — exceeds limit {limit}%",
+      "dstiExceeded": "DSTI {value}% — exceeds limit {limit}%"
+    }
+  },
   "errors": {
     "noBuyer": "No buyer assigned",
     "noProject": "Unit is not assigned to a project",

@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | ✅ IMPLEMENTED — Phase 1 (SPEC-234D) |
+| **Status** | ✅ IMPLEMENTED — Phase 1 (SPEC-234D) + Phase 2 (SPEC-234C) |
 | **Date** | 2026-03-15 |
 | **Category** | Entity Systems / Sales & Finance |
 | **Priority** | P1 — Business-Critical Process |
@@ -890,3 +890,4 @@ Predefined templates για συνηθισμένες δομές:
 | 2026-03-15 | **Permissions**: Admin only (family team). Μηδέν permissions complexity. Εξωτερικό λογιστήριο — η εφαρμογή καταγράφει παράλληλα. Customer portal (αγοραστής βλέπει δόσεις) → μελλοντικό. | Γιώργος + Claude |
 | 2026-03-15 | **Ροή + Statuses**: Νέο status 'negotiation' (πριν κράτηση — διαπραγμάτευση τιμής + calculator). Plan δημιουργείται στη διαπραγμάτευση, κλειδώνει στο προσύμφωνο/οριστικό. Calculator (SPEC-234E) τρέχει ΚΑΤΑ τη διαπραγμάτευση, πριν κλείσει η τιμή. | Γιώργος + Claude |
 | 2026-03-15 | **Phase 1 IMPLEMENTED (SPEC-234D)**: 16 new files + 4 modified. Types (`payment-plan.ts`), Service (`payment-plan.service.ts`), API routes (3 endpoints), Hook (`usePaymentPlan.ts`), Templates (4 predefined), i18n (EL+EN), UI components (6: PaymentTabContent, PaymentPlanOverview, InstallmentSchedule, RecordPaymentDialog, LoanInfoCard, CreatePaymentPlanWizard), SalesSidebar integration (payment tab after legal). Firestore subcollections: `payment_plans`, `payments`. Enterprise IDs: `pp_`, `pay_`. | Claude Code |
+| 2026-03-15 | **Phase 2 IMPLEMENTED (SPEC-234C)**: Multi-bank loan tracking. 8 new files + 8 modified. Types (`loan-tracking.ts` — 15-stage FSM, LoanTracking interface ~40 fields), Service (`loan-tracking.service.ts`), 5 API routes (`/loans`, `/loans/[loanId]`, `/transition`, `/disburse`, `/comm-log`), Hook (`useLoanTracking.ts`), UI components (5: LoanTrackingSection, LoanCard, LoanStatusTimeline, LoanDetailDialog, AddLoanDialog). PaymentPlan.loans[] array (multi-bank), migration `LoanInfo→LoanTracking`, PaymentSummary extended fields, i18n (EL+EN), Enterprise ID `loan_`. Backward compatible: old `loan: LoanInfo` auto-migrated. | Claude Code |
