@@ -10,5 +10,5 @@ export { buildCancellationConfirmationEmail } from './cancellation-confirmation'
 export type { CancellationEmailData } from './cancellation-confirmation';
 export { buildSaleConfirmationEmail } from './sale-confirmation';
 export type { SaleEmailData } from './sale-confirmation';
-export { buildProfessionalAssignmentEmail } from './professional-assignment';
+export { buildProfessionalAssignmentEmail, buildProfessionalRemovalEmail } from './professional-assignment';
 export type { ProfessionalAssignmentEmailData } from './professional-assignment';

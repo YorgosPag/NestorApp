@@ -73,12 +73,13 @@ interface PendingAssignment {
   conflictType: 'hard_block' | 'warning';
 }
 
-/** Pending email notification — shown after successful assignment */
+/** Pending email notification — shown after successful assignment or removal */
 interface PendingEmailNotification {
   contactId: string;
   contactName: string;
   role: string;
   roleLabel: string;
+  type: 'assignment' | 'removal';
 }
 
 const SLOTS: ProfessionalSlot[] = [
@@ -167,7 +168,7 @@ export function ProfessionalsCard({
 
   const drafts = getDraftContracts(contracts);
 
-  // Send the email notification
+  // Send the email notification (assignment or removal)
   const sendEmailNotification = useCallback(
     (notification: PendingEmailNotification) => {
       fetch('/api/notifications/professional-assigned', {
@@ -177,6 +178,7 @@ export function ProfessionalsCard({
           contactId: notification.contactId,
           role: notification.role,
           unitId,
+          type: notification.type,
         }),
       })
         .then(() => toast.success(t('sales.legal.emailSent', { defaultValue: 'Το email στάλθηκε' })))
@@ -212,6 +214,7 @@ export function ProfessionalsCard({
           contactName: contact.name,
           role,
           roleLabel,
+          type: 'assignment',
         });
       } catch {
         toast.error(t('common.error', { defaultValue: 'Σφάλμα' }));
@@ -277,7 +280,7 @@ export function ProfessionalsCard({
 
   // Remove a contact from a role
   const handleRemove = useCallback(
-    async (linkId: string, role: LegalProfessionalRole) => {
+    async (linkId: string, role: LegalProfessionalRole, contactId: string, contactName: string) => {
       setSaving(true);
 
       try {
@@ -293,6 +296,16 @@ export function ProfessionalsCard({
         }
 
         toast.success(t('sales.legal.professionalRemoved', { defaultValue: 'Αφαιρέθηκε' }));
+
+        // Ask user whether to send removal email
+        const roleLabel = getRoleLabel(role);
+        setPendingEmail({
+          contactId,
+          contactName,
+          role,
+          roleLabel,
+          type: 'removal',
+        });
       } catch {
         toast.error(t('common.error', { defaultValue: 'Σφάλμα' }));
       } finally {
@@ -347,7 +360,7 @@ export function ProfessionalsCard({
                           variant="ghost"
                           size="icon"
                           className="h-5 w-5 text-destructive hover:text-destructive"
-                          onClick={() => handleRemove(linked.linkId, slot.role)}
+                          onClick={() => handleRemove(linked.linkId, slot.role, linked.contactId, linked.contactName)}
                           disabled={saving}
                           title={t('sales.legal.removeProfessional', { defaultValue: 'Αφαίρεση' })}
                         >
@@ -485,15 +498,28 @@ export function ProfessionalsCard({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5 text-blue-600" />
-              Αποστολή email ειδοποίησης
+              <Mail className={`h-5 w-5 ${pendingEmail?.type === 'removal' ? 'text-destructive' : 'text-blue-600'}`} />
+              {pendingEmail?.type === 'removal'
+                ? 'Αποστολή email ακύρωσης'
+                : 'Αποστολή email ειδοποίησης'}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <p className="text-sm">
-                Θέλετε να σταλεί email ειδοποίησης στον/στην{' '}
-                <strong>«{pendingEmail?.contactName}»</strong>{' '}
-                για την ανάθεση του ρόλου{' '}
-                <strong>{pendingEmail?.roleLabel}</strong>;
+                {pendingEmail?.type === 'removal' ? (
+                  <>
+                    Θέλετε να σταλεί email ακύρωσης στον/στην{' '}
+                    <strong>«{pendingEmail?.contactName}»</strong>{' '}
+                    για την αφαίρεσή του/της από τον ρόλο{' '}
+                    <strong>{pendingEmail?.roleLabel}</strong>;
+                  </>
+                ) : (
+                  <>
+                    Θέλετε να σταλεί email ειδοποίησης στον/στην{' '}
+                    <strong>«{pendingEmail?.contactName}»</strong>{' '}
+                    για την ανάθεση του ρόλου{' '}
+                    <strong>{pendingEmail?.roleLabel}</strong>;
+                  </>
+                )}
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>

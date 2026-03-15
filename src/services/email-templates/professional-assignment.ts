@@ -161,6 +161,128 @@ function buildContentSection(data: ProfessionalAssignmentEmailData): string {
 }
 
 // ============================================================================
+// REMOVAL TEMPLATE
+// ============================================================================
+
+/**
+ * Builds the branded HTML email for professional removal (ακύρωση ανάθεσης).
+ * Same data interface as assignment — reuses the same hierarchy.
+ */
+export function buildProfessionalRemovalEmail(data: ProfessionalAssignmentEmailData): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const unitLabel = data.unitCode ?? data.unitName;
+  const subject = `Ακύρωση ανάθεσης: ${data.roleName} — ${unitLabel}`;
+
+  const contentHtml = buildRemovalContentSection(data);
+
+  const html = wrapInBrandedTemplate({
+    contentHtml,
+    companyName: data.companyName ?? 'Pagonis Energo',
+    companyPhone: data.companyPhone,
+    companyEmail: data.companyEmail,
+    companyAddress: data.companyAddress,
+    companyWebsite: data.companyWebsite,
+  });
+
+  const text = buildRemovalPlainText(data);
+
+  return { subject, html, text };
+}
+
+function buildRemovalContentSection(data: ProfessionalAssignmentEmailData): string {
+  const floorText = data.unitFloor !== null && data.unitFloor !== undefined
+    ? formatFloor(data.unitFloor)
+    : null;
+
+  return `
+    <!-- Greeting -->
+    <p style="margin:0 0 16px;font-size:16px;color:${BRAND.navyDark};">
+      Αγαπητέ/ή <strong>${escapeHtml(data.professionalName)}</strong>,
+    </p>
+    <p style="margin:0 0 24px;font-size:15px;color:${BRAND.gray};line-height:1.6;">
+      Σας ενημερώνουμε ότι η ανάθεση του ρόλου
+      <strong style="color:${BRAND.navyDark};">${escapeHtml(data.roleName)}</strong>
+      για το παρακάτω ακίνητο <strong>ακυρώθηκε</strong>.
+    </p>
+
+    <!-- Info card: Property -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;border:1px solid ${BRAND.border};border-radius:6px;overflow:hidden;">
+      <tr>
+        <td style="background-color:${BRAND.navy};padding:10px 16px;">
+          <p style="margin:0;font-size:13px;font-weight:600;color:${BRAND.white};letter-spacing:0.5px;">
+            ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:16px;">
+          ${data.unitCode ? buildInfoRow('Κωδικός', escapeHtml(data.unitCode)) : ''}
+          ${buildInfoRow('Ακίνητο', escapeHtml(data.unitName))}
+          ${floorText ? buildInfoRow('Όροφος', floorText) : ''}
+          ${data.buildingName ? buildInfoRow('Κτίριο', escapeHtml(data.buildingName)) : ''}
+          ${data.projectName ? buildInfoRow('Έργο', escapeHtml(data.projectName)) : ''}
+          ${data.projectAddress ? buildInfoRow('Διεύθυνση', escapeHtml(data.projectAddress)) : ''}
+        </td>
+      </tr>
+    </table>
+
+    <!-- Notice -->
+    <p style="margin:0 0 8px;font-size:14px;color:${BRAND.gray};line-height:1.6;">
+      Εάν έχετε ήδη ξεκινήσει εργασίες σχετικά με την υπόθεση,
+      παρακαλούμε επικοινωνήστε μαζί μας για τη διευθέτηση τυχόν εκκρεμοτήτων.
+    </p>
+    <p style="margin:0 0 8px;font-size:14px;color:${BRAND.gray};line-height:1.6;">
+      Σας ευχαριστούμε για τη συνεργασία.
+    </p>
+    <p style="margin:16px 0 0;font-size:14px;color:${BRAND.navyDark};font-weight:600;">
+      Με εκτίμηση,<br/>
+      ${escapeHtml(data.companyName ?? 'Pagonis Energo')}
+    </p>
+  `;
+}
+
+function buildRemovalPlainText(data: ProfessionalAssignmentEmailData): string {
+  const lines: string[] = [
+    `Αγαπητέ/ή ${data.professionalName},`,
+    ``,
+    `Σας ενημερώνουμε ότι η ανάθεση του ρόλου "${data.roleName}" για το παρακάτω ακίνητο ΑΚΥΡΩΘΗΚΕ.`,
+    ``,
+    `═══ ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ ═══`,
+  ];
+
+  if (data.unitCode) lines.push(`Κωδικός: ${data.unitCode}`);
+  lines.push(`Ακίνητο: ${data.unitName}`);
+  if (data.unitFloor !== null) lines.push(`Όροφος: ${formatFloor(data.unitFloor)}`);
+  if (data.buildingName) lines.push(`Κτίριο: ${data.buildingName}`);
+  if (data.projectName) lines.push(`Έργο: ${data.projectName}`);
+  if (data.projectAddress) lines.push(`Διεύθυνση: ${data.projectAddress}`);
+
+  lines.push(
+    ``,
+    `Εάν έχετε ήδη ξεκινήσει εργασίες, παρακαλούμε επικοινωνήστε μαζί μας`,
+    `για τη διευθέτηση τυχόν εκκρεμοτήτων.`,
+    ``,
+    `Σας ευχαριστούμε για τη συνεργασία.`,
+    ``,
+    `Με εκτίμηση,`,
+    data.companyName ?? 'Pagonis Energo',
+  );
+
+  if (data.companyPhone || data.companyEmail || data.companyAddress) {
+    lines.push(``, `--- Στοιχεία Επικοινωνίας ---`);
+    if (data.companyPhone) lines.push(`Τηλ: ${data.companyPhone}`);
+    if (data.companyEmail) lines.push(`Email: ${data.companyEmail}`);
+    if (data.companyAddress) lines.push(`Διεύθυνση: ${data.companyAddress}`);
+    if (data.companyWebsite) lines.push(`Web: ${data.companyWebsite}`);
+  }
+
+  return lines.join('\n');
+}
+
+// ============================================================================
 // ROW HELPER
 // ============================================================================
 

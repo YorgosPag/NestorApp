@@ -19,7 +19,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { buildProfessionalAssignmentEmail } from '@/services/email-templates/professional-assignment';
+import { buildProfessionalAssignmentEmail, buildProfessionalRemovalEmail } from '@/services/email-templates/professional-assignment';
 import { sendReplyViaMailgun } from '@/services/ai-pipeline/shared/mailgun-sender';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -33,6 +33,8 @@ interface AssignmentNotificationRequest {
   contactId: string;
   role: string;
   unitId: string;
+  /** 'assignment' (default) or 'removal' */
+  type?: 'assignment' | 'removal';
 }
 
 interface AssignmentNotificationResponse {
@@ -187,9 +189,10 @@ async function handleAssignmentNotification(
       );
     }
 
-    const { contactId, role, unitId } = body;
+    const { contactId, role, unitId, type = 'assignment' } = body;
+    const isRemoval = type === 'removal';
 
-    logger.info('Professional assignment notification', { contactId, role, unitId, userId: ctx.uid });
+    logger.info('Professional notification', { contactId, role, unitId, type, userId: ctx.uid });
 
     // 1. Fetch contact — get primary email
     const db = getAdminFirestore();
@@ -219,9 +222,9 @@ async function handleAssignmentNotification(
       return NextResponse.json({ success: true, emailSent: false });
     }
 
-    // 4. Build email
+    // 4. Build email (assignment or removal)
     const roleName = ROLE_LABELS[role] ?? role;
-    const { subject, html, text } = buildProfessionalAssignmentEmail({
+    const templateData = {
       professionalName: displayName,
       roleName,
       unitName: hierarchy.unitName,
@@ -235,7 +238,11 @@ async function handleAssignmentNotification(
       companyEmail: hierarchy.companyEmail ?? undefined,
       companyAddress: hierarchy.companyAddress ?? undefined,
       companyWebsite: hierarchy.companyWebsite ?? undefined,
-    });
+    };
+
+    const { subject, html, text } = isRemoval
+      ? buildProfessionalRemovalEmail(templateData)
+      : buildProfessionalAssignmentEmail(templateData);
 
     // 5. Send via Mailgun
     const result = await sendReplyViaMailgun({
