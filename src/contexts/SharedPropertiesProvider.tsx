@@ -17,7 +17,7 @@
 const DEBUG_SHARED_PROPERTIES_PROVIDER = false;
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Property } from '@/types/property-viewer';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -76,43 +76,14 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
     }
   }, [activated]);
 
-  // Νέα συνάρτηση που αποθηκεύει στο Firestore
-  const setProperties = useCallback(async (newProperties: Property[], description: string) => {
-    try {
-      if (DEBUG_SHARED_PROPERTIES_PROVIDER) logger.info(`Updating Firestore: ${description}`);
-
-      // Βρίσκουμε τις διαφορές μεταξύ παλιών και νέων properties
-      const oldIds = new Set(properties.map(p => p.id));
-      const newIds = new Set(newProperties.map(p => p.id));
-
-      // Properties προς διαγραφή
-      const toDelete = properties.filter(p => !newIds.has(p.id));
-
-      // Properties προς ενημέρωση/δημιουργία
-      const toUpdate = newProperties.filter(p => {
-        const oldProperty = properties.find(old => old.id === p.id);
-        return !oldProperty || JSON.stringify(oldProperty) !== JSON.stringify(p);
-      });
-
-      // Διαγραφή
-      for (const property of toDelete) {
-        await deleteDoc(doc(db, COLLECTIONS.UNITS, property.id));
-        logger.info(`Deleted: ${property.id}`);
-      }
-
-      // Ενημέρωση/Δημιουργία
-      for (const property of toUpdate) {
-        const { id, ...propertyData } = property;
-        await setDoc(doc(db, COLLECTIONS.UNITS, id), propertyData);
-        if (DEBUG_SHARED_PROPERTIES_PROVIDER) logger.info(`Updated/Created: ${id}`);
-      }
-
-      if (DEBUG_SHARED_PROPERTIES_PROVIDER) logger.info(`Firestore sync complete: ${description}`);
-    } catch (err) {
-      logger.error('Error syncing to Firestore', { error: err });
-      setError('Failed to sync changes to Firestore');
-    }
-  }, [properties]);
+  // Local-only state update — Firestore writes happen via API routes (Admin SDK).
+  // The onSnapshot listener below picks up changes automatically.
+  // Legacy callers (usePolygonHandlers, useUnitsViewerState) still call this
+  // for optimistic local updates; Firestore sync happens through the listener.
+  const setProperties = useCallback((newProperties: Property[], description: string) => {
+    if (DEBUG_SHARED_PROPERTIES_PROVIDER) logger.info(`Local state update: ${description}`);
+    setPropertiesState(newProperties);
+  }, []);
 
   // 🏢 ENTERPRISE: Only set up listener when activated
   useEffect(() => {

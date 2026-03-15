@@ -87,6 +87,8 @@ export interface EntityLinkCardProps {
   hideCurrentLabel?: boolean;
   /** Auto-save on selection change (default: true). Set to false when part of a form with its own Save button. */
   autoSave?: boolean;
+  /** Incrementing counter that triggers options re-fetch (driven by realtime events) */
+  refreshSignal?: number;
 }
 
 // =============================================================================
@@ -110,6 +112,7 @@ export function EntityLinkCard({
   hideCurrentLabel = false,
   autoSave = true,
   onValueChange,
+  refreshSignal,
 }: EntityLinkCardProps) {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
@@ -132,23 +135,30 @@ export function EntityLinkCard({
   // Effective saved value: only use savedValue in autoSave mode
   const effectiveSavedValue = autoSave ? savedValue : undefined;
 
-  // Load options on mount
+  // Load options on mount + re-fetch when refreshSignal changes (realtime events)
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      setLoading(true);
-      try {
-        const data = await loadOptions();
-        if (!cancelled) setOptions(data);
-      } catch {
-        // Options load failure is non-fatal — empty list shown
-      } finally {
-        if (!cancelled) setLoading(false);
+      // On refresh (not initial mount), don't show full loading spinner — silent refetch
+      if (refreshSignal && refreshSignal > 0) {
+        try {
+          const data = await loadOptions();
+          if (!cancelled) setOptions(data);
+        } catch { /* non-fatal */ }
+      } else {
+        setLoading(true);
+        try {
+          const data = await loadOptions();
+          if (!cancelled) setOptions(data);
+        } catch { /* non-fatal */ }
+        finally {
+          if (!cancelled) setLoading(false);
+        }
       }
     };
     load();
     return () => { cancelled = true; };
-  }, [loadOptions]);
+  }, [loadOptions, refreshSignal]);
 
   // Sync with external value changes
   // When currentValue changes (e.g. user selects a different entity in the sidebar),

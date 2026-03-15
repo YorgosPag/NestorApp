@@ -15,7 +15,7 @@
 
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { FloorFloorplanInline } from './FloorFloorplanInline';
+import { toast } from 'sonner';
 import type { Building } from '@/types/building/contracts';
 
 // ============================================================================
@@ -148,9 +149,13 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
         setCreateNumber('0');
         setCreateName('');
         setCreateElevation('');
+        toast.success(t('tabs.floors.createSuccess', { defaultValue: 'Ο όροφος δημιουργήθηκε' }));
         await fetchFloors();
+      } else {
+        toast.error(result?.error ?? t('tabs.floors.createError', { defaultValue: 'Αποτυχία δημιουργίας ορόφου' }));
       }
     } catch (err) {
+      toast.error(t('tabs.floors.createError', { defaultValue: 'Αποτυχία δημιουργίας ορόφου' }));
       console.error('[FloorsTab] Create error:', err);
     } finally {
       setCreating(false);
@@ -184,9 +189,13 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
       });
       if (result?.success) {
         setEditingId(null);
+        toast.success(t('tabs.floors.editSuccess', { defaultValue: 'Ο όροφος ενημερώθηκε' }));
         await fetchFloors();
+      } else {
+        toast.error(result?.error ?? t('tabs.floors.editError', { defaultValue: 'Αποτυχία ενημέρωσης ορόφου' }));
       }
     } catch (err) {
+      toast.error(t('tabs.floors.editError', { defaultValue: 'Αποτυχία ενημέρωσης ορόφου' }));
       console.error('[FloorsTab] Edit error:', err);
     } finally {
       setSaving(false);
@@ -215,9 +224,13 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
         `/api/floors?floorId=${floor.id}`
       );
       if (result?.success) {
+        toast.success(t('tabs.floors.deleteSuccess', { defaultValue: 'Ο όροφος διαγράφηκε' }));
         await fetchFloors();
+      } else {
+        toast.error(result?.error ?? t('tabs.floors.deleteError', { defaultValue: 'Αποτυχία διαγραφής ορόφου' }));
       }
     } catch (err) {
+      toast.error(t('tabs.floors.deleteError', { defaultValue: 'Αποτυχία διαγραφής ορόφου' }));
       console.error('[FloorsTab] Delete error:', err);
     } finally {
       setDeletingId(null);
@@ -378,10 +391,9 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                 const isEditing = editingId === floor.id;
 
                 return (
-                  <>
+                  <Fragment key={floor.id}>
                     {/* Data row */}
                     <tr
-                      key={floor.id}
                       className={`border-b border-border/50 hover:bg-muted/20 ${isExpanded ? 'bg-muted/10' : ''}`}
                     >
                       {/* Expand toggle */}
@@ -507,7 +519,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
 
                     {/* Expandable floorplan row */}
                     {isExpanded && (
-                      <tr key={`${floor.id}-floorplan`} className="bg-muted/5">
+                      <tr className="bg-muted/5">
                         <td colSpan={COLUMN_COUNT} className="px-2 py-2">
                           <FloorFloorplanInline
                             floorId={floor.id}
@@ -518,7 +530,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 );
               })}
             </tbody>

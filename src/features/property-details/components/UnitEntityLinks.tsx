@@ -73,7 +73,7 @@ export function UnitEntityLinks({
 
   return (
     <section>
-      <EntityLinkCard {...buildingLink.linkCardProps} />
+      <EntityLinkCard key={buildingLink.linkCardKey} {...buildingLink.linkCardProps} />
     </section>
   );
 }

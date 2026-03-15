@@ -234,6 +234,8 @@ export const REALTIME_EVENTS = {
   // Entity linking events (Building-Project, Unit-Building, etc.)
   ENTITY_LINKED: 'realtime:entity-linked',
   ENTITY_UNLINKED: 'realtime:entity-unlinked',
+  // Cascade propagation (ADR-231)
+  CASCADE_PROPAGATED: 'realtime:cascade-propagated',
 } as const;
 
 export type RealtimeEventType = typeof REALTIME_EVENTS[keyof typeof REALTIME_EVENTS];
@@ -1021,6 +1023,25 @@ export interface EntityUnlinkedPayload {
 }
 
 // ============================================================================
+// CASCADE PROPAGATION EVENT PAYLOADS (ADR-231)
+// ============================================================================
+
+/**
+ * Event payload for cascade hierarchy propagation
+ * Dispatched client-side after API confirms a link change
+ */
+export interface CascadePropagatedPayload {
+  /** The entity that was linked/unlinked (e.g. building, unit) */
+  sourceEntityType: 'building' | 'project' | 'unit';
+  sourceEntityId: string;
+  /** Which field changed (e.g. projectId, companyId, buildingId) */
+  changedField: string;
+  /** New value of the changed field (null = unlinked) */
+  newValue: string | null;
+  timestamp: number;
+}
+
+// ============================================================================
 // LEGAL CONTRACT EVENT PAYLOADS (ADR-230)
 // ============================================================================
 
@@ -1130,9 +1151,15 @@ export interface RealtimeEventMap {
   CONTACT_LINK_REMOVED: ContactLinkDeletedPayload;
   FILE_LINK_CREATED: FileLinkCreatedPayload;
   FILE_LINK_DELETED: FileLinkDeletedPayload;
+  // Specific link events (legacy — kept for backward compat)
+  BUILDING_PROJECT_LINKED: BuildingProjectLinkPayload;
+  UNIT_BUILDING_LINKED: UnitBuildingLinkPayload;
+  NAVIGATION_REFRESH: { timestamp: number };
   // Entity linking (2)
   ENTITY_LINKED: EntityLinkedPayload;
   ENTITY_UNLINKED: EntityUnlinkedPayload;
+  // Cascade propagation (ADR-231)
+  CASCADE_PROPAGATED: CascadePropagatedPayload;
   // Legal contracts (ADR-230)
   CONTRACT_CREATED: ContractCreatedPayload;
   CONTRACT_UPDATED: ContractUpdatedPayload;

@@ -285,7 +285,7 @@ export function GeneralTabContent({
         </aside>
       )}
       {/* ADR-200: Building → Project linking via centralized useEntityLink hook */}
-      <EntityLinkCard {...projectLink.linkCardProps} />
+      <EntityLinkCard key={projectLink.linkCardKey} {...projectLink.linkCardProps} />
       <BasicInfoCard
         formData={formData}
         updateField={updateField}

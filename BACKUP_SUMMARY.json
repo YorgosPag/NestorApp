@@ -1,35 +1,35 @@
 {
   "category": "FEATURE",
-  "shortDescription": "ADR-226 Phase 3 — Deletion Guard UI (DeletionBlockedDialog + useDeletionGuard hook)",
-  "problem": "Οι χρήστες μπορούσαν να πατήσουν delete χωρίς να δουν τις εξαρτήσεις. Τα παλιά cascade preview dialogs (Buildings/Projects) ΔΕΝ μπλοκάρανε — δείχνανε preview αλλά επέτρεπαν cascade delete.",
-  "cause": "Phase 2 ενσωμάτωσε server-side BLOCK guard αλλά το UI δεν είχε ακόμα pre-check. Ο server ρίχνει 409 αλλά χωρίς proper UI ο χρήστης δεν ξέρει γιατί.",
+  "shortDescription": "Πλήρες Audit Trail — professionals, emails, invoices, links + fix IDs→names",
+  "problem": "Το Activity Tab κατέγραφε μόνο field-level αλλαγές. Ανάθεση/αφαίρεση νομικών, emails, τιμολόγια, parking/storage sync δεν καταγράφονταν. IDs εμφανίζονταν αντί ονομάτων. commercial object γινόταν raw JSON dump.",
+  "cause": "Τα audit entries γράφονταν μόνο στο PATCH /api/units/[id]. Δεν υπήρχε integration με ProfessionalsCard, email notifications, SalesAccountingBridge, appurtenance-sync, AssociationService. UNIT_TRACKED_FIELDS ήταν τοπικό στο route, commercial ήταν ενιαίο πεδίο χωρίς sub-field tracking.",
   "filesChanged": [
-    "src/components/shared/DeletionBlockedDialog.tsx — NEW: Reusable AlertDialog με dependency list",
-    "src/hooks/useDeletionGuard.ts — NEW: Custom hook (pre-check + state + BlockedDialog)",
-    "src/i18n/locales/el/common.json — +deletionGuard keys",
-    "src/i18n/locales/en/common.json — +deletionGuard keys",
-    "src/components/building-management/BuildingsPageContent.tsx — Cascade preview → useDeletionGuard",
-    "src/components/projects/projects-page-content.tsx — Cascade preview → useDeletionGuard",
-    "src/components/building-management/tabs/UnitsTabContent.tsx — Pre-check before delete",
-    "src/components/building-management/tabs/ParkingTabContent.tsx — Pre-check before delete",
-    "src/components/building-management/StorageTab.tsx — Pre-check before delete",
-    "src/components/contacts/dialogs/DeleteContactDialog.tsx — Pre-check on open",
-    "src/components/building-management/tabs/FloorsTabContent.tsx — Pre-check before delete",
-    "docs/centralized-systems/reference/adrs/ADR-226-deletion-guard.md — Phase 3 → IMPLEMENTED"
+    "src/types/audit-trail.ts — 4 νέα AuditAction types",
+    "src/components/shared/audit/ActivityTab.tsx — ACTION_MAP + FILTER_OPTIONS + StatsPanel entries",
+    "src/config/audit-tracked-fields.ts — Centralized UNIT_TRACKED_FIELDS + flattenForTracking()",
+    "src/services/entity-audit.service.ts — diffFieldsWithResolution() async ID→name resolution",
+    "src/app/api/audit-trail/record/route.ts — VALID_ACTIONS expanded",
+    "src/app/api/units/[id]/activity/route.ts — VALID_ACTIONS expanded",
+    "src/app/api/units/[id]/route.ts — Import centralized fields + use diffFieldsWithResolution",
+    "src/components/sales/legal/ProfessionalsCard.tsx — Audit on assign/remove",
+    "src/app/api/notifications/professional-assigned/route.ts — Audit on email sent",
+    "src/services/sales-accounting/sales-accounting-bridge.ts — Audit on invoice created",
+    "src/app/api/sales/[unitId]/appurtenance-sync/route.ts — Audit on parking/storage sync",
+    "src/services/association.service.ts — Audit on contact link/unlink"
   ],
-  "solution": "1. DeletionBlockedDialog: AlertDialog (Radix) with ShieldAlert icon, dependency list (label+count), μόνο κουμπί Κατάλαβα. 2. useDeletionGuard hook: GET /api/deletion-guard/{entityType}/{entityId}, returns checking/blocked/BlockedDialog. 3. Buildings/Projects: αφαίρεση cascade preview (states, useEffect, useMemo), αντικατάσταση με hook. 4. Units/Parking/Storage/Floors: async pre-check πριν confirmation dialog. 5. Contacts: SmartDialog wrapper με pre-check on open.",
-  "testing": "TypeScript check στο background. Vercel auto-deploy triggered.",
-  "notes": "Server-side 409 guard παραμένει ως fallback. Clickable links στις εξαρτήσεις αφήνονται για Phase 4.",
+  "solution": "3 φάσεις: (1) Νέοι τύποι ενεργειών professional_assigned/removed, email_sent, invoice_created με icons/labels/colors στο UI. (2) Κεντρικοποίηση UNIT_TRACKED_FIELDS, commercial sub-fields σε dot-notation, flattenForTracking() helper, diffFieldsWithResolution() με async resolvers. (3) Audit entries σε 5 κρίσιμα σημεία: ProfessionalsCard, email notifications, SalesAccountingBridge, appurtenance-sync, AssociationService.",
+  "testing": "TypeScript check: 0 errors στα αλλαγμένα αρχεία. Vercel auto-deploy triggered.",
+  "notes": "12 αρχεία, 561 insertions. Όλα τα audit entries είναι fire-and-forget (.catch(() => {})). Client-side audit (AssociationService) χρησιμοποιεί POST /api/audit-trail/record. Server-side audit χρησιμοποιεί EntityAuditService.recordChange() απευθείας.",
   "contributors": {
     "user": "Γιώργος Παγώνης",
     "assistant": "Claude Opus 4.6",
-    "sessionDate": "2026-03-13"
+    "sessionDate": "2026-03-15"
   },
   "relatedBackups": [],
   "commits": [
     {
-      "hash": "3b356db8",
-      "message": "feat(deletion-guard): implement Phase 3 UI — DeletionBlockedDialog + useDeletionGuard hook — ADR-226"
+      "hash": "79706a87",
+      "message": "feat: complete audit trail — track professionals, emails, invoices, links + fix IDs→names"
     }
   ]
 }

@@ -28,6 +28,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { PhotoUploadService } from '@/services/photo-upload.service';
+import { computeEntityDiff, CONTACT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 
 const logger = createModuleLogger('ContactsService');
 
@@ -463,6 +464,23 @@ export class ContactsService {
 
       // Save using standard method
       await this.updateContact(id, enterpriseData);
+
+      // 📜 AUDIT TRAIL: Compute diff and send to centralized endpoint (fire-and-forget)
+      const changes = computeEntityDiff(
+        existingContact as unknown as Record<string, unknown>,
+        enterpriseData as unknown as Record<string, unknown>,
+        CONTACT_TRACKED_FIELDS,
+      );
+      if (changes.length > 0) {
+        const isStatusChange = changes.some((c) => c.field === 'status');
+        apiClient.post('/api/audit-trail/record', {
+          entityType: 'contact',
+          entityId: id,
+          entityName: this.getContactDisplayName(existingContact),
+          action: isStatusChange ? 'status_changed' : 'updated',
+          changes,
+        }).catch(() => { /* fire-and-forget — audit failure never breaks save */ });
+      }
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
