@@ -84,6 +84,27 @@ export const PATCH = withStandardRateLimit(
         const body: UnitPatchPayload = await request.json();
 
         // ================================================================
+        // VALIDATION: Field locking based on commercialStatus
+        // After sale/reservation, critical fields cannot be modified
+        // (legal requirement: cadastre, tax office, contracts)
+        // ================================================================
+        const currentCommercialStatus = existing.commercialStatus as string | undefined;
+
+        if (currentCommercialStatus === 'sold' || currentCommercialStatus === 'rented') {
+          const soldLockedFields = ['code', 'type', 'name', 'areas', 'layout', 'floor', 'commercialStatus'] as const;
+          const attemptedLockedFields = soldLockedFields.filter(f => f in body);
+          if (attemptedLockedFields.length > 0) {
+            throw new ApiError(403, `Cannot modify locked fields on a ${currentCommercialStatus} unit: ${attemptedLockedFields.join(', ')}`);
+          }
+        } else if (currentCommercialStatus === 'reserved') {
+          const reservedLockedFields = ['code', 'type', 'name'] as const;
+          const attemptedLockedFields = reservedLockedFields.filter(f => f in body);
+          if (attemptedLockedFields.length > 0) {
+            throw new ApiError(403, `Cannot modify locked fields on a reserved unit: ${attemptedLockedFields.join(', ')}`);
+          }
+        }
+
+        // ================================================================
         // VALIDATION: Company chain check for reserve/sell operations
         // ================================================================
         const isCommercialTransaction =
