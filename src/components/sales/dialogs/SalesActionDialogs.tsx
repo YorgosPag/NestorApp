@@ -800,7 +800,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
                 className="h-auto p-0 text-xs"
                 onClick={() => setShowQuickAddBroker(true)}
               >
-                + {t('legal.newBroker', { defaultValue: 'Νέος μεσίτης' })}
+                + {t('sales.legal.newBroker', { defaultValue: 'Νέος μεσίτης' })}
               </Button>
             </fieldset>
           )}
@@ -814,7 +814,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
               className="h-auto p-0 text-xs"
               onClick={() => setShowQuickAddBroker(true)}
             >
-              + {t('legal.newBroker', { defaultValue: 'Νέος μεσίτης' })}
+              + {t('sales.legal.newBroker', { defaultValue: 'Νέος μεσίτης' })}
             </Button>
           )}
 

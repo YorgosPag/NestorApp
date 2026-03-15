@@ -44,12 +44,12 @@ function getStatusBadge(
   t: (key: string) => string,
 ): { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' } {
   if (agreement.status === 'terminated') {
-    return { label: t('legal.terminatedAgreement'), variant: 'destructive' };
+    return { label: t('sales.legal.terminatedAgreement'), variant: 'destructive' };
   }
   if (agreement.endDate && new Date(agreement.endDate) < new Date()) {
-    return { label: t('legal.expiredAgreement'), variant: 'secondary' };
+    return { label: t('sales.legal.expiredAgreement'), variant: 'secondary' };
   }
-  return { label: t('legal.activeAgreement'), variant: 'default' };
+  return { label: t('sales.legal.activeAgreement'), variant: 'default' };
 }
 
 function formatCommission(agreement: BrokerageAgreement): string {
@@ -169,11 +169,11 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
       <header className="flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-lg font-semibold">
           <Briefcase className={iconSizes.md} />
-          {t('legal.brokerageTitle')}
+          {t('sales.legal.brokerageTitle')}
         </h3>
         <Button size="sm" onClick={handleAdd}>
           <Plus className={`${iconSizes.sm} mr-1`} />
-          {t('legal.addAgreement')}
+          {t('sales.legal.addAgreement')}
         </Button>
       </header>
 
@@ -182,13 +182,13 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
       )}
 
       {!isLoading && agreements.length === 0 && (
-        <p className="text-sm text-muted-foreground">{t('legal.noBrokerage')}</p>
+        <p className="text-sm text-muted-foreground">{t('sales.legal.noBrokerage')}</p>
       )}
 
       {/* Project-level agreements */}
       {projectLevel.length > 0 && (
         <article className="space-y-2">
-          <h4 className="text-sm font-medium text-muted-foreground">{t('legal.scopeProject')}</h4>
+          <h4 className="text-sm font-medium text-muted-foreground">{t('sales.legal.scopeProject')}</h4>
           <ul className="space-y-2">
             {projectLevel.map((a) => (
               <AgreementCard
@@ -216,7 +216,7 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
       {/* Unit-level agreements */}
       {unitLevel.length > 0 && (
         <article className="space-y-2">
-          <h4 className="text-sm font-medium text-muted-foreground">{t('legal.scopeUnit')}</h4>
+          <h4 className="text-sm font-medium text-muted-foreground">{t('sales.legal.scopeUnit')}</h4>
           <ul className="space-y-2">
             {unitLevel.map((a) => (
               <AgreementCard
@@ -304,19 +304,19 @@ function AgreementCard({
           <Badge variant={status.variant}>{status.label}</Badge>
           {agreement.exclusivity === 'exclusive' && (
             <Badge variant="outline" className="text-orange-600 border-orange-300">
-              {t('legal.exclusive')}
+              {t('sales.legal.exclusive')}
             </Badge>
           )}
         </div>
         {isActive && (
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" onClick={onEdit} title={t('legal.editAgreement')}>
+            <Button variant="ghost" size="sm" onClick={onEdit} title={t('sales.legal.editAgreement')}>
               <Pencil className={iconSizes.xs} />
             </Button>
-            <Button variant="ghost" size="sm" onClick={onRenew} title={t('legal.renewAgreement')}>
+            <Button variant="ghost" size="sm" onClick={onRenew} title={t('sales.legal.renewAgreement')}>
               <RefreshCw className={iconSizes.xs} />
             </Button>
-            <Button variant="ghost" size="sm" onClick={onTerminate} title={t('legal.terminateAgreement')}>
+            <Button variant="ghost" size="sm" onClick={onTerminate} title={t('sales.legal.terminateAgreement')}>
               <XCircle className={`${iconSizes.xs} text-destructive`} />
             </Button>
           </div>
@@ -324,11 +324,11 @@ function AgreementCard({
       </div>
 
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        <span>{t('legal.commission')}: {formatCommission(agreement)}</span>
-        <span>{t('legal.startDate')}: {agreement.startDate.split('T')[0]}</span>
+        <span>{t('sales.legal.commission')}: {formatCommission(agreement)}</span>
+        <span>{t('sales.legal.startDate')}: {agreement.startDate.split('T')[0]}</span>
         <span>
-          {t('legal.endDate')}:{' '}
-          {agreement.endDate ? agreement.endDate.split('T')[0] : t('legal.indefinite')}
+          {t('sales.legal.endDate')}:{' '}
+          {agreement.endDate ? agreement.endDate.split('T')[0] : t('sales.legal.indefinite')}
         </span>
         {unitName && <span>{unitName}</span>}
       </div>
@@ -341,10 +341,10 @@ function AgreementCard({
       {isTerminating && (
         <div className="flex items-center gap-2 rounded bg-destructive/10 p-2">
           <p className="text-sm flex-1">
-            {t('legal.terminateConfirm').replace('{{name}}', agreement.agentName)}
+            {t('sales.legal.terminateConfirm').replace('{{name}}', agreement.agentName)}
           </p>
           <Button size="sm" variant="destructive" onClick={onConfirmTerminate}>
-            {t('legal.terminateAgreement')}
+            {t('sales.legal.terminateAgreement')}
           </Button>
           <Button size="sm" variant="outline" onClick={onCancelAction}>
             {t('buttons.cancel')}
@@ -355,7 +355,7 @@ function AgreementCard({
       {/* Inline renew */}
       {isRenewing && (
         <div className="flex items-center gap-2 rounded bg-blue-50 p-2 dark:bg-blue-950/20">
-          <label className="text-sm">{t('legal.renewEndDate')}:</label>
+          <label className="text-sm">{t('sales.legal.renewEndDate')}:</label>
           <input
             type="date"
             value={renewDate}
@@ -363,7 +363,7 @@ function AgreementCard({
             className="h-8 rounded border px-2 text-sm"
           />
           <Button size="sm" onClick={onConfirmRenew} disabled={!renewDate}>
-            {t('legal.renewAgreement')}
+            {t('sales.legal.renewAgreement')}
           </Button>
           <Button size="sm" variant="outline" onClick={onCancelAction}>
             {t('buttons.cancel')}

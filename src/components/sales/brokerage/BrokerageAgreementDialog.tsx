@@ -160,7 +160,7 @@ export function BrokerageAgreementDialog({
         );
 
         if (!result.success) {
-          setError(result.error ?? t('legal.saveError'));
+          setError(result.error ?? t('sales.legal.saveError'));
           return;
         }
       } else {
@@ -183,7 +183,7 @@ export function BrokerageAgreementDialog({
         );
 
         if (!result.success) {
-          setError(result.error ?? t('legal.saveError'));
+          setError(result.error ?? t('sales.legal.saveError'));
           return;
         }
       }
@@ -191,7 +191,7 @@ export function BrokerageAgreementDialog({
       onOpenChange(false);
       onSuccess();
     } catch {
-      setError(t('legal.saveError'));
+      setError(t('sales.legal.saveError'));
     } finally {
       setSaving(false);
     }
@@ -210,7 +210,7 @@ export function BrokerageAgreementDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Briefcase className={iconSizes.sm} />
-            {isEdit ? t('legal.editAgreement') : t('legal.addAgreement')}
+            {isEdit ? t('sales.legal.editAgreement') : t('sales.legal.addAgreement')}
           </DialogTitle>
           <DialogDescription>
             {projectName}
@@ -223,22 +223,22 @@ export function BrokerageAgreementDialog({
             <ContactSearchManager
               selectedContactId={agentContactId}
               onContactSelect={handleAgentSelect}
-              label={t('legal.selectAgent')}
-              placeholder={t('legal.selectAgent')}
+              label={t('sales.legal.selectAgent')}
+              placeholder={t('sales.legal.selectAgent')}
               disabled={isEdit}
             />
           </fieldset>
 
           {/* Scope */}
           <fieldset className="space-y-1">
-            <Label className="text-sm font-medium">{t('legal.selectScope')}</Label>
+            <Label className="text-sm font-medium">{t('sales.legal.selectScope')}</Label>
             <Select value={scope} onValueChange={(v) => setScope(v as 'project' | 'unit')}>
               <SelectTrigger className="h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="project">{t('legal.scopeProject')}</SelectItem>
-                <SelectItem value="unit">{t('legal.scopeUnit')}</SelectItem>
+                <SelectItem value="project">{t('sales.legal.scopeProject')}</SelectItem>
+                <SelectItem value="unit">{t('sales.legal.scopeUnit')}</SelectItem>
               </SelectContent>
             </Select>
           </fieldset>
@@ -246,10 +246,10 @@ export function BrokerageAgreementDialog({
           {/* Unit selector — visible only when scope=unit */}
           {scope === 'unit' && (
             <fieldset className="space-y-1">
-              <Label className="text-sm font-medium">{t('legal.selectUnit')}</Label>
+              <Label className="text-sm font-medium">{t('sales.legal.selectUnit')}</Label>
               <Select value={unitId} onValueChange={setUnitId}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder={t('legal.selectUnit')} />
+                  <SelectValue placeholder={t('sales.legal.selectUnit')} />
                 </SelectTrigger>
                 <SelectContent>
                   {units.map((u) => (
@@ -262,14 +262,14 @@ export function BrokerageAgreementDialog({
 
           {/* Exclusivity */}
           <fieldset className="space-y-1">
-            <Label className="text-sm font-medium">{t('legal.exclusivity')}</Label>
+            <Label className="text-sm font-medium">{t('sales.legal.exclusivity')}</Label>
             <Select value={exclusivity} onValueChange={(v) => setExclusivity(v as ExclusivityType)}>
               <SelectTrigger className="h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="exclusive">{t('legal.exclusive')}</SelectItem>
-                <SelectItem value="non_exclusive">{t('legal.nonExclusive')}</SelectItem>
+                <SelectItem value="exclusive">{t('sales.legal.exclusive')}</SelectItem>
+                <SelectItem value="non_exclusive">{t('sales.legal.nonExclusive')}</SelectItem>
               </SelectContent>
             </Select>
           </fieldset>
@@ -277,19 +277,19 @@ export function BrokerageAgreementDialog({
           {/* Commission type + amount */}
           <fieldset className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label className="text-sm font-medium">{t('legal.commissionType')}</Label>
+              <Label className="text-sm font-medium">{t('sales.legal.commissionType')}</Label>
               <Select value={commissionType} onValueChange={(v) => setCommissionType(v as CommissionType)}>
                 <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="percentage">{t('legal.commissionPercentage')}</SelectItem>
-                  <SelectItem value="fixed">{t('legal.commissionFixed')}</SelectItem>
+                  <SelectItem value="percentage">{t('sales.legal.commissionPercentage')}</SelectItem>
+                  <SelectItem value="fixed">{t('sales.legal.commissionFixed')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
-              <Label className="text-sm font-medium">{t('legal.commission')}</Label>
+              <Label className="text-sm font-medium">{t('sales.legal.commission')}</Label>
               {commissionType === 'percentage' ? (
                 <Input
                   type="number"
@@ -318,7 +318,7 @@ export function BrokerageAgreementDialog({
           {/* Dates */}
           <fieldset className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label className="text-sm font-medium">{t('legal.startDate')}</Label>
+              <Label className="text-sm font-medium">{t('sales.legal.startDate')}</Label>
               <Input
                 type="date"
                 value={startDate}
@@ -328,8 +328,8 @@ export function BrokerageAgreementDialog({
             </div>
             <div className="space-y-1">
               <Label className="text-sm font-medium">
-                {t('legal.endDate')}
-                <span className="ml-1 text-xs text-muted-foreground">({t('legal.indefinite')})</span>
+                {t('sales.legal.endDate')}
+                <span className="ml-1 text-xs text-muted-foreground">({t('sales.legal.indefinite')})</span>
               </Label>
               <Input
                 type="date"
@@ -342,7 +342,7 @@ export function BrokerageAgreementDialog({
 
           {/* Notes */}
           <fieldset className="space-y-1">
-            <Label className="text-sm font-medium">{t('legal.notes')}</Label>
+            <Label className="text-sm font-medium">{t('sales.legal.notes')}</Label>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
