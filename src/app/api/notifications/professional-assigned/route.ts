@@ -64,6 +64,7 @@ function validateRequest(body: unknown): body is AssignmentNotificationRequest {
 
 interface UnitHierarchy {
   unitName: string;
+  unitCode: string | null;
   unitFloor: number | null;
   buildingName: string | null;
   projectName: string | null;
@@ -89,6 +90,7 @@ async function resolveUnitHierarchy(unitId: string): Promise<UnitHierarchy | nul
 
   const result: UnitHierarchy = {
     unitName: (unitData.name as string) ?? unitId,
+    unitCode: (unitData.code as string) ?? null,
     unitFloor: (unitData.floor as number) ?? null,
     buildingName: null,
     projectName: null,
@@ -223,6 +225,7 @@ async function handleAssignmentNotification(
       professionalName: displayName,
       roleName,
       unitName: hierarchy.unitName,
+      unitCode: hierarchy.unitCode,
       unitFloor: hierarchy.unitFloor,
       buildingName: hierarchy.buildingName,
       projectName: hierarchy.projectName,

@@ -23,9 +23,11 @@ export interface ProfessionalAssignmentEmailData {
   professionalName: string;
   /** Role label in Greek (e.g. "Δικηγόρος Πωλητή") */
   roleName: string;
-  /** Unit name (e.g. "Α-101") */
+  /** Unit name (e.g. "Διαμέρισμα Α1") */
   unitName: string;
-  /** Floor number */
+  /** Unit code (e.g. "Α-101") — distinct identifier */
+  unitCode: string | null;
+  /** Floor number (0 = Ισόγειο) */
   unitFloor: number | null;
   /** Building name */
   buildingName: string | null;
@@ -43,6 +45,17 @@ export interface ProfessionalAssignmentEmailData {
 }
 
 // ============================================================================
+// HELPERS
+// ============================================================================
+
+/** Format floor number: 0 → "Ισόγειο", -1 → "Υπόγειο", 1 → "1ος όροφος" */
+function formatFloor(floor: number): string {
+  if (floor === 0) return 'Ισόγειο';
+  if (floor < 0) return `${Math.abs(floor)}ο Υπόγειο`;
+  return `${floor}ος όροφος`;
+}
+
+// ============================================================================
 // TEMPLATE BUILDER
 // ============================================================================
 
@@ -56,7 +69,8 @@ export function buildProfessionalAssignmentEmail(data: ProfessionalAssignmentEma
   html: string;
   text: string;
 } {
-  const subject = `Ανάθεση ρόλου: ${data.roleName} — ${data.unitName}`;
+  const unitLabel = data.unitCode ?? data.unitName;
+  const subject = `Ανάθεση ρόλου: ${data.roleName} — ${unitLabel}`;
 
   const contentHtml = buildContentSection(data);
 
@@ -80,8 +94,8 @@ export function buildProfessionalAssignmentEmail(data: ProfessionalAssignmentEma
 
 function buildContentSection(data: ProfessionalAssignmentEmailData): string {
   const floorText = data.unitFloor !== null && data.unitFloor !== undefined
-    ? ` — ${data.unitFloor}ος όροφος`
-    : '';
+    ? formatFloor(data.unitFloor)
+    : null;
 
   return `
     <!-- Greeting -->
@@ -91,7 +105,8 @@ function buildContentSection(data: ProfessionalAssignmentEmailData): string {
     <p style="margin:0 0 24px;font-size:15px;color:${BRAND.gray};line-height:1.6;">
       Σας ενημερώνουμε ότι σας ανατέθηκε ο ρόλος
       <strong style="color:${BRAND.navyDark};">${escapeHtml(data.roleName)}</strong>
-      για το παρακάτω ακίνητο.
+      για το παρακάτω ακίνητο. Παρακαλούμε λάβετε υπόψη τα στοιχεία που ακολουθούν
+      και επικοινωνήστε μαζί μας το συντομότερο δυνατό.
     </p>
 
     <!-- Info card: Property -->
@@ -105,20 +120,38 @@ function buildContentSection(data: ProfessionalAssignmentEmailData): string {
       </tr>
       <tr>
         <td style="padding:16px;">
-          ${buildInfoRow('Μονάδα', `${escapeHtml(data.unitName)}${floorText}`)}
+          ${data.unitCode ? buildInfoRow('Κωδικός', escapeHtml(data.unitCode)) : ''}
+          ${buildInfoRow('Ακίνητο', escapeHtml(data.unitName))}
+          ${floorText ? buildInfoRow('Όροφος', floorText) : ''}
           ${data.buildingName ? buildInfoRow('Κτίριο', escapeHtml(data.buildingName)) : ''}
           ${data.projectName ? buildInfoRow('Έργο', escapeHtml(data.projectName)) : ''}
           ${data.projectAddress ? buildInfoRow('Διεύθυνση', escapeHtml(data.projectAddress)) : ''}
-          ${data.companyName ? buildInfoRow('Κατασκευαστική', escapeHtml(data.companyName)) : ''}
+        </td>
+      </tr>
+    </table>
+
+    <!-- Info card: Assignment details -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;border:1px solid ${BRAND.border};border-radius:6px;overflow:hidden;">
+      <tr>
+        <td style="background-color:${BRAND.navy};padding:10px 16px;">
+          <p style="margin:0;font-size:13px;font-weight:600;color:${BRAND.white};letter-spacing:0.5px;">
+            ΣΤΟΙΧΕΙΑ ΑΝΑΘΕΣΗΣ
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:16px;">
+          ${buildInfoRow('Ρόλος', escapeHtml(data.roleName))}
           ${buildInfoRow('Ημερομηνία ανάθεσης', formatDateGreek(new Date()))}
+          ${data.companyName ? buildInfoRow('Κατασκευαστική', escapeHtml(data.companyName)) : ''}
         </td>
       </tr>
     </table>
 
     <!-- CTA -->
     <p style="margin:0 0 8px;font-size:14px;color:${BRAND.gray};line-height:1.6;">
-      Παρακαλούμε επικοινωνήστε μαζί μας ώστε να συζητήσουμε τη διαδικασία
-      και τα απαραίτητα δικαιολογητικά.
+      Παρακαλούμε επικοινωνήστε μαζί μας ώστε να συζητήσουμε τη διαδικασία,
+      τα απαραίτητα δικαιολογητικά και το χρονοδιάγραμμα ολοκλήρωσης.
     </p>
     <p style="margin:16px 0 0;font-size:14px;color:${BRAND.navyDark};font-weight:600;">
       Με εκτίμηση,<br/>
@@ -155,24 +188,42 @@ function buildPlainText(data: ProfessionalAssignmentEmailData): string {
     `Αγαπητέ/ή ${data.professionalName},`,
     ``,
     `Σας ενημερώνουμε ότι σας ανατέθηκε ο ρόλος "${data.roleName}" για το παρακάτω ακίνητο.`,
+    `Παρακαλούμε λάβετε υπόψη τα στοιχεία και επικοινωνήστε μαζί μας.`,
     ``,
     `═══ ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ ═══`,
-    `Μονάδα: ${data.unitName}${data.unitFloor !== null ? ` — ${data.unitFloor}ος όροφος` : ''}`,
   ];
 
+  if (data.unitCode) lines.push(`Κωδικός: ${data.unitCode}`);
+  lines.push(`Ακίνητο: ${data.unitName}`);
+  if (data.unitFloor !== null) lines.push(`Όροφος: ${formatFloor(data.unitFloor)}`);
   if (data.buildingName) lines.push(`Κτίριο: ${data.buildingName}`);
   if (data.projectName) lines.push(`Έργο: ${data.projectName}`);
   if (data.projectAddress) lines.push(`Διεύθυνση: ${data.projectAddress}`);
-  if (data.companyName) lines.push(`Κατασκευαστική: ${data.companyName}`);
-  lines.push(`Ημερομηνία ανάθεσης: ${formatDateGreek(new Date())}`);
 
   lines.push(
     ``,
-    `Παρακαλούμε επικοινωνήστε μαζί μας ώστε να συζητήσουμε τη διαδικασία και τα απαραίτητα δικαιολογητικά.`,
+    `═══ ΣΤΟΙΧΕΙΑ ΑΝΑΘΕΣΗΣ ═══`,
+    `Ρόλος: ${data.roleName}`,
+    `Ημερομηνία: ${formatDateGreek(new Date())}`,
+  );
+  if (data.companyName) lines.push(`Κατασκευαστική: ${data.companyName}`);
+
+  lines.push(
+    ``,
+    `Παρακαλούμε επικοινωνήστε μαζί μας ώστε να συζητήσουμε τη διαδικασία,`,
+    `τα απαραίτητα δικαιολογητικά και το χρονοδιάγραμμα ολοκλήρωσης.`,
     ``,
     `Με εκτίμηση,`,
     data.companyName ?? 'Pagonis Energo',
   );
+
+  if (data.companyPhone || data.companyEmail || data.companyAddress) {
+    lines.push(``, `--- Στοιχεία Επικοινωνίας ---`);
+    if (data.companyPhone) lines.push(`Τηλ: ${data.companyPhone}`);
+    if (data.companyEmail) lines.push(`Email: ${data.companyEmail}`);
+    if (data.companyAddress) lines.push(`Διεύθυνση: ${data.companyAddress}`);
+    if (data.companyWebsite) lines.push(`Web: ${data.companyWebsite}`);
+  }
 
   return lines.join('\n');
 }
