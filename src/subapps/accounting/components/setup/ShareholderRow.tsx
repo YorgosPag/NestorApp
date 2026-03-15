@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Trash2 } from 'lucide-react';
+import { useVatUniqueness } from '@/hooks/useVatUniqueness';
 import type { Shareholder, BoardRole, ShareholderEFKAConfig, ShareholderEFKAMode } from '../../types/entity';
 
 // ============================================================================
@@ -76,6 +77,7 @@ function deriveEfkaMode(
 
 export function ShareholderRow({ shareholder, index, totalShares, onChange, onRemove }: ShareholderRowProps) {
   const { t } = useTranslation('accounting');
+  const { result: vatResult } = useVatUniqueness(shareholder.vatNumber);
 
   const capitalContribution = shareholder.sharesCount * shareholder.shareNominalValue;
   const efkaMode = deriveEfkaMode(
@@ -143,6 +145,11 @@ export function ShareholderRow({ shareholder, index, totalShares, onChange, onRe
             placeholder="123456789"
             maxLength={9}
           />
+          {vatResult && !vatResult.isUnique && vatResult.existingContact && (
+            <p className="mt-1 text-xs text-destructive font-medium" role="alert">
+              {t('setup.vatDuplicateWarning', { contactName: vatResult.existingContact.name })}
+            </p>
+          )}
         </fieldset>
         <fieldset className="space-y-1">
           <Label>{t('setup.shareholders.taxOffice')}</Label>

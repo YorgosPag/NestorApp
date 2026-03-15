@@ -55,8 +55,8 @@ export const GREEK_PHONE_EXTRACT_REGEX = /(?:\+30)?(?:\s?)(?:69\d{8}|2\d{9})/;
 /** Extract email from free text */
 export const EMAIL_EXTRACT_REGEX = /[\w.+-]+@[\w.-]+\.\w{2,}/;
 
-/** Extract 9-digit VAT number from free text */
-export const VAT_EXTRACT_REGEX = /\b\d{9}\b/;
+/** Extract 9-digit VAT number from free text — re-exported from vat-validation.ts (SSoT) */
+export { VAT_EXTRACT_REGEX } from './vat-validation';
 
 // ============================================================================
 // EXTRACTION FUNCTIONS
@@ -74,8 +74,5 @@ export function extractEmailFromText(text: string): string | null {
   return match ? match[0].toLowerCase().trim() : null;
 }
 
-/** Extract the first 9-digit VAT number from free text, or null */
-export function extractVatFromText(text: string): string | null {
-  const match = text.match(VAT_EXTRACT_REGEX);
-  return match ? match[0] : null;
-}
+/** Extract the first 9-digit VAT number from free text — re-exported from vat-validation.ts (SSoT) */
+export { extractVatFromText } from './vat-validation';

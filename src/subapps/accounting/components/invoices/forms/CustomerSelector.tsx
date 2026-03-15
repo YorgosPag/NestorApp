@@ -24,6 +24,7 @@ import {
   type PhoneInfo,
   type EmailInfo,
 } from '@/types/contacts';
+import { useVatUniqueness } from '@/hooks/useVatUniqueness';
 import type { InvoiceCustomer } from '@/subapps/accounting/types';
 
 // ============================================================================
@@ -101,6 +102,7 @@ export function CustomerSelector({ customer, onCustomerChange }: CustomerSelecto
   const { t } = useTranslation('accounting');
   const [selectedContactId, setSelectedContactId] = useState(customer.contactId ?? '');
   const [autoFillMessage, setAutoFillMessage] = useState<string | null>(null);
+  const { result: vatResult } = useVatUniqueness(customer.vatNumber ?? undefined);
 
   const updateField = (field: keyof InvoiceCustomer, value: string | null) => {
     onCustomerChange({ ...customer, [field]: value || null });
@@ -167,7 +169,13 @@ export function CustomerSelector({ customer, onCustomerChange }: CustomerSelecto
             id="customerVat"
             value={customer.vatNumber ?? ''}
             onChange={(e) => updateField('vatNumber', e.target.value)}
+            maxLength={9}
           />
+          {vatResult && !vatResult.isUnique && vatResult.existingContact && (
+            <p className="mt-1 text-xs text-destructive font-medium" role="alert">
+              {t('setup.vatDuplicateWarning', { contactName: vatResult.existingContact.name })}
+            </p>
+          )}
         </fieldset>
       </div>
 

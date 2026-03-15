@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Trash2 } from 'lucide-react';
+import { useVatUniqueness } from '@/hooks/useVatUniqueness';
 import type { Partner } from '../../types/entity';
 
 // ============================================================================
@@ -48,6 +49,7 @@ const EFKA_MAIN_CODES = ['main_1', 'main_2', 'main_3', 'main_4', 'main_5', 'main
 
 export function PartnerRow({ partner, index, onChange, onRemove }: PartnerRowProps) {
   const { t } = useTranslation('accounting');
+  const { result: vatResult } = useVatUniqueness(partner.vatNumber);
 
   return (
     <article className="rounded-lg border p-4 space-y-4">
@@ -92,6 +94,11 @@ export function PartnerRow({ partner, index, onChange, onRemove }: PartnerRowPro
             placeholder="123456789"
             maxLength={9}
           />
+          {vatResult && !vatResult.isUnique && vatResult.existingContact && (
+            <p className="mt-1 text-xs text-destructive font-medium" role="alert">
+              {t('setup.vatDuplicateWarning', { contactName: vatResult.existingContact.name })}
+            </p>
+          )}
         </div>
         <div className="space-y-1">
           <Label>{t('setup.partners.taxOffice')}</Label>

@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Trash2 } from 'lucide-react';
+import { useVatUniqueness } from '@/hooks/useVatUniqueness';
 import type { Member, MemberEFKAConfig } from '../../types/entity';
 
 // ============================================================================
@@ -57,6 +58,7 @@ const DEFAULT_EFKA_CONFIG: MemberEFKAConfig = {
 
 export function MemberRow({ member, index, onChange, onRemove }: MemberRowProps) {
   const { t } = useTranslation('accounting');
+  const { result: vatResult } = useVatUniqueness(member.vatNumber);
 
   const capitalContribution = member.sharesCount * member.shareNominalValue;
 
@@ -103,6 +105,11 @@ export function MemberRow({ member, index, onChange, onRemove }: MemberRowProps)
             placeholder="123456789"
             maxLength={9}
           />
+          {vatResult && !vatResult.isUnique && vatResult.existingContact && (
+            <p className="mt-1 text-xs text-destructive font-medium" role="alert">
+              {t('setup.vatDuplicateWarning', { contactName: vatResult.existingContact.name })}
+            </p>
+          )}
         </fieldset>
         <fieldset className="space-y-1">
           <Label>{t('setup.members.taxOffice')}</Label>

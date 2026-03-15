@@ -54,6 +54,8 @@ import type { AddressWithHierarchyValue } from '@/components/shared/addresses/Ad
 import { ContactAddressMapPreview, type DragResolvedAddress } from '@/components/contacts/details/ContactAddressMapPreview';
 // 🏢 ENTERPRISE: Κεντρικοποιημένος DoyPicker (ADR-ACC-013)
 import { DoyPicker } from '@/components/ui/doy-picker';
+// 🏢 ENTERPRISE: VAT Uniqueness Validation — cross-type duplicate detection
+import { VatNumberField } from '@/components/contacts/fields/VatNumberField';
 import { useTranslation } from 'react-i18next';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('UnifiedContactTabbedSection');
@@ -401,6 +403,17 @@ export function UnifiedContactTabbedSection({
               }}
             />
           </div>
+        ),
+
+        // 🏢 ENTERPRISE: VAT Uniqueness Validation — real-time cross-type duplicate detection
+        vatNumber: (field: CustomRendererField, fieldFormData: Record<string, unknown>, fieldOnChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, _fieldOnSelectChange: (name: string, value: string) => void, fieldDisabled: boolean) => (
+          <VatNumberField
+            field={field as unknown as import('@/config/individual-config').IndividualFieldConfig}
+            value={String(fieldFormData[field.name ?? 'vatNumber'] ?? fieldFormData['vatNumber'] ?? '')}
+            onChange={fieldOnChange}
+            disabled={fieldDisabled ?? disabled}
+            excludeContactId={formData.id}
+          />
         ),
 
         // 🏢 ENTERPRISE: Custom renderer για companyPhotos (UnifiedPhotoManager) - only for companies

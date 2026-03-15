@@ -393,6 +393,7 @@
     "searchContact": "Search contact to auto-fill...",
     "contactAutoFilled": "Fields auto-filled from contact",
     "contactAutoFillError": "Failed to load contact details",
+    "vatDuplicateWarning": "This VAT already exists in contacts: {{contactName}}",
     "searchTaxOffice": "Search tax office...",
     "noTaxOfficeFound": "No tax office found",
     "searchKad": "Search KAD (code or description)...",

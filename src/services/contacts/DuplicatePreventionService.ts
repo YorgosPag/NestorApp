@@ -278,12 +278,16 @@ export class DuplicatePreventionService {
       if (!value || value.trim() === '') continue;
 
       try {
-        const q = query(
-          colRef,
-          where(field, '==', value),
-          where('type', '==', candidateContact.type),
-          limit(5)
-        );
+        // CROSS-TYPE VAT CHECK: vatNumber queries run WITHOUT type filter
+        // to catch duplicates across individual/company/service contacts.
+        // All other fields use type-scoped queries as before.
+        const isVatField = field === 'vatNumber' || field === 'companyVatNumber';
+
+        const constraints = isVatField
+          ? [where(field, '==', value), limit(5)]
+          : [where(field, '==', value), where('type', '==', candidateContact.type), limit(5)];
+
+        const q = query(colRef, ...constraints);
 
         const snapshot = await getDocs(q);
         const fieldMatches = snapshot.docs.map(doc => ({

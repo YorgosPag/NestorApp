@@ -30,6 +30,7 @@ import {
 } from '@/types/contacts';
 import { EscoOccupationPicker } from '@/components/shared/EscoOccupationPicker';
 import type { EscoPickerValue } from '@/types/contacts/esco-types';
+import { useVatUniqueness } from '@/hooks/useVatUniqueness';
 import type { CompanySetupInput } from '../../types';
 
 // ============================================================================
@@ -117,6 +118,7 @@ export function BasicInfoSection({ data, onChange, errors }: BasicInfoSectionPro
   const { t } = useTranslation('accounting');
   const [selectedContactId, setSelectedContactId] = useState('');
   const [autoFillMessage, setAutoFillMessage] = useState<string | null>(null);
+  const { result: vatResult } = useVatUniqueness(data.vatNumber);
 
   /**
    * Handle ESCO profession picker change → update profession field
@@ -214,6 +216,11 @@ export function BasicInfoSection({ data, onChange, errors }: BasicInfoSectionPro
               />
               {errors.vatNumber && (
                 <p className="text-sm text-destructive">{errors.vatNumber}</p>
+              )}
+              {vatResult && !vatResult.isUnique && vatResult.existingContact && (
+                <p className="mt-1 text-xs text-destructive font-medium" role="alert">
+                  {t('setup.vatDuplicateWarning', { contactName: vatResult.existingContact.name })}
+                </p>
               )}
             </div>
             <div className="space-y-2">

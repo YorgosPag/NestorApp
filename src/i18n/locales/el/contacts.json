@@ -901,7 +901,9 @@
     },
     "phone": {
       "invalidFormat": "Το τηλέφωνο μπορεί να έχει μη έγκυρο format"
-    }
+    },
+    "vatDuplicate": "Το ΑΦΜ {{vatNumber}} χρησιμοποιείται ήδη από: {{contactName}}",
+    "vatChecking": "Έλεγχος ΑΦΜ..."
   },
   "submission": {
     "failedUploads": "Υπάρχουν αποτυχημένα αρχεία. Παρακαλώ δοκιμάστε ξανά.",

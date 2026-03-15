@@ -901,7 +901,9 @@
     },
     "phone": {
       "invalidFormat": "Phone number may have invalid format"
-    }
+    },
+    "vatDuplicate": "VAT {{vatNumber}} is already used by: {{contactName}}",
+    "vatChecking": "Checking VAT..."
   },
   "submission": {
     "failedUploads": "There are failed uploads. Please try again.",
