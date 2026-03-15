@@ -42,6 +42,10 @@ export interface ProfessionalAssignmentEmailData {
   companyEmail?: string;
   companyAddress?: string;
   companyWebsite?: string;
+  /** Buyer info */
+  buyerName?: string;
+  buyerPhone?: string;
+  buyerEmail?: string;
 }
 
 // ============================================================================
@@ -129,6 +133,26 @@ function buildContentSection(data: ProfessionalAssignmentEmailData): string {
         </td>
       </tr>
     </table>
+
+    ${data.buyerName ? `
+    <!-- Info card: Buyer -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;border:1px solid ${BRAND.border};border-radius:6px;overflow:hidden;">
+      <tr>
+        <td style="background-color:${BRAND.navy};padding:10px 16px;">
+          <p style="margin:0;font-size:13px;font-weight:600;color:${BRAND.white};letter-spacing:0.5px;">
+            ΣΤΟΙΧΕΙΑ ΑΓΟΡΑΣΤΗ
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:16px;">
+          ${buildInfoRow('Ονοματεπώνυμο', escapeHtml(data.buyerName))}
+          ${data.buyerPhone ? buildInfoRow('Τηλέφωνο', escapeHtml(data.buyerPhone)) : ''}
+          ${data.buyerEmail ? buildInfoRow('Email', escapeHtml(data.buyerEmail)) : ''}
+        </td>
+      </tr>
+    </table>
+    ` : ''}
 
     <!-- Info card: Assignment details -->
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;border:1px solid ${BRAND.border};border-radius:6px;overflow:hidden;">
@@ -229,6 +253,26 @@ function buildRemovalContentSection(data: ProfessionalAssignmentEmailData): stri
       </tr>
     </table>
 
+    ${data.buyerName ? `
+    <!-- Info card: Buyer -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;border:1px solid ${BRAND.border};border-radius:6px;overflow:hidden;">
+      <tr>
+        <td style="background-color:${BRAND.navy};padding:10px 16px;">
+          <p style="margin:0;font-size:13px;font-weight:600;color:${BRAND.white};letter-spacing:0.5px;">
+            ΣΤΟΙΧΕΙΑ ΑΓΟΡΑΣΤΗ
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:16px;">
+          ${buildInfoRow('Ονοματεπώνυμο', escapeHtml(data.buyerName))}
+          ${data.buyerPhone ? buildInfoRow('Τηλέφωνο', escapeHtml(data.buyerPhone)) : ''}
+          ${data.buyerEmail ? buildInfoRow('Email', escapeHtml(data.buyerEmail)) : ''}
+        </td>
+      </tr>
+    </table>
+    ` : ''}
+
     <!-- Notice -->
     <p style="margin:0 0 8px;font-size:14px;color:${BRAND.gray};line-height:1.6;">
       Εάν έχετε ήδη ξεκινήσει εργασίες σχετικά με την υπόθεση,
@@ -259,6 +303,13 @@ function buildRemovalPlainText(data: ProfessionalAssignmentEmailData): string {
   if (data.buildingName) lines.push(`Κτίριο: ${data.buildingName}`);
   if (data.projectName) lines.push(`Έργο: ${data.projectName}`);
   if (data.projectAddress) lines.push(`Διεύθυνση: ${data.projectAddress}`);
+
+  if (data.buyerName) {
+    lines.push(``, `═══ ΣΤΟΙΧΕΙΑ ΑΓΟΡΑΣΤΗ ═══`);
+    lines.push(`Ονοματεπώνυμο: ${data.buyerName}`);
+    if (data.buyerPhone) lines.push(`Τηλέφωνο: ${data.buyerPhone}`);
+    if (data.buyerEmail) lines.push(`Email: ${data.buyerEmail}`);
+  }
 
   lines.push(
     ``,
@@ -321,6 +372,13 @@ function buildPlainText(data: ProfessionalAssignmentEmailData): string {
   if (data.buildingName) lines.push(`Κτίριο: ${data.buildingName}`);
   if (data.projectName) lines.push(`Έργο: ${data.projectName}`);
   if (data.projectAddress) lines.push(`Διεύθυνση: ${data.projectAddress}`);
+
+  if (data.buyerName) {
+    lines.push(``, `═══ ΣΤΟΙΧΕΙΑ ΑΓΟΡΑΣΤΗ ═══`);
+    lines.push(`Ονοματεπώνυμο: ${data.buyerName}`);
+    if (data.buyerPhone) lines.push(`Τηλέφωνο: ${data.buyerPhone}`);
+    if (data.buyerEmail) lines.push(`Email: ${data.buyerEmail}`);
+  }
 
   lines.push(
     ``,

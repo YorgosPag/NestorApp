@@ -76,6 +76,10 @@ interface UnitHierarchy {
   companyEmail: string | null;
   companyAddress: string | null;
   companyWebsite: string | null;
+  /** Buyer info (from contact_links with role='buyer') */
+  buyerName: string | null;
+  buyerPhone: string | null;
+  buyerEmail: string | null;
 }
 
 /**
@@ -102,6 +106,9 @@ async function resolveUnitHierarchy(unitId: string): Promise<UnitHierarchy | nul
     companyEmail: null,
     companyAddress: null,
     companyWebsite: null,
+    buyerName: null,
+    buyerPhone: null,
+    buyerEmail: null,
   };
 
   // 2. Building
@@ -146,6 +153,30 @@ async function resolveUnitHierarchy(unitId: string): Promise<UnitHierarchy | nul
               ?? null;
           }
         }
+      }
+    }
+  }
+
+  // 5. Buyer — from contact_links where targetEntityId=unitId, role='buyer'
+  const buyerLinksSnap = await db.collection(COLLECTIONS.CONTACT_LINKS)
+    .where('targetEntityId', '==', unitId)
+    .where('role', '==', 'buyer')
+    .where('status', '==', 'active')
+    .limit(1)
+    .get();
+
+  if (!buyerLinksSnap.empty) {
+    const buyerLink = buyerLinksSnap.docs[0].data() as Record<string, unknown>;
+    const buyerContactId = buyerLink.sourceContactId as string | undefined;
+    if (buyerContactId) {
+      const buyerSnap = await db.collection(COLLECTIONS.CONTACTS).doc(buyerContactId).get();
+      if (buyerSnap.exists) {
+        const buyerData = buyerSnap.data() as Record<string, unknown>;
+        result.buyerName = (buyerData.displayName as string)
+          ?? [buyerData.firstName, buyerData.lastName].filter(Boolean).join(' ')
+          || null;
+        result.buyerPhone = extractPrimaryPhone(buyerData);
+        result.buyerEmail = extractPrimaryEmail(buyerData);
       }
     }
   }
@@ -277,6 +308,9 @@ async function handleAssignmentNotification(
       companyEmail: hierarchy.companyEmail ?? undefined,
       companyAddress: hierarchy.companyAddress ?? undefined,
       companyWebsite: hierarchy.companyWebsite ?? undefined,
+      buyerName: hierarchy.buyerName ?? undefined,
+      buyerPhone: hierarchy.buyerPhone ?? undefined,
+      buyerEmail: hierarchy.buyerEmail ?? undefined,
     };
 
     const { subject, html, text } = isRemoval
