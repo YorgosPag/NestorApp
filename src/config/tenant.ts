@@ -30,3 +30,19 @@ export const TENANT_COMPANY_ID = 'comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757';
  * during transition period. Will be removed in a future cleanup.
  */
 export const LEGACY_TENANT_COMPANY_ID = TENANT_COMPANY_ID;
+
+/**
+ * Get the company ID for server-side operations.
+ *
+ * Resolution order:
+ * 1. `NEXT_PUBLIC_DEFAULT_COMPANY_ID` env var (allows override per environment)
+ * 2. `TENANT_COMPANY_ID` constant (hardcoded SSoT)
+ *
+ * Use this function in ALL server-side code (webhooks, API routes, services)
+ * instead of reading `process.env.NEXT_PUBLIC_DEFAULT_COMPANY_ID` directly.
+ *
+ * @returns The enterprise company ID
+ */
+export function getCompanyId(): string {
+  return process.env.NEXT_PUBLIC_DEFAULT_COMPANY_ID || TENANT_COMPANY_ID;
+}

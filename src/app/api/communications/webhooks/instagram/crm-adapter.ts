@@ -42,6 +42,7 @@ import type {
 } from '@/server/types/conversations.firestore';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import type { InstagramMessage } from './types';
+import { getCompanyId } from '@/config/tenant';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('InstagramCRMAdapter');
@@ -100,7 +101,7 @@ export async function storeInstagramMessage(
 
     // 4. Store message
     const now = Timestamp.now();
-    const companyId = process.env.NEXT_PUBLIC_DEFAULT_COMPANY_ID ?? 'pagonis-company';
+    const companyId = getCompanyId();
 
     const messageDoc = {
       id: docId,
@@ -171,7 +172,7 @@ async function upsertConversation(
     return { conversationId, isNew: false };
   }
 
-  const companyId = process.env.NEXT_PUBLIC_DEFAULT_COMPANY_ID ?? 'pagonis-company';
+  const companyId = getCompanyId();
 
   const newConversation = {
     id: conversationId,
@@ -238,6 +239,7 @@ async function upsertExternalIdentity(
 
   const newIdentity = {
     id: identityId,
+    companyId: getCompanyId(), // 🏢 TENANT ISOLATION
     provider: IDENTITY_PROVIDER.INSTAGRAM,
     externalUserId: igsid,
     displayName: senderName,

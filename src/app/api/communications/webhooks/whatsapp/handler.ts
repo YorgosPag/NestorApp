@@ -27,6 +27,7 @@ import type {
   WhatsAppMessage,
   WhatsAppContact,
 } from './types';
+import { getCompanyId } from '@/config/tenant';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('WhatsAppWebhookHandler');
@@ -380,9 +381,7 @@ async function feedWhatsAppToPipeline(msg: {
   messageText: string;
   messageId: string;
 }): Promise<void> {
-  const companyId = process.env.DEFAULT_COMPANY_ID
-    ?? process.env.NEXT_PUBLIC_DEFAULT_COMPANY_ID
-    ?? 'default';
+  const companyId = getCompanyId();
 
   try {
     const { WhatsAppChannelAdapter } = await import(

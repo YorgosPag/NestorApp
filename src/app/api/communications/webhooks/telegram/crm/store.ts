@@ -44,6 +44,7 @@ import type {
   MessageDocument,
   ExternalIdentityDocument,
 } from '@/server/types/conversations.firestore';
+import { getCompanyId } from '@/config/tenant';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('TelegramCRMStore');
@@ -159,8 +160,8 @@ async function upsertConversation(
     } else {
       // Create new conversation - using domain constants (B3 fix)
       // B4: Type-safe Firestore document with satisfies
-      // 🏢 TENANT ISOLATION: Use environment variable for companyId (AUTHZ Phase 2)
-      const companyId = process.env.NEXT_PUBLIC_DEFAULT_COMPANY_ID || 'pagonis-company';
+      // 🏢 TENANT ISOLATION: Centralized companyId (ADR-210)
+      const companyId = getCompanyId();
 
       const newConversation = {
         id: conversationId,
@@ -244,6 +245,7 @@ async function upsertExternalIdentity(
       // Create new identity - B4: Type-safe with satisfies
       const newIdentity = {
         id: identityId,
+        companyId: getCompanyId(), // 🏢 TENANT ISOLATION
         provider: IDENTITY_PROVIDER.TELEGRAM,
         externalUserId: telegramUserId,
         displayName,
@@ -340,8 +342,8 @@ export async function storeMessageInCRM(
     );
 
     // 4. Store in canonical MESSAGES collection - B4: Type-safe with satisfies
-    // 🏢 TENANT ISOLATION: Get companyId from environment (same as conversation)
-    const companyId = process.env.NEXT_PUBLIC_DEFAULT_COMPANY_ID || 'pagonis-company';
+    // 🏢 TENANT ISOLATION: Centralized companyId (ADR-210)
+    const companyId = getCompanyId();
 
     const canonicalMessageDocId = generateMessageDocId(COMMUNICATION_CHANNELS.TELEGRAM, chatId, messageId);
 

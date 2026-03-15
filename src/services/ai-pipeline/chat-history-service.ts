@@ -22,6 +22,7 @@
 import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { getCompanyId } from '@/config/tenant';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { sanitizeDocumentId } from '@/utils/firestore-helpers';
 
@@ -44,6 +45,7 @@ export interface ChatHistoryMessage {
 
 interface ChatHistoryDocument {
   channelSenderId: string;
+  companyId: string;
   messages: ChatHistoryMessage[];
   lastUpdated: string;
   createdAt: string;
@@ -104,6 +106,7 @@ export class ChatHistoryService {
         // Create new document
         const newDoc: ChatHistoryDocument = {
           channelSenderId,
+          companyId: getCompanyId(),
           messages: [truncatedMessage],
           lastUpdated: new Date().toISOString(),
           createdAt: new Date().toISOString(),

@@ -22,6 +22,7 @@ import { storeMessageInCRM } from './crm/store';
 import { BOT_IDENTITY } from '@/config/domain-constants';
 import type { TelegramMessage, TelegramSendPayload } from './telegram/types';
 import { transcribeVoiceMessage } from './telegram/whisper-transcription';
+import { getCompanyId } from '@/config/tenant';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('TelegramHandler');
@@ -327,10 +328,8 @@ async function feedTelegramToPipeline(message: TelegramMessage['message'], overr
   const messageText = overrideText ?? message.text ?? '';
   const messageId = String(message.message_id);
 
-  // Default company ID — checks both server-only and NEXT_PUBLIC_ variants
-  const companyId = process.env.DEFAULT_COMPANY_ID
-    ?? process.env.NEXT_PUBLIC_DEFAULT_COMPANY_ID
-    ?? 'default';
+  // Centralized company ID (ADR-210)
+  const companyId = getCompanyId();
 
   try {
     const { TelegramChannelAdapter } = await import(
@@ -366,9 +365,7 @@ async function feedSuggestionToPipeline(
   userId: string,
   suggestionText: string
 ): Promise<void> {
-  const companyId = process.env.DEFAULT_COMPANY_ID
-    ?? process.env.NEXT_PUBLIC_DEFAULT_COMPANY_ID
-    ?? 'default';
+  const companyId = getCompanyId();
 
   const { TelegramChannelAdapter } = await import(
     '@/services/ai-pipeline/channel-adapters/telegram-channel-adapter'
@@ -470,9 +467,7 @@ export async function handleGET(): Promise<NextResponse> {
         const { COLLECTIONS } = await import('@/config/firestore-collections');
         const adminDb = getAdminFirestore();
 
-        const companyId = (process.env.DEFAULT_COMPANY_ID
-          ?? process.env.NEXT_PUBLIC_DEFAULT_COMPANY_ID
-          ?? 'default').trim();
+        const companyId = getCompanyId();
 
         // Step 1: Projects
         const projectsSnap = await adminDb

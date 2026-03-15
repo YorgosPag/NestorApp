@@ -18,6 +18,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { getCompanyId } from '@/config/tenant';
 import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -49,6 +50,7 @@ export type NegativeFeedbackCategory =
 
 export interface FeedbackSnapshot {
   requestId: string;
+  companyId: string;
   channelSenderId: string;
   rating: FeedbackRating | null;
   negativeCategory: NegativeFeedbackCategory | null;
@@ -123,6 +125,7 @@ export class FeedbackService {
 
       const snapshot: FeedbackSnapshot = {
         requestId: params.requestId,
+        companyId: getCompanyId(),
         channelSenderId: params.channelSenderId,
         rating: null,
         negativeCategory: null,
