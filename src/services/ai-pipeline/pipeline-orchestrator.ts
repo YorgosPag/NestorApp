@@ -397,6 +397,27 @@ export class PipelineOrchestrator {
         requestId: ctx.requestId,
       });
 
+      // 5a. Store outbound AI reply in CRM (conversations + messages collections)
+      // The agentic path bypasses processMessage() which normally handles CRM storage.
+      // Without this, admin conversations won't appear in the Unified Inbox.
+      if (ctx.intake.channel === 'telegram' && telegramChatId) {
+        try {
+          const { storeMessageInCRM } = await import(
+            '@/app/api/communications/webhooks/telegram/crm/store'
+          );
+          const { BOT_IDENTITY } = await import('@/config/domain-constants');
+          await storeMessageInCRM({
+            from: { id: BOT_IDENTITY.ID, first_name: BOT_IDENTITY.DISPLAY_NAME },
+            chat: { id: Number(telegramChatId) },
+            text: agenticResult.answer,
+            // Use requestId-derived ID for idempotency (real Telegram message_id unavailable from dispatcher)
+            message_id: `agentic_${ctx.requestId}`,
+          }, 'outbound');
+        } catch {
+          // Non-fatal: CRM store failure must never break the pipeline
+        }
+      }
+
       // 5b. ADR-173: Send suggestions + feedback keyboard (non-fatal)
       // Message order: [1] AI Answer, [2] Suggested Actions, [3] Feedback (👍/👎)
       if (!isFailedResponse) {
