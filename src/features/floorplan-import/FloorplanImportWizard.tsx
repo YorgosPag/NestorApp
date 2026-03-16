@@ -149,6 +149,10 @@ export function FloorplanImportWizard({
               unitLoading={state.unitLoading}
               selectedUnitId={state.selection.unitId}
               onSelectUnit={state.selectUnit}
+              isMultiLevel={state.selectedUnitIsMultiLevel}
+              levelItems={state.unitLevelItems}
+              selectedLevelId={state.selection.levelFloorId}
+              onSelectLevel={state.selectLevel}
             />
           )}
 

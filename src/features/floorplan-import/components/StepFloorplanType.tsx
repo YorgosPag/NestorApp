@@ -7,6 +7,7 @@
  *
  * 3 clickable radio cards: Building / Floor / Unit floorplan.
  * If unit selected → shows inline unit selector (Radix Select).
+ * If multi-level unit → shows level selector after unit (ADR-236).
  *
  * @module features/floorplan-import/components/StepFloorplanType
  */
@@ -37,6 +38,11 @@ interface StepFloorplanTypeProps {
   unitLoading: boolean;
   selectedUnitId: string | null;
   onSelectUnit: (id: string) => void;
+  /** Multi-level unit support (ADR-236) */
+  isMultiLevel: boolean;
+  levelItems: EntityOption[];
+  selectedLevelId: string | null;
+  onSelectLevel: (floorId: string) => void;
 }
 
 // =============================================================================
@@ -66,6 +72,10 @@ export function StepFloorplanType({
   unitLoading,
   selectedUnitId,
   onSelectUnit,
+  isMultiLevel,
+  levelItems,
+  selectedLevelId,
+  onSelectLevel,
 }: StepFloorplanTypeProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
@@ -135,6 +145,52 @@ export function StepFloorplanType({
               </SelectContent>
             </Select>
           )}
+        </section>
+      )}
+
+      {/* ── Level selector for multi-level units (ADR-236) ── */}
+      {selectedType === 'unit' && selectedUnitId && isMultiLevel && levelItems.length >= 2 && (
+        <section className="space-y-2">
+          <p className={`text-sm font-medium ${colors.text.secondary}`}>
+            {t('floorplanImport.select.level')}
+          </p>
+          <fieldset className="space-y-2">
+            {levelItems.map((level) => {
+              const isSelected = level.id === selectedLevelId;
+              return (
+                <label
+                  key={level.id}
+                  className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors ${
+                    isSelected
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:border-primary/50 hover:bg-muted/30'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="unit-level"
+                    value={level.id}
+                    checked={isSelected}
+                    onChange={() => onSelectLevel(level.id)}
+                    className="sr-only"
+                  />
+                  <span
+                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                      isSelected ? 'border-primary' : 'border-muted-foreground/40'
+                    }`}
+                  >
+                    {isSelected && (
+                      <span className="h-2 w-2 rounded-full bg-primary" />
+                    )}
+                  </span>
+                  <Layers className={`h-4 w-4 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <span className={`text-sm ${isSelected ? 'font-medium' : ''}`}>
+                    {level.label}
+                  </span>
+                </label>
+              );
+            })}
+          </fieldset>
         </section>
       )}
     </div>

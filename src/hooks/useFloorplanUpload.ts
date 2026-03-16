@@ -43,6 +43,8 @@ export interface FloorplanUploadConfig {
   userId: string;
   entityLabel?: string;
   purpose?: string;
+  /** For multi-level units: which level/floor this floorplan belongs to (ADR-236) */
+  levelFloorId?: string;
 }
 
 export interface FloorplanUploadResult {

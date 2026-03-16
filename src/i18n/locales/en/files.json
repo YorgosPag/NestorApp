@@ -554,7 +554,8 @@
       "project": "Select project",
       "building": "Select building",
       "floor": "Select floor",
-      "unit": "Select unit"
+      "unit": "Select unit",
+      "level": "Select unit level"
     },
     "types": {
       "building": "General Building Floorplan",

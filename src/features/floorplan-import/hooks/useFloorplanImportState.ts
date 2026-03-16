@@ -16,12 +16,13 @@
  * @module features/floorplan-import/hooks/useFloorplanImportState
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useFirestoreUnits } from '@/hooks/useFirestoreUnits';
 import type { FloorplanUploadConfig } from '@/hooks/useFloorplanUpload';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
+import type { UnitLevel } from '@/types/unit';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useFloorplanImportState');
@@ -44,6 +45,9 @@ export interface FloorplanImportSelection {
   floorplanType: FloorplanType | null;
   unitId: string | null;
   unitName: string | null;
+  /** For multi-level units: which level's floorplan to upload */
+  levelFloorId: string | null;
+  levelName: string | null;
 }
 
 export interface EntityOption {
@@ -71,6 +75,11 @@ export interface UseFloorplanImportStateReturn {
 
   unitItems: EntityOption[];
   unitLoading: boolean;
+
+  /** Multi-level unit support (ADR-236) */
+  selectedUnitIsMultiLevel: boolean;
+  unitLevelItems: EntityOption[];
+  selectLevel: (floorId: string) => void;
 }
 
 // =============================================================================
@@ -120,6 +129,8 @@ interface FloorsApiResponse {
 interface UnitItem {
   id: string;
   name: string;
+  isMultiLevel?: boolean;
+  levels?: UnitLevel[];
 }
 
 // =============================================================================
@@ -138,6 +149,8 @@ const INITIAL_SELECTION: FloorplanImportSelection = {
   floorplanType: null,
   unitId: null,
   unitName: null,
+  levelFloorId: null,
+  levelName: null,
 };
 
 const TOTAL_STEPS = 6;
@@ -209,6 +222,20 @@ export function useFloorplanImportState(
     id: u.id,
     label: u.name,
   }));
+
+  // ── Multi-level unit detection (ADR-236) ──
+  const selectedUnit = rawUnits.find((u: UnitItem) => u.id === selection.unitId) as UnitItem | undefined;
+  const selectedUnitIsMultiLevel = !!(selectedUnit?.isMultiLevel && selectedUnit.levels && selectedUnit.levels.length >= 2);
+
+  const unitLevelItems: EntityOption[] = useMemo(() => {
+    if (!selectedUnitIsMultiLevel || !selectedUnit?.levels) return [];
+    return [...selectedUnit.levels]
+      .sort((a, b) => a.floorNumber - b.floorNumber)
+      .map((level) => ({
+        id: level.floorId,
+        label: level.name,
+      }));
+  }, [selectedUnitIsMultiLevel, selectedUnit?.levels]);
 
   // (Auto-skip removed — user must explicitly select at every step)
 
@@ -394,6 +421,8 @@ export function useFloorplanImportState(
             floorplanType: null,
             unitId: null,
             unitName: null,
+            levelFloorId: null,
+            levelName: null,
           };
         }
         case 3: {
@@ -407,6 +436,8 @@ export function useFloorplanImportState(
             floorplanType: null,
             unitId: null,
             unitName: null,
+            levelFloorId: null,
+            levelName: null,
           };
         }
         case 4: {
@@ -418,6 +449,8 @@ export function useFloorplanImportState(
             floorplanType: null,
             unitId: null,
             unitName: null,
+            levelFloorId: null,
+            levelName: null,
           };
         }
         default:
@@ -432,13 +465,20 @@ export function useFloorplanImportState(
       floorplanType: type,
       unitId: type === 'unit' ? prev.unitId : null,
       unitName: type === 'unit' ? prev.unitName : null,
+      levelFloorId: null,
+      levelName: null,
     }));
   }, []);
 
   const selectUnit = useCallback((id: string) => {
     const label = unitItems.find((u) => u.id === id)?.label ?? null;
-    setSelection((prev) => ({ ...prev, unitId: id, unitName: label }));
+    setSelection((prev) => ({ ...prev, unitId: id, unitName: label, levelFloorId: null, levelName: null }));
   }, [unitItems]);
+
+  const selectLevel = useCallback((floorId: string) => {
+    const label = unitLevelItems.find((l) => l.id === floorId)?.label ?? null;
+    setSelection((prev) => ({ ...prev, levelFloorId: floorId, levelName: label }));
+  }, [unitLevelItems]);
 
   // ===========================================================================
   // NAVIGATION
@@ -453,6 +493,8 @@ export function useFloorplanImportState(
       case 5: {
         if (!selection.floorplanType) return false;
         if (selection.floorplanType === 'unit' && !selection.unitId) return false;
+        // Multi-level units require level selection (ADR-236)
+        if (selection.floorplanType === 'unit' && selectedUnitIsMultiLevel && !selection.levelFloorId) return false;
         return true;
       }
       case 6: return true; // Upload step — button handled separately
@@ -497,7 +539,9 @@ export function useFloorplanImportState(
       case 'unit':
         entityType = 'unit' as EntityType;
         entityId = selection.unitId!;
-        entityLabel = selection.unitName ?? undefined;
+        entityLabel = selection.levelName
+          ? `${selection.unitName} — ${selection.levelName}`
+          : selection.unitName ?? undefined;
         break;
       default:
         return null;
@@ -513,6 +557,7 @@ export function useFloorplanImportState(
       userId: user.uid,
       entityLabel,
       purpose: 'floorplan',
+      ...(selection.levelFloorId ? { levelFloorId: selection.levelFloorId } : {}),
     };
   })();
 
@@ -553,5 +598,9 @@ export function useFloorplanImportState(
 
     unitItems,
     unitLoading,
+
+    selectedUnitIsMultiLevel,
+    unitLevelItems,
+    selectLevel,
   };
 }
