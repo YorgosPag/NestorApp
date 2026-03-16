@@ -59,6 +59,8 @@ export interface UseFloorplanImportStateReturn {
   step: number;
   handleNext: () => void;
   handleBack: () => void;
+  /** Navigate to a completed step (click on step number) */
+  goToStep: (step: number) => void;
   canProceed: boolean;
 
   selection: FloorplanImportSelection;
@@ -506,6 +508,12 @@ export function useFloorplanImportState(
     }
   }, [step, selection.floorplanType]);
 
+  const goToStep = useCallback((targetStep: number) => {
+    if (targetStep >= 1 && targetStep < step) {
+      setStep(targetStep);
+    }
+  }, [step]);
+
   // ===========================================================================
   // UPLOAD CONFIG (step 6)
   // ===========================================================================
@@ -579,6 +587,7 @@ export function useFloorplanImportState(
     step,
     handleNext,
     handleBack,
+    goToStep,
     canProceed,
 
     selection,

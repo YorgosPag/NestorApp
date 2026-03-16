@@ -70,6 +70,8 @@ export interface FileUploadZoneProps {
   enableCompression?: boolean;
   /** Compression usage context for smart compression */
   compressionUsage?: UsageContext;
+  /** Override the default file types hint text */
+  typesHint?: string;
 }
 
 // ============================================================================
@@ -139,6 +141,7 @@ export function FileUploadZone({
   uploading = false,
   enableCompression = true,
   compressionUsage = COMPRESSION_USAGE.DOCUMENT_SCAN,
+  typesHint,
 }: FileUploadZoneProps) {
   const iconSizes = useIconSizes();
   const { createBorder, quick, getStatusBorder } = useBorderTokens();
@@ -485,7 +488,7 @@ export function FileUploadZone({
               {t('uploadZone.orDragAndDrop')}
             </div>
             <p className="text-xs text-muted-foreground/80">
-              {t('uploadZone.fileTypesHint')} • {t('uploadZone.maxSize', { size: `${Math.round(maxSize / 1024 / 1024)}MB` })}
+              {typesHint ?? t('uploadZone.fileTypesHint')} • {t('uploadZone.maxSize', { size: `${Math.round(maxSize / 1024 / 1024)}MB` })}
             </p>
             {/* 🏢 ENTERPRISE: Show type-specific limits */}
             <p className="text-xs text-muted-foreground/60">

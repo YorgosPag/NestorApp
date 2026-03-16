@@ -100,6 +100,7 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
         multiple={false}
         uploading={isUploading}
         enableCompression={false}
+        typesHint={t('floorplanImport.acceptedTypes')}
       />
 
       {/* ── Progress bar ── */}

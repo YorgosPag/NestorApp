@@ -569,7 +569,7 @@
     },
     "noItems": "Δεν βρέθηκαν στοιχεία",
     "autoSelected": "Αυτόματη επιλογή",
-    "acceptedTypes": "DXF, PDF, JPG, PNG (μέχρι 50MB)",
+    "acceptedTypes": "DXF, PDF, Εικόνες (μέχρι 50MB)",
     "uploading": "Μεταφόρτωση...",
     "success": "Η κάτοψη ανέβηκε επιτυχώς!",
     "error": "Σφάλμα μεταφόρτωσης",

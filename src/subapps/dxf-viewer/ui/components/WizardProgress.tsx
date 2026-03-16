@@ -13,12 +13,15 @@ interface WizardProgressProps {
   currentStep: number;
   totalSteps: number;
   stepLabels?: string[];
+  /** Optional: click handler for completed steps (navigate back) */
+  onStepClick?: (step: number) => void;
 }
 
 export function WizardProgress({
   currentStep,
   totalSteps,
-  stepLabels = []
+  stepLabels = [],
+  onStepClick,
 }: WizardProgressProps) {
   const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -29,22 +32,42 @@ export function WizardProgress({
       <div className="flex items-center">
         {steps.map((stepNum) => (
           <React.Fragment key={stepNum}>
-            <div className="flex flex-col items-center">
-              <div
-                className={`${PANEL_LAYOUT.WIDTH.SM} ${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.ROUNDED.FULL} flex items-center justify-center ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
-                  stepNum <= currentStep
-                    ? `${colors.bg.info} ${colors.text.inverted}`
-                    : `${colors.bg.muted} ${colors.text.muted}`
-                }`}
-              >
-                {stepNum}
-              </div>
-              {stepLabels[stepNum - 1] && (
-                <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS} text-center ${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE}`}>
-                  {stepLabels[stepNum - 1]}
+            {(() => {
+              const isCompleted = stepNum < currentStep;
+              const isClickable = isCompleted && !!onStepClick;
+              const stepContent = (
+                <>
+                  <div
+                    className={`${PANEL_LAYOUT.WIDTH.SM} ${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.ROUNDED.FULL} flex items-center justify-center ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
+                      stepNum <= currentStep
+                        ? `${colors.bg.info} ${colors.text.inverted}`
+                        : `${colors.bg.muted} ${colors.text.muted}`
+                    }`}
+                  >
+                    {stepNum}
+                  </div>
+                  {stepLabels[stepNum - 1] && (
+                    <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${isClickable ? colors.text.info : colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS} text-center ${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE}`}>
+                      {stepLabels[stepNum - 1]}
+                    </div>
+                  )}
+                </>
+              );
+
+              return isClickable ? (
+                <button
+                  type="button"
+                  onClick={() => onStepClick(stepNum)}
+                  className="flex cursor-pointer flex-col items-center opacity-90 transition-opacity hover:opacity-100"
+                >
+                  {stepContent}
+                </button>
+              ) : (
+                <div className="flex flex-col items-center">
+                  {stepContent}
                 </div>
-              )}
-            </div>
+              );
+            })()}
             {stepNum < totalSteps && (
               <div
                 className={`flex-1 ${PANEL_LAYOUT.HEIGHT.XS} ${PANEL_LAYOUT.MARGIN.X_MD} ${PANEL_LAYOUT.TRANSITION.COLORS} ${

@@ -95,10 +95,10 @@ export function StepEntitySelector({
         <button
           type="button"
           onClick={onShortcutClick}
-          className="flex w-full cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-primary/40 bg-primary/5 px-4 py-6 transition-all hover:border-primary hover:bg-primary/10 hover:shadow-sm"
+          className="flex w-full cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-border bg-card px-4 py-6 shadow-sm transition-all hover:border-primary hover:bg-primary/5 hover:shadow-md"
         >
-          <ShortcutIcon className={`${iconSizes.xl2} text-primary`} />
-          <span className="text-sm font-semibold text-primary">{shortcutLabel}</span>
+          <ShortcutIcon className={`${iconSizes.xl2} text-foreground`} />
+          <span className="text-center text-sm font-semibold text-foreground">{shortcutLabel}</span>
         </button>
       )}
 

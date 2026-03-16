@@ -118,6 +118,11 @@ export function FloorplanImportWizard({
   const shortcutConfig = STEP_SHORTCUT_CONFIG[state.step];
   const shortcutEnabled = !!shortcutConfig && !!getSelectedId();
 
+  // Navigate to a completed step by clicking its number
+  const handleStepClick = useCallback((targetStep: number) => {
+    state.goToStep(targetStep);
+  }, [state]);
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
       <DialogContent className="max-w-2xl">
@@ -130,6 +135,7 @@ export function FloorplanImportWizard({
           currentStep={state.step}
           totalSteps={TOTAL_STEPS}
           stepLabels={stepLabels}
+          onStepClick={handleStepClick}
         />
 
         {/* ── Step content area ── */}
