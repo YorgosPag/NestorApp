@@ -447,7 +447,10 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
       <FloorplanImportWizard
         isOpen={showImportWizard}
         onClose={() => setShowImportWizard(false)}
-        onComplete={() => setShowImportWizard(false)}
+        onComplete={(file) => {
+          setShowImportWizard(false);
+          onSceneImported?.(file);
+        }}
       />
     </div>
   );

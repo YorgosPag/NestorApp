@@ -27,7 +27,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface StepUploadProps {
   config: FloorplanUploadConfig;
-  onComplete: () => void;
+  onComplete: (file: File) => void;
 }
 
 // =============================================================================
@@ -57,7 +57,7 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
 
     if (result.success) {
       setUploadSuccess(true);
-      onComplete();
+      onComplete(file);
     }
   }, [uploadFloorplan, onComplete]);
 

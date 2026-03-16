@@ -44,7 +44,7 @@ import type { FloorplanType } from './hooks/useFloorplanImportState';
 interface FloorplanImportWizardProps {
   isOpen: boolean;
   onClose: () => void;
-  onComplete?: () => void;
+  onComplete?: (file: File) => void;
 }
 
 // =============================================================================
@@ -95,8 +95,8 @@ export function FloorplanImportWizard({
     [t, isNamespaceReady],
   );
 
-  const handleUploadComplete = useCallback(() => {
-    onComplete?.();
+  const handleUploadComplete = useCallback((file: File) => {
+    onComplete?.(file);
   }, [onComplete]);
 
   const handleClose = useCallback(() => {
