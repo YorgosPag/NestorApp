@@ -344,7 +344,7 @@ export function ReadOnlyMediaViewer({
               >
                 <Map className={iconSizes.sm} aria-hidden="true" />
                 <span className="text-xs">
-                  {t('viewer.media.floorplanLevel', { ns: 'properties', name: level.name, defaultValue: 'Κάτοψη {{name}}' })}
+                  {t('properties:viewer.media.floorplanLevel', { name: level.name })}
                 </span>
               </TabsTrigger>
             ))
@@ -372,7 +372,7 @@ export function ReadOnlyMediaViewer({
               >
                 <Layers className={iconSizes.sm} aria-hidden="true" />
                 <span className="text-xs">
-                  {t('viewer.media.floorplanFloorLevel', { ns: 'properties', name: level.name, defaultValue: 'Κάτοψη Ορόφου {{name}}' })}
+                  {t('properties:viewer.media.floorplanFloorLevel', { name: level.name })}
                 </span>
               </TabsTrigger>
             ))
