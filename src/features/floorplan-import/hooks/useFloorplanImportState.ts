@@ -10,7 +10,7 @@
  * - Cascading API calls via enterprise-api-client
  * - Auth-gated fetching (no API calls before authentication)
  * - Open-gated fetching (no API calls when wizard is closed)
- * - Auto-skip when only 1 option exists
+ * - User must explicitly select at every step (no auto-skip)
  * - Builds FloorplanUploadConfig for step 6
  *
  * @module features/floorplan-import/hooks/useFloorplanImportState
@@ -213,8 +213,7 @@ export function useFloorplanImportState(
     label: u.name,
   }));
 
-  // ── Auto-skip ref (prevent loops) ──
-  const autoSkipRef = useRef(false);
+  // (Auto-skip removed — user must explicitly select at every step)
 
   // ===========================================================================
   // AUTH + OPEN GUARDS
@@ -335,31 +334,7 @@ export function useFloorplanImportState(
     return () => { cancelled = true; };
   }, [isReady, step, selection.buildingId]);
 
-  // ===========================================================================
-  // AUTO-SKIP: If only 1 item, auto-select and proceed
-  // ===========================================================================
-
-  useEffect(() => {
-    if (!isOpen || autoSkipRef.current) return;
-
-    const items = getCurrentItems();
-    const loading = getCurrentLoading();
-
-    if (!loading && items.length === 1 && step >= 1 && step <= 4) {
-      const item = items[0];
-      const isAlreadySelected = getSelectedIdForStep(step) === item.id;
-      if (!isAlreadySelected) {
-        autoSkipRef.current = true;
-        handleSelectEntity(item.id);
-        // Small delay to allow state to settle before advancing
-        setTimeout(() => {
-          setStep((prev) => Math.min(prev + 1, TOTAL_STEPS));
-          autoSkipRef.current = false;
-        }, 100);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, companies, projects, buildings, floors, companiesLoading, projectsLoading, buildingsLoading, floorsLoading, step]);
+  // (Auto-skip removed — user controls navigation at every step)
 
   // ===========================================================================
   // HELPERS
@@ -382,16 +357,6 @@ export function useFloorplanImportState(
       case 3: return buildingsLoading;
       case 4: return floorsLoading;
       default: return false;
-    }
-  }
-
-  function getSelectedIdForStep(s: number): string | null {
-    switch (s) {
-      case 1: return selection.companyId;
-      case 2: return selection.projectId;
-      case 3: return selection.buildingId;
-      case 4: return selection.floorId;
-      default: return null;
     }
   }
 
