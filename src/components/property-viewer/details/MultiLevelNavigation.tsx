@@ -6,11 +6,14 @@
  * Shows existing levels with navigation + optional FloorMultiSelectField for editing.
  * Compact design with 8px spacing to match application standard.
  *
+ * Active level is controlled by parent (PropertyDetailsContent) for bidirectional
+ * synchronization with LevelTabStrip in UnitFieldsBlock.
+ *
  * @module components/property-viewer/details/MultiLevelNavigation
  * @since ADR-236 — Multi-Level Property Management
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import { ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,6 +32,10 @@ interface MultiLevelNavigationProps {
   property: Property;
   onSelectFloor: (floorId: string | null) => void;
   currentFloorId: string | null;
+  /** Controlled active level — synchronized with LevelTabStrip */
+  activeLevelId?: string | null;
+  /** Callback when user selects a level — updates shared state in parent */
+  onActiveLevelChange?: (levelId: string | null) => void;
   /** Enable floor editing (add/remove floors) */
   isEditing?: boolean;
   /** Building ID for floor subscription */
@@ -41,6 +48,8 @@ export function MultiLevelNavigation({
   property,
   onSelectFloor,
   currentFloorId,
+  activeLevelId,
+  onActiveLevelChange,
   isEditing = false,
   buildingId,
   onLevelsChange,
@@ -55,13 +64,11 @@ export function MultiLevelNavigation({
   const levels = property.levels;
   const hasLevels = levels && levels.length > 0;
 
-  // Track which floor the user clicked — defaults to primary floor or first level
-  const [selectedFloorId, setSelectedFloorId] = useState<string | null>(
-    currentFloorId ?? (hasLevels ? levels[0].floorId : null)
-  );
+  // Use controlled activeLevelId from parent, fallback to currentFloorId
+  const selectedId = activeLevelId ?? currentFloorId;
 
   const handleSelectFloor = (floorId: string) => {
-    setSelectedFloorId(floorId);
+    onActiveLevelChange?.(floorId);
     onSelectFloor(floorId);
   };
 
@@ -82,7 +89,7 @@ export function MultiLevelNavigation({
                 key={level.floorId}
                 className={cn(
                   'px-2 py-1.5 rounded-lg flex items-center justify-between transition-colors cursor-pointer',
-                  selectedFloorId === level.floorId ? colors.bg.info : colors.bg.secondary,
+                  selectedId === level.floorId ? colors.bg.info : colors.bg.secondary,
                 )}
                 onClick={() => handleSelectFloor(level.floorId)}
                 role="button"

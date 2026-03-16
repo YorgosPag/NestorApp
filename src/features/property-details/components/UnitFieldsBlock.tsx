@@ -84,6 +84,10 @@ interface UnitFieldsBlockProps {
   isCreatingNewUnit?: boolean;
   /** Callback when new unit is successfully created */
   onUnitCreated?: (unitId: string) => void;
+  /** Controlled active level — synchronized with MultiLevelNavigation */
+  activeLevelId?: string | null;
+  /** Callback when user selects a level tab — updates shared state in parent */
+  onActiveLevelChange?: (levelId: string | null) => void;
 }
 
 // =============================================================================
@@ -159,6 +163,8 @@ export function UnitFieldsBlock({
   onExitEditMode,
   isCreatingNewUnit = false,
   onUnitCreated,
+  activeLevelId: controlledLevelId,
+  onActiveLevelChange,
 }: UnitFieldsBlockProps) {
   const { t } = useTranslation('units');
   const spacing = useSpacingTokens();
@@ -219,11 +225,11 @@ export function UnitFieldsBlock({
 
   // ── ADR-236 Phase 2: Active level tab (null = "Totals" tab) ──
   const isMultiLevel = property.isMultiLevel && (property.levels?.length ?? 0) >= 2;
-  const [activeLevelId, setActiveLevelId] = useState<string | null>(
-    isMultiLevel && property.levels?.length
-      ? property.levels[0].floorId
-      : null
-  );
+  // Use controlled state from parent (bidirectional sync with MultiLevelNavigation)
+  const activeLevelId = controlledLevelId ?? null;
+  const setActiveLevelId = useCallback((id: string | null) => {
+    onActiveLevelChange?.(id);
+  }, [onActiveLevelChange]);
 
   // ── Computed: current level's data OR aggregated totals ──
   const currentLevelData: LevelData | null = activeLevelId

@@ -128,6 +128,13 @@ export function PropertyDetailsContent({
   const isMultiLevel = resolvedProperty.isMultiLevel || isMultiLevelCapableType(effectiveType);
   const showMultiFloorSelector = isMultiLevelCapableType(effectiveType);
 
+  // ADR-236: Shared active level state — synchronized between MultiLevelNavigation and LevelTabStrip
+  const [activeLevelId, setActiveLevelId] = useState<string | null>(
+    isMultiLevel && resolvedProperty.levels?.length
+      ? resolvedProperty.levels[0].floorId
+      : null
+  );
+
   // attachments (ίδια λογική με mock)
   const { storage: attachedStorage, parking: attachedParking } = resolveAttachments(resolvedProperty);
 
@@ -199,6 +206,8 @@ export function PropertyDetailsContent({
               property={resolvedProperty}
               onSelectFloor={onSelectFloor || (() => {})}
               currentFloorId={resolvedProperty.floorId}
+              activeLevelId={activeLevelId}
+              onActiveLevelChange={setActiveLevelId}
               isEditing={isEditMode && !isSoldOrRented}
               buildingId={resolvedProperty?.buildingId}
               onLevelsChange={(levels: UnitLevel[]) => {
@@ -234,6 +243,8 @@ export function PropertyDetailsContent({
         onExitEditMode={handleExitEditMode}
         isCreatingNewUnit={isCreatingNewUnit}
         onUnitCreated={onUnitCreated}
+        activeLevelId={activeLevelId}
+        onActiveLevelChange={setActiveLevelId}
       />
 
       {/* Share Button removed per user request */}
