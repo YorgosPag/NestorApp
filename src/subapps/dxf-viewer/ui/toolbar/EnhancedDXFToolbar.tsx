@@ -20,7 +20,7 @@ import { ProSnapToolbar } from '../components/ProSnapToolbar';
 // 🏢 ENTERPRISE: Shadcn Button (same as CompactToolbar - NO BORDERS)
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import { FolderUp } from 'lucide-react';
+import { FolderUp, FileUp } from 'lucide-react';
 // 🎨 ENTERPRISE: Centralized DXF toolbar colors - Single source of truth
 import { DXF_ACTION_COLORS } from '../../config/toolbar-colors';
 // ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
@@ -29,6 +29,8 @@ import UploadDxfButton from '../UploadDxfButton';
 import { SimpleProjectDialog } from '../../components/SimpleProjectDialog';
 // 🏢 ADR-050: Overlay Toolbar Integration
 import { OverlayToolbarSection } from './overlay-section';
+// 🏢 SPEC-237D: Floorplan Import Wizard
+import { FloorplanImportWizard } from '@/features/floorplan-import';
 import type { EnhancedDXFToolbarPropsExtended } from './types';
 // ADR-176: Responsive layout
 import { useResponsiveLayout } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
@@ -88,6 +90,8 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
   const { quick, getStatusBorder, radius } = useBorderTokens();
   const colors = useSemanticColors();  // ✅ ENTERPRISE: Centralized background management
   const [showSimpleDialog, setShowSimpleDialog] = React.useState(false);
+  // 🏢 SPEC-237D: Floorplan Import Wizard state
+  const [showImportWizard, setShowImportWizard] = React.useState(false);
 
   // 📐 ADR-189: Guide chord state — tracks pending chord leader key
   const chordRef = React.useRef<{ timer: ReturnType<typeof setTimeout> } | null>(null);
@@ -341,6 +345,24 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
             </Tooltip>
           </TooltipProvider>
 
+          {/* 🏢 SPEC-237D: Floorplan Import Wizard Button */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowImportWizard(true)}
+                  aria-label="Εισαγωγή Κάτοψης"
+                  className={`${iconSizes.xl} p-0`}
+                >
+                  <FileUp className={`${iconSizes.sm} text-emerald-500`} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Εισαγωγή Κάτοψης (Wizard)</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
           <div className={`w-px ${colors.bg.active} ${PANEL_LAYOUT.MARGIN.X_XS} ${PANEL_LAYOUT.MARGIN.Y_XS}`} />
 
           {toolGroups.map((group, groupIndex) => (
@@ -419,6 +441,13 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
           onSceneImported(file, encoding);
           return Promise.resolve();
         } : undefined}
+      />
+
+      {/* 🏢 SPEC-237D: Floorplan Import Wizard */}
+      <FloorplanImportWizard
+        isOpen={showImportWizard}
+        onClose={() => setShowImportWizard(false)}
+        onComplete={() => setShowImportWizard(false)}
       />
     </div>
   );
