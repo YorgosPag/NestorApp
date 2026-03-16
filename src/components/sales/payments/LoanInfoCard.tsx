@@ -40,43 +40,43 @@ export function LoanInfoCard({ loan }: LoanInfoCardProps) {
         <div className="flex items-center gap-2">
           <Landmark className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-semibold">
-            {t('loan.title', { defaultValue: 'Τραπεζικό Δάνειο' })}
+            {t('loan.title')}
           </h3>
         </div>
         <Badge variant={LOAN_STATUS_VARIANT[loan.status] ?? 'secondary'}>
-          {t(`loan.status.${loan.status}`, { defaultValue: loan.status })}
+          {t(`loan.status.${loan.status}`)}
         </Badge>
       </header>
 
       <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
         {loan.bankName && (
           <>
-            <dt className="text-muted-foreground">{t('loan.bankName', { defaultValue: 'Τράπεζα' })}</dt>
+            <dt className="text-muted-foreground">{t('loan.bankName')}</dt>
             <dd className="font-medium">{loan.bankName}</dd>
           </>
         )}
         {loan.loanAmount !== null && (
           <>
-            <dt className="text-muted-foreground">{t('loan.loanAmount', { defaultValue: 'Ποσό' })}</dt>
+            <dt className="text-muted-foreground">{t('loan.loanAmount')}</dt>
             <dd className="font-medium">€{loan.loanAmount.toLocaleString('el-GR')}</dd>
           </>
         )}
         {loan.financingPercentage !== null && (
           <>
-            <dt className="text-muted-foreground">{t('loan.financingPercentage', { defaultValue: 'Χρηματοδότηση' })}</dt>
+            <dt className="text-muted-foreground">{t('loan.financingPercentage')}</dt>
             <dd className="font-medium">{loan.financingPercentage}%</dd>
           </>
         )}
         {loan.interestRate !== null && (
           <>
-            <dt className="text-muted-foreground">{t('loan.interestRate', { defaultValue: 'Επιτόκιο' })}</dt>
+            <dt className="text-muted-foreground">{t('loan.interestRate')}</dt>
             <dd className="font-medium">{loan.interestRate}%</dd>
           </>
         )}
         {loan.termYears !== null && (
           <>
-            <dt className="text-muted-foreground">{t('loan.termYears', { defaultValue: 'Διάρκεια' })}</dt>
-            <dd className="font-medium">{loan.termYears} {t('loan.termYears', { defaultValue: 'έτη' })}</dd>
+            <dt className="text-muted-foreground">{t('loan.termYears')}</dt>
+            <dd className="font-medium">{loan.termYears} {t('loan.termYears')}</dd>
           </>
         )}
       </dl>

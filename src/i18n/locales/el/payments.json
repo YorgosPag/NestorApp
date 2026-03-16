@@ -28,6 +28,7 @@
     "beforeInstallment": "Πριν τη δόση #{index}",
     "notesOnlyWarning": "Σε ενεργό plan μπορείτε να αλλάξετε μόνο σημειώσεις",
     "typeLabel": "Τύπος δόσης",
+    "labelPlaceholder": "π.χ. Προκαταβολή 30%",
     "status": {
       "pending": "Αναμένεται",
       "due": "Ληξιπρόθεσμη",
@@ -121,7 +122,8 @@
     "step3": "Επισκόπηση & Δημιουργία",
     "selectTemplate": "Επιλέξτε πρότυπο",
     "totalAmount": "Συνολικό Ποσό Πώλησης",
-    "reviewAndCreate": "Δημιουργία"
+    "reviewAndCreate": "Δημιουργία",
+    "totalInstallments": "Σύνολο δόσεων"
   },
   "dialog": {
     "title": "Καταγραφή Πληρωμής",
@@ -131,7 +133,8 @@
     "chequeNumber": "Αρ. Επιταγής",
     "receiptNumber": "Αρ. Απόδειξης",
     "confirm": "Καταχώρηση",
-    "cancel": "Ακύρωση"
+    "cancel": "Ακύρωση",
+    "paymentRecorded": "Καταγράφηκε πληρωμή"
   },
   "loanTracking": {
     "title": "Τραπεζικά Δάνεια",
@@ -181,15 +184,26 @@
       "monthlyPayment": "Μηνιαία Δόση",
       "dstiRatio": "DSTI (%)",
       "appraisalValue": "Αξία Εκτίμησης",
-      "collateralAmount": "Ποσό Εγγύησης"
+      "collateralAmount": "Ποσό Εγγύησης",
+      "yearsUnit": "έτη"
     },
     "actions": {
       "recordDisbursement": "Καταγραφή Εκταμίευσης",
       "addCommLog": "Νέα Επικοινωνία",
       "updateStatus": "Ενημέρωση Κατάστασης"
     },
+    "noDisbursements": "Δεν υπάρχουν εκταμιεύσεις.",
+    "noCommLog": "Δεν υπάρχουν εγγραφές.",
+    "timeline": "Χρονολόγιο",
+    "milestone": "Milestone",
+    "milestonePlaceholder": "π.χ. Θεμελίωση",
     "commLog": {
       "title": "Ιστορικό Επικοινωνίας",
+      "typeLabel": "Τύπος",
+      "description": "Περιγραφή",
+      "descriptionPlaceholder": "Τι συζητήθηκε;",
+      "nextAction": "Επόμενη Ενέργεια",
+      "nextActionPlaceholder": "π.χ. Αναμονή εκτίμησης",
       "type": {
         "phone": "Τηλέφωνο",
         "email": "Email",
@@ -386,6 +400,9 @@
     "noBuyer": "Δεν υπάρχει αγοραστής",
     "noProject": "Η μονάδα δεν ανήκει σε έργο",
     "createFailed": "Σφάλμα δημιουργίας",
-    "paymentFailed": "Σφάλμα καταγραφής πληρωμής"
+    "paymentFailed": "Σφάλμα καταγραφής πληρωμής",
+    "invalidAmount": "Εισάγετε έγκυρο ποσό",
+    "invalidLabel": "Εισάγετε ετικέτα",
+    "invalidDueDate": "Εισάγετε ημερομηνία λήξης"
   }
 }

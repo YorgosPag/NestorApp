@@ -87,7 +87,7 @@ export function PaymentReportDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
-            {t('report.title', { defaultValue: 'Αναφορά Πληρωμών' })}
+            {t('report.title')}
           </DialogTitle>
         </DialogHeader>
 
@@ -111,21 +111,21 @@ export function PaymentReportDialog({
             {/* Summary Cards */}
             <nav className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <SummaryCard
-                label={t('report.totalWithPlan', { defaultValue: 'Με Πρόγραμμα' })}
+                label={t('report.totalWithPlan')}
                 value={String(report.summary.totalUnitsWithPlan)}
                 icon={<CheckCircle2 className="h-4 w-4 text-green-500" />}
               />
               <SummaryCard
-                label={t('labels.totalAmount', { defaultValue: 'Σύνολο' })}
+                label={t('labels.totalAmount')}
                 value={formatCurrency(report.summary.totalAmount)}
               />
               <SummaryCard
-                label={t('labels.paidAmount', { defaultValue: 'Πληρωμένο' })}
+                label={t('labels.paidAmount')}
                 value={formatCurrency(report.summary.totalPaid)}
                 subtitle={`${report.summary.paidPercentage}%`}
               />
               <SummaryCard
-                label={t('report.totalOverdue', { defaultValue: 'Ληξιπρόθεσμες' })}
+                label={t('report.totalOverdue')}
                 value={String(report.summary.totalOverdueCount)}
                 icon={
                   report.summary.totalOverdueCount > 0 ? (
@@ -143,21 +143,21 @@ export function PaymentReportDialog({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t('report.colUnit', { defaultValue: 'Μονάδα' })}</TableHead>
-                    <TableHead>{t('report.colBuilding', { defaultValue: 'Κτίριο' })}</TableHead>
-                    <TableHead>{t('report.colBuyer', { defaultValue: 'Αγοραστής' })}</TableHead>
+                    <TableHead>{t('report.colUnit')}</TableHead>
+                    <TableHead>{t('report.colBuilding')}</TableHead>
+                    <TableHead>{t('report.colBuyer')}</TableHead>
                     <TableHead className="text-right">
-                      {t('labels.totalAmount', { defaultValue: 'Σύνολο' })}
+                      {t('labels.totalAmount')}
                     </TableHead>
                     <TableHead className="text-right">
-                      {t('labels.paidAmount', { defaultValue: 'Πληρωμένο' })}
+                      {t('labels.paidAmount')}
                     </TableHead>
                     <TableHead className="text-right">
-                      {t('labels.remainingAmount', { defaultValue: 'Υπόλοιπο' })}
+                      {t('labels.remainingAmount')}
                     </TableHead>
                     <TableHead className="text-center">%</TableHead>
                     <TableHead className="text-center">
-                      {t('labels.overdueCount', { defaultValue: 'Ληξ/θεσμες' })}
+                      {t('labels.overdueCount')}
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -165,7 +165,7 @@ export function PaymentReportDialog({
                   {report.rows.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                        {t('report.noData', { defaultValue: 'Δεν υπάρχουν δεδομένα.' })}
+                        {t('report.noData')}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -208,7 +208,7 @@ export function PaymentReportDialog({
             {/* Footer with export button */}
             <footer className="flex items-center justify-between border-t pt-3">
               <p className="text-xs text-muted-foreground">
-                {t('report.generatedAt', { defaultValue: 'Ημ/νία αναφοράς' })}:{' '}
+                {t('report.generatedAt')}:{' '}
                 {new Date(report.generatedAt).toLocaleDateString('el-GR')}
               </p>
               <Button
@@ -217,7 +217,7 @@ export function PaymentReportDialog({
                 onClick={exportToExcel}
               >
                 <Download className="h-4 w-4" />
-                {t('report.exportExcel', { defaultValue: 'Εξαγωγή Excel' })}
+                {t('report.exportExcel')}
               </Button>
             </footer>
           </section>

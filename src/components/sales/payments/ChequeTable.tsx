@@ -46,25 +46,25 @@ export function ChequeTable({ cheques, onSelectCheque }: ChequeTableProps) {
       <TableHeader>
         <TableRow>
           <TableHead className="text-xs">
-            {t('chequeRegistry.fields.chequeNumber', { defaultValue: 'Αρ. Επιταγής' })}
+            {t('chequeRegistry.fields.chequeNumber')}
           </TableHead>
           <TableHead className="text-xs">
-            {t('chequeRegistry.fields.chequeType', { defaultValue: 'Τύπος' })}
+            {t('chequeRegistry.fields.chequeType')}
           </TableHead>
           <TableHead className="text-xs text-right">
-            {t('chequeRegistry.fields.amount', { defaultValue: 'Ποσό' })}
+            {t('chequeRegistry.fields.amount')}
           </TableHead>
           <TableHead className="text-xs">
-            {t('chequeRegistry.fields.drawerName', { defaultValue: 'Εκδότης' })}
+            {t('chequeRegistry.fields.drawerName')}
           </TableHead>
           <TableHead className="text-xs">
-            {t('chequeRegistry.fields.bankName', { defaultValue: 'Τράπεζα' })}
+            {t('chequeRegistry.fields.bankName')}
           </TableHead>
           <TableHead className="text-xs">
-            {t('chequeRegistry.fields.maturityDate', { defaultValue: 'Λήξη' })}
+            {t('chequeRegistry.fields.maturityDate')}
           </TableHead>
           <TableHead className="text-xs">
-            {t('chequeRegistry.fields.status', { defaultValue: 'Κατάσταση' })}
+            {t('chequeRegistry.fields.status')}
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -77,7 +77,7 @@ export function ChequeTable({ cheques, onSelectCheque }: ChequeTableProps) {
           >
             <TableCell className="text-xs font-mono">{cheque.chequeNumber}</TableCell>
             <TableCell className="text-xs">
-              {t(`paymentMethod.${cheque.chequeType}`, { defaultValue: cheque.chequeType })}
+              {t(`paymentMethod.${cheque.chequeType}`)}
             </TableCell>
             <TableCell className="text-xs text-right font-medium">
               {formatCurrency(cheque.amount)}

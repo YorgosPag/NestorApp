@@ -75,18 +75,18 @@ export function InstallmentSchedule({
         <TableHeader>
           <TableRow>
             <TableHead className="w-8">#</TableHead>
-            <TableHead>{t('labels.dueDate', { defaultValue: 'Ετικέτα' })}</TableHead>
+            <TableHead>{t('labels.dueDate')}</TableHead>
             <TableHead className="text-right">
-              {t('labels.amount', { defaultValue: 'Ποσό' })}
+              {t('labels.amount')}
             </TableHead>
             <TableHead className="text-right">
-              {t('labels.paidAmount', { defaultValue: 'Πληρωμένο' })}
+              {t('labels.paidAmount')}
             </TableHead>
             <TableHead className="text-center">
-              {t('installments.title', { defaultValue: 'Κατάσταση' })}
+              {t('installments.title')}
             </TableHead>
             <TableHead className="text-center">
-              {t('labels.dueDate', { defaultValue: 'Ημ. Λήξης' })}
+              {t('labels.dueDate')}
             </TableHead>
             {(onPayInstallment || onEditInstallment) && <TableHead className="w-24" />}
           </TableRow>
@@ -111,7 +111,7 @@ export function InstallmentSchedule({
                   <div className="flex flex-col">
                     <span className="text-sm font-medium">{inst.label}</span>
                     <span className="text-[10px] text-muted-foreground">
-                      {t(`installmentType.${inst.type}`, { defaultValue: inst.type })}
+                      {t(`installmentType.${inst.type}`)}
                     </span>
                   </div>
                 </TableCell>
@@ -130,7 +130,7 @@ export function InstallmentSchedule({
                 <TableCell className="text-center">
                   <Badge variant={config.variant} className="gap-1 text-[10px]">
                     <Icon className={`h-3 w-3 ${config.className}`} />
-                    {t(`installments.status.${effectiveStatus}`, { defaultValue: effectiveStatus })}
+                    {t(`installments.status.${effectiveStatus}`)}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-center text-xs">
@@ -146,7 +146,7 @@ export function InstallmentSchedule({
                           className="text-xs h-7"
                           onClick={() => onPayInstallment(inst.index)}
                         >
-                          {t('actions.payInstallment', { defaultValue: 'Πληρωμή' })}
+                          {t('actions.payInstallment')}
                         </Button>
                       )}
                       {canEdit && onEditInstallment && (
@@ -177,7 +177,7 @@ export function InstallmentSchedule({
             onClick={onAddInstallment}
           >
             <Plus className="h-3.5 w-3.5" />
-            {t('installments.addInstallment', { defaultValue: 'Προσθήκη Δόσης' })}
+            {t('installments.addInstallment')}
           </Button>
         </footer>
       )}

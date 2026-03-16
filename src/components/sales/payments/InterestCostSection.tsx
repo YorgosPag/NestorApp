@@ -112,7 +112,7 @@ export function InterestCostSection({
           <span className="flex items-center gap-2">
             <Calculator className="h-4 w-4 text-muted-foreground" />
             <h3 className="text-sm font-semibold">
-              {t('costCalculator.title', { defaultValue: 'Κόστος Χρήματος' })}
+              {t('costCalculator.title')}
             </h3>
           </span>
           {rates?.source === 'ecb_api' && (
@@ -147,7 +147,7 @@ export function InterestCostSection({
             <figure className="rounded-md bg-muted/50 p-2">
               <figcaption className="text-[10px] text-muted-foreground flex items-center justify-center gap-1">
                 <TrendingDown className="h-3 w-3" />
-                {t('costCalculator.timeCost', { defaultValue: 'Κόστος' })}
+                {t('costCalculator.timeCost')}
               </figcaption>
               <p className="text-sm font-semibold text-destructive">
                 {formatCurrency(result.timeCost)} ({formatPercent(result.timeCostPercentage)})
@@ -155,7 +155,7 @@ export function InterestCostSection({
             </figure>
             <figure className="rounded-md bg-muted/50 p-2">
               <figcaption className="text-[10px] text-muted-foreground">
-                {t('costCalculator.recommended', { defaultValue: 'Πρόταση' })}
+                {t('costCalculator.recommended')}
               </figcaption>
               <p className="text-sm font-semibold text-emerald-600">
                 {formatCurrency(result.recommendedPrice)}
@@ -177,7 +177,7 @@ export function InterestCostSection({
           onClick={() => setDialogOpen(true)}
           disabled={isLoading}
         >
-          {t('costCalculator.detailAnalysis', { defaultValue: 'Λεπτομερής Ανάλυση' })}
+          {t('costCalculator.detailAnalysis')}
           <ChevronRight className="h-3 w-3" />
         </Button>
       </section>

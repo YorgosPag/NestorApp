@@ -489,7 +489,7 @@ export function InterestCostDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <Calculator className="h-5 w-5" />
-            {t('costCalculator.dialogTitle', { defaultValue: 'Ανάλυση Κόστους Χρήματος' })}
+            {t('costCalculator.dialogTitle')}
           </DialogTitle>
         </DialogHeader>
 
@@ -504,19 +504,19 @@ export function InterestCostDialog({
             <TabsList className="grid grid-cols-4 text-xs">
               <TabsTrigger value="cashflow" className="text-xs gap-1">
                 <BarChart3 className="h-3 w-3" />
-                {t('costCalculator.tabs.cashFlow', { defaultValue: 'Cash Flow' })}
+                {t('costCalculator.tabs.cashFlow')}
               </TabsTrigger>
               <TabsTrigger value="scenarios" className="text-xs gap-1">
                 <Award className="h-3 w-3" />
-                {t('costCalculator.tabs.scenarios', { defaultValue: 'Σενάρια' })}
+                {t('costCalculator.tabs.scenarios')}
               </TabsTrigger>
               <TabsTrigger value="pricing" className="text-xs gap-1">
                 <TrendingUp className="h-3 w-3" />
-                {t('costCalculator.tabs.pricing', { defaultValue: 'Τιμολόγηση' })}
+                {t('costCalculator.tabs.pricing')}
               </TabsTrigger>
               <TabsTrigger value="settings" className="text-xs gap-1">
                 <Settings className="h-3 w-3" />
-                {t('costCalculator.tabs.settings', { defaultValue: 'Ρυθμίσεις' })}
+                {t('costCalculator.tabs.settings')}
               </TabsTrigger>
             </TabsList>
 
@@ -530,7 +530,7 @@ export function InterestCostDialog({
                 />
               ) : (
                 <p className="text-xs text-muted-foreground text-center py-4">
-                  {t('costCalculator.noData', { defaultValue: 'Δεν υπάρχουν δεδομένα.' })}
+                  {t('costCalculator.noData')}
                 </p>
               )}
             </TabsContent>
@@ -541,7 +541,7 @@ export function InterestCostDialog({
                 <ScenarioTab comparison={comparison} t={t} />
               ) : (
                 <p className="text-xs text-muted-foreground text-center py-4">
-                  {t('costCalculator.noData', { defaultValue: 'Δεν υπάρχουν δεδομένα.' })}
+                  {t('costCalculator.noData')}
                 </p>
               )}
             </TabsContent>
@@ -552,7 +552,7 @@ export function InterestCostDialog({
                 <PricingTab result={result} salePrice={salePrice} t={t} />
               ) : (
                 <p className="text-xs text-muted-foreground text-center py-4">
-                  {t('costCalculator.noData', { defaultValue: 'Δεν υπάρχουν δεδομένα.' })}
+                  {t('costCalculator.noData')}
                 </p>
               )}
             </TabsContent>

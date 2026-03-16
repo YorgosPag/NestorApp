@@ -31,7 +31,7 @@ export function ChequeStatusBadge({ status }: ChequeStatusBadgeProps) {
 
   return (
     <Badge variant={STATUS_VARIANT[status]}>
-      {t(`chequeRegistry.status.${status}`, { defaultValue: status })}
+      {t(`chequeRegistry.status.${status}`)}
     </Badge>
   );
 }

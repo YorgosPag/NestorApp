@@ -30,7 +30,7 @@ export function LoanStatusTimeline({ status, compact = false }: LoanStatusTimeli
   if (status === 'rejected' || status === 'cancelled') {
     return (
       <aside className="text-xs text-destructive font-medium py-1">
-        {t(`loanTracking.status.${status}`, { defaultValue: status })}
+        {t(`loanTracking.status.${status}`)}
       </aside>
     );
   }
@@ -69,7 +69,7 @@ export function LoanStatusTimeline({ status, compact = false }: LoanStatusTimeli
                 : isCompleted ? 'text-muted-foreground'
                   : 'text-muted-foreground/50'
             }`}>
-              {t(`loanTracking.status.${step}`, { defaultValue: step })}
+              {t(`loanTracking.status.${step}`)}
             </figcaption>
           </figure>
         );

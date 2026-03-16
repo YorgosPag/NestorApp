@@ -28,6 +28,7 @@
     "beforeInstallment": "Before installment #{index}",
     "notesOnlyWarning": "In an active plan you can only edit notes",
     "typeLabel": "Installment type",
+    "labelPlaceholder": "e.g. Down payment 30%",
     "status": {
       "pending": "Pending",
       "due": "Due",
@@ -121,7 +122,8 @@
     "step3": "Review & Create",
     "selectTemplate": "Select a template",
     "totalAmount": "Total Sale Amount",
-    "reviewAndCreate": "Create"
+    "reviewAndCreate": "Create",
+    "totalInstallments": "Total installments"
   },
   "dialog": {
     "title": "Record Payment",
@@ -131,7 +133,8 @@
     "chequeNumber": "Cheque Number",
     "receiptNumber": "Receipt Number",
     "confirm": "Record",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "paymentRecorded": "Payment recorded"
   },
   "loanTracking": {
     "title": "Bank Loans",
@@ -181,15 +184,26 @@
       "monthlyPayment": "Monthly Payment",
       "dstiRatio": "DSTI (%)",
       "appraisalValue": "Appraisal Value",
-      "collateralAmount": "Collateral Amount"
+      "collateralAmount": "Collateral Amount",
+      "yearsUnit": "years"
     },
     "actions": {
       "recordDisbursement": "Record Disbursement",
       "addCommLog": "New Communication",
       "updateStatus": "Update Status"
     },
+    "noDisbursements": "No disbursements.",
+    "noCommLog": "No entries.",
+    "timeline": "Timeline",
+    "milestone": "Milestone",
+    "milestonePlaceholder": "e.g. Foundation",
     "commLog": {
       "title": "Communication Log",
+      "typeLabel": "Type",
+      "description": "Description",
+      "descriptionPlaceholder": "What was discussed?",
+      "nextAction": "Next Action",
+      "nextActionPlaceholder": "e.g. Awaiting appraisal",
       "type": {
         "phone": "Phone",
         "email": "Email",
@@ -386,6 +400,9 @@
     "noBuyer": "No buyer assigned",
     "noProject": "Unit is not assigned to a project",
     "createFailed": "Failed to create plan",
-    "paymentFailed": "Failed to record payment"
+    "paymentFailed": "Failed to record payment",
+    "invalidAmount": "Enter a valid amount",
+    "invalidLabel": "Enter a label",
+    "invalidDueDate": "Enter a due date"
   }
 }

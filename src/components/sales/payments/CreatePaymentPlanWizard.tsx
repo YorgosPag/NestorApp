@@ -145,7 +145,7 @@ export function CreatePaymentPlanWizard({
     if (!selectedTemplate) return;
     const total = parseFloat(totalAmount);
     if (isNaN(total) || total <= 0) {
-      toast.error('Εισάγετε έγκυρο ποσό');
+      toast.error(t('errors.invalidAmount'));
       return;
     }
     setInstallments(computeInstallments(selectedTemplate, total));
@@ -184,11 +184,11 @@ export function CreatePaymentPlanWizard({
     setSubmitting(false);
 
     if (result.success) {
-      toast.success(t('paymentPlan.createPlan', { defaultValue: 'Δημιουργήθηκε' }));
+      toast.success(t('paymentPlan.createPlan'));
       onOpenChange(false);
       setStep(0);
     } else {
-      toast.error(result.error ?? t('errors.createFailed', { defaultValue: 'Σφάλμα' }));
+      toast.error(result.error ?? t('errors.createFailed'));
     }
   }, [totalAmount, taxRegime, installments, buildingId, projectId, buyerContactId, buyerName, onCreate, onOpenChange, t]);
 
@@ -201,7 +201,7 @@ export function CreatePaymentPlanWizard({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {t('wizard.title', { defaultValue: 'Δημιουργία Προγράμματος Αποπληρωμής' })}
+            {t('wizard.title')}
           </DialogTitle>
         </DialogHeader>
 
@@ -209,7 +209,7 @@ export function CreatePaymentPlanWizard({
         {step === 0 && (
           <div className="space-y-4">
             <div className="space-y-1">
-              <Label>{t('wizard.selectTemplate', { defaultValue: 'Πρότυπο' })}</Label>
+              <Label>{t('wizard.selectTemplate')}</Label>
               <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
                 <SelectTrigger>
                   <SelectValue />
@@ -229,7 +229,7 @@ export function CreatePaymentPlanWizard({
 
             <div className="space-y-1">
               <Label htmlFor="wizard-total">
-                {t('wizard.totalAmount', { defaultValue: 'Συνολικό Ποσό (€)' })}
+                {t('wizard.totalAmount')}
               </Label>
               <Input
                 id="wizard-total"
@@ -242,7 +242,7 @@ export function CreatePaymentPlanWizard({
             </div>
 
             <div className="space-y-1">
-              <Label>{t('taxRegime.vat_24', { defaultValue: 'Φορολογικό Καθεστώς' })}</Label>
+              <Label>{t('taxRegime.vat_24')}</Label>
               <Select value={taxRegime} onValueChange={(v) => setTaxRegime(v as SaleTaxRegime)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -250,7 +250,7 @@ export function CreatePaymentPlanWizard({
                 <SelectContent>
                   {TAX_REGIMES.map((r) => (
                     <SelectItem key={r.value} value={r.value}>
-                      {t(`taxRegime.${r.value}`, { defaultValue: r.value })}
+                      {t(`taxRegime.${r.value}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -279,7 +279,7 @@ export function CreatePaymentPlanWizard({
             ))}
 
             <footer className="flex items-center justify-between pt-2 border-t text-sm">
-              <span className="font-medium">Σύνολο δόσεων</span>
+              <span className="font-medium">{t('wizard.totalInstallments')}</span>
               <span className={sumMatch ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
                 €{installmentSum.toLocaleString('el-GR')}
                 {!sumMatch && ` (≠ €${total.toLocaleString('el-GR')})`}
@@ -292,13 +292,13 @@ export function CreatePaymentPlanWizard({
           {step > 0 && (
             <Button variant="outline" onClick={() => setStep(step - 1)}>
               <ChevronLeft className="h-4 w-4 mr-1" />
-              {t('dialog.cancel', { defaultValue: 'Πίσω' })}
+              {t('dialog.cancel')}
             </Button>
           )}
 
           {step === 0 && (
             <Button onClick={goToStep2}>
-              {t('wizard.step2', { defaultValue: 'Ρύθμιση Δόσεων' })}
+              {t('wizard.step2')}
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           )}
@@ -306,7 +306,7 @@ export function CreatePaymentPlanWizard({
           {step === 1 && (
             <Button onClick={handleCreate} disabled={submitting || !sumMatch}>
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t('wizard.reviewAndCreate', { defaultValue: 'Δημιουργία' })}
+              {t('wizard.reviewAndCreate')}
             </Button>
           )}
         </DialogFooter>

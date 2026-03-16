@@ -117,7 +117,7 @@ export function RecordPaymentDialog({
   const handleSubmit = useCallback(async () => {
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) {
-      toast.error('Εισάγετε έγκυρο ποσό');
+      toast.error(t('errors.invalidAmount'));
       return;
     }
 
@@ -134,10 +134,10 @@ export function RecordPaymentDialog({
     setSubmitting(false);
 
     if (result.success) {
-      toast.success(`Καταγράφηκε πληρωμή €${numAmount.toLocaleString('el-GR')}`);
+      toast.success(`${t('dialog.paymentRecorded')} €${numAmount.toLocaleString('el-GR')}`);
       onOpenChange(false);
     } else {
-      toast.error(result.error ?? t('errors.paymentFailed', { defaultValue: 'Σφάλμα' }));
+      toast.error(result.error ?? t('errors.paymentFailed'));
     }
   }, [amount, method, paymentDate, notes, installment.index, paymentPlanId, onRecord, onOpenChange, buildMethodDetails, t]);
 
@@ -148,17 +148,17 @@ export function RecordPaymentDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {t('dialog.title', { defaultValue: 'Καταγραφή Πληρωμής' })}
+            {t('dialog.title')}
           </DialogTitle>
           <DialogDescription>
-            {installment.label} — {t('labels.remainingAmount', { defaultValue: 'Υπόλοιπο' })}: €{remaining.toLocaleString('el-GR')}
+            {installment.label} — {t('labels.remainingAmount')}: €{remaining.toLocaleString('el-GR')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Amount */}
           <div className="space-y-1">
-            <Label htmlFor="pay-amount">{t('labels.amount', { defaultValue: 'Ποσό' })} (€)</Label>
+            <Label htmlFor="pay-amount">{t('labels.amount')} (€)</Label>
             <Input
               id="pay-amount"
               type="number"
@@ -171,7 +171,7 @@ export function RecordPaymentDialog({
 
           {/* Payment Method */}
           <div className="space-y-1">
-            <Label>{t('labels.method', { defaultValue: 'Μέσο Πληρωμής' })}</Label>
+            <Label>{t('labels.method')}</Label>
             <Select value={method} onValueChange={(v) => setMethod(v as PaymentMethod)}>
               <SelectTrigger>
                 <SelectValue />
@@ -179,7 +179,7 @@ export function RecordPaymentDialog({
               <SelectContent>
                 {PAYMENT_METHODS.map((m) => (
                   <SelectItem key={m} value={m}>
-                    {t(`paymentMethod.${m}`, { defaultValue: m })}
+                    {t(`paymentMethod.${m}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -188,7 +188,7 @@ export function RecordPaymentDialog({
 
           {/* Payment Date */}
           <div className="space-y-1">
-            <Label htmlFor="pay-date">{t('labels.paymentDate', { defaultValue: 'Ημ. Πληρωμής' })}</Label>
+            <Label htmlFor="pay-date">{t('labels.paymentDate')}</Label>
             <Input
               id="pay-date"
               type="date"
@@ -206,11 +206,11 @@ export function RecordPaymentDialog({
                   setBankCode(code);
                   setBankName(bank?.name ?? '');
                 }}
-                label={t('dialog.bankName', { defaultValue: 'Τράπεζα' })}
+                label={t('dialog.bankName')}
                 allowOther
               />
               <div className="space-y-1">
-                <Label htmlFor="pay-ref">{t('dialog.referenceNumber', { defaultValue: 'Αρ. Αναφοράς' })}</Label>
+                <Label htmlFor="pay-ref">{t('dialog.referenceNumber')}</Label>
                 <Input
                   id="pay-ref"
                   value={referenceNumber}
@@ -222,7 +222,7 @@ export function RecordPaymentDialog({
 
           {/* Notes */}
           <div className="space-y-1">
-            <Label htmlFor="pay-notes">{t('labels.notes', { defaultValue: 'Σημειώσεις' })}</Label>
+            <Label htmlFor="pay-notes">{t('labels.notes')}</Label>
             <Textarea
               id="pay-notes"
               value={notes}
@@ -234,11 +234,11 @@ export function RecordPaymentDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {t('dialog.cancel', { defaultValue: 'Ακύρωση' })}
+            {t('dialog.cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={submitting}>
             {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {t('dialog.confirm', { defaultValue: 'Καταχώρηση' })}
+            {t('dialog.confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -68,12 +68,12 @@ export function LoanCard({ loan, onViewDetails }: LoanCardProps) {
           <h4 className="text-sm font-medium truncate">{loan.bankName || '—'}</h4>
           {loan.isPrimary && (
             <Badge variant="outline" className="text-[10px] shrink-0">
-              {t('loanTracking.primaryLoan', { defaultValue: 'Κύριο' })}
+              {t('loanTracking.primaryLoan')}
             </Badge>
           )}
         </span>
         <Badge variant={STATUS_VARIANT[loan.status] ?? 'secondary'} className="shrink-0">
-          {t(`loanTracking.status.${loan.status}`, { defaultValue: loan.status })}
+          {t(`loanTracking.status.${loan.status}`)}
         </Badge>
       </header>
 
@@ -82,7 +82,7 @@ export function LoanCard({ loan, onViewDetails }: LoanCardProps) {
         {loan.requestedAmount !== null && (
           <>
             <dt className="text-muted-foreground">
-              {t('loanTracking.fields.requestedAmount', { defaultValue: 'Αιτηθέν' })}
+              {t('loanTracking.fields.requestedAmount')}
             </dt>
             <dd className="font-medium">€{loan.requestedAmount.toLocaleString('el-GR')}</dd>
           </>
@@ -90,7 +90,7 @@ export function LoanCard({ loan, onViewDetails }: LoanCardProps) {
         {loan.approvedAmount !== null && (
           <>
             <dt className="text-muted-foreground">
-              {t('loanTracking.fields.approvedAmount', { defaultValue: 'Εγκεκριμένο' })}
+              {t('loanTracking.fields.approvedAmount')}
             </dt>
             <dd className="font-medium">€{loan.approvedAmount.toLocaleString('el-GR')}</dd>
           </>
@@ -98,7 +98,7 @@ export function LoanCard({ loan, onViewDetails }: LoanCardProps) {
         {loan.interestRate !== null && (
           <>
             <dt className="text-muted-foreground">
-              {t('loanTracking.fields.interestRate', { defaultValue: 'Επιτόκιο' })}
+              {t('loanTracking.fields.interestRate')}
             </dt>
             <dd className="font-medium">
               {loan.interestRate}%
@@ -109,9 +109,9 @@ export function LoanCard({ loan, onViewDetails }: LoanCardProps) {
         {loan.termYears !== null && (
           <>
             <dt className="text-muted-foreground">
-              {t('loanTracking.fields.termYears', { defaultValue: 'Διάρκεια' })}
+              {t('loanTracking.fields.termYears')}
             </dt>
-            <dd className="font-medium">{loan.termYears} έτη</dd>
+            <dd className="font-medium">{loan.termYears} {t('loanTracking.fields.yearsUnit')}</dd>
           </>
         )}
       </dl>
@@ -141,7 +141,7 @@ export function LoanCard({ loan, onViewDetails }: LoanCardProps) {
         <section className="space-y-1">
           <span className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground">
-              {t('loanTracking.fields.disbursedAmount', { defaultValue: 'Εκταμίευση' })}
+              {t('loanTracking.fields.disbursedAmount')}
             </span>
             <span>
               €{loan.disbursedAmount.toLocaleString('el-GR')} / €{loan.approvedAmount.toLocaleString('el-GR')}
@@ -163,7 +163,7 @@ export function LoanCard({ loan, onViewDetails }: LoanCardProps) {
           onClick={onViewDetails}
         >
           <Eye className="h-3 w-3" />
-          {t('actions.viewDetails', { defaultValue: 'Λεπτομέρειες' })}
+          {t('actions.viewDetails')}
         </Button>
       </footer>
     </article>

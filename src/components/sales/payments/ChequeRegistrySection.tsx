@@ -69,7 +69,7 @@ export function ChequeRegistrySection({
         <span className="flex items-center gap-2">
           <FileText className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-semibold">
-            {t('chequeRegistry.title', { defaultValue: 'Μητρώο Επιταγών' })}
+            {t('chequeRegistry.title')}
           </h3>
         </span>
         <Button
@@ -79,13 +79,13 @@ export function ChequeRegistrySection({
           onClick={() => setAddDialogOpen(true)}
         >
           <Plus className="h-3 w-3" />
-          {t('chequeRegistry.actions.addCheque', { defaultValue: 'Νέα Επιταγή' })}
+          {t('chequeRegistry.actions.addCheque')}
         </Button>
       </header>
 
       {cheques.length === 0 ? (
         <p className="text-xs text-muted-foreground text-center py-2">
-          {t('chequeRegistry.noCheques', { defaultValue: 'Δεν υπάρχουν καταγεγραμμένες επιταγές.' })}
+          {t('chequeRegistry.noCheques')}
         </p>
       ) : (
         <ChequeTable cheques={cheques} onSelectCheque={setDetailCheque} />

@@ -97,12 +97,12 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
         <header className="flex items-center gap-2">
           <CreditCard className="h-4 w-4 text-muted-foreground" />
           <h2 className="text-sm font-semibold">
-            {t('title', { defaultValue: 'Πληρωμές' })}
+            {t('title')}
           </h2>
         </header>
 
         <p className="text-xs text-muted-foreground text-center py-4">
-          {t('paymentPlan.noPlan', { defaultValue: 'Δεν υπάρχει πρόγραμμα αποπληρωμής.' })}
+          {t('paymentPlan.noPlan')}
         </p>
 
         <Button
@@ -113,12 +113,12 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
           disabled={!buyerContactId}
         >
           <Plus className="h-3 w-3" />
-          {t('paymentPlan.createPlan', { defaultValue: 'Δημιουργία Προγράμματος' })}
+          {t('paymentPlan.createPlan')}
         </Button>
 
         {!buyerContactId && (
           <p className="text-[10px] text-muted-foreground text-center">
-            {t('errors.noBuyer', { defaultValue: 'Πρώτα ορίστε αγοραστή' })}
+            {t('errors.noBuyer')}
           </p>
         )}
 
@@ -147,7 +147,7 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
         <span className="flex items-center gap-2">
           <CreditCard className="h-4 w-4 text-muted-foreground" />
           <h2 className="text-sm font-semibold">
-            {t('title', { defaultValue: 'Πληρωμές' })}
+            {t('title')}
           </h2>
         </span>
         {resolvedProjectId && (
@@ -158,7 +158,7 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
             onClick={() => setReportDialogOpen(true)}
           >
             <FileSpreadsheet className="h-3.5 w-3.5" />
-            {t('report.button', { defaultValue: 'Αναφορά' })}
+            {t('report.button')}
           </Button>
         )}
       </header>

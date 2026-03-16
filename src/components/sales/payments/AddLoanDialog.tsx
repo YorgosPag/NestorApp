@@ -77,7 +77,7 @@ export function AddLoanDialog({ open, onOpenChange, onAdd, existingCount }: AddL
       const result = await onAdd(input);
 
       if (result.success) {
-        toast.success(t('loanTracking.addLoan', { defaultValue: 'Δάνειο προστέθηκε' }));
+        toast.success(t('loanTracking.addLoan'));
         // Reset form
         setBankCode('');
         setBankName('');
@@ -99,12 +99,10 @@ export function AddLoanDialog({ open, onOpenChange, onAdd, existingCount }: AddL
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="text-sm">
-            {t('loanTracking.addLoan', { defaultValue: 'Νέο Δάνειο' })}
+            {t('loanTracking.addLoan')}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            {t('loanTracking.addLoanDesc', {
-              defaultValue: 'Καταγράψτε ένα νέο τραπεζικό δάνειο για αυτό το payment plan.',
-            })}
+            {t('loanTracking.addLoanDesc')}
           </DialogDescription>
         </DialogHeader>
 
@@ -116,7 +114,7 @@ export function AddLoanDialog({ open, onOpenChange, onAdd, existingCount }: AddL
               setBankCode(code);
               setBankName(bank?.name ?? '');
             }}
-            label={`${t('loanTracking.fields.bankName', { defaultValue: 'Τράπεζα' })} *`}
+            label={`${t('loanTracking.fields.bankName')} *`}
             required
             allowOther
           />
@@ -124,7 +122,7 @@ export function AddLoanDialog({ open, onOpenChange, onAdd, existingCount }: AddL
           {/* Requested Amount */}
           <span className="space-y-1">
             <Label className="text-xs">
-              {t('loanTracking.fields.requestedAmount', { defaultValue: 'Αιτηθέν Ποσό (€)' })}
+              {t('loanTracking.fields.requestedAmount')}
             </Label>
             <Input
               type="number"
@@ -138,7 +136,7 @@ export function AddLoanDialog({ open, onOpenChange, onAdd, existingCount }: AddL
           {/* Disbursement Type */}
           <span className="space-y-1">
             <Label className="text-xs">
-              {t('loanTracking.disbursementType.title', { defaultValue: 'Τύπος Εκταμίευσης' })}
+              {t('loanTracking.disbursementType.title')}
             </Label>
             <Select
               value={disbursementType}
@@ -149,10 +147,10 @@ export function AddLoanDialog({ open, onOpenChange, onAdd, existingCount }: AddL
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="lump_sum" className="text-xs">
-                  {t('loanTracking.disbursementType.lump_sum', { defaultValue: 'Εφάπαξ' })}
+                  {t('loanTracking.disbursementType.lump_sum')}
                 </SelectItem>
                 <SelectItem value="phased" className="text-xs">
-                  {t('loanTracking.disbursementType.phased', { defaultValue: 'Σταδιακή (Milestones)' })}
+                  {t('loanTracking.disbursementType.phased')}
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -166,7 +164,7 @@ export function AddLoanDialog({ open, onOpenChange, onAdd, existingCount }: AddL
               onCheckedChange={(checked) => setIsPrimary(checked === true)}
             />
             <Label htmlFor="isPrimary" className="text-xs cursor-pointer">
-              {t('loanTracking.primaryLoan', { defaultValue: 'Κύριο Δάνειο' })}
+              {t('loanTracking.primaryLoan')}
             </Label>
           </span>
         </fieldset>
@@ -178,7 +176,7 @@ export function AddLoanDialog({ open, onOpenChange, onAdd, existingCount }: AddL
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
           >
-            {t('dialog.cancel', { defaultValue: 'Ακύρωση' })}
+            {t('dialog.cancel')}
           </Button>
           <Button
             size="sm"
@@ -186,7 +184,7 @@ export function AddLoanDialog({ open, onOpenChange, onAdd, existingCount }: AddL
             onClick={handleSubmit}
           >
             {isSubmitting && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
-            {t('loanTracking.addLoan', { defaultValue: 'Προσθήκη' })}
+            {t('loanTracking.addLoan')}
           </Button>
         </DialogFooter>
       </DialogContent>

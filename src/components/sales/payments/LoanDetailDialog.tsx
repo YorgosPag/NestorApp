@@ -116,7 +116,7 @@ export function LoanDetailDialog({
     if (Object.keys(editFields).length === 0) return;
     handleAction(
       () => onUpdate(editFields),
-      t('loanTracking.actions.updateStatus', { defaultValue: 'Ενημερώθηκε' })
+      t('loanTracking.actions.updateStatus')
     );
   }, [editFields, onUpdate, handleAction, t]);
 
@@ -124,7 +124,7 @@ export function LoanDetailDialog({
   const handleTransition = useCallback((targetStatus: string) => {
     handleAction(
       () => onTransition({ targetStatus: targetStatus as LoanTransitionInput['targetStatus'] }),
-      t('loanTracking.actions.updateStatus', { defaultValue: 'Η κατάσταση ενημερώθηκε' })
+      t('loanTracking.actions.updateStatus')
     );
   }, [onTransition, handleAction, t]);
 
@@ -138,7 +138,7 @@ export function LoanDetailDialog({
         milestone: disbMilestone.trim(),
         disbursementDate: new Date(disbDate).toISOString(),
       }),
-      t('loanTracking.actions.recordDisbursement', { defaultValue: 'Εκταμίευση καταγράφηκε' })
+      t('loanTracking.actions.recordDisbursement')
     );
   }, [disbAmount, disbMilestone, disbDate, onDisburse, handleAction, t]);
 
@@ -151,7 +151,7 @@ export function LoanDetailDialog({
         summary: commSummary.trim(),
         nextAction: commNextAction.trim() || undefined,
       }),
-      t('loanTracking.commLog.title', { defaultValue: 'Καταγράφηκε' })
+      t('loanTracking.commLog.title')
     );
   }, [commType, commSummary, commNextAction, onAddCommLog, handleAction, t]);
 
@@ -167,7 +167,7 @@ export function LoanDetailDialog({
             {loan.bankName}
             {loan.isPrimary && (
               <Badge variant="outline" className="text-[10px]">
-                {t('loanTracking.primaryLoan', { defaultValue: 'Κύριο' })}
+                {t('loanTracking.primaryLoan')}
               </Badge>
             )}
           </DialogTitle>
@@ -176,15 +176,15 @@ export function LoanDetailDialog({
         <Tabs defaultValue="details">
           <TabsList className="grid grid-cols-4 w-full">
             <TabsTrigger value="details" className="text-xs">
-              {t('actions.viewDetails', { defaultValue: 'Στοιχεία' })}
+              {t('actions.viewDetails')}
             </TabsTrigger>
             <TabsTrigger value="disbursements" className="text-xs">
-              {t('loanTracking.fields.disbursedAmount', { defaultValue: 'Εκταμιεύσεις' })}
+              {t('loanTracking.fields.disbursedAmount')}
             </TabsTrigger>
             <TabsTrigger value="commlog" className="text-xs">
-              {t('loanTracking.commLog.title', { defaultValue: 'Ιστορικό' })}
+              {t('loanTracking.commLog.title')}
             </TabsTrigger>
-            <TabsTrigger value="timeline" className="text-xs">Timeline</TabsTrigger>
+            <TabsTrigger value="timeline" className="text-xs">{t('loanTracking.timeline')}</TabsTrigger>
           </TabsList>
 
           {/* ============== DETAILS TAB ============== */}
@@ -193,7 +193,7 @@ export function LoanDetailDialog({
             {nextStatuses.length > 0 && (
               <fieldset className="space-y-2">
                 <legend className="text-xs font-semibold text-muted-foreground">
-                  {t('loanTracking.actions.updateStatus', { defaultValue: 'Αλλαγή Κατάστασης' })}
+                  {t('loanTracking.actions.updateStatus')}
                 </legend>
                 <nav className="flex flex-wrap gap-1">
                   {nextStatuses.map((ns) => (
@@ -206,7 +206,7 @@ export function LoanDetailDialog({
                       onClick={() => handleTransition(ns)}
                     >
                       <ArrowRight className="h-2.5 w-2.5" />
-                      {t(`loanTracking.status.${ns}`, { defaultValue: ns })}
+                      {t(`loanTracking.status.${ns}`)}
                     </Button>
                   ))}
                 </nav>
@@ -216,7 +216,7 @@ export function LoanDetailDialog({
             {/* Editable Fields */}
             <fieldset className="grid grid-cols-2 gap-3">
               <span className="space-y-1">
-                <Label className="text-xs">{t('loanTracking.fields.bankName', { defaultValue: 'Τράπεζα' })}</Label>
+                <Label className="text-xs">{t('loanTracking.fields.bankName')}</Label>
                 <Input
                   defaultValue={loan.bankName}
                   className="h-8 text-xs"
@@ -224,7 +224,7 @@ export function LoanDetailDialog({
                 />
               </span>
               <span className="space-y-1">
-                <Label className="text-xs">{t('loanTracking.fields.bankBranch', { defaultValue: 'Υποκατάστημα' })}</Label>
+                <Label className="text-xs">{t('loanTracking.fields.bankBranch')}</Label>
                 <Input
                   defaultValue={loan.bankBranch ?? ''}
                   className="h-8 text-xs"
@@ -232,7 +232,7 @@ export function LoanDetailDialog({
                 />
               </span>
               <span className="space-y-1">
-                <Label className="text-xs">{t('loanTracking.fields.requestedAmount', { defaultValue: 'Αιτηθέν Ποσό' })}</Label>
+                <Label className="text-xs">{t('loanTracking.fields.requestedAmount')}</Label>
                 <Input
                   type="number"
                   defaultValue={loan.requestedAmount ?? ''}
@@ -241,7 +241,7 @@ export function LoanDetailDialog({
                 />
               </span>
               <span className="space-y-1">
-                <Label className="text-xs">{t('loanTracking.fields.approvedAmount', { defaultValue: 'Εγκεκριμένο Ποσό' })}</Label>
+                <Label className="text-xs">{t('loanTracking.fields.approvedAmount')}</Label>
                 <Input
                   type="number"
                   defaultValue={loan.approvedAmount ?? ''}
@@ -250,7 +250,7 @@ export function LoanDetailDialog({
                 />
               </span>
               <span className="space-y-1">
-                <Label className="text-xs">{t('loanTracking.fields.interestRate', { defaultValue: 'Επιτόκιο (%)' })}</Label>
+                <Label className="text-xs">{t('loanTracking.fields.interestRate')}</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -260,7 +260,7 @@ export function LoanDetailDialog({
                 />
               </span>
               <span className="space-y-1">
-                <Label className="text-xs">{t('loanTracking.fields.termYears', { defaultValue: 'Διάρκεια (Έτη)' })}</Label>
+                <Label className="text-xs">{t('loanTracking.fields.termYears')}</Label>
                 <Input
                   type="number"
                   defaultValue={loan.termYears ?? ''}
@@ -269,7 +269,7 @@ export function LoanDetailDialog({
                 />
               </span>
               <span className="space-y-1">
-                <Label className="text-xs">{t('loanTracking.fields.appraisalValue', { defaultValue: 'Αξία Εκτίμησης' })}</Label>
+                <Label className="text-xs">{t('loanTracking.fields.appraisalValue')}</Label>
                 <Input
                   type="number"
                   defaultValue={loan.appraisalValue ?? ''}
@@ -278,7 +278,7 @@ export function LoanDetailDialog({
                 />
               </span>
               <span className="space-y-1">
-                <Label className="text-xs">{t('loanTracking.fields.monthlyPayment', { defaultValue: 'Μηνιαία Δόση' })}</Label>
+                <Label className="text-xs">{t('loanTracking.fields.monthlyPayment')}</Label>
                 <Input
                   type="number"
                   defaultValue={loan.monthlyPayment ?? ''}
@@ -289,7 +289,7 @@ export function LoanDetailDialog({
             </fieldset>
 
             <span className="space-y-1">
-              <Label className="text-xs">{t('labels.notes', { defaultValue: 'Σημειώσεις' })}</Label>
+              <Label className="text-xs">{t('labels.notes')}</Label>
               <Textarea
                 defaultValue={loan.notes ?? ''}
                 className="text-xs min-h-[60px]"
@@ -304,7 +304,7 @@ export function LoanDetailDialog({
               onClick={handleSaveDetails}
             >
               {isSubmitting && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
-              {t('dialog.confirm', { defaultValue: 'Αποθήκευση' })}
+              {t('dialog.confirm')}
             </Button>
           </TabsContent>
 
@@ -330,18 +330,18 @@ export function LoanDetailDialog({
               </ul>
             ) : (
               <p className="text-xs text-muted-foreground text-center py-2">
-                Δεν υπάρχουν εκταμιεύσεις.
+                {t('loanTracking.noDisbursements')}
               </p>
             )}
 
             {/* New disbursement form */}
             <fieldset className="space-y-2 border-t pt-2">
               <legend className="text-xs font-semibold">
-                {t('loanTracking.actions.recordDisbursement', { defaultValue: 'Νέα Εκταμίευση' })}
+                {t('loanTracking.actions.recordDisbursement')}
               </legend>
               <span className="grid grid-cols-2 gap-2">
                 <span className="space-y-1">
-                  <Label className="text-xs">{t('labels.amount', { defaultValue: 'Ποσό' })}</Label>
+                  <Label className="text-xs">{t('labels.amount')}</Label>
                   <Input
                     type="number"
                     value={disbAmount}
@@ -351,17 +351,17 @@ export function LoanDetailDialog({
                   />
                 </span>
                 <span className="space-y-1">
-                  <Label className="text-xs">Milestone</Label>
+                  <Label className="text-xs">{t('loanTracking.milestone')}</Label>
                   <Input
                     value={disbMilestone}
                     onChange={(e) => setDisbMilestone(e.target.value)}
                     className="h-8 text-xs"
-                    placeholder="π.χ. Θεμελίωση"
+                    placeholder={t('loanTracking.milestonePlaceholder')}
                   />
                 </span>
               </span>
               <span className="space-y-1">
-                <Label className="text-xs">{t('labels.paymentDate', { defaultValue: 'Ημερομηνία' })}</Label>
+                <Label className="text-xs">{t('labels.paymentDate')}</Label>
                 <Input
                   type="date"
                   value={disbDate}
@@ -378,7 +378,7 @@ export function LoanDetailDialog({
               >
                 {isSubmitting && <Loader2 className="h-3 w-3 animate-spin" />}
                 <Plus className="h-3 w-3" />
-                {t('loanTracking.actions.recordDisbursement', { defaultValue: 'Καταγραφή' })}
+                {t('loanTracking.actions.recordDisbursement')}
               </Button>
             </fieldset>
           </TabsContent>
@@ -392,7 +392,7 @@ export function LoanDetailDialog({
                   <li key={i} className="text-xs border-b pb-1.5 space-y-0.5">
                     <span className="flex items-center justify-between">
                       <Badge variant="outline" className="text-[10px]">
-                        {t(`loanTracking.commLog.type.${entry.type}`, { defaultValue: entry.type })}
+                        {t(`loanTracking.commLog.type.${entry.type}`)}
                       </Badge>
                       <time className="text-muted-foreground">
                         {new Date(entry.date).toLocaleDateString('el-GR')}
@@ -409,17 +409,17 @@ export function LoanDetailDialog({
               </ul>
             ) : (
               <p className="text-xs text-muted-foreground text-center py-2">
-                Δεν υπάρχουν εγγραφές.
+                {t('loanTracking.noCommLog')}
               </p>
             )}
 
             {/* New entry form */}
             <fieldset className="space-y-2 border-t pt-2">
               <legend className="text-xs font-semibold">
-                {t('loanTracking.actions.addCommLog', { defaultValue: 'Νέα Επικοινωνία' })}
+                {t('loanTracking.actions.addCommLog')}
               </legend>
               <span className="space-y-1">
-                <Label className="text-xs">Τύπος</Label>
+                <Label className="text-xs">{t('loanTracking.commLog.typeLabel')}</Label>
                 <Select value={commType} onValueChange={(v) => setCommType(v as CommunicationEntryType)}>
                   <SelectTrigger className="h-8 text-xs">
                     <SelectValue />
@@ -427,28 +427,28 @@ export function LoanDetailDialog({
                   <SelectContent>
                     {(['phone', 'email', 'meeting', 'document', 'note'] as const).map(ct => (
                       <SelectItem key={ct} value={ct} className="text-xs">
-                        {t(`loanTracking.commLog.type.${ct}`, { defaultValue: ct })}
+                        {t(`loanTracking.commLog.type.${ct}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </span>
               <span className="space-y-1">
-                <Label className="text-xs">Περιγραφή</Label>
+                <Label className="text-xs">{t('loanTracking.commLog.description')}</Label>
                 <Textarea
                   value={commSummary}
                   onChange={(e) => setCommSummary(e.target.value)}
                   className="text-xs min-h-[50px]"
-                  placeholder="Τι συζητήθηκε;"
+                  placeholder={t('loanTracking.commLog.descriptionPlaceholder')}
                 />
               </span>
               <span className="space-y-1">
-                <Label className="text-xs">Επόμενη Ενέργεια</Label>
+                <Label className="text-xs">{t('loanTracking.commLog.nextAction')}</Label>
                 <Input
                   value={commNextAction}
                   onChange={(e) => setCommNextAction(e.target.value)}
                   className="h-8 text-xs"
-                  placeholder="π.χ. Αναμονή εκτίμησης"
+                  placeholder={t('loanTracking.commLog.nextActionPlaceholder')}
                 />
               </span>
               <Button
@@ -460,7 +460,7 @@ export function LoanDetailDialog({
               >
                 {isSubmitting && <Loader2 className="h-3 w-3 animate-spin" />}
                 <Plus className="h-3 w-3" />
-                {t('loanTracking.actions.addCommLog', { defaultValue: 'Καταγραφή' })}
+                {t('loanTracking.actions.addCommLog')}
               </Button>
             </fieldset>
           </TabsContent>

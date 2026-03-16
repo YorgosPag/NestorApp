@@ -60,11 +60,11 @@ export function PaymentPlanOverview({ plan }: PaymentPlanOverviewProps) {
         <div className="flex items-center gap-2">
           <CreditCard className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-semibold">
-            {t('paymentPlan.title', { defaultValue: 'Πρόγραμμα Αποπληρωμής' })}
+            {t('paymentPlan.title')}
           </h3>
         </div>
         <Badge variant={STATUS_VARIANT[plan.status] ?? 'secondary'}>
-          {t(`paymentPlan.status.${plan.status}`, { defaultValue: plan.status })}
+          {t(`paymentPlan.status.${plan.status}`)}
         </Badge>
       </header>
 
@@ -72,7 +72,7 @@ export function PaymentPlanOverview({ plan }: PaymentPlanOverviewProps) {
       <dl className="grid grid-cols-3 gap-2 text-center">
         <div>
           <dt className="text-[10px] text-muted-foreground uppercase">
-            {t('labels.totalAmount', { defaultValue: 'Συνολικό' })}
+            {t('labels.totalAmount')}
           </dt>
           <dd className="text-sm font-semibold">
             €{plan.totalAmount.toLocaleString('el-GR')}
@@ -80,7 +80,7 @@ export function PaymentPlanOverview({ plan }: PaymentPlanOverviewProps) {
         </div>
         <div>
           <dt className="text-[10px] text-muted-foreground uppercase">
-            {t('labels.paidAmount', { defaultValue: 'Πληρωμένο' })}
+            {t('labels.paidAmount')}
           </dt>
           <dd className="text-sm font-semibold text-green-600">
             €{plan.paidAmount.toLocaleString('el-GR')}
@@ -88,7 +88,7 @@ export function PaymentPlanOverview({ plan }: PaymentPlanOverviewProps) {
         </div>
         <div>
           <dt className="text-[10px] text-muted-foreground uppercase">
-            {t('labels.remainingAmount', { defaultValue: 'Υπόλοιπο' })}
+            {t('labels.remainingAmount')}
           </dt>
           <dd className="text-sm font-semibold text-orange-600">
             €{plan.remainingAmount.toLocaleString('el-GR')}
@@ -106,13 +106,13 @@ export function PaymentPlanOverview({ plan }: PaymentPlanOverviewProps) {
       <footer className="flex items-center justify-between text-xs text-muted-foreground">
         <span>
           {paidInstallments}/{plan.installments.length}{' '}
-          {t('installments.title', { defaultValue: 'δόσεις' })}
+          {t('installments.title')}
         </span>
 
         {overdueCount > 0 && (
           <span className="flex items-center gap-1 text-destructive">
             <AlertTriangle className="h-3 w-3" />
-            {overdueCount} {t('labels.overdueCount', { defaultValue: 'ληξιπρόθεσμες' })}
+            {overdueCount} {t('labels.overdueCount')}
           </span>
         )}
 

@@ -138,7 +138,7 @@ export function EditInstallmentDialog({
         setSubmitting(false);
 
         if (result.success) {
-          toast.success(t('installments.updateSuccess', { defaultValue: 'Η δόση ενημερώθηκε' }));
+          toast.success(t('installments.updateSuccess'));
           onOpenChange(false);
         } else {
           toast.error(result.error ?? 'Error');
@@ -150,7 +150,7 @@ export function EditInstallmentDialog({
       const numAmount = parseFloat(amount);
       const numPercentage = parseFloat(percentage);
       if (isNaN(numAmount) || numAmount <= 0) {
-        toast.error('Εισάγετε έγκυρο ποσό');
+        toast.error(t('errors.invalidAmount'));
         return;
       }
 
@@ -167,7 +167,7 @@ export function EditInstallmentDialog({
       setSubmitting(false);
 
       if (result.success) {
-        toast.success(t('installments.updateSuccess', { defaultValue: 'Η δόση ενημερώθηκε' }));
+        toast.success(t('installments.updateSuccess'));
         onOpenChange(false);
       } else {
         toast.error(result.error ?? 'Error');
@@ -177,15 +177,15 @@ export function EditInstallmentDialog({
       const numAmount = parseFloat(amount);
       const numPercentage = parseFloat(percentage);
       if (!label.trim()) {
-        toast.error('Εισάγετε ετικέτα');
+        toast.error(t('errors.invalidLabel'));
         return;
       }
       if (isNaN(numAmount) || numAmount <= 0) {
-        toast.error('Εισάγετε έγκυρο ποσό');
+        toast.error(t('errors.invalidAmount'));
         return;
       }
       if (!dueDate) {
-        toast.error('Εισάγετε ημερομηνία λήξης');
+        toast.error(t('errors.invalidDueDate'));
         return;
       }
 
@@ -205,7 +205,7 @@ export function EditInstallmentDialog({
       setSubmitting(false);
 
       if (result.success) {
-        toast.success(t('installments.addSuccess', { defaultValue: 'Η δόση προστέθηκε' }));
+        toast.success(t('installments.addSuccess'));
         onOpenChange(false);
       } else {
         toast.error(result.error ?? 'Error');
@@ -223,7 +223,7 @@ export function EditInstallmentDialog({
     setDeleteConfirmOpen(false);
 
     if (result.success) {
-      toast.success(t('installments.deleteSuccess', { defaultValue: 'Η δόση διαγράφηκε' }));
+      toast.success(t('installments.deleteSuccess'));
       onOpenChange(false);
     } else {
       toast.error(result.error ?? 'Error');
@@ -237,8 +237,8 @@ export function EditInstallmentDialog({
     installment.paidAmount === 0;
 
   const dialogTitle = mode === 'add'
-    ? t('installments.addInstallment', { defaultValue: 'Προσθήκη Δόσης' })
-    : t('installments.editInstallment', { defaultValue: 'Επεξεργασία Δόσης' });
+    ? t('installments.addInstallment')
+    : t('installments.editInstallment');
 
   return (
     <>
@@ -248,7 +248,7 @@ export function EditInstallmentDialog({
             <DialogTitle>{dialogTitle}</DialogTitle>
             {isNotesOnly && mode === 'edit' && (
               <DialogDescription>
-                {t('installments.notesOnlyWarning', { defaultValue: 'Σε ενεργό plan μπορείτε να αλλάξετε μόνο σημειώσεις' })}
+                {t('installments.notesOnlyWarning')}
               </DialogDescription>
             )}
           </DialogHeader>
@@ -258,13 +258,13 @@ export function EditInstallmentDialog({
             {!isNotesOnly && (
               <div className="space-y-1">
                 <Label htmlFor="inst-label">
-                  {t('labels.dueDate', { defaultValue: 'Ετικέτα' })}
+                  {t('labels.dueDate')}
                 </Label>
                 <Input
                   id="inst-label"
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
-                  placeholder="π.χ. Προκαταβολή 30%"
+                  placeholder={t('installments.labelPlaceholder')}
                 />
               </div>
             )}
@@ -272,7 +272,7 @@ export function EditInstallmentDialog({
             {/* Type */}
             {!isNotesOnly && (
               <div className="space-y-1">
-                <Label>{t('installments.typeLabel', { defaultValue: 'Τύπος δόσης' })}</Label>
+                <Label>{t('installments.typeLabel')}</Label>
                 <Select value={type} onValueChange={(v) => setType(v as InstallmentType)}>
                   <SelectTrigger>
                     <SelectValue />
@@ -280,7 +280,7 @@ export function EditInstallmentDialog({
                   <SelectContent>
                     {INSTALLMENT_TYPES.map((iType) => (
                       <SelectItem key={iType} value={iType}>
-                        {t(`installmentType.${iType}`, { defaultValue: iType })}
+                        {t(`installmentType.${iType}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -293,7 +293,7 @@ export function EditInstallmentDialog({
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label htmlFor="inst-amount">
-                    {t('labels.amount', { defaultValue: 'Ποσό' })} (€)
+                    {t('labels.amount')} (€)
                   </Label>
                   <Input
                     id="inst-amount"
@@ -323,7 +323,7 @@ export function EditInstallmentDialog({
             {!isNotesOnly && (
               <div className="space-y-1">
                 <Label htmlFor="inst-due">
-                  {t('labels.dueDate', { defaultValue: 'Ημ. Λήξης' })}
+                  {t('labels.dueDate')}
                 </Label>
                 <Input
                   id="inst-due"
@@ -338,7 +338,7 @@ export function EditInstallmentDialog({
             {mode === 'add' && totalInstallments > 0 && (
               <div className="space-y-1">
                 <Label>
-                  {t('installments.insertPosition', { defaultValue: 'Θέση εισαγωγής' })}
+                  {t('installments.insertPosition')}
                 </Label>
                 <Select value={insertAtIndex} onValueChange={setInsertAtIndex}>
                   <SelectTrigger>
@@ -346,12 +346,11 @@ export function EditInstallmentDialog({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="end">
-                      {t('installments.atEnd', { defaultValue: 'Στο τέλος' })}
+                      {t('installments.atEnd')}
                     </SelectItem>
                     {Array.from({ length: totalInstallments }, (_, i) => (
                       <SelectItem key={i} value={i.toString()}>
                         {t('installments.beforeInstallment', {
-                          defaultValue: `Πριν τη δόση #${i + 1}`,
                           index: (i + 1).toString(),
                         })}
                       </SelectItem>
@@ -364,7 +363,7 @@ export function EditInstallmentDialog({
             {/* Notes */}
             <div className="space-y-1">
               <Label htmlFor="inst-notes">
-                {t('labels.notes', { defaultValue: 'Σημειώσεις' })}
+                {t('labels.notes')}
               </Label>
               <Textarea
                 id="inst-notes"
@@ -384,20 +383,20 @@ export function EditInstallmentDialog({
                 disabled={submitting}
               >
                 <Trash2 className="mr-1 h-3.5 w-3.5" />
-                {t('installments.deleteInstallment', { defaultValue: 'Διαγραφή' })}
+                {t('installments.deleteInstallment')}
               </Button>
             ) : (
               <span />
             )}
             <span className="flex gap-2">
               <Button variant="outline" onClick={() => onOpenChange(false)}>
-                {t('dialog.cancel', { defaultValue: 'Ακύρωση' })}
+                {t('dialog.cancel')}
               </Button>
               <Button onClick={handleSubmit} disabled={submitting}>
                 {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {mode === 'add'
-                  ? t('installments.addInstallment', { defaultValue: 'Προσθήκη' })
-                  : t('dialog.confirm', { defaultValue: 'Αποθήκευση' })}
+                  ? t('installments.addInstallment')
+                  : t('dialog.confirm')}
               </Button>
             </span>
           </DialogFooter>
@@ -409,17 +408,17 @@ export function EditInstallmentDialog({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {t('installments.deleteInstallment', { defaultValue: 'Διαγραφή Δόσης' })}
+              {t('installments.deleteInstallment')}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {t('installments.confirmDelete', { defaultValue: 'Σίγουρα θέλετε να διαγράψετε αυτήν τη δόση;' })}
+              {t('installments.confirmDelete')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('dialog.cancel', { defaultValue: 'Ακύρωση' })}</AlertDialogCancel>
+            <AlertDialogCancel>{t('dialog.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t('installments.deleteInstallment', { defaultValue: 'Διαγραφή' })}
+              {t('installments.deleteInstallment')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -109,11 +109,11 @@ export function AddChequeDialog({
 
       const result = await onAdd(input);
       if (result.success) {
-        toast.success(t('chequeRegistry.actions.chequeCreated', { defaultValue: 'Η επιταγή καταγράφηκε' }));
+        toast.success(t('chequeRegistry.actions.chequeCreated'));
         resetForm();
         onOpenChange(false);
       } else {
-        toast.error(result.error ?? 'Σφάλμα');
+        toast.error(result.error ?? t('errors.createFailed'));
       }
     } finally {
       setIsSubmitting(false);
@@ -125,7 +125,7 @@ export function AddChequeDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="text-sm">
-            {t('chequeRegistry.actions.addCheque', { defaultValue: 'Νέα Επιταγή' })}
+            {t('chequeRegistry.actions.addCheque')}
           </DialogTitle>
         </DialogHeader>
 
@@ -136,7 +136,7 @@ export function AddChequeDialog({
           {/* Cheque Type */}
           <fieldset className="space-y-1">
             <Label className="text-xs">
-              {t('chequeRegistry.fields.chequeType', { defaultValue: 'Τύπος' })}
+              {t('chequeRegistry.fields.chequeType')}
             </Label>
             <Select value={chequeType} onValueChange={(v) => setChequeType(v as ChequeType)}>
               <SelectTrigger className="h-8 text-xs">
@@ -144,10 +144,10 @@ export function AddChequeDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="bank_cheque">
-                  {t('paymentMethod.bank_cheque', { defaultValue: 'Τραπεζική Επιταγή' })}
+                  {t('paymentMethod.bank_cheque')}
                 </SelectItem>
                 <SelectItem value="personal_cheque">
-                  {t('paymentMethod.personal_cheque', { defaultValue: 'Προσωπική Επιταγή' })}
+                  {t('paymentMethod.personal_cheque')}
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -157,7 +157,7 @@ export function AddChequeDialog({
           <fieldset className="grid grid-cols-2 gap-2">
             <section className="space-y-1">
               <Label className="text-xs">
-                {t('chequeRegistry.fields.chequeNumber', { defaultValue: 'Αρ. Επιταγής' })}
+                {t('chequeRegistry.fields.chequeNumber')}
               </Label>
               <Input
                 className="h-8 text-xs"
@@ -168,7 +168,7 @@ export function AddChequeDialog({
             </section>
             <section className="space-y-1">
               <Label className="text-xs">
-                {t('chequeRegistry.fields.amount', { defaultValue: 'Ποσό (€)' })}
+                {t('chequeRegistry.fields.amount')}
               </Label>
               <Input
                 className="h-8 text-xs"
@@ -190,12 +190,12 @@ export function AddChequeDialog({
                 setBankCode(code);
                 setBankName(bank?.name ?? '');
               }}
-              label={t('chequeRegistry.fields.bankName', { defaultValue: 'Τράπεζα' })}
+              label={t('chequeRegistry.fields.bankName')}
               allowOther
             />
             <section className="space-y-1">
               <Label className="text-xs">
-                {t('chequeRegistry.fields.bankBranch', { defaultValue: 'Υποκατάστημα' })}
+                {t('chequeRegistry.fields.bankBranch')}
               </Label>
               <Input
                 className="h-8 text-xs"
@@ -208,7 +208,7 @@ export function AddChequeDialog({
           {/* Drawer Name */}
           <fieldset className="space-y-1">
             <Label className="text-xs">
-              {t('chequeRegistry.fields.drawerName', { defaultValue: 'Εκδότης' })}
+              {t('chequeRegistry.fields.drawerName')}
             </Label>
             <Input
               className="h-8 text-xs"
@@ -221,7 +221,7 @@ export function AddChequeDialog({
           <fieldset className="grid grid-cols-2 gap-2">
             <section className="space-y-1">
               <Label className="text-xs">
-                {t('chequeRegistry.fields.issueDate', { defaultValue: 'Ημ. Έκδοσης' })}
+                {t('chequeRegistry.fields.issueDate')}
               </Label>
               <Input
                 className="h-8 text-xs"
@@ -232,7 +232,7 @@ export function AddChequeDialog({
             </section>
             <section className="space-y-1">
               <Label className="text-xs">
-                {t('chequeRegistry.fields.maturityDate', { defaultValue: 'Ημ. Λήξης' })}
+                {t('chequeRegistry.fields.maturityDate')}
               </Label>
               <Input
                 className="h-8 text-xs"
@@ -251,14 +251,14 @@ export function AddChequeDialog({
               onCheckedChange={(v) => setCrossedCheque(v === true)}
             />
             <Label htmlFor="crossedCheque" className="text-xs cursor-pointer">
-              {t('chequeRegistry.fields.crossedCheque', { defaultValue: 'Δίγραμμη Επιταγή' })}
+              {t('chequeRegistry.fields.crossedCheque')}
             </Label>
           </fieldset>
 
           {/* Notes */}
           <fieldset className="space-y-1">
             <Label className="text-xs">
-              {t('labels.notes', { defaultValue: 'Σημειώσεις' })}
+              {t('labels.notes')}
             </Label>
             <Textarea
               className="text-xs min-h-[60px]"
@@ -275,14 +275,14 @@ export function AddChequeDialog({
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
           >
-            {t('dialog.cancel', { defaultValue: 'Ακύρωση' })}
+            {t('dialog.cancel')}
           </Button>
           <Button
             size="sm"
             onClick={handleSubmit}
             disabled={!canSubmit || isSubmitting}
           >
-            {t('chequeRegistry.actions.addCheque', { defaultValue: 'Καταγραφή' })}
+            {t('chequeRegistry.actions.addCheque')}
           </Button>
         </DialogFooter>
       </DialogContent>

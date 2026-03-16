@@ -65,7 +65,7 @@ export function LoanTrackingSection({ unitId }: LoanTrackingSectionProps) {
           <span className="flex items-center gap-2">
             <Landmark className="h-4 w-4 text-muted-foreground" />
             <h3 className="text-sm font-semibold">
-              {t('loanTracking.title', { defaultValue: 'Τραπεζικά Δάνεια' })}
+              {t('loanTracking.title')}
             </h3>
           </span>
           <Button
@@ -75,12 +75,12 @@ export function LoanTrackingSection({ unitId }: LoanTrackingSectionProps) {
             onClick={() => setAddDialogOpen(true)}
           >
             <Plus className="h-3 w-3" />
-            {t('loanTracking.addLoan', { defaultValue: 'Νέο Δάνειο' })}
+            {t('loanTracking.addLoan')}
           </Button>
         </header>
 
         <p className="text-xs text-muted-foreground text-center py-2">
-          {t('loanTracking.noLoans', { defaultValue: 'Δεν υπάρχουν καταγεγραμμένα δάνεια.' })}
+          {t('loanTracking.noLoans')}
         </p>
 
         <AddLoanDialog
@@ -99,7 +99,7 @@ export function LoanTrackingSection({ unitId }: LoanTrackingSectionProps) {
         <span className="flex items-center gap-2">
           <Landmark className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-semibold">
-            {t('loanTracking.title', { defaultValue: 'Τραπεζικά Δάνεια' })}
+            {t('loanTracking.title')}
           </h3>
         </span>
         {loans.length < MAX_LOANS && (
@@ -110,7 +110,7 @@ export function LoanTrackingSection({ unitId }: LoanTrackingSectionProps) {
             onClick={() => setAddDialogOpen(true)}
           >
             <Plus className="h-3 w-3" />
-            {t('loanTracking.addLoan', { defaultValue: 'Νέο Δάνειο' })}
+            {t('loanTracking.addLoan')}
           </Button>
         )}
       </header>
