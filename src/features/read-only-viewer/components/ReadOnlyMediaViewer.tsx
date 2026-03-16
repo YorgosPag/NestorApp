@@ -146,8 +146,9 @@ export function ReadOnlyMediaViewer({
 
   // Read active tab from URL (with validation)
   // ADR-236: For multi-level units, default to first level tab instead of 'floorplans'
+  const hasMultipleLevels = levels && levels.length > 1;
   const parsedTab = parseMediaTabParam(searchParams.get(MEDIA_TAB_PARAM));
-  const activeTab = (parsedTab === DEFAULT_MEDIA_TAB && isMultiLevel && levels && levels.length > 0)
+  const activeTab = (parsedTab === DEFAULT_MEDIA_TAB && hasMultipleLevels && levels.length > 0)
     ? `floorplan-floor-${levels[0].floorId}`
     : parsedTab;
 
