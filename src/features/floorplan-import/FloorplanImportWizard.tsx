@@ -80,7 +80,7 @@ export function FloorplanImportWizard({
 }: FloorplanImportWizardProps) {
   const { t, isNamespaceReady } = useTranslation('files');
 
-  const state = useFloorplanImportState();
+  const state = useFloorplanImportState({ isOpen });
 
   // ── Step labels (translated) ──
   // isNamespaceReady triggers re-compute when lazy-loaded namespace becomes available

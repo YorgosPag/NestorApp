@@ -8,6 +8,8 @@
  * 6-step wizard state: Company → Project → Building → Floor → Type → Upload
  *
  * - Cascading API calls via enterprise-api-client
+ * - Auth-gated fetching (no API calls before authentication)
+ * - Open-gated fetching (no API calls when wizard is closed)
  * - Auto-skip when only 1 option exists
  * - Builds FloorplanUploadConfig for step 6
  *
@@ -142,11 +144,23 @@ const INITIAL_SELECTION: FloorplanImportSelection = {
 const TOTAL_STEPS = 6;
 
 // =============================================================================
+// OPTIONS
+// =============================================================================
+
+interface UseFloorplanImportStateOptions {
+  /** Whether the wizard dialog is currently open */
+  isOpen: boolean;
+}
+
+// =============================================================================
 // HOOK
 // =============================================================================
 
-export function useFloorplanImportState(): UseFloorplanImportStateReturn {
-  const { user } = useAuth();
+export function useFloorplanImportState(
+  options: UseFloorplanImportStateOptions
+): UseFloorplanImportStateReturn {
+  const { isOpen } = options;
+  const { user, loading: authLoading } = useAuth();
 
   // ── Step state ──
   const [step, setStep] = useState(1);
@@ -167,6 +181,26 @@ export function useFloorplanImportState(): UseFloorplanImportStateReturn {
   // ── Raw project data (for extracting buildings without extra API call) ──
   const projectsRawRef = useRef<ProjectItem[]>([]);
 
+  // ── Open epoch: increments each time wizard opens → forces fresh data fetch ──
+  const [openEpoch, setOpenEpoch] = useState(0);
+  const prevOpenRef = useRef(false);
+
+  // Detect open transitions: closed→open increments epoch and resets state
+  useEffect(() => {
+    if (isOpen && !prevOpenRef.current) {
+      // Wizard just opened — fresh start
+      setOpenEpoch((e) => e + 1);
+      setStep(1);
+      setSelection(INITIAL_SELECTION);
+      setCompanies([]);
+      setProjects([]);
+      setBuildings([]);
+      setFloors([]);
+      projectsRawRef.current = [];
+    }
+    prevOpenRef.current = isOpen;
+  }, [isOpen]);
+
   // ── Units via existing hook ──
   const { units: rawUnits, loading: unitLoading } = useFirestoreUnits({
     buildingId: selection.buildingId ?? undefined,
@@ -183,15 +217,22 @@ export function useFloorplanImportState(): UseFloorplanImportStateReturn {
   const autoSkipRef = useRef(false);
 
   // ===========================================================================
+  // AUTH + OPEN GUARDS
+  // ===========================================================================
+  const isReady = isOpen && !authLoading && !!user;
+
+  // ===========================================================================
   // DATA FETCHING
   // ===========================================================================
 
-  // Step 1: Companies
+  // Step 1: Companies — fetches when wizard opens with auth ready
   useEffect(() => {
-    if (step !== 1) return;
+    if (!isReady || step !== 1) return;
 
     let cancelled = false;
     setCompaniesLoading(true);
+
+    logger.info('Fetching companies', { openEpoch });
 
     apiClient.get<CompaniesApiResponse | Record<string, unknown>>('/api/companies')
       .then((res) => {
@@ -215,11 +256,11 @@ export function useFloorplanImportState(): UseFloorplanImportStateReturn {
       .finally(() => { if (!cancelled) setCompaniesLoading(false); });
 
     return () => { cancelled = true; };
-  }, [step]);
+  }, [isReady, step, openEpoch]);
 
   // Step 2: Projects by company
   useEffect(() => {
-    if (step !== 2 || !selection.companyId) return;
+    if (!isReady || step !== 2 || !selection.companyId) return;
 
     let cancelled = false;
     setProjectsLoading(true);
@@ -247,11 +288,11 @@ export function useFloorplanImportState(): UseFloorplanImportStateReturn {
       .finally(() => { if (!cancelled) setProjectsLoading(false); });
 
     return () => { cancelled = true; };
-  }, [step, selection.companyId]);
+  }, [isReady, step, selection.companyId]);
 
   // Step 3: Buildings (from projectsRaw — no extra API)
   useEffect(() => {
-    if (step !== 3 || !selection.projectId) return;
+    if (!isReady || step !== 3 || !selection.projectId) return;
 
     setBuildingsLoading(true);
     const project = projectsRawRef.current.find((p) => p.id === selection.projectId);
@@ -262,11 +303,11 @@ export function useFloorplanImportState(): UseFloorplanImportStateReturn {
     }));
     setBuildings(items);
     setBuildingsLoading(false);
-  }, [step, selection.projectId]);
+  }, [isReady, step, selection.projectId]);
 
   // Step 4: Floors by building
   useEffect(() => {
-    if (step !== 4 || !selection.buildingId) return;
+    if (!isReady || step !== 4 || !selection.buildingId) return;
 
     let cancelled = false;
     setFloorsLoading(true);
@@ -292,14 +333,14 @@ export function useFloorplanImportState(): UseFloorplanImportStateReturn {
       .finally(() => { if (!cancelled) setFloorsLoading(false); });
 
     return () => { cancelled = true; };
-  }, [step, selection.buildingId]);
+  }, [isReady, step, selection.buildingId]);
 
   // ===========================================================================
   // AUTO-SKIP: If only 1 item, auto-select and proceed
   // ===========================================================================
 
   useEffect(() => {
-    if (autoSkipRef.current) return;
+    if (!isOpen || autoSkipRef.current) return;
 
     const items = getCurrentItems();
     const loading = getCurrentLoading();
@@ -318,7 +359,7 @@ export function useFloorplanImportState(): UseFloorplanImportStateReturn {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companies, projects, buildings, floors, companiesLoading, projectsLoading, buildingsLoading, floorsLoading, step]);
+  }, [isOpen, companies, projects, buildings, floors, companiesLoading, projectsLoading, buildingsLoading, floorsLoading, step]);
 
   // ===========================================================================
   // HELPERS
@@ -501,7 +542,7 @@ export function useFloorplanImportState(): UseFloorplanImportStateReturn {
   })();
 
   // ===========================================================================
-  // RESET
+  // RESET (called externally on dialog close)
   // ===========================================================================
 
   const reset = useCallback(() => {
