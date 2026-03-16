@@ -387,6 +387,8 @@ export async function preloadCriticalNamespaces(language: Language = 'el') {
     'storage',       // 🏢 Storage management module - added 2026-01-24
     'parking',       // 🏢 Parking management module - added 2026-01-24
     'dxf-viewer',    // ?? DXF viewer UI - avoids fallback-to-keys after language switch
+    'files',         // 🏢 File storage, floorplan import wizard (SPEC-237D)
+    'properties',    // 🏢 Property viewer, media tabs
     'accounting',    // 🏢 Accounting subapp - all financial modules
     'crm',           // 🏢 CRM module - calendar, teams, pipeline, contacts
   ];
