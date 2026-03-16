@@ -45,6 +45,8 @@ export interface FloorplanUploadConfig {
   purpose?: string;
   /** For multi-level units: which level/floor this floorplan belongs to (ADR-236) */
   levelFloorId?: string;
+  /** Cross-entity visibility — parent entity links (e.g., 'floor:flr_xxx') */
+  linkedTo?: string[];
 }
 
 export interface FloorplanUploadResult {
@@ -157,7 +159,7 @@ function getErrorCodeFromError(error: Error): UploadErrorCode {
 // ============================================================================
 
 export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanUploadReturn {
-  const { companyId, projectId, entityType, entityId, domain, category, userId, entityLabel, purpose = 'floorplan' } = config;
+  const { companyId, projectId, entityType, entityId, domain, category, userId, entityLabel, purpose = 'floorplan', linkedTo } = config;
 
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -207,6 +209,7 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
         companyId, projectId, entityType, entityId, domain, category,
         entityLabel, purpose, originalFilename: file.name, ext,
         contentType: file.type, createdBy: userId,
+        ...(linkedTo && linkedTo.length > 0 ? { linkedTo } : {}),
       });
 
       logger.info('FileRecord created', { fileId });
@@ -267,7 +270,7 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
     } finally {
       setIsUploading(false);
     }
-  }, [companyId, projectId, entityType, entityId, domain, category, userId, entityLabel, purpose]);
+  }, [companyId, projectId, entityType, entityId, domain, category, userId, entityLabel, purpose, linkedTo]);
 
   return { uploadFloorplan, isUploading, progress, error, errorCode, clearError };
 }

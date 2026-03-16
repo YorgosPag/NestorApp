@@ -120,6 +120,9 @@ export interface BuildPendingFileRecordInput {
   revision?: number;
   customTitle?: string;
 
+  // Cross-entity visibility — parent entity links (e.g., unit → floor, building)
+  linkedTo?: string[];
+
   // Multi-level unit floorplan (ADR-236 Phase 3)
   levelFloorId?: string;
 
@@ -326,6 +329,9 @@ export function buildPendingFileRecordData(
   }
   if (input.customTitle) {
     recordBase.customTitle = input.customTitle;
+  }
+  if (input.linkedTo && input.linkedTo.length > 0) {
+    recordBase.linkedTo = input.linkedTo;
   }
   if (input.levelFloorId) {
     recordBase.levelFloorId = input.levelFloorId;

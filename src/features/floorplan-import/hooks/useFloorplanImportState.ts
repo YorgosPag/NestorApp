@@ -552,6 +552,15 @@ export function useFloorplanImportState(
         return null;
     }
 
+    // Build parent entity links for cross-entity visibility
+    const linkedTo: string[] = [];
+    if (selection.floorplanType === 'unit') {
+      if (selection.floorId) linkedTo.push(`floor:${selection.floorId}`);
+      if (selection.buildingId) linkedTo.push(`building:${selection.buildingId}`);
+    } else if (selection.floorplanType === 'floor') {
+      if (selection.buildingId) linkedTo.push(`building:${selection.buildingId}`);
+    }
+
     return {
       companyId: selection.companyId,
       projectId: selection.projectId ?? undefined,
@@ -563,6 +572,7 @@ export function useFloorplanImportState(
       entityLabel,
       purpose: 'floorplan',
       ...(selection.levelFloorId ? { levelFloorId: selection.levelFloorId } : {}),
+      ...(linkedTo.length > 0 ? { linkedTo } : {}),
     };
   })();
 

@@ -668,6 +668,13 @@ export interface CreateFileRecordInput {
    */
   levelFloorId?: string;
 
+  /**
+   * 🔗 ENTERPRISE: Cross-entity visibility — parent entity links
+   * Format: '{entityType}:{entityId}' (e.g., 'floor:flr_xxx', 'building:bld_xxx')
+   * Enables a unit floorplan to appear in floor/building views via getLinkedFiles()
+   */
+  linkedTo?: string[];
+
   // =========================================================================
   // FILE METADATA
   // =========================================================================

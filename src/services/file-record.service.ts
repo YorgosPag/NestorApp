@@ -176,6 +176,7 @@ export class FileRecordService {
       occurredAt: input.occurredAt,
       revision: input.revision,
       customTitle: input.customTitle,
+      linkedTo: input.linkedTo,
       language: 'el', // 🏢 ENTERPRISE: Always use Greek for stored displayNames
     };
 

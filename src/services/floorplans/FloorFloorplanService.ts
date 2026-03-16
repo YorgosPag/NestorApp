@@ -231,6 +231,20 @@ export class FloorFloorplanService {
         );
       }
 
+      // 🔗 ENTERPRISE: Cross-entity linked files fallback (e.g., unit floorplan linked to floor)
+      if (!fileRecords || fileRecords.length === 0) {
+        floorplanLogger.info('No direct records, trying cross-entity linked files');
+        const linkedFiles = await FileRecordService.getLinkedFiles(
+          ENTITY_TYPES.FLOOR,
+          floorId,
+          companyId
+        );
+        fileRecords = linkedFiles.filter(f =>
+          f.domain === FILE_DOMAINS.CONSTRUCTION &&
+          f.category === FILE_CATEGORIES.FLOORPLANS
+        );
+      }
+
       floorplanLogger.debug('Query result', { count: fileRecords?.length ?? 0 });
 
       if (!fileRecords || fileRecords.length === 0) {
