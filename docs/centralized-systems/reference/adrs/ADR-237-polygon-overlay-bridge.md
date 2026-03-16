@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | PLANNING |
+| **Status** | ✅ IMPLEMENTED (4/4 SPECs complete) |
 | **Date** | 2026-03-16 |
 | **Category** | Canvas & Rendering / Property Management |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
