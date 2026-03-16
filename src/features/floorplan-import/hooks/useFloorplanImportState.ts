@@ -5,13 +5,13 @@
  * SPEC-237D: Floorplan Import State Machine
  * =============================================================================
  *
- * 6-step wizard state: Company → Project → Building → Floor → Type → Upload
+ * 6-step wizard: Company → Project → Building → Floor → Unit → Upload
  *
- * - Cascading API calls via enterprise-api-client
- * - Auth-gated fetching (no API calls before authentication)
- * - Open-gated fetching (no API calls when wizard is closed)
- * - User must explicitly select at every step (no auto-skip)
- * - Builds FloorplanUploadConfig for step 6
+ * Steps 2-4 offer a "shortcut" floorplan card: user can upload a floorplan
+ * at project/building/floor level without going deeper. Clicking the card
+ * sets floorplanType and jumps to step 6 (upload).
+ *
+ * Step 5 is the unit selector (with level radio for multi-level units).
  *
  * @module features/floorplan-import/hooks/useFloorplanImportState
  */
@@ -31,7 +31,7 @@ const logger = createModuleLogger('useFloorplanImportState');
 // TYPES
 // =============================================================================
 
-export type FloorplanType = 'building' | 'floor' | 'unit';
+export type FloorplanType = 'project' | 'building' | 'floor' | 'unit';
 
 export interface FloorplanImportSelection {
   companyId: string | null;
@@ -63,8 +63,10 @@ export interface UseFloorplanImportStateReturn {
 
   selection: FloorplanImportSelection;
   selectEntity: (id: string) => void;
-  selectFloorplanType: (type: FloorplanType) => void;
   selectUnit: (id: string) => void;
+
+  /** Shortcut: set floorplanType and jump to upload (step 6) */
+  jumpToUpload: (type: FloorplanType) => void;
 
   currentStepItems: EntityOption[];
   currentStepLoading: boolean;
@@ -190,8 +192,6 @@ export function useFloorplanImportState(
   const [buildingsLoading, setBuildingsLoading] = useState(false);
   const [floorsLoading, setFloorsLoading] = useState(false);
 
-  // (projectsRawRef removed — buildings now fetched via /api/buildings)
-
   // ── Open epoch: increments each time wizard opens → forces fresh data fetch ──
   const [openEpoch, setOpenEpoch] = useState(0);
   const prevOpenRef = useRef(false);
@@ -199,7 +199,6 @@ export function useFloorplanImportState(
   // Detect open transitions: closed→open increments epoch and resets state
   useEffect(() => {
     if (isOpen && !prevOpenRef.current) {
-      // Wizard just opened — fresh start
       setOpenEpoch((e) => e + 1);
       setStep(1);
       setSelection(INITIAL_SELECTION);
@@ -211,11 +210,11 @@ export function useFloorplanImportState(
     prevOpenRef.current = isOpen;
   }, [isOpen]);
 
-  // ── Units via existing hook ──
+  // ── Units via existing hook (step 5) ──
   const { units: rawUnits, loading: unitLoading } = useFirestoreUnits({
     buildingId: selection.buildingId ?? undefined,
     floorId: selection.floorId ?? undefined,
-    autoFetch: !!selection.buildingId && selection.floorplanType === 'unit',
+    autoFetch: !!selection.buildingId && step === 5,
   });
 
   const unitItems: EntityOption[] = rawUnits.map((u: UnitItem) => ({
@@ -236,8 +235,6 @@ export function useFloorplanImportState(
         label: level.name,
       }));
   }, [selectedUnitIsMultiLevel, selectedUnit?.levels]);
-
-  // (Auto-skip removed — user must explicitly select at every step)
 
   // ===========================================================================
   // AUTH + OPEN GUARDS
@@ -260,7 +257,6 @@ export function useFloorplanImportState(
     apiClient.get<CompaniesApiResponse | Record<string, unknown>>('/api/companies')
       .then((res) => {
         if (cancelled) return;
-        // Handle both canonical (unwrapped) and raw responses
         const raw = res as Record<string, unknown>;
         const companiesList = (raw.companies ?? raw.data ?? []) as CompanyItem[];
         logger.info('Companies loaded', { count: companiesList.length });
@@ -371,8 +367,6 @@ export function useFloorplanImportState(
     return () => { cancelled = true; };
   }, [isReady, step, selection.buildingId]);
 
-  // (Auto-skip removed — user controls navigation at every step)
-
   // ===========================================================================
   // HELPERS
   // ===========================================================================
@@ -411,46 +405,24 @@ export function useFloorplanImportState(
         case 2: {
           const label = projects.find((p) => p.id === id)?.label ?? null;
           return {
-            ...prev,
-            projectId: id,
-            projectName: label,
-            buildingId: null,
-            buildingName: null,
-            floorId: null,
-            floorName: null,
-            floorplanType: null,
-            unitId: null,
-            unitName: null,
-            levelFloorId: null,
-            levelName: null,
+            ...prev, projectId: id, projectName: label,
+            buildingId: null, buildingName: null, floorId: null, floorName: null,
+            floorplanType: null, unitId: null, unitName: null, levelFloorId: null, levelName: null,
           };
         }
         case 3: {
           const label = buildings.find((b) => b.id === id)?.label ?? null;
           return {
-            ...prev,
-            buildingId: id,
-            buildingName: label,
-            floorId: null,
-            floorName: null,
-            floorplanType: null,
-            unitId: null,
-            unitName: null,
-            levelFloorId: null,
-            levelName: null,
+            ...prev, buildingId: id, buildingName: label,
+            floorId: null, floorName: null, floorplanType: null,
+            unitId: null, unitName: null, levelFloorId: null, levelName: null,
           };
         }
         case 4: {
           const label = floors.find((f) => f.id === id)?.label ?? null;
           return {
-            ...prev,
-            floorId: id,
-            floorName: label,
-            floorplanType: null,
-            unitId: null,
-            unitName: null,
-            levelFloorId: null,
-            levelName: null,
+            ...prev, floorId: id, floorName: label,
+            floorplanType: null, unitId: null, unitName: null, levelFloorId: null, levelName: null,
           };
         }
         default:
@@ -459,26 +431,35 @@ export function useFloorplanImportState(
     });
   }, [step, companies, projects, buildings, floors]);
 
-  const selectFloorplanType = useCallback((type: FloorplanType) => {
-    setSelection((prev) => ({
-      ...prev,
-      floorplanType: type,
-      unitId: type === 'unit' ? prev.unitId : null,
-      unitName: type === 'unit' ? prev.unitName : null,
-      levelFloorId: null,
-      levelName: null,
-    }));
-  }, []);
-
   const selectUnit = useCallback((id: string) => {
     const label = unitItems.find((u) => u.id === id)?.label ?? null;
-    setSelection((prev) => ({ ...prev, unitId: id, unitName: label, levelFloorId: null, levelName: null }));
+    setSelection((prev) => ({
+      ...prev, unitId: id, unitName: label,
+      floorplanType: 'unit', levelFloorId: null, levelName: null,
+    }));
   }, [unitItems]);
 
   const selectLevel = useCallback((floorId: string) => {
     const label = unitLevelItems.find((l) => l.id === floorId)?.label ?? null;
     setSelection((prev) => ({ ...prev, levelFloorId: floorId, levelName: label }));
   }, [unitLevelItems]);
+
+  // ===========================================================================
+  // SHORTCUT: Jump to upload from steps 2-4
+  // ===========================================================================
+
+  const jumpToUpload = useCallback((type: FloorplanType) => {
+    setSelection((prev) => ({
+      ...prev,
+      floorplanType: type,
+      // Clear downstream selections not needed for this type
+      ...(type === 'project' ? { buildingId: null, buildingName: null, floorId: null, floorName: null, unitId: null, unitName: null } : {}),
+      ...(type === 'building' ? { floorId: null, floorName: null, unitId: null, unitName: null } : {}),
+      ...(type === 'floor' ? { unitId: null, unitName: null } : {}),
+      levelFloorId: null, levelName: null,
+    }));
+    setStep(6);
+  }, []);
 
   // ===========================================================================
   // NAVIGATION
@@ -491,28 +472,39 @@ export function useFloorplanImportState(
       case 3: return !!selection.buildingId;
       case 4: return !!selection.floorId;
       case 5: {
-        if (!selection.floorplanType) return false;
-        if (selection.floorplanType === 'unit' && !selection.unitId) return false;
-        // Multi-level units require level selection (ADR-236)
-        if (selection.floorplanType === 'unit' && selectedUnitIsMultiLevel && !selection.levelFloorId) return false;
+        if (!selection.unitId) return false;
+        if (selectedUnitIsMultiLevel && !selection.levelFloorId) return false;
         return true;
       }
-      case 6: return true; // Upload step — button handled separately
+      case 6: return true;
       default: return false;
     }
   })();
 
   const handleNext = useCallback(() => {
     if (canProceed && step < TOTAL_STEPS) {
+      // Step 5 → 6: auto-set floorplanType to 'unit'
+      if (step === 5) {
+        setSelection((prev) => ({ ...prev, floorplanType: 'unit' }));
+      }
       setStep((prev) => prev + 1);
     }
   }, [canProceed, step]);
 
   const handleBack = useCallback(() => {
     if (step > 1) {
-      setStep((prev) => prev - 1);
+      // If we jumped to step 6 from a shortcut, go back to where we came from
+      if (step === 6 && selection.floorplanType === 'project') {
+        setStep(2);
+      } else if (step === 6 && selection.floorplanType === 'building') {
+        setStep(3);
+      } else if (step === 6 && selection.floorplanType === 'floor') {
+        setStep(4);
+      } else {
+        setStep((prev) => prev - 1);
+      }
     }
-  }, [step]);
+  }, [step, selection.floorplanType]);
 
   // ===========================================================================
   // UPLOAD CONFIG (step 6)
@@ -526,6 +518,11 @@ export function useFloorplanImportState(
     let entityLabel: string | undefined;
 
     switch (selection.floorplanType) {
+      case 'project':
+        entityType = 'project' as EntityType;
+        entityId = selection.projectId!;
+        entityLabel = selection.projectName ?? undefined;
+        break;
       case 'building':
         entityType = 'building' as EntityType;
         entityId = selection.buildingId!;
@@ -586,8 +583,8 @@ export function useFloorplanImportState(
 
     selection,
     selectEntity: handleSelectEntity,
-    selectFloorplanType,
     selectUnit,
+    jumpToUpload,
 
     currentStepItems: getCurrentItems(),
     currentStepLoading: getCurrentLoading(),

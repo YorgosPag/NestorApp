@@ -8,10 +8,15 @@
  * Renders either radio buttons (≤5 items) or Radix Select (>5 items).
  * Used for: Company, Project, Building, Floor selection.
  *
+ * Steps 2-4 include an optional shortcut card above the list that lets
+ * the user upload a floorplan at the current entity level (e.g. project,
+ * building, floor) without going deeper.
+ *
  * @module features/floorplan-import/components/StepEntitySelector
  */
 
 import React from 'react';
+import { Upload } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -34,6 +39,10 @@ interface StepEntitySelectorProps {
   loading: boolean;
   placeholder: string;
   emptyMessage: string;
+  /** Optional shortcut card label (e.g. "Γενική Κάτοψη Έργου") */
+  shortcutLabel?: string;
+  /** Called when shortcut card is clicked → jumps to upload */
+  onShortcutClick?: () => void;
 }
 
 // =============================================================================
@@ -53,6 +62,8 @@ export function StepEntitySelector({
   loading,
   placeholder,
   emptyMessage,
+  shortcutLabel,
+  onShortcutClick,
 }: StepEntitySelectorProps) {
   const colors = useSemanticColors();
 
@@ -74,63 +85,73 @@ export function StepEntitySelector({
     );
   }
 
-  // ── Radio list (≤5 items) ──
-  if (items.length <= RADIO_THRESHOLD) {
-    return (
-      <fieldset className="space-y-2 py-4">
-        {items.map((item) => {
-          const isSelected = item.id === selectedId;
-          return (
-            <label
-              key={item.id}
-              className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors ${
-                isSelected
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border hover:border-primary/50 hover:bg-muted/30'
-              }`}
-            >
-              <input
-                type="radio"
-                name="entity-selector"
-                value={item.id}
-                checked={isSelected}
-                onChange={() => onSelect(item.id)}
-                className="sr-only"
-              />
-              <span
-                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
-                  isSelected ? 'border-primary' : 'border-muted-foreground/40'
+  return (
+    <div className="space-y-4 py-4">
+      {/* ── Shortcut card (steps 2-4 only, shown when entity is selected) ── */}
+      {shortcutLabel && onShortcutClick && (
+        <button
+          type="button"
+          onClick={onShortcutClick}
+          className="flex w-full cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 px-4 py-3 transition-all hover:border-primary hover:bg-primary/10"
+        >
+          <Upload className="h-5 w-5 shrink-0 text-primary" />
+          <span className="text-sm font-medium text-primary">{shortcutLabel}</span>
+        </button>
+      )}
+
+      {/* ── Radio list (≤5 items) ── */}
+      {items.length <= RADIO_THRESHOLD ? (
+        <fieldset className="space-y-2">
+          {items.map((item) => {
+            const isSelected = item.id === selectedId;
+            return (
+              <label
+                key={item.id}
+                className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors ${
+                  isSelected
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:border-primary/50 hover:bg-muted/30'
                 }`}
               >
-                {isSelected && (
-                  <span className="h-2 w-2 rounded-full bg-primary" />
-                )}
-              </span>
-              <span className={`text-sm ${isSelected ? 'font-medium' : ''}`}>
+                <input
+                  type="radio"
+                  name="entity-selector"
+                  value={item.id}
+                  checked={isSelected}
+                  onChange={() => onSelect(item.id)}
+                  className="sr-only"
+                />
+                <span
+                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                    isSelected ? 'border-primary' : 'border-muted-foreground/40'
+                  }`}
+                >
+                  {isSelected && (
+                    <span className="h-2 w-2 rounded-full bg-primary" />
+                  )}
+                </span>
+                <span className={`text-sm ${isSelected ? 'font-medium' : ''}`}>
+                  {item.label}
+                </span>
+              </label>
+            );
+          })}
+        </fieldset>
+      ) : (
+        /* ── Dropdown (>5 items) — ADR-001 Radix Select ── */
+        <Select value={selectedId ?? ''} onValueChange={onSelect}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder={placeholder} />
+          </SelectTrigger>
+          <SelectContent>
+            {items.map((item) => (
+              <SelectItem key={item.id} value={item.id}>
                 {item.label}
-              </span>
-            </label>
-          );
-        })}
-      </fieldset>
-    );
-  }
-
-  // ── Dropdown (>5 items) — ADR-001 Radix Select ──
-  return (
-    <div className="py-4">
-      <Select value={selectedId ?? ''} onValueChange={onSelect}>
-        <SelectTrigger className="w-full">
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent>
-          {items.map((item) => (
-            <SelectItem key={item.id} value={item.id}>
-              {item.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
     </div>
   );
 }

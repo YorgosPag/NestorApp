@@ -546,7 +546,7 @@
       "project": "Project",
       "building": "Building",
       "floor": "Floor",
-      "type": "Type",
+      "unit": "Unit",
       "upload": "Upload"
     },
     "select": {
@@ -556,6 +556,11 @@
       "floor": "Select floor",
       "unit": "Select unit",
       "level": "Select unit level"
+    },
+    "shortcuts": {
+      "project": "Upload General Project Floorplan",
+      "building": "Upload General Building Floorplan",
+      "floor": "Upload Floor Floorplan"
     },
     "types": {
       "building": "General Building Floorplan",

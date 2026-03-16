@@ -6,14 +6,14 @@
  * =============================================================================
  *
  * 6-step horizontal wizard for importing floorplans into the system.
- * Company → Project → Building → Floor → Type → Upload
+ * Company → Project → Building → Floor → Unit → Upload
  *
- * Reuses:
- * - WizardProgress (step indicator)
- * - Dialog (Radix modal)
- * - useFloorplanUpload (upload pipeline)
- * - FileUploadZone (drag & drop)
- * - enterprise-api-client (cascading data)
+ * Steps 2-4 have a floorplan shortcut card above the entity list:
+ * - Step 2: "Γενική Κάτοψη Έργου" → jump to upload
+ * - Step 3: "Γενική Κάτοψη Κτιρίου" → jump to upload
+ * - Step 4: "Κάτοψη Ορόφου" → jump to upload
+ *
+ * Step 5 is the unit selector (with level radio for multi-level units).
  *
  * @module features/floorplan-import/FloorplanImportWizard
  */
@@ -32,8 +32,9 @@ import { WizardProgress } from '@/subapps/dxf-viewer/ui/components/WizardProgres
 
 import { useFloorplanImportState } from './hooks/useFloorplanImportState';
 import { StepEntitySelector } from './components/StepEntitySelector';
-import { StepFloorplanType } from './components/StepFloorplanType';
+import { StepUnitSelector } from './components/StepUnitSelector';
 import { StepUpload } from './components/StepUpload';
+import type { FloorplanType } from './hooks/useFloorplanImportState';
 
 // =============================================================================
 // TYPES
@@ -51,22 +52,27 @@ interface FloorplanImportWizardProps {
 
 const TOTAL_STEPS = 6;
 
-// Step label keys for WizardProgress
 const STEP_LABEL_KEYS = [
   'floorplanImport.steps.company',
   'floorplanImport.steps.project',
   'floorplanImport.steps.building',
   'floorplanImport.steps.floor',
-  'floorplanImport.steps.type',
+  'floorplanImport.steps.unit',
   'floorplanImport.steps.upload',
 ] as const;
 
-// Select placeholder keys per step
 const SELECT_PLACEHOLDER_KEYS: Record<number, string> = {
   1: 'floorplanImport.select.company',
   2: 'floorplanImport.select.project',
   3: 'floorplanImport.select.building',
   4: 'floorplanImport.select.floor',
+};
+
+/** Shortcut floorplan card config for steps 2-4 */
+const STEP_SHORTCUT_CONFIG: Record<number, { type: FloorplanType; labelKey: string }> = {
+  2: { type: 'project', labelKey: 'floorplanImport.shortcuts.project' },
+  3: { type: 'building', labelKey: 'floorplanImport.shortcuts.building' },
+  4: { type: 'floor', labelKey: 'floorplanImport.shortcuts.floor' },
 };
 
 // =============================================================================
@@ -82,26 +88,21 @@ export function FloorplanImportWizard({
 
   const state = useFloorplanImportState({ isOpen });
 
-  // ── Step labels (translated) ──
-  // isNamespaceReady triggers re-compute when lazy-loaded namespace becomes available
   const stepLabels = useMemo(
     () => STEP_LABEL_KEYS.map((key) => t(key)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [t, isNamespaceReady],
   );
 
-  // ── Upload completion handler ──
   const handleUploadComplete = useCallback(() => {
     onComplete?.();
   }, [onComplete]);
 
-  // ── Close + reset ──
   const handleClose = useCallback(() => {
     state.reset();
     onClose();
   }, [state, onClose]);
 
-  // ── Get selected ID for current step ──
   const getSelectedId = (): string | null => {
     switch (state.step) {
       case 1: return state.selection.companyId;
@@ -111,6 +112,10 @@ export function FloorplanImportWizard({
       default: return null;
     }
   };
+
+  // Determine if current step has a shortcut card and if it's enabled
+  const shortcutConfig = STEP_SHORTCUT_CONFIG[state.step];
+  const shortcutEnabled = !!shortcutConfig && !!getSelectedId();
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
@@ -137,14 +142,14 @@ export function FloorplanImportWizard({
               loading={state.currentStepLoading}
               placeholder={t(SELECT_PLACEHOLDER_KEYS[state.step] ?? '')}
               emptyMessage={t('floorplanImport.noItems')}
+              shortcutLabel={shortcutEnabled ? t(shortcutConfig.labelKey) : undefined}
+              onShortcutClick={shortcutEnabled ? () => state.jumpToUpload(shortcutConfig.type) : undefined}
             />
           )}
 
-          {/* Step 5: Floorplan type */}
+          {/* Step 5: Unit selector + levels */}
           {state.step === 5 && (
-            <StepFloorplanType
-              selectedType={state.selection.floorplanType}
-              onSelectType={state.selectFloorplanType}
+            <StepUnitSelector
               unitItems={state.unitItems}
               unitLoading={state.unitLoading}
               selectedUnitId={state.selection.unitId}
