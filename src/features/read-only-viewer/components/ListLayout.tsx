@@ -28,6 +28,7 @@ export function ListLayout({
   selectedPropertyIds,
   handlePolygonSelect,
   hoveredPropertyId,
+  onHoverProperty,
   readOnlyViewerProps,
   viewerProps,
 }: {
@@ -36,6 +37,8 @@ export function ListLayout({
   selectedPropertyIds: string[];
   handlePolygonSelect: (id: string, isShiftClick: boolean) => void;
   hoveredPropertyId: string | null;
+  /** SPEC-237C: Hover callback for bidirectional sync */
+  onHoverProperty?: (propertyId: string | null) => void;
   readOnlyViewerProps: ViewerPropsType;
   viewerProps: ViewerPropsType;
 }) {
@@ -78,6 +81,8 @@ export function ListLayout({
                 selectedPropertyIds={selectedPropertyIds}
                 onSelectProperty={handlePolygonSelect}
                 isLoading={isLoading}
+                hoveredPropertyId={hoveredPropertyId}
+                onHoverProperty={onHoverProperty}
               />
             </ScrollArea>
           </CardContent>
@@ -118,6 +123,9 @@ export function ListLayout({
               ? filteredProperties.find((p) => p.id === selectedPropertyIds[0])?.levels
               : undefined
           }
+          onHoverOverlay={onHoverProperty}
+          onClickOverlay={(unitId) => handlePolygonSelect(unitId, false)}
+          highlightedOverlayUnitId={hoveredPropertyId}
         />
       </div>
 

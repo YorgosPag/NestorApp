@@ -73,6 +73,12 @@ interface ReadOnlyMediaViewerProps {
   companyId?: string | null;
   /** Multi-level unit levels (ADR-236) — one tab per floor */
   levels?: Array<{ floorId: string; floorNumber: number; name: string }>;
+  /** Callback: mouse hovers overlay → passes linked unitId (SPEC-237C) */
+  onHoverOverlay?: (unitId: string | null) => void;
+  /** Callback: user clicks overlay → passes linked unitId (SPEC-237C) */
+  onClickOverlay?: (unitId: string) => void;
+  /** ID of unit highlighted externally (from list hover) — bidirectional sync (SPEC-237C) */
+  highlightedOverlayUnitId?: string | null;
   /** Optional className */
   className?: string;
 }
@@ -118,6 +124,9 @@ export function ReadOnlyMediaViewer({
   floorNumber,
   companyId: propCompanyId,
   levels,
+  onHoverOverlay,
+  onClickOverlay,
+  highlightedOverlayUnitId,
   className,
 }: ReadOnlyMediaViewerProps) {
   const { t } = useTranslation(['properties', 'common', 'files']);
@@ -407,6 +416,9 @@ export function ReadOnlyMediaViewer({
                   spacing={spacing}
                   iconSizes={iconSizes}
                   t={t}
+                  onHoverOverlay={onHoverOverlay}
+                  onClickOverlay={onClickOverlay}
+                  highlightedOverlayUnitId={highlightedOverlayUnitId}
                 />
               </TabsContent>
             ))
@@ -423,6 +435,9 @@ export function ReadOnlyMediaViewer({
                 <FloorplanGallery
                   files={floorFloorplansData.files}
                   overlays={singleFloorOverlays}
+                  highlightedOverlayUnitId={highlightedOverlayUnitId}
+                  onHoverOverlay={onHoverOverlay}
+                  onClickOverlay={onClickOverlay}
                   emptyMessage={t('viewer.media.noFloorFloorplans', { ns: 'properties', defaultValue: 'Δεν υπάρχει κάτοψη ορόφου' })}
                   className="h-full"
                 />
@@ -561,6 +576,10 @@ interface FloorFloorplanTabContentProps {
   spacing: ReturnType<typeof useSpacingTokens>;
   iconSizes: ReturnType<typeof useIconSizes>;
   t: (key: string, options?: Record<string, unknown>) => string;
+  /** SPEC-237C: Overlay interaction callbacks */
+  onHoverOverlay?: (unitId: string | null) => void;
+  onClickOverlay?: (unitId: string) => void;
+  highlightedOverlayUnitId?: string | null;
 }
 
 function FloorFloorplanTabContent({
@@ -571,6 +590,9 @@ function FloorFloorplanTabContent({
   spacing,
   iconSizes,
   t,
+  onHoverOverlay,
+  onClickOverlay,
+  highlightedOverlayUnitId,
 }: FloorFloorplanTabContentProps) {
   const { floorFloorplan, loading, error, refetch } = useFloorFloorplans({
     floorId,
@@ -631,6 +653,9 @@ function FloorFloorplanTabContent({
       <FloorplanGallery
         files={files}
         overlays={overlays}
+        highlightedOverlayUnitId={highlightedOverlayUnitId}
+        onHoverOverlay={onHoverOverlay}
+        onClickOverlay={onClickOverlay}
         emptyMessage={t('viewer.media.noFloorFloorplans', { ns: 'properties', defaultValue: 'Δεν υπάρχει κάτοψη ορόφου' })}
         className="h-full"
       />

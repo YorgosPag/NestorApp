@@ -139,6 +139,12 @@ export interface ListCardProps {
   /** 🏢 ENTERPRISE: Mouse enter handler for keyboard navigation (ADR-029 Global Search) */
   onMouseEnter?: () => void;
 
+  /** Mouse leave handler — bidirectional hover sync (ADR-237/SPEC-237C) */
+  onMouseLeave?: () => void;
+
+  /** External hover highlight — bidirectional sync from canvas (ADR-237/SPEC-237C) */
+  isHovered?: boolean;
+
   // ==========================================================================
   // FAVORITES
   // ==========================================================================

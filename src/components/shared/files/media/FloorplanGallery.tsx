@@ -66,6 +66,8 @@ import type { FileRecord, DxfSceneData } from '@/types/file-record';
 import type { FloorOverlayItem } from '@/hooks/useFloorOverlays';
 import { getStatusColors } from '@/subapps/dxf-viewer/config/color-mapping';
 import { UI_COLORS, withOpacity } from '@/subapps/dxf-viewer/config/color-config';
+import { isPointInPolygon } from '@core/polygon-system/utils/polygon-utils';
+import type { UniversalPolygon } from '@core/polygon-system/types';
 
 // ============================================================================
 // TYPES
@@ -88,6 +90,12 @@ export interface FloorplanGalleryProps {
   initialIndex?: number;
   /** Polygon overlays to render on top of DXF floorplans (ADR-237 / SPEC-237B) */
   overlays?: ReadonlyArray<FloorOverlayItem>;
+  /** ID of unit highlighted externally (from list hover) — bidirectional sync (SPEC-237C) */
+  highlightedOverlayUnitId?: string | null;
+  /** Callback: mouse hovers overlay → passes linked unitId (or null on leave) (SPEC-237C) */
+  onHoverOverlay?: (unitId: string | null) => void;
+  /** Callback: user clicks overlay → passes linked unitId (SPEC-237C) */
+  onClickOverlay?: (unitId: string) => void;
 }
 
 // ============================================================================
@@ -333,6 +341,7 @@ function drawOverlayPolygons(
   bounds: { min: { x: number; y: number }; max: { x: number; y: number } },
   zoom: number,
   panOffset: PanOffset,
+  highlightedUnitId?: string | null,
 ): void {
   const ctx = canvas.getContext('2d');
   if (!ctx || overlays.length === 0) return;
@@ -350,10 +359,13 @@ function drawOverlayPolygons(
     if (overlay.polygon.length < 3) continue;
 
     const colors = getStatusColors(overlay.status ?? 'unavailable') ?? OVERLAY_FALLBACK;
+    const isHighlighted = !!(highlightedUnitId && overlay.linked?.unitId === highlightedUnitId);
 
-    ctx.fillStyle = colors.fill;
+    ctx.fillStyle = isHighlighted
+      ? withOpacity(colors.stroke, 0.7)
+      : colors.fill;
     ctx.strokeStyle = colors.stroke;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = isHighlighted ? 3 : 2;
 
     // Draw polygon
     ctx.beginPath();
@@ -392,6 +404,94 @@ function drawOverlayPolygons(
 }
 
 // ============================================================================
+// HIT-TESTING UTILITIES (SPEC-237C — Interactive Overlays)
+// ============================================================================
+
+/** AABB (Axis-Aligned Bounding Box) for fast pre-filtering */
+interface OverlayAABB {
+  overlayIndex: number;
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+  unitId: string | undefined;
+}
+
+/** Compute AABBs for all overlays (memoized externally) */
+function computeOverlayAABBs(overlays: ReadonlyArray<FloorOverlayItem>): OverlayAABB[] {
+  return overlays.map((overlay, index) => {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const v of overlay.polygon) {
+      if (v.x < minX) minX = v.x;
+      if (v.y < minY) minY = v.y;
+      if (v.x > maxX) maxX = v.x;
+      if (v.y > maxY) maxY = v.y;
+    }
+    return { overlayIndex: index, minX, minY, maxX, maxY, unitId: overlay.linked?.unitId };
+  });
+}
+
+/**
+ * Inverse coordinate transform: screen (canvas) pixels → DXF world coordinates.
+ * Reverses the math in renderDxfToCanvas:
+ *   screenX = (worldX - bounds.min.x) * scale + offsetX
+ *   screenY = (bounds.max.y - worldY) * scale + offsetY
+ */
+function screenToWorld(
+  screenX: number,
+  screenY: number,
+  canvas: HTMLCanvasElement,
+  bounds: { min: { x: number; y: number }; max: { x: number; y: number } },
+  zoom: number,
+  panOffset: PanOffset,
+): { x: number; y: number } {
+  const drawingWidth = bounds.max.x - bounds.min.x;
+  const drawingHeight = bounds.max.y - bounds.min.y;
+  const baseScale = Math.min(canvas.width / drawingWidth, canvas.height / drawingHeight);
+  const scale = baseScale * zoom;
+  const offsetX = (canvas.width - drawingWidth * scale) / 2 + panOffset.x;
+  const offsetY = (canvas.height - drawingHeight * scale) / 2 + panOffset.y;
+
+  const worldX = (screenX - offsetX) / scale + bounds.min.x;
+  const worldY = bounds.max.y - (screenY - offsetY) / scale;
+  return { x: worldX, y: worldY };
+}
+
+/**
+ * Hit-test overlays at a world-space point.
+ * Uses AABB pre-filter + centralized isPointInPolygon (ray casting).
+ * Returns the first overlay with a linked unitId, or null.
+ */
+function hitTestOverlays(
+  worldPoint: { x: number; y: number },
+  overlays: ReadonlyArray<FloorOverlayItem>,
+  aabbs: OverlayAABB[],
+): FloorOverlayItem | null {
+  for (const aabb of aabbs) {
+    // AABB pre-filter
+    if (worldPoint.x < aabb.minX || worldPoint.x > aabb.maxX ||
+        worldPoint.y < aabb.minY || worldPoint.y > aabb.maxY) {
+      continue;
+    }
+
+    const overlay = overlays[aabb.overlayIndex];
+    // Wrap in UniversalPolygon for isPointInPolygon (ZERO `as any`)
+    const universalPolygon: UniversalPolygon = {
+      id: overlay.id,
+      type: 'simple',
+      points: overlay.polygon,
+      isClosed: true,
+      style: { strokeColor: '', fillColor: '', strokeWidth: 0, fillOpacity: 0, strokeOpacity: 0 },
+    };
+
+    if (isPointInPolygon(worldPoint, universalPolygon)) {
+      return overlay;
+    }
+  }
+  return null;
+}
+
+// ============================================================================
 // MODULE LOGGER
 // ============================================================================
 
@@ -417,6 +517,9 @@ export function FloorplanGallery({
   className,
   initialIndex = 0,
   overlays,
+  highlightedOverlayUnitId,
+  onHoverOverlay,
+  onClickOverlay,
 }: FloorplanGalleryProps) {
   const { t } = useTranslation('files');
   const iconSizes = useIconSizes();
@@ -452,11 +555,75 @@ export function FloorplanGallery({
   // Zoom + Pan — fullscreen modal (independent instance)
   const modalZP = useZoomPan(ZOOM_CONFIG);
 
+  // SPEC-237C: AABB cache for fast hit-testing
+  const overlayAABBs = useMemo(
+    () => overlays ? computeOverlayAABBs(overlays) : [],
+    [overlays],
+  );
+
+  // SPEC-237C: Local hover state for cursor + visual feedback
+  const [hoveredOverlayUnitId, setHoveredOverlayUnitId] = useState<string | null>(null);
+  const rafRef = useRef<number>(0);
+
+  // SPEC-237C: Effective highlight = external (list hover) OR local (canvas hover)
+  const effectiveHighlightId = highlightedOverlayUnitId || hoveredOverlayUnitId;
+
   // Current file
   const currentFile = floorplanFiles[currentIndex] || null;
   const isDxf = currentFile?.ext?.toLowerCase() === 'dxf';
   const isPdf = currentFile?.ext?.toLowerCase() === 'pdf';
   const isImage = currentFile && !isDxf && !isPdf;
+
+  // =========================================================================
+  // SPEC-237C: Canvas Mouse Handlers (Hit-Testing, Hover, Click)
+  // =========================================================================
+
+  const handleCanvasMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!loadedScene?.bounds || !overlays?.length || !inlineCanvasRef.current) return;
+    // rAF-throttle for 60fps performance
+    cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      const canvas = inlineCanvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      // Account for CSS scaling vs actual canvas pixels
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const screenX = (e.clientX - rect.left) * scaleX;
+      const screenY = (e.clientY - rect.top) * scaleY;
+      const worldPt = screenToWorld(screenX, screenY, canvas, loadedScene.bounds!, inlineZP.zoom, inlineZP.panOffset);
+      const hit = hitTestOverlays(worldPt, overlays, overlayAABBs);
+      const unitId = hit?.linked?.unitId ?? null;
+      setHoveredOverlayUnitId(unitId);
+      onHoverOverlay?.(unitId);
+    });
+  }, [loadedScene?.bounds, overlays, overlayAABBs, inlineZP.zoom, inlineZP.panOffset, onHoverOverlay]);
+
+  const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!loadedScene?.bounds || !overlays?.length || !inlineCanvasRef.current) return;
+    const canvas = inlineCanvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const screenX = (e.clientX - rect.left) * scaleX;
+    const screenY = (e.clientY - rect.top) * scaleY;
+    const worldPt = screenToWorld(screenX, screenY, canvas, loadedScene.bounds!, inlineZP.zoom, inlineZP.panOffset);
+    const hit = hitTestOverlays(worldPt, overlays, overlayAABBs);
+    if (hit?.linked?.unitId) {
+      onClickOverlay?.(hit.linked.unitId);
+    }
+  }, [loadedScene?.bounds, overlays, overlayAABBs, inlineZP.zoom, inlineZP.panOffset, onClickOverlay]);
+
+  const handleCanvasMouseLeave = useCallback(() => {
+    cancelAnimationFrame(rafRef.current);
+    setHoveredOverlayUnitId(null);
+    onHoverOverlay?.(null);
+  }, [onHoverOverlay]);
+
+  // Cleanup rAF on unmount
+  useEffect(() => {
+    return () => cancelAnimationFrame(rafRef.current);
+  }, []);
 
   // =========================================================================
   // NAVIGATION
@@ -637,11 +804,11 @@ export function FloorplanGallery({
   useEffect(() => {
     if (!loadedScene || !inlineCanvasRef.current || !isDxf) return;
     renderDxfToCanvas(inlineCanvasRef.current, loadedScene, inlineZP.zoom, inlineZP.panOffset, drawingMode);
-    // SPEC-237B: Draw overlay polygons on top of DXF rendering
+    // SPEC-237B/C: Draw overlay polygons with optional highlight
     if (overlays?.length && loadedScene.bounds) {
-      drawOverlayPolygons(inlineCanvasRef.current, overlays, loadedScene.bounds, inlineZP.zoom, inlineZP.panOffset);
+      drawOverlayPolygons(inlineCanvasRef.current, overlays, loadedScene.bounds, inlineZP.zoom, inlineZP.panOffset, effectiveHighlightId);
     }
-  }, [loadedScene, isDxf, inlineZP.zoom, inlineZP.panOffset, drawingMode, overlays]);
+  }, [loadedScene, isDxf, inlineZP.zoom, inlineZP.panOffset, drawingMode, overlays, effectiveHighlightId]);
 
   // =========================================================================
   // DXF CANVAS RENDERING — FULLSCREEN MODAL
@@ -658,9 +825,9 @@ export function FloorplanGallery({
     const doRender = () => {
       if (!modalCanvasRef.current) return;
       renderDxfToCanvas(modalCanvasRef.current, loadedScene, modalZP.zoom, modalZP.panOffset, drawingMode);
-      // SPEC-237B: Draw overlay polygons on fullscreen canvas too
+      // SPEC-237B/C: Draw overlay polygons on fullscreen canvas too
       if (overlays?.length && loadedScene.bounds) {
-        drawOverlayPolygons(modalCanvasRef.current, overlays, loadedScene.bounds, modalZP.zoom, modalZP.panOffset);
+        drawOverlayPolygons(modalCanvasRef.current, overlays, loadedScene.bounds, modalZP.zoom, modalZP.panOffset, effectiveHighlightId);
       }
       modalCanvasReadyRef.current = true;
     };
@@ -673,7 +840,7 @@ export function FloorplanGallery({
 
     // Subsequent renders (zoom/pan changes): immediate
     doRender();
-  }, [isFullscreen, loadedScene, isDxf, modalZP.zoom, modalZP.panOffset, drawingMode, overlays]);
+  }, [isFullscreen, loadedScene, isDxf, modalZP.zoom, modalZP.panOffset, drawingMode, overlays, effectiveHighlightId]);
 
   // =========================================================================
   // ACTIONS
@@ -819,6 +986,7 @@ export function FloorplanGallery({
     zp: ReturnType<typeof useZoomPan>,
     canvasRef: React.Ref<HTMLCanvasElement>,
     viewClassName?: string,
+    enableHitTesting?: boolean,
   ) {
     return (
       <figure
@@ -846,13 +1014,16 @@ export function FloorplanGallery({
           </section>
         )}
 
-        {/* DXF Canvas */}
+        {/* DXF Canvas — SPEC-237C: mouse handlers for hit-testing */}
         {isDxf && !isLoading && !sceneError && loadedScene && (
           <canvas
             ref={canvasRef}
-            className="w-full h-full"
+            className={cn('w-full h-full', enableHitTesting && effectiveHighlightId ? 'cursor-pointer' : '')}
             style={canvasUtilities.geoInteractive.canvasFullDisplay()}
             aria-label={t('floorplan.canvasAlt', { fileName: currentFile?.displayName })}
+            onMouseMove={enableHitTesting ? handleCanvasMouseMove : undefined}
+            onClick={enableHitTesting ? handleCanvasClick : undefined}
+            onMouseLeave={enableHitTesting ? handleCanvasMouseLeave : undefined}
           />
         )}
 
@@ -1028,8 +1199,8 @@ export function FloorplanGallery({
           </nav>
         </header>
 
-        {/* Inline Floorplan Viewer */}
-        {renderViewerContent(inlineZP, inlineCanvasRef, 'min-h-[500px]')}
+        {/* Inline Floorplan Viewer — SPEC-237C: enable hit-testing on inline canvas */}
+        {renderViewerContent(inlineZP, inlineCanvasRef, 'min-h-[500px]', true)}
       </article>
 
       {/* =============================================================== */}

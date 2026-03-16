@@ -84,6 +84,8 @@ export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard
   onClick,
   onKeyDown,
   onMouseEnter,
+  onMouseLeave,
+  isHovered = false,
   // Favorites
   isFavorite,
   onToggleFavorite,
@@ -192,6 +194,8 @@ export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard
         spacing.padding.sm,
         // 🏢 ENTERPRISE: Hover variant from prop (standard/subtle/none)
         getHoverClasses(),
+        // SPEC-237C: External hover highlight (bidirectional sync from canvas)
+        isHovered && !isSelected && 'ring-2 ring-primary/40 bg-accent/50',
         // Selection state using centralized colors
         isSelected
           ? cn(getStatusBorder('info'), colors.bg.info, 'shadow-sm')
@@ -201,6 +205,7 @@ export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
       role={role}
       tabIndex={tabIndex}
       aria-label={ariaLabel || title}

@@ -16,6 +16,8 @@ export type ReadOnlyPropertyViewerLayoutProps = {
   filteredProperties: Property[];
   selectedPropertyIds: string[];
   hoveredPropertyId: string | null;
+  /** SPEC-237C: Hover callback for bidirectional sync */
+  onHoverProperty?: (propertyId: string | null) => void;
   handlePolygonSelect: (id: string | null) => void;
   onSelectFloor: (floorId: string | null) => void;
   handleUpdateProperty: (propertyId: string, updates: Partial<Property>) => void;

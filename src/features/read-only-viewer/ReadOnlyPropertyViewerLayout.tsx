@@ -21,6 +21,7 @@ export function ReadOnlyPropertyViewerLayout({
   hoveredPropertyId,
   handlePolygonSelect,
   onSelectFloor,
+  onHoverProperty,
   handleUpdateProperty,
   ...viewerProps
 }: ReadOnlyPropertyViewerLayoutProps) {
@@ -41,6 +42,7 @@ export function ReadOnlyPropertyViewerLayout({
             selectedPropertyIds={selectedPropertyIds}
             handlePolygonSelect={handlePolygonSelect}
             hoveredPropertyId={hoveredPropertyId}
+            onHoverProperty={onHoverProperty}
             readOnlyViewerProps={readOnlyViewerProps}
             viewerProps={{
               ...viewerProps,

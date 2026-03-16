@@ -44,10 +44,16 @@ export interface PropertyListCardProps {
   property: Property;
   /** Whether card is selected */
   isSelected?: boolean;
+  /** External hover highlight — bidirectional sync from canvas (SPEC-237C) */
+  isHovered?: boolean;
   /** Whether item is favorite */
   isFavorite?: boolean;
   /** Click handler */
   onSelect?: (isShiftClick?: boolean) => void;
+  /** Mouse enter handler — bidirectional hover sync (SPEC-237C) */
+  onMouseEnter?: () => void;
+  /** Mouse leave handler — bidirectional hover sync (SPEC-237C) */
+  onMouseLeave?: () => void;
   /** Favorite toggle handler */
   onToggleFavorite?: () => void;
   /** View floor plan handler (optional) */
@@ -110,8 +116,11 @@ const STATUS_LABEL_KEYS: Record<string, string> = {
 export function PropertyListCard({
   property,
   isSelected = false,
+  isHovered = false,
   isFavorite,
   onSelect,
+  onMouseEnter,
+  onMouseLeave,
   onToggleFavorite,
   onViewFloorPlan,
   compact = false,
@@ -220,8 +229,11 @@ export function PropertyListCard({
       badges={badges}
       stats={stats}
       isSelected={isSelected}
+      isHovered={isHovered}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
       isFavorite={isFavorite}
       onToggleFavorite={onToggleFavorite}
       compact={compact}
