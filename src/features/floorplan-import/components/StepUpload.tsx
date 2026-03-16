@@ -19,7 +19,7 @@ import { useFloorplanUpload } from '@/hooks/useFloorplanUpload';
 import type { FloorplanUploadConfig } from '@/hooks/useFloorplanUpload';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // =============================================================================
 // TYPES

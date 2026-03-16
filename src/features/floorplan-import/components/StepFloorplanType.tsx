@@ -23,7 +23,7 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { FloorplanType, EntityOption } from '../hooks/useFloorplanImportState';
 
 // =============================================================================
