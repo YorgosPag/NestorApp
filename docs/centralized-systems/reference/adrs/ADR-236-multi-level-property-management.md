@@ -108,6 +108,60 @@ export interface LevelData {
 | `src/i18n/locales/el/units.json` | Added `multiLevel.perLevel.*` keys |
 | `src/i18n/locales/en/units.json` | Added `multiLevel.perLevel.*` keys |
 
+## Phase 3: Per-Level Unit Floorplan Tabs (ADR-236 Phase 3)
+
+### Problem
+Multi-level units (maisonettes etc.) showed ONE "Κάτοψη Μονάδας" tab for ALL unit floorplans. Need N tabs (one per level).
+
+### Root Cause
+`FileRecord` had no `levelFloorId` field — no way to link a unit floorplan file to a specific level.
+
+### Schema Change
+Added **optional** `levelFloorId?: string` to:
+- `FileRecord` (Firestore contract)
+- `CreateFileRecordInput` (upload API)
+- `BuildPendingFileRecordInput` (SSoT core)
+- `FileRecordBase` (SSoT core)
+- Persisted in `buildPendingFileRecordData()` when present
+
+### Service/Hook Changes
+- `FileRecordService.getFilesByEntity()` — added `levelFloorId` filter option
+- `useEntityFiles` hook — added `levelFloorId` param, passed to service
+
+### UI Changes (ReadOnlyMediaViewer)
+- **New component**: `UnitFloorplanTabContent` — filters pre-fetched files by `levelFloorId`, with first-level fallback for untagged legacy files
+- **Tab ordering (multi-level)**: Unit FP tabs → Floor FP tabs → Photos → Videos
+- **Tab naming**: "Κάτ. Επιπέδου {name}" (unit) / "Κάτ. Ορόφου {name}" (floor)
+- **URL deep-linking**: Added `unit-floorplan-{floorId}` prefix to `parseMediaTabParam`
+- **Default tab (multi-level)**: `unit-floorplan-{levels[0].floorId}`
+- **Single-level**: Zero change — existing behavior preserved
+
+### Tab Structure
+```
+Multi-level (2 levels): 6 tabs
+[Κάτ.Επιπ.Ισόγ.] [Κάτ.Επιπ.1ος] [Κάτ.Ορόφ.Ισόγ.] [Κάτ.Ορόφ.1ος] [Φωτο] [Βίντεο]
+ unit-floorplan     unit-floorplan  floorplan-floor   floorplan-floor
+
+Single-level: 4 tabs (unchanged)
+[Κάτοψη Μονάδας] [Κάτοψη Ορόφου] [Φωτογραφίες] [Βίντεο]
+```
+
+### Backward Compatibility
+- Fully backward compatible — `levelFloorId` is optional
+- Existing unit floorplans (without `levelFloorId`) → shown in first unit level tab (fallback)
+- Single-level units → unchanged behavior
+- Upload flow with `levelFloorId` → future Phase 4 work
+
+### Files Changed (Phase 3)
+| File | Action |
+|------|--------|
+| `src/types/file-record.ts` | Added `levelFloorId` to `FileRecord` + `CreateFileRecordInput` |
+| `src/services/file-record/file-record-core.ts` | Added `levelFloorId` to `BuildPendingFileRecordInput` + `FileRecordBase` + persist logic |
+| `src/services/file-record.service.ts` | Added `levelFloorId` filter to `getFilesByEntity()` |
+| `src/components/shared/files/hooks/useEntityFiles.ts` | Added `levelFloorId` param |
+| `src/features/read-only-viewer/components/ReadOnlyMediaViewer.tsx` | Multi-level unit FP tabs + `UnitFloorplanTabContent` + tab reordering |
+
 ## Changelog
+- **2026-03-16**: Phase 3 — Per-level unit floorplan tabs with `levelFloorId` schema field
 - **2026-03-16**: Phase 2 — Per-level data entry (areas, layout, orientations, finishes) with auto-aggregation
 - **2026-03-16**: Initial implementation — all 3 phases complete

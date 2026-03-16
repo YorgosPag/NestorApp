@@ -54,6 +54,8 @@ export interface UseEntityFilesParams {
   category?: FileCategory;
   /** Optional purpose filter (e.g., 'project-floorplan', 'parking-floorplan') */
   purpose?: string;
+  /** ADR-236 Phase 3: Filter unit floorplans by level floor ID */
+  levelFloorId?: string;
   /** Auto-fetch on mount (default: true) */
   autoFetch?: boolean;
 }
@@ -117,6 +119,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     domain,
     category,
     purpose,
+    levelFloorId,
     autoFetch = true,
   } = params;
 
@@ -144,6 +147,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
         domain,
         category,
         purpose,
+        levelFloorId,
       });
 
       // 🔗 ENTERPRISE: Parallel queries for owned + linked files
@@ -156,6 +160,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
             companyId,
             domain,
             category,
+            levelFloorId,
             includeDeleted: false,
           }
         ),
@@ -209,7 +214,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     } finally {
       setLoading(false);
     }
-  }, [entityType, entityId, companyId, domain, category, purpose]);
+  }, [entityType, entityId, companyId, domain, category, purpose, levelFloorId]);
 
   // =========================================================================
   // 🗑️ TRASH OPERATIONS (Enterprise Trash System - ADR-032)

@@ -120,6 +120,9 @@ export interface BuildPendingFileRecordInput {
   revision?: number;
   customTitle?: string;
 
+  // Multi-level unit floorplan (ADR-236 Phase 3)
+  levelFloorId?: string;
+
   // Source metadata (for external ingestion)
   source?: FileSourceMetadata;
 
@@ -162,6 +165,9 @@ export interface FileRecordBase {
   occurredAt?: string;
   revision?: number;
   customTitle?: string;
+
+  // Multi-level unit floorplan (ADR-236 Phase 3)
+  levelFloorId?: string;
 
   // Source metadata (for external ingestion)
   source?: FileSourceMetadata;
@@ -320,6 +326,9 @@ export function buildPendingFileRecordData(
   }
   if (input.customTitle) {
     recordBase.customTitle = input.customTitle;
+  }
+  if (input.levelFloorId) {
+    recordBase.levelFloorId = input.levelFloorId;
   }
   if (input.source) {
     recordBase.source = input.source;

@@ -358,6 +358,14 @@ export interface FileRecord {
   purpose?: string;
 
   /**
+   * 🏢 ENTERPRISE: Level floor ID for multi-level unit floorplans (ADR-236 Phase 3)
+   * Links a unit floorplan file to a specific floor/level of a multi-level unit (e.g., maisonette).
+   * References a floor document ID. When present, enables per-level floorplan tabs.
+   * Omitted for single-level units or legacy uploads.
+   */
+  levelFloorId?: string;
+
+  /**
    * 🏢 ENTERPRISE: Thumbnail preview URL (generated at upload time)
    * Small PNG image (~300x200px) stored in Firebase Storage.
    * Used for file card previews in FilesList and galleries.
@@ -653,6 +661,12 @@ export interface CreateFileRecordInput {
    * When provided, replaces category+purpose in display name
    */
   customTitle?: string;
+
+  /**
+   * 🏢 ENTERPRISE: Level floor ID for multi-level unit floorplans (ADR-236 Phase 3)
+   * Links an uploaded unit floorplan to a specific floor/level.
+   */
+  levelFloorId?: string;
 
   // =========================================================================
   // FILE METADATA

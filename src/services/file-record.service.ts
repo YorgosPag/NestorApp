@@ -368,6 +368,8 @@ export class FileRecordService {
       domain?: FileDomain;
       category?: FileCategory;
       purpose?: string;
+      /** ADR-236 Phase 3: Filter unit floorplans by level floor ID */
+      levelFloorId?: string;
       includeDeleted?: boolean;
       companyId?: string; // kept for API compat — auto-injected by FirestoreQueryService
     }
@@ -390,6 +392,10 @@ export class FileRecordService {
 
     if (options?.purpose) {
       constraints.push(where('purpose', '==', options.purpose));
+    }
+
+    if (options?.levelFloorId) {
+      constraints.push(where('levelFloorId', '==', options.levelFloorId));
     }
 
     if (!options?.includeDeleted) {
