@@ -474,6 +474,57 @@
     return;
   }
 
+  // ═══ FIREBASE PERMISSION ERROR SUPPRESSION ═══
+  // 🏢 FIX (2026-03-16): Firestore onSnapshot listeners throw unhandled
+  // promise rejections for "Missing or insufficient permissions" when
+  // security rules deny access. These are NOT bugs — they're expected
+  // until Firestore rules are updated. Suppress to keep console clean.
+
+  const SUPPRESSED_REJECTION_PATTERNS = [
+    'Missing or insufficient permissions',
+    'permission-denied',
+    'PERMISSION_DENIED',
+  ];
+
+  let firebasePermissionWarningShown = false;
+
+  function suppressFirebaseRejections() {
+    // Also suppress CSS chunk loading errors (stale Vercel cache)
+    window.addEventListener('error', function(event) {
+      if (event.filename && event.filename.endsWith('.css') && event.message === 'SyntaxError') {
+        event.preventDefault();
+      }
+    });
+
+    window.addEventListener('unhandledrejection', function(event) {
+      const reason = event.reason;
+      if (!reason) return;
+
+      const message = typeof reason === 'string'
+        ? reason
+        : reason.message || reason.toString();
+
+      const isFirebasePermission = SUPPRESSED_REJECTION_PATTERNS.some(
+        pattern => message.includes(pattern)
+      );
+
+      if (isFirebasePermission) {
+        // Prevent the error from appearing in console
+        event.preventDefault();
+
+        // Log once in development so devs know it happened
+        if (isDevelopment && !firebasePermissionWarningShown) {
+          firebasePermissionWarningShown = true;
+          console.warn(
+            '⚠️ [Firestore] Permission denied errors suppressed. ' +
+            'Firestore security rules may need updating. ' +
+            'See SECURITY_AUDIT_REPORT.md for details.'
+          );
+        }
+      }
+    });
+  }
+
   // ═══ ENTERPRISE INITIALIZATION SEQUENCE ═══
 
   function initializeEnterpriseSuppression() {
@@ -486,6 +537,9 @@
 
       // 3. Canvas Arc patching
       patchCanvasArc();
+
+      // 4. Firebase permission error suppression
+      suppressFirebaseRejections();
 
       // ✅ Success notification (μόνο σε development)
       if (isDevelopment) {
