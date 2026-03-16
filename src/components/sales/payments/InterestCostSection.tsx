@@ -102,7 +102,7 @@ export function InterestCostSection({
   const effectiveRate = result?.effectiveRate ?? 0;
   const euriborLabel = rates
     ? `Euribor 3M: ${formatPercent(rates.euribor3M)}`
-    : t('costCalculator.loadingRates', { defaultValue: 'Φόρτωση...' });
+    : t('costCalculator.loadingRates');
 
   return (
     <>
@@ -117,7 +117,7 @@ export function InterestCostSection({
           </span>
           {rates?.source === 'ecb_api' && (
             <Badge variant="outline" className="text-[10px]">
-              ECB Live
+              {t('costCalculator.settings.ecbLive')}
             </Badge>
           )}
         </header>
@@ -128,7 +128,7 @@ export function InterestCostSection({
           {rates && spreads && (
             <>
               <span>+</span>
-              <span>Spread {formatPercent(spreads.defaultSpread)}</span>
+              <span>{t('costCalculator.settings.spread')} {formatPercent(spreads.defaultSpread)}</span>
               <span>=</span>
               <span className="font-medium text-foreground">
                 {formatPercent(effectiveRate)}
@@ -141,7 +141,7 @@ export function InterestCostSection({
         {result && (
           <article className="grid grid-cols-3 gap-2 text-center">
             <figure className="rounded-md bg-muted/50 p-2">
-              <figcaption className="text-[10px] text-muted-foreground">NPV</figcaption>
+              <figcaption className="text-[10px] text-muted-foreground">{t('costCalculator.cashFlow.npv')}</figcaption>
               <p className="text-sm font-semibold">{formatCurrency(result.npv)}</p>
             </figure>
             <figure className="rounded-md bg-muted/50 p-2">

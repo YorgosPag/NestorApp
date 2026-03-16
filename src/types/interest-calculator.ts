@@ -164,10 +164,12 @@ export interface CostCalculationResult {
 
 /** Named scenario result */
 export interface ScenarioResult {
-  /** Scenario name (e.g. "Μετρητά", "Off-Plan") */
+  /** Scenario name — i18n key (e.g. "costCalculator.scenarios.cashName") */
   name: string;
-  /** Description */
+  /** Description — i18n key */
   description: string;
+  /** Optional interpolation params for description (e.g. { count: "5" }) */
+  descriptionParams?: Record<string, string>;
   /** Calculated result */
   result: CostCalculationResult;
 }

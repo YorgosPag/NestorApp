@@ -303,13 +303,37 @@
       "amount": "Ποσό",
       "date": "Ημερομηνία",
       "days": "Ημέρες",
+      "df": "ΣΠ",
+      "pv": "ΠΑ",
+      "npv": "ΚΠΑ",
       "nominalTotal": "Ονομαστικό σύνολο"
     },
     "scenarios": {
       "scenario": "Σενάριο",
       "cost": "Κόστος",
       "days": "ημέρες",
-      "discountRate": "Επιτόκιο αναγωγής"
+      "discountRate": "Επιτόκιο αναγωγής",
+      "npv": "ΚΠΑ",
+      "wacp": "ΜΣΧΕ",
+      "best": "Καλύτερο",
+      "cashName": "Μετρητά",
+      "cashDesc": "100% εφάπαξ πληρωμή",
+      "offPlanName": "Off-Plan",
+      "offPlanDesc": "10/10/30/20/30 σε 18 μήνες",
+      "loanName": "Δάνειο 70%",
+      "loanDesc": "30% ίδια + 70% τράπεζα σε 6 μήνες",
+      "currentPlanName": "Τρέχον Πρόγραμμα",
+      "currentPlanDesc": "{count} δόσεις — ενεργό πρόγραμμα",
+      "flowLabels": {
+        "cash": "Μετρητά",
+        "reservation": "Κράτηση (10%)",
+        "downPayment": "Προκαταβολή (10%)",
+        "frame": "Σκελετός (30%)",
+        "completion": "Αποπεράτωση (20%)",
+        "final": "Οριστικό (30%)",
+        "ownFunds": "Ίδια κεφάλαια (30%)",
+        "loanDisburse": "Εκταμίευση δανείου (70%)"
+      }
     },
     "pricing": {
       "sellAtLeast": "Πουλήστε τουλάχιστον:",
@@ -329,7 +353,15 @@
       "manualRate": "Χειροκίνητο Επιτόκιο",
       "bankSpread": "Τραπεζικό Spread",
       "save": "Αποθήκευση",
-      "spreadSaved": "Το spread αποθηκεύτηκε!"
+      "spreadSaved": "Το spread αποθηκεύτηκε!",
+      "euribor1M": "Euribor 1Μ + Spread",
+      "euribor3M": "Euribor 3Μ + Spread",
+      "euribor6M": "Euribor 6Μ + Spread",
+      "euribor12M": "Euribor 12Μ + Spread",
+      "ecbMain": "Βασικό Επιτόκιο ΕΚΤ + Spread",
+      "ecbMainShort": "Βασικό ΕΚΤ",
+      "ecbLive": "ΕΚΤ Live",
+      "spread": "Spread"
     }
   },
   "report": {

@@ -139,8 +139,8 @@ function CashFlowTab({
             <TableHead className="text-xs text-right">{t('costCalculator.cashFlow.amount')}</TableHead>
             <TableHead className="text-xs text-right">{t('costCalculator.cashFlow.date')}</TableHead>
             <TableHead className="text-xs text-right">{t('costCalculator.cashFlow.days')}</TableHead>
-            <TableHead className="text-xs text-right">DF</TableHead>
-            <TableHead className="text-xs text-right">PV</TableHead>
+            <TableHead className="text-xs text-right">{t('costCalculator.cashFlow.df')}</TableHead>
+            <TableHead className="text-xs text-right">{t('costCalculator.cashFlow.pv')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -162,7 +162,7 @@ function CashFlowTab({
           {t('costCalculator.cashFlow.nominalTotal')}: {formatCurrency(salePrice)}
         </span>
         <span className="font-semibold">
-          NPV: {formatCurrency(totalPV)}
+          {t('costCalculator.cashFlow.npv')}: {formatCurrency(totalPV)}
         </span>
       </footer>
     </article>
@@ -183,9 +183,9 @@ function ScenarioTab({
         <TableHeader>
           <TableRow>
             <TableHead className="text-xs">{t('costCalculator.scenarios.scenario')}</TableHead>
-            <TableHead className="text-xs text-right">NPV</TableHead>
+            <TableHead className="text-xs text-right">{t('costCalculator.scenarios.npv')}</TableHead>
             <TableHead className="text-xs text-right">{t('costCalculator.scenarios.cost')}</TableHead>
-            <TableHead className="text-xs text-right">WACP</TableHead>
+            <TableHead className="text-xs text-right">{t('costCalculator.scenarios.wacp')}</TableHead>
             <TableHead className="text-xs text-center" />
           </TableRow>
         </TableHeader>
@@ -195,9 +195,9 @@ function ScenarioTab({
             return (
               <TableRow key={idx} className={isBest ? 'bg-emerald-50 dark:bg-emerald-950/20' : ''}>
                 <TableCell className="text-xs">
-                  <span className="font-medium">{s.name}</span>
+                  <span className="font-medium">{t(s.name)}</span>
                   <br />
-                  <span className="text-muted-foreground">{s.description}</span>
+                  <span className="text-muted-foreground">{t(s.description, s.descriptionParams)}</span>
                 </TableCell>
                 <TableCell className="text-xs text-right font-medium">
                   {formatCurrency(s.result.npv)}
@@ -216,7 +216,7 @@ function ScenarioTab({
                   {isBest && (
                     <Badge variant="default" className="text-[10px]">
                       <Award className="h-3 w-3 mr-1" />
-                      Best
+                      {t('costCalculator.scenarios.best')}
                     </Badge>
                   )}
                 </TableCell>
@@ -265,7 +265,7 @@ function PricingTab({
         <dt className="text-muted-foreground">{t('costCalculator.pricing.nominalPrice')}</dt>
         <dd className="text-right font-medium">{formatCurrency(salePrice)}</dd>
 
-        <dt className="text-muted-foreground">NPV ({formatPercent(result.npvPercentage)})</dt>
+        <dt className="text-muted-foreground">{t('costCalculator.cashFlow.npv')} ({formatPercent(result.npvPercentage)})</dt>
         <dd className="text-right font-medium">{formatCurrency(result.npv)}</dd>
 
         <dt className="text-muted-foreground text-destructive">
@@ -374,7 +374,7 @@ function SettingsTab({
             <dt className="text-muted-foreground">12M</dt>
             <dd>{formatPercent(rates.euribor12M)}</dd>
             <dd />
-            <dt className="text-muted-foreground">ECB Main</dt>
+            <dt className="text-muted-foreground">{t('costCalculator.settings.ecbMainShort')}</dt>
             <dd>{formatPercent(rates.ecbMainRate)}</dd>
             <dd className="text-muted-foreground">{formatDate(rates.rateDate)}</dd>
           </dl>
@@ -394,11 +394,11 @@ function SettingsTab({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="euribor_1M">Euribor 1M + Spread</SelectItem>
-            <SelectItem value="euribor_3M">Euribor 3M + Spread</SelectItem>
-            <SelectItem value="euribor_6M">Euribor 6M + Spread</SelectItem>
-            <SelectItem value="euribor_12M">Euribor 12M + Spread</SelectItem>
-            <SelectItem value="ecb_main">ECB Main Rate + Spread</SelectItem>
+            <SelectItem value="euribor_1M">{t('costCalculator.settings.euribor1M')}</SelectItem>
+            <SelectItem value="euribor_3M">{t('costCalculator.settings.euribor3M')}</SelectItem>
+            <SelectItem value="euribor_6M">{t('costCalculator.settings.euribor6M')}</SelectItem>
+            <SelectItem value="euribor_12M">{t('costCalculator.settings.euribor12M')}</SelectItem>
+            <SelectItem value="ecb_main">{t('costCalculator.settings.ecbMain')}</SelectItem>
             <SelectItem value="manual">{t('costCalculator.settings.manual')}</SelectItem>
           </SelectContent>
         </Select>

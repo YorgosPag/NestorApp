@@ -222,24 +222,24 @@ export function buildComparisonScenarios(
     salePrice,
     referenceDate,
     cashFlows: [
-      { label: 'Μετρητά', amount: salePrice, date: referenceDate, certainty: 'certain' },
+      { label: 'costCalculator.scenarios.flowLabels.cash', amount: salePrice, date: referenceDate, certainty: 'certain' },
     ],
     discountRateSource: 'manual',
     bankSpread: 0,
   };
   scenarios.push({
-    name: 'Μετρητά',
-    description: '100% εφάπαξ πληρωμή',
+    name: 'costCalculator.scenarios.cashName',
+    description: 'costCalculator.scenarios.cashDesc',
     result: calculateFullResult(cashInput, discountRate),
   });
 
   // --- Scenario 2: Off-Plan Standard ---
   const offPlanFlows: CashFlowEntry[] = [
-    { label: 'Κράτηση (10%)', amount: salePrice * 0.10, date: referenceDate, certainty: 'certain' },
-    { label: 'Προκαταβολή (10%)', amount: salePrice * 0.10, date: addMonths(refDate, 1), certainty: 'certain' },
-    { label: 'Σκελετός (30%)', amount: salePrice * 0.30, date: addMonths(refDate, 6), certainty: 'probable' },
-    { label: 'Αποπεράτωση (20%)', amount: salePrice * 0.20, date: addMonths(refDate, 12), certainty: 'probable' },
-    { label: 'Οριστικό (30%)', amount: salePrice * 0.30, date: addMonths(refDate, 18), certainty: 'uncertain' },
+    { label: 'costCalculator.scenarios.flowLabels.reservation', amount: salePrice * 0.10, date: referenceDate, certainty: 'certain' },
+    { label: 'costCalculator.scenarios.flowLabels.downPayment', amount: salePrice * 0.10, date: addMonths(refDate, 1), certainty: 'certain' },
+    { label: 'costCalculator.scenarios.flowLabels.frame', amount: salePrice * 0.30, date: addMonths(refDate, 6), certainty: 'probable' },
+    { label: 'costCalculator.scenarios.flowLabels.completion', amount: salePrice * 0.20, date: addMonths(refDate, 12), certainty: 'probable' },
+    { label: 'costCalculator.scenarios.flowLabels.final', amount: salePrice * 0.30, date: addMonths(refDate, 18), certainty: 'uncertain' },
   ];
   const offPlanInput: CostCalculationInput = {
     salePrice,
@@ -249,15 +249,15 @@ export function buildComparisonScenarios(
     bankSpread: 0,
   };
   scenarios.push({
-    name: 'Off-Plan',
-    description: '10/10/30/20/30 σε 18 μήνες',
+    name: 'costCalculator.scenarios.offPlanName',
+    description: 'costCalculator.scenarios.offPlanDesc',
     result: calculateFullResult(offPlanInput, discountRate),
   });
 
   // --- Scenario 3: Bank Loan 70% ---
   const loanFlows: CashFlowEntry[] = [
-    { label: 'Ίδια κεφάλαια (30%)', amount: salePrice * 0.30, date: referenceDate, certainty: 'certain' },
-    { label: 'Εκταμίευση δανείου (70%)', amount: salePrice * 0.70, date: addMonths(refDate, 6), certainty: 'probable' },
+    { label: 'costCalculator.scenarios.flowLabels.ownFunds', amount: salePrice * 0.30, date: referenceDate, certainty: 'certain' },
+    { label: 'costCalculator.scenarios.flowLabels.loanDisburse', amount: salePrice * 0.70, date: addMonths(refDate, 6), certainty: 'probable' },
   ];
   const loanInput: CostCalculationInput = {
     salePrice,
@@ -267,8 +267,8 @@ export function buildComparisonScenarios(
     bankSpread: 0,
   };
   scenarios.push({
-    name: 'Δάνειο 70%',
-    description: '30% ίδια + 70% τράπεζα σε 6 μήνες',
+    name: 'costCalculator.scenarios.loanName',
+    description: 'costCalculator.scenarios.loanDesc',
     result: calculateFullResult(loanInput, discountRate),
   });
 
@@ -288,8 +288,9 @@ export function buildComparisonScenarios(
       bankSpread: 0,
     };
     scenarios.push({
-      name: 'Τρέχον Πρόγραμμα',
-      description: `${installments.length} δόσεις — ενεργό πρόγραμμα`,
+      name: 'costCalculator.scenarios.currentPlanName',
+      description: 'costCalculator.scenarios.currentPlanDesc',
+      descriptionParams: { count: String(installments.length) },
       result: calculateFullResult(planInput, discountRate),
     });
   }

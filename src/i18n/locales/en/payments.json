@@ -303,13 +303,37 @@
       "amount": "Amount",
       "date": "Date",
       "days": "Days",
+      "df": "DF",
+      "pv": "PV",
+      "npv": "NPV",
       "nominalTotal": "Nominal total"
     },
     "scenarios": {
       "scenario": "Scenario",
       "cost": "Cost",
       "days": "days",
-      "discountRate": "Discount rate"
+      "discountRate": "Discount rate",
+      "npv": "NPV",
+      "wacp": "WACP",
+      "best": "Best",
+      "cashName": "Cash",
+      "cashDesc": "100% lump sum payment",
+      "offPlanName": "Off-Plan",
+      "offPlanDesc": "10/10/30/20/30 over 18 months",
+      "loanName": "Loan 70%",
+      "loanDesc": "30% own funds + 70% bank in 6 months",
+      "currentPlanName": "Current Plan",
+      "currentPlanDesc": "{count} installments — active plan",
+      "flowLabels": {
+        "cash": "Cash",
+        "reservation": "Reservation (10%)",
+        "downPayment": "Down payment (10%)",
+        "frame": "Frame (30%)",
+        "completion": "Completion (20%)",
+        "final": "Final (30%)",
+        "ownFunds": "Own funds (30%)",
+        "loanDisburse": "Loan disbursement (70%)"
+      }
     },
     "pricing": {
       "sellAtLeast": "Sell at least:",
@@ -329,7 +353,15 @@
       "manualRate": "Manual Rate",
       "bankSpread": "Bank Spread",
       "save": "Save",
-      "spreadSaved": "Spread saved!"
+      "spreadSaved": "Spread saved!",
+      "euribor1M": "Euribor 1M + Spread",
+      "euribor3M": "Euribor 3M + Spread",
+      "euribor6M": "Euribor 6M + Spread",
+      "euribor12M": "Euribor 12M + Spread",
+      "ecbMain": "ECB Main Rate + Spread",
+      "ecbMainShort": "ECB Main",
+      "ecbLive": "ECB Live",
+      "spread": "Spread"
     }
   },
   "report": {
