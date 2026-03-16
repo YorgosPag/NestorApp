@@ -323,7 +323,7 @@ export function ReadOnlyMediaViewer({
               >
                 <Layers className={iconSizes.sm} aria-hidden="true" />
                 <span className="text-xs">
-                  {t('viewer.media.floorplanLevel', { ns: 'properties', defaultValue: 'Κάτοψη {{name}}', name: level.name })}
+                  {`${t('viewer.media.floorplans', { ns: 'properties', defaultValue: 'Κάτοψη' })} ${level.name}`}
                 </span>
               </TabsTrigger>
             ))
