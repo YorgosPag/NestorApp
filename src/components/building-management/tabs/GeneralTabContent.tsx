@@ -135,6 +135,17 @@ export function GeneralTabContent({
     },
   }, effectiveIsEditing);
 
+  // Sync formData when user selects a different building
+  const prevBuildingIdRef = React.useRef(building.id);
+  useEffect(() => {
+    if (prevBuildingIdRef.current !== building.id) {
+      prevBuildingIdRef.current = building.id;
+      setFormData(buildFormData(building));
+      setSaveError(null);
+      setErrors({});
+    }
+  }, [building]);
+
   // Track cancel vs save transitions for form reset
   const didSaveRef = React.useRef(false);
   const prevEditingRef = React.useRef(effectiveIsEditing);
