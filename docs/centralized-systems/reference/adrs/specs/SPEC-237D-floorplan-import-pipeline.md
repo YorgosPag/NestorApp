@@ -368,6 +368,7 @@ floorplanType === 'unit'
 | 2026-03-16 | FIX: Αφαίρεση "Αυτόματη επιλογή" UI — single items εμφανίζονται ως radio buttons, απαιτούν explicit κλικ πριν το "Επόμενο" | Claude |
 | 2026-03-16 | FIX: Step 3 (buildings) — αντικατάσταση embedded data από projectsRawRef με proper API call `GET /api/buildings?projectId=xxx`. Πιο αξιόπιστο, με fallback σε companyId | Claude |
 | 2026-03-16 | FEAT: Multi-level unit support (ADR-236) — μεζονέτες/penthouses δείχνουν level selector μετά την επιλογή μονάδας. `levelFloorId` περνά στο upload config. i18n `select.level` keys (el+en) | Claude |
+| 2026-03-16 | FEAT: Major UX redesign — Steps 2-4 τώρα έχουν shortcut card "Ανέβασμα Κάτοψης [Entity]" πάνω από τη λίστα. Step 5 αλλάχθηκε από type selector σε unit selector. Νέο `StepUnitSelector` component. `FloorplanType` τώρα περιλαμβάνει 'project'. Back από upload επιστρέφει στο step που ήρθε ο χρήστης | Claude |
 
 ### Implementation Notes
 
