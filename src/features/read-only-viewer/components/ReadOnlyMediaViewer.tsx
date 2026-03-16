@@ -145,7 +145,11 @@ export function ReadOnlyMediaViewer({
   const pathname = usePathname();
 
   // Read active tab from URL (with validation)
-  const activeTab = parseMediaTabParam(searchParams.get(MEDIA_TAB_PARAM));
+  // ADR-236: For multi-level units, default to first level tab instead of 'floorplans'
+  const parsedTab = parseMediaTabParam(searchParams.get(MEDIA_TAB_PARAM));
+  const activeTab = (parsedTab === DEFAULT_MEDIA_TAB && isMultiLevel && levels && levels.length > 0)
+    ? `floorplan-floor-${levels[0].floorId}`
+    : parsedTab;
 
   // Update URL when tab changes (preserves other params)
   const setActiveTab = useCallback((newTab: MediaTab) => {
@@ -308,17 +312,7 @@ export function ReadOnlyMediaViewer({
             spacing.padding.sm
           )}
         >
-          <TabsTrigger
-            value="floorplans"
-            className="flex items-center gap-1.5 data-[state=active]:bg-primary/10 px-3 py-1.5"
-          >
-            <Map className={iconSizes.sm} aria-hidden="true" />
-            <span className="text-xs">{t('viewer.media.floorplanProperty', { ns: 'properties', defaultValue: 'Κάτοψη Ακινήτου' })}</span>
-            {!floorplansData.loading && floorplansData.files.length > 0 && (
-              <span className="ml-1 text-xs text-muted-foreground">({floorplansData.files.length})</span>
-            )}
-          </TabsTrigger>
-          {/* ADR-236: Multi-level → one tab per floor; single → one "Κάτοψη Ορόφου" tab */}
+          {/* ADR-236: Level floorplans FIRST — one tab per floor (multi-level) or single floor tab */}
           {isMultiLevel ? (
             levels.map((level) => (
               <TabsTrigger
@@ -341,6 +335,17 @@ export function ReadOnlyMediaViewer({
               <span className="text-xs">{t('viewer.media.floorplanFloor', { ns: 'properties', defaultValue: 'Κάτοψη Ορόφου' })}</span>
             </TabsTrigger>
           )}
+          {/* Unit floorplan — after level tabs, renamed to "Κάτοψη Ορόφου" */}
+          <TabsTrigger
+            value="floorplans"
+            className="flex items-center gap-1.5 data-[state=active]:bg-primary/10 px-3 py-1.5"
+          >
+            <Map className={iconSizes.sm} aria-hidden="true" />
+            <span className="text-xs">{t('viewer.media.floorplanFloor', { ns: 'properties', defaultValue: 'Κάτοψη Ορόφου' })}</span>
+            {!floorplansData.loading && floorplansData.files.length > 0 && (
+              <span className="ml-1 text-xs text-muted-foreground">({floorplansData.files.length})</span>
+            )}
+          </TabsTrigger>
           <TabsTrigger
             value="photos"
             className="flex items-center gap-1.5 data-[state=active]:bg-primary/10 px-3 py-1.5"
