@@ -137,7 +137,6 @@ export function FloorplanImportWizard({
               loading={state.currentStepLoading}
               placeholder={t(SELECT_PLACEHOLDER_KEYS[state.step] ?? '')}
               emptyMessage={t('floorplanImport.noItems')}
-              autoSelectedMessage={t('floorplanImport.autoSelected')}
             />
           )}
 

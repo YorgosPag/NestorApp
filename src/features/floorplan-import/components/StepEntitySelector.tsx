@@ -34,7 +34,6 @@ interface StepEntitySelectorProps {
   loading: boolean;
   placeholder: string;
   emptyMessage: string;
-  autoSelectedMessage?: string;
 }
 
 // =============================================================================
@@ -54,7 +53,6 @@ export function StepEntitySelector({
   loading,
   placeholder,
   emptyMessage,
-  autoSelectedMessage,
 }: StepEntitySelectorProps) {
   const colors = useSemanticColors();
 
@@ -72,16 +70,6 @@ export function StepEntitySelector({
     return (
       <div className="flex items-center justify-center py-12">
         <p className={`text-sm ${colors.text.muted}`}>{emptyMessage}</p>
-      </div>
-    );
-  }
-
-  // ── Auto-selected single item ──
-  if (items.length === 1 && autoSelectedMessage) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-2 py-8">
-        <p className={`text-sm font-medium ${colors.text.primary}`}>{items[0].label}</p>
-        <p className={`text-xs ${colors.text.muted}`}>{autoSelectedMessage}</p>
       </div>
     );
   }
