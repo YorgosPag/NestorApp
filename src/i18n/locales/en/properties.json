@@ -426,6 +426,7 @@
       "noVideos": "No videos available",
       "floorplanProperty": "Unit Floorplan",
       "floorplanFloor": "Floor Plan",
+      "floorplanUnit": "Unit Floorplan",
       "floorplanLevel": "{{name}} Plan"
     }
   },

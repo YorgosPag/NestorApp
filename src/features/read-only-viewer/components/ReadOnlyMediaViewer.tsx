@@ -156,25 +156,29 @@ export function ReadOnlyMediaViewer({
   const pathname = usePathname();
 
   // Read active tab from URL (with validation)
-  // ADR-236: For multi-level units, default to first level tab instead of 'floorplans'
+  // ADR-236: For multi-level units, default to first level tab on INITIAL load only
   const hasMultipleLevels = levels && levels.length > 1;
-  const parsedTab = parseMediaTabParam(searchParams.get(MEDIA_TAB_PARAM));
-  const activeTab = (parsedTab === DEFAULT_MEDIA_TAB && hasMultipleLevels && levels.length > 0)
+  const rawMediaTabParam = searchParams.get(MEDIA_TAB_PARAM);
+  const parsedTab = parseMediaTabParam(rawMediaTabParam);
+  // Redirect to first level tab ONLY when NO param is in URL (initial load).
+  // If user explicitly clicked "floorplans" tab, rawMediaTabParam will be "floorplans" — respect it.
+  const activeTab = (!rawMediaTabParam && hasMultipleLevels && levels.length > 0)
     ? `floorplan-floor-${levels[0].floorId}`
     : parsedTab;
 
   // Update URL when tab changes (preserves other params)
   const setActiveTab = useCallback((newTab: MediaTab) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (newTab === DEFAULT_MEDIA_TAB) {
-      // Remove param for default value (cleaner URLs)
+    if (newTab === DEFAULT_MEDIA_TAB && !hasMultipleLevels) {
+      // Remove param for default value (cleaner URLs) — single-level only.
+      // For multi-level, always keep param so "floorplans" click isn't confused with initial load.
       params.delete(MEDIA_TAB_PARAM);
     } else {
       params.set(MEDIA_TAB_PARAM, newTab);
     }
     // Use replace to avoid polluting browser history
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }, [searchParams, router, pathname]);
+  }, [searchParams, router, pathname, hasMultipleLevels]);
 
   // ==========================================================================
   // 🏢 ENTERPRISE: Data Fetching with Centralized Hook (ADR-031)
@@ -350,13 +354,18 @@ export function ReadOnlyMediaViewer({
               <span className="text-xs">{t('viewer.media.floorplanFloor', { ns: 'properties', defaultValue: 'Κάτοψη Ορόφου' })}</span>
             </TabsTrigger>
           )}
-          {/* Unit floorplan — after level tabs, renamed to "Κάτοψη Ορόφου" */}
+          {/* Unit floorplan — label depends on multi-level status */}
           <TabsTrigger
             value="floorplans"
             className="flex items-center gap-1.5 data-[state=active]:bg-primary/10 px-3 py-1.5"
           >
             <Map className={iconSizes.sm} aria-hidden="true" />
-            <span className="text-xs">{t('viewer.media.floorplanFloor', { ns: 'properties', defaultValue: 'Κάτοψη Ορόφου' })}</span>
+            <span className="text-xs">
+              {isMultiLevel
+                ? t('viewer.media.floorplanUnit', { ns: 'properties', defaultValue: 'Κάτοψη Μονάδας' })
+                : t('viewer.media.floorplanFloor', { ns: 'properties', defaultValue: 'Κάτοψη Ορόφου' })
+              }
+            </span>
             {!floorplansData.loading && floorplansData.files.length > 0 && (
               <span className="ml-1 text-xs text-muted-foreground">({floorplansData.files.length})</span>
             )}

@@ -420,6 +420,7 @@
       "noVideos": "Δεν υπάρχουν βίντεο",
       "floorplanProperty": "Κάτοψη Ακινήτου",
       "floorplanFloor": "Κάτοψη Ορόφου",
+      "floorplanUnit": "Κάτοψη Μονάδας",
       "floorplanLevel": "Κάτοψη {{name}}"
     }
   },
