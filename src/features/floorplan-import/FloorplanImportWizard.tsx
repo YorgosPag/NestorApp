@@ -19,6 +19,7 @@
  */
 
 import React, { useCallback, useMemo } from 'react';
+import { FolderKanban, Building2, Layers } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   Dialog,
@@ -69,10 +70,10 @@ const SELECT_PLACEHOLDER_KEYS: Record<number, string> = {
 };
 
 /** Shortcut floorplan card config for steps 2-4 */
-const STEP_SHORTCUT_CONFIG: Record<number, { type: FloorplanType; labelKey: string }> = {
-  2: { type: 'project', labelKey: 'floorplanImport.shortcuts.project' },
-  3: { type: 'building', labelKey: 'floorplanImport.shortcuts.building' },
-  4: { type: 'floor', labelKey: 'floorplanImport.shortcuts.floor' },
+const STEP_SHORTCUT_CONFIG: Record<number, { type: FloorplanType; labelKey: string; icon: React.ElementType }> = {
+  2: { type: 'project', labelKey: 'floorplanImport.shortcuts.project', icon: FolderKanban },
+  3: { type: 'building', labelKey: 'floorplanImport.shortcuts.building', icon: Building2 },
+  4: { type: 'floor', labelKey: 'floorplanImport.shortcuts.floor', icon: Layers },
 };
 
 // =============================================================================
@@ -143,6 +144,7 @@ export function FloorplanImportWizard({
               placeholder={t(SELECT_PLACEHOLDER_KEYS[state.step] ?? '')}
               emptyMessage={t('floorplanImport.noItems')}
               shortcutLabel={shortcutEnabled ? t(shortcutConfig.labelKey) : undefined}
+              shortcutIcon={shortcutEnabled ? shortcutConfig.icon : undefined}
               onShortcutClick={shortcutEnabled ? () => state.jumpToUpload(shortcutConfig.type) : undefined}
             />
           )}

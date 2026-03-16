@@ -8,15 +8,13 @@
  * Renders either radio buttons (≤5 items) or Radix Select (>5 items).
  * Used for: Company, Project, Building, Floor selection.
  *
- * Steps 2-4 include an optional shortcut card above the list that lets
- * the user upload a floorplan at the current entity level (e.g. project,
- * building, floor) without going deeper.
+ * Steps 2-4 include an optional shortcut card above the list — a large
+ * clickable card with icon (same style as the old type cards from step 5).
  *
  * @module features/floorplan-import/components/StepEntitySelector
  */
 
 import React from 'react';
-import { Upload } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -25,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { EntityOption } from '../hooks/useFloorplanImportState';
 
@@ -41,6 +40,8 @@ interface StepEntitySelectorProps {
   emptyMessage: string;
   /** Optional shortcut card label (e.g. "Γενική Κάτοψη Έργου") */
   shortcutLabel?: string;
+  /** Icon for shortcut card */
+  shortcutIcon?: React.ElementType;
   /** Called when shortcut card is clicked → jumps to upload */
   onShortcutClick?: () => void;
 }
@@ -63,8 +64,10 @@ export function StepEntitySelector({
   placeholder,
   emptyMessage,
   shortcutLabel,
+  shortcutIcon: ShortcutIcon,
   onShortcutClick,
 }: StepEntitySelectorProps) {
+  const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
   // ── Loading ──
@@ -87,15 +90,15 @@ export function StepEntitySelector({
 
   return (
     <div className="space-y-4 py-4">
-      {/* ── Shortcut card (steps 2-4 only, shown when entity is selected) ── */}
-      {shortcutLabel && onShortcutClick && (
+      {/* ── Shortcut card — large clickable card with icon ── */}
+      {shortcutLabel && ShortcutIcon && onShortcutClick && (
         <button
           type="button"
           onClick={onShortcutClick}
-          className="flex w-full cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 px-4 py-3 transition-all hover:border-primary hover:bg-primary/10"
+          className="flex w-full cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-primary/40 bg-primary/5 px-4 py-6 transition-all hover:border-primary hover:bg-primary/10 hover:shadow-sm"
         >
-          <Upload className="h-5 w-5 shrink-0 text-primary" />
-          <span className="text-sm font-medium text-primary">{shortcutLabel}</span>
+          <ShortcutIcon className={`${iconSizes.xl2} text-primary`} />
+          <span className="text-sm font-semibold text-primary">{shortcutLabel}</span>
         </button>
       )}
 
