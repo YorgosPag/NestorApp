@@ -1,7 +1,7 @@
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import type { Property, ExtendedPropertyDetails } from '@/types/property-viewer';
 import type { PropertyDetailsContentProps } from './types';
 // 🏢 ENTERPRISE: i18n support
@@ -106,6 +106,13 @@ export function PropertyDetailsContent({
   const commercialStatus = resolvedProperty?.commercialStatus ?? 'unavailable';
   const isSoldOrRented = commercialStatus === 'sold' || commercialStatus === 'rented';
 
+  // ADR-236: Track type locally so multi-floor selector responds instantly to type changes
+  // (property prop updates async via Firestore, but we need immediate UI response)
+  const [localType, setLocalType] = useState(resolvedProperty?.type ?? '');
+  useEffect(() => {
+    if (resolvedProperty?.type) setLocalType(resolvedProperty.type);
+  }, [resolvedProperty?.type]);
+
   // Early return if no property data available
   if (!resolvedProperty) {
     logger.warn('PropertyDetailsContent: No property data provided');
@@ -118,14 +125,26 @@ export function PropertyDetailsContent({
   };
 
   // ADR-236: Determine if property is multi-level capable (SSoT detection)
-  const isMultiLevel = resolvedProperty.isMultiLevel || isMultiLevelCapableType(resolvedProperty.type);
-  const showMultiFloorSelector = isMultiLevelCapableType(resolvedProperty.type);
+  const effectiveType = localType || resolvedProperty.type;
+  const isMultiLevel = resolvedProperty.isMultiLevel || isMultiLevelCapableType(effectiveType);
+  const showMultiFloorSelector = isMultiLevelCapableType(effectiveType);
 
   // attachments (ίδια λογική με mock)
   const { storage: attachedStorage, parking: attachedParking } = resolveAttachments(resolvedProperty);
 
   // safe update (ίδια συμπεριφορά: no-op όταν read-only)
-  const safeOnUpdateProperty = makeSafeUpdate(isReadOnly, onUpdateProperty || (() => {}));
+  const baseSafeUpdate = makeSafeUpdate(isReadOnly, onUpdateProperty || (() => {}));
+
+  // ADR-236: Intercept updates to track type changes locally for instant UI response
+  const safeOnUpdateProperty = useCallback(
+    (id: string, updates: Partial<Property>) => {
+      if (updates.type && typeof updates.type === 'string') {
+        setLocalType(updates.type);
+      }
+      baseSafeUpdate(id, updates);
+    },
+    [baseSafeUpdate]
+  );
 
   // === RENDER: ΑΠΑΡΑΛΛΑΚΤΟ DOM/Tailwind/labels ===
   // 🏢 ENTERPRISE: Internal padding (8px) - parent CardContent has p-0 for scrollbar alignment
