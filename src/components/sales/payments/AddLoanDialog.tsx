@@ -29,6 +29,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { BankSelector } from '@/components/banking/BankSelector';
+import type { BankInfo } from '@/constants/greek-banks';
 import type { CreateLoanInput, DisbursementType } from '@/types/loan-tracking';
 
 // ============================================================================
@@ -53,6 +55,7 @@ interface AddLoanDialogProps {
 
 export function AddLoanDialog({ open, onOpenChange, onAdd, existingCount }: AddLoanDialogProps) {
   const { t } = useTranslation('payments');
+  const [bankCode, setBankCode] = useState('');
   const [bankName, setBankName] = useState('');
   const [isPrimary, setIsPrimary] = useState(existingCount === 0);
   const [requestedAmount, setRequestedAmount] = useState('');
@@ -76,6 +79,7 @@ export function AddLoanDialog({ open, onOpenChange, onAdd, existingCount }: AddL
       if (result.success) {
         toast.success(t('loanTracking.addLoan', { defaultValue: 'Δάνειο προστέθηκε' }));
         // Reset form
+        setBankCode('');
         setBankName('');
         setRequestedAmount('');
         setDisbursementType('lump_sum');
@@ -106,18 +110,16 @@ export function AddLoanDialog({ open, onOpenChange, onAdd, existingCount }: AddL
 
         <fieldset className="space-y-3">
           {/* Bank Name */}
-          <span className="space-y-1">
-            <Label className="text-xs">
-              {t('loanTracking.fields.bankName', { defaultValue: 'Τράπεζα' })} *
-            </Label>
-            <Input
-              value={bankName}
-              onChange={(e) => setBankName(e.target.value)}
-              className="h-8 text-xs"
-              placeholder="π.χ. Εθνική Τράπεζα"
-              autoFocus
-            />
-          </span>
+          <BankSelector
+            value={bankCode}
+            onChange={(code: string, bank: BankInfo | undefined) => {
+              setBankCode(code);
+              setBankName(bank?.name ?? '');
+            }}
+            label={`${t('loanTracking.fields.bankName', { defaultValue: 'Τράπεζα' })} *`}
+            required
+            allowOther
+          />
 
           {/* Requested Amount */}
           <span className="space-y-1">

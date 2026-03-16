@@ -8,6 +8,8 @@
 import React, { useState, useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { toast } from 'sonner';
+import { BankSelector } from '@/components/banking/BankSelector';
+import type { BankInfo } from '@/constants/greek-banks';
 import {
   Dialog,
   DialogContent,
@@ -53,6 +55,7 @@ export function AddChequeDialog({
   const [chequeType, setChequeType] = useState<ChequeType>('bank_cheque');
   const [chequeNumber, setChequeNumber] = useState('');
   const [amount, setAmount] = useState('');
+  const [bankCode, setBankCode] = useState('');
   const [bankName, setBankName] = useState('');
   const [bankBranch, setBankBranch] = useState('');
   const [drawerName, setDrawerName] = useState('');
@@ -65,6 +68,7 @@ export function AddChequeDialog({
     setChequeType('bank_cheque');
     setChequeNumber('');
     setAmount('');
+    setBankCode('');
     setBankName('');
     setBankBranch('');
     setDrawerName('');
@@ -180,16 +184,15 @@ export function AddChequeDialog({
 
           {/* Bank + Branch */}
           <fieldset className="grid grid-cols-2 gap-2">
-            <section className="space-y-1">
-              <Label className="text-xs">
-                {t('chequeRegistry.fields.bankName', { defaultValue: 'Τράπεζα' })}
-              </Label>
-              <Input
-                className="h-8 text-xs"
-                value={bankName}
-                onChange={(e) => setBankName(e.target.value)}
-              />
-            </section>
+            <BankSelector
+              value={bankCode}
+              onChange={(code: string, bank: BankInfo | undefined) => {
+                setBankCode(code);
+                setBankName(bank?.name ?? '');
+              }}
+              label={t('chequeRegistry.fields.bankName', { defaultValue: 'Τράπεζα' })}
+              allowOther
+            />
             <section className="space-y-1">
               <Label className="text-xs">
                 {t('chequeRegistry.fields.bankBranch', { defaultValue: 'Υποκατάστημα' })}

@@ -28,6 +28,8 @@ import {
 } from '@/components/ui/select';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { toast } from 'sonner';
+import { BankSelector } from '@/components/banking/BankSelector';
+import type { BankInfo } from '@/constants/greek-banks';
 import type {
   Installment,
   PaymentMethod,
@@ -73,6 +75,7 @@ export function RecordPaymentDialog({
   const [amount, setAmount] = useState(remaining.toString());
   const [method, setMethod] = useState<PaymentMethod>('bank_transfer');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [bankCode, setBankCode] = useState('');
   const [bankName, setBankName] = useState('');
   const [referenceNumber, setReferenceNumber] = useState('');
   const [notes, setNotes] = useState('');
@@ -197,15 +200,15 @@ export function RecordPaymentDialog({
           {/* Bank fields */}
           {showBankFields && (
             <>
-              <div className="space-y-1">
-                <Label htmlFor="pay-bank">{t('dialog.bankName', { defaultValue: 'Τράπεζα' })}</Label>
-                <Input
-                  id="pay-bank"
-                  value={bankName}
-                  onChange={(e) => setBankName(e.target.value)}
-                  placeholder="π.χ. Εθνική Τράπεζα"
-                />
-              </div>
+              <BankSelector
+                value={bankCode}
+                onChange={(code: string, bank: BankInfo | undefined) => {
+                  setBankCode(code);
+                  setBankName(bank?.name ?? '');
+                }}
+                label={t('dialog.bankName', { defaultValue: 'Τράπεζα' })}
+                allowOther
+              />
               <div className="space-y-1">
                 <Label htmlFor="pay-ref">{t('dialog.referenceNumber', { defaultValue: 'Αρ. Αναφοράς' })}</Label>
                 <Input
