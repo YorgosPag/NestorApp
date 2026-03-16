@@ -201,6 +201,7 @@ export function useFloorplanImportState(
   // ── Units via existing hook ──
   const { units: rawUnits, loading: unitLoading } = useFirestoreUnits({
     buildingId: selection.buildingId ?? undefined,
+    floorId: selection.floorId ?? undefined,
     autoFetch: !!selection.buildingId && selection.floorplanType === 'unit',
   });
 
