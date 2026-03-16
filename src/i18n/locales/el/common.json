@@ -1505,6 +1505,16 @@
     "appurtenances": {
       "activeRental": "Ενεργή μίσθωση",
       "noArea": "Δεν έχει εμβαδόν (τ.μ.) — δεν μπορεί να συμπεριληφθεί"
+    },
+    "quickFilters": {
+      "allStatuses": "Όλες",
+      "allStatusesTooltip": "Εμφάνιση όλων",
+      "forSale": "Προς Πώληση",
+      "forSaleTooltip": "Διαθέσιμα προς πώληση",
+      "reserved": "Κρατημένα",
+      "reservedTooltip": "Κρατημένα από αγοραστή",
+      "dualListing": "Πώληση & Ενοικίαση",
+      "dualListingTooltip": "Καταχωρημένα για πώληση και ενοικίαση"
     }
   },
   "salesStorage": {

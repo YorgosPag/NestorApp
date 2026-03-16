@@ -1506,6 +1506,16 @@
     "appurtenances": {
       "activeRental": "Active rental",
       "noArea": "No area (sqm) — cannot be included"
+    },
+    "quickFilters": {
+      "allStatuses": "All",
+      "allStatusesTooltip": "Show all statuses",
+      "forSale": "For Sale",
+      "forSaleTooltip": "Available for sale",
+      "reserved": "Reserved",
+      "reservedTooltip": "Reserved by buyer",
+      "dualListing": "Sale & Rent",
+      "dualListingTooltip": "Listed for both sale and rent"
     }
   },
   "salesStorage": {
