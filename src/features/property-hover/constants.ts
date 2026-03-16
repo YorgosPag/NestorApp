@@ -1,67 +1,88 @@
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
-import type { UseSemanticColorsReturn } from '@/hooks/useSemanticColors';
 // 🏢 ENTERPRISE: Import centralized property status labels from enterprise source
 import { PROPERTY_STATUS_LABELS } from '@/constants/property-statuses-enterprise';
 
 /**
- * ✅ ENTERPRISE PATTERN: Dependency Injection
- * Αντί να καλώ useSemanticColors() hook εδώ (violation των Rules of Hooks),
- * περνώ τα colors ως παράμετρο από το component που καλεί τη function.
+ * 🏢 ENTERPRISE: Status Color Mapping (Tailwind classes)
  *
- * 🏢 ENTERPRISE FIX (2026-01-19): Use proper semantic color mapping
- * StatusColorPatterns has: active, inactive, pending, completed, cancelled
- * Mapping to semantic status colors for property statuses:
- * - for-sale/available → active (green)
- * - for-rent → pending (yellow/blue)
- * - sold → cancelled (red)
- * - rented/reserved → completed (blue)
- * - unknown → inactive (gray)
+ * Maps commercial statuses to Tailwind utility classes.
+ * Previously used colors.status.* from useSemanticColors, but that was
+ * removed during the design-system migration (color-bridge). Now uses
+ * Tailwind classes directly — same visual result, zero runtime dependency.
  */
-export const getPropertyStatusConfig = (colors: UseSemanticColorsReturn) => {
+const STATUS_COLORS = {
+  active: {
+    bg: 'bg-emerald-500/10',
+    text: 'text-emerald-700 dark:text-emerald-400',
+    border: 'border-emerald-500/30',
+  },
+  pending: {
+    bg: 'bg-amber-500/10',
+    text: 'text-amber-700 dark:text-amber-400',
+    border: 'border-amber-500/30',
+  },
+  cancelled: {
+    bg: 'bg-red-500/10',
+    text: 'text-red-700 dark:text-red-400',
+    border: 'border-red-500/30',
+  },
+  completed: {
+    bg: 'bg-blue-500/10',
+    text: 'text-blue-700 dark:text-blue-400',
+    border: 'border-blue-500/30',
+  },
+  inactive: {
+    bg: 'bg-muted/50',
+    text: 'text-muted-foreground',
+    border: 'border-border',
+  },
+} as const;
+
+/**
+ * ✅ ENTERPRISE PATTERN: Property Status Config
+ *
+ * Returns status display configuration (label, color classes, price label).
+ * No hook dependency — safe to call from any context.
+ */
+export function getPropertyStatusConfig() {
   return {
     'for-sale': {
       label: PROPERTY_STATUS_LABELS['for-sale'],
-      // 🏢 ENTERPRISE: Map to 'active' status (green - available for transaction)
-      color: `${colors.status.active.bg} ${colors.status.active.text} ${colors.status.active.border}`,
-      priceLabel: 'properties.priceLabels.salePrice' // i18n key
+      color: `${STATUS_COLORS.active.bg} ${STATUS_COLORS.active.text} ${STATUS_COLORS.active.border}`,
+      priceLabel: 'properties.priceLabels.salePrice',
     },
     'for-rent': {
       label: PROPERTY_STATUS_LABELS['for-rent'],
-      // 🏢 ENTERPRISE: Map to 'pending' status (yellow/blue - active listing)
-      color: `${colors.status.pending.bg} ${colors.status.pending.text} ${colors.status.pending.border}`,
-      priceLabel: 'properties.priceLabels.monthlyRent' // i18n key
+      color: `${STATUS_COLORS.pending.bg} ${STATUS_COLORS.pending.text} ${STATUS_COLORS.pending.border}`,
+      priceLabel: 'properties.priceLabels.monthlyRent',
     },
     'sold': {
       label: PROPERTY_STATUS_LABELS['sold'],
-      // 🏢 ENTERPRISE: Map to 'cancelled' status (red - no longer available)
-      color: `${colors.status.cancelled.bg} ${colors.status.cancelled.text} ${colors.status.cancelled.border}`,
-      priceLabel: 'properties.priceLabels.salePrice' // i18n key
+      color: `${STATUS_COLORS.cancelled.bg} ${STATUS_COLORS.cancelled.text} ${STATUS_COLORS.cancelled.border}`,
+      priceLabel: 'properties.priceLabels.salePrice',
     },
     'rented': {
       label: PROPERTY_STATUS_LABELS['rented'],
-      // 🏢 ENTERPRISE: Map to 'completed' status (blue - transaction complete)
-      color: `${colors.status.completed.bg} ${colors.status.completed.text} ${colors.status.completed.border}`,
-      priceLabel: 'properties.priceLabels.monthlyRent' // i18n key
+      color: `${STATUS_COLORS.completed.bg} ${STATUS_COLORS.completed.text} ${STATUS_COLORS.completed.border}`,
+      priceLabel: 'properties.priceLabels.monthlyRent',
     },
     'reserved': {
       label: PROPERTY_STATUS_LABELS['reserved'],
-      // 🏢 ENTERPRISE: Map to 'pending' status (yellow - pending completion)
-      color: `${colors.status.pending.bg} ${colors.status.pending.text} ${colors.status.pending.border}`,
-      priceLabel: 'properties.priceLabels.salePrice' // i18n key
+      color: `${STATUS_COLORS.pending.bg} ${STATUS_COLORS.pending.text} ${STATUS_COLORS.pending.border}`,
+      priceLabel: 'properties.priceLabels.salePrice',
     },
     'unknown': {
-      label: 'properties.status.unknown', // i18n key for unknown status
-      // 🏢 ENTERPRISE: Map to 'inactive' status (gray - no status)
-      color: `${colors.status.inactive.bg} ${colors.status.inactive.text} ${colors.status.inactive.border}`,
-      priceLabel: 'properties.priceLabels.price' // i18n key
+      label: 'properties.status.unknown',
+      color: `${STATUS_COLORS.inactive.bg} ${STATUS_COLORS.inactive.text} ${STATUS_COLORS.inactive.border}`,
+      priceLabel: 'properties.priceLabels.price',
     },
   } as const;
-};
+}
 
 /**
  * ⚠️ DEPRECATED: Για backward compatibility ΜΟΝΟ
  * Αυτό θα αφαιρεθεί σε μελλοντική έκδοση.
- * Χρησιμοποίησε getPropertyStatusConfig(colors) αντί για αυτό.
+ * Χρησιμοποίησε getPropertyStatusConfig() αντί για αυτό.
  * 🏢 ENTERPRISE: Type-safe empty object with proper typing
  */
 export const statusConfig: Record<string, never> = {}; // Empty για να μην σπάσει compilation

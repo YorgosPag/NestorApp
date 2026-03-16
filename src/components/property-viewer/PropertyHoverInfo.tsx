@@ -33,7 +33,7 @@ interface PropertyHoverInfoProps {
 function PropertyHoverContent({ property }: { property: Property }) {
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
-  const statusConfig = getPropertyStatusConfig(colors);
+  const statusConfig = getPropertyStatusConfig();
   const statusInfo = statusConfig[property.status as keyof typeof statusConfig] || statusConfig['unknown'];
 
   return (
