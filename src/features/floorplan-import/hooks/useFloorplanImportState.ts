@@ -100,7 +100,6 @@ interface ProjectItem {
   title?: string;
   companyId?: string;
   linkedCompanyId?: string;
-  buildings?: BuildingItem[];
 }
 
 interface ProjectsByCompanyResponse {
@@ -178,8 +177,7 @@ export function useFloorplanImportState(
   const [buildingsLoading, setBuildingsLoading] = useState(false);
   const [floorsLoading, setFloorsLoading] = useState(false);
 
-  // ── Raw project data (for extracting buildings without extra API call) ──
-  const projectsRawRef = useRef<ProjectItem[]>([]);
+  // (projectsRawRef removed — buildings now fetched via /api/buildings)
 
   // ── Open epoch: increments each time wizard opens → forces fresh data fetch ──
   const [openEpoch, setOpenEpoch] = useState(0);
@@ -196,7 +194,6 @@ export function useFloorplanImportState(
       setProjects([]);
       setBuildings([]);
       setFloors([]);
-      projectsRawRef.current = [];
     }
     prevOpenRef.current = isOpen;
   }, [isOpen]);
@@ -270,8 +267,7 @@ export function useFloorplanImportState(
         const raw = res as Record<string, unknown>;
         const projectsList = (raw.projects ?? raw.data ?? []) as ProjectItem[];
         logger.info('Projects loaded', { count: projectsList.length });
-        projectsRawRef.current = projectsList;
-        const items = projectsRawRef.current.map((p) => ({
+        const items = projectsList.map((p) => ({
           id: p.id,
           label: p.name ?? p.title ?? p.id,
         }));
@@ -281,7 +277,6 @@ export function useFloorplanImportState(
         if (!cancelled) {
           logger.error('Failed to load projects', { error: String(err) });
           setProjects([]);
-          projectsRawRef.current = [];
         }
       })
       .finally(() => { if (!cancelled) setProjectsLoading(false); });
@@ -289,19 +284,34 @@ export function useFloorplanImportState(
     return () => { cancelled = true; };
   }, [isReady, step, selection.companyId]);
 
-  // Step 3: Buildings (from projectsRaw — no extra API)
+  // Step 3: Buildings — fetched via /api/buildings?projectId=xxx
   useEffect(() => {
     if (!isReady || step !== 3 || !selection.projectId) return;
 
+    let cancelled = false;
     setBuildingsLoading(true);
-    const project = projectsRawRef.current.find((p) => p.id === selection.projectId);
-    const bldgs = project?.buildings ?? [];
-    const items = bldgs.map((b) => ({
-      id: b.id,
-      label: b.name ?? b.id,
-    }));
-    setBuildings(items);
-    setBuildingsLoading(false);
+
+    apiClient.get<Record<string, unknown>>(`/api/buildings?projectId=${selection.projectId}`)
+      .then((res) => {
+        if (cancelled) return;
+        const raw = res as Record<string, unknown>;
+        const buildingsList = (raw.buildings ?? raw.data ?? []) as BuildingItem[];
+        logger.info('Buildings loaded', { count: buildingsList.length });
+        const items = buildingsList.map((b) => ({
+          id: b.id,
+          label: b.name ?? b.id,
+        }));
+        setBuildings(items);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          logger.error('Failed to load buildings', { error: String(err) });
+          setBuildings([]);
+        }
+      })
+      .finally(() => { if (!cancelled) setBuildingsLoading(false); });
+
+    return () => { cancelled = true; };
   }, [isReady, step, selection.projectId]);
 
   // Step 4: Floors by building
@@ -517,7 +527,6 @@ export function useFloorplanImportState(
     setProjects([]);
     setBuildings([]);
     setFloors([]);
-    projectsRawRef.current = [];
   }, []);
 
   // ===========================================================================
