@@ -264,7 +264,7 @@
 | ↳ SPEC-237A | Foundation — Level-to-Floor Mapping + Multi-Level Bug Fix | ✅ IMPLEMENTED | 2026-03-16 | — | [📄](./adrs/specs/SPEC-237A-foundation-level-floor-mapping.md) |
 | ↳ SPEC-237B | Overlay Bridge Core — Read-Only Hook + Canvas Rendering | ✅ IMPLEMENTED | 2026-03-16 | — | [📄](./adrs/specs/SPEC-237B-overlay-bridge-core.md) |
 | ↳ SPEC-237C | Interactive Overlays — Hit-Testing, Hover, Click + Bidirectional Sync | ✅ IMPLEMENTED | 2026-03-16 | — | [📄](./adrs/specs/SPEC-237C-interactive-overlays.md) |
-| ↳ SPEC-237D | Floorplan Import Pipeline — Horizontal UI | 📋 PLANNING | 2026-03-16 | — | [📄](./adrs/specs/SPEC-237D-floorplan-import-pipeline.md) |
+| ↳ SPEC-237D | Floorplan Import Pipeline — Horizontal UI | ✅ IMPLEMENTED | 2026-03-16 | — | [📄](./adrs/specs/SPEC-237D-floorplan-import-pipeline.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

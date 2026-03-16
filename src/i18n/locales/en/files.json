@@ -538,5 +538,39 @@
     "namePlaceholder": "Folder name",
     "moveToFolder": "Move to folder",
     "removeFromFolder": "Remove from folder"
+  },
+  "floorplanImport": {
+    "title": "Import Floorplan",
+    "steps": {
+      "company": "Company",
+      "project": "Project",
+      "building": "Building",
+      "floor": "Floor",
+      "type": "Type",
+      "upload": "Upload"
+    },
+    "select": {
+      "company": "Select company",
+      "project": "Select project",
+      "building": "Select building",
+      "floor": "Select floor",
+      "unit": "Select unit"
+    },
+    "types": {
+      "building": "General Building Floorplan",
+      "floor": "Floor Floorplan",
+      "unit": "Unit Floorplan"
+    },
+    "noItems": "No items found",
+    "autoSelected": "Auto-selected",
+    "acceptedTypes": "DXF, PDF, JPG, PNG (up to 50MB)",
+    "uploading": "Uploading...",
+    "success": "Floorplan uploaded successfully!",
+    "error": "Upload error",
+    "retry": "Try again",
+    "back": "Back",
+    "next": "Next",
+    "upload": "Upload",
+    "cancel": "Cancel"
   }
 }
