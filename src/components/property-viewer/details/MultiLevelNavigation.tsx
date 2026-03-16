@@ -4,7 +4,7 @@
  * MultiLevelNavigation — Displays and manages floors for multi-level units (ADR-236)
  *
  * Shows existing levels with navigation + optional FloorMultiSelectField for editing.
- * Renders with rounded corners (enterprise design tokens).
+ * Compact design with 8px spacing to match application standard.
  *
  * @module components/property-viewer/details/MultiLevelNavigation
  * @since ADR-236 — Multi-Level Property Management
@@ -43,7 +43,7 @@ export function MultiLevelNavigation({
   onLevelsChange,
 }: MultiLevelNavigationProps) {
   const iconSizes = useIconSizes();
-  const { getStatusBorder, radius } = useBorderTokens();
+  const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const { t } = useTranslation(['properties', 'units']);
 
@@ -53,46 +53,52 @@ export function MultiLevelNavigation({
   return (
     <section
       className={cn(
-        'p-3 space-y-2 rounded-xl border',
+        'p-2 rounded-xl border',
         colors.bg.info,
         getStatusBorder('info'),
       )}
     >
-      <h4 className={cn('text-xs font-semibold flex items-center gap-2', colors.text.info)}>
+      <h4 className={cn('text-xs font-semibold flex items-center gap-1.5 mb-2', colors.text.info)}>
         <ChevronsUpDown className={iconSizes.sm} />
         {t('properties:multiLevel.title', { defaultValue: 'Επίπεδα Ακινήτου' })}
       </h4>
 
-      {/* Existing levels — navigation buttons */}
-      {hasLevels && levels.map((level) => (
-        <article
-          key={level.floorId}
-          className={cn(
-            'p-2 rounded-lg flex items-center justify-between transition-colors',
-            currentFloorId === level.floorId ? colors.bg.info : colors.bg.secondary,
-          )}
-        >
-          <span className="text-sm font-medium">{level.name}</span>
-          <Button
-            size="sm"
-            className="h-7 text-xs"
-            onClick={() => onSelectFloor(level.floorId)}
-          >
-            {t('properties:multiLevel.goTo', { defaultValue: 'Μετάβαση' })}
-          </Button>
-        </article>
-      ))}
+      {/* Existing levels — compact rows with 8px gaps */}
+      {hasLevels && (
+        <nav className="flex flex-col gap-2">
+          {levels.map((level) => (
+            <article
+              key={level.floorId}
+              className={cn(
+                'px-2 py-1.5 rounded-lg flex items-center justify-between transition-colors',
+                currentFloorId === level.floorId ? colors.bg.info : colors.bg.secondary,
+              )}
+            >
+              <span className="text-xs font-medium">{level.name}</span>
+              <Button
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={() => onSelectFloor(level.floorId)}
+              >
+                {t('properties:multiLevel.goTo', { defaultValue: 'Μετάβαση' })}
+              </Button>
+            </article>
+          ))}
+        </nav>
+      )}
 
       {/* Edit mode — add/remove floors */}
       {isEditing && onLevelsChange && (
-        <FloorMultiSelectField
-          buildingId={buildingId ?? null}
-          value={levels ?? []}
-          onChange={onLevelsChange}
-          label={t('units:multiLevel.floors', { defaultValue: 'Όροφοι' })}
-          noBuildingHint={t('units:fields.location.noFloorHint', { defaultValue: 'Συνδέστε πρώτα κτίριο' })}
-          disabled={false}
-        />
+        <div className={hasLevels ? 'mt-2' : ''}>
+          <FloorMultiSelectField
+            buildingId={buildingId ?? null}
+            value={levels ?? []}
+            onChange={onLevelsChange}
+            label={t('units:multiLevel.floors', { defaultValue: 'Όροφοι' })}
+            noBuildingHint={t('units:fields.location.noFloorHint', { defaultValue: 'Συνδέστε πρώτα κτίριο' })}
+            disabled={false}
+          />
+        </div>
       )}
 
       {/* No levels yet — show hint */}

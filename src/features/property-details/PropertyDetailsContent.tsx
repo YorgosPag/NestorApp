@@ -153,36 +153,15 @@ export function PropertyDetailsContent({
 
       {hasPropertyWithMismatch(resolvedProperty) && resolvedProperty.buyerMismatch && !isReadOnly && <BuyerMismatchAlert />}
 
-      {showMultiFloorSelector && !isReadOnly && (
-        <MultiLevelNavigation
-          property={resolvedProperty}
-          onSelectFloor={onSelectFloor || (() => {})}
-          currentFloorId={resolvedProperty.floorId}
-          isEditing={isEditMode && !isSoldOrRented}
-          buildingId={resolvedProperty?.buildingId}
-          onLevelsChange={(levels: UnitLevel[]) => {
-            if (safeOnUpdateProperty && resolvedProperty?.id) {
-              const derived = deriveMultiLevelFields(levels);
-              safeOnUpdateProperty(resolvedProperty.id, {
-                levels: derived.levels,
-                isMultiLevel: derived.isMultiLevel,
-                floor: derived.floor,
-                floorId: derived.floorId,
-              });
-            }
-          }}
-        />
-      )}
-
-      {/* Building Link + Floor + Linked Spaces — top row, 3 columns */}
+      {/* Building Link + Floor + Linked Spaces — top row */}
       {!isReadOnly && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           <UnitEntityLinks
             unitId={resolvedProperty?.id ?? ''}
             currentBuildingId={resolvedProperty?.buildingId}
             isEditing={isEditMode && !isSoldOrRented}
           />
-          {/* Floor card — only for single-floor types (multi-level uses MultiLevelNavigation above) */}
+          {/* Floor card — only for single-floor types (multi-level uses MultiLevelNavigation below) */}
           {!showMultiFloorSelector && (
             <Card>
               <CardHeader className="p-2">
@@ -223,6 +202,28 @@ export function PropertyDetailsContent({
             />
           )}
         </div>
+      )}
+
+      {/* ADR-236: Multi-level floors — between grid row and UnitFieldsBlock */}
+      {showMultiFloorSelector && !isReadOnly && (
+        <MultiLevelNavigation
+          property={resolvedProperty}
+          onSelectFloor={onSelectFloor || (() => {})}
+          currentFloorId={resolvedProperty.floorId}
+          isEditing={isEditMode && !isSoldOrRented}
+          buildingId={resolvedProperty?.buildingId}
+          onLevelsChange={(levels: UnitLevel[]) => {
+            if (safeOnUpdateProperty && resolvedProperty?.id) {
+              const derived = deriveMultiLevelFields(levels);
+              safeOnUpdateProperty(resolvedProperty.id, {
+                levels: derived.levels,
+                isMultiLevel: derived.isMultiLevel,
+                floor: derived.floor,
+                floorId: derived.floorId,
+              });
+            }
+          }}
+        />
       )}
 
       {/* 🏢 ENTERPRISE: Unit Fields Block (identity, location, layout, areas, etc) */}
