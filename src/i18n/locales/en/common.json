@@ -2019,17 +2019,17 @@
     "submitError": "Failed to submit command"
   },
   "months": {
-    "5": "May",
+    "1": "January",
     "2": "February",
-    "9": "September",
-    "11": "November",
-    "10": "October",
-    "6": "June",
-    "8": "August",
     "3": "March",
     "4": "April",
+    "5": "May",
+    "6": "June",
     "7": "July",
-    "1": "January",
+    "8": "August",
+    "9": "September",
+    "10": "October",
+    "11": "November",
     "12": "December"
   },
   "a11y": {
@@ -2114,5 +2114,11 @@
     "version": "Version",
     "revisionHistory": "Revision History",
     "noRevisions": "No previous revisions"
+  },
+  "audit": {
+    "changeHistory": "Change History",
+    "noHistory": "No change history",
+    "changesWillAppear": "Changes will appear here automatically",
+    "noFilterResults": "No changes found for this filter"
   }
 }

@@ -41,6 +41,7 @@ import { formatRelativeTime, formatDateTime, formatDate } from '@/lib/intl-utils
 import type { AuditEntityType, AuditAction, EntityAuditEntry } from '@/types/audit-trail';
 import type { TabComponentProps } from '@/components/generic/UniversalTabsRenderer';
 import { StatsCard } from '@/components/property-management/dashboard/StatsCard';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // ACTION CONFIG
@@ -93,6 +94,7 @@ export function ActivityTab({ entityType, entityId, unit, data }: ActivityTabPro
     ?? (data as Record<string, unknown> | undefined)?.id as string | undefined;
 
   const resolvedEntityType = entityType ?? 'unit';
+  const { t } = useTranslation('common');
   const [activeFilter, setActiveFilter] = useState<AuditAction | 'all'>('all');
 
   const { entries, isLoading, error, hasMore, loadMore } = useEntityAudit({
@@ -126,7 +128,7 @@ export function ActivityTab({ entityType, entityId, unit, data }: ActivityTabPro
       {/* ── Header ── */}
       <header className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
         <History className="h-4 w-4" />
-        <span>Ιστορικό αλλαγών</span>
+        <span>{t('audit.changeHistory')}</span>
       </header>
 
       {/* ── Statistics ── */}
@@ -159,8 +161,8 @@ export function ActivityTab({ entityType, entityId, unit, data }: ActivityTabPro
       {!isLoading && entries.length === 0 && !error && (
         <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
           <Clock className="mb-2 h-8 w-8 opacity-40" />
-          <p className="text-sm">Δεν υπάρχει ιστορικό αλλαγών</p>
-          <p className="text-xs opacity-60">Οι αλλαγές θα εμφανίζονται εδώ αυτόματα</p>
+          <p className="text-sm">{t('audit.noHistory')}</p>
+          <p className="text-xs opacity-60">{t('audit.changesWillAppear')}</p>
         </div>
       )}
 
@@ -168,7 +170,7 @@ export function ActivityTab({ entityType, entityId, unit, data }: ActivityTabPro
       {!isLoading && entries.length > 0 && filteredEntries.length === 0 && (
         <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
           <Filter className="mb-2 h-6 w-6 opacity-40" />
-          <p className="text-sm">Δεν βρέθηκαν αλλαγές για αυτό το φίλτρο</p>
+          <p className="text-sm">{t('audit.noFilterResults')}</p>
         </div>
       )}
 

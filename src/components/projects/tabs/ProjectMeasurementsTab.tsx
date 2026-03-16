@@ -35,6 +35,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
 import { formatCurrency as formatCurrencyIntl } from '@/lib/intl-utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 const logger = createModuleLogger('ProjectMeasurementsTab');
 
@@ -73,6 +74,7 @@ const formatCurrencyWithDecimals = (amount: number): string =>
 export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTabProps) {
   const iconSizes = useIconSizes();
   const typography = useTypography();
+  const { t } = useTranslation('projects');
 
   const [buildings, setBuildings] = useState<BuildingInfo[]>([]);
   const [allItems, setAllItems] = useState<BOQItem[]>([]);
@@ -217,9 +219,9 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
     return (
       <section className="text-center py-12 border-2 border-dashed rounded-lg">
         <Building2 className={cn(iconSizes.xl, 'mx-auto mb-3 text-muted-foreground')} />
-        <h3 className={cn(typography.heading.md, 'mb-2')}>Δεν υπάρχουν κτίρια</h3>
+        <h3 className={cn(typography.heading.md, 'mb-2')}>{t('measurements.noBuildings')}</h3>
         <p className="text-sm text-muted-foreground">
-          Προσθέστε κτίρια στο Έργο για να δείτε συγκεντρωτικές επιμετρήσεις.
+          {t('measurements.noBuildingsHint')}
         </p>
       </section>
     );
@@ -229,12 +231,14 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
     return (
       <section className="text-center py-12 border-2 border-dashed rounded-lg">
         <Ruler className={cn(iconSizes.xl, 'mx-auto mb-3 text-muted-foreground')} />
-        <h3 className={cn(typography.heading.md, 'mb-2')}>Δεν υπάρχουν επιμετρήσεις</h3>
+        <h3 className={cn(typography.heading.md, 'mb-2')}>{t('measurements.noMeasurements')}</h3>
         <p className="text-sm text-muted-foreground">
-          Οι επιμετρήσεις καταχωρούνται στην καρτέλα «Επιμετρήσεις» κάθε κτιρίου.
+          {t('measurements.noMeasurementsHint')}
         </p>
         <p className="text-xs text-muted-foreground mt-1">
-          {buildings.length} κτίρι{buildings.length === 1 ? 'ο' : 'α'} στο έργο
+          {buildings.length === 1
+            ? t('measurements.buildingsInProject', { count: String(buildings.length) })
+            : t('measurements.buildingsInProjectPlural', { count: String(buildings.length) })}
         </p>
       </section>
     );
@@ -248,10 +252,10 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
       <header>
         <h2 className={cn(typography.heading.lg, 'flex items-center gap-2')}>
           <Ruler className={iconSizes.lg} />
-          Συγκεντρωτικές Επιμετρήσεις
+          {t('measurements.title')}
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Συγκεντρωτική προβολή από όλα τα κτίρια — οι καταχωρήσεις γίνονται στο κάθε κτίριο.
+          {t('measurements.subtitle')}
         </p>
       </header>
 
@@ -263,11 +267,11 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
           <CardContent className="p-3">
             <div className="flex items-center gap-2 text-muted-foreground mb-1">
               <Package className="h-4 w-4" />
-              <span className="text-xs font-medium">Εργασίες</span>
+              <span className="text-xs font-medium">{t('measurements.works')}</span>
             </div>
             <p className={cn(typography.heading.lg, 'tabular-nums')}>{totalItems}</p>
             <p className="text-xs text-muted-foreground">
-              σε {buildingsWithItems} / {buildings.length} κτίρια
+              {t('measurements.inBuildingsCount', { with: String(buildingsWithItems), total: String(buildings.length) })}
             </p>
           </CardContent>
         </Card>
@@ -276,7 +280,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
           <CardContent className="p-3">
             <div className="flex items-center gap-2 text-muted-foreground mb-1">
               <TrendingUp className="h-4 w-4" />
-              <span className="text-xs font-medium">Εκτίμηση</span>
+              <span className="text-xs font-medium">{t('measurements.estimate')}</span>
             </div>
             <p className={cn(typography.heading.lg, 'tabular-nums')}>
               {formatCurrencyWithDecimals(projectSummary.totalEstimatedCost)}
@@ -288,7 +292,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
           <CardContent className="p-3">
             <div className="flex items-center gap-2 text-muted-foreground mb-1">
               <Ruler className="h-4 w-4" />
-              <span className="text-xs font-medium">Πραγματικό</span>
+              <span className="text-xs font-medium">{t('measurements.actual')}</span>
             </div>
             <p className={cn(typography.heading.lg, 'tabular-nums')}>
               {projectSummary.totalActualCost !== null
@@ -303,11 +307,11 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
           <CardContent className="p-3">
             <div className="flex items-center gap-2 text-muted-foreground mb-1">
               <Building2 className="h-4 w-4" />
-              <span className="text-xs font-medium">Κτίρια</span>
+              <span className="text-xs font-medium">{t('measurements.buildings')}</span>
             </div>
             <p className={cn(typography.heading.lg, 'tabular-nums')}>{buildings.length}</p>
             <p className="text-xs text-muted-foreground">
-              {buildingsWithItems} με εργασίες
+              {buildingsWithItems} {t('measurements.withWorks')}
             </p>
           </CardContent>
         </Card>
@@ -319,7 +323,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
       <div className="space-y-2">
         <h3 className={cn(typography.heading.md, 'flex items-center gap-2')}>
           <Layers className={iconSizes.md} />
-          Ανάλυση ανά Κτίριο
+          {t('measurements.perBuildingBreakdown')}
         </h3>
 
         {buildingAggregations.map(({ building, summary, items }) => {
@@ -348,7 +352,9 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
                     )}
                     {building.name}
                     <Badge variant="secondary" className="ml-1">
-                      {items.length} εργασί{items.length === 1 ? 'α' : 'ες'}
+                      {items.length === 1
+                        ? t('measurements.worksCount', { count: String(items.length) })
+                        : t('measurements.worksCountPlural', { count: String(items.length) })}
                     </Badge>
                   </CardTitle>
 
@@ -373,7 +379,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
 
                 {!hasData && (
                   <p className="text-xs text-muted-foreground">
-                    Δεν υπάρχουν επιμετρήσεις σε αυτό το κτίριο.
+                    {t('measurements.noMeasurementsInBuilding')}
                   </p>
                 )}
 
@@ -381,9 +387,9 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
                 {isExpanded && summary && (
                   <div className="mt-3 space-y-1">
                     <div className="grid grid-cols-[1fr_auto_auto] gap-2 text-xs font-medium text-muted-foreground border-b pb-1">
-                      <span>Κατηγορία</span>
-                      <span className="text-right">Εργασίες</span>
-                      <span className="text-right w-24">Εκτίμηση</span>
+                      <span>{t('measurements.category')}</span>
+                      <span className="text-right">{t('measurements.worksHeader')}</span>
+                      <span className="text-right w-24">{t('measurements.estimateHeader')}</span>
                     </div>
                     {summary.categories.map(cat => (
                       <div

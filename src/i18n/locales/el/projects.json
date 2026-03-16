@@ -1124,5 +1124,28 @@
     "projectAddresses": "Διευθύνσεις Έργου",
     "tabLabel": "Διευθύνσεις",
     "tabDescription": "Διαχείριση διευθύνσεων του έργου"
+  },
+  "measurements": {
+    "title": "Συγκεντρωτικές Επιμετρήσεις",
+    "subtitle": "Συγκεντρωτική προβολή από όλα τα κτίρια — οι καταχωρήσεις γίνονται στο κάθε κτίριο.",
+    "noBuildings": "Δεν υπάρχουν κτίρια",
+    "noBuildingsHint": "Προσθέστε κτίρια στο Έργο για να δείτε συγκεντρωτικές επιμετρήσεις.",
+    "noMeasurements": "Δεν υπάρχουν επιμετρήσεις",
+    "noMeasurementsHint": "Οι επιμετρήσεις καταχωρούνται στην καρτέλα «Επιμετρήσεις» κάθε κτιρίου.",
+    "buildingsInProject": "{count} κτίριο στο έργο",
+    "buildingsInProjectPlural": "{count} κτίρια στο έργο",
+    "noMeasurementsInBuilding": "Δεν υπάρχουν επιμετρήσεις σε αυτό το κτίριο.",
+    "works": "Εργασίες",
+    "estimate": "Εκτίμηση",
+    "actual": "Πραγματικό",
+    "buildings": "Κτίρια",
+    "inBuildingsCount": "σε {with} / {total} κτίρια",
+    "withWorks": "με εργασίες",
+    "perBuildingBreakdown": "Ανάλυση ανά Κτίριο",
+    "worksCount": "{count} εργασία",
+    "worksCountPlural": "{count} εργασίες",
+    "category": "Κατηγορία",
+    "worksHeader": "Εργασίες",
+    "estimateHeader": "Εκτίμηση"
   }
 }

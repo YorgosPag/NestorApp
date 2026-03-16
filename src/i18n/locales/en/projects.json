@@ -1063,5 +1063,28 @@
     "projectAddresses": "Project Addresses",
     "tabLabel": "Addresses",
     "tabDescription": "Manage project addresses"
+  },
+  "measurements": {
+    "title": "Measurements Overview",
+    "subtitle": "Aggregate view from all buildings — entries are made per building.",
+    "noBuildings": "No buildings",
+    "noBuildingsHint": "Add buildings to the Project to see aggregate measurements.",
+    "noMeasurements": "No measurements",
+    "noMeasurementsHint": "Measurements are entered in the \"Measurements\" tab of each building.",
+    "buildingsInProject": "{count} building in project",
+    "buildingsInProjectPlural": "{count} buildings in project",
+    "noMeasurementsInBuilding": "No measurements in this building.",
+    "works": "Works",
+    "estimate": "Estimate",
+    "actual": "Actual",
+    "buildings": "Buildings",
+    "inBuildingsCount": "in {with} / {total} buildings",
+    "withWorks": "with works",
+    "perBuildingBreakdown": "Breakdown per Building",
+    "worksCount": "{count} work",
+    "worksCountPlural": "{count} works",
+    "category": "Category",
+    "worksHeader": "Works",
+    "estimateHeader": "Estimate"
   }
 }
