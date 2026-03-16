@@ -43,7 +43,7 @@ export function StatusCard({ statsByStatus, getStatusLabel }: StatusCardProps) {
                         <div key={status} className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <div className={`${iconSizes.xs} ${iconSizes.xs} rounded-full ${getStatusColor(status)}`} />
-                                <span className="text-xs">{getStatusLabel(status)}</span>
+                                <span className="text-xs">{t(getStatusLabel(status))}</span>
                             </div>
                             <span className="text-xs font-medium">{count}</span>
                         </div>

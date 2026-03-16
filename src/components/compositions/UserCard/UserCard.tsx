@@ -149,7 +149,7 @@ export function UserCard({
         <CommonBadge
           key="status"
           status="company"
-          customLabel={getStatusLabel(user.status)}
+          customLabel={t(getStatusLabel(user.status))}
           variant={
             user.status === 'active' ? 'default' :
             user.status === 'suspended' ? 'destructive' :
