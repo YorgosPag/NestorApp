@@ -102,8 +102,8 @@ export interface FloorplanGalleryProps {
 // CONSTANTS
 // ============================================================================
 
-/** Supported floorplan file extensions */
-const FLOORPLAN_EXTENSIONS = ['dxf', 'pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp'];
+/** Supported floorplan file extensions (includes 'json' for scene data saved by FloorplanSaveOrchestrator) */
+const FLOORPLAN_EXTENSIONS = ['dxf', 'pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'json'];
 
 /** Zoom configuration for the useZoomPan hook */
 const ZOOM_CONFIG = {
@@ -570,8 +570,10 @@ export function FloorplanGallery({
 
   // Current file
   const currentFile = floorplanFiles[currentIndex] || null;
-  const isDxf = currentFile?.ext?.toLowerCase() === 'dxf';
-  const isPdf = currentFile?.ext?.toLowerCase() === 'pdf';
+  const fileExt = currentFile?.ext?.toLowerCase() || '';
+  // JSON scene files (saved by FloorplanSaveOrchestrator) are treated as DXF scenes
+  const isDxf = fileExt === 'dxf' || fileExt === 'json';
+  const isPdf = fileExt === 'pdf';
   const isImage = currentFile && !isDxf && !isPdf;
 
   // =========================================================================
@@ -690,6 +692,8 @@ export function FloorplanGallery({
     if (currentFile.processedData) return;
     if (!currentFile.downloadUrl) return;
     if (currentFile.status !== 'ready') return;
+    // JSON scene files (FloorplanSaveOrchestrator) are already processed — skip server processing
+    if (fileExt === 'json') return;
     if (!auth.currentUser) return;
 
     const triggerProcessing = async () => {
@@ -732,13 +736,36 @@ export function FloorplanGallery({
     };
 
     triggerProcessing();
-  }, [currentFile?.id, currentFile?.processedData, currentFile?.downloadUrl, currentFile?.status, isDxf, t, onRefresh]);
+  }, [currentFile?.id, currentFile?.processedData, currentFile?.downloadUrl, currentFile?.status, isDxf, fileExt, t, onRefresh]);
 
   // =========================================================================
   // DXF SCENE LOADING
   // =========================================================================
 
   useEffect(() => {
+    // JSON scene files (FloorplanSaveOrchestrator): downloadUrl IS the scene — fetch directly
+    if (currentFile && fileExt === 'json' && currentFile.downloadUrl && !currentFile.processedData) {
+      setIsLoading(true);
+      setSceneError(null);
+
+      const loadJsonScene = async () => {
+        try {
+          const response = await fetch(currentFile.downloadUrl!);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const sceneData: DxfSceneData = await response.json();
+          setLoadedScene(sceneData);
+        } catch (err) {
+          logger.error('Failed to load JSON scene', { error: err });
+          setSceneError(err instanceof Error ? err.message : 'Unknown error');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      loadJsonScene();
+      return;
+    }
+
     if (!currentFile?.processedData) {
       setLoadedScene(null);
       return;
@@ -795,7 +822,7 @@ export function FloorplanGallery({
     }
 
     setLoadedScene(null);
-  }, [currentFile?.processedData, currentFile?.id, t]);
+  }, [currentFile?.processedData, currentFile?.downloadUrl, currentFile?.id, fileExt, t]);
 
   // =========================================================================
   // DXF CANVAS RENDERING — INLINE
