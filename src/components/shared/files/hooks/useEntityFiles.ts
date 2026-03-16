@@ -171,11 +171,14 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
       ]);
 
       // 🏢 ENTERPRISE: Client-side purpose filtering (backward compatible)
+      // The wizard uploads with purpose='floorplan'; entity pages may filter by
+      // specific purposes like 'floor-floorplan' or 'project-floorplan'.
+      // Generic 'floorplan' matches any *-floorplan filter for compatibility.
       const filterByPurpose = (file: FileRecord): boolean => {
         if (!purpose) return true;
         if (!file.purpose) return true;
         if (file.purpose === purpose) return true;
-        if (file.purpose === 'floorplan' && purpose === 'project-floorplan') return true;
+        if (file.purpose === 'floorplan' && purpose.endsWith('-floorplan')) return true;
         return false;
       };
 
