@@ -13,12 +13,15 @@
 import React from 'react';
 import { ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
 import type { UnitLevel } from '@/types/unit';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { FloorMultiSelectField } from '@/components/shared/FloorMultiSelectField';
 
@@ -43,70 +46,69 @@ export function MultiLevelNavigation({
   onLevelsChange,
 }: MultiLevelNavigationProps) {
   const iconSizes = useIconSizes();
-  const { getStatusBorder } = useBorderTokens();
+  const { quick } = useBorderTokens();
   const colors = useSemanticColors();
+  const spacing = useSpacingTokens();
+  const typography = useTypography();
   const { t } = useTranslation(['properties', 'units']);
 
   const levels = property.levels;
   const hasLevels = levels && levels.length > 0;
 
   return (
-    <section
-      className={cn(
-        'p-2 rounded-xl border',
-        colors.bg.info,
-        getStatusBorder('info'),
-      )}
-    >
-      <h4 className={cn('text-xs font-semibold flex items-center gap-1.5 mb-2', colors.text.info)}>
-        <ChevronsUpDown className={iconSizes.sm} />
-        {t('properties:multiLevel.title', { defaultValue: 'Επίπεδα Ακινήτου' })}
-      </h4>
-
-      {/* Existing levels — compact rows with 8px gaps */}
-      {hasLevels && (
-        <nav className="flex flex-col gap-2">
-          {levels.map((level) => (
-            <article
-              key={level.floorId}
-              className={cn(
-                'px-2 py-1.5 rounded-lg flex items-center justify-between transition-colors',
-                currentFloorId === level.floorId ? colors.bg.info : colors.bg.secondary,
-              )}
-            >
-              <span className="text-xs font-medium">{level.name}</span>
-              <Button
-                size="sm"
-                className="h-6 px-2 text-xs"
-                onClick={() => onSelectFloor(level.floorId)}
+    <Card className={cn(quick.card, colors.bg.card)}>
+      <CardHeader className="!p-2 flex flex-col space-y-2">
+        <CardTitle className={cn('flex items-center', spacing.gap.sm, typography.card.titleCompact)}>
+          <ChevronsUpDown className={cn(iconSizes.md, 'text-emerald-500')} />
+          {t('properties:multiLevel.title', { defaultValue: 'Επίπεδα Ακινήτου' })}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="!p-2 !pt-0">
+        {/* Existing levels — compact rows with 8px gaps */}
+        {hasLevels && (
+          <nav className="flex flex-col gap-2">
+            {levels.map((level) => (
+              <article
+                key={level.floorId}
+                className={cn(
+                  'px-2 py-1.5 rounded-lg flex items-center justify-between transition-colors',
+                  currentFloorId === level.floorId ? colors.bg.info : colors.bg.secondary,
+                )}
               >
-                {t('properties:multiLevel.goTo', { defaultValue: 'Μετάβαση' })}
-              </Button>
-            </article>
-          ))}
-        </nav>
-      )}
+                <span className="text-xs font-medium">{level.name}</span>
+                <Button
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => onSelectFloor(level.floorId)}
+                >
+                  {t('properties:multiLevel.goTo', { defaultValue: 'Μετάβαση' })}
+                </Button>
+              </article>
+            ))}
+          </nav>
+        )}
 
-      {/* Edit mode — add/remove floors */}
-      {isEditing && onLevelsChange && (
-        <div className={hasLevels ? 'mt-2' : ''}>
-          <FloorMultiSelectField
-            buildingId={buildingId ?? null}
-            value={levels ?? []}
-            onChange={onLevelsChange}
-            label={t('units:multiLevel.floors', { defaultValue: 'Όροφοι' })}
-            noBuildingHint={t('units:fields.location.noFloorHint', { defaultValue: 'Συνδέστε πρώτα κτίριο' })}
-            disabled={false}
-          />
-        </div>
-      )}
+        {/* Edit mode — add/remove floors */}
+        {isEditing && onLevelsChange && (
+          <div className={hasLevels ? 'mt-2' : ''}>
+            <FloorMultiSelectField
+              buildingId={buildingId ?? null}
+              value={levels ?? []}
+              onChange={onLevelsChange}
+              label={t('units:multiLevel.floors', { defaultValue: 'Όροφοι' })}
+              noBuildingHint={t('units:fields.location.noFloorHint', { defaultValue: 'Συνδέστε πρώτα κτίριο' })}
+              disabled={false}
+            />
+          </div>
+        )}
 
-      {/* No levels yet — show hint */}
-      {!hasLevels && !isEditing && (
-        <p className="text-xs text-muted-foreground italic">
-          {t('units:multiLevel.noFloors', { defaultValue: 'Επιλέξτε τουλάχιστον 2 ορόφους' })}
-        </p>
-      )}
-    </section>
+        {/* No levels yet — show hint */}
+        {!hasLevels && !isEditing && (
+          <p className="text-xs text-muted-foreground italic">
+            {t('units:multiLevel.noFloors', { defaultValue: 'Επιλέξτε τουλάχιστον 2 ορόφους' })}
+          </p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
