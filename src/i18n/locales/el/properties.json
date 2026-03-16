@@ -421,8 +421,8 @@
       "floorplanProperty": "Κάτοψη Ακινήτου",
       "floorplanFloor": "Κάτοψη Ορόφου",
       "floorplanUnit": "Κάτοψη Μονάδας",
-      "floorplanLevel": "Κάτοψη {{name}}",
-      "floorplanFloorLevel": "Κάτοψη Ορόφου {{name}}"
+      "floorplanLevel": "Κάτοψη {name}",
+      "floorplanFloorLevel": "Κάτοψη Ορόφου {name}"
     }
   },
   "meta": {

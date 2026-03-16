@@ -427,8 +427,8 @@
       "floorplanProperty": "Unit Floorplan",
       "floorplanFloor": "Floor Plan",
       "floorplanUnit": "Unit Floorplan",
-      "floorplanLevel": "{{name}} Plan",
-      "floorplanFloorLevel": "Floor Plan {{name}}"
+      "floorplanLevel": "{name} Plan",
+      "floorplanFloorLevel": "Floor Plan {name}"
     }
   },
   "meta": {
