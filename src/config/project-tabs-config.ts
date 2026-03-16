@@ -75,10 +75,10 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'locations',
-    label: 'locations.tabLabel',
+    label: 'tabs.labels.locations',
     value: 'locations',
     icon: 'map-pin',
-    description: 'locations.tabDescription',
+    description: 'tabs.descriptions.locations',
     order: 2,
     enabled: true,
     component: 'ProjectLocationsTab',

@@ -820,7 +820,8 @@
       "buildingContacts": "Associates",
       "buildingLocations": "Addresses",
       "brokers": "Brokers",
-      "ownershipTable": "Ownership Table"
+      "ownershipTable": "Ownership Table",
+      "locations": "Addresses"
     },
     "descriptions": {
       "projectGeneral": "Basic information and project details",
@@ -840,7 +841,8 @@
       "floorsManagement": "Building floor management — level number, elevation",
       "history": "Change history",
       "brokers": "Brokerage agreements and sales assignments",
-      "ownershipTable": "Ownership percentage table (millesimal shares) for each property"
+      "ownershipTable": "Ownership percentage table (millesimal shares) for each property",
+      "locations": "Manage project addresses"
     },
     "floors": {
       "title": "Building Floors",
