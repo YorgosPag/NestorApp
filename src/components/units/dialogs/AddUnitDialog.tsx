@@ -67,6 +67,8 @@ import { useAuth } from '@/auth/contexts/AuthContext';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { UnitType, OperationalStatus, CommercialStatus } from '@/types/unit';
 import type { Building } from '@/types/building/contracts';
+import { isMultiLevelCapableType } from '@/config/domain-constants';
+import { FloorMultiSelectField } from '@/components/shared/FloorMultiSelectField';
 
 // =============================================================================
 // TYPES
@@ -145,6 +147,7 @@ export function AddUnitDialog({
     handleChange,
     handleSelectChange,
     handleNumberChange,
+    handleLevelsChange,
     resetForm,
   } = useUnitForm({ onUnitAdded, onOpenChange });
 
@@ -214,6 +217,9 @@ export function AddUnitDialog({
       handleSelectChange('code', suggestedCode);
     }
   }, [suggestedCode, codeOverridden, handleSelectChange]);
+
+  // ADR-236: Multi-level detection based on selected type
+  const isMultiLevelType = isMultiLevelCapableType(formData.type);
 
   // ENTERPRISE: Active tab state
   const [activeTab, setActiveTab] = useState('basic');
@@ -381,6 +387,8 @@ export function AddUnitDialog({
                         // Reset floor selection when building changes
                         handleSelectChange('floorId', '');
                         handleNumberChange('floor', '');
+                        // ADR-236: Reset multi-level selection
+                        handleLevelsChange([]);
                       }}
                       disabled={loading || buildingsLoading}
                     >
@@ -401,13 +409,24 @@ export function AddUnitDialog({
                   </FormInput>
                 </FormField>
 
-                {/* Floor — populated from registered floors of selected building */}
+                {/* Floor — ADR-236: Multi-floor for multi-level types, single for others */}
                 <FormField
-                  label={t('dialog.addUnit.fields.floor')}
+                  label={isMultiLevelType
+                    ? t('multiLevel.floors', { defaultValue: 'Όροφοι' })
+                    : t('dialog.addUnit.fields.floor')}
                   htmlFor="floorId"
                 >
                   <FormInput>
-                    {floorsLoading ? (
+                    {isMultiLevelType ? (
+                      <FloorMultiSelectField
+                        buildingId={formData.buildingId || null}
+                        value={formData.levels}
+                        onChange={handleLevelsChange}
+                        label=""
+                        noBuildingHint={t('dialog.addUnit.placeholders.floor')}
+                        disabled={loading}
+                      />
+                    ) : floorsLoading ? (
                       <section className="flex items-center gap-2 h-10 text-muted-foreground text-sm">
                         <Spinner size="small" />
                         <span>{t('dialog.addUnit.loadingFloors')}</span>

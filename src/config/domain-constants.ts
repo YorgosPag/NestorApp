@@ -562,6 +562,40 @@ export const MESSAGES_PAGE_SIZE = 50;
 export const MESSAGE_PREVIEW_LENGTH = 120;
 
 // ============================================================================
+// MULTI-LEVEL UNIT DETECTION (ADR-236)
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Unit types that can span multiple floors
+ * SSoT for multi-level detection — includes both canonical English
+ * codes and legacy Greek values for backward compatibility.
+ *
+ * @since ADR-236 — Multi-Level Property Management
+ */
+export const MULTI_LEVEL_CAPABLE_TYPES: ReadonlySet<string> = new Set([
+  // Canonical English codes
+  'maisonette',       // Μεζονέτα
+  'penthouse',        // Ρετιρέ
+  'loft',             // Loft
+  'shop',             // Κατάστημα
+  'hall',             // Αίθουσα
+  'detached_house',   // Μονοκατοικία
+  'villa',            // Βίλα
+  // Legacy Greek values (backward compat)
+  'Μεζονέτα',
+  'Κατάστημα',
+]);
+
+/**
+ * Check if a unit type supports multi-level floors.
+ * @param type — UnitType value (canonical or legacy)
+ */
+export function isMultiLevelCapableType(type: string | undefined | null): boolean {
+  if (!type) return false;
+  return MULTI_LEVEL_CAPABLE_TYPES.has(type);
+}
+
+// ============================================================================
 // PARKING/STORAGE ALLOCATION METADATA SCHEMA
 // ============================================================================
 

@@ -5,7 +5,7 @@ import type { GenericFilterState, NumericRange } from '@/components/core/Advance
 export type { PropertyStats } from './property';
 // Re-export UnitCoverage from unit.ts for property compatibility
 // Also import for local use in Property interface
-import type { UnitCoverage, CommercialStatus } from './unit';
+import type { UnitCoverage, CommercialStatus, UnitLevel } from './unit';
 export type { UnitCoverage };
 
 // 🏢 PHASE 3-5: Import all unit feature types
@@ -81,7 +81,7 @@ export interface Property {
     floorId: string;
     vertices: Array<{x: number, y: number}>;
     isMultiLevel?: boolean;
-    levels?: { floorId: string; name: string; }[];
+    levels?: UnitLevel[];
     parentPropertyId?: string;
     features?: string[];
     attachments?: {

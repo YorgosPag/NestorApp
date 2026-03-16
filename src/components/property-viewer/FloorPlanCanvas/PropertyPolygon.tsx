@@ -10,6 +10,7 @@ import { PropertyPolygonLabels } from './PropertyPolygonLabels';
 import { PropertyMultiLevelIndicator } from './PropertyMultiLevelIndicator';
 import { PropertyPolygonTooltip } from './PropertyPolygonTooltip';
 import { SelectionOverlay } from './SelectionOverlay';
+import { isMultiLevelCapableType } from '@/config/domain-constants';
 
 interface PropertyPolygonProps {
   property: Property;
@@ -43,7 +44,7 @@ export function PropertyPolygon({
   if (!pathProps.visible) return null;
 
   const centroid = getCentroid(property.vertices);
-  const isMultiLevel = property.isMultiLevel || property.type === 'Μεζονέτα';
+  const isMultiLevel = property.isMultiLevel || isMultiLevelCapableType(property.type);
 
   return (
     <g className="property-polygon">

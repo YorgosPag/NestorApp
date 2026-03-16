@@ -134,6 +134,29 @@ export interface UnitCommercialData {
 }
 
 // =============================================================================
+// 🏢 UNIT LEVEL (Multi-Level Properties — ADR-236)
+// =============================================================================
+
+/**
+ * ✅ ENTERPRISE: Floor-level record for multi-level units (maisonettes, penthouses, etc.)
+ *
+ * Units that span multiple floors store an array of UnitLevel entries.
+ * The `isPrimary` floor is used to derive backward-compatible `floor`/`floorId` fields.
+ *
+ * @since ADR-236 — Multi-Level Property Management
+ */
+export interface UnitLevel {
+  /** Firestore floor document ID */
+  floorId: string;
+  /** Floor number (used for sorting) */
+  floorNumber: number;
+  /** Human-readable name — e.g. "Ισόγειο", "1ος Όροφος" */
+  name: string;
+  /** Primary floor (entrance level) — exactly one per unit */
+  isPrimary: boolean;
+}
+
+// =============================================================================
 // 🏢 UNIT TYPE - CANONICAL ENGLISH CODES
 // =============================================================================
 // 📅 Updated 2026-01-24: Changed to canonical English codes
@@ -401,6 +424,12 @@ export interface Unit {
   // === LINKED SPACES ===
   /** Relationships to parking and storage spaces */
   linkedSpaces?: LinkedSpace[];
+
+  // === MULTI-LEVEL (ADR-236) ===
+  /** Whether this unit spans multiple floors (maisonette, penthouse, loft, etc.) */
+  isMultiLevel?: boolean;
+  /** Floor-level details when unit spans multiple floors */
+  levels?: UnitLevel[];
 }
 
 // =============================================================================
@@ -465,6 +494,10 @@ export interface UnitDoc {
   };
   unitAmenities?: AmenityCodeType[];
   linkedSpaces?: LinkedSpace[];
+
+  // Multi-level fields (ADR-236)
+  isMultiLevel?: boolean;
+  levels?: UnitLevel[];
 
   // Commercial fields (ADR-197, ADR-230)
   commercialStatus?: CommercialStatus;

@@ -37,12 +37,19 @@ const FORBIDDEN_FIELDS: ReadonlySet<string> = new Set([
 // TYPES
 // ============================================================================
 
+interface UnitLevelPayload {
+  floorId: string;
+  floorNumber: number;
+  name: string;
+  isPrimary: boolean;
+}
+
 /** Unit PATCH body — core fields explicitly typed, extended fields passed through */
 interface UnitPatchPayload extends Record<string, unknown> {
   name?: string;
   type?: string;
   status?: string;
-  floor?: string;
+  floor?: string | number;
   area?: number;
   price?: number;
   description?: string;
@@ -51,6 +58,9 @@ interface UnitPatchPayload extends Record<string, unknown> {
   companyId?: string | null;
   companyName?: string;
   projectName?: string;
+  // ADR-236: Multi-level fields
+  isMultiLevel?: boolean;
+  levels?: UnitLevelPayload[];
 }
 
 interface UnitMutationResult {
@@ -96,6 +106,7 @@ export const PATCH = withStandardRateLimit(
             'commercialStatus', 'buildingId', 'linkedSpaces',
             'orientations', 'condition', 'energy', 'systemsOverride',
             'finishes', 'interiorFeatures', 'securityFeatures',
+            'levels', 'isMultiLevel',
           ] as const;
           const attemptedLockedFields = soldLockedFields.filter(f => f in body);
           if (attemptedLockedFields.length > 0) {
@@ -106,6 +117,28 @@ export const PATCH = withStandardRateLimit(
           const attemptedLockedFields = reservedLockedFields.filter(f => f in body);
           if (attemptedLockedFields.length > 0) {
             throw new ApiError(403, `Cannot modify locked fields on a reserved unit: ${attemptedLockedFields.join(', ')}`);
+          }
+        }
+
+        // ================================================================
+        // VALIDATION: ADR-236 — Multi-level floors
+        // ================================================================
+        if (Array.isArray(body.levels)) {
+          if (body.levels.length >= 2) {
+            const primaryCount = body.levels.filter((l: UnitLevelPayload) => l.isPrimary).length;
+            if (primaryCount !== 1) {
+              throw new ApiError(400, 'Exactly one floor must be marked as primary');
+            }
+            // Auto-derive backward-compat fields from primary level
+            const primary = body.levels.find((l: UnitLevelPayload) => l.isPrimary);
+            if (primary) {
+              body.floor = primary.floorNumber;
+              body.floorId = primary.floorId;
+              body.isMultiLevel = true;
+            }
+          } else if (body.levels.length === 0) {
+            // Clearing levels — revert to single floor mode
+            body.isMultiLevel = false;
           }
         }
 

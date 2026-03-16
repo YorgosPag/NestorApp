@@ -27,6 +27,13 @@ const logger = createModuleLogger('UnitsCreateRoute');
  * Unit creation payload from client.
  * All fields except name are optional.
  */
+interface UnitLevelPayload {
+  floorId: string;
+  floorNumber: number;
+  name: string;
+  isPrimary: boolean;
+}
+
 interface UnitCreatePayload {
   name: string;
   code?: string;
@@ -42,6 +49,9 @@ interface UnitCreatePayload {
   description?: string;
   vertices?: unknown[];
   layout?: Record<string, number>;
+  // ADR-236: Multi-level fields
+  isMultiLevel?: boolean;
+  levels?: UnitLevelPayload[];
 }
 
 interface UnitCreateResponse {
@@ -144,6 +154,23 @@ export const POST = withStandardRateLimit(
             logger.warn('[Units] Entity code auto-generation failed, proceeding without code', {
               error: codeErr instanceof Error ? codeErr.message : String(codeErr),
             });
+          }
+        }
+
+        // 🏢 ADR-236: Validate multi-level floors
+        if (body.isMultiLevel && Array.isArray(body.levels)) {
+          if (body.levels.length < 2) {
+            throw new ApiError(400, 'Multi-level units require at least 2 floors');
+          }
+          const primaryCount = body.levels.filter(l => l.isPrimary).length;
+          if (primaryCount !== 1) {
+            throw new ApiError(400, 'Exactly one floor must be marked as primary');
+          }
+          // Auto-derive floor/floorId from primary level
+          const primary = body.levels.find(l => l.isPrimary);
+          if (primary) {
+            body.floor = primary.floorNumber;
+            body.floorId = primary.floorId;
           }
         }
 

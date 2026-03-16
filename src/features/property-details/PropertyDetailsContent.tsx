@@ -30,6 +30,10 @@ import { UnitEntityLinks } from './components/UnitEntityLinks';
 import { LinkedSpacesCard } from './components/LinkedSpacesCard';
 import { FloorSelectField } from '@/components/shared/FloorSelectField';
 import type { FloorChangePayload } from '@/components/shared/FloorSelectField';
+import { FloorMultiSelectField } from '@/components/shared/FloorMultiSelectField';
+import { isMultiLevelCapableType } from '@/config/domain-constants';
+import type { UnitLevel } from '@/types/unit';
+import { deriveMultiLevelFields } from '@/services/multi-level.service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MapPin } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -113,8 +117,9 @@ export function PropertyDetailsContent({
     return typeof prop === 'object' && prop !== null && 'buyerMismatch' in prop;
   };
 
-  // Determine if property is multi-level based on type
-  const isMultiLevel = resolvedProperty.type === 'Μεζονέτα';
+  // ADR-236: Determine if property is multi-level capable (SSoT detection)
+  const isMultiLevel = resolvedProperty.isMultiLevel || isMultiLevelCapableType(resolvedProperty.type);
+  const showMultiFloorSelector = isMultiLevelCapableType(resolvedProperty.type);
 
   // attachments (ίδια λογική με mock)
   const { storage: attachedStorage, parking: attachedParking } = resolveAttachments(resolvedProperty);
@@ -150,31 +155,52 @@ export function PropertyDetailsContent({
             <CardHeader className="p-2">
               <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
                 <MapPin className={cn(iconSizes.md, 'text-emerald-500')} />
-                {t('units:fields.location.floor', { defaultValue: 'Όροφος' })}
+                {showMultiFloorSelector
+                  ? t('units:multiLevel.floors', { defaultValue: 'Όροφοι' })
+                  : t('units:fields.location.floor', { defaultValue: 'Όροφος' })}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-2 pt-0">
-              <FloorSelectField
-                buildingId={resolvedProperty?.buildingId ?? null}
-                value={resolvedProperty?.floorId ?? ''}
-                onChange={(v: string, payload?: FloorChangePayload) => {
-                  if (safeOnUpdateProperty && resolvedProperty?.id) {
-                    if (payload) {
-                      // Save both floor number AND floorId for data consistency
+              {showMultiFloorSelector ? (
+                <FloorMultiSelectField
+                  buildingId={resolvedProperty?.buildingId ?? null}
+                  value={resolvedProperty?.levels ?? []}
+                  onChange={(levels: UnitLevel[]) => {
+                    if (safeOnUpdateProperty && resolvedProperty?.id) {
+                      const derived = deriveMultiLevelFields(levels);
                       safeOnUpdateProperty(resolvedProperty.id, {
-                        floor: payload.floor,
-                        floorId: payload.floorId,
+                        levels: derived.levels,
+                        isMultiLevel: derived.isMultiLevel,
+                        floor: derived.floor,
+                        floorId: derived.floorId,
                       });
-                    } else {
-                      // Clear both floor and floorId when deselecting
-                      safeOnUpdateProperty(resolvedProperty.id, { floor: 0, floorId: null });
                     }
-                  }
-                }}
-                label={t('units:fields.location.floor', { defaultValue: 'Όροφος' })}
-                noBuildingHint={t('units:fields.location.noFloorHint', { defaultValue: 'Συνδέστε πρώτα κτίριο' })}
-                disabled={!isEditMode || isSoldOrRented}
-              />
+                  }}
+                  label={t('units:multiLevel.floors', { defaultValue: 'Όροφοι' })}
+                  noBuildingHint={t('units:fields.location.noFloorHint', { defaultValue: 'Συνδέστε πρώτα κτίριο' })}
+                  disabled={!isEditMode || isSoldOrRented}
+                />
+              ) : (
+                <FloorSelectField
+                  buildingId={resolvedProperty?.buildingId ?? null}
+                  value={resolvedProperty?.floorId ?? ''}
+                  onChange={(v: string, payload?: FloorChangePayload) => {
+                    if (safeOnUpdateProperty && resolvedProperty?.id) {
+                      if (payload) {
+                        safeOnUpdateProperty(resolvedProperty.id, {
+                          floor: payload.floor,
+                          floorId: payload.floorId,
+                        });
+                      } else {
+                        safeOnUpdateProperty(resolvedProperty.id, { floor: 0, floorId: null });
+                      }
+                    }
+                  }}
+                  label={t('units:fields.location.floor', { defaultValue: 'Όροφος' })}
+                  noBuildingHint={t('units:fields.location.noFloorHint', { defaultValue: 'Συνδέστε πρώτα κτίριο' })}
+                  disabled={!isEditMode || isSoldOrRented}
+                />
+              )}
             </CardContent>
           </Card>
           {resolvedProperty?.buildingId && (

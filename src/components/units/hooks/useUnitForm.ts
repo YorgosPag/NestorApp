@@ -24,7 +24,8 @@ import { useState, useCallback } from 'react';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { createUnit } from '@/services/units.service';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { UnitType, OperationalStatus, CommercialStatus } from '@/types/unit';
+import type { UnitType, UnitLevel, OperationalStatus, CommercialStatus } from '@/types/unit';
+import { deriveMultiLevelFields } from '@/services/multi-level.service';
 
 // =============================================================================
 // TYPES
@@ -40,6 +41,8 @@ export interface UnitFormData {
   floor: number | '';
   operationalStatus: OperationalStatus;
   commercialStatus: CommercialStatus;
+  // ADR-236: Multi-level floors
+  levels: UnitLevel[];
   // Tab 2: Details
   area: number | '';
   bedrooms: number | '';
@@ -57,6 +60,8 @@ const INITIAL_FORM_DATA: UnitFormData = {
   floor: '',
   operationalStatus: 'draft',
   commercialStatus: 'unavailable',
+  // ADR-236: Multi-level floors
+  levels: [],
   // Tab 2: Details
   area: '',
   bedrooms: '',
@@ -124,18 +129,36 @@ export function useUnitForm({
       try {
         // Build the unit data matching Property type for addUnit()
         // ENTERPRISE: Firestore does NOT accept undefined values — only include fields with real values
+
+        // ADR-236: If multi-level, derive floor/floorId from primary level
+        const hasMultiLevel = formData.levels.length >= 2;
+        let resolvedFloor = formData.floor !== '' ? formData.floor : 0;
+        let resolvedFloorId = formData.floorId || '';
+
+        if (hasMultiLevel) {
+          const derived = deriveMultiLevelFields(formData.levels);
+          resolvedFloor = derived.floor;
+          resolvedFloorId = derived.floorId;
+        }
+
         const unitData: Record<string, unknown> = {
           name: formData.name,
           type: formData.type || 'apartment',
           buildingId: formData.buildingId,
           building: '',
-          floor: formData.floor !== '' ? formData.floor : 0,
-          floorId: formData.floorId || '',
+          floor: resolvedFloor,
+          floorId: resolvedFloorId,
           project: '',
           commercialStatus: formData.commercialStatus,
           operationalStatus: formData.operationalStatus,
           vertices: [],
         };
+
+        // ADR-236: Include multi-level fields
+        if (hasMultiLevel) {
+          unitData.isMultiLevel = true;
+          unitData.levels = formData.levels;
+        }
 
         // Conditionally add optional fields (Firestore rejects undefined)
         if (formData.code) unitData.code = formData.code;
@@ -204,6 +227,17 @@ export function useUnitForm({
     [errors]
   );
 
+  // ADR-236: Update levels (multi-level floors)
+  const handleLevelsChange = useCallback((levels: UnitLevel[]) => {
+    setFormData((prev) => {
+      if (levels.length >= 2) {
+        const derived = deriveMultiLevelFields(levels);
+        return { ...prev, levels, floor: derived.floor, floorId: derived.floorId };
+      }
+      return { ...prev, levels };
+    });
+  }, []);
+
   const resetForm = useCallback(() => {
     setFormData(INITIAL_FORM_DATA);
     setErrors({});
@@ -221,6 +255,7 @@ export function useUnitForm({
     handleChange,
     handleSelectChange,
     handleNumberChange,
+    handleLevelsChange,
     resetForm,
   };
 }

@@ -676,5 +676,13 @@
         "error": "Error deleting unit"
       }
     }
+  },
+  "multiLevel": {
+    "floors": "Floors",
+    "addFloor": "Add floor",
+    "primaryFloor": "Primary floor",
+    "setPrimary": "Set as primary",
+    "removeFloor": "Remove",
+    "noFloors": "Select at least 2 floors"
   }
 }

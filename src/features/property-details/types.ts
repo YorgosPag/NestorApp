@@ -5,6 +5,13 @@ export type PropertyDetailsContentProps = {
   onSelectFloor: (floorId: string | null) => void;
   onUpdateProperty: (propertyId: string, updates: Partial<Property>) => void;
   isReadOnly?: boolean;
+  /** Edit mode state from parent (UnitsSidebar) — Pattern A */
+  isEditMode?: boolean;
+  onToggleEditMode?: () => void;
+  onExitEditMode?: () => void;
+  /** Inline new unit creation */
+  isCreatingNewUnit?: boolean;
+  onUnitCreated?: (unitId: string) => void;
 };
 
 export type AttachmentsData = {
