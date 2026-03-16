@@ -262,7 +262,7 @@
 | **ADR-236** | Multi-Level Property Management (Πολυεπίπεδη Διαχείριση Ακινήτων) | ✅ IMPLEMENTED | 2026-03-16 | Domain / Property Management | [📄](./adrs/ADR-236-multi-level-property-management.md) |
 | **ADR-237** | Polygon Overlay Bridge (DXF Viewer → Δημόσια Σελίδα Ακινήτων) | 📋 PLANNING (4 SPECs) | 2026-03-16 | Canvas & Rendering / Property Management | [📄](./adrs/ADR-237-polygon-overlay-bridge.md) |
 | ↳ SPEC-237A | Foundation — Level-to-Floor Mapping + Multi-Level Bug Fix | ✅ IMPLEMENTED | 2026-03-16 | — | [📄](./adrs/specs/SPEC-237A-foundation-level-floor-mapping.md) |
-| ↳ SPEC-237B | Overlay Bridge Core — Read-Only Hook + Canvas Rendering | 📋 PLANNING | 2026-03-16 | — | [📄](./adrs/specs/SPEC-237B-overlay-bridge-core.md) |
+| ↳ SPEC-237B | Overlay Bridge Core — Read-Only Hook + Canvas Rendering | ✅ IMPLEMENTED | 2026-03-16 | — | [📄](./adrs/specs/SPEC-237B-overlay-bridge-core.md) |
 | ↳ SPEC-237C | Interactive Overlays — Hit-Testing, Hover, Click + Bidirectional Sync | 📋 PLANNING | 2026-03-16 | — | [📄](./adrs/specs/SPEC-237C-interactive-overlays.md) |
 | ↳ SPEC-237D | Floorplan Import Pipeline — Horizontal UI | 📋 PLANNING | 2026-03-16 | — | [📄](./adrs/specs/SPEC-237D-floorplan-import-pipeline.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |

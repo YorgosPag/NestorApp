@@ -42,6 +42,8 @@ import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 import { useEntityFiles } from '@/components/shared/files/hooks/useEntityFiles';
 // 🏢 ENTERPRISE: Floor Floorplan Hook (ADR-060) - Uses FloorFloorplanService
 import { useFloorFloorplans } from '@/hooks/useFloorFloorplans';
+// 🏢 ENTERPRISE: Floor Overlays Hook (ADR-237 / SPEC-237B) - Read-only overlay bridge
+import { useFloorOverlays } from '@/hooks/useFloorOverlays';
 import type { FileRecord } from '@/types/file-record';
 
 // 🏢 ENTERPRISE: Centralized Gallery Components (NO DUPLICATES)
@@ -190,6 +192,9 @@ export function ReadOnlyMediaViewer({
     floorNumber: floorNumber ?? null,
     companyId: effectiveCompanyId || null,
   });
+
+  // 🏢 SPEC-237B: Load overlays for single-level floor (read-only bridge)
+  const { overlays: singleFloorOverlays } = useFloorOverlays(floorId || null);
 
   // 🏢 ENTERPRISE: Adapter - Convert FloorFloorplanData to FileRecord[] for FloorplanGallery
   const floorFloorplansData = React.useMemo(() => {
@@ -417,6 +422,7 @@ export function ReadOnlyMediaViewer({
               >
                 <FloorplanGallery
                   files={floorFloorplansData.files}
+                  overlays={singleFloorOverlays}
                   emptyMessage={t('viewer.media.noFloorFloorplans', { ns: 'properties', defaultValue: 'Δεν υπάρχει κάτοψη ορόφου' })}
                   className="h-full"
                 />
@@ -573,6 +579,9 @@ function FloorFloorplanTabContent({
     companyId,
   });
 
+  // 🏢 SPEC-237B: Load overlays for this floor (read-only bridge)
+  const { overlays } = useFloorOverlays(floorId);
+
   const files = React.useMemo<FileRecord[]>(() => {
     if (!floorFloorplan) return [];
     return [{
@@ -621,6 +630,7 @@ function FloorFloorplanTabContent({
     >
       <FloorplanGallery
         files={files}
+        overlays={overlays}
         emptyMessage={t('viewer.media.noFloorFloorplans', { ns: 'properties', defaultValue: 'Δεν υπάρχει κάτοψη ορόφου' })}
         className="h-full"
       />

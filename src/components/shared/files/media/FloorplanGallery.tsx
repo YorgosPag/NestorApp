@@ -63,6 +63,9 @@ import { canvasUtilities } from '@/styles/design-tokens';
 import { auth } from '@/lib/firebase';
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import type { FileRecord, DxfSceneData } from '@/types/file-record';
+import type { FloorOverlayItem } from '@/hooks/useFloorOverlays';
+import { getStatusColors } from '@/subapps/dxf-viewer/config/color-mapping';
+import { UI_COLORS, withOpacity } from '@/subapps/dxf-viewer/config/color-config';
 
 // ============================================================================
 // TYPES
@@ -83,6 +86,8 @@ export interface FloorplanGalleryProps {
   className?: string;
   /** Initial file index */
   initialIndex?: number;
+  /** Polygon overlays to render on top of DXF floorplans (ADR-237 / SPEC-237B) */
+  overlays?: ReadonlyArray<FloorOverlayItem>;
 }
 
 // ============================================================================
@@ -308,6 +313,85 @@ function renderDxfToCanvas(
 }
 
 // ============================================================================
+// OVERLAY RENDERING (SPEC-237B — Overlay Bridge Core)
+// ============================================================================
+
+/** Fallback colors when no status is set */
+const OVERLAY_FALLBACK = {
+  stroke: UI_COLORS.DARK_GRAY,
+  fill: withOpacity(UI_COLORS.DARK_GRAY, 0.375),
+} as const;
+
+/**
+ * Draw polygon overlays on top of a DXF canvas.
+ * Uses the SAME coordinate transform as renderDxfToCanvas (Y-flip, scale, offset).
+ * Only for DXF floorplans — PDF/Image require calibration data (SPEC-237D).
+ */
+function drawOverlayPolygons(
+  canvas: HTMLCanvasElement,
+  overlays: ReadonlyArray<FloorOverlayItem>,
+  bounds: { min: { x: number; y: number }; max: { x: number; y: number } },
+  zoom: number,
+  panOffset: PanOffset,
+): void {
+  const ctx = canvas.getContext('2d');
+  if (!ctx || overlays.length === 0) return;
+
+  const drawingWidth = bounds.max.x - bounds.min.x;
+  const drawingHeight = bounds.max.y - bounds.min.y;
+  const baseScale = Math.min(canvas.width / drawingWidth, canvas.height / drawingHeight);
+  const scale = baseScale * zoom;
+  const offsetX = (canvas.width - drawingWidth * scale) / 2 + panOffset.x;
+  const offsetY = (canvas.height - drawingHeight * scale) / 2 + panOffset.y;
+
+  ctx.save();
+
+  for (const overlay of overlays) {
+    if (overlay.polygon.length < 3) continue;
+
+    const colors = getStatusColors(overlay.status ?? 'unavailable') ?? OVERLAY_FALLBACK;
+
+    ctx.fillStyle = colors.fill;
+    ctx.strokeStyle = colors.stroke;
+    ctx.lineWidth = 2;
+
+    // Draw polygon
+    ctx.beginPath();
+    overlay.polygon.forEach((vertex, i) => {
+      const sx = (vertex.x - bounds.min.x) * scale + offsetX;
+      const sy = (bounds.max.y - vertex.y) * scale + offsetY;
+      if (i === 0) ctx.moveTo(sx, sy);
+      else ctx.lineTo(sx, sy);
+    });
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Draw label if present
+    if (overlay.label) {
+      const centroid = overlay.polygon.reduce(
+        (acc, v) => ({ x: acc.x + v.x, y: acc.y + v.y }),
+        { x: 0, y: 0 },
+      );
+      centroid.x /= overlay.polygon.length;
+      centroid.y /= overlay.polygon.length;
+
+      const cx = (centroid.x - bounds.min.x) * scale + offsetX;
+      const cy = (bounds.max.y - centroid.y) * scale + offsetY;
+
+      const fontSize = Math.max(10, 14 * scale / baseScale);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `bold ${fontSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(overlay.label, cx, cy);
+    }
+  }
+
+  ctx.restore();
+}
+
+// ============================================================================
 // MODULE LOGGER
 // ============================================================================
 
@@ -332,6 +416,7 @@ export function FloorplanGallery({
   emptyMessage,
   className,
   initialIndex = 0,
+  overlays,
 }: FloorplanGalleryProps) {
   const { t } = useTranslation('files');
   const iconSizes = useIconSizes();
@@ -552,7 +637,11 @@ export function FloorplanGallery({
   useEffect(() => {
     if (!loadedScene || !inlineCanvasRef.current || !isDxf) return;
     renderDxfToCanvas(inlineCanvasRef.current, loadedScene, inlineZP.zoom, inlineZP.panOffset, drawingMode);
-  }, [loadedScene, isDxf, inlineZP.zoom, inlineZP.panOffset, drawingMode]);
+    // SPEC-237B: Draw overlay polygons on top of DXF rendering
+    if (overlays?.length && loadedScene.bounds) {
+      drawOverlayPolygons(inlineCanvasRef.current, overlays, loadedScene.bounds, inlineZP.zoom, inlineZP.panOffset);
+    }
+  }, [loadedScene, isDxf, inlineZP.zoom, inlineZP.panOffset, drawingMode, overlays]);
 
   // =========================================================================
   // DXF CANVAS RENDERING — FULLSCREEN MODAL
@@ -569,6 +658,10 @@ export function FloorplanGallery({
     const doRender = () => {
       if (!modalCanvasRef.current) return;
       renderDxfToCanvas(modalCanvasRef.current, loadedScene, modalZP.zoom, modalZP.panOffset, drawingMode);
+      // SPEC-237B: Draw overlay polygons on fullscreen canvas too
+      if (overlays?.length && loadedScene.bounds) {
+        drawOverlayPolygons(modalCanvasRef.current, overlays, loadedScene.bounds, modalZP.zoom, modalZP.panOffset);
+      }
       modalCanvasReadyRef.current = true;
     };
 
@@ -580,7 +673,7 @@ export function FloorplanGallery({
 
     // Subsequent renders (zoom/pan changes): immediate
     doRender();
-  }, [isFullscreen, loadedScene, isDxf, modalZP.zoom, modalZP.panOffset, drawingMode]);
+  }, [isFullscreen, loadedScene, isDxf, modalZP.zoom, modalZP.panOffset, drawingMode, overlays]);
 
   // =========================================================================
   // ACTIONS
