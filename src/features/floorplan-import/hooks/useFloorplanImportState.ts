@@ -193,10 +193,14 @@ export function useFloorplanImportState(): UseFloorplanImportStateReturn {
     let cancelled = false;
     setCompaniesLoading(true);
 
-    apiClient.get<CompaniesApiResponse>('/api/companies')
+    apiClient.get<CompaniesApiResponse | Record<string, unknown>>('/api/companies')
       .then((res) => {
         if (cancelled) return;
-        const items = (res.companies ?? []).map((c) => ({
+        // Handle both canonical (unwrapped) and raw responses
+        const raw = res as Record<string, unknown>;
+        const companiesList = (raw.companies ?? raw.data ?? []) as CompanyItem[];
+        logger.info('Companies loaded', { count: companiesList.length });
+        const items = companiesList.map((c) => ({
           id: c.id,
           label: c.companyName ?? c.tradeName ?? c.legalName ?? c.id,
         }));
@@ -220,10 +224,13 @@ export function useFloorplanImportState(): UseFloorplanImportStateReturn {
     let cancelled = false;
     setProjectsLoading(true);
 
-    apiClient.get<ProjectsByCompanyResponse>(`/api/projects/by-company/${selection.companyId}`)
+    apiClient.get<ProjectsByCompanyResponse | Record<string, unknown>>(`/api/projects/by-company/${selection.companyId}`)
       .then((res) => {
         if (cancelled) return;
-        projectsRawRef.current = res.projects ?? [];
+        const raw = res as Record<string, unknown>;
+        const projectsList = (raw.projects ?? raw.data ?? []) as ProjectItem[];
+        logger.info('Projects loaded', { count: projectsList.length });
+        projectsRawRef.current = projectsList;
         const items = projectsRawRef.current.map((p) => ({
           id: p.id,
           label: p.name ?? p.title ?? p.id,
@@ -264,10 +271,13 @@ export function useFloorplanImportState(): UseFloorplanImportStateReturn {
     let cancelled = false;
     setFloorsLoading(true);
 
-    apiClient.get<FloorsApiResponse>(`/api/floors?buildingId=${selection.buildingId}`)
+    apiClient.get<FloorsApiResponse | Record<string, unknown>>(`/api/floors?buildingId=${selection.buildingId}`)
       .then((res) => {
         if (cancelled) return;
-        const items = (res.floors ?? []).map((f) => ({
+        const raw = res as Record<string, unknown>;
+        const floorsList = (raw.floors ?? raw.data ?? []) as FloorItem[];
+        logger.info('Floors loaded', { count: floorsList.length });
+        const items = floorsList.map((f) => ({
           id: f.id,
           label: f.name || `Όροφος ${f.number}`,
         }));

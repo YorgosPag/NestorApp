@@ -78,14 +78,16 @@ export function FloorplanImportWizard({
   onClose,
   onComplete,
 }: FloorplanImportWizardProps) {
-  const { t } = useTranslation('files');
+  const { t, isNamespaceReady } = useTranslation('files');
 
   const state = useFloorplanImportState();
 
   // ── Step labels (translated) ──
+  // isNamespaceReady triggers re-compute when lazy-loaded namespace becomes available
   const stepLabels = useMemo(
     () => STEP_LABEL_KEYS.map((key) => t(key)),
-    [t],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t, isNamespaceReady],
   );
 
   // ── Upload completion handler ──
