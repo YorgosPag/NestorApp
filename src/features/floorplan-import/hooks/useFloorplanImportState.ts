@@ -227,7 +227,7 @@ export function useFloorplanImportState(
 
   // Step 1: Companies — fetches when wizard opens with auth ready
   useEffect(() => {
-    if (!isReady || step !== 1) return;
+    if (!isReady) return;
 
     let cancelled = false;
     setCompaniesLoading(true);
@@ -256,7 +256,7 @@ export function useFloorplanImportState(
       .finally(() => { if (!cancelled) setCompaniesLoading(false); });
 
     return () => { cancelled = true; };
-  }, [isReady, step, openEpoch]);
+  }, [isReady, openEpoch]);
 
   // Step 2: Projects by company
   useEffect(() => {
