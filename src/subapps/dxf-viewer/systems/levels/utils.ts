@@ -39,17 +39,19 @@ export class LevelOperations {
   static addLevel(
     levels: Level[],
     name: string,
-    setAsDefault = false
+    setAsDefault = false,
+    floorId?: string
   ): { levels: Level[]; newLevelId: string } {
     const id = LevelOperations.generateLevelId();
     const order = LevelOperations.getNextOrder(levels);
-    
+
     const newLevel: Level = {
       id,
       name,
       order,
       isDefault: setAsDefault,
-      visible: true
+      visible: true,
+      ...(floorId ? { floorId } : {}),
     };
 
     const updatedLevels = setAsDefault

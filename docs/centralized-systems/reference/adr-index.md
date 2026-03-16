@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 221 ADRs | Last Updated: 2026-03-15
+**📊 Stats**: 222 ADRs | Last Updated: 2026-03-16
 
 ---
 
@@ -260,6 +260,11 @@
 | **ADR-234** | Payment Plan & Installment Tracking (Πρόγραμμα Αποπληρωμής Ακινήτου) | ✅ IMPLEMENTED (Phase 1-5: SPEC-234D + SPEC-234C + SPEC-234A + SPEC-234E + Alerts & Reports) | 2026-03-16 | Entity Systems / Sales & Finance | [📄](./adrs/ADR-234-payment-plan-installment-tracking.md) |
 | **ADR-235** | Ownership Percentage Table (Πίνακας Ποσοστών Συνιδιοκτησίας) | ✅ IMPLEMENTED (Phase 1+2) | 2026-03-16 | Domain / Property Law | [📄](./adrs/ADR-235-ownership-percentage-table.md) |
 | **ADR-236** | Multi-Level Property Management (Πολυεπίπεδη Διαχείριση Ακινήτων) | ✅ IMPLEMENTED | 2026-03-16 | Domain / Property Management | [📄](./adrs/ADR-236-multi-level-property-management.md) |
+| **ADR-237** | Polygon Overlay Bridge (DXF Viewer → Δημόσια Σελίδα Ακινήτων) | 📋 PLANNING (4 SPECs) | 2026-03-16 | Canvas & Rendering / Property Management | [📄](./adrs/ADR-237-polygon-overlay-bridge.md) |
+| ↳ SPEC-237A | Foundation — Level-to-Floor Mapping + Multi-Level Bug Fix | ✅ IMPLEMENTED | 2026-03-16 | — | [📄](./adrs/specs/SPEC-237A-foundation-level-floor-mapping.md) |
+| ↳ SPEC-237B | Overlay Bridge Core — Read-Only Hook + Canvas Rendering | 📋 PLANNING | 2026-03-16 | — | [📄](./adrs/specs/SPEC-237B-overlay-bridge-core.md) |
+| ↳ SPEC-237C | Interactive Overlays — Hit-Testing, Hover, Click + Bidirectional Sync | 📋 PLANNING | 2026-03-16 | — | [📄](./adrs/specs/SPEC-237C-interactive-overlays.md) |
+| ↳ SPEC-237D | Floorplan Import Pipeline — Horizontal UI | 📋 PLANNING | 2026-03-16 | — | [📄](./adrs/specs/SPEC-237D-floorplan-import-pipeline.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

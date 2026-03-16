@@ -11,6 +11,7 @@ export interface Level {
   order: number;
   isDefault: boolean;
   visible: boolean;
+  floorId?: string;  // Σύνδεση με building floor (ADR-237, SPEC-237A)
 }
 
 export interface FloorplanDoc {

@@ -27,7 +27,7 @@ export interface LevelSystemState {
 
 export interface LevelSystemActions extends ImportWizardActions {
   // Level operations
-  addLevel: (name: string, setAsDefault?: boolean) => Promise<string | null>;
+  addLevel: (name: string, setAsDefault?: boolean, floorId?: string) => Promise<string | null>;
   removeLevel: (levelId: string) => Promise<void>;
   deleteLevel: (levelId: string) => Promise<void>;
   clearAllLevels: () => Promise<void>;

@@ -169,10 +169,10 @@ function useLevelsSystemState({
   }, [enableFirestore, firestoreCollection, currentLevelId, onLevelChange, handleError]);
 
   // Level operations
-  const addLevel = useCallback(async (name: string, setAsDefault = false): Promise<string | null> => {
+  const addLevel = useCallback(async (name: string, setAsDefault = false, floorId?: string): Promise<string | null> => {
     try {
       setIsLoading(true);
-      
+
       const validationError = LevelOperations.validateLevelName(name, levels);
       if (validationError) {
         handleError(validationError);
@@ -186,24 +186,25 @@ function useLevelsSystemState({
           isDefault: setAsDefault,
           visible: true,
           createdAt: serverTimestamp(),
+          ...(floorId ? { floorId } : {}),
         };
-        
+
         const docRef = await withStorageErrorHandling(
           () => addDoc(collection(db, firestoreCollection), newLevelData),
           'Failed to add level to Firestore'
         );
-        
+
         if (!docRef) {
           throw new Error('Failed to create level due to storage error');
         }
-        
+
         if (setAsDefault || settings.autoSelectNewLevel) {
           setCurrentLevelId(docRef.id);
           onLevelChange?.(docRef.id);
         }
         return docRef.id;
       } else {
-        const { levels: updatedLevels, newLevelId } = LevelOperations.addLevel(levels, name, setAsDefault);
+        const { levels: updatedLevels, newLevelId } = LevelOperations.addLevel(levels, name, setAsDefault, floorId);
         setLevels(updatedLevels);
         
         if (setAsDefault || settings.autoSelectNewLevel) {
