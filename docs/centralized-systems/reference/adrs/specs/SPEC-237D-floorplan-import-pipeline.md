@@ -146,7 +146,7 @@ interface FileRecord {
 | **Data Source** | Firestore `companies` collection |
 | **Selection** | Dropdown / list |
 | **Output** | `companyId: string` |
-| **Auto-skip** | Αν ο χρήστης ανήκει σε 1 εταιρεία → auto-select + skip |
+| **Auto-skip** | ❌ ΑΦΑΙΡΕΘΗΚΕ (2026-03-16) — ο χρήστης επιλέγει πάντα χειροκίνητα |
 
 ### Step 2: Επιλογή Έργου
 
@@ -165,7 +165,7 @@ interface FileRecord {
 | **Selection** | Dropdown / list |
 | **Output** | `buildingId: string` |
 | **Dependency** | Step 2 (projectId) |
-| **Auto-skip** | Αν 1 κτίριο → auto-select + skip |
+| **Auto-skip** | ❌ ΑΦΑΙΡΕΘΗΚΕ (2026-03-16) — ο χρήστης επιλέγει πάντα χειροκίνητα |
 
 ### Step 4: Επιλογή Ορόφου
 
@@ -269,15 +269,16 @@ floorplanType === 'unit'
 | ✕ Ακύρωση | Close wizard | Always available |
 | ✓ Upload | Start upload | Only on Step 6 with file selected |
 
-### Auto-Skip Logic
+### Auto-Skip Logic — ❌ ΑΦΑΙΡΕΘΗΚΕ (2026-03-16)
 
-```
-Αν company count === 1 → auto-select, skip to Step 2
-Αν project count === 1 → auto-select, skip to Step 3
-Αν building count === 1 → auto-select, skip to Step 4
-```
+~~Αν company/project/building count === 1 → auto-select + skip~~
 
-Ο χρήστης μπορεί πάντα να πατήσει "Πίσω" για να αλλάξει auto-selection.
+**Λόγος αφαίρεσης**: Το auto-skip προκαλούσε race condition στο Step 3 (buildings) —
+τα buildings εξάγονταν από `projectsRawRef` που δεν είχε ενημερωθεί ακόμα.
+Επιπλέον, ο χρήστης δεν μπορούσε να δει τι επιλέχθηκε αυτόματα, δημιουργώντας σύγχυση.
+
+**Τρέχουσα συμπεριφορά**: Ο χρήστης επιλέγει χειροκίνητα σε κάθε βήμα.
+Μπορεί να πατήσει "Πίσω" για να αλλάξει οποιαδήποτε επιλογή.
 
 ---
 
@@ -316,7 +317,7 @@ floorplanType === 'unit'
 |---|-----------|-------------|
 | 1 | Wizard εμφανίζεται σωστά (horizontal steps) | Visual — step indicator |
 | 2 | Company → Project → Building → Floor cascade | Selection propagation |
-| 3 | Auto-skip λειτουργεί (1 option → skip) | Single-item auto-selection |
+| 3 | ~~Auto-skip~~ ΑΦΑΙΡΕΘΗΚΕ — χρήστης επιλέγει πάντα χειροκίνητα | Manual selection at every step |
 | 4 | Back navigation λειτουργεί σε κάθε step | Click "Πίσω" |
 | 5 | DXF file upload → FloorplanSaveOrchestrator | FileRecord created in Firestore |
 | 6 | PDF file upload λειτουργεί | FileRecord + Storage upload |
@@ -349,7 +350,7 @@ floorplanType === 'unit'
 |------|----------|-----------|
 | Large file upload timeout | MEDIUM | Progress bar + retry mechanism |
 | Company/Project/Building cascade latency | LOW | Parallel Firestore queries where possible |
-| User confusion σε πολλά steps | LOW | Auto-skip + clear step indicator |
+| User confusion σε πολλά steps | LOW | Clear step indicator + back navigation |
 | DXF parsing failure | LOW | Error message + retry, fallback to raw upload |
 | Concurrent uploads (same floor) | LOW | Last-write-wins — same as existing pattern |
 
@@ -362,6 +363,8 @@ floorplanType === 'unit'
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-03-16 | IMPLEMENTED — 5 new files in `src/features/floorplan-import/`, i18n keys added (el+en), zero new services | Claude |
+| 2026-03-16 | FIX: Race condition στο companies fetch — αφαίρεση `step !== 1` guard από useEffect deps | Claude |
+| 2026-03-16 | FIX: Αφαίρεση auto-skip λογικής — προκαλούσε race condition στο buildings step + κακή UX. Ο χρήστης επιλέγει χειροκίνητα πλέον | Claude |
 
 ### Implementation Notes
 
@@ -371,7 +374,7 @@ floorplanType === 'unit'
 - `src/features/floorplan-import/components/StepEntitySelector.tsx` — Generic entity selector (steps 1-4), radio ≤5 / Radix Select >5
 - `src/features/floorplan-import/components/StepFloorplanType.tsx` — 3 radio cards + conditional unit selector
 - `src/features/floorplan-import/components/StepUpload.tsx` — FileUploadZone + progress bar + success/error
-- `src/features/floorplan-import/hooks/useFloorplanImportState.ts` — State machine (6 steps, cascading API, auto-skip)
+- `src/features/floorplan-import/hooks/useFloorplanImportState.ts` — State machine (6 steps, cascading API, manual selection)
 
 **Modified files:**
 - `src/i18n/locales/el/files.json` — +floorplanImport.* (34 keys)
