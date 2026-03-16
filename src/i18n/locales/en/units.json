@@ -687,7 +687,9 @@
     "perLevel": {
       "tabTotals": "Totals",
       "autoComputed": "Auto-computed from levels",
-      "noDataYet": "Enter data for this level"
+      "noDataYet": "Enter data for this level",
+      "perFloorHint": "Per floor",
+      "sharedHint": "Shared across all floors"
     }
   }
 }

@@ -498,12 +498,26 @@ export function UnitFieldsBlock({
 
       {/* ─── Level Tab Strip (ADR-236 Phase 2) ─── */}
       {isMultiLevel && property.levels && property.levels.length >= 2 && (
-        <LevelTabStrip
-          levels={property.levels}
-          activeLevelId={activeLevelId}
-          onSelectLevel={setActiveLevelId}
-          t={t}
-        />
+        <>
+          <LevelTabStrip
+            levels={property.levels}
+            activeLevelId={activeLevelId}
+            onSelectLevel={setActiveLevelId}
+            t={t}
+          />
+          <aside className="flex items-center gap-3 text-[10px] text-muted-foreground px-1">
+            <span className="flex items-center gap-1">
+              <Layers className="h-3 w-3" />
+              <span className="font-medium">{t('multiLevel.perLevel.perFloorHint')}</span>:
+              {' '}{t('fields.areas.sectionTitle')}, {t('fields.layout.sectionTitle', { defaultValue: 'Διάταξη' })}, {t('orientation.sectionTitle')}, {t('finishes.sectionTitle')}
+            </span>
+            <span className="text-muted-foreground/60">|</span>
+            <span>
+              <span className="font-medium">{t('multiLevel.perLevel.sharedHint')}</span>:
+              {' '}{t('condition.sectionTitle')}, {t('energy.class')}, {t('systems.sectionTitle')}, {t('features.interior.label')}, {t('features.security.label')}
+            </span>
+          </aside>
+        </>
       )}
 
       {/* ─── Identity + Location Row ─── */}
@@ -669,6 +683,11 @@ export function UnitFieldsBlock({
             <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
               <Ruler className={cn(iconSizes.sm, NAVIGATION_ENTITIES.area.color)} />
               {t('fields.areas.sectionTitle')}
+              {isMultiLevel && (
+                <span className="ml-auto text-[9px] font-normal text-emerald-600 dark:text-emerald-400">
+                  {t('multiLevel.perLevel.perFloorHint')}
+                </span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-2 pt-0">
@@ -743,6 +762,11 @@ export function UnitFieldsBlock({
             <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
               <Bed className={cn(iconSizes.sm, 'text-violet-500')} />
               {t('fields.layout.sectionTitle', { defaultValue: 'Διάταξη' })}
+              {isMultiLevel && (
+                <span className="ml-auto text-[9px] font-normal text-emerald-600 dark:text-emerald-400">
+                  {t('multiLevel.perLevel.perFloorHint')}
+                </span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-2 pt-0">
@@ -811,6 +835,11 @@ export function UnitFieldsBlock({
             <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
               <Compass className={cn(iconSizes.sm, 'text-amber-500')} />
               {t('orientation.sectionTitle')}
+              {isMultiLevel && (
+                <span className="ml-auto text-[9px] font-normal text-emerald-600 dark:text-emerald-400">
+                  {t('multiLevel.perLevel.perFloorHint')}
+                </span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-2 pt-0 space-y-2">
@@ -867,6 +896,11 @@ export function UnitFieldsBlock({
               <Wrench className={cn(iconSizes.sm, 'text-orange-500')} />
               {t('condition.sectionTitle')}
               <Zap className={cn(iconSizes.sm, 'text-green-500')} />
+              {isMultiLevel && (
+                <span className="ml-auto text-[9px] font-normal text-muted-foreground">
+                  {t('multiLevel.perLevel.sharedHint')}
+                </span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-2 pt-0">
@@ -917,6 +951,11 @@ export function UnitFieldsBlock({
             <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
               <Thermometer className={cn(iconSizes.sm, 'text-red-500')} />
               {t('systems.sectionTitle')}
+              {isMultiLevel && (
+                <span className="ml-auto text-[9px] font-normal text-muted-foreground">
+                  {t('multiLevel.perLevel.sharedHint')}
+                </span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-2 pt-0">
@@ -960,6 +999,11 @@ export function UnitFieldsBlock({
             <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
               <Home className={cn(iconSizes.sm, 'text-teal-500')} />
               {t('finishes.sectionTitle')}
+              {isMultiLevel && (
+                <span className="ml-auto text-[9px] font-normal text-emerald-600 dark:text-emerald-400">
+                  {t('multiLevel.perLevel.perFloorHint')}
+                </span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-2 pt-0 space-y-2">
@@ -1064,6 +1108,11 @@ export function UnitFieldsBlock({
             <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
               <Shield className={cn(iconSizes.sm, 'text-purple-500')} />
               {t('features.sectionTitle')}
+              {isMultiLevel && (
+                <span className="ml-auto text-[9px] font-normal text-muted-foreground">
+                  {t('multiLevel.perLevel.sharedHint')}
+                </span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-2 pt-0 space-y-2">

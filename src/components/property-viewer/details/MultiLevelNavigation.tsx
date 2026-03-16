@@ -10,7 +10,7 @@
  * @since ADR-236 — Multi-Level Property Management
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,6 +55,16 @@ export function MultiLevelNavigation({
   const levels = property.levels;
   const hasLevels = levels && levels.length > 0;
 
+  // Track which floor the user clicked — defaults to primary floor or first level
+  const [selectedFloorId, setSelectedFloorId] = useState<string | null>(
+    currentFloorId ?? (hasLevels ? levels[0].floorId : null)
+  );
+
+  const handleSelectFloor = (floorId: string) => {
+    setSelectedFloorId(floorId);
+    onSelectFloor(floorId);
+  };
+
   return (
     <Card className={cn(quick.card, colors.bg.card)}>
       <CardHeader className="!p-2 flex flex-col space-y-2">
@@ -71,15 +81,19 @@ export function MultiLevelNavigation({
               <article
                 key={level.floorId}
                 className={cn(
-                  'px-2 py-1.5 rounded-lg flex items-center justify-between transition-colors',
-                  currentFloorId === level.floorId ? colors.bg.info : colors.bg.secondary,
+                  'px-2 py-1.5 rounded-lg flex items-center justify-between transition-colors cursor-pointer',
+                  selectedFloorId === level.floorId ? colors.bg.info : colors.bg.secondary,
                 )}
+                onClick={() => handleSelectFloor(level.floorId)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSelectFloor(level.floorId); }}
               >
                 <span className="text-xs font-medium">{level.name}</span>
                 <Button
                   size="sm"
                   className="h-6 px-2 text-xs"
-                  onClick={() => onSelectFloor(level.floorId)}
+                  onClick={(e) => { e.stopPropagation(); handleSelectFloor(level.floorId); }}
                 >
                   {t('properties:multiLevel.goTo', { defaultValue: 'Μετάβαση' })}
                 </Button>
