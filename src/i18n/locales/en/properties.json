@@ -423,7 +423,10 @@
       "videos": "Videos",
       "noFloorplans": "No floorplans available",
       "noPhotos": "No photos available",
-      "noVideos": "No videos available"
+      "noVideos": "No videos available",
+      "floorplanProperty": "Unit Floorplan",
+      "floorplanFloor": "Floor Plan",
+      "floorplanLevel": "{{name}} Plan"
     }
   },
   "meta": {
@@ -448,7 +451,9 @@
     "features": "Features",
     "share": "Share",
     "shareSuccess": "Property shared successfully!",
-    "shareError": "Sharing error. Please try again."
+    "shareError": "Sharing error. Please try again.",
+    "limitedInfo": "Limited information in public view",
+    "contactForMore": "Contact us for more information"
   },
   "statusSelector": {
     "currentStatus": "Current Status:",

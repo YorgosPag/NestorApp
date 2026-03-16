@@ -1194,7 +1194,7 @@ function ReadOnlyCompactView({ property, t }: { property: Property; t: TFunction
     .join(', ');
 
   return (
-    <section className="grid grid-cols-2 gap-x-4 gap-y-1 p-2">
+    <section className="flex flex-col gap-1 p-2">
       {/* Identity */}
       <CompactField label={t('fields.identity.name', { defaultValue: 'Όνομα' })} value={property.name} />
       <CompactField label={t('fields.identity.code', { defaultValue: 'Κωδικός' })} value={property.code} />
@@ -1274,7 +1274,7 @@ function ReadOnlyCompactView({ property, t }: { property: Property; t: TFunction
 
       {/* Description — full width */}
       {property.description && (
-        <dl className="col-span-2 mt-1">
+        <dl className="mt-1">
           <dt className="text-xs text-muted-foreground">{t('fields.identity.description', { defaultValue: 'Περιγραφή' })}</dt>
           <dd className="text-xs mt-0.5">{property.description}</dd>
         </dl>
