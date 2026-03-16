@@ -49,21 +49,21 @@ export function SalesDetailsHeader({
       // 1. Αλλαγή τιμής — μόνο αν δεν είναι πουλημένο
       ...(!isSold ? [createEntityAction(
         'edit',
-        t('sales.actions.changePrice', { defaultValue: 'Τιμή' }),
+        t('sales.actions.changePrice'),
         onChangePrice,
         { icon: DollarSign }
       )] : []),
       // 2. Κράτηση — μόνο αν δεν είναι ήδη κρατημένο ή πουλημένο
       ...(canReserve ? [createEntityAction(
         'new',
-        t('sales.actions.reserve', { defaultValue: 'Κράτηση' }),
+        t('sales.actions.reserve'),
         onReserve,
         { icon: UserCheck }
       )] : []),
       // 3. Πώληση — μόνο αν είναι διαθέσιμο ή κρατημένο (όχι αν είναι ήδη πουλημένο)
       ...(!isSold ? [createEntityAction(
         'save',
-        t('sales.actions.sell', { defaultValue: 'Πώληση' }),
+        t('sales.actions.sell'),
         onSell,
         { icon: CheckCircle }
       )] : []),
@@ -74,7 +74,7 @@ export function SalesDetailsHeader({
       list.push(
         createEntityAction(
           'delete',
-          t('sales.actions.revert', { defaultValue: 'Επαναφορά' }),
+          t('sales.actions.revert'),
           onRevert,
           { icon: Undo2 }
         ),
@@ -88,7 +88,7 @@ export function SalesDetailsHeader({
     <EntityDetailsHeader
       icon={ShoppingBag}
       title={unit.name || unit.code || unit.id}
-      subtitle={[unit.code, t(`units:types.${unit.type}`, { defaultValue: unit.type })].filter(Boolean).join(' · ')}
+      subtitle={[unit.code, t(`units:types.${unit.type}`)].filter(Boolean).join(' · ')}
       variant="detailed"
       actions={actions}
     />

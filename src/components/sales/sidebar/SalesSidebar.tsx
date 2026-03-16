@@ -172,7 +172,7 @@ export function SalesSidebar({
               >
                 <tab.icon className={iconSizes.sm} />
                 <span className="hidden sm:inline">
-                  {t(tab.labelKey, { defaultValue: tab.defaultLabel })}
+                  {t(tab.labelKey)}
                 </span>
               </TabsTrigger>
             ))}
@@ -211,7 +211,7 @@ export function SalesSidebar({
               <TabsContent key={tabId} value={tabId} className="flex-1">
                 <section className="p-4">
                   <p className="text-sm text-muted-foreground text-center mb-3">
-                    {t(`sales.tabs.${tabId}Hint`, { defaultValue: hints[tabId] })}
+                    {t(`sales.tabs.${tabId}Hint`)}
                   </p>
                   <div className="pt-2 border-t">
                     <Button
@@ -223,7 +223,7 @@ export function SalesSidebar({
                       }}
                     >
                       <ExternalLink className={iconSizes.sm} />
-                      {t('sales.tabs.openInSpaces', { defaultValue: 'Άνοιγμα στους Χώρους' })}
+                      {t('sales.tabs.openInSpaces')}
                     </Button>
                   </div>
                 </section>
@@ -244,10 +244,10 @@ export function SalesSidebar({
   // List Column
   // =========================================================================
   const listColumn = (
-    <EntityListColumn aria-label={t('sales.available.listLabel', { defaultValue: 'Λίστα μονάδων πωλήσεων' })}>
+    <EntityListColumn aria-label={t('sales.available.listLabel')}>
       <GenericListHeader
         icon={ShoppingBag}
-        entityName={t('sales.available.listTitle', { defaultValue: 'Μονάδες' })}
+        entityName={t('sales.available.listTitle')}
         itemCount={units.length}
       />
 
@@ -272,7 +272,7 @@ export function SalesSidebar({
 
           {units.length === 0 && (
             <div className="p-6 text-center text-sm text-muted-foreground">
-              {t('sales.available.noResults', { defaultValue: 'Δεν βρέθηκαν μονάδες με αυτά τα κριτήρια.' })}
+              {t('sales.available.noResults')}
             </div>
           )}
         </div>
@@ -293,7 +293,7 @@ export function SalesSidebar({
       <MobileDetailsSlideIn
         isOpen={isMobile && !!selectedUnit}
         onClose={() => onSelectUnit('__none__')}
-        title={selectedUnit?.name || t('sales.available.unitDetails', { defaultValue: 'Στοιχεία Μονάδας' })}
+        title={selectedUnit?.name || t('sales.available.unitDetails')}
       >
         {isMobile && selectedUnit && detailsContent}
       </MobileDetailsSlideIn>

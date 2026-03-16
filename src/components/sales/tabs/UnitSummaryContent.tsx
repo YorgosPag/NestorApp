@@ -73,12 +73,12 @@ export function UnitSummaryContent({ data: unit }: UnitSummaryContentProps) {
   const orientation = unit.orientations?.[0];
 
   return (
-    <section className="flex flex-col gap-2 p-2" aria-label={t('sales.tabs.unitSummary', { defaultValue: 'Φυσικά Στοιχεία' })}>
+    <section className="flex flex-col gap-2 p-2" aria-label={t('sales.tabs.unitSummary')}>
       <Card>
         <CardHeader className="p-3 pb-0">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <Home className={`${iconSizes.sm} text-teal-600`} />
-            {t('sales.unitSummary.physicalData', { defaultValue: 'Φυσικά Στοιχεία' })}
+            {t('sales.unitSummary.physicalData')}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-3 pt-2">
@@ -86,49 +86,49 @@ export function UnitSummaryContent({ data: unit }: UnitSummaryContentProps) {
             <SummaryField
               icon={Home}
               iconColor="text-teal-600"
-              label={t('sales.unitSummary.type', { defaultValue: 'Τύπος' })}
-              value={t(`sales.unitTypes.${unit.type}`, { defaultValue: unit.type })}
+              label={t('sales.unitSummary.type')}
+              value={t(`sales.unitTypes.${unit.type}`)}
             />
             <SummaryField
               icon={Maximize2}
               iconColor="text-pink-600"
-              label={t('sales.unitSummary.area', { defaultValue: 'Εμβαδόν' })}
+              label={t('sales.unitSummary.area')}
               value={area ? `${area} m²` : undefined}
             />
             <SummaryField
               icon={Layers}
               iconColor="text-orange-600"
-              label={t('sales.unitSummary.floor', { defaultValue: 'Όροφος' })}
+              label={t('sales.unitSummary.floor')}
               value={unit.floor !== undefined ? `${unit.floor}ος` : undefined}
             />
             <SummaryField
               icon={Building2}
               iconColor="text-blue-600"
-              label={t('sales.unitSummary.building', { defaultValue: 'Κτίριο' })}
+              label={t('sales.unitSummary.building')}
               value={unit.building}
             />
             <SummaryField
               icon={Bed}
               iconColor="text-violet-600"
-              label={t('sales.unitSummary.bedrooms', { defaultValue: 'Υπνοδωμάτια' })}
+              label={t('sales.unitSummary.bedrooms')}
               value={unit.layout?.bedrooms}
             />
             <SummaryField
               icon={Bath}
               iconColor="text-cyan-600"
-              label={t('sales.unitSummary.bathrooms', { defaultValue: 'Μπάνια' })}
+              label={t('sales.unitSummary.bathrooms')}
               value={unit.layout?.bathrooms}
             />
             <SummaryField
               icon={Compass}
               iconColor="text-amber-600"
-              label={t('sales.unitSummary.orientation', { defaultValue: 'Προσανατολισμός' })}
-              value={orientation ? t(`orientations.${orientation}`, { defaultValue: orientation }) : undefined}
+              label={t('sales.unitSummary.orientation')}
+              value={orientation ? t(`orientations.${orientation}`) : undefined}
             />
             <SummaryField
               icon={Zap}
               iconColor="text-yellow-600"
-              label={t('sales.unitSummary.energy', { defaultValue: 'Ενεργειακή' })}
+              label={t('sales.unitSummary.energy')}
               value={unit.energy?.class}
             />
           </div>
@@ -144,7 +144,7 @@ export function UnitSummaryContent({ data: unit }: UnitSummaryContentProps) {
               }}
             >
               <ExternalLink className={iconSizes.sm} />
-              {t('sales.unitSummary.openInSpaces', { defaultValue: 'Άνοιγμα στους Χώρους' })}
+              {t('sales.unitSummary.openInSpaces')}
             </Button>
           </div>
         </CardContent>

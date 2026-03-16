@@ -74,8 +74,8 @@ function SalesParkingContent() {
   // ADR-229 Phase 2: Data-level loading guard (after all hooks)
   if (loading) {
     return (
-      <PageContainer ariaLabel={t('salesParking.pageTitle', { defaultValue: 'Διαθέσιμες Θέσεις Στάθμευσης' })}>
-        <PageLoadingState icon={Car} message={t('salesParking.loading', { defaultValue: 'Φόρτωση θέσεων στάθμευσης...' })} layout="contained" />
+      <PageContainer ariaLabel={t('salesParking.pageTitle')}>
+        <PageLoadingState icon={Car} message={t('salesParking.loading')} layout="contained" />
       </PageContainer>
     );
   }
@@ -85,39 +85,39 @@ function SalesParkingContent() {
   // =========================================================================
   const unifiedDashboardStats: DashboardStat[] = [
     {
-      title: t('salesParking.stats.available', { defaultValue: 'Διαθέσιμες Θέσεις' }),
+      title: t('salesParking.stats.available'),
       value: dashboardStats.availableCount,
-      description: t('salesParking.stats.forSaleNow', { defaultValue: 'Προς πώληση τώρα' }),
+      description: t('salesParking.stats.forSaleNow'),
       icon: Car,
       color: 'blue',
     },
     {
-      title: t('salesParking.stats.avgPrice', { defaultValue: 'Μέση Τιμή' }),
+      title: t('salesParking.stats.avgPrice'),
       value: dashboardStats.averagePrice > 0 ? formatCurrencyCompact(dashboardStats.averagePrice) : '—',
-      description: t('salesParking.stats.avgPriceDesc', { defaultValue: 'Μέση ζητούμενη τιμή' }),
+      description: t('salesParking.stats.avgPriceDesc'),
       icon: DollarSign,
       color: 'green',
     },
     {
-      title: t('salesParking.stats.totalValue', { defaultValue: 'Συνολική Αξία' }),
+      title: t('salesParking.stats.totalValue'),
       value: dashboardStats.totalValue > 0 ? formatCurrencyCompact(dashboardStats.totalValue) : '—',
-      description: t('salesParking.stats.totalValueDesc', { defaultValue: 'Αξία χαρτοφυλακίου' }),
+      description: t('salesParking.stats.totalValueDesc'),
       icon: TrendingUp,
       color: 'purple',
     },
     {
-      title: t('salesParking.stats.avgPricePerSqm', { defaultValue: 'Μ.Ο. €/m²' }),
+      title: t('salesParking.stats.avgPricePerSqm'),
       value: dashboardStats.averagePricePerSqm > 0
         ? formatCurrencyWhole(Math.round(dashboardStats.averagePricePerSqm))
         : '—',
-      description: t('salesParking.stats.avgPricePerSqmDesc', { defaultValue: 'Μέση τιμή ανά τ.μ.' }),
+      description: t('salesParking.stats.avgPricePerSqmDesc'),
       icon: Maximize2,
       color: 'orange',
     },
   ];
 
   return (
-    <PageContainer ariaLabel={t('salesParking.pageTitle', { defaultValue: 'Διαθέσιμες Θέσεις Στάθμευσης' })}>
+    <PageContainer ariaLabel={t('salesParking.pageTitle')}>
       {/* LAYER 1: Header */}
       <SalesAvailableHeader
         viewMode={viewMode}
@@ -128,9 +128,9 @@ function SalesParkingContent() {
         setSearchTerm={setSearchTerm}
         showFilters={showFilters}
         setShowFilters={setShowFilters}
-        titleOverride={t('salesParking.pageTitle', { defaultValue: 'Διαθέσιμες Θέσεις Στάθμευσης' })}
-        subtitleOverride={t('salesParking.pageSubtitle', { defaultValue: 'Θέσεις στάθμευσης προς πώληση - Ενεργές καταχωρήσεις' })}
-        searchPlaceholderOverride={t('salesParking.searchPlaceholder', { defaultValue: 'Αναζήτηση θέσης...' })}
+        titleOverride={t('salesParking.pageTitle')}
+        subtitleOverride={t('salesParking.pageSubtitle')}
+        searchPlaceholderOverride={t('salesParking.searchPlaceholder')}
       />
 
       {/* LAYER 2: Dashboard */}
@@ -177,7 +177,7 @@ function SalesParkingContent() {
         ) : (
           <section
             className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 p-2 overflow-y-auto"
-            aria-label={t('salesParking.gridLabel', { defaultValue: 'Grid θέσεων στάθμευσης' })}
+            aria-label={t('salesParking.gridLabel')}
           >
             {filteredItems.map(item => (
               <article
@@ -200,12 +200,12 @@ function SalesParkingContent() {
                       item.status === 'sold' ? 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400' :
                       'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
                     }`}>
-                      {t(`parking:status.${item.status ?? 'available'}`, { defaultValue: item.status ?? 'available' })}
+                      {t(`parking:status.${item.status ?? 'available'}`)}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {t(`parking:types.${item.type ?? 'standard'}`, { defaultValue: item.type ?? 'standard' })}
-                    {item.locationZone ? ` · ${t(`parking:locationZone.${item.locationZone}`, { defaultValue: item.locationZone })}` : ''}
+                    {t(`parking:types.${item.type ?? 'standard'}`)}
+                    {item.locationZone ? ` · ${t(`parking:locationZone.${item.locationZone}`)}` : ''}
                   </p>
                   <p className="text-lg font-bold text-green-600 mt-1">
                     {(item.commercial?.askingPrice ?? item.price)
@@ -223,7 +223,7 @@ function SalesParkingContent() {
 
             {filteredItems.length === 0 && (
               <div className="col-span-full p-6 text-center text-sm text-muted-foreground">
-                {t('salesParking.noResults', { defaultValue: 'Δεν βρέθηκαν θέσεις στάθμευσης.' })}
+                {t('salesParking.noResults')}
               </div>
             )}
           </section>

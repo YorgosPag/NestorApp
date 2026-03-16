@@ -78,8 +78,8 @@ function SalesStorageContent() {
   // ADR-229 Phase 2: Data-level loading guard (after all hooks)
   if (loading) {
     return (
-      <PageContainer ariaLabel={t('salesStorage.pageTitle', { defaultValue: 'Διαθέσιμες Αποθήκες' })}>
-        <PageLoadingState icon={NAVIGATION_ENTITIES.storage.icon} message={t('salesStorage.loading', { defaultValue: 'Φόρτωση αποθηκών...' })} layout="contained" />
+      <PageContainer ariaLabel={t('salesStorage.pageTitle')}>
+        <PageLoadingState icon={NAVIGATION_ENTITIES.storage.icon} message={t('salesStorage.loading')} layout="contained" />
       </PageContainer>
     );
   }
@@ -89,39 +89,39 @@ function SalesStorageContent() {
   // =========================================================================
   const unifiedDashboardStats: DashboardStat[] = [
     {
-      title: t('salesStorage.stats.available', { defaultValue: 'Διαθέσιμες Αποθήκες' }),
+      title: t('salesStorage.stats.available'),
       value: dashboardStats.availableCount,
-      description: t('salesStorage.stats.forSaleNow', { defaultValue: 'Προς πώληση τώρα' }),
+      description: t('salesStorage.stats.forSaleNow'),
       icon: Package,
       color: 'orange',
     },
     {
-      title: t('salesStorage.stats.avgPrice', { defaultValue: 'Μέση Τιμή' }),
+      title: t('salesStorage.stats.avgPrice'),
       value: dashboardStats.averagePrice > 0 ? formatCurrencyCompact(dashboardStats.averagePrice) : '—',
-      description: t('salesStorage.stats.avgPriceDesc', { defaultValue: 'Μέση ζητούμενη τιμή' }),
+      description: t('salesStorage.stats.avgPriceDesc'),
       icon: DollarSign,
       color: 'green',
     },
     {
-      title: t('salesStorage.stats.totalValue', { defaultValue: 'Συνολική Αξία' }),
+      title: t('salesStorage.stats.totalValue'),
       value: dashboardStats.totalValue > 0 ? formatCurrencyCompact(dashboardStats.totalValue) : '—',
-      description: t('salesStorage.stats.totalValueDesc', { defaultValue: 'Αξία χαρτοφυλακίου' }),
+      description: t('salesStorage.stats.totalValueDesc'),
       icon: TrendingUp,
       color: 'purple',
     },
     {
-      title: t('salesStorage.stats.avgPricePerSqm', { defaultValue: 'Μ.Ο. €/m²' }),
+      title: t('salesStorage.stats.avgPricePerSqm'),
       value: dashboardStats.averagePricePerSqm > 0
         ? formatCurrencyWhole(Math.round(dashboardStats.averagePricePerSqm))
         : '—',
-      description: t('salesStorage.stats.avgPricePerSqmDesc', { defaultValue: 'Μέση τιμή ανά τ.μ.' }),
+      description: t('salesStorage.stats.avgPricePerSqmDesc'),
       icon: Maximize2,
       color: 'blue',
     },
   ];
 
   return (
-    <PageContainer ariaLabel={t('salesStorage.pageTitle', { defaultValue: 'Διαθέσιμες Αποθήκες' })}>
+    <PageContainer ariaLabel={t('salesStorage.pageTitle')}>
       {/* LAYER 1: Header */}
       <SalesAvailableHeader
         viewMode={viewMode}
@@ -132,9 +132,9 @@ function SalesStorageContent() {
         setSearchTerm={setSearchTerm}
         showFilters={showFilters}
         setShowFilters={setShowFilters}
-        titleOverride={t('salesStorage.pageTitle', { defaultValue: 'Διαθέσιμες Αποθήκες' })}
-        subtitleOverride={t('salesStorage.pageSubtitle', { defaultValue: 'Αποθήκες προς πώληση - Ενεργές καταχωρήσεις' })}
-        searchPlaceholderOverride={t('salesStorage.searchPlaceholder', { defaultValue: 'Αναζήτηση αποθήκης...' })}
+        titleOverride={t('salesStorage.pageTitle')}
+        subtitleOverride={t('salesStorage.pageSubtitle')}
+        searchPlaceholderOverride={t('salesStorage.searchPlaceholder')}
       />
 
       {/* LAYER 2: Dashboard */}
@@ -181,7 +181,7 @@ function SalesStorageContent() {
         ) : (
           <section
             className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 p-2 overflow-y-auto"
-            aria-label={t('salesStorage.gridLabel', { defaultValue: 'Grid αποθηκών' })}
+            aria-label={t('salesStorage.gridLabel')}
           >
             {filteredItems.map(item => (
               <article
@@ -204,11 +204,11 @@ function SalesStorageContent() {
                       item.status === 'sold' ? 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400' :
                       'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
                     }`}>
-                      {t(`storage:status.${item.status}`, { defaultValue: item.status })}
+                      {t(`storage:status.${item.status}`)}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {t(`storage:types.${item.type}`, { defaultValue: item.type })} · {item.area ?? '—'} m²
+                    {t(`storage:types.${item.type}`)} · {item.area ?? '—'} m²
                   </p>
                   <p className="text-lg font-bold text-green-600 mt-1">
                     {(item.commercial?.askingPrice ?? item.price)
@@ -226,7 +226,7 @@ function SalesStorageContent() {
 
             {filteredItems.length === 0 && (
               <div className="col-span-full p-6 text-center text-sm text-muted-foreground">
-                {t('salesStorage.noResults', { defaultValue: 'Δεν βρέθηκαν αποθήκες.' })}
+                {t('salesStorage.noResults')}
               </div>
             )}
           </section>

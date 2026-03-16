@@ -1303,7 +1303,11 @@
         "interest": "Interest",
         "activeViews": "Active views",
         "avgTime": "Average Time",
-        "onMarket": "On market"
+        "onMarket": "On market",
+        "totalValue": "Total Value",
+        "totalValueDesc": "Portfolio value",
+        "avgPricePerSqm": "Avg €/m²",
+        "avgPricePerSqmDesc": "Average price per sqm"
       },
       "types": {
         "studios": {
@@ -1352,7 +1356,57 @@
       "videos": "Videos",
       "documents": "Documents",
       "history": "History",
-      "legal": "Legal"
+      "legal": "Legal",
+      "payments": "Payments",
+      "openInSpaces": "Open in Spaces"
+    },
+    "actions": {
+      "revert": "Revert"
+    },
+    "saleInfo": {
+      "pricing": "Commercial Data",
+      "askingPrice": "Asking Price",
+      "finalPrice": "Final Price",
+      "reservation": "Reservation",
+      "deposit": "Deposit",
+      "buyer": "Buyer",
+      "unknownBuyer": "Unknown",
+      "invoices": "Sale Invoices",
+      "invoiceType": {
+        "sales_invoice": "INV",
+        "credit_invoice": "Credit Note"
+      },
+      "paymentStatus": {
+        "paid": "Paid",
+        "partial": "Partial",
+        "unpaid": "Unpaid"
+      },
+      "dates": "Dates",
+      "listedDate": "On Market",
+      "reservationDate": "Reservation Date",
+      "saleDate": "Sale Date",
+      "cancellationDate": "Cancellation Date",
+      "daysOnMarket": "Days",
+      "hierarchy": "Property Hierarchy"
+    },
+    "hierarchy": {
+      "company": "Company",
+      "project": "Project",
+      "permit": "Permit Title",
+      "building": "Building",
+      "unit": "Unit"
+    },
+    "unitSummary": {
+      "physicalData": "Physical Data",
+      "type": "Type",
+      "area": "Area",
+      "floor": "Floor",
+      "building": "Building",
+      "bedrooms": "Bedrooms",
+      "bathrooms": "Bathrooms",
+      "orientation": "Orientation",
+      "energy": "Energy Class",
+      "openInSpaces": "Open in Spaces"
     },
     "legal": {
       "title": "Legal Process",

@@ -83,8 +83,8 @@ function SalesAvailableContent() {
   // ADR-229 Phase 2: Data-level loading guard (after all hooks)
   if (loading) {
     return (
-      <PageContainer ariaLabel={t('sales.available.title', { defaultValue: 'Διαθέσιμες Μονάδες' })}>
-        <PageLoadingState icon={ShoppingBag} message={t('sales.available.loading', { defaultValue: 'Φόρτωση μονάδων...' })} layout="contained" />
+      <PageContainer ariaLabel={t('sales.available.title')}>
+        <PageLoadingState icon={ShoppingBag} message={t('sales.available.loading')} layout="contained" />
       </PageContainer>
     );
   }
@@ -94,39 +94,39 @@ function SalesAvailableContent() {
   // =========================================================================
   const unifiedDashboardStats: DashboardStat[] = [
     {
-      title: t('sales.available.stats.availableApartments', { defaultValue: 'Διαθέσιμες Μονάδες' }),
+      title: t('sales.available.stats.availableApartments'),
       value: dashboardStats.availableCount,
-      description: t('sales.available.stats.forSaleNow', { defaultValue: 'Προς πώληση τώρα' }),
+      description: t('sales.available.stats.forSaleNow'),
       icon: ShoppingBag,
       color: 'blue',
     },
     {
-      title: t('sales.available.stats.avgPrice', { defaultValue: 'Μέση Τιμή' }),
+      title: t('sales.available.stats.avgPrice'),
       value: dashboardStats.averagePrice > 0 ? formatCurrencyCompact(dashboardStats.averagePrice) : '—',
-      description: t('sales.available.stats.avgPriceDesc', { defaultValue: 'Μέση ζητούμενη τιμή' }),
+      description: t('sales.available.stats.avgPriceDesc'),
       icon: DollarSign,
       color: 'green',
     },
     {
-      title: t('sales.available.stats.totalValue', { defaultValue: 'Συνολική Αξία' }),
+      title: t('sales.available.stats.totalValue'),
       value: dashboardStats.totalValue > 0 ? formatCurrencyCompact(dashboardStats.totalValue) : '—',
-      description: t('sales.available.stats.totalValueDesc', { defaultValue: 'Αξία χαρτοφυλακίου' }),
+      description: t('sales.available.stats.totalValueDesc'),
       icon: TrendingUp,
       color: 'purple',
     },
     {
-      title: t('sales.available.stats.avgPricePerSqm', { defaultValue: 'Μ.Ο. €/m²' }),
+      title: t('sales.available.stats.avgPricePerSqm'),
       value: dashboardStats.averagePricePerSqm > 0
         ? formatCurrencyWhole(Math.round(dashboardStats.averagePricePerSqm))
         : '—',
-      description: t('sales.available.stats.avgPricePerSqmDesc', { defaultValue: 'Μέση τιμή ανά τ.μ.' }),
+      description: t('sales.available.stats.avgPricePerSqmDesc'),
       icon: Maximize2,
       color: 'orange',
     },
   ];
 
   return (
-    <PageContainer ariaLabel={t('sales.available.title', { defaultValue: 'Διαθέσιμες Μονάδες' })}>
+    <PageContainer ariaLabel={t('sales.available.title')}>
       {/* LAYER 1: Header */}
       <SalesAvailableHeader
         viewMode={viewMode}
@@ -185,7 +185,7 @@ function SalesAvailableContent() {
           // Grid view — cards in grid layout
           <section
             className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 p-2 overflow-y-auto"
-            aria-label={t('sales.available.gridLabel', { defaultValue: 'Grid μονάδων πωλήσεων' })}
+            aria-label={t('sales.available.gridLabel')}
           >
             {(filteredUnits as Unit[]).map(unit => (
               <article
@@ -210,12 +210,12 @@ function SalesAvailableContent() {
                       'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
                     }`}>
                       {unit.commercialStatus
-                        ? t(`sales.commercialStatus.${unit.commercialStatus}`, { defaultValue: unit.commercialStatus })
-                        : t('sales.commercialStatus.new', { defaultValue: 'Νέα' })}
+                        ? t(`sales.commercialStatus.${unit.commercialStatus}`)
+                        : t('sales.commercialStatus.new')}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {t(`sales.unitTypes.${unit.type}`, { defaultValue: unit.type })} · {unit.areas?.gross ?? unit.area ?? '—'} m²
+                    {t(`sales.unitTypes.${unit.type}`)} · {unit.areas?.gross ?? unit.area ?? '—'} m²
                   </p>
                   <p className="text-lg font-bold text-green-600 mt-1">
                     {unit.commercial?.askingPrice
@@ -233,7 +233,7 @@ function SalesAvailableContent() {
 
             {filteredUnits.length === 0 && (
               <div className="col-span-full p-6 text-center text-sm text-muted-foreground">
-                {t('sales.available.noResults', { defaultValue: 'Δεν βρέθηκαν μονάδες.' })}
+                {t('sales.available.noResults')}
               </div>
             )}
           </section>

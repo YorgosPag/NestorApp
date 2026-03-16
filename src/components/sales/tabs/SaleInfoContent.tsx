@@ -116,7 +116,7 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
   const daysOnMarket = computeDaysOnMarket(commercial?.listedDate);
 
   return (
-    <section className="flex flex-col gap-2 p-2" aria-label={t('sales.tabs.saleInfo', { defaultValue: 'Πληροφορίες Πώλησης' })}>
+    <section className="flex flex-col gap-2 p-2" aria-label={t('sales.tabs.saleInfo')}>
       {/* Ιεραρχία Ακινήτου: Εταιρεία → Έργο → Κτίριο → Μονάδα */}
       <UnitHierarchyCard unitId={unit.id} />
 
@@ -125,14 +125,14 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
         <CardHeader className="p-3 pb-0">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <DollarSign className={`${iconSizes.sm} ${SALES_ICON_COLORS.pricingSection}`} />
-            {t('sales.saleInfo.pricing', { defaultValue: 'Εμπορικά Στοιχεία' })}
+            {t('sales.saleInfo.pricing')}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-3 pt-2">
           <InfoRow
             icon={DollarSign}
             iconColor={SALES_ICON_COLORS.askingPrice}
-            label={t('sales.saleInfo.askingPrice', { defaultValue: 'Ζητούμενη' })}
+            label={t('sales.saleInfo.askingPrice')}
             value={formatCurrencyWhole(askingPrice)}
             valueColor={colors.text.success}
           />
@@ -140,7 +140,7 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
             <InfoRow
               icon={DollarSign}
               iconColor={SALES_ICON_COLORS.finalPrice}
-              label={t('sales.saleInfo.finalPrice', { defaultValue: 'Τελική τιμή' })}
+              label={t('sales.saleInfo.finalPrice')}
               value={`${formatCurrencyWhole(finalPrice)}${discount ? ` (${discount})` : ''}`}
               valueColor={colors.text.info}
             />
@@ -162,7 +162,7 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
           <CardHeader className="p-3 pb-0">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <UserCheck className={`${iconSizes.sm} ${SALES_ICON_COLORS.reservationSection}`} />
-              {t('sales.saleInfo.reservation', { defaultValue: 'Κράτηση' })}
+              {t('sales.saleInfo.reservation')}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-3 pt-2">
@@ -170,7 +170,7 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
               <InfoRow
                 icon={CreditCard}
                 iconColor={SALES_ICON_COLORS.deposit}
-                label={t('sales.saleInfo.deposit', { defaultValue: 'Προκαταβολή' })}
+                label={t('sales.saleInfo.deposit')}
                 value={formatCurrencyWhole(commercial.reservationDeposit)}
               />
             )}
@@ -178,13 +178,13 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
               <div className="flex items-center justify-between py-1.5">
                 <span className="flex items-center gap-2 text-sm text-muted-foreground">
                   <UserCheck className={`${iconSizes.sm} ${SALES_ICON_COLORS.buyer} flex-shrink-0`} />
-                  {t('sales.saleInfo.buyer', { defaultValue: 'Αγοραστής' })}
+                  {t('sales.saleInfo.buyer')}
                 </span>
                 <button
                   onClick={() => router.push(ENTITY_ROUTES.contacts.withId(commercial.buyerContactId!))}
                   className={`text-sm font-medium ${colors.text.info} flex items-center gap-1 hover:underline`}
                 >
-                  {resolvedBuyerName ?? t('sales.saleInfo.unknownBuyer', { defaultValue: 'Άγνωστος' })}
+                  {resolvedBuyerName ?? t('sales.saleInfo.unknownBuyer')}
                   <ExternalLink className={iconSizes.xs} />
                 </button>
               </div>
@@ -203,21 +203,21 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
         <CardHeader className="p-3 pb-0">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <Calendar className={`${iconSizes.sm} ${SALES_ICON_COLORS.datesSection}`} />
-            {t('sales.saleInfo.dates', { defaultValue: 'Ημερομηνίες' })}
+            {t('sales.saleInfo.dates')}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-3 pt-2">
           <InfoRow
             icon={Calendar}
             iconColor={SALES_ICON_COLORS.listedDate}
-            label={t('sales.saleInfo.listedDate', { defaultValue: 'Στην αγορά' })}
+            label={t('sales.saleInfo.listedDate')}
             value={formatDate(commercial?.listedDate)}
           />
           {commercial?.reservationDate && (
             <InfoRow
               icon={Calendar}
               iconColor={SALES_ICON_COLORS.reservationDate}
-              label={t('sales.saleInfo.reservationDate', { defaultValue: 'Ημ. κράτησης' })}
+              label={t('sales.saleInfo.reservationDate')}
               value={formatDate(commercial.reservationDate)}
             />
           )}
@@ -225,7 +225,7 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
             <InfoRow
               icon={Calendar}
               iconColor={SALES_ICON_COLORS.saleDate}
-              label={t('sales.saleInfo.saleDate', { defaultValue: 'Ημ. πώλησης' })}
+              label={t('sales.saleInfo.saleDate')}
               value={formatDate(commercial.saleDate)}
             />
           )}
@@ -233,14 +233,14 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
             <InfoRow
               icon={Calendar}
               iconColor={SALES_ICON_COLORS.cancellationDate}
-              label={t('sales.saleInfo.cancellationDate', { defaultValue: 'Ημ. ακύρωσης' })}
+              label={t('sales.saleInfo.cancellationDate')}
               value={formatDate(commercial.cancellationDate)}
             />
           )}
           <InfoRow
             icon={Clock}
             iconColor={SALES_ICON_COLORS.daysOnMarket}
-            label={t('sales.saleInfo.daysOnMarket', { defaultValue: 'Ημέρες' })}
+            label={t('sales.saleInfo.daysOnMarket')}
             value={daysOnMarket}
           />
         </CardContent>

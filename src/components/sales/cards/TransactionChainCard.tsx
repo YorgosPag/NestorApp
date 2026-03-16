@@ -52,13 +52,7 @@ function formatDate(isoDate: string): string {
   }
 }
 
-function getInvoiceTypeLabel(type: string): string {
-  switch (type) {
-    case 'sales_invoice': return 'ΤΠ';
-    case 'credit_invoice': return 'Πιστωτικό';
-    default: return type;
-  }
-}
+// Invoice type label resolved via i18n in render (sales.saleInfo.invoiceType.*)
 
 function getInvoiceIcon(type: string): React.ElementType {
   switch (type) {
@@ -75,13 +69,7 @@ function getPaymentBadgeClass(status: string): string {
   }
 }
 
-function getPaymentLabel(status: string): string {
-  switch (status) {
-    case 'paid': return 'Πληρωμένο';
-    case 'partial': return 'Μερική';
-    default: return 'Απλήρωτο';
-  }
-}
+// Payment status label resolved via i18n in render (sales.saleInfo.paymentStatus.*)
 
 // =============================================================================
 // COMPONENT
@@ -123,7 +111,7 @@ export function TransactionChainCard({ unitId }: TransactionChainCardProps) {
       <CardHeader className="p-3 pb-0">
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
           <Receipt className={`${iconSizes.sm} text-indigo-600`} />
-          {t('sales.saleInfo.invoices', { defaultValue: 'Παραστατικά Πώλησης' })}
+          {t('sales.saleInfo.invoices')}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-3 pt-2">
@@ -138,7 +126,7 @@ export function TransactionChainCard({ unitId }: TransactionChainCardProps) {
                 <span className="flex items-center gap-2 text-sm">
                   <Icon className={`${iconSizes.sm} text-muted-foreground flex-shrink-0`} />
                   <span className="font-medium">
-                    {getInvoiceTypeLabel(inv.type)} {inv.series}-{inv.number}
+                    {t(`sales.saleInfo.invoiceType.${inv.type}`)} {inv.series}-{inv.number}
                   </span>
                   <span className="text-muted-foreground text-xs">
                     {formatDate(inv.issueDate)}
@@ -150,7 +138,7 @@ export function TransactionChainCard({ unitId }: TransactionChainCardProps) {
                     {formatCurrency(inv.totalGrossAmount)}
                   </span>
                   <span className={`text-xs px-1.5 py-0.5 rounded-full ${getPaymentBadgeClass(inv.paymentStatus)}`}>
-                    {getPaymentLabel(inv.paymentStatus)}
+                    {t(`sales.saleInfo.paymentStatus.${inv.paymentStatus}`)}
                   </span>
                 </span>
               </li>

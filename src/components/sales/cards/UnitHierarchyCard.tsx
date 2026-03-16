@@ -97,7 +97,7 @@ export function UnitHierarchyCard({ unitId }: UnitHierarchyCardProps) {
       <CardHeader className="p-3 pb-0">
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
           <Building2 className={`${iconSizes.sm} text-indigo-600`} />
-          {t('sales.saleInfo.hierarchy', { defaultValue: 'Ιεραρχία Ακινήτου' })}
+          {t('sales.saleInfo.hierarchy')}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-3 pt-2">
@@ -107,7 +107,7 @@ export function UnitHierarchyCard({ unitId }: UnitHierarchyCardProps) {
             <HierarchyNode
               icon={Briefcase}
               iconColor="text-slate-600"
-              label={t('sales.hierarchy.company', { defaultValue: 'Εταιρεία' })}
+              label={t('sales.hierarchy.company')}
               value={hierarchy.company.name}
               iconSizeClass={iconSizes.xs}
             />
@@ -118,7 +118,7 @@ export function UnitHierarchyCard({ unitId }: UnitHierarchyCardProps) {
             <HierarchyNode
               icon={FolderKanban}
               iconColor="text-blue-600"
-              label={t('sales.hierarchy.project', { defaultValue: 'Έργο' })}
+              label={t('sales.hierarchy.project')}
               value={hierarchy.project.name}
               iconSizeClass={iconSizes.xs}
             />
@@ -129,7 +129,7 @@ export function UnitHierarchyCard({ unitId }: UnitHierarchyCardProps) {
             <HierarchyNode
               icon={FileText}
               iconColor="text-amber-600"
-              label={t('sales.hierarchy.permit', { defaultValue: 'Τίτλος Αδείας' })}
+              label={t('sales.hierarchy.permit')}
               value={hierarchy.project.permitTitle}
               iconSizeClass={iconSizes.xs}
             />
@@ -140,7 +140,7 @@ export function UnitHierarchyCard({ unitId }: UnitHierarchyCardProps) {
             <HierarchyNode
               icon={Building2}
               iconColor="text-teal-600"
-              label={t('sales.hierarchy.building', { defaultValue: 'Κτίριο' })}
+              label={t('sales.hierarchy.building')}
               value={hierarchy.building.name}
               iconSizeClass={iconSizes.xs}
             />
@@ -150,7 +150,7 @@ export function UnitHierarchyCard({ unitId }: UnitHierarchyCardProps) {
           <HierarchyNode
             icon={Home}
             iconColor="text-green-600"
-            label={t('sales.hierarchy.unit', { defaultValue: 'Μονάδα' })}
+            label={t('sales.hierarchy.unit')}
             value={`${hierarchy.unit.name} — ${formatFloorLabel(hierarchy.unit.floor)}`}
             iconSizeClass={iconSizes.xs}
             isLast

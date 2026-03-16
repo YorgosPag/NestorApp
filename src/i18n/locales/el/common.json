@@ -1302,7 +1302,11 @@
         "interest": "Ενδιαφέρον",
         "activeViews": "Ενεργές προβολές",
         "avgTime": "Μέσος Χρόνος",
-        "onMarket": "Στην αγορά"
+        "onMarket": "Στην αγορά",
+        "totalValue": "Συνολική Αξία",
+        "totalValueDesc": "Αξία χαρτοφυλακίου",
+        "avgPricePerSqm": "Μ.Ο. €/m²",
+        "avgPricePerSqmDesc": "Μέση τιμή ανά τ.μ."
       },
       "types": {
         "studios": {
@@ -1351,7 +1355,57 @@
       "videos": "Βίντεο",
       "documents": "Έγγραφα",
       "history": "Ιστορικό",
-      "legal": "Νομικά"
+      "legal": "Νομικά",
+      "payments": "Πληρωμές",
+      "openInSpaces": "Άνοιγμα στους Χώρους"
+    },
+    "actions": {
+      "revert": "Επαναφορά"
+    },
+    "saleInfo": {
+      "pricing": "Εμπορικά Στοιχεία",
+      "askingPrice": "Ζητούμενη",
+      "finalPrice": "Τελική τιμή",
+      "reservation": "Κράτηση",
+      "deposit": "Προκαταβολή",
+      "buyer": "Αγοραστής",
+      "unknownBuyer": "Άγνωστος",
+      "invoices": "Παραστατικά Πώλησης",
+      "invoiceType": {
+        "sales_invoice": "ΤΠ",
+        "credit_invoice": "Πιστωτικό"
+      },
+      "paymentStatus": {
+        "paid": "Πληρωμένο",
+        "partial": "Μερική",
+        "unpaid": "Απλήρωτο"
+      },
+      "dates": "Ημερομηνίες",
+      "listedDate": "Στην αγορά",
+      "reservationDate": "Ημ. κράτησης",
+      "saleDate": "Ημ. πώλησης",
+      "cancellationDate": "Ημ. ακύρωσης",
+      "daysOnMarket": "Ημέρες",
+      "hierarchy": "Ιεραρχία Ακινήτου"
+    },
+    "hierarchy": {
+      "company": "Εταιρεία",
+      "project": "Έργο",
+      "permit": "Τίτλος Αδείας",
+      "building": "Κτίριο",
+      "unit": "Μονάδα"
+    },
+    "unitSummary": {
+      "physicalData": "Φυσικά Στοιχεία",
+      "type": "Τύπος",
+      "area": "Εμβαδόν",
+      "floor": "Όροφος",
+      "building": "Κτίριο",
+      "bedrooms": "Υπνοδωμάτια",
+      "bathrooms": "Μπάνια",
+      "orientation": "Προσανατολισμός",
+      "energy": "Ενεργειακή",
+      "openInSpaces": "Άνοιγμα στους Χώρους"
     },
     "legal": {
       "title": "Νομική Διαδικασία",
