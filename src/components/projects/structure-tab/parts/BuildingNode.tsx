@@ -80,21 +80,21 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
   const tabs = useMemo(() => [
     {
       id: 'units' as SpaceTab,
-      label: t('structure.tabs.units', 'Μονάδες'),
+      label: t('structure.tabs.units'),
       icon: NAVIGATION_ENTITIES.unit.icon,
       iconColor: NAVIGATION_ENTITIES.unit.color,
       count: totalUnits
     },
     {
       id: 'storage' as SpaceTab,
-      label: t('structure.tabs.storage', 'Αποθήκες'),
+      label: t('structure.tabs.storage'),
       icon: NAVIGATION_ENTITIES.storage.icon,
       iconColor: NAVIGATION_ENTITIES.storage.color,
       count: totalStorages
     },
     {
       id: 'parking' as SpaceTab,
-      label: t('structure.tabs.parking', 'Στάθμευση'),
+      label: t('structure.tabs.parking'),
       icon: NAVIGATION_ENTITIES.parking.icon,
       iconColor: NAVIGATION_ENTITIES.parking.color,
       count: totalParkingSpots
@@ -122,12 +122,12 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
         <div className="flex-1">
           <div className={cn(typography.heading.sm, colors.text.foreground)}>{buildingName}</div>
           <div className={cn(typography.body.sm, colors.text.muted)}>
-            {totalUnits} {t('structure.units', 'μονάδες')} • {totalStorages} {t('structure.storages', 'αποθήκες')} • {totalParkingSpots} {t('structure.parkingSpots', 'θέσεις')}
+            {totalUnits} {t('structure.units')} • {totalStorages} {t('structure.storages')} • {totalParkingSpots} {t('structure.parkingSpots')}
           </div>
         </div>
         <div className={cn("text-right", typography.body.sm)}>
           <div className={cn(typography.heading.sm, colors.text.success)}>
-            {totalUnits > 0 ? ((soldUnits / totalUnits) * 100).toFixed(1) : 0}% {t('structure.salesPercentage', 'πωλήσεις')}
+            {totalUnits > 0 ? ((soldUnits / totalUnits) * 100).toFixed(1) : 0}% {t('structure.salesPercentage')}
           </div>
           <div className={colors.text.muted}>
             {soldArea.toFixed(1)} m² {t('structure.soldArea', 'πωλημένα')}

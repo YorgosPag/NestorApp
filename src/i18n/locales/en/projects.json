@@ -250,6 +250,8 @@
     "customer": "Customer",
     "customerNotFound": "Customer (ID: {id}) - No data found",
     "units": "units",
+    "storages": "storage",
+    "parkingSpots": "spots",
     "soldUnits": "sold",
     "totalArea": "Total Area",
     "salesPercentage": "sales",
@@ -257,6 +259,14 @@
     "totalUnitsLabel": "Total Units",
     "soldLabel": "Sold",
     "salesPctLabel": "% Sales",
+    "stats": {
+      "units": "Units",
+      "storages": "Storage",
+      "parking": "Spots",
+      "sold": "sold",
+      "salesPct": "% Sales",
+      "totalSpaces": "Total"
+    },
     "error": "Error",
     "errors": {
       "loadFailed": "Failed to load project structure"
@@ -265,7 +275,12 @@
     "notFound": "Project structure not found.",
     "buildings": "buildings",
     "buildingsCount": "{count} buildings",
-    "unitsCount": "{count} units"
+    "unitsCount": "{count} units",
+    "tabs": {
+      "units": "Units",
+      "storage": "Storage",
+      "parking": "Parking"
+    }
   },
   "buildings": {
     "cardTitle": "Project Buildings",
@@ -1037,5 +1052,16 @@
       "combined": "Combined = Combined % × Construction",
       "volume": "Volume = Volume Coef. × Construction"
     }
+  },
+  "locations": {
+    "title": "Locations & Addresses",
+    "subtitle": "Manage all project addresses",
+    "newAddress": "New Address",
+    "addNewAddress": "Add New Address",
+    "noAddresses": "No addresses",
+    "noAddressesHint": "Use the \"New Address\" button to add an address",
+    "projectAddresses": "Project Addresses",
+    "tabLabel": "Addresses",
+    "tabDescription": "Manage project addresses"
   }
 }

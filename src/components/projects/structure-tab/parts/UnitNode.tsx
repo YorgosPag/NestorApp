@@ -41,7 +41,7 @@ export const UnitNode = ({ unit }: { unit: UnitModel }) => {
               <div className="flex items-center gap-2 mb-1">
                 <span className={cn(typography.heading.sm, colors.text.foreground)}>{unit.name}</span>
                 <span className={cn("px-2 py-1 rounded-full", typography.label.xs, getStatusColor(unit.status))}>
-                  {getStatusLabel(unit.status)}
+                  {t(getStatusLabel(unit.status))}
                 </span>
               </div>
               <div className={cn("flex items-center gap-4", typography.body.sm, colors.text.muted)}>

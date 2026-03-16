@@ -250,6 +250,8 @@
     "customer": "Πελάτης",
     "customerNotFound": "Πελάτης (ID: {id}) - Δεν βρέθηκαν στοιχεία",
     "units": "μονάδες",
+    "storages": "αποθήκες",
+    "parkingSpots": "θέσεις",
     "soldUnits": "πωλημένες",
     "totalArea": "Συνολική Επιφάνεια",
     "salesPercentage": "πωλήσεις",
@@ -257,6 +259,14 @@
     "totalUnitsLabel": "Σύνολο Μονάδων",
     "soldLabel": "Πωλημένες",
     "salesPctLabel": "% Πωλήσεων",
+    "stats": {
+      "units": "Μονάδες",
+      "storages": "Αποθήκες",
+      "parking": "Θέσεις",
+      "sold": "πωλημένες",
+      "salesPct": "% Πωλήσεων",
+      "totalSpaces": "Σύνολο"
+    },
     "error": "Σφάλμα",
     "errors": {
       "loadFailed": "Αποτυχία φόρτωσης δομής έργου"
@@ -265,7 +275,12 @@
     "notFound": "Δεν βρέθηκε η δομή του έργου.",
     "buildings": "κτίρια",
     "buildingsCount": "{count} κτίρια",
-    "unitsCount": "{count} μονάδες"
+    "unitsCount": "{count} μονάδες",
+    "tabs": {
+      "units": "Μονάδες",
+      "storage": "Αποθήκες",
+      "parking": "Στάθμευση"
+    }
   },
   "buildings": {
     "cardTitle": "Κτίρια Έργου",
@@ -1098,5 +1113,16 @@
       "error": "Δεν ήταν δυνατός ο εντοπισμός των διευθύνσεων στον χάρτη. Βεβαιωθείτε ότι οι διευθύνσεις είναι έγκυρες.",
       "partialStatus": "{count} από {total} διευθύνσεις"
     }
+  },
+  "locations": {
+    "title": "Τοποθεσίες & Διευθύνσεις",
+    "subtitle": "Διαχείριση όλων των διευθύνσεων του έργου",
+    "newAddress": "Νέα Διεύθυνση",
+    "addNewAddress": "Προσθήκη Νέας Διεύθυνσης",
+    "noAddresses": "Δεν υπάρχουν διευθύνσεις",
+    "noAddressesHint": "Χρησιμοποιήστε το κουμπί «Νέα Διεύθυνση» για να προσθέσετε διεύθυνση",
+    "projectAddresses": "Διευθύνσεις Έργου",
+    "tabLabel": "Διευθύνσεις",
+    "tabDescription": "Διαχείριση διευθύνσεων του έργου"
   }
 }

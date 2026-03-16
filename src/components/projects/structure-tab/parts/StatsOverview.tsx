@@ -40,30 +40,30 @@ export function StatsOverview({
 
   const dashboardStats: DashboardStat[] = [
     {
-      title: t('structure.stats.units', 'Μονάδες'),
+      title: t('structure.stats.units'),
       value: totalUnits,
-      description: `${soldUnits} ${t('structure.stats.sold', 'πωλημένες')} • ${unitsArea.toFixed(0)} m²`,
+      description: `${soldUnits} ${t('structure.stats.sold')} • ${unitsArea.toFixed(0)} m²`,
       icon: NAVIGATION_ENTITIES.unit.icon,
       color: 'blue',
     },
     {
-      title: t('structure.stats.storages', 'Αποθήκες'),
+      title: t('structure.stats.storages'),
       value: totalStorages,
-      description: `${soldStorages} ${t('structure.stats.sold', 'πωλημένες')} • ${storagesArea.toFixed(0)} m²`,
+      description: `${soldStorages} ${t('structure.stats.sold')} • ${storagesArea.toFixed(0)} m²`,
       icon: NAVIGATION_ENTITIES.storage.icon,
       color: 'yellow',
     },
     {
-      title: t('structure.stats.parking', 'Θέσεις'),
+      title: t('structure.stats.parking'),
       value: totalParkingSpots,
-      description: `${soldParkingSpots} ${t('structure.stats.sold', 'πωλημένες')} • ${parkingArea.toFixed(0)} m²`,
+      description: `${soldParkingSpots} ${t('structure.stats.sold')} • ${parkingArea.toFixed(0)} m²`,
       icon: NAVIGATION_ENTITIES.parking.icon,
       color: 'purple',
     },
     {
-      title: t('structure.stats.salesPct', '% Πωλήσεων'),
+      title: t('structure.stats.salesPct'),
       value: `${soldPct.toFixed(1)}%`,
-      description: `${t('structure.stats.totalSpaces', 'Σύνολο')}: ${totalSpaces} • ${totalArea.toFixed(0)} m²`,
+      description: `${t('structure.stats.totalSpaces')}: ${totalSpaces} • ${totalArea.toFixed(0)} m²`,
       icon: BarChart3,
       color: 'orange',
     },

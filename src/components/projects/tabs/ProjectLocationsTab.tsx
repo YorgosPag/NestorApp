@@ -523,16 +523,16 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
         <div>
           <h2 className={cn(typography.heading.lg, "flex items-center", spacing.gap.sm)}>
             <MapPin className={iconSizes.lg} />
-            Τοποθεσίες & Διευθύνσεις
+            {t('locations.title')}
           </h2>
           <p className={cn(typography.body.sm, colors.text.muted, spacing.margin.top.xs)}>
-            Διαχείριση όλων των διευθύνσεων του έργου
+            {t('locations.subtitle')}
           </p>
         </div>
         {!isAddFormOpen && (
           <Button onClick={() => setIsAddFormOpen(true)} variant="default">
             <Plus className={cn(iconSizes.sm, spacing.margin.right.sm)} />
-            Νέα Διεύθυνση
+            {t('locations.newAddress')}
           </Button>
         )}
       </header>
@@ -543,7 +543,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
           <div className="flex items-center justify-between">
             <h3 className={cn(typography.heading.md, "flex items-center", spacing.gap.sm)}>
               <Plus className={iconSizes.md} />
-              Προσθήκη Νέας Διεύθυνσης
+              {t('locations.addNewAddress')}
             </h3>
             <Button variant="ghost" size="sm" onClick={handleCancelAdd}>
               <X className={iconSizes.sm} />
@@ -690,9 +690,9 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
           {localAddresses.length === 0 ? (
             <div className={cn("text-center border-2 border-dashed rounded-lg", spacing.padding.y["2xl"])}>
               <MapPin className={cn(iconSizes.xl, "mx-auto", colors.text.muted, spacing.margin.bottom.md)} />
-              <h3 className={cn(typography.heading.md, spacing.margin.bottom.sm)}>Δεν υπάρχουν διευθύνσεις</h3>
+              <h3 className={cn(typography.heading.md, spacing.margin.bottom.sm)}>{t('locations.noAddresses')}</h3>
               <p className={cn(typography.body.sm, colors.text.muted)}>
-                Χρησιμοποιήστε το κουμπί «Νέα Διεύθυνση» για να προσθέσετε διεύθυνση
+                {t('locations.noAddressesHint')}
               </p>
             </div>
           ) : (
@@ -701,7 +701,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
               <aside className={spacing.spaceBetween.md}>
                 <div className="flex items-center justify-between">
                   <h3 className={typography.heading.md}>
-                    Διευθύνσεις Έργου ({localAddresses.length})
+                    {t('locations.projectAddresses')} ({localAddresses.length})
                   </h3>
                 </div>
 

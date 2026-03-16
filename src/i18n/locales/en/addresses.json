@@ -83,5 +83,14 @@
     "locationDenied": "Location access denied",
     "locationError": "Could not determine location",
     "myLocation": "My location"
+  },
+  "locations": {
+    "title": "Locations & Addresses",
+    "subtitle": "Manage all project addresses",
+    "newAddress": "New Address",
+    "addNewAddress": "Add New Address",
+    "noAddresses": "No addresses",
+    "noAddressesHint": "Use the \"New Address\" button to add an address",
+    "projectAddresses": "Project Addresses"
   }
 }
