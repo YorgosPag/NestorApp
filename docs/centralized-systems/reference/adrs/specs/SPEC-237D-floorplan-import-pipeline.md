@@ -365,6 +365,7 @@ floorplanType === 'unit'
 | 2026-03-16 | IMPLEMENTED — 5 new files in `src/features/floorplan-import/`, i18n keys added (el+en), zero new services | Claude |
 | 2026-03-16 | FIX: Race condition στο companies fetch — αφαίρεση `step !== 1` guard από useEffect deps | Claude |
 | 2026-03-16 | FIX: Αφαίρεση auto-skip λογικής — προκαλούσε race condition στο buildings step + κακή UX. Ο χρήστης επιλέγει χειροκίνητα πλέον | Claude |
+| 2026-03-16 | FIX: Αφαίρεση "Αυτόματη επιλογή" UI — single items εμφανίζονται ως radio buttons, απαιτούν explicit κλικ πριν το "Επόμενο" | Claude |
 
 ### Implementation Notes
 
