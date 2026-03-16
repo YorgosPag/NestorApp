@@ -11,7 +11,8 @@
  * @since ADR-236 — Multi-Level Property Management
  */
 
-import type { UnitLevel } from '@/types/unit';
+import type { UnitLevel, LevelData } from '@/types/unit';
+import type { OrientationType } from '@/constants/unit-features-enterprise';
 
 // =============================================================================
 // TYPES
@@ -125,4 +126,86 @@ export function validateMultiLevelFloors(levels: UnitLevel[]): ValidationResult 
   }
 
   return { valid: true };
+}
+
+// =============================================================================
+// AGGREGATE LEVEL DATA (ADR-236 Phase 2)
+// =============================================================================
+
+/** Aggregated totals computed from per-level data */
+export interface AggregatedUnitData {
+  areas: {
+    gross: number;
+    net: number;
+    balcony: number;
+    terrace: number;
+    garden: number;
+  };
+  layout: {
+    bedrooms: number;
+    bathrooms: number;
+    wc: number;
+  };
+  orientations: OrientationType[];
+}
+
+/**
+ * Aggregate per-level data into unit-level totals.
+ *
+ * - **Areas**: SUM each measurement across all levels
+ * - **Layout**: SUM bedrooms, bathrooms, wc across all levels
+ * - **Orientations**: UNION (unique values from all levels)
+ * - **Finishes**: NOT aggregated — each level keeps its own
+ *
+ * Pure function, safe for both client-side and server-side usage.
+ *
+ * @param levelData — Record<floorId, LevelData> from the unit document
+ * @returns aggregated totals ready to be merged into top-level unit fields
+ */
+export function aggregateLevelData(levelData: Record<string, LevelData>): AggregatedUnitData {
+  const entries = Object.values(levelData);
+
+  const areas = {
+    gross: 0,
+    net: 0,
+    balcony: 0,
+    terrace: 0,
+    garden: 0,
+  };
+
+  const layout = {
+    bedrooms: 0,
+    bathrooms: 0,
+    wc: 0,
+  };
+
+  const orientationSet = new Set<OrientationType>();
+
+  for (const level of entries) {
+    if (level.areas) {
+      areas.gross += level.areas.gross ?? 0;
+      areas.net += level.areas.net ?? 0;
+      areas.balcony += level.areas.balcony ?? 0;
+      areas.terrace += level.areas.terrace ?? 0;
+      areas.garden += level.areas.garden ?? 0;
+    }
+
+    if (level.layout) {
+      layout.bedrooms += level.layout.bedrooms ?? 0;
+      layout.bathrooms += level.layout.bathrooms ?? 0;
+      layout.wc += level.layout.wc ?? 0;
+    }
+
+    if (level.orientations) {
+      for (const o of level.orientations) {
+        orientationSet.add(o);
+      }
+    }
+  }
+
+  return {
+    areas,
+    layout,
+    orientations: Array.from(orientationSet),
+  };
 }

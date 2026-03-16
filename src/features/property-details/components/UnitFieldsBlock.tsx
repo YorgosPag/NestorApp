@@ -35,7 +35,7 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-e
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Bed, Bath, Compass, Wrench, Zap,
-  Ruler, Thermometer, Snowflake, Home, Shield, Flame, FileText, Info, Lock
+  Ruler, Thermometer, Snowflake, Home, Shield, Flame, FileText, Info, Lock, Layers
 } from 'lucide-react';
 import {
   Popover,
@@ -50,7 +50,8 @@ import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import type { Property } from '@/types/property-viewer';
-import type { UnitType, CommercialStatus, OperationalStatus } from '@/types/unit';
+import type { UnitType, CommercialStatus, OperationalStatus, LevelData } from '@/types/unit';
+import { aggregateLevelData } from '@/services/multi-level.service';
 import type {
   ConditionType,
   OrientationType,
@@ -212,8 +213,43 @@ export function UnitFieldsBlock({
     windowFrames: property.finishes?.windowFrames ?? '',
     glazing: property.finishes?.glazing ?? '',
     interiorFeatures: property.interiorFeatures ?? [],
-    securityFeatures: property.securityFeatures ?? []
+    securityFeatures: property.securityFeatures ?? [],
+    levelData: property.levelData ?? {} as Record<string, LevelData>,
   });
+
+  // ── ADR-236 Phase 2: Active level tab (null = "Totals" tab) ──
+  const isMultiLevel = property.isMultiLevel && (property.levels?.length ?? 0) >= 2;
+  const [activeLevelId, setActiveLevelId] = useState<string | null>(
+    isMultiLevel && property.levels?.length
+      ? property.levels[0].floorId
+      : null
+  );
+
+  // ── Computed: current level's data OR aggregated totals ──
+  const currentLevelData: LevelData | null = activeLevelId
+    ? (formData.levelData[activeLevelId] ?? {})
+    : null;
+  const aggregatedTotals = isMultiLevel && Object.keys(formData.levelData).length > 0
+    ? aggregateLevelData(formData.levelData)
+    : null;
+
+  // ── Update a specific level's data ──
+  const updateLevelField = useCallback(<K extends keyof LevelData>(
+    field: K,
+    value: LevelData[K]
+  ) => {
+    if (!activeLevelId) return; // Totals tab is read-only
+    setFormData(prev => ({
+      ...prev,
+      levelData: {
+        ...prev.levelData,
+        [activeLevelId]: {
+          ...prev.levelData[activeLevelId],
+          [field]: value,
+        },
+      },
+    }));
+  }, [activeLevelId]);
 
   // ── Sync form data when property changes externally (e.g. floor via FloorSelectField) ──
   useEffect(() => {
@@ -244,6 +280,7 @@ export function UnitFieldsBlock({
       glazing: property.finishes?.glazing ?? '',
       interiorFeatures: property.interiorFeatures ?? [],
       securityFeatures: property.securityFeatures ?? [],
+      levelData: property.levelData ?? {} as Record<string, LevelData>,
     }));
   }, [property]);
 
@@ -307,8 +344,21 @@ export function UnitFieldsBlock({
     if (formData.interiorFeatures.length > 0) updates.interiorFeatures = formData.interiorFeatures as InteriorFeatureCodeType[];
     if (formData.securityFeatures.length > 0) updates.securityFeatures = formData.securityFeatures as SecurityFeatureCodeType[];
 
+    // ADR-236 Phase 2: Per-level data + auto-aggregation
+    if (isMultiLevel && Object.keys(formData.levelData).length > 0) {
+      (updates as Record<string, unknown>).levelData = formData.levelData;
+      const agg = aggregateLevelData(formData.levelData);
+      updates.areas = agg.areas;
+      updates.layout = {
+        bedrooms: agg.layout.bedrooms,
+        bathrooms: agg.layout.bathrooms,
+        wc: agg.layout.wc,
+      };
+      updates.orientations = agg.orientations;
+    }
+
     return updates;
-  }, [formData]);
+  }, [formData, isMultiLevel]);
 
   // ── Save handler ──
   const handleSave = useCallback(async () => {
@@ -394,7 +444,8 @@ export function UnitFieldsBlock({
       windowFrames: property.finishes?.windowFrames ?? '',
       glazing: property.finishes?.glazing ?? '',
       interiorFeatures: property.interiorFeatures ?? [],
-      securityFeatures: property.securityFeatures ?? []
+      securityFeatures: property.securityFeatures ?? [],
+      levelData: property.levelData ?? {} as Record<string, LevelData>,
     });
     if (onExitEditMode) { onExitEditMode(); } else { setLocalEditing(false); }
   }, [property, onExitEditMode]);
@@ -443,6 +494,16 @@ export function UnitFieldsBlock({
             }
           </AlertDescription>
         </Alert>
+      )}
+
+      {/* ─── Level Tab Strip (ADR-236 Phase 2) ─── */}
+      {isMultiLevel && property.levels && property.levels.length >= 2 && (
+        <LevelTabStrip
+          levels={property.levels}
+          activeLevelId={activeLevelId}
+          onSelectLevel={setActiveLevelId}
+          t={t}
+        />
       )}
 
       {/* ─── Identity + Location Row ─── */}
@@ -602,7 +663,7 @@ export function UnitFieldsBlock({
           </CardContent>
         </Card>
 
-        {/* ─── Areas Card ─── */}
+        {/* ─── Areas Card (level-aware) ─── */}
         <Card>
           <CardHeader className="p-2 pb-1">
             <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
@@ -611,26 +672,63 @@ export function UnitFieldsBlock({
             </CardTitle>
           </CardHeader>
           <CardContent className="p-2 pt-0">
-            <div className="space-y-2">
-              {([
-                ['areaGross', 'fields.areas.gross'],
-                ['areaNet', 'fields.areas.net'],
-                ['areaBalcony', 'fields.areas.balcony'],
-                ['areaTerrace', 'fields.areas.terrace'],
-                ['areaGarden', 'fields.areas.garden'],
-              ] as const).map(([field, labelKey]) => (
-                <fieldset key={field} className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">{t(labelKey)}</Label>
-                  <Input
-                    type="number" min={0} step={0.1}
-                    value={formData[field]}
-                    onChange={(e) => setFormData(prev => ({ ...prev, [field]: parseFloat(e.target.value) || 0 }))}
-                    className={cn('h-7 text-xs', quick.input)}
-                    disabled={!isEditing || isSoldOrRented}
-                  />
-                </fieldset>
-              ))}
-            </div>
+            {isMultiLevel && activeLevelId === null && aggregatedTotals ? (
+              /* Read-only aggregated totals */
+              <div className="space-y-1.5">
+                <p className="text-[10px] text-muted-foreground italic">{t('multiLevel.perLevel.autoComputed')}</p>
+                {([
+                  ['gross', 'fields.areas.gross'],
+                  ['net', 'fields.areas.net'],
+                  ['balcony', 'fields.areas.balcony'],
+                  ['terrace', 'fields.areas.terrace'],
+                  ['garden', 'fields.areas.garden'],
+                ] as const).map(([key, labelKey]) => (
+                  aggregatedTotals.areas[key] > 0 ? (
+                    <dl key={key} className="flex items-baseline gap-1.5">
+                      <dt className="text-xs text-muted-foreground">{t(labelKey)}:</dt>
+                      <dd className="text-xs font-semibold">{aggregatedTotals.areas[key]} m²</dd>
+                    </dl>
+                  ) : null
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {([
+                  ['gross', 'fields.areas.gross'],
+                  ['net', 'fields.areas.net'],
+                  ['balcony', 'fields.areas.balcony'],
+                  ['terrace', 'fields.areas.terrace'],
+                  ['garden', 'fields.areas.garden'],
+                ] as const).map(([areaKey, labelKey]) => {
+                  const value = isMultiLevel && activeLevelId
+                    ? (currentLevelData?.areas?.[areaKey] ?? 0)
+                    : formData[`area${areaKey.charAt(0).toUpperCase()}${areaKey.slice(1)}` as keyof typeof formData] as number;
+                  return (
+                    <fieldset key={areaKey} className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">{t(labelKey)}</Label>
+                      <Input
+                        type="number" min={0} step={0.1}
+                        value={value}
+                        onChange={(e) => {
+                          const num = parseFloat(e.target.value) || 0;
+                          if (isMultiLevel && activeLevelId) {
+                            updateLevelField('areas', {
+                              ...(currentLevelData?.areas ?? { gross: 0 }),
+                              [areaKey]: num,
+                            });
+                          } else {
+                            const flatKey = `area${areaKey.charAt(0).toUpperCase()}${areaKey.slice(1)}`;
+                            setFormData(prev => ({ ...prev, [flatKey]: num }));
+                          }
+                        }}
+                        className={cn('h-7 text-xs', quick.input)}
+                        disabled={!isEditing || isSoldOrRented}
+                      />
+                    </fieldset>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
       </section>
@@ -639,7 +737,7 @@ export function UnitFieldsBlock({
           ROW 1: Διάταξη, Εμβαδά, Κατάσταση/Ενέργεια
       ═══════════════════════════════════════════════════════════════ */}
       <section className="grid grid-cols-3 gap-3">
-        {/* ─── Layout Card ─── */}
+        {/* ─── Layout Card (level-aware) ─── */}
         <Card>
           <CardHeader className="p-2 pb-1">
             <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
@@ -648,39 +746,66 @@ export function UnitFieldsBlock({
             </CardTitle>
           </CardHeader>
           <CardContent className="p-2 pt-0">
-            <div className="space-y-2">
-              <fieldset className="space-y-1">
-                <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Bed className={cn(iconSizes.xs, 'text-violet-600')} />
-                  {t('card.stats.bedrooms')}
-                </Label>
-                <Input type="number" min={0} max={20} value={formData.bedrooms}
-                  onChange={(e) => setFormData(prev => ({ ...prev, bedrooms: parseInt(e.target.value) || 0 }))}
-                  className={cn('h-7 text-xs', quick.input)} disabled={!isEditing || isSoldOrRented} />
-              </fieldset>
-              <fieldset className="space-y-1">
-                <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Bath className={cn(iconSizes.xs, 'text-cyan-600')} />
-                  {t('card.stats.bathrooms')}
-                </Label>
-                <Input type="number" min={0} max={10} value={formData.bathrooms}
-                  onChange={(e) => setFormData(prev => ({ ...prev, bathrooms: parseInt(e.target.value) || 0 }))}
-                  className={cn('h-7 text-xs', quick.input)} disabled={!isEditing || isSoldOrRented} />
-              </fieldset>
-              <fieldset className="space-y-1">
-                <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Bath className={cn(iconSizes.xs, 'text-sky-500')} />
-                  {t('fields.layout.wc')}
-                </Label>
-                <Input type="number" min={0} max={5} value={formData.wc}
-                  onChange={(e) => setFormData(prev => ({ ...prev, wc: parseInt(e.target.value) || 0 }))}
-                  className={cn('h-7 text-xs', quick.input)} disabled={!isEditing || isSoldOrRented} />
-              </fieldset>
-            </div>
+            {isMultiLevel && activeLevelId === null && aggregatedTotals ? (
+              <div className="space-y-1.5">
+                <p className="text-[10px] text-muted-foreground italic">{t('multiLevel.perLevel.autoComputed')}</p>
+                {aggregatedTotals.layout.bedrooms > 0 && (
+                  <dl className="flex items-baseline gap-1.5">
+                    <dt className="text-xs text-muted-foreground">{t('card.stats.bedrooms')}:</dt>
+                    <dd className="text-xs font-semibold">{aggregatedTotals.layout.bedrooms}</dd>
+                  </dl>
+                )}
+                {aggregatedTotals.layout.bathrooms > 0 && (
+                  <dl className="flex items-baseline gap-1.5">
+                    <dt className="text-xs text-muted-foreground">{t('card.stats.bathrooms')}:</dt>
+                    <dd className="text-xs font-semibold">{aggregatedTotals.layout.bathrooms}</dd>
+                  </dl>
+                )}
+                {aggregatedTotals.layout.wc > 0 && (
+                  <dl className="flex items-baseline gap-1.5">
+                    <dt className="text-xs text-muted-foreground">{t('fields.layout.wc')}:</dt>
+                    <dd className="text-xs font-semibold">{aggregatedTotals.layout.wc}</dd>
+                  </dl>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {([
+                  ['bedrooms', 'card.stats.bedrooms', Bed, 'text-violet-600', 20],
+                  ['bathrooms', 'card.stats.bathrooms', Bath, 'text-cyan-600', 10],
+                  ['wc', 'fields.layout.wc', Bath, 'text-sky-500', 5],
+                ] as const).map(([layoutKey, labelKey, Icon, iconColor, max]) => {
+                  const value = isMultiLevel && activeLevelId
+                    ? (currentLevelData?.layout?.[layoutKey] ?? 0)
+                    : formData[layoutKey];
+                  return (
+                    <fieldset key={layoutKey} className="space-y-1">
+                      <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Icon className={cn(iconSizes.xs, iconColor)} />
+                        {t(labelKey)}
+                      </Label>
+                      <Input type="number" min={0} max={max} value={value}
+                        onChange={(e) => {
+                          const num = parseInt(e.target.value) || 0;
+                          if (isMultiLevel && activeLevelId) {
+                            updateLevelField('layout', {
+                              ...(currentLevelData?.layout ?? {}),
+                              [layoutKey]: num,
+                            });
+                          } else {
+                            setFormData(prev => ({ ...prev, [layoutKey]: num }));
+                          }
+                        }}
+                        className={cn('h-7 text-xs', quick.input)} disabled={!isEditing || isSoldOrRented} />
+                    </fieldset>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* ─── Orientation Card ─── */}
+        {/* ─── Orientation Card (level-aware) ─── */}
         <Card>
           <CardHeader className="p-2 pb-1">
             <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
@@ -689,25 +814,49 @@ export function UnitFieldsBlock({
             </CardTitle>
           </CardHeader>
           <CardContent className="p-2 pt-0 space-y-2">
-            <fieldset className="space-y-1">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                {t('orientation.sectionTitle')}
-              </Label>
-              <div className="flex flex-wrap gap-1">
-                {ORIENTATION_OPTIONS.map((orientation) => {
-                  const isSelected = formData.orientations.includes(orientation);
-                  return (
-                    <Button key={orientation} type="button"
-                      variant={isSelected ? 'default' : 'outline'} size="sm"
-                      className="h-6 px-1.5 text-xs"
-                      disabled={!isEditing || isSoldOrRented}
-                      onClick={() => toggleArrayItem('orientations', orientation)}>
-                      {t(`orientation.short.${orientation}`)}
-                    </Button>
-                  );
-                })}
+            {isMultiLevel && activeLevelId === null && aggregatedTotals ? (
+              <div className="space-y-1.5">
+                <p className="text-[10px] text-muted-foreground italic">{t('multiLevel.perLevel.autoComputed')}</p>
+                {aggregatedTotals.orientations.length > 0 && (
+                  <p className="text-xs font-medium">
+                    {aggregatedTotals.orientations.map(o => t(`orientation.short.${o}`, { defaultValue: o })).join(', ')}
+                  </p>
+                )}
               </div>
-            </fieldset>
+            ) : (
+              <fieldset className="space-y-1">
+                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                  {t('orientation.sectionTitle')}
+                </Label>
+                <div className="flex flex-wrap gap-1">
+                  {ORIENTATION_OPTIONS.map((orientation) => {
+                    const levelOrientations = isMultiLevel && activeLevelId
+                      ? (currentLevelData?.orientations ?? [])
+                      : formData.orientations;
+                    const isSelected = levelOrientations.includes(orientation);
+                    return (
+                      <Button key={orientation} type="button"
+                        variant={isSelected ? 'default' : 'outline'} size="sm"
+                        className="h-6 px-1.5 text-xs"
+                        disabled={!isEditing || isSoldOrRented}
+                        onClick={() => {
+                          if (isMultiLevel && activeLevelId) {
+                            const current = currentLevelData?.orientations ?? [];
+                            const updated = current.includes(orientation)
+                              ? current.filter(o => o !== orientation)
+                              : [...current, orientation];
+                            updateLevelField('orientations', updated as OrientationType[]);
+                          } else {
+                            toggleArrayItem('orientations', orientation);
+                          }
+                        }}>
+                        {t(`orientation.short.${orientation}`)}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            )}
           </CardContent>
         </Card>
 
@@ -805,7 +954,7 @@ export function UnitFieldsBlock({
             </div>
           </CardContent>
         </Card>
-        {/* ─── Finishes Card ─── */}
+        {/* ─── Finishes Card (level-aware) ─── */}
         <Card>
           <CardHeader className="p-2 pb-1">
             <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
@@ -814,52 +963,98 @@ export function UnitFieldsBlock({
             </CardTitle>
           </CardHeader>
           <CardContent className="p-2 pt-0 space-y-2">
-            {/* Flooring */}
-            <fieldset className="space-y-1">
-              <Label className="text-xs text-muted-foreground">{t('finishes.flooring.label')}</Label>
-              <div className="flex flex-wrap gap-1">
-                {FLOORING_OPTIONS.map((floor) => {
-                  const isSelected = formData.flooring.includes(floor);
-                  return (
-                    <Button key={floor} type="button"
-                      variant={isSelected ? 'default' : 'outline'} size="sm"
-                      className="h-6 px-1.5 text-xs"
-                      disabled={!isEditing || isSoldOrRented}
-                      onClick={() => toggleArrayItem('flooring', floor)}>
-                      {t(`finishes.flooring.${floor}`)}
-                    </Button>
-                  );
-                })}
-              </div>
-            </fieldset>
+            {(() => {
+              const levelFlooring = isMultiLevel && activeLevelId
+                ? (currentLevelData?.finishes?.flooring ?? [])
+                : formData.flooring;
+              const levelFrames = isMultiLevel && activeLevelId
+                ? (currentLevelData?.finishes?.windowFrames ?? '')
+                : formData.windowFrames;
+              const levelGlazing = isMultiLevel && activeLevelId
+                ? (currentLevelData?.finishes?.glazing ?? '')
+                : formData.glazing;
 
-            {/* Frames & Glazing */}
-            <div className="grid grid-cols-2 gap-2">
-              <fieldset className="space-y-1">
-                <Label className="text-xs text-muted-foreground">{t('finishes.frames.label')}</Label>
-                <Select value={formData.windowFrames} disabled={!isEditing || isSoldOrRented}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, windowFrames: value }))}>
-                  <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={t('finishes.frames.label')} /></SelectTrigger>
-                  <SelectContent>
-                    {FRAME_OPTIONS.map((f) => (
-                      <SelectItem key={f} value={f} className="text-xs">{t(`finishes.frames.${f}`)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </fieldset>
-              <fieldset className="space-y-1">
-                <Label className="text-xs text-muted-foreground">{t('finishes.glazing.label')}</Label>
-                <Select value={formData.glazing} disabled={!isEditing || isSoldOrRented}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, glazing: value }))}>
-                  <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={t('finishes.glazing.label')} /></SelectTrigger>
-                  <SelectContent>
-                    {GLAZING_OPTIONS.map((g) => (
-                      <SelectItem key={g} value={g} className="text-xs">{t(`finishes.glazing.${g}`)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </fieldset>
-            </div>
+              return (
+                <>
+                  {/* Flooring */}
+                  <fieldset className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">{t('finishes.flooring.label')}</Label>
+                    <div className="flex flex-wrap gap-1">
+                      {FLOORING_OPTIONS.map((floor) => {
+                        const isSelected = levelFlooring.includes(floor);
+                        return (
+                          <Button key={floor} type="button"
+                            variant={isSelected ? 'default' : 'outline'} size="sm"
+                            className="h-6 px-1.5 text-xs"
+                            disabled={!isEditing || isSoldOrRented}
+                            onClick={() => {
+                              if (isMultiLevel && activeLevelId) {
+                                const updated = isSelected
+                                  ? levelFlooring.filter(f => f !== floor)
+                                  : [...levelFlooring, floor];
+                                updateLevelField('finishes', {
+                                  ...(currentLevelData?.finishes ?? {}),
+                                  flooring: updated as FlooringType[],
+                                });
+                              } else {
+                                toggleArrayItem('flooring', floor);
+                              }
+                            }}>
+                            {t(`finishes.flooring.${floor}`)}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+
+                  {/* Frames & Glazing */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <fieldset className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">{t('finishes.frames.label')}</Label>
+                      <Select value={levelFrames} disabled={!isEditing || isSoldOrRented}
+                        onValueChange={(value) => {
+                          if (isMultiLevel && activeLevelId) {
+                            updateLevelField('finishes', {
+                              ...(currentLevelData?.finishes ?? {}),
+                              windowFrames: value as FrameType,
+                            });
+                          } else {
+                            setFormData(prev => ({ ...prev, windowFrames: value }));
+                          }
+                        }}>
+                        <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={t('finishes.frames.label')} /></SelectTrigger>
+                        <SelectContent>
+                          {FRAME_OPTIONS.map((f) => (
+                            <SelectItem key={f} value={f} className="text-xs">{t(`finishes.frames.${f}`)}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </fieldset>
+                    <fieldset className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">{t('finishes.glazing.label')}</Label>
+                      <Select value={levelGlazing} disabled={!isEditing || isSoldOrRented}
+                        onValueChange={(value) => {
+                          if (isMultiLevel && activeLevelId) {
+                            updateLevelField('finishes', {
+                              ...(currentLevelData?.finishes ?? {}),
+                              glazing: value as GlazingType,
+                            });
+                          } else {
+                            setFormData(prev => ({ ...prev, glazing: value }));
+                          }
+                        }}>
+                        <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={t('finishes.glazing.label')} /></SelectTrigger>
+                        <SelectContent>
+                          {GLAZING_OPTIONS.map((g) => (
+                            <SelectItem key={g} value={g} className="text-xs">{t(`finishes.glazing.${g}`)}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </fieldset>
+                  </div>
+                </>
+              );
+            })()}
           </CardContent>
         </Card>
 
@@ -917,10 +1112,57 @@ export function UnitFieldsBlock({
 }
 
 // =============================================================================
-// 🏢 ENTERPRISE: Read-Only Compact View (Ευρετήριο Ακινήτων)
+// 🏢 ADR-236 Phase 2: Level Tab Strip (multi-level units)
 // =============================================================================
 
 import type { TFunction } from 'i18next';
+import type { UnitLevel } from '@/types/unit';
+
+/** Tab bar showing one button per level + a "Totals" button */
+function LevelTabStrip({
+  levels,
+  activeLevelId,
+  onSelectLevel,
+  t,
+}: {
+  levels: UnitLevel[];
+  activeLevelId: string | null;
+  onSelectLevel: (id: string | null) => void;
+  t: TFunction;
+}) {
+  const sorted = [...levels].sort((a, b) => a.floorNumber - b.floorNumber);
+
+  return (
+    <nav aria-label="Level tabs" className="flex items-center gap-1 rounded-md bg-muted/50 p-1">
+      <Layers className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+      {sorted.map((level) => (
+        <Button
+          key={level.floorId}
+          type="button"
+          variant={activeLevelId === level.floorId ? 'default' : 'ghost'}
+          size="sm"
+          className="h-6 px-2 text-xs"
+          onClick={() => onSelectLevel(level.floorId)}
+        >
+          {level.name}
+        </Button>
+      ))}
+      <Button
+        type="button"
+        variant={activeLevelId === null ? 'default' : 'ghost'}
+        size="sm"
+        className="h-6 px-2 text-xs"
+        onClick={() => onSelectLevel(null)}
+      >
+        {t('multiLevel.perLevel.tabTotals', { defaultValue: 'Σύνολα' })} ✓
+      </Button>
+    </nav>
+  );
+}
+
+// =============================================================================
+// 🏢 ENTERPRISE: Read-Only Compact View (Ευρετήριο Ακινήτων)
+// =============================================================================
 
 /** Single label:value row for compact view */
 function CompactField({ label, value }: { label: string; value: string | number | undefined }) {

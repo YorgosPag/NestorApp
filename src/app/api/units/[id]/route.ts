@@ -17,6 +17,8 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { aggregateLevelData } from '@/services/multi-level.service';
+import type { LevelData } from '@/types/unit';
 import { UNIT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
 import { propagateUnitBuildingLink } from '@/lib/firestore/cascade-propagation.service';
@@ -61,6 +63,12 @@ interface UnitPatchPayload extends Record<string, unknown> {
   // ADR-236: Multi-level fields
   isMultiLevel?: boolean;
   levels?: UnitLevelPayload[];
+  // ADR-236 Phase 2: Per-level data
+  levelData?: Record<string, unknown>;
+  // Auto-aggregated fields (set by server from levelData)
+  areas?: Record<string, number>;
+  layout?: Record<string, number>;
+  orientations?: string[];
 }
 
 interface UnitMutationResult {
@@ -106,7 +114,7 @@ export const PATCH = withStandardRateLimit(
             'commercialStatus', 'buildingId', 'linkedSpaces',
             'orientations', 'condition', 'energy', 'systemsOverride',
             'finishes', 'interiorFeatures', 'securityFeatures',
-            'levels', 'isMultiLevel',
+            'levels', 'isMultiLevel', 'levelData',
           ] as const;
           const attemptedLockedFields = soldLockedFields.filter(f => f in body);
           if (attemptedLockedFields.length > 0) {
@@ -140,6 +148,28 @@ export const PATCH = withStandardRateLimit(
             // Clearing levels — revert to single floor mode
             body.isMultiLevel = false;
           }
+        }
+
+        // ================================================================
+        // VALIDATION + AGGREGATION: ADR-236 Phase 2 — Per-level data
+        // ================================================================
+        if (body.levelData && typeof body.levelData === 'object') {
+          const ld = body.levelData as Record<string, LevelData>;
+          const existingLevels = (body.levels ?? existing.levels) as UnitLevelPayload[] | undefined;
+
+          if (existingLevels && existingLevels.length >= 2) {
+            const validFloorIds = new Set(existingLevels.map((l) => l.floorId));
+            const invalidKeys = Object.keys(ld).filter((k) => !validFloorIds.has(k));
+            if (invalidKeys.length > 0) {
+              throw new ApiError(400, `levelData contains invalid floorIds: ${invalidKeys.join(', ')}`);
+            }
+          }
+
+          // Auto-aggregate into top-level fields
+          const aggregated = aggregateLevelData(ld);
+          body.areas = aggregated.areas;
+          body.layout = aggregated.layout;
+          body.orientations = aggregated.orientations;
         }
 
         // ================================================================

@@ -156,6 +156,34 @@ export interface UnitLevel {
   isPrimary: boolean;
 }
 
+/**
+ * Per-level content data for multi-level units (ADR-236 Phase 2).
+ * Each level stores its own areas, layout, orientations, finishes.
+ * Unit-level totals are auto-aggregated from all levels.
+ *
+ * @since ADR-236 Phase 2 — Per-Level Data Entry
+ */
+export interface LevelData {
+  areas?: {
+    gross: number;
+    net?: number;
+    balcony?: number;
+    terrace?: number;
+    garden?: number;
+  };
+  layout?: {
+    bedrooms?: number;
+    bathrooms?: number;
+    wc?: number;
+  };
+  orientations?: OrientationType[];
+  finishes?: {
+    flooring?: FlooringType[];
+    windowFrames?: FrameType;
+    glazing?: GlazingType;
+  };
+}
+
 // =============================================================================
 // 🏢 UNIT TYPE - CANONICAL ENGLISH CODES
 // =============================================================================
@@ -430,6 +458,8 @@ export interface Unit {
   isMultiLevel?: boolean;
   /** Floor-level details when unit spans multiple floors */
   levels?: UnitLevel[];
+  /** Per-level content data keyed by floorId — multi-level units only (ADR-236 Phase 2) */
+  levelData?: Record<string, LevelData>;
 }
 
 // =============================================================================
@@ -498,6 +528,7 @@ export interface UnitDoc {
   // Multi-level fields (ADR-236)
   isMultiLevel?: boolean;
   levels?: UnitLevel[];
+  levelData?: Record<string, LevelData>;
 
   // Commercial fields (ADR-197, ADR-230)
   commercialStatus?: CommercialStatus;

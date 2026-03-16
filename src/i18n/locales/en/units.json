@@ -683,6 +683,11 @@
     "primaryFloor": "Primary floor",
     "setPrimary": "Set as primary",
     "removeFloor": "Remove",
-    "noFloors": "Select at least 2 floors"
+    "noFloors": "Select at least 2 floors",
+    "perLevel": {
+      "tabTotals": "Totals",
+      "autoComputed": "Auto-computed from levels",
+      "noDataYet": "Enter data for this level"
+    }
   }
 }
