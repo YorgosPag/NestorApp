@@ -366,6 +366,7 @@ floorplanType === 'unit'
 | 2026-03-16 | FIX: Race condition στο companies fetch — αφαίρεση `step !== 1` guard από useEffect deps | Claude |
 | 2026-03-16 | FIX: Αφαίρεση auto-skip λογικής — προκαλούσε race condition στο buildings step + κακή UX. Ο χρήστης επιλέγει χειροκίνητα πλέον | Claude |
 | 2026-03-16 | FIX: Αφαίρεση "Αυτόματη επιλογή" UI — single items εμφανίζονται ως radio buttons, απαιτούν explicit κλικ πριν το "Επόμενο" | Claude |
+| 2026-03-16 | FIX: Step 3 (buildings) — αντικατάσταση embedded data από projectsRawRef με proper API call `GET /api/buildings?projectId=xxx`. Πιο αξιόπιστο, με fallback σε companyId | Claude |
 
 ### Implementation Notes
 
