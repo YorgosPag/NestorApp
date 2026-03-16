@@ -69,6 +69,8 @@ interface ReadOnlyMediaViewerProps {
   floorNumber?: number | null;
   /** 🏢 FIX: Company ID from unit data — needed for FileRecord queries (super_admin support) */
   companyId?: string | null;
+  /** Multi-level unit levels (ADR-236) — one tab per floor */
+  levels?: Array<{ floorId: string; floorNumber: number; name: string }>;
   /** Optional className */
   className?: string;
 }
@@ -76,9 +78,9 @@ interface ReadOnlyMediaViewerProps {
 /**
  * 🏢 ENTERPRISE: Media Tab Type
  * Exported for parent components (e.g., ListLayout) to read from URL.
- * URL Query Param: ?mediaTab=floorplans|floorplan-floor|photos|videos
+ * URL Query Param: ?mediaTab=floorplans|floorplan-floor|floorplan-floor-{id}|photos|videos
  */
-export type MediaTab = 'floorplans' | 'floorplan-floor' | 'photos' | 'videos';
+export type MediaTab = string;
 
 /** 🏢 ENTERPRISE: URL Query Param key - centralized constant */
 export const MEDIA_TAB_PARAM = 'mediaTab' as const;
@@ -86,17 +88,18 @@ export const MEDIA_TAB_PARAM = 'mediaTab' as const;
 /** 🏢 ENTERPRISE: Default tab when no URL param */
 export const DEFAULT_MEDIA_TAB: MediaTab = 'floorplans';
 
-/** 🏢 ENTERPRISE: Valid media tabs for URL validation */
-const VALID_MEDIA_TABS: readonly MediaTab[] = ['floorplans', 'floorplan-floor', 'photos', 'videos'] as const;
+/** 🏢 ENTERPRISE: Base valid media tabs for URL validation */
+const BASE_VALID_TABS = ['floorplans', 'floorplan-floor', 'photos', 'videos'] as const;
 
 /**
  * 🏢 ENTERPRISE: Type-safe URL param parser
- * Returns validated MediaTab or default
+ * Accepts base tabs + dynamic floorplan-floor-{floorId} tabs (ADR-236 multi-level)
  */
 export function parseMediaTabParam(value: string | null): MediaTab {
-  if (value && VALID_MEDIA_TABS.includes(value as MediaTab)) {
-    return value as MediaTab;
-  }
+  if (!value) return DEFAULT_MEDIA_TAB;
+  if ((BASE_VALID_TABS as readonly string[]).includes(value)) return value;
+  // ADR-236: Allow dynamic floor tabs like "floorplan-floor-abc123"
+  if (value.startsWith('floorplan-floor-')) return value;
   return DEFAULT_MEDIA_TAB;
 }
 
@@ -112,6 +115,7 @@ export function ReadOnlyMediaViewer({
   buildingId,
   floorNumber,
   companyId: propCompanyId,
+  levels,
   className,
 }: ReadOnlyMediaViewerProps) {
   const { t } = useTranslation(['properties', 'common', 'files']);
@@ -172,33 +176,21 @@ export function ReadOnlyMediaViewer({
   });
 
   // 🏢 Floor floorplans (Κάτοψη Ορόφου) - Uses FloorFloorplanService (ADR-060)
-  // This hook loads from dxf-scenes/{fileId}/scene.json via FloorFloorplanService
-  logger.info('[ReadOnlyMediaViewer] Floor props:', { data: { floorId, buildingId, floorNumber, companyId: effectiveCompanyId } });
+  // For single-floor units, uses props directly. Multi-floor uses FloorFloorplanTabContent.
+  const isMultiLevel = levels && levels.length > 1;
+  logger.info('[ReadOnlyMediaViewer] Floor props:', { data: { floorId, buildingId, floorNumber, companyId: effectiveCompanyId, isMultiLevel, levelCount: levels?.length } });
   const { floorFloorplan, loading: floorFloorplanLoading, error: floorFloorplanError, refetch: refetchFloorFloorplan } = useFloorFloorplans({
     floorId: floorId || null,
     buildingId: buildingId || null,
     floorNumber: floorNumber ?? null,
-    companyId: effectiveCompanyId || null, // 🏢 FIX: Use unit's companyId for super_admin support
+    companyId: effectiveCompanyId || null,
   });
 
   // 🏢 ENTERPRISE: Adapter - Convert FloorFloorplanData to FileRecord[] for FloorplanGallery
   const floorFloorplansData = React.useMemo(() => {
     const files: FileRecord[] = [];
 
-    // 🔍 DEBUG: Log what data we're receiving
-    logger.info('[ReadOnlyMediaViewer] floorFloorplan data:', { data: {
-      hasFloorFloorplan: !!floorFloorplan,
-      hasScene: !!floorFloorplan?.scene,
-      sceneEntitiesCount: floorFloorplan?.scene?.entities?.length || 0,
-      sceneLayersType: floorFloorplan?.scene?.layers ? (Array.isArray(floorFloorplan.scene.layers) ? 'array' : 'object') : 'none',
-      sceneBounds: floorFloorplan?.scene?.bounds,
-      fileType: floorFloorplan?.fileType,
-      fileName: floorFloorplan?.fileName,
-    } });
-
     if (floorFloorplan) {
-      // Create a synthetic FileRecord from FloorFloorplanData
-      // 🏢 ENTERPRISE: Using correct FileRecord field names (ADR-031)
       const fileRecord: FileRecord = {
         id: floorFloorplan.fileRecordId || `floor_floorplan_${floorFloorplan.buildingId}_${floorFloorplan.floorId}`,
         originalFilename: floorFloorplan.fileName || 'floor_floorplan',
@@ -209,7 +201,7 @@ export function ReadOnlyMediaViewer({
         contentType: floorFloorplan.fileType === 'pdf' ? 'application/pdf'
                    : floorFloorplan.fileType === 'image' ? `image/${floorFloorplan.fileName?.split('.').pop()?.toLowerCase() === 'jpg' ? 'jpeg' : (floorFloorplan.fileName?.split('.').pop()?.toLowerCase() || 'png')}`
                    : 'application/dxf',
-        sizeBytes: 0, // Unknown for legacy data
+        sizeBytes: 0,
         storagePath: '',
         downloadUrl: floorFloorplan.pdfImageUrl || '',
         status: 'ready',
@@ -221,8 +213,6 @@ export function ReadOnlyMediaViewer({
         category: 'floorplans',
         createdBy: SYSTEM_IDENTITY.ID,
         createdAt: floorFloorplan.timestamp ? new Date(floorFloorplan.timestamp).toISOString() : new Date().toISOString(),
-        // 🏢 ENTERPRISE: Include scene data for DXF rendering (V1 pattern for backward compat)
-        // Note: SceneModel and DxfSceneData are structurally compatible for rendering purposes
         processedData: floorFloorplan.scene ? {
           fileType: 'dxf' as const,
           scene: floorFloorplan.scene as unknown as import('@/types/file-record').DxfSceneData,
@@ -270,16 +260,13 @@ export function ReadOnlyMediaViewer({
 
   // Current tab's data based on activeTab
   const getCurrentTabData = () => {
-    switch (activeTab) {
-      case 'floorplans':
-        return floorplansData;
-      case 'floorplan-floor':
-        return floorFloorplansData;
-      case 'photos':
-        return photosData;
-      case 'videos':
-        return videosData;
-    }
+    if (activeTab === 'floorplans') return floorplansData;
+    if (activeTab === 'floorplan-floor') return floorFloorplansData;
+    // ADR-236: Multi-level floor tabs are handled by FloorFloorplanTabContent (own hooks)
+    if (activeTab.startsWith('floorplan-floor-')) return null;
+    if (activeTab === 'photos') return photosData;
+    if (activeTab === 'videos') return videosData;
+    return null;
   };
 
   const currentTabData = getCurrentTabData();
@@ -331,13 +318,29 @@ export function ReadOnlyMediaViewer({
               <span className="ml-1 text-xs text-muted-foreground">({floorplansData.files.length})</span>
             )}
           </TabsTrigger>
-          <TabsTrigger
-            value="floorplan-floor"
-            className="flex items-center gap-1.5 data-[state=active]:bg-primary/10 px-3 py-1.5"
-          >
-            <Layers className={iconSizes.sm} aria-hidden="true" />
-            <span className="text-xs">{t('viewer.media.floorplanFloor', { ns: 'properties', defaultValue: 'Κάτοψη Ορόφου' })}</span>
-          </TabsTrigger>
+          {/* ADR-236: Multi-level → one tab per floor; single → one "Κάτοψη Ορόφου" tab */}
+          {isMultiLevel ? (
+            levels.map((level) => (
+              <TabsTrigger
+                key={level.floorId}
+                value={`floorplan-floor-${level.floorId}`}
+                className="flex items-center gap-1.5 data-[state=active]:bg-primary/10 px-3 py-1.5"
+              >
+                <Layers className={iconSizes.sm} aria-hidden="true" />
+                <span className="text-xs">
+                  {t('viewer.media.floorplanLevel', { ns: 'properties', defaultValue: 'Κάτοψη {{name}}', name: level.name })}
+                </span>
+              </TabsTrigger>
+            ))
+          ) : (
+            <TabsTrigger
+              value="floorplan-floor"
+              className="flex items-center gap-1.5 data-[state=active]:bg-primary/10 px-3 py-1.5"
+            >
+              <Layers className={iconSizes.sm} aria-hidden="true" />
+              <span className="text-xs">{t('viewer.media.floorplanFloor', { ns: 'properties', defaultValue: 'Κάτοψη Ορόφου' })}</span>
+            </TabsTrigger>
+          )}
           <TabsTrigger
             value="photos"
             className="flex items-center gap-1.5 data-[state=active]:bg-primary/10 px-3 py-1.5"
@@ -381,24 +384,39 @@ export function ReadOnlyMediaViewer({
             </TabContentWrapper>
           </TabsContent>
 
-          {/* Floor Floorplan Tab - Uses centralized FloorplanGallery */}
-          <TabsContent value="floorplan-floor" className="h-full m-0 data-[state=inactive]:hidden">
-            <TabContentWrapper
-              loading={floorFloorplansData.loading}
-              error={floorFloorplansData.error}
-              onRetry={floorFloorplansData.refetch}
-              spacing={spacing}
-              iconSizes={iconSizes}
-              t={t}
-            >
-              <FloorplanGallery
-                files={floorFloorplansData.files}
-                emptyMessage={t('viewer.media.noFloorFloorplans', { ns: 'properties', defaultValue: 'Δεν υπάρχει κάτοψη ορόφου' })}
-                className="h-full"
-                // 🏢 READ-ONLY: No delete action
-              />
-            </TabContentWrapper>
-          </TabsContent>
+          {/* Floor Floorplan Tab(s) - ADR-236: multi-level → one content per floor */}
+          {isMultiLevel ? (
+            levels.map((level) => (
+              <TabsContent key={level.floorId} value={`floorplan-floor-${level.floorId}`} className="h-full m-0 data-[state=inactive]:hidden">
+                <FloorFloorplanTabContent
+                  floorId={level.floorId}
+                  buildingId={buildingId || null}
+                  floorNumber={level.floorNumber}
+                  companyId={effectiveCompanyId || null}
+                  spacing={spacing}
+                  iconSizes={iconSizes}
+                  t={t}
+                />
+              </TabsContent>
+            ))
+          ) : (
+            <TabsContent value="floorplan-floor" className="h-full m-0 data-[state=inactive]:hidden">
+              <TabContentWrapper
+                loading={floorFloorplansData.loading}
+                error={floorFloorplansData.error}
+                onRetry={floorFloorplansData.refetch}
+                spacing={spacing}
+                iconSizes={iconSizes}
+                t={t}
+              >
+                <FloorplanGallery
+                  files={floorFloorplansData.files}
+                  emptyMessage={t('viewer.media.noFloorFloorplans', { ns: 'properties', defaultValue: 'Δεν υπάρχει κάτοψη ορόφου' })}
+                  className="h-full"
+                />
+              </TabContentWrapper>
+            </TabsContent>
+          )}
 
           {/* Photos Tab - Uses centralized MediaGallery */}
           <TabsContent value="photos" className="h-full m-0 overflow-auto data-[state=inactive]:hidden">
@@ -517,6 +535,91 @@ function TabContentWrapper({
   return <>{children}</>;
 }
 
+// =============================================================================
+// 🏢 ADR-236: Floor Floorplan Tab Content (per-floor hook isolation)
+// =============================================================================
+// Each multi-level floor needs its own useFloorFloorplans call.
+// Extracted to a component so hooks are called unconditionally per-render.
+
+interface FloorFloorplanTabContentProps {
+  floorId: string;
+  buildingId: string | null;
+  floorNumber: number;
+  companyId: string | null;
+  spacing: ReturnType<typeof useSpacingTokens>;
+  iconSizes: ReturnType<typeof useIconSizes>;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}
+
+function FloorFloorplanTabContent({
+  floorId,
+  buildingId,
+  floorNumber,
+  companyId,
+  spacing,
+  iconSizes,
+  t,
+}: FloorFloorplanTabContentProps) {
+  const { floorFloorplan, loading, error, refetch } = useFloorFloorplans({
+    floorId,
+    buildingId,
+    floorNumber,
+    companyId,
+  });
+
+  const files = React.useMemo<FileRecord[]>(() => {
+    if (!floorFloorplan) return [];
+    return [{
+      id: floorFloorplan.fileRecordId || `floor_floorplan_${floorFloorplan.buildingId}_${floorFloorplan.floorId}`,
+      originalFilename: floorFloorplan.fileName || 'floor_floorplan',
+      displayName: floorFloorplan.fileName || 'Κάτοψη Ορόφου',
+      ext: floorFloorplan.fileType === 'pdf' ? 'pdf'
+         : floorFloorplan.fileType === 'image' ? (floorFloorplan.fileName?.split('.').pop()?.toLowerCase() || 'png')
+         : 'dxf',
+      contentType: floorFloorplan.fileType === 'pdf' ? 'application/pdf'
+                 : floorFloorplan.fileType === 'image' ? `image/${floorFloorplan.fileName?.split('.').pop()?.toLowerCase() === 'jpg' ? 'jpeg' : (floorFloorplan.fileName?.split('.').pop()?.toLowerCase() || 'png')}`
+                 : 'application/dxf',
+      sizeBytes: 0,
+      storagePath: '',
+      downloadUrl: floorFloorplan.pdfImageUrl || '',
+      status: 'ready' as const,
+      lifecycleState: 'active' as const,
+      companyId: companyId || '',
+      entityType: 'floor' as const,
+      entityId: floorFloorplan.floorId,
+      domain: 'construction' as const,
+      category: 'floorplans' as const,
+      createdBy: SYSTEM_IDENTITY.ID,
+      createdAt: floorFloorplan.timestamp ? new Date(floorFloorplan.timestamp).toISOString() : new Date().toISOString(),
+      processedData: floorFloorplan.scene ? {
+        fileType: 'dxf' as const,
+        scene: floorFloorplan.scene as unknown as import('@/types/file-record').DxfSceneData,
+        processedAt: Date.now(),
+        sceneStats: {
+          entityCount: floorFloorplan.scene.entities?.length || 0,
+          layerCount: Object.keys(floorFloorplan.scene.layers || {}).length,
+          parseTimeMs: 0,
+        },
+      } : undefined,
+    }];
+  }, [floorFloorplan, companyId]);
+
+  return (
+    <TabContentWrapper
+      loading={loading}
+      error={error ? new Error(error) : null}
+      onRetry={refetch}
+      spacing={spacing}
+      iconSizes={iconSizes}
+      t={t}
+    >
+      <FloorplanGallery
+        files={files}
+        emptyMessage={t('viewer.media.noFloorFloorplans', { ns: 'properties', defaultValue: 'Δεν υπάρχει κάτοψη ορόφου' })}
+        className="h-full"
+      />
+    </TabContentWrapper>
+  );
+}
+
 export default ReadOnlyMediaViewer;
-
-

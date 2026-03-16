@@ -117,7 +117,7 @@ export function PropertyListCard({
   compact = false,
   className,
 }: PropertyListCardProps) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'units']);
 
   // ==========================================================================
   // 🏢 COMPUTED VALUES (Memoized)
@@ -188,7 +188,7 @@ export function PropertyListCard({
   /** Get subtitle - type and project */
   const subtitle = useMemo(() => {
     const parts: string[] = [];
-    if (property.type) parts.push(property.type);
+    if (property.type) parts.push(t(`types.${property.type}`, { ns: 'units', defaultValue: property.type }));
     if (property.project) parts.push(property.project);
     return parts.join(' • ') || undefined;
   }, [property.type, property.project]);

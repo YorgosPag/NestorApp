@@ -414,6 +414,12 @@ export function UnitFieldsBlock({
     });
   }, []);
 
+  // ── Read-Only Compact Mode (Ευρετήριο Ακινήτων) ──
+  // Plain text, 2-column grid, no form fields — all hooks above are called unconditionally
+  if (isReadOnly) {
+    return <ReadOnlyCompactView property={property} t={t} />;
+  }
+
   return (
     <form
       id={isEditing ? 'unit-fields-form' : undefined}
@@ -907,6 +913,131 @@ export function UnitFieldsBlock({
         </Card>
       </section>
     </form>
+  );
+}
+
+// =============================================================================
+// 🏢 ENTERPRISE: Read-Only Compact View (Ευρετήριο Ακινήτων)
+// =============================================================================
+
+import type { TFunction } from 'i18next';
+
+/** Single label:value row for compact view */
+function CompactField({ label, value }: { label: string; value: string | number | undefined }) {
+  if (!value && value !== 0) return null;
+  return (
+    <dl className="flex items-baseline gap-1.5">
+      <dt className="text-xs text-muted-foreground whitespace-nowrap">{label}:</dt>
+      <dd className="text-xs font-medium truncate">{String(value)}</dd>
+    </dl>
+  );
+}
+
+/** Compact plain-text view for read-only mode (Ευρετήριο) */
+function ReadOnlyCompactView({ property, t }: { property: Property; t: TFunction }) {
+  const orientationLabels = (property.orientations ?? [])
+    .map((o) => t(`orientation.short.${o}`, { defaultValue: o }))
+    .join(', ');
+
+  const flooringLabels = (property.finishes?.flooring ?? [])
+    .map((f) => t(`finishes.flooring.${f}`, { defaultValue: f }))
+    .join(', ');
+
+  const interiorLabels = (property.interiorFeatures ?? [])
+    .map((f) => t(`features.interior.${f}`, { defaultValue: f }))
+    .join(', ');
+
+  const securityLabels = (property.securityFeatures ?? [])
+    .map((f) => t(`features.security.${f}`, { defaultValue: f }))
+    .join(', ');
+
+  return (
+    <section className="grid grid-cols-2 gap-x-4 gap-y-1 p-2">
+      {/* Identity */}
+      <CompactField label={t('fields.identity.name', { defaultValue: 'Όνομα' })} value={property.name} />
+      <CompactField label={t('fields.identity.code', { defaultValue: 'Κωδικός' })} value={property.code} />
+      <CompactField
+        label={t('fields.identity.type', { defaultValue: 'Τύπος' })}
+        value={property.type ? t(`types.${property.type}`, { defaultValue: property.type }) : undefined}
+      />
+      <CompactField
+        label={t('fields.identity.commercialStatus', { defaultValue: 'Εμπορική Κατάσταση' })}
+        value={property.commercialStatus ? t(`commercialStatus.${property.commercialStatus}`, { defaultValue: property.commercialStatus }) : undefined}
+      />
+      <CompactField
+        label={t('dialog.addUnit.fields.status', { defaultValue: 'Λειτουργική' })}
+        value={(() => {
+          const opStatus = (property as unknown as Record<string, unknown>).operationalStatus;
+          return opStatus
+            ? t(`dialog.addUnit.statusOptions.${opStatus}`, { defaultValue: String(opStatus) })
+            : undefined;
+        })()}
+      />
+
+      {/* Areas */}
+      {property.areas?.gross ? (
+        <CompactField label={t('fields.areas.gross')} value={`${property.areas.gross} m²`} />
+      ) : null}
+      {property.areas?.net ? (
+        <CompactField label={t('fields.areas.net')} value={`${property.areas.net} m²`} />
+      ) : null}
+      {property.areas?.balcony ? (
+        <CompactField label={t('fields.areas.balcony')} value={`${property.areas.balcony} m²`} />
+      ) : null}
+
+      {/* Layout */}
+      {property.layout?.bedrooms ? (
+        <CompactField label={t('card.stats.bedrooms')} value={property.layout.bedrooms} />
+      ) : null}
+      {property.layout?.bathrooms ? (
+        <CompactField label={t('card.stats.bathrooms')} value={property.layout.bathrooms} />
+      ) : null}
+
+      {/* Orientation */}
+      {orientationLabels && (
+        <CompactField label={t('orientation.sectionTitle')} value={orientationLabels} />
+      )}
+
+      {/* Condition & Energy */}
+      {property.condition && (
+        <CompactField label={t('condition.sectionTitle')} value={t(`condition.${property.condition}`, { defaultValue: property.condition })} />
+      )}
+      {property.energy?.class && (
+        <CompactField label={t('energy.class')} value={property.energy.class} />
+      )}
+
+      {/* Systems */}
+      {property.systemsOverride?.heatingType && (
+        <CompactField label={t('systems.heating.label')} value={t(`systems.heating.${property.systemsOverride.heatingType}`, { defaultValue: property.systemsOverride.heatingType })} />
+      )}
+      {property.systemsOverride?.coolingType && (
+        <CompactField label={t('systems.cooling.label')} value={t(`systems.cooling.${property.systemsOverride.coolingType}`, { defaultValue: property.systemsOverride.coolingType })} />
+      )}
+
+      {/* Finishes */}
+      {flooringLabels && (
+        <CompactField label={t('finishes.flooring.label')} value={flooringLabels} />
+      )}
+      {property.finishes?.windowFrames && (
+        <CompactField label={t('finishes.frames.label')} value={t(`finishes.frames.${property.finishes.windowFrames}`, { defaultValue: property.finishes.windowFrames })} />
+      )}
+
+      {/* Features */}
+      {interiorLabels && (
+        <CompactField label={t('features.interior.label')} value={interiorLabels} />
+      )}
+      {securityLabels && (
+        <CompactField label={t('features.security.label')} value={securityLabels} />
+      )}
+
+      {/* Description — full width */}
+      {property.description && (
+        <dl className="col-span-2 mt-1">
+          <dt className="text-xs text-muted-foreground">{t('fields.identity.description', { defaultValue: 'Περιγραφή' })}</dt>
+          <dd className="text-xs mt-0.5">{property.description}</dd>
+        </dl>
+      )}
+    </section>
   );
 }
 
