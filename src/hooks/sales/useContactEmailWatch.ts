@@ -62,8 +62,11 @@ export function useContactEmailWatch(contactId: string): ContactEmailState {
           email: resolvedEmail,
         });
       },
-      () => {
+      (err) => {
         // On error, assume no email (non-blocking)
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[useContactEmailWatch] Subscription error (non-blocking):', err.message);
+        }
         setState({ hasEmail: false, email: null });
       }
     );

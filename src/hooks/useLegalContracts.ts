@@ -124,8 +124,12 @@ export function useLegalContracts(unitId: string | null, projectId?: string): Us
         const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as BrokerageAgreement);
         setAgreements(data);
       },
-      () => {
+      (err) => {
         // Non-blocking — agreements are supplementary data
+        // Log once to help diagnose permission issues without flooding console
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[useLegalContracts] Subscription error (non-blocking):', err.message);
+        }
         setAgreements([]);
       }
     );

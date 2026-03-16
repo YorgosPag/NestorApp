@@ -54,6 +54,8 @@ type RealtimeDocument = DocumentData & { id: string };
 class RealtimeServiceCore {
   private static instance: RealtimeServiceCore;
   private subscriptions: Map<string, SubscriptionEntry> = new Map();
+  /** Track permission errors to log once per collection, not per retry */
+  private permissionErrorsSeen: Set<string> = new Set();
 
   private constructor() {
     logger.info('Initialized');
@@ -104,9 +106,7 @@ class RealtimeServiceCore {
         onData(data);
       },
       (error) => {
-        logger.error(`${collectionName} error`, { error });
-        this.updateSubscriptionStatus(subscriptionId, 'error');
-        onError?.(error);
+        this.handleSubscriptionError(subscriptionId, collectionName, error, onError);
       }
     );
 
@@ -160,9 +160,7 @@ class RealtimeServiceCore {
         }
       },
       (error) => {
-        logger.error(`${collectionName}/${documentId} error`, { error });
-        this.updateSubscriptionStatus(subscriptionId, 'error');
-        onError?.(error);
+        this.handleSubscriptionError(subscriptionId, `${collectionName}/${documentId}`, error, onError);
       }
     );
 
@@ -351,6 +349,42 @@ class RealtimeServiceCore {
   ): string {
     const constraintStr = constraints.length > 0 ? `:${constraints.length}constraints` : '';
     return `${collectionName}${constraintStr}:${Date.now()}`;
+  }
+
+  /**
+   * Centralized error handler for Firestore onSnapshot subscriptions.
+   *
+   * - permission-denied: log ONCE per source, auto-unsubscribe (stops retry flood)
+   * - other errors: log normally, keep subscription alive for transient issues
+   */
+  private handleSubscriptionError(
+    subscriptionId: string,
+    source: string,
+    error: Error,
+    onError?: (error: Error) => void
+  ): void {
+    const isPermissionDenied =
+      error.message?.includes('Missing or insufficient permissions') ||
+      error.message?.includes('permission-denied') ||
+      (error as { code?: string }).code === 'permission-denied';
+
+    if (isPermissionDenied) {
+      // Log once per source to prevent console flood
+      if (!this.permissionErrorsSeen.has(source)) {
+        this.permissionErrorsSeen.add(source);
+        logger.warn(`${source}: permission denied — auto-unsubscribed (Firestore rules may need update)`);
+      }
+      // Auto-unsubscribe to stop the retry loop that floods the console
+      this.updateSubscriptionStatus(subscriptionId, 'error');
+      this.unsubscribe(subscriptionId);
+      onError?.(error);
+      return;
+    }
+
+    // Non-permission errors: log and keep alive (may be transient)
+    logger.error(`${source} error`, { error });
+    this.updateSubscriptionStatus(subscriptionId, 'error');
+    onError?.(error);
   }
 
   private updateSubscriptionStatus(subscriptionId: string, status: SubscriptionStatus): void {
