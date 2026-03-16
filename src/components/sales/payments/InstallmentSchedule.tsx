@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { CheckCircle2, Clock, AlertTriangle, MinusCircle, CircleDashed } from 'lucide-react';
+import { CheckCircle2, Clock, AlertTriangle, MinusCircle, CircleDashed, Pencil, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -43,14 +43,20 @@ const STATUS_CONFIG: Record<InstallmentStatus, {
 interface InstallmentScheduleProps {
   installments: Installment[];
   onPayInstallment?: (index: number) => void;
+  onEditInstallment?: (index: number) => void;
+  onAddInstallment?: () => void;
   planStatus: string;
 }
 
 export function InstallmentSchedule({
   installments,
   onPayInstallment,
+  onEditInstallment,
+  onAddInstallment,
   planStatus,
 }: InstallmentScheduleProps) {
+  const canEdit = planStatus === 'negotiation' || planStatus === 'draft' || planStatus === 'active';
+  const canAdd = planStatus === 'negotiation' || planStatus === 'draft';
   const { t } = useTranslation('payments');
 
   const now = new Date().toISOString();
@@ -82,7 +88,7 @@ export function InstallmentSchedule({
             <TableHead className="text-center">
               {t('labels.dueDate', { defaultValue: 'Ημ. Λήξης' })}
             </TableHead>
-            {onPayInstallment && <TableHead className="w-20" />}
+            {(onPayInstallment || onEditInstallment) && <TableHead className="w-24" />}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -130,18 +136,30 @@ export function InstallmentSchedule({
                 <TableCell className="text-center text-xs">
                   {new Date(inst.dueDate).toLocaleDateString('el-GR')}
                 </TableCell>
-                {onPayInstallment && (
+                {(onPayInstallment || onEditInstallment) && (
                   <TableCell>
-                    {canPay && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs h-7"
-                        onClick={() => onPayInstallment(inst.index)}
-                      >
-                        {t('actions.payInstallment', { defaultValue: 'Πληρωμή' })}
-                      </Button>
-                    )}
+                    <span className="flex gap-1">
+                      {canPay && onPayInstallment && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs h-7"
+                          onClick={() => onPayInstallment(inst.index)}
+                        >
+                          {t('actions.payInstallment', { defaultValue: 'Πληρωμή' })}
+                        </Button>
+                      )}
+                      {canEdit && onEditInstallment && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          onClick={() => onEditInstallment(inst.index)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </span>
                   </TableCell>
                 )}
               </TableRow>
@@ -149,6 +167,20 @@ export function InstallmentSchedule({
           })}
         </TableBody>
       </Table>
+
+      {canAdd && onAddInstallment && (
+        <footer className="flex justify-center border-t p-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="gap-1 text-xs"
+            onClick={onAddInstallment}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {t('installments.addInstallment', { defaultValue: 'Προσθήκη Δόσης' })}
+          </Button>
+        </footer>
+      )}
     </section>
   );
 }

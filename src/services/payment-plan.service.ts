@@ -317,7 +317,8 @@ export class PaymentPlanService {
     unitId: string,
     planId: string,
     input: CreateInstallmentInput,
-    updatedBy: string
+    updatedBy: string,
+    insertAtIndex?: number
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const plan = await this.getPaymentPlan(unitId, planId);
@@ -327,7 +328,7 @@ export class PaymentPlanService {
       }
 
       const newInstallment: Installment = {
-        index: plan.installments.length,
+        index: 0, // Will be re-indexed below
         label: input.label,
         type: input.type,
         amount: input.amount,
@@ -340,7 +341,15 @@ export class PaymentPlanService {
         notes: input.notes ?? null,
       };
 
-      const updatedInstallments = [...plan.installments, newInstallment];
+      let updatedInstallments: Installment[];
+      if (insertAtIndex !== undefined && insertAtIndex >= 0 && insertAtIndex < plan.installments.length) {
+        updatedInstallments = [...plan.installments];
+        updatedInstallments.splice(insertAtIndex, 0, newInstallment);
+      } else {
+        updatedInstallments = [...plan.installments, newInstallment];
+      }
+      // Re-index all installments
+      updatedInstallments = updatedInstallments.map((inst, i) => ({ ...inst, index: i }));
       const newTotal = updatedInstallments.reduce((s, i) => s + i.amount, 0);
 
       const db = getDb();

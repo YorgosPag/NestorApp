@@ -19,6 +19,8 @@ import type {
   CreatePaymentPlanInput,
   CreatePaymentInput,
   UpdatePaymentPlanInput,
+  CreateInstallmentInput,
+  UpdateInstallmentInput,
   LoanInfo,
 } from '@/types/payment-plan';
 
@@ -35,6 +37,9 @@ interface UsePaymentPlanReturn {
   createPlan: (input: Omit<CreatePaymentPlanInput, 'unitId'>) => Promise<{ success: boolean; error?: string }>;
   updatePlan: (planId: string, updates: UpdatePaymentPlanInput) => Promise<{ success: boolean; error?: string }>;
   recordPayment: (input: CreatePaymentInput) => Promise<{ success: boolean; error?: string }>;
+  addInstallment: (planId: string, input: CreateInstallmentInput, insertAtIndex?: number) => Promise<{ success: boolean; error?: string }>;
+  updateInstallment: (planId: string, index: number, updates: UpdateInstallmentInput) => Promise<{ success: boolean; error?: string }>;
+  removeInstallment: (planId: string, index: number) => Promise<{ success: boolean; error?: string }>;
   /** @deprecated Use useLoanTracking hook instead */
   updateLoan: (planId: string, loan: Partial<LoanInfo>) => Promise<{ success: boolean; error?: string }>;
 }
@@ -158,6 +163,72 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
     [unitId, fetchData]
   );
 
+  // Add installment
+  const addInstallment = useCallback(
+    async (planId: string, input: CreateInstallmentInput, insertAtIndex?: number) => {
+      if (!unitId) return { success: false, error: 'No unit selected' };
+      try {
+        const data = await fetchJson<{ success: boolean; error?: string }>(
+          `/api/units/${unitId}/payment-plan/installments`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ planId, installment: input, insertAtIndex }),
+          }
+        );
+        if (data.success) await fetchData();
+        return { success: data.success, error: data.error };
+      } catch (err) {
+        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+      }
+    },
+    [unitId, fetchData]
+  );
+
+  // Update installment
+  const updateInstallment = useCallback(
+    async (planId: string, index: number, updates: UpdateInstallmentInput) => {
+      if (!unitId) return { success: false, error: 'No unit selected' };
+      try {
+        const data = await fetchJson<{ success: boolean; error?: string }>(
+          `/api/units/${unitId}/payment-plan/installments`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ planId, index, updates }),
+          }
+        );
+        if (data.success) await fetchData();
+        return { success: data.success, error: data.error };
+      } catch (err) {
+        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+      }
+    },
+    [unitId, fetchData]
+  );
+
+  // Remove installment
+  const removeInstallment = useCallback(
+    async (planId: string, index: number) => {
+      if (!unitId) return { success: false, error: 'No unit selected' };
+      try {
+        const data = await fetchJson<{ success: boolean; error?: string }>(
+          `/api/units/${unitId}/payment-plan/installments`,
+          {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ planId, index }),
+          }
+        );
+        if (data.success) await fetchData();
+        return { success: data.success, error: data.error };
+      } catch (err) {
+        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+      }
+    },
+    [unitId, fetchData]
+  );
+
   // Update loan info
   const updateLoan = useCallback(
     async (planId: string, loan: Partial<LoanInfo>) => {
@@ -189,6 +260,9 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
     createPlan,
     updatePlan,
     recordPayment,
+    addInstallment,
+    updateInstallment,
+    removeInstallment,
     updateLoan,
   };
 }

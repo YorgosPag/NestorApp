@@ -14,6 +14,7 @@ import { usePaymentPlan } from '@/hooks/usePaymentPlan';
 import { PaymentPlanOverview } from '@/components/sales/payments/PaymentPlanOverview';
 import { InstallmentSchedule } from '@/components/sales/payments/InstallmentSchedule';
 import { RecordPaymentDialog } from '@/components/sales/payments/RecordPaymentDialog';
+import { EditInstallmentDialog } from '@/components/sales/payments/EditInstallmentDialog';
 import { LoanTrackingSection } from '@/components/sales/payments/LoanTrackingSection';
 import { ChequeRegistrySection } from '@/components/sales/payments/ChequeRegistrySection';
 import { InterestCostSection } from '@/components/sales/payments/InterestCostSection';
@@ -38,16 +39,32 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
     error,
     createPlan,
     recordPayment,
+    addInstallment,
+    updateInstallment,
+    removeInstallment,
   } = usePaymentPlan(unit.id);
 
   const [wizardOpen, setWizardOpen] = useState(false);
   const [payDialogOpen, setPayDialogOpen] = useState(false);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editDialogMode, setEditDialogMode] = useState<'add' | 'edit'>('edit');
   const [selectedInstallmentIdx, setSelectedInstallmentIdx] = useState(0);
 
   const handlePayInstallment = useCallback((index: number) => {
     setSelectedInstallmentIdx(index);
     setPayDialogOpen(true);
+  }, []);
+
+  const handleEditInstallment = useCallback((index: number) => {
+    setSelectedInstallmentIdx(index);
+    setEditDialogMode('edit');
+    setEditDialogOpen(true);
+  }, []);
+
+  const handleAddInstallment = useCallback(() => {
+    setEditDialogMode('add');
+    setEditDialogOpen(true);
   }, []);
 
   // Loading
@@ -154,6 +171,8 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
         installments={plan.installments}
         planStatus={plan.status}
         onPayInstallment={handlePayInstallment}
+        onEditInstallment={handleEditInstallment}
+        onAddInstallment={handleAddInstallment}
       />
 
       {/* Loan Tracking (Phase 2 — SPEC-234C) */}
@@ -184,6 +203,19 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
           onRecord={recordPayment}
         />
       )}
+
+      {/* Edit/Add Installment Dialog (SPEC-234D) */}
+      <EditInstallmentDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        mode={editDialogMode}
+        planStatus={plan.status}
+        installment={editDialogMode === 'edit' ? plan.installments[selectedInstallmentIdx] : undefined}
+        totalInstallments={plan.installments.length}
+        onAdd={(input, insertAtIndex) => addInstallment(plan.id, input, insertAtIndex)}
+        onUpdate={(index, updates) => updateInstallment(plan.id, index, updates)}
+        onDelete={(index) => removeInstallment(plan.id, index)}
+      />
 
       {/* Payment Report Dialog (Phase 5 — ADR-234) */}
       {resolvedProjectId && (
