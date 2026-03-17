@@ -372,7 +372,7 @@ export const POST = withStandardRateLimit(
           buildingId: body.buildingId,
           type: isValidStorageType(body.type || 'small') ? body.type || 'small' : 'small',
           status: isValidStorageStatus(body.status || 'available') ? body.status || 'available' : 'available',
-          companyId: isSuperAdmin ? null : ctx.companyId,  // 🔒 ADR-232
+          companyId: ctx.companyId,  // 🏢 ENTERPRISE: always set (super_admin inherits from auth)
           linkedCompanyId: null,                            // 🏢 ADR-232
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),

@@ -153,12 +153,24 @@ export const POST = withStandardRateLimit(
       // Parse request body
       const body: BuildingCreatePayload = await request.json();
 
-      // 🏢 ADR-232: Super admin entities get companyId: null (no tenant)
+      // 🏢 ENTERPRISE: ALL users (including super_admin) inherit companyId from project
       const isSuperAdmin = isRoleBypass(ctx.globalRole);
+      let resolvedCompanyId: string | null = ctx.companyId;
+
+      if (isSuperAdmin && body.projectId) {
+        try {
+          const projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(String(body.projectId)).get();
+          const projectData = projectDoc.data();
+          resolvedCompanyId = projectData?.companyId || projectData?.linkedCompanyId || ctx.companyId;
+          logger.info('[Buildings] Super admin: inherited companyId from project', { projectId: body.projectId, resolvedCompanyId });
+        } catch {
+          logger.warn('[Buildings] Could not resolve project companyId');
+        }
+      }
 
       const sanitizedData = {
         ...body,
-        companyId: isSuperAdmin ? null : ctx.companyId,  // 🔒 ADR-232: null for super admin
+        companyId: resolvedCompanyId,
         linkedCompanyId: null,                            // 🏢 ADR-232: Set via EntityLinkCard
         progress: 0,
         createdAt: FieldValue.serverTimestamp(),

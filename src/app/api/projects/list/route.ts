@@ -286,14 +286,17 @@ export const POST = withHighRateLimit(
         // 🏢 ENTERPRISE: Parse request body
         const body: ProjectCreatePayload = await req.json();
 
-        // 🏢 ADR-232: Super admin entities get companyId: null (no tenant)
-        // Regular users get companyId from auth context (tenant isolation)
+        // 🏢 ENTERPRISE: ALL users (including super_admin) get companyId
+        // Super admin inherits from linkedCompanyId (the company entity this project belongs to)
         const isSuperAdmin = isRoleBypass(ctx.globalRole);
+        const resolvedCompanyId = isSuperAdmin
+          ? (body.linkedCompanyId ?? ctx.companyId)
+          : ctx.companyId;
 
         const sanitizedData = {
           ...body,
-          companyId: isSuperAdmin ? null : ctx.companyId,  // 🔒 ADR-232: null for super admin
-          linkedCompanyId: body.linkedCompanyId ?? null,    // 🏢 ADR-232: Business entity link
+          companyId: resolvedCompanyId,
+          linkedCompanyId: body.linkedCompanyId ?? null,
           progress: 0,
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),

@@ -225,7 +225,7 @@ export const POST = withStandardRateLimit(
           buildingId: body.buildingId?.trim() || null,
           type: body.type || 'standard',
           status: body.status || 'available',
-          companyId: isSuperAdmin ? null : ctx.companyId,  // 🔒 ADR-232
+          companyId: ctx.companyId,  // 🏢 ENTERPRISE: always set (super_admin inherits from auth)
           linkedCompanyId: null,                            // 🏢 ADR-232
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),
