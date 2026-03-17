@@ -124,6 +124,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   IMPORT_BATCH: 'batch',
   EXPENSE_DOC: 'exdoc',
   APY_CERTIFICATE: 'apy',
+  CUSTOM_CATEGORY: 'custcat',
 
   // ==========================================================================
   // FILE & MEDIA OPERATIONS
@@ -768,6 +769,14 @@ export class EnterpriseIdService {
   }
 
   /**
+   * 🏷️ Generate Custom Category ID (ADR-ACC-021)
+   * Format: custcat_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateCustomCategoryId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.CUSTOM_CATEGORY).id;
+  }
+
+  /**
    * 🏭 Generate Fixed Asset ID
    * Format: fxa_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
    */
@@ -1270,6 +1279,7 @@ export const generateEfkaPaymentId = () => enterpriseIdService.generateEfkaPayme
 export const generateImportBatchId = () => enterpriseIdService.generateImportBatchId();
 export const generateExpenseDocId = () => enterpriseIdService.generateExpenseDocId();
 export const generateApyCertificateId = () => enterpriseIdService.generateApyCertificateId();
+export const generateCustomCategoryId = () => enterpriseIdService.generateCustomCategoryId();
 
 // =============================================================================
 // AI PIPELINE & AUDIT

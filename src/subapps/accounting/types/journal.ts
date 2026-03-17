@@ -50,7 +50,7 @@ import type {
  * ```
  */
 export interface CategoryDefinition {
-  /** Μοναδικός κωδικός κατηγορίας */
+  /** Μοναδικός κωδικός κατηγορίας (built-in ή custom_xxx) */
   code: AccountCategory;
   /** Τύπος: έσοδο ή έξοδο */
   type: EntryType;

@@ -9,8 +9,9 @@
  */
 
 import type { VATRate, VATDeductibilityRule } from '../../types/vat';
-import type { ExpenseCategory } from '../../types/common';
+import type { ExpenseCategory, AccountCategory } from '../../types/common';
 import { ACCOUNT_CATEGORIES } from '../../config/account-categories';
+import { isCustomCategoryCode } from '../../types/custom-category';
 
 // ============================================================================
 // GREEK VAT RATES (Ν.2859/2000 — Κώδικας ΦΠΑ)
@@ -118,6 +119,28 @@ export function getVatDeductibilityRules(): ReadonlyMap<ExpenseCategory, VATDedu
     _cachedRules = buildDeductibilityRules();
   }
   return _cachedRules;
+}
+
+/**
+ * Ποσοστό εκπτωσιμότητας ΦΠΑ για οποιαδήποτε AccountCategory (built-in ή custom).
+ *
+ * Custom categories: χρησιμοποιεί το `vatDeductiblePercent` που παρέχεται ως argument.
+ * Built-in categories: αναζήτηση στο cached rules map.
+ *
+ * @param category - AccountCategory (built-in ή custom_xxx)
+ * @param customVatDeductiblePercent - Για custom categories: το percent από το Firestore doc
+ * @returns Ποσοστό εκπτωσιμότητας (0, 50, 100)
+ */
+export function getDeductibilityPercent(
+  category: AccountCategory,
+  customVatDeductiblePercent?: number
+): number {
+  if (isCustomCategoryCode(category)) {
+    return customVatDeductiblePercent ?? 100;
+  }
+  const rules = getVatDeductibilityRules();
+  const rule = rules.get(category as ExpenseCategory);
+  return rule?.deductiblePercent ?? 100;
 }
 
 // ============================================================================

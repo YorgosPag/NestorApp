@@ -192,6 +192,15 @@ export type {
   APYCertificate,
 } from './apy-certificate';
 
+// ── Custom Category Types (ADR-ACC-021) ──────────────────────────────────────
+export type {
+  CustomCategoryCode,
+  CustomCategoryDocument,
+  CreateCustomCategoryInput,
+  UpdateCustomCategoryInput,
+} from './custom-category';
+export { isCustomCategoryCode } from './custom-category';
+
 // ── Abstraction Interfaces (ADR-ACC-010) ────────────────────────────────────
 export type {
   IAccountingRepository,

@@ -20,6 +20,7 @@ import {
   generateImportBatchId,
   generateExpenseDocId,
   generateApyCertificateId,
+  generateCustomCategoryId,
 } from '@/services/enterprise-id.service';
 import type { PaginatedResult } from '@/lib/pagination';
 import type { IAccountingRepository } from '../../types/interfaces';
@@ -60,6 +61,12 @@ import type { Partner, Member, Shareholder } from '../../types/entity';
 import type { TaxInstallment } from '../../types/tax';
 import type { ReceivedExpenseDocument } from '../../types/documents';
 import type { APYCertificate, APYEmailSendRecord } from '../../types/apy-certificate';
+import type {
+  CustomCategoryDocument,
+  CreateCustomCategoryInput,
+  UpdateCustomCategoryInput,
+  CustomCategoryCode,
+} from '../../types/custom-category';
 import type { CompanyProfile, CompanySetupInput } from '../../types/company';
 
 import { sanitizeForFirestore, isoNow } from './firestore-helpers';
@@ -790,6 +797,90 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
           emailHistory: FieldValue.arrayUnion(sanitizeForFirestore(record as Record<string, unknown>)),
           updatedAt: isoNow(),
         });
+    }, undefined);
+  }
+
+  // ── Custom Categories (ADR-ACC-021) ──────────────────────────────────────
+
+  async createCustomCategory(
+    data: CreateCustomCategoryInput
+  ): Promise<{ id: string; code: string }> {
+    const id = generateCustomCategoryId();
+    // code = custom_ + short hash από το id (χαρακτήρες μετά το 'custcat_')
+    const shortHash = id.replace('custcat_', '').split('-')[0];
+    const code: CustomCategoryCode = `custom_${shortHash}`;
+    const now = isoNow();
+
+    const doc = sanitizeForFirestore({
+      ...data,
+      categoryId: id,
+      code,
+      sortOrder: data.sortOrder ?? 100,
+      icon: data.icon ?? 'Tag',
+      kadCode: data.kadCode ?? null,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    } as Record<string, unknown>);
+
+    await safeFirestoreOperation(async (db) => {
+      await db.collection(COLLECTIONS.ACCOUNTING_CUSTOM_CATEGORIES).doc(id).set(doc);
+    }, undefined);
+
+    return { id, code };
+  }
+
+  async getCustomCategory(categoryId: string): Promise<CustomCategoryDocument | null> {
+    return safeFirestoreOperation(async (db) => {
+      const snap = await db
+        .collection(COLLECTIONS.ACCOUNTING_CUSTOM_CATEGORIES)
+        .doc(categoryId)
+        .get();
+      if (!snap.exists) return null;
+      return snap.data() as CustomCategoryDocument;
+    }, null);
+  }
+
+  async listCustomCategories(includeInactive = false): Promise<CustomCategoryDocument[]> {
+    return safeFirestoreOperation(async (db) => {
+      let query: FirebaseFirestore.Query = db.collection(
+        COLLECTIONS.ACCOUNTING_CUSTOM_CATEGORIES
+      );
+
+      if (!includeInactive) {
+        query = query.where('isActive', '==', true);
+      }
+
+      query = query.orderBy('sortOrder', 'asc');
+
+      const snap = await query.get();
+      return snap.docs.map((d) => d.data() as CustomCategoryDocument);
+    }, []);
+  }
+
+  async updateCustomCategory(
+    categoryId: string,
+    updates: UpdateCustomCategoryInput
+  ): Promise<void> {
+    await safeFirestoreOperation(async (db) => {
+      await db
+        .collection(COLLECTIONS.ACCOUNTING_CUSTOM_CATEGORIES)
+        .doc(categoryId)
+        .update(
+          sanitizeForFirestore({
+            ...updates,
+            updatedAt: isoNow(),
+          } as Record<string, unknown>)
+        );
+    }, undefined);
+  }
+
+  async deleteCustomCategory(categoryId: string): Promise<void> {
+    await safeFirestoreOperation(async (db) => {
+      await db
+        .collection(COLLECTIONS.ACCOUNTING_CUSTOM_CATEGORIES)
+        .doc(categoryId)
+        .delete();
     }, undefined);
   }
 }

@@ -77,6 +77,11 @@ import type {
   DocumentType,
 } from './documents';
 import type { APYCertificate, APYEmailSendRecord } from './apy-certificate';
+import type {
+  CustomCategoryDocument,
+  CreateCustomCategoryInput,
+  UpdateCustomCategoryInput,
+} from './custom-category';
 
 // ============================================================================
 // ACCOUNTING REPOSITORY — CRUD Operations
@@ -165,6 +170,13 @@ export interface IAccountingRepository {
   listAPYCertificates(fiscalYear?: number, customerId?: string): Promise<APYCertificate[]>;
   updateAPYCertificate(certificateId: string, updates: Partial<Omit<APYCertificate, 'certificateId' | 'createdAt'>>): Promise<void>;
   pushAPYEmailRecord(certificateId: string, record: APYEmailSendRecord): Promise<void>;
+
+  // ── Custom Categories (ADR-ACC-021) ─────────────────────────────────────
+  createCustomCategory(data: CreateCustomCategoryInput): Promise<{ id: string; code: string }>;
+  getCustomCategory(categoryId: string): Promise<CustomCategoryDocument | null>;
+  listCustomCategories(includeInactive?: boolean): Promise<CustomCategoryDocument[]>;
+  updateCustomCategory(categoryId: string, updates: UpdateCustomCategoryInput): Promise<void>;
+  deleteCustomCategory(categoryId: string): Promise<void>;
 }
 
 // ============================================================================

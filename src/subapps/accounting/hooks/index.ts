@@ -43,3 +43,6 @@ export { usePartners } from './usePartners';
 
 // ── APY Certificate Hooks (ADR-ACC-020) ──────────────────────────────────────
 export { useAPYCertificates } from './useAPYCertificates';
+
+// ── Custom Category Hooks (ADR-ACC-021) ───────────────────────────────────────
+export { useCustomCategories } from './useCustomCategories';

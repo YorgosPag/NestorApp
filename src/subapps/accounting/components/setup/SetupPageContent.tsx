@@ -37,6 +37,7 @@ import { EntityTypeSelector } from './EntityTypeSelector';
 import { PartnerManagementSection } from './PartnerManagementSection';
 import { MemberManagementSection } from './MemberManagementSection';
 import { ShareholderManagementSection } from './ShareholderManagementSection';
+import { CustomCategoriesSection } from './CustomCategoriesSection';
 
 // ============================================================================
 // DEFAULTS
@@ -338,6 +339,7 @@ export function SetupPageContent() {
             <KadSection data={formData} onChange={handleChange} errors={translatedErrors} />
             <InvoiceSeriesSection data={formData} onChange={handleChange} />
             <ServicePresetsSection />
+            <CustomCategoriesSection />
 
             {/* Footer Save Button */}
             <footer className="flex justify-end pt-4">

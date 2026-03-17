@@ -83,8 +83,8 @@ export type ExpenseCategory =
   | 'depreciation'
   | 'other_expense';
 
-/** Ενοποιημένος τύπος κατηγορίας (έσοδα + έξοδα) */
-export type AccountCategory = IncomeCategory | ExpenseCategory;
+/** Ενοποιημένος τύπος κατηγορίας (έσοδα + έξοδα + custom) */
+export type AccountCategory = IncomeCategory | ExpenseCategory | `custom_${string}`;
 
 // ============================================================================
 // MYDATA CLASSIFICATION CODES (ΑΑΔΕ)
