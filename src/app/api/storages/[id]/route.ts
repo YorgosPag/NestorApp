@@ -29,6 +29,8 @@ interface StoragePatchPayload {
   type?: 'large' | 'small' | 'basement' | 'ground' | 'special' | 'storage' | 'parking' | 'garage' | 'warehouse';
   status?: 'available' | 'occupied' | 'maintenance' | 'reserved' | 'sold' | 'unavailable';
   floor?: string;
+  /** Floor document ID (Firestore foreign key) */
+  floorId?: string | null;
   area?: number;
   price?: number;
   description?: string;
@@ -76,6 +78,7 @@ export const PATCH = withStandardRateLimit(
         if (body.type) updateData.type = body.type;
         if (body.status) updateData.status = body.status;
         if (body.floor !== undefined) updateData.floor = body.floor?.trim() || null;
+        if (body.floorId !== undefined) updateData.floorId = body.floorId || null;
         if (body.area !== undefined) updateData.area = typeof body.area === 'number' ? body.area : null;
         if (body.price !== undefined) updateData.price = typeof body.price === 'number' ? body.price : null;
         if (body.description !== undefined) updateData.description = body.description?.trim() || null;

@@ -285,6 +285,8 @@ interface StorageCreatePayload {
   type?: StorageType;
   status?: StorageStatus;
   floor?: string;
+  /** Floor document ID (Firestore foreign key) */
+  floorId?: string;
   area?: number;
   price?: number;
   description?: string;
@@ -392,6 +394,7 @@ export const POST = withStandardRateLimit(
 
         // Optional fields
         if (body.floor?.trim()) cleanData.floor = body.floor.trim();
+        if (body.floorId?.trim()) cleanData.floorId = body.floorId.trim();
         if (typeof body.area === 'number' && body.area > 0) cleanData.area = body.area;
         if (typeof body.price === 'number' && body.price >= 0) cleanData.price = body.price;
         if (body.description?.trim()) cleanData.description = body.description.trim();
