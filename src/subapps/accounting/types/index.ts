@@ -66,6 +66,7 @@ export type {
   InvoiceCustomer,
   VatBreakdown,
   InvoiceMyDataMeta,
+  EmailSendRecord,
   Invoice,
   InvoiceSeries,
   InvoiceFilters,

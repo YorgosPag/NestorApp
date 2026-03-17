@@ -104,7 +104,7 @@ export async function sendReplyViaMailgun(
       for (const attachment of params.attachments) {
         const blob = attachment.content instanceof Blob
           ? attachment.content
-          : new Blob([attachment.content], { type: attachment.contentType });
+          : new Blob([new Uint8Array(attachment.content)], { type: attachment.contentType });
         formData.append('attachment', blob, attachment.filename);
       }
     }
