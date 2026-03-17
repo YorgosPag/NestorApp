@@ -12,6 +12,8 @@ export interface AutoSaveSceneManagerState extends SceneManagerState {
   setAutoSaveEnabled: (enabled: boolean) => void;
   lastSaveTime: Date | null;
   saveStatus: 'idle' | 'saving' | 'success' | 'error';
+  /** 🏢 ENTERPRISE: Inject existing FileRecord ID so cadFiles uses the same ID */
+  setFileRecordId: (id: string | null) => void;
 }
 
 export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
@@ -30,7 +32,22 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
   const loadedFilesRef = useRef<Set<string>>(new Set());
   // Cache fileName → enterpriseId mapping to avoid generating new IDs on every save
   const fileIdCacheRef = useRef<Map<string, string>>(new Map());
+  // 🏢 ENTERPRISE: Injected FileRecord ID (from wizard/upload) — ensures cadFiles uses the same ID
+  const injectedFileRecordIdRef = useRef<string | null>(null);
   
+  /**
+   * 🏢 ENTERPRISE: Inject FileRecord ID from external source (wizard upload)
+   * When set, auto-save writes to cadFiles using THIS ID instead of generating a new one.
+   * This ensures cadFiles and files collections share the same document ID.
+   */
+  const setFileRecordId = useCallback((id: string | null) => {
+    injectedFileRecordIdRef.current = id;
+    // Also cache it for the current filename so subsequent saves reuse it
+    if (id && currentFileName) {
+      fileIdCacheRef.current.set(currentFileName, id);
+    }
+  }, [currentFileName]);
+
   /**
    * Enhanced setLevelScene with auto-save
    */
@@ -49,9 +66,12 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
         setSaveStatus('saving');
 
         try {
-          // 🏢 ENTERPRISE: Cache enterprise ID per filename to avoid generating new IDs on every save
-          // Always use enterprise IDs (SOS N.6) — no legacy fallback
-          let fileId = fileIdCacheRef.current.get(currentFileName);
+          // 🏢 ENTERPRISE: Resolve file ID with priority:
+          // 1. Injected FileRecord ID (from wizard/upload) — ensures cadFiles ↔ files use same ID
+          // 2. Cached ID (from previous save in this session)
+          // 3. New enterprise ID (first standalone save)
+          let fileId = injectedFileRecordIdRef.current
+            ?? fileIdCacheRef.current.get(currentFileName);
           if (!fileId) {
             fileId = DxfFirestoreService.generateFileId(currentFileName);
             fileIdCacheRef.current.set(currentFileName, fileId);
@@ -119,6 +139,7 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
     autoSaveEnabled,
     setAutoSaveEnabled,
     lastSaveTime,
-    saveStatus
+    saveStatus,
+    setFileRecordId,
   };
 }

@@ -82,7 +82,7 @@ export function useSceneState() {
   }, [currentLevelId, setLevelScene]);
 
   // File import handler
-  const handleFileImport = useCallback(async (file: File) => {
+  const handleFileImport = useCallback(async (file: File, fileRecordId?: string) => {
     let targetLevelId = currentLevelId;
     
     // If no level is selected, use the first available level or create one
@@ -120,8 +120,11 @@ export function useSceneState() {
     try {
       // Set current filename for auto-save (levelsSystem has access to the auto-save scene manager)
       if (levelsSystem.setCurrentFileName) {
-
         levelsSystem.setCurrentFileName(file.name);
+      }
+      // 🏢 ENTERPRISE: Inject FileRecord ID so cadFiles uses the same ID as files collection
+      if (fileRecordId && levelsSystem.setFileRecordId) {
+        levelsSystem.setFileRecordId(fileRecordId);
       }
       
       const scene = await importDxfFile(file);

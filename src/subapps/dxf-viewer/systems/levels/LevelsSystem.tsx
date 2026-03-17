@@ -549,10 +549,11 @@ function useLevelsSystemState({
     setCurrentFileName: sceneManager.setCurrentFileName,
     getCurrentFileName: () => sceneManager.currentFileName,
     setAutoSaveEnabled: sceneManager.setAutoSaveEnabled,
-    getAutoSaveStatus: () => ({ 
-      lastSaveTime: sceneManager.lastSaveTime, 
-      saveStatus: sceneManager.saveStatus 
+    getAutoSaveStatus: () => ({
+      lastSaveTime: sceneManager.lastSaveTime,
+      saveStatus: sceneManager.saveStatus
     }),
+    setFileRecordId: sceneManager.setFileRecordId,
 
     // Import wizard
     startImportWizard,

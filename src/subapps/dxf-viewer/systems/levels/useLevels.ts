@@ -55,6 +55,8 @@ export interface LevelSystemActions extends ImportWizardActions {
   getCurrentFileName?: () => string | null;
   setAutoSaveEnabled?: (enabled: boolean) => void;
   getAutoSaveStatus?: () => { lastSaveTime: Date | null; saveStatus: string };
+  /** 🏢 ENTERPRISE: Inject FileRecord ID so cadFiles uses the same ID as files collection */
+  setFileRecordId?: (id: string | null) => void;
 
   // Import wizard - inherits from shared interface
   completeImport: () => FloorplanDoc | null;
