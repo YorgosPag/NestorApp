@@ -23,9 +23,7 @@ import { Spinner } from '@/components/ui/spinner';
 // 🏢 ENTERPRISE: Using centralized entity config for consistent icons/colors
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
+// 🏢 ADR-238: linkedSpaces saved via Admin SDK API (client updateDoc blocked by security rules)
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTypography } from '@/hooks/useTypography';
@@ -290,12 +288,9 @@ export function LinkedSpacesCard({
     setSaveStatus('idle');
 
     try {
-      const unitRef = doc(db, COLLECTIONS.UNITS, unitId);
-
-      // 🏢 ENTERPRISE: Update linkedSpaces array with draft values
-      await updateDoc(unitRef, {
+      // 🏢 ADR-238: Save via Admin SDK API (client-side updateDoc blocked by Firestore security rules)
+      await apiClient.patch(`/api/units/${unitId}`, {
         linkedSpaces: draftLinkedSpaces,
-        updatedAt: new Date().toISOString(),
       });
 
       logger.info(`[LinkedSpacesCard] Unit ${unitId} linkedSpaces updated with ${draftLinkedSpaces.length} spaces`);
