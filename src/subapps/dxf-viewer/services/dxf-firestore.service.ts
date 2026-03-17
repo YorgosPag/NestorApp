@@ -45,6 +45,20 @@ const isExpectedError = (error: Error): boolean => {
          (message.includes('permission') && message.includes('missing'));
 };
 
+/**
+ * Optional entity context for dual-write to `files` collection.
+ * Injected by callers that know the business context (building, floor, project).
+ * When absent, the DXF save still works (cadFiles primary) but the `files`
+ * record will use fallback values ('standalone', 'system').
+ */
+export interface DxfSaveContext {
+  companyId?: string;
+  projectId?: string;
+  buildingId?: string;
+  floorId?: string;
+  createdBy?: string;
+}
+
 export interface DxfFileMetadata {
   id: string;
   fileName: string;
@@ -192,8 +206,9 @@ export class DxfFirestoreService {
 
   /**
    * Save scene to Firebase Storage + metadata to Firestore (Enterprise Edition)
+   * Also dual-writes to `files` collection for cadFiles → files consolidation.
    */
-  static async saveToStorage(fileId: string, fileName: string, scene: SceneModel): Promise<boolean> {
+  static async saveToStorage(fileId: string, fileName: string, scene: SceneModel, context?: DxfSaveContext): Promise<boolean> {
     try {
       dxfLogger.debug('Saving to Storage', { fileId, fileName });
 
@@ -242,6 +257,20 @@ export class DxfFirestoreService {
 
       const docRef = doc(db, this.COLLECTION_NAME, fileId);
       await setDoc(docRef, metadata);
+
+      // 🔄 DUAL-WRITE: Also save to files collection (enterprise FileRecord)
+      // Non-blocking — cadFiles remains primary, files write failure is silent
+      try {
+        await this.writeToFilesCollection(
+          fileId, fileName, downloadURL, sceneBytes.length,
+          scene.entities.length, newVersion, context
+        );
+      } catch (dualWriteError) {
+        dxfLogger.warn('Dual-write to files collection failed (non-blocking)', {
+          fileId,
+          error: getErrorMessage(dualWriteError),
+        });
+      }
 
       // 🏢 ENTERPRISE: INFO level for successful saves (important operation)
       dxfLogger.info('Storage save complete', {
@@ -390,6 +419,58 @@ export class DxfFirestoreService {
   }
   
   /**
+   * 🔄 DUAL-WRITE: Write enterprise FileRecord to `files` collection.
+   * Maps DxfFileMetadata → FileRecord schema for cadFiles → files consolidation.
+   * Uses merge: true so repeated saves update rather than overwrite.
+   *
+   * @enterprise ADR-031 — File Storage Consolidation (cadFiles → files)
+   */
+  private static async writeToFilesCollection(
+    fileId: string,
+    fileName: string,
+    downloadUrl: string,
+    sizeBytes: number,
+    entityCount: number,
+    version: number,
+    context?: DxfSaveContext
+  ): Promise<void> {
+    const fileRecord = {
+      id: fileId,
+      companyId: context?.companyId ?? null,
+      projectId: context?.projectId ?? null,
+      entityType: 'building' as const,
+      entityId: context?.buildingId ?? 'standalone',
+      domain: 'construction' as const,
+      category: 'drawings' as const,
+      storagePath: `dxf-scenes/${fileId}/scene.json`,
+      displayName: fileName,
+      originalFilename: fileName,
+      ext: 'dxf',
+      contentType: 'application/dxf',
+      status: 'ready' as const,
+      sizeBytes,
+      downloadUrl,
+      revision: version,
+      hash: null,
+      createdBy: context?.createdBy ?? 'system',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      processedData: {
+        fileType: 'dxf' as const,
+        sceneStats: { entityCount, layerCount: 0, parseTimeMs: 0 },
+        processedDataPath: `dxf-scenes/${fileId}/scene.json`,
+        processedDataUrl: downloadUrl,
+        processedAt: Date.now(),
+      },
+    };
+
+    const filesDocRef = doc(db, COLLECTIONS.FILES, fileId);
+    await setDoc(filesDocRef, fileRecord, { merge: true });
+
+    dxfLogger.debug('Dual-write to files collection succeeded', { fileId });
+  }
+
+  /**
    * Generate a simple checksum for change detection
    */
   private static generateSceneChecksum(scene: SceneModel): string {
@@ -417,7 +498,7 @@ export class DxfFirestoreService {
   /**
    * 🔒 Enterprise Auto-save with Security Validation (V3)
    */
-  static async autoSaveV3(fileName: string, scene: SceneModel): Promise<{
+  static async autoSaveV3(fileName: string, scene: SceneModel, context?: DxfSaveContext): Promise<{
     success: boolean;
     fileId?: string;
     validationResults?: SecurityValidationResult[];
@@ -439,7 +520,7 @@ export class DxfFirestoreService {
       }
 
       // Step 2: Use validated file ID and sanitized name
-      const success = await this.saveToStorage(validation.fileId, validation.sanitizedFileName, scene);
+      const success = await this.saveToStorage(validation.fileId, validation.sanitizedFileName, scene, context);
 
       if (success) {
         // 🏢 ENTERPRISE: INFO level for successful save operations
@@ -471,16 +552,16 @@ export class DxfFirestoreService {
    * Auto-save with intelligent routing (Storage for new files, Firestore for legacy)
    * @deprecated Use autoSaveV3 for enterprise security features
    */
-  static async autoSaveV2(fileId: string, fileName: string, scene: SceneModel): Promise<boolean> {
+  static async autoSaveV2(fileId: string, fileName: string, scene: SceneModel, context?: DxfSaveContext): Promise<boolean> {
     // Check if file already exists to determine save method
     const existingMetadata = await this.getFileMetadata(fileId);
 
     if (existingMetadata && existingMetadata.storageUrl) {
       // File already uses Storage - continue using Storage
-      return this.saveToStorage(fileId, fileName, scene);
+      return this.saveToStorage(fileId, fileName, scene, context);
     } else {
       // New file or legacy file - use Storage for better performance
-      return this.saveToStorage(fileId, fileName, scene);
+      return this.saveToStorage(fileId, fileName, scene, context);
     }
   }
 
