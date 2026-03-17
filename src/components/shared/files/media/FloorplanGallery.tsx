@@ -684,29 +684,98 @@ export function FloorplanGallery({
   }, []);
 
   // =========================================================================
-  // DXF AUTO-PROCESSING (Enterprise Pattern - ADR-033)
+  // DXF SCENE LOADING — Single unified effect (no race conditions)
+  // Priority: V1 embedded → V3 API → JSON scene → Client-side DXF parse
   // =========================================================================
 
   useEffect(() => {
-    if (!currentFile || !isDxf) return;
-    if (currentFile.processedData) return;
-    if (fileExt === 'json') return;
-    if (!currentFile.downloadUrl) return;
-    if (currentFile.status !== 'ready') return;
+    // Guard: only DXF/JSON files
+    if (!currentFile || !isDxf) {
+      setLoadedScene(null);
+      return;
+    }
 
-    const parseClientSide = async () => {
-      logger.info('Client-side DXF parsing', { displayName: currentFile.displayName });
+    let cancelled = false;
+
+    const loadScene = async () => {
+      // ── PATH A: V1 Legacy — embedded scene in processedData ──
+      if (currentFile.processedData?.scene) {
+        setLoadedScene(currentFile.processedData.scene);
+        return;
+      }
+
+      // ── PATH B: V3 — processedDataPath via authenticated API ──
+      if (currentFile.processedData?.processedDataPath && currentFile.id && auth.currentUser) {
+        setIsLoading(true);
+        setSceneError(null);
+        try {
+          const idToken = await auth.currentUser.getIdToken();
+          const response = await fetch(`/api/floorplans/scene?fileId=${currentFile.id}`, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${idToken}` },
+          });
+          if (cancelled) return;
+          if (response.status === 202) {
+            setSceneError(t('floorplan.processingInProgress'));
+            return;
+          }
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `HTTP ${response.status}`);
+          }
+          const sceneData: DxfSceneData = await response.json();
+          if (!cancelled) setLoadedScene(sceneData);
+        } catch (err) {
+          if (!cancelled) {
+            logger.error('Failed to load scene via API', { error: err });
+            setSceneError(err instanceof Error ? err.message : 'Unknown error');
+          }
+        } finally {
+          if (!cancelled) setIsLoading(false);
+        }
+        return;
+      }
+
+      // From here: NO processedData — need to fetch + parse from downloadUrl
+      if (!currentFile.downloadUrl) return;
+
+      // ── PATH C: JSON scene files (FloorplanSaveOrchestrator) ──
+      if (fileExt === 'json') {
+        setIsLoading(true);
+        setSceneError(null);
+        try {
+          const response = await fetch(currentFile.downloadUrl);
+          if (cancelled) return;
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const sceneData: DxfSceneData = await response.json();
+          if (!cancelled) setLoadedScene(sceneData);
+        } catch (err) {
+          if (!cancelled) {
+            logger.error('Failed to load JSON scene', { error: err });
+            setSceneError(err instanceof Error ? err.message : 'Unknown error');
+          }
+        } finally {
+          if (!cancelled) setIsLoading(false);
+        }
+        return;
+      }
+
+      // ── PATH D: Client-side DXF parsing (same pipeline as DXF Viewer) ──
+      if (currentFile.status !== 'ready') return;
+
       setIsLoading(true);
       setSceneError(null);
-
       try {
-        const resp = await fetch(currentFile.downloadUrl!);
+        logger.info('Client-side DXF parsing', { displayName: currentFile.displayName });
+        const resp = await fetch(currentFile.downloadUrl);
+        if (cancelled) return;
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const blob = await resp.blob();
         const file = new File([blob], currentFile.originalFilename || 'plan.dxf');
 
         const { dxfImportService } = await import('@/subapps/dxf-viewer/io/dxf-import');
         const result = await dxfImportService.importDxfFile(file);
+        if (cancelled) return;
         if (!result.success || !result.scene) throw new Error(result.error || 'Parse failed');
 
         const scene: DxfSceneData = {
@@ -718,108 +787,21 @@ export function FloorplanGallery({
           bounds: result.scene.bounds,
         };
 
-        setLoadedScene(scene);
+        if (!cancelled) setLoadedScene(scene);
       } catch (err) {
-        logger.error('Client-side DXF parse failed', { error: err });
-        setSceneError(err instanceof Error ? err.message : 'Parse failed');
+        if (!cancelled) {
+          logger.error('Client-side DXF parse failed', { error: err });
+          setSceneError(err instanceof Error ? err.message : 'Parse failed');
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
-    parseClientSide();
+    loadScene();
+    return () => { cancelled = true; };
   }, [currentFile?.id, currentFile?.processedData, currentFile?.downloadUrl,
-      currentFile?.status, currentFile?.originalFilename, isDxf, fileExt]);
-
-  // =========================================================================
-  // DXF SCENE LOADING
-  // =========================================================================
-
-  useEffect(() => {
-    // JSON scene files (FloorplanSaveOrchestrator): downloadUrl IS the scene — fetch directly
-    if (currentFile && fileExt === 'json' && currentFile.downloadUrl && !currentFile.processedData) {
-      setIsLoading(true);
-      setSceneError(null);
-
-      const loadJsonScene = async () => {
-        try {
-          const response = await fetch(currentFile.downloadUrl!);
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          const sceneData: DxfSceneData = await response.json();
-          setLoadedScene(sceneData);
-        } catch (err) {
-          logger.error('Failed to load JSON scene', { error: err });
-          setSceneError(err instanceof Error ? err.message : 'Unknown error');
-        } finally {
-          setIsLoading(false);
-        }
-      };
-
-      loadJsonScene();
-      return;
-    }
-
-    if (!currentFile?.processedData) {
-      // Client-side parsing effect handles DXF files without processedData —
-      // only clear scene when switching to a non-DXF file or file with no data at all
-      if (!isDxf || !currentFile?.downloadUrl || currentFile?.status !== 'ready') {
-        setLoadedScene(null);
-      }
-      return;
-    }
-
-    const processedData = currentFile.processedData;
-
-    // V3: Load via authenticated API
-    if (processedData.processedDataPath && currentFile.id && auth.currentUser) {
-      setIsLoading(true);
-      setSceneError(null);
-
-      const loadSceneFromAPI = async () => {
-        try {
-          const currentUser = auth.currentUser;
-          if (!currentUser) throw new Error('User not authenticated');
-          const idToken = await currentUser.getIdToken();
-
-          const response = await fetch(`/api/floorplans/scene?fileId=${currentFile.id}`, {
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${idToken}` },
-          });
-
-          if (response.status === 202) {
-            setSceneError(t('floorplan.processingInProgress'));
-            setIsLoading(false);
-            return;
-          }
-
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || `HTTP ${response.status}`);
-          }
-
-          const sceneData: DxfSceneData = await response.json();
-          setLoadedScene(sceneData);
-          setIsLoading(false);
-        } catch (err) {
-          logger.error('Failed to load scene', { error: err });
-          setSceneError(err instanceof Error ? err.message : 'Unknown error');
-          setIsLoading(false);
-        }
-      };
-
-      loadSceneFromAPI();
-      return;
-    }
-
-    // V1 Legacy: Use embedded scene
-    if (processedData.scene) {
-      setLoadedScene(processedData.scene);
-      setIsLoading(false);
-      return;
-    }
-
-    setLoadedScene(null);
-  }, [currentFile?.processedData, currentFile?.downloadUrl, currentFile?.id, currentFile?.status, fileExt, isDxf, t]);
+      currentFile?.status, currentFile?.originalFilename, isDxf, fileExt, t]);
 
   // =========================================================================
   // DXF CANVAS RENDERING — INLINE
