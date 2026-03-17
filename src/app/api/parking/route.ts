@@ -15,22 +15,15 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth, logAuditEvent } from '@/lib/auth';
+import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { requireBuildingInTenant, TenantIsolationError } from '@/lib/auth/tenant-isolation';
-import { FieldValue } from 'firebase-admin/firestore';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
-import {
-  formatFloorCode,
-  resolveTypeCode,
-  formatEntityCode,
-  parseEntityCode,
-} from '@/services/entity-code.service';
-import { extractBuildingLetter } from '@/config/entity-code-config';
+import { createEntity } from '@/lib/firestore/entity-creation.service';
 
 const logger = createModuleLogger('ParkingRoute');
 
@@ -123,11 +116,6 @@ interface ParkingCreateResponse {
 export const POST = withStandardRateLimit(
   withAuth<ApiSuccessResponse<ParkingCreateResponse>>(
     async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      const adminDb = getAdminFirestore();
-      if (!adminDb) {
-        throw new ApiError(503, 'Database unavailable');
-      }
-
       try {
         const body: ParkingCreatePayload = await request.json();
 
@@ -136,39 +124,13 @@ export const POST = withStandardRateLimit(
           throw new ApiError(400, 'Parking spot number is required');
         }
 
-        // ADR-191: buildingId is optional (open space support)
-        // If buildingId provided → tenant-verify it and resolve projectId from building
-        // If no buildingId → parking created without building link
-        let resolvedProjectId = body.projectId?.trim() || null;
-        let resolvedCompanyId: string | null = ctx.companyId;
+        const buildingId = body.buildingId?.trim() || null;
+        const resolvedProjectId = body.projectId?.trim() || null;
 
-        if (body.buildingId?.trim()) {
-          // Tenant isolation — verify building belongs to user's company
-          try {
-            await requireBuildingInTenant({
-              ctx,
-              buildingId: body.buildingId,
-              path: '/api/parking (POST)',
-            });
-          } catch (err) {
-            if (err instanceof TenantIsolationError) {
-              throw new ApiError(err.status, err.message);
-            }
-            throw err;
-          }
-
-          // Auto-resolve projectId + companyId from building
-          const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(body.buildingId).get();
-          const buildingData = buildingDoc.data() as Record<string, unknown> | undefined;
-          if (!resolvedProjectId) {
-            resolvedProjectId = (buildingData?.projectId as string) || null;
-          }
-          // Inherit companyId from building (critical for super_admin)
-          if (buildingData?.companyId) {
-            resolvedCompanyId = buildingData.companyId as string;
-          }
-        } else if (resolvedProjectId) {
-          // No building but projectId provided — verify project belongs to tenant
+        // ADR-191: Open space parking (no buildingId) — verify project belongs to tenant
+        if (!buildingId && resolvedProjectId) {
+          const adminDb = getAdminFirestore();
+          if (!adminDb) throw new ApiError(503, 'Database unavailable');
           const projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(resolvedProjectId).get();
           if (!projectDoc.exists) {
             throw new ApiError(404, 'Project not found');
@@ -179,87 +141,43 @@ export const POST = withStandardRateLimit(
           }
         }
 
-        // 🏢 ADR-233: Auto-generate entity code if number looks manual (e.g. "P-001")
-        let parkingNumber = body.number.trim();
-        if (body.buildingId?.trim()) {
-          try {
-            const buildingDocForCode = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(body.buildingId).get();
-            const buildingDataForCode = buildingDocForCode.data();
-            const buildingName = (buildingDataForCode?.name as string) || '?';
-            const buildingLetter = extractBuildingLetter(buildingName);
-            const typeCode = resolveTypeCode('parking', undefined, body.locationZone ?? undefined);
-            const floorLevel = body.floor ? parseInt(body.floor, 10) : 0;
-            const floorCode = formatFloorCode(isNaN(floorLevel) ? 0 : floorLevel);
-
-            if (typeCode && !parseEntityCode(parkingNumber)) {
-              // Only auto-generate if current number is NOT already in ADR-233 format
-              const existingParking = await adminDb.collection(COLLECTIONS.PARKING_SPACES)
-                .where('buildingId', '==', body.buildingId)
-                .get();
-
-              let maxSeq = 0;
-              for (const doc of existingParking.docs) {
-                const num = doc.data().number as string | undefined;
-                if (!num) continue;
-                const parsed = parseEntityCode(num);
-                if (parsed && parsed.typeCode === typeCode && parsed.floorCode === floorCode) {
-                  if (parsed.sequence > maxSeq) maxSeq = parsed.sequence;
-                }
-              }
-
-              parkingNumber = formatEntityCode(buildingLetter, typeCode, floorCode, maxSeq + 1);
-              logger.info('Auto-generated parking code', { parkingNumber, buildingId: body.buildingId });
-            }
-          } catch (codeErr) {
-            logger.warn('Parking code auto-generation failed, using original number', {
-              error: codeErr instanceof Error ? codeErr.message : String(codeErr),
-            });
-          }
-        }
-
-        // Sanitize data — force companyId from auth context
-        const cleanData: Record<string, unknown> = {
-          number: parkingNumber,
-          buildingId: body.buildingId?.trim() || null,
+        // Entity-specific fields (everything NOT handled by centralized service)
+        const entitySpecificFields: Record<string, unknown> = {
+          number: body.number.trim(),
+          buildingId: buildingId,
           type: body.type || 'standard',
           status: body.status || 'available',
-          companyId: resolvedCompanyId,  // 🏢 ENTERPRISE: inherited from building or auth context
-          linkedCompanyId: null,                            // 🏢 ADR-232
-          createdAt: FieldValue.serverTimestamp(),
-          updatedAt: FieldValue.serverTimestamp(),
-          createdBy: ctx.uid,
         };
 
-        // projectId
-        if (resolvedProjectId) cleanData.projectId = resolvedProjectId;
+        // projectId — auto-resolved from building by service, but may come from body
+        if (resolvedProjectId) entitySpecificFields.projectId = resolvedProjectId;
 
-        // Optional fields — only include if provided (Firestore rejects undefined)
-        if (body.locationZone) cleanData.locationZone = body.locationZone;
-        if (body.floor?.trim()) cleanData.floor = body.floor.trim();
-        if (body.location?.trim()) cleanData.location = body.location.trim();
-        if (typeof body.area === 'number' && body.area > 0) cleanData.area = body.area;
-        if (typeof body.price === 'number' && body.price >= 0) cleanData.price = body.price;
-        if (body.notes?.trim()) cleanData.notes = body.notes.trim();
+        // Optional fields — only include if provided
+        if (body.locationZone) entitySpecificFields.locationZone = body.locationZone;
+        if (body.floor?.trim()) entitySpecificFields.floor = body.floor.trim();
+        if (body.location?.trim()) entitySpecificFields.location = body.location.trim();
+        if (typeof body.area === 'number' && body.area > 0) entitySpecificFields.area = body.area;
+        if (typeof body.price === 'number' && body.price >= 0) entitySpecificFields.price = body.price;
+        if (body.notes?.trim()) entitySpecificFields.notes = body.notes.trim();
 
-        logger.info('Creating parking spot', { number: body.number, buildingId: body.buildingId, companyId: ctx.companyId });
+        logger.info('Creating parking spot', { number: body.number, buildingId, companyId: ctx.companyId });
 
-        // 🏗️ ADR-210: Enterprise ID for parking spots
-        const { generateParkingId } = await import('@/services/enterprise-id.service');
-        const parkingSpotId = generateParkingId();
-        await adminDb.collection(COLLECTIONS.PARKING_SPACES).doc(parkingSpotId).set(cleanData);
-
-        logger.info('Parking spot created', { parkingSpotId });
-
-        await logAuditEvent(ctx, 'data_created', 'parking_spot', 'api', {
-          newValue: {
-            type: 'status',
-            value: { parkingSpotId, number: body.number, buildingId: body.buildingId },
+        // 🏢 ADR-238: Centralized entity creation
+        // projectId auto-resolved from building by service (building-child propagation)
+        const result = await createEntity('parking', {
+          auth: ctx,
+          parentId: buildingId,
+          entitySpecificFields,
+          codeOptions: {
+            currentValue: body.number.trim(),
+            floorLevel: body.floor ? parseInt(body.floor, 10) || 0 : 0,
+            locationZone: body.locationZone ?? undefined,
           },
-          metadata: { reason: 'Parking spot created via API' },
+          apiPath: '/api/parking (POST)',
         });
 
         return apiSuccess<ParkingCreateResponse>(
-          { parkingSpotId },
+          { parkingSpotId: result.id },
           'Parking spot created successfully'
         );
       } catch (error) {
