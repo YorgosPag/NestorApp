@@ -89,21 +89,23 @@ export const POST = withStandardRateLimit(
           throw new ApiError(400, 'Unit name is required');
         }
 
-        // 🏢 ADR-232: Super admin entities get companyId: null
-        // Regular users inherit companyId from building (or fallback to auth context)
+        // 🏢 ENTERPRISE: ALL users (including super_admin) inherit companyId from building
+        // This ensures units always have companyId for file queries, floorplan display, etc.
         const isSuperAdmin = isRoleBypass(ctx.globalRole);
-        let resolvedCompanyId: string | null = isSuperAdmin ? null : ctx.companyId;
+        let resolvedCompanyId: string | null = ctx.companyId;
 
-        if (!isSuperAdmin && body.buildingId) {
+        if (body.buildingId) {
           const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(body.buildingId).get();
           if (buildingDoc.exists) {
-            const buildingCompanyId = buildingDoc.data()?.companyId;
+            const buildingData = buildingDoc.data();
+            const buildingCompanyId = buildingData?.companyId || buildingData?.linkedCompanyId;
             if (buildingCompanyId) {
               resolvedCompanyId = buildingCompanyId;
               logger.info('[Units] companyId inherited from building', {
                 buildingId: body.buildingId,
                 buildingCompanyId,
                 userCompanyId: ctx.companyId,
+                isSuperAdmin,
               });
             }
           }

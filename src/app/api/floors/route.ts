@@ -272,8 +272,25 @@ export const POST = withStandardRateLimit(
         // CREATE FLOOR DOCUMENT
         // ============================================================================
 
-        // 🏢 ADR-232: Super admin entities get companyId: null
+        // 🏢 ENTERPRISE: Resolve companyId from parent building (Google-level ownership)
+        // Super admin inherits companyId from the building, not from their own auth context.
+        // This ensures floors always have companyId for file queries (FloorFloorplanService).
+        let resolvedCompanyId: string | null = ctx.companyId;
         const isSuperAdmin = isRoleBypass(ctx.globalRole);
+
+        if (isSuperAdmin) {
+          try {
+            const buildingDoc = await getAdminFirestore()
+              .collection(COLLECTIONS.BUILDINGS)
+              .doc(body.buildingId)
+              .get();
+            const buildingData = buildingDoc.data();
+            resolvedCompanyId = buildingData?.companyId || buildingData?.linkedCompanyId || null;
+            logger.info('[Floors/Create] Super admin: inherited companyId from building', { buildingId: body.buildingId, resolvedCompanyId });
+          } catch {
+            logger.warn('[Floors/Create] Could not resolve building companyId');
+          }
+        }
 
         const now = new Date().toISOString();
         const floorDocument: Record<string, unknown> = {
@@ -284,7 +301,7 @@ export const POST = withStandardRateLimit(
           buildingName: body.buildingName || '',
           ...(body.projectId ? { projectId: String(body.projectId) } : {}),
           ...(body.projectName ? { projectName: body.projectName } : {}),
-          ...(isSuperAdmin ? {} : { companyId: ctx.companyId }),  // 🔒 ADR-232: omit for super admin
+          ...(resolvedCompanyId ? { companyId: resolvedCompanyId } : {}),
           units: body.units || 0,
           elevation: body.elevation ?? null,  // 🏢 ADR-180: IFC elevation (metres)
           createdAt: now,
