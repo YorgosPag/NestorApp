@@ -57,6 +57,8 @@ export interface DxfSaveContext {
   buildingId?: string;
   floorId?: string;
   createdBy?: string;
+  /** 🏢 ENTERPRISE: Canonical scene path (derived from FileRecord storagePath) */
+  canonicalScenePath?: string;
 }
 
 export interface DxfFileMetadata {
@@ -217,7 +219,8 @@ export class DxfFirestoreService {
       const sceneBytes = new TextEncoder().encode(sceneJson);
 
       // 2. Upload to Firebase Storage
-      const storagePath = `${this.STORAGE_FOLDER}/${fileId}/scene.json`;
+      // 🏢 ENTERPRISE: Use canonical path (next to DXF) if available, fallback to legacy dxf-scenes/
+      const storagePath = context?.canonicalScenePath ?? `${this.STORAGE_FOLDER}/${fileId}/scene.json`;
       const storageRef = ref(storage, storagePath);
 
       const snapshot = await uploadBytes(storageRef, sceneBytes, {
@@ -335,9 +338,11 @@ export class DxfFirestoreService {
       }
 
       // 2. Download scene from Storage
-      // 🏢 ENTERPRISE FIX: Use the known storage path pattern instead of the download URL
-      // The download URL has CORS issues, but using ref() with the path works correctly
-      const storagePath = `dxf-scenes/${fileId}/scene.json`;
+      // 🏢 ENTERPRISE: Try canonical path first (from storageUrl metadata), fallback to legacy
+      // The storageUrl may contain the canonical path if saved by the new enterprise flow
+      const storagePath = metadata.storageUrl?.startsWith('companies/')
+        ? this.deriveScenePath(metadata.storageUrl)
+        : `dxf-scenes/${fileId}/scene.json`;
       const storageRef = ref(storage, storagePath);
       const sceneBytes = await getBytes(storageRef);
       const sceneJson = new TextDecoder().decode(sceneBytes);
@@ -434,6 +439,9 @@ export class DxfFirestoreService {
     version: number,
     context?: DxfSaveContext
   ): Promise<void> {
+    // 🏢 ENTERPRISE: Use canonical scene path if available
+    const scenePath = context?.canonicalScenePath ?? `dxf-scenes/${fileId}/scene.json`;
+
     const fileRecord = {
       id: fileId,
       companyId: context?.companyId ?? null,
@@ -442,7 +450,7 @@ export class DxfFirestoreService {
       entityId: context?.buildingId ?? 'standalone',
       domain: 'construction' as const,
       category: 'drawings' as const,
-      storagePath: `dxf-scenes/${fileId}/scene.json`,
+      storagePath: scenePath,
       displayName: fileName,
       originalFilename: fileName,
       ext: 'dxf',
@@ -458,7 +466,7 @@ export class DxfFirestoreService {
       processedData: {
         fileType: 'dxf' as const,
         sceneStats: { entityCount, layerCount: 0, parseTimeMs: 0 },
-        processedDataPath: `dxf-scenes/${fileId}/scene.json`,
+        processedDataPath: scenePath,
         processedDataUrl: downloadUrl,
         processedAt: Date.now(),
       },
@@ -657,15 +665,16 @@ export class DxfFirestoreService {
   }
 
   /**
-   * 🏢 ENTERPRISE: Find existing FileRecord ID by originalFilename
+   * 🏢 ENTERPRISE: Find existing FileRecord by originalFilename
    *
    * Checks if a FileRecord already exists in `files` collection for this filename.
-   * Used by auto-save to reuse the wizard-created FileRecord ID for cadFiles,
-   * ensuring both collections share the same document ID.
+   * Used by auto-save to:
+   * 1. Reuse the wizard-created FileRecord ID for cadFiles (same document ID)
+   * 2. Derive canonical scene path from the FileRecord's storagePath
    *
-   * @returns The existing FileRecord ID, or null if not found
+   * @returns { id, storagePath } or null if not found
    */
-  static async findExistingFileRecordId(fileName: string): Promise<string | null> {
+  static async findExistingFileRecord(fileName: string): Promise<{ id: string; storagePath: string | null } | null> {
     try {
       const { collection, query, where, limit, getDocs } = await import('firebase/firestore');
       const q = query(
@@ -677,9 +686,11 @@ export class DxfFirestoreService {
       );
       const snapshot = await getDocs(q);
       if (!snapshot.empty) {
+        const docData = snapshot.docs[0].data();
         const existingId = snapshot.docs[0].id;
-        dxfLogger.info('Found existing FileRecord for auto-save reuse', { fileName, existingId });
-        return existingId;
+        const storagePath = (docData.storagePath as string) ?? null;
+        dxfLogger.info('Found existing FileRecord for auto-save reuse', { fileName, existingId, storagePath });
+        return { id: existingId, storagePath };
       }
       return null;
     } catch (error) {
@@ -689,5 +700,19 @@ export class DxfFirestoreService {
       });
       return null;
     }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Derive scene JSON path from a FileRecord's storagePath
+   *
+   * Given `companies/.../files/file_xxx.dxf`
+   * Returns `companies/.../files/file_xxx.scene.json`
+   *
+   * This ensures scene JSON lives next to the original DXF in the canonical path.
+   */
+  static deriveScenePath(fileRecordStoragePath: string): string {
+    // Replace extension with .scene.json
+    const withoutExt = fileRecordStoragePath.replace(/\.[^/.]+$/, '');
+    return `${withoutExt}.scene.json`;
   }
 }

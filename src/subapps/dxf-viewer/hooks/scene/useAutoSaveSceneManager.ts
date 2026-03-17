@@ -73,14 +73,28 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
           // 4. New enterprise ID (first standalone save — no wizard involved)
           let fileId = injectedFileRecordIdRef.current
             ?? fileIdCacheRef.current.get(currentFileName);
+          let canonicalScenePath: string | undefined;
+
           if (!fileId) {
             // Check if wizard already created a FileRecord for this filename
-            const existingId = await DxfFirestoreService.findExistingFileRecordId(currentFileName);
-            fileId = existingId ?? DxfFirestoreService.generateFileId(currentFileName);
+            const existing = await DxfFirestoreService.findExistingFileRecord(currentFileName);
+            if (existing) {
+              fileId = existing.id;
+              // Derive scene path next to the original DXF in canonical storage
+              if (existing.storagePath) {
+                canonicalScenePath = DxfFirestoreService.deriveScenePath(existing.storagePath);
+              }
+            } else {
+              fileId = DxfFirestoreService.generateFileId(currentFileName);
+            }
             fileIdCacheRef.current.set(currentFileName, fileId);
           }
-          // 🚀 PHASE 4: Use Storage-based auto-save for better performance
-          const success = await DxfFirestoreService.autoSaveV2(fileId, currentFileName, scene);
+
+          // 🚀 PHASE 4: Use Storage-based auto-save with canonical path
+          const success = await DxfFirestoreService.autoSaveV2(
+            fileId, currentFileName, scene,
+            canonicalScenePath ? { canonicalScenePath } : undefined
+          );
           
           if (success) {
             setSaveStatus('success');
