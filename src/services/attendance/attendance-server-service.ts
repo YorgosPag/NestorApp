@@ -310,7 +310,7 @@ export async function processQrCheckIn(payload: QrCheckInPayload): Promise<QrChe
 
     if (photoMeta) {
       // Update the event with photo metadata
-      await eventRef.update({ photo: photoMeta });
+      await db.collection(COLLECTIONS.ATTENDANCE_EVENTS).doc(eventId).update({ photo: photoMeta });
       photoUploaded = true;
     }
   }

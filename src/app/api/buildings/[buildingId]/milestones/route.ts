@@ -187,7 +187,7 @@ export async function POST(
 
       return NextResponse.json({
         success: true,
-        id: docRef.id,
+        id: enterpriseId,
       } as MilestoneMutationResponse);
     },
     { permissions: 'buildings:buildings:update' }
