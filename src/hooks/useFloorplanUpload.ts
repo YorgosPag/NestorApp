@@ -247,10 +247,20 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
       logger.info('FileRecord finalized');
       setProgress(90);
 
-      // 🏢 ENTERPRISE V2: Processing is handled by useFloorplanFiles hook
-      // When the file status becomes 'ready', useFloorplanFiles will detect
-      // the unprocessed file and call the server API with proper Bearer token auth.
-      // This eliminates duplicate requests and race conditions.
+      // Phase 8: Trigger server-side DXF processing immediately (fire-and-forget)
+      // Do NOT await — processing takes 15-60s. User can close wizard; API continues.
+      currentUser.getIdToken().then((token) => {
+        fetch('/api/floorplans/process', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ fileId, forceReprocess: false }),
+        })
+          .then((res) => {
+            if (res.ok) logger.info('Floorplan processing started successfully', { fileId });
+            else logger.warn('Floorplan processing returned error', { fileId, status: res.status });
+          })
+          .catch((err) => logger.warn('Floorplan processing request failed', { fileId, error: String(err) }));
+      }).catch(() => {});
 
       setProgress(100);
 

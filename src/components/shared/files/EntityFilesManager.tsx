@@ -326,9 +326,16 @@ export function EntityFilesManager({
           if (response.ok) {
             anyProcessed = true;
             logger.info('[EntityFilesManager] Auto-processed floorplan', { fileId: file.id });
+          } else {
+            // HTTP error (e.g. 504 Vercel timeout, 500 parse error) — allow retry on next mount
+            _floorplanProcessingSubmitted.current.delete(file.id);
+            logger.warn('[EntityFilesManager] Auto-process returned HTTP error (non-blocking)', {
+              fileId: file.id,
+              status: response.status,
+            });
           }
         } catch (err) {
-          // Allow retry on next render
+          // Network error — allow retry on next render
           _floorplanProcessingSubmitted.current.delete(file.id);
           logger.warn('[EntityFilesManager] Auto-process failed (non-blocking)', {
             fileId: file.id,
@@ -337,9 +344,10 @@ export function EntityFilesManager({
         }
       }
 
-      // 🏢 ADR-240: No manual refetch needed — when realtime=true, Firestore onSnapshot
-      // propagates the processedData write automatically to the UI.
-      void anyProcessed; // suppress unused-variable warning
+      // After API writes processedData to Firestore, refetch to get the updated record
+      if (anyProcessed && !cancelled) {
+        await refetch();
+      }
     };
 
     processFiles();
@@ -347,7 +355,7 @@ export function EntityFilesManager({
     return () => {
       cancelled = true;
     };
-  }, [displayStyle, filteredFiles]);
+  }, [displayStyle, filteredFiles, refetch]);
 
   // =========================================================================
   // 📋 AUDIT TRAIL — Record file operations (ADR-195)
