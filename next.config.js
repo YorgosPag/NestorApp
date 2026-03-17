@@ -340,9 +340,10 @@ module.exports = withSentryConfig(nextConfig, {
   project: 'nestor-app',
   silent: true,
 
-  // Source maps: upload to Sentry + auto-delete client maps (no leak to users)
+  // Source maps: DISABLED on Hobby plan (causes 45min+ builds / OOM)
+  // Re-enable when upgrading to Vercel Pro ($20/mo → 4 cores, 16 GB)
   sourcemaps: {
-    deleteSourcemapsAfterUpload: true,
+    disable: true,
   },
 
   // Upload source maps AFTER build completes — reduces peak RAM usage
