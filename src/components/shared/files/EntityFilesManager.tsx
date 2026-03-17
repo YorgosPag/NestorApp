@@ -266,6 +266,81 @@ export function EntityFilesManager({
   }, [files, searchTerm]);
 
   // =========================================================================
+  // 🏢 ENTERPRISE: AUTO-PROCESSING for floorplan-gallery (ADR-240)
+  // Mirrors processUnprocessedFiles() from useFloorplanFiles.
+  // Triggered automatically when displayStyle='floorplan-gallery' detects
+  // FileRecords with status='ready' but processedData=null (e.g. Wizard uploads).
+  // Uses a ref-guard to prevent re-submission on re-renders.
+  // =========================================================================
+
+  const _floorplanProcessingSubmitted = React.useRef<Set<string>>(new Set());
+
+  React.useEffect(() => {
+    if (displayStyle !== 'floorplan-gallery') return;
+
+    const unprocessed = filteredFiles.filter(
+      f =>
+        !f.processedData &&
+        f.downloadUrl &&
+        f.status === 'ready' &&
+        !_floorplanProcessingSubmitted.current.has(f.id),
+    );
+
+    if (unprocessed.length === 0) return;
+
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+
+    // Mark as submitted immediately — prevents duplicate API calls on re-renders
+    unprocessed.forEach(f => _floorplanProcessingSubmitted.current.add(f.id));
+
+    let cancelled = false;
+
+    const processFiles = async () => {
+      let idToken: string;
+      try {
+        idToken = await currentUser.getIdToken();
+      } catch {
+        // Allow retry on next render
+        unprocessed.forEach(f => _floorplanProcessingSubmitted.current.delete(f.id));
+        return;
+      }
+
+      for (const file of unprocessed) {
+        if (cancelled) return;
+        try {
+          const response = await fetch('/api/floorplans/process', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${idToken}`,
+            },
+            body: JSON.stringify({ fileId: file.id, forceReprocess: false }),
+          });
+          if (response.ok) {
+            logger.info('[EntityFilesManager] Auto-processed floorplan', { fileId: file.id });
+          }
+        } catch (err) {
+          // Allow retry on next render
+          _floorplanProcessingSubmitted.current.delete(file.id);
+          logger.warn('[EntityFilesManager] Auto-process failed (non-blocking)', {
+            fileId: file.id,
+            error: String(err),
+          });
+        }
+      }
+
+      // Firestore real-time listener auto-updates processedData — no manual refetch needed
+    };
+
+    processFiles();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [displayStyle, filteredFiles]);
+
+  // =========================================================================
   // 📋 AUDIT TRAIL — Record file operations (ADR-195)
   // =========================================================================
 

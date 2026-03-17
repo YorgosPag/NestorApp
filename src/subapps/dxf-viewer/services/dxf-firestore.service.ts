@@ -59,6 +59,22 @@ export interface DxfSaveContext {
   createdBy?: string;
   /** 🏢 ENTERPRISE: Canonical scene path (derived from FileRecord storagePath) */
   canonicalScenePath?: string;
+  /**
+   * 🏢 ADR-240: Entity type for the `files` collection dual-write record.
+   * When absent, defaults to 'building' (backward compatibility).
+   * Set to 'floor' when saving a floor-level DXF (e.g. Wizard import).
+   */
+  entityType?: 'building' | 'floor' | 'unit';
+  /**
+   * 🏢 ADR-240: File category for the `files` collection dual-write record.
+   * When absent, defaults to 'drawings'. Set to 'floorplans' for floor plans.
+   */
+  filesCategory?: 'drawings' | 'floorplans';
+  /**
+   * 🏢 ADR-240: Purpose tag for the `files` collection dual-write record.
+   * Aligns with FLOORPLAN_PURPOSES (e.g. 'floor-floorplan').
+   */
+  purpose?: string;
 }
 
 export interface DxfFileMetadata {
@@ -442,20 +458,32 @@ export class DxfFirestoreService {
     // 🏢 ENTERPRISE: Use canonical scene path if available
     const scenePath = context?.canonicalScenePath ?? `dxf-scenes/${fileId}/scene.json`;
 
+    // 🏢 ADR-240: Resolve entityType + entityId from context (fix hardcoded 'building')
+    const resolvedEntityType = context?.entityType ?? 'building';
+    const resolvedEntityId = (() => {
+      if (resolvedEntityType === 'floor') return context?.floorId ?? 'standalone';
+      if (resolvedEntityType === 'unit') return context?.floorId ?? context?.buildingId ?? 'standalone';
+      return context?.buildingId ?? 'standalone';
+    })();
+    const resolvedCategory = context?.filesCategory ?? 'drawings';
+
     const fileRecord = {
       id: fileId,
       companyId: context?.companyId ?? null,
       projectId: context?.projectId ?? null,
-      entityType: 'building' as const,
-      entityId: context?.buildingId ?? 'standalone',
+      entityType: resolvedEntityType,
+      entityId: resolvedEntityId,
       domain: 'construction' as const,
-      category: 'drawings' as const,
+      category: resolvedCategory,
+      ...(context?.purpose ? { purpose: context.purpose } : {}),
       storagePath: scenePath,
       displayName: fileName,
       originalFilename: fileName,
       ext: 'dxf',
       contentType: 'application/dxf',
       status: 'ready' as const,
+      lifecycleState: 'active' as const,
+      isDeleted: false,
       sizeBytes,
       downloadUrl,
       revision: version,
