@@ -249,7 +249,7 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
 
       // Phase 8: Trigger server-side DXF processing immediately (fire-and-forget)
       // Do NOT await — processing takes 15-60s. User can close wizard; API continues.
-      currentUser.getIdToken().then((token) => {
+      auth.currentUser?.getIdToken().then((token) => {
         fetch('/api/floorplans/process', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
