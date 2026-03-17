@@ -71,6 +71,12 @@ export interface FloorFloorplanData {
   pdfDimensions?: { width: number; height: number } | null;
   /** FileRecord ID (for Enterprise pattern) */
   fileRecordId?: string;
+  /**
+   * 🏢 V3 ADR-240: Path to processed scene JSON in Storage.
+   * When set, FloorplanGallery uses PATH B (authenticated /api/floorplans/scene)
+   * instead of trying to parse the raw DXF file client-side.
+   */
+  processedDataPath?: string;
 }
 
 /**
@@ -299,7 +305,28 @@ export class FloorFloorplanService {
         };
       }
 
-      // DXF scene JSON — download and parse
+      // ── V3 pattern (ADR-240): raw DXF + processedDataPath in Storage ──
+      // FloorplanGallery will load scene via /api/floorplans/scene (PATH B)
+      if (ext === 'dxf' && fileRecord.processedData?.processedDataPath) {
+        floorplanLogger.debug('V3 DXF with processedDataPath — delegating scene load to FloorplanGallery PATH B', {
+          fileId: fileRecord.id,
+          processedDataPath: fileRecord.processedData.processedDataPath,
+        });
+        return {
+          buildingId,
+          floorId,
+          floorNumber,
+          type: 'floor',
+          fileName: fileRecord.originalFilename,
+          timestamp: getTimestamp(),
+          fileType: 'dxf',
+          scene: null,
+          fileRecordId: fileRecord.id,
+          processedDataPath: fileRecord.processedData.processedDataPath,
+        };
+      }
+
+      // ── V1/V2 pattern: scene stored as JSON file (downloadUrl points to JSON) ──
       if (!fileRecord.downloadUrl) {
         floorplanLogger.warn(`No download URL for DXF floorplan`, { floorId, fileId: fileRecord.id });
         return null;

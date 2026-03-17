@@ -238,7 +238,13 @@ export function ReadOnlyMediaViewer({
         category: 'floorplans',
         createdBy: SYSTEM_IDENTITY.ID,
         createdAt: floorFloorplan.timestamp ? new Date(floorFloorplan.timestamp).toISOString() : new Date().toISOString(),
-        processedData: floorFloorplan.scene ? {
+        // 🏢 ADR-240 V3: V3 DXF has processedDataPath → FloorplanGallery uses PATH B (scene API)
+        // V1/V2: scene is embedded directly
+        processedData: floorFloorplan.processedDataPath ? {
+          fileType: 'dxf' as const,
+          processedDataPath: floorFloorplan.processedDataPath,
+          processedAt: Date.now(),
+        } : floorFloorplan.scene ? {
           fileType: 'dxf' as const,
           scene: floorFloorplan.scene as unknown as import('@/types/file-record').DxfSceneData,
           processedAt: Date.now(),
@@ -669,7 +675,13 @@ function FloorFloorplanTabContent({
       category: 'floorplans' as const,
       createdBy: SYSTEM_IDENTITY.ID,
       createdAt: floorFloorplan.timestamp ? new Date(floorFloorplan.timestamp).toISOString() : new Date().toISOString(),
-      processedData: floorFloorplan.scene ? {
+      // 🏢 ADR-240 V3: V3 DXF has processedDataPath → FloorplanGallery uses PATH B (scene API)
+      // V1/V2: scene is embedded directly
+      processedData: floorFloorplan.processedDataPath ? {
+        fileType: 'dxf' as const,
+        processedDataPath: floorFloorplan.processedDataPath,
+        processedAt: Date.now(),
+      } : floorFloorplan.scene ? {
         fileType: 'dxf' as const,
         scene: floorFloorplan.scene as unknown as import('@/types/file-record').DxfSceneData,
         processedAt: Date.now(),
