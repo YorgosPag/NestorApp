@@ -87,7 +87,7 @@ export interface InvoicePayment {
 // ISSUER / CUSTOMER INFO
 // ============================================================================
 
-/** Στοιχεία εκδότη (η εταιρεία μας) */
+/** Στοιχεία εκδότη (η εταιρεία μας) — snapshot κατά την έκδοση (ADR-ACC-018) */
 export interface InvoiceIssuer {
   /** Επωνυμία */
   name: string;
@@ -103,10 +103,19 @@ export interface InvoiceIssuer {
   postalCode: string;
   /** Τηλέφωνο */
   phone: string | null;
+  /** Κινητό (ADR-ACC-018) */
+  mobile: string | null;
   /** Email */
   email: string | null;
+  /** Website (ADR-ACC-018 — footer) */
+  website: string | null;
   /** Δραστηριότητα/Επάγγελμα */
   profession: string;
+  /** Τραπεζικοί λογαριασμοί — snapshot κατά την έκδοση (ADR-ACC-018) */
+  bankAccounts: Array<{
+    bankName: string;
+    iban: string;
+  }>;
 }
 
 /** Στοιχεία πελάτη/λήπτη */

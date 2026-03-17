@@ -28,6 +28,7 @@
 | [ACC-015](./ADR-ACC-015-ae-setup-shareholders.md) | AE Setup & Shareholder Management (Ανώνυμη Εταιρεία) | IMPLEMENTED | Entity Types | 2026-02-12 |
 | [ACC-016](./ADR-ACC-016-ae-corporate-tax-dividends.md) | AE Corporate Tax & Dividends | IMPLEMENTED | Entity Types | 2026-02-12 |
 | [ACC-017](./ADR-ACC-017-ae-board-efka.md) | AE Board of Directors & EFKA Dual-Mode | IMPLEMENTED | Entity Types | 2026-02-12 |
+| [ACC-018](./ADR-ACC-018-invoice-pdf-generation.md) | Invoice PDF Generation (Δημιουργία PDF Τιμολογίων) | IMPLEMENTED | PDF/Export | 2026-03-17 |
 
 ---
 
@@ -37,7 +38,7 @@
 |--------|-----|-------------|
 | M-001: Company Setup | ACC-000, ACC-011, ACC-013 | Founding ADR + Service Presets + Searchable ΔΟΥ/ΚΑΔ |
 | M-002: Income/Expense Book | ACC-001 | Chart of accounts + journal entries |
-| M-003: Invoicing | ACC-002, ACC-011 | Invoice types, series, service presets |
+| M-003: Invoicing | ACC-002, ACC-011, ACC-018 | Invoice types, series, service presets, PDF generation |
 | M-004: myDATA | ACC-003 | ΑΑΔΕ API, document types, MARK numbers |
 | M-005: VAT Engine | ACC-004 | Quarterly declarations, rates |
 | M-006: Expense Tracker | ACC-005 | AI classification + data extraction |

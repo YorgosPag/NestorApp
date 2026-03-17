@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/hooks/useAuth';
 import type { Invoice } from '@/subapps/accounting/types';
+import { useCompanySetup } from '@/subapps/accounting/hooks/useCompanySetup';
 import { InvoiceSummaryCard } from './InvoiceSummaryCard';
 import { InvoiceActionsMenu } from './InvoiceActionsMenu';
 
@@ -18,6 +19,7 @@ interface InvoiceDetailsProps {
 export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
   const { t } = useTranslation('accounting');
   const { user } = useAuth();
+  const { profile: companyProfile } = useCompanySetup();
 
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,7 +84,7 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
             <p className="text-sm text-muted-foreground">{t(`invoices.types.${invoice.type}`)}</p>
           </div>
         </div>
-        <InvoiceActionsMenu invoice={invoice} onRefresh={fetchInvoice} />
+        <InvoiceActionsMenu invoice={invoice} onRefresh={fetchInvoice} companyProfile={companyProfile} />
       </header>
 
       <InvoiceSummaryCard invoice={invoice} />

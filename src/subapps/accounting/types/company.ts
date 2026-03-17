@@ -61,6 +61,8 @@ interface CompanyProfileBase {
   // ── Επικοινωνία ─────────────────────────────────────────────────────────
   /** Τηλέφωνο */
   phone: string | null;
+  /** Κινητό (ADR-ACC-018) */
+  mobile: string | null;
   /** Email */
   email: string | null;
   /** Website */

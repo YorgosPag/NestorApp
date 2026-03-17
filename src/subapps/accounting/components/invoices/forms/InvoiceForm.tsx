@@ -21,10 +21,12 @@ import { CustomerSelector } from './CustomerSelector';
 import { LineItemsEditor } from './LineItemsEditor';
 import { InvoicePreview } from './InvoicePreview';
 import { useServicePresets } from '@/subapps/accounting/hooks';
+import { useCompanySetup } from '@/subapps/accounting/hooks/useCompanySetup';
 import type {
   InvoiceType,
   InvoiceLineItem,
   InvoiceCustomer,
+  InvoiceIssuer,
   PaymentMethod,
   MyDataIncomeType,
 } from '@/subapps/accounting/types';
@@ -57,6 +59,44 @@ const DEFAULT_CUSTOMER: InvoiceCustomer = {
   email: null,
 };
 
+/**
+ * Build InvoiceIssuer snapshot from company profile (ADR-ACC-018).
+ * Self-contained document — snapshot at invoice creation time.
+ */
+function buildIssuerSnapshot(profile: ReturnType<typeof useCompanySetup>['profile']): InvoiceIssuer {
+  if (!profile) {
+    return {
+      name: '',
+      vatNumber: '',
+      taxOffice: '',
+      address: '',
+      city: '',
+      postalCode: '',
+      phone: null,
+      mobile: null,
+      email: null,
+      website: null,
+      profession: '',
+      bankAccounts: [],
+    };
+  }
+
+  return {
+    name: profile.businessName,
+    vatNumber: profile.vatNumber,
+    taxOffice: profile.taxOffice,
+    address: profile.address,
+    city: profile.city,
+    postalCode: profile.postalCode,
+    phone: profile.phone ?? null,
+    mobile: profile.mobile ?? null,
+    email: profile.email ?? null,
+    website: profile.website ?? null,
+    profession: profile.profession,
+    bankAccounts: [], // Populated later if bank accounts are configured
+  };
+}
+
 function calculateTotals(lineItems: InvoiceLineItem[]) {
   let totalNet = 0;
   let totalVat = 0;
@@ -79,6 +119,7 @@ export function InvoiceForm({ onSuccess, onCancel }: InvoiceFormProps) {
   const { t } = useTranslation('accounting');
   const { user } = useAuth();
   const { presets } = useServicePresets();
+  const { profile: companyProfile } = useCompanySetup();
 
   const DEFAULT_LINE_ITEM: InvoiceLineItem = {
     lineNumber: 1,
@@ -173,17 +214,7 @@ export function InvoiceForm({ onSuccess, onCancel }: InvoiceFormProps) {
         series: form.series,
         issueDate: form.issueDate || today,
         dueDate: form.dueDate || null,
-        issuer: {
-          name: 'Παγώνης Κατασκευαστική',
-          vatNumber: '',
-          taxOffice: '',
-          address: '',
-          city: '',
-          postalCode: '',
-          phone: null,
-          email: null,
-          profession: 'Μηχανικός',
-        },
+        issuer: buildIssuerSnapshot(companyProfile),
         customer: form.customer,
         lineItems: processedLineItems,
         currency: 'EUR',
