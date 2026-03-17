@@ -12,6 +12,7 @@ import type {
 } from '@/types/building/construction';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeToISO } from '@/lib/date-local';
+import { generateConstructionPhaseId, generateConstructionTaskId } from '@/services/enterprise-id.service';
 
 const logger = createModuleLogger('ConstructionPhasesRoute');
 
@@ -224,21 +225,26 @@ export async function POST(
         docData.dependencies = body.dependencies ?? [];
       }
 
-      const docRef = await adminDb.collection(collection).add(docData);
+      // 🏢 ENTERPRISE: setDoc + enterprise ID (SOS N.6)
+      const enterpriseId = type === 'task'
+        ? generateConstructionTaskId()
+        : generateConstructionPhaseId();
+      const docRef = adminDb.collection(collection).doc(enterpriseId);
+      await docRef.set(docData);
 
-      logger.info('[Construction] Created entity for building', { type, id: docRef.id, code, buildingId });
+      logger.info('[Construction] Created entity for building', { type, id: enterpriseId, code, buildingId });
 
       await logAuditEvent(ctx, 'data_created', buildingId, 'building', {
         newValue: {
           type: 'building_update',
-          value: { id: docRef.id, code, name, entityType: `construction_${type}` },
+          value: { id: enterpriseId, code, name, entityType: `construction_${type}` },
         },
         metadata: { reason: `Construction ${type} created` },
       });
 
       return NextResponse.json({
         success: true,
-        id: docRef.id,
+        id: enterpriseId,
         type,
       } as ConstructionMutationResponse);
     },

@@ -138,6 +138,12 @@ export const ENTERPRISE_ID_PREFIXES = {
   APPROVAL: 'appr',
 
   // ==========================================================================
+  // CONSTRUCTION (ADR-034: Gantt Chart)
+  // ==========================================================================
+  CONSTRUCTION_PHASE: 'cphase',
+  CONSTRUCTION_TASK: 'ctask',
+
+  // ==========================================================================
   // BANKING
   // ==========================================================================
   BANK_ACCOUNT: 'bacc',
@@ -790,6 +796,22 @@ export class EnterpriseIdService {
   }
 
   /**
+   * 🏗️ Generate Construction Phase ID
+   * Format: cphase_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateConstructionPhaseId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.CONSTRUCTION_PHASE).id;
+  }
+
+  /**
+   * 🔨 Generate Construction Task ID
+   * Format: ctask_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateConstructionTaskId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.CONSTRUCTION_TASK).id;
+  }
+
+  /**
    * 📁 Generate Folder ID
    * Format: fldr_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
    */
@@ -1232,6 +1254,8 @@ export const generateFileId = () => enterpriseIdService.generateFileId();
 export const generateShareId = () => enterpriseIdService.generateShareId();
 export const generatePendingId = () => enterpriseIdService.generatePendingId();
 export const generateSubscriptionId = () => enterpriseIdService.generateSubscriptionId();
+export const generateConstructionPhaseId = () => enterpriseIdService.generateConstructionPhaseId();
+export const generateConstructionTaskId = () => enterpriseIdService.generateConstructionTaskId();
 export const generateFolderId = () => enterpriseIdService.generateFolderId();
 export const generateCommentId = () => enterpriseIdService.generateCommentId();
 export const generateApprovalId = () => enterpriseIdService.generateApprovalId();
