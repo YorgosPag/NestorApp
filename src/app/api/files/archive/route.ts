@@ -102,7 +102,8 @@ async function handlePost(
         await docRef.update(updateData);
 
         // Audit log
-        await db.collection(COLLECTIONS.FILE_AUDIT_LOG).add({
+        const { generateAuditId } = await import('@/services/enterprise-id.service');
+        await db.collection(COLLECTIONS.FILE_AUDIT_LOG).doc(generateAuditId()).set({
           fileId,
           action: 'archive',
           performedBy: ctx.uid,

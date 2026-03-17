@@ -98,9 +98,12 @@ export async function storeMessageInCRM(message: CRMMessageInput, direction: 'in
       updatedAt: Timestamp.now()
     };
 
-    // 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES
-    const docRef = await database.collection(COLLECTIONS.MESSAGES).add(messageRecord);
-    logger.info('Message stored in CRM', { id: docRef.id });
+    // 🏢 ENTERPRISE: setDoc + enterprise ID (SOS N.6)
+    const { generateMessageId } = await import('@/services/enterprise-id.service');
+    const enterpriseId = generateMessageId();
+    const docRef = database.collection(COLLECTIONS.MESSAGES).doc(enterpriseId);
+    await docRef.set(messageRecord);
+    logger.info('Message stored in CRM', { id: enterpriseId });
     return docRef;
 
   } catch (error) {

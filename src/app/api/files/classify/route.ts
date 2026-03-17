@@ -209,7 +209,8 @@ async function handlePost(
 
     // Audit: record AI classification (fire-and-forget, never blocks main operation)
     try {
-      await getAdminFirestore().collection(COLLECTIONS.FILE_AUDIT_LOG).add({
+      const { generateAuditId } = await import('@/services/enterprise-id.service');
+      await getAdminFirestore().collection(COLLECTIONS.FILE_AUDIT_LOG).doc(generateAuditId()).set({
         fileId,
         action: 'ai_classify',
         performedBy: _ctx.uid,

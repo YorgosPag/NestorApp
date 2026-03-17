@@ -72,7 +72,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         });
 
         // Audit log
-        await db.collection(COLLECTIONS.FILE_AUDIT_LOG).add({
+        const { generateAuditId } = await import('@/services/enterprise-id.service');
+        await db.collection(COLLECTIONS.FILE_AUDIT_LOG).doc(generateAuditId()).set({
           fileId: doc.id,
           action: 'delete',
           performedBy: 'system:cron-purge',

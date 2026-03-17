@@ -385,12 +385,15 @@ export class AgenticToolExecutor {
     const db = getAdminFirestore();
 
     if (mode === 'create' && !documentId) {
-      const docRef = await db.collection(collection).add(writeData);
+      // 🏢 ENTERPRISE: setDoc + enterprise ID (SOS N.6)
+      const { generateEntityId } = await import('@/services/enterprise-id.service');
+      const enterpriseId = generateEntityId();
+      await db.collection(collection).doc(enterpriseId).set(writeData);
 
       // Audit log
-      await this.auditWrite(ctx, collection, docRef.id, mode, writeData);
+      await this.auditWrite(ctx, collection, enterpriseId, mode, writeData);
 
-      return { success: true, data: { id: docRef.id }, count: 1 };
+      return { success: true, data: { id: enterpriseId }, count: 1 };
     }
 
     if (documentId) {
@@ -741,7 +744,8 @@ export class AgenticToolExecutor {
   ): Promise<void> {
     try {
       const db = getAdminFirestore();
-      await db.collection(COLLECTIONS.AI_PIPELINE_AUDIT).add({
+      const { generatePipelineAuditId } = await import('@/services/enterprise-id.service');
+      await db.collection(COLLECTIONS.AI_PIPELINE_AUDIT).doc(generatePipelineAuditId()).set({
         type: 'agentic_write',
         requestId: ctx.requestId,
         companyId: ctx.companyId,

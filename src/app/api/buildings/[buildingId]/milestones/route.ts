@@ -166,10 +166,13 @@ export async function POST(
         createdBy: ctx.uid,
       };
 
-      const docRef = await adminDb.collection(COLLECTIONS.BUILDING_MILESTONES).add(docData);
+      // 🏢 ENTERPRISE: setDoc + enterprise ID (SOS N.6)
+      const { generateMilestoneId } = await import('@/services/enterprise-id.service');
+      const enterpriseId = generateMilestoneId();
+      await adminDb.collection(COLLECTIONS.BUILDING_MILESTONES).doc(enterpriseId).set(docData);
 
       logger.info('[Milestones] Created milestone for building', {
-        id: docRef.id,
+        id: enterpriseId,
         code,
         buildingId,
       });
@@ -177,7 +180,7 @@ export async function POST(
       await logAuditEvent(ctx, 'data_created', buildingId, 'building', {
         newValue: {
           type: 'building_update',
-          value: { id: docRef.id, code, title, entityType: 'milestone' },
+          value: { id: enterpriseId, code, title, entityType: 'milestone' },
         },
         metadata: { reason: 'Building milestone created' },
       });

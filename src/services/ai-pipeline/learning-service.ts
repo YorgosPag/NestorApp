@@ -320,7 +320,8 @@ export class LearningService {
     };
 
     const db = getAdminFirestore();
-    await db.collection(COLLECTIONS.AI_LEARNED_PATTERNS).add(pattern);
+    const { generateLearnedPatternId } = await import('@/services/enterprise-id.service');
+    await db.collection(COLLECTIONS.AI_LEARNED_PATTERNS).doc(generateLearnedPatternId()).set(pattern);
 
     return true;
   }

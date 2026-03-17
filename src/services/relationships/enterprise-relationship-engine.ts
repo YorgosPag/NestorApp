@@ -1040,8 +1040,9 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
     const fallback: void = undefined;
 
     await safeFirestoreOperation(async (database: Firestore) => {
-      // 🏢 ENTERPRISE: Admin SDK pattern - database.collection().add() with AdminFieldValue
-      await database.collection(this.AUDIT_COLLECTION).add({
+      // 🏢 ENTERPRISE: setDoc + enterprise ID (SOS N.6)
+      const { generateEntityAuditId } = await import('@/services/enterprise-id.service');
+      await database.collection(this.AUDIT_COLLECTION).doc(generateEntityAuditId()).set({
         ...entry,
         performedAt: AdminFieldValue.serverTimestamp()
       });

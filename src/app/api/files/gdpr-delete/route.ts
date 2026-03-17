@@ -118,7 +118,8 @@ async function handler(
     await batch4.commit();
 
     // Write GDPR erasure audit entry
-    await adminDb.collection('file_audit_log').add({
+    const { generateAuditId } = await import('@/services/enterprise-id.service');
+    await adminDb.collection('file_audit_log').doc(generateAuditId()).set({
       fileId: 'gdpr-erasure',
       action: 'gdpr_erasure',
       performedBy: 'system',

@@ -118,7 +118,10 @@ async function handlePost(
       );
     }
 
-    const docRef = await adminDb.collection('file_webhooks').add({
+    // 🏢 ENTERPRISE: setDoc + enterprise ID (SOS N.6)
+    const { generateWebhookId } = await import('@/services/enterprise-id.service');
+    const enterpriseId = generateWebhookId();
+    await adminDb.collection('file_webhooks').doc(enterpriseId).set({
       url,
       events,
       secret,
@@ -129,7 +132,7 @@ async function handlePost(
     });
 
     return NextResponse.json({
-      id: docRef.id,
+      id: enterpriseId,
       message: 'Webhook registered',
     });
   } catch (error) {

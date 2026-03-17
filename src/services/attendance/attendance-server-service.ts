@@ -293,8 +293,10 @@ export async function processQrCheckIn(payload: QrCheckInPayload): Promise<QrChe
     _serverTimestamp: FieldValue.serverTimestamp(),
   };
 
-  const eventRef = await db.collection(COLLECTIONS.ATTENDANCE_EVENTS).add(eventData);
-  const eventId = eventRef.id;
+  // 🏢 ENTERPRISE: setDoc + enterprise ID (SOS N.6)
+  const { generateEventId } = await import('@/services/enterprise-id.service');
+  const eventId = generateEventId();
+  await db.collection(COLLECTIONS.ATTENDANCE_EVENTS).doc(eventId).set(eventData);
 
   // Step 5: Upload photo (async, non-blocking for the response)
   let photoUploaded = false;

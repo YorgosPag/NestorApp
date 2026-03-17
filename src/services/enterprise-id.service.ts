@@ -138,10 +138,21 @@ export const ENTERPRISE_ID_PREFIXES = {
   APPROVAL: 'appr',
 
   // ==========================================================================
-  // CONSTRUCTION (ADR-034: Gantt Chart)
+  // CONSTRUCTION & BUILDING (ADR-034: Gantt Chart)
   // ==========================================================================
   CONSTRUCTION_PHASE: 'cphase',
   CONSTRUCTION_TASK: 'ctask',
+  MILESTONE: 'mile',
+
+  // ==========================================================================
+  // INTEGRATIONS
+  // ==========================================================================
+  WEBHOOK: 'whk',
+
+  // ==========================================================================
+  // AI LEARNING
+  // ==========================================================================
+  LEARNED_PATTERN: 'lp',
 
   // ==========================================================================
   // BANKING
@@ -796,6 +807,30 @@ export class EnterpriseIdService {
   }
 
   /**
+   * 🏗️ Generate Milestone ID
+   * Format: mile_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateMilestoneId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.MILESTONE).id;
+  }
+
+  /**
+   * 🔗 Generate Webhook ID
+   * Format: whk_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateWebhookId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.WEBHOOK).id;
+  }
+
+  /**
+   * 🧠 Generate Learned Pattern ID
+   * Format: lp_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateLearnedPatternId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.LEARNED_PATTERN).id;
+  }
+
+  /**
    * 🏗️ Generate Construction Phase ID
    * Format: cphase_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
    */
@@ -1254,6 +1289,9 @@ export const generateFileId = () => enterpriseIdService.generateFileId();
 export const generateShareId = () => enterpriseIdService.generateShareId();
 export const generatePendingId = () => enterpriseIdService.generatePendingId();
 export const generateSubscriptionId = () => enterpriseIdService.generateSubscriptionId();
+export const generateMilestoneId = () => enterpriseIdService.generateMilestoneId();
+export const generateWebhookId = () => enterpriseIdService.generateWebhookId();
+export const generateLearnedPatternId = () => enterpriseIdService.generateLearnedPatternId();
 export const generateConstructionPhaseId = () => enterpriseIdService.generateConstructionPhaseId();
 export const generateConstructionTaskId = () => enterpriseIdService.generateConstructionTaskId();
 export const generateFolderId = () => enterpriseIdService.generateFolderId();

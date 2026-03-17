@@ -106,7 +106,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<PurgeResu
         });
 
         // Audit log
-        await db.collection(COLLECTIONS.FILE_AUDIT_LOG).add({
+        const { generateAuditId } = await import('@/services/enterprise-id.service');
+        await db.collection(COLLECTIONS.FILE_AUDIT_LOG).doc(generateAuditId()).set({
           fileId: doc.id,
           action: 'delete',
           performedBy: 'system:purge',

@@ -224,8 +224,11 @@ async function ensureContactForSender(companyId: string, sender: ParsedAddress):
     updatedAt: new Date(),
   };
 
-  const docRef = await adminDb.collection(COLLECTIONS.CONTACTS).add(newContact);
-  return docRef.id;
+  // 🏢 ENTERPRISE: setDoc + enterprise ID (SOS N.6)
+  const { generateContactId } = await import('@/services/enterprise-id.service');
+  const enterpriseId = generateContactId();
+  await adminDb.collection(COLLECTIONS.CONTACTS).doc(enterpriseId).set(newContact);
+  return enterpriseId;
 }
 
 function mapAttachmentTypeToCategory(type: MessageAttachment['type']): FileCategory {
