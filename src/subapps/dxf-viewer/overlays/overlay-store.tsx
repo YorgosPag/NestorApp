@@ -104,6 +104,10 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
       });
 
       setState(prev => ({ ...prev, overlays, isLoading: false }));
+    }, (error) => {
+      // 🏢 ENTERPRISE: Handle Firestore permission errors gracefully (Fixes NESTOR-APP-3)
+      derr('Overlay subscription failed — user may lack permissions', error.message);
+      setState(prev => ({ ...prev, isLoading: false }));
     });
 
     return () => unsubscribe();
