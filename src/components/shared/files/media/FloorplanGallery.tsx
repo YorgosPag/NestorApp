@@ -62,7 +62,7 @@ import type { PanOffset } from '@/hooks/useZoomPan';
 import { canvasUtilities } from '@/styles/design-tokens';
 import { auth } from '@/lib/firebase';
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
-import type { FileRecord, DxfSceneData } from '@/types/file-record';
+import type { FileRecord, DxfSceneData, DxfSceneEntity } from '@/types/file-record';
 import type { FloorOverlayItem } from '@/hooks/useFloorOverlays';
 import { getStatusColors } from '@/subapps/dxf-viewer/config/color-mapping';
 import { UI_COLORS, withOpacity } from '@/subapps/dxf-viewer/config/color-config';
@@ -690,53 +690,46 @@ export function FloorplanGallery({
   useEffect(() => {
     if (!currentFile || !isDxf) return;
     if (currentFile.processedData) return;
+    if (fileExt === 'json') return;
     if (!currentFile.downloadUrl) return;
     if (currentFile.status !== 'ready') return;
-    // JSON scene files (FloorplanSaveOrchestrator) are already processed — skip server processing
-    if (fileExt === 'json') return;
-    if (!auth.currentUser) return;
 
-    const triggerProcessing = async () => {
-      logger.info('Triggering DXF processing', { displayName: currentFile.displayName });
+    const parseClientSide = async () => {
+      logger.info('Client-side DXF parsing', { displayName: currentFile.displayName });
       setIsLoading(true);
+      setSceneError(null);
 
       try {
-        const idToken = await auth.currentUser?.getIdToken();
-        if (!idToken) throw new Error('No auth token');
+        const resp = await fetch(currentFile.downloadUrl!);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const blob = await resp.blob();
+        const file = new File([blob], currentFile.originalFilename || 'plan.dxf');
 
-        const response = await fetch('/api/floorplans/process', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${idToken}`,
-          },
-          body: JSON.stringify({
-            fileId: currentFile.id,
-            forceReprocess: false,
+        const { dxfImportService } = await import('@/subapps/dxf-viewer/io/dxf-import');
+        const result = await dxfImportService.importDxfFile(file);
+        if (!result.success || !result.scene) throw new Error(result.error || 'Parse failed');
+
+        const scene: DxfSceneData = {
+          entities: result.scene.entities.map((entity) => {
+            const { type, layer, ...rest } = entity;
+            return { type, layer: layer || '0', ...rest } as DxfSceneEntity;
           }),
-        });
+          layers: result.scene.layers,
+          bounds: result.scene.bounds,
+        };
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || `HTTP ${response.status}`);
-        }
-
-        const result = await response.json();
-        logger.info('DXF processing completed', { result });
-
-        if (onRefresh) {
-          setTimeout(() => onRefresh(), 500);
-        }
+        setLoadedScene(scene);
       } catch (err) {
-        logger.error('DXF processing failed', { error: err });
-        setSceneError(err instanceof Error ? err.message : 'Processing failed');
+        logger.error('Client-side DXF parse failed', { error: err });
+        setSceneError(err instanceof Error ? err.message : 'Parse failed');
       } finally {
         setIsLoading(false);
       }
     };
 
-    triggerProcessing();
-  }, [currentFile?.id, currentFile?.processedData, currentFile?.downloadUrl, currentFile?.status, isDxf, fileExt, t, onRefresh]);
+    parseClientSide();
+  }, [currentFile?.id, currentFile?.processedData, currentFile?.downloadUrl,
+      currentFile?.status, currentFile?.originalFilename, isDxf, fileExt]);
 
   // =========================================================================
   // DXF SCENE LOADING
@@ -767,7 +760,11 @@ export function FloorplanGallery({
     }
 
     if (!currentFile?.processedData) {
-      setLoadedScene(null);
+      // Client-side parsing effect handles DXF files without processedData —
+      // only clear scene when switching to a non-DXF file or file with no data at all
+      if (!isDxf || !currentFile?.downloadUrl || currentFile?.status !== 'ready') {
+        setLoadedScene(null);
+      }
       return;
     }
 
@@ -822,7 +819,7 @@ export function FloorplanGallery({
     }
 
     setLoadedScene(null);
-  }, [currentFile?.processedData, currentFile?.downloadUrl, currentFile?.id, fileExt, t]);
+  }, [currentFile?.processedData, currentFile?.downloadUrl, currentFile?.id, currentFile?.status, fileExt, isDxf, t]);
 
   // =========================================================================
   // DXF CANVAS RENDERING — INLINE
@@ -1084,8 +1081,8 @@ export function FloorplanGallery({
           />
         )}
 
-        {/* DXF — processing in progress */}
-        {isDxf && !currentFile?.processedData && !isLoading && !sceneError && (
+        {/* DXF — processing in progress (only if no client-side scene loaded) */}
+        {isDxf && !currentFile?.processedData && !loadedScene && !isLoading && !sceneError && (
           <section className="flex flex-col items-center justify-center h-full">
             <AnimatedSpinner size="large" />
             <span className="mt-2 text-sm">{t('floorplan.processing')}</span>
