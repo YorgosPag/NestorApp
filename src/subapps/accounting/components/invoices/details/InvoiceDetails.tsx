@@ -10,6 +10,7 @@ import type { Invoice } from '@/subapps/accounting/types';
 import { useCompanySetup } from '@/subapps/accounting/hooks/useCompanySetup';
 import { InvoiceSummaryCard } from './InvoiceSummaryCard';
 import { InvoiceActionsMenu } from './InvoiceActionsMenu';
+import { SendInvoiceEmailDialog } from './SendInvoiceEmailDialog';
 
 interface InvoiceDetailsProps {
   invoiceId: string;
@@ -23,6 +24,7 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
 
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
 
   const fetchInvoice = useCallback(async () => {
     if (!user) {
@@ -84,10 +86,22 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
             <p className="text-sm text-muted-foreground">{t(`invoices.types.${invoice.type}`)}</p>
           </div>
         </div>
-        <InvoiceActionsMenu invoice={invoice} onRefresh={fetchInvoice} companyProfile={companyProfile} />
+        <InvoiceActionsMenu
+          invoice={invoice}
+          onRefresh={fetchInvoice}
+          companyProfile={companyProfile}
+          onSendEmail={() => setEmailDialogOpen(true)}
+        />
       </header>
 
       <InvoiceSummaryCard invoice={invoice} />
+
+      <SendInvoiceEmailDialog
+        invoice={invoice}
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        onSuccess={fetchInvoice}
+      />
 
       {/* Line Items */}
       <section className="border border-border rounded-lg p-4">

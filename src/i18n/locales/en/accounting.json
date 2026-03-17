@@ -297,6 +297,24 @@
       "minOneLineItem": "At least one line item is required",
       "invalidVatNumber": "Invalid VAT number",
       "cashLimit": "Cash payments cannot exceed €500"
+    },
+    "sendEmailDialog": {
+      "title": "Send Invoice via Email",
+      "toLabel": "Recipient",
+      "toPlaceholder": "email@example.com",
+      "subjectLabel": "Subject",
+      "languageLabel": "Email Language",
+      "languageEl": "Greek",
+      "languageEn": "English",
+      "previewLabel": "Email Preview",
+      "sendButton": "Send",
+      "cancelButton": "Cancel",
+      "sending": "Sending...",
+      "successTitle": "Email Sent!",
+      "successMessage": "The invoice was sent to {{email}}.",
+      "errorTitle": "Send Failed",
+      "invalidEmail": "Invalid email address",
+      "pdfAttachmentNote": "The PDF will be attached automatically."
     }
   },
   "common": {

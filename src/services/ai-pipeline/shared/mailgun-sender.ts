@@ -32,6 +32,16 @@ export interface MailgunSendResult {
   error?: string;
 }
 
+/** Email attachment for Mailgun multipart/form-data upload */
+export interface MailgunAttachment {
+  /** Filename as it appears in the email (e.g. 'A-42_Acme_20260317.pdf') */
+  filename: string;
+  /** Raw file data — Buffer (server) or Blob (browser) */
+  content: Buffer | Blob;
+  /** MIME type (e.g. 'application/pdf') */
+  contentType: string;
+}
+
 /** Parameters for sending an email */
 export interface MailgunSendParams {
   to: string;
@@ -39,6 +49,8 @@ export interface MailgunSendParams {
   textBody: string;
   /** Optional HTML body — if provided, email is sent as multipart (text + html) */
   htmlBody?: string;
+  /** Optional file attachments — Mailgun multipart upload */
+  attachments?: MailgunAttachment[];
 }
 
 // ============================================================================
@@ -87,6 +99,14 @@ export async function sendReplyViaMailgun(
     formData.append('text', params.textBody);
     if (params.htmlBody) {
       formData.append('html', params.htmlBody);
+    }
+    if (params.attachments && params.attachments.length > 0) {
+      for (const attachment of params.attachments) {
+        const blob = attachment.content instanceof Blob
+          ? attachment.content
+          : new Blob([attachment.content], { type: attachment.contentType });
+        formData.append('attachment', blob, attachment.filename);
+      }
     }
 
     const response = await fetch(url, {

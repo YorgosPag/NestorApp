@@ -22,6 +22,7 @@ interface InvoiceActionsMenuProps {
   invoice: Invoice;
   onRefresh: () => void;
   companyProfile: CompanyProfile | null;
+  onSendEmail: () => void;
 }
 
 /**
@@ -39,7 +40,7 @@ function buildPDFSettings(profile: CompanyProfile | null): InvoicePDFSettings {
   return settings;
 }
 
-export function InvoiceActionsMenu({ invoice, onRefresh, companyProfile }: InvoiceActionsMenuProps) {
+export function InvoiceActionsMenu({ invoice, onRefresh, companyProfile, onSendEmail }: InvoiceActionsMenuProps) {
   const { t } = useTranslation('accounting');
   const [downloading, setDownloading] = useState(false);
   const [printing, setPrinting] = useState(false);
@@ -90,7 +91,7 @@ export function InvoiceActionsMenu({ invoice, onRefresh, companyProfile }: Invoi
           <Download className="mr-2 h-4 w-4" />
           {t('forms.download')}
         </DropdownMenuItem>
-        <DropdownMenuItem disabled>
+        <DropdownMenuItem onClick={onSendEmail}>
           <Mail className="mr-2 h-4 w-4" />
           {t('forms.sendEmail')}
         </DropdownMenuItem>

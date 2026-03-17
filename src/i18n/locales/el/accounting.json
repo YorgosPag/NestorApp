@@ -297,6 +297,24 @@
       "minOneLineItem": "Τουλάχιστον μία γραμμή είναι υποχρεωτική",
       "invalidVatNumber": "Μη έγκυρο ΑΦΜ",
       "cashLimit": "Πληρωμές μετρητών δεν μπορούν να υπερβούν τα 500€"
+    },
+    "sendEmailDialog": {
+      "title": "Αποστολή Τιμολογίου μέσω Email",
+      "toLabel": "Παραλήπτης",
+      "toPlaceholder": "email@example.com",
+      "subjectLabel": "Θέμα",
+      "languageLabel": "Γλώσσα Email",
+      "languageEl": "Ελληνικά",
+      "languageEn": "Αγγλικά",
+      "previewLabel": "Προεπισκόπηση Email",
+      "sendButton": "Αποστολή",
+      "cancelButton": "Ακύρωση",
+      "sending": "Αποστολή...",
+      "successTitle": "Email Εστάλη!",
+      "successMessage": "Το τιμολόγιο εστάλη στο {{email}}.",
+      "errorTitle": "Αποτυχία Αποστολής",
+      "invalidEmail": "Μη έγκυρη διεύθυνση email",
+      "pdfAttachmentNote": "Το PDF θα επισυναφθεί αυτόματα."
     }
   },
   "common": {

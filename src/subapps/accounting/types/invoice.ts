@@ -177,6 +177,29 @@ export interface InvoiceMyDataMeta {
 }
 
 // ============================================================================
+// EMAIL SEND RECORD (ADR-ACC-019)
+// ============================================================================
+
+/**
+ * Καταγραφή μίας αποστολής τιμολογίου μέσω email.
+ * Αποθηκεύεται ως `emailHistory[]` μέσα στο Invoice document (embedded array).
+ */
+export interface EmailSendRecord {
+  /** Timestamp αποστολής (ISO 8601) */
+  sentAt: string;
+  /** Παραλήπτης email */
+  recipientEmail: string;
+  /** Subject του email */
+  subject: string;
+  /** Mailgun message ID (null αν απέτυχε πριν φτάσει στο Mailgun) */
+  mailgunMessageId: string | null;
+  /** Αποτέλεσμα αποστολής */
+  status: 'sent' | 'failed';
+  /** Μήνυμα σφάλματος (null αν επιτυχής) */
+  error: string | null;
+}
+
+// ============================================================================
 // INVOICE (ADR-ACC-002 §3 — Πλήρης δομή)
 // ============================================================================
 
@@ -261,6 +284,14 @@ export interface Invoice {
   relatedInvoiceId: string | null;
   /** Αναφορά σε εγγραφή Ε-Ε (Firestore doc ID) */
   journalEntryId: string | null;
+
+  // — Email History (ADR-ACC-019) —
+  /**
+   * Ιστορικό αποστολών email.
+   * Optional — υπάρχει μόνο αν έχει σταλεί τουλάχιστον μία φορά.
+   * Backward compatible με existing invoices (απουσία = δεν έχει σταλεί ποτέ).
+   */
+  emailHistory?: EmailSendRecord[];
 
   // — Metadata —
   /** Σημειώσεις/Παρατηρήσεις */
