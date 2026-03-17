@@ -554,6 +554,7 @@ function useLevelsSystemState({
       saveStatus: sceneManager.saveStatus
     }),
     setFileRecordId: sceneManager.setFileRecordId,
+    setSaveContext: sceneManager.setSaveContext,
 
     // Import wizard
     startImportWizard,

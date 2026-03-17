@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useCanvasOperations } from '../interfaces/useCanvasOperations';
 import type { SceneModel, AnySceneEntity } from '../../types/scene';
 import { useLevels } from '../../systems/levels';
+import type { DxfSaveContext } from '../../services/dxf-firestore.service';
 // ✅ ΦΑΣΗ 7: useDxfImport μεταφέρθηκε στο hooks/ folder
 import { useDxfImport } from '../useDxfImport';
 import { useNotifications } from '../../../../providers/NotificationProvider';
@@ -82,7 +83,7 @@ export function useSceneState() {
   }, [currentLevelId, setLevelScene]);
 
   // File import handler
-  const handleFileImport = useCallback(async (file: File, fileRecordId?: string) => {
+  const handleFileImport = useCallback(async (file: File, fileRecordId?: string, saveContext?: DxfSaveContext) => {
     let targetLevelId = currentLevelId;
     
     // If no level is selected, use the first available level or create one
@@ -125,6 +126,10 @@ export function useSceneState() {
       // 🏢 ENTERPRISE: Inject FileRecord ID so cadFiles uses the same ID as files collection
       if (fileRecordId && levelsSystem.setFileRecordId) {
         levelsSystem.setFileRecordId(fileRecordId);
+      }
+      // 🏢 ADR-240: Inject save context from Wizard (entityType/floorId/purpose)
+      if (levelsSystem.setSaveContext) {
+        levelsSystem.setSaveContext(saveContext ?? null);
       }
       
       const scene = await importDxfFile(file);

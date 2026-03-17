@@ -31,6 +31,7 @@ import { SimpleProjectDialog } from '../../components/SimpleProjectDialog';
 import { OverlayToolbarSection } from './overlay-section';
 // 🏢 SPEC-237D: Floorplan Import Wizard
 import { FloorplanImportWizard } from '@/features/floorplan-import';
+import type { DxfSaveContext } from '../../services/dxf-firestore.service';
 import type { EnhancedDXFToolbarPropsExtended } from './types';
 // ADR-176: Responsive layout
 import { useResponsiveLayout } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
@@ -49,7 +50,7 @@ interface EnhancedDXFToolbarProps {
   currentZoom: number;
   commandCount?: number;
   className?: string;
-  onSceneImported?: (file: File, encoding?: string) => void;
+  onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
   mouseCoordinates?: Point2D | null;
   showCoordinates?: boolean;
 }
@@ -447,9 +448,19 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
       <FloorplanImportWizard
         isOpen={showImportWizard}
         onClose={() => setShowImportWizard(false)}
-        onComplete={(file) => {
+        onComplete={(file, meta) => {
           setShowImportWizard(false);
-          onSceneImported?.(file);
+          // 🏢 ADR-240: Pass entity context so auto-save writes correct entityType/entityId
+          const saveContext: DxfSaveContext = {
+            companyId: meta.companyId || undefined,
+            projectId: meta.projectId || undefined,
+            ...(meta.entityType === 'floor' ? { floorId: meta.entityId } : {}),
+            ...(meta.entityType === 'building' ? { buildingId: meta.entityId } : {}),
+            entityType: meta.entityType as DxfSaveContext['entityType'],
+            filesCategory: 'floorplans',
+            purpose: meta.purpose || undefined,
+          };
+          onSceneImported?.(file, undefined, saveContext);
         }}
       />
     </div>

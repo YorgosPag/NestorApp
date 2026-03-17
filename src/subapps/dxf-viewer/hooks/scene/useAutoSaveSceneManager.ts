@@ -3,6 +3,7 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { STORAGE_TIMING } from '../../config/timing-config';
 import { useSceneManager, type SceneManagerState } from './useSceneManager';
 import { DxfFirestoreService } from '../../services/dxf-firestore.service';
+import type { DxfSaveContext } from '../../services/dxf-firestore.service';
 import type { SceneModel } from '../../types/scene';
 
 export interface AutoSaveSceneManagerState extends SceneManagerState {
@@ -14,6 +15,8 @@ export interface AutoSaveSceneManagerState extends SceneManagerState {
   saveStatus: 'idle' | 'saving' | 'success' | 'error';
   /** 🏢 ENTERPRISE: Inject existing FileRecord ID so cadFiles uses the same ID */
   setFileRecordId: (id: string | null) => void;
+  /** 🏢 ADR-240: Inject save context (entityType/floorId/purpose) from Wizard import */
+  setSaveContext: (ctx: DxfSaveContext | null) => void;
 }
 
 export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
@@ -34,6 +37,8 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
   const fileIdCacheRef = useRef<Map<string, string>>(new Map());
   // 🏢 ENTERPRISE: Injected FileRecord ID (from wizard/upload) — ensures cadFiles uses the same ID
   const injectedFileRecordIdRef = useRef<string | null>(null);
+  // 🏢 ADR-240: Injected save context from Wizard — carries entityType/floorId/purpose for dual-write
+  const injectedSaveContextRef = useRef<DxfSaveContext | null>(null);
   
   /**
    * 🏢 ENTERPRISE: Inject FileRecord ID from external source (wizard upload)
@@ -47,6 +52,11 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
       fileIdCacheRef.current.set(currentFileName, id);
     }
   }, [currentFileName]);
+
+  /** 🏢 ADR-240: Inject DxfSaveContext from Wizard so dual-write uses correct entityType/floorId */
+  const setSaveContext = useCallback((ctx: DxfSaveContext | null) => {
+    injectedSaveContextRef.current = ctx;
+  }, []);
 
   /**
    * Enhanced setLevelScene with auto-save
@@ -91,9 +101,14 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
           }
 
           // 🚀 PHASE 4: Use Storage-based auto-save with canonical path
+          // 🏢 ADR-240: Merge injected save context (from Wizard) with canonical path
+          const saveContext: DxfSaveContext = {
+            ...(injectedSaveContextRef.current ?? {}),
+            ...(canonicalScenePath ? { canonicalScenePath } : {}),
+          };
           const success = await DxfFirestoreService.autoSaveV2(
             fileId, currentFileName, scene,
-            canonicalScenePath ? { canonicalScenePath } : undefined
+            Object.keys(saveContext).length > 0 ? saveContext : undefined
           );
           
           if (success) {
@@ -158,5 +173,6 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
     lastSaveTime,
     saveStatus,
     setFileRecordId,
+    setSaveContext,
   };
 }

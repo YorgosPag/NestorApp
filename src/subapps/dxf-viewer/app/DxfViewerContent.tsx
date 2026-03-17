@@ -25,6 +25,7 @@ import React from 'react';
 
 // Types - Updated for Canvas V2
 import type { DxfViewerAppProps } from '../types';
+import type { DxfSaveContext } from '../services/dxf-firestore.service';
 import type { CircleEntity, ArcEntity, PolylineEntity } from '../types/scene';
 import type { ViewTransform, Point2D } from '../rendering/types/Types';
 import type { ToolType } from '../ui/toolbar/types';
@@ -724,32 +725,33 @@ Check console for detailed metrics`;
   }, [wrappedHandleTransformChange, showCopyableNotification]);
 
   // Wrapper για το handleFileImport που υποστηρίζει encoding
-  const handleFileImportWithEncoding = async (file: File, encoding?: string) => {
+  // 🏢 ADR-240: Optional saveContext parameter propagates Wizard entity context to auto-save
+  const handleFileImportWithEncoding = async (file: File, encoding?: string, saveContext?: DxfSaveContext) => {
     try {
       // 🔺 USE EXISTING LEVEL instead of creating new one
       // Check if we have a current level to use
       const currentLevel = levelManager.currentLevelId;
-      
+
       if (currentLevel) {
 
         // Clear overlays for current level to start fresh
         overlayStore.setCurrentLevel(currentLevel);
 
         // Import the DXF into the existing level
-        handleFileImport(file);
+        handleFileImport(file, undefined, saveContext);
       } else {
         console.warn('⚠️ [Enhanced Import] No current level found, creating default level');
         // Only create new level if no current level exists
         const timestamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '');
         const newLevelName = `${file.name.replace('.dxf', '')}_${timestamp}`;
-        
+
         const newLevelId = await levelManager.addLevel(newLevelName, true);
-        
+
         if (newLevelId) {
 
           overlayStore.setCurrentLevel(newLevelId);
 
-          handleFileImport(file);
+          handleFileImport(file, undefined, saveContext);
         } else {
           console.error('❌ [Enhanced Import] Failed to create new level');
           return;
@@ -762,7 +764,7 @@ Check console for detailed metrics`;
     } catch (error) {
       console.error('⛔ [Enhanced Import] Error in enhanced DXF import:', error);
       // Fallback to normal import on any error
-      handleFileImport(file);
+      handleFileImport(file, undefined, saveContext);
     }
   };
 

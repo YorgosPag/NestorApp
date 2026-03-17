@@ -41,10 +41,19 @@ import type { FloorplanType } from './hooks/useFloorplanImportState';
 // TYPES
 // =============================================================================
 
+/** Context passed to onComplete — lets callers configure auto-save with correct entity info */
+export interface WizardCompleteMeta {
+  companyId: string;
+  projectId?: string;
+  entityType: 'project' | 'building' | 'floor' | 'unit';
+  entityId: string;
+  purpose: string;
+}
+
 interface FloorplanImportWizardProps {
   isOpen: boolean;
   onClose: () => void;
-  onComplete?: (file: File) => void;
+  onComplete?: (file: File, meta: WizardCompleteMeta) => void;
 }
 
 // =============================================================================
@@ -96,8 +105,26 @@ export function FloorplanImportWizard({
   );
 
   const handleUploadComplete = useCallback((file: File) => {
-    onComplete?.(file);
-  }, [onComplete]);
+    // 🏢 ADR-240: Build WizardCompleteMeta from uploadConfig so callers can configure auto-save
+    const cfg = state.uploadConfig;
+    if (cfg && onComplete) {
+      const meta: WizardCompleteMeta = {
+        companyId: cfg.companyId,
+        projectId: cfg.projectId,
+        entityType: cfg.entityType as WizardCompleteMeta['entityType'],
+        entityId: cfg.entityId,
+        purpose: cfg.purpose ?? '',
+      };
+      onComplete(file, meta);
+    } else {
+      onComplete?.(file, {
+        companyId: '',
+        entityType: 'floor',
+        entityId: '',
+        purpose: '',
+      });
+    }
+  }, [onComplete, state.uploadConfig]);
 
   const handleClose = useCallback(() => {
     state.reset();

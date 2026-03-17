@@ -13,6 +13,7 @@
 
 import React from 'react';
 import type { SceneModel } from '../types/scene';
+import type { DxfSaveContext } from '../services/dxf-firestore.service';
 import type { Status as AppStatus } from '../types';
 import type { OverlayEditorMode, OverlayKind, Status } from '../overlays/types';
 import type { ViewTransform, Point2D } from '../rendering/types/Types';
@@ -34,7 +35,7 @@ interface MainContentSectionProps {
 
   // Scene and file handling
   currentScene: SceneModel | null;
-  handleFileImportWithEncoding: (file: File, encoding?: string) => Promise<void>;
+  handleFileImportWithEncoding: (file: File, encoding?: string, saveContext?: DxfSaveContext) => Promise<void>;
 
   // Transform management
   canvasTransform: { scale: number; offsetX: number; offsetY: number };

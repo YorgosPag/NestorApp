@@ -1,4 +1,5 @@
 import * as React from 'react';
+import type { DxfSaveContext } from '../../services/dxf-firestore.service';
 
 // Επεκτεταμένοι τύποι για measurement system
 export type ToolType =
@@ -289,7 +290,7 @@ export interface EnhancedDXFToolbarPropsExtended {
   currentZoom: number;
   commandCount?: number;
   className?: string;
-  onSceneImported?: (file: File, encoding?: string) => void;
+  onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
   mouseCoordinates?: { x: number; y: number } | null;
   showCoordinates?: boolean;
 

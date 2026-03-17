@@ -5,6 +5,7 @@
 
 import * as React from 'react';
 import { useContext } from 'react';
+import type { DxfSaveContext } from '../../services/dxf-firestore.service';
 import type {
   Level,
   FloorplanDoc,
@@ -57,6 +58,8 @@ export interface LevelSystemActions extends ImportWizardActions {
   getAutoSaveStatus?: () => { lastSaveTime: Date | null; saveStatus: string };
   /** 🏢 ENTERPRISE: Inject FileRecord ID so cadFiles uses the same ID as files collection */
   setFileRecordId?: (id: string | null) => void;
+  /** 🏢 ADR-240: Inject save context (entityType/floorId/purpose) from Wizard import */
+  setSaveContext?: (ctx: DxfSaveContext | null) => void;
 
   // Import wizard - inherits from shared interface
   completeImport: () => FloorplanDoc | null;
