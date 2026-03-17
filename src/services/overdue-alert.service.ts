@@ -12,6 +12,7 @@ import 'server-only';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { generateNotificationId } from '@/services/enterprise-id.service';
 import { PaymentReportService } from '@/services/payment-report.service';
 
 const logger = createModuleLogger('OverdueAlertService');
@@ -69,8 +70,8 @@ export class OverdueAlertService {
             continue;
           }
 
-          // Create notification document
-          const notificationRef = db.collection(COLLECTIONS.NOTIFICATIONS).doc();
+          // Create notification document — enterprise ID (SOS N.6)
+          const notificationRef = db.collection(COLLECTIONS.NOTIFICATIONS).doc(generateNotificationId());
           const amountFormatted = new Intl.NumberFormat('el-GR', {
             style: 'currency',
             currency: 'EUR',
