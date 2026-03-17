@@ -418,12 +418,32 @@ export function useConstructionGantt(buildingId: string): UseConstructionGanttRe
   const saveTask = useCallback(
     async (data: ConstructionTaskCreatePayload): Promise<boolean> => {
       const result = await createConstructionTask(buildingId, data);
-      if (result.success) {
-        await loadData();
+      if (result.success && result.taskId) {
+        // Optimistic insert — task appears immediately in the Gantt chart
+        // without waiting for Firestore re-fetch (eventual consistency workaround)
+        const optimisticTask: ConstructionTask = {
+          id: result.taskId,
+          phaseId: data.phaseId,
+          buildingId,
+          companyId: '', // Will be resolved on re-fetch
+          name: data.name,
+          code: data.code ?? '',
+          order: data.order ?? tasks.filter((t) => t.phaseId === data.phaseId).length,
+          status: data.status ?? 'notStarted',
+          plannedStartDate: data.plannedStartDate,
+          plannedEndDate: data.plannedEndDate,
+          progress: 0,
+          dependencies: data.dependencies ?? [],
+          description: data.description,
+        };
+        setTasks((prev) => [...prev, optimisticTask]);
+
+        // Background re-fetch to sync full server state
+        loadData();
       }
       return result.success;
     },
-    [buildingId, loadData]
+    [buildingId, loadData, tasks]
   );
 
   const updateTaskHandler = useCallback(

@@ -43,6 +43,8 @@ import {
   ImageIcon,
   FileImage,
   Table2,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 
 import { Spinner } from '@/components/ui/spinner';
@@ -150,6 +152,9 @@ export function GanttView({ building }: GanttViewProps) {
 
   // View mode state
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.MONTH);
+
+  // Fullscreen mode
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Firestore data + CRUD handlers
   const {
@@ -698,6 +703,19 @@ export function GanttView({ building }: GanttViewProps) {
             </DropdownMenuContent>
           </DropdownMenu>
         )}
+
+        {/* Fullscreen Toggle */}
+        {!isEmpty && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsFullscreen(true)}
+            title={i18n.language === 'el' ? 'Πλήρης Οθόνη' : 'Fullscreen'}
+          >
+            <Maximize2 className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
+            {i18n.language === 'el' ? 'Πλήρης Οθόνη' : 'Fullscreen'}
+          </Button>
+        )}
       </nav>
 
       {/* Summary Cards — 🏢 ENTERPRISE: Centralized UnifiedDashboard */}
@@ -764,6 +782,87 @@ export function GanttView({ building }: GanttViewProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* ─── Fullscreen Dialog ──────────────────────────────────────────── */}
+      <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
+        <DialogContent className="max-w-[95vw] h-[90vh] flex flex-col overflow-hidden">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="flex items-center justify-between">
+              <span>{building.name ?? t('tabs.timeline.gantt.title')} — {t('tabs.timeline.gantt.title')}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsFullscreen(false)}
+              >
+                <Minimize2 className={iconSizes.sm} />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Stats inside fullscreen */}
+          <UnifiedDashboard
+            stats={summaryStats}
+            columns={4}
+            className="flex-shrink-0"
+          />
+
+          {/* Gantt chart — fills remaining space */}
+          <section
+            className="flex-1 min-h-0 overflow-auto"
+            onContextMenu={handleContextMenu}
+            onPointerMove={handleGanttPointerMove}
+            onPointerLeave={handleGanttPointerLeave}
+          >
+            <div onMouseDownCapture={handleGanttMouseDown}>
+              <GanttChart
+                tasks={taskGroups}
+                startDate={timelineBounds.startDate}
+                endDate={timelineBounds.endDate}
+                title={t('tabs.timeline.gantt.title')}
+                headerLabel={building.name ?? t('tabs.timeline.gantt.title')}
+                viewMode={viewMode}
+                viewModes={AVAILABLE_VIEW_MODES}
+                onViewModeChange={setViewMode}
+                darkMode={isDarkMode}
+                showProgress
+                showCurrentDateMarker
+                todayLabel={t('tabs.timeline.gantt.toolbar.today')}
+                editMode
+                allowProgressEdit
+                allowTaskResize
+                allowTaskMove
+                movementThreshold={5}
+                onTaskUpdate={handleTaskUpdate}
+                onTaskClick={handleTaskClick}
+                onTaskDoubleClick={handleTaskDoubleClick}
+                onGroupClick={handleGroupClick}
+                locale="el-GR"
+                fontSize={designTypography.fontSize.sm}
+                getTaskColor={getTaskBarColor}
+              />
+            </div>
+          </section>
+
+          {/* Legend inside fullscreen */}
+          <footer className={cn('flex-shrink-0 flex flex-wrap items-center', spacingTokens.gap.sm, spacingTokens.padding.sm, 'border-t')}>
+            <Badge variant="default" className={getStatusColor('active', 'bg')}>
+              {t('tabs.timeline.gantt.status.completed')}
+            </Badge>
+            <Badge variant="default" className={getStatusColor('pending', 'bg')}>
+              {t('tabs.timeline.gantt.status.inProgress')}
+            </Badge>
+            <Badge variant="secondary">
+              {t('tabs.timeline.gantt.status.notStarted')}
+            </Badge>
+            <Badge variant="destructive">
+              {t('tabs.timeline.gantt.status.delayed')}
+            </Badge>
+            <Badge variant="outline" className={cn(getStatusColor('construction', 'border'), getStatusColor('construction', 'text'))}>
+              {t('tabs.timeline.gantt.status.blocked')}
+            </Badge>
+          </footer>
+        </DialogContent>
+      </Dialog>
 
       {/* Custom Context Menu — portal-rendered at exact cursor coordinates */}
       {contextMenu && createPortal(
