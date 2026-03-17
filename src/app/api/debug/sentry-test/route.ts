@@ -11,17 +11,31 @@ import { NextResponse } from 'next/server';
 export async function GET() {
   const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN?.trim();
   const nodeEnv = process.env.NODE_ENV;
+  const nextRuntime = process.env.NEXT_RUNTIME;
 
-  // Debug: Check if Sentry client is initialized
-  const client = Sentry.getClient();
+  // Check if client is already initialized
+  let client = Sentry.getClient();
+  let wasAlreadyInitialized = !!client;
+
+  // If not initialized, do it now (fallback for instrumentation issues)
+  if (!client && dsn) {
+    Sentry.init({
+      dsn,
+      tracesSampleRate: 1.0,
+      enabled: true,
+      environment: nodeEnv,
+    });
+    client = Sentry.getClient();
+  }
+
   const clientDsn = client?.getDsn();
 
   try {
-    // Method 1: Capture a manual exception
+    // Capture a manual exception
     const testError = new Error('[Sentry Test] Verification error from /api/debug/sentry-test');
     const eventId1 = Sentry.captureException(testError);
 
-    // Method 2: Capture a message
+    // Capture a message
     const eventId2 = Sentry.captureMessage('[Sentry Test] Manual test message — connection verified', 'info');
 
     // Flush to ensure events are sent before response
@@ -35,6 +49,8 @@ export async function GET() {
         dsnConfigured: !!dsn,
         dsnPrefix: dsn ? dsn.substring(0, 30) + '...' : 'MISSING',
         environment: nodeEnv,
+        nextRuntime,
+        wasAlreadyInitialized,
         sentryClientInitialized: !!client,
         sentryClientDsn: clientDsn ? `${clientDsn.protocol}://${clientDsn.host}` : 'none',
         sentryEnabled: client?.getOptions()?.enabled ?? false,
@@ -47,11 +63,6 @@ export async function GET() {
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : String(error),
-      debug: {
-        dsnConfigured: !!dsn,
-        environment: nodeEnv,
-        sentryClientInitialized: !!client,
-      },
     }, { status: 500 });
   }
 }
