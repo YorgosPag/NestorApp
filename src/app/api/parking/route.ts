@@ -138,8 +138,9 @@ export const POST = withStandardRateLimit(
 
         // ADR-191: buildingId is optional (open space support)
         // If buildingId provided → tenant-verify it and resolve projectId from building
-        // If no buildingId → projectId is required, verify project belongs to tenant
+        // If no buildingId → parking created without building link
         let resolvedProjectId = body.projectId?.trim() || null;
+        let resolvedCompanyId: string | null = ctx.companyId;
 
         if (body.buildingId?.trim()) {
           // Tenant isolation — verify building belongs to user's company
@@ -156,30 +157,27 @@ export const POST = withStandardRateLimit(
             throw err;
           }
 
-          // Auto-resolve projectId from building if not explicitly provided
+          // Auto-resolve projectId + companyId from building
+          const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(body.buildingId).get();
+          const buildingData = buildingDoc.data() as Record<string, unknown> | undefined;
           if (!resolvedProjectId) {
-            const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(body.buildingId).get();
-            const buildingData = buildingDoc.data() as Record<string, unknown> | undefined;
             resolvedProjectId = (buildingData?.projectId as string) || null;
           }
-        } else {
-          // No building — projectId is mandatory for open space parking
-          if (!resolvedProjectId) {
-            throw new ApiError(400, 'projectId is required when no buildingId is provided');
+          // Inherit companyId from building (critical for super_admin)
+          if (buildingData?.companyId) {
+            resolvedCompanyId = buildingData.companyId as string;
           }
-          // Verify project belongs to tenant company
+        } else if (resolvedProjectId) {
+          // No building but projectId provided — verify project belongs to tenant
           const projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(resolvedProjectId).get();
           if (!projectDoc.exists) {
             throw new ApiError(404, 'Project not found');
           }
           const projectData = projectDoc.data() as Record<string, unknown>;
-          if (projectData.companyId !== ctx.companyId) {
+          if (ctx.globalRole !== 'super_admin' && projectData.companyId !== ctx.companyId) {
             throw new ApiError(403, 'Project does not belong to your company');
           }
         }
-
-        // 🏢 ADR-232: Super admin entities get companyId: null
-        const isSuperAdmin = ctx.globalRole === 'super_admin';
 
         // 🏢 ADR-233: Auto-generate entity code if number looks manual (e.g. "P-001")
         let parkingNumber = body.number.trim();
@@ -225,7 +223,7 @@ export const POST = withStandardRateLimit(
           buildingId: body.buildingId?.trim() || null,
           type: body.type || 'standard',
           status: body.status || 'available',
-          companyId: ctx.companyId,  // 🏢 ENTERPRISE: always set (super_admin inherits from auth)
+          companyId: resolvedCompanyId,  // 🏢 ENTERPRISE: inherited from building or auth context
           linkedCompanyId: null,                            // 🏢 ADR-232
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),

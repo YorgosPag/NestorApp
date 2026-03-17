@@ -4,7 +4,7 @@
  * 🔧 Next.js 15: useStoragesPageState uses useSearchParams, requires Suspense
  */
 
-import React, { Suspense, useCallback, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useState } from 'react';
 
 import { StoragesHeader } from '@/components/space-management/StoragesPage/StoragesHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -34,12 +34,25 @@ import { AdvancedFiltersPanel, storageFiltersConfig } from '@/components/core/Ad
 import { ListContainer, PageContainer } from '@/core/containers';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { AddStorageDialog } from '@/components/space-management/StoragesPage/AddStorageDialog';
 import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { toggleSelect } from '@/lib/toggle-select';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { X, Check } from 'lucide-react';
+import type { StorageType, StorageStatus } from '@/types/storage/contracts';
+import { typeLabels, statusLabels } from '@/types/storage/constants';
+import { useEntityCodeSuggestion } from '@/hooks/useEntityCodeSuggestion';
 
 const logger = createModuleLogger('StoragePage');
 
@@ -74,10 +87,86 @@ function StoragePageContent() {
 
   const stats = useStorageStats(filteredStorages);
 
-  // Add/Delete dialog state
-  const [showAddDialog, setShowAddDialog] = useState(false);
+  // Delete dialog state
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Inline create form state
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createBuildingId, setCreateBuildingId] = useState('');
+  const [createName, setCreateName] = useState('');
+  const [createType, setCreateType] = useState<StorageType>('storage');
+  const [createStatus, setCreateStatus] = useState<StorageStatus>('available');
+  const [createFloor, setCreateFloor] = useState('');
+  const [createArea, setCreateArea] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [codeOverridden, setCodeOverridden] = useState(false);
+
+  const { t: tStorage } = useTranslation('storage');
+
+  // ADR-233: Auto-suggest storage code
+  const { suggestedCode } = useEntityCodeSuggestion({
+    entityType: 'storage',
+    buildingId: createBuildingId,
+    floorLevel: createFloor ? parseInt(createFloor, 10) || 0 : 0,
+    disabled: codeOverridden || !createBuildingId,
+  });
+
+  // Auto-populate when suggestion arrives
+  useEffect(() => {
+    if (suggestedCode && !codeOverridden) {
+      setCreateName(suggestedCode);
+    }
+  }, [suggestedCode, codeOverridden]);
+
+  const STORAGE_TYPES = Object.keys(typeLabels) as StorageType[];
+  const STORAGE_STATUSES = Object.keys(statusLabels) as StorageStatus[];
+
+  const resetCreateForm = useCallback(() => {
+    setShowCreateForm(false);
+    setCreateBuildingId('');
+    setCreateName('');
+    setCreateType('storage');
+    setCreateStatus('available');
+    setCreateFloor('');
+    setCreateArea('');
+    setCreateError(null);
+    setCodeOverridden(false);
+  }, []);
+
+  const handleCreateStorage = useCallback(async () => {
+    if (!createName.trim()) return;
+
+    setCreating(true);
+    setCreateError(null);
+
+    try {
+      const payload: Record<string, unknown> = {
+        name: createName.trim(),
+        type: createType,
+        status: createStatus,
+      };
+      if (createBuildingId) payload.buildingId = createBuildingId;
+      if (createFloor.trim()) payload.floor = createFloor.trim();
+      if (createArea) payload.area = parseFloat(createArea);
+
+      const result = await apiClient.post<{ storageId: string }>('/api/storages', payload);
+
+      if (result?.storageId) {
+        RealtimeService.dispatch('STORAGE_CREATED', {
+          storageId: result.storageId,
+          storage: { name: createName.trim(), type: createType, status: createStatus },
+          timestamp: Date.now(),
+        });
+        resetCreateForm();
+      }
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'Σφάλμα δημιουργίας');
+    } finally {
+      setCreating(false);
+    }
+  }, [createName, createType, createStatus, createBuildingId, createFloor, createArea, resetCreateForm]);
 
   const handleDeleteStorage = useCallback(async () => {
     if (!selectedStorage) return;
@@ -276,6 +365,125 @@ function StoragePageContent() {
           />
         </aside>
 
+        {/* Inline Create Form */}
+        {showCreateForm && (
+          <form
+            className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-3"
+            onSubmit={(e) => { e.preventDefault(); handleCreateStorage(); }}
+          >
+            {/* Row 1: Building, Name, Type */}
+            <fieldset className="grid grid-cols-3 gap-2">
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-muted-foreground">
+                  {t('pages.parking.form.building', 'Κτίριο')}
+                </span>
+                <Select value={createBuildingId} onValueChange={setCreateBuildingId} disabled={creating}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder={t('pages.parking.form.selectBuilding', 'Προαιρετικό')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {buildings.map(b => (
+                      <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-muted-foreground">
+                  {tStorage('storages.form.name', 'Όνομα')} *
+                </span>
+                <Input
+                  value={createName}
+                  onChange={(e) => {
+                    setCreateName(e.target.value);
+                    if (!codeOverridden && e.target.value !== suggestedCode) setCodeOverridden(true);
+                    if (!e.target.value) setCodeOverridden(false);
+                  }}
+                  placeholder={suggestedCode || 'ΑΠ-001'}
+                  className="h-9"
+                  disabled={creating}
+                  autoFocus
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-muted-foreground">
+                  {tStorage('storages.form.type', 'Τύπος')}
+                </span>
+                <Select value={createType} onValueChange={(v) => setCreateType(v as StorageType)} disabled={creating}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STORAGE_TYPES.map(st => (
+                      <SelectItem key={st} value={st}>{tStorage(typeLabels[st], st)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+            </fieldset>
+
+            {/* Row 2: Status, Floor, Area */}
+            <fieldset className="grid grid-cols-3 gap-2">
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-muted-foreground">
+                  {tStorage('storages.form.status', 'Κατάσταση')}
+                </span>
+                <Select value={createStatus} onValueChange={(v) => setCreateStatus(v as StorageStatus)} disabled={creating}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STORAGE_STATUSES.map(ss => (
+                      <SelectItem key={ss} value={ss}>{tStorage(statusLabels[ss], ss)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-muted-foreground">
+                  {tStorage('storages.form.floor', 'Όροφος')}
+                </span>
+                <Input
+                  value={createFloor}
+                  onChange={(e) => setCreateFloor(e.target.value)}
+                  placeholder="-1"
+                  className="h-9"
+                  disabled={creating}
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-muted-foreground">
+                  {tStorage('storages.form.area', 'Εμβαδόν (m²)')}
+                </span>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={createArea}
+                  onChange={(e) => setCreateArea(e.target.value)}
+                  placeholder="25"
+                  className="h-9"
+                  disabled={creating}
+                />
+              </label>
+            </fieldset>
+
+            {/* Error + Actions */}
+            {createError && (
+              <p className="text-sm text-destructive">{createError}</p>
+            )}
+            <nav className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" size="sm" onClick={resetCreateForm} disabled={creating}>
+                <X className="mr-1 h-4 w-4" />
+                {tStorage('storages.form.cancel', 'Ακύρωση')}
+              </Button>
+              <Button type="submit" size="sm" disabled={!createName.trim() || creating}>
+                {creating ? <Spinner size="small" color="inherit" className="mr-1" /> : <Check className="mr-1 h-4 w-4" />}
+                {tStorage('storages.form.create', 'Δημιουργία')}
+              </Button>
+            </nav>
+          </form>
+        )}
+
         {/* Content */}
         <ListContainer>
           {viewMode === 'grid' ? (
@@ -292,11 +500,11 @@ function StoragePageContent() {
                 storages={filteredStorages}
                 selectedStorage={selectedStorage}
                 onSelectStorage={(s) => setSelectedStorage(toggleSelect(selectedStorage, s))}
-                onNewItem={() => setShowAddDialog(true)}
+                onNewItem={() => setShowCreateForm(true)}
               />
               <StorageDetails
                 storage={selectedStorage}
-                onNewStorage={() => setShowAddDialog(true)}
+                onNewStorage={() => setShowCreateForm(true)}
                 onDelete={() => setShowDeleteDialog(true)}
               />
             </>
@@ -315,12 +523,6 @@ function StoragePageContent() {
             onFiltersChange={setFilters}
           />
         </MobileDetailsSlideIn>
-
-        {/* Add Storage Dialog */}
-        <AddStorageDialog
-          open={showAddDialog}
-          onOpenChange={setShowAddDialog}
-        />
 
         {/* Delete Storage Confirmation */}
         <DeleteConfirmDialog

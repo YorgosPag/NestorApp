@@ -280,7 +280,8 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
 
 interface StorageCreatePayload {
   name: string;
-  buildingId: string;
+  /** Optional — storage can exist without building link */
+  buildingId?: string;
   type?: StorageType;
   status?: StorageStatus;
   floor?: string;
@@ -309,35 +310,45 @@ export const POST = withStandardRateLimit(
         if (!body.name?.trim()) {
           throw new ApiError(400, 'Storage name is required');
         }
-        if (!body.buildingId?.trim()) {
-          throw new ApiError(400, 'Building ID is required');
-        }
 
-        // Tenant isolation — verify building belongs to user's company
-        try {
-          await requireBuildingInTenant({
-            ctx,
-            buildingId: body.buildingId,
-            path: '/api/storages (POST)',
-          });
-        } catch (err) {
-          if (err instanceof TenantIsolationError) {
-            throw new ApiError(err.status, err.message);
+        // 🏢 buildingId is optional — storage can exist without building link
+        let resolvedCompanyId: string | null = ctx.companyId;
+        let resolvedBuildingName: string | null = null;
+
+        if (body.buildingId?.trim()) {
+          // Tenant isolation — verify building belongs to user's company
+          try {
+            await requireBuildingInTenant({
+              ctx,
+              buildingId: body.buildingId,
+              path: '/api/storages (POST)',
+            });
+          } catch (err) {
+            if (err instanceof TenantIsolationError) {
+              throw new ApiError(err.status, err.message);
+            }
+            throw err;
           }
-          throw err;
-        }
 
-        // 🏢 ADR-232: Super admin entities get companyId: null
-        const isSuperAdmin = ctx.globalRole === 'super_admin';
+          // Inherit companyId from building (critical for super_admin)
+          const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(body.buildingId).get();
+          const buildingData = buildingDoc.data() as Record<string, unknown> | undefined;
+          if (buildingData?.companyId) {
+            resolvedCompanyId = buildingData.companyId as string;
+          }
+          resolvedBuildingName = (buildingData?.name as string) || null;
+
+          // Auto-resolve projectId from building if not provided
+          if (!body.projectId && buildingData?.projectId) {
+            body.projectId = buildingData.projectId as string;
+          }
+        }
 
         // 🏢 ADR-233: Auto-generate entity code if name is not already ADR-233 format
         let storageName = body.name.trim();
-        if (!parseEntityCode(storageName)) {
+        if (body.buildingId?.trim() && !parseEntityCode(storageName)) {
           try {
-            const buildingDocForCode = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(body.buildingId).get();
-            const buildingDataForCode = buildingDocForCode.data();
-            const buildingName = (buildingDataForCode?.name as string) || '?';
-            const buildingLetter = extractBuildingLetter(buildingName);
+            const buildingLetter = extractBuildingLetter(resolvedBuildingName || '?');
             const typeCode = 'AP'; // Storage = Αποθήκη
             const floorLevel = body.floor ? parseInt(body.floor, 10) : 0;
             const floorCode = formatFloorCode(isNaN(floorLevel) ? 0 : floorLevel);
@@ -369,10 +380,10 @@ export const POST = withStandardRateLimit(
         // Sanitize data
         const cleanData: Record<string, unknown> = {
           name: storageName,
-          buildingId: body.buildingId,
+          buildingId: body.buildingId?.trim() || null,
           type: isValidStorageType(body.type || 'small') ? body.type || 'small' : 'small',
           status: isValidStorageStatus(body.status || 'available') ? body.status || 'available' : 'available',
-          companyId: ctx.companyId,  // 🏢 ENTERPRISE: always set (super_admin inherits from auth)
+          companyId: resolvedCompanyId,  // 🏢 ENTERPRISE: inherited from building or auth context
           linkedCompanyId: null,                            // 🏢 ADR-232
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),

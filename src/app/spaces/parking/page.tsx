@@ -14,7 +14,7 @@
  * 🔧 Next.js 15: useParkingPageState uses useSearchParams, requires Suspense
  */
 
-import React, { Suspense, useCallback, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useState } from 'react';
 
 import { ParkingsHeader } from '@/components/space-management/ParkingPage/ParkingsHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -49,12 +49,31 @@ import {
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyCompact } from '@/lib/intl-utils';
-import { AddParkingDialog } from '@/components/space-management/ParkingPage/AddParkingDialog';
 import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { toggleSelect } from '@/lib/toggle-select';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { X, Check } from 'lucide-react';
+import {
+  PARKING_TYPES,
+  PARKING_STATUSES,
+} from '@/types/parking';
+import type {
+  ParkingSpotType,
+  ParkingSpotStatus,
+} from '@/types/parking';
+import { useEntityCodeSuggestion } from '@/hooks/useEntityCodeSuggestion';
 
 const logger = createModuleLogger('ParkingPage');
 
@@ -121,11 +140,84 @@ function ParkingPageContent() {
   // Search state (for header search)
   const [searchTerm, setSearchTerm] = React.useState('');
   const [showMobileFilters, setShowMobileFilters] = React.useState(false);
-  const [showAddDialog, setShowAddDialog] = React.useState(false);
 
   // 🅿️ Delete parking state
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Inline create form state
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createBuildingId, setCreateBuildingId] = useState('');
+  const [createNumber, setCreateNumber] = useState('');
+  const [createType, setCreateType] = useState<ParkingSpotType>('standard');
+  const [createStatus, setCreateStatus] = useState<ParkingSpotStatus>('available');
+  const [createFloor, setCreateFloor] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [codeOverridden, setCodeOverridden] = useState(false);
+
+  const { t: tParking } = useTranslation('parking');
+
+  // ADR-233: Auto-suggest parking code
+  const { suggestedCode } = useEntityCodeSuggestion({
+    entityType: 'parking',
+    buildingId: createBuildingId,
+    floorLevel: createFloor ? parseInt(createFloor, 10) || 0 : 0,
+    disabled: codeOverridden || !createBuildingId,
+  });
+
+  // Auto-populate when suggestion arrives
+  useEffect(() => {
+    if (suggestedCode && !codeOverridden) {
+      setCreateNumber(suggestedCode);
+    }
+  }, [suggestedCode, codeOverridden]);
+
+  const resetCreateForm = useCallback(() => {
+    setShowCreateForm(false);
+    setCreateBuildingId('');
+    setCreateNumber('');
+    setCreateType('standard');
+    setCreateStatus('available');
+    setCreateFloor('');
+    setCreateError(null);
+    setCodeOverridden(false);
+  }, []);
+
+  const handleCreateParking = useCallback(async () => {
+    if (!createNumber.trim()) return;
+
+    setCreating(true);
+    setCreateError(null);
+
+    try {
+      const selectedBuilding = createBuildingId ? buildings.find(b => b.id === createBuildingId) : null;
+
+      const payload: Record<string, unknown> = {
+        number: createNumber.trim(),
+        type: createType,
+        status: createStatus,
+      };
+      if (createBuildingId) payload.buildingId = createBuildingId;
+      if (createFloor.trim()) payload.floor = createFloor.trim();
+      if (selectedBuilding?.projectId) payload.projectId = selectedBuilding.projectId;
+
+      const result = await apiClient.post<{ parkingSpotId: string }>('/api/parking', payload);
+
+      if (result?.parkingSpotId) {
+        RealtimeService.dispatch('PARKING_CREATED', {
+          parkingSpotId: result.parkingSpotId,
+          parkingSpot: { number: createNumber.trim(), type: createType, status: createStatus },
+          timestamp: Date.now(),
+        });
+        resetCreateForm();
+      }
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'Σφάλμα δημιουργίας');
+    } finally {
+      setCreating(false);
+    }
+  }, [createNumber, createType, createStatus, createBuildingId, createFloor, buildings, resetCreateForm]);
 
   const handleDeleteParking = useCallback(async () => {
     if (!selectedParking) return;
@@ -271,6 +363,111 @@ function ParkingPageContent() {
           />
         </aside>
 
+        {/* Inline Create Form */}
+        {showCreateForm && (
+          <form
+            className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-3"
+            onSubmit={(e) => { e.preventDefault(); handleCreateParking(); }}
+          >
+            {/* Row 1: Building, Number, Type */}
+            <fieldset className="grid grid-cols-3 gap-2">
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-muted-foreground">
+                  {t('pages.parking.form.building', 'Κτίριο')}
+                </span>
+                <Select value={createBuildingId} onValueChange={setCreateBuildingId} disabled={creating}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder={t('pages.parking.form.selectBuilding', 'Προαιρετικό')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {buildings.map(b => (
+                      <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-muted-foreground">
+                  {t('pages.parking.form.number', 'Αριθμός')} *
+                </span>
+                <Input
+                  value={createNumber}
+                  onChange={(e) => {
+                    setCreateNumber(e.target.value);
+                    if (!codeOverridden && e.target.value !== suggestedCode) setCodeOverridden(true);
+                    if (!e.target.value) setCodeOverridden(false);
+                  }}
+                  placeholder={suggestedCode || 'P-001'}
+                  className="h-9"
+                  disabled={creating}
+                  autoFocus
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-muted-foreground">
+                  {t('pages.parking.form.type', 'Τύπος')}
+                </span>
+                <Select value={createType} onValueChange={(v) => setCreateType(v as ParkingSpotType)} disabled={creating}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PARKING_TYPES.map(pt => (
+                      <SelectItem key={pt} value={pt}>{tParking(`types.${pt}`, pt)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+            </fieldset>
+
+            {/* Row 2: Status, Floor */}
+            <fieldset className="grid grid-cols-3 gap-2">
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-muted-foreground">
+                  {t('pages.parking.form.status', 'Κατάσταση')}
+                </span>
+                <Select value={createStatus} onValueChange={(v) => setCreateStatus(v as ParkingSpotStatus)} disabled={creating}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PARKING_STATUSES.map(ps => (
+                      <SelectItem key={ps} value={ps}>{tParking(`status.${ps}`, ps)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-muted-foreground">
+                  {t('pages.parking.form.floor', 'Όροφος')}
+                </span>
+                <Input
+                  value={createFloor}
+                  onChange={(e) => setCreateFloor(e.target.value)}
+                  placeholder="-1"
+                  className="h-9"
+                  disabled={creating}
+                />
+              </label>
+              <nav className="flex items-end justify-end gap-2">
+                <Button type="button" variant="ghost" size="sm" onClick={resetCreateForm} disabled={creating}>
+                  <X className="mr-1 h-4 w-4" />
+                  {t('pages.parking.form.cancel', 'Ακύρωση')}
+                </Button>
+                <Button type="submit" size="sm" disabled={!createNumber.trim() || creating}>
+                  {creating ? <Spinner size="small" color="inherit" className="mr-1" /> : <Check className="mr-1 h-4 w-4" />}
+                  {t('pages.parking.form.create', 'Δημιουργία')}
+                </Button>
+              </nav>
+            </fieldset>
+
+            {/* Error */}
+            {createError && (
+              <p className="text-sm text-destructive">{createError}</p>
+            )}
+          </form>
+        )}
+
         {/* Content */}
         <ListContainer>
           {viewMode === 'grid' ? (
@@ -287,11 +484,11 @@ function ParkingPageContent() {
                 parkingSpots={filteredParkingSpots}
                 selectedParking={selectedParking}
                 onSelectParking={(p) => setSelectedParking(toggleSelect(selectedParking, p))}
-                onNewItem={() => setShowAddDialog(true)}
+                onNewItem={() => setShowCreateForm(true)}
               />
               <ParkingDetails
                 parking={selectedParking}
-                onNewParking={() => setShowAddDialog(true)}
+                onNewParking={() => setShowCreateForm(true)}
                 onDelete={() => setShowDeleteDialog(true)}
               />
             </>
@@ -310,12 +507,6 @@ function ParkingPageContent() {
             onFiltersChange={setFilters}
           />
         </MobileDetailsSlideIn>
-
-        {/* Add Parking Dialog */}
-        <AddParkingDialog
-          open={showAddDialog}
-          onOpenChange={setShowAddDialog}
-        />
 
         {/* Delete Parking Confirmation */}
         <DeleteConfirmDialog
