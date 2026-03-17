@@ -230,12 +230,12 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
       } else if (effectiveFloorId) {
         // floorId provided directly — fetch floor doc to get its companyId
         try {
-          const floorsRef = collection(db, 'floors');
-          const q = query(floorsRef, where('__name__', '==', effectiveFloorId));
-          const snapshot = await getDocs(q);
-          if (!snapshot.empty) {
-            const data = snapshot.docs[0].data() as FloorDocument;
+          const { doc: docRef, getDoc } = await import('firebase/firestore');
+          const floorSnap = await getDoc(docRef(db, 'floors', effectiveFloorId));
+          if (floorSnap.exists()) {
+            const data = floorSnap.data() as FloorDocument;
             floorCompanyId = data.companyId;
+            logger.info('Resolved floorCompanyId from floor doc', { floorId: effectiveFloorId, floorCompanyId });
           }
         } catch {
           // Non-critical — fall back to caller's companyId
