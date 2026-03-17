@@ -338,19 +338,15 @@ module.exports = withSentryConfig(nextConfig, {
   // Sentry build options
   org: 'pagonis',
   project: 'nestor-app',
+  silent: true,
 
-  // Suppress source map upload warnings (no auth token = no upload)
-  silent: !process.env.SENTRY_AUTH_TOKEN,
+  // Disable source map processing entirely — saves ~500MB RAM on Vercel Hobby
+  sourcemaps: {
+    disable: true,
+  },
 
-  // Disable source map upload for now (requires auth token)
-  disableServerWebpackPlugin: !process.env.SENTRY_AUTH_TOKEN,
-  disableClientWebpackPlugin: !process.env.SENTRY_AUTH_TOKEN,
-
-  // Hide source maps from users
-  hideSourceMaps: true,
-
-  // Wider error capture in Next.js
-  widenClientFileUpload: true,
+  // Disable telemetry collection during build
+  telemetry: false,
 
   // Tree-shake Sentry logger in production
   disableLogger: true,
