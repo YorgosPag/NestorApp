@@ -73,6 +73,14 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
       
       // Set new debounced save
       saveTimeoutRef.current = setTimeout(async () => {
+        // 🏢 ADR-240: Skip auto-save when wizard pipeline is active.
+        // The wizard handles saving via useFloorplanUpload + /api/floorplans/process.
+        // Running auto-save here would create a redundant scene file in Storage (cadFiles / dxf-scenes/).
+        if (injectedSaveContextRef.current?.purpose) {
+          setSaveStatus('idle');
+          return;
+        }
+
         setSaveStatus('saving');
 
         try {
