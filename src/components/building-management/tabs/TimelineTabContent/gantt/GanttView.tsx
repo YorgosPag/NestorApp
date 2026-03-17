@@ -799,6 +799,53 @@ export function GanttView({ building }: GanttViewProps) {
             </DialogTitle>
           </DialogHeader>
 
+          {/* Action buttons inside fullscreen */}
+          <nav className={cn('flex-shrink-0 flex items-center', spacingTokens.gap.sm)} aria-label="Gantt fullscreen actions">
+            <Button variant="default" size="sm" onClick={openCreatePhaseDialog}>
+              <FolderPlus className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
+              {t('tabs.timeline.gantt.actions.newPhase')}
+            </Button>
+            {phases.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openCreateTaskDialog(phases[0].id)}
+              >
+                <Plus className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
+                {t('tabs.timeline.gantt.actions.newTask')}
+              </Button>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" disabled={isExporting}>
+                  <Download className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
+                  {isExporting
+                    ? t('tabs.timeline.gantt.export.exporting')
+                    : exportLabels.export}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExport('pdf')}>
+                  <FileText className={cn(iconSizes.xs, spacingTokens.margin.right.sm)} />
+                  {exportLabels.pdf}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('png')}>
+                  <ImageIcon className={cn(iconSizes.xs, spacingTokens.margin.right.sm)} />
+                  {exportLabels.png}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('svg')}>
+                  <FileImage className={cn(iconSizes.xs, spacingTokens.margin.right.sm)} />
+                  {exportLabels.svg}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleExport('excel')}>
+                  <Table2 className={cn(iconSizes.xs, spacingTokens.margin.right.sm)} />
+                  {exportLabels.excel}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </nav>
+
           {/* Stats inside fullscreen */}
           <UnifiedDashboard
             stats={summaryStats}
