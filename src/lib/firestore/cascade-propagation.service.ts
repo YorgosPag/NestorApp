@@ -236,27 +236,39 @@ export async function propagateUnitBuildingLink(
     let resolvedCompanyId: string | null = null;
 
     if (newBuildingId) {
-      // Resolve building → projectId
+      // Resolve building → projectId + companyId
       const buildingDoc = await db.collection(COLLECTIONS.BUILDINGS).doc(newBuildingId).get();
       if (buildingDoc.exists) {
-        resolvedProjectId = (buildingDoc.data()?.projectId as string) ?? null;
+        const buildingData = buildingDoc.data();
+        resolvedProjectId = (buildingData?.projectId as string) ?? null;
+        // 🏢 ENTERPRISE: Inherit companyId from building (Google-level ownership)
+        resolvedCompanyId = (buildingData?.companyId as string) ?? null;
 
-        // 🏢 ADR-232: Resolve project → linkedCompanyId (business link)
+        // Resolve linkedCompanyId from project (business entity link)
+        let resolvedLinkedCompanyId: string | null = null;
         if (resolvedProjectId) {
           const projectDoc = await db.collection(COLLECTIONS.PROJECTS).doc(resolvedProjectId).get();
           if (projectDoc.exists) {
-            resolvedCompanyId = (projectDoc.data()?.linkedCompanyId as string) ?? null;
+            resolvedLinkedCompanyId = (projectDoc.data()?.linkedCompanyId as string) ?? null;
           }
         }
-      }
-    }
 
-    // 🏢 ADR-232: Update linkedCompanyId (business link), NOT companyId (tenant key)
-    await db.collection(COLLECTIONS.UNITS).doc(unitId).update({
-      projectId: resolvedProjectId,
-      linkedCompanyId: resolvedCompanyId,
-      updatedAt: FieldValue.serverTimestamp(),
-    });
+        // 🏢 ENTERPRISE: Update BOTH companyId AND linkedCompanyId
+        await db.collection(COLLECTIONS.UNITS).doc(unitId).update({
+          projectId: resolvedProjectId,
+          companyId: resolvedCompanyId,
+          linkedCompanyId: resolvedLinkedCompanyId,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
+    } else {
+      // Unlink: clear project/company references
+      await db.collection(COLLECTIONS.UNITS).doc(unitId).update({
+        projectId: null,
+        linkedCompanyId: null,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
 
     logger.info('Unit→Building cascade completed', {
       unitId,
