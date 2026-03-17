@@ -12,12 +12,12 @@
 
 import {
   collection,
-  addDoc,
+  doc,
+  setDoc,
   query,
   where,
   orderBy,
   getDocs,
-  doc,
   updateDoc,
   serverTimestamp,
   onSnapshot,
@@ -100,7 +100,10 @@ export const FileApprovalService = {
       reason: null,
     }));
 
-    const docRef = await addDoc(collection(db, COLLECTIONS.FILE_APPROVALS), {
+    const { generateApprovalId } = await import('@/services/enterprise-id.service');
+    const enterpriseId = generateApprovalId();
+    const docRef = doc(db, COLLECTIONS.FILE_APPROVALS, enterpriseId);
+    await setDoc(docRef, {
       fileId: input.fileId,
       companyId: input.companyId,
       requestedBy: input.requestedBy,
@@ -113,11 +116,11 @@ export const FileApprovalService = {
     });
 
     FileAuditService.log(input.fileId, 'approval_request', input.requestedBy, {
-      approvalId: docRef.id,
+      approvalId: enterpriseId,
       approverCount: input.approvers.length,
     }).catch(() => {});
 
-    return docRef.id;
+    return enterpriseId;
   },
 
   /**

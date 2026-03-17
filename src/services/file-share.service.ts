@@ -12,8 +12,8 @@
 
 import {
   collection,
-  addDoc,
   doc,
+  setDoc,
   getDoc,
   getDocs,
   updateDoc,
@@ -147,8 +147,10 @@ export class FileShareService {
       }
     }
 
-    const colRef = collection(db, COLLECTIONS.FILE_SHARES);
-    await addDoc(colRef, cleanData);
+    const { generateShareId } = await import('@/services/enterprise-id.service');
+    const enterpriseId = generateShareId();
+    const docRef = doc(db, COLLECTIONS.FILE_SHARES, enterpriseId);
+    await setDoc(docRef, cleanData);
 
     logger.info('Share link created', {
       fileId: input.fileId,

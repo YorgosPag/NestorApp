@@ -1,4 +1,4 @@
-import { collection, query, where, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
@@ -41,7 +41,10 @@ export class NavigationCompaniesService {
         ...(userId && { addedBy: userId })
       };
 
-      await addDoc(collection(db, NAVIGATION_COMPANIES_COLLECTION), entry);
+      const { generateNavigationId } = await import('@/services/enterprise-id.service');
+      const enterpriseId = generateNavigationId();
+      const docRef = doc(db, NAVIGATION_COMPANIES_COLLECTION, enterpriseId);
+      await setDoc(docRef, entry);
 
       // 🗑️ PERFORMANCE: Clear cache after modification
       this.clearCache();

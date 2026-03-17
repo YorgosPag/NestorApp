@@ -19,7 +19,8 @@ import {
   where,
   orderBy,
   getDocs,
-  addDoc,
+  doc,
+  setDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -176,7 +177,10 @@ export function useAttendanceEvents(
         createdAt: now,
       };
 
-      await addDoc(collection(db, COLLECTIONS.ATTENDANCE_EVENTS), eventData);
+      const { generateEventId } = await import('@/services/enterprise-id.service');
+      const enterpriseId = generateEventId();
+      const docRef = doc(db, COLLECTIONS.ATTENDANCE_EVENTS, enterpriseId);
+      await setDoc(docRef, eventData);
 
       // Refresh the events list
       refetch();

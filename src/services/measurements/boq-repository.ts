@@ -13,7 +13,7 @@ import {
   getDocs,
   doc,
   getDoc,
-  addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -26,6 +26,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
 import { createModuleLogger } from '@/lib/telemetry';
+import { generateBoqItemId } from '@/services/enterprise-id.service';
 import { normalizeToISO } from '@/lib/date-local';
 import type {
   BOQItem,
@@ -208,12 +209,11 @@ export class FirestoreBOQRepository implements IBOQRepository {
       updatedAt: now,
     };
 
-    const docRef = await addDoc(
-      collection(db, COLLECTIONS.BOQ_ITEMS),
-      stripUndefinedDeep(newItem as unknown as Record<string, unknown>)
-    );
+    const enterpriseId = generateBoqItemId();
+    const docRef = doc(db, COLLECTIONS.BOQ_ITEMS, enterpriseId);
+    await setDoc(docRef, stripUndefinedDeep(newItem as unknown as Record<string, unknown>));
 
-    return { id: docRef.id, ...newItem };
+    return { id: enterpriseId, ...newItem };
   }
 
   async update(id: string, data: UpdateBOQItemInput): Promise<BOQItem | null> {
@@ -284,12 +284,11 @@ export class FirestoreBOQRepository implements IBOQRepository {
       // Remove the id before writing
       const { ...payload } = duplicateData;
 
-      const docRef = await addDoc(
-        collection(db, COLLECTIONS.BOQ_ITEMS),
-        stripUndefinedDeep(payload as unknown as Record<string, unknown>)
-      );
+      const duplicateId = generateBoqItemId();
+      const docRef = doc(db, COLLECTIONS.BOQ_ITEMS, duplicateId);
+      await setDoc(docRef, stripUndefinedDeep(payload as unknown as Record<string, unknown>));
 
-      return { id: docRef.id, ...duplicateData };
+      return { id: duplicateId, ...duplicateData };
     } catch (error) {
       logger.error('Error duplicating BOQ item', { error, id });
       return null;

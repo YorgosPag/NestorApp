@@ -28,6 +28,8 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
   const isLoadingFromFirestoreRef = useRef<boolean>(false);
   // Flag to prevent multiple simultaneous loads
   const loadedFilesRef = useRef<Set<string>>(new Set());
+  // Cache fileName → enterpriseId mapping to avoid generating new IDs on every save
+  const fileIdCacheRef = useRef<Map<string, string>>(new Map());
   
   /**
    * Enhanced setLevelScene with auto-save
@@ -47,7 +49,20 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
         setSaveStatus('saving');
 
         try {
-          const fileId = DxfFirestoreService.generateFileId(currentFileName);
+          // 🏢 ENTERPRISE: Cache enterprise ID per filename to avoid generating new IDs on every save
+          let fileId = fileIdCacheRef.current.get(currentFileName);
+          if (!fileId) {
+            // First save: try legacy ID for backward compatibility, then generate enterprise ID
+            const legacyId = DxfFirestoreService.generateLegacyFileId(currentFileName);
+            const legacyDoc = await DxfFirestoreService.loadFileV2(legacyId);
+            if (legacyDoc) {
+              // Legacy file exists — keep using legacy ID for this session
+              fileId = legacyId;
+            } else {
+              fileId = DxfFirestoreService.generateFileId(currentFileName);
+            }
+            fileIdCacheRef.current.set(currentFileName, fileId);
+          }
           // 🚀 PHASE 4: Use Storage-based auto-save for better performance
           const success = await DxfFirestoreService.autoSaveV2(fileId, currentFileName, scene);
           

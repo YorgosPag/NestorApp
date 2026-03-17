@@ -233,7 +233,7 @@
 | **ADR-207** | Scattered Code Centralization — Phase 6 (Collection Utilities) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-207-phase6-collection-utilities.md) |
 | **ADR-208** | Phase 7 — Date Formatting Deduplication | ✅ ✅ Implemented | 2026-01-01 | Centralization / Deduplication | [📄](./adrs/ADR-208-phase7-date-formatting-dedup.md) |
 | **ADR-209** | ID Consistency Audit & Remediation Roadmap | ✅ ✅ IMPLEMENTED (Phases 1-4) | 2026-03-12 | Security / Data Integrity | [📄](./adrs/ADR-209-id-consistency-audit.md) |
-| **ADR-210** | Document ID Generation — Full Codebase Audit & Compliance Report | ✅ ✅ APPROVED — Phase 1 + P1/P2 + Phase 3 IMPLEMENTED | 2026-03-12 | Security / Data Integrity | [📄](./adrs/ADR-210-document-id-generation-audit.md) |
+| **ADR-210** | Document ID Generation — Full Codebase Audit & Compliance Report | ✅ APPROVED — Phase 1-4 IMPLEMENTED (24→5 violations) | 2026-03-17 | Security / Data Integrity | [📄](./adrs/ADR-210-document-id-generation-audit.md) |
 | **ADR-211** | Phase 8 — Small Utility Deduplication | ✅ ✅ Implemented | 2026-03-12 | Centralization / Deduplication | [📄](./adrs/ADR-211-phase8-small-utility-dedup.md) |
 | **ADR-212** | Phase 9 — Async/Clone/Validation/FileSize/Currency Deduplication | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-212-phase9-async-clone-url-filesize.md) |
 | **ADR-213** | Validation Centralization (Phone + Text Extraction) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-213-validation-centralization.md) |

@@ -1439,3 +1439,9 @@ src/
 - Category accordion: groups by ΑΤΟΕ code, sorted by sortOrder, shows item count + category total
 - Editor: auto-computes gross quantity and totals; allowed units change per category
 - Zero `any`, zero inline styles, zero `@ts-ignore`
+
+### 2026-03-17 — Enterprise ID Compliance (SOS N.6)
+**Change:** `addDoc()` → `setDoc()` + `generateBoqItemId()` from enterprise-id.service.ts
+**Files changed:** `boq-repository.ts` (create + duplicate methods)
+**Impact:** BOQ items now get `boq_uuid` enterprise IDs instead of Firestore auto-generated IDs
+**Ref:** ADR-210 Phase 4, CLAUDE.md SOS N.6

@@ -18,9 +18,10 @@
  *                + getCommunicationsByContact, deleteAllCommunications relocated from server file
  */
 
-import { orderBy, where, collection, doc, updateDoc, addDoc, deleteDoc, serverTimestamp, writeBatch, type DocumentData } from 'firebase/firestore';
+import { orderBy, where, collection, doc, updateDoc, setDoc, deleteDoc, serverTimestamp, writeBatch, type DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { generateMessageId } from '@/services/enterprise-id.service';
 import type { Communication } from '@/types/crm';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
@@ -80,18 +81,19 @@ export async function createCommunicationClient(
   try {
     logger.info('Creating new communication');
 
-    const communicationsRef = collection(db, COLLECTIONS.MESSAGES);
-    const docRef = await addDoc(communicationsRef, {
+    const enterpriseId = generateMessageId();
+    const docRef = doc(db, COLLECTIONS.MESSAGES, enterpriseId);
+    await setDoc(docRef, {
       ...data,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
 
-    logger.info('Communication created', { communicationId: docRef.id });
+    logger.info('Communication created', { communicationId: enterpriseId });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatch('COMMUNICATION_CREATED', {
-      communicationId: docRef.id,
+      communicationId: enterpriseId,
       communication: {
         type: data.type,
         subject: data.subject,
@@ -102,7 +104,7 @@ export async function createCommunicationClient(
       timestamp: Date.now()
     });
 
-    return { success: true, communicationId: docRef.id };
+    return { success: true, communicationId: enterpriseId };
 
   } catch (error) {
     logger.error('Error creating communication', { error });

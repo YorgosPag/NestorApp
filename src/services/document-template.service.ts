@@ -12,12 +12,12 @@
 
 import {
   collection,
-  addDoc,
+  doc,
+  setDoc,
   query,
   where,
   orderBy,
   getDocs,
-  doc,
   updateDoc,
   deleteDoc,
   getDoc,
@@ -96,7 +96,10 @@ export const DocumentTemplateService = {
    * Create a new template
    */
   async createTemplate(input: CreateTemplateInput): Promise<string> {
-    const docRef = await addDoc(collection(db, COLLECTIONS.DOCUMENT_TEMPLATES), {
+    const { generateTemplateId } = await import('@/services/enterprise-id.service');
+    const enterpriseId = generateTemplateId();
+    const docRef = doc(db, COLLECTIONS.DOCUMENT_TEMPLATES, enterpriseId);
+    await setDoc(docRef, {
       companyId: input.companyId,
       name: input.name,
       description: input.description ?? '',
@@ -108,7 +111,7 @@ export const DocumentTemplateService = {
       updatedAt: null,
       isSystem: false,
     });
-    return docRef.id;
+    return enterpriseId;
   },
 
   /**

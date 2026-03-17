@@ -105,6 +105,14 @@ export const ENTERPRISE_ID_PREFIXES = {
   OPERATION: 'op',
 
   // ==========================================================================
+  // BOQ / QUANTITY SURVEYING (ADR-175)
+  // ==========================================================================
+  BOQ_ITEM: 'boq',
+  BOQ_CATEGORY: 'boqcat',
+  BOQ_PRICE_LIST: 'boqpl',
+  BOQ_TEMPLATE: 'boqtpl',
+
+  // ==========================================================================
   // ACCOUNTING (Subapp — ADR-ACC-001 through ADR-ACC-010)
   // ==========================================================================
   JOURNAL_ENTRY: 'je',
@@ -125,6 +133,14 @@ export const ENTERPRISE_ID_PREFIXES = {
   SHARE: 'share',
   PENDING: 'pending',
   SUBSCRIPTION: 'sub',
+  FOLDER: 'fldr',
+  COMMENT: 'cmt',
+  APPROVAL: 'appr',
+
+  // ==========================================================================
+  // BANKING
+  // ==========================================================================
+  BANK_ACCOUNT: 'bacc',
 
   // ==========================================================================
   // NAVIGATION
@@ -662,6 +678,42 @@ export class EnterpriseIdService {
   }
 
   // ==========================================================================
+  // BOQ / QUANTITY SURVEYING (ADR-175)
+  // ==========================================================================
+
+  /**
+   * 📐 Generate BOQ Item ID
+   * Format: boq_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateBoqItemId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.BOQ_ITEM).id;
+  }
+
+  /**
+   * 📂 Generate BOQ Category ID
+   * Format: boqcat_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateBoqCategoryId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.BOQ_CATEGORY).id;
+  }
+
+  /**
+   * 💲 Generate BOQ Price List ID
+   * Format: boqpl_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateBoqPriceListId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.BOQ_PRICE_LIST).id;
+  }
+
+  /**
+   * 📋 Generate BOQ Template ID
+   * Format: boqtpl_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateBoqTemplateId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.BOQ_TEMPLATE).id;
+  }
+
+  // ==========================================================================
   // ACCOUNTING (Subapp — ADR-ACC-001 through ADR-ACC-010)
   // ==========================================================================
 
@@ -735,6 +787,38 @@ export class EnterpriseIdService {
    */
   generateChequeId(): string {
     return this.generateId(ENTERPRISE_ID_PREFIXES.CHEQUE).id;
+  }
+
+  /**
+   * 📁 Generate Folder ID
+   * Format: fldr_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateFolderId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.FOLDER).id;
+  }
+
+  /**
+   * 💬 Generate Comment ID
+   * Format: cmt_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateCommentId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.COMMENT).id;
+  }
+
+  /**
+   * ✅ Generate Approval ID
+   * Format: appr_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateApprovalId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.APPROVAL).id;
+  }
+
+  /**
+   * 🏦 Generate Bank Account ID
+   * Format: bacc_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateBankAccountId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.BANK_ACCOUNT).id;
   }
 
   /**
@@ -1101,6 +1185,14 @@ export const generateTemplateId = () => enterpriseIdService.generateTemplateId()
 export const generateOperationId = () => enterpriseIdService.generateOperationId();
 
 // =============================================================================
+// BOQ / QUANTITY SURVEYING (ADR-175)
+// =============================================================================
+export const generateBoqItemId = () => enterpriseIdService.generateBoqItemId();
+export const generateBoqCategoryId = () => enterpriseIdService.generateBoqCategoryId();
+export const generateBoqPriceListId = () => enterpriseIdService.generateBoqPriceListId();
+export const generateBoqTemplateId = () => enterpriseIdService.generateBoqTemplateId();
+
+// =============================================================================
 // ACCOUNTING (Subapp — ADR-ACC-001 through ADR-ACC-010)
 // =============================================================================
 export const generateJournalEntryId = () => enterpriseIdService.generateJournalEntryId();
@@ -1140,6 +1232,10 @@ export const generateFileId = () => enterpriseIdService.generateFileId();
 export const generateShareId = () => enterpriseIdService.generateShareId();
 export const generatePendingId = () => enterpriseIdService.generatePendingId();
 export const generateSubscriptionId = () => enterpriseIdService.generateSubscriptionId();
+export const generateFolderId = () => enterpriseIdService.generateFolderId();
+export const generateCommentId = () => enterpriseIdService.generateCommentId();
+export const generateApprovalId = () => enterpriseIdService.generateApprovalId();
+export const generateBankAccountId = () => enterpriseIdService.generateBankAccountId();
 
 // =============================================================================
 // OPTIMISTIC & TEMPORARY

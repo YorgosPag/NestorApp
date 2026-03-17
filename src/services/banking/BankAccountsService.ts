@@ -19,7 +19,7 @@ import {
   doc,
   getDocs,
   getDoc,
-  addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -311,18 +311,21 @@ export class BankAccountsService {
         throw new Error('Αυτό το IBAN υπάρχει ήδη για αυτή την επαφή');
       }
 
-      // Create the document
+      // Create the document with enterprise ID (SOS N.6)
+      const { generateBankAccountId } = await import('@/services/enterprise-id.service');
+      const enterpriseId = generateBankAccountId();
       const docData = {
         ...bankAccountToDoc(account),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };
 
-      const docRef = await addDoc(accountsRef, docData);
+      const docRef = doc(accountsRef, enterpriseId);
+      await setDoc(docRef, docData);
 
-      logger.info(`[BankAccountsService] Created account ${docRef.id} for contact ${contactId}`);
+      logger.info(`[BankAccountsService] Created account ${enterpriseId} for contact ${contactId}`);
 
-      return docRef.id;
+      return enterpriseId;
     } catch (error) {
       logger.error('[BankAccountsService] Error adding account:', error);
       throw error;

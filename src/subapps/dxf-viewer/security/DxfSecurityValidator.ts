@@ -292,8 +292,8 @@ export class DxfSecurityValidator extends SceneValidator {
 
   /**
    * Generate secure file ID from filename
+   * @deprecated Use DxfFirestoreService.generateFileId() which delegates to enterprise-id.service (SOS N.6)
    */
-  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
   static generateSecureFileId(fileName: string): string {
     const sanitizedName = this.sanitizeFileName(fileName);
     const timestamp = Date.now();

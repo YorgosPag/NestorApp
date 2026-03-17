@@ -23,7 +23,7 @@ import {
   query,
   orderBy,
   onSnapshot,
-  addDoc,
+  setDoc,
   deleteDoc,
   doc,
   writeBatch,
@@ -189,20 +189,19 @@ function useLevelsSystemState({
           ...(floorId ? { floorId } : {}),
         };
 
-        const docRef = await withStorageErrorHandling(
-          () => addDoc(collection(db, firestoreCollection), newLevelData),
+        const { generateLevelId } = await import('@/services/enterprise-id.service');
+        const enterpriseId = generateLevelId();
+        const docRef = doc(db, firestoreCollection, enterpriseId);
+        await withStorageErrorHandling(
+          () => setDoc(docRef, newLevelData),
           'Failed to add level to Firestore'
         );
 
-        if (!docRef) {
-          throw new Error('Failed to create level due to storage error');
-        }
-
         if (setAsDefault || settings.autoSelectNewLevel) {
-          setCurrentLevelId(docRef.id);
-          onLevelChange?.(docRef.id);
+          setCurrentLevelId(enterpriseId);
+          onLevelChange?.(enterpriseId);
         }
-        return docRef.id;
+        return enterpriseId;
       } else {
         const { levels: updatedLevels, newLevelId } = LevelOperations.addLevel(levels, name, setAsDefault, floorId);
         setLevels(updatedLevels);

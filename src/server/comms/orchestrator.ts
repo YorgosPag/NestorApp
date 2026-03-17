@@ -4,6 +4,7 @@ import { isFirebaseAvailable } from '../../app/api/communications/webhooks/teleg
 import { getFirestoreHelpers, type FirestoreHelpers } from '../../app/api/communications/webhooks/telegram/firebase/helpers-lazy';
 import { safeDbOperation } from '../../app/api/communications/webhooks/telegram/firebase/safe-op';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { generateMessageId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('CommsOrchestrator');
 
@@ -219,7 +220,7 @@ async function enqueueMessageForChannel(
   firestoreHelpers: FirestoreHelpers
 ): Promise<string | null> {
   return await safeDbOperation(async (database) => {
-    const { collection, addDoc, Timestamp } = firestoreHelpers;
+    const { collection, doc, setDoc, Timestamp } = firestoreHelpers;
 
     // Build message record compatible with existing structure
     const messageRecord = {
@@ -269,21 +270,23 @@ async function enqueueMessageForChannel(
     };
 
     // Store in messages collection (canonical collection for all communications)
-    // 🏢 ENTERPRISE: Use canonical helpers-lazy API (no database param needed)
+    // 🏢 ENTERPRISE: setDoc + enterprise ID (SOS N.6)
     // 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES
+    const enterpriseId = generateMessageId();
     const collectionRef = collection(COLLECTIONS.MESSAGES);
-    const docRef = await addDoc(collectionRef, messageRecord);
-    
+    const docRef = doc(collectionRef, enterpriseId);
+    await setDoc(docRef, messageRecord);
+
     // Log for debugging
     logger.info(`📝 ${channel.toUpperCase()} message queued:`, {
-      id: docRef.id,
+      id: enterpriseId,
       to: recipient,
       channel,
       entityType: params.entityType,
       entityId: params.entityId
     });
 
-    return docRef.id;
+    return enterpriseId;
   }, null);
 }
 

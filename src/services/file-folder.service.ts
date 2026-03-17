@@ -12,11 +12,11 @@
 
 import {
   collection,
-  addDoc,
+  doc,
+  setDoc,
   where,
   orderBy,
   deleteDoc,
-  doc,
   updateDoc,
   writeBatch,
   serverTimestamp,
@@ -82,7 +82,10 @@ export const FileFolderService = {
       0
     );
 
-    const docRef = await addDoc(collection(db, COLLECTIONS.FILE_FOLDERS), {
+    const { generateFolderId } = await import('@/services/enterprise-id.service');
+    const enterpriseId = generateFolderId();
+    const docRef = doc(db, COLLECTIONS.FILE_FOLDERS, enterpriseId);
+    await setDoc(docRef, {
       companyId: input.companyId,
       parentId: input.parentId ?? null,
       name: input.name,
@@ -93,7 +96,7 @@ export const FileFolderService = {
       createdBy: input.createdBy,
     });
 
-    return docRef.id;
+    return enterpriseId;
   },
 
   /**

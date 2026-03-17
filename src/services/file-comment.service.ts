@@ -12,13 +12,13 @@
 
 import {
   collection,
-  addDoc,
+  doc,
+  setDoc,
   query,
   where,
   orderBy,
   getDocs,
   deleteDoc,
-  doc,
   updateDoc,
   serverTimestamp,
   onSnapshot,
@@ -72,7 +72,10 @@ export const FileCommentService = {
    * Add a comment to a file
    */
   async addComment(input: CreateCommentInput): Promise<string> {
-    const docRef = await addDoc(collection(db, COLLECTIONS.FILE_COMMENTS), {
+    const { generateCommentId } = await import('@/services/enterprise-id.service');
+    const enterpriseId = generateCommentId();
+    const docRef = doc(db, COLLECTIONS.FILE_COMMENTS, enterpriseId);
+    await setDoc(docRef, {
       fileId: input.fileId,
       parentId: input.parentId ?? null,
       text: input.text,
@@ -86,11 +89,11 @@ export const FileCommentService = {
 
     // Fire-and-forget audit
     FileAuditService.log(input.fileId, 'comment', input.authorId, {
-      commentId: docRef.id,
+      commentId: enterpriseId,
       parentId: input.parentId ?? null,
     }).catch(() => {});
 
-    return docRef.id;
+    return enterpriseId;
   },
 
   /**

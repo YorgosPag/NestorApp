@@ -2,8 +2,8 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ✅ APPROVED — Phase 1 + P1/P2 + Phase 3 IMPLEMENTED |
-| **Date** | 2026-03-12 |
+| **Status** | ✅ APPROVED — Phase 1 + P1/P2 + Phase 3 + Phase 4 IMPLEMENTED |
+| **Date** | 2026-03-17 (updated) |
 | **Category** | Security / Data Integrity |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
 | **Related ADRs** | ADR-017, ADR-031, ADR-065, ADR-209 |
@@ -42,7 +42,7 @@
 | **Format** | `{prefix}_{uuid-v4}` |
 | **ADR** | ADR-017 |
 
-**50+ εξειδικευμένοι generators ανά κατηγορία:**
+**60+ εξειδικευμένοι generators ανά κατηγορία:**
 
 | Κατηγορία | Prefix | Generator | Παράδειγμα |
 |-----------|--------|-----------|------------|
@@ -76,6 +76,11 @@
 | File | `file` | `generateFileId()` | `file_a1b2c3d4-e5f6-4789-...` |
 | Photo | `photo` | `generatePhotoId()` | `photo_a1b2c3d4-e5f6-4789-...` |
 | Share | `share` | `generateShareId()` | `share_a1b2c3d4-e5f6-4789-...` |
+| Folder | `fldr` | `generateFolderId()` | `fldr_a1b2c3d4-e5f6-4789-...` |
+| Comment | `cmt` | `generateCommentId()` | `cmt_a1b2c3d4-e5f6-4789-...` |
+| Approval | `appr` | `generateApprovalId()` | `appr_a1b2c3d4-e5f6-4789-...` |
+| **Banking** | | | |
+| Bank Account | `bacc` | `generateBankAccountId()` | `bacc_a1b2c3d4-e5f6-4789-...` |
 | **Temp** | | | |
 | Optimistic | `opt` | `generateOptimisticId()` | `opt_a1b2c3d4-e5f6-4789-...` |
 | Temporary | `tmp` | `generateTempId()` | `tmp_a1b2c3d4-e5f6-4789-...` |
@@ -157,42 +162,45 @@
 | `building_floorplans` | `building_floorplan_{buildingId}_{type}` | Deterministic compound key | `BuildingFloorplanService.ts` |
 | `floor_floorplans` | `floor_floorplan_{buildingId}_{floorId}` | Deterministic compound key | `ReadOnlyMediaViewer.tsx` |
 | `association_links` | `cl_{contactId}_{type}_{targetId}` | Relationship compound key | `association.service.ts` |
-| `dxf_files` | Sanitized filename | Deterministic from filename | `dxf-firestore.service.ts` |
+| `dxf_files` | `generateFileId()` (enterprise) + legacy fallback | Enterprise UUID (new) / sanitized filename (legacy) | `dxf-firestore.service.ts` |
 
-### 3.3 Collections Migrated to Enterprise IDs ✅ (2026-03-12)
+### 3.3 Collections Migrated to Enterprise IDs ✅ (2026-03-12 → 2026-03-17)
 
-| Collection | Generator | Migrated From |
-|------------|-----------|---------------|
-| `contacts` | `generateContactId()` / `generateCompanyId()` | `addDoc` auto-ID (API + AI pipeline + create-sample) |
-| `units` | `generateUnitId()` | `addDoc` auto-ID |
-| `tasks` | `generateTaskId()` | `addDoc` auto-ID |
-| `opportunities` | `generateOpportunityId()` | `addDoc` auto-ID (2 files) |
-| `obligations` | `generateObligationId()` | `addDoc` auto-ID |
-| `obligation_transmittals` | `generateTransmittalId()` | `addDoc` auto-ID |
-| `notifications` | `generateNotificationId()` | `addDoc` auto-ID |
+| Collection | Generator | Migrated From | Date |
+|------------|-----------|---------------|------|
+| `contacts` | `generateContactId()` / `generateCompanyId()` | `addDoc` auto-ID | 2026-03-12 |
+| `units` | `generateUnitId()` | `addDoc` auto-ID | 2026-03-12 |
+| `tasks` | `generateTaskId()` | `addDoc` auto-ID | 2026-03-12 |
+| `opportunities` | `generateOpportunityId()` | `addDoc` auto-ID (2 files) | 2026-03-12 |
+| `obligations` | `generateObligationId()` | `addDoc` auto-ID | 2026-03-12 |
+| `obligation_transmittals` | `generateTransmittalId()` | `addDoc` auto-ID | 2026-03-12 |
+| `notifications` | `generateNotificationId()` | `addDoc` auto-ID | 2026-03-12 |
+| `boq_items` | `generateBoqItemId()` | `addDoc` auto-ID (2 σημεία) | 2026-03-17 |
+| `communications` | `generateMessageId()` | `addDoc` auto-ID | 2026-03-17 |
+| `messages` (client) | `generateMessageId()` | `addDoc` auto-ID (3 σημεία) | 2026-03-17 |
+| `bank_accounts` | `generateBankAccountId()` | `addDoc` auto-ID | 2026-03-17 |
+| `file_comments` | `generateCommentId()` | `addDoc` auto-ID | 2026-03-17 |
+| `file_shares` | `generateShareId()` | `addDoc` auto-ID | 2026-03-17 |
+| `file_approvals` | `generateApprovalId()` | `addDoc` auto-ID | 2026-03-17 |
+| `file_folders` | `generateFolderId()` | `addDoc` auto-ID | 2026-03-17 |
+| `file_audit_log` | `generateAuditId()` | `addDoc` auto-ID | 2026-03-17 |
+| `document_templates` | `generateTemplateId()` | `addDoc` auto-ID | 2026-03-17 |
+| `attendance_events` | `generateEventId()` | `addDoc` auto-ID | 2026-03-17 |
+| `navigation_companies` | `generateNavigationId()` | `addDoc` auto-ID | 2026-03-17 |
+| `dxfViewerLevels` | `generateLevelId()` | `addDoc` auto-ID | 2026-03-17 |
+| `cadFiles` (DXF) | `generateFileId()` | Filename-based IDs | 2026-03-17 |
 
 ### 3.4 Collections με Firestore Auto-Generated IDs (addDoc) ⚠️ — Remaining
 
 | Collection | Αρχείο | Σχόλιο |
 |------------|--------|--------|
-| `communications` | `communications.service.ts:193` | Auto-ID (legacy) |
-| `messages` (client) | `communications-client.service.ts:65`, `messageRouter.ts:240`, `orchestrator.ts:275` | Auto-ID (3 σημεία) |
-| `file_comments` | `file-comment.service.ts:75` | Auto-ID |
-| `file_shares` | `file-share.service.ts:151` | Auto-ID |
-| `file_approvals` | `file-approval.service.ts:101` | Auto-ID |
-| `file_folders` | `file-folder.service.ts:85` | Auto-ID |
-| `file_audit_log` | `file-audit.service.ts:142` | Auto-ID |
-| `document_templates` | `document-template.service.ts:99` | Auto-ID |
-| `tasks` (CRM) | `TasksRepository.ts:80` | Auto-ID αντί `generateTaskId()` |
-| `boq_items` | `boq-repository.ts:245,321` | Auto-ID (2 σημεία) |
-| `bank_accounts` | `BankAccountsService.ts:295` | Auto-ID |
-| `attendance_events` | `useAttendanceEvents.ts:179` | Auto-ID |
-| `attendance_qr_tokens` | `qr-token-service.ts` | Auto-ID + HMAC token |
-| `navigation_companies` | `navigation-companies.service.ts:44` | Auto-ID |
-| `dxfViewerLevels` | `LevelsSystem.tsx:191` | Auto-ID |
-| `dxf overlay items` | `overlay-store.tsx:137` | Auto-ID (subcollection) |
+| `attendance_qr_tokens` | `qr-token-service.ts` | Auto-ID + HMAC token (intentional — server-only tokens) |
+| `dxf overlay items` | `overlay-store.tsx:137` | Auto-ID (subcollection — low priority) |
+| `notifications` (test page) | `crm/notifications/page.tsx:44` | Test page — not production |
+| `units` (migration) | `migrate-units/route.ts:322` | One-time migration script |
+| `contacts` (database-update) | `database-update/page.tsx:199` | Admin seeding tool |
 
-**Σύνολο: 24+ collections χρησιμοποιούν Firestore auto-IDs αντί Enterprise IDs.**
+**Σύνολο: Μείωση από 24+ σε 5 (εκ των οποίων 3 admin/test — δεν τρέχουν σε production).**
 
 ---
 

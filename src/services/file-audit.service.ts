@@ -18,7 +18,8 @@
 
 import {
   collection,
-  addDoc,
+  doc,
+  setDoc,
   query,
   where,
   orderBy,
@@ -168,10 +169,12 @@ export class FileAuditService {
         }
       }
 
-      const colRef = collection(db, FILE_AUDIT_COLLECTION);
-      const docRef = await addDoc(colRef, cleanEntry);
+      const { generateAuditId } = await import('@/services/enterprise-id.service');
+      const enterpriseId = generateAuditId();
+      const docRef = doc(db, FILE_AUDIT_COLLECTION, enterpriseId);
+      await setDoc(docRef, cleanEntry);
 
-      return docRef.id;
+      return enterpriseId;
     } catch (err) {
       // Audit failures should never break the main operation
       logger.error('Failed to record audit entry', {

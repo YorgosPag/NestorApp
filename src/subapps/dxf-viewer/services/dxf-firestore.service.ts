@@ -3,6 +3,7 @@ import { db, storage } from '../../../lib/firebase';
 import { doc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, getBytes } from 'firebase/storage';
 import { COLLECTIONS } from '../../../config/firestore-collections';
+import { generateFileId as enterpriseGenerateFileId } from '@/services/enterprise-id.service';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import type { SceneModel } from '../types/scene';
 import {
@@ -150,9 +151,9 @@ export class DxfFirestoreService {
       scene
     });
 
-    // Generate secure identifiers
+    // Generate secure identifiers — enterprise ID (SOS N.6)
     const sanitizedFileName = DxfSecurityValidator.sanitizeFileName(fileName);
-    const fileId = DxfSecurityValidator.generateSecureFileId(fileName);
+    const fileId = this.generateFileId(fileName);
 
     // Check if validation passed
     const isValid = !DxfSecurityValidator.hasBlockingErrors(validationResults);
@@ -553,8 +554,10 @@ export class DxfFirestoreService {
 
   /**
    * Generate file ID from filename
+   * @deprecated Use enterprise generateFileId() from enterprise-id.service.ts (SOS N.6)
+   * Kept for backward compatibility with legacy filename-based lookups
    */
-  static generateFileId(fileName: string): string {
+  static generateLegacyFileId(fileName: string): string {
     // Remove extension and sanitize for Firestore document ID
     const baseName = fileName.replace(/\.[^/.]+$/, '');
     return baseName
@@ -562,5 +565,13 @@ export class DxfFirestoreService {
       .replace(/[^a-z0-9_-]/g, '_')
       .replace(/_+/g, '_')
       .substring(0, 100); // Firestore ID limit
+  }
+
+  /**
+   * Generate enterprise file ID (SOS N.6 compliant)
+   * Format: file_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  static generateFileId(_fileName?: string): string {
+    return enterpriseGenerateFileId();
   }
 }

@@ -2,10 +2,11 @@
 
 import { MESSAGE_DIRECTIONS, MESSAGE_STATUSES, isChannelEnabled } from '../../config/communications.config';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, updateDoc, doc, serverTimestamp, FieldValue } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, serverTimestamp, FieldValue } from 'firebase/firestore';
 import type { Channel, BaseMessageInput, SendResult } from '@/types/communications';
 import { ATTACHMENT_TYPES, type MessageAttachment } from '@/types/conversations';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { generateMessageId } from '@/services/enterprise-id.service';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
@@ -237,8 +238,11 @@ class MessageRouter {
       };
 
       // 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES
-      const docRef = await addDoc(collection(db, COLLECTIONS.MESSAGES), record);
-      return { id: docRef.id, ...record };
+      // 🏢 ENTERPRISE: setDoc + enterprise ID (SOS N.6)
+      const enterpriseId = generateMessageId();
+      const docRef = doc(db, COLLECTIONS.MESSAGES, enterpriseId);
+      await setDoc(docRef, record);
+      return { id: enterpriseId, ...record };
 
     } catch (error) {
       // Error logging removed
