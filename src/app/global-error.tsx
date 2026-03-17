@@ -18,6 +18,8 @@
 
 'use client';
 
+import * as Sentry from '@sentry/nextjs';
+import { useEffect } from 'react';
 import { RouteErrorFallback } from '@/components/ui/ErrorBoundary/ErrorBoundary';
 
 interface GlobalErrorProps {
@@ -37,6 +39,10 @@ interface GlobalErrorProps {
  * @note No TourProvider needed - useTourSafe() handles missing context gracefully
  */
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
+  useEffect(() => {
+    Sentry.captureException(error);
+  }, [error]);
+
   return (
     <html lang="el">
       <body>

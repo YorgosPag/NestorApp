@@ -1,3 +1,5 @@
+const { withSentryConfig } = require('@sentry/nextjs');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // [FAST] FAST DEV MODE - Skip checks για άμεσο startup
@@ -332,4 +334,24 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+module.exports = withSentryConfig(nextConfig, {
+  // Sentry build options
+  org: 'pagonis',
+  project: 'nestor-app',
+
+  // Suppress source map upload warnings (no auth token = no upload)
+  silent: !process.env.SENTRY_AUTH_TOKEN,
+
+  // Disable source map upload for now (requires auth token)
+  disableServerWebpackPlugin: !process.env.SENTRY_AUTH_TOKEN,
+  disableClientWebpackPlugin: !process.env.SENTRY_AUTH_TOKEN,
+
+  // Hide source maps from users
+  hideSourceMaps: true,
+
+  // Wider error capture in Next.js
+  widenClientFileUpload: true,
+
+  // Tree-shake Sentry logger in production
+  disableLogger: true,
+});
