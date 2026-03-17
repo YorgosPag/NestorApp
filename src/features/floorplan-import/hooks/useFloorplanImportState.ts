@@ -570,7 +570,7 @@ export function useFloorplanImportState(
       category: 'floorplans' as FileCategory,
       userId: user.uid,
       entityLabel,
-      purpose: 'floorplan',
+      purpose: selection.floorplanType === 'floor' ? 'floor-floorplan' : 'floorplan',
       ...(selection.levelFloorId ? { levelFloorId: selection.levelFloorId } : {}),
       ...(linkedTo.length > 0 ? { linkedTo } : {}),
     };
