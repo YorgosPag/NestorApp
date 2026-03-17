@@ -20,6 +20,7 @@ import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { getCompanyById } from '@/services/companies.service';
+import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 
@@ -99,7 +100,7 @@ export function ParkingFloorplanTab({ parking }: ParkingFloorplanTabProps) {
         projectId={parking.projectId}
         domain="construction"
         category="floorplans"
-        purpose="parking-floorplan"
+        purpose={FLOORPLAN_PURPOSES.PARKING}
         entryPointCategoryFilter="floorplans"
         displayStyle="floorplan-gallery"
         acceptedTypes={FLOORPLAN_ACCEPT}

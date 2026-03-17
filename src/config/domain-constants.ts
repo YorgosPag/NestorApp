@@ -311,6 +311,43 @@ export const PHOTO_PURPOSES = {
 export type PhotoPurpose = typeof PHOTO_PURPOSES[keyof typeof PHOTO_PURPOSES];
 
 /**
+ * 🏢 ENTERPRISE: Floorplan upload purposes (centralized)
+ * @enterprise Single source of truth for all floorplan purpose strings
+ * @see ADR-031 - Canonical File Storage System
+ * @see ADR-033 - Floorplan Processing Pipeline
+ */
+export const FLOORPLAN_PURPOSES = {
+  /** Generic/legacy floorplan (fallback) */
+  GENERAL: 'floorplan',
+  /** Project-level general floorplan */
+  PROJECT: 'project-floorplan',
+  /** Building-level floorplan */
+  BUILDING: 'building-floorplan',
+  /** Storage-level floorplan */
+  STORAGE: 'storage-floorplan',
+  /** Parking-level floorplan */
+  PARKING: 'parking-floorplan',
+  /** Floor architectural plan */
+  FLOOR: 'floor-floorplan',
+  /** Floor section drawing */
+  FLOOR_SECTION: 'floor-section',
+  /** Floor electrical plan */
+  FLOOR_ELECTRICAL: 'floor-electrical',
+  /** Floor plumbing plan */
+  FLOOR_PLUMBING: 'floor-plumbing',
+  /** Unit architectural plan */
+  UNIT: 'unit-floorplan',
+  /** Unit section drawing */
+  UNIT_SECTION: 'unit-section',
+  /** Unit electrical plan */
+  UNIT_ELECTRICAL: 'unit-electrical',
+  /** Unit plumbing plan */
+  UNIT_PLUMBING: 'unit-plumbing',
+} as const;
+
+export type FloorplanPurpose = typeof FLOORPLAN_PURPOSES[keyof typeof FLOORPLAN_PURPOSES];
+
+/**
  * 🏢 ENTERPRISE: Centralized deprecation messages
  * @enterprise All deprecation warnings use these constants
  */

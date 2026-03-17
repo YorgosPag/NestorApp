@@ -20,6 +20,7 @@ import { useState, useEffect } from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { getCompanyById } from '@/services/companies.service';
+import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('FloorFloorplanInline');
@@ -109,7 +110,7 @@ export function FloorFloorplanInline({
       projectId={projectId}
       domain="construction"
       category="floorplans"
-      purpose="floor-floorplan"
+      purpose={FLOORPLAN_PURPOSES.FLOOR}
       entryPointCategoryFilter="floorplans"
       displayStyle="floorplan-gallery"
       acceptedTypes={FLOORPLAN_ACCEPT}

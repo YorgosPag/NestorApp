@@ -21,7 +21,8 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useFirestoreUnits } from '@/hooks/useFirestoreUnits';
 import type { FloorplanUploadConfig } from '@/hooks/useFloorplanUpload';
-import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
+import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
+import type { EntityType, FileDomain, FileCategory, FloorplanPurpose } from '@/config/domain-constants';
 import type { UnitLevel } from '@/types/unit';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -158,6 +159,14 @@ const INITIAL_SELECTION: FloorplanImportSelection = {
 };
 
 const TOTAL_STEPS = 6;
+
+/** Maps wizard floorplanType → centralized FLOORPLAN_PURPOSES constant */
+const FLOORPLAN_PURPOSE_BY_TYPE: Record<FloorplanType, FloorplanPurpose> = {
+  project: FLOORPLAN_PURPOSES.PROJECT,
+  building: FLOORPLAN_PURPOSES.BUILDING,
+  floor: FLOORPLAN_PURPOSES.FLOOR,
+  unit: FLOORPLAN_PURPOSES.UNIT,
+};
 
 // =============================================================================
 // OPTIONS
@@ -570,7 +579,7 @@ export function useFloorplanImportState(
       category: 'floorplans' as FileCategory,
       userId: user.uid,
       entityLabel,
-      purpose: selection.floorplanType === 'floor' ? 'floor-floorplan' : 'floorplan',
+      purpose: FLOORPLAN_PURPOSE_BY_TYPE[selection.floorplanType!],
       ...(selection.levelFloorId ? { levelFloorId: selection.levelFloorId } : {}),
       ...(linkedTo.length > 0 ? { linkedTo } : {}),
     };

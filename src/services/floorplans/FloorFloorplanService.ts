@@ -22,7 +22,7 @@
 import { safeJsonParse } from '@/lib/json-utils';
 import { ref, getDownloadURL, getBytes } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
-import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
+import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES, FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import { FileRecordService } from '@/services/file-record.service';
 import { FloorplanSaveOrchestrator } from '@/services/floorplans/floorplan-save-orchestrator';
 import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
@@ -149,7 +149,7 @@ export class FloorFloorplanService {
         projectId,
         entityType: ENTITY_TYPES.FLOOR,
         entityId: floorId,
-        purpose: 'floor-floorplan',
+        purpose: FLOORPLAN_PURPOSES.FLOOR,
         entityLabel: `Floor ${data.floorNumber || floorId}`,
         descriptors: [buildingId, `floor-${data.floorNumber || 0}`],
         createdBy,
@@ -212,7 +212,7 @@ export class FloorFloorplanService {
           companyId,
           domain: FILE_DOMAINS.CONSTRUCTION,
           category: FILE_CATEGORIES.FLOORPLANS,
-          purpose: 'floor-floorplan',
+          purpose: FLOORPLAN_PURPOSES.FLOOR,
         }
       );
 
@@ -265,7 +265,7 @@ export class FloorFloorplanService {
       const isDxfScene = !isPdf && !isImage;
 
       // Extract buildingId from descriptors (first element)
-      const buildingId = fileRecord.purpose === 'floor-floorplan' &&
+      const buildingId = fileRecord.purpose === FLOORPLAN_PURPOSES.FLOOR &&
                          Array.isArray((fileRecord as FileRecord & { descriptors?: string[] }).descriptors)
                            ? (fileRecord as FileRecord & { descriptors?: string[] }).descriptors?.[0] || ''
                            : '';
@@ -350,7 +350,7 @@ export class FloorFloorplanService {
           companyId,
           domain: FILE_DOMAINS.CONSTRUCTION,
           category: FILE_CATEGORIES.FLOORPLANS,
-          purpose: 'floor-floorplan',
+          purpose: FLOORPLAN_PURPOSES.FLOOR,
         }
       );
 
@@ -381,7 +381,7 @@ export class FloorFloorplanService {
           companyId,
           domain: FILE_DOMAINS.CONSTRUCTION,
           category: FILE_CATEGORIES.FLOORPLANS,
-          purpose: 'floor-floorplan',
+          purpose: FLOORPLAN_PURPOSES.FLOOR,
         }
       );
 

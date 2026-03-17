@@ -10,6 +10,7 @@
  */
 
 import type { UploadEntryPoint } from './types';
+import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 
 /**
  * Project upload entry points (non-study).
@@ -94,7 +95,7 @@ export const PROJECT_ENTRY_POINTS: UploadEntryPoint[] = [
     // ------------------------------------------------------------------------
     {
       id: 'floor-plan',
-      purpose: 'floorplan',
+      purpose: FLOORPLAN_PURPOSES.GENERAL,
       domain: 'construction',
       category: 'floorplans',
       label: {

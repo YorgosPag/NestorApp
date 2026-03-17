@@ -25,6 +25,7 @@ import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { useTranslation } from 'react-i18next';
 import { getCompanyById } from '@/services/companies.service';
+import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Property } from '@/types/property-viewer';
@@ -151,7 +152,7 @@ export function FloorPlanTab({
       entityLabel={selectedUnit.name || `Μονάδα ${selectedUnit.id}`}
       domain="construction"
       category="floorplans"
-      purpose="unit-floorplan"
+      purpose={FLOORPLAN_PURPOSES.UNIT}
       entryPointCategoryFilter="floorplans"
       displayStyle="floorplan-gallery"
       acceptedTypes={FLOORPLAN_ACCEPT}

@@ -25,7 +25,7 @@ import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
 import { Logger, LogLevel, DevNullOutput } from '@/subapps/dxf-viewer/settings/telemetry/Logger';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
-import { ENTITY_TYPES } from '@/config/domain-constants';
+import { ENTITY_TYPES, FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
@@ -270,7 +270,7 @@ export class BuildingFloorplanService {
         ? (options.originalFile!.type || (fileExtension === 'pdf' ? 'application/pdf' : 'application/dxf'))
         : 'application/json';
 
-      const purpose = type === 'building' ? 'building-floorplan' : 'storage-floorplan';
+      const purpose = type === 'building' ? FLOORPLAN_PURPOSES.BUILDING : FLOORPLAN_PURPOSES.STORAGE;
       const entityLabel = type === 'building' ? `Building ${buildingId}` : `Storage ${buildingId}`;
 
       // Determine payload

@@ -25,6 +25,7 @@ import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getCompanyById } from '@/services/companies.service'; // 🏢 ENTERPRISE: Fetch company name (ADR-031)
+import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import type { Project } from '@/types/project';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('ProjectFloorplanTab');
@@ -109,7 +110,7 @@ export function ProjectFloorplanTab({
   }, [companyId]);
 
   // Determine purpose based on floorplan type for filtering
-  const purpose = floorplanType === 'parking' ? 'parking-floorplan' : 'project-floorplan';
+  const purpose = floorplanType === 'parking' ? FLOORPLAN_PURPOSES.PARKING : FLOORPLAN_PURPOSES.PROJECT;
 
   // Translated title
   const displayTitle = title

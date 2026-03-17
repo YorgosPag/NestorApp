@@ -8,6 +8,7 @@
  */
 
 import type { UploadEntryPoint } from './types';
+import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 
 /**
  * Unit (apartment/office/shop) upload entry points.
@@ -18,7 +19,7 @@ export const UNIT_ENTRY_POINTS: UploadEntryPoint[] = [
     // ------------------------------------------------------------------------
     {
       id: 'unit-floor-plan',
-      purpose: 'unit-floorplan',
+      purpose: FLOORPLAN_PURPOSES.UNIT,
       domain: 'construction',
       category: 'floorplans',
       label: {
@@ -34,7 +35,7 @@ export const UNIT_ENTRY_POINTS: UploadEntryPoint[] = [
     },
     {
       id: 'unit-section-drawing',
-      purpose: 'unit-section',
+      purpose: FLOORPLAN_PURPOSES.UNIT_SECTION,
       domain: 'construction',
       category: 'floorplans',
       label: {
@@ -50,7 +51,7 @@ export const UNIT_ENTRY_POINTS: UploadEntryPoint[] = [
     },
     {
       id: 'unit-electrical-plan',
-      purpose: 'unit-electrical',
+      purpose: FLOORPLAN_PURPOSES.UNIT_ELECTRICAL,
       domain: 'construction',
       category: 'floorplans',
       label: {
@@ -66,7 +67,7 @@ export const UNIT_ENTRY_POINTS: UploadEntryPoint[] = [
     },
     {
       id: 'unit-plumbing-plan',
-      purpose: 'unit-plumbing',
+      purpose: FLOORPLAN_PURPOSES.UNIT_PLUMBING,
       domain: 'construction',
       category: 'floorplans',
       label: {

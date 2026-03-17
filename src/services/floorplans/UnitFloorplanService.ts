@@ -31,7 +31,7 @@ import { db, storage } from '@/lib/firebase';
 import { FileRecordService } from '@/services/file-record.service';
 import { FloorplanSaveOrchestrator } from '@/services/floorplans/floorplan-save-orchestrator';
 import { RealtimeService } from '@/services/realtime';
-import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
+import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES, FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import { Logger, LogLevel, DevNullOutput } from '@/subapps/dxf-viewer/settings/telemetry/Logger';
 
 // =============================================================================
@@ -142,7 +142,7 @@ export class UnitFloorplanService {
         projectId,
         entityType: ENTITY_TYPES.UNIT,
         entityId: unitId,
-        purpose: 'unit-floorplan',
+        purpose: FLOORPLAN_PURPOSES.UNIT,
         entityLabel: `Unit ${unitId}`,
         ext: fileExtension,
         descriptors: [unitId, buildingId || '', 'unit-floorplan'].filter(Boolean),
@@ -203,7 +203,7 @@ export class UnitFloorplanService {
           companyId,
           domain: FILE_DOMAINS.CONSTRUCTION,
           category: FILE_CATEGORIES.FLOORPLANS,
-          purpose: 'unit-floorplan',
+          purpose: FLOORPLAN_PURPOSES.UNIT,
         }
       );
 
@@ -291,7 +291,7 @@ export class UnitFloorplanService {
           companyId,
           domain: FILE_DOMAINS.CONSTRUCTION,
           category: FILE_CATEGORIES.FLOORPLANS,
-          purpose: 'unit-floorplan',
+          purpose: FLOORPLAN_PURPOSES.UNIT,
         }
       );
 
@@ -324,7 +324,7 @@ export class UnitFloorplanService {
           companyId,
           domain: FILE_DOMAINS.CONSTRUCTION,
           category: FILE_CATEGORIES.FLOORPLANS,
-          purpose: 'unit-floorplan',
+          purpose: FLOORPLAN_PURPOSES.UNIT,
         }
       );
 

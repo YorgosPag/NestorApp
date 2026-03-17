@@ -11,6 +11,7 @@
  */
 
 import type { UploadEntryPoint } from './types';
+import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 
 /**
  * Floor (building storey) upload entry points.
@@ -21,7 +22,7 @@ export const FLOOR_ENTRY_POINTS: UploadEntryPoint[] = [
   // ------------------------------------------------------------------------
   {
     id: 'floor-floor-plan',
-    purpose: 'floor-floorplan',
+    purpose: FLOORPLAN_PURPOSES.FLOOR,
     domain: 'construction',
     category: 'floorplans',
     label: {
@@ -37,7 +38,7 @@ export const FLOOR_ENTRY_POINTS: UploadEntryPoint[] = [
   },
   {
     id: 'floor-section-drawing',
-    purpose: 'floor-section',
+    purpose: FLOORPLAN_PURPOSES.FLOOR_SECTION,
     domain: 'construction',
     category: 'floorplans',
     label: {
@@ -53,7 +54,7 @@ export const FLOOR_ENTRY_POINTS: UploadEntryPoint[] = [
   },
   {
     id: 'floor-electrical-plan',
-    purpose: 'floor-electrical',
+    purpose: FLOORPLAN_PURPOSES.FLOOR_ELECTRICAL,
     domain: 'construction',
     category: 'floorplans',
     label: {
@@ -69,7 +70,7 @@ export const FLOOR_ENTRY_POINTS: UploadEntryPoint[] = [
   },
   {
     id: 'floor-plumbing-plan',
-    purpose: 'floor-plumbing',
+    purpose: FLOORPLAN_PURPOSES.FLOOR_PLUMBING,
     domain: 'construction',
     category: 'floorplans',
     label: {

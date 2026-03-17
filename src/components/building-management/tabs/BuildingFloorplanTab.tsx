@@ -25,6 +25,7 @@ import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getCompanyById } from '@/services/companies.service';
+import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import type { Building } from '@/types/building/contracts';
 import { tryResolveCompanyId } from '@/services/company-id-resolver';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -140,7 +141,7 @@ export function BuildingFloorplanTab({
         projectId={resolvedBuilding.projectId}
         domain="construction"
         category="floorplans"
-        purpose="building-floorplan"
+        purpose={FLOORPLAN_PURPOSES.BUILDING}
         entryPointCategoryFilter="floorplans"
         displayStyle="floorplan-gallery"
         acceptedTypes={FLOORPLAN_ACCEPT}
