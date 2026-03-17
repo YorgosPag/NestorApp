@@ -116,6 +116,9 @@ const processingInProgress = new Set<string>();
 // ============================================================================
 
 export const dynamic = 'force-dynamic';
+// 🏢 ENTERPRISE: DXF parsing (download + parse + compress + upload) can exceed
+// the default 10s Vercel timeout for a ~400KB DXF file. Must be set explicitly.
+export const maxDuration = 60;
 
 // ============================================================================
 // MAIN HANDLER
