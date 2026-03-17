@@ -65,15 +65,16 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
         const { repository } = createAccountingServices();
         const categories = await repository.listCustomCategories(includeInactive);
 
-        return NextResponse.json({ categories });
+        return NextResponse.json({ success: true, data: categories });
       } catch (error) {
-        logger.error('Failed to list custom categories', { error });
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        const message = error instanceof Error ? error.message : 'Failed to list custom categories';
+        logger.error('Custom categories list error', { error: message });
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     }
   );
 
-  return withStandardRateLimit(request, () => handler(request));
+  return handler(request);
 }
 
 // =============================================================================
@@ -84,26 +85,33 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
     async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const body = (await req.json()) as CreateCategoryBody;
+        let body: CreateCategoryBody;
+        try {
+          body = (await req.json()) as CreateCategoryBody;
+        } catch {
+          return NextResponse.json(
+            { success: false, error: 'Invalid JSON body' },
+            { status: 400 }
+          );
+        }
 
-        // Validation
         if (!body.type || !body.label?.trim() || !body.mydataCode || !body.e3Code) {
           return NextResponse.json(
-            { error: 'Missing required fields: type, label, mydataCode, e3Code' },
+            { success: false, error: 'Missing required fields: type, label, mydataCode, e3Code' },
             { status: 400 }
           );
         }
 
         if (body.type !== 'income' && body.type !== 'expense') {
           return NextResponse.json(
-            { error: 'Invalid type — must be "income" or "expense"' },
+            { success: false, error: 'Invalid type — must be "income" or "expense"' },
             { status: 400 }
           );
         }
 
         if (![0, 50, 100].includes(body.vatDeductiblePercent)) {
           return NextResponse.json(
-            { error: 'vatDeductiblePercent must be 0, 50, or 100' },
+            { success: false, error: 'vatDeductiblePercent must be 0, 50, or 100' },
             { status: 400 }
           );
         }
@@ -127,25 +135,21 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
 
         logger.info('Custom category created', { id: result.id, code: result.code });
 
-        return NextResponse.json(result, { status: 201 });
+        return NextResponse.json({ success: true, data: result }, { status: 201 });
       } catch (error) {
-        logger.error('Failed to create custom category', { error });
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        const message = error instanceof Error ? error.message : 'Failed to create custom category';
+        logger.error('Custom category create error', { error: message });
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     }
   );
 
-  return withSensitiveRateLimit(request, () => handler(request));
+  return handler(request);
 }
 
 // =============================================================================
 // EXPORTS
 // =============================================================================
 
-export async function GET(request: NextRequest): Promise<NextResponse> {
-  return handleGet(request);
-}
-
-export async function POST(request: NextRequest): Promise<NextResponse> {
-  return handlePost(request);
-}
+export const GET = withStandardRateLimit(handleGet);
+export const POST = withSensitiveRateLimit(handlePost);

@@ -45,31 +45,31 @@ async function handleGet(
   request: NextRequest,
   segmentData?: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const params = await segmentData?.params;
-        const id = params?.id;
-        if (!id) {
-          return NextResponse.json({ error: 'Missing category ID' }, { status: 400 });
-        }
+  const { id } = await segmentData!.params;
 
+  const handler = withAuth(
+    async (_req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      try {
         const { repository } = createAccountingServices();
         const category = await repository.getCustomCategory(id);
 
         if (!category) {
-          return NextResponse.json({ error: 'Category not found' }, { status: 404 });
+          return NextResponse.json(
+            { success: false, error: 'Category not found' },
+            { status: 404 }
+          );
         }
 
-        return NextResponse.json({ category });
+        return NextResponse.json({ success: true, data: category });
       } catch (error) {
-        logger.error('Failed to get custom category', { error });
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        const message = error instanceof Error ? error.message : 'Failed to get custom category';
+        logger.error('Custom category get error', { id, error: message });
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     }
   );
 
-  return withStandardRateLimit(request, () => handler(request));
+  return handler(request);
 }
 
 // =============================================================================
@@ -80,22 +80,29 @@ async function handlePatch(
   request: NextRequest,
   segmentData?: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
+  const { id } = await segmentData!.params;
+
   const handler = withAuth(
     async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const params = await segmentData?.params;
-        const id = params?.id;
-        if (!id) {
-          return NextResponse.json({ error: 'Missing category ID' }, { status: 400 });
+        let body: UpdateCustomCategoryInput;
+        try {
+          body = (await req.json()) as UpdateCustomCategoryInput;
+        } catch {
+          return NextResponse.json(
+            { success: false, error: 'Invalid JSON body' },
+            { status: 400 }
+          );
         }
-
-        const body = (await req.json()) as UpdateCustomCategoryInput;
 
         const { repository } = createAccountingServices();
         const existing = await repository.getCustomCategory(id);
 
         if (!existing) {
-          return NextResponse.json({ error: 'Category not found' }, { status: 404 });
+          return NextResponse.json(
+            { success: false, error: 'Category not found' },
+            { status: 404 }
+          );
         }
 
         await repository.updateCustomCategory(id, body);
@@ -104,13 +111,14 @@ async function handlePatch(
 
         return NextResponse.json({ success: true });
       } catch (error) {
-        logger.error('Failed to update custom category', { error });
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        const message = error instanceof Error ? error.message : 'Failed to update custom category';
+        logger.error('Custom category update error', { id, error: message });
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     }
   );
 
-  return withSensitiveRateLimit(request, () => handler(request));
+  return handler(request);
 }
 
 // =============================================================================
@@ -121,40 +129,36 @@ async function handleDelete(
   request: NextRequest,
   segmentData?: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const params = await segmentData?.params;
-        const id = params?.id;
-        if (!id) {
-          return NextResponse.json({ error: 'Missing category ID' }, { status: 400 });
-        }
+  const { id } = await segmentData!.params;
 
+  const handler = withAuth(
+    async (_req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      try {
         const { repository } = createAccountingServices();
         const existing = await repository.getCustomCategory(id);
 
         if (!existing) {
-          return NextResponse.json({ error: 'Category not found' }, { status: 404 });
+          return NextResponse.json(
+            { success: false, error: 'Category not found' },
+            { status: 404 }
+          );
         }
 
-        // Check usage: does any journal entry use this category code?
+        // Check usage: does any journal entry reference this category code?
         const entriesPage = await repository.listJournalEntries(
           { category: existing.code },
           1
         );
-        const isUsed = entriesPage.total > 0;
+        const isUsed = entriesPage.items.length > 0;
 
         if (isUsed) {
           // Soft delete — deactivate only, preserve referential integrity
           await repository.updateCustomCategory(id, { isActive: false });
-          logger.info('Custom category soft-deleted (in use)', {
-            id,
-            code: existing.code,
-            entriesCount: entriesPage.total,
-          });
+          logger.info('Custom category soft-deleted (in use)', { id, code: existing.code });
           return NextResponse.json({
+            success: true,
             action: 'soft_deleted' as const,
-            message: `Η κατηγορία απενεργοποιήθηκε — χρησιμοποιείται σε ${entriesPage.total} εγγραφές`,
+            message: 'Η κατηγορία απενεργοποιήθηκε — χρησιμοποιείται σε υπάρχουσες εγγραφές',
           });
         }
 
@@ -162,40 +166,25 @@ async function handleDelete(
         await repository.deleteCustomCategory(id);
         logger.info('Custom category hard-deleted (unused)', { id, code: existing.code });
         return NextResponse.json({
+          success: true,
           action: 'hard_deleted' as const,
           message: 'Η κατηγορία διαγράφηκε οριστικά',
         });
       } catch (error) {
-        logger.error('Failed to delete custom category', { error });
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        const message = error instanceof Error ? error.message : 'Failed to delete custom category';
+        logger.error('Custom category delete error', { id, error: message });
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     }
   );
 
-  return withSensitiveRateLimit(request, () => handler(request));
+  return handler(request);
 }
 
 // =============================================================================
 // EXPORTS
 // =============================================================================
 
-export async function GET(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
-  return handleGet(request, segmentData);
-}
-
-export async function PATCH(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
-  return handlePatch(request, segmentData);
-}
-
-export async function DELETE(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
-  return handleDelete(request, segmentData);
-}
+export const GET = withStandardRateLimit(handleGet);
+export const PATCH = withSensitiveRateLimit(handlePatch);
+export const DELETE = withSensitiveRateLimit(handleDelete);
