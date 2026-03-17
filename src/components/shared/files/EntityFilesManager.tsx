@@ -306,6 +306,8 @@ export function EntityFilesManager({
         return;
       }
 
+      let anyProcessed = false;
+
       for (const file of unprocessed) {
         if (cancelled) return;
         try {
@@ -318,6 +320,7 @@ export function EntityFilesManager({
             body: JSON.stringify({ fileId: file.id, forceReprocess: false }),
           });
           if (response.ok) {
+            anyProcessed = true;
             logger.info('[EntityFilesManager] Auto-processed floorplan', { fileId: file.id });
           }
         } catch (err) {
@@ -330,7 +333,10 @@ export function EntityFilesManager({
         }
       }
 
-      // Firestore real-time listener auto-updates processedData — no manual refetch needed
+      // useEntityFiles uses one-time fetch — must refetch after processing to get processedData
+      if (anyProcessed && !cancelled) {
+        await refetch();
+      }
     };
 
     processFiles();
@@ -338,7 +344,7 @@ export function EntityFilesManager({
     return () => {
       cancelled = true;
     };
-  }, [displayStyle, filteredFiles]);
+  }, [displayStyle, filteredFiles, refetch]);
 
   // =========================================================================
   // 📋 AUDIT TRAIL — Record file operations (ADR-195)
