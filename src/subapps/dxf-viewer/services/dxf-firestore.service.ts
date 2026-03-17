@@ -677,24 +677,29 @@ export class DxfFirestoreService {
   static async findExistingFileRecord(fileName: string): Promise<{ id: string; storagePath: string | null } | null> {
     try {
       const { collection, query, where, limit, getDocs } = await import('firebase/firestore');
+      // 🏢 ENTERPRISE: Simple query on originalFilename only — avoids composite index requirement
       const q = query(
         collection(db, COLLECTIONS.FILES),
         where('originalFilename', '==', fileName),
-        where('category', '==', 'floorplans'),
-        where('isDeleted', '==', false),
-        limit(1)
+        limit(5)
       );
       const snapshot = await getDocs(q);
-      if (!snapshot.empty) {
-        const docData = snapshot.docs[0].data();
-        const existingId = snapshot.docs[0].id;
-        const storagePath = (docData.storagePath as string) ?? null;
-        dxfLogger.info('Found existing FileRecord for auto-save reuse', { fileName, existingId, storagePath });
-        return { id: existingId, storagePath };
+
+      // Filter in code: floorplans category + not deleted
+      for (const docSnap of snapshot.docs) {
+        const data = docSnap.data();
+        if (data.category === 'floorplans' && data.isDeleted !== true) {
+          const existingId = docSnap.id;
+          const storagePath = (data.storagePath as string) ?? null;
+          dxfLogger.info('Found existing FileRecord for auto-save reuse', { fileName, existingId, storagePath });
+          return { id: existingId, storagePath };
+        }
       }
+
+      dxfLogger.debug('No existing FileRecord found', { fileName });
       return null;
     } catch (error) {
-      dxfLogger.debug('Could not check for existing FileRecord', {
+      dxfLogger.warn('Could not check for existing FileRecord', {
         fileName,
         error: getErrorMessage(error),
       });
