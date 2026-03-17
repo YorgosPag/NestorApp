@@ -5,9 +5,10 @@
  * @see https://docs.sentry.io/platforms/javascript/guides/nextjs/
  */
 
-import * as Sentry from '@sentry/nextjs';
+// 🔇 SENTRY DISABLED (2026-03-17) — re-enable with Vercel Pro
+// import * as Sentry from '@sentry/nextjs';
 
-Sentry.init({
+/* Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN?.trim(),
 
   // Performance: 20% in production
@@ -54,4 +55,4 @@ Sentry.init({
     };
     return event;
   },
-});
+}); */

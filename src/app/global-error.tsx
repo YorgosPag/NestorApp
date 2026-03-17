@@ -18,7 +18,7 @@
 
 'use client';
 
-import * as Sentry from '@sentry/nextjs';
+// import * as Sentry from '@sentry/nextjs'; // 🔇 DISABLED (2026-03-17) — re-enable with Vercel Pro
 import { useEffect } from 'react';
 import { RouteErrorFallback } from '@/components/ui/ErrorBoundary/ErrorBoundary';
 
@@ -40,7 +40,8 @@ interface GlobalErrorProps {
  */
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
   useEffect(() => {
-    Sentry.captureException(error);
+    // Sentry.captureException(error); // 🔇 DISABLED
+    console.error('[GlobalError]', error);
   }, [error]);
 
   return (
