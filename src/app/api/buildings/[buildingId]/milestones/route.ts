@@ -5,7 +5,7 @@ import { withAuth, requireBuildingInTenant, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, type QuerySnapshot, type DocumentData } from 'firebase-admin/firestore';
 import type { BuildingMilestone } from '@/types/building/milestone';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeToISO } from '@/lib/date-local';
@@ -52,11 +52,30 @@ export async function GET(
         path: `/api/buildings/${buildingId}/milestones`,
       });
 
-      const snapshot = await adminDb
-        .collection(COLLECTIONS.BUILDING_MILESTONES)
-        .where('buildingId', '==', buildingId)
-        .orderBy('order', 'asc')
-        .get();
+      let snapshot: QuerySnapshot<DocumentData>;
+      try {
+        snapshot = await adminDb
+          .collection(COLLECTIONS.BUILDING_MILESTONES)
+          .where('buildingId', '==', buildingId)
+          .orderBy('order', 'asc')
+          .get();
+      } catch (firestoreError) {
+        const errMsg = firestoreError instanceof Error ? firestoreError.message : String(firestoreError);
+
+        // Composite index not yet built — return empty instead of 500
+        if (errMsg.includes('FAILED_PRECONDITION') || errMsg.includes('index')) {
+          logger.warn('[Milestones] Composite index not ready, returning empty', { buildingId });
+          return NextResponse.json({
+            success: true,
+            milestones: [],
+            buildingId,
+          } as MilestonesGetResponse);
+        }
+
+        // Genuine Firestore failure
+        logger.error('[Milestones] Firestore query failed', { buildingId, error: errMsg });
+        throw new ApiError(502, `Database query failed: ${errMsg}`);
+      }
 
       const milestones: BuildingMilestone[] = snapshot.docs.map((doc) => {
         const data = doc.data() as Omit<BuildingMilestone, 'id'>;

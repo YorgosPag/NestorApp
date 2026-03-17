@@ -57,17 +57,16 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     currentLevelId: null,
   });
 
-  // Firestore subscription
+  // Firestore subscription — requires both authenticated user AND a selected level
   useEffect(() => {
-    if (!state.currentLevelId) {
-
+    if (!state.currentLevelId || !user) {
       return;
     }
 
     setState(prev => ({ ...prev, isLoading: true }));
     const collectionRef = collection(db, `${COLLECTION_PREFIX}/${state.currentLevelId}/items`);
     const q = query(collectionRef, orderBy('createdAt', 'asc'));
-    
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const overlays: Record<string, Overlay> = {};
       snapshot.docs.forEach(doc => {
@@ -111,7 +110,7 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     });
 
     return () => unsubscribe();
-  }, [state.currentLevelId]);
+  }, [state.currentLevelId, user]);
 
   // Actions
   const getByLevel = useCallback((levelId: string): Overlay[] => {
