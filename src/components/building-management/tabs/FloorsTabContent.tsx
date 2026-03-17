@@ -50,6 +50,7 @@ interface FloorsApiResponse {
 
 interface FloorMutationResponse {
   success: boolean;
+  floorId?: string;
   floor?: FloorRecord;
   message?: string;
   error?: string;
@@ -137,23 +138,20 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
     if (!createName.trim()) return;
     setCreating(true);
     try {
-      const result = await apiClient.post<FloorMutationResponse>('/api/floors', {
+      await apiClient.post<FloorMutationResponse>('/api/floors', {
         number: parseInt(createNumber, 10) || 0,
         name: createName.trim(),
         elevation: createElevation ? parseFloat(createElevation) : null,
         buildingId: building.id,
         ...(building.projectId ? { projectId: building.projectId } : {}),
       });
-      if (result?.success) {
-        setShowCreateForm(false);
-        setCreateNumber('0');
-        setCreateName('');
-        setCreateElevation('');
-        toast.success(t('tabs.floors.createSuccess', { defaultValue: 'Ο όροφος δημιουργήθηκε' }));
-        await fetchFloors();
-      } else {
-        toast.error(result?.error ?? t('tabs.floors.createError', { defaultValue: 'Αποτυχία δημιουργίας ορόφου' }));
-      }
+      // apiClient throws on error — reaching here means success
+      setShowCreateForm(false);
+      setCreateNumber('0');
+      setCreateName('');
+      setCreateElevation('');
+      toast.success(t('tabs.floors.createSuccess', { defaultValue: 'Ο όροφος δημιουργήθηκε' }));
+      await fetchFloors();
     } catch (err) {
       toast.error(t('tabs.floors.createError', { defaultValue: 'Αποτυχία δημιουργίας ορόφου' }));
       console.error('[FloorsTab] Create error:', err);

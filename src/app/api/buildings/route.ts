@@ -11,6 +11,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { propagateBuildingProjectLink } from '@/lib/firestore/cascade-propagation.service';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
 import { normalizeToMillis } from '@/lib/date-local';
+import { createEntity } from '@/lib/firestore/entity-creation.service';
 
 const logger = createModuleLogger('BuildingsRoute');
 
@@ -142,66 +143,37 @@ interface BuildingCreateResponse {
 export const POST = withStandardRateLimit(
   withAuth<ApiSuccessResponse<BuildingCreateResponse>>(
     async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-    // 🔐 ADMIN SDK: Get server-side Firestore instance
-    const adminDb = getAdminFirestore();
-    if (!adminDb) {
-      logger.error('Firebase Admin not initialized');
-      throw new ApiError(503, 'Database unavailable');
-    }
-
     try {
-      // Parse request body
       const body: BuildingCreatePayload = await request.json();
 
-      // 🏢 ENTERPRISE: ALL users (including super_admin) inherit companyId from project
-      const isSuperAdmin = isRoleBypass(ctx.globalRole);
-      let resolvedCompanyId: string | null = ctx.companyId;
-
-      if (isSuperAdmin && body.projectId) {
-        try {
-          const projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(String(body.projectId)).get();
-          const projectData = projectDoc.data();
-          resolvedCompanyId = projectData?.companyId || projectData?.linkedCompanyId || ctx.companyId;
-          logger.info('[Buildings] Super admin: inherited companyId from project', { projectId: body.projectId, resolvedCompanyId });
-        } catch {
-          logger.warn('[Buildings] Could not resolve project companyId');
-        }
-      }
-
-      const sanitizedData = {
-        ...body,
-        companyId: resolvedCompanyId,
-        linkedCompanyId: null,                            // 🏢 ADR-232: Set via EntityLinkCard
+      // Entity-specific fields: exclude common fields handled by createEntity
+      const { companyId: _c, ...bodyFields } = body;
+      const entitySpecificFields: Record<string, unknown> = {
+        ...Object.fromEntries(
+          Object.entries(bodyFields).filter(([, value]) => value !== undefined)
+        ),
         progress: 0,
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-        createdBy: ctx.uid,
       };
-
-      // 🏢 ENTERPRISE: Remove undefined fields (Firestore doesn't accept undefined)
-      const cleanData = Object.fromEntries(
-        Object.entries(sanitizedData).filter(([, value]) => value !== undefined)
-      );
 
       logger.info('[Buildings] Creating new building for tenant', { companyId: ctx.companyId });
 
-      // 🏗️ CREATE: Use Admin SDK with enterprise ID (ADR-210)
-      const { generateBuildingId } = await import('@/services/enterprise-id.service');
-      const buildingId = generateBuildingId();
-      await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).set(cleanData);
+      // 🏢 ADR-238: Centralized entity creation (auto companyId, audit, timestamps)
+      const result = await createEntity('building', {
+        auth: ctx,
+        parentId: body.projectId ? String(body.projectId) : null,
+        entitySpecificFields,
+        apiPath: '/api/buildings (POST)',
+      });
 
-      logger.info('[Buildings] Building created', { buildingId });
-
-      // 🏢 ENTERPRISE: Return created building with ID
       return apiSuccess<BuildingCreateResponse>(
         {
-          buildingId,
-          building: { ...body, id: buildingId }
+          buildingId: result.id,
+          building: { ...body, id: result.id }
         },
         'Building created successfully'
       );
-
     } catch (error) {
+      if (error instanceof ApiError) throw error;
       logger.error('[Buildings] Error creating building', { error });
       throw new ApiError(500, error instanceof Error ? error.message : 'Failed to create building');
     }

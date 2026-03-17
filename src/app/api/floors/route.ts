@@ -19,12 +19,14 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { isRoleBypass } from '@/lib/auth/roles';
+import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
 import { groupByKey } from '@/utils/collection-utils';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
 import { getErrorMessage } from '@/lib/error-utils';
+import { createEntity } from '@/lib/firestore/entity-creation.service';
 
 const logger = createModuleLogger('FloorsRoute');
 
@@ -203,147 +205,72 @@ interface CreateFloorRequest {
   elevation?: number;
 }
 
-type FloorCreateSuccess = {
-  success: true;
-  floor: FloorDocument;
-  message: string;
-};
-
-type FloorCreateError = {
-  success: false;
-  error: string;
-  details?: string;
-};
-
-type FloorCreateResponse = FloorCreateSuccess | FloorCreateError;
+interface FloorCreateResponse {
+  floorId: string;
+}
 
 /**
+ * 🏢 ADR-238: Create floor via centralized entity service
+ *
+ * BUG FIXES vs legacy code:
+ * - createdAt: serverTimestamp() instead of toISOString() (consistency)
+ * - companyId: inherited for ALL users, not just super_admin
+ * - updatedAt + linkedCompanyId: now included (were missing)
+ * - Audit logging: now included (was missing)
+ *
  * @rateLimit STANDARD (60 req/min) - CRUD
  */
 export const POST = withStandardRateLimit(
-  async (request: NextRequest) => {
-  const handler = withAuth<FloorCreateResponse>(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<FloorCreateResponse>> => {
+  withAuth<ApiSuccessResponse<FloorCreateResponse>>(
+    async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
-        const body = await req.json() as CreateFloorRequest;
+        const body = await request.json() as CreateFloorRequest;
 
-        logger.info('[Floors/Create] Creating floor', { companyId: ctx.companyId, userId: ctx.uid, floorData: body });
+        logger.info('[Floors/Create] Creating floor', { companyId: ctx.companyId, userId: ctx.uid });
 
-        // ============================================================================
-        // VALIDATION
-        // ============================================================================
-
+        // Validation
         if (typeof body.number !== 'number') {
-          return NextResponse.json({
-            success: false,
-            error: 'Validation failed',
-            details: 'Floor number is required and must be a number'
-          }, { status: 400 });
+          throw new ApiError(400, 'Floor number is required and must be a number');
         }
-
         if (!body.name || typeof body.name !== 'string') {
-          return NextResponse.json({
-            success: false,
-            error: 'Validation failed',
-            details: 'Floor name is required'
-          }, { status: 400 });
+          throw new ApiError(400, 'Floor name is required');
         }
-
         if (!body.buildingId || typeof body.buildingId !== 'string') {
-          return NextResponse.json({
-            success: false,
-            error: 'Validation failed',
-            details: 'Building ID is required'
-          }, { status: 400 });
+          throw new ApiError(400, 'Building ID is required');
         }
 
-        // projectId is optional — buildings can have floors without a project link
-
-        // ============================================================================
-        // 🏢 ENTERPRISE: Generate ID using centralized service
-        // ============================================================================
-
-        const { generateFloorId } = await import('@/services/enterprise-id.service');
-        const floorId = generateFloorId();
-
-        logger.info('[Floors/Create] Generated enterprise ID', { floorId });
-
-        // ============================================================================
-        // CREATE FLOOR DOCUMENT
-        // ============================================================================
-
-        // 🏢 ENTERPRISE: Resolve companyId from parent building (Google-level ownership)
-        // Super admin inherits companyId from the building, not from their own auth context.
-        // This ensures floors always have companyId for file queries (FloorFloorplanService).
-        let resolvedCompanyId: string | null = ctx.companyId;
-        const isSuperAdmin = isRoleBypass(ctx.globalRole);
-
-        if (isSuperAdmin) {
-          try {
-            const buildingDoc = await getAdminFirestore()
-              .collection(COLLECTIONS.BUILDINGS)
-              .doc(body.buildingId)
-              .get();
-            const buildingData = buildingDoc.data();
-            resolvedCompanyId = buildingData?.companyId || buildingData?.linkedCompanyId || null;
-            logger.info('[Floors/Create] Super admin: inherited companyId from building', { buildingId: body.buildingId, resolvedCompanyId });
-          } catch {
-            logger.warn('[Floors/Create] Could not resolve building companyId');
-          }
-        }
-
-        const now = new Date().toISOString();
-        const floorDocument: Record<string, unknown> = {
-          id: floorId,
+        // Entity-specific fields (common fields handled by createEntity)
+        const entitySpecificFields: Record<string, unknown> = {
           number: body.number,
           name: body.name,
           buildingId: body.buildingId,
           buildingName: body.buildingName || '',
-          ...(body.projectId ? { projectId: String(body.projectId) } : {}),
-          ...(body.projectName ? { projectName: body.projectName } : {}),
-          ...(resolvedCompanyId ? { companyId: resolvedCompanyId } : {}),
           units: body.units || 0,
-          elevation: body.elevation ?? null,  // 🏢 ADR-180: IFC elevation (metres)
-          createdAt: now,
-          createdBy: ctx.uid
+          elevation: body.elevation ?? null,
         };
+        if (body.projectId) entitySpecificFields.projectId = String(body.projectId);
+        if (body.projectName) entitySpecificFields.projectName = body.projectName;
 
-        // ============================================================================
-        // SAVE TO FIRESTORE
-        // ============================================================================
-
-        await getAdminFirestore()
-          .collection(COLLECTIONS.FLOORS)
-          .doc(floorId)
-          .set(floorDocument);
-
-        logger.info('[Floors/Create] Floor created successfully', { floorId });
-
-        return NextResponse.json({
-          success: true,
-          floor: floorDocument,
-          message: `Floor "${body.name}" created successfully with ID ${floorId}`
-        }, { status: 201 });
-
-      } catch (error) {
-        logger.error('[Floors/Create] Error', {
-          error: getErrorMessage(error),
-          userId: ctx.uid,
-          companyId: ctx.companyId
+        // 🏢 ADR-238: Centralized entity creation
+        const result = await createEntity('floor', {
+          auth: ctx,
+          parentId: body.buildingId,
+          entitySpecificFields,
+          apiPath: '/api/floors (POST)',
         });
 
-        return NextResponse.json({
-          success: false,
-          error: 'Failed to create floor',
-          details: getErrorMessage(error)
-        }, { status: 500 });
+        return apiSuccess<FloorCreateResponse>(
+          { floorId: result.id },
+          `Floor "${body.name}" created successfully`
+        );
+      } catch (error) {
+        if (error instanceof ApiError) throw error;
+        logger.error('[Floors/Create] Error', { error: getErrorMessage(error), userId: ctx.uid });
+        throw new ApiError(500, getErrorMessage(error, 'Failed to create floor'));
       }
     },
-    { permissions: 'projects:floors:view' }  // 🏢 ENTERPRISE: Using view permission (create not defined yet)
-  );
-
-  return handler(request);
-  }
+    { permissions: 'projects:floors:view' }
+  )
 );
 
 // =============================================================================

@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | PHASE 1 IMPLEMENTED |
+| **Status** | PHASE 2 COMPLETE |
 | **Date** | 2026-03-17 |
 | **Category** | Entity Systems |
 | **Canonical Location** | `src/lib/firestore/entity-creation.service.ts` |
@@ -329,15 +329,25 @@ createEntity(entityType, params):
 - Single Firestore read per parent (tenant check + companyId + entity code share same data)
 - Open-space parking (no buildingId) pre-verified in route handler before calling service
 
-### Phase 2: Migration (ένα endpoint τη φορά)
+### Phase 2: Migration ✅ COMPLETE (2026-03-17)
 
-| Step | File | Notes |
-|:---:|------|-------|
-| 5 | `src/app/api/storages/route.ts` | Σχεδόν ίδιο με parking |
-| 5 | `src/app/api/storages/route.ts` | Σχεδόν ίδιο με parking — next canary |
-| 6 | `src/app/api/units/create/route.ts` | Reference implementation — ήδη σωστά δομημένο |
-| 7 | `src/app/api/floors/route.ts` | **Bug fixes** (timestamps, companyId, audit, linkedCompanyId) |
-| 8 | `src/app/api/buildings/route.ts` | **Bug fixes** (audit, validation) |
+| Step | File | Status | Description |
+|:---:|------|:---:|-------------|
+| 5 | `src/app/api/storages/route.ts` | ✅ | POST reduced ~130 → ~50 lines |
+| 6 | `src/app/api/buildings/route.ts` | ✅ | POST reduced ~70 → ~35 lines. **Bug fix**: audit logging added |
+| 7 | `src/app/api/floors/route.ts` | ✅ | POST reduced ~125 → ~45 lines. **5 bug fixes**: serverTimestamp, companyId ALL users, updatedAt, linkedCompanyId, audit logging |
+| 8 | `src/app/api/units/create/route.ts` | ✅ | POST reduced ~165 → ~60 lines. Tenant check added via registry |
+| 9 | `src/lib/firestore/entity-creation.types.ts` | ✅ | Fix: codeField union added `'code'`, unit registry `codeField: 'code'` |
+| 10 | `src/components/building-management/tabs/FloorsTabContent.tsx` | ✅ | Frontend fix: canonical response handling (apiSuccess format) |
+
+**Net result**: ~490 lines removed, ~190 added. **-300 lines net reduction**.
+
+**Bug fixes auto-applied**:
+- Floors: `toISOString()` → `serverTimestamp()` (CRITICAL)
+- Floors: companyId inherited for ALL users, not just super_admin (HIGH)
+- Floors: `updatedAt` + `linkedCompanyId` now included (MEDIUM)
+- Buildings + Floors: audit logging now included (HIGH)
+- Units: tenant isolation check now enabled via registry (security improvement)
 
 ### Phase 3: Cleanup & Documentation
 
@@ -406,6 +416,7 @@ createEntity(entityType, params):
 |------|----------|--------|
 | 2026-03-17 | ADR Created — audit complete, architecture designed, 9 bugs documented | Γιώργος Παγώνης + Claude Code |
 | 2026-03-17 | Phase 1 IMPLEMENTED — types, service, parking canary migration. No utils file (reused existing sanitize). Single parent read optimization. | Γιώργος Παγώνης + Claude Code |
+| 2026-03-17 | Phase 2 COMPLETE — All 4 remaining endpoints migrated (storages, buildings, floors, units). 5 bugs auto-fixed. Unit codeField corrected to 'code'. Frontend FloorsTabContent adapted to canonical response format. Net -300 lines. | Γιώργος Παγώνης + Claude Code |
 
 ---
 

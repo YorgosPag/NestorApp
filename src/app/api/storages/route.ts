@@ -1,21 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth, logAuditEvent } from '@/lib/auth';
+import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
-import { requireBuildingInTenant, TenantIsolationError } from '@/lib/auth/tenant-isolation';
-import { FieldValue } from 'firebase-admin/firestore';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeToDate } from '@/lib/date-local';
-import {
-  formatFloorCode,
-  formatEntityCode,
-  parseEntityCode,
-} from '@/services/entity-code.service';
-import { extractBuildingLetter } from '@/config/entity-code-config';
+import { createEntity } from '@/lib/firestore/entity-creation.service';
 
 const logger = createModuleLogger('StoragesRoute');
 
@@ -302,9 +295,6 @@ interface StorageCreateResponse {
 export const POST = withStandardRateLimit(
   withAuth<ApiSuccessResponse<StorageCreateResponse>>(
     async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      const adminDb = getAdminFirestore();
-      if (!adminDb) throw new ApiError(503, 'Database unavailable');
-
       try {
         const body: StorageCreatePayload = await request.json();
 
@@ -313,114 +303,43 @@ export const POST = withStandardRateLimit(
           throw new ApiError(400, 'Storage name is required');
         }
 
-        // 🏢 buildingId is optional — storage can exist without building link
-        let resolvedCompanyId: string | null = ctx.companyId;
-        let resolvedBuildingName: string | null = null;
+        const buildingId = body.buildingId?.trim() || null;
 
-        if (body.buildingId?.trim()) {
-          // Tenant isolation — verify building belongs to user's company
-          try {
-            await requireBuildingInTenant({
-              ctx,
-              buildingId: body.buildingId,
-              path: '/api/storages (POST)',
-            });
-          } catch (err) {
-            if (err instanceof TenantIsolationError) {
-              throw new ApiError(err.status, err.message);
-            }
-            throw err;
-          }
-
-          // Inherit companyId from building (critical for super_admin)
-          const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(body.buildingId).get();
-          const buildingData = buildingDoc.data() as Record<string, unknown> | undefined;
-          if (buildingData?.companyId) {
-            resolvedCompanyId = buildingData.companyId as string;
-          }
-          resolvedBuildingName = (buildingData?.name as string) || null;
-
-          // Auto-resolve projectId from building if not provided
-          if (!body.projectId && buildingData?.projectId) {
-            body.projectId = buildingData.projectId as string;
-          }
-        }
-
-        // 🏢 ADR-233: Auto-generate entity code if name is not already ADR-233 format
-        let storageName = body.name.trim();
-        if (body.buildingId?.trim() && !parseEntityCode(storageName)) {
-          try {
-            const buildingLetter = extractBuildingLetter(resolvedBuildingName || '?');
-            const typeCode = 'AP'; // Storage = Αποθήκη
-            const floorLevel = body.floor ? parseInt(body.floor, 10) : 0;
-            const floorCode = formatFloorCode(isNaN(floorLevel) ? 0 : floorLevel);
-
-            // Find next sequence
-            const existingStorages = await adminDb.collection(COLLECTIONS.STORAGE)
-              .where('buildingId', '==', body.buildingId)
-              .get();
-
-            let maxSeq = 0;
-            for (const doc of existingStorages.docs) {
-              const n = doc.data().name as string | undefined;
-              if (!n) continue;
-              const parsed = parseEntityCode(n);
-              if (parsed && parsed.typeCode === typeCode && parsed.floorCode === floorCode) {
-                if (parsed.sequence > maxSeq) maxSeq = parsed.sequence;
-              }
-            }
-
-            storageName = formatEntityCode(buildingLetter, typeCode, floorCode, maxSeq + 1);
-            logger.info('Auto-generated storage code', { storageName, buildingId: body.buildingId });
-          } catch (codeErr) {
-            logger.warn('Storage code auto-generation failed, using original name', {
-              error: codeErr instanceof Error ? codeErr.message : String(codeErr),
-            });
-          }
-        }
-
-        // Sanitize data
-        const cleanData: Record<string, unknown> = {
-          name: storageName,
-          buildingId: body.buildingId?.trim() || null,
+        // Entity-specific fields (exclude common fields handled by createEntity)
+        const entitySpecificFields: Record<string, unknown> = {
+          name: body.name.trim(),
+          buildingId,
           type: isValidStorageType(body.type || 'small') ? body.type || 'small' : 'small',
           status: isValidStorageStatus(body.status || 'available') ? body.status || 'available' : 'available',
-          companyId: resolvedCompanyId,  // 🏢 ENTERPRISE: inherited from building or auth context
-          linkedCompanyId: null,                            // 🏢 ADR-232
-          createdAt: FieldValue.serverTimestamp(),
-          updatedAt: FieldValue.serverTimestamp(),
-          createdBy: ctx.uid,
         };
 
         // Optional fields
-        if (body.floor?.trim()) cleanData.floor = body.floor.trim();
-        if (body.floorId?.trim()) cleanData.floorId = body.floorId.trim();
-        if (typeof body.area === 'number' && body.area > 0) cleanData.area = body.area;
-        if (typeof body.price === 'number' && body.price >= 0) cleanData.price = body.price;
-        if (body.description?.trim()) cleanData.description = body.description.trim();
-        if (body.notes?.trim()) cleanData.notes = body.notes.trim();
-        if (body.projectId?.trim()) cleanData.projectId = body.projectId.trim();
-        if (body.building?.trim()) cleanData.building = body.building.trim();
+        if (body.floor?.trim()) entitySpecificFields.floor = body.floor.trim();
+        if (body.floorId?.trim()) entitySpecificFields.floorId = body.floorId.trim();
+        if (typeof body.area === 'number' && body.area > 0) entitySpecificFields.area = body.area;
+        if (typeof body.price === 'number' && body.price >= 0) entitySpecificFields.price = body.price;
+        if (body.description?.trim()) entitySpecificFields.description = body.description.trim();
+        if (body.notes?.trim()) entitySpecificFields.notes = body.notes.trim();
+        if (body.projectId?.trim()) entitySpecificFields.projectId = body.projectId.trim();
+        if (body.building?.trim()) entitySpecificFields.building = body.building.trim();
 
-        logger.info('Creating storage unit', { name: body.name, buildingId: body.buildingId, companyId: ctx.companyId });
+        logger.info('Creating storage unit', { name: body.name, buildingId, companyId: ctx.companyId });
 
-        // 🏗️ ADR-210: Enterprise ID for storage units
-        const { generateStorageId } = await import('@/services/enterprise-id.service');
-        const storageId = generateStorageId();
-        await adminDb.collection(COLLECTIONS.STORAGE).doc(storageId).set(cleanData);
-
-        logger.info('Storage unit created', { storageId });
-
-        await logAuditEvent(ctx, 'data_created', 'storage', 'api', {
-          newValue: {
-            type: 'status',
-            value: { storageId, name: body.name, buildingId: body.buildingId },
+        // 🏢 ADR-238: Centralized entity creation
+        const floorLevel = body.floor ? parseInt(body.floor, 10) : 0;
+        const result = await createEntity('storage', {
+          auth: ctx,
+          parentId: buildingId,
+          entitySpecificFields,
+          codeOptions: {
+            currentValue: body.name.trim(),
+            floorLevel: isNaN(floorLevel) ? 0 : floorLevel,
           },
-          metadata: { reason: 'Storage unit created via API' },
+          apiPath: '/api/storages (POST)',
         });
 
         return apiSuccess<StorageCreateResponse>(
-          { storageId },
+          { storageId: result.id },
           'Storage unit created successfully'
         );
       } catch (error) {

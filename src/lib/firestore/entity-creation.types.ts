@@ -54,7 +54,7 @@ export interface EntityRegistryEntry {
   /** ADR-233 entity code type (null = no auto-code) */
   readonly codeType: EntityCodeType | null;
   /** Which document field receives the generated code */
-  readonly codeField: 'name' | 'number' | null;
+  readonly codeField: 'name' | 'number' | 'code' | null;
   /** Whether tenant isolation check is required */
   readonly tenantCheck: boolean;
   /** Audit log target type */
@@ -93,7 +93,7 @@ export const ENTITY_REGISTRY: Record<ServerEntityType, EntityRegistryEntry> = {
     parentField: 'buildingId',
     idGenerator: 'generateUnitId',
     codeType: 'unit',
-    codeField: 'name',
+    codeField: 'code',
     tenantCheck: true,
     auditTargetType: 'unit',
   },
