@@ -655,4 +655,39 @@ export class DxfFirestoreService {
   static generateFileId(_fileName?: string): string {
     return enterpriseGenerateFileId();
   }
+
+  /**
+   * 🏢 ENTERPRISE: Find existing FileRecord ID by originalFilename
+   *
+   * Checks if a FileRecord already exists in `files` collection for this filename.
+   * Used by auto-save to reuse the wizard-created FileRecord ID for cadFiles,
+   * ensuring both collections share the same document ID.
+   *
+   * @returns The existing FileRecord ID, or null if not found
+   */
+  static async findExistingFileRecordId(fileName: string): Promise<string | null> {
+    try {
+      const { collection, query, where, limit, getDocs } = await import('firebase/firestore');
+      const q = query(
+        collection(db, COLLECTIONS.FILES),
+        where('originalFilename', '==', fileName),
+        where('category', '==', 'floorplans'),
+        where('isDeleted', '==', false),
+        limit(1)
+      );
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        const existingId = snapshot.docs[0].id;
+        dxfLogger.info('Found existing FileRecord for auto-save reuse', { fileName, existingId });
+        return existingId;
+      }
+      return null;
+    } catch (error) {
+      dxfLogger.debug('Could not check for existing FileRecord', {
+        fileName,
+        error: getErrorMessage(error),
+      });
+      return null;
+    }
+  }
 }

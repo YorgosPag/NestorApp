@@ -67,13 +67,16 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
 
         try {
           // 🏢 ENTERPRISE: Resolve file ID with priority:
-          // 1. Injected FileRecord ID (from wizard/upload) — ensures cadFiles ↔ files use same ID
+          // 1. Injected FileRecord ID (from wizard/upload via setFileRecordId)
           // 2. Cached ID (from previous save in this session)
-          // 3. New enterprise ID (first standalone save)
+          // 3. Existing FileRecord in `files` collection (wizard uploaded this file before)
+          // 4. New enterprise ID (first standalone save — no wizard involved)
           let fileId = injectedFileRecordIdRef.current
             ?? fileIdCacheRef.current.get(currentFileName);
           if (!fileId) {
-            fileId = DxfFirestoreService.generateFileId(currentFileName);
+            // Check if wizard already created a FileRecord for this filename
+            const existingId = await DxfFirestoreService.findExistingFileRecordId(currentFileName);
+            fileId = existingId ?? DxfFirestoreService.generateFileId(currentFileName);
             fileIdCacheRef.current.set(currentFileName, fileId);
           }
           // 🚀 PHASE 4: Use Storage-based auto-save for better performance
