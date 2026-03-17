@@ -225,6 +225,7 @@ export function PropertyDetailsContent({
           )}
           {resolvedProperty?.buildingId && (
             <LinkedSpacesCard
+              key={resolvedProperty.id}
               unitId={resolvedProperty.id ?? ''}
               buildingId={resolvedProperty.buildingId}
               currentLinkedSpaces={resolvedProperty.linkedSpaces ?? []}
