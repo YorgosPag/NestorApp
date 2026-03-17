@@ -278,10 +278,56 @@ export function LinkedSpacesCard({
   }, []);
 
   // 🏢 ENTERPRISE: Save draft to Firestore
+  // Auto-adds any pending dropdown selection (if "+" was not clicked) before saving.
+  // This fixes the UX issue where users selected from dropdown but never clicked "+"
+  // and then couldn't click "Αποθήκευση" (was disabled because draft === current).
   const handleSave = useCallback(async () => {
     if (!unitId) {
       logger.error('[LinkedSpacesCard] No unitId provided');
       return;
+    }
+
+    // Auto-add any pending parking selection (selected from dropdown but "+" not clicked)
+    let finalDraft = [...draftLinkedSpaces];
+
+    if (!isSelectClearValue(selectedParkingId)) {
+      const parking = parkingOptions.find(p => p.id === selectedParkingId);
+      if (parking && !finalDraft.some(ls => ls.spaceId === selectedParkingId)) {
+        finalDraft = [
+          ...finalDraft,
+          {
+            spaceId: selectedParkingId,
+            spaceType: ALLOCATION_SPACE_TYPES.PARKING,
+            quantity: 1,
+            inclusion: selectedInclusion,
+            allocationCode: parking.number,
+          },
+        ];
+        setSelectedParkingId(SELECT_CLEAR_VALUE);
+      }
+    }
+
+    // Auto-add any pending storage selection (selected from dropdown but "+" not clicked)
+    if (!isSelectClearValue(selectedStorageId)) {
+      const storage = storageOptions.find(s => s.id === selectedStorageId);
+      if (storage && !finalDraft.some(ls => ls.spaceId === selectedStorageId)) {
+        finalDraft = [
+          ...finalDraft,
+          {
+            spaceId: selectedStorageId,
+            spaceType: ALLOCATION_SPACE_TYPES.STORAGE,
+            quantity: 1,
+            inclusion: selectedInclusion,
+            allocationCode: storage.name,
+          },
+        ];
+        setSelectedStorageId(SELECT_CLEAR_VALUE);
+      }
+    }
+
+    // Update draft state to match what we'll save (so UI reflects the new items)
+    if (finalDraft.length !== draftLinkedSpaces.length) {
+      setDraftLinkedSpaces(finalDraft);
     }
 
     setSaving(true);
@@ -290,14 +336,14 @@ export function LinkedSpacesCard({
     try {
       // 🏢 ADR-238: Save via Admin SDK API (client-side updateDoc blocked by Firestore security rules)
       await apiClient.patch(`/api/units/${unitId}`, {
-        linkedSpaces: draftLinkedSpaces,
+        linkedSpaces: finalDraft,
       });
 
-      logger.info(`[LinkedSpacesCard] Unit ${unitId} linkedSpaces updated with ${draftLinkedSpaces.length} spaces`);
+      logger.info(`[LinkedSpacesCard] Unit ${unitId} linkedSpaces updated with ${finalDraft.length} spaces`);
       setSaveStatus('success');
 
       if (onLinkedSpacesChanged) {
-        onLinkedSpacesChanged(draftLinkedSpaces);
+        onLinkedSpacesChanged(finalDraft);
       }
 
       // Reset success status after 3 seconds
@@ -308,10 +354,24 @@ export function LinkedSpacesCard({
     } finally {
       setSaving(false);
     }
-  }, [unitId, draftLinkedSpaces, onLinkedSpacesChanged]);
+  }, [
+    unitId,
+    draftLinkedSpaces,
+    selectedParkingId,
+    selectedStorageId,
+    selectedInclusion,
+    parkingOptions,
+    storageOptions,
+    onLinkedSpacesChanged,
+  ]);
 
-  // 🏢 ENTERPRISE: Check if draft differs from props
-  const hasChanges = JSON.stringify(draftLinkedSpaces) !== JSON.stringify(currentLinkedSpaces);
+  // 🏢 ENTERPRISE: Check if draft differs from props OR if there's a pending (unconfirmed) selection.
+  // Pending selection = user picked from dropdown but hasn't clicked "+" yet.
+  const hasPendingSelection =
+    !isSelectClearValue(selectedParkingId) || !isSelectClearValue(selectedStorageId);
+  const hasChanges =
+    hasPendingSelection ||
+    JSON.stringify(draftLinkedSpaces) !== JSON.stringify(currentLinkedSpaces);
 
   // 🏢 ENTERPRISE: Get space name for display
   const getSpaceName = (space: LinkedSpace): string => {
