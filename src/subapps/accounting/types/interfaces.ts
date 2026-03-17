@@ -76,6 +76,7 @@ import type {
   DocumentClassification,
   DocumentType,
 } from './documents';
+import type { APYCertificate, APYEmailSendRecord } from './apy-certificate';
 
 // ============================================================================
 // ACCOUNTING REPOSITORY — CRUD Operations
@@ -157,6 +158,13 @@ export interface IAccountingRepository {
   getExpenseDocument(documentId: string): Promise<ReceivedExpenseDocument | null>;
   updateExpenseDocument(documentId: string, updates: Partial<ReceivedExpenseDocument>): Promise<void>;
   listExpenseDocuments(fiscalYear: number, status?: ReceivedExpenseDocument['status']): Promise<ReceivedExpenseDocument[]>;
+
+  // ── APY Certificates (ADR-ACC-020) ──────────────────────────────────────
+  createAPYCertificate(data: Omit<APYCertificate, 'certificateId' | 'createdAt' | 'updatedAt'>): Promise<{ id: string }>;
+  getAPYCertificate(certificateId: string): Promise<APYCertificate | null>;
+  listAPYCertificates(fiscalYear?: number, customerId?: string): Promise<APYCertificate[]>;
+  updateAPYCertificate(certificateId: string, updates: Partial<Omit<APYCertificate, 'certificateId' | 'createdAt'>>): Promise<void>;
+  pushAPYEmailRecord(certificateId: string, record: APYEmailSendRecord): Promise<void>;
 }
 
 // ============================================================================

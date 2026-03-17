@@ -62,6 +62,7 @@ import {
   PiggyBank,
   HardDrive,
   FileBarChart,
+  ClipboardCheck,
 } from "lucide-react";
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -129,6 +130,7 @@ const NAVIGATION_LABELS = {
   accounting_efka: 'accounting.efka',
   accounting_assets: 'accounting.assets',
   accounting_documents: 'accounting.documents',
+  accounting_apy_certificates: 'accounting.apyCertificates',
   accounting_reports: 'accounting.reports',
 
   // CRM submenu
@@ -502,6 +504,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
               { icon: PiggyBank, href: '/accounting/efka' },
               { icon: HardDrive, href: '/accounting/assets' },
               { icon: FileText, href: '/accounting/documents' },
+              { icon: ClipboardCheck, href: '/accounting/apy-certificates' },
               { icon: FileBarChart, href: '/accounting/reports' },
             ]
           }
@@ -678,6 +681,7 @@ function getLabelKeyForPath(path: string): string {
     'accounting/efka': 'accounting_efka',
     'accounting/assets': 'accounting_assets',
     'accounting/documents': 'accounting_documents',
+    'accounting/apy-certificates': 'accounting_apy_certificates',
     'accounting/reports': 'accounting_reports',
 
     // CRM main

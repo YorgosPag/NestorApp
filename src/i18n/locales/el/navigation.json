@@ -241,6 +241,7 @@
     "efka": "ΕΦΚΑ",
     "assets": "Πάγια",
     "documents": "Παραστατικά",
+    "apyCertificates": "Βεβαιώσεις Παρακράτησης",
     "reports": "Αναφορές"
   },
   "crm": {
@@ -298,6 +299,7 @@
     "efka": "ΕΦΚΑ",
     "assets": "Πάγια",
     "documents": "Παραστατικά",
+    "apyCertificates": "Βεβαιώσεις Παρακράτησης",
     "reports": "Αναφορές",
     "account": "Λογαριασμός",
     "profile": "Προφίλ",

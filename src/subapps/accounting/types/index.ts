@@ -183,6 +183,15 @@ export type {
   DocumentClassification,
 } from './documents';
 
+// ── APY Certificate Types (ADR-ACC-020) ─────────────────────────────────────
+export type {
+  APYCertificateLineItem,
+  APYCertificateProvider,
+  APYCertificateCustomer,
+  APYEmailSendRecord,
+  APYCertificate,
+} from './apy-certificate';
+
 // ── Abstraction Interfaces (ADR-ACC-010) ────────────────────────────────────
 export type {
   IAccountingRepository,

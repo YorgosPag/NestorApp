@@ -241,6 +241,7 @@
     "efka": "EFKA",
     "assets": "Fixed Assets",
     "documents": "Documents",
+    "apyCertificates": "Withholding Tax Certs",
     "reports": "Reports"
   },
   "crm": {
@@ -298,6 +299,7 @@
     "efka": "EFKA",
     "assets": "Fixed Assets",
     "documents": "Documents",
+    "apyCertificates": "Withholding Tax Certs",
     "reports": "Reports",
     "account": "Account",
     "profile": "Profile",

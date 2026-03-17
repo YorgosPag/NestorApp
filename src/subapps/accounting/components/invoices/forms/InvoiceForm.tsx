@@ -36,6 +36,10 @@ interface InvoiceFormProps {
   onCancel: () => void;
 }
 
+// Configurable withholding rates — ADR-ACC-020
+const WITHHOLDING_RATE_OPTIONS = [0, 1, 3, 20] as const;
+type WithholdingRateOption = (typeof WITHHOLDING_RATE_OPTIONS)[number];
+
 interface InvoiceFormState {
   type: InvoiceType;
   series: string;
@@ -44,6 +48,7 @@ interface InvoiceFormState {
   customer: InvoiceCustomer;
   lineItems: InvoiceLineItem[];
   paymentMethod: PaymentMethod;
+  withholdingRate: WithholdingRateOption;
   notes: string;
 }
 
@@ -143,6 +148,7 @@ export function InvoiceForm({ onSuccess, onCancel }: InvoiceFormProps) {
     customer: { ...DEFAULT_CUSTOMER },
     lineItems: [{ ...DEFAULT_LINE_ITEM }],
     paymentMethod: 'bank_transfer',
+    withholdingRate: 0,
     notes: '',
   });
 
@@ -239,6 +245,11 @@ export function InvoiceForm({ onSuccess, onCancel }: InvoiceFormProps) {
         projectId: null,
         relatedInvoiceId: null,
         journalEntryId: null,
+        withholdingRate: form.withholdingRate > 0 ? form.withholdingRate : null,
+        withholdingAmount:
+          form.withholdingRate > 0
+            ? Math.round(totals.totalNetAmount * (form.withholdingRate / 100) * 100) / 100
+            : null,
         notes: form.notes || null,
         fiscalYear: currentYear,
       };
@@ -366,6 +377,44 @@ export function InvoiceForm({ onSuccess, onCancel }: InvoiceFormProps) {
 
       {/* Preview & Totals */}
       <InvoicePreview totals={totals} lineItems={form.lineItems} />
+
+      {/* Withholding Tax — ADR-ACC-020 */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-6">
+            <div className="w-52">
+              <Label htmlFor="withholdingRate">Παρακράτηση φόρου</Label>
+              <Select
+                value={String(form.withholdingRate)}
+                onValueChange={(v) =>
+                  updateField('withholdingRate', parseInt(v, 10) as WithholdingRateOption)
+                }
+              >
+                <SelectTrigger id="withholdingRate" className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {WITHHOLDING_RATE_OPTIONS.map((rate) => (
+                    <SelectItem key={rate} value={String(rate)}>
+                      {rate === 0 ? 'Χωρίς παρακράτηση' : `${rate}%`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {form.withholdingRate > 0 && (
+              <div className="text-sm text-gray-700 mt-5">
+                Ποσό παρακράτησης:{' '}
+                <strong className="text-blue-900">
+                  {(
+                    Math.round(totals.totalNetAmount * (form.withholdingRate / 100) * 100) / 100
+                  ).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+                </strong>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Notes */}
       <Card>

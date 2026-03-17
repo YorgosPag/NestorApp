@@ -273,6 +273,12 @@ export const LazyRoutes = {
     () => import('@/subapps/accounting/components/documents/DocumentsPageContent').then(mod => ({ default: mod.DocumentsPageContent })),
     { loadingType: 'list', ssr: false }
   ),
+
+  // 🏢 ENTERPRISE: Accounting Subapp (ADR-ACC-020 — APY Certificates)
+  AccountingAPYCertificates: createLazyRoute(
+    () => import('@/subapps/accounting/components/apy-certificates/APYCertificatesPageContent').then(mod => ({ default: mod.APYCertificatesPageContent })),
+    { loadingType: 'list', ssr: false }
+  ),
 } as const;
 
 // Export types for TypeScript support

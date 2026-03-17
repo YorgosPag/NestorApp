@@ -123,6 +123,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   EFKA_PAYMENT: 'efka',
   IMPORT_BATCH: 'batch',
   EXPENSE_DOC: 'exdoc',
+  APY_CERTIFICATE: 'apy',
 
   // ==========================================================================
   // FILE & MEDIA OPERATIONS
@@ -759,6 +760,14 @@ export class EnterpriseIdService {
   }
 
   /**
+   * 📋 Generate APY Certificate ID (ADR-ACC-020)
+   * Format: apy_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateApyCertificateId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.APY_CERTIFICATE).id;
+  }
+
+  /**
    * 🏭 Generate Fixed Asset ID
    * Format: fxa_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
    */
@@ -1260,6 +1269,7 @@ export const generateDepreciationId = () => enterpriseIdService.generateDeprecia
 export const generateEfkaPaymentId = () => enterpriseIdService.generateEfkaPaymentId();
 export const generateImportBatchId = () => enterpriseIdService.generateImportBatchId();
 export const generateExpenseDocId = () => enterpriseIdService.generateExpenseDocId();
+export const generateApyCertificateId = () => enterpriseIdService.generateApyCertificateId();
 
 // =============================================================================
 // AI PIPELINE & AUDIT

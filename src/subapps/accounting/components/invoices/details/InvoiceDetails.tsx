@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowLeft, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/hooks/useAuth';
@@ -102,6 +103,31 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
         onOpenChange={setEmailDialogOpen}
         onSuccess={fetchInvoice}
       />
+
+      {/* APY Certificate shortcut — ADR-ACC-020 */}
+      {invoice.withholdingAmount != null && invoice.withholdingAmount > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+          <ClipboardCheck className="h-4 w-4 text-blue-600 shrink-0" />
+          <p className="text-sm text-blue-800 flex-1">
+            Αυτό το τιμολόγιο έχει παρακράτηση{' '}
+            <strong>
+              {invoice.withholdingRate ?? ''}% (
+              {(invoice.withholdingAmount).toLocaleString('el-GR', {
+                style: 'currency',
+                currency: 'EUR',
+              })}
+              )
+            </strong>
+            .
+          </p>
+          <Link
+            href="/accounting/apy-certificates"
+            className="text-sm font-medium text-blue-700 underline whitespace-nowrap hover:text-blue-900"
+          >
+            Βεβαιώσεις Παρακράτησης →
+          </Link>
+        </div>
+      )}
 
       {/* Line Items */}
       <section className="border border-border rounded-lg p-4">

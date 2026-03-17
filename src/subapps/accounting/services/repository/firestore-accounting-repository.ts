@@ -19,6 +19,7 @@ import {
   generateEfkaPaymentId,
   generateImportBatchId,
   generateExpenseDocId,
+  generateApyCertificateId,
 } from '@/services/enterprise-id.service';
 import type { PaginatedResult } from '@/lib/pagination';
 import type { IAccountingRepository } from '../../types/interfaces';
@@ -58,6 +59,7 @@ import type {
 import type { Partner, Member, Shareholder } from '../../types/entity';
 import type { TaxInstallment } from '../../types/tax';
 import type { ReceivedExpenseDocument } from '../../types/documents';
+import type { APYCertificate, APYEmailSendRecord } from '../../types/apy-certificate';
 import type { CompanyProfile, CompanySetupInput } from '../../types/company';
 
 import { sanitizeForFirestore, isoNow } from './firestore-helpers';
@@ -702,5 +704,92 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
       const snap = await query.get();
       return snap.docs.map((d) => d.data() as ReceivedExpenseDocument);
     }, []);
+  }
+
+  // ── APY Certificates (ADR-ACC-020) ──────────────────────────────────────
+
+  async createAPYCertificate(
+    data: Omit<APYCertificate, 'certificateId' | 'createdAt' | 'updatedAt'>
+  ): Promise<{ id: string }> {
+    const id = generateApyCertificateId();
+    const now = isoNow();
+    const doc = sanitizeForFirestore({
+      ...data,
+      certificateId: id,
+      createdAt: now,
+      updatedAt: now,
+    } as unknown as Record<string, unknown>);
+
+    await safeFirestoreOperation(async (db) => {
+      await db.collection(COLLECTIONS.ACCOUNTING_APY_CERTIFICATES).doc(id).set(doc);
+    }, undefined);
+
+    return { id };
+  }
+
+  async getAPYCertificate(certificateId: string): Promise<APYCertificate | null> {
+    return safeFirestoreOperation(async (db) => {
+      const snap = await db
+        .collection(COLLECTIONS.ACCOUNTING_APY_CERTIFICATES)
+        .doc(certificateId)
+        .get();
+      if (!snap.exists) return null;
+      return snap.data() as APYCertificate;
+    }, null);
+  }
+
+  async listAPYCertificates(
+    fiscalYear?: number,
+    customerId?: string
+  ): Promise<APYCertificate[]> {
+    return safeFirestoreOperation(async (db) => {
+      let query: FirebaseFirestore.Query = db.collection(
+        COLLECTIONS.ACCOUNTING_APY_CERTIFICATES
+      );
+
+      if (fiscalYear !== undefined) {
+        query = query.where('fiscalYear', '==', fiscalYear);
+      }
+      if (customerId !== undefined) {
+        query = query.where('customerId', '==', customerId);
+      }
+
+      query = query.orderBy('createdAt', 'desc');
+
+      const snap = await query.get();
+      return snap.docs.map((d) => d.data() as APYCertificate);
+    }, []);
+  }
+
+  async updateAPYCertificate(
+    certificateId: string,
+    updates: Partial<Omit<APYCertificate, 'certificateId' | 'createdAt'>>
+  ): Promise<void> {
+    await safeFirestoreOperation(async (db) => {
+      await db
+        .collection(COLLECTIONS.ACCOUNTING_APY_CERTIFICATES)
+        .doc(certificateId)
+        .update(
+          sanitizeForFirestore({
+            ...updates,
+            updatedAt: isoNow(),
+          } as Record<string, unknown>)
+        );
+    }, undefined);
+  }
+
+  async pushAPYEmailRecord(
+    certificateId: string,
+    record: APYEmailSendRecord
+  ): Promise<void> {
+    await safeFirestoreOperation(async (db) => {
+      await db
+        .collection(COLLECTIONS.ACCOUNTING_APY_CERTIFICATES)
+        .doc(certificateId)
+        .update({
+          emailHistory: FieldValue.arrayUnion(sanitizeForFirestore(record as Record<string, unknown>)),
+          updatedAt: isoNow(),
+        });
+    }, undefined);
   }
 }
