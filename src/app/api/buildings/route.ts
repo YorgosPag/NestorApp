@@ -8,7 +8,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { isRoleBypass } from '@/lib/auth/roles';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
-import { propagateBuildingProjectLink } from '@/lib/firestore/cascade-propagation.service';
+import { linkEntity } from '@/lib/firestore/entity-linking.service';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
 import { normalizeToMillis } from '@/lib/date-local';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
@@ -275,11 +275,16 @@ export const PATCH = withStandardRateLimit(
 
       logger.info('[Buildings] Building updated', { buildingId, email: ctx.email });
 
-      // 🔗 CASCADE: Propagate projectId change to children (fire-and-forget)
+      // 🔗 ADR-239: Centralized linking — change detection + cascade + entity audit
       if ('projectId' in cleanUpdates) {
-        const newProjectId = (cleanUpdates.projectId as string) ?? null;
-        propagateBuildingProjectLink(buildingId, newProjectId).catch((err) => {
-          logger.warn('[Buildings] Cascade propagation failed (non-blocking)', {
+        linkEntity('building:projectId', {
+          auth: ctx,
+          entityId: buildingId,
+          newLinkValue: (cleanUpdates.projectId as string) ?? null,
+          existingDoc: (buildingData ?? {}) as Record<string, unknown>,
+          apiPath: '/api/buildings (PATCH)',
+        }).catch((err) => {
+          logger.warn('[Buildings] linkEntity failed (non-blocking)', {
             buildingId,
             error: err instanceof Error ? err.message : String(err),
           });

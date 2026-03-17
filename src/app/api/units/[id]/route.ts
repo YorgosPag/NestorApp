@@ -21,7 +21,7 @@ import { aggregateLevelData } from '@/services/multi-level.service';
 import type { LevelData } from '@/types/unit';
 import { UNIT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
-import { propagateUnitBuildingLink } from '@/lib/firestore/cascade-propagation.service';
+import { linkEntity } from '@/lib/firestore/entity-linking.service';
 import { createDefaultPersonaData, findActivePersona } from '@/types/contacts/personas';
 import type { PersonaData, ClientPersona } from '@/types/contacts/personas';
 import { validateContactForSale, isServiceContact } from '@/types/contacts/helpers';
@@ -296,11 +296,16 @@ export const PATCH = withStandardRateLimit(
 
         logger.info('Unit updated', { id, companyId: ctx.companyId });
 
-        // 🔗 CASCADE: Propagate buildingId change (inherit projectId + companyId)
-        if ('buildingId' in body && body.buildingId !== existing.buildingId) {
-          const newBuildingId = (body.buildingId as string) ?? null;
-          propagateUnitBuildingLink(id, newBuildingId).catch((err) => {
-            logger.warn('Unit cascade propagation failed (non-blocking)', {
+        // 🔗 ADR-239: Centralized linking — change detection + cascade (skipAudit=true: units PATCH has own audit)
+        if ('buildingId' in body) {
+          linkEntity('unit:buildingId', {
+            auth: ctx,
+            entityId: id,
+            newLinkValue: (body.buildingId as string) ?? null,
+            existingDoc: existing,
+            apiPath: '/api/units/[id] (PATCH)',
+          }).catch((err) => {
+            logger.warn('linkEntity failed (non-blocking)', {
               unitId: id,
               error: err instanceof Error ? err.message : String(err),
             });

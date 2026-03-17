@@ -14,7 +14,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -320,7 +320,7 @@ export const PATCH = withStandardRateLimit(
             return NextResponse.json({ success: false, error: 'No fields to update' }, { status: 400 });
           }
 
-          updates.updatedAt = new Date().toISOString();
+          updates.updatedAt = FieldValue.serverTimestamp();
           updates.updatedBy = ctx.uid;
 
           await floorRef.update(updates);

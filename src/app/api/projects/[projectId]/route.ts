@@ -47,7 +47,7 @@ import type { ProjectAddress } from '@/types/project/addresses';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
-import { propagateProjectCompanyLink } from '@/lib/firestore/cascade-propagation.service';
+import { linkEntity } from '@/lib/firestore/entity-linking.service';
 
 const logger = createModuleLogger('ProjectRoute');
 
@@ -310,12 +310,17 @@ async function handleUpdateProject(
   cache.delete(`${CACHE_KEY_PREFIX}:all`);
   logger.info('[Projects/Update] Cache invalidated for tenant', { companyId: ctx.companyId });
 
-  // 7. CASCADE: Propagate linkedCompanyId change to buildings + children (fire-and-forget)
+  // 7. 🔗 ADR-239: Centralized linking — change detection + cascade + entity audit
   // 🏢 ADR-232: Cascade linkedCompanyId (business link), NOT companyId (tenant key)
-  if ('linkedCompanyId' in body && body.linkedCompanyId !== projectData?.linkedCompanyId) {
-    const newLinkedCompanyId = (body.linkedCompanyId as string) ?? null;
-    propagateProjectCompanyLink(projectId, newLinkedCompanyId).catch((err) => {
-      logger.warn('[Projects/Update] Cascade propagation failed (non-blocking)', {
+  if ('linkedCompanyId' in body) {
+    linkEntity('project:linkedCompanyId', {
+      auth: ctx,
+      entityId: projectId,
+      newLinkValue: (body.linkedCompanyId as string) ?? null,
+      existingDoc: (projectData ?? {}) as Record<string, unknown>,
+      apiPath: '/api/projects/[projectId] (PATCH)',
+    }).catch((err) => {
+      logger.warn('[Projects/Update] linkEntity failed (non-blocking)', {
         projectId,
         error: err instanceof Error ? err.message : String(err),
       });

@@ -17,7 +17,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
-import { propagateChildBuildingLink } from '@/lib/firestore/cascade-propagation.service';
+import { linkEntity } from '@/lib/firestore/entity-linking.service';
 
 const logger = createModuleLogger('StoragesIdRoute');
 
@@ -88,10 +88,16 @@ export const PATCH = withStandardRateLimit(
 
         await docRef.update(updateData);
 
-        // 🔗 CASCADE: Propagate buildingId change (inherit projectId, companyId, linkedCompanyId)
+        // 🔗 ADR-239: Centralized linking — change detection + cascade + entity audit
         if (body.buildingId !== undefined) {
-          propagateChildBuildingLink(COLLECTIONS.STORAGE, id, body.buildingId ?? null).catch((err) => {
-            logger.warn('Storage cascade propagation failed (non-blocking)', {
+          linkEntity('storage:buildingId', {
+            auth: ctx,
+            entityId: id,
+            newLinkValue: body.buildingId ?? null,
+            existingDoc: existing,
+            apiPath: '/api/storages/[id] (PATCH)',
+          }).catch((err) => {
+            logger.warn('linkEntity failed (non-blocking)', {
               id, error: err instanceof Error ? err.message : String(err),
             });
           });

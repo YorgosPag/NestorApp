@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 222 ADRs | Last Updated: 2026-03-16
+**📊 Stats**: 227 ADRs | Last Updated: 2026-03-17
 
 ---
 
@@ -21,14 +21,14 @@
 | 🖼️ **Canvas & Rendering** | 39 | [View](#canvas-rendering) |
 | 📊 **Data & State** | 11 | [View](#data-state) |
 | ✏️ **Drawing System** | 16 | [View](#drawing-system) |
-| 📂 **Entity Systems** | 12 | [View](#entity-systems) |
+| 📂 **Entity Systems** | 14 | [View](#entity-systems) |
 | 🔧 **Tools & Keyboard** | 8 | [View](#tools-keyboard) |
 | 🔍 **Filters & Search** | 1 | [View](#filters-search) |
 | 🔒 **Security & Auth** | 7 | [View](#security-auth) |
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 59 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 63 | [View](#uncategorized) |
 
 ---
 
@@ -233,7 +233,7 @@
 | **ADR-207** | Scattered Code Centralization — Phase 6 (Collection Utilities) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-207-phase6-collection-utilities.md) |
 | **ADR-208** | Phase 7 — Date Formatting Deduplication | ✅ ✅ Implemented | 2026-01-01 | Centralization / Deduplication | [📄](./adrs/ADR-208-phase7-date-formatting-dedup.md) |
 | **ADR-209** | ID Consistency Audit & Remediation Roadmap | ✅ ✅ IMPLEMENTED (Phases 1-4) | 2026-03-12 | Security / Data Integrity | [📄](./adrs/ADR-209-id-consistency-audit.md) |
-| **ADR-210** | Document ID Generation — Full Codebase Audit & Compliance Report | ✅ APPROVED — Phase 1-4 IMPLEMENTED (24→5 violations) + cadFiles dual-write | 2026-03-17 | Security / Data Integrity | [📄](./adrs/ADR-210-document-id-generation-audit.md) |
+| **ADR-210** | Document ID Generation — Full Codebase Audit & Compliance Report | ✅ ✅ APPROVED — Phase 1 + P1/P2 + Phase 3 + Phase 4 IMPLEMENTED | 2026-03-17 (updated) | Security / Data Integrity | [📄](./adrs/ADR-210-document-id-generation-audit.md) |
 | **ADR-211** | Phase 8 — Small Utility Deduplication | ✅ ✅ Implemented | 2026-03-12 | Centralization / Deduplication | [📄](./adrs/ADR-211-phase8-small-utility-dedup.md) |
 | **ADR-212** | Phase 9 — Async/Clone/Validation/FileSize/Currency Deduplication | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-212-phase9-async-clone-url-filesize.md) |
 | **ADR-213** | Validation Centralization (Phone + Text Extraction) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-213-validation-centralization.md) |
@@ -249,22 +249,20 @@
 | **ADR-223** | useAsyncData — Data Fetching Centralization | ✅ ✅ Implemented (Phase 1) | 2026-03-13 | Centralization / React Hooks | [📄](./adrs/ADR-223-use-async-data-centralization.md) |
 | **ADR-224** | Safe JSON Parse Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-224-safe-json-parse-centralization.md) |
 | **ADR-225** | Type Guards Centralization — `isNonEmptyString`, `isNonEmptyArray` | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-225-type-guards-centralization.md) |
-| **ADR-226** | Centralized Deletion Guard — Referential Integrity Protection | ✅ IN PROGRESS (Phase 0 ✅, Phase 1 ✅, Phase 2 ✅, Phase 3 ✅, Phase 4 ✅ IMPLEMENTED) | 2026-03-13 | Backend Systems / Data & State | [📄](./adrs/ADR-226-deletion-guard.md) |
+| **ADR-226** | Centralized Deletion Guard — Referential Integrity Protection | ✅ IN PROGRESS (Phase 0 ✅, Phase 1 ✅, Phase 2 ✅, Phase 3 ✅, Phase 4 ✅, Phase 5 ✅ IMPLEMENTED) | 2026-03-13 | Backend Systems / Data & State | [📄](./adrs/ADR-226-deletion-guard.md) |
 | **ADR-227** | Real-Time Subscription Consolidation & Coverage Expansion | ✅ 🟢 Phases 1-3 Implemented — Phase 2 complete (10/10 hooks migrated) | 2026-03-13 | Data Access Layer / Real-Time Architecture | [📄](./adrs/ADR-227-realtime-subscription-consolidation.md) |
 | **ADR-228** | Real-Time Event Bus Coverage Gap Analysis & Implementation Roadmap | ✅ ✅ All Tiers Implemented (100% Coverage) | 2026-03-14 | Data Access Layer / Real-Time Architecture | [📄](./adrs/ADR-228-realtime-event-coverage-gap-analysis.md) |
 | **ADR-229** | Centralized Page Loading & Error States | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-229-centralized-page-loading-states.md) |
-| **ADR-230** | Contract Workflow — Legal Process (Σύστημα Συμβολαίων / Νομική Διαδικασία Πώλησης) | ✅ IMPLEMENTED — All 5 phases completed | 2026-03-14 | Entity Systems | [📄](./adrs/ADR-230-contract-workflow-legal-process.md) |
-| **ADR-231** | Cascade Entity Linking — Αυτόματη Διάδοση Ιεραρχίας | ✅ IMPLEMENTED | 2026-03-14 | Entity Systems | [📄](./adrs/ADR-231-cascade-entity-linking.md) |
-| **ADR-232** | Tenant Isolation vs Business Entity Link Separation | ✅ IMPLEMENTED | 2026-03-15 | Entity Systems / Security | [📄](./adrs/ADR-232-tenant-company-separation.md) |
-| **ADR-233** | Entity Coding System — Κωδικοποίηση Οντοτήτων | ✅ IMPLEMENTED | 2026-03-15 | Entity Systems | [📄](./adrs/ADR-233-entity-coding-system.md) |
-| **ADR-234** | Payment Plan & Installment Tracking (Πρόγραμμα Αποπληρωμής Ακινήτου) | ✅ IMPLEMENTED (Phase 1-5: SPEC-234D + SPEC-234C + SPEC-234A + SPEC-234E + Alerts & Reports) | 2026-03-16 | Entity Systems / Sales & Finance | [📄](./adrs/ADR-234-payment-plan-installment-tracking.md) |
-| **ADR-235** | Ownership Percentage Table (Πίνακας Ποσοστών Συνιδιοκτησίας) | ✅ IMPLEMENTED (Phase 1+2) | 2026-03-16 | Domain / Property Law | [📄](./adrs/ADR-235-ownership-percentage-table.md) |
-| **ADR-236** | Multi-Level Property Management (Πολυεπίπεδη Διαχείριση Ακινήτων) | ✅ IMPLEMENTED | 2026-03-16 | Domain / Property Management | [📄](./adrs/ADR-236-multi-level-property-management.md) |
-| **ADR-237** | Polygon Overlay Bridge (DXF Viewer → Δημόσια Σελίδα Ακινήτων) | ✅ IMPLEMENTED (4/4 SPECs) | 2026-03-16 | Canvas & Rendering / Property Management | [📄](./adrs/ADR-237-polygon-overlay-bridge.md) |
-| ↳ SPEC-237A | Foundation — Level-to-Floor Mapping + Multi-Level Bug Fix | ✅ IMPLEMENTED | 2026-03-16 | — | [📄](./adrs/specs/SPEC-237A-foundation-level-floor-mapping.md) |
-| ↳ SPEC-237B | Overlay Bridge Core — Read-Only Hook + Canvas Rendering | ✅ IMPLEMENTED | 2026-03-16 | — | [📄](./adrs/specs/SPEC-237B-overlay-bridge-core.md) |
-| ↳ SPEC-237C | Interactive Overlays — Hit-Testing, Hover, Click + Bidirectional Sync | ✅ IMPLEMENTED | 2026-03-16 | — | [📄](./adrs/specs/SPEC-237C-interactive-overlays.md) |
-| ↳ SPEC-237D | Floorplan Import Pipeline — Horizontal UI | ✅ IMPLEMENTED | 2026-03-16 | — | [📄](./adrs/specs/SPEC-237D-floorplan-import-pipeline.md) |
+| **ADR-230** | Contract Workflow — Legal Process (Σύστημα Συμβολαίων / Νομική Διαδικασία Πώλησης) | ✅ IMPLEMENTED — All 5 phases completed (2026-03-14) | 2026-03-14 | Entity Systems | [📄](./adrs/ADR-230-contract-workflow-legal-process.md) |
+| **ADR-231** | Cascade Entity Linking — Αυτόματη Διάδοση Ιεραρχίας | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-231-cascade-entity-linking.md) |
+| **ADR-232** | Tenant Isolation vs Business Entity Link Separation | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-232-tenant-company-separation.md) |
+| **ADR-233** | Entity Coding System — Κωδικοποίηση Οντοτήτων | ✅ ✅ ACCEPTED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-233-entity-coding-system.md) |
+| **ADR-234** | Payment Plan & Installment Tracking (Πρόγραμμα Αποπληρωμής Ακινήτου) | ✅ ✅ IMPLEMENTED — Phase 1 (SPEC-234D) + Phase 2 (SPEC-234C) + Phase 3 (SPEC-234A) | 2026-03-15 | Entity Systems / Sales & Finance | [📄](./adrs/ADR-234-payment-plan-installment-tracking.md) |
+| **ADR-235** | Πίνακας Ποσοστών Συνιδιοκτησίας (Ownership Percentage Table) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-235-ownership-percentage-table.md) |
+| **ADR-236** | Multi-Level Property Management (Πολυεπίπεδη Διαχείριση Ακινήτων) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-236-multi-level-property-management.md) |
+| **ADR-237** | Polygon Overlay Bridge (DXF Viewer → Δημόσια Σελίδα Ακινήτων) | ✅ ✅ IMPLEMENTED (4/4 SPECs complete) | 2026-03-16 | Canvas & Rendering / Property Management | [📄](./adrs/ADR-237-polygon-overlay-bridge.md) |
+| **ADR-238** | Entity Creation Centralization | 📋 PLANNING | 2026-03-17 | Entity Systems | [📄](./adrs/ADR-238-entity-creation-centralization.md) |
+| **ADR-239** | Entity Linking Centralization | ✅ IMPLEMENTED | 2026-03-17 | Entity Systems | [📄](./adrs/ADR-239-entity-linking-centralization.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -412,10 +410,10 @@
 | **ADR-130** | Default Layer Name Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-130-default-layer-name-centralization.md) |
 | **ADR-167** | Enterprise Project Address System | ✅ ✅ APPROVED | [View](./adrs/ADR-167-enterprise-project-address-system.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | [View](./adrs/ADR-018-1-photos-tab-base-template.md) |
-| **ADR-230** | Contract Workflow — Legal Process (Σύστημα Συμβολαίων / Νομική Διαδικασία Πώλησης) | ✅ IMPLEMENTED — All 5 phases completed | [View](./adrs/ADR-230-contract-workflow-legal-process.md) |
-| **ADR-231** | Cascade Entity Linking — Αυτόματη Διάδοση Ιεραρχίας | ✅ IMPLEMENTED | [View](./adrs/ADR-231-cascade-entity-linking.md) |
-| **ADR-232** | Tenant Isolation vs Business Entity Link Separation | ✅ IMPLEMENTED | [View](./adrs/ADR-232-tenant-company-separation.md) |
-| **ADR-233** | Entity Coding System — Κωδικοποίηση Οντοτήτων | ✅ IMPLEMENTED | [View](./adrs/ADR-233-entity-coding-system.md) |
+| **ADR-230** | Contract Workflow — Legal Process (Σύστημα Συμβολαίων / Νομική Διαδικασία Πώλησης) | ✅ IMPLEMENTED — All 5 phases completed (2026-03-14) | [View](./adrs/ADR-230-contract-workflow-legal-process.md) |
+| **ADR-233** | Entity Coding System — Κωδικοποίηση Οντοτήτων | ✅ ✅ ACCEPTED | [View](./adrs/ADR-233-entity-coding-system.md) |
+| **ADR-238** | Entity Creation Centralization | 📋 PLANNING | [View](./adrs/ADR-238-entity-creation-centralization.md) |
+| **ADR-239** | Entity Linking Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-239-entity-linking-centralization.md) |
 
 ---
 
@@ -549,8 +547,10 @@
 | **ADR-224** | Safe JSON Parse Centralization | ✅ APPROVED | [View](./adrs/ADR-224-safe-json-parse-centralization.md) |
 | **ADR-225** | Type Guards Centralization — `isNonEmptyString`, `isNonEmptyArray` | ✅ APPROVED | [View](./adrs/ADR-225-type-guards-centralization.md) |
 | **ADR-229** | Centralized Page Loading & Error States | ✅ APPROVED | [View](./adrs/ADR-229-centralized-page-loading-states.md) |
-| **ADR-235** | Ownership Percentage Table (Πίνακας Ποσοστών Συνιδιοκτησίας) | ✅ IMPLEMENTED (Phase 1+2) | [View](./adrs/ADR-235-ownership-percentage-table.md) |
-| **ADR-236** | Multi-Level Property Management (Πολυεπίπεδη Διαχείριση Ακινήτων) | ✅ IMPLEMENTED | [View](./adrs/ADR-236-multi-level-property-management.md) |
+| **ADR-231** | Cascade Entity Linking — Αυτόματη Διάδοση Ιεραρχίας | ✅ APPROVED | [View](./adrs/ADR-231-cascade-entity-linking.md) |
+| **ADR-232** | Tenant Isolation vs Business Entity Link Separation | ✅ APPROVED | [View](./adrs/ADR-232-tenant-company-separation.md) |
+| **ADR-235** | Πίνακας Ποσοστών Συνιδιοκτησίας (Ownership Percentage Table) | ✅ APPROVED | [View](./adrs/ADR-235-ownership-percentage-table.md) |
+| **ADR-236** | Multi-Level Property Management (Πολυεπίπεδη Διαχείριση Ακινήτων) | ✅ APPROVED | [View](./adrs/ADR-236-multi-level-property-management.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
