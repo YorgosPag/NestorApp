@@ -17,6 +17,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
+import { propagateChildBuildingLink } from '@/lib/firestore/cascade-propagation.service';
 
 const logger = createModuleLogger('StoragesIdRoute');
 
@@ -86,6 +87,15 @@ export const PATCH = withStandardRateLimit(
         if (body.buildingId !== undefined) updateData.buildingId = body.buildingId ?? null;
 
         await docRef.update(updateData);
+
+        // 🔗 CASCADE: Propagate buildingId change (inherit projectId, companyId, linkedCompanyId)
+        if (body.buildingId !== undefined) {
+          propagateChildBuildingLink(COLLECTIONS.STORAGE, id, body.buildingId ?? null).catch((err) => {
+            logger.warn('Storage cascade propagation failed (non-blocking)', {
+              id, error: err instanceof Error ? err.message : String(err),
+            });
+          });
+        }
 
         logger.info('Storage unit updated', { id, companyId: ctx.companyId });
 

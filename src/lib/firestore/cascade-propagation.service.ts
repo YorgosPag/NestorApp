@@ -290,6 +290,72 @@ export async function propagateUnitBuildingLink(
 }
 
 // ============================================================================
+// 🏢 GENERIC: Child → Building Link Cascade (Storage, Parking, etc.)
+// ============================================================================
+
+/**
+ * Propagates building hierarchy data to any child entity when its buildingId changes.
+ * Resolves: projectId, companyId, linkedCompanyId from the building→project chain.
+ *
+ * Used by: storages PATCH, parking PATCH (and any future building-child entity).
+ * Units have their own specialized `propagateUnitBuildingLink` for backward compat.
+ *
+ * @param collection - Firestore collection name (COLLECTIONS.STORAGE, COLLECTIONS.PARKING_SPACES)
+ * @param docId - Document ID of the child entity
+ * @param newBuildingId - New building ID (null to unlink)
+ */
+export async function propagateChildBuildingLink(
+  collection: string,
+  docId: string,
+  newBuildingId: string | null
+): Promise<CascadeResult> {
+  const db = getAdminFirestore();
+
+  try {
+    if (newBuildingId) {
+      const buildingDoc = await db.collection(COLLECTIONS.BUILDINGS).doc(newBuildingId).get();
+      if (buildingDoc.exists) {
+        const buildingData = buildingDoc.data();
+        const resolvedProjectId = (buildingData?.projectId as string) ?? null;
+        const resolvedCompanyId = (buildingData?.companyId as string) ?? null;
+
+        let resolvedLinkedCompanyId: string | null = null;
+        if (resolvedProjectId) {
+          const projectDoc = await db.collection(COLLECTIONS.PROJECTS).doc(resolvedProjectId).get();
+          if (projectDoc.exists) {
+            resolvedLinkedCompanyId = (projectDoc.data()?.linkedCompanyId as string) ?? null;
+          }
+        }
+
+        await db.collection(collection).doc(docId).update({
+          projectId: resolvedProjectId,
+          companyId: resolvedCompanyId,
+          linkedCompanyId: resolvedLinkedCompanyId,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+
+        logger.info('Child→Building cascade completed', {
+          collection, docId, newBuildingId, resolvedProjectId, resolvedCompanyId,
+        });
+      }
+    } else {
+      await db.collection(collection).doc(docId).update({
+        projectId: null,
+        linkedCompanyId: null,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      logger.info('Child→Building cascade: unlinked', { collection, docId });
+    }
+
+    return { success: true, totalUpdated: 1, collections: { [collection]: 1 } };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error('Child→Building cascade failed', { collection, docId, newBuildingId, error: message });
+    return { success: false, totalUpdated: 0, collections: {}, error: message };
+  }
+}
+
+// ============================================================================
 // BATCH UTILITY
 // ============================================================================
 

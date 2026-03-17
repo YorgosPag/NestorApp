@@ -17,6 +17,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
+import { propagateChildBuildingLink } from '@/lib/firestore/cascade-propagation.service';
 
 const logger = createModuleLogger('ParkingIdRoute');
 
@@ -91,6 +92,15 @@ export const PATCH = withStandardRateLimit(
         if (body.projectId?.trim()) updateData.projectId = body.projectId.trim();
 
         await docRef.update(updateData);
+
+        // 🔗 CASCADE: Propagate buildingId change (inherit projectId, companyId, linkedCompanyId)
+        if (body.buildingId !== undefined) {
+          propagateChildBuildingLink(COLLECTIONS.PARKING_SPACES, id, body.buildingId ?? null).catch((err) => {
+            logger.warn('Parking cascade propagation failed (non-blocking)', {
+              id, error: err instanceof Error ? err.message : String(err),
+            });
+          });
+        }
 
         logger.info('Parking spot updated', { id, companyId: ctx.companyId });
 
