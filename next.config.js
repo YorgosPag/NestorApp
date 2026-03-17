@@ -334,27 +334,18 @@ const nextConfig = {
   },
 };
 
-module.exports = withSentryConfig(nextConfig, {
-  // Sentry build options
-  org: 'pagonis',
-  project: 'nestor-app',
-  silent: true,
+// 🔇 SENTRY DISABLED (2026-03-17) — Hobby plan cannot handle 810K LOC instrumentation
+// Build was 45min+ with Sentry vs 3-4min without.
+// To re-enable: uncomment withSentryConfig block below, comment out the plain export.
+module.exports = nextConfig;
 
-  // Source maps: DISABLED on Hobby plan (causes 45min+ builds / OOM)
-  // Re-enable when upgrading to Vercel Pro ($20/mo → 4 cores, 16 GB)
-  sourcemaps: {
-    disable: true,
-  },
-
-  // Upload source maps AFTER build completes — reduces peak RAM usage
-  useRunAfterProductionCompileHook: true,
-
-  // Wider upload = readable stack traces through dependencies too
-  widenClientFileUpload: true,
-
-  // Disable telemetry collection during build
-  telemetry: false,
-
-  // Tree-shake Sentry logger in production
-  disableLogger: true,
-});
+// withSentryConfig(nextConfig, {
+//   org: 'pagonis',
+//   project: 'nestor-app',
+//   silent: true,
+//   sourcemaps: { disable: true },
+//   useRunAfterProductionCompileHook: true,
+//   widenClientFileUpload: true,
+//   telemetry: false,
+//   disableLogger: true,
+// });
