@@ -115,7 +115,10 @@ export function ListLayout({
           }
           companyId={
             selectedPropertyIds[0]
-              ? (filteredProperties.find((p) => p.id === selectedPropertyIds[0]) as Record<string, unknown> | undefined)?.companyId as string | undefined || null
+              ? (() => {
+                  const prop = filteredProperties.find((p) => p.id === selectedPropertyIds[0]) as Record<string, unknown> | undefined;
+                  return (prop?.companyId as string | undefined) || (prop?.linkedCompanyId as string | undefined) || null;
+                })()
               : null
           }
           levels={
