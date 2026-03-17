@@ -20,10 +20,15 @@
  * ```
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { where } from 'firebase/firestore';
+import type { DocumentData } from 'firebase/firestore';
 import { FileRecordService } from '@/services/file-record.service';
+import { firestoreQueryService } from '@/services/firestore';
+import type { QueryResult } from '@/services/firestore';
 import type { FileRecord } from '@/types/file-record';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
+import { FILE_STATUS } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime';
 import type { FileCreatedPayload, FileUpdatedPayload, FileTrashedPayload, FileRestoredPayload, FileLinkCreatedPayload } from '@/services/realtime';
@@ -58,6 +63,14 @@ export interface UseEntityFilesParams {
   levelFloorId?: string;
   /** Auto-fetch on mount (default: true) */
   autoFetch?: boolean;
+  /**
+   * 🏢 ADR-240: Real-time Firestore listener mode.
+   * When true, uses firestoreQueryService.subscribe (onSnapshot) instead of
+   * one-time getAll. Server-side updates (e.g. processedData from /api/floorplans/process)
+   * propagate to the UI automatically without any manual refetch.
+   * Default: false (backward compatible — one-time fetch).
+   */
+  realtime?: boolean;
 }
 
 /**
@@ -121,6 +134,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     purpose,
     levelFloorId,
     autoFetch = true,
+    realtime = false,
   } = params;
 
   // State
@@ -218,6 +232,73 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
       setLoading(false);
     }
   }, [entityType, entityId, companyId, domain, category, purpose, levelFloorId]);
+
+  // =========================================================================
+  // 🏢 ADR-240: REAL-TIME LISTENER (Firestore onSnapshot)
+  // Active only when realtime=true. Uses firestoreQueryService.subscribe —
+  // same pattern as useFloorplanFiles. Server-side updates (e.g. processedData
+  // written by /api/floorplans/process) propagate automatically to the UI.
+  // =========================================================================
+
+  // Stable ref for purpose filter — avoids subscription re-creation on every render
+  const purposeRef = useRef(purpose);
+  useEffect(() => { purposeRef.current = purpose; }, [purpose]);
+
+  useEffect(() => {
+    if (!realtime || !entityId) return;
+
+    setLoading(true);
+
+    // Build same constraints as getFilesByEntity
+    const constraints = [
+      where('entityType', '==', entityType),
+      where('entityId', '==', entityId),
+      where('status', '==', FILE_STATUS.READY),
+      where('isDeleted', '==', false),
+      ...(domain ? [where('domain', '==', domain)] : []),
+      ...(category ? [where('category', '==', category)] : []),
+      ...(levelFloorId ? [where('levelFloorId', '==', levelFloorId)] : []),
+    ];
+
+    const unsubscribe = firestoreQueryService.subscribe<DocumentData>(
+      'FILES',
+      (result: QueryResult<DocumentData>) => {
+        const currentPurpose = purposeRef.current;
+
+        const filterByPurpose = (file: FileRecord): boolean => {
+          if (!currentPurpose) return true;
+          if (!file.purpose) return true;
+          if (file.purpose === currentPurpose) return true;
+          if (file.purpose === 'floorplan' && currentPurpose.endsWith('-floorplan')) return true;
+          return false;
+        };
+
+        const records = result.documents
+          .map(doc => doc as unknown as FileRecord)
+          .filter(filterByPurpose);
+
+        setFiles(records);
+        setLoading(false);
+        setError(null);
+
+        logger.info('[realtime] Files updated', {
+          count: records.length,
+          entityType,
+          entityId,
+        });
+      },
+      (err: Error) => {
+        logger.error('[realtime] Listener error', { error: err.message, entityType, entityId });
+        setError(err);
+        setLoading(false);
+      },
+      { constraints },
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, [realtime, entityType, entityId, domain, category, levelFloorId]);
 
   // =========================================================================
   // 🗑️ TRASH OPERATIONS (Enterprise Trash System - ADR-032)

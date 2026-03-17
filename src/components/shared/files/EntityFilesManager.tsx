@@ -233,6 +233,10 @@ export function EntityFilesManager({
     category: fetchAllDomains ? undefined : category,
     purpose: fetchAllDomains ? undefined : purpose, // 🏢 ENTERPRISE: Skip purpose filter when fetching all domains (Documents tab)
     autoFetch: true,
+    // 🏢 ADR-240: Real-time Firestore listener for floorplan-gallery.
+    // Server-side writes (processedData from /api/floorplans/process) propagate
+    // automatically — no manual refetch needed.
+    realtime: displayStyle === 'floorplan-gallery',
   });
 
   // =========================================================================
@@ -333,10 +337,9 @@ export function EntityFilesManager({
         }
       }
 
-      // useEntityFiles uses one-time fetch — must refetch after processing to get processedData
-      if (anyProcessed && !cancelled) {
-        await refetch();
-      }
+      // 🏢 ADR-240: No manual refetch needed — when realtime=true, Firestore onSnapshot
+      // propagates the processedData write automatically to the UI.
+      void anyProcessed; // suppress unused-variable warning
     };
 
     processFiles();
@@ -344,7 +347,7 @@ export function EntityFilesManager({
     return () => {
       cancelled = true;
     };
-  }, [displayStyle, filteredFiles, refetch]);
+  }, [displayStyle, filteredFiles]);
 
   // =========================================================================
   // 📋 AUDIT TRAIL — Record file operations (ADR-195)
