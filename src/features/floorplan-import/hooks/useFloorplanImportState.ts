@@ -571,7 +571,10 @@ export function useFloorplanImportState(
     }
 
     return {
-      companyId: selection.companyId,
+      // 🏢 ADR-240: Use JWT-verified companyId (user.companyId) — NOT the entity ID
+      // from the company dropdown (selection.companyId). The dropdown may return
+      // contact-type entity IDs (cont_xxx) which don't match the tenant filter.
+      companyId: user?.companyId ?? selection.companyId,
       projectId: selection.projectId ?? undefined,
       entityType,
       entityId,
