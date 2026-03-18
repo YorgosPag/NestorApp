@@ -153,6 +153,8 @@ type DialogContentSize = 'sm' | 'default' | 'lg' | 'xl' | 'fullscreen';
 | 2 | **GanttView** | `Dialog` + `DialogContent size="fullscreen"` | Direct composition — no wrapper |
 | 3 | **FloorplanGallery** | `Dialog` + `DialogContent size="fullscreen"` | Direct composition — no wrapper |
 | 4 | **DXF Viewer** | `FullscreenOverlay` (overlay) | Portal wraps MainContentSection + FloatingPanelsSection. Toolbar button toggle. Zero canvas remount. |
+| 5 | **AnalyticsTabContent** | `FullscreenOverlay` (overlay) | Building analytics tab — FullscreenToggleButton in Header nav. |
+| 6 | **MeasurementsTabContent** | `FullscreenOverlay` (overlay) | Building BOQ/measurements tab — FullscreenToggleButton next to "New Item" button. |
 
 ---
 
@@ -239,7 +241,7 @@ return (
 ## Full Codebase Audit (2026-03-18)
 
 - **0 rogue fullscreen implementations** βρέθηκαν
-- **4/4** eligible components μεταφέρθηκαν επιτυχώς (EntityFilesManager, GanttView, FloorplanGallery, DXF Viewer)
+- **6/6** eligible components μεταφέρθηκαν επιτυχώς (EntityFilesManager, GanttView, FloorplanGallery, DXF Viewer, AnalyticsTab, MeasurementsTab)
 - **2/3** intentional exceptions τεκμηριωμένες (VideoPlayer, GeoDialogSystem)
 
 ---
@@ -248,6 +250,7 @@ return (
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-03-18 | **Building tabs fullscreen**: AnalyticsTabContent + MeasurementsTabContent — `FullscreenOverlay` wrap + `FullscreenToggleButton` in header/actions area | Claude + Γιώργος |
 | 2026-03-18 | **DXF Viewer fullscreen**: Portal-based `FullscreenOverlay` wraps canvas area, toolbar toggle button (Maximize2/Minimize2), `isFullscreen` prop flow through 7 components, i18n keys (en+el), zero canvas remount | Claude + Γιώργος |
 | 2026-03-18 | **Milestones fullscreen**: Added `FullscreenOverlay` to `TimelineTabContent.tsx` milestones view — `useFullscreen` hook + fullscreen button in toolbar + overlay with OverallProgressCard, TimelineMilestones, CriticalPathCard, CompletionForecastCard | Claude + Γιώργος |
 | 2026-03-18 | **v2 Composition Refactor**: `FullscreenContainer` → `FullscreenOverlay` (SRP), dialog mode → direct `<Dialog size="fullscreen">` composition, `FullscreenToggleButton` standalone export, CVA size variants on `DialogContent` | Claude + Γιώργος |

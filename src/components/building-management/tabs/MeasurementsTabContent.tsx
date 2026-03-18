@@ -25,6 +25,9 @@ import { Ruler, Plus, AlertCircle } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+// 🏢 ADR-241: Centralized fullscreen system
+import { useFullscreen } from '@/hooks/useFullscreen';
+import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 import type { Building } from '@/types/building/contracts';
 import type { BOQItem, BOQItemStatus, CreateBOQItemInput, UpdateBOQItemInput } from '@/types/boq';
 
@@ -44,6 +47,8 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
   const { t } = useTranslation('building');
   const { user } = useAuth();
   const { confirm, dialogProps } = useConfirmDialog();
+  // 🏢 ADR-241: Fullscreen state
+  const fullscreen = useFullscreen();
   // 🏢 ADR-201: Centralized companyId resolution (building → user fallback)
   const resolvedCompanyId = useCompanyId({ building })?.companyId ?? '';
 
@@ -179,7 +184,13 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
   // --- MAIN CONTENT ---
 
   return (
-    <section className="space-y-2 p-2">
+    <FullscreenOverlay
+      isFullscreen={fullscreen.isFullscreen}
+      onToggle={fullscreen.toggle}
+      ariaLabel="Building Measurements"
+      className="space-y-2 p-2"
+      fullscreenClassName="p-4 overflow-auto"
+    >
       <ConfirmDialog {...dialogProps} />
       {/* Summary Cards */}
       <BOQSummaryCards items={items} />
@@ -193,10 +204,14 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
             categories={categories}
           />
         </section>
-        <Button onClick={handleNewItem} className="shrink-0">
-          <Plus className="h-4 w-4 mr-2" />
-          {t('tabs.measurements.actions.newItem')}
-        </Button>
+        <nav className="flex items-center gap-2 shrink-0">
+          <Button onClick={handleNewItem}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t('tabs.measurements.actions.newItem')}
+          </Button>
+          {/* 🏢 ADR-241: Fullscreen toggle */}
+          <FullscreenToggleButton isFullscreen={fullscreen.isFullscreen} onToggle={fullscreen.toggle} />
+        </nav>
       </header>
 
       {/* Category Accordion with Items */}
@@ -218,7 +233,7 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
         categories={categories}
         onSave={handleSave}
       />
-    </section>
+    </FullscreenOverlay>
   );
 }
 

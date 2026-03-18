@@ -13,9 +13,11 @@ interface HeaderProps {
     setTimeRange: (value: '1M' | '3M' | '6M' | '1Y') => void;
     analyticsView: 'overview' | 'financial' | 'progress' | 'comparison';
     setAnalyticsView: (value: 'overview' | 'financial' | 'progress' | 'comparison') => void;
+    /** ADR-241: Fullscreen toggle button (rendered in nav area) */
+    fullscreenToggle?: React.ReactNode;
 }
 
-export default function Header({ timeRange, setTimeRange, analyticsView, setAnalyticsView }: HeaderProps) {
+export default function Header({ timeRange, setTimeRange, analyticsView, setAnalyticsView, fullscreenToggle }: HeaderProps) {
     // 🏢 ENTERPRISE: i18n hook for translations
     const { t } = useTranslation('building');
     const iconSizes = useIconSizes();
@@ -52,6 +54,8 @@ export default function Header({ timeRange, setTimeRange, analyticsView, setAnal
                     <Button variant="outline" size="sm">
                         <BarChart3 className={`${iconSizes.sm} mr-2`} /> {t('tabs.analytics.exportReport')}
                     </Button>
+                    {/* 🏢 ADR-241: Fullscreen toggle */}
+                    {fullscreenToggle}
                 </nav>
             </section>
 

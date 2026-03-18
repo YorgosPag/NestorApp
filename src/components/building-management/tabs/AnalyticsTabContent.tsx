@@ -9,6 +9,9 @@ import AnalyticsProgress from './AnalyticsTabContent/AnalyticsProgress';
 import AnalyticsComparison from './AnalyticsTabContent/AnalyticsComparison';
 // BuildingStats moved here from GeneralTabContent (consistency refactor)
 import { BuildingStats } from './BuildingStats';
+// 🏢 ADR-241: Centralized fullscreen system
+import { useFullscreen } from '@/hooks/useFullscreen';
+import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 import type { Building } from '../BuildingsPageContent';
 
 interface AnalyticsTabContentProps {
@@ -18,9 +21,17 @@ interface AnalyticsTabContentProps {
 export default function AnalyticsTabContent({ building }: AnalyticsTabContentProps) {
   const [timeRange, setTimeRange] = useState<'1M' | '3M' | '6M' | '1Y'>('6M');
   const [analyticsView, setAnalyticsView] = useState<'overview' | 'financial' | 'progress' | 'comparison'>('overview');
+  // 🏢 ADR-241: Fullscreen state
+  const fullscreen = useFullscreen();
 
   return (
-    <section className="space-y-2">
+    <FullscreenOverlay
+      isFullscreen={fullscreen.isFullscreen}
+      onToggle={fullscreen.toggle}
+      ariaLabel="Building Analytics"
+      className="space-y-2"
+      fullscreenClassName="p-4 overflow-auto"
+    >
       {/* Building Stats — aggregated unit/sales data */}
       <BuildingStats buildingId={String(building.id)} />
 
@@ -29,6 +40,7 @@ export default function AnalyticsTabContent({ building }: AnalyticsTabContentPro
         setTimeRange={setTimeRange}
         analyticsView={analyticsView}
         setAnalyticsView={setAnalyticsView}
+        fullscreenToggle={<FullscreenToggleButton isFullscreen={fullscreen.isFullscreen} onToggle={fullscreen.toggle} />}
       />
 
       <KPICards />
@@ -37,6 +49,6 @@ export default function AnalyticsTabContent({ building }: AnalyticsTabContentPro
       {analyticsView === 'financial' && <AnalyticsFinancial building={building} />}
       {analyticsView === 'progress' && <AnalyticsProgress building={building} />}
       {analyticsView === 'comparison' && <AnalyticsComparison />}
-    </section>
+    </FullscreenOverlay>
   );
 }
