@@ -834,7 +834,7 @@ export interface IGeoAlertCore {
    - ✅ Context capture (user info, URL, component stack, metadata)
    - ✅ Severity levels (Critical, Error, Warning, Info)
    - ✅ Local storage για offline error queuing
-   - ✅ Integration ready για Sentry/external services
+   - ✅ Integration ready για external services
 
 2. **Error Boundary Integration** ✅
    - ✅ Enhanced existing ErrorBoundary: `src/components/ui/ErrorBoundary/ErrorBoundary.tsx`

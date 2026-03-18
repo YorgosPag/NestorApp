@@ -6,7 +6,7 @@
  *
  * Features:
  * - Environment-based configuration
- * - External service integration (Sentry, custom endpoints)
+ * - External service integration (custom endpoints)
  * - Error filtering rules
  * - Performance monitoring settings
  * - User privacy controls
@@ -95,7 +95,6 @@ export const errorReportingConfig: ErrorTrackerConfig = {
   persistErrors: true,
 
   // **🌐 External Integration**
-  sentryDsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
   customEndpoint: process.env.NEXT_PUBLIC_ERROR_ENDPOINT,
 
   // **🐛 Debug Settings**

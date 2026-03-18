@@ -742,7 +742,7 @@ Based on ChatGPT-5 feedback, add:
    - Cache/invalidation policy
 
 3. **Observability** (Week 8)
-   - Sentry integration
+   - Error tracking integration
    - Structured logging
    - Performance budgets (Lighthouse CI)
 

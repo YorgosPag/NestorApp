@@ -9,7 +9,7 @@
  * - Context capture (user info, URL, component stack)
  * - Severity levels (Critical, Error, Warning, Info)
  * - Local storage για offline error queuing
- * - Integration ready για Sentry/external services
+ * - Integration ready για external services
  */
 
 'use client';
@@ -85,7 +85,6 @@ export interface ErrorTrackerConfig {
   persistErrors: boolean;
 
   // External integration
-  sentryDsn?: string;
   customEndpoint?: string;
 
   // Debug
@@ -461,21 +460,10 @@ export class ErrorTracker {
   // ============================================================================
 
   private sendToExternalServices(error: ErrorReport): void {
-    // Sentry integration
-    if (this.config.sentryDsn && typeof window !== 'undefined') {
-      this.sendToSentry(error);
-    }
-
     // Custom endpoint
     if (this.config.customEndpoint) {
       this.sendToCustomEndpoint(error);
     }
-  }
-
-  private sendToSentry(error: ErrorReport): void {
-    // Placeholder για Sentry integration
-    // Θα υλοποιηθεί όταν προστεθεί το Sentry SDK
-    this.log('Would send to Sentry', { errorId: error.id });
   }
 
   private sendToCustomEndpoint(error: ErrorReport): void {
