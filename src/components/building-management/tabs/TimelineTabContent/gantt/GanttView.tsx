@@ -154,6 +154,26 @@ export function GanttView({ building }: GanttViewProps) {
   // View mode state
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.MONTH);
 
+  // 🏢 ENTERPRISE: Auto-scroll to "today" marker when view mode changes
+  // Uses requestAnimationFrame to wait for library re-render
+  const handleViewModeChange = useCallback((newMode: ViewMode) => {
+    setViewMode(newMode);
+    // After React + library re-render, scroll to today marker
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const container = ganttChartRef.current;
+        if (!container) return;
+        const todayMarker = container.querySelector('.rmg-today-marker, .rmg-current-date-marker, [data-today]') as HTMLElement | null;
+        const scrollContainer = container.querySelector('.rmg-timeline-container') as HTMLElement | null;
+        if (todayMarker && scrollContainer) {
+          const markerLeft = todayMarker.offsetLeft;
+          // Scroll so today is ~15% from left edge (see future timeline to the right)
+          scrollContainer.scrollLeft = Math.max(0, markerLeft - scrollContainer.clientWidth * 0.15);
+        }
+      });
+    });
+  }, []);
+
   // Fullscreen mode (ADR-241 centralized)
   const fullscreen = useFullscreen();
 
@@ -618,6 +638,22 @@ export function GanttView({ building }: GanttViewProps) {
     return () => observer.disconnect();
   }, []);
 
+  // 🏢 ENTERPRISE: Auto-scroll to today on initial mount
+  useEffect(() => {
+    if (loading || isEmpty) return;
+    const timeout = setTimeout(() => {
+      const container = ganttChartRef.current;
+      if (!container) return;
+      const todayMarker = container.querySelector('.rmg-today-marker, .rmg-current-date-marker, [data-today]') as HTMLElement | null;
+      const scrollContainer = container.querySelector('.rmg-timeline-container') as HTMLElement | null;
+      if (todayMarker && scrollContainer) {
+        const markerLeft = todayMarker.offsetLeft;
+        scrollContainer.scrollLeft = Math.max(0, markerLeft - scrollContainer.clientWidth * 0.15);
+      }
+    }, 300); // Wait for library render
+    return () => clearTimeout(timeout);
+  }, [loading, isEmpty]);
+
   // Timeline bounds — aligned to month boundaries for correct bar positioning
   const timelineBounds = useMemo(() => {
     const now = new Date();
@@ -795,7 +831,7 @@ export function GanttView({ building }: GanttViewProps) {
                 headerLabel={building.name ?? t('tabs.timeline.gantt.title')}
                 viewMode={viewMode}
                 viewModes={AVAILABLE_VIEW_MODES}
-                onViewModeChange={setViewMode}
+                onViewModeChange={handleViewModeChange}
                 darkMode={isDarkMode}
                 showProgress
                 showCurrentDateMarker
@@ -891,7 +927,7 @@ export function GanttView({ building }: GanttViewProps) {
           onPointerMove={handleGanttPointerMove}
           onPointerLeave={handleGanttPointerLeave}
         >
-          <div onMouseDownCapture={handleGanttMouseDown}>
+          <div className="h-full" onMouseDownCapture={handleGanttMouseDown}>
             <GanttChart
               tasks={taskGroups}
               startDate={timelineBounds.startDate}
@@ -900,7 +936,7 @@ export function GanttView({ building }: GanttViewProps) {
               headerLabel={building.name ?? t('tabs.timeline.gantt.title')}
               viewMode={viewMode}
               viewModes={AVAILABLE_VIEW_MODES}
-              onViewModeChange={setViewMode}
+              onViewModeChange={handleViewModeChange}
               darkMode={isDarkMode}
               showProgress
               showCurrentDateMarker

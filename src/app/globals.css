@@ -1583,6 +1583,17 @@ html body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb:hov
   transition: width 0.05s linear !important;
 }
 
+/* 🏢 ENTERPRISE: Gantt container fills remaining viewport height */
+.rmg-gantt-chart,
+.rmg-container {
+  min-height: 100% !important;
+}
+
+/* 🏢 ENTERPRISE: Timeline grid rows fill remaining space */
+.rmg-timeline-grid {
+  min-height: 100% !important;
+}
+
 /* =============================================================
    ENTERPRISE NAVIGATION SCROLLBAR - EXCEPTION RULES
 
