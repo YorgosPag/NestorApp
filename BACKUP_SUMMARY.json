@@ -1,30 +1,33 @@
 {
-  "category": "REFACTOR",
-  "shortDescription": "Centralize ID generation — replace .add() and Date.now() with enterprise UUIDs",
-  "problem": "4 Firestore collections used .add() (auto-generated IDs) and 1 used Date.now()+Math.random() instead of the centralized enterprise-id.service.ts UUID system.",
-  "cause": "These services were created before the enterprise ID system was established, or the ID system hadn't yet covered these prefixes.",
+  "category": "FEATURE",
+  "shortDescription": "ADR-239 Entity Linking Centralization — linkEntity() service + 6 endpoints migrated",
+  "problem": "Entity linking (PATCH operations) was scattered across 5 endpoints with inconsistent patterns and bugs: (1) storage/parking had no change detection — cascade fired even when buildingId was unchanged; (2) buildings PATCH had no change detection for projectId cascade; (3) storage/parking/building had no entity audit trail for link changes; (4) floors used new Date().toISOString() instead of FieldValue.serverTimestamp().",
+  "cause": "Each PATCH endpoint had its own inline cascade block. No centralized service existed for entity linking (only creation had been centralized via ADR-238). The bugs accumulated independently across endpoints.",
   "filesChanged": [
-    "src/services/enterprise-id.service.ts",
-    "src/services/ai-pipeline/feedback-service.ts",
-    "src/services/ai-pipeline/audit-service.ts",
-    "src/services/entity-audit.service.ts",
-    "src/services/legal-contract.service.ts",
-    "src/app/api/notifications/error-report/route.ts",
-    "src/app/api/calendar/reminders/route.ts"
+    "src/lib/firestore/entity-linking.types.ts (NEW — LINK_REGISTRY with 5 entries, LinkRegistryEntry, LinkEntityParams, LinkEntityResult)",
+    "src/lib/firestore/entity-linking.service.ts (NEW — linkEntity() 7-step pipeline)",
+    "src/app/api/storages/[id]/route.ts (MODIFIED — Phase 1 canary: inline cascade → linkEntity())",
+    "src/app/api/parking/[id]/route.ts (MODIFIED — Phase 1 canary: inline cascade → linkEntity())",
+    "src/app/api/buildings/route.ts (MODIFIED — Phase 2: inline cascade → linkEntity())",
+    "src/app/api/projects/[projectId]/route.ts (MODIFIED — Phase 2: inline cascade → linkEntity())",
+    "src/app/api/units/[id]/route.ts (MODIFIED — Phase 2: inline cascade → linkEntity() with skipAudit=true)",
+    "src/app/api/floors/route.ts (MODIFIED — Phase 3: new Date().toISOString() → FieldValue.serverTimestamp())",
+    "docs/centralized-systems/reference/adrs/ADR-239-entity-linking-centralization.md (NEW)",
+    "docs/centralized-systems/reference/adr-index.md (MODIFIED — ADR-239 entry added)"
   ],
-  "solution": "Added 4 new prefixes (fb, paud, eaud, lc) + 4 class methods + 4 convenience exports to enterprise-id.service.ts. Replaced .add() with .doc(generateXxxId()).set() in 5 files. Removed local generateContractId() from legal-contract.service.ts. Added NEXT_PUBLIC_DEFAULT_COMPANY_ID env var to Vercel production.",
-  "testing": "Grep verification: 0 .add() calls remaining in changed files. 0 Date.now()+Math.random() patterns. Vercel auto-deploy.",
-  "notes": "Vercel env var NEXT_PUBLIC_DEFAULT_COMPANY_ID set to comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757. New ID formats: fb_uuid, paud_uuid, eaud_uuid, lc_uuid, notif_uuid.",
+  "solution": "1. Created LINK_REGISTRY with 5 entries (storage:buildingId, parking:buildingId, unit:buildingId, building:projectId, project:linkedCompanyId). 2. Implemented linkEntity() with 7-step pipeline: registry lookup → change detection → field locking → cascade dispatch (fire-and-forget) → entity audit → auth audit → return. 3. Migrated all 5 PATCH endpoints to use linkEntity(). 4. Fixed floors timestamp bug. 5. REUSED cascade-propagation.service and entity-audit.service without modification. 6. Created ADR-239 documentation.",
+  "testing": "Pre-commit hooks passed. TypeScript check running in background. git commit d351a2c7 successful.",
+  "notes": "unit:buildingId has skipAudit=true because units PATCH already runs EntityAuditService.diffFieldsWithResolution for buildingId (would produce duplicate audit entry). cascadeResult is always null — cascade is fire-and-forget by design (same as existing pattern). Change detection now prevents redundant cascade calls when buildingId/projectId value is unchanged.",
   "contributors": {
     "user": "Γιώργος Παγώνης",
-    "assistant": "Claude Opus 4.6",
-    "sessionDate": "2026-03-15"
+    "assistant": "Claude Sonnet 4.6",
+    "sessionDate": "2026-03-17"
   },
   "relatedBackups": [],
   "commits": [
     {
-      "hash": "36eb39e1",
-      "message": "refactor: centralize ID generation — replace .add() and Date.now() with enterprise UUIDs"
+      "hash": "d351a2c7",
+      "message": "feat: ADR-239 Entity Linking Centralization — linkEntity() + 6 endpoints migrated"
     }
   ]
 }

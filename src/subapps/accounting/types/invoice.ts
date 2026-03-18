@@ -285,6 +285,20 @@ export interface Invoice {
   /** Αναφορά σε εγγραφή Ε-Ε (Firestore doc ID) */
   journalEntryId: string | null;
 
+  // — Παρακράτηση Φόρου (ADR-ACC-020) —
+  /**
+   * Συντελεστής παρακράτησης φόρου (%).
+   * Επιτρεπτές τιμές: 0 (καμία), 1 (αντιπρόσωποι), 3 (κατασκευαστικές), 20 (υπηρεσίες ΤΠΥ).
+   * Optional — backward compatible με existing invoices. Null = δεν εφαρμόζεται παρακράτηση.
+   */
+  withholdingRate?: number | null;
+  /**
+   * Ποσό παρακράτησης φόρου σε EUR (= totalNetAmount × withholdingRate / 100).
+   * Αποθηκεύεται ως snapshot — ανεξάρτητο από μελλοντικές αλλαγές συντελεστή.
+   * Optional — backward compatible με existing invoices.
+   */
+  withholdingAmount?: number | null;
+
   // — Email History (ADR-ACC-019) —
   /**
    * Ιστορικό αποστολών email.

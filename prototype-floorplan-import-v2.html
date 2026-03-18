@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prototype V2: Κάτοψη + Linked Spaces (Αποθήκη, Parking)</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0f1729;
+    color: #e2e8f0;
+    min-height: 100vh;
+  }
+
+  /* ── Top Bar ── */
+  .topbar {
+    background: #0c1322;
+    border-bottom: 1px solid #1e293b;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .topbar h1 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #94a3b8;
+  }
+
+  .topbar .badge {
+    font-size: 11px;
+    background: #1d4ed8;
+    color: #fff;
+    padding: 3px 10px;
+    border-radius: 12px;
+  }
+
+  /* ── Main Layout: 3 panels ── */
+  .main-layout {
+    display: flex;
+    height: calc(100vh - 49px);
+  }
+
+  /* ── Left Panel: Property List ── */
+  .left-panel {
+    width: 300px;
+    background: #0c1322;
+    border-right: 1px solid #1e293b;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel-header {
+    padding: 16px;
+    border-bottom: 1px solid #1e293b;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .property-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+
+  .property-card {
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+  }
+
+  .property-card:hover {
+    background: #1e293b;
+  }
+
+  .property-card.selected {
+    background: #1e3a5f;
+    border-color: #3b82f6;
+  }
+
+  .property-card.hovered {
+    background: #1e293b;
+    border-color: #475569;
+  }
+
+  .property-name {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .property-meta {
+    font-size: 11px;
+    color: #64748b;
+    display: flex;
+    gap: 12px;
+  }
+
+  .status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+
+  .status-for-sale { background: #22c55e; }
+  .status-for-rent { background: #3b82f6; }
+  .status-reserved { background: #eab308; }
+  .status-sold { background: #ef4444; }
+
+  /* ── Center Panel: Floorplan Canvas ── */
+  .center-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #0f172a;
+  }
+
+  /* Floor tabs */
+  .floor-tabs {
+    display: flex;
+    background: #0c1322;
+    border-bottom: 1px solid #1e293b;
+    padding: 0 16px;
+    gap: 2px;
+  }
+
+  .floor-tab {
+    padding: 10px 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+  }
+
+  .floor-tab:hover {
+    color: #94a3b8;
+  }
+
+  .floor-tab.active {
+    color: #3b82f6;
+    border-bottom-color: #3b82f6;
+  }
+
+  .floor-tab .tab-badge {
+    font-size: 9px;
+    background: #334155;
+    color: #94a3b8;
+    padding: 1px 6px;
+    border-radius: 8px;
+    margin-left: 6px;
+  }
+
+  .floor-tab.active .tab-badge {
+    background: #1d4ed8;
+    color: #fff;
+  }
+
+  .floor-tab.linked-highlight {
+    color: #f59e0b;
+    border-bottom-color: #f59e0b;
+    animation: pulse-tab 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse-tab {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  /* Canvas area */
+  .canvas-area {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .canvas-area svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ── Right Panel: Details + Hover ── */
+  .right-panel {
+    width: 320px;
+    background: #0c1322;
+    border-left: 1px solid #1e293b;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .details-content {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+  }
+
+  .detail-section {
+    margin-bottom: 20px;
+  }
+
+  .detail-section h3 {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #1e293b;
+  }
+
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 4px 0;
+  }
+
+  .detail-row .label { color: #64748b; }
+  .detail-row .value { color: #e2e8f0; font-weight: 500; }
+
+  /* ── Linked Spaces Section ── */
+  .linked-spaces {
+    padding: 16px;
+    border-top: 1px solid #1e293b;
+    background: #0a0f1e;
+  }
+
+  .linked-spaces h3 {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #f59e0b;
+    margin-bottom: 12px;
+  }
+
+  .linked-space-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .linked-space-card:hover {
+    border-color: #f59e0b;
+    background: #1a2235;
+  }
+
+  .linked-space-card.active {
+    border-color: #f59e0b;
+    background: #1c1a0e;
+  }
+
+  .linked-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+
+  .linked-info {
+    flex: 1;
+  }
+
+  .linked-name {
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .linked-location {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 2px;
+  }
+
+  .linked-action {
+    font-size: 11px;
+    color: #f59e0b;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* ── Hover Info (bottom-right) ── */
+  .hover-info {
+    padding: 16px;
+    border-top: 1px solid #1e293b;
+    background: #0a101f;
+    min-height: 100px;
+    transition: all 0.2s;
+  }
+
+  .hover-info.empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #334155;
+    font-size: 12px;
+  }
+
+  .hover-info h4 {
+    font-size: 11px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
+
+  .hover-unit-name {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .hover-details {
+    font-size: 12px;
+    color: #94a3b8;
+    line-height: 1.6;
+  }
+
+  /* ── SVG Polygons ── */
+  .polygon-unit {
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+
+  .polygon-unit:hover {
+    filter: brightness(1.4);
+    stroke-width: 3;
+  }
+
+  /* ── Navigation hint ── */
+  .nav-hint {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #f59e0b;
+    color: #000;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: none;
+    z-index: 10;
+    animation: fadeIn 0.3s;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+
+  .nav-hint.visible {
+    display: block;
+  }
+
+  /* ── Legend ── */
+  .legend {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    background: rgba(12, 19, 34, 0.9);
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 11px;
+    z-index: 5;
+  }
+
+  .legend-title {
+    font-weight: 700;
+    color: #64748b;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 3px;
+    color: #94a3b8;
+  }
+
+  .legend-color {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  /* ── Linked space highlight on floor ── */
+  .polygon-linked-highlight {
+    animation: pulse-polygon 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse-polygon {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 0.4; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Διαθέσιμα Ακίνητα — Κάτοψη Ορόφου</h1>
+  <span class="badge">PROTOTYPE V2</span>
+</div>
+
+<div class="main-layout">
+
+  <!-- ══════ LEFT PANEL: Property List ══════ -->
+  <div class="left-panel">
+    <div class="panel-header">Διαθέσιμα Ακίνητα</div>
+    <div class="property-list" id="propertyList"></div>
+  </div>
+
+  <!-- ══════ CENTER PANEL: Floorplan ══════ -->
+  <div class="center-panel">
+    <div class="floor-tabs" id="floorTabs"></div>
+    <div class="canvas-area" id="canvasArea">
+      <div class="nav-hint" id="navHint"></div>
+      <svg id="floorplanSvg" viewBox="0 0 800 500"></svg>
+      <div class="legend">
+        <div class="legend-title">Υπόμνημα</div>
+        <div class="legend-item"><div class="legend-color" style="background:#22c55e80"></div> Προς Πώληση</div>
+        <div class="legend-item"><div class="legend-color" style="background:#3b82f680"></div> Προς Ενοικίαση</div>
+        <div class="legend-item"><div class="legend-color" style="background:#eab30880"></div> Κρατημένο</div>
+        <div class="legend-item"><div class="legend-color" style="background:#ef444480"></div> Πωλημένο</div>
+        <div class="legend-item"><div class="legend-color" style="background:#f59e0b80; border: 2px dashed #f59e0b"></div> Linked Space</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ RIGHT PANEL: Details ══════ -->
+  <div class="right-panel">
+    <div class="panel-header">Λεπτομέρειες Ακινήτου</div>
+    <div class="details-content" id="detailsContent">
+      <div style="display:flex;align-items:center;justify-content:center;height:100%;color:#334155;font-size:13px;">
+        Επιλέξτε ακίνητο
+      </div>
+    </div>
+    <div class="linked-spaces" id="linkedSpaces" style="display:none"></div>
+    <div class="hover-info empty" id="hoverInfo">
+      Hover πάνω σε polygon για preview
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════════════
+const FLOORS = [
+  { id: 'f-b2', name: '2ο Υπόγειο', order: -2 },
+  { id: 'f-b1', name: '1ο Υπόγειο', order: -1 },
+  { id: 'f-0',  name: 'Ισόγειο',    order: 0 },
+  { id: 'f-1',  name: '1ος Όροφος', order: 1 },
+  { id: 'f-2',  name: '2ος Όροφος', order: 2 },
+];
+
+const COLORS = {
+  'for-sale': '#22c55e',
+  'for-rent': '#3b82f6',
+  'for-sale-and-rent': '#a855f7',
+  'reserved': '#eab308',
+  'sold': '#ef4444',
+  'rented': '#f97316',
+  'unavailable': '#9ca3af',
+};
+
+const UNITS = [
+  // 1ος Όροφος — units
+  { id: 'u1', name: 'A-DI-1.01', type: 'Διαμέρισμα', area: 95, price: '€185.000', floor: 'f-1', status: 'for-sale',
+    polygon: [[80,60],[280,60],[280,220],[80,220]],
+    linked: [
+      { type: 'storage', id: 's1', name: 'Αποθ. 01', floor: 'f-b1', polygon: [[80,60],[200,60],[200,160],[80,160]] },
+      { type: 'parking', id: 'pk1', name: 'Θέση P-12', floor: 'f-b2', polygon: [[80,60],[230,60],[230,140],[80,140]] },
+    ]
+  },
+  { id: 'u2', name: 'A-DI-1.02', type: 'Διαμέρισμα', area: 110, price: '€210.000', floor: 'f-1', status: 'for-sale',
+    polygon: [[300,60],[520,60],[520,220],[300,220]],
+    linked: [
+      { type: 'storage', id: 's2', name: 'Αποθ. 02', floor: 'f-b1', polygon: [[220,60],[360,60],[360,160],[220,160]] },
+    ]
+  },
+  { id: 'u3', name: 'A-DI-1.03', type: 'Μεζονέτα', area: 140, price: '€1.200/μήνα', floor: 'f-1', status: 'for-rent',
+    polygon: [[540,60],[720,60],[720,220],[540,220]],
+    linked: [
+      { type: 'parking', id: 'pk2', name: 'Θέση P-05', floor: 'f-b2', polygon: [[260,60],[410,60],[410,140],[260,140]] },
+    ]
+  },
+  { id: 'u4', name: 'A-DI-1.04', type: 'Διαμέρισμα', area: 80, price: '€155.000', floor: 'f-1', status: 'reserved',
+    polygon: [[80,240],[280,240],[280,400],[80,400]],
+    linked: []
+  },
+  { id: 'u5', name: 'A-DI-1.05', type: 'Διαμέρισμα', area: 105, price: '€195.000', floor: 'f-1', status: 'sold',
+    polygon: [[300,240],[520,240],[520,400],[300,400]],
+    linked: [
+      { type: 'storage', id: 's3', name: 'Αποθ. 03', floor: 'f-b1', polygon: [[380,60],[520,60],[520,160],[380,160]] },
+      { type: 'parking', id: 'pk3', name: 'Θέση P-22', floor: 'f-b2', polygon: [[440,60],[590,60],[590,140],[440,140]] },
+    ]
+  },
+
+  // 2ος Όροφος — units
+  { id: 'u6', name: 'A-DI-2.01', type: 'Ρετιρέ', area: 160, price: '€320.000', floor: 'f-2', status: 'for-sale',
+    polygon: [[80,60],[520,60],[520,220],[80,220]],
+    linked: [
+      { type: 'parking', id: 'pk4', name: 'Θέση P-30', floor: 'f-b2', polygon: [[620,60],[720,60],[720,140],[620,140]] },
+    ]
+  },
+
+  // Ισόγειο — commercial
+  { id: 'u7', name: 'A-IS-0.01', type: 'Κατάστημα', area: 200, price: '€2.500/μήνα', floor: 'f-0', status: 'for-rent',
+    polygon: [[80,60],[720,60],[720,250],[80,250]],
+    linked: []
+  },
+];
+
+// ══════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════
+let currentFloor = 'f-1';
+let selectedUnit = null;
+let hoveredUnit = null;
+let showingLinkedSpace = null; // { unitId, linkedId, floor }
+
+// ══════════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════════
+
+function render() {
+  renderFloorTabs();
+  renderPropertyList();
+  renderFloorplan();
+  renderDetails();
+  renderHoverInfo();
+}
+
+function renderFloorTabs() {
+  const container = document.getElementById('floorTabs');
+  const unitsOnFloor = (fid) => UNITS.filter(u => u.floor === fid).length;
+
+  container.innerHTML = FLOORS.map(f => {
+    const count = unitsOnFloor(f.id);
+    const isActive = f.id === currentFloor;
+    const isLinkedHighlight = showingLinkedSpace && showingLinkedSpace.floor === f.id;
+    let cls = 'floor-tab';
+    if (isActive) cls += ' active';
+    if (isLinkedHighlight && !isActive) cls += ' linked-highlight';
+
+    return `<div class="${cls}" onclick="selectFloor('${f.id}')">
+      ${f.name}
+      ${count > 0 ? `<span class="tab-badge">${count}</span>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderPropertyList() {
+  const container = document.getElementById('propertyList');
+  // Only show available units (for-sale, for-rent, for-sale-and-rent)
+  const available = UNITS.filter(u => ['for-sale','for-rent','for-sale-and-rent'].includes(u.status));
+
+  container.innerHTML = available.map(u => {
+    let cls = 'property-card';
+    if (u.id === selectedUnit) cls += ' selected';
+    if (u.id === hoveredUnit) cls += ' hovered';
+
+    const floor = FLOORS.find(f => f.id === u.floor);
+    const statusClass = 'status-' + u.status.replace('-and-rent','');
+
+    return `<div class="${cls}"
+      onclick="selectUnit('${u.id}')"
+      onmouseenter="hoverUnit('${u.id}')"
+      onmouseleave="hoverUnit(null)">
+      <div class="property-name">
+        <span class="status-dot ${statusClass}"></span>
+        ${u.name}
+      </div>
+      <div class="property-meta">
+        <span>${u.type}</span>
+        <span>${u.area} τ.μ.</span>
+        <span>${floor.name}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderFloorplan() {
+  const svg = document.getElementById('floorplanSvg');
+  const hint = document.getElementById('navHint');
+
+  // Background grid
+  let html = `
+    <defs>
+      <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+      </pattern>
+    </defs>
+    <rect width="800" height="500" fill="#0f172a"/>
+    <rect width="800" height="500" fill="url(#grid)"/>
+    <!-- Building outline -->
+    <rect x="60" y="40" width="680" height="420" fill="none" stroke="#334155" stroke-width="1.5" stroke-dasharray="8,4"/>
+  `;
+
+  // Floor label
+  const floor = FLOORS.find(f => f.id === currentFloor);
+  html += `<text x="400" y="480" text-anchor="middle" fill="#334155" font-size="14" font-weight="600">${floor.name}</text>`;
+
+  // Draw units on current floor
+  const floorUnits = UNITS.filter(u => u.floor === currentFloor);
+
+  floorUnits.forEach(u => {
+    const color = COLORS[u.status];
+    const pts = u.polygon.map(p => p.join(',')).join(' ');
+    const isHovered = u.id === hoveredUnit;
+    const isSelected = u.id === selectedUnit;
+    const opacity = isHovered ? 0.5 : 0.25;
+    const strokeW = isSelected ? 3 : isHovered ? 2.5 : 1.5;
+
+    html += `<polygon
+      class="polygon-unit"
+      points="${pts}"
+      fill="${color}" fill-opacity="${opacity}"
+      stroke="${color}" stroke-width="${strokeW}" stroke-opacity="0.8"
+      onmouseenter="hoverUnit('${u.id}')"
+      onmouseleave="hoverUnit(null)"
+      onclick="selectUnit('${u.id}')"
+    />`;
+
+    // Label
+    const cx = u.polygon.reduce((s, p) => s + p[0], 0) / u.polygon.length;
+    const cy = u.polygon.reduce((s, p) => s + p[1], 0) / u.polygon.length;
+    html += `<text x="${cx}" y="${cy - 8}" text-anchor="middle" fill="${color}" font-size="12" font-weight="700" pointer-events="none">${u.name}</text>`;
+    html += `<text x="${cx}" y="${cy + 8}" text-anchor="middle" fill="#94a3b8" font-size="10" pointer-events="none">${u.area} τ.μ.</text>`;
+
+    // Linked icons
+    if (u.linked.length > 0 && (isHovered || isSelected)) {
+      const icons = u.linked.map(l => l.type === 'storage' ? '📦' : '🅿️').join(' ');
+      html += `<text x="${cx}" y="${cy + 24}" text-anchor="middle" font-size="14" pointer-events="none">${icons}</text>`;
+    }
+  });
+
+  // Draw linked space highlight (if navigated from linked space card)
+  if (showingLinkedSpace && showingLinkedSpace.floor === currentFloor) {
+    const ls = showingLinkedSpace;
+    const pts = ls.polygon.map(p => p.join(',')).join(' ');
+    const color = '#f59e0b';
+
+    html += `<polygon
+      class="polygon-linked-highlight"
+      points="${pts}"
+      fill="${color}" fill-opacity="0.3"
+      stroke="${color}" stroke-width="3" stroke-dasharray="8,4"
+    />`;
+
+    const cx = ls.polygon.reduce((s, p) => s + p[0], 0) / ls.polygon.length;
+    const cy = ls.polygon.reduce((s, p) => s + p[1], 0) / ls.polygon.length;
+    const icon = ls.type === 'storage' ? '📦' : '🅿️';
+    html += `<text x="${cx}" y="${cy - 10}" text-anchor="middle" font-size="24" pointer-events="none">${icon}</text>`;
+    html += `<text x="${cx}" y="${cy + 14}" text-anchor="middle" fill="#f59e0b" font-size="13" font-weight="700" pointer-events="none">${ls.name}</text>`;
+    html += `<text x="${cx}" y="${cy + 30}" text-anchor="middle" fill="#94a3b8" font-size="11" pointer-events="none">Ανήκει στο ${ls.unitName}</text>`;
+  }
+
+  svg.innerHTML = html;
+
+  // Navigation hint
+  if (showingLinkedSpace && showingLinkedSpace.floor === currentFloor) {
+    hint.textContent = `📍 ${showingLinkedSpace.type === 'storage' ? 'Αποθήκη' : 'Θέση Στάθμευσης'} "${showingLinkedSpace.name}" — ανήκει στο ${showingLinkedSpace.unitName}`;
+    hint.classList.add('visible');
+  } else {
+    hint.classList.remove('visible');
+  }
+}
+
+function renderDetails() {
+  const container = document.getElementById('detailsContent');
+  const linkedContainer = document.getElementById('linkedSpaces');
+
+  if (!selectedUnit) {
+    container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#334155;font-size:13px;">Επιλέξτε ακίνητο</div>';
+    linkedContainer.style.display = 'none';
+    return;
+  }
+
+  const u = UNITS.find(x => x.id === selectedUnit);
+  const floor = FLOORS.find(f => f.id === u.floor);
+  const statusLabels = {
+    'for-sale': 'Προς Πώληση', 'for-rent': 'Προς Ενοικίαση',
+    'for-sale-and-rent': 'Πώληση & Ενοικίαση', 'reserved': 'Κρατημένο',
+    'sold': 'Πωλημένο', 'rented': 'Ενοικιασμένο', 'unavailable': 'Μη Διαθέσιμο'
+  };
+
+  container.innerHTML = `
+    <div class="detail-section">
+      <h3>Ταυτότητα</h3>
+      <div class="detail-row"><span class="label">Όνομα</span><span class="value">${u.name}</span></div>
+      <div class="detail-row"><span class="label">Τύπος</span><span class="value">${u.type}</span></div>
+      <div class="detail-row"><span class="label">Όροφος</span><span class="value">${floor.name}</span></div>
+    </div>
+    <div class="detail-section">
+      <h3>Εμπορικά</h3>
+      <div class="detail-row"><span class="label">Εμβαδόν</span><span class="value">${u.area} τ.μ.</span></div>
+      <div class="detail-row"><span class="label">Τιμή</span><span class="value">${u.price}</span></div>
+      <div class="detail-row"><span class="label">Κατάσταση</span><span class="value"><span class="status-dot status-${u.status.split('-')[0]}"></span>${statusLabels[u.status]}</span></div>
+    </div>
+  `;
+
+  // Linked spaces
+  if (u.linked.length > 0) {
+    linkedContainer.style.display = 'block';
+    linkedContainer.innerHTML = `
+      <h3>🔗 Συνδεδεμένοι Χώροι</h3>
+      ${u.linked.map(l => {
+        const lFloor = FLOORS.find(f => f.id === l.floor);
+        const icon = l.type === 'storage' ? '📦' : '🅿️';
+        const typeLabel = l.type === 'storage' ? 'Αποθήκη' : 'Θέση Στάθμευσης';
+        const isActive = showingLinkedSpace && showingLinkedSpace.id === l.id;
+
+        return `<div class="linked-space-card ${isActive ? 'active' : ''}" onclick="showLinkedSpace('${u.id}', '${l.id}')">
+          <span class="linked-icon">${icon}</span>
+          <div class="linked-info">
+            <div class="linked-name">${l.name}</div>
+            <div class="linked-location">${typeLabel} — ${lFloor.name}</div>
+          </div>
+          <div class="linked-action">Δείξε →</div>
+        </div>`;
+      }).join('')}
+    `;
+  } else {
+    linkedContainer.style.display = 'none';
+  }
+}
+
+function renderHoverInfo() {
+  const container = document.getElementById('hoverInfo');
+
+  if (!hoveredUnit) {
+    container.className = 'hover-info empty';
+    container.innerHTML = 'Hover πάνω σε polygon για preview';
+    return;
+  }
+
+  const u = UNITS.find(x => x.id === hoveredUnit);
+  const statusLabels = {
+    'for-sale': 'Προς Πώληση', 'for-rent': 'Προς Ενοικίαση',
+    'for-sale-and-rent': 'Πώληση & Ενοικίαση', 'reserved': 'Κρατημένο',
+    'sold': 'Πωλημένο', 'rented': 'Ενοικιασμένο', 'unavailable': 'Μη Διαθέσιμο'
+  };
+
+  container.className = 'hover-info';
+  container.innerHTML = `
+    <h4>Preview</h4>
+    <div class="hover-unit-name" style="color:${COLORS[u.status]}">${u.name}</div>
+    <div class="hover-details">
+      ${u.type} · ${u.area} τ.μ.<br>
+      ${u.price}<br>
+      ${statusLabels[u.status]}
+      ${u.linked.length > 0 ? `<br>🔗 ${u.linked.length} συνδεδεμένοι χώροι` : ''}
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════════════
+// ACTIONS
+// ══════════════════════════════════════════════════
+
+function selectFloor(floorId) {
+  currentFloor = floorId;
+  // Clear linked highlight if we manually change floor
+  if (showingLinkedSpace && showingLinkedSpace.floor !== floorId) {
+    showingLinkedSpace = null;
+  }
+  render();
+}
+
+function selectUnit(unitId) {
+  const u = UNITS.find(x => x.id === unitId);
+  // Only navigate for available units
+  if (!['for-sale','for-rent','for-sale-and-rent'].includes(u.status)) return;
+
+  selectedUnit = unitId;
+  showingLinkedSpace = null;
+
+  // Auto-navigate to unit's floor
+  if (u.floor !== currentFloor) {
+    currentFloor = u.floor;
+  }
+  render();
+}
+
+function hoverUnit(unitId) {
+  hoveredUnit = unitId;
+  renderFloorplan();
+  renderHoverInfo();
+
+  // Highlight list card
+  document.querySelectorAll('.property-card').forEach(card => {
+    card.classList.remove('hovered');
+  });
+  if (unitId) {
+    const cards = document.querySelectorAll('.property-card');
+    cards.forEach(card => {
+      if (card.onclick.toString().includes(unitId)) {
+        card.classList.add('hovered');
+      }
+    });
+  }
+}
+
+function showLinkedSpace(unitId, linkedId) {
+  const u = UNITS.find(x => x.id === unitId);
+  const l = u.linked.find(x => x.id === linkedId);
+
+  if (showingLinkedSpace && showingLinkedSpace.id === linkedId) {
+    // Toggle off
+    showingLinkedSpace = null;
+    currentFloor = u.floor;
+  } else {
+    // Navigate to linked space's floor
+    showingLinkedSpace = {
+      id: l.id,
+      unitId: u.id,
+      unitName: u.name,
+      name: l.name,
+      type: l.type,
+      floor: l.floor,
+      polygon: l.polygon,
+    };
+    currentFloor = l.floor;
+  }
+  render();
+}
+
+// Initial render
+render();
+</script>
+
+</body>
+</html>
