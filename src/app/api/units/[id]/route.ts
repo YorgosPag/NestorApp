@@ -23,6 +23,7 @@ import { UNIT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
 import { linkEntity } from '@/lib/firestore/entity-linking.service';
 import { createDefaultPersonaData, findActivePersona } from '@/types/contacts/personas';
+import { PaymentPlanService } from '@/services/payment-plan.service';
 import type { PersonaData, ClientPersona } from '@/types/contacts/personas';
 import { validateContactForSale, isServiceContact } from '@/types/contacts/helpers';
 import type { Contact } from '@/types/contacts/contracts';
@@ -293,6 +294,22 @@ export const PATCH = withStandardRateLimit(
         );
 
         await docRef.update(updateData);
+
+        // ── Resync payment plan when sale price changes ──
+        const newCommercial = updateData.commercial as Record<string, unknown> | undefined;
+        if (newCommercial) {
+          const newPrice = (newCommercial.askingPrice as number | null)
+            ?? (newCommercial.finalPrice as number | null);
+          if (newPrice && newPrice > 0) {
+            PaymentPlanService.resyncTotalAmount(id, newPrice, ctx.uid).catch((err) => {
+              logger.warn('Payment plan resync failed (non-blocking)', {
+                unitId: id,
+                newPrice,
+                error: err instanceof Error ? err.message : String(err),
+              });
+            });
+          }
+        }
 
         logger.info('Unit updated', { id, companyId: ctx.companyId });
 

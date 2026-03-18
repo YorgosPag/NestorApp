@@ -241,6 +241,89 @@ export class PaymentPlanService {
   }
 
   /**
+   * Resync plan totalAmount when the unit's sale price changes.
+   * Distributes delta proportionally across unpaid installments.
+   */
+  static async resyncTotalAmount(
+    unitId: string,
+    newSalePrice: number,
+    updatedBy: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const plan = await this.getActivePaymentPlan(unitId);
+      if (!plan) return { success: true }; // No plan → nothing to sync
+
+      const oldTotal = plan.totalAmount;
+      if (newSalePrice === oldTotal) return { success: true }; // No change
+
+      // Only resync negotiation/draft plans automatically
+      if (plan.status !== 'negotiation' && plan.status !== 'draft') {
+        logger.info(`[PaymentPlanService] Skipping resync: plan ${plan.id} is ${plan.status} (not draft/negotiation)`);
+        return { success: true };
+      }
+
+      const delta = newSalePrice - oldTotal; // positive = increase, negative = decrease
+      const updatedInstallments = [...plan.installments];
+      const totalUnpaid = updatedInstallments
+        .filter((inst) => inst.paidAmount < inst.amount)
+        .reduce((s, inst) => s + (inst.amount - inst.paidAmount), 0);
+
+      if (delta < 0 && Math.abs(delta) > totalUnpaid) {
+        return {
+          success: false,
+          error: `Η νέα τιμή (${newSalePrice}) θα μειώσει το πλάνο κατά ${Math.abs(delta)} αλλά το αδιάθετο υπόλοιπο είναι μόνο ${totalUnpaid}.`,
+        };
+      }
+
+      if (totalUnpaid > 0) {
+        for (const inst of updatedInstallments) {
+          const unpaid = inst.amount - inst.paidAmount;
+          if (unpaid <= 0) continue;
+          const share = Math.round((unpaid / totalUnpaid) * delta * 100) / 100;
+          inst.amount = Math.round((inst.amount + share) * 100) / 100;
+          inst.percentage = newSalePrice > 0
+            ? Math.round((inst.amount / newSalePrice) * 10000) / 100
+            : 0;
+        }
+      } else if (delta > 0 && updatedInstallments.length > 0) {
+        // All paid — append a new "adjustment" installment for the increase
+        const pendingCount = updatedInstallments.filter((i) => i.status === 'pending').length;
+        if (pendingCount > 0) {
+          const share = Math.round((delta / pendingCount) * 100) / 100;
+          for (const inst of updatedInstallments) {
+            if (inst.status !== 'pending') continue;
+            inst.amount = Math.round((inst.amount + share) * 100) / 100;
+          }
+        }
+      }
+
+      // Re-index
+      const reindexed = updatedInstallments.map((inst, i) => ({ ...inst, index: i }));
+      const newTotal = reindexed.reduce((s, i) => s + i.amount, 0);
+
+      const db = getDb();
+      await db.collection(planCollectionPath(unitId)).doc(plan.id).update({
+        installments: reindexed,
+        totalAmount: newTotal,
+        remainingAmount: newTotal - plan.paidAmount,
+        updatedAt: new Date().toISOString(),
+        updatedBy,
+      });
+
+      await this.syncPaymentSummary(unitId, plan.id);
+
+      logger.info(`[PaymentPlanService] Resynced plan ${plan.id}: ${oldTotal} → ${newTotal} (delta: ${delta})`);
+      return { success: true };
+    } catch (error) {
+      logger.error('[PaymentPlanService] Failed to resync total amount:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
    * Delete payment plan (negotiation/draft only, no payments recorded).
    */
   static async deletePlan(
