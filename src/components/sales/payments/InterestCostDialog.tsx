@@ -34,6 +34,7 @@ import {
   Wallet,
   TrendingDown,
   Shield,
+  Handshake,
 } from 'lucide-react';
 import { calculateFullResult } from '@/lib/npv-engine';
 import type { CostCalculationInput, CashFlowEntry } from '@/types/interest-calculator';
@@ -87,6 +88,7 @@ import {
   EquityWaterfallDialog,
   ForwardCurveChart,
   HedgingComparisonTable,
+  CounterproposalTab,
   InfoLabel,
   InfoDt,
 } from './financial-intelligence';
@@ -1255,6 +1257,15 @@ export function InterestCostDialog({
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
+                  <TabsTrigger value="counterproposal" className="text-sm gap-1">
+                    <Handshake className="h-4 w-4" />
+                    {t('costCalculator.tabs.counterproposal')}
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs text-xs">{t('costCalculator.tabs.counterproposalTooltip')}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <TabsTrigger value="settings" className="text-sm gap-1">
                     <Settings className="h-4 w-4" />
                     {t('costCalculator.tabs.settings')}
@@ -1391,7 +1402,23 @@ export function InterestCostDialog({
               />
             </TabsContent>
 
-            {/* Tab 11: Settings */}
+            {/* Tab 11: Counterproposal */}
+            <TabsContent value="counterproposal" className="mt-3">
+              {result ? (
+                <CounterproposalTab
+                  input={sensitivityInput}
+                  effectiveRate={effectiveDiscountRate}
+                  result={result}
+                  t={t}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  {t('costCalculator.noData')}
+                </p>
+              )}
+            </TabsContent>
+
+            {/* Tab 12: Settings */}
             <TabsContent value="settings" className="mt-3">
               <SettingsTab
                 rates={rates}

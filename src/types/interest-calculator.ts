@@ -738,6 +738,64 @@ export interface WaterfallResult {
 }
 
 // =============================================================================
+// 🤝 COUNTERPROPOSAL ANALYSIS (SPEC-234F)
+// =============================================================================
+
+/** Single counterproposal scenario */
+export interface CounterproposalScenario {
+  /** i18n key for scenario name */
+  nameKey: string;
+  /** i18n key for scenario description */
+  descriptionKey: string;
+  /** Upfront payment as % of sale price (0-100) */
+  upfrontPercent: number;
+  /** Months for remaining balance (0 = lump sum) */
+  remainingMonths: number;
+  /** Net Present Value (€) */
+  npv: number;
+  /** Time cost = salePrice - NPV (€) */
+  timeCost: number;
+  /** Time cost saved vs baseline (€) */
+  timeCostSaved: number;
+  /** Maximum discount the builder could offer (= timeCostSaved) (€) */
+  maxDiscount: number;
+  /** Maximum discount as % of sale price */
+  maxDiscountPercent: number;
+  /** Suggested discount = maxDiscount × (1 - builderRetainRatio) (€) */
+  suggestedDiscount: number;
+  /** Suggested discount as % of sale price */
+  suggestedDiscountPercent: number;
+  /** Final discounted price (€) */
+  finalPrice: number;
+  /** Builder's net gain = timeCostSaved - suggestedDiscount (€) */
+  builderNetGain: number;
+  /** Builder's net gain as % of sale price */
+  builderNetGainPercent: number;
+  /** Weighted average days to payment */
+  weightedAvgDays: number;
+}
+
+/** Full counterproposal analysis result */
+export interface CounterproposalResult {
+  /** Baseline scenario (current installment plan) */
+  baseline: CounterproposalScenario;
+  /** Alternative faster-payment scenarios */
+  alternatives: CounterproposalScenario[];
+  /** Index into alternatives of the "sweet spot" recommendation */
+  sweetSpotIndex: number;
+  /** Fraction of savings the builder retains (0-1) */
+  builderRetainRatio: number;
+}
+
+/** Slider input for interactive counterproposal mode */
+export interface CounterproposalSliderInput {
+  /** Upfront payment percentage (0-100) */
+  upfrontPercent: number;
+  /** Remaining payment months (0 = lump sum) */
+  remainingMonths: number;
+}
+
+// =============================================================================
 // 📈 SPEC-242E: FORWARD CURVES
 // =============================================================================
 

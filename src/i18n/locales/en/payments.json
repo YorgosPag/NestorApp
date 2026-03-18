@@ -335,6 +335,8 @@
       "forwardCurveTooltip": "Market expectations for future interest rates based on ECB data",
       "hedging": "Hedging",
       "hedgingTooltip": "Compare interest rate protection strategies: floating, swap, cap, collar",
+      "counterproposal": "Counterproposal",
+      "counterproposalTooltip": "Discount-for-speed analysis — find the optimal discount to offer for faster payment",
       "settings": "Settings",
       "settingsTooltip": "Configure discount rates, Euribor sources, and bank spread"
     },
@@ -716,6 +718,68 @@
         "recConfigPaymentMonths": "Shortening the plan by 6 months could save approximately {{saving}} in time-value costs.",
         "recConfigBankSpread": "A lower bank spread directly reduces the effective rate. Try negotiating with multiple banks.",
         "recConfigCertaintyMix": "A lower certainty mix increases risk margins. If the payment schedule is contractually fixed, set this to 1.0."
+      }
+    },
+    "counterproposal": {
+      "infoBanner": "This tab helps you calculate how much discount you can offer a buyer in exchange for faster payment — while still coming out ahead compared to the current installment plan. It's an internal negotiation tool: the buyer never sees this analysis.",
+      "insightCard": "Sweet Spot: With {{upfront}}% upfront and {{months}} months, you can offer a discount of {{discount}} ({{discountPercent}}) and still gain {{gain}} more than the current plan.",
+      "retainRatioLabel": "Builder retains",
+      "retainRatioTooltip": "What percentage of the time-cost savings the builder keeps. The rest becomes the discount offered to the buyer. Higher = more profit, lower = more attractive offer.",
+      "scenarios": {
+        "baseline": "Current Plan",
+        "baselineDesc": "The existing installment schedule — your starting point for comparison.",
+        "fiftyUpfront": "50% Upfront",
+        "fiftyUpfrontDesc": "Half the amount paid immediately, the rest in equal installments.",
+        "eightyUpfront": "80% Upfront",
+        "eightyUpfrontDesc": "80% paid immediately, the remaining 20% within 3 months.",
+        "lumpSum": "Lump Sum",
+        "lumpSumDesc": "100% paid immediately — maximum time-cost saving.",
+        "custom": "Custom",
+        "customDesc": "Your custom scenario from the sliders below."
+      },
+      "table": {
+        "scenario": "Scenario",
+        "scenarioTooltip": "The payment structure being evaluated — different upfront/installment combinations.",
+        "upfront": "Upfront",
+        "upfrontTooltip": "How much the buyer pays immediately as a percentage of the sale price.",
+        "npv": "NPV",
+        "npvTooltip": "Net Present Value — the real value of the payments in today's money.",
+        "saving": "Saving",
+        "savingTooltip": "How much time-cost is saved compared to the current installment plan.",
+        "maxDiscount": "Max Discount",
+        "maxDiscountTooltip": "The maximum discount you could theoretically offer — equal to the entire time-cost saving. Offering this leaves you with zero net gain.",
+        "suggestedDiscount": "Suggested Discount",
+        "suggestedDiscountTooltip": "The recommended discount based on the builder retain ratio. This is the sweet spot between attracting the buyer and keeping profit.",
+        "finalPrice": "Final Price",
+        "finalPriceTooltip": "The discounted sale price the buyer would pay after applying the suggested discount.",
+        "netGain": "Net Gain",
+        "netGainTooltip": "What the builder gains after giving the discount — the difference between time-cost saved and discount offered.",
+        "monthsAbbr": "mo"
+      },
+      "slider": {
+        "title": "Negotiation Simulator",
+        "upfrontLabel": "Upfront: {{value}}%",
+        "upfrontTooltip": "Drag to test different upfront payment percentages. Higher upfront = more savings.",
+        "monthsLabel": "Remaining: {{value}} months",
+        "monthsTooltip": "How many months for the remaining balance. 0 = lump sum (all upfront).",
+        "npv": "NPV",
+        "npvTooltip": "Net Present Value of this custom scenario.",
+        "saving": "Saving",
+        "savingTooltip": "Time-cost saved vs. the current installment plan.",
+        "discount": "Discount",
+        "discountTooltip": "The suggested discount for this custom scenario.",
+        "netGain": "Net Gain",
+        "netGainTooltip": "Your net gain after offering the discount."
+      },
+      "chart": {
+        "title": "Savings Breakdown",
+        "saving": "Time-Cost Saving",
+        "discount": "Discount Offered",
+        "gain": "Builder Net Gain"
+      },
+      "badges": {
+        "sweetSpot": "Sweet Spot",
+        "baseline": "Current"
       }
     },
     "forwardCurve": {

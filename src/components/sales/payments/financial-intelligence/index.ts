@@ -13,4 +13,5 @@ export { MonteCarloTab } from './MonteCarloTab';
 export { EquityWaterfallDialog } from './EquityWaterfallDialog';
 export { ForwardCurveChart } from './ForwardCurveChart';
 export { HedgingComparisonTable } from './HedgingComparisonTable';
+export { CounterproposalTab } from './CounterproposalTab';
 export { InfoLabel, InfoTableHead, InfoDt } from './InfoLabel';
