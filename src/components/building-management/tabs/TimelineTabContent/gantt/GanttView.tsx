@@ -154,25 +154,34 @@ export function GanttView({ building }: GanttViewProps) {
   // View mode state
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.MONTH);
 
+  // Refs needed before handleViewModeChange
+  const ganttChartRef = useRef<HTMLDivElement>(null);
+
+  // 🏢 ENTERPRISE: Scroll to today marker with retry for library render timing
+  const scrollToTodayMarker = useCallback((container: HTMLElement) => {
+    const attemptScroll = (retriesLeft: number) => {
+      const todayMarker = container.querySelector('.rmg-today-marker') as HTMLElement | null;
+      const scrollContainer = container.querySelector('.rmg-timeline-container') as HTMLElement | null;
+      if (todayMarker && scrollContainer) {
+        const markerLeft = todayMarker.offsetLeft;
+        scrollContainer.scrollLeft = Math.max(0, markerLeft - scrollContainer.clientWidth * 0.15);
+      } else if (retriesLeft > 0) {
+        setTimeout(() => attemptScroll(retriesLeft - 1), 200);
+      }
+    };
+    attemptScroll(3);
+  }, []);
+
   // 🏢 ENTERPRISE: Auto-scroll to "today" marker when view mode changes
-  // Uses requestAnimationFrame to wait for library re-render
+  // setTimeout(500) gives library enough time to re-render all view modes
   const handleViewModeChange = useCallback((newMode: ViewMode) => {
     setViewMode(newMode);
-    // After React + library re-render, scroll to today marker
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const container = ganttChartRef.current;
-        if (!container) return;
-        const todayMarker = container.querySelector('.rmg-today-marker, .rmg-current-date-marker, [data-today]') as HTMLElement | null;
-        const scrollContainer = container.querySelector('.rmg-timeline-container') as HTMLElement | null;
-        if (todayMarker && scrollContainer) {
-          const markerLeft = todayMarker.offsetLeft;
-          // Scroll so today is ~15% from left edge (see future timeline to the right)
-          scrollContainer.scrollLeft = Math.max(0, markerLeft - scrollContainer.clientWidth * 0.15);
-        }
-      });
-    });
-  }, []);
+    setTimeout(() => {
+      const container = ganttChartRef.current;
+      if (!container) return;
+      scrollToTodayMarker(container);
+    }, 500);
+  }, [scrollToTodayMarker]);
 
   // Fullscreen mode (ADR-241 centralized)
   const fullscreen = useFullscreen();
@@ -212,13 +221,13 @@ export function GanttView({ building }: GanttViewProps) {
   const contextMenuRef = useRef<HTMLElement>(null);
 
   // ─── Export State ─────────────────────────────────────────────────────
-  const ganttChartRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
 
   // Custom hover tooltip state — portal-based to escape overflow containers
   const [tooltipData, setTooltipData] = useState<HoverTooltipData | null>(null);
   const tooltipElRef = useRef<HTMLDivElement>(null);
   const hoveredTaskRef = useRef('');
+  const isDraggingRef = useRef(false);
 
   // Close context menu on outside click — delayed activation to prevent
   // the triggering right-click from immediately closing
@@ -512,6 +521,21 @@ export function GanttView({ building }: GanttViewProps) {
     };
   }, []);
 
+  // 🏢 ENTERPRISE: Track drag state to prevent tooltip flicker during resize/move
+  const handleGanttMouseDown = useCallback(() => {
+    isDraggingRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    const handleMouseUp = () => { isDraggingRef.current = false; };
+    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('pointerup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('pointerup', handleMouseUp);
+    };
+  }, []);
+
   const handleGanttPointerMove = useCallback((e: React.PointerEvent) => {
     const target = e.target as HTMLElement;
     const taskItem = target.closest('.rmg-task-item') as HTMLElement | null;
@@ -524,6 +548,8 @@ export function GanttView({ building }: GanttViewProps) {
     }
 
     if (!taskItem) {
+      // During drag, do NOT hide tooltip — pointer may momentarily leave the task element
+      if (isDraggingRef.current) return;
       if (hoveredTaskRef.current) {
         hoveredTaskRef.current = '';
         setTooltipData(null);
@@ -571,6 +597,8 @@ export function GanttView({ building }: GanttViewProps) {
   }, [taskGroups, computeTooltipPosition]);
 
   const handleGanttPointerLeave = useCallback(() => {
+    // During drag, keep tooltip visible — pointer may leave container momentarily
+    if (isDraggingRef.current) return;
     hoveredTaskRef.current = '';
     setTooltipData(null);
   }, []);
@@ -604,28 +632,64 @@ export function GanttView({ building }: GanttViewProps) {
     }
   }, [taskGroups]); // eslint-disable-line react-hooks/exhaustive-deps -- intentionally watches only taskGroups
 
-  // 🏢 ENTERPRISE: Real-time tooltip update during progress slider drag
-  // Observes DOM mutations on .rmg-progress-fill width% to update tooltip instantly
+  // 🏢 ENTERPRISE: Real-time tooltip update during progress slider drag AND resize drag
+  // Observes DOM mutations on .rmg-progress-fill width% AND .rmg-task-item left/width
   useEffect(() => {
     const container = ganttChartRef.current;
     if (!container) return;
 
+    const MS_PER_DAY = 86_400_000;
+
     const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         const target = mutation.target as HTMLElement;
-        if (!target.classList?.contains('rmg-progress-fill')) continue;
 
-        // Read current width% from inline style
-        const widthStr = target.style.width;
-        if (!widthStr) continue;
-        const progressPct = Math.round(parseFloat(widthStr));
+        // Case 1: Progress fill width changed → update progress %
+        if (target.classList?.contains('rmg-progress-fill')) {
+          const widthStr = target.style.width;
+          if (!widthStr) continue;
+          const progressPct = Math.round(parseFloat(widthStr));
+          setTooltipData((prev) => {
+            if (!prev) return null;
+            if (prev.progress === progressPct) return prev;
+            return { ...prev, progress: progressPct };
+          });
+          continue;
+        }
 
-        // Update tooltip if visible
-        setTooltipData((prev) => {
-          if (!prev) return null;
-          if (prev.progress === progressPct) return prev;
-          return { ...prev, progress: progressPct };
-        });
+        // Case 2: Task item left/width changed (resize drag) → recalculate dates
+        if (target.classList?.contains('rmg-task-item') && isDraggingRef.current) {
+          const scrollContainer = container.querySelector('.rmg-timeline-container') as HTMLElement | null;
+          if (!scrollContainer) continue;
+
+          const totalWidth = scrollContainer.scrollWidth;
+          if (totalWidth <= 0) continue;
+
+          const taskLeft = parseFloat(target.style.left || '0');
+          const taskWidth = parseFloat(target.style.width || '0');
+          if (taskWidth <= 0) continue;
+
+          const boundsStart = timelineBounds.startDate.getTime();
+          const boundsEnd = timelineBounds.endDate.getTime();
+          const totalMs = boundsEnd - boundsStart;
+
+          const newStartMs = boundsStart + (taskLeft / totalWidth) * totalMs;
+          const newEndMs = boundsStart + ((taskLeft + taskWidth) / totalWidth) * totalMs;
+          const newStart = new Date(newStartMs);
+          const newEnd = new Date(newEndMs);
+          const durationDays = Math.max(1, Math.ceil((newEndMs - newStartMs) / MS_PER_DAY));
+
+          setTooltipData((prev) => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              startDate: formatDateShort(newStart),
+              endDate: formatDateShort(newEnd),
+              duration: durationDays,
+            };
+          });
+          continue;
+        }
       }
     });
 
@@ -636,7 +700,7 @@ export function GanttView({ building }: GanttViewProps) {
     });
 
     return () => observer.disconnect();
-  }, []);
+  }, [timelineBounds]);
 
   // 🏢 ENTERPRISE: Auto-scroll to today on initial mount
   useEffect(() => {
@@ -644,13 +708,8 @@ export function GanttView({ building }: GanttViewProps) {
     const timeout = setTimeout(() => {
       const container = ganttChartRef.current;
       if (!container) return;
-      const todayMarker = container.querySelector('.rmg-today-marker, .rmg-current-date-marker, [data-today]') as HTMLElement | null;
-      const scrollContainer = container.querySelector('.rmg-timeline-container') as HTMLElement | null;
-      if (todayMarker && scrollContainer) {
-        const markerLeft = todayMarker.offsetLeft;
-        scrollContainer.scrollLeft = Math.max(0, markerLeft - scrollContainer.clientWidth * 0.15);
-      }
-    }, 300); // Wait for library render
+      scrollToTodayMarker(container);
+    }, 500); // Wait for library render
     return () => clearTimeout(timeout);
   }, [loading, isEmpty]);
 
