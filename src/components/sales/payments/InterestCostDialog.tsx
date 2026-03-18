@@ -747,12 +747,17 @@ function LossBarChart({
   analysis: CashFlowAnalysisEntry[];
   t: (key: string, opts?: Record<string, string>) => string;
 }) {
-  const losses = analysis.map((cf) => ({
+  const entries = analysis.map((cf) => ({
     label: cf.label,
     loss: cf.amount - cf.presentValue,
+    lossPercent: cf.amount > 0 ? ((cf.amount - cf.presentValue) / cf.amount) * 100 : 0,
     amount: cf.amount,
+    presentValue: cf.presentValue,
+    discountFactor: cf.discountFactor,
+    daysDelta: cf.daysDelta,
+    date: cf.date,
   }));
-  const maxLoss = Math.max(...losses.map((l) => l.loss), 1);
+  const maxLoss = Math.max(...entries.map((e) => e.loss), 1);
 
   return (
     <section className="space-y-2 pt-2">
@@ -760,23 +765,51 @@ function LossBarChart({
         {t('costCalculator.chart.lossPerInstallment')}
       </h4>
       <div className="space-y-1.5">
-        {losses.map((item, idx) => {
+        {entries.map((item, idx) => {
           const widthPercent = maxLoss > 0 ? (item.loss / maxLoss) * 100 : 0;
           return (
-            <div key={idx} className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground w-28 truncate shrink-0">
-                {item.label}
-              </span>
-              <div className="flex-1 h-4 rounded bg-muted/30 overflow-hidden">
-                <div
-                  className="h-full rounded bg-gradient-to-r from-amber-400 to-red-500 transition-all duration-500"
-                  style={{ width: `${Math.max(widthPercent, widthPercent > 0 ? 2 : 0)}%` }}
-                />
-              </div>
-              <span className="text-sm font-medium text-destructive w-16 text-right shrink-0">
-                {item.loss > 0 ? `-${formatCurrencyFull(item.loss)}` : '—'}
-              </span>
-            </div>
+            <Tooltip key={idx}>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-2 cursor-help rounded p-0.5 transition-colors hover:bg-muted/40">
+                  <span className="text-sm text-muted-foreground w-28 truncate shrink-0">
+                    {item.label}
+                  </span>
+                  <div className="flex-1 h-4 rounded bg-muted/30 overflow-hidden">
+                    <div
+                      className="h-full rounded bg-gradient-to-r from-amber-400 to-red-500 transition-all duration-500"
+                      style={{ width: `${Math.max(widthPercent, widthPercent > 0 ? 2 : 0)}%` }}
+                    />
+                  </div>
+                  <span className="text-sm font-medium text-destructive w-16 text-right shrink-0">
+                    {item.loss > 0 ? `-${formatCurrencyFull(item.loss)}` : '—'}
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs p-3 space-y-1.5">
+                <p className="font-semibold text-sm">{item.label}</p>
+                <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
+                  <dt className="text-muted-foreground">{t('costCalculator.chart.barTooltipAmount')}:</dt>
+                  <dd className="text-right font-medium">{formatCurrencyFull(item.amount)}</dd>
+                  <dt className="text-muted-foreground">{t('costCalculator.chart.barTooltipPresentValue')}:</dt>
+                  <dd className="text-right font-medium">{formatCurrencyFull(item.presentValue)}</dd>
+                  <dt className="text-muted-foreground">{t('costCalculator.chart.barTooltipLoss')}:</dt>
+                  <dd className="text-right font-medium text-destructive">
+                    {item.loss > 0 ? `-${formatCurrencyFull(item.loss)}` : '—'}
+                  </dd>
+                  <dt className="text-muted-foreground">{t('costCalculator.chart.barTooltipLossPercent')}:</dt>
+                  <dd className="text-right font-medium">{item.lossPercent.toFixed(2)}%</dd>
+                  <dt className="text-muted-foreground">{t('costCalculator.chart.barTooltipDate')}:</dt>
+                  <dd className="text-right">{formatDate(item.date)}</dd>
+                  <dt className="text-muted-foreground">{t('costCalculator.chart.barTooltipDays')}:</dt>
+                  <dd className="text-right">{item.daysDelta}</dd>
+                  <dt className="text-muted-foreground">{t('costCalculator.chart.barTooltipDiscountFactor')}:</dt>
+                  <dd className="text-right">{item.discountFactor.toFixed(4)}</dd>
+                </dl>
+                <p className="text-xs text-muted-foreground leading-relaxed pt-1 border-t border-dashed">
+                  {t('costCalculator.chart.barTooltipExplanation')}
+                </p>
+              </TooltipContent>
+            </Tooltip>
           );
         })}
       </div>

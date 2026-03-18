@@ -439,7 +439,15 @@
     },
     "chart": {
       "lossPerInstallment": "Απώλεια ανά δόση",
-      "maxLoss": "Μέγιστη απώλεια"
+      "maxLoss": "Μέγιστη απώλεια",
+      "barTooltipAmount": "Ονομαστικό ποσό",
+      "barTooltipPresentValue": "Παρούσα αξία",
+      "barTooltipLoss": "Απώλεια χρονικής αξίας",
+      "barTooltipLossPercent": "Ποσοστό απώλειας",
+      "barTooltipDays": "Ημέρες από ημ/νία αναφοράς",
+      "barTooltipDate": "Ημ/νία πληρωμής",
+      "barTooltipDiscountFactor": "Συντελεστής προεξόφλησης",
+      "barTooltipExplanation": "Η διαφορά μεταξύ ονομαστικού ποσού και παρούσας αξίας — αυτό χάνετε λόγω της χρονικής αξίας του χρήματος."
     },
     "export": {
       "button": "Εξαγωγή PDF",

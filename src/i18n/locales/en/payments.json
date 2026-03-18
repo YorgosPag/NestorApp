@@ -439,7 +439,15 @@
     },
     "chart": {
       "lossPerInstallment": "Loss per installment",
-      "maxLoss": "Maximum loss"
+      "maxLoss": "Maximum loss",
+      "barTooltipAmount": "Nominal amount",
+      "barTooltipPresentValue": "Present value",
+      "barTooltipLoss": "Time-value loss",
+      "barTooltipLossPercent": "Loss percentage",
+      "barTooltipDays": "Days from reference date",
+      "barTooltipDate": "Payment date",
+      "barTooltipDiscountFactor": "Discount factor",
+      "barTooltipExplanation": "The difference between the nominal amount and its present value — this is what you lose due to the time value of money."
     },
     "export": {
       "button": "Export PDF",
