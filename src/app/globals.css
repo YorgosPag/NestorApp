@@ -103,6 +103,13 @@
     --entity-list-min: 300px;
     --entity-list-max: 420px;
     --entity-list-scrollbar-space: 8px;
+
+    /* 🏢 ENTERPRISE: Chart Color Palette (Recharts + Tailwind) */
+    --chart-1: 200 98% 39%;     /* Blue - primary series */
+    --chart-2: 142 71% 45%;     /* Green - secondary series */
+    --chart-3: 25 95% 53%;      /* Orange - tertiary series */
+    --chart-4: 280 68% 55%;     /* Purple - quaternary series */
+    --chart-5: 340 82% 52%;     /* Rose - quinary series */
   }
 
   .dark {
@@ -168,6 +175,13 @@
     --bg-modal: 217 33% 17%;          /* dark modal background */
     --bg-disabled: 216 30% 15%;       /* ✅ ENTERPRISE: dark disabled - Muted slate */
     --bg-selected: 214 95% 25%;       /* dark selected state */
+
+    /* 🏢 ENTERPRISE: Chart Color Palette - Dark Mode */
+    --chart-1: 213 94% 68%;     /* Blue-400 - primary series */
+    --chart-2: 142 71% 55%;     /* Green-400 - secondary series */
+    --chart-3: 32 95% 64%;      /* Orange-400 - tertiary series */
+    --chart-4: 270 95% 75%;     /* Purple-300 - quaternary series */
+    --chart-5: 350 89% 72%;     /* Rose-300 - quinary series */
 
     /* Sidebar Variables - Dark Mode */
     --sidebar-background: 220 20% 11%;

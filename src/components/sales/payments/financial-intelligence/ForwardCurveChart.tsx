@@ -17,7 +17,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip as RechartsTooltip,
+  Tooltip,
   ResponsiveContainer,
   Legend,
 } from 'recharts';
@@ -33,7 +33,8 @@ import {
 } from '@/components/ui/table';
 
 import { formatCurrencyWhole } from '@/lib/intl-utils';
-import type { ForwardCurveResult, SpotRatePoint, ForwardRatePoint } from '@/types/interest-calculator';
+import { FinancialTooltip } from './FinancialTooltip';
+import type { ForwardCurveResult } from '@/types/interest-calculator';
 
 // =============================================================================
 // TYPES
@@ -158,13 +159,17 @@ export function ForwardCurveChart({ t }: ForwardCurveChartProps) {
               tickFormatter={(v: number) => `${v.toFixed(2)}%`}
               domain={['auto', 'auto']}
             />
-            <RechartsTooltip
-              formatter={(value: number, name: string) => [
-                `${value.toFixed(4)}%`,
-                name === 'spotRate'
-                  ? t('costCalculator.forwardCurve.spotLine')
-                  : t('costCalculator.forwardCurve.forwardLine'),
-              ]}
+            <Tooltip
+              content={
+                <FinancialTooltip
+                  valueFormatter={(value, name) => [
+                    `${(value as number).toFixed(4)}%`,
+                    name === 'spotRate'
+                      ? t('costCalculator.forwardCurve.spotLine')
+                      : t('costCalculator.forwardCurve.forwardLine'),
+                  ]}
+                />
+              }
             />
             <Legend
               formatter={(value: string) =>

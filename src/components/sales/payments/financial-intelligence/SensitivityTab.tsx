@@ -16,7 +16,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip as RechartsTooltip,
+  Tooltip,
   ReferenceLine,
   Cell,
   ResponsiveContainer,
@@ -33,6 +33,7 @@ import { Label } from '@/components/ui/label';
 
 import { runTornadoAnalysis, buildHeatMap } from '@/lib/sensitivity-engine';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
+import { FinancialTooltip } from './FinancialTooltip';
 import type {
   CostCalculationInput,
   CostCalculationResult,
@@ -134,23 +135,33 @@ function TornadoChart({
             width={110}
             tick={{ fontSize: 12 }}
           />
-          <RechartsTooltip
-            formatter={(value: number, name: string) => [
-              formatCurrencyWhole(value),
-              name === 'lowDelta'
-                ? t('costCalculator.sensitivity.low')
-                : t('costCalculator.sensitivity.high'),
-            ]}
+          <Tooltip
+            content={
+              <FinancialTooltip
+                valueFormatter={(value, name) => [
+                  formatCurrencyWhole(value as number),
+                  name === 'lowDelta'
+                    ? t('costCalculator.sensitivity.low')
+                    : t('costCalculator.sensitivity.high'),
+                ]}
+              />
+            }
           />
           <ReferenceLine x={0} stroke="#666" strokeDasharray="3 3" />
           <Bar dataKey="lowDelta" stackId="a" name="lowDelta">
-            {chartData.map((_, i) => (
-              <Cell key={`low-${i}`} fill="hsl(var(--chart-1))" />
+            {chartData.map((entry, i) => (
+              <Cell
+                key={`low-${i}`}
+                fill={entry.lowDelta < 0 ? 'hsl(0, 72%, 51%)' : 'hsl(142, 71%, 45%)'}
+              />
             ))}
           </Bar>
           <Bar dataKey="highDelta" stackId="a" name="highDelta">
-            {chartData.map((_, i) => (
-              <Cell key={`high-${i}`} fill="hsl(var(--chart-2))" />
+            {chartData.map((entry, i) => (
+              <Cell
+                key={`high-${i}`}
+                fill={entry.highDelta < 0 ? 'hsl(0, 72%, 51%)' : 'hsl(142, 71%, 45%)'}
+              />
             ))}
           </Bar>
         </BarChart>

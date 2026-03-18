@@ -17,12 +17,13 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip as RechartsTooltip,
+  Tooltip,
   ResponsiveContainer,
   Cell,
 } from 'recharts';
 
 import { formatCurrencyWhole } from '@/lib/intl-utils';
+import { FinancialTooltip } from './FinancialTooltip';
 import type { DrawPeriodAnalysis, DrawPhaseType } from '@/types/interest-calculator';
 
 // =============================================================================
@@ -87,14 +88,18 @@ export function DrawTimelineChart({ periods, t }: DrawTimelineChartProps) {
               tick={{ fontSize: 11 }}
               tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`}
             />
-            <RechartsTooltip
-              formatter={(value: number, name: string) => [
-                formatCurrencyWhole(value),
-                name === 'drawAmount'
-                  ? t('costCalculator.drawSchedule.drawAmount')
-                  : t('costCalculator.drawSchedule.cumulativeDrawn'),
-              ]}
-              labelFormatter={(label: string) => `${t('costCalculator.drawSchedule.month')} ${label}`}
+            <Tooltip
+              content={
+                <FinancialTooltip
+                  labelFormatter={(label) => `${t('costCalculator.drawSchedule.month')} ${label}`}
+                  valueFormatter={(value, name) => [
+                    formatCurrencyWhole(value as number),
+                    name === 'drawAmount'
+                      ? t('costCalculator.drawSchedule.drawAmount')
+                      : t('costCalculator.drawSchedule.cumulativeDrawn'),
+                  ]}
+                />
+              }
             />
             <Bar dataKey="drawAmount" name="drawAmount" radius={[4, 4, 0, 0]}>
               {chartData.map((entry, idx) => (

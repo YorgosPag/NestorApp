@@ -158,29 +158,39 @@ export function GanttView({ building }: GanttViewProps) {
   const ganttChartRef = useRef<HTMLDivElement>(null);
 
   // 🏢 ENTERPRISE: Scroll to today marker with retry for library render timing
+  // Uses getBoundingClientRect for accurate position regardless of nesting depth
   const scrollToTodayMarker = useCallback((container: HTMLElement) => {
     const attemptScroll = (retriesLeft: number) => {
       const todayMarker = container.querySelector('.rmg-today-marker') as HTMLElement | null;
       const scrollContainer = container.querySelector('.rmg-timeline-container') as HTMLElement | null;
       if (todayMarker && scrollContainer) {
-        const markerLeft = todayMarker.offsetLeft;
-        scrollContainer.scrollLeft = Math.max(0, markerLeft - scrollContainer.clientWidth * 0.15);
+        // getBoundingClientRect gives position relative to viewport
+        // Subtract scrollContainer's rect to get position within scroll area
+        const markerRect = todayMarker.getBoundingClientRect();
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const markerRelativeLeft = markerRect.left - containerRect.left + scrollContainer.scrollLeft;
+        scrollContainer.scrollLeft = Math.max(0, markerRelativeLeft - scrollContainer.clientWidth * 0.15);
       } else if (retriesLeft > 0) {
-        setTimeout(() => attemptScroll(retriesLeft - 1), 200);
+        setTimeout(() => attemptScroll(retriesLeft - 1), 300);
       }
     };
-    attemptScroll(3);
+    attemptScroll(5);
   }, []);
 
   // 🏢 ENTERPRISE: Auto-scroll to "today" marker when view mode changes
-  // setTimeout(500) gives library enough time to re-render all view modes
+  // Wait for library to finish re-rendering (checks data-view-mode attribute)
   const handleViewModeChange = useCallback((newMode: ViewMode) => {
     setViewMode(newMode);
-    setTimeout(() => {
-      const container = ganttChartRef.current;
-      if (!container) return;
-      scrollToTodayMarker(container);
-    }, 500);
+    // Library needs time to fully re-render after view mode change
+    // Use increasing delays to catch slow renders (Day/Year views are heavier)
+    const delays = [300, 600, 1000];
+    delays.forEach((delay) => {
+      setTimeout(() => {
+        const container = ganttChartRef.current;
+        if (!container) return;
+        scrollToTodayMarker(container);
+      }, delay);
+    });
   }, [scrollToTodayMarker]);
 
   // Fullscreen mode (ADR-241 centralized)
@@ -292,8 +302,14 @@ export function GanttView({ building }: GanttViewProps) {
   const handleGanttMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button === 2) {
       e.stopPropagation();
+      return;
     }
-    isDraggingRef.current = true;
+    // Only mark as dragging if mousedown is on a task bar or its handles
+    const target = e.target as HTMLElement;
+    const isOnTask = target.closest('.rmg-task-item') !== null;
+    if (isOnTask) {
+      isDraggingRef.current = true;
+    }
   }, []);
 
   // Detect which task bar was right-clicked — opens custom context menu
@@ -522,8 +538,11 @@ export function GanttView({ building }: GanttViewProps) {
   }, []);
 
   // 🏢 ENTERPRISE: Reset drag state on mouse/pointer up (window-level)
+  // Small delay on reset to prevent tooltip flicker at drag end
   useEffect(() => {
-    const handleMouseUp = () => { isDraggingRef.current = false; };
+    const handleMouseUp = () => {
+      setTimeout(() => { isDraggingRef.current = false; }, 100);
+    };
     window.addEventListener('mouseup', handleMouseUp);
     window.addEventListener('pointerup', handleMouseUp);
     return () => {
@@ -736,7 +755,7 @@ export function GanttView({ building }: GanttViewProps) {
       const container = ganttChartRef.current;
       if (!container) return;
       scrollToTodayMarker(container);
-    }, 500); // Wait for library render
+    }, 800); // Wait for library render — needs more time on first mount
     return () => clearTimeout(timeout);
   }, [loading, isEmpty]);
 

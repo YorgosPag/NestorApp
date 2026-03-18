@@ -19,7 +19,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip as RechartsTooltip,
+  Tooltip,
   Legend,
   ResponsiveContainer,
 } from 'recharts';
@@ -48,6 +48,7 @@ import type {
   WaterfallResult,
   WaterfallTier,
 } from '@/types/interest-calculator';
+import { FinancialTooltip } from './FinancialTooltip';
 
 // =============================================================================
 // TYPES
@@ -314,7 +315,13 @@ export function EquityWaterfallDialog({
                       <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                       <XAxis type="number" tickFormatter={(v: number) => fmt(v)} />
                       <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11 }} />
-                      <RechartsTooltip formatter={(value: number, name: string) => [fmt(value), name === 'lp' ? 'LP' : 'GP']} />
+                      <Tooltip
+                        content={
+                          <FinancialTooltip
+                            valueFormatter={(value, name) => [fmt(value as number), name === 'lp' ? 'LP' : 'GP']}
+                          />
+                        }
+                      />
                       <Legend />
                       <Bar dataKey="lp" stackId="stack" fill="#3b82f6" name="LP" />
                       <Bar dataKey="gp" stackId="stack" fill="#10b981" name="GP" />

@@ -16,13 +16,14 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip as RechartsTooltip,
+  Tooltip,
   ReferenceLine,
   ResponsiveContainer,
 } from 'recharts';
 import { AlertTriangle } from 'lucide-react';
 
 import { formatCurrencyWhole } from '@/lib/intl-utils';
+import { FinancialTooltip } from './FinancialTooltip';
 import type { DrawPeriodAnalysis, InterestReserveStatus } from '@/types/interest-calculator';
 
 // =============================================================================
@@ -71,12 +72,16 @@ export function InterestReserveChart({ periods, reserveStatus, t }: InterestRese
               tick={{ fontSize: 11 }}
               tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`}
             />
-            <RechartsTooltip
-              formatter={(value: number) => [
-                formatCurrencyWhole(value),
-                t('costCalculator.drawSchedule.reserveBalance'),
-              ]}
-              labelFormatter={(label: string) => `${t('costCalculator.drawSchedule.month')} ${label}`}
+            <Tooltip
+              content={
+                <FinancialTooltip
+                  labelFormatter={(label) => `${t('costCalculator.drawSchedule.month')} ${label}`}
+                  valueFormatter={(value) => [
+                    formatCurrencyWhole(value as number),
+                    t('costCalculator.drawSchedule.reserveBalance'),
+                  ]}
+                />
+              }
             />
             {/* Zero line — red dashed */}
             <ReferenceLine y={0} stroke="hsl(0, 72%, 51%)" strokeDasharray="5 3" strokeWidth={1.5} />

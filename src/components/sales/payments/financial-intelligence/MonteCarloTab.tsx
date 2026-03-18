@@ -21,7 +21,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip as RechartsTooltip,
+  Tooltip,
   ResponsiveContainer,
   ComposedChart,
 } from 'recharts';
@@ -41,6 +41,7 @@ import {
 
 import { runMonteCarloSimulation } from '@/lib/monte-carlo-engine';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
+import { FinancialTooltip } from './FinancialTooltip';
 import type {
   CostCalculationInput,
   CostCalculationResult,
@@ -200,14 +201,16 @@ function FanChart({
             label={{ value: 'Month', position: 'insideBottomRight', offset: -5 }}
           />
           <YAxis tickFormatter={(v: number) => fmt(v)} />
-          <RechartsTooltip
-            formatter={(value: number, name: string) => [fmt(value), name]}
+          <Tooltip
+            content={
+              <FinancialTooltip valueFormatter={(value, name) => [fmt(value as number), name]} />
+            }
           />
-          <Area type="monotone" dataKey="p90" stackId="band" stroke="none" fill="hsl(var(--chart-1))" fillOpacity={0.15} name="P90" />
-          <Area type="monotone" dataKey="p75" stackId="band2" stroke="none" fill="hsl(var(--chart-1))" fillOpacity={0.2} name="P75" />
-          <Area type="monotone" dataKey="p50" stackId="band3" stroke="hsl(var(--chart-1))" fill="hsl(var(--chart-1))" fillOpacity={0.3} strokeWidth={2} name="P50" />
-          <Area type="monotone" dataKey="p25" stackId="band4" stroke="none" fill="hsl(var(--chart-2))" fillOpacity={0.2} name="P25" />
-          <Area type="monotone" dataKey="p10" stackId="band5" stroke="none" fill="hsl(var(--chart-2))" fillOpacity={0.15} name="P10" />
+          <Area type="monotone" dataKey="p90" stackId="band" stroke="none" fill="hsl(142, 71%, 45%)" fillOpacity={0.12} name="P90" />
+          <Area type="monotone" dataKey="p75" stackId="band2" stroke="none" fill="hsl(142, 71%, 45%)" fillOpacity={0.18} name="P75" />
+          <Area type="monotone" dataKey="p50" stackId="band3" stroke="hsl(200, 98%, 39%)" fill="hsl(200, 98%, 39%)" fillOpacity={0.25} strokeWidth={2} name="P50" />
+          <Area type="monotone" dataKey="p25" stackId="band4" stroke="none" fill="hsl(25, 95%, 53%)" fillOpacity={0.18} name="P25" />
+          <Area type="monotone" dataKey="p10" stackId="band5" stroke="none" fill="hsl(0, 72%, 51%)" fillOpacity={0.12} name="P10" />
         </AreaChart>
       </ResponsiveContainer>
     </section>
@@ -251,15 +254,21 @@ function HistogramChart({
             tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`}
             label={{ value: t('costCalculator.monteCarlo.cdf'), angle: 90, position: 'insideRight' }}
           />
-          <RechartsTooltip
-            formatter={(value: number, name: string) => [
-              name === 'frequency' ? `${(value * 100).toFixed(1)}%` : `${(value * 100).toFixed(1)}%`,
-              name === 'frequency' ? t('costCalculator.monteCarlo.frequency') : t('costCalculator.monteCarlo.cdf'),
-            ]}
-            labelFormatter={(label: number) => fmt(label)}
+          <Tooltip
+            content={
+              <FinancialTooltip
+                labelFormatter={(label) => fmt(label as number)}
+                valueFormatter={(value, name) => [
+                  `${((value as number) * 100).toFixed(1)}%`,
+                  name === 'frequency'
+                    ? t('costCalculator.monteCarlo.frequency')
+                    : t('costCalculator.monteCarlo.cdf'),
+                ]}
+              />
+            }
           />
-          <Bar yAxisId="freq" dataKey="frequency" fill="hsl(var(--chart-1))" opacity={0.7} name="frequency" />
-          <Line yAxisId="cdf" type="monotone" dataKey="cumulativeFrequency" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={false} name="cdf" />
+          <Bar yAxisId="freq" dataKey="frequency" fill="hsl(200, 98%, 39%)" opacity={0.7} name="frequency" />
+          <Line yAxisId="cdf" type="monotone" dataKey="cumulativeFrequency" stroke="hsl(25, 95%, 53%)" strokeWidth={2} dot={false} name="cdf" />
         </ComposedChart>
       </ResponsiveContainer>
     </section>
