@@ -44,9 +44,8 @@ import { ContactKadSection } from '@/components/contacts/dynamic/ContactKadSecti
 import type { KadActivity, CompanyAddress } from '@/types/ContactFormTypes';
 // 🏢 ENTERPRISE: Multi-address Section — headquarters + N branches
 import { CompanyAddressesSection } from '@/components/contacts/dynamic/CompanyAddressesSection';
-// 🏢 ADR-241: Centralized fullscreen system
-import { useFullscreen } from '@/hooks/useFullscreen';
-import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
+// 🏢 ADR-241: Addresses fullscreen wrapper (standalone component for proper hook lifecycle)
+import { AddressesSectionWithFullscreen } from '@/components/contacts/dynamic/AddressesSectionWithFullscreen';
 // 🏢 ENTERPRISE: Ministry Picker — searchable dropdown for supervisionMinistry (services)
 import { MinistryPicker } from '@/components/shared/MinistryPicker';
 import { PublicServicePicker } from '@/components/contacts/pickers/PublicServicePicker';
@@ -199,9 +198,6 @@ export function UnifiedContactTabbedSection({
 
     fetchCompanyName();
   }, [user?.companyId]);
-
-  // 🏢 ADR-241: Fullscreen state for addresses tab
-  const addressesFullscreen = useFullscreen();
 
   // 🏢 ENTERPRISE: Get configuration dynamically based on contact type
   const config = useMemo(() => getContactFormConfig(contactType), [contactType]);
@@ -475,164 +471,14 @@ export function UnifiedContactTabbedSection({
             );
           },
 
-          // 🏢 ENTERPRISE: Multi-address Section — hierarchy + headquarters + N branches + map
-          addresses: () => {
-            const currentAddresses: CompanyAddress[] = formData.companyAddresses ?? [];
-            // Fallback: build from legacy singular fields if no array yet
-            const effectiveAddresses: CompanyAddress[] = currentAddresses.length > 0
-              ? currentAddresses
-              : formData.street
-                ? [{ type: 'headquarters' as const, street: formData.street, number: formData.streetNumber ?? '', postalCode: formData.postalCode ?? '', city: formData.city ?? '' }]
-                : [{ type: 'headquarters' as const, street: '', number: '', postalCode: '', city: '' }];
-
-            return (
-              <FullscreenOverlay
-                isFullscreen={addressesFullscreen.isFullscreen}
-                onToggle={addressesFullscreen.toggle}
-                ariaLabel="Διευθύνσεις & Υποκαταστήματα"
-                className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-                fullscreenClassName="p-4 overflow-auto"
-              >
-                {/* LEFT: AddressWithHierarchy for HQ + Branches */}
-                <div className="space-y-6">
-                  {/* HQ address with hierarchy + fullscreen toggle */}
-                  <header className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-foreground">
-                      Έδρα
-                    </h3>
-                    <FullscreenToggleButton isFullscreen={addressesFullscreen.isFullscreen} onToggle={addressesFullscreen.toggle} />
-                  </header>
-                  <AddressWithHierarchy
-                    value={{
-                      street: (formData.street as string) || '',
-                      number: (formData.streetNumber as string) || '',
-                      postalCode: (formData.postalCode as string) || '',
-                      settlementName: (formData.settlement as string) || (formData.city as string) || '',
-                      settlementId: (formData.settlementId as string | null) ?? null,
-                      communityName: (formData.community as string) || '',
-                      municipalUnitName: (formData.municipalUnit as string) || '',
-                      municipalityName: (formData.municipality as string) || '',
-                      municipalityId: (formData.municipalityId as string | null) ?? null,
-                      regionalUnitName: (formData.regionalUnit as string) || '',
-                      regionName: (formData.region as string) || '',
-                      decentAdminName: (formData.decentAdmin as string) || '',
-                      majorGeoName: (formData.majorGeo as string) || '',
-                    }}
-                    onChange={(addr: AddressWithHierarchyValue) => {
-                      if (setFormData) {
-                        // Sync hierarchy to form + update HQ address in companyAddresses
-                        const updatedAddresses = [...effectiveAddresses];
-                        const hqIdx = updatedAddresses.findIndex(a => a.type === 'headquarters');
-                        if (hqIdx >= 0) {
-                          updatedAddresses[hqIdx] = {
-                            ...updatedAddresses[hqIdx],
-                            street: addr.street,
-                            number: addr.number,
-                            city: addr.settlementName || addr.municipalityName,
-                            postalCode: addr.postalCode,
-                            settlementId: addr.settlementId,
-                            communityName: addr.communityName,
-                            municipalUnitName: addr.municipalUnitName,
-                            municipalityName: addr.municipalityName,
-                            municipalityId: addr.municipalityId,
-                            regionalUnitName: addr.regionalUnitName,
-                            regionName: addr.regionName,
-                            region: addr.regionName,
-                            decentAdminName: addr.decentAdminName,
-                            majorGeoName: addr.majorGeoName,
-                          };
-                        }
-                        setFormData({
-                          ...formData,
-                          street: addr.street,
-                          streetNumber: addr.number,
-                          postalCode: addr.postalCode,
-                          city: addr.settlementName || addr.municipalityName,
-                          settlement: addr.settlementName,
-                          settlementId: addr.settlementId,
-                          community: addr.communityName,
-                          municipalUnit: addr.municipalUnitName,
-                          municipality: addr.municipalityName,
-                          municipalityId: addr.municipalityId,
-                          regionalUnit: addr.regionalUnitName,
-                          region: addr.regionName,
-                          decentAdmin: addr.decentAdminName,
-                          majorGeo: addr.majorGeoName,
-                          companyAddresses: updatedAddresses,
-                        });
-                      }
-                    }}
-                    disabled={disabled}
-                  />
-
-                  {/* Branches section */}
-                  <CompanyAddressesSection
-                    addresses={effectiveAddresses}
-                    disabled={disabled}
-                    onChange={(newAddresses) => {
-                      if (!setFormData) return;
-                      // Sync headquarters back to legacy singular fields
-                      const hq = newAddresses.find((a) => a.type === 'headquarters') ?? newAddresses[0];
-                      setFormData({
-                        ...formData,
-                        companyAddresses: newAddresses,
-                        street: hq?.street ?? '',
-                        streetNumber: hq?.number ?? '',
-                        postalCode: hq?.postalCode ?? '',
-                        city: hq?.city ?? '',
-                      });
-                    }}
-                  />
-                </div>
-
-                {/* RIGHT: Map preview — draggable pin in edit mode */}
-                <aside className="lg:sticky lg:top-0 lg:self-start lg:h-[calc(100vh-7rem)]">
-                  <ContactAddressMapPreview
-                    className="!min-h-0 h-full rounded-lg"
-                    contactId={formData.id}
-                    street={formData.street}
-                    streetNumber={formData.streetNumber}
-                    city={formData.city}
-                    postalCode={formData.postalCode}
-                    companyAddresses={formData.companyAddresses}
-                    draggable={!disabled}
-                    onDragResolve={!disabled && setFormData ? (addr: DragResolvedAddress, addressIndex: number) => {
-                      const currentAddresses = [...(formData.companyAddresses ?? [])];
-                      if (addressIndex >= 0 && addressIndex < currentAddresses.length) {
-                        currentAddresses[addressIndex] = {
-                          ...currentAddresses[addressIndex],
-                          street: addr.street,
-                          number: addr.number,
-                          postalCode: addr.postalCode,
-                          city: addr.city,
-                        };
-                      }
-                      // Sync HQ to root fields + clear hierarchy for re-resolution
-                      const hq = currentAddresses.find(a => a.type === 'headquarters') ?? currentAddresses[0];
-                      setFormData({
-                        ...formData,
-                        companyAddresses: currentAddresses,
-                        street: hq?.street ?? '',
-                        streetNumber: hq?.number ?? '',
-                        postalCode: hq?.postalCode ?? '',
-                        city: hq?.city ?? '',
-                        settlement: hq?.city ?? '',
-                        settlementId: null,
-                        community: '',
-                        municipalUnit: '',
-                        municipality: '',
-                        municipalityId: null,
-                        regionalUnit: '',
-                        region: '',
-                        decentAdmin: '',
-                        majorGeo: '',
-                      });
-                    } : undefined}
-                  />
-                </aside>
-              </FullscreenOverlay>
-            );
-          },
+          // 🏢 ADR-241: Standalone component for proper hook lifecycle (fullscreen)
+          addresses: () => (
+            <AddressesSectionWithFullscreen
+              formData={formData}
+              setFormData={setFormData}
+              disabled={disabled}
+            />
+          ),
 
         } : {}),
 
@@ -1129,7 +975,6 @@ export function UnifiedContactTabbedSection({
     canonicalUploadContext, onActiveTabChange,
     companyDisplayName, // 🏢 ENTERPRISE: Re-render when company name is fetched (ADR-031)
     user?.companyId, // 🏢 ENTERPRISE: Re-render when companyId changes
-    addressesFullscreen, // 🏢 ADR-241: Re-render when fullscreen state changes
   ]);
 
   return (
