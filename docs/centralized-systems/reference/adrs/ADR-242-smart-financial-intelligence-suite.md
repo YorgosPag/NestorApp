@@ -453,8 +453,35 @@ ACC-001 (Invoice Types) ← C2 Budget vs. Actual
 
 ---
 
-## 7. Changelog
+## 7. Implementation SPECs
+
+| SPEC | Features | Priority | Effort | Dependencies |
+|------|----------|----------|--------|-------------|
+| [SPEC-242A](specs/SPEC-242A-sensitivity-dscr.md) | B1 Sensitivity Analysis + C3 DSCR Stress Testing | ⭐⭐⭐⭐⭐ | 1 session | None — ΠΡΩΤΟ |
+| [SPEC-242B](specs/SPEC-242B-draw-schedule.md) | B3 Construction Loan Draw Schedule | ⭐⭐⭐⭐⭐ | 1 session | None — ΠΑΡΑΛΛΗΛΑ με A |
+| [SPEC-242C](specs/SPEC-242C-portfolio-dashboard.md) | C1 Portfolio Dashboard + A2 Debt Maturity + C2 Variance | ⭐⭐⭐⭐ | 2 sessions | Optional A/B |
+| [SPEC-242D](specs/SPEC-242D-monte-carlo-waterfall.md) | D1 Monte Carlo + B2 Equity Waterfall | ⭐⭐⭐ | 2 sessions | SPEC-242A |
+| [SPEC-242E](specs/SPEC-242E-forward-curves-hedging-ai.md) | A1 Forward Curves + A3 Hedging + D3 NL Query | ⭐⭐ | 2-3 sessions | SPEC-242A + C |
+
+**Εξαιρείται:** D2 (Predictive Cost Overrun) — χρειάζεται historical data, μελλοντικό SPEC-242F.
+
+### Dependency Graph
+
+```
+SPEC-242A (Sensitivity + DSCR)    ← ΠΡΩΤΟ
+SPEC-242B (Draw Schedule)         ← ΠΑΡΑΛΛΗΛΑ με A
+    ↓
+SPEC-242C (Portfolio Dashboard)   ← ΜΕΤΑ A+B
+SPEC-242D (Monte Carlo + Waterfall) ← ΜΕΤΑ A
+    ↓
+SPEC-242E (Forward Curves + AI)   ← ΤΕΛΕΥΤΑΙΟ
+```
+
+---
+
+## 8. Changelog
 
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-03-18 | Initial research document — 12 features across 4 categories | Claude Code + Γιώργος |
+| 2026-03-18 | Created 5 SPEC files (SPEC-242A through SPEC-242E) with full implementation details | Claude Code |
