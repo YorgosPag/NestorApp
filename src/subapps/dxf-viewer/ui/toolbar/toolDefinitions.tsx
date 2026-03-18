@@ -1,7 +1,7 @@
 'use client';
 import {
   MousePointer, Hand, ZoomIn, ZoomOut, Square, Pen,
-  Move, Copy, Trash2, Ruler, Undo, Redo, Focus, Maximize2, Minimize2,
+  Move, Copy, Trash2, Ruler, Undo, Redo, Focus, Maximize2,
   Grid, Crop, Download, Crosshair,
   Maximize, Calculator, Map, Edit, Hexagon, FlaskConical,
   Activity, // 🏢 ENTERPRISE: Performance Monitor icon
@@ -365,7 +365,6 @@ export const createActionButtons = (props: {
   autoCrop: boolean;
   showCursorSettings?: boolean;
   guidesVisible?: boolean;
-  isFullscreen?: boolean;
   onAction: (action: string, data?: number | string | boolean) => void;
 }): ActionDefinition[] => [
   // ⌨️ ENTERPRISE: All hotkeys from centralized keyboard-shortcuts.ts
@@ -446,16 +445,6 @@ export const createActionButtons = (props: {
     disabled: false, // 🔥 Ensure it's not disabled
     colorClass: DXF_ACTION_COLORS.fit,
     onClick: () => props.onAction('fit-to-view')
-  },
-  // 🏢 ADR-241: Fullscreen toggle (Portal-based, zero remount)
-  {
-    id: 'fullscreen',
-    icon: props.isFullscreen ? Minimize2 : Maximize2,
-    label: props.isFullscreen ? 'actionButtons.exitFullscreen' : 'actionButtons.enterFullscreen',
-    hotkey: '',
-    active: props.isFullscreen,
-    colorClass: DXF_ACTION_COLORS.fit,
-    onClick: () => props.onAction('toggle-fullscreen')
   },
   {
     id: 'export',

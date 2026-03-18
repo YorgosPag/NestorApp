@@ -20,7 +20,7 @@ import { ProSnapToolbar } from '../components/ProSnapToolbar';
 // 🏢 ENTERPRISE: Shadcn Button (same as CompactToolbar - NO BORDERS)
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import { FolderUp, FileUp } from 'lucide-react';
+import { FolderUp, FileUp, Maximize2, Minimize2 } from 'lucide-react';
 // 🎨 ENTERPRISE: Centralized DXF toolbar colors - Single source of truth
 import { DXF_ACTION_COLORS } from '../../config/toolbar-colors';
 // ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
@@ -226,7 +226,6 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
     autoCrop,
     showCursorSettings: showCursorSettings || false,
     guidesVisible,
-    isFullscreen,
     onAction: (action, data) => {
       onAction(action, data as string | number | Record<string, unknown>);
     }
@@ -324,7 +323,7 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
       className={`border ${getStatusBorder('muted')} ${quick.card} bg-card ${PANEL_LAYOUT.SHADOW.LG} ${className}`}
     >
       <div className={`flex flex-wrap ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.SPACING.SM}`}>
-        <div className={`flex ${PANEL_LAYOUT.GAP.XS} flex-1`}>
+        <div className={`flex ${PANEL_LAYOUT.GAP.XS} flex-1 min-w-0 overflow-x-auto`}>
           {/* 🏢 ENTERPRISE: Upload DXF - Shadcn Button (NO BORDERS) */}
           <UploadDxfButton
             title="Upload DXF File (Legacy)"
@@ -404,7 +403,7 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
           ))}
         </div>
 
-        <div className={PANEL_LAYOUT.FLEX_SHRINK.NONE}>
+        <div className={`${PANEL_LAYOUT.FLEX_SHRINK.NONE} flex items-center`}>
           <div className={`w-px ${colors.bg.active} ${PANEL_LAYOUT.MARGIN.X_SM} ${PANEL_LAYOUT.MARGIN.Y_XS}`} />
           <ProSnapToolbar
             enabledModes={enabledModes}
@@ -414,6 +413,29 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
             compact
             className={PANEL_LAYOUT.FLEX_SHRINK.NONE}
           />
+          {/* 🏢 ADR-241: Standalone fullscreen toggle — always visible at toolbar end */}
+          <div className={`w-px ${colors.bg.active} ${PANEL_LAYOUT.MARGIN.X_XS} ${PANEL_LAYOUT.MARGIN.Y_XS}`} />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onAction('toggle-fullscreen')}
+                  aria-label={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+                  className={`${iconSizes.xl} p-0`}
+                >
+                  {isFullscreen
+                    ? <Minimize2 className={`${iconSizes.sm} ${DXF_ACTION_COLORS.fit}`} />
+                    : <Maximize2 className={`${iconSizes.sm} ${DXF_ACTION_COLORS.fit}`} />
+                  }
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isFullscreen ? 'Έξοδος Πλήρους Οθόνης' : 'Πλήρης Οθόνη'}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
 

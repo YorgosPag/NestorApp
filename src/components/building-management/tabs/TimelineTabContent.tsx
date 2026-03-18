@@ -262,10 +262,10 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
           onToggle={fullscreen.toggle}
           headerContent={
             <span className="font-semibold">
-              {building.name} — {t('tabs.timeline.header')}
+              {building.name} — {t('tabs.timeline.header.title')}
             </span>
           }
-          ariaLabel={t('tabs.timeline.header')}
+          ariaLabel={t('tabs.timeline.header.title')}
         >
           <section className="flex-1 min-h-0 overflow-auto p-4 space-y-2">
             <OverallProgressCard building={building} milestones={milestones} />
