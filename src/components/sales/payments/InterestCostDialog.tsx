@@ -87,6 +87,8 @@ import {
   EquityWaterfallDialog,
   ForwardCurveChart,
   HedgingComparisonTable,
+  InfoLabel,
+  InfoDt,
 } from './financial-intelligence';
 
 // =============================================================================
@@ -204,11 +206,11 @@ function CashFlowTab({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="cursor-help border-b border-dashed border-muted-foreground">
-                    Απώλεια
+                    {t('costCalculator.cashFlow.loss')}
                   </span>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="max-w-xs">
-                  Η διαφορά μεταξύ ονομαστικής αξίας και παρούσας αξίας — πόσα «χάνετε» σε κάθε δόση
+                  {t('costCalculator.cashFlow.lossTooltip')}
                 </TooltipContent>
               </Tooltip>
             </TableHead>
@@ -270,7 +272,7 @@ function CashFlowTab({
                 {t('costCalculator.cashFlow.nominalTotal')}: {formatCurrency(salePrice)}
               </span>
             </TooltipTrigger>
-            <TooltipContent>Το αρχικό σύνολο χωρίς να υπολογιστεί η αξία του χρόνου</TooltipContent>
+            <TooltipContent>{t('costCalculator.cashFlow.nominalTotalTooltip')}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -616,9 +618,11 @@ function SettingsTab({
       {/* Euribor Rates */}
       <section className="space-y-2">
         <header className="flex items-center justify-between">
-          <Label className="text-sm font-semibold">
-            {t('costCalculator.settings.euriborRates')}
-          </Label>
+          <InfoLabel
+            label={t('costCalculator.settings.euriborRates')}
+            tooltip={t('costCalculator.settings.euriborRatesTooltip')}
+            className="text-sm font-semibold"
+          />
           <Button
             variant="ghost"
             size="sm"
@@ -654,9 +658,12 @@ function SettingsTab({
 
       {/* Discount Rate Source */}
       <section className="space-y-2">
-        <Label className="text-sm font-semibold" htmlFor="discount-source">
-          {t('costCalculator.settings.discountSource')}
-        </Label>
+        <InfoLabel
+          htmlFor="discount-source"
+          label={t('costCalculator.settings.discountSource')}
+          tooltip={t('costCalculator.settings.discountSourceTooltip')}
+          className="text-sm font-semibold"
+        />
         <Select
           value={discountSource}
           onValueChange={(val) => onDiscountSourceChange(val as DiscountRateSource)}
@@ -676,9 +683,12 @@ function SettingsTab({
 
         {discountSource === 'manual' && (
           <fieldset className="space-y-1">
-            <Label className="text-sm" htmlFor="manual-rate">
-              {t('costCalculator.settings.manualRate')} (%)
-            </Label>
+            <InfoLabel
+              htmlFor="manual-rate"
+              label={`${t('costCalculator.settings.manualRate')} (%)`}
+              tooltip={t('costCalculator.settings.manualRateTooltip')}
+              className="text-sm"
+            />
             <Input
               id="manual-rate"
               type="number"
@@ -695,9 +705,12 @@ function SettingsTab({
 
       {/* Bank Spread */}
       <section className="space-y-2">
-        <Label className="text-sm font-semibold" htmlFor="bank-spread">
-          {t('costCalculator.settings.bankSpread')} (%)
-        </Label>
+        <InfoLabel
+          htmlFor="bank-spread"
+          label={`${t('costCalculator.settings.bankSpread')} (%)`}
+          tooltip={t('costCalculator.settings.bankSpreadTooltip')}
+          className="text-sm font-semibold"
+        />
         <fieldset className="flex items-center gap-2">
           <Input
             id="bank-spread"
@@ -891,9 +904,11 @@ function WhatIfTab({
       <section className="space-y-4">
         <fieldset className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label className="text-sm font-semibold">
-              {t('costCalculator.whatIf.upfrontLabel')}
-            </Label>
+            <InfoLabel
+              label={t('costCalculator.whatIf.upfrontLabel')}
+              tooltip={t('costCalculator.whatIf.upfrontTooltip')}
+              className="text-sm font-semibold"
+            />
             <Badge variant="outline" className="text-sm font-bold">
               {upfrontPercent}% — {formatCurrency(salePrice * upfrontPercent / 100)}
             </Badge>
@@ -914,9 +929,11 @@ function WhatIfTab({
 
         <fieldset className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label className="text-sm font-semibold">
-              {t('costCalculator.whatIf.monthsLabel')}
-            </Label>
+            <InfoLabel
+              label={t('costCalculator.whatIf.monthsLabel')}
+              tooltip={t('costCalculator.whatIf.monthsTooltip')}
+              className="text-sm font-semibold"
+            />
             <Badge variant="outline" className="text-sm font-bold">
               {months} {t('costCalculator.scenarios.days') === 'ημέρες' ? 'μήνες' : 'months'}
             </Badge>
@@ -940,20 +957,20 @@ function WhatIfTab({
       {/* Results */}
       <section className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 space-y-3">
         <dl className="grid grid-cols-2 gap-2 text-base">
-          <dt className="text-muted-foreground">{t('costCalculator.whatIf.resultNpv')}</dt>
+          <InfoDt label={t('costCalculator.whatIf.resultNpv')} tooltip={t('costCalculator.whatIf.resultNpvTooltip')} />
           <dd className="text-right font-semibold">{formatCurrency(whatIfResult.npv)}</dd>
 
-          <dt className="text-destructive">{t('costCalculator.whatIf.resultLoss')}</dt>
+          <InfoDt label={t('costCalculator.whatIf.resultLoss')} tooltip={t('costCalculator.whatIf.resultLossTooltip')} className="text-destructive" />
           <dd className="text-right font-semibold text-destructive">
             -{formatCurrency(whatIfResult.timeCost)} ({formatPercent(whatIfResult.timeCostPercentage)})
           </dd>
 
-          <dt className="text-muted-foreground">{t('costCalculator.whatIf.resultRecommended')}</dt>
+          <InfoDt label={t('costCalculator.whatIf.resultRecommended')} tooltip={t('costCalculator.whatIf.resultRecommendedTooltip')} />
           <dd className="text-right font-bold text-emerald-600 dark:text-emerald-400">
             {formatCurrency(whatIfResult.recommendedPrice)}
           </dd>
 
-          <dt className="text-muted-foreground">{t('costCalculator.whatIf.resultWacp')}</dt>
+          <InfoDt label={t('costCalculator.whatIf.resultWacp')} tooltip={t('costCalculator.whatIf.resultWacpTooltip')} />
           <dd className="text-right font-medium">
             {whatIfResult.weightedAverageDays} {t('costCalculator.scenarios.days')}
           </dd>
@@ -1113,50 +1130,105 @@ export function InterestCostDialog({
         {!isLoading && (
           <Tabs defaultValue="cashflow" className="mt-2">
             <TabsList className="text-sm">
-              <TabsTrigger value="cashflow" className="text-sm gap-1">
-                <BarChart3 className="h-4 w-4" />
-                {t('costCalculator.tabs.cashFlow')}
-              </TabsTrigger>
-              <TabsTrigger value="scenarios" className="text-sm gap-1">
-                <Award className="h-4 w-4" />
-                {t('costCalculator.tabs.scenarios')}
-              </TabsTrigger>
-              <TabsTrigger value="pricing" className="text-sm gap-1">
-                <TrendingUp className="h-4 w-4" />
-                {t('costCalculator.tabs.pricing')}
-              </TabsTrigger>
-              <TabsTrigger value="whatif" className="text-sm gap-1">
-                <SlidersHorizontal className="h-4 w-4" />
-                {t('costCalculator.tabs.whatIf')}
-              </TabsTrigger>
-              <TabsTrigger value="sensitivity" className="text-sm gap-1">
-                <Activity className="h-4 w-4" />
-                {t('costCalculator.tabs.sensitivity')}
-              </TabsTrigger>
-              <TabsTrigger value="dscr" className="text-sm gap-1">
-                <ShieldCheck className="h-4 w-4" />
-                {t('costCalculator.tabs.dscr')}
-              </TabsTrigger>
-              <TabsTrigger value="drawschedule" className="text-sm gap-1">
-                <Landmark className="h-4 w-4" />
-                {t('costCalculator.tabs.drawSchedule')}
-              </TabsTrigger>
-              <TabsTrigger value="montecarlo" className="text-sm gap-1">
-                <Dices className="h-4 w-4" />
-                {t('costCalculator.tabs.monteCarlo')}
-              </TabsTrigger>
-              <TabsTrigger value="forwardcurve" className="text-sm gap-1">
-                <TrendingDown className="h-4 w-4" />
-                {t('costCalculator.tabs.forwardCurve')}
-              </TabsTrigger>
-              <TabsTrigger value="hedging" className="text-sm gap-1">
-                <Shield className="h-4 w-4" />
-                {t('costCalculator.tabs.hedging')}
-              </TabsTrigger>
-              <TabsTrigger value="settings" className="text-sm gap-1">
-                <Settings className="h-4 w-4" />
-                {t('costCalculator.tabs.settings')}
-              </TabsTrigger>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="cashflow" className="text-sm gap-1">
+                    <BarChart3 className="h-4 w-4" />
+                    {t('costCalculator.tabs.cashFlow')}
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs text-xs">{t('costCalculator.tabs.cashFlowTooltip')}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="scenarios" className="text-sm gap-1">
+                    <Award className="h-4 w-4" />
+                    {t('costCalculator.tabs.scenarios')}
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs text-xs">{t('costCalculator.tabs.scenariosTooltip')}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="pricing" className="text-sm gap-1">
+                    <TrendingUp className="h-4 w-4" />
+                    {t('costCalculator.tabs.pricing')}
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs text-xs">{t('costCalculator.tabs.pricingTooltip')}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="whatif" className="text-sm gap-1">
+                    <SlidersHorizontal className="h-4 w-4" />
+                    {t('costCalculator.tabs.whatIf')}
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs text-xs">{t('costCalculator.tabs.whatIfTooltip')}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="sensitivity" className="text-sm gap-1">
+                    <Activity className="h-4 w-4" />
+                    {t('costCalculator.tabs.sensitivity')}
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs text-xs">{t('costCalculator.tabs.sensitivityTooltip')}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="dscr" className="text-sm gap-1">
+                    <ShieldCheck className="h-4 w-4" />
+                    {t('costCalculator.tabs.dscr')}
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs text-xs">{t('costCalculator.tabs.dscrTooltip')}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="drawschedule" className="text-sm gap-1">
+                    <Landmark className="h-4 w-4" />
+                    {t('costCalculator.tabs.drawSchedule')}
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs text-xs">{t('costCalculator.tabs.drawScheduleTooltip')}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="montecarlo" className="text-sm gap-1">
+                    <Dices className="h-4 w-4" />
+                    {t('costCalculator.tabs.monteCarlo')}
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs text-xs">{t('costCalculator.tabs.monteCarloTooltip')}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="forwardcurve" className="text-sm gap-1">
+                    <TrendingDown className="h-4 w-4" />
+                    {t('costCalculator.tabs.forwardCurve')}
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs text-xs">{t('costCalculator.tabs.forwardCurveTooltip')}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="hedging" className="text-sm gap-1">
+                    <Shield className="h-4 w-4" />
+                    {t('costCalculator.tabs.hedging')}
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs text-xs">{t('costCalculator.tabs.hedgingTooltip')}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="settings" className="text-sm gap-1">
+                    <Settings className="h-4 w-4" />
+                    {t('costCalculator.tabs.settings')}
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs text-xs">{t('costCalculator.tabs.settingsTooltip')}</TooltipContent>
+              </Tooltip>
             </TabsList>
 
             {/* Tab 1: Cash Flow + Visual Bar Chart */}

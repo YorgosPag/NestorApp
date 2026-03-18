@@ -23,7 +23,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, HelpCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -43,6 +43,7 @@ import {
   PRESET_SIMPLE_SPLIT,
 } from '@/lib/waterfall-engine';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
+import { InfoLabel, InfoDt } from './InfoLabel';
 import type {
   WaterfallInput,
   WaterfallResult,
@@ -163,7 +164,7 @@ export function EquityWaterfallDialog({
           {/* Input form */}
           <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <fieldset className="space-y-1">
-              <Label className="text-xs">{t('costCalculator.waterfall.lpEquity')}</Label>
+              <InfoLabel label={t('costCalculator.waterfall.lpEquity')} tooltip={t('costCalculator.waterfall.lpEquityTooltip')} />
               <Input
                 type="number"
                 value={lpEquity}
@@ -171,7 +172,7 @@ export function EquityWaterfallDialog({
               />
             </fieldset>
             <fieldset className="space-y-1">
-              <Label className="text-xs">{t('costCalculator.waterfall.gpEquity')}</Label>
+              <InfoLabel label={t('costCalculator.waterfall.gpEquity')} tooltip={t('costCalculator.waterfall.gpEquityTooltip')} />
               <Input
                 type="number"
                 value={gpEquity}
@@ -179,7 +180,7 @@ export function EquityWaterfallDialog({
               />
             </fieldset>
             <fieldset className="space-y-1">
-              <Label className="text-xs">{t('costCalculator.waterfall.totalProceeds')}</Label>
+              <InfoLabel label={t('costCalculator.waterfall.totalProceeds')} tooltip={t('costCalculator.waterfall.totalProceedsTooltip')} />
               <Input
                 type="number"
                 value={totalProceeds}
@@ -187,7 +188,7 @@ export function EquityWaterfallDialog({
               />
             </fieldset>
             <fieldset className="space-y-1">
-              <Label className="text-xs">{t('costCalculator.waterfall.projectYears')}</Label>
+              <InfoLabel label={t('costCalculator.waterfall.projectYears')} tooltip={t('costCalculator.waterfall.projectYearsTooltip')} />
               <Input
                 type="number"
                 value={projectYears}
@@ -202,8 +203,9 @@ export function EquityWaterfallDialog({
               onCheckedChange={(checked) => setLpFirstReturn(checked === true)}
               id="lp-first"
             />
-            <label htmlFor="lp-first" className="text-sm cursor-pointer">
+            <label htmlFor="lp-first" className="text-sm cursor-pointer inline-flex items-center gap-1">
               {t('costCalculator.waterfall.lpFirstReturn')}
+              <HelpCircle className="h-3 w-3 text-muted-foreground" title={t('costCalculator.waterfall.lpFirstReturnTooltip')} />
             </label>
           </fieldset>
 
@@ -212,9 +214,18 @@ export function EquityWaterfallDialog({
             <h3 className="text-sm font-semibold">{t('costCalculator.waterfall.tiersTitle')}</h3>
             <header className="grid grid-cols-12 gap-2 text-xs font-medium px-1">
               <span className="col-span-3">{t('costCalculator.waterfall.tierName')}</span>
-              <span className="col-span-2">{t('costCalculator.waterfall.hurdleRate')}</span>
-              <span className="col-span-2">{t('costCalculator.waterfall.lpShare')}</span>
-              <span className="col-span-2">{t('costCalculator.waterfall.gpShare')}</span>
+              <span className="col-span-2 inline-flex items-center gap-1">
+                {t('costCalculator.waterfall.hurdleRate')}
+                <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" title={t('costCalculator.waterfall.hurdleRateTooltip')} />
+              </span>
+              <span className="col-span-2 inline-flex items-center gap-1">
+                {t('costCalculator.waterfall.lpShare')}
+                <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" title={t('costCalculator.waterfall.lpShareTooltip')} />
+              </span>
+              <span className="col-span-2 inline-flex items-center gap-1">
+                {t('costCalculator.waterfall.gpShare')}
+                <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" title={t('costCalculator.waterfall.gpShareTooltip')} />
+              </span>
               <span className="col-span-3" />
             </header>
             {tiers.map((tier, idx) => (
@@ -276,32 +287,32 @@ export function EquityWaterfallDialog({
               {/* Summary cards */}
               <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <dl className="rounded-lg border p-3 space-y-1">
-                  <dt className="text-xs text-muted-foreground">{t('costCalculator.waterfall.lpTotal')}</dt>
+                  <InfoDt label={t('costCalculator.waterfall.lpTotal')} tooltip={t('costCalculator.waterfall.lpTotalTooltip')} className="text-xs text-muted-foreground" />
                   <dd className="text-lg font-bold text-blue-600">{fmt(result.totalLP)}</dd>
                 </dl>
                 <dl className="rounded-lg border p-3 space-y-1">
-                  <dt className="text-xs text-muted-foreground">{t('costCalculator.waterfall.gpTotal')}</dt>
+                  <InfoDt label={t('costCalculator.waterfall.gpTotal')} tooltip={t('costCalculator.waterfall.gpTotalTooltip')} className="text-xs text-muted-foreground" />
                   <dd className="text-lg font-bold text-emerald-600">{fmt(result.totalGP)}</dd>
                 </dl>
                 <dl className="rounded-lg border p-3 space-y-1">
-                  <dt className="text-xs text-muted-foreground">{t('costCalculator.waterfall.lpMultiple')}</dt>
+                  <InfoDt label={t('costCalculator.waterfall.lpMultiple')} tooltip={t('costCalculator.waterfall.lpMultipleTooltip')} className="text-xs text-muted-foreground" />
                   <dd className="text-lg font-bold">{result.lpMultiple}x</dd>
                 </dl>
                 <dl className="rounded-lg border p-3 space-y-1">
-                  <dt className="text-xs text-muted-foreground">{t('costCalculator.waterfall.gpMultiple')}</dt>
+                  <InfoDt label={t('costCalculator.waterfall.gpMultiple')} tooltip={t('costCalculator.waterfall.gpMultipleTooltip')} className="text-xs text-muted-foreground" />
                   <dd className="text-lg font-bold">{result.gpMultiple}x</dd>
                 </dl>
                 <dl className="rounded-lg border p-3 space-y-1">
-                  <dt className="text-xs text-muted-foreground">{t('costCalculator.waterfall.lpIrr')}</dt>
+                  <InfoDt label={t('costCalculator.waterfall.lpIrr')} tooltip={t('costCalculator.waterfall.lpIrrTooltip')} className="text-xs text-muted-foreground" />
                   <dd className="text-sm font-medium">{result.lpIRR}%</dd>
                 </dl>
                 <dl className="rounded-lg border p-3 space-y-1">
-                  <dt className="text-xs text-muted-foreground">{t('costCalculator.waterfall.gpIrr')}</dt>
+                  <InfoDt label={t('costCalculator.waterfall.gpIrr')} tooltip={t('costCalculator.waterfall.gpIrrTooltip')} className="text-xs text-muted-foreground" />
                   <dd className="text-sm font-medium">{result.gpIRR}%</dd>
                 </dl>
                 {result.remainder > 0 && (
                   <dl className="rounded-lg border border-amber-300 p-3 space-y-1">
-                    <dt className="text-xs text-muted-foreground">{t('costCalculator.waterfall.remainder')}</dt>
+                    <InfoDt label={t('costCalculator.waterfall.remainder')} tooltip={t('costCalculator.waterfall.remainderTooltip')} className="text-xs text-muted-foreground" />
                     <dd className="text-sm font-medium text-amber-600">{fmt(result.remainder)}</dd>
                   </dl>
                 )}

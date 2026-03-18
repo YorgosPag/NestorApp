@@ -21,7 +21,7 @@ import {
   Cell,
   ResponsiveContainer,
 } from 'recharts';
-import { Info } from 'lucide-react';
+import { Info, HelpCircle } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -30,6 +30,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import {
+  Tooltip as RadixTooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 import { runTornadoAnalysis, buildHeatMap } from '@/lib/sensitivity-engine';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
@@ -112,8 +117,16 @@ function TornadoChart({
 
   return (
     <section className="space-y-2">
-      <h3 className="text-sm font-semibold">
+      <h3 className="text-sm font-semibold inline-flex items-center gap-1">
         {t('costCalculator.sensitivity.tornadoTitle')}
+        <RadixTooltip>
+          <TooltipTrigger asChild>
+            <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-xs text-xs">
+            {t('costCalculator.sensitivity.tornadoTitleTooltip')}
+          </TooltipContent>
+        </RadixTooltip>
       </h3>
       <p className="text-xs text-muted-foreground">
         {t('costCalculator.sensitivity.baseNpv')}: {formatCurrencyWhole(analysis.baseNPV)}
@@ -193,16 +206,32 @@ function HeatMap({
 
   return (
     <section className="space-y-3">
-      <h3 className="text-sm font-semibold">
+      <h3 className="text-sm font-semibold inline-flex items-center gap-1">
         {t('costCalculator.sensitivity.heatMapTitle')}
+        <RadixTooltip>
+          <TooltipTrigger asChild>
+            <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-xs text-xs">
+            {t('costCalculator.sensitivity.heatMapTitleTooltip')}
+          </TooltipContent>
+        </RadixTooltip>
       </h3>
 
       {/* Variable selectors */}
       <fieldset className="flex gap-4">
         <div className="flex-1 space-y-1">
-          <Label className="text-xs">
-            {t('costCalculator.sensitivity.rowVariable')}
-          </Label>
+          <span className="inline-flex items-center gap-1">
+            <Label className="text-xs">{t('costCalculator.sensitivity.rowVariable')}</Label>
+            <RadixTooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs text-xs">
+                {t('costCalculator.sensitivity.rowVariableTooltip')}
+              </TooltipContent>
+            </RadixTooltip>
+          </span>
           <Select value={rowVar} onValueChange={(v) => setRowVar(v as SensitivityVariable)}>
             <SelectTrigger className="h-8 text-xs">
               <SelectValue />
@@ -217,9 +246,17 @@ function HeatMap({
           </Select>
         </div>
         <div className="flex-1 space-y-1">
-          <Label className="text-xs">
-            {t('costCalculator.sensitivity.colVariable')}
-          </Label>
+          <span className="inline-flex items-center gap-1">
+            <Label className="text-xs">{t('costCalculator.sensitivity.colVariable')}</Label>
+            <RadixTooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs text-xs">
+                {t('costCalculator.sensitivity.colVariableTooltip')}
+              </TooltipContent>
+            </RadixTooltip>
+          </span>
           <Select value={colVar} onValueChange={(v) => setColVar(v as SensitivityVariable)}>
             <SelectTrigger className="h-8 text-xs">
               <SelectValue />

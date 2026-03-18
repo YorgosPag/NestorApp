@@ -10,11 +10,10 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Info, HelpCircle } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { InfoLabel, InfoTableHead, InfoDt } from './InfoLabel';
 import {
   Table,
   TableBody,
@@ -182,19 +181,11 @@ export function DSCRStressTab({ salePrice, effectiveRate, t }: DSCRStressTabProp
           </legend>
 
           <div className="space-y-1.5">
-            <div className="flex items-center gap-1">
-              <Label htmlFor="dscr-noi" className="text-xs">
-                {t('costCalculator.dscr.annualNOI')}
-              </Label>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-xs text-xs">
-                  {t('costCalculator.dscr.noiTooltip')}
-                </TooltipContent>
-              </Tooltip>
-            </div>
+            <InfoLabel
+              htmlFor="dscr-noi"
+              label={t('costCalculator.dscr.annualNOI')}
+              tooltip={t('costCalculator.dscr.noiTooltip')}
+            />
             <Input
               id="dscr-noi"
               type="number"
@@ -205,9 +196,11 @@ export function DSCRStressTab({ salePrice, effectiveRate, t }: DSCRStressTabProp
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="dscr-loan" className="text-xs">
-              {t('costCalculator.dscr.loanAmount')}
-            </Label>
+            <InfoLabel
+              htmlFor="dscr-loan"
+              label={t('costCalculator.dscr.loanAmount')}
+              tooltip={t('costCalculator.dscr.loanAmountTooltip')}
+            />
             <Input
               id="dscr-loan"
               type="number"
@@ -218,9 +211,11 @@ export function DSCRStressTab({ salePrice, effectiveRate, t }: DSCRStressTabProp
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="dscr-rate" className="text-xs">
-              {t('costCalculator.dscr.annualRate')}
-            </Label>
+            <InfoLabel
+              htmlFor="dscr-rate"
+              label={t('costCalculator.dscr.annualRate')}
+              tooltip={t('costCalculator.dscr.annualRateTooltip')}
+            />
             <Input
               id="dscr-rate"
               type="number"
@@ -232,9 +227,11 @@ export function DSCRStressTab({ salePrice, effectiveRate, t }: DSCRStressTabProp
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="dscr-term" className="text-xs">
-              {t('costCalculator.dscr.loanTermYears')}
-            </Label>
+            <InfoLabel
+              htmlFor="dscr-term"
+              label={t('costCalculator.dscr.loanTermYears')}
+              tooltip={t('costCalculator.dscr.loanTermYearsTooltip')}
+            />
             <Input
               id="dscr-term"
               type="number"
@@ -247,17 +244,21 @@ export function DSCRStressTab({ salePrice, effectiveRate, t }: DSCRStressTabProp
           {/* Key metrics */}
           <dl className="grid grid-cols-2 gap-2 pt-2 border-t">
             <div>
-              <dt className="text-xs text-muted-foreground">
-                {t('costCalculator.dscr.annualDebtService')}
-              </dt>
+              <InfoDt
+                label={t('costCalculator.dscr.annualDebtService')}
+                tooltip={t('costCalculator.dscr.annualDebtServiceTooltip')}
+                className="text-xs text-muted-foreground"
+              />
               <dd className="text-sm font-semibold">
                 {formatCurrencyWhole(baseResult.annualDebtService)}
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-muted-foreground">
-                {t('costCalculator.dscr.monthlyPayment')}
-              </dt>
+              <InfoDt
+                label={t('costCalculator.dscr.monthlyPayment')}
+                tooltip={t('costCalculator.dscr.monthlyPaymentTooltip')}
+                className="text-xs text-muted-foreground"
+              />
               <dd className="text-sm font-semibold">
                 {formatCurrencyWhole(baseResult.monthlyPayment)}
               </dd>
@@ -266,8 +267,11 @@ export function DSCRStressTab({ salePrice, effectiveRate, t }: DSCRStressTabProp
         </fieldset>
 
         {/* Gauge */}
-        <div className="flex flex-col items-center justify-center">
+        <div className="flex flex-col items-center justify-center gap-2">
           <DSCRGauge dscr={baseResult.dscr} status={baseResult.status} t={t} />
+          <p className="text-xs text-muted-foreground text-center max-w-xs leading-relaxed">
+            {t('costCalculator.dscr.gaugeZones')}
+          </p>
         </div>
       </section>
 
@@ -280,9 +284,9 @@ export function DSCRStressTab({ salePrice, effectiveRate, t }: DSCRStressTabProp
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-xs">{t('costCalculator.dscr.shockBps')}</TableHead>
-              <TableHead className="text-xs text-right">{t('costCalculator.dscr.stressedRate')}</TableHead>
-              <TableHead className="text-xs text-right">{t('costCalculator.dscr.dscrLabel')}</TableHead>
+              <InfoTableHead className="text-xs" label={t('costCalculator.dscr.shockBps')} tooltip={t('costCalculator.dscr.shockBpsTooltip')} />
+              <InfoTableHead className="text-xs text-right" label={t('costCalculator.dscr.stressedRate')} tooltip={t('costCalculator.dscr.stressedRateTooltip')} />
+              <InfoTableHead className="text-xs text-right" label={t('costCalculator.dscr.dscrLabel')} tooltip={t('costCalculator.dscr.dscrLabelTooltip')} />
               <TableHead className="text-xs text-center">{t('costCalculator.dscr.status')}</TableHead>
             </TableRow>
           </TableHeader>

@@ -21,7 +21,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
-import { Info, Loader2, AlertCircle } from 'lucide-react';
+import { Info, Loader2, AlertCircle, HelpCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -34,6 +34,12 @@ import {
 
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import { FinancialTooltip } from './FinancialTooltip';
+import { InfoTableHead } from './InfoLabel';
+import {
+  Tooltip as RadixTooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type { ForwardCurveResult } from '@/types/interest-calculator';
 
 // =============================================================================
@@ -140,12 +146,29 @@ export function ForwardCurveChart({ t }: ForwardCurveChartProps) {
 
       {/* Curve shape badge */}
       <header className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">
+        <h3 className="text-sm font-semibold inline-flex items-center gap-1">
           {t('costCalculator.forwardCurve.chartTitle')}
+          <RadixTooltip>
+            <TooltipTrigger asChild>
+              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs text-xs">
+              {t('costCalculator.forwardCurve.chartTitleTooltip')}
+            </TooltipContent>
+          </RadixTooltip>
         </h3>
-        <Badge variant={SHAPE_BADGE_VARIANT[result.curveShape] ?? 'outline'}>
-          {t(`costCalculator.forwardCurve.shape.${result.curveShape}`)}
-        </Badge>
+        <RadixTooltip>
+          <TooltipTrigger asChild>
+            <span>
+              <Badge variant={SHAPE_BADGE_VARIANT[result.curveShape] ?? 'outline'} className="cursor-help">
+                {t(`costCalculator.forwardCurve.shape.${result.curveShape}`)}
+              </Badge>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="max-w-xs text-xs">
+            {t(`costCalculator.forwardCurve.shape.${result.curveShape}Tooltip`)}
+          </TooltipContent>
+        </RadixTooltip>
       </header>
 
       {/* Chart */}
@@ -207,13 +230,9 @@ export function ForwardCurveChart({ t }: ForwardCurveChartProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('costCalculator.forwardCurve.tenor')}</TableHead>
-              <TableHead className="text-right">
-                {t('costCalculator.forwardCurve.spotLine')}
-              </TableHead>
-              <TableHead className="text-right">
-                {t('costCalculator.forwardCurve.forwardLine')}
-              </TableHead>
+              <InfoTableHead label={t('costCalculator.forwardCurve.tenor')} tooltip={t('costCalculator.forwardCurve.tenorTooltip')} />
+              <InfoTableHead className="text-right" label={t('costCalculator.forwardCurve.spotLine')} tooltip={t('costCalculator.forwardCurve.spotLineTooltip')} />
+              <InfoTableHead className="text-right" label={t('costCalculator.forwardCurve.forwardLine')} tooltip={t('costCalculator.forwardCurve.forwardLineTooltip')} />
             </TableRow>
           </TableHeader>
           <TableBody>

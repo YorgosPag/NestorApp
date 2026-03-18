@@ -29,6 +29,7 @@ import { Info, Play, Dices } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { InfoLabel, InfoDt } from './InfoLabel';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -140,35 +141,35 @@ function StatisticsCard({
   return (
     <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       <dl className="rounded-lg border p-3 space-y-1">
-        <dt className="text-xs text-muted-foreground">{t('costCalculator.monteCarlo.meanNpv')}</dt>
+        <InfoDt label={t('costCalculator.monteCarlo.meanNpv')} tooltip={t('costCalculator.monteCarlo.meanNpvTooltip')} className="text-xs text-muted-foreground" />
         <dd className="text-lg font-bold">{fmt(mcResult.meanNPV)}</dd>
       </dl>
       <dl className="rounded-lg border p-3 space-y-1">
-        <dt className="text-xs text-muted-foreground">{t('costCalculator.monteCarlo.p10')}</dt>
+        <InfoDt label={t('costCalculator.monteCarlo.p10')} tooltip={t('costCalculator.monteCarlo.p10Tooltip')} className="text-xs text-muted-foreground" />
         <dd className="text-lg font-bold">{fmt(mcResult.p10)}</dd>
       </dl>
       <dl className="rounded-lg border p-3 space-y-1">
-        <dt className="text-xs text-muted-foreground">{t('costCalculator.monteCarlo.p50')}</dt>
+        <InfoDt label={t('costCalculator.monteCarlo.p50')} tooltip={t('costCalculator.monteCarlo.p50Tooltip')} className="text-xs text-muted-foreground" />
         <dd className="text-lg font-bold">{fmt(mcResult.p50)}</dd>
       </dl>
       <dl className="rounded-lg border p-3 space-y-1">
-        <dt className="text-xs text-muted-foreground">{t('costCalculator.monteCarlo.p90')}</dt>
+        <InfoDt label={t('costCalculator.monteCarlo.p90')} tooltip={t('costCalculator.monteCarlo.p90Tooltip')} className="text-xs text-muted-foreground" />
         <dd className="text-lg font-bold">{fmt(mcResult.p90)}</dd>
       </dl>
       <dl className="rounded-lg border p-3 space-y-1">
-        <dt className="text-xs text-muted-foreground">{t('costCalculator.monteCarlo.stdDevNpv')}</dt>
+        <InfoDt label={t('costCalculator.monteCarlo.stdDevNpv')} tooltip={t('costCalculator.monteCarlo.stdDevNpvTooltip')} className="text-xs text-muted-foreground" />
         <dd className="text-sm font-medium">{fmt(mcResult.stdDevNPV)}</dd>
       </dl>
       <dl className="rounded-lg border p-3 space-y-1">
-        <dt className="text-xs text-muted-foreground">{t('costCalculator.monteCarlo.minMax')}</dt>
+        <InfoDt label={t('costCalculator.monteCarlo.minMax')} tooltip={t('costCalculator.monteCarlo.minMaxTooltip')} className="text-xs text-muted-foreground" />
         <dd className="text-sm font-medium">{fmt(mcResult.minNPV)} — {fmt(mcResult.maxNPV)}</dd>
       </dl>
       <dl className="rounded-lg border p-3 space-y-1">
-        <dt className="text-xs text-muted-foreground">{t('costCalculator.monteCarlo.probPositive')}</dt>
+        <InfoDt label={t('costCalculator.monteCarlo.probPositive')} tooltip={t('costCalculator.monteCarlo.probPositiveTooltip')} className="text-xs text-muted-foreground" />
         <dd className="text-sm font-medium">{mcResult.probPositive}%</dd>
       </dl>
       <dl className="rounded-lg border p-3 space-y-1">
-        <dt className="text-xs text-muted-foreground">{t('costCalculator.monteCarlo.executionTime')}</dt>
+        <InfoDt label={t('costCalculator.monteCarlo.executionTime')} tooltip={t('costCalculator.monteCarlo.executionTimeTooltip')} className="text-xs text-muted-foreground" />
         <dd className="text-sm font-medium">{mcResult.executionTimeMs}ms</dd>
       </dl>
     </section>
@@ -213,6 +214,9 @@ function FanChart({
           <Area type="monotone" dataKey="p10" stackId="band5" stroke="none" fill="hsl(0, 72%, 51%)" fillOpacity={0.12} name="P10" />
         </AreaChart>
       </ResponsiveContainer>
+      <p className="text-xs text-muted-foreground text-center leading-relaxed">
+        {t('costCalculator.monteCarlo.fanChartLegend')}
+      </p>
     </section>
   );
 }
@@ -271,6 +275,9 @@ function HistogramChart({
           <Line yAxisId="cdf" type="monotone" dataKey="cumulativeFrequency" stroke="hsl(25, 95%, 53%)" strokeWidth={2} dot={false} name="cdf" />
         </ComposedChart>
       </ResponsiveContainer>
+      <p className="text-xs text-muted-foreground text-center leading-relaxed">
+        {t('costCalculator.monteCarlo.histogramLegend')}
+      </p>
     </section>
   );
 }
@@ -337,7 +344,7 @@ export function MonteCarloTab({ input, effectiveRate, result, t }: MonteCarloTab
 
         <fieldset className="flex gap-4 items-end">
           <div className="space-y-1">
-            <Label className="text-xs">{t('costCalculator.monteCarlo.scenarios')}</Label>
+            <InfoLabel label={t('costCalculator.monteCarlo.scenarios')} tooltip={t('costCalculator.monteCarlo.scenariosTooltip')} />
             <Input
               type="number"
               value={scenarioCount}
@@ -346,7 +353,7 @@ export function MonteCarloTab({ input, effectiveRate, result, t }: MonteCarloTab
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">{t('costCalculator.monteCarlo.seed')}</Label>
+            <InfoLabel label={t('costCalculator.monteCarlo.seed')} tooltip={t('costCalculator.monteCarlo.seedTooltip')} />
             <Input
               type="number"
               value={seed}

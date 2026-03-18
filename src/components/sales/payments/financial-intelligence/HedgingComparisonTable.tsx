@@ -13,6 +13,12 @@ import React, { useMemo, useState } from 'react';
 import { Info } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { InfoLabel, InfoTableHead } from './InfoLabel';
+import {
+  Tooltip as RadixTooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -135,7 +141,7 @@ export function HedgingComparisonTable({ salePrice, effectiveRate, t }: HedgingC
 
         <fieldset className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="space-y-1">
-            <Label className="text-xs">{t('costCalculator.hedging.notional')}</Label>
+            <InfoLabel label={t('costCalculator.hedging.notional')} tooltip={t('costCalculator.hedging.notionalTooltip')} />
             <Input
               type="number"
               value={notional}
@@ -144,7 +150,7 @@ export function HedgingComparisonTable({ salePrice, effectiveRate, t }: HedgingC
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">{t('costCalculator.hedging.termYears')}</Label>
+            <InfoLabel label={t('costCalculator.hedging.termYears')} tooltip={t('costCalculator.hedging.termYearsTooltip')} />
             <Input
               type="number"
               min={1}
@@ -155,7 +161,7 @@ export function HedgingComparisonTable({ salePrice, effectiveRate, t }: HedgingC
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">{t('costCalculator.hedging.swapRate')}</Label>
+            <InfoLabel label={t('costCalculator.hedging.swapRate')} tooltip={t('costCalculator.hedging.swapRateTooltip')} />
             <Input
               type="number"
               step="0.01"
@@ -165,7 +171,7 @@ export function HedgingComparisonTable({ salePrice, effectiveRate, t }: HedgingC
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">{t('costCalculator.hedging.scenario')}</Label>
+            <InfoLabel label={t('costCalculator.hedging.scenario')} tooltip={t('costCalculator.hedging.scenarioTooltip')} />
             <Select value={scenarioPreset} onValueChange={(v) => setScenarioPreset(v as ScenarioPreset)}>
               <SelectTrigger className="text-sm">
                 <SelectValue />
@@ -181,7 +187,7 @@ export function HedgingComparisonTable({ salePrice, effectiveRate, t }: HedgingC
 
         <fieldset className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="space-y-1">
-            <Label className="text-xs">{t('costCalculator.hedging.capStrike')}</Label>
+            <InfoLabel label={t('costCalculator.hedging.capStrike')} tooltip={t('costCalculator.hedging.capStrikeTooltip')} />
             <Input
               type="number"
               step="0.01"
@@ -191,7 +197,7 @@ export function HedgingComparisonTable({ salePrice, effectiveRate, t }: HedgingC
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">{t('costCalculator.hedging.capPremium')}</Label>
+            <InfoLabel label={t('costCalculator.hedging.capPremium')} tooltip={t('costCalculator.hedging.capPremiumTooltip')} />
             <Input
               type="number"
               value={capPremium}
@@ -200,7 +206,7 @@ export function HedgingComparisonTable({ salePrice, effectiveRate, t }: HedgingC
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">{t('costCalculator.hedging.collarRange')}</Label>
+            <InfoLabel label={t('costCalculator.hedging.collarRange')} tooltip={t('costCalculator.hedging.collarRangeTooltip')} />
             <div className="flex gap-1">
               <Input
                 type="number"
@@ -221,7 +227,7 @@ export function HedgingComparisonTable({ salePrice, effectiveRate, t }: HedgingC
             </div>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">{t('costCalculator.hedging.collarPremium')}</Label>
+            <InfoLabel label={t('costCalculator.hedging.collarPremium')} tooltip={t('costCalculator.hedging.collarPremiumTooltip')} />
             <Input
               type="number"
               value={collarPremium}
@@ -241,10 +247,10 @@ export function HedgingComparisonTable({ salePrice, effectiveRate, t }: HedgingC
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('costCalculator.hedging.strategy')}</TableHead>
-              <TableHead className="text-right">{t('costCalculator.hedging.totalCost')}</TableHead>
-              <TableHead className="text-right">{t('costCalculator.hedging.avgAnnual')}</TableHead>
-              <TableHead className="text-right">{t('costCalculator.hedging.avgRate')}</TableHead>
+              <InfoTableHead label={t('costCalculator.hedging.strategy')} tooltip={t('costCalculator.hedging.strategyTooltip')} />
+              <InfoTableHead className="text-right" label={t('costCalculator.hedging.totalCost')} tooltip={t('costCalculator.hedging.totalCostTooltip')} />
+              <InfoTableHead className="text-right" label={t('costCalculator.hedging.avgAnnual')} tooltip={t('costCalculator.hedging.avgAnnualTooltip')} />
+              <InfoTableHead className="text-right" label={t('costCalculator.hedging.avgRate')} tooltip={t('costCalculator.hedging.avgRateTooltip')} />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -282,9 +288,18 @@ export function HedgingComparisonTable({ salePrice, effectiveRate, t }: HedgingC
 
         {/* Break-even callout */}
         <aside className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3">
-          <Badge variant="outline" className="shrink-0">
-            {t('costCalculator.hedging.breakEven')}
-          </Badge>
+          <RadixTooltip>
+            <TooltipTrigger asChild>
+              <span>
+                <Badge variant="outline" className="shrink-0 cursor-help">
+                  {t('costCalculator.hedging.breakEven')}
+                </Badge>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs text-xs">
+              {t('costCalculator.hedging.breakEvenTooltip')}
+            </TooltipContent>
+          </RadixTooltip>
           <p className="text-sm text-amber-800 dark:text-amber-300">
             {t('costCalculator.hedging.breakEvenText', {
               rate: comparison.breakEvenRate.toFixed(2),

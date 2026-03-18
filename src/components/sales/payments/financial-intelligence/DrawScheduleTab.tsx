@@ -13,6 +13,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { Info, Plus, FileSpreadsheet, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { InfoLabel, InfoDt } from './InfoLabel';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -189,9 +190,7 @@ export function DrawScheduleTab({ salePrice, effectiveRate, t }: DrawScheduleTab
         <div className="grid grid-cols-3 gap-3">
           {/* Total Commitment */}
           <div className="space-y-1">
-            <Label htmlFor="ds-commitment" className="text-xs">
-              {t('costCalculator.drawSchedule.totalCommitment')}
-            </Label>
+            <InfoLabel htmlFor="ds-commitment" label={t('costCalculator.drawSchedule.totalCommitment')} tooltip={t('costCalculator.drawSchedule.totalCommitmentTooltip')} />
             <Input
               id="ds-commitment"
               type="number"
@@ -202,9 +201,7 @@ export function DrawScheduleTab({ salePrice, effectiveRate, t }: DrawScheduleTab
 
           {/* Annual Rate */}
           <div className="space-y-1">
-            <Label htmlFor="ds-rate" className="text-xs">
-              {t('costCalculator.drawSchedule.annualRate')}
-            </Label>
+            <InfoLabel htmlFor="ds-rate" label={t('costCalculator.drawSchedule.annualRate')} tooltip={t('costCalculator.drawSchedule.annualRateTooltip')} />
             <Input
               id="ds-rate"
               type="number"
@@ -216,9 +213,7 @@ export function DrawScheduleTab({ salePrice, effectiveRate, t }: DrawScheduleTab
 
           {/* Interest Reserve */}
           <div className="space-y-1">
-            <Label htmlFor="ds-reserve" className="text-xs">
-              {t('costCalculator.drawSchedule.interestReserve')}
-            </Label>
+            <InfoLabel htmlFor="ds-reserve" label={t('costCalculator.drawSchedule.interestReserve')} tooltip={t('costCalculator.drawSchedule.interestReserveTooltip')} />
             <Input
               id="ds-reserve"
               type="number"
@@ -229,9 +224,7 @@ export function DrawScheduleTab({ salePrice, effectiveRate, t }: DrawScheduleTab
 
           {/* Closing Date */}
           <div className="space-y-1">
-            <Label htmlFor="ds-closing" className="text-xs">
-              {t('costCalculator.drawSchedule.closingDate')}
-            </Label>
+            <InfoLabel htmlFor="ds-closing" label={t('costCalculator.drawSchedule.closingDate')} tooltip={t('costCalculator.drawSchedule.closingDateTooltip')} />
             <Input
               id="ds-closing"
               type="date"
@@ -242,9 +235,7 @@ export function DrawScheduleTab({ salePrice, effectiveRate, t }: DrawScheduleTab
 
           {/* Maturity Date */}
           <div className="space-y-1">
-            <Label htmlFor="ds-maturity" className="text-xs">
-              {t('costCalculator.drawSchedule.maturityDate')}
-            </Label>
+            <InfoLabel htmlFor="ds-maturity" label={t('costCalculator.drawSchedule.maturityDate')} tooltip={t('costCalculator.drawSchedule.maturityDateTooltip')} />
             <Input
               id="ds-maturity"
               type="date"
@@ -255,9 +246,7 @@ export function DrawScheduleTab({ salePrice, effectiveRate, t }: DrawScheduleTab
 
           {/* Origination Fee */}
           <div className="space-y-1">
-            <Label htmlFor="ds-origination" className="text-xs">
-              {t('costCalculator.drawSchedule.originationFee')}
-            </Label>
+            <InfoLabel htmlFor="ds-origination" label={t('costCalculator.drawSchedule.originationFee')} tooltip={t('costCalculator.drawSchedule.originationFeeTooltip')} />
             <Input
               id="ds-origination"
               type="number"
@@ -270,9 +259,7 @@ export function DrawScheduleTab({ salePrice, effectiveRate, t }: DrawScheduleTab
 
         {/* Interest Accrual Method — separate row */}
         <div className="max-w-xs space-y-1">
-          <Label htmlFor="ds-accrual" className="text-xs">
-            {t('costCalculator.drawSchedule.interestAccrual')}
-          </Label>
+          <InfoLabel htmlFor="ds-accrual" label={t('costCalculator.drawSchedule.interestAccrual')} tooltip={t('costCalculator.drawSchedule.interestAccrualTooltip')} />
           <Select
             value={loanTerms.interestAccrual}
             onValueChange={(v) => updateLoanTerm('interestAccrual', v as InterestAccrualMethod)}
@@ -419,34 +406,22 @@ export function DrawScheduleTab({ salePrice, effectiveRate, t }: DrawScheduleTab
             {t('costCalculator.drawSchedule.summaryTitle')}
           </h4>
           <dl className="grid grid-cols-2 gap-3 text-sm">
-            <dt className="text-muted-foreground">
-              {t('costCalculator.drawSchedule.totalDrawn')}
-            </dt>
+            <InfoDt label={t('costCalculator.drawSchedule.totalDrawn')} tooltip={t('costCalculator.drawSchedule.totalDrawnTooltip')} />
             <dd className="text-right font-medium">{formatCurrencyWhole(result.totalDrawn)}</dd>
 
-            <dt className="text-muted-foreground">
-              {t('costCalculator.drawSchedule.totalInterest')}
-            </dt>
+            <InfoDt label={t('costCalculator.drawSchedule.totalInterest')} tooltip={t('costCalculator.drawSchedule.totalInterestTooltip')} />
             <dd className="text-right font-medium">{formatCurrencyWhole(result.totalInterest)}</dd>
 
-            <dt className="text-muted-foreground">
-              {t('costCalculator.drawSchedule.originationFeeLabel')}
-            </dt>
+            <InfoDt label={t('costCalculator.drawSchedule.originationFeeLabel')} tooltip={t('costCalculator.drawSchedule.originationFeeLabelTooltip')} />
             <dd className="text-right font-medium">{formatCurrencyWhole(result.originationFeeAmount)}</dd>
 
-            <dt className="text-muted-foreground font-semibold">
-              {t('costCalculator.drawSchedule.totalCostOfCapital')}
-            </dt>
+            <InfoDt label={t('costCalculator.drawSchedule.totalCostOfCapital')} tooltip={t('costCalculator.drawSchedule.totalCostOfCapitalTooltip')} className="text-muted-foreground font-semibold" />
             <dd className="text-right font-bold">{formatCurrencyWhole(result.totalCostOfCapital)}</dd>
 
-            <dt className="text-muted-foreground">
-              {t('costCalculator.drawSchedule.costPercent')}
-            </dt>
+            <InfoDt label={t('costCalculator.drawSchedule.costPercent')} tooltip={t('costCalculator.drawSchedule.costPercentTooltip')} />
             <dd className="text-right font-medium">{formatPercent(result.costOfCapitalPercent)}</dd>
 
-            <dt className="text-muted-foreground">
-              {t('costCalculator.drawSchedule.waob')}
-            </dt>
+            <InfoDt label={t('costCalculator.drawSchedule.waob')} tooltip={t('costCalculator.drawSchedule.waobTooltip')} />
             <dd className="text-right font-medium">{formatCurrencyWhole(result.weightedAverageBalance)}</dd>
 
             <dt className="text-muted-foreground">
