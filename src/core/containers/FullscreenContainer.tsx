@@ -190,12 +190,13 @@ function OverlayModeContainer({
   return (
     <section
       className={cn(
-        className,
-        isFullscreen && [
-          'fixed inset-0 z-50 flex flex-col overflow-auto',
-          colors.bg.primary,
-          fullscreenClassName,
-        ]
+        isFullscreen
+          ? [
+              'fixed inset-0 z-50 flex flex-col overflow-auto',
+              colors.bg.primary,
+              fullscreenClassName,
+            ]
+          : className
       )}
       aria-label={ariaLabel}
       role={isFullscreen ? 'dialog' : undefined}

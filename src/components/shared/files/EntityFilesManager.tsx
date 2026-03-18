@@ -852,7 +852,7 @@ export function EntityFilesManager({
       fullscreenClassName="rounded-none"
       ariaLabel={t('manager.filesTitle')}
     >
-    <Card className="w-full">
+    <Card className={cn('w-full', fullscreen.isFullscreen && 'h-full flex flex-col rounded-none border-0')}>
       <CardHeader>
         <nav className="flex flex-wrap items-center justify-between gap-2" role="toolbar" aria-label={t('manager.fileManagementTools')}>
           <div className="flex flex-col gap-1">
@@ -1068,7 +1068,7 @@ export function EntityFilesManager({
         </div>
       )}
 
-      <CardContent className="space-y-2">
+      <CardContent className={cn('space-y-2', fullscreen.isFullscreen && 'flex-1 min-h-0 overflow-auto')}>
         {/* Upload Pipeline (conditional) - Only show on files tab */}
         {activeTab === 'files' && showUploadZone && (
           <div className="relative space-y-2 p-2 bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
