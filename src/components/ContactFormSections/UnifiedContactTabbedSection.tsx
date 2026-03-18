@@ -44,6 +44,9 @@ import { ContactKadSection } from '@/components/contacts/dynamic/ContactKadSecti
 import type { KadActivity, CompanyAddress } from '@/types/ContactFormTypes';
 // 🏢 ENTERPRISE: Multi-address Section — headquarters + N branches
 import { CompanyAddressesSection } from '@/components/contacts/dynamic/CompanyAddressesSection';
+// 🏢 ADR-241: Centralized fullscreen system
+import { useFullscreen } from '@/hooks/useFullscreen';
+import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 // 🏢 ENTERPRISE: Ministry Picker — searchable dropdown for supervisionMinistry (services)
 import { MinistryPicker } from '@/components/shared/MinistryPicker';
 import { PublicServicePicker } from '@/components/contacts/pickers/PublicServicePicker';
@@ -196,6 +199,9 @@ export function UnifiedContactTabbedSection({
 
     fetchCompanyName();
   }, [user?.companyId]);
+
+  // 🏢 ADR-241: Fullscreen state for addresses tab
+  const addressesFullscreen = useFullscreen();
 
   // 🏢 ENTERPRISE: Get configuration dynamically based on contact type
   const config = useMemo(() => getContactFormConfig(contactType), [contactType]);
@@ -480,13 +486,22 @@ export function UnifiedContactTabbedSection({
                 : [{ type: 'headquarters' as const, street: '', number: '', postalCode: '', city: '' }];
 
             return (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <FullscreenOverlay
+                isFullscreen={addressesFullscreen.isFullscreen}
+                onToggle={addressesFullscreen.toggle}
+                ariaLabel="Διευθύνσεις & Υποκαταστήματα"
+                className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+                fullscreenClassName="p-4 overflow-auto"
+              >
                 {/* LEFT: AddressWithHierarchy for HQ + Branches */}
                 <div className="space-y-6">
-                  {/* HQ address with hierarchy */}
-                  <h3 className="text-sm font-semibold text-foreground">
-                    Έδρα
-                  </h3>
+                  {/* HQ address with hierarchy + fullscreen toggle */}
+                  <header className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Έδρα
+                    </h3>
+                    <FullscreenToggleButton isFullscreen={addressesFullscreen.isFullscreen} onToggle={addressesFullscreen.toggle} />
+                  </header>
                   <AddressWithHierarchy
                     value={{
                       street: (formData.street as string) || '',
@@ -615,7 +630,7 @@ export function UnifiedContactTabbedSection({
                     } : undefined}
                   />
                 </aside>
-              </div>
+              </FullscreenOverlay>
             );
           },
 
