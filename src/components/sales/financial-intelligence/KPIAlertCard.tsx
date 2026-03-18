@@ -11,6 +11,7 @@ import type { LucideIcon } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { HealthStatus } from '@/types/interest-calculator';
 
 // =============================================================================
@@ -52,11 +53,7 @@ function formatValue(value: string | number, format?: string): string {
   if (typeof value === 'string') return value;
   switch (format) {
     case 'currency':
-      return new Intl.NumberFormat('el-GR', {
-        style: 'currency',
-        currency: 'EUR',
-        maximumFractionDigits: 0,
-      }).format(value);
+      return formatCurrencyWhole(value);
     case 'percent':
       return `${value.toFixed(2)}%`;
     case 'days':

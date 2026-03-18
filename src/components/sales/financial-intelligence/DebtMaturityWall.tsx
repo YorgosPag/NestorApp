@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type {
   DebtMaturityEntry,
   MaturityWallYear,
@@ -49,7 +50,7 @@ interface DebtMaturityWallProps {
   t: (key: string) => string;
 }
 
-interface DebtMaturityFormData {
+export interface DebtMaturityFormData {
   projectName: string;
   loanType: LoanType;
   outstandingBalance: number;
@@ -294,8 +295,7 @@ export function DebtMaturityWall({ entries, onAdd, onRemove, t }: DebtMaturityWa
   const yearData = useMemo(() => buildYearData(entries), [entries]);
   const chartData = useMemo(() => buildChartData(yearData), [yearData]);
 
-  const euroFormatter = (val: number) =>
-    new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(val);
+  const euroFormatter = (val: number) => formatCurrencyWhole(val) ?? '';
 
   return (
     <Card>

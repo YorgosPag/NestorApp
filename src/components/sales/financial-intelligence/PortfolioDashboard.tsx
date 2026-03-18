@@ -31,8 +31,10 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatCurrencyWhole } from '@/lib/intl-utils';
 import { KPIAlertCard } from './KPIAlertCard';
 import { DebtMaturityWall } from './DebtMaturityWall';
+import type { DebtMaturityFormData } from './DebtMaturityWall';
 import { BudgetVarianceChart } from './BudgetVarianceChart';
 import type {
   PortfolioSummary,
@@ -80,8 +82,7 @@ const STATUS_BADGE: Record<HealthStatus, 'success' | 'info' | 'warning' | 'destr
 // EURO FORMATTER
 // =============================================================================
 
-const fmtEuro = (val: number) =>
-  new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(val);
+const fmtEuro = (val: number) => formatCurrencyWhole(val) ?? '';
 
 // =============================================================================
 // COMPONENT
@@ -157,7 +158,7 @@ export function PortfolioDashboard() {
   // HANDLERS
   // =========================================================================
 
-  const handleAddDebt = useCallback(async (data: Parameters<typeof DebtMaturityWall>[0] extends { onAdd: (d: infer D) => Promise<void> } ? D : never) => {
+  const handleAddDebt = useCallback(async (data: DebtMaturityFormData) => {
     const res = await fetch('/api/financial-intelligence/debt-maturity', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

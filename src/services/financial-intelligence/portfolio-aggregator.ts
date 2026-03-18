@@ -12,7 +12,7 @@
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { getString, getNumber } from '@/lib/firestore/field-extractors';
+import { getString, getNumber, getObject } from '@/lib/firestore/field-extractors';
 import { createModuleLogger } from '@/lib/telemetry';
 import type {
   HealthStatus,
@@ -127,111 +127,119 @@ export async function aggregatePortfolio(companyId: string): Promise<PortfolioAg
 
   // 2. Per project — get units and aggregate
   for (const projectDoc of projectsSnap.docs) {
-    const projectData = projectDoc.data();
-    const projectId = projectDoc.id;
-    const projectName = getString(projectData, 'name', '') || getString(projectData, 'title', 'Unknown');
+    try {
+      const projectData = projectDoc.data();
+      const projectId = projectDoc.id;
+      const projectName = getString(projectData, 'name', '') || getString(projectData, 'title', 'Unknown');
 
-    // Query units for this project
-    const unitsSnap = await db
-      .collection(COLLECTIONS.UNITS)
-      .where('project', '==', projectId)
-      .get();
+      // Query units for this project
+      const unitsSnap = await db
+        .collection(COLLECTIONS.UNITS)
+        .where('project', '==', projectId)
+        .get();
 
-    let projectTotalValue = 0;
-    let projectCollected = 0;
-    let projectTotalUnits = unitsSnap.size;
-    let projectSoldUnits = 0;
-    let projectCostOfMoneySum = 0;
-    let projectCostOfMoneyCount = 0;
-    let projectCollectionDaysSum = 0;
-    let projectCollectionDaysCount = 0;
+      let projectTotalValue = 0;
+      let projectCollected = 0;
+      const projectTotalUnits = unitsSnap.size;
+      let projectSoldUnits = 0;
+      let projectCostOfMoneySum = 0;
+      let projectCostOfMoneyCount = 0;
+      let projectCollectionDaysSum = 0;
+      let projectCollectionDaysCount = 0;
 
-    for (const unitDoc of unitsSnap.docs) {
-      const unitData = unitDoc.data();
+      for (const unitDoc of unitsSnap.docs) {
+        const unitData = unitDoc.data();
 
-      // Extract sale price
-      const salePrice = getNumber(unitData, 'salePrice', 0)
-        || getNumber(unitData, 'price', 0)
-        || (unitData?.commercial as Record<string, unknown>)?.salePrice as number || 0;
+        // Extract sale price — try direct fields first, then nested commercial object
+        const commercial = getObject<Record<string, unknown>>(unitData, 'commercial');
+        const salePrice = getNumber(unitData, 'salePrice', 0)
+          || getNumber(unitData, 'price', 0)
+          || (commercial ? getNumber(commercial, 'salePrice', 0) : 0);
 
-      projectTotalValue += salePrice;
+        projectTotalValue += salePrice;
 
-      // Check if sold
-      const status = getString(unitData, 'status', '');
-      const isSold = status === 'sold' || status === 'reserved' || status === 'contracted';
-      if (isSold) projectSoldUnits++;
+        // Check if sold
+        const status = getString(unitData, 'status', '');
+        const isSold = status === 'sold' || status === 'reserved' || status === 'contracted';
+        if (isSold) projectSoldUnits++;
 
-      // Use denormalized paymentSummary if available
-      const paymentSummary = unitData?.commercial?.paymentSummary as Record<string, unknown> | undefined
-        ?? unitData?.paymentSummary as Record<string, unknown> | undefined;
+        // Use denormalized paymentSummary if available
+        const paymentSummary = (commercial ? getObject<Record<string, unknown>>(commercial, 'paymentSummary') : undefined)
+          ?? getObject<Record<string, unknown>>(unitData, 'paymentSummary');
 
-      if (paymentSummary) {
-        const collected = getNumber(paymentSummary, 'totalPaid', 0)
-          || getNumber(paymentSummary, 'collected', 0);
-        projectCollected += collected;
+        if (paymentSummary) {
+          const collected = getNumber(paymentSummary, 'totalPaid', 0)
+            || getNumber(paymentSummary, 'collected', 0);
+          projectCollected += collected;
 
-        const costOfMoney = getNumber(paymentSummary, 'costOfMoney');
-        if (costOfMoney !== undefined && costOfMoney > 0) {
-          projectCostOfMoneySum += costOfMoney;
-          projectCostOfMoneyCount++;
+          const costOfMoney = getNumber(paymentSummary, 'costOfMoney');
+          if (costOfMoney !== undefined && costOfMoney > 0) {
+            projectCostOfMoneySum += costOfMoney;
+            projectCostOfMoneyCount++;
+          }
+
+          const avgCollectionDays = getNumber(paymentSummary, 'avgCollectionDays')
+            || getNumber(paymentSummary, 'wacp');
+          if (avgCollectionDays !== undefined && avgCollectionDays > 0) {
+            projectCollectionDaysSum += avgCollectionDays;
+            projectCollectionDaysCount++;
+          }
+
+          const npv = getNumber(paymentSummary, 'npv', 0);
+          totalNPV += npv;
+
+          const timeCost = getNumber(paymentSummary, 'timeCost', 0);
+          totalTimeCost += timeCost;
         }
-
-        const avgCollectionDays = getNumber(paymentSummary, 'avgCollectionDays')
-          || getNumber(paymentSummary, 'wacp');
-        if (avgCollectionDays !== undefined && avgCollectionDays > 0) {
-          projectCollectionDaysSum += avgCollectionDays;
-          projectCollectionDaysCount++;
-        }
-
-        const npv = getNumber(paymentSummary, 'npv', 0);
-        totalNPV += npv;
-
-        const timeCost = getNumber(paymentSummary, 'timeCost', 0);
-        totalTimeCost += timeCost;
       }
-    }
 
-    const projectOutstanding = projectTotalValue - projectCollected;
-    const avgCostOfMoney = projectCostOfMoneyCount > 0
-      ? projectCostOfMoneySum / projectCostOfMoneyCount
-      : 0;
-    const avgCollectionDays = projectCollectionDaysCount > 0
-      ? projectCollectionDaysSum / projectCollectionDaysCount
-      : 0;
-    const soldPercent = projectTotalUnits > 0
-      ? (projectSoldUnits / projectTotalUnits) * 100
-      : 0;
+      const projectOutstanding = projectTotalValue - projectCollected;
+      const avgCostOfMoney = projectCostOfMoneyCount > 0
+        ? projectCostOfMoneySum / projectCostOfMoneyCount
+        : 0;
+      const avgCollectionDays = projectCollectionDaysCount > 0
+        ? projectCollectionDaysSum / projectCollectionDaysCount
+        : 0;
+      const soldPercent = projectTotalUnits > 0
+        ? (projectSoldUnits / projectTotalUnits) * 100
+        : 0;
 
-    // Health status (worst of 3 metrics)
-    const costHealth = getMetricHealth(avgCostOfMoney, COST_OF_MONEY_THRESHOLDS, true);
-    const daysHealth = getMetricHealth(avgCollectionDays, COLLECTION_DAYS_THRESHOLDS, true);
-    const soldHealth = getMetricHealth(soldPercent, SOLD_PERCENT_THRESHOLDS, false);
-    const healthStatus = worstHealth(costHealth, daysHealth, soldHealth);
+      // Health status (worst of 3 metrics)
+      const costHealth = getMetricHealth(avgCostOfMoney, COST_OF_MONEY_THRESHOLDS, true);
+      const daysHealth = getMetricHealth(avgCollectionDays, COLLECTION_DAYS_THRESHOLDS, true);
+      const soldHealth = getMetricHealth(soldPercent, SOLD_PERCENT_THRESHOLDS, false);
+      const healthStatus = worstHealth(costHealth, daysHealth, soldHealth);
 
-    projectSummaries.push({
-      projectId,
-      projectName,
-      totalUnits: projectTotalUnits,
-      soldUnits: projectSoldUnits,
-      totalValue: Math.round(projectTotalValue * 100) / 100,
-      collected: Math.round(projectCollected * 100) / 100,
-      costOfMoney: Math.round(avgCostOfMoney * 100) / 100,
-      avgCollectionDays: Math.round(avgCollectionDays),
-      healthStatus,
-    });
+      projectSummaries.push({
+        projectId,
+        projectName,
+        totalUnits: projectTotalUnits,
+        soldUnits: projectSoldUnits,
+        totalValue: Math.round(projectTotalValue * 100) / 100,
+        collected: Math.round(projectCollected * 100) / 100,
+        costOfMoney: Math.round(avgCostOfMoney * 100) / 100,
+        avgCollectionDays: Math.round(avgCollectionDays),
+        healthStatus,
+      });
 
-    // Accumulate portfolio totals
-    totalPortfolioValue += projectTotalValue;
-    totalCollected += projectCollected;
-    totalOutstanding += projectOutstanding;
-    totalUnitsAll += projectTotalUnits;
-    soldUnitsAll += projectSoldUnits;
+      // Accumulate portfolio totals
+      totalPortfolioValue += projectTotalValue;
+      totalCollected += projectCollected;
+      totalOutstanding += projectOutstanding;
+      totalUnitsAll += projectTotalUnits;
+      soldUnitsAll += projectSoldUnits;
 
-    // Weighted averages (by project value)
-    if (projectTotalValue > 0) {
-      weightedCostSum += avgCostOfMoney * projectTotalValue;
-      weightedDaysSum += avgCollectionDays * projectTotalValue;
-      weightTotal += projectTotalValue;
+      // Weighted averages (by project value)
+      if (projectTotalValue > 0) {
+        weightedCostSum += avgCostOfMoney * projectTotalValue;
+        weightedDaysSum += avgCollectionDays * projectTotalValue;
+        weightTotal += projectTotalValue;
+      }
+    } catch (err) {
+      logger.warn(`[Portfolio] Failed to aggregate project ${projectDoc.id}, skipping`, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      continue;
     }
   }
 

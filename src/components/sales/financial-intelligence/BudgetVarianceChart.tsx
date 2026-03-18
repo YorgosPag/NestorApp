@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type {
   BudgetVarianceAnalysis,
   BudgetVarianceEntry,
@@ -253,8 +254,7 @@ export function BudgetVarianceChart({
     return buildWaterfallData(analysis.categories);
   }, [analysis]);
 
-  const euroFormatter = (val: number) =>
-    new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(val);
+  const euroFormatter = (val: number) => formatCurrencyWhole(val) ?? '';
 
   return (
     <Card>
