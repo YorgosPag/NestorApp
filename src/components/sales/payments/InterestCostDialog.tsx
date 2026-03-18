@@ -29,6 +29,7 @@ import {
   Banknote,
   Activity,
   ShieldCheck,
+  Landmark,
 } from 'lucide-react';
 import { calculateFullResult } from '@/lib/npv-engine';
 import type { CostCalculationInput, CashFlowEntry } from '@/types/interest-calculator';
@@ -74,7 +75,7 @@ import type {
   CashFlowAnalysisEntry,
 } from '@/types/interest-calculator';
 
-import { SensitivityTab, DSCRStressTab } from './financial-intelligence';
+import { SensitivityTab, DSCRStressTab, DrawScheduleTab } from './financial-intelligence';
 
 // =============================================================================
 // TYPES
@@ -1081,7 +1082,7 @@ export function InterestCostDialog({
 
         {!isLoading && (
           <Tabs defaultValue="cashflow" className="mt-2">
-            <TabsList className="grid grid-cols-7 text-sm">
+            <TabsList className="text-sm">
               <TabsTrigger value="cashflow" className="text-sm gap-1">
                 <BarChart3 className="h-4 w-4" />
                 {t('costCalculator.tabs.cashFlow')}
@@ -1105,6 +1106,10 @@ export function InterestCostDialog({
               <TabsTrigger value="dscr" className="text-sm gap-1">
                 <ShieldCheck className="h-4 w-4" />
                 {t('costCalculator.tabs.dscr')}
+              </TabsTrigger>
+              <TabsTrigger value="drawschedule" className="text-sm gap-1">
+                <Landmark className="h-4 w-4" />
+                {t('costCalculator.tabs.drawSchedule')}
               </TabsTrigger>
               <TabsTrigger value="settings" className="text-sm gap-1">
                 <Settings className="h-4 w-4" />
@@ -1200,7 +1205,16 @@ export function InterestCostDialog({
               />
             </TabsContent>
 
-            {/* Tab 7: Settings */}
+            {/* Tab 7: Draw Schedule */}
+            <TabsContent value="drawschedule" className="mt-3">
+              <DrawScheduleTab
+                salePrice={salePrice}
+                effectiveRate={effectiveDiscountRate}
+                t={t}
+              />
+            </TabsContent>
+
+            {/* Tab 8: Settings */}
             <TabsContent value="settings" className="mt-3">
               <SettingsTab
                 rates={rates}

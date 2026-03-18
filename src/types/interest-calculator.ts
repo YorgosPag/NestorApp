@@ -334,3 +334,108 @@ export interface StressTestResult {
   /** Maximum rate (%) that still maintains DSCR ≥ 1.0 */
   maxRateForDSCR1: number;
 }
+
+// =============================================================================
+// 🏗️ CONSTRUCTION LOAN DRAW SCHEDULE (SPEC-242B)
+// =============================================================================
+
+/** Construction draw phase type — stages of a typical build */
+export type DrawPhaseType =
+  | 'land_acquisition'
+  | 'permits'
+  | 'foundation'
+  | 'structure'
+  | 'masonry'
+  | 'mechanical'
+  | 'finishes'
+  | 'landscaping'
+  | 'custom';
+
+/** Single draw event in the construction loan schedule */
+export interface DrawScheduleEntry {
+  /** Construction phase identifier */
+  phase: DrawPhaseType;
+  /** Human-readable label (e.g. "Foundation Pour") */
+  label: string;
+  /** Amount drawn (€) */
+  drawAmount: number;
+  /** Date of draw (ISO string) */
+  drawDate: string;
+  /** Cumulative completion percentage at this draw (0-100) */
+  completionPercent: number;
+}
+
+/** Interest accrual method */
+export type InterestAccrualMethod = 'simple' | 'compound';
+
+/** Construction loan terms */
+export interface LoanTerms {
+  /** Total loan commitment (€) — max amount available */
+  totalCommitment: number;
+  /** Annual interest rate (%, e.g. 5.0 for 5%) */
+  annualRate: number;
+  /** Interest reserve set aside at closing (€) */
+  interestReserve: number;
+  /** Loan maturity date (ISO string) */
+  maturityDate: string;
+  /** Origination fee (%, e.g. 1.0 for 1%) */
+  originationFee: number;
+  /** Interest accrual method */
+  interestAccrual: InterestAccrualMethod;
+  /** Loan closing date (ISO string) — start of interest clock */
+  closingDate: string;
+}
+
+/** Monthly period analysis for draw schedule */
+export interface DrawPeriodAnalysis {
+  /** Month index (0-based from closing) */
+  month: number;
+  /** Period date (ISO string, 1st of month) */
+  date: string;
+  /** Cumulative amount drawn at end of period (€) */
+  cumulativeDrawn: number;
+  /** Interest accrued in this period (€) */
+  periodInterest: number;
+  /** Cumulative interest accrued (€) */
+  cumulativeInterest: number;
+  /** Remaining interest reserve balance (€) */
+  reserveBalance: number;
+  /** Draw event that occurred in this period, if any */
+  drawEvent: DrawScheduleEntry | null;
+}
+
+/** Interest reserve depletion status */
+export interface InterestReserveStatus {
+  /** Initial reserve amount (€) */
+  initialReserve: number;
+  /** Final reserve balance (€) — negative means shortfall */
+  finalBalance: number;
+  /** Whether reserve is sufficient for full term */
+  sufficient: boolean;
+  /** Month index when reserve is exhausted (null if sufficient) */
+  exhaustionMonth: number | null;
+  /** Date when reserve is exhausted (null if sufficient) */
+  exhaustionDate: string | null;
+  /** Cash shortfall if reserve insufficient (€, 0 if sufficient) */
+  cashShortfall: number;
+}
+
+/** Full draw schedule analysis result */
+export interface DrawScheduleResult {
+  /** Monthly period breakdown */
+  periods: DrawPeriodAnalysis[];
+  /** Total interest over loan term (€) */
+  totalInterest: number;
+  /** Total amount drawn (€) */
+  totalDrawn: number;
+  /** Interest reserve depletion analysis */
+  reserveStatus: InterestReserveStatus;
+  /** Total cost of capital = interest + origination fee (€) */
+  totalCostOfCapital: number;
+  /** Cost of capital as % of total commitment */
+  costOfCapitalPercent: number;
+  /** Origination fee in euros (€) */
+  originationFeeAmount: number;
+  /** Weighted average outstanding balance (€) */
+  weightedAverageBalance: number;
+}

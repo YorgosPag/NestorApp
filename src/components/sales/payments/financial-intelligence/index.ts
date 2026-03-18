@@ -6,3 +6,4 @@
 
 export { SensitivityTab } from './SensitivityTab';
 export { DSCRStressTab } from './DSCRStressTab';
+export { DrawScheduleTab } from './DrawScheduleTab';
