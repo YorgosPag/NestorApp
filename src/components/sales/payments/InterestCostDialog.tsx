@@ -485,7 +485,7 @@ export function InterestCostDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="xl" className="max-h-[85vh] overflow-y-auto">
+      <DialogContent size="2xl" className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <Calculator className="h-5 w-5" />
