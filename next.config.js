@@ -1,5 +1,3 @@
-const { withSentryConfig } = require('@sentry/nextjs');
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // [FAST] FAST DEV MODE - Skip checks για άμεσο startup
@@ -334,18 +332,4 @@ const nextConfig = {
   },
 };
 
-// 🔇 SENTRY DISABLED (2026-03-17) — Hobby plan cannot handle 810K LOC instrumentation
-// Build was 45min+ with Sentry vs 3-4min without.
-// To re-enable: uncomment withSentryConfig block below, comment out the plain export.
 module.exports = nextConfig;
-
-// withSentryConfig(nextConfig, {
-//   org: 'pagonis',
-//   project: 'nestor-app',
-//   silent: true,
-//   sourcemaps: { disable: true },
-//   useRunAfterProductionCompileHook: true,
-//   widenClientFileUpload: true,
-//   telemetry: false,
-//   disableLogger: true,
-// });

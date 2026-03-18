@@ -1,33 +1,46 @@
 {
   "category": "FEATURE",
-  "shortDescription": "ADR-239 Entity Linking Centralization — linkEntity() service + 6 endpoints migrated",
-  "problem": "Entity linking (PATCH operations) was scattered across 5 endpoints with inconsistent patterns and bugs: (1) storage/parking had no change detection — cascade fired even when buildingId was unchanged; (2) buildings PATCH had no change detection for projectId cascade; (3) storage/parking/building had no entity audit trail for link changes; (4) floors used new Date().toISOString() instead of FieldValue.serverTimestamp().",
-  "cause": "Each PATCH endpoint had its own inline cascade block. No centralized service existed for entity linking (only creation had been centralized via ADR-238). The bugs accumulated independently across endpoints.",
+  "shortDescription": "SPEC-242C Quality Polish + SPEC-242D Monte Carlo Simulation & Equity Waterfall Distribution",
+  "problem": "SPEC-242C had 5 quality issues (scattered formatters, unsafe casts, no error resilience, complex type inference). SPEC-242D: No probabilistic analysis or LP/GP profit distribution tools existed in the Interest Cost Calculator.",
+  "cause": "SPEC-242C was functional but below Google-level quality standard. SPEC-242D was the next phase in the ADR-242 roadmap — advanced financial modeling features.",
   "filesChanged": [
-    "src/lib/firestore/entity-linking.types.ts (NEW — LINK_REGISTRY with 5 entries, LinkRegistryEntry, LinkEntityParams, LinkEntityResult)",
-    "src/lib/firestore/entity-linking.service.ts (NEW — linkEntity() 7-step pipeline)",
-    "src/app/api/storages/[id]/route.ts (MODIFIED — Phase 1 canary: inline cascade → linkEntity())",
-    "src/app/api/parking/[id]/route.ts (MODIFIED — Phase 1 canary: inline cascade → linkEntity())",
-    "src/app/api/buildings/route.ts (MODIFIED — Phase 2: inline cascade → linkEntity())",
-    "src/app/api/projects/[projectId]/route.ts (MODIFIED — Phase 2: inline cascade → linkEntity())",
-    "src/app/api/units/[id]/route.ts (MODIFIED — Phase 2: inline cascade → linkEntity() with skipAudit=true)",
-    "src/app/api/floors/route.ts (MODIFIED — Phase 3: new Date().toISOString() → FieldValue.serverTimestamp())",
-    "docs/centralized-systems/reference/adrs/ADR-239-entity-linking-centralization.md (NEW)",
-    "docs/centralized-systems/reference/adr-index.md (MODIFIED — ADR-239 entry added)"
+    "src/components/sales/financial-intelligence/KPIAlertCard.tsx",
+    "src/components/sales/financial-intelligence/DebtMaturityWall.tsx",
+    "src/components/sales/financial-intelligence/BudgetVarianceChart.tsx",
+    "src/components/sales/financial-intelligence/PortfolioDashboard.tsx",
+    "src/services/financial-intelligence/portfolio-aggregator.ts",
+    "src/types/interest-calculator.ts",
+    "src/lib/sensitivity-engine.ts",
+    "src/lib/monte-carlo-engine.ts",
+    "src/lib/waterfall-engine.ts",
+    "src/i18n/locales/en/payments.json",
+    "src/i18n/locales/el/payments.json",
+    "src/components/sales/payments/financial-intelligence/MonteCarloTab.tsx",
+    "src/components/sales/payments/financial-intelligence/EquityWaterfallDialog.tsx",
+    "src/components/sales/payments/financial-intelligence/index.ts",
+    "src/components/sales/payments/InterestCostDialog.tsx"
   ],
-  "solution": "1. Created LINK_REGISTRY with 5 entries (storage:buildingId, parking:buildingId, unit:buildingId, building:projectId, project:linkedCompanyId). 2. Implemented linkEntity() with 7-step pipeline: registry lookup → change detection → field locking → cascade dispatch (fire-and-forget) → entity audit → auth audit → return. 3. Migrated all 5 PATCH endpoints to use linkEntity(). 4. Fixed floors timestamp bug. 5. REUSED cascade-propagation.service and entity-audit.service without modification. 6. Created ADR-239 documentation.",
-  "testing": "Pre-commit hooks passed. TypeScript check running in background. git commit d351a2c7 successful.",
-  "notes": "unit:buildingId has skipAudit=true because units PATCH already runs EntityAuditService.diffFieldsWithResolution for buildingId (would produce duplicate audit entry). cascadeResult is always null — cascade is fire-and-forget by design (same as existing pattern). Change detection now prevents redundant cascade calls when buildingId/projectId value is unchanged.",
+  "solution": "TASK A: Centralized formatCurrencyWhole() across 4 components, replaced `as Record` with getObject(), added try-catch per project in aggregator, exported DebtMaturityFormData type. TASK B: Monte Carlo engine (Mulberry32 PRNG, 3 distributions, histogram via Sturges' rule, fan chart), Waterfall engine (tiered LP/GP, 3 presets, Newton IRR), MonteCarloTab (fan chart + histogram + stats), EquityWaterfallDialog (stacked bar + summary), integrated as 9th tab + header button in InterestCostDialog.",
+  "testing": "TypeScript compilation — 0 new errors on changed files. Vercel auto-deploy triggered.",
+  "notes": "MC engine: seeded RNG for reproducibility, reuses npv-engine + sensitivity-engine. Waterfall: supports LP-first and pari-passu. ~1,594 new lines across 4 new + 11 modified files.",
   "contributors": {
     "user": "Γιώργος Παγώνης",
-    "assistant": "Claude Sonnet 4.6",
-    "sessionDate": "2026-03-17"
+    "assistant": "Claude Opus 4.6 (1M context)",
+    "sessionDate": "2026-03-18"
   },
-  "relatedBackups": [],
+  "relatedBackups": [
+    "SPEC-242A Sensitivity Analysis & DSCR Stress Testing",
+    "SPEC-242B Construction Loan Draw Schedule",
+    "SPEC-242C Portfolio Dashboard & Debt Maturity Wall"
+  ],
   "commits": [
     {
-      "hash": "d351a2c7",
-      "message": "feat: ADR-239 Entity Linking Centralization — linkEntity() + 6 endpoints migrated"
+      "hash": "275be24e",
+      "message": "fix: SPEC-242C quality — centralize formatters, type safety, error resilience"
+    },
+    {
+      "hash": "742643d2",
+      "message": "feat: SPEC-242D Monte Carlo Simulation & Equity Waterfall Distribution"
     }
   ]
 }
