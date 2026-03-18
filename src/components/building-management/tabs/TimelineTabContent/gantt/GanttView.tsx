@@ -785,8 +785,9 @@ export function GanttView({ building }: GanttViewProps) {
       )}
 
       {/* ─── Fullscreen (ADR-241 — FullscreenOverlay portal, 100% viewport) ── */}
+      {fullscreen.isFullscreen && (
       <FullscreenOverlay
-        isFullscreen={fullscreen.isFullscreen}
+        isFullscreen
         onToggle={fullscreen.toggle}
         headerContent={
           <span className="font-semibold">
@@ -905,6 +906,7 @@ export function GanttView({ building }: GanttViewProps) {
           </Badge>
         </footer>
       </FullscreenOverlay>
+      )}
 
       {/* Custom Context Menu — portal-rendered at exact cursor coordinates */}
       {contextMenu && createPortal(
