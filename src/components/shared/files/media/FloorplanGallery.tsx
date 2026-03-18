@@ -55,7 +55,11 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useFullscreen } from '@/hooks/useFullscreen';
-import { FullscreenContainer } from '@/core/containers/FullscreenContainer';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useZoomPan } from '@/hooks/useZoomPan';
@@ -1211,16 +1215,12 @@ export function FloorplanGallery({
       </article>
 
       {/* =============================================================== */}
-      {/* FULLSCREEN MODAL (ADR-241 centralized)                          */}
+      {/* FULLSCREEN MODAL (ADR-241 — direct Dialog composition)          */}
       {/* =============================================================== */}
-      <FullscreenContainer
-        isFullscreen={fullscreen.isFullscreen}
-        onToggle={fullscreen.toggle}
-        onExit={fullscreen.exit}
-        mode="dialog"
-        togglePosition="none"
-        headerContent={
-          <>
+      <Dialog open={fullscreen.isFullscreen} onOpenChange={(open) => { if (!open) fullscreen.exit(); }}>
+        <DialogContent size="fullscreen" hideCloseButton className="flex flex-col p-0 gap-0">
+          <DialogTitle className="sr-only">{t('floorplan.gallery')}</DialogTitle>
+          <header className="flex items-center justify-between shrink-0 border-b px-4 py-2">
             <span className="flex items-center gap-2 px-2">
               {getFileIcon(currentFile?.ext || '')}
               <Tooltip>
@@ -1235,13 +1235,12 @@ export function FloorplanGallery({
             <nav className="flex items-center gap-1 ml-auto" aria-label={t('floorplan.actions')}>
               {renderZoomControls(modalZP, { showClose: true })}
             </nav>
-          </>
-        }
-        ariaLabel={t('floorplan.gallery')}
-      >
-        {/* Fullscreen Viewer */}
-        {renderViewerContent(modalZP, modalCanvasRef)}
-      </FullscreenContainer>
+          </header>
+          <section className="flex-1 min-h-0 flex flex-col overflow-auto">
+            {renderViewerContent(modalZP, modalCanvasRef)}
+          </section>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

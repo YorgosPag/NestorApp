@@ -1,6 +1,6 @@
-# ADR-241: Fullscreen Container Centralization
+# ADR-241: Fullscreen — Composition Architecture
 
-## Status: ✅ IMPLEMENTED (2026-03-18)
+## Status: ✅ IMPLEMENTED (2026-03-18) | REFACTORED (2026-03-18)
 
 ## Context
 
@@ -11,7 +11,7 @@
 - Toggle button με icon swap
 - CSS positioning (fixed / absolute / portal)
 
-### Προβλήματα
+### Αρχικό πρόβλημα (v1)
 
 | Πρόβλημα | Αντίκτυπο |
 |----------|-----------|
@@ -20,56 +20,53 @@
 | **Maintenance burden** | Κάθε bug fix (π.χ. body scroll lock) έπρεπε να γίνει σε 6 σημεία |
 | **No accessibility** | Κανένα component δεν χρησιμοποιούσε semantic HTML ή ARIA attributes |
 
-### Existing Implementations (πριν τη centralization)
+### Πρόβλημα v1 → v2 refactor
 
-1. **EntityFilesManager** — Custom `isFullscreen` state + CSS classes
-2. **GanttView** — ~125 γραμμές custom fullscreen logic + overlay
-3. **FloorplanGallery** — Custom fullscreen state + escape handler
-4. **VideoPlayer** — Native browser Fullscreen API (`requestFullscreen`)
-5. **FullscreenView (DXF)** — DXF architecture-specific implementation
-6. **GeoDialogSystem** — Dialog framework fullscreen mode
+Το `FullscreenContainer` (v1) είχε 2 modes σε 1 component:
+- `mode="overlay"` — React Portal + CSS fixed
+- `mode="dialog"` — Wrapper πάνω από Radix Dialog
+
+Ο dialog mode ήταν **abstraction πάνω σε abstraction** (Radix Dialog). Google-level architecture χρησιμοποιεί **composition** — ξεχωριστά components για ξεχωριστά πράγματα.
 
 ---
 
-## Decision
+## Decision (v2 — Composition Architecture)
 
-Δημιουργήθηκε ένα **centralized fullscreen system** αποτελούμενο από:
+Decompose σε **SRP components**:
 
-1. **`useFullscreen` hook** — Shared logic (state, escape, scroll lock)
-2. **`FullscreenContainer` component** — Shared UI (overlay/dialog, header, toggle button)
-3. **i18n keys** — Τυποποιημένα labels
+```
+ΠΡΙΝ (v1):                          ΜΕΤΑ (v2):
+┌─────────────────────┐           ┌──────────────────┐
+│ FullscreenContainer │           │ FullscreenOverlay │  (overlay μόνο)
+│  mode="overlay"     │           └──────────────────┘
+│  mode="dialog"      │           ┌──────────────────┐
+└─────────────────────┘           │ Dialog            │  (+ size="fullscreen")
+                                  │  size="fullscreen"│
+                                  └──────────────────┘
+                                  ┌──────────────────────────┐
+                                  │ FullscreenToggleButton    │  (standalone)
+                                  └──────────────────────────┘
+                                  ┌──────────────────┐
+                                  │ useFullscreen     │  (ως έχει)
+                                  └──────────────────┘
+```
 
 ### Design Principles
 
-- **Radix pattern**: Controlled + uncontrolled mode (like Radix primitives)
-- **Zero inline styles**: Tailwind-only styling
-- **Semantic HTML**: Proper `<dialog>`, `<header>`, `<button>` elements
-- **Composable**: Hook μπορεί να χρησιμοποιηθεί χωρίς Container και αντίστροφα
+- **SRP**: Κάθε component κάνει ένα πράγμα
+- **Composition over abstraction**: Dialog mode = direct `<Dialog>` + `<DialogContent size="fullscreen">`
+- **CVA variants**: `DialogContent` αποκτά `size` prop μέσω `class-variance-authority`
+- **Zero breaking changes**: Default `size="default"` = σημερινό `max-w-lg`
 
 ---
 
 ## Components
 
-### 1. `useFullscreen` hook
+### 1. `useFullscreen` hook (αμετάβλητο)
 
 **Location**: `src/hooks/useFullscreen.ts`
 
-**API**:
-
 ```typescript
-interface UseFullscreenOptions {
-  /** Controlled mode — external state */
-  isFullscreen?: boolean;
-  /** Controlled mode — external setter */
-  onFullscreenChange?: (value: boolean) => void;
-  /** Initial state for uncontrolled mode */
-  defaultFullscreen?: boolean;
-  /** Enable Escape key to exit (default: true) */
-  escapeToExit?: boolean;
-  /** Lock body scroll when fullscreen (default: true) */
-  lockBodyScroll?: boolean;
-}
-
 interface UseFullscreenReturn {
   isFullscreen: boolean;
   toggle: () => void;
@@ -78,54 +75,60 @@ interface UseFullscreenReturn {
 }
 ```
 
-**Features**:
-- Controlled + uncontrolled mode (Radix pattern)
-- Uses `useEscapeKey` hook internally (δεν γράφει δικό του listener)
-- Body scroll lock via `document.body.classList.add('overflow-hidden')`
-- Cleanup on unmount
+### 2. `FullscreenOverlay` component (πρώην `FullscreenContainer`)
 
-### 2. `FullscreenContainer` component
-
-**Location**: `src/core/containers/FullscreenContainer.tsx`
+**Location**: `src/core/containers/FullscreenOverlay.tsx`
 
 **API**:
 
 ```typescript
-interface FullscreenContainerProps {
+interface FullscreenOverlayProps {
   children: React.ReactNode;
-  /** 'overlay' = CSS fixed, no remount | 'dialog' = Radix Dialog portal */
-  mode?: 'overlay' | 'dialog';
-  /** Toggle button position or 'none' to hide */
-  togglePosition?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'none';
-  /** Show header bar with close button */
-  showHeader?: boolean;
-  /** Custom content for the header bar */
+  isFullscreen: boolean;
+  onToggle: () => void;
   headerContent?: React.ReactNode;
-  /** Header title text */
-  title?: string;
-  /** Controlled mode props */
-  isFullscreen?: boolean;
-  onFullscreenChange?: (value: boolean) => void;
-  /** CSS class for the fullscreen wrapper */
   className?: string;
+  fullscreenClassName?: string;
+  ariaLabel?: string;
 }
 ```
 
-**Modes**:
+- CSS `fixed inset-0 z-50` overlay via React Portal
+- Children do NOT remount — state preserved
+- Ideal for: EntityFilesManager, canvas-based views
 
-| Mode | Mechanism | Remount | Portal | Use Case |
-|------|-----------|---------|--------|----------|
-| `overlay` | CSS `fixed inset-0 z-50` | No | No | Media viewers, file managers |
-| `dialog` | Radix Dialog portal | Yes (portal) | Yes | Charts, complex layouts (Gantt) |
+### 3. `FullscreenToggleButton` (standalone export)
 
-**Features**:
-- Built-in toggle button (Maximize/Minimize icons) — configurable position ή `'none'`
-- Header bar με close button + optional custom content
-- Tailwind-only, semantic HTML
-- Dark/light theme support via CSS variables
-- `aria-label` attributes για accessibility
+**Location**: `src/core/containers/FullscreenOverlay.tsx`
 
-### 3. i18n Keys
+```typescript
+interface ToggleButtonProps {
+  isFullscreen: boolean;
+  onToggle: () => void;
+}
+```
+
+- Maximize2 / Minimize2 icon toggle
+- i18n tooltips
+- Can be used independently in any context
+
+### 4. `DialogContent` size variants (CVA)
+
+**Location**: `src/components/ui/dialog.tsx`
+
+```typescript
+type DialogContentSize = 'sm' | 'default' | 'lg' | 'xl' | 'fullscreen';
+```
+
+| Size | CSS |
+|------|-----|
+| `sm` | `max-w-sm` |
+| `default` | `max-w-lg` |
+| `lg` | `max-w-2xl` |
+| `xl` | `max-w-4xl` |
+| `fullscreen` | `max-w-[95vw] w-[95vw] h-[90vh]` |
+
+### 5. i18n Keys
 
 **Location**: `src/i18n/locales/{en,el}/common.json`
 
@@ -134,7 +137,8 @@ interface FullscreenContainerProps {
   "fullscreen": {
     "enter": "Enter fullscreen / Πλήρης οθόνη",
     "exit": "Exit fullscreen / Έξοδος πλήρους οθόνης",
-    "toggle": "Toggle fullscreen / Εναλλαγή πλήρους οθόνης"
+    "enterTooltip": "...",
+    "exitTooltip": "..."
   }
 }
 ```
@@ -143,13 +147,11 @@ interface FullscreenContainerProps {
 
 ## Migrated Components
 
-| # | Component | File | Mode | Lines Removed | Notes |
-|---|-----------|------|------|---------------|-------|
-| 1 | **EntityFilesManager** | `src/components/shared/files/EntityFilesManager.tsx` | `overlay` | ~15 | Replaced custom isFullscreen state + CSS |
-| 2 | **GanttView** | `src/components/construction/gantt/GanttView.tsx` | `dialog` | ~125 | Major cleanup — removed custom overlay, escape handler, toggle logic |
-| 3 | **FloorplanGallery** | `src/components/floorplans/FloorplanGallery.tsx` | `dialog` | ~15 | Replaced custom fullscreen + escape handler |
-
-### Total Lines Removed: ~155
+| # | Component | Pattern | Notes |
+|---|-----------|---------|-------|
+| 1 | **EntityFilesManager** | `FullscreenOverlay` (overlay) | Simple rename — props unchanged |
+| 2 | **GanttView** | `Dialog` + `DialogContent size="fullscreen"` | Direct composition — no wrapper |
+| 3 | **FloorplanGallery** | `Dialog` + `DialogContent size="fullscreen"` | Direct composition — no wrapper |
 
 ---
 
@@ -157,62 +159,68 @@ interface FullscreenContainerProps {
 
 | Component | Reason |
 |-----------|--------|
-| **VideoPlayer** | Uses native browser Fullscreen API (`element.requestFullscreen()`). Different paradigm — CSS overlay δεν αντικαθιστά native fullscreen. |
-| **FullscreenView (DXF)** | Μέρος του DXF architecture. Έχει deep coupling με canvas coordinate system και zoom state. Αλλαγή θα σπάσει DXF pipeline. |
-| **GeoDialogSystem** | Χρησιμοποιεί dialog framework με δικό του fullscreen mode. Η αρχιτεκτονική είναι fundamentally διαφορετική (dialog stack management). |
+| **VideoPlayer** | Uses native browser Fullscreen API (`element.requestFullscreen()`). Different paradigm. |
+| **FullscreenView (DXF)** | Deep coupling με canvas coordinate system και zoom state. |
+| **GeoDialogSystem** | Dialog framework με δικό του fullscreen mode (dialog stack management). |
 
 ---
 
-## Architecture
+## Architecture (v2)
 
 ```
-┌─────────────────────────────────────────┐
-│           Consumer Component            │
-│  (EntityFilesManager, GanttView, etc.)  │
-└───────────────┬─────────────────────────┘
-                │ uses
-                ▼
-┌─────────────────────────────────────────┐
-│        FullscreenContainer              │
-│  mode: 'overlay' | 'dialog'            │
-│  ┌─────────────────────────────────┐    │
-│  │  useFullscreen hook             │    │
-│  │  - state (controlled/uncontrolled)   │
-│  │  - useEscapeKey                 │    │
-│  │  - body scroll lock             │    │
-│  └─────────────────────────────────┘    │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│           Consumer Component                    │
+│  (EntityFilesManager, GanttView, FloorplanGallery)│
+└───────┬─────────────────────────────┬───────────┘
+        │ overlay pattern             │ dialog pattern
+        ▼                             ▼
+┌───────────────────┐   ┌─────────────────────────┐
+│ FullscreenOverlay │   │ Dialog + DialogContent   │
+│ (React Portal)    │   │ size="fullscreen"        │
+└───────────────────┘   │ + FullscreenToggleButton │
+                        └─────────────────────────┘
+        │                             │
+        └──────────┬──────────────────┘
+                   ▼
+        ┌──────────────────┐
+        │ useFullscreen    │
+        │ (state + escape) │
+        └──────────────────┘
 ```
 
 ---
 
 ## Usage Examples
 
-### Minimal (uncontrolled)
+### Overlay mode (EntityFilesManager)
 
 ```tsx
-<FullscreenContainer>
-  <MyContent />
-</FullscreenContainer>
+const fs = useFullscreen();
+<FullscreenOverlay isFullscreen={fs.isFullscreen} onToggle={fs.toggle}>
+  <Card>...</Card>
+</FullscreenOverlay>
 ```
 
-### Controlled mode with header
+### Dialog mode (GanttView) — Direct composition
 
 ```tsx
-const [isFullscreen, setIsFullscreen] = useState(false);
+const fs = useFullscreen();
 
-<FullscreenContainer
-  mode="dialog"
-  isFullscreen={isFullscreen}
-  onFullscreenChange={setIsFullscreen}
-  showHeader
-  title="Gantt Chart"
->
-  <GanttChart />
-</FullscreenContainer>
+<Dialog open={fs.isFullscreen} onOpenChange={(open) => { if (!open) fs.exit(); }}>
+  <DialogContent size="fullscreen" hideCloseButton className="flex flex-col p-0 gap-0">
+    <DialogTitle className="sr-only">Gantt Chart</DialogTitle>
+    <header className="flex items-center justify-between shrink-0 border-b px-4 py-2">
+      <span className="font-semibold">Title</span>
+      <FullscreenToggleButton isFullscreen onToggle={fs.toggle} />
+    </header>
+    <section className="flex-1 min-h-0 overflow-auto">
+      <GanttChart ... />
+    </section>
+  </DialogContent>
+</Dialog>
 ```
 
-### Hook-only (without Container)
+### Hook-only (without any container)
 
 ```tsx
 const { isFullscreen, toggle, exit } = useFullscreen({ escapeToExit: true });
@@ -227,8 +235,18 @@ return (
 
 ---
 
+## Full Codebase Audit (2026-03-18)
+
+- **0 rogue fullscreen implementations** βρέθηκαν
+- **3/3** eligible components μεταφέρθηκαν επιτυχώς
+- **3/3** intentional exceptions τεκμηριωμένες (VideoPlayer, DXF FullscreenView, GeoDialogSystem)
+
+---
+
 ## Changelog
 
 | Date | Change | Author |
 |------|--------|--------|
-| 2026-03-18 | Initial implementation — `useFullscreen` hook, `FullscreenContainer` component, 3 component migrations (EntityFilesManager, GanttView, FloorplanGallery), i18n keys | Claude + Γιώργος |
+| 2026-03-18 | **v2 Composition Refactor**: `FullscreenContainer` → `FullscreenOverlay` (SRP), dialog mode → direct `<Dialog size="fullscreen">` composition, `FullscreenToggleButton` standalone export, CVA size variants on `DialogContent` | Claude + Γιώργος |
+| 2026-03-18 | Full codebase audit — confirmed 100% centralization coverage, 0 rogue implementations | Claude + Γιώργος |
+| 2026-03-18 | Initial implementation — `useFullscreen` hook, `FullscreenContainer` component, 3 component migrations, i18n keys | Claude + Γιώργος |

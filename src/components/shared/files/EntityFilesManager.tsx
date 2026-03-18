@@ -32,7 +32,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useFullscreen } from '@/hooks/useFullscreen';
-import { FullscreenContainer } from '@/core/containers/FullscreenContainer';
+import { FullscreenOverlay } from '@/core/containers/FullscreenOverlay';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { apiClient } from '@/lib/api/enterprise-api-client';
@@ -844,11 +844,9 @@ export function EntityFilesManager({
   // =========================================================================
 
   return (
-    <FullscreenContainer
+    <FullscreenOverlay
       isFullscreen={fullscreen.isFullscreen}
       onToggle={fullscreen.toggle}
-      mode="overlay"
-      togglePosition="none"
       fullscreenClassName="rounded-none"
       ariaLabel={t('manager.filesTitle')}
     >
@@ -1335,6 +1333,6 @@ export function EntityFilesManager({
         />
       )}
     </Card>
-    </FullscreenContainer>
+    </FullscreenOverlay>
   );
 }
