@@ -158,32 +158,43 @@ export function GanttView({ building }: GanttViewProps) {
   const ganttChartRef = useRef<HTMLDivElement>(null);
 
   // 🏢 ENTERPRISE: Scroll to today marker with retry for library render timing
-  // Uses getBoundingClientRect for accurate position regardless of nesting depth
   const scrollToTodayMarker = useCallback((container: HTMLElement) => {
     const attemptScroll = (retriesLeft: number) => {
-      const todayMarker = container.querySelector('.rmg-today-marker') as HTMLElement | null;
+      const todayMarker = container.querySelector('[data-testid="today-marker"]') as HTMLElement | null;
       const scrollContainer = container.querySelector('.rmg-timeline-container') as HTMLElement | null;
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Gantt] scrollToTodayMarker attempt', {
+          retriesLeft,
+          markerFound: !!todayMarker,
+          scrollContainerFound: !!scrollContainer,
+          markerLeft: todayMarker?.style.left,
+          markerOffsetLeft: todayMarker?.offsetLeft,
+          scrollWidth: scrollContainer?.scrollWidth,
+          clientWidth: scrollContainer?.clientWidth,
+        });
+      }
+
       if (todayMarker && scrollContainer) {
-        // getBoundingClientRect gives position relative to viewport
-        // Subtract scrollContainer's rect to get position within scroll area
-        const markerRect = todayMarker.getBoundingClientRect();
-        const containerRect = scrollContainer.getBoundingClientRect();
-        const markerRelativeLeft = markerRect.left - containerRect.left + scrollContainer.scrollLeft;
-        scrollContainer.scrollLeft = Math.max(0, markerRelativeLeft - scrollContainer.clientWidth * 0.15);
+        // The marker uses style.left in absolute pixels from the timeline-content
+        const markerLeftPx = parseFloat(todayMarker.style.left || '0');
+        if (markerLeftPx > 0) {
+          const targetScroll = Math.max(0, markerLeftPx - scrollContainer.clientWidth * 0.15);
+          scrollContainer.scrollLeft = targetScroll;
+        }
       } else if (retriesLeft > 0) {
-        setTimeout(() => attemptScroll(retriesLeft - 1), 300);
+        setTimeout(() => attemptScroll(retriesLeft - 1), 400);
       }
     };
     attemptScroll(5);
   }, []);
 
   // 🏢 ENTERPRISE: Auto-scroll to "today" marker when view mode changes
-  // Wait for library to finish re-rendering (checks data-view-mode attribute)
+  // Library re-renders with new unitWidth — marker position changes
   const handleViewModeChange = useCallback((newMode: ViewMode) => {
     setViewMode(newMode);
-    // Library needs time to fully re-render after view mode change
-    // Use increasing delays to catch slow renders (Day/Year views are heavier)
-    const delays = [300, 600, 1000];
+    // Multiple attempts with increasing delays — library may take variable time
+    const delays = [200, 500, 1000, 1500];
     delays.forEach((delay) => {
       setTimeout(() => {
         const container = ganttChartRef.current;
