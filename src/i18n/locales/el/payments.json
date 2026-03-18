@@ -315,6 +315,8 @@
       "dscr": "Stress DSCR",
       "drawSchedule": "Εκταμιεύσεις",
       "monteCarlo": "Monte Carlo",
+      "forwardCurve": "Καμπύλη Επιτοκίων",
+      "hedging": "Αντιστάθμιση",
       "settings": "Ρυθμίσεις"
     },
     "cashFlow": {
@@ -562,6 +564,55 @@
       "frequency": "Συχνότητα",
       "cdf": "ΑΣΚ",
       "npvEuro": "ΚΠΑ (€)"
+    },
+    "forwardCurve": {
+      "loading": "Φόρτωση δεδομένων καμπύλης επιτοκίων…",
+      "error": "Αποτυχία φόρτωσης δεδομένων καμπύλης.",
+      "infoBanner": "Η καμπύλη επιτοκίων δείχνει τις προσδοκίες της αγοράς για μελλοντικά επιτόκια. Τα spot rates είναι τρέχοντα Euribor ΕΚΤ· τα forward rates υπολογίζονται με τον τύπο no-arbitrage.",
+      "chartTitle": "Καμπύλη Απόδοσης — Spot vs Forward",
+      "spotLine": "Spot Rate",
+      "forwardLine": "Forward Rate",
+      "rateTableTitle": "Πίνακας Επιτοκίων",
+      "tenor": "Διάρκεια",
+      "rateDate": "Ημ/νία επιτοκίων",
+      "shape": {
+        "normal": "Κανονική (Ανοδική)",
+        "inverted": "Ανεστραμμένη (Καθοδική)",
+        "flat": "Επίπεδη",
+        "humped": "Καμπυλωτή"
+      }
+    },
+    "hedging": {
+      "infoBanner": "Συγκρίνετε 4 στρατηγικές αντιστάθμισης κινδύνου επιτοκίου: κυμαινόμενο, swap, cap και collar. Ρυθμίστε παραμέτρους και σενάρια επιτοκίων για τη βέλτιστη προστασία.",
+      "configTitle": "Παράμετροι Αντιστάθμισης",
+      "notional": "Κεφάλαιο (€)",
+      "termYears": "Διάρκεια (έτη)",
+      "swapRate": "Επιτόκιο Swap (%)",
+      "scenario": "Σενάριο Επιτοκίων",
+      "scenarioRising": "Ανοδικό (+50bps/έτος)",
+      "scenarioFlat": "Σταθερό",
+      "scenarioDeclining": "Καθοδικό (−30bps/έτος)",
+      "capStrike": "Cap Strike (%)",
+      "capPremium": "Ασφάλιστρο Cap (€/έτος)",
+      "collarRange": "Collar Floor / Cap (%)",
+      "collarPremium": "Ασφάλιστρο Collar (€/έτος)",
+      "resultsTitle": "Σύγκριση Στρατηγικών",
+      "strategy": "Στρατηγική",
+      "totalCost": "Συνολικό Κόστος",
+      "avgAnnual": "Μ.Ο. Ετήσιο",
+      "avgRate": "Μ.Ο. Επιτόκιο",
+      "cheapest": "Καλύτερο",
+      "strategyName": {
+        "floating": "Κυμαινόμενο",
+        "swap": "Swap",
+        "cap": "Cap",
+        "collar": "Collar"
+      },
+      "breakEven": "Break-Even",
+      "breakEvenText": "Σε σταθερό κυμαινόμενο επιτόκιο {rate}%, το swap και το κυμαινόμενο κοστίζουν το ίδιο.",
+      "annualTitle": "Ετήσια Ανάλυση",
+      "year": "Έτος",
+      "scenarioRate": "Επιτόκιο Σεναρίου"
     },
     "waterfall": {
       "title": "Equity Waterfall",

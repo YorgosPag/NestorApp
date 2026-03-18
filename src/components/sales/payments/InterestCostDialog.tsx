@@ -32,6 +32,8 @@ import {
   Landmark,
   Dices,
   Wallet,
+  TrendingDown,
+  Shield,
 } from 'lucide-react';
 import { calculateFullResult } from '@/lib/npv-engine';
 import type { CostCalculationInput, CashFlowEntry } from '@/types/interest-calculator';
@@ -77,7 +79,15 @@ import type {
   CashFlowAnalysisEntry,
 } from '@/types/interest-calculator';
 
-import { SensitivityTab, DSCRStressTab, DrawScheduleTab, MonteCarloTab, EquityWaterfallDialog } from './financial-intelligence';
+import {
+  SensitivityTab,
+  DSCRStressTab,
+  DrawScheduleTab,
+  MonteCarloTab,
+  EquityWaterfallDialog,
+  ForwardCurveChart,
+  HedgingComparisonTable,
+} from './financial-intelligence';
 
 // =============================================================================
 // TYPES
@@ -1135,6 +1145,14 @@ export function InterestCostDialog({
                 <Dices className="h-4 w-4" />
                 {t('costCalculator.tabs.monteCarlo')}
               </TabsTrigger>
+              <TabsTrigger value="forwardcurve" className="text-sm gap-1">
+                <TrendingDown className="h-4 w-4" />
+                {t('costCalculator.tabs.forwardCurve')}
+              </TabsTrigger>
+              <TabsTrigger value="hedging" className="text-sm gap-1">
+                <Shield className="h-4 w-4" />
+                {t('costCalculator.tabs.hedging')}
+              </TabsTrigger>
               <TabsTrigger value="settings" className="text-sm gap-1">
                 <Settings className="h-4 w-4" />
                 {t('costCalculator.tabs.settings')}
@@ -1254,7 +1272,21 @@ export function InterestCostDialog({
               )}
             </TabsContent>
 
-            {/* Tab 9: Settings */}
+            {/* Tab 9: Forward Curves */}
+            <TabsContent value="forwardcurve" className="mt-3">
+              <ForwardCurveChart t={t} />
+            </TabsContent>
+
+            {/* Tab 10: Hedging Simulator */}
+            <TabsContent value="hedging" className="mt-3">
+              <HedgingComparisonTable
+                salePrice={salePrice}
+                effectiveRate={effectiveDiscountRate}
+                t={t}
+              />
+            </TabsContent>
+
+            {/* Tab 11: Settings */}
             <TabsContent value="settings" className="mt-3">
               <SettingsTab
                 rates={rates}

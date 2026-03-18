@@ -736,3 +736,121 @@ export interface WaterfallResult {
   /** Undistributed remainder (should be 0) */
   remainder: number;
 }
+
+// =============================================================================
+// 📈 SPEC-242E: FORWARD CURVES
+// =============================================================================
+
+/** A single spot rate point on the yield curve */
+export interface SpotRatePoint {
+  /** Tenor label (e.g. '1W', '1M', '3M', '6M', '12M') */
+  tenor: EuriborTenor;
+  /** Tenor in years (e.g. 1/52, 1/12, 0.25, 0.5, 1.0) */
+  tenorYears: number;
+  /** Spot rate (%) */
+  rate: number;
+}
+
+/** A derived forward rate between two tenors */
+export interface ForwardRatePoint {
+  /** Starting tenor label (e.g. '1M') */
+  fromTenor: EuriborTenor;
+  /** Ending tenor label (e.g. '3M') */
+  toTenor: EuriborTenor;
+  /** Forward period label (e.g. '1M→3M') */
+  label: string;
+  /** Forward rate (%) */
+  rate: number;
+  /** Period start in years */
+  fromYears: number;
+  /** Period end in years */
+  toYears: number;
+}
+
+/** Classification of yield curve shape */
+export type CurveShape = 'normal' | 'inverted' | 'flat' | 'humped';
+
+/** Complete forward curve analysis result */
+export interface ForwardCurveResult {
+  /** Spot rates extracted from ECB data */
+  spotRates: SpotRatePoint[];
+  /** Derived forward rates */
+  forwardRates: ForwardRatePoint[];
+  /** Detected curve shape */
+  curveShape: CurveShape;
+  /** Rate date from ECB */
+  rateDate: string;
+  /** Source identifier */
+  source: string;
+}
+
+// =============================================================================
+// 🛡️ SPEC-242E: HEDGING STRATEGIES
+// =============================================================================
+
+/** Available hedging strategy types */
+export type HedgingStrategy = 'floating' | 'swap' | 'cap' | 'collar';
+
+/** Input parameters for hedging comparison */
+export interface HedgingInput {
+  /** Outstanding loan notional (€) */
+  notional: number;
+  /** Loan term in years */
+  termYears: number;
+  /** Current floating rate (%) */
+  currentFloatingRate: number;
+  /** Fixed swap rate (%) */
+  swapRate: number;
+  /** Cap strike rate (%) */
+  capStrike: number;
+  /** Cap annual premium (€) */
+  capPremium: number;
+  /** Collar cap rate (%) */
+  collarCap: number;
+  /** Collar floor rate (%) */
+  collarFloor: number;
+  /** Collar annual premium (€) */
+  collarPremium: number;
+  /** Rate scenario per year (%) — length = termYears */
+  rateScenario: number[];
+}
+
+/** Annual cost breakdown for one strategy */
+export interface HedgingAnnualEntry {
+  /** Year number (1-based) */
+  year: number;
+  /** Rate applied this year (%) */
+  effectiveRate: number;
+  /** Interest cost this year (€) */
+  interestCost: number;
+  /** Premium cost this year (€) */
+  premiumCost: number;
+  /** Total cost this year (€) */
+  totalCost: number;
+}
+
+/** Result for a single hedging strategy */
+export interface HedgingStrategyResult {
+  /** Strategy type */
+  strategy: HedgingStrategy;
+  /** Per-year breakdown */
+  annualBreakdown: HedgingAnnualEntry[];
+  /** Total cost over loan term (€) */
+  totalCost: number;
+  /** Average annual cost (€) */
+  averageAnnualCost: number;
+  /** Effective average rate (%) */
+  effectiveAverageRate: number;
+}
+
+/** Comparison result of all hedging strategies */
+export interface HedgingComparisonResult {
+  /** All strategy results */
+  strategies: HedgingStrategyResult[];
+  /** Index of cheapest strategy in strategies array */
+  cheapestIndex: number;
+  /** Break-even rate: where swap cost equals floating cost (%) */
+  breakEvenRate: number;
+  /** Input parameters used */
+  input: HedgingInput;
+}

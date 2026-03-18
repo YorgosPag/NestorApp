@@ -315,6 +315,8 @@
       "dscr": "DSCR Stress",
       "drawSchedule": "Draw Schedule",
       "monteCarlo": "Monte Carlo",
+      "forwardCurve": "Forward Curves",
+      "hedging": "Hedging",
       "settings": "Settings"
     },
     "cashFlow": {
@@ -562,6 +564,55 @@
       "frequency": "Frequency",
       "cdf": "CDF",
       "npvEuro": "NPV (€)"
+    },
+    "forwardCurve": {
+      "loading": "Loading forward curve data…",
+      "error": "Failed to load forward curve data.",
+      "infoBanner": "The forward curve shows market expectations for future interest rates. Spot rates are current ECB Euribor rates; forward rates are derived using the no-arbitrage formula.",
+      "chartTitle": "Yield Curve — Spot vs Forward Rates",
+      "spotLine": "Spot Rate",
+      "forwardLine": "Forward Rate",
+      "rateTableTitle": "Rate Table",
+      "tenor": "Tenor",
+      "rateDate": "Rate date",
+      "shape": {
+        "normal": "Normal (Upward)",
+        "inverted": "Inverted (Downward)",
+        "flat": "Flat",
+        "humped": "Humped"
+      }
+    },
+    "hedging": {
+      "infoBanner": "Compare 4 interest rate hedging strategies: unhedged floating, fixed-rate swap, cap, and collar. Adjust parameters and rate scenarios to find the optimal protection strategy.",
+      "configTitle": "Hedging Parameters",
+      "notional": "Notional (€)",
+      "termYears": "Term (years)",
+      "swapRate": "Swap Rate (%)",
+      "scenario": "Rate Scenario",
+      "scenarioRising": "Rising (+50bps/yr)",
+      "scenarioFlat": "Flat",
+      "scenarioDeclining": "Declining (−30bps/yr)",
+      "capStrike": "Cap Strike (%)",
+      "capPremium": "Cap Premium (€/yr)",
+      "collarRange": "Collar Floor / Cap (%)",
+      "collarPremium": "Collar Premium (€/yr)",
+      "resultsTitle": "Strategy Comparison",
+      "strategy": "Strategy",
+      "totalCost": "Total Cost",
+      "avgAnnual": "Avg. Annual",
+      "avgRate": "Avg. Rate",
+      "cheapest": "Best",
+      "strategyName": {
+        "floating": "Floating",
+        "swap": "Swap",
+        "cap": "Cap",
+        "collar": "Collar"
+      },
+      "breakEven": "Break-Even",
+      "breakEvenText": "At a constant floating rate of {rate}%, the swap and floating strategies cost the same.",
+      "annualTitle": "Annual Breakdown",
+      "year": "Year",
+      "scenarioRate": "Scenario Rate"
     },
     "waterfall": {
       "title": "Equity Waterfall",
