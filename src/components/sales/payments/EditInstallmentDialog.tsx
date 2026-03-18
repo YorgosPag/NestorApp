@@ -61,6 +61,10 @@ interface EditInstallmentDialogProps {
   installment?: Installment;
   /** Total installments count (for insert position select in add mode) */
   totalInstallments: number;
+  /** Maximum amount allowed for new/edited installment (95% of unpaid balance) */
+  maxAmount?: number;
+  /** Total plan amount (sale price) for reference display */
+  planTotalAmount?: number;
   onAdd: (input: CreateInstallmentInput, insertAtIndex?: number) => Promise<{ success: boolean; error?: string }>;
   onUpdate: (index: number, updates: UpdateInstallmentInput) => Promise<{ success: boolean; error?: string }>;
   onDelete: (index: number) => Promise<{ success: boolean; error?: string }>;
@@ -85,6 +89,8 @@ export function EditInstallmentDialog({
   planStatus,
   installment,
   totalInstallments,
+  maxAmount,
+  planTotalAmount,
   onAdd,
   onUpdate,
   onDelete,
@@ -290,32 +296,47 @@ export function EditInstallmentDialog({
 
             {/* Amount + Percentage */}
             {!isNotesOnly && (
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label htmlFor="inst-amount">
-                    {t('labels.amount')} (€)
-                  </Label>
-                  <Input
-                    id="inst-amount"
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                  />
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="inst-amount">
+                      {t('labels.amount')} (€)
+                    </Label>
+                    <Input
+                      id="inst-amount"
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="inst-pct">%</Label>
+                    <Input
+                      id="inst-pct"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={percentage}
+                      onChange={(e) => setPercentage(e.target.value)}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="inst-pct">%</Label>
-                  <Input
-                    id="inst-pct"
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    value={percentage}
-                    onChange={(e) => setPercentage(e.target.value)}
-                  />
-                </div>
+                {/* Max amount hint + validation warning */}
+                {maxAmount !== undefined && maxAmount > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {t('installments.maxAmountHint', {
+                      max: new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(maxAmount),
+                    })}
+                  </p>
+                )}
+                {maxAmount !== undefined && parseFloat(amount) > maxAmount && (
+                  <p className="text-xs text-destructive font-medium">
+                    {t('installments.amountExceedsMax')}
+                  </p>
+                )}
               </div>
             )}
 

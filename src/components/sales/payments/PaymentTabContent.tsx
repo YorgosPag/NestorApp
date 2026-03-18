@@ -227,6 +227,12 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
         planStatus={plan.status}
         installment={editDialogMode === 'edit' ? plan.installments[selectedInstallmentIdx] : undefined}
         totalInstallments={plan.installments.length}
+        maxAmount={Math.round(
+          plan.installments
+            .filter((inst) => inst.paidAmount < inst.amount)
+            .reduce((s, inst) => s + (inst.amount - inst.paidAmount), 0) * 0.95 * 100
+        ) / 100}
+        planTotalAmount={plan.totalAmount}
         onAdd={(input, insertAtIndex) => addInstallment(plan.id, input, insertAtIndex)}
         onUpdate={(index, updates) => updateInstallment(plan.id, index, updates)}
         onDelete={(index) => removeInstallment(plan.id, index)}

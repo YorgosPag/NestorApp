@@ -341,29 +341,34 @@ export class PaymentPlanService {
         notes: input.notes ?? null,
       };
 
-      // ── Redistribute amounts: keep totalAmount constant ──
-      // The new installment's amount is "carved out" of existing unpaid
-      // installments proportionally, so the grand total stays at plan.totalAmount.
+      // ── Validate & redistribute amounts: keep totalAmount constant ──
       const existingInstallments = plan.installments;
       const totalUnpaid = existingInstallments
         .filter((inst) => inst.paidAmount < inst.amount)
         .reduce((s, inst) => s + (inst.amount - inst.paidAmount), 0);
       const addedAmount = newInstallment.amount;
 
-      if (totalUnpaid > 0 && addedAmount <= totalUnpaid) {
-        // Reduce each unpaid installment proportionally
+      // Guard: new installment cannot exceed 95% of unpaid (leave min balance)
+      const maxAllowed = Math.round(totalUnpaid * 0.95 * 100) / 100;
+      if (existingInstallments.length > 0 && addedAmount > maxAllowed) {
+        const fmt = (v: number) => new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
+        return {
+          success: false,
+          error: `Το ποσό ${fmt(addedAmount)} υπερβαίνει το μέγιστο επιτρεπτό ${fmt(maxAllowed)} (95% του αδιάθετου υπολοίπου ${fmt(totalUnpaid)}). Οι υπόλοιπες δόσεις πρέπει να διατηρήσουν ελάχιστο υπόλοιπο.`,
+        };
+      }
+
+      if (totalUnpaid > 0 && addedAmount > 0 && addedAmount <= totalUnpaid) {
         const reductionRatio = addedAmount / totalUnpaid;
         for (const inst of existingInstallments) {
           const unpaidPortion = inst.amount - inst.paidAmount;
           if (unpaidPortion <= 0) continue;
           const reduction = Math.round(unpaidPortion * reductionRatio * 100) / 100;
           inst.amount = Math.round((inst.amount - reduction) * 100) / 100;
-          // Recalculate percentage
           if (plan.totalAmount > 0) {
             inst.percentage = Math.round((inst.amount / plan.totalAmount) * 10000) / 100;
           }
         }
-        // Recalculate new installment percentage
         if (plan.totalAmount > 0) {
           newInstallment.percentage = Math.round((newInstallment.amount / plan.totalAmount) * 10000) / 100;
         }
@@ -443,6 +448,20 @@ export class PaymentPlanService {
 
       // ── Redistribute delta to keep totalAmount constant ──
       const amountDelta = inst.amount - oldAmount;
+      if (amountDelta > 0 && input.amount !== undefined) {
+        const othersUnpaid = updated
+          .filter((item, i) => i !== index && item.paidAmount < item.amount)
+          .reduce((s, item) => s + (item.amount - item.paidAmount), 0);
+
+        const maxIncrease = Math.round(othersUnpaid * 0.95 * 100) / 100;
+        if (amountDelta > maxIncrease) {
+          const fmt = (v: number) => new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
+          return {
+            success: false,
+            error: `Η αύξηση κατά ${fmt(amountDelta)} υπερβαίνει το μέγιστο ${fmt(maxIncrease)} (95% του αδιάθετου υπολοίπου ${fmt(othersUnpaid)}).`,
+          };
+        }
+      }
       if (amountDelta !== 0 && input.amount !== undefined) {
         const othersUnpaid = updated
           .filter((item, i) => i !== index && item.paidAmount < item.amount)
@@ -521,21 +540,38 @@ export class PaymentPlanService {
         return { success: false, error: 'Δεν μπορείτε να αφαιρέσετε πληρωμένη δόση' };
       }
 
-      // ── Redistribute: give removed amount back to remaining unpaid ──
+      // ── Redistribute: give removed amount back to remaining installments ──
       const removedAmount = plan.installments[index].amount;
       const remaining = plan.installments.filter((_, i) => i !== index);
-      const totalUnpaidRemaining = remaining
-        .filter((inst) => inst.paidAmount < inst.amount)
-        .reduce((s, inst) => s + (inst.amount - inst.paidAmount), 0);
 
-      if (totalUnpaidRemaining > 0 && removedAmount > 0) {
-        for (const inst of remaining) {
-          const unpaidPortion = inst.amount - inst.paidAmount;
-          if (unpaidPortion <= 0) continue;
-          const addBack = Math.round((unpaidPortion / totalUnpaidRemaining) * removedAmount * 100) / 100;
-          inst.amount = Math.round((inst.amount + addBack) * 100) / 100;
-          if (plan.totalAmount > 0) {
-            inst.percentage = Math.round((inst.amount / plan.totalAmount) * 10000) / 100;
+      if (removedAmount > 0 && remaining.length > 0) {
+        // Find installments that can receive the redistributed amount
+        const unpaidInstallments = remaining.filter((inst) => inst.paidAmount < inst.amount);
+        const totalUnpaidRemaining = unpaidInstallments
+          .reduce((s, inst) => s + (inst.amount - inst.paidAmount), 0);
+
+        if (totalUnpaidRemaining > 0) {
+          // Proportional redistribution based on unpaid portions
+          for (const inst of remaining) {
+            const unpaidPortion = inst.amount - inst.paidAmount;
+            if (unpaidPortion <= 0) continue;
+            const addBack = Math.round((unpaidPortion / totalUnpaidRemaining) * removedAmount * 100) / 100;
+            inst.amount = Math.round((inst.amount + addBack) * 100) / 100;
+            if (plan.totalAmount > 0) {
+              inst.percentage = Math.round((inst.amount / plan.totalAmount) * 10000) / 100;
+            }
+          }
+        } else {
+          // Edge case: all remaining have 0 unpaid → distribute equally among pending
+          const pendingInstallments = remaining.filter((inst) => inst.status === 'pending');
+          const count = pendingInstallments.length || remaining.length;
+          const shareEach = Math.round((removedAmount / count) * 100) / 100;
+          const targets = pendingInstallments.length > 0 ? pendingInstallments : remaining;
+          for (const inst of targets) {
+            inst.amount = Math.round((inst.amount + shareEach) * 100) / 100;
+            if (plan.totalAmount > 0) {
+              inst.percentage = Math.round((inst.amount / plan.totalAmount) * 10000) / 100;
+            }
           }
         }
       }
