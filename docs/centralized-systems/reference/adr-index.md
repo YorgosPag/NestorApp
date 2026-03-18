@@ -264,12 +264,12 @@
 | **ADR-238** | Entity Creation Centralization | 📋 PLANNING | 2026-03-17 | Entity Systems | [📄](./adrs/ADR-238-entity-creation-centralization.md) |
 | **ADR-239** | Entity Linking Centralization | ✅ IMPLEMENTED | 2026-03-17 | Entity Systems | [📄](./adrs/ADR-239-entity-linking-centralization.md) |
 | **ADR-241** | Fullscreen Container Centralization | ✅ IMPLEMENTED | 2026-03-18 | UI Components | [📄](./adrs/ADR-241-fullscreen-container-centralization.md) |
-| **ADR-242** | Smart Financial Intelligence Suite — Enterprise Features for InterestCostDialog | 📋 SPEC READY (5 SPECs) | 2026-03-18 | Entity Systems / Sales & Finance | [📄](./adrs/ADR-242-smart-financial-intelligence-suite.md) |
-| ↳ SPEC-242A | Sensitivity Analysis & DSCR Stress Testing | 📋 SPEC READY | 2026-03-18 | — | [📄](./adrs/specs/SPEC-242A-sensitivity-dscr.md) |
-| ↳ SPEC-242B | Construction Loan Draw Schedule & Interest Reserve | 📋 SPEC READY | 2026-03-18 | — | [📄](./adrs/specs/SPEC-242B-draw-schedule.md) |
-| ↳ SPEC-242C | Portfolio Dashboard & Debt Maturity Wall | 📋 SPEC READY | 2026-03-18 | — | [📄](./adrs/specs/SPEC-242C-portfolio-dashboard.md) |
-| ↳ SPEC-242D | Monte Carlo Simulation & Equity Waterfall | 📋 SPEC READY | 2026-03-18 | — | [📄](./adrs/specs/SPEC-242D-monte-carlo-waterfall.md) |
-| ↳ SPEC-242E | Forward Curves, Hedging Simulator & NL Financial Query | 📋 SPEC READY | 2026-03-18 | — | [📄](./adrs/specs/SPEC-242E-forward-curves-hedging-ai.md) |
+| **ADR-242** | Smart Financial Intelligence Suite — Enterprise Features for InterestCostDialog | 🟡 IN PROGRESS (A✅B✅C✅D✅E🟡) | 2026-03-18 | Entity Systems / Sales & Finance | [📄](./adrs/ADR-242-smart-financial-intelligence-suite.md) |
+| ↳ SPEC-242A | Sensitivity Analysis & DSCR Stress Testing | ✅ IMPLEMENTED | 2026-03-18 | — | [📄](./adrs/specs/SPEC-242A-sensitivity-dscr.md) |
+| ↳ SPEC-242B | Construction Loan Draw Schedule & Interest Reserve | ✅ IMPLEMENTED | 2026-03-18 | — | [📄](./adrs/specs/SPEC-242B-draw-schedule.md) |
+| ↳ SPEC-242C | Portfolio Dashboard & Debt Maturity Wall | ✅ IMPLEMENTED | 2026-03-18 | — | [📄](./adrs/specs/SPEC-242C-portfolio-dashboard.md) |
+| ↳ SPEC-242D | Monte Carlo Simulation & Equity Waterfall | ✅ IMPLEMENTED | 2026-03-18 | — | [📄](./adrs/specs/SPEC-242D-monte-carlo-waterfall.md) |
+| ↳ SPEC-242E | Forward Curves, Hedging Simulator & NL Financial Query | 🟡 SESSION 1/2 (Curves+Hedging done, NL Query pending) | 2026-03-18 | — | [📄](./adrs/specs/SPEC-242E-forward-curves-hedging-ai.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

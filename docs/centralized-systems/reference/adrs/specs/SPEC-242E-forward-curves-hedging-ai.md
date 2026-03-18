@@ -5,7 +5,7 @@
 | **ADR** | ADR-242 |
 | **Phase** | E — AI-Powered & External APIs |
 | **Priority** | ⭐⭐ LOW |
-| **Status** | 📋 SPEC READY |
+| **Status** | 🟡 PARTIALLY IMPLEMENTED (Session 1 of 2) |
 | **Estimated Effort** | 2-3 sessions |
 | **Prerequisite** | SPEC-242A (sensitivity engine), SPEC-242C (portfolio dashboard) |
 | **Dependencies** | SPEC-242A, SPEC-242C, ECB API (ήδη σε χρήση), OpenAI (ήδη στο stack) |
@@ -594,6 +594,42 @@ Capabilities:
 14. **Zero `any`**, semantic HTML, enterprise TypeScript
 15. **License**: ECB API = δημόσια δεδομένα (OK), OpenAI = already in stack (OK)
 16. **No new dependencies**: ECB + OpenAI already configured
+
+---
+
+## 9. Implementation Log
+
+| Date | Session | What was implemented | What remains |
+|------|---------|---------------------|-------------|
+| 2026-03-18 | Session 1 | A1 Forward Curves (engine + API + UI) + A3 Hedging Simulator (engine + UI) — 5 new files, 1,281 lines | D3 NL Financial Query (chat interface, agentic tools) |
+
+### Session 1 Deliverables (2026-03-18)
+
+**New Files:**
+| File | Lines | Description |
+|------|-------|-------------|
+| `src/lib/forward-curve-engine.ts` | ~170 | Spot extraction, forward rate derivation (no-arbitrage formula), curve shape detection |
+| `src/lib/hedging-engine.ts` | ~240 | Floating/Swap/Cap/Collar calculators, strategy comparison, break-even (binary search), scenario presets |
+| `src/app/api/ecb/forward-rates/route.ts` | ~48 | Auth + rate-limited API, reuses EuriborService |
+| `ForwardCurveChart.tsx` | ~220 | Self-fetching, ComposedChart (spot solid + forward dashed), shape badge, rate table |
+| `HedgingComparisonTable.tsx` | ~280 | Config panel (8 params), Radix Select scenario presets, 4-strategy comparison table, break-even callout, annual breakdown |
+
+**Modified Files:**
+| File | Change |
+|------|--------|
+| `interest-calculator.ts` | +120 lines: SpotRatePoint, ForwardRatePoint, CurveShape, ForwardCurveResult, HedgingStrategy, HedgingInput, HedgingAnnualEntry, HedgingStrategyResult, HedgingComparisonResult |
+| `InterestCostDialog.tsx` | +2 tabs (Forward Curves tab 9, Hedging tab 10), +TrendingDown/Shield icons |
+| `financial-intelligence/index.ts` | +2 barrel exports |
+| `en/payments.json` | +60 i18n keys (forwardCurve.*, hedging.*) |
+| `el/payments.json` | +60 i18n keys (forwardCurve.*, hedging.*) |
+
+**Type deviations from SPEC:**
+- Types simplified vs SPEC proposal: used flat interfaces (SpotRatePoint, ForwardRatePoint, HedgingInput) instead of nested YieldCurveData/HedgeStrategy. More practical, same functionality.
+- Forward curve uses available ECB Euribor tenors (1W/1M/3M/6M/12M) rather than extrapolated 2Y/3Y/5Y.
+- Hedging engine uses annual cost model (rate × notional per year) rather than monthly accrual. Sufficient for comparison purposes.
+
+**Pending — Session 2:**
+- D3 NL Financial Query: FinancialQueryChat component, financial-query-tools for ADR-171 agentic loop, portfolio dashboard integration.
 
 ---
 
