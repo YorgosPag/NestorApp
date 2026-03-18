@@ -163,17 +163,16 @@ export function GanttView({ building }: GanttViewProps) {
       const todayMarker = container.querySelector('[data-testid="today-marker"]') as HTMLElement | null;
       const scrollContainer = container.querySelector('.rmg-timeline-container') as HTMLElement | null;
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[Gantt] scrollToTodayMarker attempt', {
-          retriesLeft,
-          markerFound: !!todayMarker,
-          scrollContainerFound: !!scrollContainer,
-          markerLeft: todayMarker?.style.left,
-          markerOffsetLeft: todayMarker?.offsetLeft,
-          scrollWidth: scrollContainer?.scrollWidth,
-          clientWidth: scrollContainer?.clientWidth,
-        });
-      }
+      // TEMP DEBUG — console.warn survives Terser drop_console
+      console.warn('[Gantt] scrollToTodayMarker', {
+        retriesLeft,
+        markerFound: !!todayMarker,
+        scrollContainerFound: !!scrollContainer,
+        markerLeft: todayMarker?.style.left,
+        markerOffsetLeft: todayMarker?.offsetLeft,
+        scrollWidth: scrollContainer?.scrollWidth,
+        clientWidth: scrollContainer?.clientWidth,
+      });
 
       if (todayMarker && scrollContainer) {
         // The marker uses style.left in absolute pixels from the timeline-content
