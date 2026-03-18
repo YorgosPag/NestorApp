@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 228 ADRs | Last Updated: 2026-03-18
+**📊 Stats**: 229 ADRs | Last Updated: 2026-03-18
 
 ---
 
@@ -264,6 +264,7 @@
 | **ADR-238** | Entity Creation Centralization | 📋 PLANNING | 2026-03-17 | Entity Systems | [📄](./adrs/ADR-238-entity-creation-centralization.md) |
 | **ADR-239** | Entity Linking Centralization | ✅ IMPLEMENTED | 2026-03-17 | Entity Systems | [📄](./adrs/ADR-239-entity-linking-centralization.md) |
 | **ADR-241** | Fullscreen Container Centralization | ✅ IMPLEMENTED | 2026-03-18 | UI Components | [📄](./adrs/ADR-241-fullscreen-container-centralization.md) |
+| **ADR-242** | Smart Financial Intelligence Suite — Enterprise Features for InterestCostDialog | 📋 RESEARCH COMPLETE | 2026-03-18 | Entity Systems / Sales & Finance | [📄](./adrs/ADR-242-smart-financial-intelligence-suite.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
