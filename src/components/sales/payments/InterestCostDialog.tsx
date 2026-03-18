@@ -27,6 +27,8 @@ import {
   SlidersHorizontal,
   Download,
   Banknote,
+  Activity,
+  ShieldCheck,
 } from 'lucide-react';
 import { calculateFullResult } from '@/lib/npv-engine';
 import type { CostCalculationInput, CashFlowEntry } from '@/types/interest-calculator';
@@ -71,6 +73,8 @@ import type {
   DiscountRateSource,
   CashFlowAnalysisEntry,
 } from '@/types/interest-calculator';
+
+import { SensitivityTab, DSCRStressTab } from './financial-intelligence';
 
 // =============================================================================
 // TYPES
@@ -1033,6 +1037,27 @@ export function InterestCostDialog({
   const lossPercent = result?.timeCostPercentage ?? 0;
   const effectiveDiscountRate = comparison?.discountRate ?? 5;
 
+  // Build CostCalculationInput for Sensitivity tab
+  const sensitivityInput = useMemo(() => {
+    const referenceDate = new Date().toISOString().split('T')[0];
+    const cashFlows: CashFlowEntry[] = installments && installments.length > 0
+      ? installments.map((inst) => ({
+          label: inst.label,
+          amount: inst.amount,
+          date: inst.dueDate,
+          certainty: (inst.status === 'paid' ? 'certain' : inst.status === 'due' || inst.status === 'partial' ? 'probable' : 'uncertain') as 'certain' | 'probable' | 'uncertain',
+        }))
+      : [{ label: 'Cash', amount: salePrice, date: referenceDate, certainty: 'certain' as const }];
+
+    return {
+      salePrice,
+      referenceDate,
+      cashFlows,
+      discountRateSource: 'manual' as const,
+      bankSpread: spreads?.defaultSpread ?? 2.4,
+    };
+  }, [salePrice, installments, spreads]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="fullscreen" className="overflow-y-auto flex flex-col">
@@ -1056,7 +1081,7 @@ export function InterestCostDialog({
 
         {!isLoading && (
           <Tabs defaultValue="cashflow" className="mt-2">
-            <TabsList className="grid grid-cols-5 text-sm">
+            <TabsList className="grid grid-cols-7 text-sm">
               <TabsTrigger value="cashflow" className="text-sm gap-1">
                 <BarChart3 className="h-4 w-4" />
                 {t('costCalculator.tabs.cashFlow')}
@@ -1072,6 +1097,14 @@ export function InterestCostDialog({
               <TabsTrigger value="whatif" className="text-sm gap-1">
                 <SlidersHorizontal className="h-4 w-4" />
                 {t('costCalculator.tabs.whatIf')}
+              </TabsTrigger>
+              <TabsTrigger value="sensitivity" className="text-sm gap-1">
+                <Activity className="h-4 w-4" />
+                {t('costCalculator.tabs.sensitivity')}
+              </TabsTrigger>
+              <TabsTrigger value="dscr" className="text-sm gap-1">
+                <ShieldCheck className="h-4 w-4" />
+                {t('costCalculator.tabs.dscr')}
               </TabsTrigger>
               <TabsTrigger value="settings" className="text-sm gap-1">
                 <Settings className="h-4 w-4" />
@@ -1142,7 +1175,32 @@ export function InterestCostDialog({
               />
             </TabsContent>
 
-            {/* Tab 5: Settings */}
+            {/* Tab 5: Sensitivity Analysis */}
+            <TabsContent value="sensitivity" className="mt-3">
+              {result ? (
+                <SensitivityTab
+                  input={sensitivityInput}
+                  effectiveRate={effectiveDiscountRate}
+                  result={result}
+                  t={t}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  {t('costCalculator.noData')}
+                </p>
+              )}
+            </TabsContent>
+
+            {/* Tab 6: DSCR Stress Test */}
+            <TabsContent value="dscr" className="mt-3">
+              <DSCRStressTab
+                salePrice={salePrice}
+                effectiveRate={effectiveDiscountRate}
+                t={t}
+              />
+            </TabsContent>
+
+            {/* Tab 7: Settings */}
             <TabsContent value="settings" className="mt-3">
               <SettingsTab
                 rates={rates}

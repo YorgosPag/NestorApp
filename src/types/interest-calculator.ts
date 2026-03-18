@@ -217,3 +217,120 @@ export interface BankSpreadsResponse {
   config?: BankSpreadConfig;
   error?: string;
 }
+
+// =============================================================================
+// 📊 SENSITIVITY ANALYSIS (SPEC-242A)
+// =============================================================================
+
+/** Variables available for sensitivity perturbation */
+export type SensitivityVariable =
+  | 'discountRate'
+  | 'bankSpread'
+  | 'salePrice'
+  | 'upfrontPercent'
+  | 'paymentMonths'
+  | 'certaintyMix';
+
+/** Single tornado bar entry — one variable's impact on NPV */
+export interface TornadoEntry {
+  /** Variable key */
+  variable: SensitivityVariable;
+  /** Human-readable label (i18n key) */
+  label: string;
+  /** Base value of the variable */
+  baseValue: number;
+  /** NPV when variable is at its low extreme */
+  lowNPV: number;
+  /** NPV when variable is at its high extreme */
+  highNPV: number;
+  /** Total swing width |highNPV - lowNPV| */
+  swingWidth: number;
+}
+
+/** Result of tornado sensitivity analysis */
+export interface SensitivityResult {
+  /** NPV at base-case values */
+  baseNPV: number;
+  /** Entries sorted by swingWidth descending (most impactful first) */
+  entries: TornadoEntry[];
+}
+
+/** Single cell in 2-variable heat map */
+export interface HeatMapCell {
+  /** Row variable value */
+  rowValue: number;
+  /** Column variable value */
+  colValue: number;
+  /** Calculated NPV */
+  npv: number;
+  /** Color intensity bucket 0-4 (0=best/green, 4=worst/red) */
+  bucket: number;
+}
+
+/** Result of 2-variable heat map */
+export interface HeatMapResult {
+  /** Row variable key */
+  rowVariable: SensitivityVariable;
+  /** Column variable key */
+  colVariable: SensitivityVariable;
+  /** Row header values */
+  rowValues: number[];
+  /** Column header values */
+  colValues: number[];
+  /** 2D grid of cells [row][col] */
+  cells: HeatMapCell[][];
+  /** Min NPV in grid */
+  minNPV: number;
+  /** Max NPV in grid */
+  maxNPV: number;
+}
+
+// =============================================================================
+// 🛡️ DSCR STRESS TESTING (SPEC-242A)
+// =============================================================================
+
+/** Input for Debt Service Coverage Ratio calculation */
+export interface DSCRInput {
+  /** Annual Net Operating Income (€) */
+  annualNOI: number;
+  /** Total loan amount (€) */
+  loanAmount: number;
+  /** Annual interest rate (%, e.g. 5.0 for 5%) */
+  annualRate: number;
+  /** Loan term in years */
+  loanTermYears: number;
+}
+
+/** Result of single DSCR calculation */
+export interface DSCRResult {
+  /** DSCR ratio (NOI / annual debt service) */
+  dscr: number;
+  /** Annual debt service = 12 × monthly payment */
+  annualDebtService: number;
+  /** Monthly mortgage payment */
+  monthlyPayment: number;
+  /** Status classification */
+  status: 'safe' | 'adequate' | 'warning' | 'danger';
+}
+
+/** Single row in rate stress test */
+export interface StressTestRow {
+  /** Rate shock in basis points */
+  shockBps: number;
+  /** Stressed rate (%) */
+  stressedRate: number;
+  /** DSCR at stressed rate */
+  dscr: number;
+  /** Status at stressed rate */
+  status: 'safe' | 'adequate' | 'warning' | 'danger';
+}
+
+/** Full stress test result */
+export interface StressTestResult {
+  /** Base case result */
+  baseResult: DSCRResult;
+  /** Stress test rows */
+  rows: StressTestRow[];
+  /** Maximum rate (%) that still maintains DSCR ≥ 1.0 */
+  maxRateForDSCR1: number;
+}

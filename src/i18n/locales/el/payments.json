@@ -311,6 +311,8 @@
       "scenarios": "Σενάρια",
       "pricing": "Τιμολόγηση",
       "whatIf": "Τι θα γινόταν αν…",
+      "sensitivity": "Ευαισθησία",
+      "dscr": "Stress DSCR",
       "settings": "Ρυθμίσεις"
     },
     "cashFlow": {
@@ -431,6 +433,49 @@
       "ecbMainShort": "Βασικό ΕΚΤ",
       "ecbLive": "ΕΚΤ Live",
       "spread": "Spread"
+    },
+    "sensitivity": {
+      "tabLabel": "Ευαισθησία",
+      "infoBanner": "Δείτε ποιες μεταβλητές επηρεάζουν περισσότερο την ΚΠΑ σας. Το tornado chart κατατάσσει τις μεταβλητές κατά επίδραση· ο χάρτης θερμότητας δείχνει πώς αλληλεπιδρούν δύο μεταβλητές.",
+      "tornadoTitle": "Tornado Chart — Επίδραση Μεταβλητών στην ΚΠΑ",
+      "baseNpv": "Βασική ΚΠΑ",
+      "low": "Χαμηλό (−20%)",
+      "high": "Υψηλό (+20%)",
+      "swing": "Εύρος",
+      "heatMapTitle": "Χάρτης Θερμότητας 2 Μεταβλητών",
+      "rowVariable": "Μεταβλητή γραμμής",
+      "colVariable": "Μεταβλητή στήλης",
+      "varDiscountRate": "Επιτόκιο Αναγωγής",
+      "varBankSpread": "Τραπεζικό Spread",
+      "varSalePrice": "Τιμή Πώλησης",
+      "varUpfrontPercent": "Ποσοστό Προκαταβολής",
+      "varPaymentMonths": "Διάρκεια Πληρωμών",
+      "varCertaintyMix": "Μίγμα Βεβαιότητας"
+    },
+    "dscr": {
+      "tabLabel": "Stress DSCR",
+      "infoBanner": "Ο δείκτης κάλυψης εξυπηρέτησης χρέους (DSCR) μετρά την ικανότητα του αγοραστή να εξυπηρετεί το δάνειο. Εισάγετε τα στοιχεία δανείου για να δείτε πώς οι αυξήσεις επιτοκίου επηρεάζουν την κάλυψη χρέους.",
+      "title": "Υπολογιστής DSCR",
+      "annualNOI": "Ετήσιο Καθαρό Εισόδημα (€)",
+      "noiTooltip": "Ετήσιο καθαρό λειτουργικό εισόδημα — εισόδημα ενοικίων ή ετήσιο εισόδημα αγοραστή διαθέσιμο για εξυπηρέτηση χρέους",
+      "loanAmount": "Ποσό Δανείου (€)",
+      "annualRate": "Επιτόκιο (%)",
+      "loanTermYears": "Διάρκεια Δανείου (έτη)",
+      "calculate": "Υπολογισμός",
+      "gaugeTitle": "Δείκτης DSCR",
+      "safe": "Ασφαλές",
+      "adequate": "Επαρκές",
+      "warning": "Προσοχή",
+      "danger": "Κίνδυνος",
+      "annualDebtService": "Ετήσια Εξυπηρέτηση Χρέους",
+      "monthlyPayment": "Μηνιαία Δόση",
+      "stressTitle": "Stress Test Επιτοκίου",
+      "shockBps": "Shock (bps)",
+      "stressedRate": "Επιτόκιο",
+      "dscrLabel": "DSCR",
+      "status": "Κατάσταση",
+      "maxRateLabel": "Μέγιστο επιτόκιο για DSCR ≥ 1.0",
+      "baseCase": "Βασική Περίπτωση"
     }
   },
   "report": {

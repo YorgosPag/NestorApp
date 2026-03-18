@@ -1714,3 +1714,20 @@ body [data-navigation-scroll="true"]::-webkit-scrollbar-corner {
 [data-canvas-type="dxf"] {
   z-index: 10 !important; /* Foreground layer - DXF drawing + mouse events */
 }
+
+/* =============================================================================
+ * 📊 SENSITIVITY & DSCR — SPEC-242A Heat Map & Status Colors
+ * ============================================================================= */
+
+/* Heat map buckets: 0=best(green) → 4=worst(red) */
+.heatmap-cell-0 { @apply bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-200; }
+.heatmap-cell-1 { @apply bg-emerald-50 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300; }
+.heatmap-cell-2 { @apply bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300; }
+.heatmap-cell-3 { @apply bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-300; }
+.heatmap-cell-4 { @apply bg-red-100 text-red-900 dark:bg-red-900/40 dark:text-red-200; }
+
+/* DSCR status colors */
+.dscr-safe     { @apply text-emerald-700 dark:text-emerald-400; }
+.dscr-adequate { @apply text-blue-700 dark:text-blue-400; }
+.dscr-warning  { @apply text-amber-700 dark:text-amber-400; }
+.dscr-danger   { @apply text-red-700 dark:text-red-400; }

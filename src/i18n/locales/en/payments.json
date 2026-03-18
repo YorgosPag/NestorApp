@@ -311,6 +311,8 @@
       "scenarios": "Scenarios",
       "pricing": "Pricing",
       "whatIf": "What if…",
+      "sensitivity": "Sensitivity",
+      "dscr": "DSCR Stress",
       "settings": "Settings"
     },
     "cashFlow": {
@@ -431,6 +433,49 @@
       "ecbMainShort": "ECB Main",
       "ecbLive": "ECB Live",
       "spread": "Spread"
+    },
+    "sensitivity": {
+      "tabLabel": "Sensitivity",
+      "infoBanner": "See which variables have the greatest impact on your NPV. The tornado chart ranks variables by influence; the heat map shows how two variables interact.",
+      "tornadoTitle": "Tornado Chart — Variable Impact on NPV",
+      "baseNpv": "Base NPV",
+      "low": "Low (−20%)",
+      "high": "High (+20%)",
+      "swing": "Swing",
+      "heatMapTitle": "2-Variable Heat Map",
+      "rowVariable": "Row variable",
+      "colVariable": "Column variable",
+      "varDiscountRate": "Discount Rate",
+      "varBankSpread": "Bank Spread",
+      "varSalePrice": "Sale Price",
+      "varUpfrontPercent": "Down Payment %",
+      "varPaymentMonths": "Payment Duration",
+      "varCertaintyMix": "Certainty Mix"
+    },
+    "dscr": {
+      "tabLabel": "DSCR Stress",
+      "infoBanner": "Debt Service Coverage Ratio (DSCR) measures the buyer's ability to service debt. Enter the loan details to see how rate increases affect debt coverage.",
+      "title": "DSCR Calculator",
+      "annualNOI": "Annual Net Income (€)",
+      "noiTooltip": "Annual net operating income — rental income or buyer's annual income available for debt service",
+      "loanAmount": "Loan Amount (€)",
+      "annualRate": "Interest Rate (%)",
+      "loanTermYears": "Loan Term (years)",
+      "calculate": "Calculate",
+      "gaugeTitle": "DSCR Gauge",
+      "safe": "Safe",
+      "adequate": "Adequate",
+      "warning": "Warning",
+      "danger": "Danger",
+      "annualDebtService": "Annual Debt Service",
+      "monthlyPayment": "Monthly Payment",
+      "stressTitle": "Rate Stress Test",
+      "shockBps": "Shock (bps)",
+      "stressedRate": "Rate",
+      "dscrLabel": "DSCR",
+      "status": "Status",
+      "maxRateLabel": "Max sustainable rate for DSCR ≥ 1.0",
+      "baseCase": "Base Case"
     }
   },
   "report": {
