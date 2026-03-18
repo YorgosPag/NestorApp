@@ -5,7 +5,7 @@
 | **ADR** | ADR-242 |
 | **Phase** | A — Quick Wins (Pure Math) |
 | **Priority** | ⭐⭐⭐⭐⭐ CRITICAL |
-| **Status** | 📋 SPEC READY |
+| **Status** | ✅ IMPLEMENTED (2026-03-18) |
 | **Estimated Effort** | 1 session |
 | **Prerequisite** | SPEC-234E (InterestCostDialog) — ήδη υλοποιημένο |
 | **Dependencies** | Κανένα — ΠΡΩΤΟ στη σειρά υλοποίησης |
