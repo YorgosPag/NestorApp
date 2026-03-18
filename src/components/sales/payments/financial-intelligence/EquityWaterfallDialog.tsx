@@ -44,6 +44,11 @@ import {
 } from '@/lib/waterfall-engine';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import { InfoLabel, InfoDt } from './InfoLabel';
+import {
+  Tooltip as RadixTooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type {
   WaterfallInput,
   WaterfallResult,
@@ -205,7 +210,12 @@ export function EquityWaterfallDialog({
             />
             <label htmlFor="lp-first" className="text-sm cursor-pointer inline-flex items-center gap-1">
               {t('costCalculator.waterfall.lpFirstReturn')}
-              <HelpCircle className="h-3 w-3 text-muted-foreground" title={t('costCalculator.waterfall.lpFirstReturnTooltip')} />
+              <RadixTooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs text-xs">{t('costCalculator.waterfall.lpFirstReturnTooltip')}</TooltipContent>
+              </RadixTooltip>
             </label>
           </fieldset>
 
@@ -216,15 +226,30 @@ export function EquityWaterfallDialog({
               <span className="col-span-3">{t('costCalculator.waterfall.tierName')}</span>
               <span className="col-span-2 inline-flex items-center gap-1">
                 {t('costCalculator.waterfall.hurdleRate')}
-                <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" title={t('costCalculator.waterfall.hurdleRateTooltip')} />
+                <RadixTooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs text-xs">{t('costCalculator.waterfall.hurdleRateTooltip')}</TooltipContent>
+                </RadixTooltip>
               </span>
               <span className="col-span-2 inline-flex items-center gap-1">
                 {t('costCalculator.waterfall.lpShare')}
-                <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" title={t('costCalculator.waterfall.lpShareTooltip')} />
+                <RadixTooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs text-xs">{t('costCalculator.waterfall.lpShareTooltip')}</TooltipContent>
+                </RadixTooltip>
               </span>
               <span className="col-span-2 inline-flex items-center gap-1">
                 {t('costCalculator.waterfall.gpShare')}
-                <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" title={t('costCalculator.waterfall.gpShareTooltip')} />
+                <RadixTooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs text-xs">{t('costCalculator.waterfall.gpShareTooltip')}</TooltipContent>
+                </RadixTooltip>
               </span>
               <span className="col-span-3" />
             </header>
