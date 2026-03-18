@@ -10,6 +10,9 @@
 import React, { useState, useCallback } from 'react';
 import { CreditCard, Plus, Loader2, FileSpreadsheet } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ADR-241: Centralized fullscreen system
+import { useFullscreen } from '@/hooks/useFullscreen';
+import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 import { usePaymentPlan } from '@/hooks/usePaymentPlan';
 import { PaymentPlanOverview } from '@/components/sales/payments/PaymentPlanOverview';
 import { InstallmentSchedule } from '@/components/sales/payments/InstallmentSchedule';
@@ -44,6 +47,8 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
     removeInstallment,
   } = usePaymentPlan(unit.id);
 
+  // 🏢 ADR-241: Fullscreen state
+  const fullscreen = useFullscreen();
   const [wizardOpen, setWizardOpen] = useState(false);
   const [payDialogOpen, setPayDialogOpen] = useState(false);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
@@ -141,7 +146,13 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
   const selectedInstallment = plan.installments[selectedInstallmentIdx];
 
   return (
-    <section className="space-y-4 p-3">
+    <FullscreenOverlay
+      isFullscreen={fullscreen.isFullscreen}
+      onToggle={fullscreen.toggle}
+      ariaLabel="Payment Plan"
+      className="space-y-4 p-3"
+      fullscreenClassName="p-4 overflow-auto"
+    >
       {/* Header */}
       <header className="flex items-center justify-between">
         <span className="flex items-center gap-2">
@@ -150,17 +161,21 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
             {t('title')}
           </h2>
         </span>
-        {resolvedProjectId && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1 text-xs h-7"
-            onClick={() => setReportDialogOpen(true)}
-          >
-            <FileSpreadsheet className="h-3.5 w-3.5" />
-            {t('report.button')}
-          </Button>
-        )}
+        <nav className="flex items-center gap-1">
+          {resolvedProjectId && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1 text-xs h-7"
+              onClick={() => setReportDialogOpen(true)}
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              {t('report.button')}
+            </Button>
+          )}
+          {/* 🏢 ADR-241: Fullscreen toggle */}
+          <FullscreenToggleButton isFullscreen={fullscreen.isFullscreen} onToggle={fullscreen.toggle} />
+        </nav>
       </header>
 
       {/* Overview */}
@@ -225,6 +240,6 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
           projectId={resolvedProjectId}
         />
       )}
-    </section>
+    </FullscreenOverlay>
   );
 }

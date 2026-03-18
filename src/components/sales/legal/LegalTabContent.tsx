@@ -9,6 +9,9 @@
 import React, { useCallback, useState } from 'react';
 import { Plus, Scale, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ADR-241: Centralized fullscreen system
+import { useFullscreen } from '@/hooks/useFullscreen';
+import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 import { useLegalContracts } from '@/hooks/useLegalContracts';
 import { ContractTimeline } from '@/components/sales/legal/ContractTimeline';
 import { ContractCard } from '@/components/sales/legal/ContractCard';
@@ -66,6 +69,8 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
 
   const [selectedPhase, setSelectedPhase] = useState<ContractPhase>('preliminary');
   const [creating, setCreating] = useState(false);
+  // 🏢 ADR-241: Fullscreen state
+  const fullscreen = useFullscreen();
 
   // Filter out phases that already have a contract
   const availablePhases = CREATABLE_PHASES.filter(
@@ -123,13 +128,23 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
   }
 
   return (
-    <section className="space-y-4 p-3">
+    <FullscreenOverlay
+      isFullscreen={fullscreen.isFullscreen}
+      onToggle={fullscreen.toggle}
+      ariaLabel="Legal Process"
+      className="space-y-4 p-3"
+      fullscreenClassName="p-4 overflow-auto"
+    >
       {/* Title */}
-      <header className="flex items-center gap-2">
-        <Scale className="h-4 w-4 text-muted-foreground" />
-        <h2 className="text-sm font-semibold">
-          {t('sales.legal.title', { defaultValue: 'Νομική Διαδικασία' })}
-        </h2>
+      <header className="flex items-center justify-between">
+        <span className="flex items-center gap-2">
+          <Scale className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold">
+            {t('sales.legal.title', { defaultValue: 'Νομική Διαδικασία' })}
+          </h2>
+        </span>
+        {/* 🏢 ADR-241: Fullscreen toggle */}
+        <FullscreenToggleButton isFullscreen={fullscreen.isFullscreen} onToggle={fullscreen.toggle} />
       </header>
 
       {/* Timeline */}
@@ -196,6 +211,6 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
 
       {/* Brokerage */}
       <BrokerageCard agreements={agreements} />
-    </section>
+    </FullscreenOverlay>
   );
 }
