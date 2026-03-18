@@ -152,6 +152,7 @@ type DialogContentSize = 'sm' | 'default' | 'lg' | 'xl' | 'fullscreen';
 | 1 | **EntityFilesManager** | `FullscreenOverlay` (overlay) | Simple rename — props unchanged |
 | 2 | **GanttView** | `Dialog` + `DialogContent size="fullscreen"` | Direct composition — no wrapper |
 | 3 | **FloorplanGallery** | `Dialog` + `DialogContent size="fullscreen"` | Direct composition — no wrapper |
+| 4 | **DXF Viewer** | `FullscreenOverlay` (overlay) | Portal wraps MainContentSection + FloatingPanelsSection. Toolbar button toggle. Zero canvas remount. |
 
 ---
 
@@ -160,7 +161,7 @@ type DialogContentSize = 'sm' | 'default' | 'lg' | 'xl' | 'fullscreen';
 | Component | Reason |
 |-----------|--------|
 | **VideoPlayer** | Uses native browser Fullscreen API (`element.requestFullscreen()`). Different paradigm. |
-| **FullscreenView (DXF)** | Deep coupling με canvas coordinate system και zoom state. |
+| **~~FullscreenView (DXF)~~** | ~~Deep coupling με canvas coordinate system και zoom state.~~ **MIGRATED** (2026-03-18) — Portal-based `FullscreenOverlay` wraps `MainContentSection` + `FloatingPanelsSection`, zero canvas remount. |
 | **GeoDialogSystem** | Dialog framework με δικό του fullscreen mode (dialog stack management). |
 
 ---
@@ -238,8 +239,8 @@ return (
 ## Full Codebase Audit (2026-03-18)
 
 - **0 rogue fullscreen implementations** βρέθηκαν
-- **3/3** eligible components μεταφέρθηκαν επιτυχώς
-- **3/3** intentional exceptions τεκμηριωμένες (VideoPlayer, DXF FullscreenView, GeoDialogSystem)
+- **4/4** eligible components μεταφέρθηκαν επιτυχώς (EntityFilesManager, GanttView, FloorplanGallery, DXF Viewer)
+- **2/3** intentional exceptions τεκμηριωμένες (VideoPlayer, GeoDialogSystem)
 
 ---
 
@@ -247,6 +248,8 @@ return (
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-03-18 | **DXF Viewer fullscreen**: Portal-based `FullscreenOverlay` wraps canvas area, toolbar toggle button (Maximize2/Minimize2), `isFullscreen` prop flow through 7 components, i18n keys (en+el), zero canvas remount | Claude + Γιώργος |
+| 2026-03-18 | **Milestones fullscreen**: Added `FullscreenOverlay` to `TimelineTabContent.tsx` milestones view — `useFullscreen` hook + fullscreen button in toolbar + overlay with OverallProgressCard, TimelineMilestones, CriticalPathCard, CompletionForecastCard | Claude + Γιώργος |
 | 2026-03-18 | **v2 Composition Refactor**: `FullscreenContainer` → `FullscreenOverlay` (SRP), dialog mode → direct `<Dialog size="fullscreen">` composition, `FullscreenToggleButton` standalone export, CVA size variants on `DialogContent` | Claude + Γιώργος |
 | 2026-03-18 | Full codebase audit — confirmed 100% centralization coverage, 0 rogue implementations | Claude + Γιώργος |
 | 2026-03-18 | Initial implementation — `useFullscreen` hook, `FullscreenContainer` component, 3 component migrations, i18n keys | Claude + Γιώργος |

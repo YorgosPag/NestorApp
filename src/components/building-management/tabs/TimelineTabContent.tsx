@@ -2,6 +2,8 @@
 'use client';
 
 import React, { lazy, Suspense, useCallback, useMemo, useState } from 'react';
+import { useFullscreen } from '@/hooks/useFullscreen';
+import { FullscreenOverlay } from '@/core/containers/FullscreenOverlay';
 import { TimelineHeader } from './TimelineTabContent/TimelineHeader';
 import { OverallProgressCard } from './TimelineTabContent/OverallProgressCard';
 import { TimelineMilestones } from './TimelineTabContent/TimelineMilestones';
@@ -16,7 +18,7 @@ import type { Building } from '../BuildingsPageContent';
 // ProgressCard moved here from GeneralTabContent (consistency refactor)
 import { ProgressCard } from './GeneralTabContent/ProgressCard';
 // 🏢 ENTERPRISE: Milestone Export — PDF & Excel (ADR-034)
-import { Download, FileText, Table2 } from 'lucide-react';
+import { Download, FileText, Maximize2, Table2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -51,6 +53,9 @@ interface TimelineTabContentProps {
 const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
   // View toggle state (milestones = default, gantt = ADR-034)
   const [activeView, setActiveView] = useState<TimelineView>('milestones');
+
+  // 🏢 ADR-241: Fullscreen for milestones view
+  const fullscreen = useFullscreen();
 
   // i18n and semantic colors hooks
   const { t, i18n } = useTranslation('building');
@@ -198,6 +203,16 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
                 <Plus className={cn(iconSizes.sm, 'mr-1.5')} />
                 {t('tabs.timeline.milestoneDialog.addButton')}
               </Button>
+            {/* Fullscreen Toggle (ADR-241) */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fullscreen.enter}
+                title={i18n.language === 'el' ? 'Πλήρης Οθόνη' : 'Fullscreen'}
+              >
+                <Maximize2 className={cn(iconSizes.sm, 'mr-1.5')} />
+                {i18n.language === 'el' ? 'Πλήρης Οθόνη' : 'Fullscreen'}
+              </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" disabled={isExporting}>
@@ -239,6 +254,40 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
           </div>
         </>
       )}
+
+      {/* ─── Milestones Fullscreen (ADR-241 — FullscreenOverlay portal) ── */}
+      <FullscreenOverlay
+        isFullscreen={fullscreen.isFullscreen}
+        onToggle={fullscreen.toggle}
+        headerContent={
+          <span className="font-semibold">
+            {building.name} — {t('tabs.timeline.header')}
+          </span>
+        }
+        ariaLabel={t('tabs.timeline.header')}
+      >
+        <section className="flex-1 min-h-0 overflow-auto p-4 space-y-2">
+          <OverallProgressCard building={building} milestones={milestones} />
+          {milestonesLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            </div>
+          ) : (
+            <TimelineMilestones
+              milestones={milestones}
+              getStatusColor={wrappedGetStatusColor}
+              getStatusText={wrappedGetStatusText}
+              getTypeIcon={getTypeIcon}
+              onEditMilestone={handleEditMilestone}
+              onDeleteMilestone={handleDeleteMilestoneConfirm}
+            />
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <CriticalPathCard />
+            <CompletionForecastCard milestones={milestones} />
+          </div>
+        </section>
+      </FullscreenOverlay>
 
       {/* Gantt View (ADR-034) — lazy loaded */}
       {activeView === 'gantt' && (
