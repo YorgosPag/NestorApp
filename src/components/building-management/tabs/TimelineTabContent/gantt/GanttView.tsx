@@ -654,9 +654,9 @@ export function GanttView({ building }: GanttViewProps) {
   }
 
   return (
-    <section className={cn('flex flex-col', spacingTokens.gap.sm)} aria-label={t('tabs.timeline.gantt.title')}>
+    <section className={cn('flex-1 flex flex-col min-h-0', spacingTokens.gap.sm)} aria-label={t('tabs.timeline.gantt.title')}>
       {/* Toolbar: New Phase / New Task / Export */}
-      <nav className={cn('flex items-center', spacingTokens.gap.sm)} aria-label="Gantt actions">
+      <nav className={cn('shrink-0 flex items-center', spacingTokens.gap.sm)} aria-label="Gantt actions">
         <Button variant="default" size="sm" onClick={openCreatePhaseDialog}>
           <FolderPlus className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
           {t('tabs.timeline.gantt.actions.newPhase')}
@@ -724,7 +724,7 @@ export function GanttView({ building }: GanttViewProps) {
         <UnifiedDashboard
           stats={summaryStats}
           columns={4}
-          className=""
+          className="shrink-0"
         />
       )}
 
@@ -746,12 +746,12 @@ export function GanttView({ building }: GanttViewProps) {
       {/* Gantt Chart — with right-click context menu + hover tooltip via portals */}
       {!isEmpty && (
         <Card
-          className="border-0 shadow-none"
+          className="flex-1 flex flex-col min-h-0 border-0 shadow-none"
           onContextMenu={handleContextMenu}
           onPointerMove={handleGanttPointerMove}
           onPointerLeave={handleGanttPointerLeave}
         >
-          <CardContent className={spacingTokens.padding.none} onMouseDownCapture={handleGanttMouseDown}>
+          <CardContent className={cn('flex-1 min-h-0 overflow-auto', spacingTokens.padding.none)} onMouseDownCapture={handleGanttMouseDown}>
             <div ref={ganttChartRef}>
               <GanttChart
                 tasks={taskGroups}

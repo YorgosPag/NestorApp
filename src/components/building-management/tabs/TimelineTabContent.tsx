@@ -181,7 +181,7 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
   }, [building.name, building.progress, milestones, isExporting, companyName, projectName]);
 
   return (
-    <section className="space-y-2">
+    <section className={activeView === 'gantt' ? 'flex flex-1 flex-col min-h-0 gap-2' : 'space-y-2'}>
       {/* View Toggle: Milestones | Gantt (ADR-034) */}
       <TimelineViewToggle activeView={activeView} onViewChange={setActiveView} />
 
