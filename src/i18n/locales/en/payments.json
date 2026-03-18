@@ -350,7 +350,7 @@
       "vsCash": "{diff} less compared to cash payment",
       "bankComparison": "Comparison with bank borrowing",
       "bankComparisonText": "If you borrowed {amount} for {days} days at {rate} interest, you would pay {interest} in interest. This is the real cost of waiting in banking terms.",
-      "bankInterestLabel": "Bank borrowing interest"
+      "bankInterestLabel": "Bank borrowing interest",
       "cashName": "Cash",
       "cashDesc": "100% lump sum payment",
       "offPlanName": "Off-Plan",
