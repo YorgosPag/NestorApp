@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -187,32 +188,46 @@ function OverlayModeContainer({
 }: OverlayModeProps) {
   const colors = useSemanticColors();
 
-  return (
+  // Portal target — must be client-side only
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setPortalTarget(document.body);
+  }, []);
+
+  // Normal (non-fullscreen): render children inline
+  if (!isFullscreen) {
+    return (
+      <section className={className} aria-label={ariaLabel}>
+        {children}
+      </section>
+    );
+  }
+
+  // Fullscreen: render via portal to escape overflow-hidden ancestors
+  const fullscreenContent = (
     <section
       className={cn(
-        isFullscreen
-          ? [
-              'fixed inset-0 z-50 flex flex-col overflow-auto',
-              colors.bg.primary,
-              fullscreenClassName,
-            ]
-          : className
+        'fixed inset-0 z-50 flex flex-col overflow-auto',
+        colors.bg.primary,
+        fullscreenClassName,
       )}
       aria-label={ariaLabel}
-      role={isFullscreen ? 'dialog' : undefined}
-      aria-modal={isFullscreen ? true : undefined}
+      role="dialog"
+      aria-modal
     >
-      {isFullscreen && headerContent && (
+      {headerContent && (
         <header className="flex items-center justify-between shrink-0 border-b px-4 py-2">
           <span className="flex items-center gap-2">{headerContent}</span>
           {togglePosition !== 'none' && (
-            <FullscreenToggleButton isFullscreen={isFullscreen} onToggle={onToggle} />
+            <FullscreenToggleButton isFullscreen onToggle={onToggle} />
           )}
         </header>
       )}
       {children}
     </section>
   );
+
+  return portalTarget ? createPortal(fullscreenContent, portalTarget) : null;
 }
 
 // =============================================================================
