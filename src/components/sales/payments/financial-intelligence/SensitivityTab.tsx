@@ -32,6 +32,7 @@ import {
 import { Label } from '@/components/ui/label';
 
 import { runTornadoAnalysis, buildHeatMap } from '@/lib/sensitivity-engine';
+import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type {
   CostCalculationInput,
   CostCalculationResult,
@@ -52,14 +53,6 @@ interface SensitivityTabProps {
 // =============================================================================
 // HELPERS
 // =============================================================================
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 const VARIABLE_OPTIONS: SensitivityVariable[] = [
   'discountRate',
@@ -122,7 +115,7 @@ function TornadoChart({
         {t('costCalculator.sensitivity.tornadoTitle')}
       </h3>
       <p className="text-xs text-muted-foreground">
-        {t('costCalculator.sensitivity.baseNpv')}: {formatCurrency(analysis.baseNPV)}
+        {t('costCalculator.sensitivity.baseNpv')}: {formatCurrencyWhole(analysis.baseNPV)}
       </p>
       <ResponsiveContainer width="100%" height={280}>
         <BarChart
@@ -133,7 +126,7 @@ function TornadoChart({
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             type="number"
-            tickFormatter={(v: number) => `${v >= 0 ? '+' : ''}${formatCurrency(v)}`}
+            tickFormatter={(v: number) => `${v >= 0 ? '+' : ''}${formatCurrencyWhole(v)}`}
           />
           <YAxis
             type="category"
@@ -143,7 +136,7 @@ function TornadoChart({
           />
           <RechartsTooltip
             formatter={(value: number, name: string) => [
-              formatCurrency(value),
+              formatCurrencyWhole(value),
               name === 'lowDelta'
                 ? t('costCalculator.sensitivity.low')
                 : t('costCalculator.sensitivity.high'),
@@ -257,7 +250,7 @@ function HeatMap({
                     key={ci}
                     className={`p-1.5 text-center font-mono border border-border heatmap-cell-${cell.bucket}`}
                   >
-                    {formatCurrency(cell.npv)}
+                    {formatCurrencyWhole(cell.npv)}
                   </td>
                 ))}
               </tr>

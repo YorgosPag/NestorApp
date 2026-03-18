@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/table';
 
 import { calculateDSCR, runStressTest } from '@/lib/dscr-engine';
+import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { DSCRInput } from '@/types/interest-calculator';
 
 // =============================================================================
@@ -40,14 +41,6 @@ interface DSCRStressTabProps {
 // =============================================================================
 // HELPERS
 // =============================================================================
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 const STATUS_BADGE_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
   safe: 'default',
@@ -258,7 +251,7 @@ export function DSCRStressTab({ salePrice, effectiveRate, t }: DSCRStressTabProp
                 {t('costCalculator.dscr.annualDebtService')}
               </dt>
               <dd className="text-sm font-semibold">
-                {formatCurrency(baseResult.annualDebtService)}
+                {formatCurrencyWhole(baseResult.annualDebtService)}
               </dd>
             </div>
             <div>
@@ -266,7 +259,7 @@ export function DSCRStressTab({ salePrice, effectiveRate, t }: DSCRStressTabProp
                 {t('costCalculator.dscr.monthlyPayment')}
               </dt>
               <dd className="text-sm font-semibold">
-                {formatCurrency(baseResult.monthlyPayment)}
+                {formatCurrencyWhole(baseResult.monthlyPayment)}
               </dd>
             </div>
           </dl>

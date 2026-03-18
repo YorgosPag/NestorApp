@@ -17,7 +17,6 @@ import {
   Area,
   BarChart,
   Bar,
-  LineChart,
   Line,
   XAxis,
   YAxis,

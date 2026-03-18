@@ -22,6 +22,7 @@ import {
 } from 'recharts';
 import { AlertTriangle } from 'lucide-react';
 
+import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { DrawPeriodAnalysis, InterestReserveStatus } from '@/types/interest-calculator';
 
 // =============================================================================
@@ -44,13 +45,6 @@ export function InterestReserveChart({ periods, reserveStatus, t }: InterestRese
     reserveBalance: Math.round(p.reserveBalance),
     monthIndex: p.month,
   }));
-
-  const formatCurrency = (value: number): string =>
-    new Intl.NumberFormat('el-GR', {
-      style: 'currency',
-      currency: 'EUR',
-      maximumFractionDigits: 0,
-    }).format(value);
 
   // Unique gradient ID for this chart instance
   const gradientId = 'reserveGradient';
@@ -79,7 +73,7 @@ export function InterestReserveChart({ periods, reserveStatus, t }: InterestRese
             />
             <RechartsTooltip
               formatter={(value: number) => [
-                formatCurrency(value),
+                formatCurrencyWhole(value),
                 t('costCalculator.drawSchedule.reserveBalance'),
               ]}
               labelFormatter={(label: string) => `${t('costCalculator.drawSchedule.month')} ${label}`}
@@ -119,7 +113,7 @@ export function InterestReserveChart({ periods, reserveStatus, t }: InterestRese
           <p className="text-sm text-red-800 dark:text-red-300 leading-relaxed">
             {t('costCalculator.drawSchedule.reserveWarning', {
               month: String((reserveStatus.exhaustionMonth ?? 0) + 1),
-              shortfall: formatCurrency(reserveStatus.cashShortfall),
+              shortfall: formatCurrencyWhole(reserveStatus.cashShortfall),
             })}
           </p>
         </aside>

@@ -22,6 +22,7 @@ import {
   Cell,
 } from 'recharts';
 
+import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { DrawPeriodAnalysis, DrawPhaseType } from '@/types/interest-calculator';
 
 // =============================================================================
@@ -71,13 +72,6 @@ export function DrawTimelineChart({ periods, t }: DrawTimelineChartProps) {
     }
   }
 
-  const formatCurrency = (value: number): string =>
-    new Intl.NumberFormat('el-GR', {
-      style: 'currency',
-      currency: 'EUR',
-      maximumFractionDigits: 0,
-    }).format(value);
-
   return (
     <section className="space-y-3">
       <h4 className="text-sm font-semibold">
@@ -95,7 +89,7 @@ export function DrawTimelineChart({ periods, t }: DrawTimelineChartProps) {
             />
             <RechartsTooltip
               formatter={(value: number, name: string) => [
-                formatCurrency(value),
+                formatCurrencyWhole(value),
                 name === 'drawAmount'
                   ? t('costCalculator.drawSchedule.drawAmount')
                   : t('costCalculator.drawSchedule.cumulativeDrawn'),

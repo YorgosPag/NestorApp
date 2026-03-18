@@ -35,6 +35,7 @@ import { analyzeDrawSchedule, getGreekConstructionTemplate } from '@/lib/draw-sc
 import { DrawTimelineChart } from './DrawTimelineChart';
 import { InterestReserveChart } from './InterestReserveChart';
 
+import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type {
   DrawScheduleEntry,
   LoanTerms,
@@ -55,14 +56,6 @@ interface DrawScheduleTabProps {
 // =============================================================================
 // HELPERS
 // =============================================================================
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 function formatPercent(value: number): string {
   return `${value.toFixed(2)}%`;
@@ -429,22 +422,22 @@ export function DrawScheduleTab({ salePrice, effectiveRate, t }: DrawScheduleTab
             <dt className="text-muted-foreground">
               {t('costCalculator.drawSchedule.totalDrawn')}
             </dt>
-            <dd className="text-right font-medium">{formatCurrency(result.totalDrawn)}</dd>
+            <dd className="text-right font-medium">{formatCurrencyWhole(result.totalDrawn)}</dd>
 
             <dt className="text-muted-foreground">
               {t('costCalculator.drawSchedule.totalInterest')}
             </dt>
-            <dd className="text-right font-medium">{formatCurrency(result.totalInterest)}</dd>
+            <dd className="text-right font-medium">{formatCurrencyWhole(result.totalInterest)}</dd>
 
             <dt className="text-muted-foreground">
               {t('costCalculator.drawSchedule.originationFeeLabel')}
             </dt>
-            <dd className="text-right font-medium">{formatCurrency(result.originationFeeAmount)}</dd>
+            <dd className="text-right font-medium">{formatCurrencyWhole(result.originationFeeAmount)}</dd>
 
             <dt className="text-muted-foreground font-semibold">
               {t('costCalculator.drawSchedule.totalCostOfCapital')}
             </dt>
-            <dd className="text-right font-bold">{formatCurrency(result.totalCostOfCapital)}</dd>
+            <dd className="text-right font-bold">{formatCurrencyWhole(result.totalCostOfCapital)}</dd>
 
             <dt className="text-muted-foreground">
               {t('costCalculator.drawSchedule.costPercent')}
@@ -454,7 +447,7 @@ export function DrawScheduleTab({ salePrice, effectiveRate, t }: DrawScheduleTab
             <dt className="text-muted-foreground">
               {t('costCalculator.drawSchedule.waob')}
             </dt>
-            <dd className="text-right font-medium">{formatCurrency(result.weightedAverageBalance)}</dd>
+            <dd className="text-right font-medium">{formatCurrencyWhole(result.weightedAverageBalance)}</dd>
 
             <dt className="text-muted-foreground">
               {t('costCalculator.drawSchedule.reserveStatusLabel')}
