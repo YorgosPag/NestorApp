@@ -288,12 +288,12 @@ export function GanttView({ building }: GanttViewProps) {
 
   // ─── Context Menu Handlers ────────────────────────────────────────────
 
-  // Prevent right-click from starting a drag operation in the Gantt library
+  // Prevent right-click drag + track drag state for tooltip stability
   const handleGanttMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button === 2) {
-      // Right-click — stop propagation to prevent library drag
       e.stopPropagation();
     }
+    isDraggingRef.current = true;
   }, []);
 
   // Detect which task bar was right-clicked — opens custom context menu
@@ -521,11 +521,7 @@ export function GanttView({ building }: GanttViewProps) {
     };
   }, []);
 
-  // 🏢 ENTERPRISE: Track drag state to prevent tooltip flicker during resize/move
-  const handleGanttMouseDown = useCallback(() => {
-    isDraggingRef.current = true;
-  }, []);
-
+  // 🏢 ENTERPRISE: Reset drag state on mouse/pointer up (window-level)
   useEffect(() => {
     const handleMouseUp = () => { isDraggingRef.current = false; };
     window.addEventListener('mouseup', handleMouseUp);
@@ -632,6 +628,37 @@ export function GanttView({ building }: GanttViewProps) {
     }
   }, [taskGroups]); // eslint-disable-line react-hooks/exhaustive-deps -- intentionally watches only taskGroups
 
+  // Timeline bounds — aligned to month boundaries for correct bar positioning
+  const timelineBounds = useMemo(() => {
+    const now = new Date();
+    let earliest = now;
+    let latest = now;
+
+    for (const group of taskGroups) {
+      for (const task of group.tasks) {
+        const start = task.startDate instanceof Date ? task.startDate : new Date(task.startDate);
+        const end = task.endDate instanceof Date ? task.endDate : new Date(task.endDate);
+        if (start < earliest) earliest = start;
+        if (end > latest) latest = end;
+      }
+    }
+
+    // Pad: 3 months before earliest, 12 months after latest
+    // CRITICAL: Align to 1st of month — the library renders header columns
+    // from the 1st of each month, so the startDate must match for correct alignment
+    const startDate = new Date(earliest);
+    startDate.setMonth(startDate.getMonth() - 3);
+    startDate.setDate(1);
+    startDate.setHours(0, 0, 0, 0);
+
+    const endDate = new Date(latest);
+    endDate.setMonth(endDate.getMonth() + 13);
+    endDate.setDate(0); // last day of the +12 month
+    endDate.setHours(23, 59, 59, 999);
+
+    return { startDate, endDate };
+  }, [taskGroups]);
+
   // 🏢 ENTERPRISE: Real-time tooltip update during progress slider drag AND resize drag
   // Observes DOM mutations on .rmg-progress-fill width% AND .rmg-task-item left/width
   useEffect(() => {
@@ -712,37 +739,6 @@ export function GanttView({ building }: GanttViewProps) {
     }, 500); // Wait for library render
     return () => clearTimeout(timeout);
   }, [loading, isEmpty]);
-
-  // Timeline bounds — aligned to month boundaries for correct bar positioning
-  const timelineBounds = useMemo(() => {
-    const now = new Date();
-    let earliest = now;
-    let latest = now;
-
-    for (const group of taskGroups) {
-      for (const task of group.tasks) {
-        const start = task.startDate instanceof Date ? task.startDate : new Date(task.startDate);
-        const end = task.endDate instanceof Date ? task.endDate : new Date(task.endDate);
-        if (start < earliest) earliest = start;
-        if (end > latest) latest = end;
-      }
-    }
-
-    // Pad: 3 months before earliest, 12 months after latest
-    // CRITICAL: Align to 1st of month — the library renders header columns
-    // from the 1st of each month, so the startDate must match for correct alignment
-    const startDate = new Date(earliest);
-    startDate.setMonth(startDate.getMonth() - 3);
-    startDate.setDate(1);
-    startDate.setHours(0, 0, 0, 0);
-
-    const endDate = new Date(latest);
-    endDate.setMonth(endDate.getMonth() + 13);
-    endDate.setDate(0); // last day of the +12 month
-    endDate.setHours(23, 59, 59, 999);
-
-    return { startDate, endDate };
-  }, [taskGroups]);
 
   // Summary stats — 🏢 ENTERPRISE: Centralized UnifiedDashboard (Google-level SSoT)
   const summaryStats = useMemo((): DashboardStat[] => [
