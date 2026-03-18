@@ -40,6 +40,9 @@ export interface DXFViewerLayoutProps extends Omit<DxfViewerState, 'snapEnabled'
   /** ADR-176: Mobile sidebar toggle callback */
   onSidebarToggle?: () => void;
 
+  /** ADR-241: Fullscreen state for toolbar icon toggle */
+  isFullscreen?: boolean;
+
   // Props from useDxfViewerState that need to be passed down
   className?: string;
   entities: DXFEntity[];

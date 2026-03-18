@@ -85,6 +85,9 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
 
   // ADR-189: Guide visibility
   guidesVisible = true,
+
+  // ADR-241: Fullscreen state
+  isFullscreen,
 }) => {
   // 🏢 ENTERPRISE HOOKS: Design system integration
   const iconSizes = useIconSizes();
@@ -223,6 +226,7 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
     autoCrop,
     showCursorSettings: showCursorSettings || false,
     guidesVisible,
+    isFullscreen,
     onAction: (action, data) => {
       onAction(action, data as string | number | Record<string, unknown>);
     }

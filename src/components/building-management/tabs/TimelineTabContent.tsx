@@ -256,38 +256,40 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
       )}
 
       {/* ─── Milestones Fullscreen (ADR-241 — FullscreenOverlay portal) ── */}
-      <FullscreenOverlay
-        isFullscreen={fullscreen.isFullscreen}
-        onToggle={fullscreen.toggle}
-        headerContent={
-          <span className="font-semibold">
-            {building.name} — {t('tabs.timeline.header')}
-          </span>
-        }
-        ariaLabel={t('tabs.timeline.header')}
-      >
-        <section className="flex-1 min-h-0 overflow-auto p-4 space-y-2">
-          <OverallProgressCard building={building} milestones={milestones} />
-          {milestonesLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      {fullscreen.isFullscreen && (
+        <FullscreenOverlay
+          isFullscreen
+          onToggle={fullscreen.toggle}
+          headerContent={
+            <span className="font-semibold">
+              {building.name} — {t('tabs.timeline.header')}
+            </span>
+          }
+          ariaLabel={t('tabs.timeline.header')}
+        >
+          <section className="flex-1 min-h-0 overflow-auto p-4 space-y-2">
+            <OverallProgressCard building={building} milestones={milestones} />
+            {milestonesLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              </div>
+            ) : (
+              <TimelineMilestones
+                milestones={milestones}
+                getStatusColor={wrappedGetStatusColor}
+                getStatusText={wrappedGetStatusText}
+                getTypeIcon={getTypeIcon}
+                onEditMilestone={handleEditMilestone}
+                onDeleteMilestone={handleDeleteMilestoneConfirm}
+              />
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <CriticalPathCard />
+              <CompletionForecastCard milestones={milestones} />
             </div>
-          ) : (
-            <TimelineMilestones
-              milestones={milestones}
-              getStatusColor={wrappedGetStatusColor}
-              getStatusText={wrappedGetStatusText}
-              getTypeIcon={getTypeIcon}
-              onEditMilestone={handleEditMilestone}
-              onDeleteMilestone={handleDeleteMilestoneConfirm}
-            />
-          )}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            <CriticalPathCard />
-            <CompletionForecastCard milestones={milestones} />
-          </div>
-        </section>
-      </FullscreenOverlay>
+          </section>
+        </FullscreenOverlay>
+      )}
 
       {/* Gantt View (ADR-034) — lazy loaded */}
       {activeView === 'gantt' && (

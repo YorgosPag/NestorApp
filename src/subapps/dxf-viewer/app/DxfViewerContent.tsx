@@ -17,6 +17,9 @@ import { matchesShortcut } from '../config/keyboard-shortcuts';
 import { USE_AI_DRAWING_ASSISTANT } from '../config/feature-flags';
 // ✅ ENTERPRISE: Centralized copy-to-clipboard hook
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
+// 🏢 ADR-241: Centralized fullscreen — Portal-based, zero remount
+import { useFullscreen } from '@/hooks/useFullscreen';
+import { FullscreenOverlay } from '@/core/containers/FullscreenOverlay';
 
 // ✅ React stack suppression handled globally in layout.tsx via public/suppress-console.js
 
@@ -140,6 +143,9 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const eventBus = useEventBus(); // 🔧 PHASE 3: Centralized event coordination
   const colors = useSemanticColors();
   const { copy: copyToClipboard } = useCopyToClipboard();
+
+  // 🏢 ADR-241: Centralized fullscreen — Portal-based, zero canvas remount
+  const fullscreen = useFullscreen();
 
   // ADR-176: Responsive layout + sidebar drawer state
   const { layoutMode } = useResponsiveLayout();
@@ -381,9 +387,14 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       setAiChatOpen(prev => !prev);
       return;
     }
+    // 🏢 ADR-241: Fullscreen toggle (Portal-based, zero remount)
+    if (action === 'toggle-fullscreen') {
+      fullscreen.toggle();
+      return;
+    }
     // Pass all other actions to original handleAction
     handleAction(action, data);
-  }, [handleAction, togglePerfMonitor, perfMonitorEnabled, notifications]);
+  }, [handleAction, togglePerfMonitor, perfMonitorEnabled, notifications, fullscreen]);
 
   // ✅ PERFORMANCE: Memoize wrapped state to prevent unnecessary child re-renders
   const wrappedState = React.useMemo(() => ({
@@ -1026,74 +1037,85 @@ Check console for detailed metrics`;
         />
       )}
 
-      {/* 🚀 LCP OPTIMIZATION: Lazy-loaded Main Content Section */}
-      <React.Suspense fallback={<div className={`flex-1 ${colors.bg.skeleton} ${PANEL_LAYOUT.ANIMATE.PULSE}`} />}>
-        <MainContentSection
-        state={wrappedState}
-        currentScene={currentScene}
-        handleFileImportWithEncoding={handleFileImportWithEncoding}
-        canvasTransform={canvasTransform}
-        wrappedHandleTransformChange={wrappedHandleTransformChange}
-        handleRegionClick={handleRegionClick}
-        handleCanvasMouseMove={handleCanvasMouseMove}
-        overlayMode={overlayMode}
-        overlayStatus={overlayStatus}
-        overlayKind={overlayKind}
-        setOverlayMode={setOverlayMode}
-        setOverlayStatus={setOverlayStatus}
-        setOverlayKind={setOverlayKind}
-        dxfCanvasVisible={dxfCanvasVisible}
-        layerCanvasVisible={layerCanvasVisible}
-        setDxfCanvasVisible={setDxfCanvasVisible}
-        setLayerCanvasVisible={setLayerCanvasVisible}
-        showCopyableNotification={showCopyableNotification}
-        showGrid={showGrid}
-        activeTool={activeTool}
-        handleToolChange={handleToolChange}
-        testModalOpen={testModalOpen}
-        setTestModalOpen={setTestModalOpen}
-        testReport={testReport}
-        setTestReport={setTestReport}
-        formattedTestReport={formattedTestReport}
-        setFormattedTestReport={setFormattedTestReport}
-        panToWorldOrigin={panToWorldOrigin}
-        showCalibration={showCalibration}
-        handleCalibrationToggle={handleCalibrationToggle}
-        onSidebarToggle={() => setSidebarOpen(prev => !prev)}
-        />
-      </React.Suspense>
+      {/* 🏢 ADR-241: FullscreenOverlay — Portal-based, zero canvas remount */}
+      {/* Sidebar stays OUTSIDE → hidden in fullscreen. Canvas + panels INSIDE → fullscreen. */}
+      <FullscreenOverlay
+        isFullscreen={fullscreen.isFullscreen}
+        onToggle={fullscreen.toggle}
+        ariaLabel="DXF Viewer"
+        className="flex flex-1 min-w-0"
+        fullscreenClassName="flex-row"
+      >
+        {/* 🚀 LCP OPTIMIZATION: Lazy-loaded Main Content Section */}
+        <React.Suspense fallback={<div className={`flex-1 ${colors.bg.skeleton} ${PANEL_LAYOUT.ANIMATE.PULSE}`} />}>
+          <MainContentSection
+          state={wrappedState}
+          currentScene={currentScene}
+          handleFileImportWithEncoding={handleFileImportWithEncoding}
+          canvasTransform={canvasTransform}
+          wrappedHandleTransformChange={wrappedHandleTransformChange}
+          handleRegionClick={handleRegionClick}
+          handleCanvasMouseMove={handleCanvasMouseMove}
+          overlayMode={overlayMode}
+          overlayStatus={overlayStatus}
+          overlayKind={overlayKind}
+          setOverlayMode={setOverlayMode}
+          setOverlayStatus={setOverlayStatus}
+          setOverlayKind={setOverlayKind}
+          dxfCanvasVisible={dxfCanvasVisible}
+          layerCanvasVisible={layerCanvasVisible}
+          setDxfCanvasVisible={setDxfCanvasVisible}
+          setLayerCanvasVisible={setLayerCanvasVisible}
+          showCopyableNotification={showCopyableNotification}
+          showGrid={showGrid}
+          activeTool={activeTool}
+          handleToolChange={handleToolChange}
+          testModalOpen={testModalOpen}
+          setTestModalOpen={setTestModalOpen}
+          testReport={testReport}
+          setTestReport={setTestReport}
+          formattedTestReport={formattedTestReport}
+          setFormattedTestReport={setFormattedTestReport}
+          panToWorldOrigin={panToWorldOrigin}
+          showCalibration={showCalibration}
+          handleCalibrationToggle={handleCalibrationToggle}
+          onSidebarToggle={() => setSidebarOpen(prev => !prev)}
+          isFullscreen={fullscreen.isFullscreen}
+          />
+        </React.Suspense>
 
-      {/* 🚀 LCP OPTIMIZATION: Lazy-loaded Floating Panels Section */}
-      <React.Suspense fallback={<div className={`${PANEL_LAYOUT.WIDTH.PANEL_SM} ${colors.bg.skeleton} ${PANEL_LAYOUT.ANIMATE.PULSE}`} />}>
-        <FloatingPanelsSection
-        colorMenu={colorMenu}
-        currentScene={currentScene}
-        handleSceneChange={handleSceneChange}
-        closeColorMenu={closeColorMenu}
-        floatingRef={floatingRef}
-        showCursorSettings={showCursorSettings}
-        showCalibration={showCalibration}
-        showGuidePanel={showGuidePanel}
-        showGuideAnalysisPanel={showGuideAnalysisPanel}
-        handleAction={wrappedHandleAction}
-        activeTool={activeTool}
-        overlayMode={overlayMode}
-        overlayStatus={overlayStatus}
-        overlayKind={overlayKind}
-        setOverlayMode={setOverlayMode}
-        setOverlayStatus={setOverlayStatus}
-        setOverlayKind={setOverlayKind}
-        snapEnabled={snapEnabled}
-        handleToolChange={handleToolChange}
-        canUndo={canUndo}
-        canRedo={canRedo}
-        overlayStore={overlayStore}
-        testModalOpen={testModalOpen}
-        setTestModalOpen={setTestModalOpen}
-        testReport={testReport}
-        formattedTestReport={formattedTestReport}
-        />
-      </React.Suspense>
+        {/* 🚀 LCP OPTIMIZATION: Lazy-loaded Floating Panels Section */}
+        <React.Suspense fallback={<div className={`${PANEL_LAYOUT.WIDTH.PANEL_SM} ${colors.bg.skeleton} ${PANEL_LAYOUT.ANIMATE.PULSE}`} />}>
+          <FloatingPanelsSection
+          colorMenu={colorMenu}
+          currentScene={currentScene}
+          handleSceneChange={handleSceneChange}
+          closeColorMenu={closeColorMenu}
+          floatingRef={floatingRef}
+          showCursorSettings={showCursorSettings}
+          showCalibration={showCalibration}
+          showGuidePanel={showGuidePanel}
+          showGuideAnalysisPanel={showGuideAnalysisPanel}
+          handleAction={wrappedHandleAction}
+          activeTool={activeTool}
+          overlayMode={overlayMode}
+          overlayStatus={overlayStatus}
+          overlayKind={overlayKind}
+          setOverlayMode={setOverlayMode}
+          setOverlayStatus={setOverlayStatus}
+          setOverlayKind={setOverlayKind}
+          snapEnabled={snapEnabled}
+          handleToolChange={handleToolChange}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          overlayStore={overlayStore}
+          testModalOpen={testModalOpen}
+          setTestModalOpen={setTestModalOpen}
+          testReport={testReport}
+          formattedTestReport={formattedTestReport}
+          />
+        </React.Suspense>
+      </FullscreenOverlay>
 
       {/* 🚀 LCP OPTIMIZATION: Lazy-loaded Tests Modal for reduced initial bundle */}
       <React.Suspense fallback={<div className="hidden" />}>

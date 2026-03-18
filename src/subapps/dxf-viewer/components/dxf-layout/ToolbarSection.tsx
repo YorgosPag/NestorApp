@@ -134,6 +134,8 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
           onSidebarToggle={onSidebarToggle}
           // ADR-189: Guide visibility toggle
           guidesVisible={guidesVisible}
+          // ADR-241: Fullscreen state for toolbar icon toggle
+          isFullscreen={dxfProps.isFullscreen}
           // 🏢 ENTERPRISE: Removed unnecessary empty spread - all required props are passed explicitly
         />
 

@@ -1583,7 +1583,9 @@
     "autoCropOn": "Auto-Crop ΟΝ",
     "autoCropOff": "Auto-Crop OFF",
     "showGuides": "Εμφάνιση Οδηγών",
-    "hideGuides": "Απόκρυψη Οδηγών"
+    "hideGuides": "Απόκρυψη Οδηγών",
+    "enterFullscreen": "Πλήρης Οθόνη",
+    "exitFullscreen": "Έξοδος Πλήρους Οθόνης"
   },
   "textTemplates": {
     "normalText": {

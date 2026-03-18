@@ -75,6 +75,8 @@ interface MainContentSectionProps {
   handleCalibrationToggle: () => void;
   /** ADR-176: Mobile sidebar toggle */
   onSidebarToggle?: () => void;
+  /** ADR-241: Fullscreen state for toolbar icon toggle */
+  isFullscreen?: boolean;
 }
 
 /**
@@ -115,6 +117,7 @@ export const MainContentSection = React.memo<MainContentSectionProps>(({
   showCalibration,
   handleCalibrationToggle,
   onSidebarToggle,
+  isFullscreen,
 }) => {
   return (
     <div
@@ -182,6 +185,7 @@ export const MainContentSection = React.memo<MainContentSectionProps>(({
           setOverlayStatus={setOverlayStatus}
           setOverlayKind={setOverlayKind}
           onSidebarToggle={onSidebarToggle}
+          isFullscreen={isFullscreen}
         />
       </div>
     </div>

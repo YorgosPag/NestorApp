@@ -307,4 +307,7 @@ export interface EnhancedDXFToolbarPropsExtended {
 
   /** ADR-189: Whether construction guides are visible */
   guidesVisible?: boolean;
+
+  /** ADR-241: Fullscreen state for toolbar icon toggle */
+  isFullscreen?: boolean;
 }
