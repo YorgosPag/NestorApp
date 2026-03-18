@@ -84,7 +84,7 @@ const VARIABLE_META: VariableMeta[] = [
  * Apply a perturbation factor to a specific variable, returning modified input + rate.
  * factor: 1.0 = base, 0.8 = -20%, 1.2 = +20%.
  */
-function applyVariablePerturbation(
+export function applyVariablePerturbation(
   input: CostCalculationInput,
   rate: number,
   variable: SensitivityVariable,

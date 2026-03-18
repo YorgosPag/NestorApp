@@ -576,3 +576,163 @@ export interface BudgetVarianceAnalysis {
   /** Top 3 categories by absolute variance */
   topVariances: BudgetVarianceEntry[];
 }
+
+// =============================================================================
+// 🎲 SPEC-242D — Monte Carlo Simulation
+// =============================================================================
+
+/** Distribution type for Monte Carlo variable sampling */
+export type MonteCarloDistribution = 'normal' | 'triangular' | 'uniform';
+
+/** Configuration for a single Monte Carlo variable */
+export interface MonteCarloVariable {
+  /** Variable key (must match SensitivityVariable) */
+  key: SensitivityVariable;
+  /** Whether this variable is enabled for simulation */
+  enabled: boolean;
+  /** Distribution type */
+  distribution: MonteCarloDistribution;
+  /** Mean or base value */
+  mean: number;
+  /** Standard deviation (for normal dist) or half-range */
+  stdDev: number;
+  /** Minimum value (for triangular/uniform) */
+  min: number;
+  /** Maximum value (for triangular/uniform) */
+  max: number;
+}
+
+/** Monte Carlo simulation configuration */
+export interface MonteCarloConfig {
+  /** Number of simulation scenarios */
+  scenarioCount: number;
+  /** Random seed for reproducibility */
+  seed: number;
+  /** Variables to perturb */
+  variables: MonteCarloVariable[];
+}
+
+/** Single bin in NPV histogram */
+export interface HistogramBin {
+  /** Lower edge of bin (€) */
+  binStart: number;
+  /** Upper edge of bin (€) */
+  binEnd: number;
+  /** Midpoint label */
+  midpoint: number;
+  /** Number of scenarios in this bin */
+  count: number;
+  /** Frequency (count / total) */
+  frequency: number;
+  /** Cumulative frequency (CDF) */
+  cumulativeFrequency: number;
+}
+
+/** Single point in fan chart (percentile bands over time) */
+export interface FanChartPoint {
+  /** Month index from reference date */
+  month: number;
+  /** P10 cumulative cash flow */
+  p10: number;
+  /** P25 cumulative cash flow */
+  p25: number;
+  /** P50 (median) cumulative cash flow */
+  p50: number;
+  /** P75 cumulative cash flow */
+  p75: number;
+  /** P90 cumulative cash flow */
+  p90: number;
+}
+
+/** Full Monte Carlo simulation result */
+export interface MonteCarloResult {
+  /** Number of scenarios run */
+  scenarioCount: number;
+  /** Mean NPV across all scenarios (€) */
+  meanNPV: number;
+  /** Standard deviation of NPV */
+  stdDevNPV: number;
+  /** Percentile NPV values */
+  p10: number;
+  p25: number;
+  p50: number;
+  p75: number;
+  p90: number;
+  /** Min/Max NPV observed */
+  minNPV: number;
+  maxNPV: number;
+  /** Probability that NPV > salePrice (%) */
+  probAboveSalePrice: number;
+  /** Probability that NPV > 0 (%) */
+  probPositive: number;
+  /** Histogram bins for NPV distribution */
+  histogram: HistogramBin[];
+  /** Fan chart data points */
+  fanChart: FanChartPoint[];
+  /** Execution time in ms */
+  executionTimeMs: number;
+}
+
+// =============================================================================
+// 💰 SPEC-242D — Equity Waterfall Distribution
+// =============================================================================
+
+/** Single tier in equity waterfall */
+export interface WaterfallTier {
+  /** Tier name (e.g. "Return of Capital", "8% Preferred") */
+  name: string;
+  /** Hurdle rate for this tier (%, 0 for return of capital) */
+  hurdleRate: number;
+  /** LP share in this tier (0-1) */
+  lpShare: number;
+  /** GP share in this tier (0-1) */
+  gpShare: number;
+}
+
+/** Input for waterfall calculation */
+export interface WaterfallInput {
+  /** Total equity invested by LP (€) */
+  lpEquity: number;
+  /** Total equity invested by GP (€) */
+  gpEquity: number;
+  /** Total distributable proceeds (€) */
+  totalProceeds: number;
+  /** Project duration in years (for IRR) */
+  projectYears: number;
+  /** Waterfall tiers (ordered) */
+  tiers: WaterfallTier[];
+  /** Whether LP gets capital back first (true) or pari-passu (false) */
+  lpFirstReturn: boolean;
+}
+
+/** Result for a single waterfall tier */
+export interface WaterfallTierResult {
+  /** Tier name */
+  name: string;
+  /** Amount distributed to LP in this tier (€) */
+  lpAmount: number;
+  /** Amount distributed to GP in this tier (€) */
+  gpAmount: number;
+  /** Total distributed in this tier */
+  totalAmount: number;
+}
+
+/** Full waterfall distribution result */
+export interface WaterfallResult {
+  /** Per-tier breakdown */
+  tiers: WaterfallTierResult[];
+  /** Total distributed to LP (€) */
+  totalLP: number;
+  /** Total distributed to GP (€) */
+  totalGP: number;
+  /** LP multiple on invested capital */
+  lpMultiple: number;
+  /** GP multiple on invested capital */
+  gpMultiple: number;
+  /** LP IRR approximation (%) */
+  lpIRR: number;
+  /** GP IRR approximation (%) */
+  gpIRR: number;
+  /** Undistributed remainder (should be 0) */
+  remainder: number;
+}

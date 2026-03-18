@@ -30,6 +30,8 @@ import {
   Activity,
   ShieldCheck,
   Landmark,
+  Dices,
+  Wallet,
 } from 'lucide-react';
 import { calculateFullResult } from '@/lib/npv-engine';
 import type { CostCalculationInput, CashFlowEntry } from '@/types/interest-calculator';
@@ -75,7 +77,7 @@ import type {
   CashFlowAnalysisEntry,
 } from '@/types/interest-calculator';
 
-import { SensitivityTab, DSCRStressTab, DrawScheduleTab } from './financial-intelligence';
+import { SensitivityTab, DSCRStressTab, DrawScheduleTab, MonteCarloTab, EquityWaterfallDialog } from './financial-intelligence';
 
 // =============================================================================
 // TYPES
@@ -1025,6 +1027,7 @@ export function InterestCostDialog({
   const { t } = useTranslation('payments');
   const [discountSource, setDiscountSource] = useState<DiscountRateSource>('euribor_3M');
   const [manualRate, setManualRate] = useState(5);
+  const [waterfallOpen, setWaterfallOpen] = useState(false);
 
   // Load comparison when dialog opens
   useEffect(() => {
@@ -1067,7 +1070,24 @@ export function InterestCostDialog({
             <Calculator className="h-6 w-6" />
             {t('costCalculator.dialogTitle')}
           </DialogTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1 ml-auto"
+            onClick={() => setWaterfallOpen(true)}
+          >
+            <Wallet className="h-4 w-4" />
+            {t('costCalculator.waterfall.title')}
+          </Button>
         </DialogHeader>
+
+        {/* Equity Waterfall Dialog */}
+        <EquityWaterfallDialog
+          open={waterfallOpen}
+          onOpenChange={setWaterfallOpen}
+          salePrice={salePrice}
+          t={t}
+        />
 
         {/* Alert threshold — shows when loss > 3% */}
         {!isLoading && result && (
@@ -1110,6 +1130,10 @@ export function InterestCostDialog({
               <TabsTrigger value="drawschedule" className="text-sm gap-1">
                 <Landmark className="h-4 w-4" />
                 {t('costCalculator.tabs.drawSchedule')}
+              </TabsTrigger>
+              <TabsTrigger value="montecarlo" className="text-sm gap-1">
+                <Dices className="h-4 w-4" />
+                {t('costCalculator.tabs.monteCarlo')}
               </TabsTrigger>
               <TabsTrigger value="settings" className="text-sm gap-1">
                 <Settings className="h-4 w-4" />
@@ -1214,7 +1238,23 @@ export function InterestCostDialog({
               />
             </TabsContent>
 
-            {/* Tab 8: Settings */}
+            {/* Tab 8: Monte Carlo Simulation */}
+            <TabsContent value="montecarlo" className="mt-3">
+              {result ? (
+                <MonteCarloTab
+                  input={sensitivityInput}
+                  effectiveRate={effectiveDiscountRate}
+                  result={result}
+                  t={t}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  {t('costCalculator.noData')}
+                </p>
+              )}
+            </TabsContent>
+
+            {/* Tab 9: Settings */}
             <TabsContent value="settings" className="mt-3">
               <SettingsTab
                 rates={rates}
