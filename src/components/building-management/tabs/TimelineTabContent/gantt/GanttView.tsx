@@ -584,6 +584,40 @@ export function GanttView({ building }: GanttViewProps) {
     }
   }, [taskGroups]); // eslint-disable-line react-hooks/exhaustive-deps -- intentionally watches only taskGroups
 
+  // 🏢 ENTERPRISE: Real-time tooltip update during progress slider drag
+  // Observes DOM mutations on .rmg-progress-fill width% to update tooltip instantly
+  useEffect(() => {
+    const container = ganttChartRef.current;
+    if (!container) return;
+
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        const target = mutation.target as HTMLElement;
+        if (!target.classList?.contains('rmg-progress-fill')) continue;
+
+        // Read current width% from inline style
+        const widthStr = target.style.width;
+        if (!widthStr) continue;
+        const progressPct = Math.round(parseFloat(widthStr));
+
+        // Update tooltip if visible
+        setTooltipData((prev) => {
+          if (!prev) return null;
+          if (prev.progress === progressPct) return prev;
+          return { ...prev, progress: progressPct };
+        });
+      }
+    });
+
+    observer.observe(container, {
+      attributes: true,
+      attributeFilter: ['style'],
+      subtree: true,
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   // Timeline bounds — aligned to month boundaries for correct bar positioning
   const timelineBounds = useMemo(() => {
     const now = new Date();
