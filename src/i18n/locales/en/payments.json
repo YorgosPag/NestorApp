@@ -310,6 +310,7 @@
       "cashFlow": "Cash Flow",
       "scenarios": "Scenarios",
       "pricing": "Pricing",
+      "whatIf": "What if…",
       "settings": "Settings"
     },
     "cashFlow": {
@@ -346,7 +347,10 @@
       "rowTooltipOffPlan": "Off-Plan: The buyer pays gradually during construction. You lose {cost} due to waiting.",
       "rowTooltipLoan": "Loan: The buyer pays 30% own funds + 70% via bank. You lose {cost} due to waiting.",
       "rowTooltipCurrent": "Current Plan: The installment plan you have agreed on. You lose {cost} due to waiting.",
-      "vsCash": "{diff} less compared to cash payment"
+      "vsCash": "{diff} less compared to cash payment",
+      "bankComparison": "Comparison with bank borrowing",
+      "bankComparisonText": "If you borrowed {amount} for {days} days at {rate} interest, you would pay {interest} in interest. This is the real cost of waiting in banking terms.",
+      "bankInterestLabel": "Bank borrowing interest"
       "cashName": "Cash",
       "cashDesc": "100% lump sum payment",
       "offPlanName": "Off-Plan",
@@ -381,6 +385,33 @@
       "whatThisMeans": "What does this mean?",
       "whatThisMeansText": "If you sell at the nominal price ({nominal}) with installments, you actually receive only {npv}. To truly get {nominal}, you need to sell at {recommended}.",
       "disclaimer": "Pricing recommendation based on Net Present Value (NPV) of future cash flows. This is not financial advice."
+    },
+    "whatIf": {
+      "infoBanner": "Try different payment scenarios. Drag the sliders to see how value loss changes depending on the down payment percentage and repayment duration.",
+      "upfrontLabel": "Down payment",
+      "monthsLabel": "Repayment months",
+      "resultNpv": "Real value (NPV)",
+      "resultLoss": "Value loss",
+      "resultRecommended": "Recommended price",
+      "resultWacp": "Average collection time",
+      "comparedToCurrent": "Compared to current plan",
+      "betterBy": "You gain {amount}",
+      "worseBy": "You lose {amount}",
+      "same": "Same value"
+    },
+    "alert": {
+      "highLoss": "Value loss exceeds {threshold}! Consider requesting a higher down payment or increasing the sale price.",
+      "thresholdLabel": "Alert threshold"
+    },
+    "chart": {
+      "lossPerInstallment": "Loss per installment",
+      "maxLoss": "Maximum loss"
+    },
+    "export": {
+      "button": "Export PDF",
+      "title": "Cost of Money Analysis Report",
+      "generated": "Generated",
+      "exporting": "Exporting..."
     },
     "settings": {
       "euriborRates": "Euribor Rates",

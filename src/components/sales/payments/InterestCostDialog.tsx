@@ -12,7 +12,7 @@
  * @enterprise ADR-234 Phase 4 - Interest Cost Calculator (SPEC-234E)
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   Calculator,
   RefreshCw,
@@ -24,7 +24,12 @@ import {
   Info,
   HelpCircle,
   AlertTriangle,
+  SlidersHorizontal,
+  Download,
+  Banknote,
 } from 'lucide-react';
+import { calculateFullResult } from '@/lib/npv-engine';
+import type { CostCalculationInput, CashFlowEntry } from '@/types/interest-calculator';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { toast } from 'sonner';
 
@@ -40,6 +45,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 import {
   Select,
   SelectContent,
@@ -701,6 +707,298 @@ function SettingsTab({
 }
 
 // =============================================================================
+// VISUAL LOSS BAR CHART (CSS-based, no dependency)
+// =============================================================================
+
+function LossBarChart({
+  analysis,
+  t,
+}: {
+  analysis: CashFlowAnalysisEntry[];
+  t: (key: string, opts?: Record<string, string>) => string;
+}) {
+  const losses = analysis.map((cf) => ({
+    label: cf.label,
+    loss: cf.amount - cf.presentValue,
+    amount: cf.amount,
+  }));
+  const maxLoss = Math.max(...losses.map((l) => l.loss), 1);
+
+  return (
+    <section className="space-y-2 pt-2">
+      <h4 className="text-xs font-semibold text-muted-foreground">
+        {t('costCalculator.chart.lossPerInstallment')}
+      </h4>
+      <div className="space-y-1.5">
+        {losses.map((item, idx) => {
+          const widthPercent = maxLoss > 0 ? (item.loss / maxLoss) * 100 : 0;
+          return (
+            <div key={idx} className="flex items-center gap-2">
+              <span className="text-[10px] text-muted-foreground w-28 truncate shrink-0">
+                {item.label}
+              </span>
+              <div className="flex-1 h-4 rounded bg-muted/30 overflow-hidden">
+                <div
+                  className="h-full rounded bg-gradient-to-r from-amber-400 to-red-500 transition-all duration-500"
+                  style={{ width: `${Math.max(widthPercent, widthPercent > 0 ? 2 : 0)}%` }}
+                />
+              </div>
+              <span className="text-[10px] font-medium text-destructive w-16 text-right shrink-0">
+                {item.loss > 0 ? `-${formatCurrencyFull(item.loss)}` : '—'}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[10px] text-muted-foreground text-right">
+        {t('costCalculator.chart.maxLoss')}: {formatCurrencyFull(maxLoss)}
+      </p>
+    </section>
+  );
+}
+
+// =============================================================================
+// BANK COST COMPARISON
+// =============================================================================
+
+function BankComparisonSection({
+  salePrice,
+  npv,
+  weightedDays,
+  discountRate,
+  t,
+}: {
+  salePrice: number;
+  npv: number;
+  weightedDays: number;
+  discountRate: number;
+  t: (key: string, opts?: Record<string, string>) => string;
+}) {
+  // Simple interest calculation: I = P × r × (d/365)
+  const outstandingAmount = salePrice - npv > 0 ? salePrice - npv : salePrice * 0.5;
+  const bankRate = discountRate + 2.40; // Euribor + typical Greek bank spread
+  const bankInterest = outstandingAmount * (bankRate / 100) * (weightedDays / 365);
+
+  return (
+    <section className="flex gap-2 rounded-lg border border-violet-200 bg-violet-50 dark:border-violet-900 dark:bg-violet-950/30 p-3">
+      <Banknote className="h-4 w-4 text-violet-600 dark:text-violet-400 shrink-0 mt-0.5" />
+      <div className="space-y-1">
+        <p className="text-xs font-semibold text-violet-800 dark:text-violet-300">
+          {t('costCalculator.scenarios.bankComparison')}
+        </p>
+        <p className="text-xs text-violet-700 dark:text-violet-400 leading-relaxed">
+          {t('costCalculator.scenarios.bankComparisonText', {
+            amount: formatCurrency(outstandingAmount),
+            days: String(weightedDays),
+            rate: formatPercent(bankRate),
+            interest: formatCurrency(bankInterest),
+          })}
+        </p>
+      </div>
+    </section>
+  );
+}
+
+// =============================================================================
+// WHAT-IF SIMULATOR TAB
+// =============================================================================
+
+function WhatIfTab({
+  salePrice,
+  currentResult,
+  discountRate,
+  t,
+}: {
+  salePrice: number;
+  currentResult: CostCalculationResult | null;
+  discountRate: number;
+  t: (key: string, opts?: Record<string, string>) => string;
+}) {
+  const [upfrontPercent, setUpfrontPercent] = useState(30);
+  const [months, setMonths] = useState(12);
+
+  const whatIfResult = useMemo(() => {
+    const referenceDate = new Date().toISOString().split('T')[0];
+    const upfrontAmount = salePrice * (upfrontPercent / 100);
+    const remainingAmount = salePrice - upfrontAmount;
+    const refDate = new Date(referenceDate);
+
+    const cashFlows: CashFlowEntry[] = [
+      {
+        label: 'Προκαταβολή',
+        amount: upfrontAmount,
+        date: referenceDate,
+        certainty: 'certain' as const,
+      },
+    ];
+
+    if (remainingAmount > 0 && months > 0) {
+      const monthlyAmount = remainingAmount / months;
+      for (let i = 1; i <= months; i++) {
+        const d = new Date(refDate);
+        d.setMonth(d.getMonth() + i);
+        cashFlows.push({
+          label: `Δόση ${i}`,
+          amount: monthlyAmount,
+          date: d.toISOString().split('T')[0],
+          certainty: i <= 3 ? 'certain' as const : i <= 9 ? 'probable' as const : 'uncertain' as const,
+        });
+      }
+    }
+
+    const input: CostCalculationInput = {
+      salePrice,
+      referenceDate,
+      cashFlows,
+      discountRateSource: 'manual',
+      bankSpread: 0,
+    };
+
+    return calculateFullResult(input, discountRate);
+  }, [salePrice, upfrontPercent, months, discountRate]);
+
+  const currentNpv = currentResult?.npv ?? salePrice;
+  const diff = whatIfResult.npv - currentNpv;
+
+  return (
+    <article className="space-y-4">
+      {/* Info banner */}
+      <section className="flex gap-2 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-3">
+        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+        <p className="text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+          {t('costCalculator.whatIf.infoBanner')}
+        </p>
+      </section>
+
+      {/* Sliders */}
+      <section className="space-y-4">
+        <fieldset className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs font-semibold">
+              {t('costCalculator.whatIf.upfrontLabel')}
+            </Label>
+            <Badge variant="outline" className="text-xs font-bold">
+              {upfrontPercent}% — {formatCurrency(salePrice * upfrontPercent / 100)}
+            </Badge>
+          </div>
+          <Slider
+            value={[upfrontPercent]}
+            onValueChange={([val]) => setUpfrontPercent(val)}
+            min={0}
+            max={100}
+            step={5}
+          />
+          <div className="flex justify-between text-[10px] text-muted-foreground">
+            <span>0%</span>
+            <span>50%</span>
+            <span>100%</span>
+          </div>
+        </fieldset>
+
+        <fieldset className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs font-semibold">
+              {t('costCalculator.whatIf.monthsLabel')}
+            </Label>
+            <Badge variant="outline" className="text-xs font-bold">
+              {months} {t('costCalculator.scenarios.days') === 'ημέρες' ? 'μήνες' : 'months'}
+            </Badge>
+          </div>
+          <Slider
+            value={[months]}
+            onValueChange={([val]) => setMonths(val)}
+            min={1}
+            max={36}
+            step={1}
+          />
+          <div className="flex justify-between text-[10px] text-muted-foreground">
+            <span>1</span>
+            <span>12</span>
+            <span>24</span>
+            <span>36</span>
+          </div>
+        </fieldset>
+      </section>
+
+      {/* Results */}
+      <section className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 space-y-3">
+        <dl className="grid grid-cols-2 gap-2 text-sm">
+          <dt className="text-muted-foreground">{t('costCalculator.whatIf.resultNpv')}</dt>
+          <dd className="text-right font-semibold">{formatCurrency(whatIfResult.npv)}</dd>
+
+          <dt className="text-destructive">{t('costCalculator.whatIf.resultLoss')}</dt>
+          <dd className="text-right font-semibold text-destructive">
+            -{formatCurrency(whatIfResult.timeCost)} ({formatPercent(whatIfResult.timeCostPercentage)})
+          </dd>
+
+          <dt className="text-muted-foreground">{t('costCalculator.whatIf.resultRecommended')}</dt>
+          <dd className="text-right font-bold text-emerald-600 dark:text-emerald-400">
+            {formatCurrency(whatIfResult.recommendedPrice)}
+          </dd>
+
+          <dt className="text-muted-foreground">{t('costCalculator.whatIf.resultWacp')}</dt>
+          <dd className="text-right font-medium">
+            {whatIfResult.weightedAverageDays} {t('costCalculator.scenarios.days')}
+          </dd>
+        </dl>
+      </section>
+
+      {/* Comparison with current */}
+      {currentResult && (
+        <section className={`flex gap-2 rounded-lg border p-3 ${
+          diff > 0
+            ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/30'
+            : diff < 0
+              ? 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30'
+              : 'border-muted bg-muted/30'
+        }`}>
+          <TrendingUp className={`h-4 w-4 shrink-0 mt-0.5 ${
+            diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-red-600' : 'text-muted-foreground'
+          }`} />
+          <div>
+            <p className="text-xs font-semibold">{t('costCalculator.whatIf.comparedToCurrent')}</p>
+            <p className={`text-xs font-medium ${
+              diff > 0 ? 'text-emerald-700 dark:text-emerald-400' : diff < 0 ? 'text-red-700 dark:text-red-400' : 'text-muted-foreground'
+            }`}>
+              {diff > 0
+                ? t('costCalculator.whatIf.betterBy', { amount: formatCurrency(Math.abs(diff)) })
+                : diff < 0
+                  ? t('costCalculator.whatIf.worseBy', { amount: formatCurrency(Math.abs(diff)) })
+                  : t('costCalculator.whatIf.same')}
+            </p>
+          </div>
+        </section>
+      )}
+    </article>
+  );
+}
+
+// =============================================================================
+// ALERT THRESHOLD
+// =============================================================================
+
+function LossAlertBanner({
+  lossPercent,
+  threshold,
+  t,
+}: {
+  lossPercent: number;
+  threshold: number;
+  t: (key: string, opts?: Record<string, string>) => string;
+}) {
+  if (lossPercent <= threshold) return null;
+
+  return (
+    <section className="flex gap-2 rounded-lg border-2 border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/30 p-3">
+      <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+      <p className="text-xs font-medium text-red-800 dark:text-red-300 leading-relaxed">
+        {t('costCalculator.alert.highLoss', { threshold: formatPercent(threshold) })}
+      </p>
+    </section>
+  );
+}
+
+// =============================================================================
 // MAIN DIALOG
 // =============================================================================
 
@@ -731,6 +1029,10 @@ export function InterestCostDialog({
     }
   }, [open, comparison, salePrice, installments, onCompare]);
 
+  // Calculate loss percentage for alert threshold
+  const lossPercent = result?.timeCostPercentage ?? 0;
+  const effectiveDiscountRate = comparison?.discountRate ?? 5;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="2xl" className="max-h-[90vh] overflow-y-auto">
@@ -741,6 +1043,11 @@ export function InterestCostDialog({
           </DialogTitle>
         </DialogHeader>
 
+        {/* Alert threshold — shows when loss > 3% */}
+        {!isLoading && result && (
+          <LossAlertBanner lossPercent={lossPercent} threshold={3} t={t} />
+        )}
+
         {isLoading && (
           <section className="flex items-center justify-center p-8">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -749,7 +1056,7 @@ export function InterestCostDialog({
 
         {!isLoading && (
           <Tabs defaultValue="cashflow" className="mt-2">
-            <TabsList className="grid grid-cols-4 text-xs">
+            <TabsList className="grid grid-cols-5 text-xs">
               <TabsTrigger value="cashflow" className="text-xs gap-1">
                 <BarChart3 className="h-3 w-3" />
                 {t('costCalculator.tabs.cashFlow')}
@@ -762,20 +1069,28 @@ export function InterestCostDialog({
                 <TrendingUp className="h-3 w-3" />
                 {t('costCalculator.tabs.pricing')}
               </TabsTrigger>
+              <TabsTrigger value="whatif" className="text-xs gap-1">
+                <SlidersHorizontal className="h-3 w-3" />
+                {t('costCalculator.tabs.whatIf')}
+              </TabsTrigger>
               <TabsTrigger value="settings" className="text-xs gap-1">
                 <Settings className="h-3 w-3" />
                 {t('costCalculator.tabs.settings')}
               </TabsTrigger>
             </TabsList>
 
-            {/* Tab 1: Cash Flow */}
+            {/* Tab 1: Cash Flow + Visual Bar Chart */}
             <TabsContent value="cashflow" className="mt-3">
               {result?.cashFlowAnalysis && result.cashFlowAnalysis.length > 0 ? (
-                <CashFlowTab
-                  analysis={result.cashFlowAnalysis}
-                  salePrice={salePrice}
-                  t={t}
-                />
+                <div className="space-y-4">
+                  <CashFlowTab
+                    analysis={result.cashFlowAnalysis}
+                    salePrice={salePrice}
+                    t={t}
+                  />
+                  {/* Visual loss bar chart */}
+                  <LossBarChart analysis={result.cashFlowAnalysis} t={t} />
+                </div>
               ) : (
                 <p className="text-xs text-muted-foreground text-center py-4">
                   {t('costCalculator.noData')}
@@ -783,10 +1098,22 @@ export function InterestCostDialog({
               )}
             </TabsContent>
 
-            {/* Tab 2: Scenarios */}
+            {/* Tab 2: Scenarios + Bank Comparison */}
             <TabsContent value="scenarios" className="mt-3">
               {comparison ? (
-                <ScenarioTab comparison={comparison} t={t} />
+                <div className="space-y-4">
+                  <ScenarioTab comparison={comparison} t={t} />
+                  {/* Bank cost comparison */}
+                  {result && (
+                    <BankComparisonSection
+                      salePrice={salePrice}
+                      npv={result.npv}
+                      weightedDays={result.weightedAverageDays}
+                      discountRate={effectiveDiscountRate}
+                      t={t}
+                    />
+                  )}
+                </div>
               ) : (
                 <p className="text-xs text-muted-foreground text-center py-4">
                   {t('costCalculator.noData')}
@@ -805,7 +1132,17 @@ export function InterestCostDialog({
               )}
             </TabsContent>
 
-            {/* Tab 4: Settings */}
+            {/* Tab 4: What-If Simulator */}
+            <TabsContent value="whatif" className="mt-3">
+              <WhatIfTab
+                salePrice={salePrice}
+                currentResult={result}
+                discountRate={effectiveDiscountRate}
+                t={t}
+              />
+            </TabsContent>
+
+            {/* Tab 5: Settings */}
             <TabsContent value="settings" className="mt-3">
               <SettingsTab
                 rates={rates}
