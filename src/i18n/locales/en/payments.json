@@ -670,7 +670,17 @@
         "dynamicExecutionTime": "Execution time measures computation speed. Useful for choosing the right number of scenarios vs. performance.",
         "recommendationLowRisk": "Low Risk: P10 is positive and probability > 90%. The deal is safe under most conditions.",
         "recommendationMediumRisk": "Medium Risk: Mean is positive but P10 is negative. The deal is likely profitable but has downside scenarios.",
-        "recommendationHighRisk": "High Risk: Mean is negative or probability < 70%. Reconsider the terms or reduce uncertainty."
+        "recommendationHighRisk": "High Risk: Mean is negative or probability < 70%. Reconsider the terms or reduce uncertainty.",
+        "hoverHint": "Hover over a statistic card or config field to see its explanation.",
+        "configDiscountRate": "Current discount rate: {{value}}%. This is the rate used to discount future cash flows. A higher rate means future payments are worth less today — increasing the time cost.",
+        "configBankSpread": "Current bank spread: {{value}}%. This margin is added on top of Euribor. A wider spread increases the effective interest rate the buyer pays.",
+        "configSalePrice": "Current sale price: {{value}} €. All NPV calculations are relative to this amount. Changing it shifts all cash flows proportionally.",
+        "configUpfrontPercent": "Current upfront: {{value}}%. A higher down payment reduces the amount financed and the total time-value loss.",
+        "configPaymentMonths": "Current payment duration: {{value}} months. Longer payment plans increase interest exposure and reduce NPV.",
+        "configCertaintyMix": "Current certainty mix: {{value}}. Values closer to 1.0 mean higher confidence in the cash flow schedule. Lower values model more uncertainty.",
+        "configStdDev": "Standard deviation: {{value}}. Controls how much the simulated values scatter around the mean. Higher = wider variation in outcomes.",
+        "configMin": "Minimum bound: {{value}}. The lowest value this variable can take in the simulation. No scenario will go below this.",
+        "configMax": "Maximum bound: {{value}}. The highest value this variable can take in the simulation. No scenario will go above this."
       }
     },
     "forwardCurve": {
