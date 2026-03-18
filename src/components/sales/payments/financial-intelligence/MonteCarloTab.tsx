@@ -11,7 +11,7 @@
  * @enterprise ADR-242 SPEC-242D — Monte Carlo Simulation
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   AreaChart,
   Area,
@@ -25,7 +25,7 @@ import {
   ResponsiveContainer,
   ComposedChart,
 } from 'recharts';
-import { Info, Play, Dices } from 'lucide-react';
+import { Info, Play, Dices, BookOpen, Lightbulb, ShieldCheck, ShieldAlert, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -129,46 +129,54 @@ function createDefaultVariables(input: CostCalculationInput, rate: number): Mont
 // STATISTICS CARD
 // =============================================================================
 
+/** Metric keys that map to help panel dynamic explanations */
+type HelpMetricKey = 'meanNpv' | 'p10' | 'p50' | 'p90' | 'stdDev' | 'minMax' | 'probPositive' | 'executionTime';
+
 function StatisticsCard({
   mcResult,
   t,
+  onHoverMetric,
 }: {
   mcResult: MonteCarloResult;
   t: MonteCarloTabProps['t'];
+  onHoverMetric: (metric: HelpMetricKey | null) => void;
 }) {
   const fmt = (v: number) => formatCurrencyWhole(v) ?? '';
 
+  const cardClass = (metric: HelpMetricKey) =>
+    'rounded-lg border p-3 space-y-1 transition-colors hover:border-blue-400 hover:bg-blue-50/50 dark:hover:border-blue-600 dark:hover:bg-blue-950/30 cursor-help';
+
   return (
     <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <dl className="rounded-lg border p-3 space-y-1">
+      <dl className={cardClass('meanNpv')} onMouseEnter={() => onHoverMetric('meanNpv')} onMouseLeave={() => onHoverMetric(null)}>
         <InfoDt label={t('costCalculator.monteCarlo.meanNpv')} tooltip={t('costCalculator.monteCarlo.meanNpvTooltip')} className="text-xs text-muted-foreground" />
         <dd className="text-lg font-bold">{fmt(mcResult.meanNPV)}</dd>
       </dl>
-      <dl className="rounded-lg border p-3 space-y-1">
+      <dl className={cardClass('p10')} onMouseEnter={() => onHoverMetric('p10')} onMouseLeave={() => onHoverMetric(null)}>
         <InfoDt label={t('costCalculator.monteCarlo.p10')} tooltip={t('costCalculator.monteCarlo.p10Tooltip')} className="text-xs text-muted-foreground" />
         <dd className="text-lg font-bold">{fmt(mcResult.p10)}</dd>
       </dl>
-      <dl className="rounded-lg border p-3 space-y-1">
+      <dl className={cardClass('p50')} onMouseEnter={() => onHoverMetric('p50')} onMouseLeave={() => onHoverMetric(null)}>
         <InfoDt label={t('costCalculator.monteCarlo.p50')} tooltip={t('costCalculator.monteCarlo.p50Tooltip')} className="text-xs text-muted-foreground" />
         <dd className="text-lg font-bold">{fmt(mcResult.p50)}</dd>
       </dl>
-      <dl className="rounded-lg border p-3 space-y-1">
+      <dl className={cardClass('p90')} onMouseEnter={() => onHoverMetric('p90')} onMouseLeave={() => onHoverMetric(null)}>
         <InfoDt label={t('costCalculator.monteCarlo.p90')} tooltip={t('costCalculator.monteCarlo.p90Tooltip')} className="text-xs text-muted-foreground" />
         <dd className="text-lg font-bold">{fmt(mcResult.p90)}</dd>
       </dl>
-      <dl className="rounded-lg border p-3 space-y-1">
+      <dl className={cardClass('stdDev')} onMouseEnter={() => onHoverMetric('stdDev')} onMouseLeave={() => onHoverMetric(null)}>
         <InfoDt label={t('costCalculator.monteCarlo.stdDevNpv')} tooltip={t('costCalculator.monteCarlo.stdDevNpvTooltip')} className="text-xs text-muted-foreground" />
         <dd className="text-sm font-medium">{fmt(mcResult.stdDevNPV)}</dd>
       </dl>
-      <dl className="rounded-lg border p-3 space-y-1">
+      <dl className={cardClass('minMax')} onMouseEnter={() => onHoverMetric('minMax')} onMouseLeave={() => onHoverMetric(null)}>
         <InfoDt label={t('costCalculator.monteCarlo.minMax')} tooltip={t('costCalculator.monteCarlo.minMaxTooltip')} className="text-xs text-muted-foreground" />
         <dd className="text-sm font-medium">{fmt(mcResult.minNPV)} — {fmt(mcResult.maxNPV)}</dd>
       </dl>
-      <dl className="rounded-lg border p-3 space-y-1">
+      <dl className={cardClass('probPositive')} onMouseEnter={() => onHoverMetric('probPositive')} onMouseLeave={() => onHoverMetric(null)}>
         <InfoDt label={t('costCalculator.monteCarlo.probPositive')} tooltip={t('costCalculator.monteCarlo.probPositiveTooltip')} className="text-xs text-muted-foreground" />
         <dd className="text-sm font-medium">{mcResult.probPositive}%</dd>
       </dl>
-      <dl className="rounded-lg border p-3 space-y-1">
+      <dl className={cardClass('executionTime')} onMouseEnter={() => onHoverMetric('executionTime')} onMouseLeave={() => onHoverMetric(null)}>
         <InfoDt label={t('costCalculator.monteCarlo.executionTime')} tooltip={t('costCalculator.monteCarlo.executionTimeTooltip')} className="text-xs text-muted-foreground" />
         <dd className="text-sm font-medium">{mcResult.executionTimeMs}ms</dd>
       </dl>
@@ -283,6 +291,156 @@ function HistogramChart({
 }
 
 // =============================================================================
+// HELP PANEL
+// =============================================================================
+
+/** Map metric keys to i18n dynamic explanation keys */
+const METRIC_I18N_MAP: Record<HelpMetricKey, string> = {
+  meanNpv: 'dynamicMeanNpv',
+  p10: 'dynamicP10',
+  p50: 'dynamicP50',
+  p90: 'dynamicP90',
+  stdDev: 'dynamicStdDev',
+  minMax: 'dynamicMinMax',
+  probPositive: 'dynamicProbPositive',
+  executionTime: 'dynamicExecutionTime',
+};
+
+/** Map metric keys to display label keys */
+const METRIC_LABEL_MAP: Record<HelpMetricKey, string> = {
+  meanNpv: 'meanNpv',
+  p10: 'p10',
+  p50: 'p50',
+  p90: 'p90',
+  stdDev: 'stdDevNpv',
+  minMax: 'minMax',
+  probPositive: 'probPositive',
+  executionTime: 'executionTime',
+};
+
+type RiskLevel = 'low' | 'medium' | 'high';
+
+function assessRisk(mcResult: MonteCarloResult): RiskLevel {
+  if (mcResult.p10 > 0 && mcResult.probPositive >= 90) return 'low';
+  if (mcResult.meanNPV > 0 && mcResult.probPositive >= 70) return 'medium';
+  return 'high';
+}
+
+const RISK_ICONS: Record<RiskLevel, React.ReactNode> = {
+  low: <ShieldCheck className="h-4 w-4 text-green-600 dark:text-green-400" />,
+  medium: <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />,
+  high: <ShieldAlert className="h-4 w-4 text-red-600 dark:text-red-400" />,
+};
+
+const RISK_BORDER: Record<RiskLevel, string> = {
+  low: 'border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/30',
+  medium: 'border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/30',
+  high: 'border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/30',
+};
+
+const RISK_I18N: Record<RiskLevel, string> = {
+  low: 'recommendationLowRisk',
+  medium: 'recommendationMediumRisk',
+  high: 'recommendationHighRisk',
+};
+
+function MonteCarloHelpPanel({
+  hoveredMetric,
+  mcResult,
+  t,
+}: {
+  hoveredMetric: HelpMetricKey | null;
+  mcResult: MonteCarloResult;
+  t: MonteCarloTabProps['t'];
+}) {
+  const h = (key: string) => t(`costCalculator.monteCarlo.help.${key}`);
+  const fmt = (v: number) => formatCurrencyWhole(v) ?? '';
+
+  const riskLevel = assessRisk(mcResult);
+
+  /** Get the formatted value for the hovered metric */
+  const getMetricValue = (key: HelpMetricKey): string => {
+    switch (key) {
+      case 'meanNpv': return fmt(mcResult.meanNPV);
+      case 'p10': return fmt(mcResult.p10);
+      case 'p50': return fmt(mcResult.p50);
+      case 'p90': return fmt(mcResult.p90);
+      case 'stdDev': return fmt(mcResult.stdDevNPV);
+      case 'minMax': return `${fmt(mcResult.minNPV)} — ${fmt(mcResult.maxNPV)}`;
+      case 'probPositive': return `${mcResult.probPositive}%`;
+      case 'executionTime': return `${mcResult.executionTimeMs}ms`;
+    }
+  };
+
+  return (
+    <aside className="sticky top-4 space-y-4">
+      {/* Glossary — always visible */}
+      <section className="rounded-lg border p-4 space-y-3">
+        <header className="flex items-center gap-2">
+          <BookOpen className="h-4 w-4 text-muted-foreground" />
+          <h4 className="text-sm font-semibold">{h('glossaryTitle')}</h4>
+        </header>
+        <dl className="space-y-2 text-xs text-muted-foreground leading-relaxed">
+          <dd>{h('glossaryDiscountRate')}</dd>
+          <dd>{h('glossaryBankSpread')}</dd>
+          <dd>{h('glossarySalePrice')}</dd>
+          <dd>{h('glossaryUpfrontPercent')}</dd>
+          <dd>{h('glossaryPaymentMonths')}</dd>
+          <dd>{h('glossaryCertaintyMix')}</dd>
+        </dl>
+        <hr className="border-dashed" />
+        <dl className="space-y-2 text-xs text-muted-foreground leading-relaxed">
+          <dd>{h('glossaryNormal')}</dd>
+          <dd>{h('glossaryTriangular')}</dd>
+          <dd>{h('glossaryUniform')}</dd>
+        </dl>
+      </section>
+
+      {/* Dynamic explanation — appears on hover */}
+      <section
+        className={`rounded-lg border p-4 space-y-3 transition-all duration-200 ${
+          hoveredMetric
+            ? 'opacity-100 translate-y-0'
+            : 'opacity-40 translate-y-0'
+        }`}
+      >
+        <header className="flex items-center gap-2">
+          <Lightbulb className="h-4 w-4 text-amber-500" />
+          <h4 className="text-sm font-semibold">{h('dynamicTitle')}</h4>
+        </header>
+        {hoveredMetric ? (
+          <article className="space-y-2">
+            <p className="text-sm font-medium">
+              {t(`costCalculator.monteCarlo.${METRIC_LABEL_MAP[hoveredMetric]}`)}: {getMetricValue(hoveredMetric)}
+            </p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {h(METRIC_I18N_MAP[hoveredMetric])}
+            </p>
+          </article>
+        ) : (
+          <p className="text-xs text-muted-foreground italic">
+            Hover over a statistic card to see its explanation.
+          </p>
+        )}
+      </section>
+
+      {/* Risk recommendation */}
+      <section className={`rounded-lg border p-4 space-y-2 ${RISK_BORDER[riskLevel]}`}>
+        <header className="flex items-center gap-2">
+          {RISK_ICONS[riskLevel]}
+          <h4 className="text-sm font-semibold">
+            {h(RISK_I18N[riskLevel]).split(':')[0]}
+          </h4>
+        </header>
+        <p className="text-xs leading-relaxed">
+          {h(RISK_I18N[riskLevel]).split(':').slice(1).join(':').trim()}
+        </p>
+      </section>
+    </aside>
+  );
+}
+
+// =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 
@@ -294,6 +452,7 @@ export function MonteCarloTab({ input, effectiveRate, result, t }: MonteCarloTab
   const [seed, setSeed] = useState(42);
   const [mcResult, setMcResult] = useState<MonteCarloResult | null>(null);
   const [running, setRunning] = useState(false);
+  const [hoveredMetric, setHoveredMetric] = useState<HelpMetricKey | null>(null);
 
   const handleToggleVariable = useCallback((key: SensitivityVariable) => {
     setVariables(prev => prev.map(v =>
@@ -436,16 +595,22 @@ export function MonteCarloTab({ input, effectiveRate, result, t }: MonteCarloTab
         </section>
       </section>
 
-      {/* Results */}
+      {/* Results — 2-column: results left, help panel right */}
       {mcResult && (
-        <section className="space-y-6">
-          <header className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold">{t('costCalculator.monteCarlo.resultsTitle')}</h3>
-            <Badge variant="secondary">{mcResult.scenarioCount.toLocaleString()} scenarios</Badge>
-          </header>
-          <StatisticsCard mcResult={mcResult} t={t} />
-          <FanChart mcResult={mcResult} t={t} />
-          <HistogramChart mcResult={mcResult} t={t} />
+        <section className="grid md:grid-cols-3 gap-6">
+          {/* Left column: statistics + charts */}
+          <section className="md:col-span-2 space-y-6">
+            <header className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold">{t('costCalculator.monteCarlo.resultsTitle')}</h3>
+              <Badge variant="secondary">{mcResult.scenarioCount.toLocaleString()} scenarios</Badge>
+            </header>
+            <StatisticsCard mcResult={mcResult} t={t} onHoverMetric={setHoveredMetric} />
+            <FanChart mcResult={mcResult} t={t} />
+            <HistogramChart mcResult={mcResult} t={t} />
+          </section>
+
+          {/* Right column: contextual help panel */}
+          <MonteCarloHelpPanel hoveredMetric={hoveredMetric} mcResult={mcResult} t={t} />
         </section>
       )}
     </article>

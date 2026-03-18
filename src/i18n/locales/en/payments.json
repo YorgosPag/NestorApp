@@ -639,7 +639,31 @@
       "histogramLegend": "Bars show how often each NPV range occurred. The orange line is the cumulative probability (CDF) — shows what % of scenarios fall below each value.",
       "frequency": "Frequency",
       "cdf": "Cumulative Distribution (CDF)",
-      "npvEuro": "NPV (€)"
+      "npvEuro": "NPV (€)",
+      "help": {
+        "glossaryTitle": "Glossary",
+        "glossaryDiscountRate": "Discount Rate: The interest rate used to convert future cash flows to today's value. Higher rate = lower present value.",
+        "glossaryBankSpread": "Bank Spread: The margin the bank adds on top of the base rate (e.g. Euribor). Reflects the bank's profit and risk premium.",
+        "glossarySalePrice": "Sale Price: The agreed property price. All cash flows and NPV calculations reference this amount.",
+        "glossaryUpfrontPercent": "Upfront %: The percentage of the sale price paid as a down payment. Higher upfront = lower financing cost.",
+        "glossaryPaymentMonths": "Payment Months: Total duration of the installment plan in months. Longer = more interest paid.",
+        "glossaryCertaintyMix": "Certainty Mix: Weight between certain (contracted) and uncertain (estimated) scenarios. 1.0 = fully certain.",
+        "glossaryNormal": "Normal Distribution: Bell curve — most values cluster near the mean, extreme values are rare. Best for market rates.",
+        "glossaryTriangular": "Triangular Distribution: Defined by min, most-likely, and max. Good when you have a rough estimate with bounds.",
+        "glossaryUniform": "Uniform Distribution: All values between min and max are equally likely. Use when you have no idea about the most likely value.",
+        "dynamicTitle": "What does this mean?",
+        "dynamicMeanNpv": "Mean NPV is the average across all scenarios — your most probable outcome. If positive, the deal creates value on average.",
+        "dynamicP10": "P10 is the pessimistic boundary. 90% of scenarios are better than this. If P10 is still positive, risk is low.",
+        "dynamicP50": "P50 is the median — the middle outcome. Half of scenarios are above, half below. More robust than the mean against outliers.",
+        "dynamicP90": "P90 is the optimistic boundary. Only 10% of scenarios are better. Don't base decisions on this — it's the best case.",
+        "dynamicStdDev": "Standard Deviation measures uncertainty. Low = results are tightly clustered (predictable). High = wide spread (risky).",
+        "dynamicMinMax": "Range shows the absolute extremes. A very wide range signals that some scenarios produce drastically different outcomes.",
+        "dynamicProbPositive": "Probability of positive NPV shows what % of scenarios yield a profit. Below 80% warrants caution.",
+        "dynamicExecutionTime": "Execution time measures computation speed. Useful for choosing the right number of scenarios vs. performance.",
+        "recommendationLowRisk": "Low Risk: P10 is positive and probability > 90%. The deal is safe under most conditions.",
+        "recommendationMediumRisk": "Medium Risk: Mean is positive but P10 is negative. The deal is likely profitable but has downside scenarios.",
+        "recommendationHighRisk": "High Risk: Mean is negative or probability < 70%. Reconsider the terms or reduce uncertainty."
+      }
     },
     "forwardCurve": {
       "loading": "Loading forward curve data…",
