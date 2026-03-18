@@ -146,8 +146,8 @@ function CashFlowTab({
     <article className="space-y-3">
       {/* Educational info banner */}
       <section className="flex gap-2 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-3">
-        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-        <p className="text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+        <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+        <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed">
           {t('costCalculator.cashFlow.infoBanner')}
         </p>
       </section>
@@ -155,11 +155,11 @@ function CashFlowTab({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="text-xs">{t('costCalculator.cashFlow.label')}</TableHead>
-            <TableHead className="text-xs text-right">{t('costCalculator.cashFlow.amount')}</TableHead>
-            <TableHead className="text-xs text-right">{t('costCalculator.cashFlow.date')}</TableHead>
-            <TableHead className="text-xs text-right">{t('costCalculator.cashFlow.days')}</TableHead>
-            <TableHead className="text-xs text-right">
+            <TableHead className="text-sm">{t('costCalculator.cashFlow.label')}</TableHead>
+            <TableHead className="text-sm text-right">{t('costCalculator.cashFlow.amount')}</TableHead>
+            <TableHead className="text-sm text-right">{t('costCalculator.cashFlow.date')}</TableHead>
+            <TableHead className="text-sm text-right">{t('costCalculator.cashFlow.days')}</TableHead>
+            <TableHead className="text-sm text-right">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="cursor-help border-b border-dashed border-muted-foreground">
@@ -171,7 +171,7 @@ function CashFlowTab({
                 </TooltipContent>
               </Tooltip>
             </TableHead>
-            <TableHead className="text-xs text-right">
+            <TableHead className="text-sm text-right">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="cursor-help border-b border-dashed border-muted-foreground">
@@ -183,7 +183,7 @@ function CashFlowTab({
                 </TooltipContent>
               </Tooltip>
             </TableHead>
-            <TableHead className="text-xs text-right">
+            <TableHead className="text-sm text-right">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="cursor-help border-b border-dashed border-muted-foreground">
@@ -224,13 +224,13 @@ function CashFlowTab({
               <Tooltip key={idx}>
                 <TooltipTrigger asChild>
                   <TableRow className={`cursor-help ${lossColor}`}>
-                    <TableCell className="text-xs font-medium">{cf.label}</TableCell>
-                    <TableCell className="text-xs text-right">{formatCurrencyFull(cf.amount)}</TableCell>
-                    <TableCell className="text-xs text-right">{formatDate(cf.date)}</TableCell>
-                    <TableCell className="text-xs text-right">{cf.daysDelta}</TableCell>
-                    <TableCell className="text-xs text-right">{cf.discountFactor.toFixed(4)}</TableCell>
-                    <TableCell className="text-xs text-right font-medium">{formatCurrencyFull(cf.presentValue)}</TableCell>
-                    <TableCell className="text-xs text-right font-medium text-destructive">
+                    <TableCell className="text-sm font-medium">{cf.label}</TableCell>
+                    <TableCell className="text-sm text-right">{formatCurrencyFull(cf.amount)}</TableCell>
+                    <TableCell className="text-sm text-right">{formatDate(cf.date)}</TableCell>
+                    <TableCell className="text-sm text-right">{cf.daysDelta}</TableCell>
+                    <TableCell className="text-sm text-right">{cf.discountFactor.toFixed(4)}</TableCell>
+                    <TableCell className="text-sm text-right font-medium">{formatCurrencyFull(cf.presentValue)}</TableCell>
+                    <TableCell className="text-sm text-right font-medium text-destructive">
                       {loss > 0 ? `-${formatCurrencyFull(loss)}` : '—'}
                     </TableCell>
                   </TableRow>
@@ -246,7 +246,7 @@ function CashFlowTab({
 
       {/* Summary with insight */}
       <footer className="space-y-2 pt-2 border-t">
-        <div className="flex justify-between items-center text-xs">
+        <div className="flex justify-between items-center text-sm">
           <Tooltip>
             <TooltipTrigger asChild>
               <span className="text-muted-foreground cursor-help">
@@ -268,8 +268,8 @@ function CashFlowTab({
         {/* Loss insight callout */}
         {totalLoss > 0 ? (
           <section className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3">
-            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-sm text-amber-800 dark:text-amber-300 leading-relaxed">
               {t('costCalculator.cashFlow.summaryLoss', {
                 loss: formatCurrency(totalLoss),
                 percent: formatPercent(lossPercent),
@@ -278,8 +278,8 @@ function CashFlowTab({
           </section>
         ) : (
           <section className="flex gap-2 rounded-lg border border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/30 p-3">
-            <Info className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-            <p className="text-xs text-emerald-800 dark:text-emerald-300 leading-relaxed">
+            <Info className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            <p className="text-sm text-emerald-800 dark:text-emerald-300 leading-relaxed">
               {t('costCalculator.cashFlow.summaryNoLoss')}
             </p>
           </section>
@@ -312,8 +312,8 @@ function ScenarioTab({
     <article className="space-y-3">
       {/* Educational info banner */}
       <section className="flex gap-2 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-3">
-        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-        <p className="text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+        <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+        <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed">
           {t('costCalculator.scenarios.infoBanner')}
         </p>
       </section>
@@ -321,8 +321,8 @@ function ScenarioTab({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="text-xs">{t('costCalculator.scenarios.scenario')}</TableHead>
-            <TableHead className="text-xs text-right">
+            <TableHead className="text-sm">{t('costCalculator.scenarios.scenario')}</TableHead>
+            <TableHead className="text-sm text-right">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="cursor-help border-b border-dashed border-muted-foreground">
@@ -334,7 +334,7 @@ function ScenarioTab({
                 </TooltipContent>
               </Tooltip>
             </TableHead>
-            <TableHead className="text-xs text-right">
+            <TableHead className="text-sm text-right">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="cursor-help border-b border-dashed border-muted-foreground">
@@ -346,7 +346,7 @@ function ScenarioTab({
                 </TooltipContent>
               </Tooltip>
             </TableHead>
-            <TableHead className="text-xs text-right">
+            <TableHead className="text-sm text-right">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="cursor-help border-b border-dashed border-muted-foreground">
@@ -358,7 +358,7 @@ function ScenarioTab({
                 </TooltipContent>
               </Tooltip>
             </TableHead>
-            <TableHead className="text-xs text-center" />
+            <TableHead className="text-sm text-center" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -371,32 +371,32 @@ function ScenarioTab({
               <Tooltip key={idx}>
                 <TooltipTrigger asChild>
                   <TableRow className={`cursor-help ${isBest ? 'bg-emerald-50 dark:bg-emerald-950/20' : ''}`}>
-                    <TableCell className="text-xs">
+                    <TableCell className="text-sm">
                       <span className="font-medium">{t(s.name)}</span>
                       <br />
                       <span className="text-muted-foreground">{t(s.description, s.descriptionParams)}</span>
                     </TableCell>
-                    <TableCell className="text-xs text-right font-medium">
+                    <TableCell className="text-sm text-right font-medium">
                       {formatCurrency(s.result.npv)}
                       <br />
                       <span className="text-muted-foreground">{formatPercent(s.result.npvPercentage)}</span>
                     </TableCell>
-                    <TableCell className="text-xs text-right text-destructive">
+                    <TableCell className="text-sm text-right text-destructive">
                       {formatCurrency(s.result.timeCost)}
                       <br />
                       <span>{formatPercent(s.result.timeCostPercentage)}</span>
                     </TableCell>
-                    <TableCell className="text-xs text-right">
+                    <TableCell className="text-sm text-right">
                       {s.result.weightedAverageDays} {t('costCalculator.scenarios.days')}
                     </TableCell>
                     <TableCell className="text-center">
                       {isBest ? (
-                        <Badge variant="default" className="text-[10px]">
-                          <Award className="h-3 w-3 mr-1" />
+                        <Badge variant="default" className="text-sm">
+                          <Award className="h-4 w-4 mr-1" />
                           {t('costCalculator.scenarios.best')}
                         </Badge>
                       ) : diffFromCash > 0 ? (
-                        <span className="text-[10px] text-muted-foreground">
+                        <span className="text-sm text-muted-foreground">
                           {t('costCalculator.scenarios.vsCash', { diff: formatCurrency(diffFromCash) })}
                         </span>
                       ) : null}
@@ -412,7 +412,7 @@ function ScenarioTab({
         </TableBody>
       </Table>
 
-      <footer className="text-[10px] text-muted-foreground text-center">
+      <footer className="text-sm text-muted-foreground text-center">
         {t('costCalculator.scenarios.discountRate')}: {formatPercent(comparison.discountRate)}
       </footer>
     </article>
@@ -433,22 +433,22 @@ function PricingTab({
     <article className="space-y-4">
       {/* Educational info banner */}
       <section className="flex gap-2 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-3">
-        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-        <p className="text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+        <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+        <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed">
           {t('costCalculator.pricing.infoBanner')}
         </p>
       </section>
 
       {/* Hero callout */}
       <section className="rounded-lg border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 p-4 text-center space-y-2">
-        <TrendingUp className="h-8 w-8 mx-auto text-emerald-600" />
-        <p className="text-xs text-muted-foreground">
+        <TrendingUp className="h-10 w-10 mx-auto text-emerald-600" />
+        <p className="text-sm text-muted-foreground">
           {t('costCalculator.pricing.sellAtLeast')}
         </p>
-        <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
+        <p className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">
           {formatCurrency(result.recommendedPrice)}
         </p>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           +{formatCurrency(result.priceAdjustment)} ({formatPercent(result.priceAdjustmentPercentage)})
           {' '}{t('costCalculator.pricing.overNominal')}
         </p>
@@ -456,12 +456,12 @@ function PricingTab({
 
       {/* "What this means" explanation */}
       <section className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3">
-        <HelpCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+        <HelpCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
         <div>
-          <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 mb-1">
+          <p className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-1">
             {t('costCalculator.pricing.whatThisMeans')}
           </p>
-          <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+          <p className="text-sm text-amber-700 dark:text-amber-400 leading-relaxed">
             {t('costCalculator.pricing.whatThisMeansText', {
               nominal: formatCurrency(salePrice),
               npv: formatCurrency(result.npv),
@@ -472,7 +472,7 @@ function PricingTab({
       </section>
 
       {/* Breakdown with tooltips */}
-      <dl className="grid grid-cols-2 gap-3 text-sm">
+      <dl className="grid grid-cols-2 gap-3 text-base">
         <dt className="text-muted-foreground">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -538,7 +538,7 @@ function PricingTab({
         <dd className="text-right font-medium">{formatPercent(result.effectiveRate)}</dd>
       </dl>
 
-      <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
+      <p className="text-sm text-muted-foreground text-center leading-relaxed">
         {t('costCalculator.pricing.disclaimer')}
       </p>
     </article>
@@ -599,13 +599,13 @@ function SettingsTab({
       {/* Euribor Rates */}
       <section className="space-y-2">
         <header className="flex items-center justify-between">
-          <Label className="text-xs font-semibold">
+          <Label className="text-sm font-semibold">
             {t('costCalculator.settings.euriborRates')}
           </Label>
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 gap-1 text-xs"
+            className="h-7 gap-1 text-sm"
             onClick={handleRefresh}
             disabled={refreshing || isLoading}
           >
@@ -615,7 +615,7 @@ function SettingsTab({
         </header>
 
         {rates && (
-          <dl className="grid grid-cols-3 gap-2 text-xs">
+          <dl className="grid grid-cols-3 gap-2 text-base">
             <dt className="text-muted-foreground">1M</dt>
             <dd>{formatPercent(rates.euribor1M)}</dd>
             <dd />
@@ -637,14 +637,14 @@ function SettingsTab({
 
       {/* Discount Rate Source */}
       <section className="space-y-2">
-        <Label className="text-xs font-semibold" htmlFor="discount-source">
+        <Label className="text-sm font-semibold" htmlFor="discount-source">
           {t('costCalculator.settings.discountSource')}
         </Label>
         <Select
           value={discountSource}
           onValueChange={(val) => onDiscountSourceChange(val as DiscountRateSource)}
         >
-          <SelectTrigger id="discount-source" className="text-xs">
+          <SelectTrigger id="discount-source" className="text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -659,7 +659,7 @@ function SettingsTab({
 
         {discountSource === 'manual' && (
           <fieldset className="space-y-1">
-            <Label className="text-xs" htmlFor="manual-rate">
+            <Label className="text-sm" htmlFor="manual-rate">
               {t('costCalculator.settings.manualRate')} (%)
             </Label>
             <Input
@@ -670,7 +670,7 @@ function SettingsTab({
               max="50"
               value={manualRate}
               onChange={(e) => onManualRateChange(parseFloat(e.target.value) || 0)}
-              className="text-xs"
+              className="text-sm"
             />
           </fieldset>
         )}
@@ -678,7 +678,7 @@ function SettingsTab({
 
       {/* Bank Spread */}
       <section className="space-y-2">
-        <Label className="text-xs font-semibold" htmlFor="bank-spread">
+        <Label className="text-sm font-semibold" htmlFor="bank-spread">
           {t('costCalculator.settings.bankSpread')} (%)
         </Label>
         <fieldset className="flex items-center gap-2">
@@ -690,12 +690,12 @@ function SettingsTab({
             max="10"
             value={localSpread}
             onChange={(e) => setLocalSpread(parseFloat(e.target.value) || 0)}
-            className="text-xs flex-1"
+            className="text-sm flex-1"
           />
           <Button
             variant="outline"
             size="sm"
-            className="text-xs h-8"
+            className="text-sm h-8"
             onClick={handleSaveSpread}
           >
             {t('costCalculator.settings.save')}
@@ -726,7 +726,7 @@ function LossBarChart({
 
   return (
     <section className="space-y-2 pt-2">
-      <h4 className="text-xs font-semibold text-muted-foreground">
+      <h4 className="text-sm font-semibold text-muted-foreground">
         {t('costCalculator.chart.lossPerInstallment')}
       </h4>
       <div className="space-y-1.5">
@@ -734,7 +734,7 @@ function LossBarChart({
           const widthPercent = maxLoss > 0 ? (item.loss / maxLoss) * 100 : 0;
           return (
             <div key={idx} className="flex items-center gap-2">
-              <span className="text-[10px] text-muted-foreground w-28 truncate shrink-0">
+              <span className="text-sm text-muted-foreground w-28 truncate shrink-0">
                 {item.label}
               </span>
               <div className="flex-1 h-4 rounded bg-muted/30 overflow-hidden">
@@ -743,14 +743,14 @@ function LossBarChart({
                   style={{ width: `${Math.max(widthPercent, widthPercent > 0 ? 2 : 0)}%` }}
                 />
               </div>
-              <span className="text-[10px] font-medium text-destructive w-16 text-right shrink-0">
+              <span className="text-sm font-medium text-destructive w-16 text-right shrink-0">
                 {item.loss > 0 ? `-${formatCurrencyFull(item.loss)}` : '—'}
               </span>
             </div>
           );
         })}
       </div>
-      <p className="text-[10px] text-muted-foreground text-right">
+      <p className="text-sm text-muted-foreground text-right">
         {t('costCalculator.chart.maxLoss')}: {formatCurrencyFull(maxLoss)}
       </p>
     </section>
@@ -781,12 +781,12 @@ function BankComparisonSection({
 
   return (
     <section className="flex gap-2 rounded-lg border border-violet-200 bg-violet-50 dark:border-violet-900 dark:bg-violet-950/30 p-3">
-      <Banknote className="h-4 w-4 text-violet-600 dark:text-violet-400 shrink-0 mt-0.5" />
+      <Banknote className="h-5 w-5 text-violet-600 dark:text-violet-400 shrink-0 mt-0.5" />
       <div className="space-y-1">
-        <p className="text-xs font-semibold text-violet-800 dark:text-violet-300">
+        <p className="text-sm font-semibold text-violet-800 dark:text-violet-300">
           {t('costCalculator.scenarios.bankComparison')}
         </p>
-        <p className="text-xs text-violet-700 dark:text-violet-400 leading-relaxed">
+        <p className="text-sm text-violet-700 dark:text-violet-400 leading-relaxed">
           {t('costCalculator.scenarios.bankComparisonText', {
             amount: formatCurrency(outstandingAmount),
             days: String(weightedDays),
@@ -864,8 +864,8 @@ function WhatIfTab({
     <article className="space-y-4">
       {/* Info banner */}
       <section className="flex gap-2 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-3">
-        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-        <p className="text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+        <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+        <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed">
           {t('costCalculator.whatIf.infoBanner')}
         </p>
       </section>
@@ -874,10 +874,10 @@ function WhatIfTab({
       <section className="space-y-4">
         <fieldset className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label className="text-xs font-semibold">
+            <Label className="text-sm font-semibold">
               {t('costCalculator.whatIf.upfrontLabel')}
             </Label>
-            <Badge variant="outline" className="text-xs font-bold">
+            <Badge variant="outline" className="text-sm font-bold">
               {upfrontPercent}% — {formatCurrency(salePrice * upfrontPercent / 100)}
             </Badge>
           </div>
@@ -888,7 +888,7 @@ function WhatIfTab({
             max={100}
             step={5}
           />
-          <div className="flex justify-between text-[10px] text-muted-foreground">
+          <div className="flex justify-between text-sm text-muted-foreground">
             <span>0%</span>
             <span>50%</span>
             <span>100%</span>
@@ -897,10 +897,10 @@ function WhatIfTab({
 
         <fieldset className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label className="text-xs font-semibold">
+            <Label className="text-sm font-semibold">
               {t('costCalculator.whatIf.monthsLabel')}
             </Label>
-            <Badge variant="outline" className="text-xs font-bold">
+            <Badge variant="outline" className="text-sm font-bold">
               {months} {t('costCalculator.scenarios.days') === 'ημέρες' ? 'μήνες' : 'months'}
             </Badge>
           </div>
@@ -911,7 +911,7 @@ function WhatIfTab({
             max={36}
             step={1}
           />
-          <div className="flex justify-between text-[10px] text-muted-foreground">
+          <div className="flex justify-between text-sm text-muted-foreground">
             <span>1</span>
             <span>12</span>
             <span>24</span>
@@ -922,7 +922,7 @@ function WhatIfTab({
 
       {/* Results */}
       <section className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 space-y-3">
-        <dl className="grid grid-cols-2 gap-2 text-sm">
+        <dl className="grid grid-cols-2 gap-2 text-base">
           <dt className="text-muted-foreground">{t('costCalculator.whatIf.resultNpv')}</dt>
           <dd className="text-right font-semibold">{formatCurrency(whatIfResult.npv)}</dd>
 
@@ -956,8 +956,8 @@ function WhatIfTab({
             diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-red-600' : 'text-muted-foreground'
           }`} />
           <div>
-            <p className="text-xs font-semibold">{t('costCalculator.whatIf.comparedToCurrent')}</p>
-            <p className={`text-xs font-medium ${
+            <p className="text-sm font-semibold">{t('costCalculator.whatIf.comparedToCurrent')}</p>
+            <p className={`text-sm font-medium ${
               diff > 0 ? 'text-emerald-700 dark:text-emerald-400' : diff < 0 ? 'text-red-700 dark:text-red-400' : 'text-muted-foreground'
             }`}>
               {diff > 0
@@ -991,7 +991,7 @@ function LossAlertBanner({
   return (
     <section className="flex gap-2 rounded-lg border-2 border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/30 p-3">
       <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-      <p className="text-xs font-medium text-red-800 dark:text-red-300 leading-relaxed">
+      <p className="text-sm font-medium text-red-800 dark:text-red-300 leading-relaxed">
         {t('costCalculator.alert.highLoss', { threshold: formatPercent(threshold) })}
       </p>
     </section>
@@ -1035,10 +1035,10 @@ export function InterestCostDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="2xl" className="max-h-[90vh] overflow-y-auto">
+      <DialogContent size="fullscreen" className="overflow-y-auto flex flex-col">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <Calculator className="h-5 w-5" />
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <Calculator className="h-6 w-6" />
             {t('costCalculator.dialogTitle')}
           </DialogTitle>
         </DialogHeader>
@@ -1050,31 +1050,31 @@ export function InterestCostDialog({
 
         {isLoading && (
           <section className="flex items-center justify-center p-8">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </section>
         )}
 
         {!isLoading && (
           <Tabs defaultValue="cashflow" className="mt-2">
-            <TabsList className="grid grid-cols-5 text-xs">
-              <TabsTrigger value="cashflow" className="text-xs gap-1">
-                <BarChart3 className="h-3 w-3" />
+            <TabsList className="grid grid-cols-5 text-sm">
+              <TabsTrigger value="cashflow" className="text-sm gap-1">
+                <BarChart3 className="h-4 w-4" />
                 {t('costCalculator.tabs.cashFlow')}
               </TabsTrigger>
-              <TabsTrigger value="scenarios" className="text-xs gap-1">
-                <Award className="h-3 w-3" />
+              <TabsTrigger value="scenarios" className="text-sm gap-1">
+                <Award className="h-4 w-4" />
                 {t('costCalculator.tabs.scenarios')}
               </TabsTrigger>
-              <TabsTrigger value="pricing" className="text-xs gap-1">
-                <TrendingUp className="h-3 w-3" />
+              <TabsTrigger value="pricing" className="text-sm gap-1">
+                <TrendingUp className="h-4 w-4" />
                 {t('costCalculator.tabs.pricing')}
               </TabsTrigger>
-              <TabsTrigger value="whatif" className="text-xs gap-1">
-                <SlidersHorizontal className="h-3 w-3" />
+              <TabsTrigger value="whatif" className="text-sm gap-1">
+                <SlidersHorizontal className="h-4 w-4" />
                 {t('costCalculator.tabs.whatIf')}
               </TabsTrigger>
-              <TabsTrigger value="settings" className="text-xs gap-1">
-                <Settings className="h-3 w-3" />
+              <TabsTrigger value="settings" className="text-sm gap-1">
+                <Settings className="h-4 w-4" />
                 {t('costCalculator.tabs.settings')}
               </TabsTrigger>
             </TabsList>
@@ -1092,7 +1092,7 @@ export function InterestCostDialog({
                   <LossBarChart analysis={result.cashFlowAnalysis} t={t} />
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground text-center py-4">
+                <p className="text-sm text-muted-foreground text-center py-4">
                   {t('costCalculator.noData')}
                 </p>
               )}
@@ -1115,7 +1115,7 @@ export function InterestCostDialog({
                   )}
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground text-center py-4">
+                <p className="text-sm text-muted-foreground text-center py-4">
                   {t('costCalculator.noData')}
                 </p>
               )}
@@ -1126,7 +1126,7 @@ export function InterestCostDialog({
               {result ? (
                 <PricingTab result={result} salePrice={salePrice} t={t} />
               ) : (
-                <p className="text-xs text-muted-foreground text-center py-4">
+                <p className="text-sm text-muted-foreground text-center py-4">
                   {t('costCalculator.noData')}
                 </p>
               )}
