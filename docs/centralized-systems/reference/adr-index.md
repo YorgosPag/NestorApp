@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 227 ADRs | Last Updated: 2026-03-17
+**📊 Stats**: 228 ADRs | Last Updated: 2026-03-18
 
 ---
 
@@ -263,6 +263,7 @@
 | **ADR-237** | Polygon Overlay Bridge (DXF Viewer → Δημόσια Σελίδα Ακινήτων) | ✅ ✅ IMPLEMENTED (4/4 SPECs complete) | 2026-03-16 | Canvas & Rendering / Property Management | [📄](./adrs/ADR-237-polygon-overlay-bridge.md) |
 | **ADR-238** | Entity Creation Centralization | 📋 PLANNING | 2026-03-17 | Entity Systems | [📄](./adrs/ADR-238-entity-creation-centralization.md) |
 | **ADR-239** | Entity Linking Centralization | ✅ IMPLEMENTED | 2026-03-17 | Entity Systems | [📄](./adrs/ADR-239-entity-linking-centralization.md) |
+| **ADR-241** | Fullscreen Container Centralization | ✅ IMPLEMENTED | 2026-03-18 | UI Components | [📄](./adrs/ADR-241-fullscreen-container-centralization.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -291,6 +292,7 @@
 | **ADR-128** | Switch Status Variant (Green ON / Red OFF) | ✅ APPROVED | [View](./adrs/ADR-128-switch-status-variant-green-on-red-off.md) |
 | **ADR-135** | Menu Icons Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-135-menu-icons-centralization.md) |
 | **ADR-144** | Icon Click Sequence Colors Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-144-icon-click-sequence-colors-centralization.md) |
+| **ADR-241** | Fullscreen Container Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-241-fullscreen-container-centralization.md) |
 
 ---
 

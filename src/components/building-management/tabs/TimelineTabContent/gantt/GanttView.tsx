@@ -44,7 +44,6 @@ import {
   FileImage,
   Table2,
   Maximize2,
-  Minimize2,
 } from 'lucide-react';
 
 import { Spinner } from '@/components/ui/spinner';
@@ -53,6 +52,8 @@ import { getStatusColor } from '@/lib/design-system';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useFullscreen } from '@/hooks/useFullscreen';
+import { FullscreenContainer } from '@/core/containers/FullscreenContainer';
 import { useTypography } from '@/hooks/useTypography';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { typography as designTypography, zIndex, colors as tokenColors } from '@/styles/design-tokens';
@@ -153,8 +154,8 @@ export function GanttView({ building }: GanttViewProps) {
   // View mode state
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.MONTH);
 
-  // Fullscreen mode
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  // Fullscreen mode (ADR-241 centralized)
+  const fullscreen = useFullscreen();
 
   // Firestore data + CRUD handlers
   const {
@@ -704,12 +705,12 @@ export function GanttView({ building }: GanttViewProps) {
           </DropdownMenu>
         )}
 
-        {/* Fullscreen Toggle */}
+        {/* Fullscreen Toggle (ADR-241) */}
         {!isEmpty && (
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setIsFullscreen(true)}
+            onClick={fullscreen.enter}
             title={i18n.language === 'el' ? 'Πλήρης Οθόνη' : 'Fullscreen'}
           >
             <Maximize2 className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
@@ -783,133 +784,129 @@ export function GanttView({ building }: GanttViewProps) {
         </Card>
       )}
 
-      {/* ─── Fullscreen Dialog ──────────────────────────────────────────── */}
-      <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
-        <DialogContent className="max-w-[95vw] h-[90vh] flex flex-col overflow-hidden">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="flex items-center justify-between">
-              <span>{building.name ?? t('tabs.timeline.gantt.title')} — {t('tabs.timeline.gantt.title')}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsFullscreen(false)}
-              >
-                <Minimize2 className={iconSizes.sm} />
-              </Button>
-            </DialogTitle>
-          </DialogHeader>
-
-          {/* Action buttons inside fullscreen */}
-          <nav className={cn('flex-shrink-0 flex items-center', spacingTokens.gap.sm)} aria-label="Gantt fullscreen actions">
-            <Button variant="default" size="sm" onClick={openCreatePhaseDialog}>
-              <FolderPlus className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
-              {t('tabs.timeline.gantt.actions.newPhase')}
+      {/* ─── Fullscreen (ADR-241 centralized) ─────────────────────────── */}
+      <FullscreenContainer
+        isFullscreen={fullscreen.isFullscreen}
+        onToggle={fullscreen.toggle}
+        onExit={fullscreen.exit}
+        mode="dialog"
+        headerContent={
+          <span className="font-semibold">
+            {building.name ?? t('tabs.timeline.gantt.title')} — {t('tabs.timeline.gantt.title')}
+          </span>
+        }
+        ariaLabel={t('tabs.timeline.gantt.title')}
+      >
+        {/* Action buttons inside fullscreen */}
+        <nav className={cn('flex-shrink-0 flex items-center', spacingTokens.gap.sm, spacingTokens.padding.sm)} aria-label="Gantt fullscreen actions">
+          <Button variant="default" size="sm" onClick={openCreatePhaseDialog}>
+            <FolderPlus className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
+            {t('tabs.timeline.gantt.actions.newPhase')}
+          </Button>
+          {phases.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => openCreateTaskDialog(phases[0].id)}
+            >
+              <Plus className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
+              {t('tabs.timeline.gantt.actions.newTask')}
             </Button>
-            {phases.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => openCreateTaskDialog(phases[0].id)}
-              >
-                <Plus className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
-                {t('tabs.timeline.gantt.actions.newTask')}
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={isExporting}>
+                <Download className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
+                {isExporting
+                  ? t('tabs.timeline.gantt.export.exporting')
+                  : exportLabels.export}
               </Button>
-            )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" disabled={isExporting}>
-                  <Download className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
-                  {isExporting
-                    ? t('tabs.timeline.gantt.export.exporting')
-                    : exportLabels.export}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                  <FileText className={cn(iconSizes.xs, spacingTokens.margin.right.sm)} />
-                  {exportLabels.pdf}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('png')}>
-                  <ImageIcon className={cn(iconSizes.xs, spacingTokens.margin.right.sm)} />
-                  {exportLabels.png}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('svg')}>
-                  <FileImage className={cn(iconSizes.xs, spacingTokens.margin.right.sm)} />
-                  {exportLabels.svg}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleExport('excel')}>
-                  <Table2 className={cn(iconSizes.xs, spacingTokens.margin.right.sm)} />
-                  {exportLabels.excel}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </nav>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleExport('pdf')}>
+                <FileText className={cn(iconSizes.xs, spacingTokens.margin.right.sm)} />
+                {exportLabels.pdf}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('png')}>
+                <ImageIcon className={cn(iconSizes.xs, spacingTokens.margin.right.sm)} />
+                {exportLabels.png}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('svg')}>
+                <FileImage className={cn(iconSizes.xs, spacingTokens.margin.right.sm)} />
+                {exportLabels.svg}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleExport('excel')}>
+                <Table2 className={cn(iconSizes.xs, spacingTokens.margin.right.sm)} />
+                {exportLabels.excel}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </nav>
 
-          {/* Stats inside fullscreen */}
-          <UnifiedDashboard
-            stats={summaryStats}
-            columns={4}
-            className="flex-shrink-0"
-          />
+        {/* Stats inside fullscreen */}
+        <UnifiedDashboard
+          stats={summaryStats}
+          columns={4}
+          className="flex-shrink-0"
+        />
 
-          {/* Gantt chart — fills remaining space */}
-          <section
-            className="flex-1 min-h-0 overflow-auto"
-            onContextMenu={handleContextMenu}
-            onPointerMove={handleGanttPointerMove}
-            onPointerLeave={handleGanttPointerLeave}
-          >
-            <div onMouseDownCapture={handleGanttMouseDown}>
-              <GanttChart
-                tasks={taskGroups}
-                startDate={timelineBounds.startDate}
-                endDate={timelineBounds.endDate}
-                title={t('tabs.timeline.gantt.title')}
-                headerLabel={building.name ?? t('tabs.timeline.gantt.title')}
-                viewMode={viewMode}
-                viewModes={AVAILABLE_VIEW_MODES}
-                onViewModeChange={setViewMode}
-                darkMode={isDarkMode}
-                showProgress
-                showCurrentDateMarker
-                todayLabel={t('tabs.timeline.gantt.toolbar.today')}
-                editMode
-                allowProgressEdit
-                allowTaskResize
-                allowTaskMove
-                movementThreshold={5}
-                onTaskUpdate={handleTaskUpdate}
-                onTaskClick={handleTaskClick}
-                onTaskDoubleClick={handleTaskDoubleClick}
-                onGroupClick={handleGroupClick}
-                locale="el-GR"
-                fontSize={designTypography.fontSize.sm}
-                getTaskColor={getTaskBarColor}
-              />
-            </div>
-          </section>
+        {/* Gantt chart — fills remaining space */}
+        <section
+          className="flex-1 min-h-0 overflow-auto"
+          onContextMenu={handleContextMenu}
+          onPointerMove={handleGanttPointerMove}
+          onPointerLeave={handleGanttPointerLeave}
+        >
+          <div onMouseDownCapture={handleGanttMouseDown}>
+            <GanttChart
+              tasks={taskGroups}
+              startDate={timelineBounds.startDate}
+              endDate={timelineBounds.endDate}
+              title={t('tabs.timeline.gantt.title')}
+              headerLabel={building.name ?? t('tabs.timeline.gantt.title')}
+              viewMode={viewMode}
+              viewModes={AVAILABLE_VIEW_MODES}
+              onViewModeChange={setViewMode}
+              darkMode={isDarkMode}
+              showProgress
+              showCurrentDateMarker
+              todayLabel={t('tabs.timeline.gantt.toolbar.today')}
+              editMode
+              allowProgressEdit
+              allowTaskResize
+              allowTaskMove
+              movementThreshold={5}
+              onTaskUpdate={handleTaskUpdate}
+              onTaskClick={handleTaskClick}
+              onTaskDoubleClick={handleTaskDoubleClick}
+              onGroupClick={handleGroupClick}
+              locale="el-GR"
+              fontSize={designTypography.fontSize.sm}
+              getTaskColor={getTaskBarColor}
+            />
+          </div>
+        </section>
 
-          {/* Legend inside fullscreen */}
-          <footer className={cn('flex-shrink-0 flex flex-wrap items-center', spacingTokens.gap.sm, spacingTokens.padding.sm, 'border-t')}>
-            <Badge variant="default" className={getStatusColor('active', 'bg')}>
-              {t('tabs.timeline.gantt.status.completed')}
-            </Badge>
-            <Badge variant="default" className={getStatusColor('pending', 'bg')}>
-              {t('tabs.timeline.gantt.status.inProgress')}
-            </Badge>
-            <Badge variant="secondary">
-              {t('tabs.timeline.gantt.status.notStarted')}
-            </Badge>
-            <Badge variant="destructive">
-              {t('tabs.timeline.gantt.status.delayed')}
-            </Badge>
-            <Badge variant="outline" className={cn(getStatusColor('construction', 'border'), getStatusColor('construction', 'text'))}>
-              {t('tabs.timeline.gantt.status.blocked')}
-            </Badge>
-          </footer>
-        </DialogContent>
-      </Dialog>
+        {/* Legend inside fullscreen */}
+        <footer className={cn('flex-shrink-0 flex flex-wrap items-center', spacingTokens.gap.sm, spacingTokens.padding.sm, 'border-t')}>
+          <Badge variant="default" className={getStatusColor('active', 'bg')}>
+            {t('tabs.timeline.gantt.status.completed')}
+          </Badge>
+          <Badge variant="default" className={getStatusColor('pending', 'bg')}>
+            {t('tabs.timeline.gantt.status.inProgress')}
+          </Badge>
+          <Badge variant="secondary">
+            {t('tabs.timeline.gantt.status.notStarted')}
+          </Badge>
+          <Badge variant="destructive">
+            {t('tabs.timeline.gantt.status.delayed')}
+          </Badge>
+          <Badge variant="outline" className={cn(getStatusColor('construction', 'border'), getStatusColor('construction', 'text'))}>
+            {t('tabs.timeline.gantt.status.blocked')}
+          </Badge>
+        </footer>
+      </FullscreenContainer>
 
       {/* Custom Context Menu — portal-rendered at exact cursor coordinates */}
       {contextMenu && createPortal(

@@ -26,11 +26,13 @@
 
 import React, { useCallback, useState, useMemo } from 'react';
 import { normalizeForSearch } from '@/utils/greek-text';
-import { FileText, RefreshCw, List, Network, Eye, Code, ArrowUp, Trash2, Grid3X3, Image as ImageIcon, X as XIcon } from 'lucide-react';
+import { FileText, RefreshCw, List, Network, Eye, Code, ArrowUp, Trash2, Grid3X3, Image as ImageIcon, X as XIcon, Maximize2, Minimize2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useFullscreen } from '@/hooks/useFullscreen';
+import { FullscreenContainer } from '@/core/containers/FullscreenContainer';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { apiClient } from '@/lib/api/enterprise-api-client';
@@ -199,6 +201,7 @@ export function EntityFilesManager({
   const [searchTerm, setSearchTerm] = useState(''); // 🔍 ENTERPRISE: File search (Google Drive/Dropbox pattern)
   const [linkModalFile, setLinkModalFile] = useState<FileRecord | null>(null); // 🔗 ENTERPRISE: File to link to buildings
   const [selectedFile, setSelectedFile] = useState<FileRecord | null>(null); // 🏢 ENTERPRISE: Inline preview (split-panel)
+  const fullscreen = useFullscreen(); // 🏢 ENTERPRISE: Centralized fullscreen (ADR-241)
 
   // 🏢 ENTERPRISE: Reset custom title when entry point changes
   React.useEffect(() => {
@@ -841,6 +844,14 @@ export function EntityFilesManager({
   // =========================================================================
 
   return (
+    <FullscreenContainer
+      isFullscreen={fullscreen.isFullscreen}
+      onToggle={fullscreen.toggle}
+      mode="overlay"
+      togglePosition="none"
+      fullscreenClassName="rounded-none"
+      ariaLabel={t('manager.filesTitle')}
+    >
     <Card className="w-full">
       <CardHeader>
         <nav className="flex flex-wrap items-center justify-between gap-2" role="toolbar" aria-label={t('manager.fileManagementTools')}>
@@ -1014,6 +1025,27 @@ export function EntityFilesManager({
                 </Tooltip>
               </>
             )}
+
+            {/* 🏢 ENTERPRISE: Fullscreen toggle (ADR-241 centralized) */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fullscreen.toggle}
+                  aria-label={fullscreen.isFullscreen ? t('manager.exitFullscreen') : t('manager.fullscreen')}
+                  aria-pressed={fullscreen.isFullscreen}
+                >
+                  {fullscreen.isFullscreen
+                    ? <Minimize2 className={iconSizes.sm} aria-hidden="true" />
+                    : <Maximize2 className={iconSizes.sm} aria-hidden="true" />
+                  }
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {fullscreen.isFullscreen ? t('manager.exitFullscreenTooltip') : t('manager.fullscreenTooltip')}
+              </TooltipContent>
+            </Tooltip>
           </div>
         </nav>
       </CardHeader>
@@ -1303,5 +1335,6 @@ export function EntityFilesManager({
         />
       )}
     </Card>
+    </FullscreenContainer>
   );
 }

@@ -2130,5 +2130,11 @@
     "noHistory": "No change history",
     "changesWillAppear": "Changes will appear here automatically",
     "noFilterResults": "No changes found for this filter"
+  },
+  "fullscreen": {
+    "enter": "Fullscreen",
+    "exit": "Exit Fullscreen",
+    "enterTooltip": "Expand to fullscreen",
+    "exitTooltip": "Return to normal view"
   }
 }

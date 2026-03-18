@@ -6,7 +6,7 @@
 
 **📊 Quick Stats**: 33 Enterprise Systems + Accounting Subapp (11 ADRs) | 24,000+ Lines | Fortune 500 Quality
 
-> **🆕 Latest**: ADR-203 Entity Page State Centralization — Generic useEntityPageState<T,F> hook eliminates 207 lines boilerplate across 4 entity pages (2026-03-12)
+> **🆕 Latest**: ADR-241 Fullscreen Container Centralization — useFullscreen hook + FullscreenContainer (overlay/dialog). 3 migrations, ~155 lines removed (2026-03-18)
 
 ---
 
@@ -67,6 +67,7 @@
 - **[🔍 Filter System](data-systems/filter-system.md)** - Enterprise filtering & search
 - **[📋 Entity Page State (ADR-203)](reference/adrs/ADR-203-entity-page-state-centralization.md)** - Centralized useEntityPageState hook (Projects, Buildings, Parking, Storages)
 - **[🏢 Entity Systems](data-systems/entity-systems.md)** - Entity linking, uploads, ID generation
+- **[🏭 Entity Creation Centralization (ADR-238)](reference/adrs/ADR-238-entity-creation-centralization.md)** - SSoT for entity creation: companyId, timestamps, audit, entity codes (PLANNING)
 - **[🚨 Alert Engine](data-systems/alert-engine.md)** - Real-time monitoring & notifications
 - **[🌍 Polygon System](data-systems/polygon-system.md)** - Geographic drawing engine
 - **[🏗️ State Management](data-systems/state-management.md)** - Context providers & stores
@@ -118,6 +119,7 @@
 - **[📄 Enterprise Headers](ui-systems/enterprise-headers.md)** - Header component system
 - **[🖼️ Overlays](ui-systems/overlays.md)** - Crosshairs, rulers, visual feedback
 - **[🎨 Canvas System](ui-systems/canvas-system.md)** - Coordinates, transforms, rendering
+- **[🔲 Fullscreen Container (ADR-241)](reference/adrs/ADR-241-fullscreen-container-centralization.md)** - Centralized useFullscreen hook + FullscreenContainer component (overlay/dialog modes)
 
 ### ⚒️ **TOOLS**
 - **[📋 Overview](tools/index.md)** - Drawing tools, keyboard shortcuts, interactions
@@ -195,6 +197,6 @@
 
 > **💡 Tip**: Bookmark this page για quick navigation στα centralized systems!
 >
-> **🔄 Last Updated**: 2026-02-10
+> **🔄 Last Updated**: 2026-03-18
 >
 > **👥 Maintainers**: Γιώργος Παγώνης + Claude Code (Anthropic AI)

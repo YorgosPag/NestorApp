@@ -53,8 +53,9 @@ import {
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useFullscreen } from '@/hooks/useFullscreen';
+import { FullscreenContainer } from '@/core/containers/FullscreenContainer';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useZoomPan } from '@/hooks/useZoomPan';
@@ -543,8 +544,8 @@ export function FloorplanGallery({
   const [loadedScene, setLoadedScene] = useState<DxfSceneData | null>(null);
   const [sceneError, setSceneError] = useState<string | null>(null);
 
-  // Fullscreen modal state
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  // Fullscreen modal state (ADR-241 centralized)
+  const fullscreen = useFullscreen();
 
   // DXF drawing mode — dark (colored) or light (black & white)
   const [drawingMode, setDrawingMode] = useState<DxfDrawingMode>('dark');
@@ -648,10 +649,10 @@ export function FloorplanGallery({
   // Keyboard navigation
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      // Escape closes fullscreen modal
-      if (event.key === 'Escape' && isFullscreen) {
+      // Escape closes fullscreen modal (handled by useFullscreen hook — ADR-241)
+      if (event.key === 'Escape' && fullscreen.isFullscreen) {
         event.preventDefault();
-        setIsFullscreen(false);
+        fullscreen.exit();
         return;
       }
 
@@ -668,7 +669,7 @@ export function FloorplanGallery({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [goToPrevious, goToNext, floorplanFiles.length, isFullscreen]);
+  }, [goToPrevious, goToNext, floorplanFiles.length, fullscreen.isFullscreen, fullscreen.exit]);
 
   // =========================================================================
   // FULLSCREEN
@@ -676,12 +677,12 @@ export function FloorplanGallery({
 
   const handleOpenFullscreen = useCallback(() => {
     modalZP.resetAll();
-    setIsFullscreen(true);
-  }, [modalZP]);
+    fullscreen.enter();
+  }, [modalZP, fullscreen]);
 
   const handleCloseFullscreen = useCallback(() => {
-    setIsFullscreen(false);
-  }, []);
+    fullscreen.exit();
+  }, [fullscreen]);
 
   // =========================================================================
   // DXF SCENE LOADING — Single unified effect (no race conditions)
@@ -822,11 +823,11 @@ export function FloorplanGallery({
 
   // Reset modal canvas flag when fullscreen closes
   useEffect(() => {
-    if (!isFullscreen) modalCanvasReadyRef.current = false;
-  }, [isFullscreen]);
+    if (!fullscreen.isFullscreen) modalCanvasReadyRef.current = false;
+  }, [fullscreen.isFullscreen]);
 
   useEffect(() => {
-    if (!isFullscreen || !loadedScene || !isDxf) return;
+    if (!fullscreen.isFullscreen || !loadedScene || !isDxf) return;
 
     const doRender = () => {
       if (!modalCanvasRef.current) return;
@@ -846,7 +847,7 @@ export function FloorplanGallery({
 
     // Subsequent renders (zoom/pan changes): immediate
     doRender();
-  }, [isFullscreen, loadedScene, isDxf, modalZP.zoom, modalZP.panOffset, drawingMode, overlays, effectiveHighlightId]);
+  }, [fullscreen.isFullscreen, loadedScene, isDxf, modalZP.zoom, modalZP.panOffset, drawingMode, overlays, effectiveHighlightId]);
 
   // =========================================================================
   // ACTIONS
@@ -1210,16 +1211,16 @@ export function FloorplanGallery({
       </article>
 
       {/* =============================================================== */}
-      {/* FULLSCREEN MODAL                                                */}
+      {/* FULLSCREEN MODAL (ADR-241 centralized)                          */}
       {/* =============================================================== */}
-      <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
-        <DialogContent
-          className="max-w-[95vw] w-[95vw] h-[90vh] flex flex-col p-0 gap-0"
-          hideCloseButton
-        >
-          {/* Fullscreen Header */}
-          <header className="flex items-center justify-between p-2 border-b bg-background/95 shrink-0">
-            {/* File Info */}
+      <FullscreenContainer
+        isFullscreen={fullscreen.isFullscreen}
+        onToggle={fullscreen.toggle}
+        onExit={fullscreen.exit}
+        mode="dialog"
+        togglePosition="none"
+        headerContent={
+          <>
             <span className="flex items-center gap-2 px-2">
               {getFileIcon(currentFile?.ext || '')}
               <Tooltip>
@@ -1231,17 +1232,16 @@ export function FloorplanGallery({
                 <TooltipContent>{currentFile?.displayName}</TooltipContent>
               </Tooltip>
             </span>
-
-            {/* Zoom Controls + Close */}
-            <nav className="flex items-center gap-1" aria-label={t('floorplan.actions')}>
+            <nav className="flex items-center gap-1 ml-auto" aria-label={t('floorplan.actions')}>
               {renderZoomControls(modalZP, { showClose: true })}
             </nav>
-          </header>
-
-          {/* Fullscreen Viewer */}
-          {renderViewerContent(modalZP, modalCanvasRef)}
-        </DialogContent>
-      </Dialog>
+          </>
+        }
+        ariaLabel={t('floorplan.gallery')}
+      >
+        {/* Fullscreen Viewer */}
+        {renderViewerContent(modalZP, modalCanvasRef)}
+      </FullscreenContainer>
     </>
   );
 }
