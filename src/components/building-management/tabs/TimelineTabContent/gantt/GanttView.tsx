@@ -53,7 +53,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useFullscreen } from '@/hooks/useFullscreen';
-import { FullscreenContainer } from '@/core/containers/FullscreenContainer';
+import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 import { useTypography } from '@/hooks/useTypography';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { typography as designTypography, zIndex, colors as tokenColors } from '@/styles/design-tokens';
@@ -784,12 +784,10 @@ export function GanttView({ building }: GanttViewProps) {
         </Card>
       )}
 
-      {/* ─── Fullscreen (ADR-241 centralized) ─────────────────────────── */}
-      <FullscreenContainer
+      {/* ─── Fullscreen (ADR-241 — FullscreenOverlay portal, 100% viewport) ── */}
+      <FullscreenOverlay
         isFullscreen={fullscreen.isFullscreen}
         onToggle={fullscreen.toggle}
-        onExit={fullscreen.exit}
-        mode="dialog"
         headerContent={
           <span className="font-semibold">
             {building.name ?? t('tabs.timeline.gantt.title')} — {t('tabs.timeline.gantt.title')}
@@ -798,7 +796,7 @@ export function GanttView({ building }: GanttViewProps) {
         ariaLabel={t('tabs.timeline.gantt.title')}
       >
         {/* Action buttons inside fullscreen */}
-        <nav className={cn('flex-shrink-0 flex items-center', spacingTokens.gap.sm, spacingTokens.padding.sm)} aria-label="Gantt fullscreen actions">
+        <nav className={cn('flex-shrink-0 flex items-center', spacingTokens.gap.sm, 'px-2 pt-2')} aria-label="Gantt fullscreen actions">
           <Button variant="default" size="sm" onClick={openCreatePhaseDialog}>
             <FolderPlus className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
             {t('tabs.timeline.gantt.actions.newPhase')}
@@ -844,16 +842,16 @@ export function GanttView({ building }: GanttViewProps) {
           </DropdownMenu>
         </nav>
 
-        {/* Stats inside fullscreen */}
+        {/* Stats inside fullscreen — 8px spacing (p-2) */}
         <UnifiedDashboard
           stats={summaryStats}
           columns={4}
-          className="flex-shrink-0"
+          className="flex-shrink-0 px-2 pb-2"
         />
 
-        {/* Gantt chart — fills remaining space */}
+        {/* Gantt chart — fills remaining space, 8px horizontal padding */}
         <section
-          className="flex-1 min-h-0 overflow-auto"
+          className="flex-1 min-h-0 overflow-auto px-2"
           onContextMenu={handleContextMenu}
           onPointerMove={handleGanttPointerMove}
           onPointerLeave={handleGanttPointerLeave}
@@ -889,7 +887,7 @@ export function GanttView({ building }: GanttViewProps) {
         </section>
 
         {/* Legend inside fullscreen */}
-        <footer className={cn('flex-shrink-0 flex flex-wrap items-center', spacingTokens.gap.sm, spacingTokens.padding.sm, 'border-t')}>
+        <footer className={cn('flex-shrink-0 flex flex-wrap items-center', spacingTokens.gap.sm, 'px-2 py-2', 'border-t')}>
           <Badge variant="default" className={getStatusColor('active', 'bg')}>
             {t('tabs.timeline.gantt.status.completed')}
           </Badge>
@@ -906,7 +904,7 @@ export function GanttView({ building }: GanttViewProps) {
             {t('tabs.timeline.gantt.status.blocked')}
           </Badge>
         </footer>
-      </FullscreenContainer>
+      </FullscreenOverlay>
 
       {/* Custom Context Menu — portal-rendered at exact cursor coordinates */}
       {contextMenu && createPortal(
