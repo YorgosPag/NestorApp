@@ -1129,6 +1129,7 @@ export function UnifiedContactTabbedSection({
     canonicalUploadContext, onActiveTabChange,
     companyDisplayName, // 🏢 ENTERPRISE: Re-render when company name is fetched (ADR-031)
     user?.companyId, // 🏢 ENTERPRISE: Re-render when companyId changes
+    addressesFullscreen, // 🏢 ADR-241: Re-render when fullscreen state changes
   ]);
 
   return (
