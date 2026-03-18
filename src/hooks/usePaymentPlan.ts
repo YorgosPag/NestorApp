@@ -40,6 +40,7 @@ interface UsePaymentPlanReturn {
   addInstallment: (planId: string, input: CreateInstallmentInput, insertAtIndex?: number) => Promise<{ success: boolean; error?: string }>;
   updateInstallment: (planId: string, index: number, updates: UpdateInstallmentInput) => Promise<{ success: boolean; error?: string }>;
   removeInstallment: (planId: string, index: number) => Promise<{ success: boolean; error?: string }>;
+  deletePlan: (planId: string) => Promise<{ success: boolean; error?: string }>;
   /** @deprecated Use useLoanTracking hook instead */
   updateLoan: (planId: string, loan: Partial<LoanInfo>) => Promise<{ success: boolean; error?: string }>;
 }
@@ -251,6 +252,22 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
     [unitId, fetchData]
   );
 
+  const deletePlan = useCallback(
+    async (planId: string) => {
+      try {
+        const data = await fetchJson<{ success: boolean; error?: string }>(
+          `/api/units/${unitId}/payment-plan?planId=${encodeURIComponent(planId)}`,
+          { method: 'DELETE' }
+        );
+        if (data.success) await fetchData();
+        return { success: data.success, error: data.error };
+      } catch (err) {
+        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+      }
+    },
+    [unitId, fetchData]
+  );
+
   return {
     plan,
     payments,
@@ -259,6 +276,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
     refetch: () => { fetchData(); },
     createPlan,
     updatePlan,
+    deletePlan,
     recordPayment,
     addInstallment,
     updateInstallment,

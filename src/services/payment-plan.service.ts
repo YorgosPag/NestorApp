@@ -240,6 +240,45 @@ export class PaymentPlanService {
     }
   }
 
+  /**
+   * Delete payment plan (negotiation/draft only, no payments recorded).
+   */
+  static async deletePlan(
+    unitId: string,
+    planId: string,
+    deletedBy: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const plan = await this.getPaymentPlan(unitId, planId);
+      if (!plan) return { success: false, error: 'Payment plan not found' };
+
+      if (plan.status !== 'negotiation' && plan.status !== 'draft') {
+        return { success: false, error: 'Μπορείτε να διαγράψετε μόνο plans σε negotiation/draft' };
+      }
+      if (plan.paidAmount > 0) {
+        return { success: false, error: 'Δεν μπορείτε να διαγράψετε plan με καταγεγραμμένες πληρωμές' };
+      }
+
+      const db = getDb();
+      await db.collection(planCollectionPath(unitId)).doc(planId).delete();
+
+      // Clear payment summary from unit
+      await db.collection(COLLECTIONS.UNITS).doc(unitId).update({
+        'commercial.paymentSummary': null,
+        updatedAt: new Date().toISOString(),
+      });
+
+      logger.info(`[PaymentPlanService] Deleted plan ${planId} by ${deletedBy}`);
+      return { success: true };
+    } catch (error) {
+      logger.error('[PaymentPlanService] Failed to delete plan:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
   // ==========================================================================
   // STATUS TRANSITIONS
   // ==========================================================================

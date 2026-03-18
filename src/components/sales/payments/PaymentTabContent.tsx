@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { CreditCard, Plus, Loader2, FileSpreadsheet } from 'lucide-react';
+import { CreditCard, Plus, Loader2, FileSpreadsheet, RefreshCw, Trash2 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ADR-241: Centralized fullscreen system
 import { useFullscreen } from '@/hooks/useFullscreen';
@@ -24,6 +24,17 @@ import { InterestCostSection } from '@/components/sales/payments/InterestCostSec
 import { CreatePaymentPlanWizard } from '@/components/sales/payments/CreatePaymentPlanWizard';
 import { PaymentReportDialog } from '@/components/sales/payments/PaymentReportDialog';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 import type { Unit } from '@/types/unit';
 
 // ============================================================================
@@ -40,7 +51,9 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
     plan,
     isLoading,
     error,
+    refetch,
     createPlan,
+    deletePlan,
     recordPayment,
     addInstallment,
     updateInstallment,
@@ -55,6 +68,8 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editDialogMode, setEditDialogMode] = useState<'add' | 'edit'>('edit');
   const [selectedInstallmentIdx, setSelectedInstallmentIdx] = useState(0);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const handlePayInstallment = useCallback((index: number) => {
     setSelectedInstallmentIdx(index);
@@ -71,6 +86,24 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
     setEditDialogMode('add');
     setEditDialogOpen(true);
   }, []);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    refetch();
+    // Small delay to show the animation
+    setTimeout(() => setRefreshing(false), 600);
+  }, [refetch]);
+
+  const handleDeletePlan = useCallback(async () => {
+    if (!plan) return;
+    const result = await deletePlan(plan.id);
+    setDeleteConfirmOpen(false);
+    if (result.success) {
+      toast.success(t('paymentPlan.deleteSuccess'));
+    } else {
+      toast.error(result.error ?? 'Error');
+    }
+  }, [plan, deletePlan, t]);
 
   // Loading
   if (isLoading) {
@@ -173,6 +206,27 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
               {t('report.button')}
             </Button>
           )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            aria-label={t('paymentPlan.refresh')}
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+          </Button>
+          {(plan.status === 'negotiation' || plan.status === 'draft') && plan.paidAmount === 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+              onClick={() => setDeleteConfirmOpen(true)}
+              aria-label={t('paymentPlan.deletePlan')}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
           {/* 🏢 ADR-241: Fullscreen toggle */}
           <FullscreenToggleButton isFullscreen={fullscreen.isFullscreen} onToggle={fullscreen.toggle} />
         </nav>
@@ -246,6 +300,26 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
           projectId={resolvedProjectId}
         />
       )}
+      {/* Delete Plan Confirmation */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('paymentPlan.deletePlan')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('paymentPlan.deleteConfirm')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('paymentPlan.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeletePlan}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t('paymentPlan.confirmDelete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </FullscreenOverlay>
   );
 }

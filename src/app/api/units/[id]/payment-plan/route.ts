@@ -134,3 +134,45 @@ async function handlePatch(
 }
 
 export const PATCH = withStandardRateLimit(handlePatch);
+
+// =============================================================================
+// DELETE — Delete Payment Plan (negotiation/draft only, no payments)
+// =============================================================================
+
+async function handleDelete(
+  request: NextRequest,
+  segmentData?: SegmentData
+): Promise<NextResponse> {
+  const { id: unitId } = await segmentData!.params;
+
+  const handler = withAuth(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      try {
+        const { searchParams } = new URL(req.url);
+        const planId = searchParams.get('planId');
+
+        if (!planId) {
+          return NextResponse.json(
+            { success: false, error: 'planId query parameter is required' },
+            { status: 400 }
+          );
+        }
+
+        const result = await PaymentPlanService.deletePlan(unitId, planId, ctx.uid);
+
+        if (!result.success) {
+          return NextResponse.json({ success: false, error: result.error }, { status: 409 });
+        }
+
+        return NextResponse.json({ success: true });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to delete payment plan';
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
+      }
+    }
+  );
+
+  return handler(request);
+}
+
+export const DELETE = withStandardRateLimit(handleDelete);
