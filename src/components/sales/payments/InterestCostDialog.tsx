@@ -21,6 +21,9 @@ import {
   Settings,
   BarChart3,
   Loader2,
+  Info,
+  HelpCircle,
+  AlertTriangle,
 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { toast } from 'sonner';
@@ -130,9 +133,19 @@ function CashFlowTab({
   t: (key: string, opts?: Record<string, string>) => string;
 }) {
   const totalPV = analysis.reduce((sum, cf) => sum + cf.presentValue, 0);
+  const totalLoss = salePrice - totalPV;
+  const lossPercent = salePrice > 0 ? (totalLoss / salePrice) * 100 : 0;
 
   return (
     <article className="space-y-3">
+      {/* Educational info banner */}
+      <section className="flex gap-2 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-3">
+        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+        <p className="text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+          {t('costCalculator.cashFlow.infoBanner')}
+        </p>
+      </section>
+
       <Table>
         <TableHeader>
           <TableRow>
@@ -147,7 +160,9 @@ function CashFlowTab({
                     {t('costCalculator.cashFlow.df')}
                   </span>
                 </TooltipTrigger>
-                <TooltipContent>{t('costCalculator.cashFlow.dfTooltip')}</TooltipContent>
+                <TooltipContent side="top" className="max-w-xs">
+                  {t('costCalculator.cashFlow.dfTooltip')}
+                </TooltipContent>
               </Tooltip>
             </TableHead>
             <TableHead className="text-xs text-right">
@@ -157,32 +172,112 @@ function CashFlowTab({
                     {t('costCalculator.cashFlow.pv')}
                   </span>
                 </TooltipTrigger>
-                <TooltipContent>{t('costCalculator.cashFlow.pvTooltip')}</TooltipContent>
+                <TooltipContent side="top" className="max-w-xs">
+                  {t('costCalculator.cashFlow.pvTooltip')}
+                </TooltipContent>
+              </Tooltip>
+            </TableHead>
+            <TableHead className="text-xs text-right">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help border-b border-dashed border-muted-foreground">
+                    Απώλεια
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  Η διαφορά μεταξύ ονομαστικής αξίας και παρούσας αξίας — πόσα «χάνετε» σε κάθε δόση
+                </TooltipContent>
               </Tooltip>
             </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {analysis.map((cf, idx) => (
-            <TableRow key={idx}>
-              <TableCell className="text-xs font-medium">{cf.label}</TableCell>
-              <TableCell className="text-xs text-right">{formatCurrencyFull(cf.amount)}</TableCell>
-              <TableCell className="text-xs text-right">{formatDate(cf.date)}</TableCell>
-              <TableCell className="text-xs text-right">{cf.daysDelta}</TableCell>
-              <TableCell className="text-xs text-right">{cf.discountFactor.toFixed(4)}</TableCell>
-              <TableCell className="text-xs text-right font-medium">{formatCurrencyFull(cf.presentValue)}</TableCell>
-            </TableRow>
-          ))}
+          {analysis.map((cf, idx) => {
+            const loss = cf.amount - cf.presentValue;
+            const lossRatio = cf.amount > 0 ? loss / cf.amount : 0;
+            // Color coding: green = no loss, yellow = small loss (<1%), orange = medium (<2%), red = high (>2%)
+            const lossColor = lossRatio === 0
+              ? ''
+              : lossRatio < 0.01
+                ? 'bg-yellow-50/50 dark:bg-yellow-950/10'
+                : lossRatio < 0.02
+                  ? 'bg-orange-50/50 dark:bg-orange-950/10'
+                  : 'bg-red-50/50 dark:bg-red-950/10';
+
+            const rowTooltipText = cf.daysDelta === 0
+              ? t('costCalculator.cashFlow.rowTooltipToday', { label: cf.label })
+              : t('costCalculator.cashFlow.rowTooltip', {
+                  label: cf.label,
+                  days: String(cf.daysDelta),
+                  pv: formatCurrencyFull(cf.presentValue),
+                  amount: formatCurrencyFull(cf.amount),
+                  loss: formatCurrencyFull(loss),
+                });
+
+            return (
+              <Tooltip key={idx}>
+                <TooltipTrigger asChild>
+                  <TableRow className={`cursor-help ${lossColor}`}>
+                    <TableCell className="text-xs font-medium">{cf.label}</TableCell>
+                    <TableCell className="text-xs text-right">{formatCurrencyFull(cf.amount)}</TableCell>
+                    <TableCell className="text-xs text-right">{formatDate(cf.date)}</TableCell>
+                    <TableCell className="text-xs text-right">{cf.daysDelta}</TableCell>
+                    <TableCell className="text-xs text-right">{cf.discountFactor.toFixed(4)}</TableCell>
+                    <TableCell className="text-xs text-right font-medium">{formatCurrencyFull(cf.presentValue)}</TableCell>
+                    <TableCell className="text-xs text-right font-medium text-destructive">
+                      {loss > 0 ? `-${formatCurrencyFull(loss)}` : '—'}
+                    </TableCell>
+                  </TableRow>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-sm text-sm">
+                  {rowTooltipText}
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
         </TableBody>
       </Table>
 
-      <footer className="flex justify-between items-center pt-2 border-t text-xs">
-        <span className="text-muted-foreground">
-          {t('costCalculator.cashFlow.nominalTotal')}: {formatCurrency(salePrice)}
-        </span>
-        <span className="font-semibold">
-          {t('costCalculator.cashFlow.npv')}: {formatCurrency(totalPV)}
-        </span>
+      {/* Summary with insight */}
+      <footer className="space-y-2 pt-2 border-t">
+        <div className="flex justify-between items-center text-xs">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="text-muted-foreground cursor-help">
+                {t('costCalculator.cashFlow.nominalTotal')}: {formatCurrency(salePrice)}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>Το αρχικό σύνολο χωρίς να υπολογιστεί η αξία του χρόνου</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="font-semibold cursor-help border-b border-dashed border-muted-foreground">
+                {t('costCalculator.cashFlow.npv')}: {formatCurrency(totalPV)}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">{t('costCalculator.cashFlow.npvTooltip')}</TooltipContent>
+          </Tooltip>
+        </div>
+
+        {/* Loss insight callout */}
+        {totalLoss > 0 ? (
+          <section className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3">
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+              {t('costCalculator.cashFlow.summaryLoss', {
+                loss: formatCurrency(totalLoss),
+                percent: formatPercent(lossPercent),
+              })}
+            </p>
+          </section>
+        ) : (
+          <section className="flex gap-2 rounded-lg border border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/30 p-3">
+            <Info className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-emerald-800 dark:text-emerald-300 leading-relaxed">
+              {t('costCalculator.cashFlow.summaryNoLoss')}
+            </p>
+          </section>
+        )}
       </footer>
     </article>
   );
@@ -196,50 +291,116 @@ function ScenarioTab({
   comparison: ScenarioComparison;
   t: (key: string, opts?: Record<string, string>) => string;
 }) {
+  // Find cash scenario NPV for comparison
+  const cashNpv = comparison.scenarios[0]?.result.npv ?? 0;
+
+  // Map scenario index to tooltip key
+  const scenarioTooltipKeys = [
+    'costCalculator.scenarios.rowTooltipCash',
+    'costCalculator.scenarios.rowTooltipOffPlan',
+    'costCalculator.scenarios.rowTooltipLoan',
+    'costCalculator.scenarios.rowTooltipCurrent',
+  ];
+
   return (
     <article className="space-y-3">
+      {/* Educational info banner */}
+      <section className="flex gap-2 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-3">
+        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+        <p className="text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+          {t('costCalculator.scenarios.infoBanner')}
+        </p>
+      </section>
+
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="text-xs">{t('costCalculator.scenarios.scenario')}</TableHead>
-            <TableHead className="text-xs text-right">{t('costCalculator.scenarios.npv')}</TableHead>
-            <TableHead className="text-xs text-right">{t('costCalculator.scenarios.cost')}</TableHead>
-            <TableHead className="text-xs text-right">{t('costCalculator.scenarios.wacp')}</TableHead>
+            <TableHead className="text-xs text-right">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help border-b border-dashed border-muted-foreground">
+                    {t('costCalculator.scenarios.npv')}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  {t('costCalculator.scenarios.npvTooltip')}
+                </TooltipContent>
+              </Tooltip>
+            </TableHead>
+            <TableHead className="text-xs text-right">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help border-b border-dashed border-muted-foreground">
+                    {t('costCalculator.scenarios.cost')}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  {t('costCalculator.scenarios.costTooltip')}
+                </TooltipContent>
+              </Tooltip>
+            </TableHead>
+            <TableHead className="text-xs text-right">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help border-b border-dashed border-muted-foreground">
+                    {t('costCalculator.scenarios.wacp')}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  {t('costCalculator.scenarios.wacpTooltip')}
+                </TooltipContent>
+              </Tooltip>
+            </TableHead>
             <TableHead className="text-xs text-center" />
           </TableRow>
         </TableHeader>
         <TableBody>
           {comparison.scenarios.map((s, idx) => {
             const isBest = idx === comparison.bestScenarioIndex;
+            const diffFromCash = cashNpv - s.result.npv;
+            const tooltipKey = scenarioTooltipKeys[idx] ?? scenarioTooltipKeys[3];
+
             return (
-              <TableRow key={idx} className={isBest ? 'bg-emerald-50 dark:bg-emerald-950/20' : ''}>
-                <TableCell className="text-xs">
-                  <span className="font-medium">{t(s.name)}</span>
-                  <br />
-                  <span className="text-muted-foreground">{t(s.description, s.descriptionParams)}</span>
-                </TableCell>
-                <TableCell className="text-xs text-right font-medium">
-                  {formatCurrency(s.result.npv)}
-                  <br />
-                  <span className="text-muted-foreground">{formatPercent(s.result.npvPercentage)}</span>
-                </TableCell>
-                <TableCell className="text-xs text-right text-destructive">
-                  {formatCurrency(s.result.timeCost)}
-                  <br />
-                  <span>{formatPercent(s.result.timeCostPercentage)}</span>
-                </TableCell>
-                <TableCell className="text-xs text-right">
-                  {s.result.weightedAverageDays} {t('costCalculator.scenarios.days')}
-                </TableCell>
-                <TableCell className="text-center">
-                  {isBest && (
-                    <Badge variant="default" className="text-[10px]">
-                      <Award className="h-3 w-3 mr-1" />
-                      {t('costCalculator.scenarios.best')}
-                    </Badge>
-                  )}
-                </TableCell>
-              </TableRow>
+              <Tooltip key={idx}>
+                <TooltipTrigger asChild>
+                  <TableRow className={`cursor-help ${isBest ? 'bg-emerald-50 dark:bg-emerald-950/20' : ''}`}>
+                    <TableCell className="text-xs">
+                      <span className="font-medium">{t(s.name)}</span>
+                      <br />
+                      <span className="text-muted-foreground">{t(s.description, s.descriptionParams)}</span>
+                    </TableCell>
+                    <TableCell className="text-xs text-right font-medium">
+                      {formatCurrency(s.result.npv)}
+                      <br />
+                      <span className="text-muted-foreground">{formatPercent(s.result.npvPercentage)}</span>
+                    </TableCell>
+                    <TableCell className="text-xs text-right text-destructive">
+                      {formatCurrency(s.result.timeCost)}
+                      <br />
+                      <span>{formatPercent(s.result.timeCostPercentage)}</span>
+                    </TableCell>
+                    <TableCell className="text-xs text-right">
+                      {s.result.weightedAverageDays} {t('costCalculator.scenarios.days')}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {isBest ? (
+                        <Badge variant="default" className="text-[10px]">
+                          <Award className="h-3 w-3 mr-1" />
+                          {t('costCalculator.scenarios.best')}
+                        </Badge>
+                      ) : diffFromCash > 0 ? (
+                        <span className="text-[10px] text-muted-foreground">
+                          {t('costCalculator.scenarios.vsCash', { diff: formatCurrency(diffFromCash) })}
+                        </span>
+                      ) : null}
+                    </TableCell>
+                  </TableRow>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-sm text-sm">
+                  {t(tooltipKey, { cost: formatCurrency(s.result.timeCost) })}
+                </TooltipContent>
+              </Tooltip>
             );
           })}
         </TableBody>
@@ -264,6 +425,14 @@ function PricingTab({
 }) {
   return (
     <article className="space-y-4">
+      {/* Educational info banner */}
+      <section className="flex gap-2 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-3">
+        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+        <p className="text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+          {t('costCalculator.pricing.infoBanner')}
+        </p>
+      </section>
+
       {/* Hero callout */}
       <section className="rounded-lg border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 p-4 text-center space-y-2">
         <TrendingUp className="h-8 w-8 mx-auto text-emerald-600" />
@@ -279,27 +448,87 @@ function PricingTab({
         </p>
       </section>
 
-      {/* Breakdown */}
+      {/* "What this means" explanation */}
+      <section className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3">
+        <HelpCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+        <div>
+          <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 mb-1">
+            {t('costCalculator.pricing.whatThisMeans')}
+          </p>
+          <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+            {t('costCalculator.pricing.whatThisMeansText', {
+              nominal: formatCurrency(salePrice),
+              npv: formatCurrency(result.npv),
+              recommended: formatCurrency(result.recommendedPrice),
+            })}
+          </p>
+        </div>
+      </section>
+
+      {/* Breakdown with tooltips */}
       <dl className="grid grid-cols-2 gap-3 text-sm">
-        <dt className="text-muted-foreground">{t('costCalculator.pricing.nominalPrice')}</dt>
+        <dt className="text-muted-foreground">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="cursor-help border-b border-dashed border-muted-foreground">
+                {t('costCalculator.pricing.nominalPrice')}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">{t('costCalculator.pricing.nominalPriceTooltip')}</TooltipContent>
+          </Tooltip>
+        </dt>
         <dd className="text-right font-medium">{formatCurrency(salePrice)}</dd>
 
-        <dt className="text-muted-foreground">{t('costCalculator.cashFlow.npv')} ({formatPercent(result.npvPercentage)})</dt>
+        <dt className="text-muted-foreground">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="cursor-help border-b border-dashed border-muted-foreground">
+                {t('costCalculator.cashFlow.npv')} ({formatPercent(result.npvPercentage)})
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">{t('costCalculator.cashFlow.npvTooltip')}</TooltipContent>
+          </Tooltip>
+        </dt>
         <dd className="text-right font-medium">{formatCurrency(result.npv)}</dd>
 
-        <dt className="text-muted-foreground text-destructive">
-          {t('costCalculator.pricing.timeCost')}
+        <dt className="text-destructive">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="cursor-help border-b border-dashed border-destructive">
+                {t('costCalculator.pricing.timeCost')}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">{t('costCalculator.pricing.timeCostTooltip')}</TooltipContent>
+          </Tooltip>
         </dt>
         <dd className="text-right font-medium text-destructive">
           -{formatCurrency(result.timeCost)}
         </dd>
 
-        <dt className="text-muted-foreground">{t('costCalculator.pricing.wacp')}</dt>
+        <dt className="text-muted-foreground">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="cursor-help border-b border-dashed border-muted-foreground">
+                {t('costCalculator.pricing.wacp')}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">{t('costCalculator.pricing.wacpTooltip')}</TooltipContent>
+          </Tooltip>
+        </dt>
         <dd className="text-right font-medium">
           {result.weightedAverageDays} {t('costCalculator.scenarios.days')}
         </dd>
 
-        <dt className="text-muted-foreground">{t('costCalculator.pricing.effectiveRate')}</dt>
+        <dt className="text-muted-foreground">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="cursor-help border-b border-dashed border-muted-foreground">
+                {t('costCalculator.pricing.effectiveRate')}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">{t('costCalculator.pricing.effectiveRateTooltip')}</TooltipContent>
+          </Tooltip>
+        </dt>
         <dd className="text-right font-medium">{formatPercent(result.effectiveRate)}</dd>
       </dl>
 
