@@ -439,3 +439,140 @@ export interface DrawScheduleResult {
   /** Weighted average outstanding balance (€) */
   weightedAverageBalance: number;
 }
+
+// =============================================================================
+// 📊 SPEC-242C — Portfolio Dashboard & Debt Maturity Wall
+// =============================================================================
+
+/** Health status traffic-light for project financial health */
+export type HealthStatus = 'excellent' | 'good' | 'warning' | 'critical';
+
+/** Portfolio-level aggregate summary across all projects */
+export interface PortfolioSummary {
+  /** Number of active projects */
+  activeProjects: number;
+  /** Total units across all projects */
+  totalUnits: number;
+  /** Total sold units across all projects */
+  soldUnits: number;
+  /** Total portfolio value (€) — sum of all unit sale prices */
+  totalPortfolioValue: number;
+  /** Total collected amount (€) */
+  totalCollected: number;
+  /** Total outstanding amount (€) */
+  totalOutstanding: number;
+  /** Weighted average cost of money across portfolio (%) */
+  weightedAvgCostOfMoney: number;
+  /** Weighted average collection period (days) */
+  weightedAvgCollectionDays: number;
+  /** Total NPV across all units (€) */
+  totalNPV: number;
+  /** Total time cost across portfolio (€) */
+  totalTimeCost: number;
+  /** ISO timestamp when this summary was calculated */
+  calculatedAt: string;
+}
+
+/** Per-project financial summary for portfolio table */
+export interface ProjectFinancialSummary {
+  /** Project document ID */
+  projectId: string;
+  /** Project display name */
+  projectName: string;
+  /** Total units in project */
+  totalUnits: number;
+  /** Sold units in project */
+  soldUnits: number;
+  /** Total value of all units (€) */
+  totalValue: number;
+  /** Total collected (€) */
+  collected: number;
+  /** Effective cost of money (%) */
+  costOfMoney: number;
+  /** Average collection period (days) */
+  avgCollectionDays: number;
+  /** Overall health status (worst of 3 metrics) */
+  healthStatus: HealthStatus;
+}
+
+/** Loan type for debt maturity wall */
+export type LoanType = 'construction' | 'mortgage' | 'bridge' | 'mezzanine';
+
+/** Single debt entry in the maturity wall */
+export interface DebtMaturityEntry {
+  /** Unique loan ID (dmt_ prefix) */
+  loanId: string;
+  /** Associated project name */
+  projectName: string;
+  /** Type of loan */
+  loanType: LoanType;
+  /** Outstanding balance (€) */
+  outstandingBalance: number;
+  /** Current interest rate (%) */
+  currentRate: number;
+  /** Maturity date (ISO string) */
+  maturityDate: string;
+  /** Months remaining to maturity */
+  monthsToMaturity: number;
+  /** Estimated refinancing rate (%) */
+  estimatedRefiRate: number;
+  /** Loan-to-value at maturity (%) */
+  ltvAtMaturity: number;
+  /** Current DSCR ratio */
+  currentDSCR: number;
+  /** Risk level based on proximity and metrics */
+  riskLevel: HealthStatus;
+}
+
+/** Aggregated year view for stacked bar chart */
+export interface MaturityWallYear {
+  /** Calendar year */
+  year: number;
+  /** Total maturing amount (€) */
+  totalMaturing: number;
+  /** Individual entries maturing in this year */
+  entries: DebtMaturityEntry[];
+  /** Average refinancing gap in basis points */
+  avgRefiGapBps: number;
+}
+
+/** Budget vs actual variance trend */
+export type VarianceTrend = 'improving' | 'stable' | 'worsening';
+
+/** Single budget variance line item */
+export interface BudgetVarianceEntry {
+  /** Display label (e.g. "Land Acquisition") */
+  category: string;
+  /** Machine-readable key */
+  categoryKey: string;
+  /** Budgeted amount (€) */
+  budgetAmount: number;
+  /** Actual spend (€) */
+  actualAmount: number;
+  /** Variance (€) = actual − budget (positive = over budget) */
+  variance: number;
+  /** Variance as percentage */
+  variancePercent: number;
+  /** Trend direction */
+  trend: VarianceTrend;
+}
+
+/** Full budget variance analysis for a project */
+export interface BudgetVarianceAnalysis {
+  /** Project document ID */
+  projectId: string;
+  /** Project display name */
+  projectName: string;
+  /** Total budgeted (€) */
+  totalBudget: number;
+  /** Total actual spend (€) */
+  totalActual: number;
+  /** Total variance (€) */
+  totalVariance: number;
+  /** Total variance (%) */
+  totalVariancePercent: number;
+  /** Individual category breakdowns */
+  categories: BudgetVarianceEntry[];
+  /** Top 3 categories by absolute variance */
+  topVariances: BudgetVarianceEntry[];
+}

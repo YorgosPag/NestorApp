@@ -5,7 +5,7 @@
 | **ADR** | ADR-242 |
 | **Phase** | C — Portfolio Intelligence |
 | **Priority** | ⭐⭐⭐⭐ HIGH |
-| **Status** | 📋 SPEC READY |
+| **Status** | ✅ IMPLEMENTED |
 | **Estimated Effort** | 2 sessions |
 | **Prerequisite** | SPEC-234E (InterestCostDialog), ADR-234 (Payment Plans), ADR-197 (Sales) |
 | **Dependencies** | Προαιρετικά SPEC-242A/B (χρησιμοποιεί DSCR engine, draw schedule data) |

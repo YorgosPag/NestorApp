@@ -182,6 +182,12 @@ export const ENTERPRISE_ID_PREFIXES = {
   CHEQUE: 'chq',
 
   // ==========================================================================
+  // FINANCIAL INTELLIGENCE (SPEC-242C)
+  // ==========================================================================
+  DEBT_MATURITY: 'dmt',
+  BUDGET_VARIANCE: 'bvar',
+
+  // ==========================================================================
   // OPTIMISTIC & TEMPORARY
   // ==========================================================================
   OPTIMISTIC: 'opt',
@@ -1083,6 +1089,26 @@ export class EnterpriseIdService {
   }
 
   // ==========================================================================
+  // FINANCIAL INTELLIGENCE (SPEC-242C)
+  // ==========================================================================
+
+  /**
+   * 📊 Generate Debt Maturity Entry ID
+   * Format: dmt_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateDebtMaturityId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.DEBT_MATURITY).id;
+  }
+
+  /**
+   * 📈 Generate Budget Variance Entry ID
+   * Format: bvar_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateBudgetVarianceId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.BUDGET_VARIANCE).id;
+  }
+
+  // ==========================================================================
   // UTILITY METHODS
   // ==========================================================================
 
@@ -1318,6 +1344,12 @@ export const generateFolderId = () => enterpriseIdService.generateFolderId();
 export const generateCommentId = () => enterpriseIdService.generateCommentId();
 export const generateApprovalId = () => enterpriseIdService.generateApprovalId();
 export const generateBankAccountId = () => enterpriseIdService.generateBankAccountId();
+
+// =============================================================================
+// FINANCIAL INTELLIGENCE (SPEC-242C)
+// =============================================================================
+export const generateDebtMaturityId = () => enterpriseIdService.generateDebtMaturityId();
+export const generateBudgetVarianceId = () => enterpriseIdService.generateBudgetVarianceId();
 
 // =============================================================================
 // OPTIMISTIC & TEMPORARY

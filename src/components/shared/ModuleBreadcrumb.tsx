@@ -37,6 +37,7 @@ import {
   Bell,
   Inbox,
   Headphones,
+  BarChart3,
   type LucideIcon,
 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -84,6 +85,8 @@ const SEGMENT_CONFIG: Record<string, { labelKey: string; icon: LucideIcon; color
   'admin':          { labelKey: 'module.admin',           icon: Settings,     color: 'text-rose-400' },
   'ai-inbox':       { labelKey: 'module.aiInbox',         icon: Inbox,        color: 'text-fuchsia-400' },
   'operator-inbox': { labelKey: 'module.operatorInbox',   icon: Headphones,   color: 'text-cyan-400' },
+  // Financial Intelligence (SPEC-242C)
+  'financial-intelligence': { labelKey: 'module.financialIntelligence', icon: BarChart3, color: 'text-emerald-400' },
 };
 
 interface BreadcrumbSegment {

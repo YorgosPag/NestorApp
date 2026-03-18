@@ -219,7 +219,8 @@
     "availableApartments": "Διαθέσιμες Μονάδες",
     "availableStorage": "Διαθέσιμες Αποθήκες",
     "availableParking": "Διαθέσιμες Θέσεις Στάθμευσης",
-    "soldProperties": "Πωληθέντα"
+    "soldProperties": "Πωληθέντα",
+    "financialIntelligence": "Χρηματοοικονομική Ανάλυση"
   },
   "pages": {
     "home": "Αρχική",
@@ -308,7 +309,8 @@
     "security": "Ασφάλεια",
     "admin": "Διαχείριση",
     "aiInbox": "AI Inbox",
-    "operatorInbox": "Operator Inbox"
+    "operatorInbox": "Operator Inbox",
+    "financialIntelligence": "Χρηματοοικονομική Ανάλυση"
   },
   "badges": {
     "new": "Νέο",

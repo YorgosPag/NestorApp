@@ -63,6 +63,7 @@ import {
   HardDrive,
   FileBarChart,
   ClipboardCheck,
+  BarChart3,
 } from "lucide-react";
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -454,6 +455,10 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
               {
                 icon: CheckCircle,
                 href: '/sales/sold'
+              },
+              {
+                icon: BarChart3,
+                href: '/sales/financial-intelligence'
               }
             ]
           },
