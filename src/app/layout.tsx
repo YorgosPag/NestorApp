@@ -44,8 +44,12 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "Pagonis",
-  description: "Μια εφαρμογή για να αποτυπώσετε τις σκέψεις σας, ενισχυμένες με AI.",
+  title: "Nestor Pagonis",
+  description: "Nestor — Enterprise Construction & Property Management Platform",
+  icons: {
+    icon: '/images/nestor-app-logo.png',
+    apple: '/images/nestor-app-logo.png',
+  },
 };
 
 export default function RootLayout({
