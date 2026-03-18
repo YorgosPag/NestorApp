@@ -341,12 +341,40 @@ export class PaymentPlanService {
         notes: input.notes ?? null,
       };
 
+      // ── Redistribute amounts: keep totalAmount constant ──
+      // The new installment's amount is "carved out" of existing unpaid
+      // installments proportionally, so the grand total stays at plan.totalAmount.
+      const existingInstallments = plan.installments;
+      const totalUnpaid = existingInstallments
+        .filter((inst) => inst.paidAmount < inst.amount)
+        .reduce((s, inst) => s + (inst.amount - inst.paidAmount), 0);
+      const addedAmount = newInstallment.amount;
+
+      if (totalUnpaid > 0 && addedAmount <= totalUnpaid) {
+        // Reduce each unpaid installment proportionally
+        const reductionRatio = addedAmount / totalUnpaid;
+        for (const inst of existingInstallments) {
+          const unpaidPortion = inst.amount - inst.paidAmount;
+          if (unpaidPortion <= 0) continue;
+          const reduction = Math.round(unpaidPortion * reductionRatio * 100) / 100;
+          inst.amount = Math.round((inst.amount - reduction) * 100) / 100;
+          // Recalculate percentage
+          if (plan.totalAmount > 0) {
+            inst.percentage = Math.round((inst.amount / plan.totalAmount) * 10000) / 100;
+          }
+        }
+        // Recalculate new installment percentage
+        if (plan.totalAmount > 0) {
+          newInstallment.percentage = Math.round((newInstallment.amount / plan.totalAmount) * 10000) / 100;
+        }
+      }
+
       let updatedInstallments: Installment[];
-      if (insertAtIndex !== undefined && insertAtIndex >= 0 && insertAtIndex < plan.installments.length) {
-        updatedInstallments = [...plan.installments];
+      if (insertAtIndex !== undefined && insertAtIndex >= 0 && insertAtIndex < existingInstallments.length) {
+        updatedInstallments = [...existingInstallments];
         updatedInstallments.splice(insertAtIndex, 0, newInstallment);
       } else {
-        updatedInstallments = [...plan.installments, newInstallment];
+        updatedInstallments = [...existingInstallments, newInstallment];
       }
       // Re-index all installments
       updatedInstallments = updatedInstallments.map((inst, i) => ({ ...inst, index: i }));
@@ -403,6 +431,7 @@ export class PaymentPlanService {
 
       const updated = [...plan.installments];
       const inst = { ...updated[index] };
+      const oldAmount = inst.amount;
 
       if (input.label !== undefined) inst.label = input.label;
       if (input.amount !== undefined) inst.amount = input.amount;
@@ -411,6 +440,40 @@ export class PaymentPlanService {
       if (input.notes !== undefined) inst.notes = input.notes ?? null;
 
       updated[index] = inst;
+
+      // ── Redistribute delta to keep totalAmount constant ──
+      const amountDelta = inst.amount - oldAmount;
+      if (amountDelta !== 0 && input.amount !== undefined) {
+        const othersUnpaid = updated
+          .filter((item, i) => i !== index && item.paidAmount < item.amount)
+          .reduce((s, item) => s + (item.amount - item.paidAmount), 0);
+
+        if (othersUnpaid > 0 && Math.abs(amountDelta) <= othersUnpaid) {
+          for (let i = 0; i < updated.length; i++) {
+            if (i === index) continue;
+            const unpaid = updated[i].amount - updated[i].paidAmount;
+            if (unpaid <= 0) continue;
+            const adjustment = Math.round((unpaid / othersUnpaid) * amountDelta * 100) / 100;
+            updated[i] = {
+              ...updated[i],
+              amount: Math.round((updated[i].amount - adjustment) * 100) / 100,
+            };
+            if (plan.totalAmount > 0) {
+              updated[i] = {
+                ...updated[i],
+                percentage: Math.round((updated[i].amount / plan.totalAmount) * 10000) / 100,
+              };
+            }
+          }
+        }
+        // Update edited installment percentage too
+        if (plan.totalAmount > 0) {
+          updated[index] = {
+            ...updated[index],
+            percentage: Math.round((updated[index].amount / plan.totalAmount) * 10000) / 100,
+          };
+        }
+      }
 
       const newTotal = updated.reduce((s, i) => s + i.amount, 0);
 
@@ -458,10 +521,26 @@ export class PaymentPlanService {
         return { success: false, error: 'Δεν μπορείτε να αφαιρέσετε πληρωμένη δόση' };
       }
 
-      const updated = plan.installments
-        .filter((_, i) => i !== index)
-        .map((inst, i) => ({ ...inst, index: i }));
+      // ── Redistribute: give removed amount back to remaining unpaid ──
+      const removedAmount = plan.installments[index].amount;
+      const remaining = plan.installments.filter((_, i) => i !== index);
+      const totalUnpaidRemaining = remaining
+        .filter((inst) => inst.paidAmount < inst.amount)
+        .reduce((s, inst) => s + (inst.amount - inst.paidAmount), 0);
 
+      if (totalUnpaidRemaining > 0 && removedAmount > 0) {
+        for (const inst of remaining) {
+          const unpaidPortion = inst.amount - inst.paidAmount;
+          if (unpaidPortion <= 0) continue;
+          const addBack = Math.round((unpaidPortion / totalUnpaidRemaining) * removedAmount * 100) / 100;
+          inst.amount = Math.round((inst.amount + addBack) * 100) / 100;
+          if (plan.totalAmount > 0) {
+            inst.percentage = Math.round((inst.amount / plan.totalAmount) * 10000) / 100;
+          }
+        }
+      }
+
+      const updated = remaining.map((inst, i) => ({ ...inst, index: i }));
       const newTotal = updated.reduce((s, i) => s + i.amount, 0);
 
       const db = getDb();
