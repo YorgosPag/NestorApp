@@ -317,8 +317,10 @@
       "amount": "Amount",
       "date": "Date",
       "days": "Days",
-      "df": "DF",
-      "pv": "PV",
+      "df": "Disc. Factor",
+      "dfTooltip": "Discount Factor — shows how much 1€ paid in the future is worth today",
+      "pv": "Present Value",
+      "pvTooltip": "Present Value — the real value of each installment in today's money",
       "npv": "NPV",
       "nominalTotal": "Nominal total"
     },

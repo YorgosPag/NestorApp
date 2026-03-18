@@ -34,6 +34,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -139,8 +140,26 @@ function CashFlowTab({
             <TableHead className="text-xs text-right">{t('costCalculator.cashFlow.amount')}</TableHead>
             <TableHead className="text-xs text-right">{t('costCalculator.cashFlow.date')}</TableHead>
             <TableHead className="text-xs text-right">{t('costCalculator.cashFlow.days')}</TableHead>
-            <TableHead className="text-xs text-right">{t('costCalculator.cashFlow.df')}</TableHead>
-            <TableHead className="text-xs text-right">{t('costCalculator.cashFlow.pv')}</TableHead>
+            <TableHead className="text-xs text-right">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help border-b border-dashed border-muted-foreground">
+                    {t('costCalculator.cashFlow.df')}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{t('costCalculator.cashFlow.dfTooltip')}</TooltipContent>
+              </Tooltip>
+            </TableHead>
+            <TableHead className="text-xs text-right">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help border-b border-dashed border-muted-foreground">
+                    {t('costCalculator.cashFlow.pv')}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{t('costCalculator.cashFlow.pvTooltip')}</TooltipContent>
+              </Tooltip>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
