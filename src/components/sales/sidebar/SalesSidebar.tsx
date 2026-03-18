@@ -58,6 +58,8 @@ interface SalesSidebarProps {
   /** Quick filter: selected unit type */
   selectedUnitType: string;
   onUnitTypeChange: (type: string) => void;
+  /** Callback after commercial data mutation (price change, reserve, sell) */
+  onDataMutated?: () => void;
 }
 
 // =============================================================================
@@ -128,6 +130,7 @@ export function SalesSidebar({
   onCommercialStatusChange,
   selectedUnitType,
   onUnitTypeChange,
+  onDataMutated,
 }: SalesSidebarProps) {
   const { t } = useTranslation('common');
   const isMobile = useIsMobile();
@@ -305,6 +308,7 @@ export function SalesSidebar({
             unit={selectedUnit}
             open={changePriceOpen}
             onOpenChange={setChangePriceOpen}
+            onSuccess={onDataMutated}
           />
           <ReserveDialog
             unit={selectedUnit}

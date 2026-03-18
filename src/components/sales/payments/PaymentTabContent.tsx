@@ -7,7 +7,7 @@
  * @enterprise ADR-234 - Payment Plan & Installment Tracking
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { CreditCard, Plus, Loader2, FileSpreadsheet, RefreshCw, Trash2 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ADR-241: Centralized fullscreen system
@@ -70,6 +70,18 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
   const [selectedInstallmentIdx, setSelectedInstallmentIdx] = useState(0);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  // ── Auto-refetch when sale price changes ──
+  const prevPriceRef = useRef(unit.commercial?.askingPrice ?? unit.commercial?.finalPrice ?? 0);
+  useEffect(() => {
+    const currentPrice = unit.commercial?.askingPrice ?? unit.commercial?.finalPrice ?? 0;
+    if (currentPrice !== prevPriceRef.current && currentPrice > 0) {
+      prevPriceRef.current = currentPrice;
+      // Delay slightly so the server-side resync has time to complete
+      const timer = setTimeout(() => refetch(), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [unit.commercial?.askingPrice, unit.commercial?.finalPrice, refetch]);
 
   const handlePayInstallment = useCallback((index: number) => {
     setSelectedInstallmentIdx(index);

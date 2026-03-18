@@ -56,6 +56,7 @@ function SalesAvailableContent() {
     selectedUnitType,
     setSelectedUnitType,
     dashboardStats,
+    refetch,
   } = useSalesUnitsViewerState();
 
   // Search state (for header search)
@@ -180,6 +181,7 @@ function SalesAvailableContent() {
             onCommercialStatusChange={setSelectedCommercialStatus}
             selectedUnitType={selectedUnitType}
             onUnitTypeChange={setSelectedUnitType}
+            onDataMutated={refetch}
           />
         ) : (
           // Grid view — cards in grid layout
