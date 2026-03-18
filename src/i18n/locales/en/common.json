@@ -1295,6 +1295,10 @@
       "title": "Available Units",
       "subtitle": "Units for sale - Active listings",
       "overview": "Available Units - Overview",
+      "listTitle": "Available Units",
+      "listLabel": "Available units for sale list",
+      "noResults": "No units found matching these criteria.",
+      "unitDetails": "Unit Details",
       "stats": {
         "availableApartments": "Available Units",
         "forSaleNow": "For sale now",
@@ -1358,9 +1362,15 @@
       "history": "History",
       "legal": "Legal",
       "payments": "Payments",
-      "openInSpaces": "Open in Spaces"
+      "openInSpaces": "Open in Spaces",
+      "documentsHint": "Documents are managed in Spaces → Units",
+      "photosHint": "Photos are managed in Spaces → Units",
+      "videosHint": "Videos are managed in Spaces → Units"
     },
     "actions": {
+      "changePrice": "Change Price",
+      "reserve": "Reserve",
+      "sell": "Sell",
       "revert": "Revert"
     },
     "saleInfo": {
