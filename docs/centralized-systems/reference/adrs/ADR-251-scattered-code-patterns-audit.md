@@ -382,3 +382,4 @@ const result = schema.safeParse(formData);
 | Date | Change |
 |------|--------|
 | 2026-03-19 | Initial audit completed. 6 findings documented with real Grep data. |
+| 2026-03-19 | 6 SPEC files created (SPEC-251A through SPEC-251F) — one per finding with full implementation details. |

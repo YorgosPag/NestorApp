@@ -284,6 +284,12 @@
 | ↳ SPEC-249C | Defense in Depth (unitCoverage Drift, Installment Sum) | 📋 PENDING | 2026-03-19 | — | [📄](./adrs/specs/SPEC-249C-defense-in-depth.md) |
 | **ADR-250** | Codebase Audit Findings — Security, Indexes, Centralization | 📋 DOCUMENTED | 2026-03-19 | Infrastructure / Security / Data Integrity | [📄](./adrs/ADR-250-codebase-audit-findings.md) |
 | **ADR-251** | Scattered Code Patterns Audit & Consolidation Roadmap (6 findings, migrate-on-touch) | ✅ DOCUMENTED | 2026-03-19 | Centralization / Code Quality | [📄](./adrs/ADR-251-scattered-code-patterns-audit.md) |
+| ↳ SPEC-251A | Error Handling Centralization → `getErrorMessage()` (inline patterns → centralized) | 📋 PENDING | 2026-03-19 | — | [📄](./adrs/specs/SPEC-251A-error-handling-centralization.md) |
+| ↳ SPEC-251B | Data Fetching → `useAsyncData` (117 files triple useState → centralized hook) | 📋 PENDING | 2026-03-19 | — | [📄](./adrs/specs/SPEC-251B-data-fetching-useAsyncData.md) |
+| ↳ SPEC-251C | Toast/Notification Consolidation (14 direct sonner imports → NotificationProvider) | 📋 PENDING | 2026-03-19 | — | [📄](./adrs/specs/SPEC-251C-toast-notification-consolidation.md) |
+| ↳ SPEC-251D | Loading States Centralization → `useAsyncData` + `PageLoadingState` (189 files) | 📋 PENDING | 2026-03-19 | — | [📄](./adrs/specs/SPEC-251D-loading-states-centralization.md) |
+| ↳ SPEC-251E | Dialog State Centralization → `useConfirmDialog` (44 files manual state) | 📋 PENDING | 2026-03-19 | — | [📄](./adrs/specs/SPEC-251E-dialog-state-centralization.md) |
+| ↳ SPEC-251F | Form Validation → Zod Schemas (~6 files manual validation) | 📋 PENDING | 2026-03-19 | — | [📄](./adrs/specs/SPEC-251F-form-validation-zod.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
