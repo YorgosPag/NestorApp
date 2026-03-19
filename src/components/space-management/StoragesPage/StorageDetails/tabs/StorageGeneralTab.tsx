@@ -51,6 +51,10 @@ interface StorageGeneralTabProps {
   onEditingChange?: (editing: boolean) => void;
   /** Ref for save delegation from header button */
   onSaveRef?: React.MutableRefObject<(() => Promise<boolean>) | null>;
+  /** Create mode: POST new entity instead of PATCH existing */
+  createMode?: boolean;
+  /** Callback when entity is created successfully (create mode only) */
+  onCreated?: (id: string) => void;
 }
 
 interface StorageFormState {
@@ -118,6 +122,8 @@ export function StorageGeneralTab({
   isEditing = false,
   onEditingChange,
   onSaveRef,
+  createMode = false,
+  onCreated,
 }: StorageGeneralTabProps) {
   const iconSizes = useIconSizes();
   const typography = useTypography();
@@ -166,6 +172,37 @@ export function StorageGeneralTab({
   // Register save handler with parent via ref
   const handleSave = useCallback(async (): Promise<boolean> => {
     try {
+      if (createMode) {
+        // CREATE MODE: POST new storage
+        if (!form.name.trim()) return false;
+
+        const payload: Record<string, unknown> = {
+          name: form.name.trim(),
+          type: form.type,
+          status: form.status,
+        };
+        if (buildingLink.linkedId) payload.buildingId = buildingLink.linkedId;
+        if (form.floor.trim()) payload.floor = form.floor.trim();
+        if (form.floorId) payload.floorId = form.floorId;
+        if (form.area) payload.area = parseFloat(form.area);
+        if (form.description.trim()) payload.description = form.description.trim();
+        if (form.notes.trim()) payload.notes = form.notes.trim();
+
+        const result = await apiClient.post<{ storageId: string }>('/api/storages', payload);
+
+        if (result?.storageId) {
+          RealtimeService.dispatch('STORAGE_CREATED', {
+            storageId: result.storageId,
+            storage: payload,
+            timestamp: Date.now(),
+          });
+          logger.info('Storage created', { id: result.storageId });
+          onCreated?.(result.storageId);
+        }
+        return true;
+      }
+
+      // EDIT MODE: PATCH existing storage
       const payload: Record<string, unknown> = {};
 
       if (form.name.trim() !== (storage.name || '')) payload.name = form.name.trim();
@@ -212,7 +249,7 @@ export function StorageGeneralTab({
       logger.error('Failed to save storage', { error: err instanceof Error ? err.message : String(err) });
       return false;
     }
-  }, [form, storage, onEditingChange, buildingLink]);
+  }, [form, storage, onEditingChange, buildingLink, createMode, onCreated]);
 
   // Register save ref for header delegation
   useEffect(() => {

@@ -14,13 +14,14 @@
  * 🔧 Next.js 15: useParkingPageState uses useSearchParams, requires Suspense
  */
 
-import React, { Suspense, useCallback, useEffect, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
 import { ParkingsHeader } from '@/components/space-management/ParkingPage/ParkingsHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { ParkingsList } from '@/components/space-management/ParkingPage/ParkingsList';
 import { ParkingDetails } from '@/components/space-management/ParkingPage/ParkingDetails';
 import { ParkingGridView } from '@/components/space-management/ParkingPage/ParkingGridView';
+import { ParkingGeneralTab } from '@/components/space-management/ParkingPage/ParkingDetails/tabs/ParkingGeneralTab';
 import {
   Car,
   TrendingUp,
@@ -55,29 +56,22 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { toggleSelect } from '@/lib/toggle-select';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  PARKING_TYPES,
-  PARKING_STATUSES,
-} from '@/types/parking';
-import type {
-  ParkingSpotType,
-  ParkingSpotStatus,
-} from '@/types/parking';
-import { useEntityCodeSuggestion } from '@/hooks/useEntityCodeSuggestion';
+import type { ParkingSpot } from '@/types/parking';
 
 const logger = createModuleLogger('ParkingPage');
 
 interface ParkingDeleteResult {
   id: string;
 }
+
+/** Empty parking spot for create mode — GeneralTab initializes all fields from this */
+const EMPTY_PARKING: ParkingSpot = {
+  id: '',
+  number: '',
+  type: 'standard',
+  status: 'available',
+  floor: '',
+};
 
 function ParkingPageContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
@@ -143,79 +137,15 @@ function ParkingPageContent() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Inline create form state
+  // Create form state — reuses ParkingGeneralTab in create mode (single source of truth)
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [createBuildingId, setCreateBuildingId] = useState('');
-  const [createNumber, setCreateNumber] = useState('');
-  const [createType, setCreateType] = useState<ParkingSpotType>('standard');
-  const [createStatus, setCreateStatus] = useState<ParkingSpotStatus>('available');
-  const [createFloor, setCreateFloor] = useState('');
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
-  const [codeOverridden, setCodeOverridden] = useState(false);
+  const createSaveRef = useRef<(() => Promise<boolean>) | null>(null);
 
   const { t: tParking } = useTranslation('parking');
 
-  // ADR-233: Auto-suggest parking code
-  const { suggestedCode } = useEntityCodeSuggestion({
-    entityType: 'parking',
-    buildingId: createBuildingId,
-    floorLevel: createFloor ? parseInt(createFloor, 10) || 0 : 0,
-    disabled: codeOverridden || !createBuildingId,
-  });
-
-  // Auto-populate when suggestion arrives
-  useEffect(() => {
-    if (suggestedCode && !codeOverridden) {
-      setCreateNumber(suggestedCode);
-    }
-  }, [suggestedCode, codeOverridden]);
-
   const resetCreateForm = useCallback(() => {
     setShowCreateForm(false);
-    setCreateBuildingId('');
-    setCreateNumber('');
-    setCreateType('standard');
-    setCreateStatus('available');
-    setCreateFloor('');
-    setCreateError(null);
-    setCodeOverridden(false);
   }, []);
-
-  const handleCreateParking = useCallback(async () => {
-    if (!createNumber.trim()) return;
-
-    setCreating(true);
-    setCreateError(null);
-
-    try {
-      const selectedBuilding = createBuildingId ? buildings.find(b => b.id === createBuildingId) : null;
-
-      const payload: Record<string, unknown> = {
-        number: createNumber.trim(),
-        type: createType,
-        status: createStatus,
-      };
-      if (createBuildingId) payload.buildingId = createBuildingId;
-      if (createFloor.trim()) payload.floor = createFloor.trim();
-      if (selectedBuilding?.projectId) payload.projectId = selectedBuilding.projectId;
-
-      const result = await apiClient.post<{ parkingSpotId: string }>('/api/parking', payload);
-
-      if (result?.parkingSpotId) {
-        RealtimeService.dispatch('PARKING_CREATED', {
-          parkingSpotId: result.parkingSpotId,
-          parkingSpot: { number: createNumber.trim(), type: createType, status: createStatus },
-          timestamp: Date.now(),
-        });
-        resetCreateForm();
-      }
-    } catch (err) {
-      setCreateError(err instanceof Error ? err.message : 'Σφάλμα δημιουργίας');
-    } finally {
-      setCreating(false);
-    }
-  }, [createNumber, createType, createStatus, createBuildingId, createFloor, buildings, resetCreateForm]);
 
   const handleDeleteParking = useCallback(async () => {
     if (!selectedParking) return;
@@ -397,107 +327,21 @@ function ParkingPageContent() {
                         icon={Car}
                         title={tParking('header.newParking', 'Νέα Θέση Στάθμευσης')}
                         actions={[
-                          createEntityAction('save',
-                            creating
-                              ? t('pages.parking.form.creating', 'Δημιουργία...')
-                              : t('pages.parking.form.create', 'Δημιουργία'),
-                            creating ? () => {} : handleCreateParking
-                          ),
-                          createEntityAction('cancel', t('pages.parking.form.cancel', 'Ακύρωση'), resetCreateForm),
+                          createEntityAction('save', tParking('form.create', 'Δημιουργία'), () => createSaveRef.current?.()),
+                          createEntityAction('cancel', tParking('form.cancel', 'Ακύρωση'), resetCreateForm),
                         ]}
                         variant="detailed"
                       />
                     </div>
                   }
                   tabsRenderer={
-                    <section className="flex flex-col gap-4 p-4">
-                      {/* Row 1: Building, Number, Type */}
-                      <fieldset className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <label className="flex flex-col gap-1">
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {t('pages.parking.form.building', 'Κτίριο')}
-                          </span>
-                          <Select value={createBuildingId} onValueChange={setCreateBuildingId} disabled={creating}>
-                            <SelectTrigger className="h-9">
-                              <SelectValue placeholder={t('pages.parking.form.selectBuilding', 'Προαιρετικό')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {buildings.map(b => (
-                                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </label>
-                        <label className="flex flex-col gap-1">
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {t('pages.parking.form.number', 'Αριθμός')} *
-                          </span>
-                          <Input
-                            value={createNumber}
-                            onChange={(e) => {
-                              setCreateNumber(e.target.value);
-                              if (!codeOverridden && e.target.value !== suggestedCode) setCodeOverridden(true);
-                              if (!e.target.value) setCodeOverridden(false);
-                            }}
-                            placeholder={suggestedCode || 'P-001'}
-                            className="h-9"
-                            disabled={creating}
-                            autoFocus
-                          />
-                        </label>
-                        <label className="flex flex-col gap-1">
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {t('pages.parking.form.type', 'Τύπος')}
-                          </span>
-                          <Select value={createType} onValueChange={(v) => setCreateType(v as ParkingSpotType)} disabled={creating}>
-                            <SelectTrigger className="h-9">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {PARKING_TYPES.map(pt => (
-                                <SelectItem key={pt} value={pt}>{tParking(`types.${pt}`, pt)}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </label>
-                      </fieldset>
-
-                      {/* Row 2: Status, Floor */}
-                      <fieldset className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <label className="flex flex-col gap-1">
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {t('pages.parking.form.status', 'Κατάσταση')}
-                          </span>
-                          <Select value={createStatus} onValueChange={(v) => setCreateStatus(v as ParkingSpotStatus)} disabled={creating}>
-                            <SelectTrigger className="h-9">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {PARKING_STATUSES.map(ps => (
-                                <SelectItem key={ps} value={ps}>{tParking(`status.${ps}`, ps)}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </label>
-                        <label className="flex flex-col gap-1">
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {t('pages.parking.form.floor', 'Όροφος')}
-                          </span>
-                          <Input
-                            value={createFloor}
-                            onChange={(e) => setCreateFloor(e.target.value)}
-                            placeholder="-1"
-                            className="h-9"
-                            disabled={creating}
-                          />
-                        </label>
-                      </fieldset>
-
-                      {/* Error */}
-                      {createError && (
-                        <p className="text-sm text-destructive">{createError}</p>
-                      )}
-                    </section>
+                    <ParkingGeneralTab
+                      parking={EMPTY_PARKING}
+                      isEditing
+                      createMode
+                      onSaveRef={createSaveRef}
+                      onCreated={() => resetCreateForm()}
+                    />
                   }
                 />
               ) : (

@@ -4,13 +4,14 @@
  * 🔧 Next.js 15: useStoragesPageState uses useSearchParams, requires Suspense
  */
 
-import React, { Suspense, useCallback, useEffect, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
 import { StoragesHeader } from '@/components/space-management/StoragesPage/StoragesHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { StoragesList } from '@/components/space-management/StoragesPage/StoragesList';
 import { StorageDetails } from '@/components/space-management/StoragesPage/StorageDetails';
 import { StorageGridView } from '@/components/space-management/StoragesPage/StorageGridView';
+import { StorageGeneralTab } from '@/components/space-management/StoragesPage/StorageDetails/tabs/StorageGeneralTab';
 import {
   Warehouse,
   TrendingUp,
@@ -40,22 +41,22 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { toggleSelect } from '@/lib/toggle-select';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import type { StorageType, StorageStatus } from '@/types/storage/contracts';
-import { typeLabels, statusLabels } from '@/types/storage/constants';
-import { useEntityCodeSuggestion } from '@/hooks/useEntityCodeSuggestion';
 
 const logger = createModuleLogger('StoragePage');
 
 // Re-export Storage type for backward compatibility
 export type { Storage } from '@/types/storage/contracts';
+
+/** Empty storage for create mode — GeneralTab initializes all fields from this */
+const EMPTY_STORAGE: import('@/types/storage/contracts').Storage = {
+  id: '',
+  name: '',
+  type: 'storage',
+  status: 'available',
+  building: '',
+  floor: '',
+  area: 0,
+};
 
 function StoragePageContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
@@ -89,82 +90,15 @@ function StoragePageContent() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Inline create form state
+  // Create form state — reuses StorageGeneralTab in create mode (single source of truth)
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [createBuildingId, setCreateBuildingId] = useState('');
-  const [createName, setCreateName] = useState('');
-  const [createType, setCreateType] = useState<StorageType>('storage');
-  const [createStatus, setCreateStatus] = useState<StorageStatus>('available');
-  const [createFloor, setCreateFloor] = useState('');
-  const [createArea, setCreateArea] = useState('');
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
-  const [codeOverridden, setCodeOverridden] = useState(false);
+  const createSaveRef = useRef<(() => Promise<boolean>) | null>(null);
 
   const { t: tStorage } = useTranslation('storage');
 
-  // ADR-233: Auto-suggest storage code
-  const { suggestedCode } = useEntityCodeSuggestion({
-    entityType: 'storage',
-    buildingId: createBuildingId,
-    floorLevel: createFloor ? parseInt(createFloor, 10) || 0 : 0,
-    disabled: codeOverridden || !createBuildingId,
-  });
-
-  // Auto-populate when suggestion arrives
-  useEffect(() => {
-    if (suggestedCode && !codeOverridden) {
-      setCreateName(suggestedCode);
-    }
-  }, [suggestedCode, codeOverridden]);
-
-  const STORAGE_TYPES = Object.keys(typeLabels) as StorageType[];
-  const STORAGE_STATUSES = Object.keys(statusLabels) as StorageStatus[];
-
   const resetCreateForm = useCallback(() => {
     setShowCreateForm(false);
-    setCreateBuildingId('');
-    setCreateName('');
-    setCreateType('storage');
-    setCreateStatus('available');
-    setCreateFloor('');
-    setCreateArea('');
-    setCreateError(null);
-    setCodeOverridden(false);
   }, []);
-
-  const handleCreateStorage = useCallback(async () => {
-    if (!createName.trim()) return;
-
-    setCreating(true);
-    setCreateError(null);
-
-    try {
-      const payload: Record<string, unknown> = {
-        name: createName.trim(),
-        type: createType,
-        status: createStatus,
-      };
-      if (createBuildingId) payload.buildingId = createBuildingId;
-      if (createFloor.trim()) payload.floor = createFloor.trim();
-      if (createArea) payload.area = parseFloat(createArea);
-
-      const result = await apiClient.post<{ storageId: string }>('/api/storages', payload);
-
-      if (result?.storageId) {
-        RealtimeService.dispatch('STORAGE_CREATED', {
-          storageId: result.storageId,
-          storage: { name: createName.trim(), type: createType, status: createStatus },
-          timestamp: Date.now(),
-        });
-        resetCreateForm();
-      }
-    } catch (err) {
-      setCreateError(err instanceof Error ? err.message : 'Σφάλμα δημιουργίας');
-    } finally {
-      setCreating(false);
-    }
-  }, [createName, createType, createStatus, createBuildingId, createFloor, createArea, resetCreateForm]);
 
   const handleDeleteStorage = useCallback(async () => {
     if (!selectedStorage) return;
@@ -399,12 +333,7 @@ function StoragePageContent() {
                         icon={Warehouse}
                         title={tStorage('header.newStorage', 'Νέα Αποθήκη')}
                         actions={[
-                          createEntityAction('save',
-                            creating
-                              ? tStorage('storages.form.creating', 'Δημιουργία...')
-                              : tStorage('storages.form.create', 'Δημιουργία'),
-                            creating ? () => {} : handleCreateStorage
-                          ),
+                          createEntityAction('save', tStorage('storages.form.create', 'Δημιουργία'), () => createSaveRef.current?.()),
                           createEntityAction('cancel', tStorage('storages.form.cancel', 'Ακύρωση'), resetCreateForm),
                         ]}
                         variant="detailed"
@@ -412,108 +341,13 @@ function StoragePageContent() {
                     </div>
                   }
                   tabsRenderer={
-                    <section className="flex flex-col gap-4 p-4">
-                      {/* Row 1: Building, Name, Type */}
-                      <fieldset className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <label className="flex flex-col gap-1">
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {t('pages.parking.form.building', 'Κτίριο')}
-                          </span>
-                          <Select value={createBuildingId} onValueChange={setCreateBuildingId} disabled={creating}>
-                            <SelectTrigger className="h-9">
-                              <SelectValue placeholder={t('pages.parking.form.selectBuilding', 'Προαιρετικό')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {buildings.map(b => (
-                                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </label>
-                        <label className="flex flex-col gap-1">
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {tStorage('storages.form.name', 'Όνομα')} *
-                          </span>
-                          <Input
-                            value={createName}
-                            onChange={(e) => {
-                              setCreateName(e.target.value);
-                              if (!codeOverridden && e.target.value !== suggestedCode) setCodeOverridden(true);
-                              if (!e.target.value) setCodeOverridden(false);
-                            }}
-                            placeholder={suggestedCode || 'ΑΠ-001'}
-                            className="h-9"
-                            disabled={creating}
-                            autoFocus
-                          />
-                        </label>
-                        <label className="flex flex-col gap-1">
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {tStorage('storages.form.type', 'Τύπος')}
-                          </span>
-                          <Select value={createType} onValueChange={(v) => setCreateType(v as StorageType)} disabled={creating}>
-                            <SelectTrigger className="h-9">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {STORAGE_TYPES.map(st => (
-                                <SelectItem key={st} value={st}>{tStorage(typeLabels[st], st)}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </label>
-                      </fieldset>
-
-                      {/* Row 2: Status, Floor, Area */}
-                      <fieldset className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <label className="flex flex-col gap-1">
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {tStorage('storages.form.status', 'Κατάσταση')}
-                          </span>
-                          <Select value={createStatus} onValueChange={(v) => setCreateStatus(v as StorageStatus)} disabled={creating}>
-                            <SelectTrigger className="h-9">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {STORAGE_STATUSES.map(ss => (
-                                <SelectItem key={ss} value={ss}>{tStorage(statusLabels[ss], ss)}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </label>
-                        <label className="flex flex-col gap-1">
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {tStorage('storages.form.floor', 'Όροφος')}
-                          </span>
-                          <Input
-                            value={createFloor}
-                            onChange={(e) => setCreateFloor(e.target.value)}
-                            placeholder="-1"
-                            className="h-9"
-                            disabled={creating}
-                          />
-                        </label>
-                        <label className="flex flex-col gap-1">
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {tStorage('storages.form.area', 'Εμβαδόν (m²)')}
-                          </span>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={createArea}
-                            onChange={(e) => setCreateArea(e.target.value)}
-                            placeholder="25"
-                            className="h-9"
-                            disabled={creating}
-                          />
-                        </label>
-                      </fieldset>
-
-                      {/* Error */}
-                      {createError && (
-                        <p className="text-sm text-destructive">{createError}</p>
-                      )}
-                    </section>
+                    <StorageGeneralTab
+                      storage={EMPTY_STORAGE}
+                      isEditing
+                      createMode
+                      onSaveRef={createSaveRef}
+                      onCreated={() => resetCreateForm()}
+                    />
                   }
                 />
               ) : (

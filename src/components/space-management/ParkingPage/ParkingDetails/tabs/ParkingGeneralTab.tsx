@@ -49,6 +49,10 @@ interface ParkingGeneralTabProps {
   onEditingChange?: (editing: boolean) => void;
   /** Ref for save delegation from header button */
   onSaveRef?: React.MutableRefObject<(() => Promise<boolean>) | null>;
+  /** Create mode: POST new entity instead of PATCH existing */
+  createMode?: boolean;
+  /** Callback when entity is created successfully (create mode only) */
+  onCreated?: (id: string) => void;
 }
 
 interface ParkingFormState {
@@ -112,6 +116,8 @@ export function ParkingGeneralTab({
   isEditing = false,
   onEditingChange,
   onSaveRef,
+  createMode = false,
+  onCreated,
 }: ParkingGeneralTabProps) {
   const iconSizes = useIconSizes();
   const typography = useTypography();
@@ -160,6 +166,37 @@ export function ParkingGeneralTab({
   // Register save handler with parent via ref
   const handleSave = useCallback(async (): Promise<boolean> => {
     try {
+      if (createMode) {
+        // CREATE MODE: POST new parking spot
+        if (!form.number.trim()) return false;
+
+        const payload: Record<string, unknown> = {
+          number: form.number.trim(),
+          type: form.type,
+          status: form.status,
+        };
+        if (buildingLink.linkedId) payload.buildingId = buildingLink.linkedId;
+        if (form.floor.trim()) payload.floor = form.floor.trim();
+        if (form.floorId) payload.floorId = form.floorId;
+        if (form.location.trim()) payload.location = form.location.trim();
+        if (form.area) payload.area = parseFloat(form.area);
+        if (form.notes.trim()) payload.notes = form.notes.trim();
+
+        const result = await apiClient.post<{ parkingSpotId: string }>('/api/parking', payload);
+
+        if (result?.parkingSpotId) {
+          RealtimeService.dispatch('PARKING_CREATED', {
+            parkingSpotId: result.parkingSpotId,
+            parkingSpot: payload,
+            timestamp: Date.now(),
+          });
+          logger.info('Parking spot created', { id: result.parkingSpotId });
+          onCreated?.(result.parkingSpotId);
+        }
+        return true;
+      }
+
+      // EDIT MODE: PATCH existing parking spot
       const payload: Record<string, unknown> = {};
 
       if (form.number.trim() !== (parking.number || '')) payload.number = form.number.trim();
@@ -206,7 +243,7 @@ export function ParkingGeneralTab({
       logger.error('Failed to save parking spot', { error: err instanceof Error ? err.message : String(err) });
       return false;
     }
-  }, [form, parking, onEditingChange, buildingLink]);
+  }, [form, parking, onEditingChange, buildingLink, createMode, onCreated]);
 
   // Register save ref for header delegation
   useEffect(() => {
