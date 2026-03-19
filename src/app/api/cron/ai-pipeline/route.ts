@@ -35,6 +35,7 @@ import {
   getAIPipelineQueueHealth,
 } from '@/server/ai/workers/ai-pipeline-worker';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { QUEUE_STATUS } from '@/constants/entity-status-values';
 
 const logger = createModuleLogger('AI_PIPELINE_CRON');
 
@@ -101,12 +102,13 @@ async function executeBatchProcessing(trigger: CronTrigger): Promise<Response> {
       try {
         const { getAdminFirestore } = await import('@/lib/firebaseAdmin');
         const { COLLECTIONS } = await import('@/config/firestore-collections');
+        const { FIELDS } = await import('@/config/firestore-field-constants');
         const adminDb = getAdminFirestore();
 
         const failedSnapshot = await adminDb
           .collection(COLLECTIONS.AI_PIPELINE_QUEUE)
-          .where('status', '==', 'failed')
-          .orderBy('createdAt', 'desc')
+          .where(FIELDS.STATUS, '==', QUEUE_STATUS.FAILED)
+          .orderBy(FIELDS.CREATED_AT, 'desc')
           .limit(10)
           .get();
 
@@ -194,12 +196,13 @@ async function handleGET(request: NextRequest): Promise<Response> {
     try {
       const { getAdminFirestore } = await import('@/lib/firebaseAdmin');
       const { COLLECTIONS } = await import('@/config/firestore-collections');
+      const { FIELDS } = await import('@/config/firestore-field-constants');
       const adminDb = getAdminFirestore();
 
       const failedSnapshot = await adminDb
         .collection(COLLECTIONS.AI_PIPELINE_QUEUE)
-        .where('status', '==', 'failed')
-        .orderBy('createdAt', 'desc')
+        .where(FIELDS.STATUS, '==', QUEUE_STATUS.FAILED)
+        .orderBy(FIELDS.CREATED_AT, 'desc')
         .limit(10)
         .get();
 
@@ -222,8 +225,8 @@ async function handleGET(request: NextRequest): Promise<Response> {
       // Also show recent completed items for comparison
       const completedSnapshot = await adminDb
         .collection(COLLECTIONS.AI_PIPELINE_QUEUE)
-        .where('status', '==', 'completed')
-        .orderBy('createdAt', 'desc')
+        .where(FIELDS.STATUS, '==', QUEUE_STATUS.COMPLETED)
+        .orderBy(FIELDS.CREATED_AT, 'desc')
         .limit(5)
         .get();
 

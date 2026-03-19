@@ -25,6 +25,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('FixFloorplanCompanyId');
@@ -125,16 +126,16 @@ async function handleMigration(
 
     const floorFloorplansSnapshot = await adminDb
       .collection(COLLECTIONS.FILES)
-      .where('entityType', '==', 'floor')
+      .where(FIELDS.ENTITY_TYPE, '==', 'floor')
       .where('category', '==', 'floorplans')
-      .where('isDeleted', '==', false)
+      .where(FIELDS.IS_DELETED, '==', false)
       .get();
 
     const buildingFloorplansSnapshot = await adminDb
       .collection(COLLECTIONS.FILES)
-      .where('entityType', '==', 'building')
+      .where(FIELDS.ENTITY_TYPE, '==', 'building')
       .where('category', '==', 'floorplans')
-      .where('isDeleted', '==', false)
+      .where(FIELDS.IS_DELETED, '==', false)
       .get();
 
     const allFloorplanRecords: FileRecordDoc[] = [

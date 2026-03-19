@@ -24,6 +24,7 @@ import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
 // Role bypass check for super_admin cross-tenant access
 import { isRoleBypass } from '@/lib/auth/roles';
@@ -126,7 +127,7 @@ export const GET = withStandardRateLimit(async function GET(
             .where('linkedCompanyId', '==', companyId)
             .get(),
           db.collection(COLLECTIONS.PROJECTS)
-            .where('companyId', '==', companyId)
+            .where(FIELDS.COMPANY_ID, '==', companyId)
             .get(),
         ]);
 
@@ -146,7 +147,7 @@ export const GET = withStandardRateLimit(async function GET(
         if (projectIds.length > 0) {
           const buildingsSnapshot = await db
             .collection(COLLECTIONS.BUILDINGS)
-            .where('companyId', '==', companyId)
+            .where(FIELDS.COMPANY_ID, '==', companyId)
             .get();
 
           for (const bDoc of buildingsSnapshot.docs) {

@@ -22,7 +22,8 @@ import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { withAuth, type AuthenticatedHandler } from '@/lib/auth/middleware';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
@@ -78,7 +79,7 @@ const handleGet: AuthenticatedHandler<AnalyticsResponse> = async () => {
     const [feedbackSnap, patternsSnap, toolAnalyticsDoc, recentPatternsSnap] = await Promise.all([
       // All feedback (limit 500 for analytics)
       db.collection(COLLECTIONS.AI_AGENT_FEEDBACK)
-        .orderBy('createdAt', 'desc')
+        .orderBy(FIELDS.CREATED_AT, 'desc')
         .limit(500)
         .get(),
       // Top patterns by score
@@ -87,10 +88,10 @@ const handleGet: AuthenticatedHandler<AnalyticsResponse> = async () => {
         .limit(10)
         .get(),
       // Tool analytics document
-      db.doc('settings/ai_tool_analytics').get(),
+      db.collection(COLLECTIONS.SETTINGS).doc(SYSTEM_DOCS.AI_TOOL_ANALYTICS).get(),
       // Patterns created this week
       db.collection(COLLECTIONS.AI_LEARNED_PATTERNS)
-        .where('createdAt', '>=', oneWeekAgo)
+        .where(FIELDS.CREATED_AT, '>=', oneWeekAgo)
         .get(),
     ]);
 

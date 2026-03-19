@@ -14,6 +14,7 @@
 import { NextRequest } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
@@ -166,7 +167,7 @@ async function findNextSequence(
 
   // Query all entities in this building + floor
   let queryRef = adminDb.collection(collectionName)
-    .where('buildingId', '==', buildingId);
+    .where(FIELDS.BUILDING_ID, '==', buildingId);
 
   // For units, we can also filter by floor
   if (entityType === 'unit') {

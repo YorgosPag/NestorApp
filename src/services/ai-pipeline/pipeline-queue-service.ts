@@ -17,7 +17,9 @@
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { PIPELINE_QUEUE_CONFIG, PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
+import { QUEUE_STATUS } from '@/constants/entity-status-values';
 import { generatePipelineQueueId } from '@/services/enterprise-id.service';
 import { FieldValue } from 'firebase-admin/firestore';
 import type {
@@ -92,7 +94,7 @@ export async function enqueuePipelineItem(
     companyId: params.companyId,
     channel: params.channel,
     intakeMessageId,
-    status: 'pending',
+    status: QUEUE_STATUS.PENDING,
     pipelineState: PipelineState.RECEIVED,
     context,
     retryCount: 0,
@@ -108,7 +110,7 @@ export async function enqueuePipelineItem(
       adminDb
         .collection(COLLECTIONS.AI_PIPELINE_QUEUE)
         .where('intakeMessageId', '==', intakeMessageId)
-        .where('status', 'in', ['pending', 'processing'])
+        .where(FIELDS.STATUS, 'in', [QUEUE_STATUS.PENDING, QUEUE_STATUS.PROCESSING])
         .limit(1)
     );
 
@@ -147,8 +149,8 @@ export async function claimNextPipelineItems(
 
   // Query pending items ordered by creation time (FIFO)
   const pendingSnapshot = await collectionRef
-    .where('status', '==', 'pending' satisfies PipelineQueueStatus)
-    .orderBy('createdAt', 'asc')
+    .where(FIELDS.STATUS, '==', QUEUE_STATUS.PENDING satisfies PipelineQueueStatus)
+    .orderBy(FIELDS.CREATED_AT, 'asc')
     .limit(batchSize)
     .get();
 
@@ -165,19 +167,19 @@ export async function claimNextPipelineItems(
         const data = freshDoc.data();
 
         // Re-check status inside transaction (optimistic concurrency)
-        if (!freshDoc.exists || data?.status !== 'pending') {
+        if (!freshDoc.exists || data?.status !== QUEUE_STATUS.PENDING) {
           return; // Already claimed by another worker
         }
 
         transaction.update(doc.ref, {
-          status: 'processing' satisfies PipelineQueueStatus,
+          status: QUEUE_STATUS.PROCESSING satisfies PipelineQueueStatus,
           processingStartedAt: now,
         });
       });
 
       const updatedDoc = await doc.ref.get();
       const data = updatedDoc.data();
-      if (data && data.status === 'processing') {
+      if (data && data.status === QUEUE_STATUS.PROCESSING) {
         claimed.push({ id: doc.id, ...data } as PipelineQueueItem);
       }
     } catch {
@@ -206,8 +208,8 @@ export async function claimRetryablePipelineItems(
   const collectionRef = adminDb.collection(COLLECTIONS.AI_PIPELINE_QUEUE);
 
   const failedSnapshot = await collectionRef
-    .where('status', '==', 'failed' satisfies PipelineQueueStatus)
-    .orderBy('createdAt', 'asc')
+    .where(FIELDS.STATUS, '==', QUEUE_STATUS.FAILED satisfies PipelineQueueStatus)
+    .orderBy(FIELDS.CREATED_AT, 'asc')
     .limit(batchSize)
     .get();
 
@@ -222,19 +224,19 @@ export async function claimRetryablePipelineItems(
         const freshDoc = await transaction.get(doc.ref);
         const data = freshDoc.data();
 
-        if (!freshDoc.exists || data?.status !== 'failed') return;
+        if (!freshDoc.exists || data?.status !== QUEUE_STATUS.FAILED) return;
 
         // Check retry eligibility
         if ((data.retryCount ?? 0) >= (data.maxRetries ?? PIPELINE_QUEUE_CONFIG.MAX_RETRIES)) {
           // Move to dead letter
           transaction.update(doc.ref, {
-            status: 'dead_letter' satisfies PipelineQueueStatus,
+            status: QUEUE_STATUS.DEAD_LETTER satisfies PipelineQueueStatus,
           });
           return;
         }
 
         transaction.update(doc.ref, {
-          status: 'processing' satisfies PipelineQueueStatus,
+          status: QUEUE_STATUS.PROCESSING satisfies PipelineQueueStatus,
           processingStartedAt: now,
           retryCount: FieldValue.increment(1),
         });
@@ -242,7 +244,7 @@ export async function claimRetryablePipelineItems(
 
       const updatedDoc = await doc.ref.get();
       const data = updatedDoc.data();
-      if (data && data.status === 'processing') {
+      if (data && data.status === QUEUE_STATUS.PROCESSING) {
         claimed.push({ id: doc.id, ...data } as PipelineQueueItem);
       }
     } catch {
@@ -273,7 +275,7 @@ export async function markPipelineItemCompleted(
     .collection(COLLECTIONS.AI_PIPELINE_QUEUE)
     .doc(queueId)
     .update({
-      status: 'completed' satisfies PipelineQueueStatus,
+      status: QUEUE_STATUS.COMPLETED satisfies PipelineQueueStatus,
       pipelineState: finalContext.state,
       context: finalContext,
       completedAt: new Date().toISOString(),
@@ -302,7 +304,7 @@ export async function markPipelineItemFailed(
   const now = new Date().toISOString();
 
   const updateData: Record<string, unknown> = {
-    status: 'failed' satisfies PipelineQueueStatus,
+    status: QUEUE_STATUS.FAILED satisfies PipelineQueueStatus,
     lastError: { message: error, step, occurredAt: now },
   };
 
@@ -342,7 +344,7 @@ export async function recoverStalePipelineItems(): Promise<number> {
 
   const staleSnapshot = await adminDb
     .collection(COLLECTIONS.AI_PIPELINE_QUEUE)
-    .where('status', '==', 'processing' satisfies PipelineQueueStatus)
+    .where(FIELDS.STATUS, '==', QUEUE_STATUS.PROCESSING satisfies PipelineQueueStatus)
     .where('processingStartedAt', '<', threshold)
     .get();
 
@@ -351,7 +353,7 @@ export async function recoverStalePipelineItems(): Promise<number> {
   let recovered = 0;
   for (const doc of staleSnapshot.docs) {
     await doc.ref.update({
-      status: 'failed' satisfies PipelineQueueStatus,
+      status: QUEUE_STATUS.FAILED satisfies PipelineQueueStatus,
       lastError: {
         message: 'Stale processing recovery — item exceeded processing timeout',
         step: 'recovery',
@@ -390,13 +392,13 @@ export async function getPipelineQueueStats(): Promise<PipelineQueueStats> {
   const collectionRef = adminDb.collection(COLLECTIONS.AI_PIPELINE_QUEUE);
 
   const statuses: PipelineQueueStatus[] = [
-    'pending', 'processing', 'completed', 'failed', 'dead_letter',
+    QUEUE_STATUS.PENDING, QUEUE_STATUS.PROCESSING, QUEUE_STATUS.COMPLETED, QUEUE_STATUS.FAILED, QUEUE_STATUS.DEAD_LETTER,
   ];
 
   const counts = await Promise.all(
     statuses.map(async (status) => {
       const snapshot = await collectionRef
-        .where('status', '==', status)
+        .where(FIELDS.STATUS, '==', status)
         .count()
         .get();
       return { status, count: snapshot.data().count };
@@ -414,11 +416,11 @@ export async function getPipelineQueueStats(): Promise<PipelineQueueStats> {
 
   for (const { status, count } of counts) {
     switch (status) {
-      case 'pending': stats.pending = count; break;
-      case 'processing': stats.processing = count; break;
-      case 'completed': stats.completed = count; break;
-      case 'failed': stats.failed = count; break;
-      case 'dead_letter': stats.deadLetter = count; break;
+      case QUEUE_STATUS.PENDING: stats.pending = count; break;
+      case QUEUE_STATUS.PROCESSING: stats.processing = count; break;
+      case QUEUE_STATUS.COMPLETED: stats.completed = count; break;
+      case QUEUE_STATUS.FAILED: stats.failed = count; break;
+      case QUEUE_STATUS.DEAD_LETTER: stats.deadLetter = count; break;
     }
     stats.total += count;
   }
@@ -455,10 +457,10 @@ export async function getProposedPipelineItems(
     .where('pipelineState', '==', PipelineState.PROPOSED satisfies PipelineStateValue);
 
   if (query.companyId) {
-    ref = ref.where('companyId', '==', query.companyId);
+    ref = ref.where(FIELDS.COMPANY_ID, '==', query.companyId);
   }
 
-  ref = ref.orderBy('createdAt', 'desc').limit(query.limit ?? 50);
+  ref = ref.orderBy(FIELDS.CREATED_AT, 'desc').limit(query.limit ?? 50);
 
   const snapshot = await ref.get();
 
@@ -529,7 +531,7 @@ export async function updateApprovalDecision(
 
     // For approved items, reset queue status to 'processing' to signal resume
     if (approval.decision !== 'rejected') {
-      updatePayload.status = 'processing' satisfies PipelineQueueStatus;
+      updatePayload.status = QUEUE_STATUS.PROCESSING satisfies PipelineQueueStatus;
       updatePayload.processingStartedAt = new Date().toISOString();
     }
 
@@ -575,7 +577,7 @@ export async function getProposedItemStats(
         .where('pipelineState', '==', state);
 
       if (companyId) {
-        ref = ref.where('companyId', '==', companyId);
+        ref = ref.where(FIELDS.COMPANY_ID, '==', companyId);
       }
 
       const snapshot = await ref.count().get();

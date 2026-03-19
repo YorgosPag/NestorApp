@@ -4,6 +4,8 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
+import { ENTITY_STATUS } from '@/constants/entity-status-values';
 import type { CompanyContact, ContactStatus } from '@/types/contacts';
 import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -218,8 +220,8 @@ async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promi
 
       const companiesSnapshot = await getAdminFirestore()
         .collection(COLLECTIONS.CONTACTS)
-        .where('type', '==', 'company')
-        .where('status', '==', 'active')
+        .where(FIELDS.TYPE, '==', 'company')
+        .where(FIELDS.STATUS, '==', ENTITY_STATUS.ACTIVE)
         .get();
 
       for (const doc of companiesSnapshot.docs) {

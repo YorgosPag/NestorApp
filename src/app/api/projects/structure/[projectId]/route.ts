@@ -23,6 +23,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { isRoleBypass } from '@/lib/auth/roles';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
@@ -117,9 +118,9 @@ export const GET = withStandardRateLimit(async function GET(
         // 🏢 ADR-209: Single query with normalized projectId (handles string/number mismatch)
         let buildingsQuery = getAdminFirestore()
           .collection(COLLECTIONS.BUILDINGS)
-          .where('projectId', '==', normalizeProjectIdForQuery(projectId));
+          .where(FIELDS.PROJECT_ID, '==', normalizeProjectIdForQuery(projectId));
         if (!isSuperAdmin) {
-          buildingsQuery = buildingsQuery.where('companyId', '==', ctx.companyId);
+          buildingsQuery = buildingsQuery.where(FIELDS.COMPANY_ID, '==', ctx.companyId);
         }
         const buildingsSnapshot = await buildingsQuery.get();
 
@@ -138,9 +139,9 @@ export const GET = withStandardRateLimit(async function GET(
           logger.info('Fetching units for building', { buildingId: building.id });
           let unitsQuery = getAdminFirestore()
             .collection(COLLECTIONS.UNITS)
-            .where('buildingId', '==', building.id);
+            .where(FIELDS.BUILDING_ID, '==', building.id);
           if (!isSuperAdmin) {
-            unitsQuery = unitsQuery.where('companyId', '==', ctx.companyId);
+            unitsQuery = unitsQuery.where(FIELDS.COMPANY_ID, '==', ctx.companyId);
           }
           const unitsSnapshot = await unitsQuery.get();
 
@@ -153,7 +154,7 @@ export const GET = withStandardRateLimit(async function GET(
           logger.info('Fetching storage for building', { buildingId: building.id });
           const storageSnapshot = await getAdminFirestore()
             .collection(COLLECTIONS.STORAGE)
-            .where('buildingId', '==', building.id)
+            .where(FIELDS.BUILDING_ID, '==', building.id)
             .get();
 
           const storages = storageSnapshot.docs.map(storageDoc => {
@@ -172,7 +173,7 @@ export const GET = withStandardRateLimit(async function GET(
           logger.info('Fetching parking for building', { buildingId: building.id });
           const parkingSnapshot = await getAdminFirestore()
             .collection(COLLECTIONS.PARKING_SPACES)
-            .where('buildingId', '==', building.id)
+            .where(FIELDS.BUILDING_ID, '==', building.id)
             .get();
 
           const parkingSpots = parkingSnapshot.docs.map(parkingDoc => {

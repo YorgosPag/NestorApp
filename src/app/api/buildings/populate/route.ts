@@ -15,6 +15,7 @@ import { generateOperationId } from '@/services/enterprise-id.service';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { FIELDS } from '@/config/firestore-field-constants';
 
 /**
  * ENTERPRISE POPULATE ROUTE: Create Buildings from Templates
@@ -175,7 +176,7 @@ export const GET = withStandardRateLimit(
       const db = getAdminFirestore();
       const buildingsSnapshot = await db
         .collection(SERVER_COLLECTIONS.BUILDINGS)
-        .where('companyId', '==', companyId)
+        .where(FIELDS.COMPANY_ID, '==', companyId)
         .get();
 
       const projectGroups: Record<string, BuildingSummary[]> = {};

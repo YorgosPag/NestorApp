@@ -28,6 +28,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore, getAdminAuth, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { LEGACY_TENANT_COMPANY_ID } from '@/config/tenant';
 import { generateCompanyId } from '@/services/enterprise-id.service';
 import { withAuth, logSystemOperation, extractRequestMetadata } from '@/lib/auth';
@@ -369,7 +370,7 @@ async function executeMigration(
     // Find all users with this companyId in their claims
     const usersSnap = await db
       .collection(COLLECTIONS.USERS)
-      .where('companyId', '==', oldId)
+      .where(FIELDS.COMPANY_ID, '==', oldId)
       .get();
 
     let usersUpdated = 0;

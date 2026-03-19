@@ -7,6 +7,7 @@ import type { Building } from '@/types/building/contracts';
 import type { Property } from '@/types/property-viewer';
 import type { Contact } from '@/types/contacts';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { chunkArray } from '@/lib/array-utils';
 
@@ -23,7 +24,7 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
   async getProjectsByCompanyId(companyId: string): Promise<Project[]> {
     return await safeFirestoreOperation(async (database) => {
       const projectsCollection = database.collection(PROJECTS_COLLECTION);
-      const snapshot = await projectsCollection.where('companyId', '==', companyId).get();
+      const snapshot = await projectsCollection.where(FIELDS.COMPANY_ID, '==', companyId).get();
 
       const projects: Project[] = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -51,7 +52,7 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
     return await safeFirestoreOperation(async (database) => {
       // Using Firestore admin SDK methods correctly
       const buildingsCollection = database.collection(COLLECTIONS.BUILDINGS);
-      const snapshot = await buildingsCollection.where('projectId', '==', projectId).get();
+      const snapshot = await buildingsCollection.where(FIELDS.PROJECT_ID, '==', projectId).get();
 
       return snapshot.docs.map(doc => ({
         id: doc.id,
@@ -64,7 +65,7 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
     return await safeFirestoreOperation(async (database) => {
       // Using Firestore admin SDK methods correctly
       const unitsCollection = database.collection(COLLECTIONS.UNITS);
-      const snapshot = await unitsCollection.where('buildingId', '==', buildingId).get();
+      const snapshot = await unitsCollection.where(FIELDS.BUILDING_ID, '==', buildingId).get();
 
       return snapshot.docs.map(doc => ({
         id: doc.id,

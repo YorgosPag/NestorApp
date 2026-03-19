@@ -3,6 +3,7 @@ import type { Project, ProjectCustomer, ProjectStats } from '@/types/project';
 import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 
 // ✅ ENTERPRISE FIX: Use Firebase Admin methods from db instance, not direct imports
 // Firebase Admin SDK Firestore functions are methods on the db instance, not standalone functions
@@ -158,7 +159,7 @@ export class ProjectsService implements IProjectsService {
             // Document exists
         }
 
-        const buildingsQuery = database.collection(COLLECTIONS.BUILDINGS).where('projectId', '==', projectId);
+        const buildingsQuery = database.collection(COLLECTIONS.BUILDINGS).where(FIELDS.PROJECT_ID, '==', projectId);
         const buildings = await buildingsQuery.get();
         buildings.docs.forEach(doc => {
             // Process building
@@ -167,7 +168,7 @@ export class ProjectsService implements IProjectsService {
         for (const building of buildings.docs) {
             // 🏢 ENTERPRISE: Use configurable building ID pattern
             const buildingIdPattern = process.env.NEXT_PUBLIC_BUILDING_ID_PATTERN || 'building-';
-            const unitsQuery = database.collection(COLLECTIONS.UNITS).where('buildingId', '==', `${buildingIdPattern}${building.id}`);
+            const unitsQuery = database.collection(COLLECTIONS.UNITS).where(FIELDS.BUILDING_ID, '==', `${buildingIdPattern}${building.id}`);
             const units = await unitsQuery.get();
             units.docs.forEach(doc => {
                 const data = doc.data();
@@ -176,7 +177,7 @@ export class ProjectsService implements IProjectsService {
         }
 
         try {
-            const directUnitsQuery = database.collection(COLLECTIONS.UNITS).where('projectId', '==', projectId);
+            const directUnitsQuery = database.collection(COLLECTIONS.UNITS).where(FIELDS.PROJECT_ID, '==', projectId);
             const directUnits = await directUnitsQuery.get();
             if (!directUnits.empty) {
                 // Has direct units

@@ -18,6 +18,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { HOLD_TYPES } from '@/config/domain-constants';
 
 const logger = createModuleLogger('FilePurgeRoute');
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<PurgeResu
     // Query trashed files with expired purgeAt
     const snapshot = await db
       .collection(COLLECTIONS.FILES)
-      .where('isDeleted', '==', true)
+      .where(FIELDS.IS_DELETED, '==', true)
       .where('purgeAt', '<=', now)
       .limit(100) // Process in batches of 100
       .get();

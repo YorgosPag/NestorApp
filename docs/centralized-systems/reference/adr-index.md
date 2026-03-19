@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 235 ADRs + 5 SPECs (242A-E) | Last Updated: 2026-03-19
+**📊 Stats**: 235 ADRs + 6 SPECs (242A-E, 245B3) | Last Updated: 2026-03-19
 
 ---
 
@@ -274,6 +274,7 @@
 | **ADR-243** | Custom MCP Server — Firestore + Firebase Storage Access for Claude Code (v1.1.0: 15 tools) | ✅ IMPLEMENTED | 2026-03-19 | Infrastructure | [📄](./adrs/ADR-243-firestore-mcp-server.md) |
 | **ADR-244** | Role Management Admin Console — RBAC UI for User & Permission Management | 📋 PROPOSED | 2026-03-19 | Security & Auth | [📄](./adrs/ADR-244-role-management-admin-console.md) |
 | **ADR-245** | API Routes Centralization — Zero Hardcoded Endpoints | ✅ PHASE_A_COMPLETE | 2026-03-19 | Infrastructure | [📄](./adrs/ADR-245-api-routes-centralization.md) |
+| **SPEC-245B3** | Hardcoded Strings Centralization — Doc IDs, Field Names, Status Values | ✅ IMPLEMENTED | 2026-03-19 | Infrastructure | [📄](./adrs/specs/SPEC-245B3-hardcoded-strings-centralization.md) |
 | **ADR-246** | Universal Firestore→API Mapper Centralization (27+ scattered → 1 SSoT) | ✅ APPROVED | 2026-03-19 | Data Access Layer / Entity Systems | [📄](./adrs/ADR-246-universal-firestore-mapper-centralization.md) |
 | **ADR-247** | Entity Relationship Integrity Audit (5 findings, 6 protected areas) | ✅ APPROVED | 2026-03-19 | Entity Systems / Data Integrity | [📄](./adrs/ADR-247-entity-relationship-integrity-audit.md) |
 | **ADR-248** | Centralized Auto-Save System (Google-Level) — 8+ boilerplate patterns → 1 hook | ✅ IMPLEMENTED | 2026-03-19 | UI / State Management / Data Persistence | [📄](./adrs/ADR-248-centralized-auto-save.md) |

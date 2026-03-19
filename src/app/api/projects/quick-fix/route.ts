@@ -19,6 +19,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { EnterpriseConfigurationManager } from '@/core/configuration/enterprise-config-management';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -51,7 +52,7 @@ async function getCompanyIdByName(companyName: string): Promise<string | null> {
   try {
     const snapshot = await getAdminFirestore()
       .collection(COLLECTIONS.CONTACTS)
-      .where('type', '==', 'company')
+      .where(FIELDS.TYPE, '==', 'company')
       .where('companyName', '==', companyName)
       .get();
 

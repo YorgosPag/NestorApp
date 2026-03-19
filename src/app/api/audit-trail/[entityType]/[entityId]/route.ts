@@ -16,6 +16,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import type { AuditEntityType, EntityAuditEntry, EntityAuditResponse } from '@/types/audit-trail';
 
@@ -57,9 +58,9 @@ export const GET = withStandardRateLimit(
       // Build Firestore query
       let q = db
         .collection(COLLECTIONS.ENTITY_AUDIT_TRAIL)
-        .where('entityType', '==', entityType)
-        .where('entityId', '==', entityId)
-        .where('companyId', '==', ctx.companyId)
+        .where(FIELDS.ENTITY_TYPE, '==', entityType)
+        .where(FIELDS.ENTITY_ID, '==', entityId)
+        .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
         .orderBy('timestamp', 'desc')
         .limit(limit + 1); // Fetch one extra to determine hasMore
 

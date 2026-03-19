@@ -16,6 +16,7 @@
 import { NextRequest } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS, FIRESTORE_LIMITS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { logAuditEvent } from '@/lib/auth';
@@ -226,7 +227,7 @@ const handleGET = withAuth<ApiSuccessResponse<SearchResponseData>>(
         // Index: tenantId + entityType + audience + search.prefixes (array-contains-any) + updatedAt
         let queryBuilder = searchCollection
           .where('tenantId', '==', tenantId)
-          .where('entityType', '==', entityType)
+          .where(FIELDS.ENTITY_TYPE, '==', entityType)
           .where('audience', '==', SEARCH_AUDIENCE.INTERNAL);
 
         // 🔍 Prefix-based search (Firestore array-contains-any)
@@ -238,7 +239,7 @@ const handleGET = withAuth<ApiSuccessResponse<SearchResponseData>>(
 
         // Execute with ordering and limit
         const snapshot = await queryBuilder
-          .orderBy('updatedAt', 'desc')
+          .orderBy(FIELDS.UPDATED_AT, 'desc')
           .limit(limit)
           .get();
 

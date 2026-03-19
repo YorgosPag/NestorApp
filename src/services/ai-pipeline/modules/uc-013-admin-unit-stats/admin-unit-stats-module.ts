@@ -18,6 +18,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { sendChannelReply } from '../../shared/channel-reply-dispatcher';
@@ -193,7 +194,7 @@ export class AdminUnitStatsModule implements IUCModule {
       if (statsType === 'contacts' || statsType === 'all') {
         const contactsSnapshot = await adminDb
           .collection(COLLECTIONS.CONTACTS)
-          .where('companyId', '==', ctx.companyId)
+          .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
           .get();
 
         let individuals = 0;
@@ -213,7 +214,7 @@ export class AdminUnitStatsModule implements IUCModule {
       // ── Project stats (if requested) ──
       const projectsSnapshot = await adminDb
         .collection(COLLECTIONS.PROJECTS)
-        .where('companyId', '==', ctx.companyId)
+        .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
         .get();
 
       const projectMap = new Map<string, string>();
@@ -233,7 +234,7 @@ export class AdminUnitStatsModule implements IUCModule {
       if (statsType === 'units' || statsType === 'all' || statsType === 'unit_categories') {
         const unitsSnapshot = await adminDb
           .collection(COLLECTIONS.UNITS)
-          .where('companyId', '==', ctx.companyId)
+          .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
           .get();
 
         const perProject = new Map<string, ProjectUnitBreakdown>();

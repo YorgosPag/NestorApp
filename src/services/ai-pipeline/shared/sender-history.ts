@@ -18,6 +18,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { normalizeToISO } from '@/lib/date-local';
 
@@ -104,9 +105,9 @@ export async function getSenderHistory(
     // We fetch limit+1 to account for excluding the current message
     const snapshot = await adminDb
       .collection(COLLECTIONS.MESSAGES)
-      .where('companyId', '==', companyId)
+      .where(FIELDS.COMPANY_ID, '==', companyId)
       .where('from', '==', senderEmail)
-      .orderBy('createdAt', 'desc')
+      .orderBy(FIELDS.CREATED_AT, 'desc')
       .limit(limit + 1)
       .get();
 

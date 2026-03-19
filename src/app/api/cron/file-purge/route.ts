@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { HOLD_TYPES } from '@/config/domain-constants';
 
 const logger = createModuleLogger('CronFilePurge');
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // Find trashed files past their purge date
     const snapshot = await db
       .collection(COLLECTIONS.FILES)
-      .where('isDeleted', '==', true)
+      .where(FIELDS.IS_DELETED, '==', true)
       .where('purgeAt', '<=', now)
       .limit(100)
       .get();

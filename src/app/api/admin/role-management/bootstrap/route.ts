@@ -29,6 +29,7 @@ import type { AuthContext, PermissionCache, GlobalRole } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminAuth, getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -69,7 +70,7 @@ export const POST = withSensitiveRateLimit(
         // 1. Read all user documents where companyId matches the caller's company
         const usersSnap = await db
           .collection(COLLECTIONS.USERS)
-          .where('companyId', '==', ctx.companyId)
+          .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
           .get();
 
         if (usersSnap.empty) {

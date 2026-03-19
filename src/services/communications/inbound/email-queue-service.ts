@@ -16,6 +16,8 @@ import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { getAdminFirestore } from '@/server/admin/admin-guards';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
+import { QUEUE_STATUS } from '@/constants/entity-status-values';
 import {
   EMAIL_QUEUE_CONFIG,
   getRetryDelayMs,
@@ -265,7 +267,7 @@ export async function enqueueInboundEmail(params: {
     // 🏢 ENTERPRISE: Store both text and HTML content (Gmail/Outlook/Salesforce pattern)
     const queueItem: Omit<EmailIngestionQueueItem, 'id'> = {
       providerMessageId: params.providerMessageId,
-      status: 'pending',
+      status: QUEUE_STATUS.PENDING,
       routingResolution: {
         companyId: routing.companyId,
         matchedPattern: routing.matchedPattern,
@@ -462,8 +464,8 @@ export async function claimNextQueueItems(
     // Deploy: firebase deploy --only firestore:indexes --project pagonis-87766
     // See: ADR-071 Production Incident Report (2026-02-06)
     const pendingQuery = await queueCollection
-      .where('status', '==', 'pending')
-      .orderBy('createdAt', 'asc')
+      .where(FIELDS.STATUS, '==', QUEUE_STATUS.PENDING)
+      .orderBy(FIELDS.CREATED_AT, 'asc')
       .limit(batchSize)
       .get();
 
@@ -484,20 +486,20 @@ export async function claimNextQueueItems(
         const data = freshDoc.data();
 
         // Double-check status in case another worker claimed it
-        if (!data || data.status !== 'pending') {
+        if (!data || data.status !== QUEUE_STATUS.PENDING) {
           return null;
         }
 
         // Claim the item
         transaction.update(docRef, {
-          status: 'processing',
+          status: QUEUE_STATUS.PROCESSING,
           processingStartedAt: now,
         });
 
         return {
           id: doc.id,
           ...data,
-          status: 'processing' as const,
+          status: QUEUE_STATUS.PROCESSING as const,
           processingStartedAt: now,
         } as EmailIngestionQueueItem;
       });
@@ -540,8 +542,8 @@ export async function claimRetryableItems(
   try {
     // Query for failed items
     const failedQuery = await queueCollection
-      .where('status', '==', 'failed')
-      .orderBy('createdAt', 'asc')
+      .where(FIELDS.STATUS, '==', QUEUE_STATUS.FAILED)
+      .orderBy(FIELDS.CREATED_AT, 'asc')
       .limit(batchSize * 2) // Get more to filter by retry eligibility
       .get();
 
@@ -577,12 +579,12 @@ export async function claimRetryableItems(
         const freshDoc = await transaction.get(docRef);
         const freshData = freshDoc.data();
 
-        if (!freshData || freshData.status !== 'failed') {
+        if (!freshData || freshData.status !== QUEUE_STATUS.FAILED) {
           return null;
         }
 
         transaction.update(docRef, {
-          status: 'processing',
+          status: QUEUE_STATUS.PROCESSING,
           processingStartedAt: now,
           retryCount: FieldValue.increment(1),
         });
@@ -590,7 +592,7 @@ export async function claimRetryableItems(
         return {
           id: doc.id,
           ...freshData,
-          status: 'processing' as const,
+          status: QUEUE_STATUS.PROCESSING as const,
           processingStartedAt: now,
           retryCount: freshData.retryCount + 1,
         } as EmailIngestionQueueItem;
@@ -746,7 +748,7 @@ export async function markQueueItemCompleted(
   const docRef = adminDb.collection(COLLECTIONS.EMAIL_INGESTION_QUEUE).doc(queueId);
 
   await docRef.update({
-    status: 'completed',
+    status: QUEUE_STATUS.COMPLETED,
     completedAt: new Date(),
     result,
   });
@@ -781,7 +783,7 @@ export async function markQueueItemFailed(
 
   // Determine new status
   const newStatus: EmailIngestionQueueStatus =
-    currentRetryCount >= maxRetries ? 'dead_letter' : 'failed';
+    currentRetryCount >= maxRetries ? QUEUE_STATUS.DEAD_LETTER : QUEUE_STATUS.FAILED;
 
   // Build retry history entry
   const retryHistoryEntry = {
@@ -797,7 +799,7 @@ export async function markQueueItemFailed(
       occurredAt: now,
     },
     retryHistory: FieldValue.arrayUnion(retryHistoryEntry),
-    ...(newStatus === 'dead_letter' ? { completedAt: now } : {}),
+    ...(newStatus === QUEUE_STATUS.DEAD_LETTER ? { completedAt: now } : {}),
   });
 
   logger.warn('Queue item marked as failed', {
@@ -828,7 +830,7 @@ export async function recoverStaleItems(): Promise<number> {
 
   try {
     const staleQuery = await queueCollection
-      .where('status', '==', 'processing')
+      .where(FIELDS.STATUS, '==', QUEUE_STATUS.PROCESSING)
       .where('processingStartedAt', '<', threshold)
       .limit(50)
       .get();
@@ -841,7 +843,7 @@ export async function recoverStaleItems(): Promise<number> {
 
     for (const doc of staleQuery.docs) {
       await doc.ref.update({
-        status: 'failed',
+        status: QUEUE_STATUS.FAILED,
         lastError: {
           message: 'Processing timeout - worker may have crashed',
           code: 'STALE_PROCESSING',
@@ -876,33 +878,33 @@ export async function getQueueStats(): Promise<EmailIngestionQueueStats> {
   const queueCollection = adminDb.collection(COLLECTIONS.EMAIL_INGESTION_QUEUE);
 
   const statuses: EmailIngestionQueueStatus[] = [
-    'pending',
-    'processing',
-    'completed',
-    'failed',
-    'dead_letter',
+    QUEUE_STATUS.PENDING,
+    QUEUE_STATUS.PROCESSING,
+    QUEUE_STATUS.COMPLETED,
+    QUEUE_STATUS.FAILED,
+    QUEUE_STATUS.DEAD_LETTER,
   ];
 
   const byStatus: Record<EmailIngestionQueueStatus, number> = {
-    pending: 0,
-    processing: 0,
-    completed: 0,
-    failed: 0,
-    dead_letter: 0,
+    [QUEUE_STATUS.PENDING]: 0,
+    [QUEUE_STATUS.PROCESSING]: 0,
+    [QUEUE_STATUS.COMPLETED]: 0,
+    [QUEUE_STATUS.FAILED]: 0,
+    [QUEUE_STATUS.DEAD_LETTER]: 0,
   };
 
   // Count items by status
   await Promise.all(
     statuses.map(async (status) => {
-      const snapshot = await queueCollection.where('status', '==', status).count().get();
+      const snapshot = await queueCollection.where(FIELDS.STATUS, '==', status).count().get();
       byStatus[status] = snapshot.data().count;
     })
   );
 
   // Get oldest pending item
   const oldestPendingQuery = await queueCollection
-    .where('status', '==', 'pending')
-    .orderBy('createdAt', 'asc')
+    .where(FIELDS.STATUS, '==', QUEUE_STATUS.PENDING)
+    .orderBy(FIELDS.CREATED_AT, 'asc')
     .limit(1)
     .get();
 

@@ -18,6 +18,7 @@ import 'server-only';
 
 import { getAdminFirestore, getAdminStorage, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { validateQrToken } from './qr-token-service';
 import { isWithinGeofence } from './geofence-service';
@@ -58,8 +59,8 @@ export async function resolveWorkerForProject(
   // Get all contact links for this project with role 'worker' or type 'contact'
   const linksSnapshot = await db
     .collection(COLLECTIONS.CONTACT_LINKS)
-    .where('entityId', '==', projectId)
-    .where('entityType', '==', 'project')
+    .where(FIELDS.ENTITY_ID, '==', projectId)
+    .where(FIELDS.ENTITY_TYPE, '==', 'project')
     .get();
 
   if (linksSnapshot.empty) {

@@ -17,7 +17,7 @@
  */
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('AdminConfigService');
@@ -83,7 +83,7 @@ export async function getAdminConfiguration(): Promise<AdminConfiguration> {
   }
 
   try {
-    const docRef = getAdminFirestore().collection(COLLECTIONS.SYSTEM).doc('settings');
+    const docRef = getAdminFirestore().collection(COLLECTIONS.SYSTEM).doc(SYSTEM_DOCS.SYSTEM_SETTINGS);
     const docSnap = await docRef.get();
 
     if (!docSnap.exists) {
@@ -168,7 +168,7 @@ export async function updateAdminConfiguration(
   updates: Partial<AdminConfiguration>
 ): Promise<void> {
   try {
-    const docRef = getAdminFirestore().collection(COLLECTIONS.SYSTEM).doc('settings');
+    const docRef = getAdminFirestore().collection(COLLECTIONS.SYSTEM).doc(SYSTEM_DOCS.SYSTEM_SETTINGS);
 
     await docRef.set({
       admin: {

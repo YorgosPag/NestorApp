@@ -13,6 +13,7 @@ import { getFirestoreHelpers } from '../firebase/helpers-lazy';
 import { safeDbOperation } from '../firebase/safe-op';
 import { extractSearchCriteria, applyAdvancedFilters } from './criteria';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import type { SearchResult, TelegramProperty } from '../shared/types';
 import {
   getTemplateResolver,
@@ -60,10 +61,10 @@ export async function searchProperties(
     try {
       // Firebase Admin SDK: use collection(path) then chain .where().orderBy().limit()
       let q = collection(COLLECTIONS.UNITS)
-        .where('status', '==', 'available');
+        .where(FIELDS.STATUS, '==', 'available');
 
       if (criteria.type) {
-        q = q.where('type', '==', criteria.type);
+        q = q.where(FIELDS.TYPE, '==', criteria.type);
       }
 
       q = q.orderBy('price').limit(10);

@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { generateNavigationId } from '@/services/enterprise-id.service';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -62,7 +63,7 @@ async function handleAddCompany(request: NextRequest, ctx: AuthContext): Promise
   // Check for duplicates
   const existing = await adminDb
     .collection(COLLECTIONS.NAVIGATION)
-    .where('contactId', '==', contactId)
+    .where(FIELDS.CONTACT_ID, '==', contactId)
     .limit(1)
     .get();
 
@@ -117,7 +118,7 @@ async function handleRemoveCompany(request: NextRequest, ctx: AuthContext): Prom
 
   const snapshot = await adminDb
     .collection(COLLECTIONS.NAVIGATION)
-    .where('contactId', '==', contactId)
+    .where(FIELDS.CONTACT_ID, '==', contactId)
     .get();
 
   if (snapshot.empty) {

@@ -3,6 +3,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -51,15 +52,15 @@ export const GET = withStandardRateLimit(
       // Query 1: Contacts with matching companyId (tenant isolation)
       const tenantSnapshot = await adminDb
         .collection(COLLECTIONS.CONTACTS)
-        .where('type', '==', 'individual')
-        .where('companyId', '==', ctx.companyId)
+        .where(FIELDS.TYPE, '==', 'individual')
+        .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
         .get();
 
       // Query 2: Legacy contacts without companyId (created by this user)
       const legacySnapshot = await adminDb
         .collection(COLLECTIONS.CONTACTS)
-        .where('type', '==', 'individual')
-        .where('createdBy', '==', ctx.uid)
+        .where(FIELDS.TYPE, '==', 'individual')
+        .where(FIELDS.CREATED_BY, '==', ctx.uid)
         .get();
 
       // Merge results (deduplicate by doc ID)

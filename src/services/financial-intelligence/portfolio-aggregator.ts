@@ -12,6 +12,7 @@
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { getString, getNumber, getObject } from '@/lib/firestore/field-extractors';
 import { createModuleLogger } from '@/lib/telemetry';
 import type {
@@ -105,7 +106,7 @@ export async function aggregatePortfolio(companyId: string): Promise<PortfolioAg
   // 1. Get all active projects for this company
   const projectsSnap = await db
     .collection(COLLECTIONS.PROJECTS)
-    .where('companyId', '==', companyId)
+    .where(FIELDS.COMPANY_ID, '==', companyId)
     .get();
 
   logger.info(`[Portfolio] Found ${projectsSnap.size} projects for company ${companyId}`);

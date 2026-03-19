@@ -18,6 +18,7 @@ import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import type { Firestore, Transaction } from 'firebase-admin/firestore';
 import { FieldValue as AdminFieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import type {
   EntityType,
   RelationshipType,
@@ -386,7 +387,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
           // 📊 FALLBACK: Read directly from projects collection with companyId
           const projectsSnap = await database
             .collection(COLLECTIONS.PROJECTS)
-            .where('companyId', '==', parentId)
+            .where(FIELDS.COMPANY_ID, '==', parentId)
             .get();
 
           // 🏢 ENTERPRISE: Double type assertion for generic return type
@@ -403,7 +404,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
           // 🏢 FALLBACK: Read directly from units collection with buildingId
           const unitsSnap = await database
             .collection(COLLECTIONS.UNITS)
-            .where('buildingId', '==', parentId)
+            .where(FIELDS.BUILDING_ID, '==', parentId)
             .get();
 
           // 🏢 ENTERPRISE: Double type assertion for generic return type
@@ -657,8 +658,8 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
       // 🏢 ENTERPRISE: Admin SDK pattern - Build query with chained methods
       let queryRef = database
         .collection(this.AUDIT_COLLECTION)
-        .where('entityType', '==', entityType)
-        .where('entityId', '==', entityId);
+        .where(FIELDS.ENTITY_TYPE, '==', entityType)
+        .where(FIELDS.ENTITY_ID, '==', entityId);
 
       if (options.operations && options.operations.length > 0) {
         queryRef = queryRef.where('operation', 'in', options.operations);

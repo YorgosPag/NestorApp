@@ -15,6 +15,7 @@
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { generateChequeId, generatePaymentRecordId } from '@/services/enterprise-id.service';
 import type { PaymentRecord } from '@/types/payment-plan';
@@ -93,7 +94,7 @@ export class ChequeRegistryService {
       const snapshot = await db
         .collection(chequeCollectionPath())
         .where('context.unitId', '==', unitId)
-        .orderBy('createdAt', 'desc')
+        .orderBy(FIELDS.CREATED_AT, 'desc')
         .get();
 
       const cheques = snapshot.docs.map(doc => doc.data() as ChequeRecord);

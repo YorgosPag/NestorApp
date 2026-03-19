@@ -21,6 +21,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { BUILDING_IDS, BuildingIdUtils } from '@/config/building-ids-config';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('UnitsTestConnectionRoute');
@@ -64,7 +65,7 @@ const getHandler = async (request: NextRequest) => {
         logger.info('[Units/TestConnection] Getting buildings for project', { projectId: BUILDING_IDS.PROJECT_ID });
         const buildingsSnapshot = await getAdminFirestore()
           .collection(COLLECTIONS.BUILDINGS)
-          .where('projectId', '==', BUILDING_IDS.PROJECT_ID)
+          .where(FIELDS.PROJECT_ID, '==', BUILDING_IDS.PROJECT_ID)
           .get();
 
         const buildings = buildingsSnapshot.docs.map(doc => {

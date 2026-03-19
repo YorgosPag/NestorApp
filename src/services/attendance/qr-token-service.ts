@@ -22,6 +22,7 @@ import 'server-only';
 import { createHmac, randomBytes } from 'crypto';
 import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { AttendanceQrToken, QrTokenStatus } from '@/components/projects/ika/contracts';
 
@@ -104,9 +105,9 @@ export async function generateDailyQrToken(
 
   // Check for existing active token for this project+date
   const existing = await collection
-    .where('projectId', '==', projectId)
+    .where(FIELDS.PROJECT_ID, '==', projectId)
     .where('validDate', '==', date)
-    .where('status', '==', 'active' satisfies QrTokenStatus)
+    .where(FIELDS.STATUS, '==', 'active' satisfies QrTokenStatus)
     .limit(1)
     .get();
 
@@ -230,7 +231,7 @@ export async function validateQrToken(tokenString: string): Promise<QrTokenValid
   const snapshot = await db
     .collection(COLLECTIONS.ATTENDANCE_QR_TOKENS)
     .where('token', '==', tokenString)
-    .where('status', '==', 'active' satisfies QrTokenStatus)
+    .where(FIELDS.STATUS, '==', 'active' satisfies QrTokenStatus)
     .limit(1)
     .get();
 
@@ -307,9 +308,9 @@ export async function getActiveToken(
   const db = getAdminFirestore();
   const snapshot = await db
     .collection(COLLECTIONS.ATTENDANCE_QR_TOKENS)
-    .where('projectId', '==', projectId)
+    .where(FIELDS.PROJECT_ID, '==', projectId)
     .where('validDate', '==', date)
-    .where('status', '==', 'active' satisfies QrTokenStatus)
+    .where(FIELDS.STATUS, '==', 'active' satisfies QrTokenStatus)
     .limit(1)
     .get();
 

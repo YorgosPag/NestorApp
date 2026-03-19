@@ -14,6 +14,7 @@
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { generateContractId } from '@/services/enterprise-id.service';
 import { AssociationService } from '@/services/association.service';
@@ -142,8 +143,8 @@ export class LegalContractService {
       const db = getDb();
       const snapshot = await db
         .collection(COLLECTIONS.LEGAL_CONTRACTS)
-        .where('unitId', '==', unitId)
-        .orderBy('createdAt', 'asc')
+        .where(FIELDS.UNIT_ID, '==', unitId)
+        .orderBy(FIELDS.CREATED_AT, 'asc')
         .get();
       return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as LegalContract);
     } catch (error) {
@@ -163,7 +164,7 @@ export class LegalContractService {
       const db = getDb();
       const snapshot = await db
         .collection(COLLECTIONS.LEGAL_CONTRACTS)
-        .where('unitId', '==', unitId)
+        .where(FIELDS.UNIT_ID, '==', unitId)
         .where('phase', '==', phase)
         .get();
       if (snapshot.empty) return null;

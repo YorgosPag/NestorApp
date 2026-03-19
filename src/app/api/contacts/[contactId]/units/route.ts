@@ -3,6 +3,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ContactUnitsRoute');
@@ -167,7 +168,7 @@ export async function GET(
     const unitsSnapshot = await adminDb
       .collection(COLLECTIONS.UNITS)
       .where('soldTo', '==', contactId)
-      .where('companyId', '==', ctx.companyId)
+      .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
       .get();
 
     const units = unitsSnapshot.docs.map(unitDoc => ({

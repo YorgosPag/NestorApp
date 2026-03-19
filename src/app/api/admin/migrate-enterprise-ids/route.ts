@@ -33,6 +33,7 @@ import { withAuth, logMigrationExecuted } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import {
   generateBuildingId,
   generateContactId,
@@ -229,7 +230,7 @@ async function updateBuildingReferences(
   // 1. contact_links: documents with entityId pointing to old building
   const contactLinksSnap = await db
     .collection(COLLECTIONS.CONTACT_LINKS)
-    .where('entityId', '==', oldId)
+    .where(FIELDS.ENTITY_ID, '==', oldId)
     .get();
 
   if (!contactLinksSnap.empty) {
@@ -280,7 +281,7 @@ async function updateContactReferences(
   // 1. contact_links: documents with contactId pointing to old contact
   const contactLinksSnap = await db
     .collection(COLLECTIONS.CONTACT_LINKS)
-    .where('contactId', '==', oldId)
+    .where(FIELDS.CONTACT_ID, '==', oldId)
     .get();
 
   if (!contactLinksSnap.empty) {

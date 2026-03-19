@@ -30,6 +30,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('FixProjectsRoute');
@@ -81,7 +82,7 @@ async function handleFixProjectsExecute(request: NextRequest, ctx: AuthContext):
     const getCompanyIdByName = async (companyName: string): Promise<string | null> => {
       try {
         const companiesQuery = await adminDb.collection(COLLECTIONS.CONTACTS)
-          .where('type', '==', 'company')
+          .where(FIELDS.TYPE, '==', 'company')
           .where('companyName', '==', companyName)
           .limit(1)
           .get();

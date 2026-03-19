@@ -18,6 +18,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { BUILDING_IDS, BuildingIdUtils } from '@/config/building-ids-config';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -65,7 +66,7 @@ export const POST = withHeavyRateLimit(
         logger.info('[Units/ConnectToBuildings] Getting buildings for project', { projectId: BUILDING_IDS.PROJECT_ID });
         const buildingsSnapshot = await getAdminFirestore()
           .collection(COLLECTIONS.BUILDINGS)
-          .where('projectId', '==', BUILDING_IDS.PROJECT_ID)
+          .where(FIELDS.PROJECT_ID, '==', BUILDING_IDS.PROJECT_ID)
           .get();
 
         const buildings = buildingsSnapshot.docs.map(doc => ({

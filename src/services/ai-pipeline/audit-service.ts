@@ -13,6 +13,7 @@
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { generatePipelineAuditId } from '@/services/enterprise-id.service';
 import type {
   PipelineContext,
@@ -98,7 +99,7 @@ export class PipelineAuditService {
 
     const snapshot = await adminDb
       .collection(COLLECTIONS.AI_PIPELINE_AUDIT)
-      .where('companyId', '==', companyId)
+      .where(FIELDS.COMPANY_ID, '==', companyId)
       .orderBy('timestamp', 'desc')
       .limit(limit)
       .get();

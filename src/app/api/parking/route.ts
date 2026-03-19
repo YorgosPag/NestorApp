@@ -20,6 +20,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { requireBuildingInTenant, TenantIsolationError } from '@/lib/auth/tenant-isolation';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -232,7 +233,7 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
       // Query parking spots for this building
       const snapshot = await getAdminFirestore()
         .collection(COLLECTIONS.PARKING_SPACES)
-        .where('buildingId', '==', requestedBuildingId)
+        .where(FIELDS.BUILDING_ID, '==', requestedBuildingId)
         .get();
 
       const parkingSpots = snapshot.docs.map(doc => mapParkingDoc(doc.id, doc.data() as Record<string, unknown>));
@@ -262,7 +263,7 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
       // Get all parking with this projectId
       const snapshot = await getAdminFirestore()
         .collection(COLLECTIONS.PARKING_SPACES)
-        .where('projectId', '==', requestedProjectId)
+        .where(FIELDS.PROJECT_ID, '==', requestedProjectId)
         .get();
 
       const parkingSpots = snapshot.docs.map(doc => mapParkingDoc(doc.id, doc.data() as Record<string, unknown>));
@@ -284,7 +285,7 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
     const buildingsSnapshot = await (isSuperAdmin
       ? getAdminFirestore().collection(COLLECTIONS.BUILDINGS).get()
       : getAdminFirestore().collection(COLLECTIONS.BUILDINGS)
-          .where('companyId', '==', ctx.companyId).get());
+          .where(FIELDS.COMPANY_ID, '==', ctx.companyId).get());
 
     const authorizedBuildingIds = new Set(buildingsSnapshot.docs.map(doc => doc.id));
     logger.info('Found authorized buildings', { buildingCount: authorizedBuildingIds.size, companyId: ctx.companyId });
@@ -292,7 +293,7 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
     const snapshot = await (isSuperAdmin
       ? getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES).get()
       : getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES)
-          .where('companyId', '==', ctx.companyId).get());
+          .where(FIELDS.COMPANY_ID, '==', ctx.companyId).get());
 
     const parkingSpots = mapParkingDocs(snapshot.docs);
     logger.info('Found parking spots for company', { count: parkingSpots.length });

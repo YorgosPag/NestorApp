@@ -18,6 +18,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { sendChannelReply } from '../../shared/channel-reply-dispatcher';
@@ -159,7 +160,7 @@ export class AdminProjectStatusModule implements IUCModule {
       // STEP 1: Get ALL buildings for this company
       const buildingsSnapshot = await adminDb
         .collection(COLLECTIONS.BUILDINGS)
-        .where('companyId', '==', ctx.companyId)
+        .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
         .limit(200)
         .get();
 
@@ -188,7 +189,7 @@ export class AdminProjectStatusModule implements IUCModule {
       // Also get projects by companyId (for projects without buildings)
       const projectsSnapshot = await adminDb
         .collection(COLLECTIONS.PROJECTS)
-        .where('companyId', '==', ctx.companyId)
+        .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
         .limit(50)
         .get();
 
@@ -273,7 +274,7 @@ export class AdminProjectStatusModule implements IUCModule {
 
         const snapshot = await adminDb
           .collection(COLLECTIONS.CONSTRUCTION_PHASES)
-          .where('buildingId', 'in', batch)
+          .where(FIELDS.BUILDING_ID, 'in', batch)
           .limit(1000)
           .get();
 
@@ -293,7 +294,7 @@ export class AdminProjectStatusModule implements IUCModule {
 
         const snapshot = await adminDb
           .collection(COLLECTIONS.UNITS)
-          .where('buildingId', 'in', batch)
+          .where(FIELDS.BUILDING_ID, 'in', batch)
           .limit(2000)
           .get();
 

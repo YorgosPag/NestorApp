@@ -15,6 +15,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { generateRequestId } from '@/services/enterprise-id.service';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 // 🏢 ENTERPRISE: Canonical response format (SAP/Salesforce pattern)
@@ -155,12 +156,12 @@ async function handleListConversations(request: NextRequest, ctx: AuthContext): 
 
   // Build query with TENANT ISOLATION (AUTHZ Phase 2)
   let query = getAdminFirestore().collection(COLLECTIONS.CONVERSATIONS)
-    .where('companyId', '==', ctx.companyId) // CRITICAL: Filter by user's company
+    .where(FIELDS.COMPANY_ID, '==', ctx.companyId) // CRITICAL: Filter by user's company
     .orderBy('audit.updatedAt', 'desc');
 
   // Apply filters
   if (status && Object.values(CONVERSATION_STATUS).includes(status)) {
-    query = query.where('status', '==', status);
+    query = query.where(FIELDS.STATUS, '==', status);
   }
 
   if (channel && Object.values(COMMUNICATION_CHANNELS).includes(channel)) {

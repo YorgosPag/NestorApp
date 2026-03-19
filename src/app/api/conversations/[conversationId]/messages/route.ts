@@ -21,6 +21,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 // Type alias for canonical response
 type MessagesCanonicalResponse = ApiSuccessResponse<MessagesListResponse>;
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { generateRequestId } from '@/services/enterprise-id.service';
 import { fieldToISO } from '@/lib/date-local';
 import { getString, getObject } from '@/lib/firestore/field-extractors';
@@ -188,7 +189,7 @@ async function handleListMessages(request: NextRequest, ctx: AuthContext, conver
   const query = getAdminFirestore()
     .collection(COLLECTIONS.MESSAGES)
     .where('conversationId', '==', conversationId)
-    .orderBy('createdAt', order);
+    .orderBy(FIELDS.CREATED_AT, order);
 
   // Get total count
   const countSnapshot = await query.count().get();

@@ -18,6 +18,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
 const logger = createModuleLogger('AVAILABILITY_CHECK');
@@ -88,9 +89,9 @@ export async function checkAvailability(
     // Query active appointments for the same date and company
     const snapshot = await adminDb
       .collection(COLLECTIONS.APPOINTMENTS)
-      .where('companyId', '==', companyId)
+      .where(FIELDS.COMPANY_ID, '==', companyId)
       .where('appointment.requestedDate', '==', requestedDate)
-      .where('status', 'in', ['approved', 'pending_approval'])
+      .where(FIELDS.STATUS, 'in', ['approved', 'pending_approval'])
       .get();
 
     const existingAppointments: ExistingAppointment[] = snapshot.docs.map(

@@ -11,6 +11,7 @@
 import type { Property } from '@/types/property';
 import { extractSearchCriteria as extractCriteriaFromText } from '@/services/property-search.service';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { isFirebaseAvailable } from './firebase/availability';
 import { getFirestoreHelpers } from './firebase/helpers-lazy';
 import {
@@ -102,10 +103,10 @@ export async function executeSmartSearch(
 
     // 🏢 ENTERPRISE: Use Firebase Admin SDK pattern
     let q = collection(COLLECTIONS.UNITS)
-      .where('status', '==', 'available');
+      .where(FIELDS.STATUS, '==', 'available');
 
     if (criteria.type) {
-      q = q.where('type', '==', criteria.type);
+      q = q.where(FIELDS.TYPE, '==', criteria.type);
     }
 
     q = q.orderBy('price').limit(10);

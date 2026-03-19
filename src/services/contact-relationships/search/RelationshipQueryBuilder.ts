@@ -28,6 +28,8 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
+import { ENTITY_STATUS } from '@/constants/entity-status-values';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('RelationshipQueryBuilder');
 
@@ -116,7 +118,7 @@ export class RelationshipQueryBuilder {
     return new RelationshipQueryBuilder()
       .where('sourceContactId', '==', contactId)
       .orWhere('targetContactId', '==', contactId)
-      .where('status', '==', 'active');
+      .where(FIELDS.STATUS, '==', ENTITY_STATUS.ACTIVE);
   }
 
   /**
@@ -129,7 +131,7 @@ export class RelationshipQueryBuilder {
         'employee', 'manager', 'director', 'executive',
         'civil_servant', 'department_head', 'ministry_official'
       ])
-      .where('status', '==', 'active');
+      .where(FIELDS.STATUS, '==', ENTITY_STATUS.ACTIVE);
   }
 
   /**
@@ -138,7 +140,7 @@ export class RelationshipQueryBuilder {
   static forDepartment(department: string): RelationshipQueryBuilder {
     return new RelationshipQueryBuilder()
       .where('department', '==', department)
-      .where('status', '==', 'active')
+      .where(FIELDS.STATUS, '==', ENTITY_STATUS.ACTIVE)
       .orderBy('position', 'asc');
   }
 
@@ -324,14 +326,14 @@ export class RelationshipQueryBuilder {
    * 📊 Order by Created Date (newest first)
    */
   newest(): RelationshipQueryBuilder {
-    return this.orderBy('createdAt', 'desc');
+    return this.orderBy(FIELDS.CREATED_AT, 'desc');
   }
 
   /**
    * 📊 Order by Created Date (oldest first)
    */
   oldest(): RelationshipQueryBuilder {
-    return this.orderBy('createdAt', 'asc');
+    return this.orderBy(FIELDS.CREATED_AT, 'asc');
   }
 
   /**

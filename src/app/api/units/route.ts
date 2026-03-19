@@ -17,6 +17,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { UNIT_SALE_STATUS } from '@/constants/property-statuses-enterprise';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { isRoleBypass } from '@/lib/auth/roles';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -72,7 +73,7 @@ export const GET = withStandardRateLimit(
         if (isSuperAdmin && buildingId) {
           // 🏢 ADR-232: Super admin by buildingId — skip companyId filter
           unitsQuery = db.collection(COLLECTIONS.UNITS)
-            .where('buildingId', '==', buildingId)
+            .where(FIELDS.BUILDING_ID, '==', buildingId)
             .orderBy('name', 'asc');
         } else if (isSuperAdmin) {
           // 🏢 ADR-232: Super admin without buildingId — load ALL units
@@ -80,7 +81,7 @@ export const GET = withStandardRateLimit(
             .orderBy('name', 'asc');
         } else {
           unitsQuery = db.collection(COLLECTIONS.UNITS)
-            .where('companyId', '==', tenantCompanyId)
+            .where(FIELDS.COMPANY_ID, '==', tenantCompanyId)
             .orderBy('name', 'asc');
         }
 

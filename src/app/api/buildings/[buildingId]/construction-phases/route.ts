@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { withAuth, requireBuildingInTenant, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -63,7 +64,7 @@ export async function GET(
       // Fetch phases ordered by 'order' field
       const phasesSnapshot = await adminDb
         .collection(COLLECTIONS.CONSTRUCTION_PHASES)
-        .where('buildingId', '==', buildingId)
+        .where(FIELDS.BUILDING_ID, '==', buildingId)
         .orderBy('order', 'asc')
         .get();
 
@@ -94,7 +95,7 @@ export async function GET(
       // Fetch tasks ordered by 'order' field
       const tasksSnapshot = await adminDb
         .collection(COLLECTIONS.CONSTRUCTION_TASKS)
-        .where('buildingId', '==', buildingId)
+        .where(FIELDS.BUILDING_ID, '==', buildingId)
         .orderBy('order', 'asc')
         .get();
 
@@ -195,7 +196,7 @@ export async function POST(
       // Auto-generate code if not provided
       const existingCount = await adminDb
         .collection(collection)
-        .where('buildingId', '==', buildingId)
+        .where(FIELDS.BUILDING_ID, '==', buildingId)
         .count()
         .get();
 

@@ -402,11 +402,12 @@ export async function GET(): Promise<Response> {
 
   try {
     const { getAdminFirestore } = await import('@/lib/firebaseAdmin');
-    const { COLLECTIONS } = await import('@/config/firestore-collections');
+    const { COLLECTIONS, SYSTEM_DOCS } = await import('@/config/firestore-collections');
+    const { FIELDS } = await import('@/config/firestore-field-constants');
     const adminDb = getAdminFirestore();
 
     // Check routing rules
-    const settingsDoc = await adminDb.collection(COLLECTIONS.SYSTEM).doc('settings').get();
+    const settingsDoc = await adminDb.collection(COLLECTIONS.SYSTEM).doc(SYSTEM_DOCS.SYSTEM_SETTINGS).get();
     const routingInfo = diagnostic.routing as Record<string, unknown>;
     routingInfo.hasSettings = settingsDoc.exists;
 
@@ -426,7 +427,7 @@ export async function GET(): Promise<Response> {
     const queueRef = adminDb.collection(COLLECTIONS.EMAIL_INGESTION_QUEUE);
     const queueInfo = diagnostic.queue as Record<string, unknown>;
 
-    const allItems = await queueRef.orderBy('createdAt', 'desc').limit(10).get();
+    const allItems = await queueRef.orderBy(FIELDS.CREATED_AT, 'desc').limit(10).get();
     queueInfo.total = allItems.size;
 
     let pending = 0, processing = 0, completed = 0, failed = 0;

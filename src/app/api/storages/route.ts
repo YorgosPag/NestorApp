@@ -3,6 +3,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -104,13 +105,13 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
       logger.info('Querying storages for building', { buildingId: requestedBuildingId });
       snapshot = await getAdminFirestore()
         .collection(COLLECTIONS.STORAGE)
-        .where('buildingId', '==', requestedBuildingId)
+        .where(FIELDS.BUILDING_ID, '==', requestedBuildingId)
         .get();
     } else if (requestedProjectId) {
       // Validate projectId belongs to user's company
       const projectsSnapshot = await getAdminFirestore()
         .collection(COLLECTIONS.PROJECTS)
-        .where('companyId', '==', ctx.companyId)
+        .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
         .get();
       const authorizedProjectIds = new Set(projectsSnapshot.docs.map(doc => doc.id));
 
@@ -126,7 +127,7 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
       logger.info('Querying storages for project', { projectId: requestedProjectId });
       snapshot = await getAdminFirestore()
         .collection(COLLECTIONS.STORAGE)
-        .where('projectId', '==', requestedProjectId)
+        .where(FIELDS.PROJECT_ID, '==', requestedProjectId)
         .get();
     } else if (ctx.globalRole === 'super_admin') {
       // 🏢 ADR-232: Super admin — load ALL storages
@@ -139,7 +140,7 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
       logger.info('Querying all storages for company', { companyId: ctx.companyId });
       snapshot = await getAdminFirestore()
         .collection(COLLECTIONS.STORAGE)
-        .where('companyId', '==', ctx.companyId)
+        .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
         .get();
     }
 

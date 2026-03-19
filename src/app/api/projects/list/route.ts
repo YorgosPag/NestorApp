@@ -27,6 +27,7 @@ import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { fieldToISO } from '@/lib/date-local';
 import { getString, getNumber, getArray } from '@/lib/firestore/field-extractors';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
@@ -170,7 +171,7 @@ export const GET = withHighRateLimit(
         // 🔒 Regular user: Tenant-scoped (only their company)
         projectsSnapshot = await getAdminFirestore()
           .collection(COLLECTIONS.PROJECTS)
-          .where('companyId', '==', ctx.companyId)
+          .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
           .get();
       }
 
@@ -340,7 +341,7 @@ export const POST = withHighRateLimit(
         if (!isSuperAdmin && ctx.companyId) {
           const navQuery = await adminDb
             .collection(COLLECTIONS.NAVIGATION)
-            .where('contactId', '==', ctx.companyId)
+            .where(FIELDS.CONTACT_ID, '==', ctx.companyId)
             .limit(1)
             .get();
 

@@ -3,6 +3,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,8 +74,8 @@ export const GET = async (request: NextRequest) => {
       if (floorId) {
         const floorFilesSnap = await db
           .collection(COLLECTIONS.FILES)
-          .where('entityType', '==', 'floor')
-          .where('entityId', '==', floorId)
+          .where(FIELDS.ENTITY_TYPE, '==', 'floor')
+          .where(FIELDS.ENTITY_ID, '==', floorId)
           .get();
         floorFiles = floorFilesSnap.docs.map((d) => ({
           id: d.id,
@@ -85,8 +86,8 @@ export const GET = async (request: NextRequest) => {
       // 4. Query files collection for unit floorplan records
       const unitFilesSnap = await db
         .collection(COLLECTIONS.FILES)
-        .where('entityType', '==', 'unit')
-        .where('entityId', '==', unitId)
+        .where(FIELDS.ENTITY_TYPE, '==', 'unit')
+        .where(FIELDS.ENTITY_ID, '==', unitId)
         .where('category', '==', 'floorplans')
         .get();
       const unitFiles: (DocData & { id: string })[] = unitFilesSnap.docs.map((d) => ({
@@ -99,7 +100,7 @@ export const GET = async (request: NextRequest) => {
       if (floorId) {
         const legacySnap = await db
           .collection(COLLECTIONS.FLOOR_FLOORPLANS)
-          .where('floorId', '==', floorId)
+          .where(FIELDS.FLOOR_ID, '==', floorId)
           .get();
         legacyFloorplans = legacySnap.docs.map((d) => ({
           id: d.id,

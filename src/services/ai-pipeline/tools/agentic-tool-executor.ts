@@ -19,6 +19,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { getCollectionSchemaInfo } from '@/config/firestore-schema-map';
 // ADR-173: Tool analytics
 import { getToolAnalyticsService } from '../tool-analytics-service';
@@ -436,7 +437,7 @@ export class AgenticToolExecutor {
 
     const contactsSnap = await db
       .collection(COLLECTIONS.CONTACTS)
-      .where('companyId', '==', ctx.companyId)
+      .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
       .limit(50)
       .get();
 
@@ -574,7 +575,7 @@ export class AgenticToolExecutor {
     for (const collection of collections) {
       const snap = await db
         .collection(collection)
-        .where('companyId', '==', ctx.companyId)
+        .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
         .limit(100) // Fetch more to filter client-side
         .get();
 

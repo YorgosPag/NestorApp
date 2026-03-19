@@ -4,6 +4,7 @@ import type { Project, ProjectCustomer, ProjectStats } from '@/types/project';
 import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 
 export class ProjectsService implements IProjectsService {
   private firestoreRepo: IProjectsRepository;
@@ -160,14 +161,14 @@ export class ProjectsService implements IProjectsService {
             // Debug logging removed
         }
         
-        const buildings = await db.collection(COLLECTIONS.BUILDINGS).where('projectId', '==', projectId).get();
+        const buildings = await db.collection(COLLECTIONS.BUILDINGS).where(FIELDS.PROJECT_ID, '==', projectId).get();
         // Debug logging removed
         buildings.docs.forEach((doc) => {
             // Debug logging removed
         });
         
         for (const building of buildings.docs) {
-            const units = await db.collection(COLLECTIONS.UNITS).where('buildingId', '==', `building-${building.id}`).get();
+            const units = await db.collection(COLLECTIONS.UNITS).where(FIELDS.BUILDING_ID, '==', `building-${building.id}`).get();
             // Debug logging removed
             units.docs.forEach((doc) => {
                 const data = doc.data();
@@ -176,7 +177,7 @@ export class ProjectsService implements IProjectsService {
         }
         
         try {
-            const directUnits = await db.collection(COLLECTIONS.UNITS).where('projectId', '==', projectId).get();
+            const directUnits = await db.collection(COLLECTIONS.UNITS).where(FIELDS.PROJECT_ID, '==', projectId).get();
             if (!directUnits.empty) {
                 // Debug logging removed
             }

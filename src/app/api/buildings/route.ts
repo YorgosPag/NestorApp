@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
@@ -62,7 +63,7 @@ export const GET = withStandardRateLimit(
     if (projectId) {
       // 🏢 ADR-209: Single query with normalized projectId (handles string/number mismatch)
       const projectQuery = adminDb.collection(COLLECTIONS.BUILDINGS)
-        .where('projectId', '==', normalizeProjectIdForQuery(projectId));
+        .where(FIELDS.PROJECT_ID, '==', normalizeProjectIdForQuery(projectId));
       snapshot = await projectQuery.get();
 
       // Step 3: Fallback — many buildings have no projectId field.
@@ -70,7 +71,7 @@ export const GET = withStandardRateLimit(
       if (snapshot.empty && tenantCompanyId) {
         logger.info('[Buildings] No buildings with projectId, falling back to companyId', { projectId, tenantCompanyId });
         const fallbackQuery = adminDb.collection(COLLECTIONS.BUILDINGS)
-          .where('companyId', '==', tenantCompanyId);
+          .where(FIELDS.COMPANY_ID, '==', tenantCompanyId);
         snapshot = await fallbackQuery.get();
       }
     } else if (isSuperAdmin) {
@@ -80,7 +81,7 @@ export const GET = withStandardRateLimit(
     } else {
       // Without projectId, use tenant companyId to list all buildings
       const queryRef = adminDb.collection(COLLECTIONS.BUILDINGS)
-        .where('companyId', '==', tenantCompanyId);
+        .where(FIELDS.COMPANY_ID, '==', tenantCompanyId);
       snapshot = await queryRef.get();
     }
 

@@ -348,6 +348,26 @@ export const SYSTEM_DOCS = {
   EURIBOR_RATES: process.env.NEXT_PUBLIC_EURIBOR_RATES_DOC || 'euribor_rates',
   // Path: settings/bank_spreads — Bank spread configuration
   BANK_SPREADS: process.env.NEXT_PUBLIC_BANK_SPREADS_DOC || 'bank_spreads',
+
+  // ⚙️ SYSTEM SETTINGS (ADR-245B: Hardcoded Strings Audit)
+  // Path: system/settings — Global system configuration (admin config, email routing, etc.)
+  SYSTEM_SETTINGS: process.env.NEXT_PUBLIC_SYSTEM_SETTINGS_DOC || 'settings',
+
+  // 🤖 AI TOOL ANALYTICS (ADR-245B: Hardcoded Strings Audit)
+  // Path: settings/ai_tool_analytics — Aggregated AI tool usage analytics
+  AI_TOOL_ANALYTICS: process.env.NEXT_PUBLIC_AI_TOOL_ANALYTICS_DOC || 'ai_tool_analytics',
+
+  // 📊 ACCOUNTING SETTINGS DOCUMENTS (ADR-245B: Hardcoded Strings Audit)
+  // Path: accounting_settings/{docId} — Accounting subsystem singleton documents
+  ACCT_COMPANY_PROFILE: process.env.NEXT_PUBLIC_ACCT_COMPANY_PROFILE_DOC || 'company_profile',
+  ACCT_PARTNERS: process.env.NEXT_PUBLIC_ACCT_PARTNERS_DOC || 'partners',
+  ACCT_MEMBERS: process.env.NEXT_PUBLIC_ACCT_MEMBERS_DOC || 'members',
+  ACCT_SHAREHOLDERS: process.env.NEXT_PUBLIC_ACCT_SHAREHOLDERS_DOC || 'shareholders',
+  ACCT_SERVICE_PRESETS: process.env.NEXT_PUBLIC_ACCT_SERVICE_PRESETS_DOC || 'service_presets',
+
+  // 📊 ACCOUNTING EFKA CONFIG DOCUMENT (ADR-245B: Hardcoded Strings Audit)
+  // Path: accounting_efka_config/user_config — EFKA user configuration
+  ACCT_EFKA_USER_CONFIG: process.env.NEXT_PUBLIC_ACCT_EFKA_USER_CONFIG_DOC || 'user_config',
 } as const;
 
 // ============================================================================

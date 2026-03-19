@@ -30,6 +30,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore, getAdminDiagnostics } from '@/lib/firebaseAdmin';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import type { CompanyContact } from '@/types/contacts';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -244,7 +245,7 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
           const contactsSnapshot = await adminDb
             .collection(COLLECTIONS.CONTACTS)
             .where('__name__', 'in', chunk)
-            .where('type', '==', 'company')
+            .where(FIELDS.TYPE, '==', 'company')
             .get();
 
           contactsSnapshot.docs.forEach(doc => {
@@ -338,7 +339,7 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
         // 🏢 ENTERPRISE: Single query - under the limit (Admin SDK)
         const projectsSnapshot = await adminDb
           .collection(COLLECTIONS.PROJECTS)
-          .where('companyId', 'in', companyIds)
+          .where(FIELDS.COMPANY_ID, 'in', companyIds)
           .get();
 
         allProjects = projectsSnapshot.docs.map(doc => mapProjectDocument(doc));
@@ -353,7 +354,7 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
           chunks.map(async (chunk) => {
             const snapshot = await adminDb
               .collection(COLLECTIONS.PROJECTS)
-              .where('companyId', 'in', chunk)
+              .where(FIELDS.COMPANY_ID, 'in', chunk)
               .get();
             return snapshot.docs.map(doc => mapProjectDocument(doc));
           })
@@ -397,7 +398,7 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
         buildingChunks.map(async (chunk) => {
           const snapshot = await adminDb
             .collection(COLLECTIONS.BUILDINGS)
-            .where('projectId', 'in', chunk)
+            .where(FIELDS.PROJECT_ID, 'in', chunk)
             .get();
           return snapshot.docs;
         })

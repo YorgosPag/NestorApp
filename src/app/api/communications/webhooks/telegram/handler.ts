@@ -24,6 +24,7 @@ import type { TelegramMessage, TelegramSendPayload } from './telegram/types';
 import { transcribeVoiceMessage } from './telegram/whisper-transcription';
 import { getCompanyId } from '@/config/tenant';
 import { createModuleLogger } from '@/lib/telemetry';
+import { FIELDS } from '@/config/firestore-field-constants';
 
 const logger = createModuleLogger('TelegramHandler');
 
@@ -465,6 +466,7 @@ export async function handleGET(): Promise<NextResponse> {
       try {
         const { getAdminFirestore } = await import('@/lib/firebaseAdmin');
         const { COLLECTIONS } = await import('@/config/firestore-collections');
+        const { FIELDS } = await import('@/config/firestore-field-constants');
         const adminDb = getAdminFirestore();
 
         const companyId = getCompanyId();
@@ -472,7 +474,7 @@ export async function handleGET(): Promise<NextResponse> {
         // Step 1: Projects
         const projectsSnap = await adminDb
           .collection(COLLECTIONS.PROJECTS)
-          .where('companyId', '==', companyId)
+          .where(FIELDS.COMPANY_ID, '==', companyId)
           .limit(10)
           .get();
 
@@ -488,7 +490,7 @@ export async function handleGET(): Promise<NextResponse> {
         if (projectIds.length > 0) {
           const buildSnap = await adminDb
             .collection(COLLECTIONS.BUILDINGS)
-            .where('projectId', 'in', projectIds.slice(0, 30))
+            .where(FIELDS.PROJECT_ID, 'in', projectIds.slice(0, 30))
             .get();
           buildings = buildSnap.docs.map(d => ({
             id: d.id,
@@ -503,7 +505,7 @@ export async function handleGET(): Promise<NextResponse> {
         if (buildingIds.length > 0) {
           const phaseSnap = await adminDb
             .collection(COLLECTIONS.CONSTRUCTION_PHASES)
-            .where('buildingId', 'in', buildingIds.slice(0, 30))
+            .where(FIELDS.BUILDING_ID, 'in', buildingIds.slice(0, 30))
             .limit(50)
             .get();
           phases = phaseSnap.docs.map(d => ({

@@ -16,6 +16,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 export const maxDuration = 60;
@@ -35,7 +36,7 @@ async function handler(
     // Query all files created by this user
     const filesSnapshot = await adminDb
       .collection(COLLECTIONS.FILES)
-      .where('createdBy', '==', userId)
+      .where(FIELDS.CREATED_BY, '==', userId)
       .get();
 
     const files = filesSnapshot.docs.map((doc) => {
@@ -96,7 +97,7 @@ async function handler(
     // Query shares created by this user
     const sharesSnapshot = await adminDb
       .collection(COLLECTIONS.FILE_SHARES)
-      .where('createdBy', '==', userId)
+      .where(FIELDS.CREATED_BY, '==', userId)
       .get();
 
     const shares = sharesSnapshot.docs.map((doc) => {

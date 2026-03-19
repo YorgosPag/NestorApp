@@ -9,7 +9,8 @@
  */
 
 import { getAdminFirestore, safeFirestoreOperation, FieldValue } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import {
   generateJournalEntryId,
   generateInvoiceAccId,
@@ -87,7 +88,7 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
 
   async getCompanySetup(): Promise<CompanyProfile | null> {
     return safeFirestoreOperation(async (db) => {
-      const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc('company_profile').get();
+      const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(SYSTEM_DOCS.ACCT_COMPANY_PROFILE).get();
       if (!snap.exists) return null;
       const raw = snap.data() as Record<string, unknown>;
       // Backward compat: docs without entityType → sole_proprietor
@@ -101,7 +102,7 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
   async saveCompanySetup(data: CompanySetupInput): Promise<void> {
     const now = isoNow();
     await safeFirestoreOperation(async (db) => {
-      const docRef = db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc('company_profile');
+      const docRef = db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(SYSTEM_DOCS.ACCT_COMPANY_PROFILE);
       const existing = await docRef.get();
 
       const doc = sanitizeForFirestore({
@@ -120,7 +121,7 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
 
   async getPartners(): Promise<Partner[]> {
     return safeFirestoreOperation(async (db) => {
-      const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc('partners').get();
+      const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(SYSTEM_DOCS.ACCT_PARTNERS).get();
       if (!snap.exists) return [];
       const data = snap.data() as { partners: Partner[] };
       return data.partners ?? [];
@@ -130,7 +131,7 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
   async savePartners(partners: Partner[]): Promise<void> {
     const now = isoNow();
     await safeFirestoreOperation(async (db) => {
-      const docRef = db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc('partners');
+      const docRef = db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(SYSTEM_DOCS.ACCT_PARTNERS);
       const doc = sanitizeForFirestore({
         partners,
         updatedAt: now,
@@ -155,7 +156,7 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
 
   async getMembers(): Promise<Member[]> {
     return safeFirestoreOperation(async (db) => {
-      const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc('members').get();
+      const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(SYSTEM_DOCS.ACCT_MEMBERS).get();
       if (!snap.exists) return [];
       const data = snap.data() as { members: Member[] };
       return data.members ?? [];
@@ -165,7 +166,7 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
   async saveMembers(members: Member[]): Promise<void> {
     const now = isoNow();
     await safeFirestoreOperation(async (db) => {
-      const docRef = db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc('members');
+      const docRef = db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(SYSTEM_DOCS.ACCT_MEMBERS);
       const doc = sanitizeForFirestore({
         members,
         updatedAt: now,
@@ -190,7 +191,7 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
 
   async getShareholders(): Promise<Shareholder[]> {
     return safeFirestoreOperation(async (db) => {
-      const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc('shareholders').get();
+      const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(SYSTEM_DOCS.ACCT_SHAREHOLDERS).get();
       if (!snap.exists) return [];
       const data = snap.data() as { shareholders: Shareholder[] };
       return data.shareholders ?? [];
@@ -200,7 +201,7 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
   async saveShareholders(shareholders: Shareholder[]): Promise<void> {
     const now = isoNow();
     await safeFirestoreOperation(async (db) => {
-      const docRef = db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc('shareholders');
+      const docRef = db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(SYSTEM_DOCS.ACCT_SHAREHOLDERS);
       const doc = sanitizeForFirestore({
         shareholders,
         updatedAt: now,
@@ -269,12 +270,12 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
     return safeFirestoreOperation(async (db) => {
       let query: FirebaseFirestore.Query = db.collection(COLLECTIONS.ACCOUNTING_JOURNAL_ENTRIES);
 
-      if (filters.type) query = query.where('type', '==', filters.type);
+      if (filters.type) query = query.where(FIELDS.TYPE, '==', filters.type);
       if (filters.category) query = query.where('category', '==', filters.category);
       if (filters.fiscalYear) query = query.where('fiscalYear', '==', filters.fiscalYear);
       if (filters.quarter) query = query.where('quarter', '==', filters.quarter);
       if (filters.paymentMethod) query = query.where('paymentMethod', '==', filters.paymentMethod);
-      if (filters.contactId) query = query.where('contactId', '==', filters.contactId);
+      if (filters.contactId) query = query.where(FIELDS.CONTACT_ID, '==', filters.contactId);
 
       query = query.orderBy('date', 'desc').limit(pageSize);
 
@@ -337,12 +338,12 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
     return safeFirestoreOperation(async (db) => {
       let query: FirebaseFirestore.Query = db.collection(COLLECTIONS.ACCOUNTING_INVOICES);
 
-      if (filters.type) query = query.where('type', '==', filters.type);
+      if (filters.type) query = query.where(FIELDS.TYPE, '==', filters.type);
       if (filters.paymentStatus) query = query.where('paymentStatus', '==', filters.paymentStatus);
       if (filters.fiscalYear) query = query.where('fiscalYear', '==', filters.fiscalYear);
       if (filters.customerId) query = query.where('customer.contactId', '==', filters.customerId);
-      if (filters.projectId) query = query.where('projectId', '==', filters.projectId);
-      if (filters.unitId) query = query.where('unitId', '==', filters.unitId);
+      if (filters.projectId) query = query.where(FIELDS.PROJECT_ID, '==', filters.projectId);
+      if (filters.unitId) query = query.where(FIELDS.UNIT_ID, '==', filters.unitId);
 
       query = query.orderBy('issueDate', 'desc').limit(pageSize);
 
@@ -387,7 +388,7 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
     return safeFirestoreOperation(async (db) => {
       const snap = await db
         .collection(COLLECTIONS.ACCOUNTING_SETTINGS)
-        .doc('service_presets')
+        .doc(SYSTEM_DOCS.ACCT_SERVICE_PRESETS)
         .get();
       if (!snap.exists) return [];
       const doc = snap.data() as ServicePresetsDocument;
@@ -400,7 +401,7 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
     await safeFirestoreOperation(async (db) => {
       const docRef = db
         .collection(COLLECTIONS.ACCOUNTING_SETTINGS)
-        .doc('service_presets');
+        .doc(SYSTEM_DOCS.ACCT_SERVICE_PRESETS);
       const doc = sanitizeForFirestore({
         presets,
         updatedAt: now,
@@ -542,7 +543,7 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
       let query: FirebaseFirestore.Query = db.collection(COLLECTIONS.ACCOUNTING_FIXED_ASSETS);
 
       if (filters.category) query = query.where('category', '==', filters.category);
-      if (filters.status) query = query.where('status', '==', filters.status);
+      if (filters.status) query = query.where(FIELDS.STATUS, '==', filters.status);
       if (filters.acquisitionYear) query = query.where('acquisitionFiscalYear', '==', filters.acquisitionYear);
 
       query = query.orderBy('acquisitionDate', 'desc').limit(pageSize);
@@ -613,7 +614,7 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
 
   async getEFKAUserConfig(): Promise<EFKAUserConfig | null> {
     return safeFirestoreOperation(async (db) => {
-      const snap = await db.collection(COLLECTIONS.ACCOUNTING_EFKA_CONFIG).doc('user_config').get();
+      const snap = await db.collection(COLLECTIONS.ACCOUNTING_EFKA_CONFIG).doc(SYSTEM_DOCS.ACCT_EFKA_USER_CONFIG).get();
       if (!snap.exists) return null;
       return snap.data() as EFKAUserConfig;
     }, null);
@@ -621,7 +622,7 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
 
   async saveEFKAUserConfig(config: EFKAUserConfig): Promise<void> {
     await safeFirestoreOperation(async (db) => {
-      await db.collection(COLLECTIONS.ACCOUNTING_EFKA_CONFIG).doc('user_config').set(
+      await db.collection(COLLECTIONS.ACCOUNTING_EFKA_CONFIG).doc(SYSTEM_DOCS.ACCT_EFKA_USER_CONFIG).set(
         sanitizeForFirestore(config as unknown as Record<string, unknown>)
       );
     }, undefined);
@@ -703,10 +704,10 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
         .where('fiscalYear', '==', fiscalYear);
 
       if (status) {
-        query = query.where('status', '==', status);
+        query = query.where(FIELDS.STATUS, '==', status);
       }
 
-      query = query.orderBy('createdAt', 'desc');
+      query = query.orderBy(FIELDS.CREATED_AT, 'desc');
 
       const snap = await query.get();
       return snap.docs.map((d) => d.data() as ReceivedExpenseDocument);
@@ -761,7 +762,7 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
         query = query.where('customerId', '==', customerId);
       }
 
-      query = query.orderBy('createdAt', 'desc');
+      query = query.orderBy(FIELDS.CREATED_AT, 'desc');
 
       const snap = await query.get();
       return snap.docs.map((d) => d.data() as APYCertificate);

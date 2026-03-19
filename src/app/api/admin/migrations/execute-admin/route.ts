@@ -29,6 +29,8 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
+import { ENTITY_STATUS } from '@/constants/entity-status-values';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ExecuteAdminMigrationRoute');
@@ -92,8 +94,8 @@ async function handleAdminSdkMigration(
     // Step 1: Fetch all companies
     logger.info('Step 1: Fetching companies...');
     const companiesSnapshot = await adminDb.collection(COLLECTIONS.CONTACTS)
-      .where('type', '==', 'company')
-      .where('status', '==', 'active')
+      .where(FIELDS.TYPE, '==', 'company')
+      .where(FIELDS.STATUS, '==', ENTITY_STATUS.ACTIVE)
       .get();
 
     // 🏢 ENTERPRISE: Type-safe company/project data

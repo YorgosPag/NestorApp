@@ -34,6 +34,7 @@ import {
   type FileSourceMetadata,
 } from '@/services/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
+import { FIELDS } from '@/config/firestore-field-constants';
 
 const logger = createModuleLogger('TelegramMediaDownload');
 
@@ -194,7 +195,7 @@ async function checkExistingFileRecord(params: {
 
     // 🏢 ENTERPRISE: Query MUST include companyId for tenant isolation
     let query = firestore.collection(COLLECTIONS.FILES)
-      .where('companyId', '==', params.companyId) // 🔒 CRITICAL: Tenant isolation
+      .where(FIELDS.COMPANY_ID, '==', params.companyId) // 🔒 CRITICAL: Tenant isolation
       .where('source.chatId', '==', params.chatId)
       .where('source.messageId', '==', params.messageId);
 

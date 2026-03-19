@@ -17,6 +17,7 @@ import 'server-only';
 
 import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { logAuditEvent } from '@/lib/auth/audit';
 import { isRoleBypass } from '@/lib/auth/roles';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
@@ -173,7 +174,7 @@ async function generateEntityCode(
     const adminDb = getAdminFirestore();
     const snapshot = await adminDb
       .collection(entry.collection)
-      .where('buildingId', '==', buildingId)
+      .where(FIELDS.BUILDING_ID, '==', buildingId)
       .get();
 
     let maxSeq = 0;

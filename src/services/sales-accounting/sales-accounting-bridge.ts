@@ -11,6 +11,7 @@
 
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { getCategoryByCode } from '@/subapps/accounting/config/account-categories';
 import { generateTransactionId } from '@/services/enterprise-id.service';
@@ -384,9 +385,9 @@ export class SalesAccountingBridge {
     return safeFirestoreOperation(async (db) => {
       const snap = await db
         .collection(COLLECTIONS.ACCOUNTING_INVOICES)
-        .where('unitId', '==', unitId)
-        .where('type', '==', 'sales_invoice')
-        .orderBy('createdAt', 'asc')
+        .where(FIELDS.UNIT_ID, '==', unitId)
+        .where(FIELDS.TYPE, '==', 'sales_invoice')
+        .orderBy(FIELDS.CREATED_AT, 'asc')
         .limit(1)
         .get();
 

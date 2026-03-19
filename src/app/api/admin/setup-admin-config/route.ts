@@ -26,7 +26,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
         };
 
         // Save to Firestore
-        const docRef = getAdminFirestore().collection(COLLECTIONS.SYSTEM).doc('settings');
+        const docRef = getAdminFirestore().collection(COLLECTIONS.SYSTEM).doc(SYSTEM_DOCS.SYSTEM_SETTINGS);
 
         // Check if document exists
         const existingDoc = await docRef.get();
@@ -193,7 +193,7 @@ export async function GET(request: NextRequest) {
       logger.info('Check request from user', { uid: ctx.uid });
 
       try {
-        const docRef = getAdminFirestore().collection(COLLECTIONS.SYSTEM).doc('settings');
+        const docRef = getAdminFirestore().collection(COLLECTIONS.SYSTEM).doc(SYSTEM_DOCS.SYSTEM_SETTINGS);
         const docSnap = await docRef.get();
 
         if (!docSnap.exists) {

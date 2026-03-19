@@ -18,6 +18,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { getCompanyId } from '@/config/tenant';
 import { generateFeedbackId } from '@/services/enterprise-id.service';
 import { safeJsonParse } from '@/lib/json-utils';
@@ -247,7 +248,7 @@ export class FeedbackService {
       const snap = await db
         .collection(COLLECTIONS.AI_AGENT_FEEDBACK)
         .where('channelSenderId', '==', channelSenderId)
-        .orderBy('createdAt', 'desc')
+        .orderBy(FIELDS.CREATED_AT, 'desc')
         .limit(1)
         .get();
 
@@ -358,7 +359,7 @@ export class FeedbackService {
       const staleDocs = await db
         .collection(COLLECTIONS.AI_AGENT_FEEDBACK)
         .where('rating', '==', null)
-        .where('createdAt', '<', cutoff)
+        .where(FIELDS.CREATED_AT, '<', cutoff)
         .limit(100)
         .get();
 

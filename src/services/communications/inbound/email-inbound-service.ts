@@ -2,7 +2,9 @@ import { createHash } from 'crypto';
 import { isRecord } from '@/lib/type-guards';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getAdminFirestore } from '@/server/admin/admin-guards';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
+import { ENTITY_STATUS } from '@/constants/entity-status-values';
 import { logWebhookEvent } from '@/lib/auth/audit';
 import { COMMUNICATION_CHANNELS } from '@/types/communications';
 import type { Communication } from '@/types/crm';
@@ -117,7 +119,7 @@ function matchesRoutingPattern(pattern: string, email: string): boolean {
 
 async function loadInboundRoutingRules(): Promise<InboundRoutingRule[]> {
   const adminDb = getAdminFirestore();
-  const settingsDoc = await adminDb.collection(COLLECTIONS.SYSTEM).doc('settings').get();
+  const settingsDoc = await adminDb.collection(COLLECTIONS.SYSTEM).doc(SYSTEM_DOCS.SYSTEM_SETTINGS).get();
   if (!settingsDoc.exists) return [];
 
   const data = settingsDoc.data();
@@ -164,7 +166,7 @@ async function findContactByEmail(companyId: string, email: string): Promise<str
 
   for (const field of candidateFields) {
     const snapshot = await contactsRef
-      .where('companyId', '==', companyId)
+      .where(FIELDS.COMPANY_ID, '==', companyId)
       .where(field, '==', normalizedEmail)
       .limit(1)
       .get();
@@ -653,8 +655,8 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
     const ADMIN_GLOBAL_ROLES: GlobalRole[] = ['super_admin', 'company_admin'];
     const usersSnapshot = await adminDb
       .collection(COLLECTIONS.USERS)
-      .where('companyId', '==', routing.companyId)
-      .where('status', '==', 'active')
+      .where(FIELDS.COMPANY_ID, '==', routing.companyId)
+      .where(FIELDS.STATUS, '==', ENTITY_STATUS.ACTIVE)
       .where('globalRole', 'in', ADMIN_GLOBAL_ROLES)
       .get();
 

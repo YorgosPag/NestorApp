@@ -15,6 +15,7 @@
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { generatePaymentPlanId, generatePaymentRecordId } from '@/services/enterprise-id.service';
 import type {
@@ -170,7 +171,7 @@ export class PaymentPlanService {
       const db = getDb();
       const snapshot = await db
         .collection(planCollectionPath(unitId))
-        .where('status', 'in', ['negotiation', 'draft', 'active', 'completed'])
+        .where(FIELDS.STATUS, 'in', ['negotiation', 'draft', 'active', 'completed'])
         .limit(1)
         .get();
       if (snapshot.empty) return null;
@@ -905,7 +906,7 @@ export class PaymentPlanService {
       const db = getDb();
       const snapshot = await db
         .collection(paymentCollectionPath(unitId))
-        .orderBy('createdAt', 'desc')
+        .orderBy(FIELDS.CREATED_AT, 'desc')
         .get();
       return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as PaymentRecord);
     } catch (error) {

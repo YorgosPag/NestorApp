@@ -4,6 +4,8 @@ import {
   getAdminFirestore,
   SERVER_COLLECTIONS,
 } from '@/server/admin/admin-guards';
+import { FIELDS } from '@/config/firestore-field-constants';
+import { ENTITY_STATUS } from '@/constants/entity-status-values';
 
 /**
  * ENTERPRISE: Admin Building Templates Service
@@ -101,8 +103,8 @@ export async function listTemplatesForCompany(
 
   const snapshot = await db
     .collection(SERVER_COLLECTIONS.ADMIN_BUILDING_TEMPLATES)
-    .where('companyId', '==', companyId)
-    .where('status', '==', 'active')
+    .where(FIELDS.COMPANY_ID, '==', companyId)
+    .where(FIELDS.STATUS, '==', ENTITY_STATUS.ACTIVE)
     .get();
 
   return snapshot.docs.map((doc) => ({
@@ -131,7 +133,7 @@ export async function buildingExistsForTemplate(
 
   const snapshot = await db
     .collection(SERVER_COLLECTIONS.BUILDINGS)
-    .where('companyId', '==', companyId)
+    .where(FIELDS.COMPANY_ID, '==', companyId)
     .where('sourceTemplateId', '==', templateId)
     .limit(1)
     .get();
@@ -155,7 +157,7 @@ export async function getExistingBuildingId(
 
   const snapshot = await db
     .collection(SERVER_COLLECTIONS.BUILDINGS)
-    .where('companyId', '==', companyId)
+    .where(FIELDS.COMPANY_ID, '==', companyId)
     .where('sourceTemplateId', '==', templateId)
     .limit(1)
     .get();

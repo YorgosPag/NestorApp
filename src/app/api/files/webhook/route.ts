@@ -16,6 +16,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 export const maxDuration = 10;
@@ -53,7 +54,7 @@ async function handleGet(
 
     const snapshot = await adminDb
       .collection(COLLECTIONS.FILE_WEBHOOKS)
-      .where('createdBy', '==', ctx.uid)
+      .where(FIELDS.CREATED_BY, '==', ctx.uid)
       .get();
 
     const webhooks = snapshot.docs.map((d) => ({

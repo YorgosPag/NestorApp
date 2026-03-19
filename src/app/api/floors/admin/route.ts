@@ -17,6 +17,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { groupByKey } from '@/utils/collection-utils';
@@ -88,7 +89,7 @@ export async function GET(request: NextRequest) {
         if (buildingId) {
           // Query floors by buildingId (Enterprise foreign key relationship)
           const floorsSnapshot = await getAdminFirestore().collection(COLLECTIONS.FLOORS)
-            .where('buildingId', '==', buildingId)
+            .where(FIELDS.BUILDING_ID, '==', buildingId)
             .get();
 
           floors = floorsSnapshot.docs.map(doc => ({
@@ -102,7 +103,7 @@ export async function GET(request: NextRequest) {
         } else if (projectId) {
           // Query floors by projectId
           const floorsSnapshot = await getAdminFirestore().collection(COLLECTIONS.FLOORS)
-            .where('projectId', '==', projectId)
+            .where(FIELDS.PROJECT_ID, '==', projectId)
             .get();
 
           floors = floorsSnapshot.docs.map(doc => ({

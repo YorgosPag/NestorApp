@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { getContactDisplayName, getPrimaryPhone, getPrimaryEmail, type Contact } from '@/types/contacts';
 import { COLLECTIONS, FIRESTORE_LIMITS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { withAuth, requireBuildingInTenant, TenantIsolationError } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -80,8 +81,8 @@ export async function GET(
         // 🔒 TENANT ISOLATION: Query units with both companyId AND buildingId filters
         logger.info('Fetching units for building', { buildingId });
         const unitsSnapshot = await getAdminFirestore().collection(COLLECTIONS.UNITS)
-          .where('companyId', '==', ctx.companyId)
-          .where('buildingId', '==', buildingId)
+          .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
+          .where(FIELDS.BUILDING_ID, '==', buildingId)
           .get();
 
         const units = unitsSnapshot.docs.map(doc => ({
@@ -136,7 +137,7 @@ export async function GET(
 
         // Query contacts with tenant isolation
         const contactsSnapshot = await getAdminFirestore().collection(COLLECTIONS.CONTACTS)
-          .where('companyId', '==', ctx.companyId)
+          .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
           .where('__name__', 'in', contactIdsToQuery)
           .get();
 

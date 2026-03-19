@@ -25,6 +25,7 @@ import {
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
+import { FIELDS } from '@/config/firestore-field-constants';
 
 const logger = createModuleLogger('DeletionGuard');
 
@@ -149,7 +150,7 @@ async function executeCascadeDeletions(
       let query: FirebaseFirestore.Query = db.collection(dep.collection);
 
       if (!dep.skipCompanyFilter) {
-        query = query.where('companyId', '==', companyId);
+        query = query.where(FIELDS.COMPANY_ID, '==', companyId);
       }
 
       if (dep.queryType === 'array-contains') {
@@ -329,7 +330,7 @@ async function checkSingleDependency(
 
     // Tenant isolation — skip for collections without companyId (e.g. accounting_invoices)
     if (!dep.skipCompanyFilter) {
-      query = query.where('companyId', '==', companyId);
+      query = query.where(FIELDS.COMPANY_ID, '==', companyId);
     }
 
     if (dep.queryType === 'array-contains') {

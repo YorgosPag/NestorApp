@@ -29,6 +29,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 // 🏢 ENTERPRISE: Import from centralized search types (ADR-029 - ZERO duplicates)
@@ -703,7 +704,7 @@ async function backfillEntityType(
   let query: Query<DocumentData> = adminDb.collection(config.collection);
 
   if (options.companyId) {
-    query = query.where('companyId', '==', options.companyId);
+    query = query.where(FIELDS.COMPANY_ID, '==', options.companyId);
   }
 
   // ADR-214 Phase 8: Default limit(500) to prevent unbounded reads
@@ -949,7 +950,7 @@ export const GET = withAuth<BackfillStatusApiResponse>(
     for (const entityType of Object.values(SEARCH_ENTITY_TYPES)) {
       const snapshot = await adminDb
         .collection(COLLECTIONS.SEARCH_DOCUMENTS)
-        .where('entityType', '==', entityType)
+        .where(FIELDS.ENTITY_TYPE, '==', entityType)
         .count()
         .get();
       counts[entityType] = snapshot.data().count;

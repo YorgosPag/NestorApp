@@ -14,6 +14,7 @@ import { FieldValue as AdminFieldValue, Timestamp as AdminTimestamp } from 'fire
 import type { Communication } from '@/types/crm';
 import { TRIAGE_STATUSES, TRIAGE_STATUS_VALUES, type TriageStatus } from '@/constants/triage-statuses';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { generateMessageId } from '@/services/enterprise-id.service';
 import { getAdminFirestore } from '@/server/admin/admin-guards';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
@@ -117,7 +118,7 @@ async function fetchTriageCommunications(params: {
   } else {
     // Tenant-scoped: filter by companyId
     if (params.status) {
-      snapshots = [await messagesRef.where('companyId', '==', params.companyId).where('triageStatus', '==', params.status).get()];
+      snapshots = [await messagesRef.where(FIELDS.COMPANY_ID, '==', params.companyId).where('triageStatus', '==', params.status).get()];
     } else {
       // 🐛 DEBUG: Log each query
       logger.info('📊 Fetching stats - running queries for each status', {
@@ -128,7 +129,7 @@ async function fetchTriageCommunications(params: {
       snapshots = await Promise.all(
         TRIAGE_STATUS_VALUES.map(async (status) => {
           const snapshot = await messagesRef
-            .where('companyId', '==', params.companyId)
+            .where(FIELDS.COMPANY_ID, '==', params.companyId)
             .where('triageStatus', '==', status)
             .get();
 

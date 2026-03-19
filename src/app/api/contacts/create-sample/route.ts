@@ -3,6 +3,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { generateContactId } from '@/services/enterprise-id.service';
@@ -304,7 +305,7 @@ export const POST = withStandardRateLimit(
 
     // Get all sold units that currently use old customer_xxx IDs
     const unitsSnapshot = await getAdminFirestore().collection(COLLECTIONS.UNITS)
-      .where('status', '==', 'sold')
+      .where(FIELDS.STATUS, '==', 'sold')
       .get();
 
     let updatedUnits = 0;

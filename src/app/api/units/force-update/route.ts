@@ -18,6 +18,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { UNIT_SALE_STATUS } from '@/constants/property-statuses-enterprise';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { processAdminBatch, BATCH_SIZE_WRITE } from '@/lib/admin-batch-utils';
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest) {
         logger.info('[Units/ForceUpdate] Loading available contact IDs from database');
         const contactsSnapshot = await getAdminFirestore()
           .collection(COLLECTIONS.CONTACTS)
-          .where('type', '==', 'individual')
+          .where(FIELDS.TYPE, '==', 'individual')
           .limit(8)
           .get();
 

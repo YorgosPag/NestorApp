@@ -3,6 +3,8 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
+import { ENTITY_STATUS } from '@/constants/entity-status-values';
 import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -60,9 +62,9 @@ export const GET = withHighRateLimit(
         }
     const contactsSnapshot = await adminDb
       .collection(COLLECTIONS.CONTACTS)
-      .where('type', '==', 'company')
-      .where('status', '==', 'active')
-      .where('companyId', '==', ctx.companyId)
+      .where(FIELDS.TYPE, '==', 'company')
+      .where(FIELDS.STATUS, '==', ENTITY_STATUS.ACTIVE)
+      .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
       .get();
 
     const companies = contactsSnapshot.docs.map(doc => ({

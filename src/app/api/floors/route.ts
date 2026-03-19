@@ -18,6 +18,7 @@ import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { isRoleBypass } from '@/lib/auth/roles';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -92,13 +93,13 @@ export const GET = withStandardRateLimit(
         const baseCollection = getAdminFirestore().collection(COLLECTIONS.FLOORS);
         let floorsQuery: FirebaseFirestore.Query = isSuperAdmin
           ? baseCollection
-          : baseCollection.where('companyId', '==', tenantCompanyId);
+          : baseCollection.where(FIELDS.COMPANY_ID, '==', tenantCompanyId);
 
         // Apply additional filters
         if (buildingId) {
-          floorsQuery = floorsQuery.where('buildingId', '==', buildingId);
+          floorsQuery = floorsQuery.where(FIELDS.BUILDING_ID, '==', buildingId);
         } else if (projectId) {
-          floorsQuery = floorsQuery.where('projectId', '==', normalizeProjectIdForQuery(projectId));
+          floorsQuery = floorsQuery.where(FIELDS.PROJECT_ID, '==', normalizeProjectIdForQuery(projectId));
         }
 
         // Execute query

@@ -17,6 +17,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { extractKeywords, computeKeywordOverlap } from './shared/greek-nlp';
 import type { FeedbackSnapshot, ToolChainDetailEntry } from './feedback-service';
 import { getFeedbackService } from './feedback-service';
@@ -227,7 +228,7 @@ export class LearningService {
       // So we query by updatedAt < cutoff, then filter by score client-side
       const snap = await db
         .collection(COLLECTIONS.AI_LEARNED_PATTERNS)
-        .where('updatedAt', '<', cutoff)
+        .where(FIELDS.UPDATED_AT, '<', cutoff)
         .limit(100)
         .get();
 

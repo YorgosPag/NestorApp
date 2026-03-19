@@ -32,6 +32,8 @@ import {
 } from 'firebase/firestore';
 import { getAdminFirestore } from '@/server/admin/admin-guards';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
+import { ENTITY_STATUS } from '@/constants/entity-status-values';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import type {
   AssignmentPolicy,
@@ -93,7 +95,7 @@ export async function createAssignmentPolicy(
     rules: rulesWithIds,
     triageSettings: input.triageSettings,
     taskDefaults: input.taskDefaults,
-    status: 'active',
+    status: ENTITY_STATUS.ACTIVE,
     createdBy: input.createdBy,
     createdAt,
     version: 1,
@@ -167,7 +169,7 @@ export async function getAssignmentPolicies(
     q = query(q, where('status', '==', queryParams.status));
   } else if (!queryParams.includeInactive) {
     // Default: only active policies
-    q = query(q, where('status', '==', 'active'));
+    q = query(q, where('status', '==', ENTITY_STATUS.ACTIVE));
   }
 
   const snapshot = await getDocs(q);
@@ -185,7 +187,7 @@ export async function getCompanyWidePolicy(
   const policies = await getAssignmentPolicies({
     companyId,
     projectId: null,
-    status: 'active',
+    status: ENTITY_STATUS.ACTIVE,
   });
 
   // Return first active company-wide policy
@@ -201,9 +203,9 @@ export async function getCompanyWidePolicyAdmin(
 ): Promise<AssignmentPolicy | null> {
   const policiesRef = getPoliciesAdminCollection();
   const snapshot = await policiesRef
-    .where('companyId', '==', companyId)
-    .where('projectId', '==', null)
-    .where('status', '==', 'active')
+    .where(FIELDS.COMPANY_ID, '==', companyId)
+    .where(FIELDS.PROJECT_ID, '==', null)
+    .where(FIELDS.STATUS, '==', ENTITY_STATUS.ACTIVE)
     .limit(1)
     .get();
 
@@ -225,7 +227,7 @@ export async function getProjectPolicy(
   const policies = await getAssignmentPolicies({
     companyId,
     projectId,
-    status: 'active',
+    status: ENTITY_STATUS.ACTIVE,
   });
 
   // Return first active project-specific policy
@@ -242,9 +244,9 @@ export async function getProjectPolicyAdmin(
 ): Promise<AssignmentPolicy | null> {
   const policiesRef = getPoliciesAdminCollection();
   const snapshot = await policiesRef
-    .where('companyId', '==', companyId)
-    .where('projectId', '==', projectId)
-    .where('status', '==', 'active')
+    .where(FIELDS.COMPANY_ID, '==', companyId)
+    .where(FIELDS.PROJECT_ID, '==', projectId)
+    .where(FIELDS.STATUS, '==', ENTITY_STATUS.ACTIVE)
     .limit(1)
     .get();
 

@@ -17,6 +17,7 @@ import 'server-only';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { fuzzyGreekMatch } from './greek-text-utils';
 import { generateContactId, generateCompanyId } from '@/services/enterprise-id.service';
@@ -68,7 +69,7 @@ export async function findContactByEmail(
 
   const snapshot = await adminDb
     .collection(COLLECTIONS.CONTACTS)
-    .where('companyId', '==', companyId)
+    .where(FIELDS.COMPANY_ID, '==', companyId)
     .limit(50)
     .get();
 
@@ -125,7 +126,7 @@ export async function findContactByName(
   // Fetch contacts for this company (limited scan for MVP)
   const snapshot = await adminDb
     .collection(COLLECTIONS.CONTACTS)
-    .where('companyId', '==', companyId)
+    .where(FIELDS.COMPANY_ID, '==', companyId)
     .limit(200)
     .get();
 
@@ -215,7 +216,7 @@ export async function listContacts(
 
   const snapshot = await adminDb
     .collection(COLLECTIONS.CONTACTS)
-    .where('companyId', '==', companyId)
+    .where(FIELDS.COMPANY_ID, '==', companyId)
     .limit(200)
     .get();
 

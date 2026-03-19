@@ -16,6 +16,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 export const maxDuration = 60;
@@ -52,7 +53,7 @@ async function handler(
     // 1. Delete files (respect holds)
     const filesSnapshot = await adminDb
       .collection(COLLECTIONS.FILES)
-      .where('createdBy', '==', userId)
+      .where(FIELDS.CREATED_BY, '==', userId)
       .get();
 
     const batch1 = adminDb.batch();
@@ -92,7 +93,7 @@ async function handler(
     // 3. Delete shares
     const sharesSnapshot = await adminDb
       .collection(COLLECTIONS.FILE_SHARES)
-      .where('createdBy', '==', userId)
+      .where(FIELDS.CREATED_BY, '==', userId)
       .get();
 
     const batch3 = adminDb.batch();
