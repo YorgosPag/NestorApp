@@ -98,7 +98,7 @@ export function useLinkedSpacesForSale(unit: Unit): UseLinkedSpacesForSaleResult
               try {
                 const endpoint = ls.spaceType === 'parking'
                   ? `/api/parking/${ls.spaceId}`
-                  : `/api/storage/${ls.spaceId}`;
+                  : `/api/storages/${ls.spaceId}`;
                 const data = await apiClient.get<{
                   area?: number;
                   commercial?: { askingPrice?: number };
