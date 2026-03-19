@@ -268,7 +268,8 @@
   "admin": {
     "aiInbox": "AI Εισερχόμενα",
     "operatorInbox": "Εισερχόμενα Χειριστών",
-    "setup": "Ρύθμιση Admin"
+    "setup": "Ρύθμιση Admin",
+    "roleManagement": "Διαχείριση Ρόλων"
   },
   "legal": {
     "privacyPolicy": "Πολιτική Απορρήτου",

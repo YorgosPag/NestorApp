@@ -107,6 +107,9 @@ const NAVIGATION_LABELS = {
   // 🏢 ENTERPRISE: Admin Setup
   admin_setup: 'admin.setup',
 
+  // 🏢 ENTERPRISE: Role Management (ADR-244)
+  role_management: 'admin.roleManagement',
+
   // Badges
   badge_new: 'badges.new',
 
@@ -610,6 +613,15 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
                 }
               },
               {
+                icon: Users,
+                href: '/admin/role-management',
+                smartConfig: {
+                  priority: 'medium',
+                  analyticsKey: 'nav_role_management',
+                  permissions: ['admin_access']
+                }
+              },
+              {
                 icon: Archive,
                 href: "/debug",
                 badge: "DEBUG",
@@ -715,6 +727,7 @@ function getLabelKeyForPath(path: string): string {
     'admin/ai-inbox': 'ai_inbox',
     'admin/operator-inbox': 'operator_inbox',
     'admin/setup': 'admin_setup',
+    'admin/role-management': 'role_management',
 
     // Tools paths
     'files': 'file_manager',

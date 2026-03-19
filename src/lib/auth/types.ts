@@ -242,6 +242,11 @@ export const AUDIT_ACTIONS = {
   'data_deleted': true,              // API data delete events (DELETE operations with tenant isolation)
   // Webhook operations (External integrations)
   'webhook_received': true,          // External webhook event received (Mailgun, Telegram, etc.)
+  // Role Management operations (ADR-244: Admin Console)
+  'user_suspended': true,            // User account suspended (Firebase Auth disabled)
+  'user_activated': true,            // User account reactivated (Firebase Auth enabled)
+  'permission_set_granted': true,    // Org-level permission set assigned to user
+  'permission_set_revoked': true,    // Org-level permission set removed from user
 } as const;
 
 /**
@@ -353,6 +358,34 @@ export interface UnauthenticatedContext {
  * Union type for request context.
  */
 export type RequestContext = AuthContext | UnauthenticatedContext;
+
+// =============================================================================
+// COMPANY MEMBERSHIP (ADR-244: Role Management — Source of Truth for RBAC)
+// =============================================================================
+
+/**
+ * Company member document structure.
+ * Stored in /companies/{companyId}/members/{uid}
+ *
+ * This is the SOURCE OF TRUTH for user authorization data.
+ * Firebase Custom Claims contain a sync copy of globalRole.
+ */
+export interface CompanyMemberDocument {
+  /** Firebase Auth UID */
+  uid: string;
+  /** Global role — SOURCE OF TRUTH (Firebase claims = sync copy) */
+  globalRole: GlobalRole;
+  /** User status — derived from Firebase Auth disabled field */
+  status: 'active' | 'suspended';
+  /** When the user joined the company */
+  joinedAt: Date;
+  /** Org-level permission set IDs (apply to ALL projects) */
+  permissionSetIds: string[];
+  /** Who added this member */
+  addedBy: string;
+  /** Last update timestamp */
+  updatedAt: Date | null;
+}
 
 // =============================================================================
 // PROJECT MEMBERSHIP

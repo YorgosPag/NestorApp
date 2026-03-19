@@ -298,6 +298,9 @@ export const SUBCOLLECTIONS = {
   // Project subcollections (RBAC: /companies/{id}/projects/{id}/members)
   PROJECT_MEMBERS: process.env.NEXT_PUBLIC_PROJECT_MEMBERS_SUBCOL || 'members',
 
+  // Company member subcollections (ADR-244: Role Management — /companies/{id}/members/{uid})
+  COMPANY_MEMBERS: process.env.NEXT_PUBLIC_COMPANY_MEMBERS_SUBCOL || 'members',
+
   // Unit subcollections (RBAC: /companies/{id}/units/{id}/grants)
   UNIT_GRANTS: process.env.NEXT_PUBLIC_UNIT_GRANTS_SUBCOL || 'grants',
 

@@ -268,7 +268,8 @@
   "admin": {
     "aiInbox": "AI Inbox",
     "operatorInbox": "Operator Inbox",
-    "setup": "Admin Setup"
+    "setup": "Admin Setup",
+    "roleManagement": "Role Management"
   },
   "legal": {
     "privacyPolicy": "Privacy Policy",

@@ -266,5 +266,112 @@
       "emailHint": "\"Send email to [name] that...\" — Send email",
       "statsHint": "\"How many properties do we have?\" — Unit stats"
     }
+  },
+  "roleManagement": {
+    "title": "Role Management",
+    "tabs": {
+      "users": "Users",
+      "roles": "Roles & Permissions",
+      "audit": "Audit Log",
+      "projects": "Project Members"
+    },
+    "usersTab": {
+      "search": "Search users by name or email...",
+      "filterRole": "Filter by role",
+      "filterStatus": "Filter by status",
+      "allRoles": "All Roles",
+      "allStatuses": "All Statuses",
+      "noUsers": "No users found",
+      "loadingUsers": "Loading users..."
+    },
+    "roleChange": {
+      "title": "Change Role",
+      "currentRole": "Current Role",
+      "newRole": "New Role",
+      "selectRole": "Select new role",
+      "reason": "Reason for change",
+      "reasonPlaceholder": "Explain why this role change is needed (min 10 chars)...",
+      "warning": "User must re-login for changes to apply",
+      "selfProtection": "Cannot change your own role",
+      "confirm": "Confirm Change",
+      "cancel": "Cancel",
+      "success": "Role changed successfully",
+      "error": "Failed to change role",
+      "sameRole": "User already has this role"
+    },
+    "status": {
+      "suspendTitle": "Suspend User",
+      "suspendConfirm": "Are you sure you want to suspend this user? They will be unable to sign in.",
+      "reactivateTitle": "Reactivate User",
+      "reason": "Reason",
+      "reasonPlaceholder": "Explain why (min 10 chars)...",
+      "suspendSuccess": "User suspended successfully",
+      "reactivateSuccess": "User reactivated successfully",
+      "error": "Failed to update user status"
+    },
+    "permissionSets": {
+      "title": "Manage Permission Sets",
+      "orgLevel": "Organization-Level Permission Sets",
+      "description": "These permission sets apply to ALL projects",
+      "mfaRequired": "MFA Required",
+      "reason": "Reason for change",
+      "reasonPlaceholder": "Explain why (min 10 chars)...",
+      "save": "Save Changes",
+      "cancel": "Cancel",
+      "success": "Permission sets updated successfully",
+      "error": "Failed to update permission sets",
+      "noChanges": "No changes made"
+    },
+    "userDetail": {
+      "title": "User Details",
+      "userInfo": "User Information",
+      "globalRole": "Global Role",
+      "level": "Level",
+      "status": "Status",
+      "mfa": "MFA Status",
+      "mfaEnrolled": "Enrolled",
+      "mfaNotEnrolled": "Not enrolled",
+      "lastSignIn": "Last Sign-In",
+      "orgPermissionSets": "Organization Permission Sets",
+      "noOrgSets": "No org-level permission sets assigned",
+      "projectMemberships": "Project Memberships",
+      "noProjects": "No project memberships",
+      "effectivePermissions": "Effective Permissions"
+    },
+    "matrix": {
+      "title": "Permission Matrix",
+      "legend": {
+        "full": "Full access",
+        "partial": "Partial access",
+        "none": "No access"
+      }
+    },
+    "hierarchy": {
+      "title": "Role Hierarchy"
+    },
+    "permissionSetCards": {
+      "title": "Permission Set Details",
+      "permissions": "Permissions"
+    },
+    "comingSoon": "Coming soon — Phase B",
+    "accessDenied": "Access Denied",
+    "accessDeniedDescription": "You need super_admin or company_admin role to access this page.",
+    "actions": {
+      "changeRole": "Change Role",
+      "managePermissions": "Manage Permissions",
+      "suspend": "Suspend",
+      "reactivate": "Reactivate",
+      "viewDetails": "View Details"
+    },
+    "table": {
+      "user": "User",
+      "email": "Email",
+      "role": "Role",
+      "status": "Status",
+      "mfa": "MFA",
+      "projects": "Projects",
+      "lastSignIn": "Last Sign-In",
+      "actions": "Actions"
+    }
   }
 }
