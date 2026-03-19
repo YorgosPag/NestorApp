@@ -79,10 +79,11 @@ export function UsersTab({ canEdit }: UsersTabProps) {
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await apiClient.get<UserListResponse>(
+      // apiClient unwraps canonical { success, data } → returns data directly
+      const data = await apiClient.get<UserListResponse['data']>(
         '/api/admin/role-management/users'
       );
-      setUsers(response.data.users);
+      setUsers(data.users);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load users';
       notifyError(message);

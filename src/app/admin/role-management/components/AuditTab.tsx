@@ -62,16 +62,17 @@ export function AuditTab({ canExport }: AuditTabProps) {
       if (filters.targetId) params.set('targetId', filters.targetId);
       if (filters.action && filters.action !== 'all') params.set('action', filters.action);
 
-      const response = await apiClient.get<AuditLogResponse>(
+      // apiClient unwraps canonical { success, data } → returns data directly
+      const data = await apiClient.get<AuditLogResponse['data']>(
         `/api/admin/role-management/audit-log?${params.toString()}`
       );
 
       if (isMore) {
-        setEntries((prev) => [...prev, ...response.data.entries]);
+        setEntries((prev) => [...prev, ...data.entries]);
       } else {
-        setEntries(response.data.entries);
+        setEntries(data.entries);
       }
-      setNextCursor(response.data.nextCursor);
+      setNextCursor(data.nextCursor);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load audit logs';
       notifyError(message);

@@ -105,9 +105,10 @@ export function AssignMemberDialog({
   useEffect(() => {
     if (!open) return;
     setIsLoadingUsers(true);
+    // apiClient unwraps canonical { success, data } → returns data directly
     apiClient
-      .get<UserListResponse>('/api/admin/role-management/users')
-      .then((res) => setCompanyUsers(res.data.users))
+      .get<UserListResponse['data']>('/api/admin/role-management/users')
+      .then((data) => setCompanyUsers(data.users))
       .catch(() => setCompanyUsers([]))
       .finally(() => setIsLoadingUsers(false));
   }, [open]);

@@ -87,11 +87,14 @@ export function ProjectMembersTab({ canEdit }: ProjectMembersTabProps) {
   // ---------------------------------------------------------------------------
   useEffect(() => {
     setIsLoadingProjects(true);
+    // apiClient unwraps canonical { success, data } → returns data directly
+    // Projects list returns data as array directly
     apiClient
-      .get<ProjectListApiResponse>('/api/projects/list')
-      .then((res) => {
+      .get<ProjectListItem[]>('/api/projects/list')
+      .then((data) => {
+        const items = Array.isArray(data) ? data : [];
         setProjects(
-          res.data.map((p) => ({ id: p.id, name: p.name, status: p.status }))
+          items.map((p) => ({ id: p.id, name: p.name, status: p.status }))
         );
       })
       .catch((err) => {
@@ -111,10 +114,11 @@ export function ProjectMembersTab({ canEdit }: ProjectMembersTabProps) {
     }
     setIsLoadingMembers(true);
     try {
-      const res = await apiClient.get<ProjectMembersResponse>(
+      // apiClient unwraps canonical { success, data } → returns data directly
+      const data = await apiClient.get<ProjectMembersResponse['data']>(
         `/api/admin/role-management/project-members?projectId=${encodeURIComponent(projectId)}`
       );
-      setMembers(res.data.members);
+      setMembers(data.members);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load members';
       notifyError(message);
