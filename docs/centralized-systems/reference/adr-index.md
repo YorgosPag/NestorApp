@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 229 ADRs + 5 SPECs (242A-E) | Last Updated: 2026-03-18
+**📊 Stats**: 230 ADRs + 5 SPECs (242A-E) | Last Updated: 2026-03-19
 
 ---
 
@@ -270,6 +270,7 @@
 | ↳ SPEC-242C | Portfolio Dashboard & Debt Maturity Wall | ✅ IMPLEMENTED | 2026-03-18 | — | [📄](./adrs/specs/SPEC-242C-portfolio-dashboard.md) |
 | ↳ SPEC-242D | Monte Carlo Simulation & Equity Waterfall | ✅ IMPLEMENTED | 2026-03-18 | — | [📄](./adrs/specs/SPEC-242D-monte-carlo-waterfall.md) |
 | ↳ SPEC-242E | Forward Curves, Hedging Simulator & NL Financial Query | 🟡 SESSION 1/2 (Curves+Hedging done, NL Query pending) | 2026-03-18 | — | [📄](./adrs/specs/SPEC-242E-forward-curves-hedging-ai.md) |
+| **ADR-243** | Custom Firestore MCP Server — Secure Database Access for Claude Code | ✅ IMPLEMENTED | 2026-03-19 | Infrastructure | [📄](./adrs/ADR-243-firestore-mcp-server.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

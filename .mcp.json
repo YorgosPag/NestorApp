@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "firestore": {
+      "command": "npx",
+      "args": ["tsx", "mcp-server/src/index.ts"],
+      "cwd": "C:\\Nestor_Pagonis",
+      "env": {
+        "DOTENV_PATH": ".env.local"
+      }
+    }
+  }
+}
