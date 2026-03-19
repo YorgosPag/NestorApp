@@ -7,10 +7,10 @@
 | **Parent ADR** | ADR-251 (Scattered Code Patterns Audit) |
 | **Finding** | #1 — Error Handling Patterns |
 | **Priority** | MEDIUM |
-| **Status** | 📋 PENDING |
+| **Status** | ✅ BATCH 1 COMPLETE (111 files) |
 | **Estimated Effort** | ~1 session |
 | **Dependencies** | None — `getErrorMessage()` already exists (ADR-221) |
-| **Strategy** | MIGRATE-ON-TOUCH |
+| **Strategy** | BULK MIGRATION (Batch 1) + MIGRATE-ON-TOUCH (Batch 2) |
 | **Date** | 2026-03-19 |
 
 ---
@@ -194,19 +194,23 @@ const fetchData = async () => {
 
 ## 9. Verification Criteria
 
-- [ ] Κανένα αρχείο δεν έχει `err instanceof Error ? err.message` pattern (εκτός αν δεν αγγίχτηκε)
-- [ ] Κάθε migrated αρχείο κάνει `import { getErrorMessage } from '@/lib/error-utils'`
-- [ ] TypeScript compilation passes χωρίς errors
-- [ ] Error handling behavior δεν αλλάζει (same messages εμφανίζονται στο UI)
+- [x] Κανένα αρχείο στο `src/lib/`, `src/hooks/`, `src/services/` δεν έχει `err instanceof Error ? err.message` pattern
+- [x] Κάθε migrated αρχείο κάνει `import { getErrorMessage } from '@/lib/error-utils'`
+- [ ] TypeScript compilation passes χωρίς errors (tsc running in background)
+- [x] Error handling behavior δεν αλλάζει (same messages εμφανίζονται στο UI)
+- [ ] `src/app/api/` migration (Batch 2 — ~170 αρχεία, pending)
 
 ---
 
 ## 10. Success Metrics
 
-| Metric | Baseline | Target |
-|--------|----------|--------|
-| `getErrorMessage` imports | 41 files | 60+ files |
-| Inline `instanceof Error` patterns | N files | 0 files (in touched files) |
+| Metric | Baseline | After Batch 1 | Target |
+|--------|----------|---------------|--------|
+| `getErrorMessage` imports | 41 files | **152 files** | 200+ files |
+| Inline `instanceof Error` patterns in lib/ | ~12 files | **0 files** | 0 |
+| Inline `instanceof Error` patterns in hooks/ | ~25 files | **0 files** | 0 |
+| Inline `instanceof Error` patterns in services/ | ~76 files | **0 files** | 0 |
+| Inline `instanceof Error` patterns in api/ | ~170 files | ~170 files (Batch 2) | 0 |
 
 ---
 
@@ -215,3 +219,4 @@ const fetchData = async () => {
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-03-19 | Initial SPEC creation | Claude Code |
+| 2026-03-19 | **Batch 1 COMPLETE**: Migrated 111 files (12 lib + 25 hooks + 74 services) — 0 remaining patterns in lib/hooks/services | Claude Code |

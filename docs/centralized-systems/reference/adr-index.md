@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 238 ADRs + 9 SPECs (242A-E, 245B3, 249A-C) | Last Updated: 2026-03-19
+**📊 Stats**: 239 ADRs + 9 SPECs (242A-E, 245B3, 249A-C) | Last Updated: 2026-03-19
 
 ---
 
@@ -24,7 +24,7 @@
 | 📂 **Entity Systems** | 14 | [View](#entity-systems) |
 | 🔧 **Tools & Keyboard** | 8 | [View](#tools-keyboard) |
 | 🔍 **Filters & Search** | 1 | [View](#filters-search) |
-| 🔒 **Security & Auth** | 8 | [View](#security-auth) |
+| 🔒 **Security & Auth** | 9 | [View](#security-auth) |
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
@@ -290,6 +290,7 @@
 | ↳ SPEC-251D | Loading States Centralization → `useAsyncData` + `PageLoadingState` (189 files) | 📋 PENDING | 2026-03-19 | — | [📄](./adrs/specs/SPEC-251D-loading-states-centralization.md) |
 | ↳ SPEC-251E | Dialog State Centralization → `useConfirmDialog` (44 files manual state) | 📋 PENDING | 2026-03-19 | — | [📄](./adrs/specs/SPEC-251E-dialog-state-centralization.md) |
 | ↳ SPEC-251F | Form Validation → Zod Schemas (~6 files manual validation) | 📋 PENDING | 2026-03-19 | — | [📄](./adrs/specs/SPEC-251F-form-validation-zod.md) |
+| **ADR-252** | Comprehensive Security Audit (Firestore Rules, API Routes, Server-side Validation) — 18 findings | 📋 DOCUMENTED | 2026-03-19 | Security / Infrastructure | [📄](./adrs/ADR-252-comprehensive-security-audit.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -481,6 +482,7 @@
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | [View](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
 | **ADR-244** | Role Management Admin Console | 📋 PROPOSED | [View](./adrs/ADR-244-role-management-admin-console.md) |
 | **ADR-245** | API Routes Centralization — Zero Hardcoded Endpoints | ✅ PHASE_A_COMPLETE | [View](./adrs/ADR-245-api-routes-centralization.md) |
+| **ADR-252** | Comprehensive Security Audit (Firestore Rules, API Routes, Server-side Validation) | 📋 DOCUMENTED | [View](./adrs/ADR-252-comprehensive-security-audit.md) |
 
 ---
 
