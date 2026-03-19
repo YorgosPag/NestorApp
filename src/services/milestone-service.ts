@@ -10,6 +10,7 @@
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 import type {
   BuildingMilestone,
   MilestoneCreatePayload,
@@ -63,7 +64,7 @@ export async function createMilestone(
     logger.error('createMilestone failed', { error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: getErrorMessage(error),
     };
   }
 }
@@ -85,7 +86,7 @@ export async function updateMilestone(
     logger.error('updateMilestone failed', { error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: getErrorMessage(error),
     };
   }
 }
@@ -105,7 +106,7 @@ export async function deleteMilestone(
     logger.error('deleteMilestone failed', { error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: getErrorMessage(error),
     };
   }
 }

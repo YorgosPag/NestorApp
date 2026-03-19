@@ -24,6 +24,7 @@ import {
 import { sendChannelReply } from '../../shared/channel-reply-dispatcher';
 import { setAdminSession, buildAdminIdentifier } from '../../shared/admin-session';
 import { extractPhoneFromText, extractEmailFromText } from '@/lib/validation/phone-validation';
+import { getErrorMessage } from '@/lib/error-utils';
 import { PipelineIntentType } from '@/types/ai-pipeline';
 import type {
   IUCModule,
@@ -103,7 +104,7 @@ export class AdminCreateContactModule implements IUCModule {
       try {
         duplicateContact = await findContactByEmail(email, ctx.companyId);
       } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
+        const msg = getErrorMessage(error);
         logger.warn('UC-015 LOOKUP: Duplicate check failed', {
           requestId: ctx.requestId,
           error: msg,
@@ -295,7 +296,7 @@ export class AdminCreateContactModule implements IUCModule {
 
       return { success: true, sideEffects };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error);
       logger.error('UC-015 EXECUTE: Failed', { requestId: ctx.requestId, error: errorMessage });
 
       // If it's a duplicate error from createContactServerSide, notify admin

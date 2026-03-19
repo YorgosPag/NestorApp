@@ -18,6 +18,7 @@
 import 'server-only';
 
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('PIPELINE_MAILGUN_SENDER');
 
@@ -143,7 +144,7 @@ export async function sendReplyViaMailgun(
       messageId: result.id ?? undefined,
     };
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = getErrorMessage(error);
     logger.error('Mailgun send failed', {
       error: msg,
       to: params.to,

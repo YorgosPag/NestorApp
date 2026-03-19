@@ -110,6 +110,7 @@ import { DepartmentMetrics as ServiceDepartmentMetrics } from './hierarchy/Depar
 import { CacheStats } from './adapters/RelationshipCacheAdapter';
 import type { ExportResult } from './bulk/ImportExportService';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 const logger = createModuleLogger('ContactRelationshipService');
 
 // Re-export CacheStats as CacheStatistics for backward compatibility
@@ -510,7 +511,7 @@ export class ContactRelationshipService {
       const importError: ServiceImportError = {
         row: 0,
         data: null,
-        error: error instanceof Error ? error.message : 'Unknown import error'
+        error: getErrorMessage(error, 'Unknown import error')
       };
       return { success: [], errors: [importError] };
     }

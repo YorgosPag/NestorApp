@@ -22,6 +22,7 @@ import {
 } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 
 // ============================================================================
@@ -1039,7 +1040,7 @@ export class PhotoUploadService {
       canonicalLogger.error('Upload failed, marking FileRecord as failed');
       await FileRecordService.markFileRecordFailed(
         fileId,
-        error instanceof Error ? error.message : 'Unknown error'
+        getErrorMessage(error)
       );
       throw error;
     }

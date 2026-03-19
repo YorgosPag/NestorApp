@@ -2,6 +2,7 @@
 
 import { sleep } from '@/lib/async-utils';
 import { isValidEmail } from '@/lib/validation/email-validation';
+import { getErrorMessage } from '@/lib/error-utils';
 import { generateMessageId, generateTemplateId } from '@/services/enterprise-id.service';
 
 // Email Integration Service
@@ -139,9 +140,9 @@ class EmailIntegrationService {
           return { success: false, error: `Unsupported provider: ${provider.type}` };
       }
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error'
+      return {
+        success: false,
+        error: getErrorMessage(error)
       };
     }
   }
@@ -208,9 +209,9 @@ class EmailIntegrationService {
         }
       };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Template processing failed'
+      return {
+        success: false,
+        error: getErrorMessage(error, 'Template processing failed')
       };
     }
   }

@@ -19,6 +19,7 @@ import 'server-only';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('TOOL_ANALYTICS_SERVICE');
 
@@ -92,7 +93,7 @@ export class ToolAnalyticsService {
       // Non-fatal: analytics failure must never break tool execution
       logger.warn('Failed to record tool analytics', {
         toolName,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
     }
   }
@@ -135,7 +136,7 @@ export class ToolAnalyticsService {
       return warnings.slice(0, 4); // Max 4 warnings
     } catch (error) {
       logger.warn('Failed to get tool warnings', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       return [];
     }
@@ -184,7 +185,7 @@ export class ToolAnalyticsService {
       }
     } catch (error) {
       logger.warn('Failed to recompute tool analytics', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
     }
   }

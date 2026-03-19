@@ -5,6 +5,7 @@ import { firestoreQueryService } from '@/services/firestore';
 import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
 import { applyUpdates } from '@/lib/utils';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('useFirestoreProjectsPaginated');
 
@@ -149,7 +150,7 @@ export function useFirestoreProjectsPaginated(
       logger.info('Loaded projects', { count: result.size, hasNext: result.size === pageSize });
     } catch (err) {
       logger.error('Load failed', { error: err });
-      setError(err instanceof Error ? err.message : 'Failed to load projects');
+      setError(getErrorMessage(err, 'Failed to load projects'));
     } finally {
       setLoading(false);
     }
@@ -186,7 +187,7 @@ export function useFirestoreProjectsPaginated(
       logger.info('Refresh complete', { count: result.size });
     } catch (err) {
       logger.error('Refresh failed', { error: err });
-      setError(err instanceof Error ? err.message : 'Failed to refresh projects');
+      setError(getErrorMessage(err, 'Failed to refresh projects'));
     } finally {
       setLoading(false);
     }
@@ -258,7 +259,7 @@ export function useFirestoreProjectsPaginated(
         logger.info('Initial load complete', { count: result.size });
       } catch (err) {
         logger.error('Initial load failed', { error: err });
-        setError(err instanceof Error ? err.message : 'Failed to load projects');
+        setError(getErrorMessage(err, 'Failed to load projects'));
       } finally {
         setLoading(false);
       }

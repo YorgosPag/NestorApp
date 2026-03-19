@@ -56,6 +56,7 @@ import type {
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 const logger = createModuleLogger('EnterpriseSessionService');
 
 // ============================================================================
@@ -479,7 +480,7 @@ export class EnterpriseSessionService {
       logger.error('Failed to revoke session:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
         affectedSessions: [],
         action: 'revoke'
       };
@@ -521,7 +522,7 @@ export class EnterpriseSessionService {
       logger.error('Failed to revoke all sessions:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
         affectedSessions: [],
         action: 'revoke_all'
       };

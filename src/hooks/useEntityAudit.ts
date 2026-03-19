@@ -13,6 +13,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { useAuth } from '@/hooks/useAuth';
+import { getErrorMessage } from '@/lib/error-utils';
 import { RealtimeService } from '@/services/realtime';
 import type { AuditEntityType, EntityAuditEntry, EntityAuditResponse } from '@/types/audit-trail';
 
@@ -82,7 +83,7 @@ export function useEntityAudit({
         setNextCursor(data.nextCursor);
       } catch (err) {
         if (!isMounted.current) return;
-        setError(err instanceof Error ? err.message : 'Failed to load audit trail');
+        setError(getErrorMessage(err, 'Failed to load audit trail'));
       } finally {
         if (isMounted.current) {
           setIsLoading(false);

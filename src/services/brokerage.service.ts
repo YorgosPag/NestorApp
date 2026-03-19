@@ -23,6 +23,7 @@ import {
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 import { generateBrokerageId, generateCommissionId } from '@/services/enterprise-id.service';
 import type {
   BrokerageAgreement,
@@ -111,7 +112,7 @@ export class BrokerageService {
       logger.error('[BrokerageService] Failed to create agreement:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
       };
     }
   }
@@ -181,7 +182,7 @@ export class BrokerageService {
       logger.error('[BrokerageService] Failed to terminate agreement:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
       };
     }
   }
@@ -244,7 +245,7 @@ export class BrokerageService {
       logger.error('[BrokerageService] Failed to update agreement:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
       };
     }
   }
@@ -512,7 +513,7 @@ export class BrokerageService {
       logger.error('[BrokerageService] Failed to record commission:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
       };
     }
   }
@@ -560,7 +561,7 @@ export class BrokerageService {
       logger.error('[BrokerageService] Failed to update commission payment:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
       };
     }
   }

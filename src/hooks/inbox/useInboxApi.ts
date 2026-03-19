@@ -18,6 +18,7 @@ import { useInterval } from '@/hooks/useInterval';
 import { useAuth } from '@/auth/hooks/useAuth';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { getErrorMessage } from '@/lib/error-utils';
 import {
   INBOX_POLL_MS,
   THREAD_POLL_MS,
@@ -216,7 +217,7 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
       }
     } catch (err) {
       if (mountedRef.current) {
-        setError(err instanceof Error ? err.message : 'Failed to load conversations');
+        setError(getErrorMessage(err, 'Failed to load conversations'));
       }
     } finally {
       if (mountedRef.current) {
@@ -377,7 +378,7 @@ export function useConversationMessages(
       }
     } catch (err) {
       if (mountedRef.current) {
-        setError(err instanceof Error ? err.message : 'Failed to load messages');
+        setError(getErrorMessage(err, 'Failed to load messages'));
       }
     } finally {
       if (mountedRef.current) {
@@ -483,7 +484,7 @@ export function useSendMessage(conversationId: string | null): UseSendMessageRes
 
       return result ?? null;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to send message';
+      const errorMessage = getErrorMessage(err, 'Failed to send message');
       setError(errorMessage);
       return null;
     } finally {

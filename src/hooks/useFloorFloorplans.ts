@@ -23,6 +23,7 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FloorFloorplanService, type FloorFloorplanData } from '@/services/floorplans/FloorFloorplanService';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 import { RealtimeService } from '@/services/realtime';
 import type { FloorplanCreatedPayload, FloorplanDeletedPayload } from '@/services/realtime';
 
@@ -273,7 +274,7 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
       }
 
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      const errorMessage = getErrorMessage(err);
       logger.error('Error fetching floor floorplan', { error: err });
       setError(errorMessage);
     } finally {

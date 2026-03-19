@@ -22,6 +22,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 import { extractSearchCriteria, type PropertySearchCriteria } from '@/services/property-search.service';
 import { findContactByEmail, type ContactMatch } from '../../shared/contact-lookup';
 import { sendChannelReply } from '../../shared/channel-reply-dispatcher';
@@ -327,7 +328,7 @@ export class PropertySearchModule implements IUCModule {
       try {
         senderContact = await findContactByEmail(senderEmail, ctx.companyId);
       } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
+        const msg = getErrorMessage(error);
         logger.warn('UC-003 LOOKUP: Contact search failed (non-fatal)', {
           requestId: ctx.requestId,
           error: msg,
@@ -537,7 +538,7 @@ export class PropertySearchModule implements IUCModule {
         ],
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error);
 
       logger.error('UC-003 EXECUTE: Failed', {
         requestId: ctx.requestId,
@@ -582,7 +583,7 @@ export class PropertySearchModule implements IUCModule {
       await adminDb.collection(COLLECTIONS.UNITS).limit(1).get();
       return true;
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
+      const msg = getErrorMessage(error);
       logger.error('UC-003 HEALTH CHECK: Failed', { error: msg });
       return false;
     }

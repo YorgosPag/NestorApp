@@ -17,6 +17,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 import { generatePaymentPlanId, generatePaymentRecordId } from '@/services/enterprise-id.service';
 import type {
   PaymentPlan,
@@ -158,7 +159,7 @@ export class PaymentPlanService {
       logger.error('[PaymentPlanService] Failed to create plan:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
       };
     }
   }
@@ -236,7 +237,7 @@ export class PaymentPlanService {
       logger.error('[PaymentPlanService] Failed to update plan:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
       };
     }
   }
@@ -319,7 +320,7 @@ export class PaymentPlanService {
       logger.error('[PaymentPlanService] Failed to resync total amount:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
       };
     }
   }
@@ -358,7 +359,7 @@ export class PaymentPlanService {
       logger.error('[PaymentPlanService] Failed to delete plan:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
       };
     }
   }
@@ -424,7 +425,7 @@ export class PaymentPlanService {
       logger.error('[PaymentPlanService] Failed to transition plan:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
       };
     }
   }
@@ -525,7 +526,7 @@ export class PaymentPlanService {
       logger.error('[PaymentPlanService] Failed to add installment:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
       };
     }
   }
@@ -636,7 +637,7 @@ export class PaymentPlanService {
       logger.error('[PaymentPlanService] Failed to update installment:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
       };
     }
   }
@@ -719,7 +720,7 @@ export class PaymentPlanService {
       logger.error('[PaymentPlanService] Failed to remove installment:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
       };
     }
   }
@@ -893,7 +894,7 @@ export class PaymentPlanService {
       logger.error('[PaymentPlanService] Failed to record payment:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
       };
     }
   }
@@ -955,7 +956,7 @@ export class PaymentPlanService {
       logger.error('[PaymentPlanService] Failed to update loan info:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
       };
     }
   }

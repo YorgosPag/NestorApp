@@ -26,6 +26,7 @@ import type { Communication } from '@/types/crm';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 import { firestoreQueryService } from '@/services/firestore';
 import { normalizeToISO } from '@/lib/date-local';
 
@@ -110,7 +111,7 @@ export async function createCommunicationClient(
     logger.error('Error creating communication', { error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: getErrorMessage(error)
     };
   }
 }
@@ -156,7 +157,7 @@ export async function updateCommunicationClient(
     logger.error('Error updating communication', { communicationId, error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: getErrorMessage(error)
     };
   }
 }
@@ -188,7 +189,7 @@ export async function deleteCommunicationClient(
     logger.error('Error deleting communication', { communicationId, error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: getErrorMessage(error)
     };
   }
 }

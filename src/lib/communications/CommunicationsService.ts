@@ -17,6 +17,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { BaseMessageInput, SendResult, Channel } from '@/types/communications';
 import { companySettingsService } from '@/services/company/EnterpriseCompanySettingsService';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 const logger = createModuleLogger('CommunicationsService');
 
 // ============================================================================
@@ -402,7 +403,7 @@ class CommunicationsService {
           results[channel] = { success: false, message: 'No test method available' };
         }
       } catch (error: unknown) {
-        results[channel] = { success: false, error: error instanceof Error ? error.message : String(error) };
+        results[channel] = { success: false, error: getErrorMessage(error) };
       }
     }
     return results;

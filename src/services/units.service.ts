@@ -23,6 +23,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { normalizeUnit } from '@/utils/unit-normalizer';
 import { generateUnitId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 
 const logger = createModuleLogger('UnitsService');
@@ -100,7 +101,7 @@ export async function createUnit(
     logger.error('Error creating unit', { error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: getErrorMessage(error)
     };
   }
 }
@@ -331,7 +332,7 @@ export async function updateUnitLink(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update unit link',
+      error: getErrorMessage(error, 'Failed to update unit link'),
     };
   }
 }

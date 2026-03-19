@@ -18,6 +18,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { PolygonType, PolygonStyle } from '@core/polygon-system/types';
 import { polygonStyleService } from '@/services/polygon/EnterprisePolygonStyleService';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // ============================================================================
 // HOOK TYPES
@@ -129,7 +130,7 @@ export function usePolygonStyles(options: UsePolygonStylesOptions = {}): UsePoly
       }
 
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load polygon styles';
+      const errorMessage = getErrorMessage(err, 'Failed to load polygon styles');
       setError(errorMessage);
 
       if (debug) {

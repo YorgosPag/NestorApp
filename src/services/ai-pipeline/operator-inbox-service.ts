@@ -20,6 +20,7 @@
 import 'server-only';
 
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 import {
   updateApprovalDecision,
   markPipelineItemCompleted,
@@ -147,7 +148,7 @@ export async function processOperatorDecision(
     };
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = getErrorMessage(error);
     const elapsed = Date.now() - startTime;
 
     logger.error('Error processing operator decision', {

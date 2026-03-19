@@ -361,7 +361,7 @@ export class ApiErrorHandler {
           }
         } catch (trackerError) {
           // ErrorTracker unavailable (server-side) - log warning but don't fail
-          logger.warn('[ApiErrorHandler] ErrorTracker unavailable', { error: trackerError instanceof Error ? trackerError.message : trackerError });
+          logger.warn('[ApiErrorHandler] ErrorTracker unavailable', { error: getErrorMessage(trackerError) });
         }
       }
 

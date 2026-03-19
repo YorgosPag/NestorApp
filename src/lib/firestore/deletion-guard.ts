@@ -25,6 +25,7 @@ import {
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 import { FIELDS } from '@/config/firestore-field-constants';
 
 const logger = createModuleLogger('DeletionGuard');
@@ -188,7 +189,7 @@ async function executeCascadeDeletions(
       });
     } catch (err) {
       logger.error(`[DeletionGuard] Cascade deletion failed for ${dep.collection}.${dep.foreignKey}`, {
-        error: err instanceof Error ? err.message : String(err),
+        error: getErrorMessage(err),
         entityId,
       });
       // On cascade failure → throw to prevent orphan parent deletion
@@ -300,7 +301,7 @@ export async function executeDeletion(
     logger.error('[DeletionGuard] Audit trail failed (non-blocking)', {
       entityType,
       entityId,
-      error: err instanceof Error ? err.message : String(err),
+      error: getErrorMessage(err),
     });
   });
 
@@ -354,7 +355,7 @@ async function checkSingleDependency(
     };
   } catch (err) {
     logger.error(`[DeletionGuard] Failed to check dependency ${dep.collection}.${dep.foreignKey}`, {
-      error: err instanceof Error ? err.message : String(err),
+      error: getErrorMessage(err),
       entityId,
       companyId,
     });

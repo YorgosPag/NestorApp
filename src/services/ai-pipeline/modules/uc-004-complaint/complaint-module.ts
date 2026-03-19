@@ -28,6 +28,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 import { findContactByEmail, type ContactMatch } from '../../shared/contact-lookup';
 import { getSenderHistory, type SenderHistoryResult } from '../../shared/sender-history';
 import { generateAIReply } from '../../shared/ai-reply-generator';
@@ -132,7 +133,7 @@ export class ComplaintModule implements IUCModule {
       try {
         senderContact = await findContactByEmail(senderEmail, ctx.companyId);
       } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
+        const msg = getErrorMessage(error);
         logger.warn('UC-004 LOOKUP: Contact search failed (non-fatal)', {
           requestId: ctx.requestId,
           error: msg,
@@ -149,7 +150,7 @@ export class ComplaintModule implements IUCModule {
         ctx.intake.id,
       );
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
+      const msg = getErrorMessage(error);
       logger.warn('UC-004 LOOKUP: Sender history query failed (non-fatal)', {
         requestId: ctx.requestId,
         error: msg,
@@ -348,7 +349,7 @@ export class ComplaintModule implements IUCModule {
         sideEffects,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error);
 
       logger.error('UC-004 EXECUTE: Failed', {
         requestId: ctx.requestId,
@@ -392,7 +393,7 @@ export class ComplaintModule implements IUCModule {
       await adminDb.collection(COLLECTIONS.AI_PIPELINE_AUDIT).limit(1).get();
       return true;
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
+      const msg = getErrorMessage(error);
       logger.error('UC-004 HEALTH CHECK: Failed', { error: msg });
       return false;
     }

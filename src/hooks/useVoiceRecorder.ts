@@ -18,6 +18,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { API_ROUTES } from '@/config/domain-constants';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // TYPES
@@ -126,7 +127,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
       recorder.start(250); // Collect data every 250ms
       setStatus('recording');
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message = getErrorMessage(err);
       const isPermissionDenied =
         message.includes('Permission') ||
         message.includes('NotAllowed') ||
@@ -197,7 +198,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
             resolve('');
           }
         } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
+          const message = getErrorMessage(err);
           setError(message);
           setStatus('error');
           resolve('');

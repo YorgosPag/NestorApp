@@ -7,6 +7,7 @@ import pako from 'pako';
 import { RealtimeService } from '@/services/realtime';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('FloorplanService');
 
@@ -216,7 +217,7 @@ export class FloorplanService {
       logger.error('saveFloorplan FAILED', {
         projectId,
         type,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: getErrorMessage(error)
       });
       return false;
     }
@@ -306,7 +307,7 @@ export class FloorplanService {
       logger.error('loadFloorplan FAILED', {
         projectId,
         type,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: getErrorMessage(error)
       });
       return null;
     }

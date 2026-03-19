@@ -36,6 +36,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { getErrorMessage } from '@/lib/error-utils';
 import { EntityLinkingService } from '../EntityLinkingService';
 import type {
   LinkEntityParams,
@@ -79,7 +80,7 @@ export function useEntityLinking(): UseEntityLinkingReturn {
 
       return result;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      const errorMessage = getErrorMessage(err);
       setError(errorMessage);
       return {
         success: false,
@@ -108,7 +109,7 @@ export function useEntityLinking(): UseEntityLinkingReturn {
 
       return result;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      const errorMessage = getErrorMessage(err);
       setError(errorMessage);
       return {
         success: false,
@@ -138,7 +139,7 @@ export function useEntityLinking(): UseEntityLinkingReturn {
 
         return result;
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        const errorMessage = getErrorMessage(err);
         setError(errorMessage);
         return {
           success: false,

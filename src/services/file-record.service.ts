@@ -61,6 +61,7 @@ import {
   type BuildPendingFileRecordInput,
 } from '@/services/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 // 🏢 ENTERPRISE: Audit trail for file operations (ADR-191 Phase 3.1)
@@ -238,7 +239,7 @@ export class FileRecordService {
     } catch (error) {
       logger.error('Failed to write FileRecord to Firestore', {
         fileId,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       throw error; // Re-throw to stop upload pipeline
     }

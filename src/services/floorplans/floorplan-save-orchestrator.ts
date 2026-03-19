@@ -31,6 +31,7 @@ import type { EntityType, FileDomain, FileCategory } from '@/config/domain-const
 import { FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
 import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // LOGGER
@@ -275,7 +276,7 @@ export class FloorplanSaveOrchestrator {
       return undefined;
     } catch (thumbError) {
       logger.warn('Thumbnail generation skipped', {
-        error: thumbError instanceof Error ? thumbError.message : String(thumbError),
+        error: getErrorMessage(thumbError),
       });
       return undefined;
     }

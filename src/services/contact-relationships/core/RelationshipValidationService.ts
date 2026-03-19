@@ -16,6 +16,7 @@ import {
   isEmploymentRelationship
 } from '@/types/contacts/relationships';
 import { isValidEmail as isValidEmailFn } from '@/lib/validation/email-validation';
+import { getErrorMessage } from '@/lib/error-utils';
 import { isValidPhone as isValidPhoneFn } from '@/lib/validation/phone-validation';
 import { isNonEmptyTrimmedString } from '@/lib/type-guards';
 import { Contact } from '@/types/contacts';
@@ -403,7 +404,7 @@ export class RelationshipValidationService {
       } catch (error) {
         errors.push({
           index: i,
-          error: error instanceof Error ? error.message : 'Unknown validation error'
+          error: getErrorMessage(error, 'Unknown validation error')
         });
       }
     }

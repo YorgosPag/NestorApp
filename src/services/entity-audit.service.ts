@@ -17,6 +17,7 @@ import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateEntityAuditId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 import type {
   AuditEntityType,
   AuditAction,
@@ -101,7 +102,7 @@ export class EntityAuditService {
       logger.error('Failed to record audit entry', {
         entityType: params.entityType,
         entityId: params.entityId,
-        error: err instanceof Error ? err.message : String(err),
+        error: getErrorMessage(err),
       });
       return null;
     }

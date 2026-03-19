@@ -16,6 +16,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
+import { getErrorMessage } from '@/lib/error-utils';
 import type { MessageListItem } from './useInboxApi';
 
 // ============================================================================
@@ -188,7 +189,7 @@ export function useMessageActions(): UseMessageActionsResult {
 
       throw new Error('Unexpected response format');
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to delete messages';
+      const errorMessage = getErrorMessage(err, 'Failed to delete messages');
       setError(errorMessage);
       return {
         success: false,

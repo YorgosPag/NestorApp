@@ -23,6 +23,7 @@ import type { Opportunity } from '@/types/crm';
 // Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('OpportunitiesClientService');
 
@@ -94,7 +95,7 @@ export async function createOpportunityClient(
     logger.error('Error creating opportunity', { error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: getErrorMessage(error)
     };
   }
 }
@@ -138,7 +139,7 @@ export async function updateOpportunityClient(
     logger.error('Error updating opportunity', { opportunityId, error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: getErrorMessage(error)
     };
   }
 }
@@ -169,7 +170,7 @@ export async function deleteOpportunityClient(
     logger.error('Error deleting opportunity', { opportunityId, error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: getErrorMessage(error)
     };
   }
 }

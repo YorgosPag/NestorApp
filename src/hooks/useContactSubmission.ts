@@ -11,6 +11,7 @@ import {
 } from '@/utils/validation';
 import { isValidGreekVat } from '@/lib/validation/vat-validation';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('useContactSubmission');
 
@@ -433,7 +434,7 @@ export function useContactSubmission({
       logger.error('SUBMISSION: Form submission failed', { error });
 
       // 🏢 ENTERPRISE ERROR HANDLING με intelligent error categorization
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error);
 
       if (errorMessage.startsWith('DUPLICATE_CONTACT_DETECTED')) {
         // 🚨 ENTERPRISE DUPLICATE PREVENTION - Smart UX handling

@@ -22,6 +22,7 @@ import { extractKeywords, computeKeywordOverlap } from './shared/greek-nlp';
 import type { FeedbackSnapshot, ToolChainDetailEntry } from './feedback-service';
 import { getFeedbackService } from './feedback-service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('LEARNING_SERVICE');
 
@@ -99,7 +100,7 @@ export class LearningService {
       } catch (error) {
         logger.warn('Failed to process feedback item', {
           feedbackId: feedback.id,
-          error: error instanceof Error ? error.message : String(error),
+          error: getErrorMessage(error),
         });
       }
     }
@@ -177,7 +178,7 @@ export class LearningService {
       return ranked.map(r => r.pattern);
     } catch (error) {
       logger.warn('Failed to find relevant patterns', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       return [];
     }
@@ -210,7 +211,7 @@ export class LearningService {
     } catch (error) {
       logger.warn('Failed to update pattern score', {
         patternId,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
     }
   }
@@ -252,7 +253,7 @@ export class LearningService {
       return lowQualityDocs.length;
     } catch (error) {
       logger.warn('Failed to cleanup low-quality patterns', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       return 0;
     }

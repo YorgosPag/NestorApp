@@ -40,6 +40,7 @@ import {
   calculateCategorySummary,
   calculateBartexSummary,
 } from '@/services/ownership/ownership-calculation-engine';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // ============================================================================
 // TYPES
@@ -152,7 +153,7 @@ export function useOwnershipTable(
       }
     } catch (err) {
       if (isMounted.current) {
-        setError(err instanceof Error ? err.message : 'Failed to load ownership table');
+        setError(getErrorMessage(err, 'Failed to load ownership table'));
       }
     } finally {
       if (isMounted.current) {
@@ -191,7 +192,7 @@ export function useOwnershipTable(
       runValidation(rows);
     } catch (err) {
       if (isMounted.current) {
-        setError(err instanceof Error ? err.message : 'Failed to auto-populate');
+        setError(getErrorMessage(err, 'Failed to auto-populate'));
       }
     } finally {
       if (isMounted.current) {
@@ -345,7 +346,7 @@ export function useOwnershipTable(
       }
     } catch (err) {
       if (isMounted.current) {
-        setError(err instanceof Error ? err.message : 'Failed to save');
+        setError(getErrorMessage(err, 'Failed to save'));
         setSaving(false);
       }
     }
@@ -374,7 +375,7 @@ export function useOwnershipTable(
       }
     } catch (err) {
       if (isMounted.current) {
-        setError(err instanceof Error ? err.message : 'Failed to finalize');
+        setError(getErrorMessage(err, 'Failed to finalize'));
         setSaving(false);
       }
     }
@@ -397,7 +398,7 @@ export function useOwnershipTable(
       }
     } catch (err) {
       if (isMounted.current) {
-        setError(err instanceof Error ? err.message : 'Failed to unlock');
+        setError(getErrorMessage(err, 'Failed to unlock'));
         setSaving(false);
       }
     }

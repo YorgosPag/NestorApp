@@ -15,6 +15,7 @@
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 import { generateLoanId, generatePaymentRecordId } from '@/services/enterprise-id.service';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import type { PaymentPlan, PaymentRecord } from '@/types/payment-plan';
@@ -109,7 +110,7 @@ export class LoanTrackingService {
       return { success: true, loans };
     } catch (error) {
       logger.error('[LoanTrackingService] Failed to get loans:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return { success: false, error: getErrorMessage(error) };
     }
   }
 
@@ -130,7 +131,7 @@ export class LoanTrackingService {
       return { success: true, loan };
     } catch (error) {
       logger.error('[LoanTrackingService] Failed to get loan:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return { success: false, error: getErrorMessage(error) };
     }
   }
 
@@ -201,7 +202,7 @@ export class LoanTrackingService {
       return { success: true, loan: newLoan };
     } catch (error) {
       logger.error('[LoanTrackingService] Failed to add loan:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return { success: false, error: getErrorMessage(error) };
     }
   }
 
@@ -279,7 +280,7 @@ export class LoanTrackingService {
       return { success: true };
     } catch (error) {
       logger.error('[LoanTrackingService] Failed to update loan:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return { success: false, error: getErrorMessage(error) };
     }
   }
 
@@ -367,7 +368,7 @@ export class LoanTrackingService {
       return { success: true };
     } catch (error) {
       logger.error('[LoanTrackingService] Failed to transition loan:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return { success: false, error: getErrorMessage(error) };
     }
   }
 
@@ -501,7 +502,7 @@ export class LoanTrackingService {
       return { success: true, paymentId };
     } catch (error) {
       logger.error('[LoanTrackingService] Failed to record disbursement:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return { success: false, error: getErrorMessage(error) };
     }
   }
 
@@ -558,7 +559,7 @@ export class LoanTrackingService {
       return { success: true };
     } catch (error) {
       logger.error('[LoanTrackingService] Failed to add comm log:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return { success: false, error: getErrorMessage(error) };
     }
   }
 }

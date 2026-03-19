@@ -1,6 +1,7 @@
 'use client';
 
 import { isValidEmail } from '@/lib/validation/email-validation';
+import { getErrorMessage } from '@/lib/error-utils';
 
 /**
  * 🏢 ENTERPRISE: Data Import Service with Type-Safe Validation
@@ -136,7 +137,7 @@ class DataImportService {
         data: [],
         errors: [{
           row: 0,
-          message: error instanceof Error ? error.message : 'Unknown error occurred'
+          message: getErrorMessage(error, 'Unknown error occurred')
         }],
         warnings: [],
         duplicates: [],
@@ -389,7 +390,7 @@ class DataImportService {
           recordErrors.push({
             row: rowNumber,
             field: column.targetKey,
-            message: `Transformation error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            message: `Transformation error: ${getErrorMessage(error)}`,
             value: rawValue
           });
           return;
@@ -494,7 +495,7 @@ class DataImportService {
         error: {
           row: rowNumber,
           field: column.targetKey,
-          message: error instanceof Error ? error.message : 'Conversion error',
+          message: getErrorMessage(error, 'Conversion error'),
           value
         }
       };

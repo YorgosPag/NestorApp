@@ -15,6 +15,7 @@
 import { useCallback, useState } from 'react';
 import { API_ROUTES } from '@/config/domain-constants';
 import { useVoiceCommandStore } from '@/stores/voiceCommandStore';
+import { getErrorMessage } from '@/lib/error-utils';
 import type { SubmitCommandResult } from '@/types/voice-command';
 
 // ============================================================================
@@ -74,7 +75,7 @@ export function useVoiceCommand(): UseVoiceCommandReturn {
 
         return result;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Network error';
+        const message = getErrorMessage(err, 'Network error');
         setError(message);
         return { success: false, error: message };
       } finally {

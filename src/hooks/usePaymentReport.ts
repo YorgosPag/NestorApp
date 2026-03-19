@@ -10,6 +10,7 @@
 
 import { useState, useCallback } from 'react';
 import { API_ROUTES } from '@/config/domain-constants';
+import { getErrorMessage } from '@/lib/error-utils';
 import type { PaymentReportData } from '@/services/payment-export/types';
 
 interface UsePaymentReportReturn {
@@ -44,7 +45,7 @@ export function usePaymentReport(projectId: string): UsePaymentReportReturn {
 
       setReport(json.data);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Άγνωστο σφάλμα';
+      const message = getErrorMessage(err, 'Άγνωστο σφάλμα');
       setError(message);
     } finally {
       setIsLoading(false);
@@ -64,7 +65,7 @@ export function usePaymentReport(projectId: string): UsePaymentReportReturn {
       );
       await exportPaymentReportToExcel(report);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Σφάλμα εξαγωγής';
+      const message = getErrorMessage(err, 'Σφάλμα εξαγωγής');
       setError(message);
     }
   }, [report]);

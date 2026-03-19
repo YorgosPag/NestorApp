@@ -17,6 +17,7 @@ import 'server-only';
 
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 import { sendChannelReply } from '../../shared/channel-reply-dispatcher';
 import { generateAdminConversationalReply } from '../../shared/ai-reply-generator';
 import type {
@@ -147,9 +148,9 @@ export class AdminFallbackModule implements IUCModule {
 
       return { success: true, sideEffects };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error('UC-014 EXECUTE: Failed', { requestId: ctx.requestId, error: errorMessage });
-      return { success: false, sideEffects: [], error: errorMessage };
+      const errorMsg = getErrorMessage(error);
+      logger.error('UC-014 EXECUTE: Failed', { requestId: ctx.requestId, error: errorMsg });
+      return { success: false, sideEffects: [], error: errorMsg };
     }
   }
 

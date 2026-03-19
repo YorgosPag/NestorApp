@@ -25,6 +25,7 @@ import type {
 import { computeLegalPhase, CONTRACT_PHASE_ORDER } from '@/types/legal-contracts';
 import type { BrokerageAgreement } from '@/types/brokerage';
 import { BrokerageService } from '@/services/brokerage.service';
+import { getErrorMessage } from '@/lib/error-utils';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -99,7 +100,7 @@ export function useLegalContracts(unitId: string | null, projectId?: string): Us
       );
       setContracts(data.data ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(getErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -155,7 +156,7 @@ export function useLegalContracts(unitId: string | null, projectId?: string): Us
       }
       return { success: data.success, error: data.error };
     } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+      return { success: false, error: getErrorMessage(err) };
     }
   }, [fetchContracts]);
 
@@ -174,7 +175,7 @@ export function useLegalContracts(unitId: string | null, projectId?: string): Us
       }
       return { success: data.success, error: data.error };
     } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+      return { success: false, error: getErrorMessage(err) };
     }
   }, [fetchContracts]);
 
@@ -193,7 +194,7 @@ export function useLegalContracts(unitId: string | null, projectId?: string): Us
       }
       return { success: data.success, error: data.error };
     } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+      return { success: false, error: getErrorMessage(err) };
     }
   }, [fetchContracts]);
 
@@ -216,7 +217,7 @@ export function useLegalContracts(unitId: string | null, projectId?: string): Us
       }
       return { success: data.success, error: data.error };
     } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+      return { success: false, error: getErrorMessage(err) };
     }
   }, [fetchContracts]);
 

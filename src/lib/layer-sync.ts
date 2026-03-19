@@ -18,6 +18,7 @@ import {
   DocumentData
 } from 'firebase/firestore';
 import type { Layer, LayerEvent } from '@/types/layers';
+import { getErrorMessage } from '@/lib/error-utils';
 
 /**
  * Layer Sync Utility για τη διαχείριση real-time συγχρονισμού
@@ -283,7 +284,7 @@ export class LayerSyncManager {
   }
 
   private handleError(message: string, error: unknown): void {
-    const errorMessage = `${message}: ${error instanceof Error ? error.message : String(error)}`;
+    const errorMessage = `${message}: ${getErrorMessage(error)}`;
     // Error logging removed
     
     this.updateState({

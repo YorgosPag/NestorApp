@@ -10,6 +10,7 @@
  */
 
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
+import { getErrorMessage } from '@/lib/error-utils';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
@@ -333,7 +334,7 @@ export class SalesAccountingBridge {
         error: null,
       };
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error creating invoice';
+      const message = getErrorMessage(err, 'Unknown error creating invoice');
       console.error(`[SalesAccountingBridge] Error for unit ${unitId}:`, message);
       return this.errorResult(unitId, message);
     }

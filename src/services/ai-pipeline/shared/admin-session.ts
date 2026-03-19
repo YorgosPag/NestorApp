@@ -18,6 +18,7 @@ import 'server-only';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { generateTempId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 import { sanitizeDocumentId } from '@/utils/firestore-helpers';
 
 const logger = createModuleLogger('ADMIN_SESSION');
@@ -87,7 +88,7 @@ export async function getAdminSession(
 
     return data;
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = getErrorMessage(error);
     logger.warn('Failed to read admin session', { adminIdentifier, error: msg });
     return null;
   }
@@ -125,7 +126,7 @@ export async function setAdminSession(
       contactId: lastAction.contactId,
     });
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = getErrorMessage(error);
     logger.warn('Failed to write admin session', { adminIdentifier, error: msg });
     // Non-fatal — session is a convenience feature, not critical
   }

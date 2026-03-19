@@ -15,6 +15,7 @@
  *     → EmailChannelAdapter.feedToPipeline() → ai_pipeline_queue
  */
 
+import { getErrorMessage } from '@/lib/error-utils';
 import type { EmailIngestionQueueItem } from '@/types/email-ingestion-queue';
 import type { IntakeMessage, IntakeAttachment, AdminCommandMeta } from '@/types/ai-pipeline';
 import { PipelineChannel } from '@/types/ai-pipeline';
@@ -110,10 +111,9 @@ export class EmailChannelAdapter {
         requestId,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
       return {
         enqueued: false,
-        error: `EmailChannelAdapter: ${errorMessage}`,
+        error: `EmailChannelAdapter: ${getErrorMessage(error)}`,
       };
     }
   }

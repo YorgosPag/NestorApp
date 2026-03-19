@@ -19,6 +19,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // TYPES
@@ -179,7 +180,7 @@ export function usePhotoCapture(): UsePhotoCaptureReturn {
       setStatus('ready');
     } catch (err) {
       setStatus('error');
-      setError(err instanceof Error ? err.message : 'Σφάλμα κατά τη λήψη φωτογραφίας');
+      setError(getErrorMessage(err, 'Σφάλμα κατά τη λήψη φωτογραφίας'));
     }
   }, []);
 

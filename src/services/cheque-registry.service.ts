@@ -17,6 +17,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 import { generateChequeId, generatePaymentRecordId } from '@/services/enterprise-id.service';
 import type { PaymentRecord } from '@/types/payment-plan';
 import type {
@@ -101,7 +102,7 @@ export class ChequeRegistryService {
       return { success: true, cheques };
     } catch (error) {
       logger.error('[ChequeRegistryService] Failed to get cheques:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return { success: false, error: getErrorMessage(error) };
     }
   }
 
@@ -118,7 +119,7 @@ export class ChequeRegistryService {
       return { success: true, cheque: doc.data() as ChequeRecord };
     } catch (error) {
       logger.error('[ChequeRegistryService] Failed to get cheque:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return { success: false, error: getErrorMessage(error) };
     }
   }
 
@@ -169,7 +170,7 @@ export class ChequeRegistryService {
       return { success: true, cheque };
     } catch (error) {
       logger.error('[ChequeRegistryService] Failed to create cheque:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return { success: false, error: getErrorMessage(error) };
     }
   }
 
@@ -216,7 +217,7 @@ export class ChequeRegistryService {
       return { success: true };
     } catch (error) {
       logger.error('[ChequeRegistryService] Failed to update cheque:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return { success: false, error: getErrorMessage(error) };
     }
   }
 
@@ -319,7 +320,7 @@ export class ChequeRegistryService {
       return { success: true };
     } catch (error) {
       logger.error('[ChequeRegistryService] Failed to transition cheque:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return { success: false, error: getErrorMessage(error) };
     }
   }
 
@@ -372,7 +373,7 @@ export class ChequeRegistryService {
       return { success: true };
     } catch (error) {
       logger.error('[ChequeRegistryService] Failed to endorse cheque:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return { success: false, error: getErrorMessage(error) };
     }
   }
 
@@ -424,7 +425,7 @@ export class ChequeRegistryService {
       return { success: true };
     } catch (error) {
       logger.error('[ChequeRegistryService] Failed to bounce cheque:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return { success: false, error: getErrorMessage(error) };
     }
   }
 
@@ -479,7 +480,7 @@ export class ChequeRegistryService {
       return { success: true, cheque: newCheque };
     } catch (error) {
       logger.error('[ChequeRegistryService] Failed to replace cheque:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return { success: false, error: getErrorMessage(error) };
     }
   }
 }

@@ -7,6 +7,7 @@ import type { Channel, BaseMessageInput, SendResult } from '@/types/communicatio
 import { ATTACHMENT_TYPES, type MessageAttachment } from '@/types/conversations';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateMessageId } from '@/services/enterprise-id.service';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
@@ -171,7 +172,7 @@ class MessageRouter {
 
     } catch (error: unknown) {
       // Error logging removed
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error);
 
       if (messageRecordId) {
         await this.updateMessageStatus(messageRecordId, {
@@ -307,7 +308,7 @@ class MessageRouter {
         if (r.status === 'fulfilled') {
           results.push({ ...r.value, originalData: chunk[idx] });
         } else {
-          const errorMessage = r.reason instanceof Error ? r.reason.message : String(r.reason);
+          const errorMessage = getErrorMessage(r.reason);
           results.push({ success: false, error: errorMessage, originalData: chunk[idx] });
         }
       });

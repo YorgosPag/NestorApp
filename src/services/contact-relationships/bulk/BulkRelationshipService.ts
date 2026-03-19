@@ -17,6 +17,7 @@ import {
 import { RelationshipCRUDService } from '../core/RelationshipCRUDService';
 import { RelationshipValidationService } from '../core/RelationshipValidationService';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('BulkRelationshipService');
 
@@ -188,7 +189,7 @@ export class BulkRelationshipService {
         result.success.push(updated);
 
       } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        const errorMsg = getErrorMessage(error);
         result.errors.push({
           index: i,
           data: { id, ...updateData },
@@ -281,11 +282,7 @@ export class BulkRelationshipService {
         valid.push(relationship);
 
       } catch (error) {
-        if (error instanceof Error) {
-          errors.push(error.message);
-        } else {
-          errors.push('Unknown validation error');
-        }
+        errors.push(getErrorMessage(error, 'Unknown validation error'));
 
         invalid.push({
           index: i,
@@ -395,7 +392,7 @@ export class BulkRelationshipService {
         result.success.push(created);
 
       } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        const errorMsg = getErrorMessage(error);
         result.errors.push({
           index: i,
           data: relationships[i],
@@ -429,7 +426,7 @@ export class BulkRelationshipService {
           return { success: true, data: created, index: originalIndex };
 
         } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+          const errorMsg = getErrorMessage(error);
           return {
             success: false,
             error: errorMsg,

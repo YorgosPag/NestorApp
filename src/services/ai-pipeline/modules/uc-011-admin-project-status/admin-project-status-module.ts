@@ -21,6 +21,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 import { sendChannelReply } from '../../shared/channel-reply-dispatcher';
 import { PipelineIntentType } from '@/types/ai-pipeline';
 import type {
@@ -372,7 +373,7 @@ export class AdminProjectStatusModule implements IUCModule {
         lookupData.projects = allProjectDetails;
       }
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
+      const msg = getErrorMessage(error);
       logger.warn('UC-011 LOOKUP: Project query failed', {
         requestId: ctx.requestId,
         error: msg,
@@ -510,7 +511,7 @@ export class AdminProjectStatusModule implements IUCModule {
           : [`reply_failed:${replyResult.error ?? 'unknown'}`],
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error);
       logger.error('UC-011 EXECUTE: Failed', { requestId: ctx.requestId, error: errorMessage });
       return { success: false, sideEffects: [], error: errorMessage };
     }

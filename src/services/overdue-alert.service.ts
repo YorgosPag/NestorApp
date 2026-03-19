@@ -12,6 +12,7 @@ import 'server-only';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 import { generateNotificationId } from '@/services/enterprise-id.service';
 import { PaymentReportService } from '@/services/payment-report.service';
 
@@ -121,7 +122,7 @@ export class OverdueAlertService {
           result.errors++;
           logger.error('Failed to process unit for overdue alert', {
             unitId: unit.unitId,
-            error: unitError instanceof Error ? unitError.message : 'Unknown',
+            error: getErrorMessage(unitError),
           });
         }
       }
@@ -135,7 +136,7 @@ export class OverdueAlertService {
       return result;
     } catch (error) {
       logger.error('Overdue scan failed', {
-        error: error instanceof Error ? error.message : 'Unknown',
+        error: getErrorMessage(error),
       });
       throw error;
     }

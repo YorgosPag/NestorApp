@@ -20,6 +20,7 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { RealtimeService } from '@/services/realtime';
 import type { ContactLinkCreatedPayload, ContactLinkDeletedPayload } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 import type { EntityType } from '@/config/domain-constants';
 import type { ContactLink } from '@/types/associations';
 import type { EntityAssociationLink, ContactEntityLink, GroupedContactEntityLinks } from '@/types/entity-associations';
@@ -127,7 +128,7 @@ export function useEntityContactLinks(
         }
       } catch (err) {
         if (!cancelled) {
-          const msg = err instanceof Error ? err.message : 'Failed to load associations';
+          const msg = getErrorMessage(err, 'Failed to load associations');
           setError(msg);
           logger.error('Failed to load entity contact links', { error: err });
         }
@@ -289,7 +290,7 @@ export function useContactEntityLinks(
         if (!cancelled) setGrouped(result);
       } catch (err) {
         if (!cancelled) {
-          const msg = err instanceof Error ? err.message : 'Failed to load entity links';
+          const msg = getErrorMessage(err, 'Failed to load entity links');
           setError(msg);
           logger.error('Failed to load contact entity links', { error: err });
         }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { UnitFloorplanService, type UnitFloorplanData } from '@/services/floorplans/UnitFloorplanService';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 import { RealtimeService } from '@/services/realtime';
 import type { FloorplanCreatedPayload, FloorplanDeletedPayload } from '@/services/realtime';
 
@@ -40,7 +41,7 @@ export function useUnitFloorplans(unitId: string | number, companyId: string): U
       logger.info('Unit floorplan loaded', { hasUnitFloorplan: !!unitData });
 
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      const errorMessage = getErrorMessage(err);
       logger.error('Error fetching unit floorplan', { error: err });
       setError(errorMessage);
     } finally {

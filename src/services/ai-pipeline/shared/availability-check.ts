@@ -20,6 +20,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('AVAILABILITY_CHECK');
 
@@ -146,7 +147,7 @@ export async function checkAvailability(
       operatorBriefing,
     };
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = getErrorMessage(error);
 
     logger.warn('Availability check failed (non-fatal)', {
       requestId,

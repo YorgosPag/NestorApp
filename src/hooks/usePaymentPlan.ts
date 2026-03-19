@@ -14,6 +14,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { API_ROUTES } from '@/config/domain-constants';
+import { getErrorMessage } from '@/lib/error-utils';
 import type {
   PaymentPlan,
   PaymentRecord,
@@ -89,7 +90,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
       setPlan(planRes.data ?? null);
       setPayments(paymentsRes.data ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(getErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -115,7 +116,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
         if (data.success) fetchData().catch(() => {});
         return { success: data.success, error: data.error };
       } catch (err) {
-        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        return { success: false, error: getErrorMessage(err) };
       }
     },
     [unitId, fetchData]
@@ -137,7 +138,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
         if (data.success) await fetchData();
         return { success: data.success, error: data.error };
       } catch (err) {
-        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        return { success: false, error: getErrorMessage(err) };
       }
     },
     [unitId, fetchData]
@@ -159,7 +160,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
         if (data.success) await fetchData();
         return { success: data.success, error: data.error };
       } catch (err) {
-        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        return { success: false, error: getErrorMessage(err) };
       }
     },
     [unitId, fetchData]
@@ -181,7 +182,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
         if (data.success) await fetchData();
         return { success: data.success, error: data.error };
       } catch (err) {
-        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        return { success: false, error: getErrorMessage(err) };
       }
     },
     [unitId, fetchData]
@@ -203,7 +204,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
         if (data.success) await fetchData();
         return { success: data.success, error: data.error };
       } catch (err) {
-        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        return { success: false, error: getErrorMessage(err) };
       }
     },
     [unitId, fetchData]
@@ -225,7 +226,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
         if (data.success) await fetchData();
         return { success: data.success, error: data.error };
       } catch (err) {
-        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        return { success: false, error: getErrorMessage(err) };
       }
     },
     [unitId, fetchData]
@@ -247,7 +248,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
         if (data.success) await fetchData();
         return { success: data.success, error: data.error };
       } catch (err) {
-        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        return { success: false, error: getErrorMessage(err) };
       }
     },
     [unitId, fetchData]
@@ -263,7 +264,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
         if (data.success) await fetchData();
         return { success: data.success, error: data.error };
       } catch (err) {
-        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        return { success: false, error: getErrorMessage(err) };
       }
     },
     [unitId, fetchData]

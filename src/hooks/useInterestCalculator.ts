@@ -26,6 +26,7 @@ import type {
   BankSpreadsResponse,
 } from '@/types/interest-calculator';
 import type { Installment } from '@/types/payment-plan';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // FETCH HELPER
@@ -95,7 +96,7 @@ export function useInterestCalculator(): UseInterestCalculatorReturn {
         setSpreads(spreadsRes.config);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch rates');
+      setError(getErrorMessage(err, 'Failed to fetch rates'));
     } finally {
       setIsLoading(false);
     }
@@ -117,7 +118,7 @@ export function useInterestCalculator(): UseInterestCalculatorReturn {
       }
       return { success: false, error: res.error ?? 'Refresh failed' };
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Refresh failed';
+      const msg = getErrorMessage(err, 'Refresh failed');
       return { success: false, error: msg };
     }
   }, []);
@@ -139,7 +140,7 @@ export function useInterestCalculator(): UseInterestCalculatorReturn {
         setError(res.error ?? 'Calculation failed');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Calculation failed');
+      setError(getErrorMessage(err, 'Calculation failed'));
     } finally {
       setIsLoading(false);
     }
@@ -186,7 +187,7 @@ export function useInterestCalculator(): UseInterestCalculatorReturn {
         setError(res.error ?? 'Comparison failed');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Comparison failed');
+      setError(getErrorMessage(err, 'Comparison failed'));
     } finally {
       setIsLoading(false);
     }
@@ -205,7 +206,7 @@ export function useInterestCalculator(): UseInterestCalculatorReturn {
       }
       return { success: false, error: res.error ?? 'Update failed' };
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Update failed';
+      const msg = getErrorMessage(err, 'Update failed');
       return { success: false, error: msg };
     }
   }, []);

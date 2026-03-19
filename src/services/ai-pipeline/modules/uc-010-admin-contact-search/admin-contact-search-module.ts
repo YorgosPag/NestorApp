@@ -22,6 +22,7 @@ import 'server-only';
 
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 import { findContactByName, listContacts, getContactMissingFields } from '../../shared/contact-lookup';
 import type { ContactTypeFilter } from '../../shared/contact-lookup';
 import { sendChannelReply } from '../../shared/channel-reply-dispatcher';
@@ -165,7 +166,7 @@ export class AdminContactSearchModule implements IUCModule {
         results = await listContacts(ctx.companyId, typeFilter, 20);
       }
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
+      const msg = getErrorMessage(error);
       logger.warn('UC-010 LOOKUP: Contact lookup failed', {
         requestId: ctx.requestId,
         error: msg,
@@ -368,9 +369,9 @@ export class AdminContactSearchModule implements IUCModule {
           : [`reply_failed:${replyResult.error ?? 'unknown'}`],
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error('UC-010 EXECUTE: Failed', { requestId: ctx.requestId, error: errorMessage });
-      return { success: false, sideEffects: [], error: errorMessage };
+      const errorMsg = getErrorMessage(error);
+      logger.error('UC-010 EXECUTE: Failed', { requestId: ctx.requestId, error: errorMsg });
+      return { success: false, sideEffects: [], error: errorMsg };
     }
   }
 

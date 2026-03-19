@@ -28,6 +28,7 @@ import { FloorplanSaveOrchestrator } from '@/services/floorplans/floorplan-save-
 import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
 import type { FileRecord } from '@/types/file-record';
 import { Logger, LogLevel, DevNullOutput } from '@/subapps/dxf-viewer/settings/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 
@@ -187,7 +188,7 @@ export class FloorFloorplanService {
       floorplanLogger.error(`Error saving floor floorplan`, {
         buildingId,
         floorId,
-        error: error instanceof Error ? error.message : String(error)
+        error: getErrorMessage(error)
       });
       return false;
     }
@@ -385,7 +386,7 @@ export class FloorFloorplanService {
     } catch (error) {
       floorplanLogger.warn(`Error checking floor floorplan`, {
         floorId,
-        error: error instanceof Error ? error.message : String(error)
+        error: getErrorMessage(error)
       });
       return false;
     }
@@ -433,7 +434,7 @@ export class FloorFloorplanService {
     } catch (error) {
       floorplanLogger.error(`Error deleting floor floorplan`, {
         floorId,
-        error: error instanceof Error ? error.message : String(error)
+        error: getErrorMessage(error)
       });
       return false;
     }

@@ -15,6 +15,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { getString, getNumber, getObject } from '@/lib/firestore/field-extractors';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 import type {
   HealthStatus,
   PortfolioSummary,
@@ -239,7 +240,7 @@ export async function aggregatePortfolio(companyId: string): Promise<PortfolioAg
       }
     } catch (err) {
       logger.warn(`[Portfolio] Failed to aggregate project ${projectDoc.id}, skipping`, {
-        error: err instanceof Error ? err.message : String(err),
+        error: getErrorMessage(err),
       });
       continue;
     }

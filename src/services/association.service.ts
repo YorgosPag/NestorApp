@@ -61,6 +61,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime';
 import { contactLinkConverter, fileLinkConverter } from '@/lib/firestore/converters/association.converter';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 const logger = createModuleLogger('AssociationService');
 import type {
   ContactLink,
@@ -220,7 +221,7 @@ export class AssociationService {
       logger.error('[AssociationService] Failed to link contact:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
         errorCode: 'LINK_CONTACT_FAILED',
       };
     }
@@ -395,7 +396,7 @@ export class AssociationService {
       logger.error('[AssociationService] Failed to link file:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
         errorCode: 'LINK_FILE_FAILED',
       };
     }
@@ -585,7 +586,7 @@ export class AssociationService {
       logger.error('[AssociationService] Failed to unlink contact:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
         errorCode: 'UNLINK_CONTACT_FAILED',
       };
     }
@@ -629,7 +630,7 @@ export class AssociationService {
       logger.error('[AssociationService] Failed to update role:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
         errorCode: 'UPDATE_ROLE_FAILED',
       };
     }

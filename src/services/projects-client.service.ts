@@ -23,6 +23,7 @@ import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime
 // 🏢 ENTERPRISE: Centralized API client (Fortune-500 pattern)
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('ProjectsClientService');
 
@@ -112,7 +113,7 @@ export async function createProject(
     logger.error('Error creating project', { error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: getErrorMessage(error)
     };
   }
 }
@@ -158,7 +159,7 @@ export async function updateProjectClient(
     logger.error('Error updating project', { projectId, error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: getErrorMessage(error)
     };
   }
 }
@@ -195,7 +196,7 @@ export async function deleteProject(
     logger.error('Error deleting project', { projectId, error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: getErrorMessage(error)
     };
   }
 }

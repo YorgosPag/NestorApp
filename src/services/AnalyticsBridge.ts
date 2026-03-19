@@ -16,6 +16,7 @@
 // TODO: EventAnalyticsEngine not implemented yet - temporarily disabled
 // import { EventAnalyticsEngine } from '@geo-alert/core/alert-engine/analytics/EventAnalyticsEngine';
 import { safeJsonParse } from '@/lib/json-utils';
+import { getErrorMessage } from '@/lib/error-utils';
 import { generateSessionId as generateEnterpriseSessionId, generateEventId as generateEnterpriseEventId } from '@/services/enterprise-id.service';
 
 // ============================================================================
@@ -459,7 +460,7 @@ export class AnalyticsBridge {
           success: false,
           metadata: {
             url: args[0]?.toString(),
-            error: error instanceof Error ? error.message : String(error),
+            error: getErrorMessage(error),
             duration
           }
         });

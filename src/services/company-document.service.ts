@@ -18,6 +18,7 @@ import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateCompanyId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 import type { CompanyDocument, CompanySettings, CompanyStatus, CompanyPlan } from '@/types/company';
 
@@ -66,7 +67,7 @@ export async function validateCompanyExists(companyId: string): Promise<boolean>
   } catch (error) {
     logger.error('[CompanyDocument] validateCompanyExists failed', {
       companyId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
     // On error, assume exists to avoid blocking audit writes
     return true;
@@ -109,7 +110,7 @@ export async function getCompanyDocument(companyId: string): Promise<CompanyDocu
   } catch (error) {
     logger.error('[CompanyDocument] getCompanyDocument failed', {
       companyId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
     return null;
   }
@@ -174,7 +175,7 @@ export async function ensureCompanyDocument(
   } catch (error) {
     logger.error('[CompanyDocument] ensureCompanyDocument failed', {
       companyId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
     throw error;
   }
@@ -226,7 +227,7 @@ export async function createCompanyDocument(
     return created;
   } catch (error) {
     logger.error('[CompanyDocument] createCompanyDocument failed', {
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
     throw error;
   }

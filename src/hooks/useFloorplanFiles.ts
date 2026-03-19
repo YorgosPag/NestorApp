@@ -25,6 +25,7 @@ import { firestoreQueryService } from '@/services/firestore';
 import type { QueryResult } from '@/services/firestore';
 import type { FileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 import { FILE_CATEGORIES, FILE_DOMAINS, FILE_LIFECYCLE_STATES, API_ROUTES } from '@/config/domain-constants';
 
 // ============================================================================
@@ -215,7 +216,7 @@ export function useFloorplanFiles(config: UseFloorplanFilesConfig): UseFloorplan
           processUnprocessedFiles(filteredFiles);
 
         } catch (err) {
-          const errorMessage = err instanceof Error ? err.message : 'Failed to load files';
+          const errorMessage = getErrorMessage(err, 'Failed to load files');
           logger.error('Error processing snapshot', { error: errorMessage });
           setError(errorMessage);
           setLoading(false);

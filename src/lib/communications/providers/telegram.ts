@@ -4,6 +4,7 @@ import { COMMUNICATION_CHANNELS } from '../../config/communications.config';
 import type { BaseMessageInput, SendResult } from '@/types/communications';
 import type { WebhookData, InboundParsed } from '../core/messageRouter';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 const logger = createModuleLogger('telegram');
 
 // ============================================================================
@@ -171,7 +172,7 @@ class TelegramProvider {
 
     } catch (error: unknown) {
       logger.error('Telegram send error', { error });
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = getErrorMessage(error);
       return {
         success: false,
         error: errorMessage,
@@ -249,7 +250,7 @@ class TelegramProvider {
         message: `Connected to Telegram Bot: ${result.result.first_name} (@${result.result.username})`
       };
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = getErrorMessage(error);
       return {
         success: false,
         error: errorMessage,

@@ -20,6 +20,7 @@ import { getAdminFirestore, getAdminStorage, FieldValue } from '@/lib/firebaseAd
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 import { validateQrToken } from './qr-token-service';
 import { isWithinGeofence } from './geofence-service';
 import type {
@@ -205,7 +206,7 @@ export async function uploadAttendancePhoto(
     logger.error('Photo upload failed', {
       projectId,
       eventId,
-      error: error instanceof Error ? error.message : 'Unknown',
+      error: getErrorMessage(error, 'Unknown'),
     });
     return null;
   }

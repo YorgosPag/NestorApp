@@ -20,6 +20,7 @@
 import type { IntakeMessage, AdminCommandMeta } from '@/types/ai-pipeline';
 import { PipelineChannel } from '@/types/ai-pipeline';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
+import { getErrorMessage } from '@/lib/error-utils';
 import { enqueuePipelineItem } from '../pipeline-queue-service';
 import { isSuperAdminWhatsApp } from '../shared/super-admin-resolver';
 
@@ -110,7 +111,7 @@ export class WhatsAppChannelAdapter {
         isAdmin: adminCommandMeta?.isAdminCommand ?? false,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error);
       return {
         enqueued: false,
         error: `WhatsAppChannelAdapter: ${errorMessage}`,

@@ -28,6 +28,7 @@ import {
 } from '@/services/notificationService';
 import type { Notification } from '@/types/notification';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('useNotifications');
 
@@ -186,7 +187,7 @@ export function useNotifications(
       logger.info('Marked notifications as read', { count: notificationIds.length });
     } catch (err) {
       logger.error('Failed to mark as read', { error: err });
-      setError(err instanceof Error ? err.message : 'Failed to mark as read');
+      setError(getErrorMessage(err, 'Failed to mark as read'));
     }
   }, []);
 
@@ -208,7 +209,7 @@ export function useNotifications(
       setError(null);
     } catch (err) {
       logger.error('Refresh failed', { error: err });
-      setError(err instanceof Error ? err.message : 'Failed to refresh');
+      setError(getErrorMessage(err, 'Failed to refresh'));
     } finally {
       setLoading(false);
     }

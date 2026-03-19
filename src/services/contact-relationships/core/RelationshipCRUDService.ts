@@ -21,6 +21,7 @@ import { FirestoreRelationshipAdapter } from '../adapters/FirestoreRelationshipA
 import { RelationshipValidationService } from './RelationshipValidationService';
 import { generateRelationshipId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 const logger = createModuleLogger('RelationshipCRUDService');
 
 // ============================================================================
@@ -86,7 +87,7 @@ export class RelationshipCRUDService {
     } catch (error) {
       // 🔧 If Firebase index is missing, log warning but continue with creation
       // This prevents the relationship creation from failing due to missing composite index
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error);
       const errorCode = (error as { code?: string })?.code;
 
       // 🔧 FIX: Removed 'FirebaseError' match — it caught ALL Firebase errors (permissions, etc.)

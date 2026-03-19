@@ -13,6 +13,7 @@
 import { ContactRelationship, RelationshipType } from '@/types/contacts/relationships';
 import { Contact, IndividualContact, CompanyContact, ServiceContact } from '@/types/contacts';
 import { isValidEmail } from '@/lib/validation/email-validation';
+import { getErrorMessage } from '@/lib/error-utils';
 import { BulkRelationshipService } from './BulkRelationshipService';
 import { ContactsService } from '@/services/contacts.service';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -172,7 +173,7 @@ export class ImportExportService {
           result.importedRelationships++;
 
         } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+          const errorMsg = getErrorMessage(error);
           result.errors.push({
             row: i + 1,
             data: row,

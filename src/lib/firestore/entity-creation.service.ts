@@ -30,6 +30,7 @@ import {
 import { extractBuildingLetter } from '@/config/entity-code-config';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 import type { AuthContext } from '@/lib/auth/types';
 import type {
@@ -195,7 +196,7 @@ async function generateEntityCode(
     return code;
   } catch (err) {
     logger.warn('Entity code auto-generation failed', {
-      error: err instanceof Error ? err.message : String(err),
+      error: getErrorMessage(err),
     });
     return null;
   }

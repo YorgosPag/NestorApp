@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useFileUploadState';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('useAutoUploadEffect');
 
@@ -191,7 +192,7 @@ export function useAutoUploadEffect({
           const fallbackMimeType = file ? file.type : '';
           onUploadCompleteRef.current({
             success: false,
-            error: err instanceof Error ? err.message : 'Upload failed',
+            error: getErrorMessage(err, 'Upload failed'),
             url: '',
             fileName: file?.name ?? '',
             fileSize: fallbackFileSize,

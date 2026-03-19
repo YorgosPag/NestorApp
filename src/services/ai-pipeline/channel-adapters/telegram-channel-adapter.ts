@@ -17,6 +17,7 @@
  *     → TelegramChannelAdapter.feedToPipeline() → ai_pipeline_queue
  */
 
+import { getErrorMessage } from '@/lib/error-utils';
 import type { IntakeMessage, AdminCommandMeta } from '@/types/ai-pipeline';
 import { PipelineChannel } from '@/types/ai-pipeline';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
@@ -112,10 +113,9 @@ export class TelegramChannelAdapter {
         isAdmin: adminCommandMeta?.isAdminCommand ?? false,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
       return {
         enqueued: false,
-        error: `TelegramChannelAdapter: ${errorMessage}`,
+        error: `TelegramChannelAdapter: ${getErrorMessage(error)}`,
       };
     }
   }

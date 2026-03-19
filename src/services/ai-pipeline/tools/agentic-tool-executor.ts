@@ -25,6 +25,7 @@ import { getCollectionSchemaInfo } from '@/config/firestore-schema-map';
 import { getToolAnalyticsService } from '../tool-analytics-service';
 import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('AGENTIC_TOOL_EXECUTOR');
 
@@ -198,7 +199,7 @@ export class AgenticToolExecutor {
 
       return result;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error);
       logger.error('Tool execution error', {
         tool: toolName,
         requestId: ctx.requestId,
@@ -761,7 +762,7 @@ export class AgenticToolExecutor {
       // Non-fatal — don't let audit failure break the operation
       logger.warn('Failed to audit write operation', {
         requestId: ctx.requestId,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
     }
   }

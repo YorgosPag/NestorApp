@@ -4,6 +4,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { BuildingStats } from '@/types/building';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('BuildingsService');
 
@@ -34,6 +35,6 @@ export async function getBuildingStats(buildingId: string): Promise<BuildingStat
     return { totalUnits, soldUnits, totalSoldArea };
   } catch (error) {
     logger.error(`Error fetching stats for building ${buildingId}`, { error });
-    throw new Error(`Failed to calculate building statistics: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(`Failed to calculate building statistics: ${getErrorMessage(error)}`);
   }
 }

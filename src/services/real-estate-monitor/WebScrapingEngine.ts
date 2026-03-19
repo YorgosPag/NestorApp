@@ -14,6 +14,7 @@
 'use client';
 
 import { safeJsonParse } from '@/lib/json-utils';
+import { getErrorMessage } from '@/lib/error-utils';
 import { addressResolver, type GeocodingResult } from './AddressResolver';
 
 // ============================================================================
@@ -181,7 +182,7 @@ export class WebScrapingEngine {
           totalFound: 0,
           newProperties: 0,
           updatedProperties: 0,
-          errors: [error instanceof Error ? error.message : 'Unknown error'],
+          errors: [getErrorMessage(error)],
           properties: [],
           executionTime: 0
         });
@@ -216,7 +217,7 @@ export class WebScrapingEngine {
         totalFound: 0,
         newProperties: 0,
         updatedProperties: 0,
-        errors: [error instanceof Error ? error.message : 'Scraping failed'],
+        errors: [getErrorMessage(error, 'Scraping failed')],
         properties,
         executionTime: Date.now() - startTime
       };
@@ -295,7 +296,7 @@ export class WebScrapingEngine {
       };
 
     } catch (error) {
-      throw new Error(`API scraping failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`API scraping failed: ${getErrorMessage(error)}`);
     }
   }
 

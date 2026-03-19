@@ -23,6 +23,7 @@ import {
   DEFAULT_LABOR_COMPLIANCE_CONFIG,
 } from '@/components/projects/ika/contracts';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('LaborComplianceService');
 
@@ -146,7 +147,7 @@ export const LaborComplianceService = {
       if (!snapshot.exists()) return null;
       return snapshot.data() as LaborComplianceDocument;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
+      const msg = getErrorMessage(err);
       logger.error('Failed to read labor compliance document', { error: msg });
       throw err;
     }

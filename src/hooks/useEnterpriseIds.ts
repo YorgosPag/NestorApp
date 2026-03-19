@@ -30,6 +30,7 @@ import {
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('useEnterpriseIds');
 
@@ -178,7 +179,7 @@ export function useMigrationStatus() {
         throw new Error(data?.message || 'Unknown error');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch migration status');
+      setError(getErrorMessage(err, 'Failed to fetch migration status'));
     } finally {
       setIsLoading(false);
     }
@@ -216,7 +217,7 @@ export function useMigrationStatus() {
         throw new Error(data?.message || 'Migration failed');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Migration failed');
+      setError(getErrorMessage(err, 'Migration failed'));
       throw err;
     } finally {
       setIsLoading(false);

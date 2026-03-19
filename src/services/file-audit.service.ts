@@ -30,6 +30,7 @@ import {
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('FileAuditService');
 
@@ -180,7 +181,7 @@ export class FileAuditService {
       logger.error('Failed to record audit entry', {
         fileId,
         action,
-        error: err instanceof Error ? err.message : String(err),
+        error: getErrorMessage(err),
       });
       return '';
     }

@@ -44,6 +44,7 @@ import type {
   SkippedEntity
 } from './enterprise-relationship-engine.contracts';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('EnterpriseRelationshipEngine');
 
@@ -195,7 +196,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
         } catch (error) {
           const relationshipError: RelationshipError = {
             code: 'RELATIONSHIP_CREATION_FAILED',
-            message: error instanceof Error ? error.message : 'Unknown error',
+            message: getErrorMessage(error),
             entityType: parentType,
             entityId: parentId,
             field: 'relationship'
@@ -328,7 +329,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
           // This is safe because contact is the most generic entity type
           const relationshipError: RelationshipError = {
             code: 'RELATIONSHIP_REMOVAL_FAILED',
-            message: error instanceof Error ? error.message : 'Unknown error',
+            message: getErrorMessage(error),
             entityType: 'contact' as EntityType,
             entityId: relationshipId,
             field: 'relationship'
@@ -1152,7 +1153,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
                 skippedEntities.push({
                   entityType: currentType,
                   entityId: idToDelete,
-                  reason: error instanceof Error ? error.message : 'Unknown error'
+                  reason: getErrorMessage(error)
                 });
               }
             }

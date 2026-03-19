@@ -25,6 +25,7 @@ import { RealtimeService } from '@/services/realtime';
 import { mapActivePersonas } from '@/utils/contactForm/mappers/individual';
 import { generateContactId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
@@ -475,7 +476,7 @@ export class ContactsService {
         }).catch((err) => {
           logger.warn('Contact name cascade failed (non-blocking)', {
             contactId: id,
-            error: err instanceof Error ? err.message : String(err),
+            error: getErrorMessage(err),
           });
         });
       }
@@ -498,7 +499,7 @@ export class ContactsService {
       }
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error);
       logger.error('ENTERPRISE UPDATE: Failed to update contact', {
         errorMessage,
         contactId: id,
@@ -632,7 +633,7 @@ export class ContactsService {
       });
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error);
       const errorCode = (error as { code?: string })?.code ?? 'unknown';
       logger.error('CONTACTS SERVICE: Update failed', {
         errorMessage,

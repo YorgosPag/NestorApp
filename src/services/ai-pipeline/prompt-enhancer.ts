@@ -18,6 +18,7 @@ import { getLearningService } from './learning-service';
 import { getToolAnalyticsService } from './tool-analytics-service';
 import { sanitizeForPromptInjection } from './shared/prompt-sanitizer';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('PROMPT_ENHANCER');
 
@@ -102,7 +103,7 @@ export async function enhanceSystemPrompt(userQuery: string): Promise<string> {
   } catch (error) {
     // Non-fatal: enhancement failure must never break the pipeline
     logger.warn('Failed to enhance system prompt', {
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
     return '';
   }

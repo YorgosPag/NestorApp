@@ -19,6 +19,7 @@ import {
   BRAND,
   escapeHtml,
 } from '@/services/email-templates';
+import { getErrorMessage } from '@/lib/error-utils';
 import type { SalesAccountingEvent, SalesAccountingResult } from './types';
 
 // ============================================================================
@@ -419,7 +420,7 @@ export async function notifyAccountingOffice(
     }
   } catch (err) {
     // Fire-and-forget — η πώληση και το τιμολόγιο πέτυχαν ήδη
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = getErrorMessage(err);
     console.warn(`[ADR-198 Notify] Failed to send email: ${msg}`);
   }
 }
@@ -477,7 +478,7 @@ export async function notifyBuyerReservation(
       console.warn(`[Buyer Notify] Mailgun error: ${mailResult.error}`);
     }
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = getErrorMessage(err);
     console.warn(`[Buyer Notify] Failed to send buyer email: ${msg}`);
   }
 }
@@ -534,7 +535,7 @@ export async function notifyBuyerCancellation(
       console.warn(`[Buyer Notify] Mailgun cancellation error: ${mailResult.error}`);
     }
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = getErrorMessage(err);
     console.warn(`[Buyer Notify] Failed to send cancellation email: ${msg}`);
   }
 }
@@ -591,7 +592,7 @@ export async function notifyBuyerSale(
       console.warn(`[Buyer Notify] Mailgun sale error: ${mailResult.error}`);
     }
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = getErrorMessage(err);
     console.warn(`[Buyer Notify] Failed to send sale email: ${msg}`);
   }
 }

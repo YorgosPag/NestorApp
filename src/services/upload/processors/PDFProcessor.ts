@@ -40,6 +40,7 @@ import {
 import type { FileRecord } from '@/types/file-record';
 import { Logger, LogLevel, ConsoleOutput } from '@/subapps/dxf-viewer/settings/telemetry';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 const pdfLogger = createModuleLogger('PDFProcessor');
 
 // ============================================================================
@@ -605,7 +606,7 @@ export class PDFProcessor implements FileProcessor {
       canonicalLogger.error('Upload failed, marking FileRecord as failed');
       await FileRecordService.markFileRecordFailed(
         fileId,
-        error instanceof Error ? error.message : 'Unknown error'
+        getErrorMessage(error)
       );
       throw error;
     }

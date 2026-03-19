@@ -1,6 +1,7 @@
 // src/services/email.service.ts
 // Enterprise Email Service with Resend integration
 import { Resend } from 'resend';
+import { getErrorMessage } from '@/lib/error-utils';
 import { EmailTemplatesService } from './email-templates.service';
 import type { EmailTemplateType, EmailTemplateData } from '@/types/email-templates';
 
@@ -163,7 +164,7 @@ export class EmailService {
 
     } catch (error) {
       console.error('❌ ENTERPRISE EMAIL ERROR:', error);
-      throw new Error(error instanceof Error ? error.message : 'Failed to send email');
+      throw new Error(getErrorMessage(error, 'Failed to send email'));
     }
   }
 

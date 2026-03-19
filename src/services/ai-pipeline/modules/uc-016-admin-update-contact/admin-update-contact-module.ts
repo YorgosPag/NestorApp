@@ -34,6 +34,7 @@ import {
   setAdminSession,
   buildAdminIdentifier,
 } from '../../shared/admin-session';
+import { getErrorMessage } from '@/lib/error-utils';
 import { PipelineIntentType } from '@/types/ai-pipeline';
 import type {
   IUCModule,
@@ -435,7 +436,7 @@ export class AdminUpdateContactModule implements IUCModule {
 
       return { success: true, sideEffects };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error);
       logger.error('UC-016 EXECUTE: Failed', { requestId: ctx.requestId, error: errorMessage });
       return { success: false, sideEffects: [], error: errorMessage };
     }

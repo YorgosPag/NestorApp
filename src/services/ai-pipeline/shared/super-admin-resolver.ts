@@ -16,6 +16,7 @@ import 'server-only';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 import type {
   SuperAdminRegistryDoc,
   SuperAdminResolution,
@@ -77,8 +78,7 @@ async function getRegistry(): Promise<SuperAdminRegistryDoc | null> {
 
     return data;
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('Failed to fetch super admin registry', { error: errorMessage });
+    logger.error('Failed to fetch super admin registry', { error: getErrorMessage(error) });
     // Return stale cache if available, otherwise null
     return registryCache.data;
   }

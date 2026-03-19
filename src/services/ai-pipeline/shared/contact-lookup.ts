@@ -19,6 +19,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 import { fuzzyGreekMatch } from './greek-text-utils';
 import { generateContactId, generateCompanyId } from '@/services/enterprise-id.service';
 
@@ -336,7 +337,7 @@ export async function getContactById(
       type: (data.type as string) ?? (data.contactType as string) ?? null,
     };
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = getErrorMessage(error);
     logger.warn('getContactById failed', { contactId, error: msg });
     return null;
   }

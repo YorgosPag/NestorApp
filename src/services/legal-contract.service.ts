@@ -16,6 +16,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 import { generateContractId } from '@/services/enterprise-id.service';
 import { AssociationService } from '@/services/association.service';
 import type {
@@ -130,7 +131,7 @@ export class LegalContractService {
       logger.error('[LegalContractService] Failed to create contract:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
       };
     }
   }
@@ -218,7 +219,7 @@ export class LegalContractService {
       logger.error('[LegalContractService] Failed to update contract:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
       };
     }
   }
@@ -277,7 +278,7 @@ export class LegalContractService {
       logger.error('[LegalContractService] Failed to transition status:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
       };
     }
   }
@@ -365,7 +366,7 @@ export class LegalContractService {
       logger.error('[LegalContractService] Failed to override professional:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
       };
     }
   }

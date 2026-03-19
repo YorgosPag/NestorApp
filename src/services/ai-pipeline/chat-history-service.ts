@@ -25,6 +25,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getCompanyId } from '@/config/tenant';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 import { sanitizeDocumentId } from '@/utils/firestore-helpers';
 
 const logger = createModuleLogger('CHAT_HISTORY_SERVICE');
@@ -119,7 +120,7 @@ export class ChatHistoryService {
       logger.warn('Failed to add chat history message', {
         channelSenderId,
         role: message.role,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
     }
   }
@@ -154,7 +155,7 @@ export class ChatHistoryService {
     } catch (error) {
       logger.warn('Failed to get chat history', {
         channelSenderId,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       return [];
     }
@@ -172,7 +173,7 @@ export class ChatHistoryService {
     } catch (error) {
       logger.warn('Failed to clear chat history', {
         channelSenderId,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
     }
   }
@@ -211,7 +212,7 @@ export class ChatHistoryService {
       return oldDocs.size;
     } catch (error) {
       logger.warn('Failed to cleanup chat history', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       return 0;
     }

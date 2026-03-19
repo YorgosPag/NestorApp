@@ -4,6 +4,7 @@
 import { useEffect, useMemo } from 'react';
 import { NotificationClient } from '@/api/notificationClient';
 import { useNotificationCenter } from '@/stores/notificationCenter';
+import { getErrorMessage } from '@/lib/error-utils';
 import type { Notification } from '@/types/notification';
 
 export type StreamOptions = {
@@ -43,7 +44,7 @@ export function useNotificationStream(opts: StreamOptions) {
         center.setCursor(cursor);
         center.setStatus('ready');
       } catch (e: unknown) {
-        const errorMessage = e instanceof Error ? e.message : String(e);
+        const errorMessage = getErrorMessage(e);
         center.setError(errorMessage);
         center.setStatus('error');
       }

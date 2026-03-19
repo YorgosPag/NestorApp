@@ -1,6 +1,7 @@
 'use client';
 
 import { sleep } from '@/lib/async-utils';
+import { getErrorMessage } from '@/lib/error-utils';
 import { generateJobId, generateOperationId } from '@/services/enterprise-id.service';
 
 // Batch Processing Service for bulk operations
@@ -271,7 +272,7 @@ class BatchProcessingService {
       return {
         operationId: operation.id,
         status: 'failed',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
         executionTime: Date.now() - startTime,
         retryCount: operation.retries || 0
       };

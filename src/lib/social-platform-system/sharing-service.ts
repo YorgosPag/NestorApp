@@ -22,6 +22,7 @@ import {
   type SocialPlatformType
 } from './platform-config';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 import { formatCurrency } from '@/lib/intl-utils';
 const logger = createModuleLogger('sharing-service');
 
@@ -288,7 +289,7 @@ export class SharingService {
       return {
         success: false,
         method: 'clipboard',
-        error: error instanceof Error ? error.message : 'Unknown sharing error'
+        error: getErrorMessage(error, 'Unknown sharing error')
       };
     }
   }

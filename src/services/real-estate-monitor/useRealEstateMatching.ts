@@ -10,6 +10,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { getErrorMessage } from '@/lib/error-utils';
 import {
   checkPropertyInRealEstatePolygons,
   checkMultiplePropertiesInRealEstatePolygons,
@@ -132,7 +133,7 @@ export function useRealEstateMatching(
 
       return result;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      const errorMessage = getErrorMessage(err, 'Unknown error occurred');
       setError(errorMessage);
       // Error logging removed //('Error checking property:', err);
 
@@ -186,7 +187,7 @@ export function useRealEstateMatching(
       // Debug logging removed //(`✅ Batch processing complete: ${batchResults.length} results, ${getAlertableProperties(batchResults).length} alerts`);
 
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Batch processing failed';
+      const errorMessage = getErrorMessage(err, 'Batch processing failed');
       setError(errorMessage);
       // Error logging removed //('Error in batch processing:', err);
     } finally {

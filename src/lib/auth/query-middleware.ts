@@ -36,6 +36,7 @@ import {
 import { auth } from '@/lib/firebase';
 import type { User } from 'firebase/auth';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 const logger = createModuleLogger('query-middleware');
 
 // ============================================================================
@@ -570,7 +571,7 @@ export class AuthorizedQueryService {
       timestamp: new Date().toISOString(),
       collection: collectionName,
       user: authContext.uid,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: getErrorMessage(error)
     };
 
     if (process.env.NODE_ENV === 'development') {

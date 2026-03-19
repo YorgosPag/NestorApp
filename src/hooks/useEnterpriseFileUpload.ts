@@ -23,6 +23,7 @@ import { PhotoUploadService } from '@/services/photo-upload.service';
 import type { UsageContext } from '@/config/photo-compression-config';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('useEnterpriseFileUpload');
 
@@ -348,7 +349,7 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
       return result;
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Σφάλμα κατά το ανέβασμα';
+      const errorMessage = getErrorMessage(error, 'Σφάλμα κατά το ανέβασμα');
 
       failUpload(errorMessage);
 

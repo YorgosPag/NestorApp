@@ -39,6 +39,7 @@ import { DEFAULT_TEMPLATE_SECTIONS } from '@/types/obligation-services';
 import type { IObligationsRepository, SearchFilters, ObligationStats } from './contracts';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 import { normalizeToDate } from '@/lib/date-local';
 import { validateObligationStatusTransition } from './workflow-rules';
 import { exportObligationToPDF } from '@/services/pdf';
@@ -355,7 +356,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
     } catch (error) {
       logger.error('Error creating obligation in Firebase', {
         error,
-        message: error instanceof Error ? error.message : String(error),
+        message: getErrorMessage(error),
       });
       throw error;
     }

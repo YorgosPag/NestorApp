@@ -20,6 +20,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 import { normalizeToISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('sender-history');
@@ -153,7 +154,7 @@ export async function getSenderHistory(
     logger.warn('Sender history query failed (non-fatal)', {
       senderEmail,
       companyId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
 
     return emptyResult;

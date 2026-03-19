@@ -14,6 +14,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { API_ROUTES } from '@/config/domain-constants';
+import { getErrorMessage } from '@/lib/error-utils';
 import type {
   LoanTracking,
   CreateLoanInput,
@@ -80,7 +81,7 @@ export function useLoanTracking(unitId: string | null): UseLoanTrackingReturn {
       const res = await fetchJson<{ success: boolean; data: LoanTracking[] }>(basePath);
       setLoans(res.data ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(getErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -103,7 +104,7 @@ export function useLoanTracking(unitId: string | null): UseLoanTrackingReturn {
         if (res.success) fetchData().catch(() => {});
         return { success: res.success, error: res.error };
       } catch (err) {
-        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        return { success: false, error: getErrorMessage(err) };
       }
     },
     [basePath, fetchData]
@@ -125,7 +126,7 @@ export function useLoanTracking(unitId: string | null): UseLoanTrackingReturn {
         if (res.success) await fetchData();
         return { success: res.success, error: res.error };
       } catch (err) {
-        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        return { success: false, error: getErrorMessage(err) };
       }
     },
     [basePath, fetchData]
@@ -147,7 +148,7 @@ export function useLoanTracking(unitId: string | null): UseLoanTrackingReturn {
         if (res.success) await fetchData();
         return { success: res.success, error: res.error };
       } catch (err) {
-        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        return { success: false, error: getErrorMessage(err) };
       }
     },
     [basePath, fetchData]
@@ -169,7 +170,7 @@ export function useLoanTracking(unitId: string | null): UseLoanTrackingReturn {
         if (res.success) await fetchData();
         return { success: res.success, error: res.error };
       } catch (err) {
-        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        return { success: false, error: getErrorMessage(err) };
       }
     },
     [basePath, fetchData]
@@ -191,7 +192,7 @@ export function useLoanTracking(unitId: string | null): UseLoanTrackingReturn {
         if (res.success) await fetchData();
         return { success: res.success, error: res.error };
       } catch (err) {
-        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        return { success: false, error: getErrorMessage(err) };
       }
     },
     [basePath, fetchData]

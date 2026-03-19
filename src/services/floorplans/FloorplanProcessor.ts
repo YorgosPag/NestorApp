@@ -32,6 +32,7 @@ import type {
   FloorplanFileType,
 } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('FloorplanProcessor');
 
@@ -224,8 +225,7 @@ export class FloorplanProcessor {
         },
       };
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown processing error';
+      const errorMessage = getErrorMessage(error, 'Unknown processing error');
       logger.error('Processing failed', { error: errorMessage });
       return {
         success: false,

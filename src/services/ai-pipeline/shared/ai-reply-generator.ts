@@ -21,6 +21,7 @@
 import 'server-only';
 
 import { isRecord, isNonEmptyTrimmedString } from '@/lib/type-guards';
+import { getErrorMessage } from '@/lib/error-utils';
 import { AI_ANALYSIS_DEFAULTS } from '@/config/ai-analysis-config';
 import { PIPELINE_REPLY_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
@@ -326,7 +327,7 @@ async function callOpenAI(
       if (attempt >= maxRetries) {
         logger.error('OpenAI reply generation failed after retries', {
           requestId,
-          error: error instanceof Error ? error.message : String(error),
+          error: getErrorMessage(error),
         });
         return null;
       }
@@ -424,7 +425,7 @@ export async function generateAdminConversationalReply(
     const durationMs = Date.now() - startTime;
     logger.error('Admin conversational reply failed', {
       requestId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
       durationMs,
     });
     return { replyText: null, aiGenerated: false, durationMs };
@@ -549,7 +550,7 @@ export async function generateCompositeReply(
     const durationMs = Date.now() - startTime;
     logger.error('Composite reply unexpected error — using concatenation fallback', {
       requestId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
       durationMs,
     });
 
@@ -640,7 +641,7 @@ export async function generateAIReply(
     const durationMs = Date.now() - startTime;
     logger.error('AI reply generation unexpected error — using fallback', {
       requestId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
       durationMs,
     });
 

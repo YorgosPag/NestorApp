@@ -3,6 +3,7 @@
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 const logger = createModuleLogger('firebase-server');
 import { getFirestore, Firestore, collection, doc, getDocs, getDoc as getFirestoreDoc, query, where, WhereFilterOp } from 'firebase/firestore';
 
@@ -63,7 +64,7 @@ function initializeFirebaseServer() {
 
   } catch (error) {
     logger.error('ENTERPRISE ERROR: Critical Firebase initialization failure', {
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
       stack: error instanceof Error ? error.stack : 'No stack trace',
       config: {
         hasApiKey: !!firebaseConfig.apiKey,

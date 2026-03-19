@@ -14,6 +14,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { API_ROUTES } from '@/config/domain-constants';
+import { getErrorMessage } from '@/lib/error-utils';
 import type {
   ChequeRecord,
   CreateChequeInput,
@@ -79,7 +80,7 @@ export function useChequeRegistry(unitId: string | null): UseChequeRegistryRetur
       const res = await fetchJson<{ success: boolean; data: ChequeRecord[] }>(basePath);
       setCheques(res.data ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(getErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -102,7 +103,7 @@ export function useChequeRegistry(unitId: string | null): UseChequeRegistryRetur
         if (res.success) fetchData().catch(() => {});
         return { success: res.success, error: res.error };
       } catch (err) {
-        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        return { success: false, error: getErrorMessage(err) };
       }
     },
     [basePath, fetchData]
@@ -124,7 +125,7 @@ export function useChequeRegistry(unitId: string | null): UseChequeRegistryRetur
         if (res.success) await fetchData();
         return { success: res.success, error: res.error };
       } catch (err) {
-        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        return { success: false, error: getErrorMessage(err) };
       }
     },
     [basePath, fetchData]
@@ -146,7 +147,7 @@ export function useChequeRegistry(unitId: string | null): UseChequeRegistryRetur
         if (res.success) await fetchData();
         return { success: res.success, error: res.error };
       } catch (err) {
-        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        return { success: false, error: getErrorMessage(err) };
       }
     },
     [basePath, fetchData]
@@ -168,7 +169,7 @@ export function useChequeRegistry(unitId: string | null): UseChequeRegistryRetur
         if (res.success) await fetchData();
         return { success: res.success, error: res.error };
       } catch (err) {
-        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        return { success: false, error: getErrorMessage(err) };
       }
     },
     [basePath, fetchData]
@@ -190,7 +191,7 @@ export function useChequeRegistry(unitId: string | null): UseChequeRegistryRetur
         if (res.success) await fetchData();
         return { success: res.success, error: res.error };
       } catch (err) {
-        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        return { success: false, error: getErrorMessage(err) };
       }
     },
     [basePath, fetchData]

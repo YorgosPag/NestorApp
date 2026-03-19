@@ -33,6 +33,7 @@ import { FloorplanSaveOrchestrator } from '@/services/floorplans/floorplan-save-
 import { RealtimeService } from '@/services/realtime';
 import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES, FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import { Logger, LogLevel, DevNullOutput } from '@/subapps/dxf-viewer/settings/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // 🏢 ENTERPRISE LOGGER CONFIGURATION
@@ -175,7 +176,7 @@ export class UnitFloorplanService {
       logger.error('Error saving unit floorplan', {
         unitId,
         companyId,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       return false;
     }
@@ -273,7 +274,7 @@ export class UnitFloorplanService {
       logger.error('Error loading unit floorplan', {
         unitId,
         companyId,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       return null;
     }
@@ -306,7 +307,7 @@ export class UnitFloorplanService {
     } catch (error) {
       logger.warn('Error checking unit floorplan', {
         unitId,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       return false;
     }
@@ -347,7 +348,7 @@ export class UnitFloorplanService {
     } catch (error) {
       logger.error('Error deleting unit floorplan', {
         unitId,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       return false;
     }
