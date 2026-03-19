@@ -10,6 +10,7 @@
  */
 
 import type { ParsedAddress } from '@/services/communications/inbound/types';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 // ============================================================================
 // STATUS TYPES
@@ -299,7 +300,7 @@ export interface EmailIngestionWorkerStatus {
  */
 export const EMAIL_QUEUE_CONFIG = {
   /** Firestore collection name */
-  COLLECTION_NAME: 'email_ingestion_queue',
+  COLLECTION_NAME: COLLECTIONS.EMAIL_INGESTION_QUEUE,
 
   /** Maximum retry attempts before dead letter */
   MAX_RETRIES: 3,

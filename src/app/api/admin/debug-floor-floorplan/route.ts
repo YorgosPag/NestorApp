@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,14 +55,14 @@ export const GET = async (request: NextRequest) => {
       const db = getAdminFirestore();
 
       // 1. Get unit document
-      const unitDoc = await db.collection('units').doc(unitId).get();
+      const unitDoc = await db.collection(COLLECTIONS.UNITS).doc(unitId).get();
       const unitData = unitDoc.exists ? (unitDoc.data() as DocData) : null;
 
       // 2. Get floor document if floorId exists
       const floorId = (unitData?.floorId as string) ?? null;
       let floorData: (DocData & { id: string }) | null = null;
       if (floorId) {
-        const floorDoc = await db.collection('floors').doc(floorId).get();
+        const floorDoc = await db.collection(COLLECTIONS.FLOORS).doc(floorId).get();
         floorData = floorDoc.exists
           ? { id: floorDoc.id, ...(floorDoc.data() as DocData) }
           : null;
@@ -71,7 +72,7 @@ export const GET = async (request: NextRequest) => {
       let floorFiles: (DocData & { id: string })[] = [];
       if (floorId) {
         const floorFilesSnap = await db
-          .collection('files')
+          .collection(COLLECTIONS.FILES)
           .where('entityType', '==', 'floor')
           .where('entityId', '==', floorId)
           .get();
@@ -83,7 +84,7 @@ export const GET = async (request: NextRequest) => {
 
       // 4. Query files collection for unit floorplan records
       const unitFilesSnap = await db
-        .collection('files')
+        .collection(COLLECTIONS.FILES)
         .where('entityType', '==', 'unit')
         .where('entityId', '==', unitId)
         .where('category', '==', 'floorplans')
@@ -97,7 +98,7 @@ export const GET = async (request: NextRequest) => {
       let legacyFloorplans: (DocData & { id: string })[] = [];
       if (floorId) {
         const legacySnap = await db
-          .collection('floor_floorplans')
+          .collection(COLLECTIONS.FLOOR_FLOORPLANS)
           .where('floorId', '==', floorId)
           .get();
         legacyFloorplans = legacySnap.docs.map((d) => ({

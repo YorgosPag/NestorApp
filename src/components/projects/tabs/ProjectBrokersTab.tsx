@@ -207,7 +207,7 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
     if (!projectId) return;
     try {
       const q = query(
-        collection(db, 'units'),
+        collection(db, COLLECTIONS.UNITS),
         where('projectId', '==', projectId)
       );
       const snap = await getDocs(q);

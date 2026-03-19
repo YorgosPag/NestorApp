@@ -252,6 +252,12 @@ export const COLLECTIONS = {
 
   // 📊 OWNERSHIP PERCENTAGE TABLE (ADR-235: Πίνακας Χιλιοστών Συνιδιοκτησίας)
   OWNERSHIP_TABLES: process.env.NEXT_PUBLIC_OWNERSHIP_TABLES_COLLECTION || 'ownership_tables',
+
+  // 📐 FLOOR FLOORPLANS (Legacy — embedded PDF floorplans per floor)
+  FLOOR_FLOORPLANS: process.env.NEXT_PUBLIC_FLOOR_FLOORPLANS_COLLECTION || 'floor_floorplans',
+
+  // 🔗 FILE WEBHOOKS (ADR-191: Enterprise Document Management — Phase 5.4)
+  FILE_WEBHOOKS: process.env.NEXT_PUBLIC_FILE_WEBHOOKS_COLLECTION || 'file_webhooks',
 } as const;
 
 // ============================================================================
@@ -309,6 +315,9 @@ export const SUBCOLLECTIONS = {
 
   // Ownership table revisions (ADR-235)
   OWNERSHIP_REVISIONS: process.env.NEXT_PUBLIC_OWNERSHIP_REVISIONS_SUBCOL || 'revisions',
+
+  // Company audit logs (ADR-210: subcollection under companies/{id})
+  COMPANY_AUDIT_LOGS: process.env.NEXT_PUBLIC_COMPANY_AUDIT_LOGS_SUBCOL || 'audit_logs',
 } as const;
 
 // ============================================================================

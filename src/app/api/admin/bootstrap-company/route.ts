@@ -22,7 +22,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { LEGACY_TENANT_COMPANY_ID } from '@/config/tenant';
 import { ensureCompanyDocument, getCompanyDocument } from '@/services/company-document.service';
 import { withAuth, logSystemOperation, extractRequestMetadata } from '@/lib/auth';
@@ -54,7 +54,7 @@ export const GET = withAuth(
       const auditLogsSnap = await db
         .collection(COLLECTIONS.COMPANIES)
         .doc(companyId)
-        .collection('audit_logs')
+        .collection(SUBCOLLECTIONS.COMPANY_AUDIT_LOGS)
         .limit(1)
         .get();
 

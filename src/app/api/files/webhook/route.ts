@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 export const maxDuration = 10;
@@ -51,7 +52,7 @@ async function handleGet(
     }
 
     const snapshot = await adminDb
-      .collection('file_webhooks')
+      .collection(COLLECTIONS.FILE_WEBHOOKS)
       .where('createdBy', '==', ctx.uid)
       .get();
 
@@ -121,7 +122,7 @@ async function handlePost(
     // 🏢 ENTERPRISE: setDoc + enterprise ID (SOS N.6)
     const { generateWebhookId } = await import('@/services/enterprise-id.service');
     const enterpriseId = generateWebhookId();
-    await adminDb.collection('file_webhooks').doc(enterpriseId).set({
+    await adminDb.collection(COLLECTIONS.FILE_WEBHOOKS).doc(enterpriseId).set({
       url,
       events,
       secret,
@@ -161,7 +162,7 @@ async function handleDelete(
       return NextResponse.json({ error: 'Missing webhookId' }, { status: 400 });
     }
 
-    const docRef = adminDb.collection('file_webhooks').doc(webhookId);
+    const docRef = adminDb.collection(COLLECTIONS.FILE_WEBHOOKS).doc(webhookId);
     const docSnap = await docRef.get();
 
     if (!docSnap.exists || docSnap.data()?.createdBy !== ctx.uid) {

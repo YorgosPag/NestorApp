@@ -20,6 +20,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import { FloorFloorplanService, type FloorFloorplanData } from '@/services/floorplans/FloorFloorplanService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime';
@@ -108,7 +109,7 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
    */
   const findFloor = useCallback(async (bId: string, fNum: number): Promise<ResolvedFloor | null> => {
     try {
-      const floorsRef = collection(db, 'floors');
+      const floorsRef = collection(db, COLLECTIONS.FLOORS);
       const q = query(
         floorsRef,
         where('buildingId', '==', bId),
@@ -159,7 +160,7 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
    */
   const searchLegacyFloorFloorplans = useCallback(async (floorIdStr: string): Promise<FloorFloorplanData | null> => {
     try {
-      const floorplansRef = collection(db, 'floor_floorplans');
+      const floorplansRef = collection(db, COLLECTIONS.FLOOR_FLOORPLANS);
       const q = query(floorplansRef, where('floorId', '==', floorIdStr));
       const snapshot = await getDocs(q);
 
@@ -231,7 +232,7 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
         // floorId provided directly — fetch floor doc to get its companyId
         try {
           const { doc: docRef, getDoc } = await import('firebase/firestore');
-          const floorSnap = await getDoc(docRef(db, 'floors', effectiveFloorId));
+          const floorSnap = await getDoc(docRef(db, COLLECTIONS.FLOORS, effectiveFloorId));
           if (floorSnap.exists()) {
             const data = floorSnap.data() as FloorDocument;
             floorCompanyId = data.companyId;

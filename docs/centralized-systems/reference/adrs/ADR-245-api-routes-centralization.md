@@ -489,6 +489,7 @@ ESLint rule που απαγορεύει hardcoded `/api/` strings εκτός `do
 | 2026-03-19 | **Phase B SPECs CREATED** — SPEC-245B1 (high-priority, ~35 files, ~105 instances) + SPEC-245B2 (lower-priority, mostly already migrated). Audit revealed ~30 files already use API_ROUTES. | Claude Code |
 | 2026-03-19 | **Phase B1 COMPLETE** — SPEC-245B1 executed. 6 αρχεία χρειάστηκαν αλλαγές (BuildingSelectorCard, FloorSelectField, LinkedSpacesCard, SalesUnitListCard, TransactionChainCard, entity-linking/config). ~50 αρχεία ήταν ήδη migrated. Zero hardcoded `/api/` strings remain in scope. | Claude Code |
 | 2026-03-19 | **Phase B2 COMPLETE** — SPEC-245B2 executed. New `API_ROUTES.GEOCODING` entry. Rate limit config: 2 exact-match paths migrated (SEARCH, PROJECTS.LIST), 9 prefix-only paths unchanged. Geographic config fallback migrated. Phase B fully complete. | Claude Code |
+| 2026-03-19 | **COLLECTIONS Centralization** — Ίδιο pattern εφαρμόστηκε σε Firestore collection names. +3 νέα entries στο COLLECTIONS (FLOOR_FLOORPLANS, FILE_WEBHOOKS) + SUBCOLLECTIONS (COMPANY_AUDIT_LOGS). 55 hardcoded strings σε 12 αρχεία αντικαταστάθηκαν με COLLECTIONS.XXX references. 100% adoption — zero active hardcoded collection names. | Claude Code |
 
 ---
 

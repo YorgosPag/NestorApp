@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 export const maxDuration = 60;
@@ -50,7 +51,7 @@ async function handler(
 
     // 1. Delete files (respect holds)
     const filesSnapshot = await adminDb
-      .collection('files')
+      .collection(COLLECTIONS.FILES)
       .where('createdBy', '==', userId)
       .get();
 
@@ -77,7 +78,7 @@ async function handler(
 
     // 2. Delete comments
     const commentsSnapshot = await adminDb
-      .collection('file_comments')
+      .collection(COLLECTIONS.FILE_COMMENTS)
       .where('authorId', '==', userId)
       .get();
 
@@ -90,7 +91,7 @@ async function handler(
 
     // 3. Delete shares
     const sharesSnapshot = await adminDb
-      .collection('file_shares')
+      .collection(COLLECTIONS.FILE_SHARES)
       .where('createdBy', '==', userId)
       .get();
 
@@ -103,7 +104,7 @@ async function handler(
 
     // 4. Anonymize audit log (keep for compliance but remove PII)
     const auditSnapshot = await adminDb
-      .collection('file_audit_log')
+      .collection(COLLECTIONS.FILE_AUDIT_LOG)
       .where('performedBy', '==', userId)
       .get();
 
@@ -119,7 +120,7 @@ async function handler(
 
     // Write GDPR erasure audit entry
     const { generateAuditId } = await import('@/services/enterprise-id.service');
-    await adminDb.collection('file_audit_log').doc(generateAuditId()).set({
+    await adminDb.collection(COLLECTIONS.FILE_AUDIT_LOG).doc(generateAuditId()).set({
       fileId: 'gdpr-erasure',
       action: 'gdpr_erasure',
       performedBy: 'system',

@@ -22,6 +22,7 @@
 import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import { getCompanyId } from '@/config/tenant';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { sanitizeDocumentId } from '@/utils/firestore-helpers';
@@ -55,7 +56,7 @@ interface ChatHistoryDocument {
 // CONSTANTS
 // ============================================================================
 
-const COLLECTION_NAME = 'ai_chat_history';
+const COLLECTION_NAME = COLLECTIONS.AI_CHAT_HISTORY;
 const MAX_MESSAGES_PER_USER = 20;
 const MAX_MESSAGE_CONTENT_LENGTH = 2000;
 const HISTORY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours

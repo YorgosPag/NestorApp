@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 export const maxDuration = 60;
@@ -33,7 +34,7 @@ async function handler(
 
     // Query all files created by this user
     const filesSnapshot = await adminDb
-      .collection('files')
+      .collection(COLLECTIONS.FILES)
       .where('createdBy', '==', userId)
       .get();
 
@@ -59,7 +60,7 @@ async function handler(
 
     // Query audit log entries for this user
     const auditSnapshot = await adminDb
-      .collection('file_audit_log')
+      .collection(COLLECTIONS.FILE_AUDIT_LOG)
       .where('performedBy', '==', userId)
       .orderBy('timestamp', 'desc')
       .limit(500)
@@ -78,7 +79,7 @@ async function handler(
 
     // Query comments by this user
     const commentsSnapshot = await adminDb
-      .collection('file_comments')
+      .collection(COLLECTIONS.FILE_COMMENTS)
       .where('authorId', '==', userId)
       .get();
 
@@ -94,7 +95,7 @@ async function handler(
 
     // Query shares created by this user
     const sharesSnapshot = await adminDb
-      .collection('file_shares')
+      .collection(COLLECTIONS.FILE_SHARES)
       .where('createdBy', '==', userId)
       .get();
 

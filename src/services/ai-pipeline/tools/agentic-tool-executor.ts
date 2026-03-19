@@ -65,44 +65,44 @@ interface QueryFilter {
  * System/config/settings collections are EXCLUDED for security.
  */
 const ALLOWED_READ_COLLECTIONS = new Set([
-  'projects',
-  'buildings',
-  'units',
-  'floors',
-  'contacts',
-  'construction_phases',
-  'construction_tasks',
-  'leads',
-  'opportunities',
-  'appointments',
-  'tasks',
-  'obligations',
-  'messages',
-  'communications',
-  'invoices',
-  'payments',
-  'contact_links',
-  'employment_records',
-  'attendance_events',
-  'conversations',
-  'activities',
-  'documents',
-  'parking_spots',
-  'accounting_invoices',
-  'accounting_bank_transactions',
-  'accounting_journal_entries',
-  'accounting_fixed_assets',
+  COLLECTIONS.PROJECTS,
+  COLLECTIONS.BUILDINGS,
+  COLLECTIONS.UNITS,
+  COLLECTIONS.FLOORS,
+  COLLECTIONS.CONTACTS,
+  COLLECTIONS.CONSTRUCTION_PHASES,
+  COLLECTIONS.CONSTRUCTION_TASKS,
+  COLLECTIONS.LEADS,
+  COLLECTIONS.OPPORTUNITIES,
+  COLLECTIONS.APPOINTMENTS,
+  COLLECTIONS.TASKS,
+  COLLECTIONS.OBLIGATIONS,
+  COLLECTIONS.MESSAGES,
+  COLLECTIONS.COMMUNICATIONS,
+  COLLECTIONS.INVOICES,
+  COLLECTIONS.PAYMENTS,
+  COLLECTIONS.CONTACT_LINKS,
+  COLLECTIONS.EMPLOYMENT_RECORDS,
+  COLLECTIONS.ATTENDANCE_EVENTS,
+  COLLECTIONS.CONVERSATIONS,
+  COLLECTIONS.ACTIVITIES,
+  COLLECTIONS.DOCUMENTS,
+  COLLECTIONS.PARKING_SPACES,
+  COLLECTIONS.ACCOUNTING_INVOICES,
+  COLLECTIONS.ACCOUNTING_BANK_TRANSACTIONS,
+  COLLECTIONS.ACCOUNTING_JOURNAL_ENTRIES,
+  COLLECTIONS.ACCOUNTING_FIXED_ASSETS,
 ]);
 
 /**
  * Collections allowed for write operations (admin only, very restricted)
  */
 const ALLOWED_WRITE_COLLECTIONS = new Set([
-  'contacts',
-  'tasks',
-  'appointments',
-  'activities',
-  'leads',
+  COLLECTIONS.CONTACTS,
+  COLLECTIONS.TASKS,
+  COLLECTIONS.APPOINTMENTS,
+  COLLECTIONS.ACTIVITIES,
+  COLLECTIONS.LEADS,
 ]);
 
 /**
@@ -621,10 +621,10 @@ export class AgenticToolExecutor {
     // These are child collections linked via parentId (buildingId, phaseId)
     // Data isolation for these is enforced via their parent (buildings.companyId)
     const collectionsWithOptionalCompanyId = new Set([
-      'buildings',
-      'floors',
-      'construction_phases',
-      'construction_tasks',
+      COLLECTIONS.BUILDINGS,
+      COLLECTIONS.FLOORS,
+      COLLECTIONS.CONSTRUCTION_PHASES,
+      COLLECTIONS.CONSTRUCTION_TASKS,
     ]);
     if (collectionsWithOptionalCompanyId.has(collection)) {
       return filters.filter(f => f.field !== 'companyId');

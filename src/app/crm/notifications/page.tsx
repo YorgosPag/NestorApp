@@ -9,6 +9,7 @@ import { NotificationCard } from './NotificationCard';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import { collection, addDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PageLoadingState } from '@/core/states';
@@ -41,7 +42,7 @@ export default function CrmNotificationsPage() {
 
     setIsCreatingTest(true);
     try {
-      const docRef = await addDoc(collection(db, 'notifications'), {
+      const docRef = await addDoc(collection(db, COLLECTIONS.NOTIFICATIONS), {
         userId: user.uid,
         tenantId: 'default',
         title: t('notifications.test.title'),
@@ -66,7 +67,7 @@ export default function CrmNotificationsPage() {
     if (!testNotificationId) return;
 
     try {
-      await deleteDoc(doc(db, 'notifications', testNotificationId));
+      await deleteDoc(doc(db, COLLECTIONS.NOTIFICATIONS, testNotificationId));
       setTestNotificationId(null);
       logger.info('Test notification deleted');
     } catch (err) {
