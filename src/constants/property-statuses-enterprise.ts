@@ -2125,8 +2125,6 @@ export const PERSONA_FIELD_LABELS = {
   OWNERSHIP_NOTES: 'persona.fields.ownershipNotes',
   // 👤 Client
   CLIENT_SINCE: 'persona.fields.clientSince',
-  CLIENT_CATEGORY: 'persona.fields.clientCategory',
-  PREFERRED_CONTACT_METHOD: 'persona.fields.preferredContactMethod',
   // 📦 Supplier
   SUPPLIER_CATEGORY: 'persona.fields.supplierCategory',
   PAYMENT_TERMS_DAYS: 'persona.fields.paymentTermsDays',

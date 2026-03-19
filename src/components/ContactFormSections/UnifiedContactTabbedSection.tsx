@@ -1,6 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState, useEffect, useCallback } from 'react';
+import { Calendar, ExternalLink } from 'lucide-react';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { ContactType } from '@/types/contacts';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
@@ -29,6 +31,8 @@ import type { PersonaType } from '@/types/contacts/personas';
 import { createDefaultPersonaData } from '@/types/contacts/personas';
 // 🏢 ENTERPRISE: Brokerage guard — prevent persona removal when active records exist
 import { BrokerageService } from '@/services/brokerage.service';
+// 🛡️ ENTERPRISE: Client guard — prevent persona removal when active purchases exist (ADR-121)
+import { ClientService } from '@/services/client.service';
 import { toast } from 'sonner';
 // 🇪🇺 ENTERPRISE: ESCO Professional Classification (ADR-034) + Skills (ADR-132)
 import { EscoOccupationPicker } from '@/components/shared/EscoOccupationPicker';
@@ -602,6 +606,18 @@ export function UnifiedContactTabbedSection({
                 }
               }
 
+              // 🛡️ GUARD: Prevent removal of client if active purchased units exist (ADR-121)
+              if (personaType === 'client' && formData.id) {
+                const { hasUnits, hasParking, hasStorage } = await ClientService.hasActiveUnits(formData.id);
+                if (hasUnits || hasParking || hasStorage) {
+                  toast.error(
+                    'Δεν μπορεί να αφαιρεθεί η ιδιότητα «Πελάτης» — υπάρχουν ενεργές αγορές συνδεδεμένες.',
+                    { duration: 5000 }
+                  );
+                  return;
+                }
+              }
+
               // Deactivate: remove from activePersonas (data stays in personaData for re-activation)
               setFormData({
                 ...formData,
@@ -731,6 +747,33 @@ export function UnifiedContactTabbedSection({
               }}
             />
           ),
+
+          // 🛡️ ENTERPRISE: clientSince — read-only date + sales link (ADR-121 Client Tab Redesign)
+          clientSince: () => {
+            const rawValue = formData.clientSince as string | null;
+            const displayDate = rawValue
+              ? new Date(rawValue).toLocaleDateString('el-GR', { year: 'numeric', month: 'long', day: 'numeric' })
+              : t('persona.fields.clientSinceEmpty', 'Δεν έχει οριστεί');
+
+            return (
+              <section className="col-span-full space-y-4">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <label className="text-sm font-medium text-muted-foreground">
+                    {t('persona.fields.clientSince', 'Πελάτης από')}
+                  </label>
+                  <span className="text-sm font-semibold">{displayDate}</span>
+                </div>
+                <Link
+                  href="/sales/available-apartments"
+                  className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  {t('persona.links.viewClientPurchases', 'Προβολή αγορών πελάτη')}
+                </Link>
+              </section>
+            );
+          },
         } : {}),
 
         // 🏢 ENTERPRISE: Public Service Registry Picker + Ministry Picker (services only)

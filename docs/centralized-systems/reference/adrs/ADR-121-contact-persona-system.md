@@ -32,7 +32,7 @@ Implement the **SAP Business Partner "Role/Persona" pattern**:
 | `accountant` | oeeNumber, accountingClass | P1 |
 | `lawyer` | barAssociationNumber, barAssociation | P1 |
 | `property_owner` | propertyCount, ownershipNotes | P1 |
-| `client` | clientSince, clientCategory, preferredContactMethod | P1 |
+| `client` | clientSince (read-only) | P1 |
 | `supplier` | supplierCategory, paymentTermsDays | P2 |
 | `notary` | notaryRegistryNumber, notaryDistrict | P2 |
 | `real_estate_agent` | licenseNumber, agency | P2 |
@@ -115,3 +115,22 @@ Implement the **SAP Business Partner "Role/Persona" pattern**:
 ### Negative
 - Increased complexity in form data routing (wrapped handlers)
 - Persona data stored as embedded array (bounded at 9 max, acceptable)
+
+## Changelog
+
+### 2026-03-19 — Client Persona Guard + Tab Redesign
+
+**Removal guards**: Added `ClientService.hasActiveUnits()` guard that prevents removing the "Client" persona badge when the contact has active purchased units, parking spots, or storage units. Same fail-open pattern as `BrokerageService.hasActiveRecords()`.
+
+**Client tab simplification**: Removed `clientCategory` and `preferredContactMethod` dropdown fields from the client persona tab. Only `clientSince` remains, rendered as a **read-only** date display (not editable). Added "View client purchases" link to `/sales/available-apartments`.
+
+**Files changed**:
+| File | Change |
+|------|--------|
+| `src/services/client.service.ts` | **NEW** — `ClientService.hasActiveUnits()` queries units/parking/storage |
+| `src/types/contacts/personas.ts` | Removed `clientCategory`, `preferredContactMethod` from `ClientPersona` interface + `createDefaultPersonaData` |
+| `src/config/persona-config.ts` | Removed 2 select fields + option arrays from client section |
+| `src/constants/property-statuses-enterprise.ts` | Removed `CLIENT_CATEGORY`, `PREFERRED_CONTACT_METHOD` from `PERSONA_FIELD_LABELS` |
+| `src/components/ContactFormSections/UnifiedContactTabbedSection.tsx` | Added client guard + custom clientSince renderer (read-only + sales link) |
+
+**Note**: `ClientCategory` and `PreferredContactMethod` types kept in `personas.ts` (used by `contact-info.ts`).

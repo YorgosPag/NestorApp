@@ -190,10 +190,6 @@ export interface ClientPersona extends BasePersonaData {
   personaType: 'client';
   /** Ημερομηνία εγγραφής ως πελάτης */
   clientSince: string | null;
-  /** Κατηγορία πελάτη */
-  clientCategory: ClientCategory | null;
-  /** Προτιμώμενος τρόπος επικοινωνίας */
-  preferredContactMethod: PreferredContactMethod | null;
 }
 
 /**
@@ -393,8 +389,6 @@ export function createDefaultPersonaData(personaType: PersonaType): PersonaData 
         ...base,
         personaType: 'client',
         clientSince: null,
-        clientCategory: null,
-        preferredContactMethod: null,
       };
     case 'supplier':
       return {

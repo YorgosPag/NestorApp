@@ -81,20 +81,7 @@ const ENGINEER_LICENSE_OPTIONS = [
   { value: 'D', label: 'persona.options.licenseClass.D' },
 ];
 
-const CLIENT_CATEGORY_OPTIONS = [
-  { value: 'residential',    label: 'persona.options.clientCategory.residential' },
-  { value: 'commercial',     label: 'persona.options.clientCategory.commercial' },
-  { value: 'industrial',     label: 'persona.options.clientCategory.industrial' },
-  { value: 'public_sector',  label: 'persona.options.clientCategory.publicSector' },
-  { value: 'other',          label: 'persona.options.clientCategory.other' },
-];
-
-const PREFERRED_CONTACT_OPTIONS = [
-  { value: 'phone',      label: 'persona.options.contactMethod.phone' },
-  { value: 'email',      label: 'persona.options.contactMethod.email' },
-  { value: 'in_person',  label: 'persona.options.contactMethod.inPerson' },
-  { value: 'messaging',  label: 'persona.options.contactMethod.messaging' },
-];
+// CLIENT_CATEGORY_OPTIONS & PREFERRED_CONTACT_OPTIONS removed — ADR-121 Client Tab Redesign (2026-03-19)
 
 const SUPPLIER_CATEGORY_OPTIONS = [
   { value: 'materials',      label: 'persona.options.supplierCategory.materials' },
@@ -355,22 +342,6 @@ export const PERSONA_SECTIONS: Record<PersonaType, PersonaSectionConfig[]> = {
           type: 'date',
           helpText: 'persona.helpTexts.clientSince',
           icon: 'calendar',
-        },
-        {
-          id: 'clientCategory',
-          label: PERSONA_FIELD_LABELS.CLIENT_CATEGORY,
-          type: 'select',
-          options: CLIENT_CATEGORY_OPTIONS,
-          helpText: 'persona.helpTexts.clientCategory',
-          icon: 'tag',
-        },
-        {
-          id: 'preferredContactMethod',
-          label: PERSONA_FIELD_LABELS.PREFERRED_CONTACT_METHOD,
-          type: 'select',
-          options: PREFERRED_CONTACT_OPTIONS,
-          helpText: 'persona.helpTexts.preferredContactMethod',
-          icon: 'phone',
         },
       ],
     },
