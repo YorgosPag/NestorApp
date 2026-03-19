@@ -43,6 +43,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   USER: 'usr',
   ASSET: 'ast',
   RELATIONSHIP: 'rel',
+  MEMBER: 'mbr',
 
   // ==========================================================================
   // LEGAL DOCUMENTS & OBLIGATIONS
@@ -404,6 +405,14 @@ export class EnterpriseIdService {
    */
   generateRelationshipId(): string {
     return this.generateId(ENTERPRISE_ID_PREFIXES.RELATIONSHIP).id;
+  }
+
+  /**
+   * 👥 Generate Member ID (ADR-244 Phase B: Project Members)
+   * Format: mbr_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateMemberId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.MEMBER).id;
   }
 
   /**
@@ -1221,6 +1230,7 @@ export const generateDocumentId = () => enterpriseIdService.generateDocumentId()
 export const generateUserId = () => enterpriseIdService.generateUserId();
 export const generateAssetId = () => enterpriseIdService.generateAssetId();
 export const generateRelationshipId = () => enterpriseIdService.generateRelationshipId();
+export const generateMemberId = () => enterpriseIdService.generateMemberId();
 export const generateWorkspaceId = () => enterpriseIdService.generateWorkspaceId();
 export const generateAddressId = () => enterpriseIdService.generateAddressId();
 export const generateOpportunityId = () => enterpriseIdService.generateOpportunityId();

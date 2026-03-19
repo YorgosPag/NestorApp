@@ -136,7 +136,7 @@ export function UserDetailPanel({ user, open, onClose }: UserDetailPanelProps) {
                 </Badge>
               </dd>
 
-              <dt className="text-muted-foreground">{t('roleManagement.status', 'Status')}</dt>
+              <dt className="text-muted-foreground">{t('roleManagement.table.status', 'Status')}</dt>
               <dd>
                 <Badge variant={STATUS_BADGE_VARIANT[user.status]}>
                   {user.status}

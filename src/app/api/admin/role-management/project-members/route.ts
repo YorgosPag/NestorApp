@@ -21,6 +21,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { generateMemberId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -31,6 +32,7 @@ const logger = createModuleLogger('RoleManagement:ProjectMembers');
 // =============================================================================
 
 interface MemberDoc {
+  uid: string;
   companyId: string;
   projectId: string;
   roleId: string;
@@ -145,11 +147,14 @@ export const GET = withSensitiveRateLimit(
           });
         }
 
-        // Collect UIDs for enrichment
-        const memberDocs = membersSnap.docs.map((doc) => ({
-          uid: doc.id,
-          ...(doc.data() as MemberDoc),
-        }));
+        // Collect UIDs for enrichment (uid is a field, doc ID is enterprise ID)
+        const memberDocs = membersSnap.docs.map((doc) => {
+          const data = doc.data() as MemberDoc;
+          return {
+            ...data,
+            uid: data.uid ?? doc.id, // Backward compat: old docs may use doc.id as uid
+          };
+        });
 
         const uids = memberDocs.map((m) => m.uid);
 
@@ -221,13 +226,19 @@ export const POST = withSensitiveRateLimit(
         const { action, projectId, uid, roleId, permissionSetIds, reason } = validated;
         const db = getAdminFirestore();
 
-        const memberRef = db
+        // Enterprise pattern: members collection ref with query by uid field
+        const membersCol = db
           .collection(COLLECTIONS.COMPANIES)
           .doc(ctx.companyId)
           .collection(SUBCOLLECTIONS.COMPANY_PROJECTS)
           .doc(projectId)
-          .collection(SUBCOLLECTIONS.PROJECT_MEMBERS)
-          .doc(uid);
+          .collection(SUBCOLLECTIONS.PROJECT_MEMBERS);
+
+        // Helper: find existing member doc by uid field
+        const findMemberByUid = async () => {
+          const snap = await membersCol.where('uid', '==', uid).limit(1).get();
+          return snap.empty ? null : snap.docs[0];
+        };
 
         switch (action) {
           case 'assign': {
@@ -238,15 +249,18 @@ export const POST = withSensitiveRateLimit(
               );
             }
 
-            const existing = await memberRef.get();
-            if (existing.exists) {
+            const existing = await findMemberByUid();
+            if (existing) {
               return NextResponse.json(
                 { success: false, error: 'User is already a member of this project' },
                 { status: 409 }
               );
             }
 
-            await memberRef.set({
+            // Enterprise ID: setDoc() + generateMemberId() (ADR-017)
+            const memberId = generateMemberId();
+            await membersCol.doc(memberId).set({
+              uid,
               companyId: ctx.companyId,
               projectId,
               roleId,
@@ -259,27 +273,27 @@ export const POST = withSensitiveRateLimit(
             await logAuditEvent(ctx, 'member_added', uid, 'user', {
               newValue: {
                 type: 'project_member',
-                value: { projectId, roleId, permissionSetIds: permissionSetIds ?? [] },
+                value: { projectId, roleId, permissionSetIds: permissionSetIds ?? [], memberId },
               },
               metadata: { reason },
             });
 
             return NextResponse.json({
               success: true,
-              data: { action: 'assign', projectId, uid },
+              data: { action: 'assign', projectId, uid, memberId },
             });
           }
 
           case 'update': {
-            const existing = await memberRef.get();
-            if (!existing.exists) {
+            const existingDoc = await findMemberByUid();
+            if (!existingDoc) {
               return NextResponse.json(
                 { success: false, error: 'User is not a member of this project' },
                 { status: 404 }
               );
             }
 
-            const prevData = existing.data() as MemberDoc;
+            const prevData = existingDoc.data() as MemberDoc;
             const updates: Record<string, unknown> = {};
             if (roleId !== undefined) updates.roleId = roleId;
             if (permissionSetIds !== undefined) updates.permissionSetIds = permissionSetIds;
@@ -291,7 +305,7 @@ export const POST = withSensitiveRateLimit(
               );
             }
 
-            await memberRef.update(updates);
+            await existingDoc.ref.update(updates);
 
             await logAuditEvent(ctx, 'member_updated', uid, 'user', {
               previousValue: {
@@ -312,16 +326,16 @@ export const POST = withSensitiveRateLimit(
           }
 
           case 'remove': {
-            const existing = await memberRef.get();
-            if (!existing.exists) {
+            const existingDoc = await findMemberByUid();
+            if (!existingDoc) {
               return NextResponse.json(
                 { success: false, error: 'User is not a member of this project' },
                 { status: 404 }
               );
             }
 
-            const prevData = existing.data() as MemberDoc;
-            await memberRef.delete();
+            const prevData = existingDoc.data() as MemberDoc;
+            await existingDoc.ref.delete();
 
             await logAuditEvent(ctx, 'member_removed', uid, 'user', {
               previousValue: {

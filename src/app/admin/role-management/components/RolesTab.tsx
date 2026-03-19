@@ -48,7 +48,7 @@ export function RolesTab() {
       {/* Section 3: Permission Sets */}
       <details>
         <summary className="cursor-pointer text-lg font-semibold mb-3">
-          {t('roleManagement.permissionSets', 'Permission Sets')} ({permissionSetEntries.length})
+          {t('roleManagement.permissionSetCards.title', 'Permission Sets')} ({permissionSetEntries.length})
         </summary>
         <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-3">
           {permissionSetEntries.map(([setId, definition]) => (
