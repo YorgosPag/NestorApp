@@ -1052,6 +1052,14 @@
       "description": "Each role activates additional fields specific to that role",
       "empty": "No roles selected"
     },
+    "guards": {
+      "realEstateAgent": {
+        "blocked": "Cannot remove the \"Real Estate Agent\" role — there are active agreements or pending commissions for this contact."
+      },
+      "client": {
+        "blocked": "Cannot remove the \"Client\" role — there are active purchases linked to this contact."
+      }
+    },
     "types": {
       "constructionWorker": "Construction Worker",
       "engineer": "Engineer",

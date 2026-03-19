@@ -29,10 +29,8 @@ import { PersonaSelector } from '@/components/contacts/personas/PersonaSelector'
 import { getMergedIndividualSections, getPersonaFields } from '@/config/persona-config';
 import type { PersonaType } from '@/types/contacts/personas';
 import { createDefaultPersonaData } from '@/types/contacts/personas';
-// 🏢 ENTERPRISE: Brokerage guard — prevent persona removal when active records exist
-import { BrokerageService } from '@/services/brokerage.service';
-// 🛡️ ENTERPRISE: Client guard — prevent persona removal when active purchases exist (ADR-121)
-import { ClientService } from '@/services/client.service';
+// 🛡️ ENTERPRISE: Persona Removal Guard Registry (ADR-121)
+import { checkPersonaRemovalGuard } from '@/config/persona-removal-guards';
 import { toast } from 'sonner';
 // 🇪🇺 ENTERPRISE: ESCO Professional Classification (ADR-034) + Skills (ADR-132)
 import { EscoOccupationPicker } from '@/components/shared/EscoOccupationPicker';
@@ -594,26 +592,11 @@ export function UnifiedContactTabbedSection({
             const isActive = currentActive.includes(personaType);
 
             if (isActive) {
-              // 🛡️ GUARD: Prevent removal of real_estate_agent if active brokerage records exist
-              if (personaType === 'real_estate_agent' && formData.id) {
-                const { hasAgreements, hasCommissions } = await BrokerageService.hasActiveRecords(formData.id);
-                if (hasAgreements || hasCommissions) {
-                  toast.error(
-                    'Δεν μπορεί να αφαιρεθεί η ιδιότητα «Μεσίτης Ακινήτων» — υπάρχουν ενεργές συμβάσεις ή εκκρεμείς προμήθειες για αυτήν την επαφή.',
-                    { duration: 5000 }
-                  );
-                  return;
-                }
-              }
-
-              // 🛡️ GUARD: Prevent removal of client if active purchased units exist (ADR-121)
-              if (personaType === 'client' && formData.id) {
-                const { hasUnits, hasParking, hasStorage } = await ClientService.hasActiveUnits(formData.id);
-                if (hasUnits || hasParking || hasStorage) {
-                  toast.error(
-                    'Δεν μπορεί να αφαιρεθεί η ιδιότητα «Πελάτης» — υπάρχουν ενεργές αγορές συνδεδεμένες.',
-                    { duration: 5000 }
-                  );
+              // 🛡️ GUARD: Registry-based persona removal check (ADR-121)
+              if (formData.id) {
+                const guardResult = await checkPersonaRemovalGuard(personaType, formData.id);
+                if (guardResult.blocked) {
+                  toast.error(t(guardResult.reasonKey!), { duration: 5000 });
                   return;
                 }
               }

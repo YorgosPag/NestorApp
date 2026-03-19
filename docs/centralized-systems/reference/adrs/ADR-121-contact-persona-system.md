@@ -134,3 +134,19 @@ Implement the **SAP Business Partner "Role/Persona" pattern**:
 | `src/components/ContactFormSections/UnifiedContactTabbedSection.tsx` | Added client guard + custom clientSince renderer (read-only + sales link) |
 
 **Note**: `ClientCategory` and `PreferredContactMethod` types kept in `personas.ts` (used by `contact-info.ts`).
+
+### 2026-03-19 — Centralized Persona Removal Guard Registry
+
+**Pattern**: Extracted 2 copy-paste guard if-blocks into a **Strategy + Registry** pattern (`persona-removal-guards.ts`). Each guard is an adapter function that normalizes service-specific results into `{ blocked, reasonKey }`. The registry is a `ReadonlyMap<PersonaType, GuardFn>` with O(1) lookup and fail-open error handling at the top level.
+
+**Benefit**: Adding a new guard (e.g., `property_owner`, `supplier`) = 1 adapter function + 1 Map entry. Zero changes to the UI component.
+
+**i18n**: Moved hardcoded Greek toast messages to `persona.guards.*` keys in `contacts.json` (el + en).
+
+**Files changed**:
+| File | Change |
+|------|--------|
+| `src/config/persona-removal-guards.ts` | **NEW** — Registry + types + `checkPersonaRemovalGuard()` public API |
+| `src/components/ContactFormSections/UnifiedContactTabbedSection.tsx` | Replaced 2 guard if-blocks (23 lines) with 1 registry call (5 lines), removed `BrokerageService`/`ClientService` imports |
+| `src/i18n/locales/el/contacts.json` | Added `persona.guards.realEstateAgent.blocked` + `persona.guards.client.blocked` |
+| `src/i18n/locales/en/contacts.json` | Added `persona.guards.realEstateAgent.blocked` + `persona.guards.client.blocked` |
