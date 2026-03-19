@@ -475,7 +475,10 @@ function ParkingPageContent() {
             <ParkingGridView
               parkingSpots={filteredParkingSpots}
               selectedParking={selectedParking}
-              onSelectParking={(p) => setSelectedParking(toggleSelect(selectedParking, p))}
+              onSelectParking={(p) => {
+                setSelectedParking(toggleSelect(selectedParking, p));
+                setShowCreateForm(false);
+              }}
             />
           ) : (
             /* 🏢 ENTERPRISE: List View with Details Panel */
@@ -483,12 +486,21 @@ function ParkingPageContent() {
               <ParkingsList
                 parkingSpots={filteredParkingSpots}
                 selectedParking={selectedParking}
-                onSelectParking={(p) => setSelectedParking(toggleSelect(selectedParking, p))}
-                onNewItem={() => setShowCreateForm(true)}
+                onSelectParking={(p) => {
+                  setSelectedParking(toggleSelect(selectedParking, p));
+                  setShowCreateForm(false);
+                }}
+                onNewItem={() => {
+                  setShowCreateForm(true);
+                  setSelectedParking(null);
+                }}
               />
               <ParkingDetails
                 parking={selectedParking}
-                onNewParking={() => setShowCreateForm(true)}
+                onNewParking={() => {
+                  setShowCreateForm(true);
+                  setSelectedParking(null);
+                }}
                 onDelete={() => setShowDeleteDialog(true)}
               />
             </>
