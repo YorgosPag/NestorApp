@@ -133,10 +133,11 @@ export async function aggregatePortfolio(companyId: string): Promise<PortfolioAg
       const projectId = projectDoc.id;
       const projectName = getString(projectData, 'name', '') || getString(projectData, 'title', 'Unknown');
 
-      // Query units for this project
+      // Query units for this project — S-1 fix: add companyId tenant isolation
       const unitsSnap = await db
         .collection(COLLECTIONS.UNITS)
         .where('project', '==', projectId)
+        .where(FIELDS.COMPANY_ID, '==', companyId)
         .get();
 
       let projectTotalValue = 0;

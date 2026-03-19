@@ -109,17 +109,32 @@ export async function resolveWorkerForProject(
  * Get geofence configuration for a project.
  * Reads from the project document's geofenceConfig field.
  *
+ * S-2 fix: accepts optional pre-fetched project data to avoid duplicate reads.
+ * Validates that the project has a companyId (orphan detection).
+ *
  * @param projectId - The project ID
- * @returns GeofenceConfig or null if not configured
+ * @param projectData - Optional pre-fetched project data (skips Firestore read)
+ * @returns GeofenceConfig or null if not configured / invalid
  */
-export async function getProjectGeofence(projectId: string): Promise<GeofenceConfig | null> {
-  const db = getAdminFirestore();
-  const projectDoc = await db.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
+export async function getProjectGeofence(
+  projectId: string,
+  projectData?: FirebaseFirestore.DocumentData | null,
+): Promise<GeofenceConfig | null> {
+  const data = projectData ?? await (async () => {
+    const db = getAdminFirestore();
+    const projectDoc = await db.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
+    return projectDoc.exists ? projectDoc.data() : null;
+  })();
 
-  if (!projectDoc.exists) return null;
+  if (!data) return null;
 
-  const data = projectDoc.data();
-  const geofence = data?.geofenceConfig as GeofenceConfig | undefined;
+  // S-2: Orphan detection — project must belong to a tenant
+  if (!data[FIELDS.COMPANY_ID]) {
+    logger.warn('Project missing companyId — possible orphan', { projectId });
+    return null;
+  }
+
+  const geofence = data.geofenceConfig as GeofenceConfig | undefined;
 
   if (!geofence || !geofence.enabled) return null;
 
@@ -234,6 +249,20 @@ export async function processQrCheckIn(payload: QrCheckInPayload): Promise<QrChe
   const projectId = tokenResult.projectId;
   const validDate = tokenResult.validDate ?? new Date().toISOString().slice(0, 10);
 
+  // S-2 fix: Read project doc ONCE, validate tenant ownership early
+  const db0 = getAdminFirestore();
+  const projectDoc = await db0.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
+  if (!projectDoc.exists) {
+    logger.warn('QR check-in rejected: project not found', { projectId });
+    return failResponse('project_not_found');
+  }
+  const projectData = projectDoc.data()!;
+  const projectCompanyId = projectData[FIELDS.COMPANY_ID] as string | undefined;
+  if (!projectCompanyId) {
+    logger.warn('QR check-in rejected: project missing companyId', { projectId });
+    return failResponse('project_invalid');
+  }
+
   // Step 2: Resolve worker
   const worker = await resolveWorkerForProject(projectId, payload.workerIdentifier);
   if (!worker) {
@@ -241,9 +270,9 @@ export async function processQrCheckIn(payload: QrCheckInPayload): Promise<QrChe
     return failResponse('worker_not_found');
   }
 
-  // Step 3: Geofence verification
+  // Step 3: Geofence verification — pass pre-fetched project data (no duplicate read)
   let geofenceResult: GeofenceVerificationResult | null = null;
-  const geofence = await getProjectGeofence(projectId);
+  const geofence = await getProjectGeofence(projectId, projectData);
 
   if (geofence && payload.coordinates) {
     geofenceResult = isWithinGeofence(
@@ -267,6 +296,7 @@ export async function processQrCheckIn(payload: QrCheckInPayload): Promise<QrChe
   const now = new Date().toISOString();
 
   const eventData = {
+    companyId: projectCompanyId, // S-2: propagate tenant from validated project
     projectId,
     contactId: worker.contactId,
     eventType: payload.eventType,
