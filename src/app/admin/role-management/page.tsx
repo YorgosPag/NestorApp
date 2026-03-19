@@ -8,18 +8,18 @@
  * canEdit: only super_admin can modify roles/permissions.
  */
 
-import { useState } from 'react';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { TabsContainer } from '@/components/ui/navigation/TabsComponents';
+import type { TabDefinition } from '@/components/ui/navigation/TabsComponents';
 import { Alert } from '@/components/ui/alert';
+import { Users, Shield, FileText, FolderOpen } from 'lucide-react';
 
 import { UsersTab } from './components/UsersTab';
 import { RolesTab } from './components/RolesTab';
 import { AuditTab } from './components/AuditTab';
 import { ProjectMembersTab } from './components/ProjectMembersTab';
-import type { TabId } from './types';
 import type { GlobalRole } from '@/lib/auth/types';
 
 // =============================================================================
@@ -35,8 +35,6 @@ const ALLOWED_ROLES: readonly string[] = ['super_admin', 'company_admin'] as con
 export default function RoleManagementPage() {
   const { user, loading } = useAuth();
   const { t } = useTranslation('admin');
-
-  const [activeTab, setActiveTab] = useState<TabId>('users');
 
   // ---------------------------------------------------------------------------
   // Derive role from FirebaseAuthUser (has globalRole from custom claims)
@@ -93,41 +91,15 @@ export default function RoleManagementPage() {
         </p>
       </header>
 
-      <Tabs
-        value={activeTab}
-        onValueChange={(value) => setActiveTab(value as TabId)}
-      >
-        <TabsList>
-          <TabsTrigger value="users">
-            {t('roleManagement.tabs.users', 'Users')}
-          </TabsTrigger>
-          <TabsTrigger value="roles">
-            {t('roleManagement.tabs.roles', 'Roles & Permissions')}
-          </TabsTrigger>
-          <TabsTrigger value="audit">
-            {t('roleManagement.tabs.audit', 'Audit Log')}
-          </TabsTrigger>
-          <TabsTrigger value="projects">
-            {t('roleManagement.tabs.projects', 'Project Members')}
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="users" className="mt-4">
-          <UsersTab canEdit={canEdit} />
-        </TabsContent>
-
-        <TabsContent value="roles" className="mt-4">
-          <RolesTab />
-        </TabsContent>
-
-        <TabsContent value="audit" className="mt-4">
-          <AuditTab canExport={canEdit} />
-        </TabsContent>
-
-        <TabsContent value="projects" className="mt-4">
-          <ProjectMembersTab canEdit={canEdit} />
-        </TabsContent>
-      </Tabs>
+      <TabsContainer
+        tabs={[
+          { id: 'users', label: t('roleManagement.tabs.users', 'Users'), icon: Users, content: <UsersTab canEdit={canEdit} /> },
+          { id: 'roles', label: t('roleManagement.tabs.roles', 'Roles & Permissions'), icon: Shield, content: <RolesTab /> },
+          { id: 'audit', label: t('roleManagement.tabs.audit', 'Audit Log'), icon: FileText, content: <AuditTab canExport={canEdit} /> },
+          { id: 'projects', label: t('roleManagement.tabs.projects', 'Project Members'), icon: FolderOpen, content: <ProjectMembersTab canEdit={canEdit} /> },
+        ] satisfies TabDefinition[]}
+        defaultTab="users"
+      />
     </main>
   );
 }
