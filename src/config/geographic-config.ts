@@ -4,6 +4,7 @@
  * ZERO HARDCODED COORDINATES - All data από environment variables
  */
 
+import { API_ROUTES } from '@/config/domain-constants';
 import { safeJsonParse } from '@/lib/json-utils';
 
 interface GeocodingConfig {
@@ -88,7 +89,7 @@ function getGeographicConfig(): GeographicConfig {
       RESOLVER_TIMEOUT_MS: parseInt(process.env.NEXT_PUBLIC_GEOCODING_RESOLVER_TIMEOUT_MS || '5000', 10),
       NOMINATIM_RESULT_LIMIT: process.env.NEXT_PUBLIC_NOMINATIM_RESULT_LIMIT || '1',
       ACCEPT_LANGUAGE: process.env.NEXT_PUBLIC_GEOCODING_ACCEPT_LANGUAGE || 'el,en',
-      API_ENDPOINT: process.env.NEXT_PUBLIC_GEOCODING_API_ENDPOINT || '/api/geocoding',
+      API_ENDPOINT: process.env.NEXT_PUBLIC_GEOCODING_API_ENDPOINT || API_ROUTES.GEOCODING,
       CONFIDENCE: {
         BASE: parseFloat(process.env.NEXT_PUBLIC_GEOCODING_CONFIDENCE_BASE || '0.4'),
         STREET_MATCH: parseFloat(process.env.NEXT_PUBLIC_GEOCODING_CONFIDENCE_STREET || '0.25'),

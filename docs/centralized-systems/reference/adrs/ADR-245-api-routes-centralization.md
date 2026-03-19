@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | PHASE_B1_COMPLETE — High-priority consumers migrated. SPEC-245B2 remaining. |
+| **Status** | ✅ PHASE_B_COMPLETE — All consumer migrations done. Zero hardcoded client-side API paths. |
 | **Date** | 2026-03-19 |
 | **Category** | Backend Systems / Infrastructure |
 | **Canonical Location** | `src/config/domain-constants.ts` → `API_ROUTES` |
@@ -462,8 +462,7 @@ ESLint rule που απαγορεύει hardcoded `/api/` strings εκτός `do
 
 ### SPEC-245B2: Lower-Priority Consumer Migration
 - **Scope**: Financial, Attendance, Messages, Voice, Calendar, Admin, Notifications, Misc, Accounting
-- **Status**: **MOSTLY COMPLETE** — ~30 αρχεία ΗΔΗ χρησιμοποιούν `API_ROUTES`
-- **Remaining**: 2 optional (rate-limit config, geocoding config)
+- **Status**: ✅ **COMPLETE** — All optional migrations executed (rate-limit + geocoding)
 - **Location**: [`specs/SPEC-245B2-lower-priority-consumer-migration.md`](./specs/SPEC-245B2-lower-priority-consumer-migration.md)
 
 ---
@@ -489,6 +488,7 @@ ESLint rule που απαγορεύει hardcoded `/api/` strings εκτός `do
 | 2026-03-19 | **Phase A COMPLETE** — API_ROUTES extended from 2→95+ entries. Nested structure with type-safe builders. Backward-compat aliases for AUTH. 2 existing consumers migrated. | Claude Code |
 | 2026-03-19 | **Phase B SPECs CREATED** — SPEC-245B1 (high-priority, ~35 files, ~105 instances) + SPEC-245B2 (lower-priority, mostly already migrated). Audit revealed ~30 files already use API_ROUTES. | Claude Code |
 | 2026-03-19 | **Phase B1 COMPLETE** — SPEC-245B1 executed. 6 αρχεία χρειάστηκαν αλλαγές (BuildingSelectorCard, FloorSelectField, LinkedSpacesCard, SalesUnitListCard, TransactionChainCard, entity-linking/config). ~50 αρχεία ήταν ήδη migrated. Zero hardcoded `/api/` strings remain in scope. | Claude Code |
+| 2026-03-19 | **Phase B2 COMPLETE** — SPEC-245B2 executed. New `API_ROUTES.GEOCODING` entry. Rate limit config: 2 exact-match paths migrated (SEARCH, PROJECTS.LIST), 9 prefix-only paths unchanged. Geographic config fallback migrated. Phase B fully complete. | Claude Code |
 
 ---
 

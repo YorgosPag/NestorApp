@@ -14,6 +14,7 @@
  * - Environment-aware (dev/staging/production)
  */
 
+import { API_ROUTES } from '@/config/domain-constants';
 import { getCurrentRuntimeEnvironment } from '@/config/environment-security-config';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -97,8 +98,8 @@ export const ENDPOINT_CATEGORY_MAPPINGS: Record<string, RateLimitCategory> = {
   '/api/admin/templates': 'SENSITIVE',
 
   // Search endpoints - HIGH
-  '/api/search': 'HIGH',
-  '/api/projects/list': 'HIGH',
+  [API_ROUTES.SEARCH]: 'HIGH',
+  [API_ROUTES.PROJECTS.LIST]: 'HIGH',
   '/api/contacts/list': 'HIGH',
 
   // Report endpoints - HEAVY

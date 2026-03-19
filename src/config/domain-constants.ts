@@ -773,6 +773,7 @@ export const API_ROUTES = {
   DELETION_GUARD: {
     CHECK: (entityType: string, entityId: string) => `/api/deletion-guard/${entityType}/${entityId}` as const,
   },
+  GEOCODING: '/api/geocoding',
   DXF_AI: { COMMAND: '/api/dxf-ai/command' },
 
   // ── Entity Activity (generic) ─────────────────────────────────────────

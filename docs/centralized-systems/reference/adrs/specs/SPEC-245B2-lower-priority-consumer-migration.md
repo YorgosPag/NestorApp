@@ -6,7 +6,7 @@
 | **Phase** | B2 (Lower-Priority Consumer Migration) |
 | **Scope** | Financial, Attendance, Messages, Voice, Calendar, Admin, Notifications, Misc, Accounting, Infrastructure |
 | **Date** | 2026-03-19 |
-| **Status** | MOSTLY COMPLETE — ~30 αρχεία ΗΔΗ μεταβήθηκαν κατά τη Φάση A |
+| **Status** | ✅ COMPLETE — All optional migrations executed (2026-03-19) |
 | **Remaining Files** | ~5 (infrastructure config + geocoding) |
 
 ---
@@ -211,8 +211,8 @@ API_ENDPOINT: process.env.NEXT_PUBLIC_GEOCODING_API_ENDPOINT || API_ROUTES.GEOCO
 - [x] Audit Trail (contacts.service, association.service) — ΗΔΗ `API_ROUTES`
 - [x] Accounting subapp (ALL components) — ΗΔΗ `API_ROUTES`
 - [x] Misc (useGlobalSearch, useEnterpriseIds, etc.) — ΗΔΗ `API_ROUTES`
-- [ ] **Optional**: Rate limit config paths → `API_ROUTES` (11 instances)
-- [ ] **Optional**: Geographic config fallback → `API_ROUTES.GEOCODING` (1 instance)
+- [x] **Optional**: Rate limit config paths → `API_ROUTES` (2 exact-match paths migrated: SEARCH, PROJECTS.LIST)
+- [x] **Optional**: Geographic config fallback → `API_ROUTES.GEOCODING` (new entry + migration done)
 
 ---
 
