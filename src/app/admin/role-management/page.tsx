@@ -17,6 +17,8 @@ import { Alert } from '@/components/ui/alert';
 
 import { UsersTab } from './components/UsersTab';
 import { RolesTab } from './components/RolesTab';
+import { AuditTab } from './components/AuditTab';
+import { ProjectMembersTab } from './components/ProjectMembersTab';
 import type { TabId } from './types';
 import type { GlobalRole } from '@/lib/auth/types';
 
@@ -119,25 +121,11 @@ export default function RoleManagementPage() {
         </TabsContent>
 
         <TabsContent value="audit" className="mt-4">
-          <section className="rounded-lg border p-8 text-center">
-            <h2 className="text-lg font-semibold text-muted-foreground">
-              {t('roleManagement.comingSoon', 'Coming soon — Phase B')}
-            </h2>
-            <p className="text-sm text-muted-foreground mt-2">
-              {t('roleManagement.auditLogPlaceholder', 'Audit log with role change history and permission modifications.')}
-            </p>
-          </section>
+          <AuditTab canExport={canEdit} />
         </TabsContent>
 
         <TabsContent value="projects" className="mt-4">
-          <section className="rounded-lg border p-8 text-center">
-            <h2 className="text-lg font-semibold text-muted-foreground">
-              {t('roleManagement.comingSoon', 'Coming soon — Phase B')}
-            </h2>
-            <p className="text-sm text-muted-foreground mt-2">
-              {t('roleManagement.projectMembersPlaceholder', 'Manage project-level role assignments and permission sets.')}
-            </p>
-          </section>
+          <ProjectMembersTab canEdit={canEdit} />
         </TabsContent>
       </Tabs>
     </main>

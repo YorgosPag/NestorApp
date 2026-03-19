@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | IMPLEMENTED (Phase A) |
+| **Status** | IMPLEMENTED (Phase A + Phase B) |
 | **Date** | 2026-03-19 |
 | **Category** | Security & Auth |
 | **Planned Location** | `src/app/admin/role-management/page.tsx` |
@@ -541,6 +541,7 @@ src/app/api/admin/role-management/
 | 2026-03-19 | 1.6.0 | **Source of Truth**: `companies/{cId}/members/{uid}.globalRole` is SSoT. Firebase claims = sync copy. `users/{uid}.globalRole` removed (no duplicate). Role change = atomic dual-write (Firestore + claims). |
 | 2026-03-19 | 1.7.0 | **2-scope permission sets** (Google pattern): Org-level (`companies/{cId}/members/{uid}.permissionSetIds`) applies to ALL projects. Project-level (`projects/{pId}/members/{uid}.permissionSetIds`) applies to ONE project. New endpoint: `PATCH /users/:uid/permission-sets` for org-level. |
 | 2026-03-19 | 2.0.0 | **Phase A IMPLEMENTED**: 19 new files created. Page shell (4 tabs), Users tab (table + search + filters + RoleChangeDialog + PermissionSetManager + UserDetailPanel), Roles tab (RolePermissionMatrix + PermissionSetCards + RoleHierarchyDiagram), 5 API endpoints (GET users, PATCH role, PATCH status, PATCH permission-sets, POST bootstrap), CompanyMemberDocument type, i18n keys (en+el), navigation entry. Tabs 3-4 placeholder (Phase B). |
+| 2026-03-19 | 3.0.0 | **Phase B IMPLEMENTED**: Audit Log Tab + Project Members Tab. **Audit Log**: GET audit-log (cursor-based pagination + filters), GET audit-log/export (CSV/JSON download, super_admin only), AuditTab, AuditTimeline (grouped by date, clickable actors/targets), AuditFilters, AuditExport. **Project Members**: GET/POST project-members (list/assign/update/remove), ProjectMembersTab (project selector + member table), MemberTable, AssignMemberDialog (3-step wizard). **Data model**: 3 new audit actions (member_added, member_removed, member_updated), new AuditChangeValue type 'project_member'. i18n keys (en+el) for both tabs. 10 new files, 5 modified. |
 
 ---
 

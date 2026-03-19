@@ -247,6 +247,10 @@ export const AUDIT_ACTIONS = {
   'user_activated': true,            // User account reactivated (Firebase Auth enabled)
   'permission_set_granted': true,    // Org-level permission set assigned to user
   'permission_set_revoked': true,    // Org-level permission set removed from user
+  // Project membership operations (ADR-244 Phase B: Project Members)
+  'member_added': true,              // User added as project member
+  'member_removed': true,            // User removed from project
+  'member_updated': true,            // Project member role/permissions updated
 } as const;
 
 /**
@@ -279,7 +283,7 @@ export type AuditTargetType = keyof typeof AUDIT_TARGET_TYPES;
  * Typed audit change value (NO any!).
  */
 export interface AuditChangeValue {
-  type: 'role' | 'permission' | 'grant' | 'status' | 'membership' | 'webhook' | 'building_update' | 'building_delete' | 'project_create' | 'communication_status' | 'task_linked';
+  type: 'role' | 'permission' | 'grant' | 'status' | 'membership' | 'webhook' | 'building_update' | 'building_delete' | 'project_create' | 'communication_status' | 'task_linked' | 'project_member';
   value: string | string[] | Record<string, unknown>;
 }
 
