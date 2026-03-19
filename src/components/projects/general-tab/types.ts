@@ -40,6 +40,7 @@ export interface ProjectFormData {
   location: string;
 }
 
+/** @deprecated Use return type from useAutosave hook directly (ADR-248) */
 export interface UseAutosaveState {
   autoSaving: boolean;
   lastSaved: Date | null;

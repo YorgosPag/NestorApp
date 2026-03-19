@@ -1,29 +1,84 @@
+/**
+ * @file useAutosave — Project auto-save hook (ADR-248 wrapper)
+ * @module components/projects/general-tab/hooks/useAutosave
+ *
+ * 🏢 ENTERPRISE: ADR-248 — Wraps centralized useAutoSave for backward compatibility.
+ *
+ * Previously this hook was BROKEN — it only showed a fake "saving..." animation
+ * without actually persisting to Firestore. Now it uses the centralized
+ * useAutoSave hook for actual debounced auto-save.
+ *
+ * @see src/hooks/useAutoSave.ts (centralized hook)
+ * @see src/types/auto-save.ts
+ * @created 2026-03-19 (rewritten from broken stub)
+ */
+
 'use client';
 
-import { useEffect, useRef, useState } from "react";
-import { useDebounce } from '@/hooks/useDebounce';
+import { useAutoSave } from '@/hooks/useAutoSave';
+import type { SaveStatus } from '@/types/auto-save';
 
-export function useAutosave<T>(data: T, isEditing: boolean, delay = 2000) {
-  const [autoSaving, setAutoSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const dirtyRef = useRef(false);
+interface UseAutosaveOptions<T> {
+  /** Async function that persists data to Firestore */
+  saveFn: (data: T) => Promise<void>;
+  /** Debounce delay in ms. Default: 2000 */
+  debounceMs?: number;
+}
 
-  const startEditing = () => { /* noop: έλεγχος γίνεται από parent */ };
-  const stopEditing = () => { /* noop */ };
-  const setDirty = () => { dirtyRef.current = true; };
+interface UseAutosaveReturn {
+  /** Whether save is in progress */
+  autoSaving: boolean;
+  /** Timestamp of last successful save */
+  lastSaved: Date | null;
+  /** Current save status (for AutoSaveStatusIndicator) */
+  status: SaveStatus;
+  /** Error message from last failed save */
+  error: string | null;
+  /** Force immediate save */
+  saveNow: () => Promise<void>;
+  /** Retry last failed save */
+  retry: () => Promise<void>;
+}
 
-  const debouncedData = useDebounce(data, delay);
+/**
+ * Project auto-save hook with actual Firestore persistence.
+ *
+ * @param data - Current form data state
+ * @param isEditing - Only auto-save while editing
+ * @param options - Save function and optional config
+ *
+ * @example
+ * ```tsx
+ * const { autoSaving, lastSaved, status } = useAutosave(projectData, isEditing, {
+ *   saveFn: (data) => updateProject(projectId, data),
+ * });
+ * ```
+ */
+export function useAutosave<T>(
+  data: T,
+  isEditing: boolean,
+  options: UseAutosaveOptions<T>
+): UseAutosaveReturn {
+  const { saveFn, debounceMs } = options;
 
-  useEffect(() => {
-    if (!isEditing || !dirtyRef.current) return;
-    setAutoSaving(true);
-    const t = setTimeout(() => {
-      setAutoSaving(false);
-      setLastSaved(new Date());
-      dirtyRef.current = false;
-    }, 1000);
-    return () => clearTimeout(t);
-  }, [debouncedData, isEditing]);
+  const {
+    status,
+    lastSaved,
+    error,
+    saveNow,
+    retry,
+  } = useAutoSave(data, {
+    saveFn,
+    enabled: isEditing,
+    debounceMs,
+  });
 
-  return { autoSaving, lastSaved, startEditing, stopEditing, setDirty };
+  return {
+    autoSaving: status === 'saving',
+    lastSaved,
+    status,
+    error,
+    saveNow,
+    retry,
+  };
 }

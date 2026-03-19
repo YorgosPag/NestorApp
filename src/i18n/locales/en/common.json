@@ -2146,5 +2146,12 @@
     "exit": "Exit Fullscreen",
     "enterTooltip": "Expand to fullscreen",
     "exitTooltip": "Return to normal view"
+  },
+  "autoSave": {
+    "saving": "Saving...",
+    "saved": "Saved",
+    "error": "Save failed",
+    "retry": "Retry",
+    "lastSaved": "Last saved"
   }
 }

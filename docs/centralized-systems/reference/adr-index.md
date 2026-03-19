@@ -276,6 +276,7 @@
 | **ADR-245** | API Routes Centralization — Zero Hardcoded Endpoints | ✅ PHASE_A_COMPLETE | 2026-03-19 | Infrastructure | [📄](./adrs/ADR-245-api-routes-centralization.md) |
 | **ADR-246** | Universal Firestore→API Mapper Centralization (27+ scattered → 1 SSoT) | ✅ APPROVED | 2026-03-19 | Data Access Layer / Entity Systems | [📄](./adrs/ADR-246-universal-firestore-mapper-centralization.md) |
 | **ADR-247** | Entity Relationship Integrity Audit (5 findings, 6 protected areas) | ✅ APPROVED | 2026-03-19 | Entity Systems / Data Integrity | [📄](./adrs/ADR-247-entity-relationship-integrity-audit.md) |
+| **ADR-248** | Centralized Auto-Save System (Google-Level) — 8+ boilerplate patterns → 1 hook | ✅ IMPLEMENTED | 2026-03-19 | UI / State Management / Data Persistence | [📄](./adrs/ADR-248-centralized-auto-save.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

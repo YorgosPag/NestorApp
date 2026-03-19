@@ -81,11 +81,44 @@ export function GeneralProjectTab({
     location: project.location || '',
   });
 
-  const { autoSaving, lastSaved, setDirty } = useAutosave(projectData, isEditing);
+  // 🏢 ADR-248: Centralized auto-save with actual Firestore persistence
+  const autoSaveFn = useCallback(async (data: ProjectFormData) => {
+    // Skip auto-save in create mode (no projectId yet)
+    if (isCreateMode) return;
+
+    const updatePayload: Parameters<typeof updateProject>[1] = {
+      name: data.name,
+      title: data.licenseTitle,
+      status: data.status,
+      description: data.description,
+      client: data.client || undefined,
+      location: data.location || undefined,
+      type: data.type || undefined,
+      priority: data.priority || undefined,
+      riskLevel: data.riskLevel || undefined,
+      complexity: data.complexity || undefined,
+      budget: typeof data.budget === 'number' ? data.budget : undefined,
+      totalValue: typeof data.totalValue === 'number' ? data.totalValue : undefined,
+      totalArea: typeof data.totalArea === 'number' ? data.totalArea : undefined,
+      duration: typeof data.duration === 'number' ? data.duration : undefined,
+      startDate: data.startDate || undefined,
+      completionDate: data.completionDate || undefined,
+    };
+
+    const result = await updateProject(project.id, updatePayload);
+    if (!result.success) {
+      throw new Error(result.error || 'Auto-save failed');
+    }
+  }, [project.id, isCreateMode]);
+
+  const { autoSaving, lastSaved, status: autoSaveStatus, error: autoSaveError, retry: autoSaveRetry } = useAutosave(
+    projectData,
+    isEditing && !isCreateMode,
+    { saveFn: autoSaveFn }
+  );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setProjectData(prev => ({ ...prev, [e.target.name]: e.target.value }));
-    setDirty();
   };
 
   useEffect(() => {
@@ -273,6 +306,9 @@ export function GeneralProjectTab({
         isSaving={isSaving}
         saveError={saveError}
         isEditing={isEditing}
+        autoSaveStatus={autoSaveStatus}
+        autoSaveError={autoSaveError}
+        onAutoSaveRetry={autoSaveRetry}
       />
 
       <section className={cn(spacing.spaceBetween.md, spacing.margin.top.md)}>

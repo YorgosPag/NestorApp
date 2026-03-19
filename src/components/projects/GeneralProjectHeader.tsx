@@ -16,15 +16,24 @@ import {
 } from '@/components/ui/tooltip';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
+import { AutoSaveStatusIndicator } from '@/components/shared/AutoSaveStatusIndicator';
+import type { SaveStatus } from '@/types/auto-save';
 
 interface GeneralProjectHeaderProps {
     isEditing: boolean;
-    autoSaving: boolean;
+    /** @deprecated Use autoSaveStatus instead (ADR-248) */
+    autoSaving?: boolean;
     lastSaved: Date | null;
     projectCode?: string;
     projectId?: string;
     isSaving?: boolean;
     saveError?: string | null;
+    /** ADR-248: Centralized auto-save status */
+    autoSaveStatus?: SaveStatus;
+    /** ADR-248: Auto-save error message */
+    autoSaveError?: string | null;
+    /** ADR-248: Retry callback for failed auto-save */
+    onAutoSaveRetry?: () => void;
 }
 
 export function GeneralProjectHeader({
@@ -34,7 +43,10 @@ export function GeneralProjectHeader({
     projectCode,
     projectId,
     isSaving = false,
-    saveError = null
+    saveError = null,
+    autoSaveStatus,
+    autoSaveError,
+    onAutoSaveRetry,
 }: GeneralProjectHeaderProps) {
     const { t } = useTranslation('projects');
     const iconSizes = useIconSizes();
@@ -85,7 +97,17 @@ export function GeneralProjectHeader({
                   size="sm"
                 />
 
-                {isEditing && (
+                {isEditing && autoSaveStatus && (
+                  <AutoSaveStatusIndicator
+                    status={autoSaveStatus}
+                    lastSaved={lastSaved}
+                    error={autoSaveError}
+                    variant="inline"
+                    onRetry={onAutoSaveRetry}
+                  />
+                )}
+                {/* Fallback for legacy autoSaving prop */}
+                {isEditing && !autoSaveStatus && (autoSaving || lastSaved) && (
                 <div className={cn("flex items-center", typography.body.xs, spacing.gap.sm)}>
                     {autoSaving ? (
                     <>

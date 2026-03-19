@@ -17,6 +17,9 @@ import { RealtimeService } from '@/services/realtime';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useEntityLink } from '@/hooks/useEntityLink';
 import { useCompanyId } from '@/hooks/useCompanyId';
+// 🏢 ADR-248: Centralized auto-save system
+import { useAutoSave } from '@/hooks/useAutoSave';
+import { AutoSaveStatusIndicator } from '@/components/shared/AutoSaveStatusIndicator';
 
 const logger = createModuleLogger('GeneralTabContent');
 
@@ -73,10 +76,8 @@ export function GeneralTabContent({
     }
   }, [isParentControlled, onEditingChange]);
 
-  const [autoSaving, setAutoSaving] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [formData, setFormData] = useState(() => buildFormData(building));
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -172,24 +173,33 @@ export function GeneralTabContent({
     didSaveRef.current = false;
   }, [effectiveIsEditing, building]);
 
-  useEffect(() => {
-    if (!effectiveIsEditing) return;
+  // 🏢 ADR-248: Centralized auto-save with actual Firestore persistence
+  const autoSaveFn = useCallback(async (data: ReturnType<typeof buildFormData>) => {
+    if (isCreateMode) return;
 
-    const delayId = setTimeout(() => {
-      setAutoSaving(true);
-      const saveId = setTimeout(() => {
-        setAutoSaving(false);
-        setLastSaved(new Date());
-        logger.info('Auto-saved', { formData });
-      }, 1000);
+    const result = await updateBuilding(String(building.id), {
+      name: data.name,
+      description: data.description,
+      startDate: data.startDate,
+      completionDate: data.completionDate,
+      address: data.address,
+      city: data.city,
+    });
 
-      // Cleanup for the inner timeout
-      return () => clearTimeout(saveId);
-    }, 2000);
+    if (!result.success) {
+      throw new Error(result.error || 'Auto-save failed');
+    }
+  }, [building.id, isCreateMode]);
 
-    // Cleanup for the outer timeout
-    return () => clearTimeout(delayId);
-  }, [formData, effectiveIsEditing]);
+  const {
+    status: autoSaveStatus,
+    lastSaved,
+    error: autoSaveError,
+    retry: autoSaveRetry,
+  } = useAutoSave(formData, {
+    saveFn: autoSaveFn,
+    enabled: effectiveIsEditing && !isCreateMode,
+  });
 
   /**
    * Handle building save using Firestore
@@ -290,12 +300,22 @@ export function GeneralTabContent({
       <Header
         building={building}
         isEditing={effectiveIsEditing}
-        autoSaving={autoSaving || isSaving}
+        autoSaving={autoSaveStatus === 'saving' || isSaving}
         lastSaved={lastSaved}
         setIsEditing={setEffectiveEditing}
         handleSave={handleSave}
         hideEditControls={isParentControlled}
       />
+      {/* 🏢 ADR-248: Centralized auto-save status indicator */}
+      {effectiveIsEditing && !isCreateMode && (
+        <AutoSaveStatusIndicator
+          status={autoSaveStatus}
+          lastSaved={lastSaved}
+          error={autoSaveError}
+          variant="inline"
+          onRetry={autoSaveRetry}
+        />
+      )}
       {/* ENTERPRISE: Show save error if any */}
       {saveError && (
         <aside className="bg-red-100 border border-red-400 text-red-700 px-2 py-2 rounded relative dark:bg-red-900 dark:border-red-700 dark:text-red-300">

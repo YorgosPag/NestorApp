@@ -6,7 +6,7 @@
 
 **📊 Quick Stats**: 33 Enterprise Systems + Accounting Subapp (11 ADRs) | 24,000+ Lines | Fortune 500 Quality
 
-> **🆕 Latest**: ADR-241 Fullscreen Container Centralization — useFullscreen hook + FullscreenContainer (overlay/dialog). 3 migrations, ~155 lines removed (2026-03-18)
+> **🆕 Latest**: ADR-248 Centralized Auto-Save System — useAutoSave hook + AutoSaveStatusIndicator. 8+ boilerplate patterns → 1 hook, actual Firestore persistence (2026-03-19)
 
 ---
 
