@@ -88,11 +88,11 @@ export function ProjectMembersTab({ canEdit }: ProjectMembersTabProps) {
   useEffect(() => {
     setIsLoadingProjects(true);
     // apiClient unwraps canonical { success, data } → returns data directly
-    // Projects list returns data as array directly
+    // Projects list returns { projects: [...], count, loadedAt, source }
     apiClient
-      .get<ProjectListItem[]>('/api/projects/list')
+      .get<{ projects: ProjectListItem[] }>('/api/projects/list')
       .then((data) => {
-        const items = Array.isArray(data) ? data : [];
+        const items = Array.isArray(data.projects) ? data.projects : [];
         setProjects(
           items.map((p) => ({ id: p.id, name: p.name, status: p.status }))
         );
