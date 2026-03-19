@@ -21,7 +21,7 @@ import { aggregateLevelData } from '@/services/multi-level.service';
 import type { LevelData } from '@/types/unit';
 import { UNIT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
-import { linkEntity } from '@/lib/firestore/entity-linking.service';
+import { linkEntity, validateLinkedSpacesUniqueness } from '@/lib/firestore/entity-linking.service';
 import { createDefaultPersonaData, findActivePersona } from '@/types/contacts/personas';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import type { PersonaData, ClientPersona } from '@/types/contacts/personas';
@@ -292,6 +292,16 @@ export const PATCH = withStandardRateLimit(
             },
           },
         );
+
+        // 🛡️ ADR-247 F-1: Server-side uniqueness guard for linked spaces
+        if (Array.isArray(body.linkedSpaces)) {
+          const buildingId = (existing.buildingId as string) ?? null;
+          if (buildingId) {
+            await validateLinkedSpacesUniqueness(
+              adminDb, buildingId, id, body.linkedSpaces as ReadonlyArray<{ spaceId: string }>
+            );
+          }
+        }
 
         await docRef.update(updateData);
 

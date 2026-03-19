@@ -15,6 +15,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { FieldValue } from 'firebase-admin/firestore';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -96,7 +97,7 @@ export async function propagateBuildingProjectLink(
     for (const collectionName of BUILDING_CHILD_COLLECTIONS) {
       const snapshot = await db
         .collection(collectionName)
-        .where('buildingId', '==', buildingId)
+        .where(FIELDS.BUILDING_ID, '==', buildingId)
         .select() // Only need doc refs, not data
         .get();
 
@@ -159,7 +160,7 @@ export async function propagateProjectCompanyLink(
     // 1. Find all buildings belonging to this project
     const buildingsSnap = await db
       .collection(COLLECTIONS.BUILDINGS)
-      .where('projectId', '==', projectId)
+      .where(FIELDS.PROJECT_ID, '==', projectId)
       .get();
 
     if (!buildingsSnap.empty) {
@@ -179,7 +180,7 @@ export async function propagateProjectCompanyLink(
           const chunk = buildingIds.slice(i, i + 10);
           const childSnap = await db
             .collection(collectionName)
-            .where('buildingId', 'in', chunk)
+            .where(FIELDS.BUILDING_ID, 'in', chunk)
             .select()
             .get();
 
@@ -352,6 +353,102 @@ export async function propagateChildBuildingLink(
     const message = error instanceof Error ? error.message : String(error);
     logger.error('Child→Building cascade failed', { collection, docId, newBuildingId, error: message });
     return { success: false, totalUpdated: 0, collections: {}, error: message };
+  }
+}
+
+// ============================================================================
+// RULE 5: Space allocationCode → Unit linkedSpaces (ADR-247 F-4)
+// ============================================================================
+
+/**
+ * ADR-247 F-4: When parking.number or storage.name changes,
+ * updates allocationCode in all units' linkedSpaces that reference this space.
+ *
+ * Pattern: Read-modify-write per unit (Firestore doesn't support nested array field update).
+ * Fire-and-forget — called from PATCH endpoints.
+ */
+export async function propagateSpaceAllocationCodeChange(
+  spaceId: string,
+  newAllocationCode: string,
+  buildingId: string | null
+): Promise<CascadeResult> {
+  const db = getAdminFirestore();
+  const collections: Record<string, number> = {};
+  let totalUpdated = 0;
+
+  try {
+    // Resolve buildingId if not provided
+    let resolvedBuildingId = buildingId;
+    if (!resolvedBuildingId) {
+      // Try parking first, then storage
+      for (const col of [COLLECTIONS.PARKING_SPACES, COLLECTIONS.STORAGE]) {
+        const spaceDoc = await db.collection(col).doc(spaceId).get();
+        if (spaceDoc.exists) {
+          resolvedBuildingId = (spaceDoc.data()?.buildingId as string) ?? null;
+          break;
+        }
+      }
+    }
+
+    if (!resolvedBuildingId) {
+      logger.warn('propagateSpaceAllocationCodeChange: no buildingId found', { spaceId });
+      return { success: true, totalUpdated: 0, collections };
+    }
+
+    // Query units in the same building
+    const snapshot = await db
+      .collection(COLLECTIONS.UNITS)
+      .where(FIELDS.BUILDING_ID, '==', resolvedBuildingId)
+      .get();
+
+    if (snapshot.empty) {
+      return { success: true, totalUpdated: 0, collections };
+    }
+
+    const batch = db.batch();
+    let batchCount = 0;
+
+    for (const unitDoc of snapshot.docs) {
+      const data = unitDoc.data();
+      const linkedSpaces = data.linkedSpaces as Array<Record<string, unknown>> | undefined;
+      if (!Array.isArray(linkedSpaces)) continue;
+
+      // Check if any entry references this spaceId
+      let modified = false;
+      const updatedSpaces = linkedSpaces.map((entry) => {
+        if (entry.spaceId === spaceId && entry.allocationCode !== newAllocationCode) {
+          modified = true;
+          return { ...entry, allocationCode: newAllocationCode };
+        }
+        return entry;
+      });
+
+      if (modified) {
+        batch.update(unitDoc.ref, {
+          linkedSpaces: updatedSpaces,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        batchCount++;
+      }
+    }
+
+    if (batchCount > 0) {
+      await batch.commit();
+      totalUpdated = batchCount;
+      collections[COLLECTIONS.UNITS] = batchCount;
+    }
+
+    logger.info('Space→allocationCode cascade completed', {
+      spaceId,
+      newAllocationCode,
+      totalUpdated,
+    });
+
+    return { success: true, totalUpdated, collections };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error('Space→allocationCode cascade failed', { spaceId, error: message });
+    return { success: false, totalUpdated, collections, error: message };
   }
 }
 

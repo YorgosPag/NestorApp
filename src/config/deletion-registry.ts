@@ -181,6 +181,13 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
         queryType: 'equals',
         skipCompanyFilter: true,
       },
+      // 🛡️ ADR-247 F-2: Block deletion of contact used as linkedCompanyId in projects
+      {
+        collection: COLLECTIONS.PROJECTS,
+        foreignKey: 'linkedCompanyId',
+        label: 'Συνδεδεμένα έργα (ως εταιρεία)',
+        queryType: 'equals',
+      },
     ],
   },
 

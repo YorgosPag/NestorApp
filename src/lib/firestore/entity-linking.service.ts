@@ -27,6 +27,8 @@ import { logAuditEvent } from '@/lib/auth/audit';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
+import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import {
   propagateChildBuildingLink,
   propagateUnitBuildingLink,
@@ -161,6 +163,15 @@ export async function linkEntity(
     }
   }
 
+  // --- Step 3b: Building reassignment warning (ADR-247 F-5) ---
+  if (registryKey === 'building:projectId' && oldValue !== null && normalizedNew !== null) {
+    logger.warn('linkEntity: building reassigned between projects', {
+      entityId,
+      previousProjectId: oldValue,
+      newProjectId: normalizedNew,
+    });
+  }
+
   // --- Step 4: Cascade dispatch (fire-and-forget) ---
   dispatchCascade(entry.cascadeType, entry.collection, entityId, normalizedNew);
 
@@ -218,4 +229,48 @@ export async function linkEntity(
   });
 
   return { changed: true, oldValue, newValue: normalizedNew, cascadeResult: null };
+}
+
+// =============================================================================
+// PUBLIC: validateLinkedSpacesUniqueness() — ADR-247 F-1
+// =============================================================================
+
+/**
+ * ADR-247 F-1: Validates that no spaceId in linkedSpaces is already linked to another unit.
+ * Building-scoped query — max ~50 units per building, safe performance.
+ *
+ * @throws ApiError(409) if duplicate linkage detected
+ */
+export async function validateLinkedSpacesUniqueness(
+  db: FirebaseFirestore.Firestore,
+  buildingId: string,
+  currentUnitId: string,
+  proposedSpaces: ReadonlyArray<{ spaceId: string }>
+): Promise<void> {
+  const spaceIds = new Set(proposedSpaces.map((s) => s.spaceId));
+  if (spaceIds.size === 0) return;
+
+  // Query all units in the same building (typically ≤50)
+  const snapshot = await db
+    .collection(COLLECTIONS.UNITS)
+    .where(FIELDS.BUILDING_ID, '==', buildingId)
+    .select('linkedSpaces')
+    .get();
+
+  for (const unitDoc of snapshot.docs) {
+    if (unitDoc.id === currentUnitId) continue;
+
+    const linkedSpaces = unitDoc.data().linkedSpaces as
+      | Array<{ spaceId: string }> | undefined;
+    if (!Array.isArray(linkedSpaces)) continue;
+
+    for (const space of linkedSpaces) {
+      if (spaceIds.has(space.spaceId)) {
+        throw new ApiError(
+          409,
+          `Space ${space.spaceId} is already linked to unit ${unitDoc.id}`
+        );
+      }
+    }
+  }
 }

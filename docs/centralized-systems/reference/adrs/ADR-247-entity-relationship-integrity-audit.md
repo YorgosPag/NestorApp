@@ -2,10 +2,10 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | APPROVED |
+| **Status** | IMPLEMENTED |
 | **Date** | 2026-03-19 |
 | **Category** | Entity Systems / Data Integrity |
-| **Type** | AUDIT (documentation-only, no code changes) |
+| **Type** | AUDIT + IMPLEMENTATION |
 | **Trigger** | Bug: same parking/storage linkable to multiple units (no server-side guard) |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
 
@@ -52,13 +52,13 @@
 
 ### Σύνοψη
 
-| # | Εύρημα | Severity | Server Guard | Client Guard |
-|---|--------|----------|-------------|--------------|
-| F-1 | Same space → multiple units | CRITICAL | ❌ Missing | ✅ Exists |
-| F-2 | linkedCompanyId orphaned refs | CRITICAL | ❌ Missing | ❌ Missing |
-| F-3 | Denormalized names staleness | HIGH | ❌ Missing | ❌ Missing |
-| F-4 | allocationCode staleness | HIGH | ❌ Missing | ❌ Missing |
-| F-5 | Building → multiple projects | MEDIUM | ❌ Missing | ❌ Missing |
+| # | Εύρημα | Severity | Status | Server Guard | Client Guard |
+|---|--------|----------|--------|-------------|--------------|
+| F-1 | Same space → multiple units | CRITICAL | ✅ IMPLEMENTED | ✅ `validateLinkedSpacesUniqueness()` | ✅ Exists |
+| F-2 | linkedCompanyId orphaned refs | CRITICAL | ✅ IMPLEMENTED | ✅ deletion-registry dependency | ❌ N/A |
+| F-3 | Denormalized names staleness | ~~HIGH~~ | N/A | — buildingName NOT denormalized | — |
+| F-4 | allocationCode staleness | HIGH | ✅ IMPLEMENTED | ✅ `propagateSpaceAllocationCodeChange()` | ❌ N/A |
+| F-5 | Building → multiple projects | MEDIUM | ✅ IMPLEMENTED | ✅ Warning log (observability) | ❌ N/A |
 
 ---
 
@@ -312,3 +312,4 @@ query = query.where('companyId', '==', companyId);
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-03-19 | Initial audit — 5 findings, 6 protected areas documented | Claude Code |
+| 2026-03-19 | Implementation: F-1 (uniqueness guard), F-2 (deletion guard), F-4 (cascade propagation), F-5 (warning log). F-3 marked N/A. | Claude Code |

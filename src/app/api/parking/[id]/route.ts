@@ -18,6 +18,7 @@ import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErro
 import { createModuleLogger } from '@/lib/telemetry';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
 import { linkEntity } from '@/lib/firestore/entity-linking.service';
+import { propagateSpaceAllocationCodeChange } from '@/lib/firestore/cascade-propagation.service';
 
 const logger = createModuleLogger('ParkingIdRoute');
 
@@ -92,6 +93,14 @@ export const PATCH = withStandardRateLimit(
         if (body.projectId?.trim()) updateData.projectId = body.projectId.trim();
 
         await docRef.update(updateData);
+
+        // 🔗 ADR-247 F-4: Cascade allocationCode to linkedSpaces on units
+        if (body.number?.trim() && body.number.trim() !== (existing.number as string)) {
+          propagateSpaceAllocationCodeChange(id, body.number.trim(), (existing.buildingId as string) ?? null)
+            .catch((err) => logger.warn('allocationCode cascade failed (non-blocking)', {
+              id, error: err instanceof Error ? err.message : String(err),
+            }));
+        }
 
         // 🔗 ADR-239: Centralized linking — change detection + cascade + entity audit
         if (body.buildingId !== undefined) {
