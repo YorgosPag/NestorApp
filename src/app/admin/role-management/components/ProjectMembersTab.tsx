@@ -92,12 +92,16 @@ export function ProjectMembersTab({ canEdit }: ProjectMembersTabProps) {
     apiClient
       .get<{ projects: ProjectListItem[] }>('/api/projects/list')
       .then((data) => {
-        const items = Array.isArray(data.projects) ? data.projects : [];
+        // Debug: log raw response to verify shape
+        console.log('[ProjectMembersTab] projects API response:', JSON.stringify(data).slice(0, 300));
+        const items = Array.isArray(data?.projects) ? data.projects : [];
+        console.log('[ProjectMembersTab] parsed projects count:', items.length);
         setProjects(
           items.map((p) => ({ id: p.id, name: p.name, status: p.status }))
         );
       })
       .catch((err) => {
+        console.error('[ProjectMembersTab] projects API error:', err);
         const message = err instanceof Error ? err.message : 'Failed to load projects';
         notifyError(message);
       })
