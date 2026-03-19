@@ -11,11 +11,25 @@
  */
 
 /**
+ * Checks whether a value is a plain object (created by `{}` or `Object.create(null)`).
+ *
+ * Non-plain objects — such as Firebase `FieldValue`, Firestore `Timestamp`,
+ * class instances, etc. — must be passed through untouched so Firestore
+ * can interpret their special semantics (e.g. `serverTimestamp()`).
+ */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null) return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
+/**
  * Recursively replaces `undefined` values with `null` in a plain object.
  *
  * - Shallow keys with `undefined` become `null`
- * - Nested plain objects are recursively sanitized
- * - Arrays, Dates, and other non-plain-object values are passed through unchanged
+ * - Nested **plain** objects are recursively sanitized
+ * - Arrays, Dates, FieldValue sentinels, and other non-plain-object values
+ *   are passed through unchanged
  *
  * @param data - The object to sanitize
  * @returns A shallow copy with all `undefined` values replaced by `null`
@@ -26,13 +40,8 @@ export function sanitizeForFirestore<T extends Record<string, unknown>>(data: T)
   for (const [key, value] of Object.entries(data)) {
     if (value === undefined) {
       sanitized[key] = null;
-    } else if (
-      value !== null &&
-      typeof value === 'object' &&
-      !Array.isArray(value) &&
-      !(value instanceof Date)
-    ) {
-      sanitized[key] = sanitizeForFirestore(value as Record<string, unknown>);
+    } else if (isPlainObject(value) && !Array.isArray(value)) {
+      sanitized[key] = sanitizeForFirestore(value);
     } else {
       sanitized[key] = value;
     }

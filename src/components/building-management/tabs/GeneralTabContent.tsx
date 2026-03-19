@@ -136,15 +136,23 @@ export function GeneralTabContent({
   }, effectiveIsEditing);
 
   // Sync formData when user selects a different building
+  // OR when server data arrives after creation (name was '' in temp, now populated)
   const prevBuildingIdRef = React.useRef(building.id);
+  const prevBuildingNameRef = React.useRef(building.name);
   useEffect(() => {
-    if (prevBuildingIdRef.current !== building.id) {
-      prevBuildingIdRef.current = building.id;
+    const idChanged = prevBuildingIdRef.current !== building.id;
+    const namePopulated = prevBuildingNameRef.current !== building.name;
+
+    prevBuildingIdRef.current = building.id;
+    prevBuildingNameRef.current = building.name;
+
+    // Reset form when building switches OR when server populates data (post-create sync)
+    if (idChanged || (namePopulated && !effectiveIsEditing)) {
       setFormData(buildFormData(building));
       setSaveError(null);
       setErrors({});
     }
-  }, [building]);
+  }, [building, effectiveIsEditing]);
 
   // Track cancel vs save transitions for form reset
   const didSaveRef = React.useRef(false);
