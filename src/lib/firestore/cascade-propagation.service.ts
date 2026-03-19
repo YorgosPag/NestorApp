@@ -18,6 +18,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { FieldValue } from 'firebase-admin/firestore';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('CascadePropagation');
 
@@ -122,7 +123,7 @@ export async function propagateBuildingProjectLink(
 
     return { success: true, totalUpdated, collections };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = getErrorMessage(error);
     logger.error('Building→Project cascade failed', { buildingId, newProjectId, error: message });
     return { success: false, totalUpdated, collections, error: message };
   }
@@ -208,7 +209,7 @@ export async function propagateProjectCompanyLink(
 
     return { success: true, totalUpdated, collections };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = getErrorMessage(error);
     logger.error('Project→Company cascade failed', { projectId, newCompanyId, error: message });
     return { success: false, totalUpdated, collections, error: message };
   }
@@ -284,7 +285,7 @@ export async function propagateUnitBuildingLink(
       collections: { [COLLECTIONS.UNITS]: 1 },
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = getErrorMessage(error);
     logger.error('Unit→Building cascade failed', { unitId, newBuildingId, error: message });
     return { success: false, totalUpdated: 0, collections: {}, error: message };
   }
@@ -350,7 +351,7 @@ export async function propagateChildBuildingLink(
 
     return { success: true, totalUpdated: 1, collections: { [collection]: 1 } };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = getErrorMessage(error);
     logger.error('Child→Building cascade failed', { collection, docId, newBuildingId, error: message });
     return { success: false, totalUpdated: 0, collections: {}, error: message };
   }
@@ -446,8 +447,103 @@ export async function propagateSpaceAllocationCodeChange(
 
     return { success: true, totalUpdated, collections };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = getErrorMessage(error);
     logger.error('Space→allocationCode cascade failed', { spaceId, error: message });
+    return { success: false, totalUpdated, collections, error: message };
+  }
+}
+
+// ============================================================================
+// RULE 6: Contact Name Change → Units + Payment Plans (ADR-249 P1-1/P1-2)
+// ============================================================================
+
+/**
+ * ADR-249 P1-1 + P1-2: When a contact's display name changes,
+ * propagates the new name to:
+ * 1. units.commercial.buyerName WHERE commercial.buyerContactId == contactId
+ * 2. payment_plans subcollection WHERE buyerContactId == contactId
+ *
+ * Called server-side from /api/contacts/[contactId]/name-cascade.
+ * Batched writes for atomicity per batch.
+ */
+export async function propagateContactNameChange(
+  contactId: string,
+  newDisplayName: string
+): Promise<CascadeResult> {
+  const db = getAdminFirestore();
+  const collections: Record<string, number> = {};
+  let totalUpdated = 0;
+
+  try {
+    // --- Step 1: Update units.commercial.buyerName ---
+    const unitsSnapshot = await db
+      .collection(COLLECTIONS.UNITS)
+      .where('commercial.buyerContactId', '==', contactId)
+      .select('commercial')
+      .get();
+
+    if (!unitsSnapshot.empty) {
+      const unitBatch = db.batch();
+      let unitCount = 0;
+
+      for (const unitDoc of unitsSnapshot.docs) {
+        unitBatch.update(unitDoc.ref, {
+          'commercial.buyerName': newDisplayName,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        unitCount++;
+      }
+
+      await unitBatch.commit();
+      collections[COLLECTIONS.UNITS] = unitCount;
+      totalUpdated += unitCount;
+
+      // --- Step 2: Update payment_plans subcollections for affected units ---
+      let planCount = 0;
+
+      for (const unitDoc of unitsSnapshot.docs) {
+        const plansSnapshot = await db
+          .collection(COLLECTIONS.UNITS)
+          .doc(unitDoc.id)
+          .collection('payment_plans')
+          .where('buyerContactId', '==', contactId)
+          .select()
+          .get();
+
+        if (!plansSnapshot.empty) {
+          const planBatch = db.batch();
+
+          for (const planDoc of plansSnapshot.docs) {
+            planBatch.update(planDoc.ref, {
+              buyerName: newDisplayName,
+              updatedAt: FieldValue.serverTimestamp(),
+            });
+            planCount++;
+          }
+
+          await planBatch.commit();
+        }
+      }
+
+      if (planCount > 0) {
+        collections['payment_plans'] = planCount;
+        totalUpdated += planCount;
+      }
+    } else {
+      collections[COLLECTIONS.UNITS] = 0;
+    }
+
+    logger.info('Contact→Name cascade completed', {
+      contactId,
+      newDisplayName,
+      totalUpdated,
+      collections,
+    });
+
+    return { success: true, totalUpdated, collections };
+  } catch (error) {
+    const message = getErrorMessage(error);
+    logger.error('Contact→Name cascade failed', { contactId, newDisplayName, error: message });
     return { success: false, totalUpdated, collections, error: message };
   }
 }

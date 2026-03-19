@@ -7,7 +7,7 @@
 | **Parent ADR** | ADR-249 (Comprehensive Server-Side Integrity Audit) |
 | **Phase** | P2 — Defense in Depth (Backlog) |
 | **Priority** | MEDIUM / LOW |
-| **Status** | 📋 PENDING |
+| **Status** | ✅ IMPLEMENTED |
 | **Estimated Effort** | ~2.5 hours |
 | **Dependencies** | None — self-contained |
 | **Date** | 2026-03-19 |
@@ -208,20 +208,20 @@ if (plan) {
 ## 5. Verification Criteria
 
 ### P2-1: unitCoverage Recalculation
-- [ ] Delete last photo → `unitCoverage.hasPhotos` becomes `false`
-- [ ] Delete photo (but others remain) → `unitCoverage.hasPhotos` stays `true`
-- [ ] Delete last floorplan → `unitCoverage.hasFloorplans` becomes `false`
-- [ ] Delete last document → `unitCoverage.hasDocuments` becomes `false`
-- [ ] Upload photo to unit with `hasPhotos: false` → `hasPhotos` becomes `true` (existing behavior preserved)
-- [ ] No unnecessary Firestore writes when flag doesn't change
+- [x] Delete last photo → `unitCoverage.hasPhotos` becomes `false`
+- [x] Delete photo (but others remain) → `unitCoverage.hasPhotos` stays `true`
+- [x] Delete last floorplan → `unitCoverage.hasFloorplans` becomes `false`
+- [x] Delete last document → `unitCoverage.hasDocuments` becomes `false`
+- [x] Upload photo to unit with `hasPhotos: false` → `hasPhotos` becomes `true` (existing behavior preserved)
+- [x] No unnecessary Firestore writes when flag doesn't change
 
 ### P2-2: Installment Sum Validation
-- [ ] POST installment that keeps total ≤ plan total → 201
-- [ ] POST installment that would exceed plan total → 400 (route-level)
-- [ ] POST installment with negative amount → 400
-- [ ] POST installment with amount = 0 → 400
-- [ ] Service-level 95% rule still applies independently
-- [ ] Route-level check doesn't block valid installments that pass service validation
+- [x] POST installment that keeps total ≤ plan total → 201
+- [x] POST installment that would exceed plan total → 400 (route-level)
+- [x] POST installment with negative amount → 400
+- [x] POST installment with amount = 0 → 400
+- [x] Service-level 95% rule still applies independently
+- [x] Route-level check doesn't block valid installments that pass service validation
 
 ---
 
@@ -230,3 +230,4 @@ if (plan) {
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-03-19 | Initial SPEC creation — 2 P2 fixes documented | Claude Code |
+| 2026-03-19 | ✅ Both P2 fixes implemented: unit-coverage-recalculator.ts utility, installment amount validation | Claude Code |

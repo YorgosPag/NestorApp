@@ -466,6 +466,20 @@ export class ContactsService {
       // Save using standard method
       await this.updateContact(id, enterpriseData);
 
+      // 🔗 ADR-249 P1-1: Contact name cascade — propagate name change to denormalized fields
+      const oldDisplayName = this.getContactDisplayName(existingContact);
+      const newDisplayName = this.getContactDisplayName({ ...existingContact, ...enterpriseData });
+      if (oldDisplayName !== newDisplayName && newDisplayName.length > 0) {
+        apiClient.post(`/api/contacts/${id}/name-cascade`, {
+          newDisplayName,
+        }).catch((err) => {
+          logger.warn('Contact name cascade failed (non-blocking)', {
+            contactId: id,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        });
+      }
+
       // 📜 AUDIT TRAIL: Compute diff and send to centralized endpoint (fire-and-forget)
       const changes = computeEntityDiff(
         existingContact as unknown as Record<string, unknown>,

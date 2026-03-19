@@ -21,7 +21,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import type { UpdateInvoiceInput } from '@/subapps/accounting/types';
+import type { UpdateInvoiceInput, MyDataDocumentStatus } from '@/subapps/accounting/types';
 
 // =============================================================================
 // GET — Single Invoice
@@ -94,6 +94,19 @@ async function handlePatch(
           );
         }
 
+        // 🛡️ ADR-249 P0-1: Invoice immutability guard
+        // Accepted/sent/cancelled invoices are IMMUTABLE (fiscal law + ΑΑΔΕ submission)
+        const IMMUTABLE_STATUSES: ReadonlySet<MyDataDocumentStatus> = new Set([
+          'accepted', 'cancelled', 'sent',
+        ]);
+        const currentStatus = existing.mydata?.status as MyDataDocumentStatus | undefined;
+        if (currentStatus && IMMUTABLE_STATUSES.has(currentStatus)) {
+          return NextResponse.json(
+            { success: false, error: `Cannot edit invoice with myDATA status '${currentStatus}'. Only draft or rejected invoices are editable.` },
+            { status: 403 }
+          );
+        }
+
         await repository.updateInvoice(id, body);
 
         return NextResponse.json({
@@ -140,6 +153,14 @@ async function handleDelete(
           return NextResponse.json(
             { success: false, error: 'Invoice not found' },
             { status: 404 }
+          );
+        }
+
+        // 🛡️ ADR-249 P0-1: Prevent double-cancellation (409 Conflict)
+        if (existing.mydata?.status === 'cancelled') {
+          return NextResponse.json(
+            { success: false, error: 'Invoice is already cancelled' },
+            { status: 409 }
           );
         }
 

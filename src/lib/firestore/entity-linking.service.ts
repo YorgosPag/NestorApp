@@ -27,8 +27,10 @@ import { logAuditEvent } from '@/lib/auth/audit';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import {
   propagateChildBuildingLink,
   propagateUnitBuildingLink,
@@ -87,7 +89,7 @@ function dispatchCascade(
     logger.warn('linkEntity: cascade failed (non-blocking)', {
       cascadeType,
       entityId,
-      error: err instanceof Error ? err.message : String(err),
+      error: getErrorMessage(err),
     });
   });
 }
@@ -170,6 +172,28 @@ export async function linkEntity(
       previousProjectId: oldValue,
       newProjectId: normalizedNew,
     });
+  }
+
+  // --- Step 3c: Cross-company guard (ADR-249 P1-3) ---
+  // When linking a building to a project, verify both belong to the same company.
+  // Prevents cross-company data contamination.
+  if (registryKey === 'building:projectId' && normalizedNew !== null) {
+    const buildingCompanyId = (existingDoc.companyId as string) ?? null;
+
+    if (buildingCompanyId) {
+      const db = getAdminFirestore();
+      const projectDoc = await db.collection(COLLECTIONS.PROJECTS).doc(normalizedNew).get();
+      const projectCompanyId = projectDoc.exists
+        ? (projectDoc.data()?.companyId as string) ?? null
+        : null;
+
+      if (projectCompanyId && buildingCompanyId !== projectCompanyId) {
+        throw new ApiError(
+          400,
+          `Cross-company linking blocked: building belongs to company '${buildingCompanyId}' but project belongs to '${projectCompanyId}'`
+        );
+      }
+    }
   }
 
   // --- Step 4: Cascade dispatch (fire-and-forget) ---

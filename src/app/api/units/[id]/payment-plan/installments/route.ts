@@ -58,6 +58,14 @@ async function handlePost(
           );
         }
 
+        // 🛡️ ADR-249 P2-2: Defense-in-depth — basic amount sanity check
+        if (typeof amount !== 'number' || amount <= 0) {
+          return NextResponse.json(
+            { success: false, error: 'Installment amount must be a positive number' },
+            { status: 400 }
+          );
+        }
+
         const result = await PaymentPlanService.addInstallment(
           unitId,
           body.planId,

@@ -7,7 +7,7 @@
 | **Parent ADR** | ADR-249 (Comprehensive Server-Side Integrity Audit) |
 | **Phase** | P0 — Critical Fixes (Before Production) |
 | **Priority** | CRITICAL |
-| **Status** | 📋 PENDING |
+| **Status** | ✅ IMPLEMENTED |
 | **Estimated Effort** | ~4 hours |
 | **Dependencies** | None — self-contained fixes |
 | **Date** | 2026-03-19 |
@@ -246,27 +246,27 @@ if (!existingFloors.empty) {
 ## 5. Verification Criteria
 
 ### P0-1: Invoice Immutability
-- [ ] PATCH on `accepted` invoice → returns 403
-- [ ] PATCH on `cancelled` invoice → returns 403
-- [ ] PATCH on `draft` invoice → succeeds (200)
-- [ ] PATCH on `rejected` invoice → succeeds (allows re-edit)
-- [ ] PATCH on `sent` invoice with `notes` → succeeds
-- [ ] PATCH on `sent` invoice with `amount` → returns 403
-- [ ] DELETE on any invoice → soft-delete still works (sets cancelled)
+- [x] PATCH on `accepted` invoice → returns 403
+- [x] PATCH on `cancelled` invoice → returns 403
+- [x] PATCH on `draft` invoice → succeeds (200)
+- [x] PATCH on `rejected` invoice → succeeds (allows re-edit)
+- [x] PATCH on `sent` invoice with `notes` → succeeds
+- [x] PATCH on `sent` invoice with `amount` → returns 403
+- [x] DELETE on any invoice → soft-delete still works (sets cancelled)
 
 ### P0-2: Field Locking
-- [ ] `units/[id]` PATCH with `code` on sold unit → 403
-- [ ] `units/real-update` with locked field on sold unit → 403
-- [ ] `units/final-solution` with locked field on sold unit → 403
-- [ ] `units/[id]` PATCH with `description` on sold unit → succeeds (not locked)
-- [ ] `units/[id]` PATCH with `code` on reserved unit → 403
-- [ ] `units/[id]` PATCH with `areas` on reserved unit → succeeds (not locked for reserved)
+- [x] `units/[id]` PATCH with `code` on sold unit → 403
+- [x] `units/real-update` with locked field on sold unit → 403
+- [x] `units/final-solution` with locked field on sold unit → 403
+- [x] `units/[id]` PATCH with `description` on sold unit → succeeds (not locked)
+- [x] `units/[id]` PATCH with `code` on reserved unit → 403
+- [x] `units/[id]` PATCH with `areas` on reserved unit → succeeds (not locked for reserved)
 
 ### P0-3: Floor Uniqueness
-- [ ] POST floor (buildingId=X, number=3) when no floor 3 → 201
-- [ ] POST floor (buildingId=X, number=3) when floor 3 exists → 409
-- [ ] POST floor (buildingId=Y, number=3) when floor 3 exists in X → 201 (different building)
-- [ ] POST floor (buildingId=X, number=3) when floor 3 is soft-deleted → 201 (deleted doesn't count)
+- [x] POST floor (buildingId=X, number=3) when no floor 3 → 201
+- [x] POST floor (buildingId=X, number=3) when floor 3 exists → 409
+- [x] POST floor (buildingId=Y, number=3) when floor 3 exists in X → 201 (different building)
+- [x] POST floor (buildingId=X, number=3) when floor 3 is soft-deleted → 201 (deleted doesn't count)
 
 ---
 
@@ -275,3 +275,4 @@ if (!existingFloors.empty) {
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-03-19 | Initial SPEC creation — 3 P0 fixes documented | Claude Code |
+| 2026-03-19 | ✅ All 3 P0 fixes implemented: Invoice immutability guard (PATCH 403 for accepted/sent/cancelled, DELETE 409 for already cancelled), shared field locking utility (`unit-field-locking.ts`) with refactored units/[id] + guards in real-update and final-solution, floor uniqueness guard in floors/route.ts POST (409 for duplicate floor number per building) | Claude Code |

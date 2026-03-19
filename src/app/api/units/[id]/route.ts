@@ -22,6 +22,7 @@ import type { LevelData } from '@/types/unit';
 import { UNIT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
 import { linkEntity, validateLinkedSpacesUniqueness } from '@/lib/firestore/entity-linking.service';
+import { validateUnitFieldLocking } from '@/lib/firestore/unit-field-locking';
 import { createDefaultPersonaData, findActivePersona } from '@/types/contacts/personas';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import type { PersonaData, ClientPersona } from '@/types/contacts/personas';
@@ -106,28 +107,12 @@ export const PATCH = withStandardRateLimit(
         // VALIDATION: Field locking based on commercialStatus
         // After sale/reservation, critical fields cannot be modified
         // (legal requirement: cadastre, tax office, contracts)
+        // 🛡️ ADR-249 P0-2: Uses shared utility (unit-field-locking.ts)
         // ================================================================
-        const currentCommercialStatus = existing.commercialStatus as string | undefined;
-
-        if (currentCommercialStatus === 'sold' || currentCommercialStatus === 'rented') {
-          const soldLockedFields = [
-            'code', 'type', 'name', 'areas', 'layout', 'floor', 'floorId',
-            'commercialStatus', 'buildingId', 'linkedSpaces',
-            'orientations', 'condition', 'energy', 'systemsOverride',
-            'finishes', 'interiorFeatures', 'securityFeatures',
-            'levels', 'isMultiLevel', 'levelData',
-          ] as const;
-          const attemptedLockedFields = soldLockedFields.filter(f => f in body);
-          if (attemptedLockedFields.length > 0) {
-            throw new ApiError(403, `Cannot modify locked fields on a ${currentCommercialStatus} unit: ${attemptedLockedFields.join(', ')}`);
-          }
-        } else if (currentCommercialStatus === 'reserved') {
-          const reservedLockedFields = ['code', 'type', 'name'] as const;
-          const attemptedLockedFields = reservedLockedFields.filter(f => f in body);
-          if (attemptedLockedFields.length > 0) {
-            throw new ApiError(403, `Cannot modify locked fields on a reserved unit: ${attemptedLockedFields.join(', ')}`);
-          }
-        }
+        validateUnitFieldLocking(
+          existing.commercialStatus as string | undefined,
+          Object.keys(body)
+        );
 
         // ================================================================
         // VALIDATION: ADR-236 — Multi-level floors

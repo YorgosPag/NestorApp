@@ -25,6 +25,7 @@ import { CONTACT_INFO, ContactInfoUtils } from '@/config/contact-info-config';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateContactId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { validateUnitFieldLocking } from '@/lib/firestore/unit-field-locking';
 
 const logger = createModuleLogger('UnitsRealUpdateRoute');
 
@@ -147,6 +148,14 @@ const postHandler = async (request: NextRequest) => {
           if (!contact) continue;
 
           try {
+            // 🛡️ ADR-249 P0-2: Validate field locking before update
+            const unitDoc = await getAdminFirestore().collection(COLLECTIONS.UNITS).doc(unit.id).get();
+            const unitData = unitDoc.data();
+            validateUnitFieldLocking(
+              unitData?.commercialStatus as string | undefined,
+              ['soldTo']
+            );
+
             await getAdminFirestore().collection(COLLECTIONS.UNITS).doc(unit.id).update({
               soldTo: contact.id
             });

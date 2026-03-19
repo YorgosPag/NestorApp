@@ -252,6 +252,24 @@ export const POST = withStandardRateLimit(
         if (body.projectId) entitySpecificFields.projectId = String(body.projectId);
         if (body.projectName) entitySpecificFields.projectName = body.projectName;
 
+        // 🛡️ ADR-249 P0-3: Floor uniqueness guard — prevent duplicate floor numbers per building
+        // Note: floors use hard delete (via deletion-guard), no isDeleted field needed
+        const db = getAdminFirestore();
+        const duplicateCheck = await db
+          .collection(COLLECTIONS.FLOORS)
+          .where(FIELDS.BUILDING_ID, '==', body.buildingId)
+          .where('number', '==', body.number)
+          .select()
+          .limit(1)
+          .get();
+
+        if (!duplicateCheck.empty) {
+          throw new ApiError(
+            409,
+            `Floor number ${body.number} already exists in building ${body.buildingId}`
+          );
+        }
+
         // 🏢 ADR-238: Centralized entity creation
         const result = await createEntity('floor', {
           auth: ctx,

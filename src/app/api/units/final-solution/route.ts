@@ -22,6 +22,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { generateTempId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { validateUnitFieldLocking } from '@/lib/firestore/unit-field-locking';
 
 const logger = createModuleLogger('UnitsFinalSolutionRoute');
 
@@ -146,6 +147,14 @@ export async function POST(request: NextRequest) {
           const contact = availableContacts[i % availableContacts.length];
 
           try {
+            // 🛡️ ADR-249 P0-2: Validate field locking before update
+            const unitDoc = await getAdminFirestore().collection(COLLECTIONS.UNITS).doc(unit.id).get();
+            const unitData = unitDoc.data();
+            validateUnitFieldLocking(
+              unitData?.commercialStatus as string | undefined,
+              ['soldTo']
+            );
+
             await getAdminFirestore().collection(COLLECTIONS.UNITS).doc(unit.id).update({
               soldTo: contact.id
             });

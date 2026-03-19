@@ -7,7 +7,7 @@
 | **Parent ADR** | ADR-249 (Comprehensive Server-Side Integrity Audit) |
 | **Phase** | P1 — Data Quality (2 sprints) |
 | **Priority** | HIGH |
-| **Status** | 📋 PENDING |
+| **Status** | ✅ IMPLEMENTED |
 | **Estimated Effort** | ~8 hours |
 | **Dependencies** | P0-2 (shared validation pattern) |
 | **Date** | 2026-03-19 |
@@ -254,23 +254,23 @@ crossValidation?: {
 ## 5. Verification Criteria
 
 ### P1-1: buyerName Cascade
-- [ ] Update contact name → `units.commercial.buyerName` updated in all linked units
-- [ ] Update contact name → `payment_plans.buyerName` updated in all linked plans
-- [ ] Contact with no linked units → cascade completes with `totalUpdated: 0`
-- [ ] Batch update stays under Firestore 500-doc limit (or splits into multiple batches)
-- [ ] Fire-and-forget pattern — contact PATCH returns immediately, cascade runs async
+- [x] Update contact name → `units.commercial.buyerName` updated in all linked units
+- [x] Update contact name → `payment_plans.buyerName` updated in all linked plans
+- [x] Contact with no linked units → cascade completes with `totalUpdated: 0`
+- [x] Batch update stays under Firestore 500-doc limit (or splits into multiple batches)
+- [x] Fire-and-forget pattern — contact PATCH returns immediately, cascade runs async
 
 ### P1-2: General Name Cascade
-- [ ] Update contact name → `entity_associations.contactName` updated
-- [ ] Both cascades (P1-1 + P1-2) fire in parallel without conflicts
-- [ ] Performance: cascade completes in <2s for typical data volumes (<50 affected docs)
+- [x] Update contact name → `entity_associations.contactName` updated
+- [x] Both cascades (P1-1 + P1-2) fire in parallel without conflicts
+- [x] Performance: cascade completes in <2s for typical data volumes (<50 affected docs)
 
 ### P1-3: Cross-Company Guard
-- [ ] Link building (companyId=A) to project (companyId=A) → succeeds
-- [ ] Link building (companyId=A) to project (companyId=B) → returns 400
-- [ ] Link building (companyId=null) to project (companyId=A) → succeeds (unassigned OK)
-- [ ] Link building (companyId=A) to project (companyId=null) → succeeds (unassigned OK)
-- [ ] Unlink building from project → succeeds regardless of companyId
+- [x] Link building (companyId=A) to project (companyId=A) → succeeds
+- [x] Link building (companyId=A) to project (companyId=B) → returns 400
+- [x] Link building (companyId=null) to project (companyId=A) → succeeds (unassigned OK)
+- [x] Link building (companyId=A) to project (companyId=null) → succeeds (unassigned OK)
+- [x] Unlink building from project → succeeds regardless of companyId
 
 ---
 
@@ -279,3 +279,4 @@ crossValidation?: {
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-03-19 | Initial SPEC creation — 3 P1 fixes documented | Claude Code |
+| 2026-03-19 | ✅ All 3 P1 fixes implemented: P1-1/P1-2 `propagateContactNameChange()` in cascade-propagation.service.ts, new API route `/api/contacts/[contactId]/name-cascade`, trigger in contacts.service.ts `updateContactFromForm()`; P1-3 cross-company guard in entity-linking.service.ts `linkEntity()` step 3c | Claude Code |
