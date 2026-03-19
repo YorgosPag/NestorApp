@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Save, CheckCircle, AlertCircle, Plus, X, Car, Package } from 'lucide-react';
+import { Save, CheckCircle, AlertCircle, X, Car, Package } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 // 🏢 ENTERPRISE: Using centralized entity config for consistent icons/colors
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
@@ -219,21 +219,25 @@ export function LinkedSpacesCard({
   // ✅ PATTERN: Draft state initialized in useState, updated only by user action
   // ============================================================================
 
-  // 🏢 ENTERPRISE: Add parking space to draft list (user action only)
-  const handleAddParking = useCallback(() => {
-    if (!selectedParkingId || isSelectClearValue(selectedParkingId)) return;
+  // 🏢 ENTERPRISE: Auto-add parking to draft on dropdown selection (no "+" button needed)
+  const handleParkingSelected = useCallback((parkingId: string) => {
+    if (!parkingId || isSelectClearValue(parkingId)) {
+      setSelectedParkingId(SELECT_CLEAR_VALUE);
+      return;
+    }
 
-    const parking = parkingOptions.find(p => p.id === selectedParkingId);
+    const parking = parkingOptions.find(p => p.id === parkingId);
     if (!parking) return;
 
     // Check if already linked
-    if (draftLinkedSpaces.some(ls => ls.spaceId === selectedParkingId)) {
+    if (draftLinkedSpaces.some(ls => ls.spaceId === parkingId)) {
       logger.warn('[LinkedSpacesCard] Parking already linked');
+      setSelectedParkingId(SELECT_CLEAR_VALUE);
       return;
     }
 
     const newLinkedSpace: LinkedSpace = {
-      spaceId: selectedParkingId,
+      spaceId: parkingId,
       spaceType: ALLOCATION_SPACE_TYPES.PARKING,
       quantity: 1,
       inclusion: selectedInclusion,
@@ -243,23 +247,27 @@ export function LinkedSpacesCard({
     setDraftLinkedSpaces(prev => [...prev, newLinkedSpace]);
     setSelectedParkingId(SELECT_CLEAR_VALUE);
     setSaveStatus('idle');
-  }, [selectedParkingId, parkingOptions, draftLinkedSpaces, selectedInclusion]);
+  }, [parkingOptions, draftLinkedSpaces, selectedInclusion]);
 
-  // 🏢 ENTERPRISE: Add storage space to draft list (user action only)
-  const handleAddStorage = useCallback(() => {
-    if (!selectedStorageId || isSelectClearValue(selectedStorageId)) return;
+  // 🏢 ENTERPRISE: Auto-add storage to draft on dropdown selection (no "+" button needed)
+  const handleStorageSelected = useCallback((storageId: string) => {
+    if (!storageId || isSelectClearValue(storageId)) {
+      setSelectedStorageId(SELECT_CLEAR_VALUE);
+      return;
+    }
 
-    const storage = storageOptions.find(s => s.id === selectedStorageId);
+    const storage = storageOptions.find(s => s.id === storageId);
     if (!storage) return;
 
     // Check if already linked
-    if (draftLinkedSpaces.some(ls => ls.spaceId === selectedStorageId)) {
+    if (draftLinkedSpaces.some(ls => ls.spaceId === storageId)) {
       logger.warn('[LinkedSpacesCard] Storage already linked');
+      setSelectedStorageId(SELECT_CLEAR_VALUE);
       return;
     }
 
     const newLinkedSpace: LinkedSpace = {
-      spaceId: selectedStorageId,
+      spaceId: storageId,
       spaceType: ALLOCATION_SPACE_TYPES.STORAGE,
       quantity: 1,
       inclusion: selectedInclusion,
@@ -269,7 +277,7 @@ export function LinkedSpacesCard({
     setDraftLinkedSpaces(prev => [...prev, newLinkedSpace]);
     setSelectedStorageId(SELECT_CLEAR_VALUE);
     setSaveStatus('idle');
-  }, [selectedStorageId, storageOptions, draftLinkedSpaces, selectedInclusion]);
+  }, [storageOptions, draftLinkedSpaces, selectedInclusion]);
 
   // 🏢 ENTERPRISE: Remove space from draft (user action only)
   const handleRemoveSpace = useCallback((spaceId: string) => {
@@ -492,39 +500,26 @@ export function LinkedSpacesCard({
                   {t('linkedSpaces.noParkingAvailable', { defaultValue: 'Δεν υπάρχουν διαθέσιμες θέσεις parking' })}
                 </p>
               ) : (
-                <div className={`flex ${spacing.gap.sm}`}>
-                  <Select
-                    value={selectedParkingId}
-                    onValueChange={setSelectedParkingId}
-                  >
-                    <SelectTrigger className="flex-1 h-8 text-sm">
-                      <SelectValue placeholder={t('linkedSpaces.selectParking', { defaultValue: 'Επιλογή parking...' })} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {/* 🏢 ENTERPRISE: Clear option - uses sentinel (Radix forbids empty string) */}
-                      <SelectItem value={SELECT_CLEAR_VALUE}>
-                        {t('linkedSpaces.selectParking', { defaultValue: '-- Επιλέξτε --' })}
-                      </SelectItem>
-                      {parkingOptions
-                        .filter(p => !draftLinkedSpaces.some(ls => ls.spaceId === p.id))
-                        .map((parking) => (
-                          <SelectItem key={parking.id} value={parking.id}>
-                            {parking.number} {parking.type && `(${parking.type})`}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={handleAddParking}
-                    disabled={!selectedParkingId || isSelectClearValue(selectedParkingId)}
-                    className="h-8"
-                  >
-                    <Plus className={iconSizes.xs} />
-                  </Button>
-                </div>
+                <Select
+                  value={selectedParkingId}
+                  onValueChange={handleParkingSelected}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder={t('linkedSpaces.selectParking', { defaultValue: 'Επιλογή parking...' })} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={SELECT_CLEAR_VALUE}>
+                      {t('linkedSpaces.selectParking', { defaultValue: '-- Επιλέξτε --' })}
+                    </SelectItem>
+                    {parkingOptions
+                      .filter(p => !draftLinkedSpaces.some(ls => ls.spaceId === p.id))
+                      .map((parking) => (
+                        <SelectItem key={parking.id} value={parking.id}>
+                          {parking.number} {parking.type && `(${parking.type})`}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               )}
             </fieldset>
 
@@ -544,39 +539,26 @@ export function LinkedSpacesCard({
                   {t('linkedSpaces.noStorageAvailable', { defaultValue: 'Δεν υπάρχουν διαθέσιμες αποθήκες' })}
                 </p>
               ) : (
-                <div className={`flex ${spacing.gap.sm}`}>
-                  <Select
-                    value={selectedStorageId}
-                    onValueChange={setSelectedStorageId}
-                  >
-                    <SelectTrigger className="flex-1 h-8 text-sm">
-                      <SelectValue placeholder={t('linkedSpaces.selectStorage', { defaultValue: 'Επιλογή αποθήκης...' })} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {/* 🏢 ENTERPRISE: Clear option - uses sentinel (Radix forbids empty string) */}
-                      <SelectItem value={SELECT_CLEAR_VALUE}>
-                        {t('linkedSpaces.selectStorage', { defaultValue: '-- Επιλέξτε --' })}
-                      </SelectItem>
-                      {storageOptions
-                        .filter(s => !draftLinkedSpaces.some(ls => ls.spaceId === s.id))
-                        .map((storage) => (
-                          <SelectItem key={storage.id} value={storage.id}>
-                            {storage.name} {storage.area && `(${storage.area} τ.μ.)`}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={handleAddStorage}
-                    disabled={!selectedStorageId || isSelectClearValue(selectedStorageId)}
-                    className="h-8"
-                  >
-                    <Plus className={iconSizes.xs} />
-                  </Button>
-                </div>
+                <Select
+                  value={selectedStorageId}
+                  onValueChange={handleStorageSelected}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder={t('linkedSpaces.selectStorage', { defaultValue: 'Επιλογή αποθήκης...' })} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={SELECT_CLEAR_VALUE}>
+                      {t('linkedSpaces.selectStorage', { defaultValue: '-- Επιλέξτε --' })}
+                    </SelectItem>
+                    {storageOptions
+                      .filter(s => !draftLinkedSpaces.some(ls => ls.spaceId === s.id))
+                      .map((storage) => (
+                        <SelectItem key={storage.id} value={storage.id}>
+                          {storage.name} {storage.area && `(${storage.area} τ.μ.)`}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               )}
             </fieldset>
 
