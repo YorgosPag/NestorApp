@@ -41,7 +41,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PageLoadingState, PageErrorState, StaticPageLoading } from '@/core/states';
 import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters';
 import { parkingFiltersConfig } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
-import { ListContainer, PageContainer } from '@/core/containers';
+import { ListContainer, PageContainer, DetailsContainer } from '@/core/containers';
+import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import {
   PARKING_TYPE_LABELS,
   PARKING_STATUS_LABELS
@@ -55,8 +56,6 @@ import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { toggleSelect } from '@/lib/toggle-select';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/spinner';
 import {
   Select,
   SelectContent,
@@ -64,7 +63,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { X, Check } from 'lucide-react';
 import {
   PARKING_TYPES,
   PARKING_STATUSES,
@@ -363,111 +361,6 @@ function ParkingPageContent() {
           />
         </aside>
 
-        {/* Inline Create Form */}
-        {showCreateForm && (
-          <form
-            className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-3"
-            onSubmit={(e) => { e.preventDefault(); handleCreateParking(); }}
-          >
-            {/* Row 1: Building, Number, Type */}
-            <fieldset className="grid grid-cols-3 gap-2">
-              <label className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-muted-foreground">
-                  {t('pages.parking.form.building', 'Κτίριο')}
-                </span>
-                <Select value={createBuildingId} onValueChange={setCreateBuildingId} disabled={creating}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder={t('pages.parking.form.selectBuilding', 'Προαιρετικό')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {buildings.map(b => (
-                      <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-muted-foreground">
-                  {t('pages.parking.form.number', 'Αριθμός')} *
-                </span>
-                <Input
-                  value={createNumber}
-                  onChange={(e) => {
-                    setCreateNumber(e.target.value);
-                    if (!codeOverridden && e.target.value !== suggestedCode) setCodeOverridden(true);
-                    if (!e.target.value) setCodeOverridden(false);
-                  }}
-                  placeholder={suggestedCode || 'P-001'}
-                  className="h-9"
-                  disabled={creating}
-                  autoFocus
-                />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-muted-foreground">
-                  {t('pages.parking.form.type', 'Τύπος')}
-                </span>
-                <Select value={createType} onValueChange={(v) => setCreateType(v as ParkingSpotType)} disabled={creating}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PARKING_TYPES.map(pt => (
-                      <SelectItem key={pt} value={pt}>{tParking(`types.${pt}`, pt)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </label>
-            </fieldset>
-
-            {/* Row 2: Status, Floor */}
-            <fieldset className="grid grid-cols-3 gap-2">
-              <label className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-muted-foreground">
-                  {t('pages.parking.form.status', 'Κατάσταση')}
-                </span>
-                <Select value={createStatus} onValueChange={(v) => setCreateStatus(v as ParkingSpotStatus)} disabled={creating}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PARKING_STATUSES.map(ps => (
-                      <SelectItem key={ps} value={ps}>{tParking(`status.${ps}`, ps)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-muted-foreground">
-                  {t('pages.parking.form.floor', 'Όροφος')}
-                </span>
-                <Input
-                  value={createFloor}
-                  onChange={(e) => setCreateFloor(e.target.value)}
-                  placeholder="-1"
-                  className="h-9"
-                  disabled={creating}
-                />
-              </label>
-              <nav className="flex items-end justify-end gap-2">
-                <Button type="button" variant="ghost" size="sm" onClick={resetCreateForm} disabled={creating}>
-                  <X className="mr-1 h-4 w-4" />
-                  {t('pages.parking.form.cancel', 'Ακύρωση')}
-                </Button>
-                <Button type="submit" size="sm" disabled={!createNumber.trim() || creating}>
-                  {creating ? <Spinner size="small" color="inherit" className="mr-1" /> : <Check className="mr-1 h-4 w-4" />}
-                  {t('pages.parking.form.create', 'Δημιουργία')}
-                </Button>
-              </nav>
-            </fieldset>
-
-            {/* Error */}
-            {createError && (
-              <p className="text-sm text-destructive">{createError}</p>
-            )}
-          </form>
-        )}
-
         {/* Content */}
         <ListContainer>
           {viewMode === 'grid' ? (
@@ -495,14 +388,128 @@ function ParkingPageContent() {
                   setSelectedParking(null);
                 }}
               />
-              <ParkingDetails
-                parking={selectedParking}
-                onNewParking={() => {
-                  setShowCreateForm(true);
-                  setSelectedParking(null);
-                }}
-                onDelete={() => setShowDeleteDialog(true)}
-              />
+              {showCreateForm ? (
+                <DetailsContainer
+                  selectedItem={{ id: 'create' }}
+                  header={
+                    <div className="hidden md:block">
+                      <EntityDetailsHeader
+                        icon={Car}
+                        title={tParking('header.newParking', 'Νέα Θέση Στάθμευσης')}
+                        actions={[
+                          createEntityAction('save',
+                            creating
+                              ? t('pages.parking.form.creating', 'Δημιουργία...')
+                              : t('pages.parking.form.create', 'Δημιουργία'),
+                            creating ? () => {} : handleCreateParking
+                          ),
+                          createEntityAction('cancel', t('pages.parking.form.cancel', 'Ακύρωση'), resetCreateForm),
+                        ]}
+                        variant="detailed"
+                      />
+                    </div>
+                  }
+                  tabsRenderer={
+                    <section className="flex flex-col gap-4 p-4">
+                      {/* Row 1: Building, Number, Type */}
+                      <fieldset className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <label className="flex flex-col gap-1">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {t('pages.parking.form.building', 'Κτίριο')}
+                          </span>
+                          <Select value={createBuildingId} onValueChange={setCreateBuildingId} disabled={creating}>
+                            <SelectTrigger className="h-9">
+                              <SelectValue placeholder={t('pages.parking.form.selectBuilding', 'Προαιρετικό')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {buildings.map(b => (
+                                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </label>
+                        <label className="flex flex-col gap-1">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {t('pages.parking.form.number', 'Αριθμός')} *
+                          </span>
+                          <Input
+                            value={createNumber}
+                            onChange={(e) => {
+                              setCreateNumber(e.target.value);
+                              if (!codeOverridden && e.target.value !== suggestedCode) setCodeOverridden(true);
+                              if (!e.target.value) setCodeOverridden(false);
+                            }}
+                            placeholder={suggestedCode || 'P-001'}
+                            className="h-9"
+                            disabled={creating}
+                            autoFocus
+                          />
+                        </label>
+                        <label className="flex flex-col gap-1">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {t('pages.parking.form.type', 'Τύπος')}
+                          </span>
+                          <Select value={createType} onValueChange={(v) => setCreateType(v as ParkingSpotType)} disabled={creating}>
+                            <SelectTrigger className="h-9">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {PARKING_TYPES.map(pt => (
+                                <SelectItem key={pt} value={pt}>{tParking(`types.${pt}`, pt)}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </label>
+                      </fieldset>
+
+                      {/* Row 2: Status, Floor */}
+                      <fieldset className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <label className="flex flex-col gap-1">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {t('pages.parking.form.status', 'Κατάσταση')}
+                          </span>
+                          <Select value={createStatus} onValueChange={(v) => setCreateStatus(v as ParkingSpotStatus)} disabled={creating}>
+                            <SelectTrigger className="h-9">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {PARKING_STATUSES.map(ps => (
+                                <SelectItem key={ps} value={ps}>{tParking(`status.${ps}`, ps)}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </label>
+                        <label className="flex flex-col gap-1">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {t('pages.parking.form.floor', 'Όροφος')}
+                          </span>
+                          <Input
+                            value={createFloor}
+                            onChange={(e) => setCreateFloor(e.target.value)}
+                            placeholder="-1"
+                            className="h-9"
+                            disabled={creating}
+                          />
+                        </label>
+                      </fieldset>
+
+                      {/* Error */}
+                      {createError && (
+                        <p className="text-sm text-destructive">{createError}</p>
+                      )}
+                    </section>
+                  }
+                />
+              ) : (
+                <ParkingDetails
+                  parking={selectedParking}
+                  onNewParking={() => {
+                    setShowCreateForm(true);
+                    setSelectedParking(null);
+                  }}
+                  onDelete={() => setShowDeleteDialog(true)}
+                />
+              )}
             </>
           )}
         </ListContainer>
