@@ -328,6 +328,7 @@ function mapParkingDocs(docs: FirebaseFirestore.QueryDocumentSnapshot[]): Canoni
       type: data.type as CanonicalParkingSpot['type'],
       status: data.status as CanonicalParkingSpot['status'],
       floor: data.floor as string | undefined,
+      floorId: data.floorId as string | undefined,
       location: data.location as string | undefined,
       area: data.area as number | undefined,
       price: data.price as number | undefined,

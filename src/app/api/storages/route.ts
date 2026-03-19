@@ -93,6 +93,7 @@ function mapFirestoreToStorage(docId: string, data: FirestoreStorageData): Stora
     buildingId: data.buildingId as string | undefined,
     companyId: data.companyId as string | undefined,
     floor: data.floor || '',
+    floorId: data.floorId as string | undefined,
     area: typeof data.area === 'number' ? data.area : 0,
     description: data.description,
     price: typeof data.price === 'number' ? data.price : undefined,
