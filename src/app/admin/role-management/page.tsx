@@ -8,10 +8,9 @@
  * canEdit: only super_admin can modify roles/permissions.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Alert } from '@/components/ui/alert';
@@ -25,57 +24,31 @@ import type { GlobalRole } from '@/lib/auth/types';
 // CONSTANTS
 // =============================================================================
 
-const ALLOWED_ROLES: readonly GlobalRole[] = ['super_admin', 'company_admin'] as const;
+const ALLOWED_ROLES: readonly string[] = ['super_admin', 'company_admin'] as const;
 
 // =============================================================================
 // PAGE COMPONENT
 // =============================================================================
 
 export default function RoleManagementPage() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const { t } = useTranslation('admin');
-  const spacing = useSpacingTokens();
 
   const [activeTab, setActiveTab] = useState<TabId>('users');
-  const [globalRole, setGlobalRole] = useState<GlobalRole | null>(null);
-  const [claimsLoading, setClaimsLoading] = useState(true);
 
   // ---------------------------------------------------------------------------
-  // Extract globalRole from Firebase ID token claims
+  // Derive role from FirebaseAuthUser (has globalRole from custom claims)
   // ---------------------------------------------------------------------------
-  const loadClaims = useCallback(async () => {
-    if (!user) {
-      setClaimsLoading(false);
-      return;
-    }
-
-    try {
-      const tokenResult = await user.getIdTokenResult();
-      const role = tokenResult.claims['globalRole'] as GlobalRole | undefined;
-      setGlobalRole(role ?? null);
-    } catch {
-      setGlobalRole(null);
-    } finally {
-      setClaimsLoading(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    loadClaims();
-  }, [loadClaims]);
-
-  // ---------------------------------------------------------------------------
-  // Derived state
-  // ---------------------------------------------------------------------------
+  const globalRole = (user?.globalRole as GlobalRole | undefined) ?? null;
   const canEdit = globalRole === 'super_admin';
-  const hasAccess = globalRole !== null && (ALLOWED_ROLES as readonly string[]).includes(globalRole);
+  const hasAccess = globalRole !== null && ALLOWED_ROLES.includes(globalRole);
 
   // ---------------------------------------------------------------------------
   // Loading state
   // ---------------------------------------------------------------------------
-  if (claimsLoading) {
+  if (loading) {
     return (
-      <main className={`${spacing.page} flex items-center justify-center min-h-[60vh]`}>
+      <main className="p-6 flex items-center justify-center min-h-[60vh]">
         <p className="text-muted-foreground animate-pulse">
           {t('roleManagement.loading', 'Loading access permissions...')}
         </p>
@@ -88,7 +61,7 @@ export default function RoleManagementPage() {
   // ---------------------------------------------------------------------------
   if (!hasAccess) {
     return (
-      <main className={spacing.page}>
+      <main className="p-6">
         <Alert variant="destructive">
           <h2 className="font-semibold text-lg">
             {t('roleManagement.accessDenied', 'Access Denied')}
@@ -108,7 +81,7 @@ export default function RoleManagementPage() {
   // Main layout
   // ---------------------------------------------------------------------------
   return (
-    <main className={spacing.page}>
+    <main className="p-6">
       <header className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">
           {t('roleManagement.title', 'Role Management')}

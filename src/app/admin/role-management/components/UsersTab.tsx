@@ -179,7 +179,7 @@ export function UsersTab({ canEdit }: UsersTabProps) {
         { action, reason: suspendReason }
       );
       success(
-        newStatus === 'suspended'
+        action === 'suspend'
           ? t('roleManagement.userSuspended', 'User suspended successfully.')
           : t('roleManagement.userActivated', 'User activated successfully.')
       );
