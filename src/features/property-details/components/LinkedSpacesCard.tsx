@@ -103,6 +103,10 @@ export function LinkedSpacesCard({
   const [loadingParking, setLoadingParking] = useState(false);
   const [loadingStorage, setLoadingStorage] = useState(false);
 
+  // 🏢 GOOGLE-LEVEL: Track occupied spaces — spaces already linked to OTHER units.
+  // Prevents the same parking/storage from being linked to multiple units.
+  const [occupiedSpaceIds, setOccupiedSpaceIds] = useState<Set<string>>(new Set());
+
   // 🏢 ENTERPRISE: Draft state - initialized ONCE from props (no sync via useEffect)
   // This follows the "edit session" pattern where draft is independent until save
   const [draftLinkedSpaces, setDraftLinkedSpaces] = useState<LinkedSpace[]>(currentLinkedSpaces);
@@ -137,6 +141,41 @@ export function LinkedSpacesCard({
   // 🏢 ENTERPRISE: Loading & Saving states
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+  // 🏢 GOOGLE-LEVEL: Fetch ALL units for this building → collect spaces already
+  // linked to OTHER units. These are excluded from the dropdowns so the same
+  // parking/storage cannot be assigned to multiple units simultaneously.
+  useEffect(() => {
+    const loadOccupiedSpaces = async () => {
+      if (!buildingId) {
+        setOccupiedSpaceIds(new Set());
+        return;
+      }
+
+      try {
+        interface UnitsApiResponse {
+          units?: Array<{ id: string; linkedSpaces?: Array<{ spaceId: string }> }>;
+        }
+        const result = await apiClient.get<UnitsApiResponse>(
+          `${API_ROUTES.UNITS.LIST}?buildingId=${buildingId}`
+        );
+        const occupied = new Set<string>();
+        for (const unit of result?.units ?? []) {
+          // Skip the CURRENT unit — its own spaces should remain selectable
+          if (unit.id === unitId) continue;
+          for (const ls of unit.linkedSpaces ?? []) {
+            occupied.add(ls.spaceId);
+          }
+        }
+        setOccupiedSpaceIds(occupied);
+        logger.info(`[LinkedSpacesCard] Found ${occupied.size} spaces occupied by other units`);
+      } catch {
+        setOccupiedSpaceIds(new Set());
+      }
+    };
+
+    loadOccupiedSpaces();
+  }, [buildingId, unitId]);
 
   // 🏢 ENTERPRISE: Load parking options when buildingId changes
   useEffect(() => {
@@ -452,7 +491,7 @@ export function LinkedSpacesCard({
                       {t('linkedSpaces.selectParking', { defaultValue: '-- Επιλέξτε --' })}
                     </SelectItem>
                     {parkingOptions
-                      .filter(p => !draftLinkedSpaces.some(ls => ls.spaceId === p.id))
+                      .filter(p => !draftLinkedSpaces.some(ls => ls.spaceId === p.id) && !occupiedSpaceIds.has(p.id))
                       .map((parking) => (
                         <SelectItem key={parking.id} value={parking.id}>
                           {parking.number} {parking.type && `(${parking.type})`}
@@ -491,7 +530,7 @@ export function LinkedSpacesCard({
                       {t('linkedSpaces.selectStorage', { defaultValue: '-- Επιλέξτε --' })}
                     </SelectItem>
                     {storageOptions
-                      .filter(s => !draftLinkedSpaces.some(ls => ls.spaceId === s.id))
+                      .filter(s => !draftLinkedSpaces.some(ls => ls.spaceId === s.id) && !occupiedSpaceIds.has(s.id))
                       .map((storage) => (
                         <SelectItem key={storage.id} value={storage.id}>
                           {storage.name} {storage.area && `(${storage.area} τ.μ.)`}
