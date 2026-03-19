@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 238 ADRs + 6 SPECs (242A-E, 245B3) | Last Updated: 2026-03-19
+**📊 Stats**: 238 ADRs + 9 SPECs (242A-E, 245B3, 249A-C) | Last Updated: 2026-03-19
 
 ---
 
@@ -279,6 +279,9 @@
 | **ADR-247** | Entity Relationship Integrity Audit (5 findings, 6 protected areas) | ✅ APPROVED | 2026-03-19 | Entity Systems / Data Integrity | [📄](./adrs/ADR-247-entity-relationship-integrity-audit.md) |
 | **ADR-248** | Centralized Auto-Save System (Google-Level) — 8+ boilerplate patterns → 1 hook | ✅ IMPLEMENTED | 2026-03-19 | UI / State Management / Data Persistence | [📄](./adrs/ADR-248-centralized-auto-save.md) |
 | **ADR-249** | Comprehensive Server-Side Integrity Audit (8 findings, P0/P1/P2 roadmap) | ✅ DOCUMENTED | 2026-03-19 | Entity Systems / Data Integrity / Security | [📄](./adrs/ADR-249-comprehensive-server-integrity-audit.md) |
+| ↳ SPEC-249A | Critical Server Guards (Invoice Immutability, Field Locking, Floor Uniqueness) | 📋 PENDING | 2026-03-19 | — | [📄](./adrs/specs/SPEC-249A-critical-server-guards.md) |
+| ↳ SPEC-249B | Name Cascade & Data Quality (buyerName, contactName, Cross-Company) | 📋 PENDING | 2026-03-19 | — | [📄](./adrs/specs/SPEC-249B-name-cascade-data-quality.md) |
+| ↳ SPEC-249C | Defense in Depth (unitCoverage Drift, Installment Sum) | 📋 PENDING | 2026-03-19 | — | [📄](./adrs/specs/SPEC-249C-defense-in-depth.md) |
 | **ADR-250** | Codebase Audit Findings — Security, Indexes, Centralization | 📋 DOCUMENTED | 2026-03-19 | Infrastructure / Security / Data Integrity | [📄](./adrs/ADR-250-codebase-audit-findings.md) |
 | **ADR-251** | Scattered Code Patterns Audit & Consolidation Roadmap (6 findings, migrate-on-touch) | ✅ DOCUMENTED | 2026-03-19 | Centralization / Code Quality | [📄](./adrs/ADR-251-scattered-code-patterns-audit.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
