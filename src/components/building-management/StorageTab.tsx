@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { TableCell } from '@/components/ui/table';
-import { Warehouse, Plus, Layers, Table as TableIcon, Link2, Check, X } from 'lucide-react';
+import { Warehouse, Plus, Layers, Table as TableIcon, Link2, Check, X, Unlink2 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { StorageTabStats } from './StorageTab/StorageTabStats';
 import { StorageTabFilters } from './StorageTab/StorageTabFilters';
@@ -45,6 +45,7 @@ import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, 
 import type { SpaceColumn, SpaceCardField, LinkableItem } from './shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
+import { RealtimeService } from '@/services/realtime';
 
 const logger = createModuleLogger('StorageTab');
 
@@ -114,6 +115,11 @@ export function StorageTab({ building }: StorageTabProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<StorageUnit | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
+
+  // Unlink state
+  const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
+  const [confirmUnlink, setConfirmUnlink] = useState<StorageUnit | null>(null);
+  const [unlinkLoading, setUnlinkLoading] = useState(false);
 
   // 🛡️ ADR-226 Phase 3: Deletion Guard
   const { checkBeforeDelete, BlockedDialog } = useDeletionGuard('storage');
@@ -304,6 +310,43 @@ export function StorageTab({ building }: StorageTabProps) {
       setConfirmLoading(false);
       setConfirmDelete(null);
       setDeletingId(null);
+    }
+  };
+
+  // ============================================================================
+  // UNLINK — Detach storage from building (remains in system for independent sale)
+  // ============================================================================
+
+  const handleUnlinkClick = (unit: StorageUnit) => {
+    setConfirmUnlink(unit);
+  };
+
+  const handleUnlinkConfirm = async () => {
+    if (!confirmUnlink) return;
+    setUnlinkLoading(true);
+    setUnlinkingId(confirmUnlink.id);
+    try {
+      const result = await apiClient.patch<StorageMutationResult>(
+        `/api/storages/${confirmUnlink.id}`,
+        { buildingId: null }
+      );
+      if (result?.id) {
+        RealtimeService.dispatch('STORAGE_UPDATED', {
+          storageId: confirmUnlink.id,
+          updates: { buildingId: null },
+          timestamp: Date.now(),
+        });
+      }
+      success('Η αποθήκη αποσυνδέθηκε');
+      await fetchStorageUnits();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Σφάλμα αποσύνδεσης';
+      logger.error('Unlink storage error', { error: msg });
+      notifyError(`Αποτυχία: ${msg}`);
+    } finally {
+      setUnlinkLoading(false);
+      setConfirmUnlink(null);
+      setUnlinkingId(null);
     }
   };
 
@@ -577,9 +620,10 @@ export function StorageTab({ building }: StorageTabProps) {
             actions={{
               onView: (u) => router.push(ENTITY_ROUTES.spaces.storage(u.id)),
               onEdit: startEdit,
+              onUnlink: handleUnlinkClick,
               onDelete: handleDeleteClick,
             }}
-            actionState={{ deletingId }}
+            actionState={{ deletingId, unlinkingId }}
           />
           <footer className="text-xs text-muted-foreground">
             {filteredUnits.length} {t('tabs.labels.storage')}
@@ -594,9 +638,10 @@ export function StorageTab({ building }: StorageTabProps) {
             actions={{
               onView: (u) => router.push(ENTITY_ROUTES.spaces.storage(u.id)),
               onEdit: startEdit,
+              onUnlink: handleUnlinkClick,
               onDelete: handleDeleteClick,
             }}
-            actionState={{ deletingId }}
+            actionState={{ deletingId, unlinkingId }}
             editingId={editingId}
             renderEditRow={() => (
               <>
@@ -666,6 +711,23 @@ export function StorageTab({ building }: StorageTabProps) {
 
       {/* 🛡️ ADR-226: Deletion Guard blocked dialog */}
       {BlockedDialog}
+
+      {/* Centralized Confirm Dialog (unlink) */}
+      <BuildingSpaceConfirmDialog
+        open={!!confirmUnlink}
+        onOpenChange={(open) => { if (!open) setConfirmUnlink(null); }}
+        title={t('spaceConfirm.unlinkStorage')}
+        description={
+          <>
+            {t('spaceConfirm.unlinkStorageDesc')}{' '}
+            <strong>&quot;{confirmUnlink?.code}&quot;</strong>
+          </>
+        }
+        confirmLabel={t('spaceActions.unlink')}
+        onConfirm={handleUnlinkConfirm}
+        loading={unlinkLoading}
+        variant="default"
+      />
 
       {/* Centralized Confirm Dialog (delete) */}
       <BuildingSpaceConfirmDialog

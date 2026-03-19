@@ -1754,7 +1754,9 @@
     "unlinkParking": "Unlink Parking Spot",
     "unlinkParkingDesc": "The spot will remain in the system but will not belong to a building.",
     "deleteStorage": "Delete Storage",
-    "deleteStorageDesc": "Are you sure you want to delete the storage"
+    "deleteStorageDesc": "Are you sure you want to delete the storage",
+    "unlinkStorage": "Unlink Storage",
+    "unlinkStorageDesc": "The storage will remain in the system but will not belong to a building. It can be sold independently."
   },
   "spaceLink": {
     "link": "Link",
