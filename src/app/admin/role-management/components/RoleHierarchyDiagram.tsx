@@ -162,8 +162,11 @@ export function RoleHierarchyDiagram() {
   const { t } = useTranslation('admin');
 
   return (
-    <nav aria-label={t('roleManagement.roleHierarchy', 'Role Hierarchy')}>
-      <ul className="list-none" role="tree">
+    <nav
+      aria-label={t('roleManagement.hierarchy.title', 'Role Hierarchy')}
+      className="pb-6"
+    >
+      <ul className="list-none pb-4" role="tree">
         <li className="pt-1">
           <article className="flex items-center gap-2 pb-1">
             <Badge variant={HIERARCHY.badgeVariant}>
@@ -185,7 +188,7 @@ export function RoleHierarchyDiagram() {
         </li>
       </ul>
 
-      <footer className="mt-4 p-3 rounded-lg bg-muted/50">
+      <footer className="mt-2 p-3 rounded-lg bg-muted/50">
         <p className="text-xs text-muted-foreground">
           {t(
             'roleManagement.hierarchyNote',

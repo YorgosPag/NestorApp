@@ -32,7 +32,7 @@ export function RolesTab() {
       {/* Section 1: Role Hierarchy */}
       <details open>
         <summary className="cursor-pointer text-lg font-semibold mb-3">
-          {t('roleManagement.roleHierarchy', 'Role Hierarchy')}
+          {t('roleManagement.hierarchy.title', 'Role Hierarchy')}
         </summary>
         <RoleHierarchyDiagram />
       </details>
@@ -40,7 +40,7 @@ export function RolesTab() {
       {/* Section 2: Role × Permission Matrix */}
       <details>
         <summary className="cursor-pointer text-lg font-semibold mb-3">
-          {t('roleManagement.rolePermissionMatrix', 'Role × Permission Matrix')}
+          {t('roleManagement.matrix.title', 'Permission Matrix')}
         </summary>
         <RolePermissionMatrix />
       </details>
