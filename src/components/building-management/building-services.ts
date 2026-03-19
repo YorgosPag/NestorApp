@@ -12,6 +12,7 @@
 import { RealtimeService, type BuildingUpdatedPayload } from '@/services/realtime';
 // 🏢 ENTERPRISE: Centralized API client (Fortune-500 pattern)
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 // 🏢 ENTERPRISE: Multi-address support (ADR-167)
 import type { ProjectAddress } from '@/types/project/addresses';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -60,7 +61,7 @@ export async function updateBuilding(
 
     // 🏢 ENTERPRISE: Use centralized API client (automatic Bearer token)
     // 🔒 SECURITY: apiClient handles Firebase ID token injection
-    await apiClient.patch('/api/buildings', { buildingId, ...updates });
+    await apiClient.patch(API_ROUTES.BUILDINGS.LIST, { buildingId, ...updates });
 
     logger.info('Building updated successfully', { buildingId });
 
@@ -131,7 +132,7 @@ export async function createBuilding(
     interface BuildingCreateResult {
       buildingId: string;
     }
-    const result = await apiClient.post<BuildingCreateResult>('/api/buildings', data);
+    const result = await apiClient.post<BuildingCreateResult>(API_ROUTES.BUILDINGS.LIST, data);
 
     const buildingId = result?.buildingId;
     logger.info('Building created', { buildingId });
@@ -174,7 +175,7 @@ export async function deleteBuilding(
     logger.info('Deleting building via API', { buildingId });
 
     // 🏢 ENTERPRISE: Use centralized API client (automatic Bearer token)
-    await apiClient.delete(`/api/buildings/${buildingId}`);
+    await apiClient.delete(API_ROUTES.BUILDINGS.BY_ID(buildingId));
 
     logger.info('Building deleted successfully', { buildingId });
 
@@ -235,7 +236,7 @@ export async function getProjectsList(): Promise<ProjectListItem[]> {
       count: number;
     }
 
-    const result = await apiClient.get<ProjectListResponse>('/api/projects/list');
+    const result = await apiClient.get<ProjectListResponse>(API_ROUTES.PROJECTS.LIST);
 
     if (!result || !result.projects) {
       logger.warn('Invalid response from projects API');
@@ -281,7 +282,7 @@ export async function getProjectAddresses(
       };
     }
 
-    const result = await apiClient.get<ProjectGetResult>(`/api/projects/${projectId}`);
+    const result = await apiClient.get<ProjectGetResult>(API_ROUTES.PROJECTS.BY_ID(projectId));
 
     if (!result?.project) {
       logger.warn('No project data found', { projectId });

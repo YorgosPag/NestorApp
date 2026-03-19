@@ -17,6 +17,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useTypography } from '@/hooks/useTypography';
 // 🏢 ENTERPRISE: Centralized API client
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { Building2 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 
@@ -59,7 +60,7 @@ export function ProjectTimelineTab({ project }: { project: Project }) {
         setError(null);
 
         const result = await apiClient.get<BuildingsApiResponse>(
-          `/api/buildings?projectId=${project.id}`
+          `${API_ROUTES.BUILDINGS.LIST}?projectId=${project.id}`
         );
 
         if (cancelled) return;

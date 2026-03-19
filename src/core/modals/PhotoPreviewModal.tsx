@@ -26,6 +26,7 @@ import { useTranslation } from 'react-i18next';
 import { generatePhotoId as enterpriseGeneratePhotoId } from '@/services/enterprise-id.service';
 
 import { createModuleLogger } from '@/lib/telemetry';
+import { API_ROUTES } from '@/config/domain-constants';
 const logger = createModuleLogger('PhotoPreviewModal');
 
 // ============================================================================
@@ -419,7 +420,7 @@ export function PhotoPreviewModal({
       }
 
       // 🏢 ENTERPRISE DOWNLOAD: Use server-side proxy API
-      const downloadApiUrl = `/api/download?` + new URLSearchParams({
+      const downloadApiUrl = `${API_ROUTES.DOWNLOAD}?` + new URLSearchParams({
         url: currentPhoto,
         filename: downloadFilename
       });

@@ -15,6 +15,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { MessageListItem } from './useInboxApi';
 
 // ============================================================================
@@ -167,7 +168,7 @@ export function useMessageActions(): UseMessageActionsResult {
           failed: number;
           errors: Array<{ messageId: string; reason: string }>;
         };
-      }>('/api/messages/delete', { messageIds });
+      }>(API_ROUTES.MESSAGES.DELETE, { messageIds });
 
       if (response.success && response.data) {
         // Remove deleted messages from selection

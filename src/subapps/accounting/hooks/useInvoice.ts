@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { Invoice, UpdateInvoiceInput } from '@/subapps/accounting/types';
 
 // ============================================================================
@@ -60,7 +61,7 @@ export function useInvoice(invoiceId: string | null): UseInvoiceReturn {
       setError(null);
 
       const headers = await getAuthHeaders();
-      const response = await fetch(`/api/accounting/invoices/${invoiceId}`, { headers });
+      const response = await fetch(API_ROUTES.ACCOUNTING.INVOICES.BY_ID(invoiceId), { headers });
 
       if (!response.ok) {
         const errorData: { error?: string } = await response.json();
@@ -85,7 +86,7 @@ export function useInvoice(invoiceId: string | null): UseInvoiceReturn {
       try {
         setError(null);
         const headers = await getAuthHeaders();
-        const response = await fetch(`/api/accounting/invoices/${invoiceId}`, {
+        const response = await fetch(API_ROUTES.ACCOUNTING.INVOICES.BY_ID(invoiceId), {
           method: 'PATCH',
           headers,
           body: JSON.stringify(data),

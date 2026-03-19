@@ -9,6 +9,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { PaymentReportData } from '@/services/payment-export/types';
 
 interface UsePaymentReportReturn {
@@ -34,7 +35,7 @@ export function usePaymentReport(projectId: string): UsePaymentReportReturn {
     setError(null);
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/payment-report`);
+      const response = await fetch(API_ROUTES.PROJECTS.PAYMENT_REPORT(projectId));
       const json = await response.json();
 
       if (!response.ok || !json.ok) {

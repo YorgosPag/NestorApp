@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { API_ROUTES } from '@/config/domain-constants';
 import type {
   BankTransaction,
   TransactionDirection,
@@ -83,7 +84,7 @@ export function useBankTransactions(options: UseBankTransactionsOptions = {}): U
 
       const headers = await getAuthHeaders();
       const queryString = buildQueryString();
-      const response = await fetch(`/api/accounting/bank/transactions${queryString}`, { headers });
+      const response = await fetch(`${API_ROUTES.ACCOUNTING.BANK.TRANSACTIONS}${queryString}`, { headers });
 
       if (!response.ok) {
         const errorData: { error?: string } = await response.json();
@@ -113,7 +114,7 @@ export function useBankTransactions(options: UseBankTransactionsOptions = {}): U
         formData.append('file', file);
         formData.append('accountId', targetAccountId);
 
-        const response = await fetch('/api/accounting/bank/import', {
+        const response = await fetch(API_ROUTES.ACCOUNTING.BANK.IMPORT, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
           body: formData,

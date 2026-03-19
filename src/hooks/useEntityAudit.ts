@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { useAuth } from '@/hooks/useAuth';
 import { RealtimeService } from '@/services/realtime';
 import type { AuditEntityType, EntityAuditEntry, EntityAuditResponse } from '@/types/audit-trail';
@@ -64,7 +65,7 @@ export function useEntityAudit({
         if (cursor) params.set('startAfter', cursor);
 
         const data = await apiClient.get<EntityAuditResponse>(
-          `/api/audit-trail/${entityType}/${entityId}?${params.toString()}`,
+          `${API_ROUTES.AUDIT_TRAIL.BY_ENTITY(entityType, entityId)}?${params.toString()}`,
         );
 
         if (!isMounted.current) return;

@@ -14,6 +14,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useOptimizedCustomerInfo');
@@ -121,7 +122,7 @@ export function useOptimizedCustomerInfo(
         };
       }
 
-      const data = await apiClient.get<ContactApiResponse>(`/api/contacts/${id}`);
+      const data = await apiClient.get<ContactApiResponse>(API_ROUTES.CONTACTS.BY_ID(id));
 
       if (!data?.contact) {
         throw new Error('Invalid response format');

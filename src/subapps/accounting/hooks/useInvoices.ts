@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { API_ROUTES } from '@/config/domain-constants';
 import type {
   Invoice,
   InvoiceType,
@@ -88,7 +89,7 @@ export function useInvoices(options: UseInvoicesOptions = {}): UseInvoicesReturn
 
       const headers = await getAuthHeaders();
       const queryString = buildQueryString();
-      const response = await fetch(`/api/accounting/invoices${queryString}`, { headers });
+      const response = await fetch(`${API_ROUTES.ACCOUNTING.INVOICES.LIST}${queryString}`, { headers });
 
       if (!response.ok) {
         const errorData: { error?: string } = await response.json();
@@ -113,7 +114,7 @@ export function useInvoices(options: UseInvoicesOptions = {}): UseInvoicesReturn
       try {
         setError(null);
         const headers = await getAuthHeaders();
-        const response = await fetch('/api/accounting/invoices', {
+        const response = await fetch(API_ROUTES.ACCOUNTING.INVOICES.LIST, {
           method: 'POST',
           headers,
           body: JSON.stringify(data),

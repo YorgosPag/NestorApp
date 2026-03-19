@@ -37,6 +37,7 @@ import { OBLIGATION_PREVIEW_LAYOUT } from "@/components/obligations/config/previ
 import Link from "next/link";
 import { createModuleLogger } from '@/lib/telemetry';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 const logger = createModuleLogger('NewObligationPage');
 
 // 🏢 ENTERPRISE: Import existing κεντρικοποιημένων components & services
@@ -262,7 +263,7 @@ export default function NewObligationPage() {
             projects?: ProjectListApiItem[];
           }
 
-          const listResponse = await apiClient.get<ProjectListApiResponse>('/api/projects/list');
+          const listResponse = await apiClient.get<ProjectListApiResponse>(API_ROUTES.PROJECTS.LIST);
           const companyName = companies.find((company) => company.id === formData.companyId)?.companyName || '';
           const candidateCompanyIds = new Set([String(contactIdForProjects), String(formData.companyId)]);
 

@@ -30,6 +30,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { FileRecordService } from '@/services/file-record.service';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { FileRecord } from '@/types/file-record';
 
@@ -103,7 +104,7 @@ export function LinkToBuildingModal({
 
       try {
         const data = await apiClient.get<BuildingsApiResponse>(
-          `/api/buildings?projectId=${encodeURIComponent(projectId)}`
+          `${API_ROUTES.BUILDINGS.LIST}?projectId=${encodeURIComponent(projectId)}`
         );
         setBuildings(data.buildings);
 

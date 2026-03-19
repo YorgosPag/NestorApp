@@ -21,6 +21,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { API_ROUTES } from '@/config/domain-constants';
 import {
   MapPin,
   Camera,
@@ -99,7 +100,7 @@ export function CheckInClient({ token }: CheckInClientProps) {
   useEffect(() => {
     async function validateToken() {
       try {
-        const res = await fetch(`/api/attendance/qr/validate?token=${encodeURIComponent(token)}`);
+        const res = await fetch(`${API_ROUTES.ATTENDANCE.QR_VALIDATE}?token=${encodeURIComponent(token)}`);
         const data = (await res.json()) as TokenValidationResult;
 
         if (data.valid) {
@@ -133,7 +134,7 @@ export function CheckInClient({ token }: CheckInClientProps) {
     setSubmitError('');
 
     try {
-      const res = await fetch('/api/attendance/check-in', {
+      const res = await fetch(API_ROUTES.ATTENDANCE.CHECK_IN, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

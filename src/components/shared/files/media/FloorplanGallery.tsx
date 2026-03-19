@@ -66,6 +66,7 @@ import { useZoomPan } from '@/hooks/useZoomPan';
 import type { PanOffset } from '@/hooks/useZoomPan';
 import { canvasUtilities } from '@/styles/design-tokens';
 import { auth } from '@/lib/firebase';
+import { API_ROUTES } from '@/config/domain-constants';
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import type { FileRecord, DxfSceneData, DxfSceneEntity } from '@/types/file-record';
 import type { FloorOverlayItem } from '@/hooks/useFloorOverlays';
@@ -715,7 +716,7 @@ export function FloorplanGallery({
         setSceneError(null);
         try {
           const idToken = await auth.currentUser.getIdToken();
-          const response = await fetch(`/api/floorplans/scene?fileId=${currentFile.id}`, {
+          const response = await fetch(API_ROUTES.FLOORPLANS.SCENE(currentFile.id), {
             method: 'GET',
             headers: { 'Authorization': `Bearer ${idToken}` },
           });

@@ -15,6 +15,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { createUnit } from '@/services/units.service';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { Button } from '@/components/ui/button';
@@ -168,7 +169,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   const fetchFloors = useCallback(async () => {
     try {
       const result = await apiClient.get<FloorsApiResponse>(
-        `/api/floors?buildingId=${building.id}`
+        `${API_ROUTES.FLOORS.LIST}?buildingId=${building.id}`
       );
       if (result?.floors) {
         const sorted = [...result.floors].sort((a, b) => a.number - b.number);
@@ -184,7 +185,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
     setError(null);
     try {
       const result = await apiClient.get<UnitsApiResponse>(
-        `/api/units?buildingId=${building.id}`
+        `${API_ROUTES.UNITS.LIST}?buildingId=${building.id}`
       );
       if (result?.units) {
         setUnits(result.units as Unit[]);
@@ -320,7 +321,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
     if (!editingId || !editName.trim()) return;
     setSaving(true);
     try {
-      await apiClient.patch(`/api/units/${editingId}`, {
+      await apiClient.patch(API_ROUTES.UNITS.BY_ID(editingId), {
         name: editName.trim(),
         type: editType || undefined,
         floor: editFloor ? parseInt(editFloor, 10) : undefined,
@@ -362,11 +363,11 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
     try {
       if (type === 'delete') {
         setDeletingId(item.id);
-        await apiClient.delete(`/api/units/${item.id}`);
+        await apiClient.delete(API_ROUTES.UNITS.BY_ID(item.id));
         success('Η μονάδα διαγράφηκε');
       } else {
         setUnlinkingId(item.id);
-        await apiClient.patch(`/api/units/${item.id}`, { buildingId: null });
+        await apiClient.patch(API_ROUTES.UNITS.BY_ID(item.id), { buildingId: null });
         success('Η μονάδα αποσυνδέθηκε');
       }
       await fetchUnits();
@@ -386,7 +387,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   // ============================================================================
 
   const fetchUnlinkedUnits = useCallback(async (): Promise<LinkableItem[]> => {
-    const result = await apiClient.get<UnitsApiResponse>('/api/units');
+    const result = await apiClient.get<UnitsApiResponse>(API_ROUTES.UNITS.LIST);
     if (!result?.units) return [];
     return result.units
       .filter((u) => !u.buildingId)
@@ -398,7 +399,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   }, []);
 
   const handleLinkUnit = useCallback(async (itemId: string) => {
-    await apiClient.patch(`/api/units/${itemId}`, { buildingId: building.id });
+    await apiClient.patch(API_ROUTES.UNITS.BY_ID(itemId), { buildingId: building.id });
     success('Η μονάδα συνδέθηκε');
     await fetchUnits();
   }, [building.id, fetchUnits]);

@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { API_ROUTES } from '@/config/domain-constants';
 import type {
   FiscalQuarter,
   VATQuarterSummary,
@@ -73,7 +74,7 @@ export function useVATSummary(options: UseVATSummaryOptions): UseVATSummaryRetur
       params.set('fiscalYear', String(fiscalYear));
       if (quarter !== undefined) params.set('quarter', String(quarter));
 
-      const response = await fetch(`/api/accounting/vat/summary?${params.toString()}`, { headers });
+      const response = await fetch(`${API_ROUTES.ACCOUNTING.VAT.SUMMARY}?${params.toString()}`, { headers });
 
       if (!response.ok) {
         const errorData: { error?: string } = await response.json();

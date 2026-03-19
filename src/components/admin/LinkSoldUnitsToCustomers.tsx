@@ -8,6 +8,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -43,7 +44,7 @@ export function LinkSoldUnitsToCustomers() {
       logger.info('Starting sold units linking process');
 
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
-      const data = await apiClient.post<LinkingResult>('/api/units/admin-link', {});
+      const data = await apiClient.post<LinkingResult>(API_ROUTES.UNITS.ADMIN_LINK, {});
 
       if (data?.success) {
         setResult(data);

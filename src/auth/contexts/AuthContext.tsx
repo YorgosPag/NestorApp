@@ -286,7 +286,7 @@ async function syncServerSession(firebaseUser: FirebaseUser): Promise<void> {
 
   const idToken = await firebaseUser.getIdToken(true);
 
-  const response = await fetch(API_ROUTES.AUTH_SESSION, {
+  const response = await fetch(API_ROUTES.AUTH.SESSION, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -314,7 +314,7 @@ async function clearServerSessionCookie(): Promise<void> {
     return;
   }
 
-  await fetch(API_ROUTES.AUTH_SESSION, {
+  await fetch(API_ROUTES.AUTH.SESSION, {
     method: 'DELETE',
     credentials: 'include',
   });
@@ -417,7 +417,7 @@ async function syncUserProfileToFirestore(
  */
 async function ensureDevUserProfile(): Promise<void> {
   try {
-    const response = await fetch('/api/admin/ensure-user-profile', {
+    const response = await fetch(API_ROUTES.ADMIN.ENSURE_USER_PROFILE, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

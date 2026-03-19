@@ -6,6 +6,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { API_ROUTES } from '@/config/domain-constants';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -39,7 +40,7 @@ export function CalendarNLPInput({ onParsed, locale }: CalendarNLPInputProps) {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/calendar/parse-event', {
+      const response = await fetch(API_ROUTES.CALENDAR.PARSE_EVENT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

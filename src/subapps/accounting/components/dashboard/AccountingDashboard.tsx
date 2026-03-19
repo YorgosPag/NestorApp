@@ -28,6 +28,7 @@ import { PageLoadingState } from '@/core/states';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { useAuth } from '@/hooks/useAuth';
+import { API_ROUTES } from '@/config/domain-constants';
 import { formatCurrency } from '../../utils/format';
 
 // ============================================================================
@@ -74,9 +75,9 @@ export function AccountingDashboard() {
       const year = new Date().getFullYear();
 
       const [journalRes, vatRes, invoicesRes] = await Promise.all([
-        fetch(`/api/accounting/journal?fiscalYear=${year}`, { headers }),
-        fetch(`/api/accounting/vat/summary?fiscalYear=${year}`, { headers }),
-        fetch(`/api/accounting/invoices?fiscalYear=${year}&paymentStatus=unpaid`, { headers }),
+        fetch(`${API_ROUTES.ACCOUNTING.JOURNAL}?fiscalYear=${year}`, { headers }),
+        fetch(`${API_ROUTES.ACCOUNTING.VAT.SUMMARY}?fiscalYear=${year}`, { headers }),
+        fetch(`${API_ROUTES.ACCOUNTING.INVOICES.LIST}?fiscalYear=${year}&paymentStatus=unpaid`, { headers }),
       ]);
 
       const journalData = journalRes.ok ? await journalRes.json() : null;

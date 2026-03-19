@@ -13,6 +13,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { API_ROUTES } from '@/config/domain-constants';
 import type {
   LegalContract,
   ContractPhase,
@@ -94,7 +95,7 @@ export function useLegalContracts(unitId: string | null, projectId?: string): Us
 
     try {
       const data = await fetchJson<{ success: boolean; data: LegalContract[] }>(
-        `/api/contracts?unitId=${unitId}`
+        `${API_ROUTES.CONTRACTS.LIST}?unitId=${unitId}`
       );
       setContracts(data.data ?? []);
     } catch (err) {
@@ -141,7 +142,7 @@ export function useLegalContracts(unitId: string | null, projectId?: string): Us
   const createContract = useCallback(async (input: CreateContractInput) => {
     try {
       const data = await fetchJson<{ success: boolean; error?: string }>(
-        '/api/contracts',
+        API_ROUTES.CONTRACTS.LIST,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -161,7 +162,7 @@ export function useLegalContracts(unitId: string | null, projectId?: string): Us
   const transitionStatus = useCallback(async (contractId: string, targetStatus: ContractStatus) => {
     try {
       const data = await fetchJson<{ success: boolean; error?: string }>(
-        `/api/contracts/${contractId}/transition`,
+        API_ROUTES.CONTRACTS.TRANSITION(contractId),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -180,7 +181,7 @@ export function useLegalContracts(unitId: string | null, projectId?: string): Us
   const updateContract = useCallback(async (contractId: string, updates: Record<string, unknown>) => {
     try {
       const data = await fetchJson<{ success: boolean; error?: string }>(
-        `/api/contracts/${contractId}`,
+        API_ROUTES.CONTRACTS.BY_ID(contractId),
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -203,7 +204,7 @@ export function useLegalContracts(unitId: string | null, projectId?: string): Us
   ) => {
     try {
       const data = await fetchJson<{ success: boolean; error?: string }>(
-        `/api/contracts/${contractId}/professionals`,
+        API_ROUTES.CONTRACTS.PROFESSIONALS(contractId),
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },

@@ -15,6 +15,7 @@ import { UnifiedDashboard } from '@/components/property-management/dashboard/Uni
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -63,7 +64,7 @@ export function SoldUnitsPreview() {
 
     try {
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
-      const data = await apiClient.get<UnitsData>('/api/units');
+      const data = await apiClient.get<UnitsData>(API_ROUTES.UNITS.LIST);
 
       if (data?.success) {
         setUnits(data.units);

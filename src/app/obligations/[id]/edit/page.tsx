@@ -31,6 +31,7 @@ import type { ConstructionPhase, ConstructionTask } from '@/types/building/const
 import { getContactDisplayName, type Contact } from '@/types/contacts';
 import { createModuleLogger } from '@/lib/telemetry';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 
 const logger = createModuleLogger('EditObligationPage');
 
@@ -153,13 +154,13 @@ export default function EditObligationPage() {
           }
 
           const query = draft?.projectId ? `?projectId=${encodeURIComponent(String(draft.projectId))}` : '';
-          const scopedResponse = await apiClient.get<BuildingsResponse>(`/api/buildings${query}`);
+          const scopedResponse = await apiClient.get<BuildingsResponse>(`${API_ROUTES.BUILDINGS.LIST}${query}`);
           const scopedBuildings = scopedResponse?.buildings || [];
 
           if (scopedBuildings.length > 0) {
             resolvedBuildingId = scopedBuildings[0].id;
           } else {
-            const allResponse = await apiClient.get<BuildingsResponse>('/api/buildings');
+            const allResponse = await apiClient.get<BuildingsResponse>(API_ROUTES.BUILDINGS.LIST);
             const allBuildings = allResponse?.buildings || [];
             if (allBuildings.length > 0) {
               resolvedBuildingId = allBuildings[0].id;

@@ -12,6 +12,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import {
@@ -120,7 +121,7 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
     setError(null);
 
     try {
-      const result = await apiClient.post<StorageCreateResult>('/api/storages', {
+      const result = await apiClient.post<StorageCreateResult>(API_ROUTES.STORAGES.LIST, {
         name: name.trim(),
         buildingId,
         type,

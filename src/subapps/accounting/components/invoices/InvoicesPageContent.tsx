@@ -26,6 +26,7 @@ import type { DashboardStat } from '@/components/property-management/dashboard/U
 import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters/AdvancedFiltersPanel';
 import type { FilterPanelConfig, GenericFilterState } from '@/components/core/AdvancedFilters/types';
 import { useAuth } from '@/hooks/useAuth';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { Invoice } from '@/subapps/accounting/types';
 import { formatCurrency } from '../../utils/format';
 import { AccountingPageHeader } from '../shared/AccountingPageHeader';
@@ -146,7 +147,7 @@ export function InvoicesPageContent() {
       if (filters.type && filters.type !== 'all') params.set('type', filters.type);
       if (filters.paymentStatus && filters.paymentStatus !== 'all') params.set('paymentStatus', filters.paymentStatus);
 
-      const res = await fetch(`/api/accounting/invoices?${params.toString()}`, {
+      const res = await fetch(`${API_ROUTES.ACCOUNTING.INVOICES.LIST}?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

@@ -18,6 +18,7 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Layers, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronRight, Map } from 'lucide-react';
@@ -113,7 +114,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
     setError(null);
     try {
       const result = await apiClient.get<FloorsApiResponse>(
-        `/api/floors?buildingId=${building.id}`
+        `${API_ROUTES.FLOORS.LIST}?buildingId=${building.id}`
       );
       if (result?.floors) {
         const sorted = [...result.floors].sort((a, b) => a.number - b.number);
@@ -138,7 +139,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
     if (!createName.trim()) return;
     setCreating(true);
     try {
-      await apiClient.post<FloorMutationResponse>('/api/floors', {
+      await apiClient.post<FloorMutationResponse>(API_ROUTES.FLOORS.LIST, {
         number: parseInt(createNumber, 10) || 0,
         name: createName.trim(),
         elevation: createElevation ? parseFloat(createElevation) : null,
@@ -179,7 +180,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
     if (!editingId || !editName.trim()) return;
     setSaving(true);
     try {
-      const result = await apiClient.patch<FloorMutationResponse>('/api/floors', {
+      const result = await apiClient.patch<FloorMutationResponse>(API_ROUTES.FLOORS.LIST, {
         floorId: editingId,
         number: parseInt(editNumber, 10),
         name: editName.trim(),
@@ -219,7 +220,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
     setDeletingId(floor.id);
     try {
       const result = await apiClient.delete<FloorMutationResponse>(
-        `/api/floors?floorId=${floor.id}`
+        `${API_ROUTES.FLOORS.LIST}?floorId=${floor.id}`
       );
       if (result?.success) {
         toast.success(t('tabs.floors.deleteSuccess', { defaultValue: 'Ο όροφος διαγράφηκε' }));

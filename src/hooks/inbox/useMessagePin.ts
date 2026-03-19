@@ -15,6 +15,7 @@
 
 import { useState, useCallback } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
+import { API_ROUTES } from '@/config/domain-constants';
 
 const logger = createModuleLogger('useMessagePin');
 
@@ -104,7 +105,7 @@ export function useMessagePin(): UseMessagePinReturn {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/messages/pin', {
+      const response = await fetch(API_ROUTES.MESSAGES.PIN, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -147,7 +148,7 @@ export function useMessagePin(): UseMessagePinReturn {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/messages/pin', {
+      const response = await fetch(API_ROUTES.MESSAGES.PIN, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

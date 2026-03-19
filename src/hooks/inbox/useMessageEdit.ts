@@ -16,6 +16,7 @@
 import { useState, useCallback } from 'react';
 import type { MessageListItem } from './useInboxApi';
 import { createModuleLogger } from '@/lib/telemetry';
+import { API_ROUTES } from '@/config/domain-constants';
 
 const logger = createModuleLogger('useMessageEdit');
 
@@ -125,7 +126,7 @@ export function useMessageEdit(): UseMessageEditReturn {
     setIsSaving(true);
 
     try {
-      const response = await fetch('/api/messages/edit', {
+      const response = await fetch(API_ROUTES.MESSAGES.EDIT, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

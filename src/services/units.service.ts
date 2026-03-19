@@ -19,6 +19,7 @@ import type { UnitDoc, UnitModel } from '@/types/unit';
 import { RealtimeService } from '@/services/realtime';
 // 🏢 ENTERPRISE: Centralized API client (Fortune-500 pattern)
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { normalizeUnit } from '@/utils/unit-normalizer';
 import { generateUnitId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -77,7 +78,7 @@ export async function createUnit(
     interface UnitCreateResult {
       unitId: string;
     }
-    const result = await apiClient.post<UnitCreateResult>('/api/units/create', unitData);
+    const result = await apiClient.post<UnitCreateResult>(API_ROUTES.UNITS.CREATE, unitData);
 
     const unitId = result?.unitId;
     logger.info(`Unit created with ID: ${unitId}`);
@@ -165,7 +166,7 @@ export async function getUnitsByBuilding(buildingId: string): Promise<Property[]
 // Update a unit via Admin SDK API (server-side validation + audit trail)
 export async function updateUnit(unitId: string, updates: Partial<Property>): Promise<{ success: boolean }> {
   try {
-    await apiClient.patch(`/api/units/${unitId}`, updates);
+    await apiClient.patch(API_ROUTES.UNITS.BY_ID(unitId), updates);
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     // Dispatch event for all components to update their local state
@@ -215,7 +216,7 @@ export async function updateMultipleUnitsOwner(unitIds: string[], contactId: str
 // 🔒 SECURITY: Delete unit via Admin SDK API (client-side Firestore deletes are blocked)
 export async function deleteUnit(unitId: string): Promise<{ success: boolean }> {
   try {
-    await apiClient.delete(`/api/units/${unitId}`);
+    await apiClient.delete(API_ROUTES.UNITS.BY_ID(unitId));
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatch('UNIT_DELETED', {
@@ -325,7 +326,7 @@ export async function updateUnitLink(
   }
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await apiClient.patch(`/api/units/${unitId}`, updates);
+    await apiClient.patch(API_ROUTES.UNITS.BY_ID(unitId), updates);
     return { success: true };
   } catch (error) {
     return {
@@ -348,7 +349,7 @@ export async function getBuildingsList(): Promise<Array<{ id: string; name: stri
       buildings: BuildingFromAPI[];
     }
 
-    const result = await apiClient.get<BuildingsResponse>('/api/buildings');
+    const result = await apiClient.get<BuildingsResponse>(API_ROUTES.BUILDINGS.LIST);
     if (!result?.buildings) return [];
 
     return result.buildings.map(b => ({

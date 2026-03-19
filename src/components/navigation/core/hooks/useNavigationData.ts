@@ -12,6 +12,7 @@
 import { useState, useRef } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { NavigationApiService } from '../services/navigationApi';
 import type { NavigationCompany, NavigationProject } from '../types';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -151,8 +152,8 @@ export function useNavigationData(): UseNavigationDataReturn {
         // apiClient automatically handles errors (401/403/500) and unwraps response
         // Bust server cache when explicitly refreshing (e.g. after adding a company)
         const url = bustServerCacheRef.current
-          ? `/api/audit/bootstrap?t=${Date.now()}`
-          : '/api/audit/bootstrap';
+          ? `${API_ROUTES.AUDIT.BOOTSTRAP}?t=${Date.now()}`
+          : API_ROUTES.AUDIT.BOOTSTRAP;
         bustServerCacheRef.current = false;
         const bootstrapData = await apiClient.get<BootstrapResponse>(url);
         logger.info('Bootstrap loaded', { companiesCount: bootstrapData.companies.length, projectsCount: bootstrapData.projects.length });

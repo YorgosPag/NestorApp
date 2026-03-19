@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/table';
 import { PageLoadingState, PageErrorState } from '@/core/states';
 import { useAuth } from '@/hooks/useAuth';
+import { API_ROUTES } from '@/config/domain-constants';
 import { useAPYCertificates } from '../../hooks/useAPYCertificates';
 import type { APYCertificate, APYEmailSendRecord } from '../../types';
 import { formatCurrency } from '../../utils/format';
@@ -140,7 +141,7 @@ export function APYCertificateDetails({
     setFetchError(null);
     try {
       const token = await user.getIdToken();
-      const response = await fetch(`/api/accounting/apy-certificates/${certificateId}`, {
+      const response = await fetch(API_ROUTES.ACCOUNTING.APY_CERTIFICATES.BY_ID(certificateId), {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) {

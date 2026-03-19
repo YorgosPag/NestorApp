@@ -17,6 +17,7 @@ import type { TFunction } from 'i18next';
 import { generateErrorId } from '@/services/enterprise-id.service';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { safeGetItem } from '@/lib/storage';
 // 🏢 ENTERPRISE: Product Tour System (ADR-037) - Safe wrapper for graceful degradation
 import { useTourSafe } from '@/components/ui/ProductTour';
@@ -417,7 +418,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
       logger.info('sendToAdmin calling API', { errorId, component: notificationPayload.component });
 
-      const response = await apiClient.post('/api/notifications/error-report', notificationPayload) as ErrorReportApiResponse;
+      const response = await apiClient.post(API_ROUTES.NOTIFICATIONS.ERROR_REPORT, notificationPayload) as ErrorReportApiResponse;
 
       logger.info('sendToAdmin API response', { success: response.success });
 
@@ -1261,7 +1262,7 @@ ${errorDetails.stack || 'Stack trace not available'}
         digest: error.digest,
       };
 
-      const response = await apiClient.post('/api/notifications/error-report', notificationPayload) as ErrorReportApiResponse;
+      const response = await apiClient.post(API_ROUTES.NOTIFICATIONS.ERROR_REPORT, notificationPayload) as ErrorReportApiResponse;
 
       if (response.success) {
         setEmailSent(true);

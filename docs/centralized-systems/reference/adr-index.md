@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 232 ADRs + 5 SPECs (242A-E) | Last Updated: 2026-03-19
+**📊 Stats**: 234 ADRs + 5 SPECs (242A-E) | Last Updated: 2026-03-19
 
 ---
 
@@ -273,6 +273,8 @@
 | **ADR-243** | Centralized Firestore→API Mappers (SSoT) | ✅ IMPLEMENTED | 2026-03-19 | Entity Systems | — |
 | **ADR-243** | Custom MCP Server — Firestore + Firebase Storage Access for Claude Code (v1.1.0: 15 tools) | ✅ IMPLEMENTED | 2026-03-19 | Infrastructure | [📄](./adrs/ADR-243-firestore-mcp-server.md) |
 | **ADR-244** | Role Management Admin Console — RBAC UI for User & Permission Management | 📋 PROPOSED | 2026-03-19 | Security & Auth | [📄](./adrs/ADR-244-role-management-admin-console.md) |
+| **ADR-245** | API Routes Centralization — Zero Hardcoded Endpoints | ✅ PHASE_A_COMPLETE | 2026-03-19 | Infrastructure | [📄](./adrs/ADR-245-api-routes-centralization.md) |
+| **ADR-246** | Universal Firestore→API Mapper Centralization (27+ scattered → 1 SSoT) | ✅ APPROVED | 2026-03-19 | Data Access Layer / Entity Systems | [📄](./adrs/ADR-246-universal-firestore-mapper-centralization.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -463,6 +465,7 @@
 | **ADR-072** | AI Inbox HTML Rendering with Enterprise Sanitization | ✅ IMPLEMENTED | [View](./adrs/ADR-072-ai-inbox-html-rendering.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | [View](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
 | **ADR-244** | Role Management Admin Console | 📋 PROPOSED | [View](./adrs/ADR-244-role-management-admin-console.md) |
+| **ADR-245** | API Routes Centralization — Zero Hardcoded Endpoints | ✅ PHASE_A_COMPLETE | [View](./adrs/ADR-245-api-routes-centralization.md) |
 
 ---
 

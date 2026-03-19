@@ -14,6 +14,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { UnitType } from '@/types/unit';
 import type { ParkingLocationZone } from '@/types/parking';
 
@@ -97,7 +98,7 @@ export function useEntityCodeSuggestion({
       if (locationZone) params.set('locationZone', locationZone);
 
       const result = await apiClient.get<SuggestApiResponse>(
-        `/api/entity-code/suggest?${params.toString()}`
+        `${API_ROUTES.ENTITY_CODE.SUGGEST}?${params.toString()}`
       );
 
       // Only update if this request wasn't aborted

@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { API_ROUTES } from '@/config/domain-constants';
 import type {
   ReceivedExpenseDocument,
   ExpenseCategory,
@@ -66,7 +67,7 @@ export function useExpenseDocument(documentId: string | null): UseExpenseDocumen
       setError(null);
 
       const headers = await getAuthHeaders();
-      const response = await fetch(`/api/accounting/documents/${documentId}`, { headers });
+      const response = await fetch(API_ROUTES.ACCOUNTING.DOCUMENTS.BY_ID(documentId), { headers });
 
       if (!response.ok) {
         const errorData: { error?: string } = await response.json();
@@ -97,7 +98,7 @@ export function useExpenseDocument(documentId: string | null): UseExpenseDocumen
       setConfirming(true);
       const headers = await getAuthHeaders();
 
-      const response = await fetch(`/api/accounting/documents/${documentId}`, {
+      const response = await fetch(API_ROUTES.ACCOUNTING.DOCUMENTS.BY_ID(documentId), {
         method: 'PATCH',
         headers,
         body: JSON.stringify({ action: 'confirm', ...params }),
@@ -127,7 +128,7 @@ export function useExpenseDocument(documentId: string | null): UseExpenseDocumen
       setConfirming(true);
       const headers = await getAuthHeaders();
 
-      const response = await fetch(`/api/accounting/documents/${documentId}`, {
+      const response = await fetch(API_ROUTES.ACCOUNTING.DOCUMENTS.BY_ID(documentId), {
         method: 'PATCH',
         headers,
         body: JSON.stringify({ action: 'reject', notes }),

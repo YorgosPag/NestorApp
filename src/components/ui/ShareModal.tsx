@@ -21,6 +21,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getSocialShareUrls, getPhotoSocialShareUrls, trackShareEvent } from '@/lib/share-utils';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 
 // 🏢 ENTERPRISE: Import centralized components
 import { SharePlatformGrid } from '@/components/ui/social-sharing/SharePlatformGrid';
@@ -179,7 +180,7 @@ export function ShareModal({
         error?: string;
       }
 
-      await apiClient.post<PropertyShareEmailResponse>('/api/communications/email/property-share/', emailData);
+      await apiClient.post<PropertyShareEmailResponse>(API_ROUTES.COMMUNICATIONS.EMAIL_PROPERTY_SHARE, emailData);
 
       onShareSuccess?.(`email (${emailData.recipients.length} recipients, ${emailData.templateType} template)`);
       setShowEmailForm(false);

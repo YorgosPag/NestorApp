@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { API_ROUTES } from '@/config/domain-constants';
 import type {
   JournalEntry,
   EntryType,
@@ -87,7 +88,7 @@ export function useJournalEntries(options: UseJournalEntriesOptions = {}): UseJo
 
       const headers = await getAuthHeaders();
       const queryString = buildQueryString();
-      const response = await fetch(`/api/accounting/journal${queryString}`, { headers });
+      const response = await fetch(`${API_ROUTES.ACCOUNTING.JOURNAL}${queryString}`, { headers });
 
       if (!response.ok) {
         const errorData: { error?: string } = await response.json();
@@ -112,7 +113,7 @@ export function useJournalEntries(options: UseJournalEntriesOptions = {}): UseJo
       try {
         setError(null);
         const headers = await getAuthHeaders();
-        const response = await fetch('/api/accounting/journal', {
+        const response = await fetch(API_ROUTES.ACCOUNTING.JOURNAL, {
           method: 'POST',
           headers,
           body: JSON.stringify(data),

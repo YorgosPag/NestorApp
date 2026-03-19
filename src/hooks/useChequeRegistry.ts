@@ -13,6 +13,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { API_ROUTES } from '@/config/domain-constants';
 import type {
   ChequeRecord,
   CreateChequeInput,
@@ -65,7 +66,7 @@ export function useChequeRegistry(unitId: string | null): UseChequeRegistryRetur
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const basePath = unitId ? `/api/units/${unitId}/cheques` : null;
+  const basePath = unitId ? API_ROUTES.UNITS.CHEQUES(unitId) : null;
 
   // Fetch cheques
   const fetchData = useCallback(async () => {

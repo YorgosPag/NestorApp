@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuth';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { Invoice } from '@/subapps/accounting/types';
 import {
   detectInvoiceEmailLanguage,
@@ -129,7 +130,7 @@ export function SendInvoiceEmailDialog({
     try {
       const token = await user.getIdToken();
       const response = await fetch(
-        `/api/accounting/invoices/${invoice.invoiceId}/send-email`,
+        API_ROUTES.ACCOUNTING.INVOICES.SEND_EMAIL(invoice.invoiceId),
         {
           method: 'POST',
           headers: {

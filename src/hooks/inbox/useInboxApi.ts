@@ -23,6 +23,7 @@ import {
   THREAD_POLL_MS,
   INBOX_PAGE_SIZE,
   MESSAGES_PAGE_SIZE,
+  API_ROUTES,
 } from '@/config/domain-constants';
 import type { ConversationStatus, MessageDirection, DeliveryStatus, MessageAttachment } from '@/types/conversations';
 import type { CommunicationChannel } from '@/types/communications';
@@ -196,7 +197,7 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
       // apiClient.get() automatically unwraps canonical { success: true, data: T } responses
       // Returns T directly (not wrapped in .data)
-      const result = await apiClient.get<ConversationsResponse>(`/api/conversations?${params.toString()}`);
+      const result = await apiClient.get<ConversationsResponse>(`${API_ROUTES.CONVERSATIONS.LIST}?${params.toString()}`);
 
       // 🏢 ENTERPRISE: Null safety check (Defense-in-Depth)
       if (!result || !Array.isArray(result.conversations)) {
@@ -361,7 +362,7 @@ export function useConversationMessages(
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
       // apiClient.get() automatically unwraps canonical { success: true, data: T } responses
       // Returns T directly (not wrapped in .data)
-      const result = await apiClient.get<MessagesResponse>(`/api/conversations/${conversationId}/messages?${params.toString()}`);
+      const result = await apiClient.get<MessagesResponse>(`${API_ROUTES.CONVERSATIONS.MESSAGES(conversationId)}?${params.toString()}`);
 
       if (mountedRef.current) {
         if (append) {
@@ -476,7 +477,7 @@ export function useSendMessage(conversationId: string | null): UseSendMessageRes
       // apiClient.post() automatically unwraps canonical { success: true, data: T } responses
       // Returns T directly (not wrapped in .data)
       const result = await apiClient.post<SendMessageResponse>(
-        `/api/conversations/${conversationId}/send`,
+        API_ROUTES.CONVERSATIONS.SEND(conversationId),
         options
       );
 

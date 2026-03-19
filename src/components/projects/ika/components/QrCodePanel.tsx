@@ -20,6 +20,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
+import { API_ROUTES } from '@/config/domain-constants';
 import {
   QrCode,
   RefreshCw,
@@ -77,7 +78,7 @@ export function QrCodePanel({ projectId }: QrCodePanelProps) {
 
     try {
       const today = new Date().toISOString().slice(0, 10);
-      const res = await fetch('/api/attendance/qr/generate', {
+      const res = await fetch(API_ROUTES.ATTENDANCE.QR_GENERATE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId, date: today }),

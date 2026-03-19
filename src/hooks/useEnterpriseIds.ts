@@ -28,6 +28,7 @@ import {
 } from '@/services/enterprise-id-migration.service';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useEnterpriseIds');
@@ -168,7 +169,7 @@ export function useMigrationStatus() {
         message?: string;
       }
 
-      const data = await apiClient.get<MigrationStatusResponse>('/api/enterprise-ids/migrate');
+      const data = await apiClient.get<MigrationStatusResponse>(API_ROUTES.ENTERPRISE_IDS.MIGRATE);
 
       if (data?.success) {
         setStats(data.stats);
@@ -205,7 +206,7 @@ export function useMigrationStatus() {
         message?: string;
       }
 
-      const data = await apiClient.post<MigrationResponse>('/api/enterprise-ids/migrate', options);
+      const data = await apiClient.post<MigrationResponse>(API_ROUTES.ENTERPRISE_IDS.MIGRATE, options);
 
       if (data?.success) {
         setStats(data.stats);

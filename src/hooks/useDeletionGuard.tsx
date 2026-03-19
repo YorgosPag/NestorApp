@@ -14,6 +14,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { DeletionBlockedDialog } from '@/components/shared/DeletionBlockedDialog';
 import type { EntityType, DependencyCheckResult } from '@/config/deletion-registry';
 
@@ -57,7 +58,7 @@ export function useDeletionGuard(entityType: EntityType): UseDeletionGuardReturn
 
     try {
       const result = await apiClient.get<DependencyCheckResult>(
-        `/api/deletion-guard/${entityType}/${entityId}`
+        API_ROUTES.DELETION_GUARD.CHECK(entityType, entityId)
       );
 
       setCheckResult(result);

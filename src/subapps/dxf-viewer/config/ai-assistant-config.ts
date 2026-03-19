@@ -11,6 +11,7 @@
 
 import { DXF_DEFAULT_LAYER } from './layer-config';
 import { UI_COLORS } from './color-config';
+import { API_ROUTES } from '@/config/domain-constants';
 
 // ============================================================================
 // SAFETY LIMITS
@@ -49,7 +50,7 @@ export const DXF_AI_PROMPT = {
 /** API endpoint and timeout configuration */
 export const DXF_AI_API = {
   /** REST endpoint for AI commands */
-  ENDPOINT: '/api/dxf-ai/command',
+  ENDPOINT: API_ROUTES.DXF_AI.COMMAND,
   /** Request timeout in milliseconds */
   TIMEOUT_MS: 30_000,
 } as const;

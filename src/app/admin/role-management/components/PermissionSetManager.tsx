@@ -9,6 +9,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -103,7 +104,7 @@ export function PermissionSetManager({
     setIsSubmitting(true);
     try {
       await apiClient.patch<UpdatePermissionSetsResponse>(
-        `/api/admin/role-management/users/${user.uid}/permission-sets`,
+        API_ROUTES.ADMIN.ROLE_MANAGEMENT.USER_PERMISSION_SETS(user.uid),
         { permissionSetIds: Array.from(selectedIds), reason }
       );
       success(

@@ -10,6 +10,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -81,7 +82,7 @@ export function UsersTab({ canEdit }: UsersTabProps) {
     try {
       // apiClient unwraps canonical { success, data } → returns data directly
       const data = await apiClient.get<UserListResponse['data']>(
-        '/api/admin/role-management/users'
+        API_ROUTES.ADMIN.ROLE_MANAGEMENT.USERS
       );
       setUsers(Array.isArray(data?.users) ? data.users : []);
     } catch (err) {
@@ -176,7 +177,7 @@ export function UsersTab({ canEdit }: UsersTabProps) {
 
     try {
       await apiClient.patch<Record<string, unknown>>(
-        `/api/admin/role-management/users/${selectedUser.uid}/status`,
+        API_ROUTES.ADMIN.ROLE_MANAGEMENT.USER_STATUS(selectedUser.uid),
         { action, reason: suspendReason }
       );
       success(

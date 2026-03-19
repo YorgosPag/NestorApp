@@ -17,6 +17,7 @@ import { useFileClassification, isAIClassifiable } from './useFileClassification
 import { createModuleLogger } from '@/lib/telemetry';
 import type { FileRecord } from '@/types/file-record';
 import type { FileClassification } from '@/config/domain-constants';
+import { API_ROUTES } from '@/config/domain-constants';
 
 const logger = createModuleLogger('useBatchFileOperations');
 
@@ -103,7 +104,7 @@ export function useBatchFileOperations({
     const selected = files.filter(f => selectedIds.has(f.id) && f.downloadUrl);
     if (selected.length === 0) return;
 
-    const response = await fetch('/api/files/batch-download', {
+    const response = await fetch(API_ROUTES.FILES.BATCH_DOWNLOAD, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -149,7 +150,7 @@ export function useBatchFileOperations({
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
 
-    const response = await fetch('/api/files/archive', {
+    const response = await fetch(API_ROUTES.FILES.ARCHIVE, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fileIds: ids, action: 'archive' }),

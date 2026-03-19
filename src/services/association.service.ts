@@ -56,6 +56,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { API_ROUTES } from '@/config/domain-constants';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 import { contactLinkConverter, fileLinkConverter } from '@/lib/firestore/converters/association.converter';
@@ -192,7 +193,7 @@ export class AssociationService {
 
       // 📜 Audit trail: contact linked (fire-and-forget)
       if (targetEntityType && targetEntityId) {
-        fetch('/api/audit-trail/record', {
+        fetch(API_ROUTES.AUDIT_TRAIL.RECORD, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -557,7 +558,7 @@ export class AssociationService {
 
       // 📜 Audit trail: contact unlinked (fire-and-forget)
       if (linkData.targetEntityType && linkData.targetEntityId) {
-        fetch('/api/audit-trail/record', {
+        fetch(API_ROUTES.AUDIT_TRAIL.RECORD, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

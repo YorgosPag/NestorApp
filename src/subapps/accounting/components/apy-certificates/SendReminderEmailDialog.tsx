@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuth';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { APYCertificate } from '../../types';
 import {
   buildAPYEmailSubject,
@@ -120,7 +121,7 @@ export function SendReminderEmailDialog({
     try {
       const token = await user.getIdToken();
       const response = await fetch(
-        `/api/accounting/apy-certificates/${cert.certificateId}/send-email`,
+        API_ROUTES.ACCOUNTING.APY_CERTIFICATES.SEND_EMAIL(cert.certificateId),
         {
           method: 'POST',
           headers: {

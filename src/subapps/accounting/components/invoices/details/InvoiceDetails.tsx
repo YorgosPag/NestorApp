@@ -7,6 +7,7 @@ import { ArrowLeft, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/hooks/useAuth';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { Invoice } from '@/subapps/accounting/types';
 import { useCompanySetup } from '@/subapps/accounting/hooks/useCompanySetup';
 import { InvoiceSummaryCard } from './InvoiceSummaryCard';
@@ -35,7 +36,7 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
     setLoading(true);
     try {
       const token = await user.getIdToken();
-      const res = await fetch(`/api/accounting/invoices/${invoiceId}`, {
+      const res = await fetch(API_ROUTES.ACCOUNTING.INVOICES.BY_ID(invoiceId), {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {

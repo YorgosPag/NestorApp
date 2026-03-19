@@ -38,6 +38,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useAuth } from '@/hooks/useAuth';
+import { API_ROUTES } from '@/config/domain-constants';
 import { useAPYCertificates } from '../../hooks/useAPYCertificates';
 import { useCompanySetup } from '../../hooks/useCompanySetup';
 import type { APYCertificate, APYCertificateLineItem, Invoice } from '../../types';
@@ -122,7 +123,7 @@ export function CreateAPYCertificateDialog({
         vatNumber: customerVatNumber.trim(),
       });
 
-      const response = await fetch(`/api/accounting/invoices?${params.toString()}`, {
+      const response = await fetch(`${API_ROUTES.ACCOUNTING.INVOICES.LIST}?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

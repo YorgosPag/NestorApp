@@ -15,6 +15,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -144,7 +145,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
     setError(null);
     try {
       const result = await apiClient.get<ParkingApiResponse>(
-        `/api/parking?buildingId=${building.id}`
+        `${API_ROUTES.PARKING.LIST}?buildingId=${building.id}`
       );
       if (result?.parkingSpots) {
         setParkingSpots(result.parkingSpots);
@@ -181,7 +182,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
     if (!createNumber.trim()) return;
     setCreating(true);
     try {
-      const result = await apiClient.post<ParkingCreateResult>('/api/parking', {
+      const result = await apiClient.post<ParkingCreateResult>(API_ROUTES.PARKING.LIST, {
         number: createNumber.trim(),
         type: createType,
         status: createStatus,
@@ -237,7 +238,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
     if (!editingId || !editNumber.trim()) return;
     setSaving(true);
     try {
-      const result = await apiClient.patch<ParkingMutationResult>(`/api/parking/${editingId}`, {
+      const result = await apiClient.patch<ParkingMutationResult>(API_ROUTES.PARKING.BY_ID(editingId), {
         number: editNumber.trim(),
         type: editType,
         status: editStatus,
@@ -297,7 +298,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
       if (type === 'delete') {
         setDeletingId(item.id);
         const result = await apiClient.delete<ParkingMutationResult>(
-          `/api/parking/${item.id}`
+          API_ROUTES.PARKING.BY_ID(item.id)
         );
         if (result?.id) {
           RealtimeService.dispatch('PARKING_DELETED', {
@@ -308,7 +309,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
       } else {
         setUnlinkingId(item.id);
         const result = await apiClient.patch<ParkingMutationResult>(
-          `/api/parking/${item.id}`,
+          API_ROUTES.PARKING.BY_ID(item.id),
           { buildingId: null }
         );
         if (result?.id) {
@@ -335,7 +336,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
   // ============================================================================
 
   const fetchUnlinkedParking = useCallback(async (): Promise<LinkableItem[]> => {
-    const result = await apiClient.get<ParkingApiResponse>('/api/parking');
+    const result = await apiClient.get<ParkingApiResponse>(API_ROUTES.PARKING.LIST);
     if (!result?.parkingSpots) return [];
     return result.parkingSpots
       .filter((s) => !s.buildingId)
@@ -347,7 +348,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
   }, []);
 
   const handleLinkParking = useCallback(async (itemId: string) => {
-    await apiClient.patch<ParkingMutationResult>(`/api/parking/${itemId}`, {
+    await apiClient.patch<ParkingMutationResult>(API_ROUTES.PARKING.BY_ID(itemId), {
       buildingId: building.id,
     });
     RealtimeService.dispatch('PARKING_UPDATED', {

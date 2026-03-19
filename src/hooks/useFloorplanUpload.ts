@@ -25,6 +25,7 @@ import { FileRecordService } from '@/services/file-record.service';
 import { isFloorplanFile } from '@/services/floorplans/FloorplanProcessor';
 import type { FileRecord } from '@/types/file-record';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
+import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useFloorplanUpload');
@@ -250,7 +251,7 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
       // Phase 8: Trigger server-side DXF processing immediately (fire-and-forget)
       // Do NOT await — processing takes 15-60s. User can close wizard; API continues.
       auth.currentUser?.getIdToken().then((token) => {
-        fetch('/api/floorplans/process', {
+        fetch(API_ROUTES.FLOORPLANS.PROCESS, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ fileId, forceReprocess: false }),

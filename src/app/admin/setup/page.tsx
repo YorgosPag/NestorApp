@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, XCircle, Shield, Bell, Mail } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { createModuleLogger } from '@/lib/telemetry';
+import { API_ROUTES } from '@/config/domain-constants';
 const logger = createModuleLogger('AdminSetupPage');
 
 // =============================================================================
@@ -71,7 +72,7 @@ export default function AdminSetupPage() {
 
     try {
       const token = await firebaseUser.getIdToken();
-      const response = await fetch('/api/admin/setup-admin-config', {
+      const response = await fetch(API_ROUTES.ADMIN.SETUP_CONFIG, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -120,7 +121,7 @@ export default function AdminSetupPage() {
 
     try {
       const token = await firebaseUser.getIdToken();
-      const response = await fetch('/api/admin/setup-admin-config', {
+      const response = await fetch(API_ROUTES.ADMIN.SETUP_CONFIG, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { API_ROUTES } from '@/config/domain-constants';
 import type {
   FixedAsset,
   AssetCategory,
@@ -83,7 +84,7 @@ export function useFixedAssets(options: UseFixedAssetsOptions = {}): UseFixedAss
 
       const headers = await getAuthHeaders();
       const queryString = buildQueryString();
-      const response = await fetch(`/api/accounting/fixed-assets${queryString}`, { headers });
+      const response = await fetch(`${API_ROUTES.ACCOUNTING.FIXED_ASSETS}${queryString}`, { headers });
 
       if (!response.ok) {
         const errorData: { error?: string } = await response.json();
@@ -108,7 +109,7 @@ export function useFixedAssets(options: UseFixedAssetsOptions = {}): UseFixedAss
       try {
         setError(null);
         const headers = await getAuthHeaders();
-        const response = await fetch('/api/accounting/fixed-assets', {
+        const response = await fetch(API_ROUTES.ACCOUNTING.FIXED_ASSETS, {
           method: 'POST',
           headers,
           body: JSON.stringify(data),

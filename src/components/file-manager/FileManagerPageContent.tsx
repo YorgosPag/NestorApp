@@ -108,6 +108,7 @@ import { useNotifications } from '@/providers/NotificationProvider';
 const logger = createModuleLogger('FileManagerPageContent');
 import type { FileRecord } from '@/types/file-record';
 import type { FileClassification } from '@/config/domain-constants';
+import { API_ROUTES } from '@/config/domain-constants';
 
 // ============================================================================
 // TYPES
@@ -538,7 +539,7 @@ export function FileManagerPageContent() {
     if (selected.length === 0) return;
 
     // Server-side ZIP via /api/files/batch-download
-    const response = await fetch('/api/files/batch-download', {
+    const response = await fetch(API_ROUTES.FILES.BATCH_DOWNLOAD, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -582,7 +583,7 @@ export function FileManagerPageContent() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
 
-    const response = await fetch('/api/files/archive', {
+    const response = await fetch(API_ROUTES.FILES.ARCHIVE, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fileIds: ids, action: 'archive' }),
@@ -656,7 +657,7 @@ export function FileManagerPageContent() {
 
         // ADR-191: AI auto-classify (fire-and-forget)
         if (isAIClassifiable(file.type)) {
-          fetch('/api/files/classify', {
+          fetch(API_ROUTES.FILES.CLASSIFY, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ fileId }),

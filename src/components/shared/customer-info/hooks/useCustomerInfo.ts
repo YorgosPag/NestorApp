@@ -13,6 +13,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import type {
   CustomerBasicInfo,
   CustomerExtendedInfo,
@@ -112,7 +113,7 @@ async function fetchCustomerBasicInfo(contactId: string): Promise<CustomerBasicI
       };
     }
 
-    const data = await apiClient.get<ContactApiResponse>(`/api/contacts/${contactId}`);
+    const data = await apiClient.get<ContactApiResponse>(API_ROUTES.CONTACTS.BY_ID(contactId));
 
     const contact = data.contact;
 
@@ -157,7 +158,7 @@ async function fetchCustomerExtendedInfo(contactId: string): Promise<CustomerExt
     // Παράλληλη φόρτωση basic info και units info από τα νέα enterprise APIs
     const [basicInfo, unitsData] = await Promise.all([
       fetchCustomerBasicInfo(contactId),
-      apiClient.get<UnitsApiResponse>(`/api/contacts/${contactId}/units`)
+      apiClient.get<UnitsApiResponse>(API_ROUTES.CONTACTS.UNITS(contactId))
     ]);
 
     const units = unitsData?.units || [];

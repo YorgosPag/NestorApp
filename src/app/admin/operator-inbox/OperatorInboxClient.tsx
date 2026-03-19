@@ -70,6 +70,7 @@ import type {
   PipelineAction,
 } from '@/types/ai-pipeline';
 import type { ProposedItemStats } from '@/services/ai-pipeline/pipeline-queue-service';
+import { API_ROUTES } from '@/config/domain-constants';
 
 // ============================================================================
 // LOGGER
@@ -141,7 +142,7 @@ export default function OperatorInboxClient({ adminContext }: OperatorInboxClien
     if (showRefreshIndicator) setRefreshing(true);
 
     try {
-      const response = await fetch('/api/admin/operator-inbox', {
+      const response = await fetch(API_ROUTES.ADMIN.OPERATOR_INBOX, {
         credentials: 'include',
       });
 
@@ -179,7 +180,7 @@ export default function OperatorInboxClient({ adminContext }: OperatorInboxClien
   // Smart polling: auto-refresh every 15 seconds (ADR-205 Phase 4 — useInterval)
   useInterval(async () => {
     try {
-      const response = await fetch('/api/admin/operator-inbox', {
+      const response = await fetch(API_ROUTES.ADMIN.OPERATOR_INBOX, {
         credentials: 'include',
       });
 
@@ -237,7 +238,7 @@ export default function OperatorInboxClient({ adminContext }: OperatorInboxClien
       if (modifiedActions) {
         body.modifiedActions = modifiedActions;
       }
-      const response = await fetch('/api/admin/operator-inbox', {
+      const response = await fetch(API_ROUTES.ADMIN.OPERATOR_INBOX, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -265,7 +266,7 @@ export default function OperatorInboxClient({ adminContext }: OperatorInboxClien
   const handleReject = useCallback(async (queueId: string, reason: string) => {
     setProcessingId(queueId);
     try {
-      const response = await fetch('/api/admin/operator-inbox', {
+      const response = await fetch(API_ROUTES.ADMIN.OPERATOR_INBOX, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

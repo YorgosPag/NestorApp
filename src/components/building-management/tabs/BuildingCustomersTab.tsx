@@ -7,6 +7,7 @@ import { Users } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { ProjectCustomer } from "@/types/project";
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -37,7 +38,7 @@ export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) 
           customers: ProjectCustomer[];
         }
 
-        const data = await apiClient.get<BuildingCustomersApiResponse>(`/api/buildings/${buildingId}/customers`);
+        const data = await apiClient.get<BuildingCustomersApiResponse>(API_ROUTES.BUILDINGS.CUSTOMERS(buildingId));
 
         if (mounted) {
           setCustomers(data?.customers || []);

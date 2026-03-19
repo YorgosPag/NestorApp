@@ -17,6 +17,7 @@ import { User, Scale, Briefcase, Pencil, X, Loader2, AlertTriangle, ShieldAlert,
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import { ENTITY_ROUTES } from '@/lib/routes';
+import { API_ROUTES } from '@/config/domain-constants';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -171,7 +172,7 @@ export function ProfessionalsCard({
   // Send the email notification (assignment or removal)
   const sendEmailNotification = useCallback(
     (notification: PendingEmailNotification) => {
-      fetch('/api/notifications/professional-assigned', {
+      fetch(API_ROUTES.NOTIFICATIONS.PROFESSIONAL_ASSIGNED, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -209,7 +210,7 @@ export function ProfessionalsCard({
 
         // Audit trail: professional assigned
         const roleLabel = getRoleLabel(role);
-        fetch(`/api/units/${unitId}/activity`, {
+        fetch(API_ROUTES.ENTITY_ACTIVITY('unit', unitId), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -309,7 +310,7 @@ export function ProfessionalsCard({
 
         // Audit trail: professional removed
         const roleLabel = getRoleLabel(role);
-        fetch(`/api/units/${unitId}/activity`, {
+        fetch(API_ROUTES.ENTITY_ACTIVITY('unit', unitId), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

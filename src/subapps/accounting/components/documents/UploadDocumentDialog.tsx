@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/hooks/useAuth';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { DocumentType } from '@/subapps/accounting/types';
 
 // ============================================================================
@@ -112,7 +113,7 @@ export function UploadDocumentDialog({
       const fileName = guessFileName(fileUrl);
       const mimeType = guessMimeType(fileUrl);
 
-      const response = await fetch('/api/accounting/documents', {
+      const response = await fetch(API_ROUTES.ACCOUNTING.DOCUMENTS.LIST, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

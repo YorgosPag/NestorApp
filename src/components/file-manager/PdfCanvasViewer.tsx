@@ -31,6 +31,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { API_ROUTES } from '@/config/domain-constants';
 
 // ============================================================================
 // TYPES
@@ -143,7 +144,7 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
         }
 
         // Proxy through /api/download to bypass CORS on Firebase Storage URLs
-        const proxyUrl = `/api/download?url=${encodeURIComponent(url)}&filename=preview.pdf`;
+        const proxyUrl = `${API_ROUTES.DOWNLOAD}?url=${encodeURIComponent(url)}&filename=preview.pdf`;
         const response = await fetch(proxyUrl);
         if (!response.ok) throw new Error(`Download proxy: HTTP ${response.status}`);
         const data = new Uint8Array(await response.arrayBuffer());

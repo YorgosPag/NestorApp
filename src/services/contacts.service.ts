@@ -27,6 +27,7 @@ import { generateContactId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { PhotoUploadService } from '@/services/photo-upload.service';
 import { computeEntityDiff, CONTACT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 
@@ -473,7 +474,7 @@ export class ContactsService {
       );
       if (changes.length > 0) {
         const isStatusChange = changes.some((c) => c.field === 'status');
-        apiClient.post('/api/audit-trail/record', {
+        apiClient.post(API_ROUTES.AUDIT_TRAIL.RECORD, {
           entityType: 'contact',
           entityId: id,
           entityName: this.getContactDisplayName(existingContact),
@@ -703,7 +704,7 @@ export class ContactsService {
   // Delete — via server API for audit trail + tenant isolation
   static async deleteContact(id: string): Promise<void> {
     try {
-      await apiClient.delete(`/api/contacts/${id}`);
+      await apiClient.delete(API_ROUTES.CONTACTS.BY_ID(id));
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       RealtimeService.dispatch('CONTACT_DELETED', {
@@ -717,7 +718,7 @@ export class ContactsService {
 
   static async deleteMultipleContacts(ids: string[]): Promise<void> {
     try {
-      await Promise.all(ids.map(id => apiClient.delete(`/api/contacts/${id}`)));
+      await Promise.all(ids.map(id => apiClient.delete(API_ROUTES.CONTACTS.BY_ID(id))));
     } catch (error) {
       throw new Error('Failed to delete contacts');
     }

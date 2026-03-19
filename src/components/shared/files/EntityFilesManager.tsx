@@ -38,6 +38,7 @@ import { cn } from '@/lib/utils';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { useWorkspace } from '@/contexts/WorkspaceContext'; // 🏢 ENTERPRISE: Workspace context για multi-tenancy
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
+import { API_ROUTES } from '@/config/domain-constants';
 import { useEntityFiles } from './hooks/useEntityFiles';
 import { FilesList } from './FilesList';
 import { GroupedFilesList } from './GroupedFilesList';
@@ -318,7 +319,7 @@ export function EntityFilesManager({
       for (const file of unprocessed) {
         if (cancelled) return;
         try {
-          const response = await fetch('/api/floorplans/process', {
+          const response = await fetch(API_ROUTES.FLOORPLANS.PROCESS, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -378,7 +379,7 @@ export function EntityFilesManager({
     (action: 'updated' | 'deleted' | 'created' | 'unlinked', field: string, oldValue: string | null, newValue: string | null, label: string) => {
       if (!AUDITABLE_ENTITY_TYPES.has(entityType)) return;
       apiClient
-        .post(`/api/${entityType}s/${entityId}/activity`, {
+        .post(API_ROUTES.ENTITY_ACTIVITY(entityType, entityId), {
           action,
           changes: [{ field, oldValue, newValue, label }],
         })
@@ -555,7 +556,7 @@ export function EntityFilesManager({
 
           // 🏢 ADR-191 Phase 2.2: Auto-classify via AI (fire-and-forget)
           if (isAIClassifiable(file.type)) {
-            fetch('/api/files/classify', {
+            fetch(API_ROUTES.FILES.CLASSIFY, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ fileId }),
@@ -766,7 +767,7 @@ export function EntityFilesManager({
 
       // 🏢 ENTERPRISE: Same-origin backend endpoint with Authorization header
       // This bypasses CORS issues and enforces server-side access control
-      const downloadEndpoint = `/api/download?url=${encodeURIComponent(file.downloadUrl)}&filename=${encodeURIComponent(file.displayName)}`;
+      const downloadEndpoint = `${API_ROUTES.DOWNLOAD}?url=${encodeURIComponent(file.downloadUrl)}&filename=${encodeURIComponent(file.displayName)}`;
 
       const response = await fetch(downloadEndpoint, {
         headers: {

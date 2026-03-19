@@ -38,6 +38,7 @@ import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { toggleSelect } from '@/lib/toggle-select';
@@ -105,7 +106,7 @@ function StoragePageContent() {
     setIsDeleting(true);
     try {
       const result = await apiClient.delete<{ id: string }>(
-        `/api/storages/${selectedStorage.id}`
+        API_ROUTES.STORAGES.BY_ID(selectedStorage.id)
       );
       if (result?.id) {
         RealtimeService.dispatch('STORAGE_DELETED', {

@@ -17,6 +17,7 @@
  */
 
 import { useState, useRef, useCallback } from 'react';
+import { API_ROUTES } from '@/config/domain-constants';
 
 // =============================================================================
 // TYPES
@@ -170,7 +171,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
           const formData = new FormData();
           formData.append('file', audioBlob, `voice.${ext}`);
 
-          const response = await fetch('/api/voice/transcribe', {
+          const response = await fetch(API_ROUTES.VOICE.TRANSCRIBE, {
             method: 'POST',
             body: formData,
           });

@@ -16,6 +16,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -182,7 +183,7 @@ export function ParkingGeneralTab({
         if (form.area) payload.area = parseFloat(form.area);
         if (form.notes.trim()) payload.notes = form.notes.trim();
 
-        const result = await apiClient.post<{ parkingSpotId: string }>('/api/parking', payload);
+        const result = await apiClient.post<{ parkingSpotId: string }>(API_ROUTES.PARKING.LIST, payload);
 
         if (result?.parkingSpotId) {
           RealtimeService.dispatch('PARKING_CREATED', {
@@ -220,7 +221,7 @@ export function ParkingGeneralTab({
         return true;
       }
 
-      await apiClient.patch<ParkingPatchResult>(`/api/parking/${parking.id}`, payload);
+      await apiClient.patch<ParkingPatchResult>(API_ROUTES.PARKING.BY_ID(parking.id), payload);
 
       // Dispatch realtime event for cross-page sync
       RealtimeService.dispatch('PARKING_UPDATED', {

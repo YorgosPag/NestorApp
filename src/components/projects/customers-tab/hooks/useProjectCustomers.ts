@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { ProjectCustomer } from "@/types/project";
 import type { UseProjectCustomersState } from "../types";
 import { createModuleLogger } from '@/lib/telemetry';
@@ -69,7 +70,7 @@ export function useProjectCustomers(
         customers?: ProjectCustomer[];
       }
 
-      const result = await apiClient.get<ProjectCustomersApiResponse | ProjectCustomer[]>(`/api/projects/${projectId}/customers`);
+      const result = await apiClient.get<ProjectCustomersApiResponse | ProjectCustomer[]>(API_ROUTES.PROJECTS.CUSTOMERS(projectId));
 
       // 🎯 ENTERPRISE: Handle both old format (direct array) and new format (with customers property)
       const customersData = Array.isArray(result)

@@ -10,6 +10,7 @@
 import { useEffect } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { Building } from '@/types/building/contracts';
 import { RealtimeService, type BuildingUpdatedPayload, type BuildingCreatedPayload, type BuildingDeletedPayload } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -39,7 +40,7 @@ export function useFirestoreBuildings(): UseFirestoreBuildingsReturn {
   const { data, loading, error, refetch } = useAsyncData({
     fetcher: async () => {
       logger.info('Fetching buildings');
-      const result = await apiClient.get<BuildingsData>('/api/buildings');
+      const result = await apiClient.get<BuildingsData>(API_ROUTES.BUILDINGS.LIST);
 
       if (!result || !result.buildings) {
         throw new Error('Invalid response format from API');

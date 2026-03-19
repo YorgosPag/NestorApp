@@ -10,6 +10,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -90,7 +91,7 @@ export function ProjectMembersTab({ canEdit }: ProjectMembersTabProps) {
     // apiClient unwraps canonical { success, data } → returns data directly
     // Projects list returns { projects: [...], count, loadedAt, source }
     apiClient
-      .get<{ projects: ProjectListItem[] }>('/api/projects/list')
+      .get<{ projects: ProjectListItem[] }>(API_ROUTES.PROJECTS.LIST)
       .then((data) => {
         const items = Array.isArray(data?.projects) ? data.projects : [];
         setProjects(
@@ -116,7 +117,7 @@ export function ProjectMembersTab({ canEdit }: ProjectMembersTabProps) {
     try {
       // apiClient unwraps canonical { success, data } → returns data directly
       const data = await apiClient.get<ProjectMembersResponse['data']>(
-        `/api/admin/role-management/project-members?projectId=${encodeURIComponent(projectId)}`
+        `${API_ROUTES.ADMIN.ROLE_MANAGEMENT.PROJECT_MEMBERS}?projectId=${encodeURIComponent(projectId)}`
       );
       setMembers(data.members);
     } catch (err) {
@@ -139,7 +140,7 @@ export function ProjectMembersTab({ canEdit }: ProjectMembersTabProps) {
   // ---------------------------------------------------------------------------
   const handleAssignMember = useCallback(
     async (uid: string, roleId: string, permissionSetIds: string[], reason: string) => {
-      await apiClient.post('/api/admin/role-management/project-members', {
+      await apiClient.post(API_ROUTES.ADMIN.ROLE_MANAGEMENT.PROJECT_MEMBERS, {
         action: 'assign',
         projectId: selectedProjectId,
         uid,
@@ -172,7 +173,7 @@ export function ProjectMembersTab({ canEdit }: ProjectMembersTabProps) {
     if (!removeTarget || removeReason.length < 10) return;
     setIsRemoving(true);
     try {
-      await apiClient.post('/api/admin/role-management/project-members', {
+      await apiClient.post(API_ROUTES.ADMIN.ROLE_MANAGEMENT.PROJECT_MEMBERS, {
         action: 'remove',
         projectId: selectedProjectId,
         uid: removeTarget,

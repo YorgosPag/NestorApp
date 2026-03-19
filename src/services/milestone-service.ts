@@ -8,6 +8,7 @@
  */
 
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import type {
   BuildingMilestone,
@@ -37,7 +38,7 @@ export async function getMilestones(
 ): Promise<BuildingMilestone[]> {
   try {
     const result = await apiClient.get<MilestonesApiResponse>(
-      `/api/buildings/${buildingId}/milestones`
+      API_ROUTES.BUILDINGS.MILESTONES(buildingId)
     );
     return result?.milestones ?? [];
   } catch (error) {
@@ -54,7 +55,7 @@ export async function createMilestone(
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   try {
     const result = await apiClient.post<MilestoneMutationApiResponse>(
-      `/api/buildings/${buildingId}/milestones`,
+      API_ROUTES.BUILDINGS.MILESTONES(buildingId),
       data
     );
     return { success: true, id: result?.id };
@@ -76,7 +77,7 @@ export async function updateMilestone(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await apiClient.patch<MilestoneMutationApiResponse>(
-      `/api/buildings/${buildingId}/milestones`,
+      API_ROUTES.BUILDINGS.MILESTONES(buildingId),
       { id: milestoneId, updates }
     );
     return { success: true };
@@ -97,7 +98,7 @@ export async function deleteMilestone(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await apiClient.delete<MilestoneMutationApiResponse>(
-      `/api/buildings/${buildingId}/milestones?id=${encodeURIComponent(milestoneId)}`
+      `${API_ROUTES.BUILDINGS.MILESTONES(buildingId)}?id=${encodeURIComponent(milestoneId)}`
     );
     return { success: true };
   } catch (error) {

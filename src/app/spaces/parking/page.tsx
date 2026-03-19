@@ -53,6 +53,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyCompact } from '@/lib/intl-utils';
 import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { toggleSelect } from '@/lib/toggle-select';
@@ -152,7 +153,7 @@ function ParkingPageContent() {
     setIsDeleting(true);
     try {
       const result = await apiClient.delete<ParkingDeleteResult>(
-        `/api/parking/${selectedParking.id}`
+        API_ROUTES.PARKING.BY_ID(selectedParking.id)
       );
       if (result?.id) {
         RealtimeService.dispatch('PARKING_DELETED', {

@@ -29,6 +29,7 @@ import type { MessageReaction, MessageReactionsMap, QuickReactionEmoji } from '@
 import { QUICK_REACTION_EMOJIS } from '@/types/conversations';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { API_ROUTES } from '@/config/domain-constants';
 
 const logger = createModuleLogger('useMessageReactions');
 
@@ -462,7 +463,7 @@ export function useMessageReactions(
     try {
       // 🏢 ENTERPRISE: Use centralized API client with automatic auth
       const response = await apiClient.post<ReactionResponse>(
-        `/api/messages/${messageId}/reactions`,
+        API_ROUTES.MESSAGES.REACTIONS(messageId),
         { emoji, action: 'add' }
       );
 
@@ -560,7 +561,7 @@ export function useMessageReactions(
 
     try {
       const response = await apiClient.post<ReactionResponse>(
-        `/api/messages/${messageId}/reactions`,
+        API_ROUTES.MESSAGES.REACTIONS(messageId),
         { emoji, action: 'remove' }
       );
 

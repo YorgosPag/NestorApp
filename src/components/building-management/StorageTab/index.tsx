@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Warehouse, Plus, Pencil, Trash2, Check, X } from 'lucide-react';
@@ -90,7 +91,7 @@ export function StorageTab({ building }: StorageTabProps) {
     setError(null);
     try {
       const result = await apiClient.get<StoragesApiResponse>(
-        `/api/storages?buildingId=${building.id}`
+        `${API_ROUTES.STORAGES.LIST}?buildingId=${building.id}`
       );
       if (result?.storages) {
         setStorages(result.storages);
@@ -114,7 +115,7 @@ export function StorageTab({ building }: StorageTabProps) {
     if (!createName.trim()) return;
     setCreating(true);
     try {
-      const result = await apiClient.post<StorageMutationResponse>('/api/storages', {
+      const result = await apiClient.post<StorageMutationResponse>(API_ROUTES.STORAGES.LIST, {
         name: createName.trim(),
         type: createType,
         floor: createFloor.trim(),
@@ -159,7 +160,7 @@ export function StorageTab({ building }: StorageTabProps) {
     if (!editingId || !editName.trim()) return;
     setSaving(true);
     try {
-      const result = await apiClient.patch<StorageMutationResponse>(`/api/storages/${editingId}`, {
+      const result = await apiClient.patch<StorageMutationResponse>(API_ROUTES.STORAGES.BY_ID(editingId), {
         name: editName.trim(),
         type: editType,
         floor: editFloor.trim(),
@@ -192,7 +193,7 @@ export function StorageTab({ building }: StorageTabProps) {
     setDeletingId(storage.id);
     try {
       const result = await apiClient.delete<StorageMutationResponse>(
-        `/api/storages/${storage.id}`
+        API_ROUTES.STORAGES.BY_ID(storage.id)
       );
       if (result?.success) {
         await fetchStorages();

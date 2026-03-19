@@ -11,6 +11,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import { API_ROUTES } from '@/config/domain-constants';
 import {
   ComposedChart,
   Line,
@@ -77,7 +78,7 @@ export function ForwardCurveChart({ t }: ForwardCurveChartProps) {
       setIsLoading(true);
       setError(null);
       try {
-        const res = await fetch('/api/ecb/forward-rates');
+        const res = await fetch(API_ROUTES.ECB.FORWARD_RATES);
         const data = await res.json();
 
         if (cancelled) return;

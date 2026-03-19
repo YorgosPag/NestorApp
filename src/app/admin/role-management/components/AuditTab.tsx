@@ -10,6 +10,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { Button } from '@/components/ui/button';
 
@@ -64,7 +65,7 @@ export function AuditTab({ canExport }: AuditTabProps) {
 
       // apiClient unwraps canonical { success, data } → returns data directly
       const data = await apiClient.get<AuditLogResponse['data']>(
-        `/api/admin/role-management/audit-log?${params.toString()}`
+        `${API_ROUTES.ADMIN.ROLE_MANAGEMENT.AUDIT_LOG}?${params.toString()}`
       );
 
       if (isMore) {

@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/hooks/useAuth';
+import { API_ROUTES } from '@/config/domain-constants';
 import { PaymentMethodSelector } from '../../shared/PaymentMethodSelector';
 import { CustomerSelector } from './CustomerSelector';
 import { LineItemsEditor } from './LineItemsEditor';
@@ -254,7 +255,7 @@ export function InvoiceForm({ onSuccess, onCancel }: InvoiceFormProps) {
         fiscalYear: currentYear,
       };
 
-      const res = await fetch('/api/accounting/invoices', {
+      const res = await fetch(API_ROUTES.ACCOUNTING.INVOICES.LIST, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

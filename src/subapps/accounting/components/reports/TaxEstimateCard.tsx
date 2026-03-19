@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/hooks/useAuth';
+import { API_ROUTES } from '@/config/domain-constants';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { TaxEstimate, EntityType, PartnershipTaxResult } from '@/subapps/accounting/types';
 import { formatCurrency } from '../../utils/format';
@@ -67,7 +68,7 @@ export function TaxEstimateCard({ fiscalYear }: TaxEstimateCardProps) {
       const params = new URLSearchParams();
       params.set('fiscalYear', String(fiscalYear));
 
-      const response = await fetch(`/api/accounting/tax/estimate?${params.toString()}`, {
+      const response = await fetch(`${API_ROUTES.ACCOUNTING.TAX.ESTIMATE}?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       });
 

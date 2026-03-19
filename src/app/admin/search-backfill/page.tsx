@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: Import from centralized navigation entities (ZERO duplicates)
 import { NAVIGATION_ENTITIES, type NavigationEntityType } from '@/components/navigation/config/navigation-entities';
@@ -159,7 +160,7 @@ export default function SearchBackfillPage() {
     addLog('Fetching index status...');
 
     try {
-      const response = await apiClient.get<IndexStatus>('/api/admin/search-backfill');
+      const response = await apiClient.get<IndexStatus>(API_ROUTES.ADMIN.SEARCH_BACKFILL);
       setStatus(response);
       addLog(`Index has ${response.currentIndex.totalDocuments} documents`);
     } catch (err) {
@@ -192,7 +193,7 @@ export default function SearchBackfillPage() {
       // 🏢 ENTERPRISE: Extended timeout (120s) for admin backfill operations
       // User lookups for tenant resolution may take longer than default 30s
       const response = await apiClient.post<BackfillResponse>(
-        '/api/admin/search-backfill',
+        API_ROUTES.ADMIN.SEARCH_BACKFILL,
         { dryRun },
         { timeout: 120000 }  // 2 minutes
       );
@@ -231,7 +232,7 @@ export default function SearchBackfillPage() {
 
       // 🏢 ENTERPRISE: Extended timeout (120s) for admin migration operations
       const response = await apiClient.patch<MigrationResponse>(
-        '/api/admin/search-backfill',
+        API_ROUTES.ADMIN.SEARCH_BACKFILL,
         { dryRun, defaultCompanyId: DEFAULT_COMPANY_ID },
         { timeout: 120000 }  // 2 minutes
       );
@@ -266,7 +267,7 @@ export default function SearchBackfillPage() {
 
     try {
       const response = await apiClient.patch<ParkingFKMigrationResponse>(
-        '/api/admin/seed-parking',
+        API_ROUTES.ADMIN.SEED_PARKING,
         { dryRun }
       );
 
@@ -303,7 +304,7 @@ export default function SearchBackfillPage() {
       const deleteResponse = await apiClient.delete<{
         success: boolean;
         deleted: { count: number }
-      }>('/api/admin/seed-parking');
+      }>(API_ROUTES.ADMIN.SEED_PARKING);
 
       addLog(`Deleted ${deleteResponse.deleted.count} parking spots`);
 
@@ -312,7 +313,7 @@ export default function SearchBackfillPage() {
       const createResponse = await apiClient.post<{
         success: boolean;
         created: { count: number }
-      }>('/api/admin/seed-parking', {});
+      }>(API_ROUTES.ADMIN.SEED_PARKING, {});
 
       addLog(`Created ${createResponse.created.count} parking spots`);
 

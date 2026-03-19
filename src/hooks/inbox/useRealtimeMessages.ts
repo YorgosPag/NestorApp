@@ -25,6 +25,7 @@ import type { MessageListItem } from './useInboxApi';
 import type { MessageDirection, DeliveryStatus } from '@/types/conversations';
 import type { CommunicationChannel } from '@/types/communications';
 import type { SenderType } from '@/config/domain-constants';
+import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getString, getObject } from '@/lib/firestore/field-extractors';
 import { fieldToISO } from '@/lib/date-local';
@@ -155,7 +156,7 @@ export function useRealtimeMessages(
 
           // Dispatch notifications for new inbound messages (fire-and-forget)
           for (const message of newInboundMessages) {
-            apiClient.post('/api/notifications/dispatch', {
+            apiClient.post(API_ROUTES.NOTIFICATIONS.DISPATCH, {
               messageId: message.id,
               conversationId: message.conversationId,
               recipientId: user.uid,

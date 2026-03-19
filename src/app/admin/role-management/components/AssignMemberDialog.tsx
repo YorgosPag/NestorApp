@@ -11,6 +11,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -107,7 +108,7 @@ export function AssignMemberDialog({
     setIsLoadingUsers(true);
     // apiClient unwraps canonical { success, data } → returns data directly
     apiClient
-      .get<UserListResponse['data']>('/api/admin/role-management/users')
+      .get<UserListResponse['data']>(API_ROUTES.ADMIN.ROLE_MANAGEMENT.USERS)
       .then((data) => setCompanyUsers(data.users))
       .catch(() => setCompanyUsers([]))
       .finally(() => setIsLoadingUsers(false));

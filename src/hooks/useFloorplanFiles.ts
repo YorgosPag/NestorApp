@@ -25,7 +25,7 @@ import { firestoreQueryService } from '@/services/firestore';
 import type { QueryResult } from '@/services/firestore';
 import type { FileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
-import { FILE_CATEGORIES, FILE_DOMAINS, FILE_LIFECYCLE_STATES } from '@/config/domain-constants';
+import { FILE_CATEGORIES, FILE_DOMAINS, FILE_LIFECYCLE_STATES, API_ROUTES } from '@/config/domain-constants';
 
 // ============================================================================
 // TYPES
@@ -140,7 +140,7 @@ export function useFloorplanFiles(config: UseFloorplanFilesConfig): UseFloorplan
       try {
         // 🏢 ENTERPRISE: Call server-side API (bypasses CORS)
         // Authorization header required by withAuth middleware
-        const response = await fetch('/api/floorplans/process', {
+        const response = await fetch(API_ROUTES.FLOORPLANS.PROCESS, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

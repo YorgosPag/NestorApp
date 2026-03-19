@@ -13,6 +13,7 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
+import { API_ROUTES } from '@/config/domain-constants';
 import {
   DollarSign,
   TrendingUp,
@@ -107,7 +108,7 @@ export function PortfolioDashboard() {
 
   const fetchPortfolio = useCallback(async () => {
     try {
-      const res = await fetch('/api/financial-intelligence/portfolio');
+      const res = await fetch(API_ROUTES.FINANCIAL_INTELLIGENCE.PORTFOLIO);
       if (!res.ok) throw new Error(`Portfolio fetch failed: ${res.status}`);
       const json = await res.json() as PortfolioApiResponse;
       setPortfolio(json.data.portfolio);
@@ -119,7 +120,7 @@ export function PortfolioDashboard() {
 
   const fetchDebtMaturity = useCallback(async () => {
     try {
-      const res = await fetch('/api/financial-intelligence/debt-maturity');
+      const res = await fetch(API_ROUTES.FINANCIAL_INTELLIGENCE.DEBT_MATURITY);
       if (!res.ok) return;
       const json = await res.json() as DebtApiResponse;
       setDebtEntries(json.data.entries);
@@ -130,7 +131,7 @@ export function PortfolioDashboard() {
 
   const fetchBudgetVariance = useCallback(async (projectId: string) => {
     try {
-      const res = await fetch(`/api/financial-intelligence/budget-variance?projectId=${projectId}`);
+      const res = await fetch(`${API_ROUTES.FINANCIAL_INTELLIGENCE.BUDGET_VARIANCE}?projectId=${projectId}`);
       if (!res.ok) return;
       const json = await res.json() as BudgetApiResponse;
       setBudgetAnalysis(json.data.analysis);
@@ -159,7 +160,7 @@ export function PortfolioDashboard() {
   // =========================================================================
 
   const handleAddDebt = useCallback(async (data: DebtMaturityFormData) => {
-    const res = await fetch('/api/financial-intelligence/debt-maturity', {
+    const res = await fetch(API_ROUTES.FINANCIAL_INTELLIGENCE.DEBT_MATURITY, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -169,7 +170,7 @@ export function PortfolioDashboard() {
   }, [fetchDebtMaturity]);
 
   const handleRemoveDebt = useCallback(async (loanId: string) => {
-    const res = await fetch(`/api/financial-intelligence/debt-maturity?loanId=${loanId}`, {
+    const res = await fetch(`${API_ROUTES.FINANCIAL_INTELLIGENCE.DEBT_MATURITY}?loanId=${loanId}`, {
       method: 'DELETE',
     });
     if (!res.ok) throw new Error('Failed to remove debt entry');
@@ -177,7 +178,7 @@ export function PortfolioDashboard() {
   }, [fetchDebtMaturity]);
 
   const handleSaveBudget = useCallback(async (data: { projectId: string; projectName: string; categories: Array<{ category: string; categoryKey: string; budgetAmount: number; actualAmount: number }> }) => {
-    const res = await fetch('/api/financial-intelligence/budget-variance', {
+    const res = await fetch(API_ROUTES.FINANCIAL_INTELLIGENCE.BUDGET_VARIANCE, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),

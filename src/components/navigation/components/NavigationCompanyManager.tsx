@@ -10,6 +10,7 @@ import { SelectCompanyContactModal } from '../dialogs/SelectCompanyContactModal'
 import type { Contact } from '@/types/contacts';
 import { getNavigationCompanyIds } from '@/services/navigation-companies.service';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { useNavigation } from '../core/NavigationContext';
 import { REALTIME_EVENTS } from '@/services/realtime';
 // 🏢 ENTERPRISE: Use centralized NavigationCompany type
@@ -62,7 +63,7 @@ export function NavigationCompanyManager({ companies, children }: NavigationComp
 
     try {
       // 🏢 ENTERPRISE: Server-side add via Admin SDK (Firestore rules block client writes)
-      await apiClient.post('/api/navigation/company', { contactId: contact.id });
+      await apiClient.post(API_ROUTES.NAVIGATION.COMPANY, { contactId: contact.id });
 
       // Ενημέρωση local state για το modal filtering
       setNavigationCompanyIds(prev => [...prev, contact.id!]);

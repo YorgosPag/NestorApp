@@ -13,6 +13,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { API_ROUTES } from '@/config/domain-constants';
 import type {
   LoanTracking,
   CreateLoanInput,
@@ -66,7 +67,7 @@ export function useLoanTracking(unitId: string | null): UseLoanTrackingReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const basePath = unitId ? `/api/units/${unitId}/payment-plan/loans` : null;
+  const basePath = unitId ? API_ROUTES.UNITS.LOANS(unitId) : null;
 
   // Fetch loans
   const fetchData = useCallback(async () => {

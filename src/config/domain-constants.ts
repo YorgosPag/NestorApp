@@ -504,18 +504,287 @@ export const DEFAULTS = {
 } as const;
 
 // ============================================================================
-// API ROUTES (SSoT)
+// API ROUTES (SSoT) — ADR-245: Zero Hardcoded Endpoints
 // ============================================================================
 
 /**
- * Centralized API routes to avoid hardcoded strings in client code.
+ * Centralized API routes registry — Single Source of Truth.
+ *
+ * Every client-side API call MUST use this object. Hardcoded `/api/…` strings
+ * are PROHIBITED outside this file (see ADR-245).
+ *
+ * Pattern:
+ *   - Static paths → string literal
+ *   - Dynamic paths → arrow function returning template literal `as const`
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-245-api-routes-centralization.md
  */
 export const API_ROUTES = {
-  /** Create/clear Firebase session cookie for server-side auth */
-  AUTH_SESSION: '/api/auth/session',
-  /** Mark MFA enrollment complete and sync custom claims */
-  AUTH_MFA_ENROLL_COMPLETE: '/api/auth/mfa/enroll/complete',
+  // ── Auth ──────────────────────────────────────────────────────────────
+  AUTH: {
+    SESSION: '/api/auth/session',
+    MFA_ENROLL_COMPLETE: '/api/auth/mfa/enroll/complete',
+  },
+
+  // ── Admin ─────────────────────────────────────────────────────────────
+  ADMIN: {
+    ENSURE_USER_PROFILE: '/api/admin/ensure-user-profile',
+    SETUP_CONFIG: '/api/admin/setup-admin-config',
+    OPERATOR_INBOX: '/api/admin/operator-inbox',
+    SEARCH_BACKFILL: '/api/admin/search-backfill',
+    SEED_PARKING: '/api/admin/seed-parking',
+    SET_USER_CLAIMS: '/api/admin/set-user-claims',
+    ROLE_MANAGEMENT: {
+      USERS: '/api/admin/role-management/users',
+      USER_STATUS: (uid: string) => `/api/admin/role-management/users/${uid}/status` as const,
+      USER_ROLE: (uid: string) => `/api/admin/role-management/users/${uid}/role` as const,
+      USER_PERMISSION_SETS: (uid: string) => `/api/admin/role-management/users/${uid}/permission-sets` as const,
+      PROJECT_MEMBERS: '/api/admin/role-management/project-members',
+      AUDIT_LOG: '/api/admin/role-management/audit-log',
+      AUDIT_LOG_EXPORT: '/api/admin/role-management/audit-log/export',
+    },
+  },
+
+  // ── Companies ─────────────────────────────────────────────────────────
+  COMPANIES: {
+    LIST: '/api/companies',
+  },
+
+  // ── Projects ──────────────────────────────────────────────────────────
+  PROJECTS: {
+    LIST: '/api/projects/list',
+    BY_ID: (id: string) => `/api/projects/${id}` as const,
+    BY_COMPANY: (companyId: string) => `/api/projects/by-company/${companyId}` as const,
+    CUSTOMERS: (projectId: string) => `/api/projects/${projectId}/customers` as const,
+    STRUCTURE: (projectId: string) => `/api/projects/structure/${projectId}` as const,
+    PAYMENT_REPORT: (projectId: string) => `/api/projects/${projectId}/payment-report` as const,
+  },
+
+  // ── Buildings ─────────────────────────────────────────────────────────
+  BUILDINGS: {
+    LIST: '/api/buildings',
+    BY_ID: (id: string) => `/api/buildings/${id}` as const,
+    CONSTRUCTION_PHASES: (buildingId: string) => `/api/buildings/${buildingId}/construction-phases` as const,
+    CUSTOMERS: (buildingId: string) => `/api/buildings/${buildingId}/customers` as const,
+    MILESTONES: (buildingId: string) => `/api/buildings/${buildingId}/milestones` as const,
+  },
+
+  // ── Floors ────────────────────────────────────────────────────────────
+  FLOORS: {
+    LIST: '/api/floors',
+    BY_ID: (id: string) => `/api/floors/${id}` as const,
+  },
+
+  // ── Units ─────────────────────────────────────────────────────────────
+  UNITS: {
+    LIST: '/api/units',
+    CREATE: '/api/units/create',
+    BY_ID: (id: string) => `/api/units/${id}` as const,
+    ADMIN_LINK: '/api/units/admin-link',
+    HIERARCHY: (unitId: string) => `/api/units/${unitId}/hierarchy` as const,
+    ACTIVITY: (unitId: string) => `/api/units/${unitId}/activity` as const,
+    PAYMENT_PLAN: (unitId: string) => `/api/units/${unitId}/payment-plan` as const,
+    PAYMENTS: (unitId: string) => `/api/units/${unitId}/payments` as const,
+    INSTALLMENTS: (unitId: string) => `/api/units/${unitId}/payment-plan/installments` as const,
+    LOAN: (unitId: string) => `/api/units/${unitId}/payment-plan/loan` as const,
+    LOANS: (unitId: string) => `/api/units/${unitId}/payment-plan/loans` as const,
+    CHEQUES: (unitId: string) => `/api/units/${unitId}/cheques` as const,
+  },
+
+  // ── Parking ───────────────────────────────────────────────────────────
+  PARKING: {
+    LIST: '/api/parking',
+    BY_ID: (id: string) => `/api/parking/${id}` as const,
+  },
+
+  // ── Storages ──────────────────────────────────────────────────────────
+  STORAGES: {
+    LIST: '/api/storages',
+    BY_ID: (id: string) => `/api/storages/${id}` as const,
+  },
+
+  // ── Contacts ──────────────────────────────────────────────────────────
+  CONTACTS: {
+    BY_ID: (id: string) => `/api/contacts/${id}` as const,
+    UNITS: (contactId: string) => `/api/contacts/${contactId}/units` as const,
+    SEARCH_INDIVIDUALS: '/api/contacts/search-individuals',
+  },
+
+  // ── Contracts ─────────────────────────────────────────────────────────
+  CONTRACTS: {
+    LIST: '/api/contracts',
+    BY_ID: (id: string) => `/api/contracts/${id}` as const,
+    TRANSITION: (id: string) => `/api/contracts/${id}/transition` as const,
+    PROFESSIONALS: (id: string) => `/api/contracts/${id}/professionals` as const,
+  },
+
+  // ── Sales ─────────────────────────────────────────────────────────────
+  SALES: {
+    ACCOUNTING_EVENT: (unitId: string) => `/api/sales/${unitId}/accounting-event` as const,
+    APPURTENANCE_SYNC: (unitId: string) => `/api/sales/${unitId}/appurtenance-sync` as const,
+  },
+
+  // ── Files & Floorplans ────────────────────────────────────────────────
+  FILES: {
+    CLASSIFY: '/api/files/classify',
+    BATCH_DOWNLOAD: '/api/files/batch-download',
+    ARCHIVE: '/api/files/archive',
+  },
+  DOWNLOAD: '/api/download',
+  FLOORPLANS: {
+    PROCESS: '/api/floorplans/process',
+    SCENE: (fileId: string) => `/api/floorplans/scene?fileId=${fileId}` as const,
+  },
+
+  // ── Accounting (subapp) ───────────────────────────────────────────────
+  ACCOUNTING: {
+    INVOICES: {
+      LIST: '/api/accounting/invoices',
+      BY_ID: (id: string) => `/api/accounting/invoices/${id}` as const,
+      SEND_EMAIL: (id: string) => `/api/accounting/invoices/${id}/send-email` as const,
+    },
+    JOURNAL: '/api/accounting/journal',
+    VAT: { SUMMARY: '/api/accounting/vat/summary' },
+    TAX: {
+      ESTIMATE: '/api/accounting/tax/estimate',
+      DASHBOARD: '/api/accounting/tax/dashboard',
+    },
+    BANK: {
+      TRANSACTIONS: '/api/accounting/bank/transactions',
+      IMPORT: '/api/accounting/bank/import',
+    },
+    DOCUMENTS: {
+      LIST: '/api/accounting/documents',
+      BY_ID: (id: string) => `/api/accounting/documents/${id}` as const,
+    },
+    SETUP: {
+      BASE: '/api/accounting/setup',
+      PRESETS: '/api/accounting/setup/presets',
+    },
+    CATEGORIES: {
+      LIST: '/api/accounting/categories',
+      BY_ID: (id: string) => `/api/accounting/categories/${id}` as const,
+    },
+    PARTNERS: '/api/accounting/partners',
+    APY_CERTIFICATES: {
+      LIST: '/api/accounting/apy-certificates',
+      BY_ID: (id: string) => `/api/accounting/apy-certificates/${id}` as const,
+      SEND_EMAIL: (id: string) => `/api/accounting/apy-certificates/${id}/send-email` as const,
+    },
+    FIXED_ASSETS: '/api/accounting/fixed-assets',
+    EFKA: { SUMMARY: '/api/accounting/efka/summary' },
+  },
+
+  // ── Messages & Conversations ──────────────────────────────────────────
+  MESSAGES: {
+    PIN: '/api/messages/pin',
+    EDIT: '/api/messages/edit',
+    DELETE: '/api/messages/delete',
+    REACTIONS: (messageId: string) => `/api/messages/${messageId}/reactions` as const,
+  },
+  CONVERSATIONS: {
+    LIST: '/api/conversations',
+    MESSAGES: (conversationId: string) => `/api/conversations/${conversationId}/messages` as const,
+    SEND: (conversationId: string) => `/api/conversations/${conversationId}/send` as const,
+  },
+
+  // ── Notifications ─────────────────────────────────────────────────────
+  NOTIFICATIONS: {
+    LIST: '/api/notifications',
+    DISPATCH: '/api/notifications/dispatch',
+    ERROR_REPORT: '/api/notifications/error-report',
+    READ: '/api/notifications/read',
+    PREFERENCES: '/api/notifications/preferences',
+    PROFESSIONAL_ASSIGNED: '/api/notifications/professional-assigned',
+  },
+
+  // ── Financial Intelligence ────────────────────────────────────────────
+  FINANCIAL_INTELLIGENCE: {
+    PORTFOLIO: '/api/financial-intelligence/portfolio',
+    DEBT_MATURITY: '/api/financial-intelligence/debt-maturity',
+    BUDGET_VARIANCE: '/api/financial-intelligence/budget-variance',
+  },
+  ECB: {
+    FORWARD_RATES: '/api/ecb/forward-rates',
+  },
+
+  // ── Interest Calculator ───────────────────────────────────────────────
+  EURIBOR: {
+    RATES: '/api/euribor/rates',
+    REFRESH: '/api/euribor/refresh',
+  },
+  SETTINGS: {
+    BANK_SPREADS: '/api/settings/bank-spreads',
+  },
+  CALCULATOR: {
+    COST: '/api/calculator/cost',
+  },
+
+  // ── Attendance ────────────────────────────────────────────────────────
+  ATTENDANCE: {
+    QR_GENERATE: '/api/attendance/qr/generate',
+    QR_VALIDATE: '/api/attendance/qr/validate',
+    CHECK_IN: '/api/attendance/check-in',
+    GEOFENCE: '/api/attendance/geofence',
+  },
+
+  // ── Communications ────────────────────────────────────────────────────
+  COMMUNICATIONS: {
+    EMAIL: '/api/communications/email',
+    EMAIL_PROPERTY_SHARE: '/api/communications/email/property-share/',
+  },
+
+  // ── Voice & Calendar ──────────────────────────────────────────────────
+  VOICE: {
+    TRANSCRIBE: '/api/voice/transcribe',
+    COMMAND: '/api/voice/command',
+  },
+  CALENDAR: {
+    PARSE_EVENT: '/api/calendar/parse-event',
+  },
+
+  // ── Relationships ─────────────────────────────────────────────────────
+  RELATIONSHIPS: {
+    CREATE: '/api/relationships/create',
+    REMOVE: '/api/relationships/remove',
+    HIERARCHY: '/api/relationships/hierarchy',
+    CHILDREN: '/api/relationships/children',
+    PARENT: '/api/relationships/parent',
+    VALIDATE_INTEGRITY: '/api/relationships/validate-integrity',
+    CASCADE_DELETE: '/api/relationships/cascade-delete',
+    AUDIT_TRAIL: '/api/relationships/audit-trail',
+  },
+
+  // ── Audit ─────────────────────────────────────────────────────────────
+  AUDIT: {
+    BOOTSTRAP: '/api/audit/bootstrap',
+  },
+  AUDIT_TRAIL: {
+    RECORD: '/api/audit-trail/record',
+    BY_ENTITY: (entityType: string, entityId: string) => `/api/audit-trail/${entityType}/${entityId}` as const,
+  },
+
+  // ── Misc ──────────────────────────────────────────────────────────────
+  UPLOAD: { PHOTO: '/api/upload/photo' },
+  SEARCH: '/api/search',
+  ENTERPRISE_IDS: { MIGRATE: '/api/enterprise-ids/migrate' },
+  NAVIGATION: { COMPANY: '/api/navigation/company' },
+  ENTITY_CODE: { SUGGEST: '/api/entity-code/suggest' },
+  DELETION_GUARD: {
+    CHECK: (entityType: string, entityId: string) => `/api/deletion-guard/${entityType}/${entityId}` as const,
+  },
+  DXF_AI: { COMMAND: '/api/dxf-ai/command' },
+
+  // ── Entity Activity (generic) ─────────────────────────────────────────
+  ENTITY_ACTIVITY: (entityType: string, entityId: string) =>
+    `/api/${entityType}s/${entityId}/activity` as const,
 } as const;
+
+// ── Backward-compatible flat aliases (DEPRECATED — migrate to nested form) ──
+/** @deprecated Use API_ROUTES.AUTH.SESSION */
+export const API_ROUTES_AUTH_SESSION = API_ROUTES.AUTH.SESSION;
+/** @deprecated Use API_ROUTES.AUTH.MFA_ENROLL_COMPLETE */
+export const API_ROUTES_AUTH_MFA_ENROLL_COMPLETE = API_ROUTES.AUTH.MFA_ENROLL_COMPLETE;
 
 // ============================================================================
 // AUTH EVENTS (SSoT)

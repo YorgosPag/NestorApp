@@ -21,7 +21,7 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useFirestoreUnits } from '@/hooks/useFirestoreUnits';
 import type { FloorplanUploadConfig } from '@/hooks/useFloorplanUpload';
-import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
+import { FLOORPLAN_PURPOSES, API_ROUTES } from '@/config/domain-constants';
 import type { EntityType, FileDomain, FileCategory, FloorplanPurpose } from '@/config/domain-constants';
 import type { UnitLevel } from '@/types/unit';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -265,7 +265,7 @@ export function useFloorplanImportState(
 
     logger.info('Fetching companies', { openEpoch });
 
-    apiClient.get<CompaniesApiResponse | Record<string, unknown>>('/api/companies')
+    apiClient.get<CompaniesApiResponse | Record<string, unknown>>(API_ROUTES.COMPANIES.LIST)
       .then((res) => {
         if (cancelled) return;
         const raw = res as Record<string, unknown>;
@@ -295,7 +295,7 @@ export function useFloorplanImportState(
     let cancelled = false;
     setProjectsLoading(true);
 
-    apiClient.get<ProjectsByCompanyResponse | Record<string, unknown>>(`/api/projects/by-company/${selection.companyId}`)
+    apiClient.get<ProjectsByCompanyResponse | Record<string, unknown>>(API_ROUTES.PROJECTS.BY_COMPANY(selection.companyId))
       .then((res) => {
         if (cancelled) return;
         const raw = res as Record<string, unknown>;
@@ -325,7 +325,7 @@ export function useFloorplanImportState(
     let cancelled = false;
     setBuildingsLoading(true);
 
-    apiClient.get<Record<string, unknown>>(`/api/buildings?projectId=${selection.projectId}`)
+    apiClient.get<Record<string, unknown>>(`${API_ROUTES.BUILDINGS.LIST}?projectId=${selection.projectId}`)
       .then((res) => {
         if (cancelled) return;
         const raw = res as Record<string, unknown>;
@@ -355,7 +355,7 @@ export function useFloorplanImportState(
     let cancelled = false;
     setFloorsLoading(true);
 
-    apiClient.get<FloorsApiResponse | Record<string, unknown>>(`/api/floors?buildingId=${selection.buildingId}`)
+    apiClient.get<FloorsApiResponse | Record<string, unknown>>(`${API_ROUTES.FLOORS.LIST}?buildingId=${selection.buildingId}`)
       .then((res) => {
         if (cancelled) return;
         const raw = res as Record<string, unknown>;

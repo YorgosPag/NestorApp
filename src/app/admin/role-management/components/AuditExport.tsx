@@ -8,6 +8,7 @@
 
 import { useState, useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { API_ROUTES } from '@/config/domain-constants';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -50,7 +51,7 @@ export function AuditExport({ filters, canExport }: AuditExportProps) {
       const auth = getAuth();
       const token = await auth.currentUser?.getIdToken();
       const response = await fetch(
-        `/api/admin/role-management/audit-log/export?${params.toString()}`,
+        `${API_ROUTES.ADMIN.ROLE_MANAGEMENT.AUDIT_LOG_EXPORT}?${params.toString()}`,
         { headers: { Authorization: `Bearer ${token ?? ''}` } }
       );
 

@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { API_ROUTES } from '@/config/domain-constants';
 import type {
   CustomCategoryDocument,
   CreateCustomCategoryInput,
@@ -89,7 +90,7 @@ export function useCustomCategories(
       const params = new URLSearchParams();
       if (includeInactive) params.set('includeInactive', 'true');
 
-      const res = await fetch(`/api/accounting/categories?${params.toString()}`);
+      const res = await fetch(`${API_ROUTES.ACCOUNTING.CATEGORIES.LIST}?${params.toString()}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       const data = (await res.json()) as { categories: CustomCategoryDocument[] };
@@ -109,7 +110,7 @@ export function useCustomCategories(
 
   const createCategory = useCallback(
     async (input: CreateCustomCategoryInput): Promise<{ id: string; code: string }> => {
-      const res = await fetch('/api/accounting/categories', {
+      const res = await fetch(API_ROUTES.ACCOUNTING.CATEGORIES.LIST, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
@@ -129,7 +130,7 @@ export function useCustomCategories(
 
   const updateCategory = useCallback(
     async (id: string, updates: UpdateCustomCategoryInput): Promise<void> => {
-      const res = await fetch(`/api/accounting/categories/${id}`, {
+      const res = await fetch(API_ROUTES.ACCOUNTING.CATEGORIES.BY_ID(id), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
@@ -147,7 +148,7 @@ export function useCustomCategories(
 
   const deleteCategory = useCallback(
     async (id: string): Promise<DeleteResult> => {
-      const res = await fetch(`/api/accounting/categories/${id}`, {
+      const res = await fetch(API_ROUTES.ACCOUNTING.CATEGORIES.BY_ID(id), {
         method: 'DELETE',
       });
 

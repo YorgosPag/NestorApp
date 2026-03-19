@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { formatFloorLabel } from '@/lib/intl-utils';
 import { useNavigation } from '@/components/navigation/core/NavigationContext';
 import type { UnitHierarchyResponse } from '@/app/api/units/[id]/hierarchy/route';
@@ -48,7 +49,7 @@ export function UnitHierarchyCard({ unitId }: UnitHierarchyCardProps) {
     async function fetchHierarchy() {
       try {
         const data = await apiClient.get<UnitHierarchyResponse>(
-          `/api/units/${encodeURIComponent(unitId)}/hierarchy`
+          API_ROUTES.UNITS.HIERARCHY(encodeURIComponent(unitId))
         );
         if (!cancelled) {
           setHierarchy(data);

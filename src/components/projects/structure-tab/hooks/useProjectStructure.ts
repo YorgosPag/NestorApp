@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { UseProjectStructureState } from "../types";
 // 🏢 ENTERPRISE: Types imported from contracts (not server actions file)
 import type { ProjectStructure } from "@/services/projects/contracts";
@@ -71,7 +72,7 @@ export function useProjectStructure(
         summary?: Record<string, unknown>;
       }
 
-      const result = await apiClient.get<ProjectStructureApiResponse>(`/api/projects/structure/${projectId}`);
+      const result = await apiClient.get<ProjectStructureApiResponse>(API_ROUTES.PROJECTS.STRUCTURE(projectId));
 
       logger.info('Project structure loaded', { summary: result?.summary });
 

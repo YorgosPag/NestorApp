@@ -4,6 +4,7 @@ import { Triangle, Building2, Folder, Building as BuildingIcon, Layers, Info } f
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import {
   Select,
   SelectContent,
@@ -198,7 +199,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
       }
 
       const companyParam = selectedCompanyId ? `&companyId=${selectedCompanyId}` : '';
-      const result = await apiClient.get<BuildingsApiResponse>(`/api/buildings?projectId=${projectId}${companyParam}`);
+      const result = await apiClient.get<BuildingsApiResponse>(`${API_ROUTES.BUILDINGS.LIST}?projectId=${projectId}${companyParam}`);
 
       if (result?.buildings && result.buildings.length > 0) {
         setBuildings(result.buildings);
@@ -331,7 +332,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
       // 🏢 FIX: Do NOT send companyId — floors are stored with ctx.companyId (auth user),
       // not the selectedCompanyId (contact entity). The API uses ctx.companyId automatically.
-      const result = await apiClient.get<FloorsApiResponse>(`/api/floors?buildingId=${buildingId}`);
+      const result = await apiClient.get<FloorsApiResponse>(`${API_ROUTES.FLOORS.LIST}?buildingId=${buildingId}`);
 
       if (result?.floors && result.floors.length > 0) {
         setFloors(result.floors);
@@ -362,7 +363,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
       params.set('buildingId', buildingId);
       const queryString = params.toString();
 
-      const result = await apiClient.get<UnitsApiResponse>(`/api/units?${queryString}`);
+      const result = await apiClient.get<UnitsApiResponse>(`${API_ROUTES.UNITS.LIST}?${queryString}`);
 
       // Server already filters by buildingId — use all returned units
       const buildingUnits = result?.units || [];
@@ -485,7 +486,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
         // 🏢 ENTERPRISE: Record floorplan upload in entity audit trail (fire-and-forget)
         if (saved) {
-          apiClient.post(`/api/units/${selectedUnitId}/activity`, {
+          apiClient.post(API_ROUTES.UNITS.ACTIVITY(selectedUnitId), {
             action: 'updated',
             changes: [{
               field: 'floorplan',

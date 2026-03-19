@@ -25,6 +25,7 @@ import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { Building } from '@/types/building/contracts';
 import type { FloorInfo } from '@/config/upload-entry-points';
 
@@ -79,7 +80,7 @@ export function BuildingContractsTab({
     if (!resolvedBuilding?.id) return;
     try {
       const result = await apiClient.get<{ floors: Array<{ id: string; number: number; name: string }> }>(
-        `/api/floors?buildingId=${resolvedBuilding.id}`
+        `${API_ROUTES.FLOORS.LIST}?buildingId=${resolvedBuilding.id}`
       );
       if (result?.floors) {
         const sorted = [...result.floors]

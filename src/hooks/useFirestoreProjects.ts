@@ -6,6 +6,7 @@ import { RealtimeService, type ProjectUpdatedPayload, type ProjectCreatedPayload
 import type { ProjectAddress } from '@/types/project/addresses';
 import { createModuleLogger } from '@/lib/telemetry';
 import { applyUpdates } from '@/lib/utils';
+import { API_ROUTES } from '@/config/domain-constants';
 
 const logger = createModuleLogger('useFirestoreProjects');
 
@@ -154,7 +155,7 @@ export function useFirestoreProjects() {
 
         // 🏢 ENTERPRISE: Use centralized API client (automatic Authorization header + unwrap)
         // apiClient.get() returns unwrapped data (not { success, data })
-        const result = await apiClient.get<ProjectListData>('/api/projects/list');
+        const result = await apiClient.get<ProjectListData>(API_ROUTES.PROJECTS.LIST);
 
         // Check if request was aborted
         if (controller.signal.aborted) {

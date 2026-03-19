@@ -27,6 +27,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/hooks/useAuth';
+import { API_ROUTES } from '@/config/domain-constants';
 import { VATRateSelector } from '../shared/VATRateSelector';
 import { PaymentMethodSelector } from '../shared/PaymentMethodSelector';
 import { ExpenseCategoryPicker } from '../shared/ExpenseCategoryPicker';
@@ -163,7 +164,7 @@ export function JournalEntryForm({ onSuccess, onCancel }: JournalEntryFormProps)
         notes: form.notes.trim() || null,
       };
 
-      const res = await fetch('/api/accounting/journal', {
+      const res = await fetch(API_ROUTES.ACCOUNTING.JOURNAL, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

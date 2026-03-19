@@ -23,6 +23,7 @@
 import { doc, updateDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { db } from '@/lib/firebase';
+import { API_ROUTES } from '@/config/domain-constants';
 import type {
   FileRecord,
   FloorplanProcessedData,
@@ -188,7 +189,7 @@ export class FloorplanProcessor {
 
       const idToken = await user.getIdToken();
 
-      const response = await fetch('/api/floorplans/process', {
+      const response = await fetch(API_ROUTES.FLOORPLANS.PROCESS, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

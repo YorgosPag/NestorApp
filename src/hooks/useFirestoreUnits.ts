@@ -10,6 +10,7 @@
 
 import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { Unit } from '@/types/unit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useAsyncData } from '@/hooks/useAsyncData';
@@ -58,7 +59,7 @@ export function useFirestoreUnits(
       if (floorId) params.set('floorId', floorId);
 
       const queryString = params.toString();
-      const url = queryString ? `/api/units?${queryString}` : '/api/units';
+      const url = queryString ? `${API_ROUTES.UNITS.LIST}?${queryString}` : API_ROUTES.UNITS.LIST;
 
       logger.info('Fetching units', { buildingId, floorId });
       const result = await apiClient.get<UnitsApiResponse>(url);

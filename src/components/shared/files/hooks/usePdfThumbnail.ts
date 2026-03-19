@@ -17,6 +17,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
+import { API_ROUTES } from '@/config/domain-constants';
 
 // ============================================================================
 // PDF.JS TYPES (minimal — avoid importing full pdfjs-dist types)
@@ -134,7 +135,7 @@ export function usePdfThumbnail(downloadUrl: string | undefined, enabled = true)
         if (cancelled) return;
 
         // Fetch PDF through CORS proxy
-        const proxyUrl = `/api/download?url=${encodeURIComponent(downloadUrl!)}&filename=thumb.pdf`;
+        const proxyUrl = `${API_ROUTES.DOWNLOAD}?url=${encodeURIComponent(downloadUrl!)}&filename=thumb.pdf`;
         const response = await fetch(proxyUrl);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         if (cancelled) return;

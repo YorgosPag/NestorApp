@@ -17,6 +17,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -188,7 +189,7 @@ export function StorageGeneralTab({
         if (form.description.trim()) payload.description = form.description.trim();
         if (form.notes.trim()) payload.notes = form.notes.trim();
 
-        const result = await apiClient.post<{ storageId: string }>('/api/storages', payload);
+        const result = await apiClient.post<{ storageId: string }>(API_ROUTES.STORAGES.LIST, payload);
 
         if (result?.storageId) {
           RealtimeService.dispatch('STORAGE_CREATED', {
@@ -226,7 +227,7 @@ export function StorageGeneralTab({
         return true;
       }
 
-      await apiClient.patch<StoragePatchResult>(`/api/storages/${storage.id}`, payload);
+      await apiClient.patch<StoragePatchResult>(API_ROUTES.STORAGES.BY_ID(storage.id), payload);
 
       // Dispatch realtime event for cross-page sync
       RealtimeService.dispatch('STORAGE_UPDATED', {

@@ -10,6 +10,7 @@
  */
 
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -58,7 +59,7 @@ export async function getConstructionData(
 ): Promise<{ phases: ConstructionPhase[]; tasks: ConstructionTask[] }> {
   try {
     const result = await apiClient.get<ConstructionDataApiResponse>(
-      `/api/buildings/${buildingId}/construction-phases`
+      API_ROUTES.BUILDINGS.CONSTRUCTION_PHASES(buildingId)
     );
 
     return {
@@ -79,7 +80,7 @@ export async function createConstructionPhase(
 ): Promise<{ success: boolean; phaseId?: string; error?: string }> {
   try {
     const result = await apiClient.post<CreateApiResponse>(
-      `/api/buildings/${buildingId}/construction-phases`,
+      API_ROUTES.BUILDINGS.CONSTRUCTION_PHASES(buildingId),
       { type: 'phase', ...data }
     );
 
@@ -102,7 +103,7 @@ export async function updateConstructionPhase(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await apiClient.patch<UpdateApiResponse>(
-      `/api/buildings/${buildingId}/construction-phases`,
+      API_ROUTES.BUILDINGS.CONSTRUCTION_PHASES(buildingId),
       { type: 'phase', id: phaseId, updates }
     );
 
@@ -124,7 +125,7 @@ export async function deleteConstructionPhase(
 ): Promise<{ success: boolean; cascadedTasks?: number; error?: string }> {
   try {
     const result = await apiClient.delete<DeleteApiResponse>(
-      `/api/buildings/${buildingId}/construction-phases?type=phase&id=${encodeURIComponent(phaseId)}`
+      `${API_ROUTES.BUILDINGS.CONSTRUCTION_PHASES(buildingId)}?type=phase&id=${encodeURIComponent(phaseId)}`
     );
 
     return { success: true, cascadedTasks: result?.cascadedTasks };
@@ -145,7 +146,7 @@ export async function createConstructionTask(
 ): Promise<{ success: boolean; taskId?: string; error?: string }> {
   try {
     const result = await apiClient.post<CreateApiResponse>(
-      `/api/buildings/${buildingId}/construction-phases`,
+      API_ROUTES.BUILDINGS.CONSTRUCTION_PHASES(buildingId),
       { type: 'task', ...data }
     );
 
@@ -168,7 +169,7 @@ export async function updateConstructionTask(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await apiClient.patch<UpdateApiResponse>(
-      `/api/buildings/${buildingId}/construction-phases`,
+      API_ROUTES.BUILDINGS.CONSTRUCTION_PHASES(buildingId),
       { type: 'task', id: taskId, updates }
     );
 
@@ -190,7 +191,7 @@ export async function deleteConstructionTask(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await apiClient.delete<DeleteApiResponse>(
-      `/api/buildings/${buildingId}/construction-phases?type=task&id=${encodeURIComponent(taskId)}`
+      `${API_ROUTES.BUILDINGS.CONSTRUCTION_PHASES(buildingId)}?type=task&id=${encodeURIComponent(taskId)}`
     );
 
     return { success: true };

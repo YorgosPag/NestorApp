@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { TaxEstimate, PartnershipTaxResult, EntityType } from '@/subapps/accounting/types';
 
 // ============================================================================
@@ -76,7 +77,7 @@ export function useTaxEstimate(options: UseTaxEstimateOptions): UseTaxEstimateRe
       const params = new URLSearchParams();
       params.set('fiscalYear', String(fiscalYear));
 
-      const response = await fetch(`/api/accounting/tax/estimate?${params.toString()}`, { headers });
+      const response = await fetch(`${API_ROUTES.ACCOUNTING.TAX.ESTIMATE}?${params.toString()}`, { headers });
 
       if (!response.ok) {
         const errorData: { error?: string } = await response.json();

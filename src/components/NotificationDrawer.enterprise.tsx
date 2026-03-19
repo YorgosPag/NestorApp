@@ -21,6 +21,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { createModuleLogger } from '@/lib/telemetry';
+import { API_ROUTES } from '@/config/domain-constants';
 
 const logger = createModuleLogger('NotificationDrawer');
 
@@ -104,7 +105,7 @@ export function NotificationDrawer() {
   // ✅ SSR-safe: Lazy initialization of NotificationClient
   const clientRef = useRef<NotificationClient | null>(null);
   if (!clientRef.current && typeof window !== 'undefined') {
-    clientRef.current = new NotificationClient({ baseUrl: '/api/notifications' });
+    clientRef.current = new NotificationClient({ baseUrl: API_ROUTES.NOTIFICATIONS.LIST });
   }
 
   // ✅ ENTERPRISE: Load user preferences για timezone
@@ -129,7 +130,7 @@ export function NotificationDrawer() {
 
         // 🏢 ENTERPRISE: Use centralized API client (automatic Authorization header + unwrap)
         // apiClient.get() returns unwrapped data: { preferences: {...} }
-        const data = await apiClient.get<{ preferences: UserPreferences }>('/api/notifications/preferences');
+        const data = await apiClient.get<{ preferences: UserPreferences }>(API_ROUTES.NOTIFICATIONS.PREFERENCES);
 
         if (!data || !data.preferences) {
           throw new Error('Invalid response format from API');

@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { ServicePreset } from '@/subapps/accounting/types';
 
 // ============================================================================
@@ -59,7 +60,7 @@ export function useServicePresets(): UseServicePresetsReturn {
       setError(null);
 
       const headers = await getAuthHeaders();
-      const response = await fetch('/api/accounting/setup/presets', { headers });
+      const response = await fetch(API_ROUTES.ACCOUNTING.SETUP.PRESETS, { headers });
 
       if (!response.ok) {
         const errorData: { error?: string } = await response.json();
@@ -86,7 +87,7 @@ export function useServicePresets(): UseServicePresetsReturn {
         setError(null);
 
         const headers = await getAuthHeaders();
-        const response = await fetch('/api/accounting/setup/presets', {
+        const response = await fetch(API_ROUTES.ACCOUNTING.SETUP.PRESETS, {
           method: 'PUT',
           headers,
           body: JSON.stringify(updatedPresets),

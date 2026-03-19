@@ -21,6 +21,7 @@ import type { MasterBOQCategory } from '@/config/boq-categories';
 import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
 import { boqService, computeBuildingSummary, computeItemCost } from '@/services/measurements';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -109,7 +110,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
         count: number;
       }
       const buildingsData = await apiClient.get<BuildingsResponse>(
-        `/api/buildings?projectId=${project.id}`
+        `${API_ROUTES.BUILDINGS.LIST}?projectId=${project.id}`
       );
 
       const buildingList: BuildingInfo[] = (buildingsData?.buildings ?? []).map(b => ({

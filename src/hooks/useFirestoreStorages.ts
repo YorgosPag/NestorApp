@@ -11,6 +11,7 @@
 import { useEffect } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import type { Storage } from '@/types/storage/contracts';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -54,8 +55,8 @@ export function useFirestoreStorages(
   const { data, loading, error, refetch } = useAsyncData({
     fetcher: async () => {
       const url = buildingId
-        ? `/api/storages?buildingId=${encodeURIComponent(buildingId)}`
-        : '/api/storages';
+        ? `${API_ROUTES.STORAGES.LIST}?buildingId=${encodeURIComponent(buildingId)}`
+        : API_ROUTES.STORAGES.LIST;
 
       logger.info('Fetching storages', { buildingId });
       const result = await apiClient.get<StoragesApiResponse>(url);

@@ -13,6 +13,7 @@
 
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { API_ROUTES } from '@/config/domain-constants';
 import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Direct Firestore writes removed - now using Admin SDK via API endpoints
 import type { Project, ProjectStatus } from '@/types/project';
@@ -88,7 +89,7 @@ export async function createProject(
     interface ProjectCreateResult {
       projectId: string;
     }
-    const result = await apiClient.post<ProjectCreateResult>('/api/projects/list', data);
+    const result = await apiClient.post<ProjectCreateResult>(API_ROUTES.PROJECTS.LIST, data);
 
     const projectId = result?.projectId;
     logger.info('Project created', { projectId });
@@ -133,7 +134,7 @@ export async function updateProjectClient(
 
     // 🏢 ENTERPRISE: Use centralized API client (automatic Bearer token)
     // 🔒 SECURITY: apiClient handles Firebase ID token injection
-    await apiClient.patch(`/api/projects/${projectId}`, updates);
+    await apiClient.patch(API_ROUTES.PROJECTS.BY_ID(projectId), updates);
 
     logger.info('Project updated successfully', { projectId });
 
@@ -178,7 +179,7 @@ export async function deleteProject(
 
     // 🏢 ENTERPRISE: Use centralized API client (automatic Bearer token)
     // 🔒 SECURITY: apiClient handles Firebase ID token injection
-    await apiClient.delete(`/api/projects/${projectId}`);
+    await apiClient.delete(API_ROUTES.PROJECTS.BY_ID(projectId));
 
     logger.info('Project deleted successfully', { projectId });
 

@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { CompanyProfile, CompanySetupInput } from '@/subapps/accounting/types';
 
 // ============================================================================
@@ -59,7 +60,7 @@ export function useCompanySetup(): UseCompanySetupReturn {
       setError(null);
 
       const headers = await getAuthHeaders();
-      const response = await fetch('/api/accounting/setup', { headers });
+      const response = await fetch(API_ROUTES.ACCOUNTING.SETUP.BASE, { headers });
 
       if (!response.ok) {
         const errorData: { error?: string } = await response.json();
@@ -86,7 +87,7 @@ export function useCompanySetup(): UseCompanySetupReturn {
         setError(null);
 
         const headers = await getAuthHeaders();
-        const response = await fetch('/api/accounting/setup', {
+        const response = await fetch(API_ROUTES.ACCOUNTING.SETUP.BASE, {
           method: 'PUT',
           headers,
           body: JSON.stringify(data),

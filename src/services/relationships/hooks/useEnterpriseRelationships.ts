@@ -15,6 +15,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { getErrorMessage } from '@/lib/error-utils';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import type {
   EntityType,
   RelationshipOperationResult,
@@ -217,7 +218,7 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
     try {
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
       const result = await apiClient.post<RelationshipOperationResult>(
-        '/api/relationships/create',
+        API_ROUTES.RELATIONSHIPS.CREATE,
         {
           parentType,
           parentId,
@@ -284,7 +285,7 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
     try {
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
       const result = await apiClient.post<RelationshipOperationResult>(
-        '/api/relationships/remove',
+        API_ROUTES.RELATIONSHIPS.REMOVE,
         { relationshipId, options }
       );
 
@@ -354,7 +355,7 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
     try {
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
       const children = await apiClient.get<readonly TChild[]>(
-        `/api/relationships/children?parentType=${parentType}&parentId=${parentId}&childType=${childType}`
+        `${API_ROUTES.RELATIONSHIPS.CHILDREN}?parentType=${parentType}&parentId=${parentId}&childType=${childType}`
       );
 
       // 💾 CACHE RESULT
@@ -399,7 +400,7 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
     try {
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
       const parent = await apiClient.get<TParent | null>(
-        `/api/relationships/parent?childType=${childType}&childId=${childId}&parentType=${parentType}`
+        `${API_ROUTES.RELATIONSHIPS.PARENT}?childType=${childType}&childId=${childId}&parentType=${parentType}`
       );
 
       // 💾 CACHE RESULT
@@ -444,7 +445,7 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
     try {
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
       const hierarchy = await apiClient.post<EntityHierarchyTree>(
-        '/api/relationships/hierarchy',
+        API_ROUTES.RELATIONSHIPS.HIERARCHY,
         { rootType, rootId, options }
       );
 
@@ -479,7 +480,7 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
 
     try {
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
-      const result = await apiClient.get<IntegrityValidationResult>('/api/relationships/validate-integrity');
+      const result = await apiClient.get<IntegrityValidationResult>(API_ROUTES.RELATIONSHIPS.VALIDATE_INTEGRITY);
 
       setState(prevState => ({
         ...prevState,
@@ -522,7 +523,7 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
     try {
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
       const result = await apiClient.post<CascadeDeleteResult>(
-        '/api/relationships/cascade-delete',
+        API_ROUTES.RELATIONSHIPS.CASCADE_DELETE,
         { entityType, entityId, options }
       );
 
@@ -579,7 +580,7 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
       });
 
       const auditTrail = await apiClient.get<readonly RelationshipAuditEntry[]>(
-        `/api/relationships/audit-trail?${queryParams}`
+        `${API_ROUTES.RELATIONSHIPS.AUDIT_TRAIL}?${queryParams}`
       );
 
       setState(prevState => ({ ...prevState, loading: false, error: null }));

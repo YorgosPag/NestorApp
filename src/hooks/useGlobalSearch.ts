@@ -15,6 +15,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import {
   SEARCH_CONFIG,
   type SearchResult,
@@ -200,7 +201,7 @@ export function useGlobalSearch(
       try {
         // 🏢 ENTERPRISE: Use apiClient with automatic Bearer token
         const params = buildSearchParams(searchQuery, limit, types);
-        const response = await apiClient.get<SearchApiResponse>('/api/search', { params });
+        const response = await apiClient.get<SearchApiResponse>(API_ROUTES.SEARCH, { params });
 
         // Check if this is still the latest request (handle race conditions)
         if (latestRequestRef.current !== requestId) {

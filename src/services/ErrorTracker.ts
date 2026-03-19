@@ -17,6 +17,7 @@
 import { generateSessionId, generateErrorId } from '@/services/enterprise-id.service';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { safeJsonParse } from '@/lib/json-utils';
 import { safeGetItem, safeSetItem, safeRemoveItem, STORAGE_KEYS } from '@/lib/storage';
 import { sumByKey } from '@/utils/collection-utils';
@@ -495,7 +496,7 @@ export class ErrorTracker {
       };
 
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
-      await apiClient.post('/api/notifications/error-report', notificationPayload);
+      await apiClient.post(API_ROUTES.NOTIFICATIONS.ERROR_REPORT, notificationPayload);
 
       this.log('Admin notification sent successfully', { errorId: errorReport.id });
 

@@ -150,7 +150,7 @@ export class EnterpriseTwoFactorService {
     try {
       const idToken = await currentUser.getIdToken(true);
 
-      const response = await fetch(API_ROUTES.AUTH_MFA_ENROLL_COMPLETE, {
+      const response = await fetch(API_ROUTES.AUTH.MFA_ENROLL_COMPLETE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken }),

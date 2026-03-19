@@ -10,6 +10,7 @@
 
 import { useState, useCallback } from 'react';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -94,7 +95,7 @@ export function RoleChangeDialog({
     setIsSubmitting(true);
     try {
       await apiClient.patch<ChangeRoleResponse>(
-        `/api/admin/role-management/users/${user.uid}/role`,
+        API_ROUTES.ADMIN.ROLE_MANAGEMENT.USER_ROLE(user.uid),
         { newRole, reason }
       );
       success(

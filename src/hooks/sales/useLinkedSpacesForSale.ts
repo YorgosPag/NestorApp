@@ -10,6 +10,7 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { Unit, LinkedSpace } from '@/types/unit';
 import type { SpaceInclusionType } from '@/config/domain-constants';
 import type { SaleLineItem } from '@/services/sales-accounting/types';
@@ -97,8 +98,8 @@ export function useLinkedSpacesForSale(unit: Unit): UseLinkedSpacesForSaleResult
               // Fetch current data from the space document (price + area)
               try {
                 const endpoint = ls.spaceType === 'parking'
-                  ? `/api/parking/${ls.spaceId}`
-                  : `/api/storages/${ls.spaceId}`;
+                  ? API_ROUTES.PARKING.BY_ID(ls.spaceId)
+                  : API_ROUTES.STORAGES.BY_ID(ls.spaceId);
                 const data = await apiClient.get<{
                   area?: number;
                   commercial?: { askingPrice?: number };

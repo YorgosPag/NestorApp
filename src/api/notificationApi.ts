@@ -18,6 +18,7 @@
  */
 
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { Notification, Severity } from '@/types/notification';
 
 import { createModuleLogger } from '@/lib/telemetry';
@@ -107,7 +108,7 @@ export async function fetchNotifications(): Promise<NotificationItem[]> {
     logger.info('[NotificationApi] Fetching notifications from API...');
 
     const response = await apiClient.get<NotificationsApiResponse>(
-      '/api/notifications?limit=50'
+      `${API_ROUTES.NOTIFICATIONS.LIST}?limit=50`
     );
 
     if (!response.success || !response.items) {
@@ -132,7 +133,7 @@ export async function markNotificationsRead(notificationIds: string[]): Promise<
   if (notificationIds.length === 0) return true;
 
   try {
-    const response = await apiClient.post<{ success: boolean }>('/api/notifications/read', {
+    const response = await apiClient.post<{ success: boolean }>(API_ROUTES.NOTIFICATIONS.READ, {
       ids: notificationIds
     });
 

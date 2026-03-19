@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { EFKAAnnualSummary, PartnershipEFKASummary, EntityType } from '@/subapps/accounting/types';
 
 // ============================================================================
@@ -76,7 +77,7 @@ export function useEFKASummary(options: UseEFKASummaryOptions): UseEFKASummaryRe
       const params = new URLSearchParams();
       params.set('year', String(year));
 
-      const response = await fetch(`/api/accounting/efka/summary?${params.toString()}`, { headers });
+      const response = await fetch(`${API_ROUTES.ACCOUNTING.EFKA.SUMMARY}?${params.toString()}`, { headers });
 
       if (!response.ok) {
         const errorData: { error?: string } = await response.json();

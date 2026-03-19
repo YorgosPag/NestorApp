@@ -18,6 +18,7 @@ import {
   FILE_STORAGE_FLAGS,
   FILE_STORAGE_ERROR_MESSAGES,
   type PhotoPurpose,
+  API_ROUTES,
 } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -817,7 +818,7 @@ export class PhotoUploadService {
       });
 
       // Send to server-side upload API
-      const response = await fetch('/api/upload/photo', {
+      const response = await fetch(API_ROUTES.UPLOAD.PHOTO, {
         method: 'POST',
         body: formData,
       });

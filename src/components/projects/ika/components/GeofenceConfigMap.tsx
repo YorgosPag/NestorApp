@@ -20,6 +20,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { API_ROUTES } from '@/config/domain-constants';
 import { Map, Marker, Source, Layer } from 'react-map-gl/maplibre';
 import type { MapLayerMouseEvent } from 'react-map-gl/maplibre';
 import type { FillLayerSpecification, LineLayerSpecification } from 'maplibre-gl';
@@ -205,7 +206,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
     async function loadGeofence() {
       try {
         setIsLoading(true);
-        const res = await fetch(`/api/attendance/geofence?projectId=${projectId}`);
+        const res = await fetch(`${API_ROUTES.ATTENDANCE.GEOFENCE}?projectId=${projectId}`);
         const data = (await res.json()) as GeofenceApiResponse;
 
         if (data.success && data.geofence) {
@@ -234,7 +235,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
     setSaveSuccess(false);
 
     try {
-      const res = await fetch('/api/attendance/geofence', {
+      const res = await fetch(API_ROUTES.ATTENDANCE.GEOFENCE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

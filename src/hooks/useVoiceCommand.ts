@@ -13,6 +13,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { API_ROUTES } from '@/config/domain-constants';
 import { useVoiceCommandStore } from '@/stores/voiceCommandStore';
 import type { SubmitCommandResult } from '@/types/voice-command';
 
@@ -55,7 +56,7 @@ export function useVoiceCommand(): UseVoiceCommandReturn {
       setError(null);
 
       try {
-        const response = await fetch('/api/voice/command', {
+        const response = await fetch(API_ROUTES.VOICE.COMMAND, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: trimmed }),

@@ -9,6 +9,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { dlog, dwarn, derr } from '../debug';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { CompanyContact } from '../../../types/contacts';
 // 🔐 ENTERPRISE: Auth hook for authentication-ready gating
 import { useAuth } from '@/auth/hooks/useAuth';
@@ -155,7 +156,7 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
         cached: boolean;
       }
 
-      const url = forceRefresh ? '/api/companies?refresh=true' : '/api/companies';
+      const url = forceRefresh ? `${API_ROUTES.COMPANIES.LIST}?refresh=true` : API_ROUTES.COMPANIES.LIST;
       const result = await apiClient.get<CompaniesApiResponse>(url);
 
       // apiClient.get() unwraps the canonical { success: true, data: T } response automatically
@@ -254,7 +255,7 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
         count: number;
       }
 
-      const result = await apiClient.get<ProjectsApiResponse>(`/api/projects/by-company/${companyId}`);
+      const result = await apiClient.get<ProjectsApiResponse>(API_ROUTES.PROJECTS.BY_COMPANY(companyId));
 
       // apiClient.get() unwraps the canonical response automatically
       const projectsData = result?.projects || [];

@@ -13,6 +13,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { API_ROUTES } from '@/config/domain-constants';
 import type {
   PaymentPlan,
   PaymentRecord,
@@ -78,10 +79,10 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
     try {
       const [planRes, paymentsRes] = await Promise.all([
         fetchJson<{ success: boolean; data: PaymentPlan | null }>(
-          `/api/units/${unitId}/payment-plan`
+          API_ROUTES.UNITS.PAYMENT_PLAN(unitId)
         ),
         fetchJson<{ success: boolean; data: PaymentRecord[] }>(
-          `/api/units/${unitId}/payments`
+          API_ROUTES.UNITS.PAYMENTS(unitId)
         ),
       ]);
 
@@ -104,7 +105,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
       if (!unitId) return { success: false, error: 'No unit selected' };
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          `/api/units/${unitId}/payment-plan`,
+          API_ROUTES.UNITS.PAYMENT_PLAN(unitId),
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -126,7 +127,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
       if (!unitId) return { success: false, error: 'No unit selected' };
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          `/api/units/${unitId}/payment-plan`,
+          API_ROUTES.UNITS.PAYMENT_PLAN(unitId),
           {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -148,7 +149,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
       if (!unitId) return { success: false, error: 'No unit selected' };
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          `/api/units/${unitId}/payments`,
+          API_ROUTES.UNITS.PAYMENTS(unitId),
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -170,7 +171,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
       if (!unitId) return { success: false, error: 'No unit selected' };
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          `/api/units/${unitId}/payment-plan/installments`,
+          API_ROUTES.UNITS.INSTALLMENTS(unitId),
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -192,7 +193,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
       if (!unitId) return { success: false, error: 'No unit selected' };
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          `/api/units/${unitId}/payment-plan/installments`,
+          API_ROUTES.UNITS.INSTALLMENTS(unitId),
           {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -214,7 +215,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
       if (!unitId) return { success: false, error: 'No unit selected' };
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          `/api/units/${unitId}/payment-plan/installments`,
+          API_ROUTES.UNITS.INSTALLMENTS(unitId),
           {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
@@ -236,7 +237,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
       if (!unitId) return { success: false, error: 'No unit selected' };
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          `/api/units/${unitId}/payment-plan/loan`,
+          API_ROUTES.UNITS.LOAN(unitId),
           {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -256,7 +257,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
     async (planId: string) => {
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          `/api/units/${unitId}/payment-plan?planId=${encodeURIComponent(planId)}`,
+          `${API_ROUTES.UNITS.PAYMENT_PLAN(unitId!)}?planId=${encodeURIComponent(planId)}`,
           { method: 'DELETE' }
         );
         if (data.success) await fetchData();

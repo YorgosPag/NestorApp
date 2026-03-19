@@ -30,6 +30,7 @@ import type { Unit } from '@/types/unit';
 import { TransactionChainCard } from '@/components/sales/cards/TransactionChainCard';
 import { UnitHierarchyCard } from '@/components/sales/cards/UnitHierarchyCard';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 
 // =============================================================================
 // 🏢 TYPES
@@ -95,7 +96,7 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
 
     let cancelled = false;
     apiClient.get<{ contact: { displayName: string } }>(
-      `/api/contacts/${encodeURIComponent(contactId)}`
+      API_ROUTES.CONTACTS.BY_ID(encodeURIComponent(contactId))
     ).then((data) => {
       if (!cancelled && data?.contact?.displayName) {
         setResolvedBuyerName(data.contact.displayName);

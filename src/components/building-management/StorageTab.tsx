@@ -18,6 +18,7 @@ import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 import type { Building } from '@/types/building/contracts';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { Button } from '@/components/ui/button';
@@ -152,7 +153,7 @@ export function StorageTab({ building }: StorageTabProps) {
     try {
       setLoading(true);
       const result = await apiClient.get<StoragesApiResponse>(
-        `/api/storages?buildingId=${building.id}`
+        `${API_ROUTES.STORAGES.LIST}?buildingId=${building.id}`
       );
 
       if (result?.storages) {
@@ -216,7 +217,7 @@ export function StorageTab({ building }: StorageTabProps) {
     try {
       const storageName = createCode.trim() || `Αποθήκη-${Date.now().toString(36).toUpperCase()}`;
 
-      await apiClient.post<StorageCreateResult>('/api/storages', {
+      await apiClient.post<StorageCreateResult>(API_ROUTES.STORAGES.LIST, {
         name: storageName,
         buildingId: building.id,
         projectId: building.projectId || null,
@@ -263,7 +264,7 @@ export function StorageTab({ building }: StorageTabProps) {
     if (!editingId) return;
     setSaving(true);
     try {
-      await apiClient.patch<StorageMutationResult>(`/api/storages/${editingId}`, {
+      await apiClient.patch<StorageMutationResult>(API_ROUTES.STORAGES.BY_ID(editingId), {
         name: editCode.trim() || undefined,
         type: editType,
         status: editStatus,
@@ -299,7 +300,7 @@ export function StorageTab({ building }: StorageTabProps) {
     setConfirmLoading(true);
     setDeletingId(confirmDelete.id);
     try {
-      await apiClient.delete(`/api/storages/${confirmDelete.id}`);
+      await apiClient.delete(API_ROUTES.STORAGES.BY_ID(confirmDelete.id));
       success('Η αποθήκη διαγράφηκε');
       await fetchStorageUnits();
     } catch (err) {
@@ -327,7 +328,7 @@ export function StorageTab({ building }: StorageTabProps) {
     setUnlinkingId(confirmUnlink.id);
     try {
       const result = await apiClient.patch<StorageMutationResult>(
-        `/api/storages/${confirmUnlink.id}`,
+        API_ROUTES.STORAGES.BY_ID(confirmUnlink.id),
         { buildingId: null }
       );
       if (result?.id) {
@@ -355,7 +356,7 @@ export function StorageTab({ building }: StorageTabProps) {
   // ============================================================================
 
   const fetchUnlinkedStorages = useCallback(async (): Promise<LinkableItem[]> => {
-    const result = await apiClient.get<StoragesApiResponse>('/api/storages');
+    const result = await apiClient.get<StoragesApiResponse>(API_ROUTES.STORAGES.LIST);
     if (!result?.storages) return [];
     return result.storages
       .filter((s) => !s.buildingId)
@@ -367,7 +368,7 @@ export function StorageTab({ building }: StorageTabProps) {
   }, [translatedGetTypeLabel]);
 
   const handleLinkStorage = useCallback(async (itemId: string) => {
-    await apiClient.patch(`/api/storages/${itemId}`, { buildingId: building.id });
+    await apiClient.patch(API_ROUTES.STORAGES.BY_ID(itemId), { buildingId: building.id });
     success('Η αποθήκη συνδέθηκε');
     await fetchStorageUnits();
   }, [building.id, fetchStorageUnits]);

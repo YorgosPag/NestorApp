@@ -23,6 +23,7 @@ import { DollarSign, UserCheck, CheckCircle, Undo2, UserPlus, AlertTriangle } fr
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { ContactSearchManager } from '@/components/contacts/relationships/ContactSearchManager';
 import { TabbedAddNewContactDialog } from '@/components/contacts/dialogs/TabbedAddNewContactDialog';
 import { AppurtenancesSection } from './AppurtenancesSection';
@@ -123,7 +124,7 @@ export function ChangePriceDialog({ unit, open, onOpenChange, onSuccess }: BaseD
 
     setSaving(true);
     try {
-      await apiClient.patch(`/api/units/${unit.id}`, {
+      await apiClient.patch(API_ROUTES.UNITS.BY_ID(unit.id), {
         commercialStatus: unit.commercialStatus ?? 'for-sale',
         commercial: {
           askingPrice: price,
@@ -270,7 +271,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
     setSaving(true);
     setSaveError('');
     try {
-      await apiClient.patch(`/api/units/${unit.id}`, {
+      await apiClient.patch(API_ROUTES.UNITS.BY_ID(unit.id), {
         commercialStatus: 'reserved',
         commercial: {
           askingPrice: unit.commercial?.askingPrice ?? null,
@@ -300,7 +301,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
 
       // 1. ΠΑΝΤΑ: Email κράτησης στον αγοραστή (αν έχει buyerContactId)
       if (buyerContactId) {
-        apiClient.post(`/api/sales/${unit.id}/accounting-event`, {
+        apiClient.post(API_ROUTES.SALES.ACCOUNTING_EVENT(unit.id), {
           eventType: 'reservation_notify',
           unitId: unit.id,
           unitName,
@@ -323,7 +324,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
 
       // 2. ΜΟΝΟ αν deposit > 0: Τιμολόγιο προκαταβολής
       if (depositAmount > 0) {
-        apiClient.post(`/api/sales/${unit.id}/accounting-event`, {
+        apiClient.post(API_ROUTES.SALES.ACCOUNTING_EVENT(unit.id), {
           eventType: 'deposit_invoice',
           unitId: unit.id,
           unitName,
@@ -348,7 +349,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
       // ADR-199: Sync appurtenance commercial status
       if (selectedSpaces.length > 0) {
         const syncPayload = linkedSpaces.buildSyncPayload('reserve');
-        apiClient.post(`/api/sales/${unit.id}/appurtenance-sync`, {
+        apiClient.post(API_ROUTES.SALES.APPURTENANCE_SYNC(unit.id), {
           action: 'reserve',
           spaces: syncPayload,
           buyerContactId: buyerContactId || null,
@@ -572,7 +573,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
     setSaving(true);
     setSaveError('');
     try {
-      await apiClient.patch(`/api/units/${unit.id}`, {
+      await apiClient.patch(API_ROUTES.UNITS.BY_ID(unit.id), {
         commercialStatus: 'sold',
         commercial: {
           askingPrice: unit.commercial?.askingPrice ?? null,
@@ -597,7 +598,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
         ? linkedSpaces.buildLineItems(price, unitName)
         : undefined;
 
-      apiClient.post(`/api/sales/${unit.id}/accounting-event`, {
+      apiClient.post(API_ROUTES.SALES.ACCOUNTING_EVENT(unit.id), {
         eventType: 'final_sale_invoice',
         unitId: unit.id,
         unitName,
@@ -646,7 +647,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
       // ADR-199: Sync appurtenance commercial status
       if (selectedSpaces.length > 0) {
         const syncPayload = linkedSpaces.buildSyncPayload('sell');
-        apiClient.post(`/api/sales/${unit.id}/appurtenance-sync`, {
+        apiClient.post(API_ROUTES.SALES.APPURTENANCE_SYNC(unit.id), {
           action: 'sell',
           spaces: syncPayload,
           buyerContactId: buyerContactId || null,
@@ -897,7 +898,7 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
       const depositToRefund = unit.commercial?.reservationDeposit ?? 0;
       const refundBuyerContactId = unit.commercial?.buyerContactId ?? null;
 
-      await apiClient.patch(`/api/units/${unit.id}`, {
+      await apiClient.patch(API_ROUTES.UNITS.BY_ID(unit.id), {
         commercialStatus: 'for-sale',
         commercial: {
           askingPrice: unit.commercial?.askingPrice ?? null,
@@ -931,7 +932,7 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
         : undefined;
 
       if (creditAmount > 0) {
-        apiClient.post(`/api/sales/${unit.id}/accounting-event`, {
+        apiClient.post(API_ROUTES.SALES.ACCOUNTING_EVENT(unit.id), {
           eventType: 'credit_invoice',
           unitId: unit.id,
           unitName,
@@ -958,7 +959,7 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
       if (linkedSpaces.hasSpaces) {
         const syncPayload = linkedSpaces.buildSyncPayload('revert');
         if (syncPayload.length > 0) {
-          apiClient.post(`/api/sales/${unit.id}/appurtenance-sync`, {
+          apiClient.post(API_ROUTES.SALES.APPURTENANCE_SYNC(unit.id), {
             action: 'revert',
             spaces: syncPayload,
             buyerContactId: null,

@@ -15,6 +15,7 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
 import { useNavigation } from '@/components/navigation/core/NavigationContext';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { UnitHierarchyResponse } from '@/app/api/units/[id]/hierarchy/route';
 import { StatusCard } from '@/components/property-management/dashboard/StatusCard';
 import { DetailsCard } from '@/components/property-management/dashboard/DetailsCard';
@@ -211,7 +212,7 @@ function UnitsPageContent() {
     async function syncFromHierarchy() {
       try {
         const data = await apiClient.get<UnitHierarchyResponse>(
-          `/api/units/${encodeURIComponent(selectedUnit!.id)}/hierarchy`
+          API_ROUTES.UNITS.HIERARCHY(encodeURIComponent(selectedUnit!.id))
         );
         if (cancelled || !data.company || !data.project) return;
         syncBreadcrumb({

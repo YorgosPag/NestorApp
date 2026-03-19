@@ -23,6 +23,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { API_ROUTES } from '@/config/domain-constants';
 import { Map as MapGL, Marker, Popup, Source, Layer } from 'react-map-gl/maplibre';
 import type { FillLayerSpecification, LineLayerSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -279,7 +280,7 @@ export function LiveWorkerMap({
     async function loadGeofence() {
       try {
         setGeofenceLoading(true);
-        const res = await fetch(`/api/attendance/geofence?projectId=${projectId}`);
+        const res = await fetch(`${API_ROUTES.ATTENDANCE.GEOFENCE}?projectId=${projectId}`);
         const data = (await res.json()) as GeofenceApiResponse;
         if (data.success && data.geofence) {
           setGeofence(data.geofence);

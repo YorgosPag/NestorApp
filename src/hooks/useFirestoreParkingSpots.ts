@@ -10,6 +10,7 @@
 import { useEffect } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import type { ParkingSpot } from '@/types/parking';
@@ -68,7 +69,7 @@ export function useFirestoreParkingSpots(
       const params = new URLSearchParams();
       if (buildingId) params.set('buildingId', buildingId);
       if (projectId) params.set('projectId', projectId);
-      const url = params.toString() ? `/api/parking?${params.toString()}` : '/api/parking';
+      const url = params.toString() ? `${API_ROUTES.PARKING.LIST}?${params.toString()}` : API_ROUTES.PARKING.LIST;
 
       const result = await apiClient.get<ParkingApiResponse>(url);
       logger.info(`Loaded ${result?.parkingSpots?.length || 0} parking spots`, { buildingId });

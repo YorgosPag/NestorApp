@@ -26,6 +26,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 import { AssociationService } from '@/services/association.service';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('WorkerAssignmentDialog');
@@ -91,7 +92,7 @@ export function WorkerAssignmentDialog({
       }
 
       const data = await apiClient.get<SearchData>(
-        `/api/contacts/search-individuals?q=${encodeURIComponent(searchTerm.trim())}${excludeParam}`
+        `${API_ROUTES.CONTACTS.SEARCH_INDIVIDUALS}?q=${encodeURIComponent(searchTerm.trim())}${excludeParam}`
       );
 
       const mapped: SearchResult[] = (data?.contacts || []).map(c => ({

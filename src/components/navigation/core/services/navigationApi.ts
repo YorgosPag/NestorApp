@@ -6,6 +6,7 @@
 import { getAllActiveCompanies } from '@/services/companies.service';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import type {
   NavigationCompany,
   NavigationProject,
@@ -103,7 +104,7 @@ export class NavigationApiService {
         }>;
       }
 
-      const projectsResult = await apiClient.get<ProjectsApiResponse>(`/api/projects/by-company/${companyId}`);
+      const projectsResult = await apiClient.get<ProjectsApiResponse>(API_ROUTES.PROJECTS.BY_COMPANY(companyId));
 
       if (!projectsResult?.projects) {
         return [];
@@ -147,7 +148,7 @@ export class NavigationApiService {
         }>;
       }
 
-      const buildingsResult = await apiClient.get<BuildingsApiResponse>(`/api/buildings?projectId=${projectId}`);
+      const buildingsResult = await apiClient.get<BuildingsApiResponse>(`${API_ROUTES.BUILDINGS.LIST}?projectId=${projectId}`);
 
       // Return buildings with empty floors (loaded on-demand)
       return (buildingsResult?.buildings || []).map((building) => ({
@@ -184,7 +185,7 @@ export class NavigationApiService {
         };
       }
 
-      const floorsResult = await apiClient.get<FloorsApiResponse>(`/api/floors?buildingId=${buildingId}`);
+      const floorsResult = await apiClient.get<FloorsApiResponse>(`${API_ROUTES.FLOORS.LIST}?buildingId=${buildingId}`);
 
       const floors = floorsResult?.data?.floors || floorsResult?.floors || [];
 
@@ -219,7 +220,7 @@ export class NavigationApiService {
         }>;
       }
 
-      const unitsResult = await apiClient.get<UnitsApiResponse>(`/api/units?floorId=${floorId}&buildingId=${buildingId}`);
+      const unitsResult = await apiClient.get<UnitsApiResponse>(`${API_ROUTES.UNITS.LIST}?floorId=${floorId}&buildingId=${buildingId}`);
 
       // 🏢 ENTERPRISE: Map to NavigationUnit with all required fields
       return (unitsResult?.units || []).map((unit): NavigationUnit => ({
@@ -254,7 +255,7 @@ export class NavigationApiService {
         }>;
       }
 
-      const unitsResult = await apiClient.get<UnitsApiResponse>(`/api/units?buildingId=${buildingId}`);
+      const unitsResult = await apiClient.get<UnitsApiResponse>(`${API_ROUTES.UNITS.LIST}?buildingId=${buildingId}`);
 
       // 🏢 ENTERPRISE: Map to NavigationUnit with all required fields
       return (unitsResult?.units || []).map((unit): NavigationUnit => ({

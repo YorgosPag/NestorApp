@@ -4,6 +4,7 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import { emailTemplates, getTemplateContent } from "../utils/emailTemplates";
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -62,7 +63,7 @@ export function useSendEmailModal(lead?: Lead | null, onClose?: () => void, onEm
         messageId?: string;
       }
 
-      const result = await apiClient.post<EmailApiResponse>('/api/communications/email', emailPayload);
+      const result = await apiClient.post<EmailApiResponse>(API_ROUTES.COMMUNICATIONS.EMAIL, emailPayload);
       logger.info('Email queued successfully', { result });
       return { success: true, data: result };
 
