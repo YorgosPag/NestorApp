@@ -491,7 +491,10 @@ function StoragePageContent() {
             <StorageGridView
               storages={filteredStorages}
               selectedStorage={selectedStorage}
-              onSelectStorage={(s) => setSelectedStorage(toggleSelect(selectedStorage, s))}
+              onSelectStorage={(s) => {
+                setSelectedStorage(toggleSelect(selectedStorage, s));
+                setShowCreateForm(false);
+              }}
             />
           ) : (
             /* 🏢 ENTERPRISE: List View with Details Panel */
@@ -499,12 +502,21 @@ function StoragePageContent() {
               <StoragesList
                 storages={filteredStorages}
                 selectedStorage={selectedStorage}
-                onSelectStorage={(s) => setSelectedStorage(toggleSelect(selectedStorage, s))}
-                onNewItem={() => setShowCreateForm(true)}
+                onSelectStorage={(s) => {
+                  setSelectedStorage(toggleSelect(selectedStorage, s));
+                  setShowCreateForm(false);
+                }}
+                onNewItem={() => {
+                  setShowCreateForm(true);
+                  setSelectedStorage(null);
+                }}
               />
               <StorageDetails
                 storage={selectedStorage}
-                onNewStorage={() => setShowCreateForm(true)}
+                onNewStorage={() => {
+                  setShowCreateForm(true);
+                  setSelectedStorage(null);
+                }}
                 onDelete={() => setShowDeleteDialog(true)}
               />
             </>
