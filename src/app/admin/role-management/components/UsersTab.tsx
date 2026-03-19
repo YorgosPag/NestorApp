@@ -83,7 +83,7 @@ export function UsersTab({ canEdit }: UsersTabProps) {
       const data = await apiClient.get<UserListResponse['data']>(
         '/api/admin/role-management/users'
       );
-      setUsers(data.users);
+      setUsers(Array.isArray(data?.users) ? data.users : []);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load users';
       notifyError(message);

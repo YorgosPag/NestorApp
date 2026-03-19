@@ -82,7 +82,7 @@ export const GET = withSensitiveRateLimit(
         const membersSnap = await db.collection(membersPath).get();
 
         if (membersSnap.empty) {
-          return NextResponse.json({ success: true, data: [], count: 0 });
+          return NextResponse.json({ success: true, data: { users: [], total: 0 } });
         }
 
         const memberDocs: MemberDoc[] = membersSnap.docs.map((doc) => {
