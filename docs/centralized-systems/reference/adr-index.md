@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 235 ADRs + 6 SPECs (242A-E, 245B3) | Last Updated: 2026-03-19
+**📊 Stats**: 236 ADRs + 6 SPECs (242A-E, 245B3) | Last Updated: 2026-03-19
 
 ---
 
@@ -278,6 +278,7 @@
 | **ADR-246** | Universal Firestore→API Mapper Centralization (27+ scattered → 1 SSoT) | ✅ APPROVED | 2026-03-19 | Data Access Layer / Entity Systems | [📄](./adrs/ADR-246-universal-firestore-mapper-centralization.md) |
 | **ADR-247** | Entity Relationship Integrity Audit (5 findings, 6 protected areas) | ✅ APPROVED | 2026-03-19 | Entity Systems / Data Integrity | [📄](./adrs/ADR-247-entity-relationship-integrity-audit.md) |
 | **ADR-248** | Centralized Auto-Save System (Google-Level) — 8+ boilerplate patterns → 1 hook | ✅ IMPLEMENTED | 2026-03-19 | UI / State Management / Data Persistence | [📄](./adrs/ADR-248-centralized-auto-save.md) |
+| **ADR-249** | Comprehensive Server-Side Integrity Audit (8 findings, P0/P1/P2 roadmap) | ✅ DOCUMENTED | 2026-03-19 | Entity Systems / Data Integrity / Security | [📄](./adrs/ADR-249-comprehensive-server-integrity-audit.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
