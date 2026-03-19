@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 234 ADRs + 5 SPECs (242A-E) | Last Updated: 2026-03-19
+**📊 Stats**: 235 ADRs + 5 SPECs (242A-E) | Last Updated: 2026-03-19
 
 ---
 
@@ -275,6 +275,7 @@
 | **ADR-244** | Role Management Admin Console — RBAC UI for User & Permission Management | 📋 PROPOSED | 2026-03-19 | Security & Auth | [📄](./adrs/ADR-244-role-management-admin-console.md) |
 | **ADR-245** | API Routes Centralization — Zero Hardcoded Endpoints | ✅ PHASE_A_COMPLETE | 2026-03-19 | Infrastructure | [📄](./adrs/ADR-245-api-routes-centralization.md) |
 | **ADR-246** | Universal Firestore→API Mapper Centralization (27+ scattered → 1 SSoT) | ✅ APPROVED | 2026-03-19 | Data Access Layer / Entity Systems | [📄](./adrs/ADR-246-universal-firestore-mapper-centralization.md) |
+| **ADR-247** | Entity Relationship Integrity Audit (5 findings, 6 protected areas) | ✅ APPROVED | 2026-03-19 | Entity Systems / Data Integrity | [📄](./adrs/ADR-247-entity-relationship-integrity-audit.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
