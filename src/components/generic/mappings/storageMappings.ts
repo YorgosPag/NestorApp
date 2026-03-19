@@ -24,13 +24,13 @@ import { StorageGeneralTab } from '@/components/space-management/StoragesPage/St
 import { StorageDocumentsTab } from '@/components/space-management/StoragesPage/StorageDetails/tabs/StorageDocumentsTab';
 import { StoragePhotosTab } from '@/components/space-management/StoragesPage/StorageDetails/tabs/StoragePhotosTab';
 import { StorageVideosTab } from '@/components/space-management/StoragesPage/StorageDetails/tabs/StorageVideosTab';
+import { StorageFloorplanTab } from '@/components/space-management/StoragesPage/StorageDetails/tabs/StorageFloorplanTab';
 
 // ============================================================================
 // SHARED COMPONENTS (reused from their original locations)
 // ============================================================================
 
 import PlaceholderTab from '@/components/building-management/tabs/PlaceholderTab';
-import { FloorplanViewerTab } from '@/components/projects/tabs/FloorplanViewerTab';
 import { ActivityTab } from '@/components/shared/audit/ActivityTab';
 
 // ============================================================================
@@ -42,8 +42,8 @@ export const STORAGE_COMPONENT_MAPPING = {
   'StorageDocumentsTab': StorageDocumentsTab,
   'StoragePhotosTab': StoragePhotosTab,
   'StorageVideosTab': StorageVideosTab,
+  'StorageFloorplanTab': StorageFloorplanTab,
   'PlaceholderTab': PlaceholderTab,
-  'FloorplanViewerTab': FloorplanViewerTab,
   'ActivityTab': ActivityTab,
 } as const;
 

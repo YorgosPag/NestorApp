@@ -270,11 +270,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             description: 'Κάτοψη και διάταξη αποθήκης',
             order: 2,
             enabled: true,
-            component: 'FloorplanViewerTab',
-            componentProps: {
-              title: 'Κατόψεις Αποθήκης',
-              floorplanType: 'storage'
-            }
+            component: 'StorageFloorplanTab'
           },
           {
             id: 'documents',
