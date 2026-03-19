@@ -16,9 +16,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Save, CheckCircle, AlertCircle, X, Car, Package } from 'lucide-react';
+import { CheckCircle, AlertCircle, X, Car, Package } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 // 🏢 ENTERPRISE: Using centralized entity config for consistent icons/colors
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
@@ -285,101 +284,38 @@ export function LinkedSpacesCard({
     setSaveStatus('idle');
   }, []);
 
-  // 🏢 ENTERPRISE: Save draft to Firestore
-  // Auto-adds any pending dropdown selection (if "+" was not clicked) before saving.
-  // This fixes the UX issue where users selected from dropdown but never clicked "+"
-  // and then couldn't click "Αποθήκευση" (was disabled because draft === current).
-  const handleSave = useCallback(async () => {
-    if (!unitId) {
-      logger.error('[LinkedSpacesCard] No unitId provided');
-      return;
-    }
+  // 🏢 ENTERPRISE: Auto-save — whenever draft changes, persist to Firestore automatically.
+  // No manual save button needed. Selections auto-add to draft → auto-save fires.
+  const prevDraftRef = React.useRef(JSON.stringify(currentLinkedSpaces));
+  useEffect(() => {
+    const draftJson = JSON.stringify(draftLinkedSpaces);
+    // Skip if unchanged or if this is the initial render
+    if (draftJson === prevDraftRef.current) return;
+    if (!unitId) return;
 
-    // Auto-add any pending parking selection (selected from dropdown but "+" not clicked)
-    let finalDraft = [...draftLinkedSpaces];
+    prevDraftRef.current = draftJson;
 
-    if (!isSelectClearValue(selectedParkingId)) {
-      const parking = parkingOptions.find(p => p.id === selectedParkingId);
-      if (parking && !finalDraft.some(ls => ls.spaceId === selectedParkingId)) {
-        finalDraft = [
-          ...finalDraft,
-          {
-            spaceId: selectedParkingId,
-            spaceType: ALLOCATION_SPACE_TYPES.PARKING,
-            quantity: 1,
-            inclusion: selectedInclusion,
-            allocationCode: parking.number,
-          },
-        ];
-        setSelectedParkingId(SELECT_CLEAR_VALUE);
+    const saveTimer = setTimeout(async () => {
+      setSaving(true);
+      setSaveStatus('idle');
+      try {
+        await apiClient.patch(`/api/units/${unitId}`, {
+          linkedSpaces: draftLinkedSpaces,
+        });
+        logger.info(`[LinkedSpacesCard] Auto-saved ${draftLinkedSpaces.length} linked spaces`);
+        setSaveStatus('success');
+        onLinkedSpacesChanged?.(draftLinkedSpaces);
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      } catch (error) {
+        logger.error('[LinkedSpacesCard] Auto-save error:', { error });
+        setSaveStatus('error');
+      } finally {
+        setSaving(false);
       }
-    }
+    }, 500); // 500ms debounce — instant feel, prevents double-saves
 
-    // Auto-add any pending storage selection (selected from dropdown but "+" not clicked)
-    if (!isSelectClearValue(selectedStorageId)) {
-      const storage = storageOptions.find(s => s.id === selectedStorageId);
-      if (storage && !finalDraft.some(ls => ls.spaceId === selectedStorageId)) {
-        finalDraft = [
-          ...finalDraft,
-          {
-            spaceId: selectedStorageId,
-            spaceType: ALLOCATION_SPACE_TYPES.STORAGE,
-            quantity: 1,
-            inclusion: selectedInclusion,
-            allocationCode: storage.name,
-          },
-        ];
-        setSelectedStorageId(SELECT_CLEAR_VALUE);
-      }
-    }
-
-    // Update draft state to match what we'll save (so UI reflects the new items)
-    if (finalDraft.length !== draftLinkedSpaces.length) {
-      setDraftLinkedSpaces(finalDraft);
-    }
-
-    setSaving(true);
-    setSaveStatus('idle');
-
-    try {
-      // 🏢 ADR-238: Save via Admin SDK API (client-side updateDoc blocked by Firestore security rules)
-      await apiClient.patch(`/api/units/${unitId}`, {
-        linkedSpaces: finalDraft,
-      });
-
-      logger.info(`[LinkedSpacesCard] Unit ${unitId} linkedSpaces updated with ${finalDraft.length} spaces`);
-      setSaveStatus('success');
-
-      if (onLinkedSpacesChanged) {
-        onLinkedSpacesChanged(finalDraft);
-      }
-
-      // Reset success status after 3 seconds
-      setTimeout(() => setSaveStatus('idle'), 3000);
-    } catch (error) {
-      logger.error('[LinkedSpacesCard] Error saving:', { error: error });
-      setSaveStatus('error');
-    } finally {
-      setSaving(false);
-    }
-  }, [
-    unitId,
-    draftLinkedSpaces,
-    selectedParkingId,
-    selectedStorageId,
-    selectedInclusion,
-    parkingOptions,
-    storageOptions,
-    onLinkedSpacesChanged,
-  ]);
-
-  // 🏢 ENTERPRISE: Check if draft differs from props OR if there's a pending (unconfirmed) selection.
-  // Pending selection = user picked from dropdown but hasn't clicked "+" yet.
-  const hasPendingSelection =
-    !isSelectClearValue(selectedParkingId) || !isSelectClearValue(selectedStorageId);
-  const hasChanges =
-    hasPendingSelection ||
-    JSON.stringify(draftLinkedSpaces) !== JSON.stringify(currentLinkedSpaces);
+    return () => clearTimeout(saveTimer);
+  }, [draftLinkedSpaces, unitId, onLinkedSpacesChanged]);
 
   // 🏢 ENTERPRISE: Get space name for display
   const getSpaceName = (space: LinkedSpace): string => {
@@ -562,41 +498,29 @@ export function LinkedSpacesCard({
               )}
             </fieldset>
 
-            {/* Save button */}
-            <footer className={`flex items-center justify-between ${spacing.padding.top.sm}`}>
-              <Button
-                onClick={handleSave}
-                disabled={saving || !hasChanges}
-                variant={hasChanges ? 'default' : 'outline'}
-                size="sm"
-              >
-                {saving ? (
-                  <>
-                    <Spinner size="small" color="inherit" className={spacing.margin.right.sm} />
+            {/* Auto-save status indicators (no manual save button needed) */}
+            {(saving || saveStatus !== 'idle') && (
+              <footer className={`flex items-center ${spacing.gap.sm} ${spacing.padding.top.sm}`}>
+                {saving && (
+                  <span className={`flex items-center ${spacing.gap.sm} text-sm text-muted-foreground`}>
+                    <Spinner size="small" />
                     {t('linkedSpaces.saving', { defaultValue: 'Αποθήκευση...' })}
-                  </>
-                ) : (
-                  <>
-                    <Save className={cn(iconSizes.sm, spacing.margin.right.sm)} />
-                    {t('linkedSpaces.save', { defaultValue: 'Αποθήκευση' })}
-                  </>
+                  </span>
                 )}
-              </Button>
-
-              {/* Status indicators */}
-              {saveStatus === 'success' && (
-                <span className={`flex items-center ${spacing.gap.sm} text-sm text-green-600 dark:text-green-400`}>
-                  <CheckCircle className={iconSizes.sm} />
-                  {t('linkedSpaces.success', { defaultValue: 'Αποθηκεύτηκε!' })}
-                </span>
-              )}
-              {saveStatus === 'error' && (
-                <span className={`flex items-center ${spacing.gap.sm} text-sm text-red-600 dark:text-red-400`}>
-                  <AlertCircle className={iconSizes.sm} />
-                  {t('linkedSpaces.error', { defaultValue: 'Σφάλμα' })}
-                </span>
-              )}
-            </footer>
+                {saveStatus === 'success' && (
+                  <span className={`flex items-center ${spacing.gap.sm} text-sm text-green-600 dark:text-green-400`}>
+                    <CheckCircle className={iconSizes.sm} />
+                    {t('linkedSpaces.success', { defaultValue: 'Αποθηκεύτηκε!' })}
+                  </span>
+                )}
+                {saveStatus === 'error' && (
+                  <span className={`flex items-center ${spacing.gap.sm} text-sm text-red-600 dark:text-red-400`}>
+                    <AlertCircle className={iconSizes.sm} />
+                    {t('linkedSpaces.error', { defaultValue: 'Σφάλμα' })}
+                  </span>
+                )}
+              </footer>
+            )}
           </>
         )}
 
