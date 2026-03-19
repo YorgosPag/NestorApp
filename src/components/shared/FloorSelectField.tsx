@@ -3,14 +3,13 @@
 /**
  * FloorSelectField — Reusable floor dropdown (Radix Select — ADR-001 canonical)
  *
- * Real-time Firestore subscription for floors of a given buildingId.
+ * Loads floors via API (Admin SDK) — consistent with every other entity in the app.
  * When no building is linked, shows a disabled state with a hint.
  *
  * @module components/shared/FloorSelectField
- * @pattern onSnapshot — same as useContactEmailWatch, useRealtimeBuildings
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Select,
   SelectContent,
@@ -20,12 +19,8 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { collection, query, where, onSnapshot, type QueryConstraint } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import { formatFloorLabel } from '@/lib/intl-utils';
-import { cn } from '@/lib/utils';
-import { useAuth } from '@/auth/contexts/AuthContext';
 
 // =============================================================================
 // TYPES
@@ -45,6 +40,16 @@ export interface FloorChangePayload {
   floor: number;
   /** Floor document ID (foreign key on unit document) */
   floorId: string;
+}
+
+interface FloorsApiResponse {
+  floors: Array<{
+    id: string;
+    number: number;
+    name?: string;
+    buildingId: string;
+    [key: string]: unknown;
+  }>;
 }
 
 export interface FloorSelectFieldProps {
@@ -81,62 +86,40 @@ export function FloorSelectField({
 }: FloorSelectFieldProps) {
   const [floors, setFloors] = useState<FloorOption[]>([]);
   const [loading, setLoading] = useState(false);
-  const { user } = useAuth();
 
   // Keep floors ref for lookup in onChange
   const floorsRef = useRef<FloorOption[]>([]);
   floorsRef.current = floors;
 
-  // Real-time Firestore subscription for floors
-  useEffect(() => {
-    if (!buildingId || !user) {
+  // 🏢 GOOGLE-LEVEL: Load floors via API (Admin SDK) — same pattern as every other entity.
+  // No client-side Firestore dependency. Works regardless of security rules.
+  const loadFloors = useCallback(async (bId: string) => {
+    setLoading(true);
+    try {
+      const result = await apiClient.get<FloorsApiResponse>(`/api/floors?buildingId=${bId}`);
+      const options: FloorOption[] = (result?.floors ?? [])
+        .map((f) => ({
+          id: f.id,
+          value: String(typeof f.number === 'number' ? f.number : 0),
+          label: f.name || formatFloorLabel(typeof f.number === 'number' ? f.number : 0),
+        }))
+        .sort((a, b) => Number(a.value) - Number(b.value));
+
+      setFloors(options);
+    } catch {
       setFloors([]);
+    } finally {
       setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!buildingId) {
+      setFloors([]);
       return;
     }
-
-    setLoading(true);
-
-    const floorsCol = collection(db, COLLECTIONS.FLOORS);
-    const constraints: QueryConstraint[] = [
-      where('buildingId', '==', buildingId),
-    ];
-
-    // 🏢 ADR-232: Skip companyId filter for super admin (entities may have null companyId)
-    const isSuperAdmin = user.globalRole === 'super_admin';
-    if (!isSuperAdmin && user.companyId) {
-      constraints.push(where('companyId', '==', user.companyId));
-    }
-
-    const q = query(floorsCol, ...constraints);
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const options: FloorOption[] = snapshot.docs
-          .map((doc) => {
-            const data = doc.data();
-            const num = typeof data.number === 'number' ? data.number : 0;
-            return {
-              id: doc.id,
-              value: String(num),
-              label: (data.name as string) || formatFloorLabel(num),
-            };
-          })
-          .sort((a, b) => Number(a.value) - Number(b.value));
-
-        setFloors(options);
-        setLoading(false);
-      },
-      () => {
-        // On error, clear floors (non-blocking)
-        setFloors([]);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [buildingId, user]);
+    loadFloors(buildingId);
+  }, [buildingId, loadFloors]);
 
   const isDisabled = disabled || !buildingId;
   const selectValue = value || NONE_VALUE;
@@ -148,7 +131,6 @@ export function FloorSelectField({
     }
 
     // v = floor doc ID (since SelectItem value={f.id})
-    // Find the floor option to get the floor number for display
     const selectedFloor = floorsRef.current.find((f) => f.id === v);
     if (selectedFloor) {
       onChange(selectedFloor.value, {
