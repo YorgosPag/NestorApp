@@ -71,12 +71,24 @@ export interface AuditEntry {
   op: string;
   collection: string;
   documentId?: string;
+  path?: string;
   filters?: QueryFilter[];
   fieldsChanged?: string[];
   resultCount?: number;
   ms: number;
   blocked?: boolean;
   reason?: string;
+}
+
+// ============================================================================
+// STORAGE ACCESS CONTROL TYPES
+// ============================================================================
+
+export type StorageOperation = 'read' | 'write' | 'delete';
+
+export interface StorageAccessDecision {
+  allowed: boolean;
+  reason: string;
 }
 
 // ============================================================================

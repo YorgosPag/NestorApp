@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 230 ADRs + 5 SPECs (242A-E) | Last Updated: 2026-03-19
+**📊 Stats**: 231 ADRs + 5 SPECs (242A-E) | Last Updated: 2026-03-19
 
 ---
 
@@ -24,7 +24,7 @@
 | 📂 **Entity Systems** | 14 | [View](#entity-systems) |
 | 🔧 **Tools & Keyboard** | 8 | [View](#tools-keyboard) |
 | 🔍 **Filters & Search** | 1 | [View](#filters-search) |
-| 🔒 **Security & Auth** | 7 | [View](#security-auth) |
+| 🔒 **Security & Auth** | 8 | [View](#security-auth) |
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
@@ -270,7 +270,8 @@
 | ↳ SPEC-242C | Portfolio Dashboard & Debt Maturity Wall | ✅ IMPLEMENTED | 2026-03-18 | — | [📄](./adrs/specs/SPEC-242C-portfolio-dashboard.md) |
 | ↳ SPEC-242D | Monte Carlo Simulation & Equity Waterfall | ✅ IMPLEMENTED | 2026-03-18 | — | [📄](./adrs/specs/SPEC-242D-monte-carlo-waterfall.md) |
 | ↳ SPEC-242E | Forward Curves, Hedging Simulator & NL Financial Query | 🟡 SESSION 1/2 (Curves+Hedging done, NL Query pending) | 2026-03-18 | — | [📄](./adrs/specs/SPEC-242E-forward-curves-hedging-ai.md) |
-| **ADR-243** | Custom Firestore MCP Server — Secure Database Access for Claude Code | ✅ IMPLEMENTED | 2026-03-19 | Infrastructure | [📄](./adrs/ADR-243-firestore-mcp-server.md) |
+| **ADR-243** | Custom MCP Server — Firestore + Firebase Storage Access for Claude Code (v1.1.0: 15 tools) | ✅ IMPLEMENTED | 2026-03-19 | Infrastructure | [📄](./adrs/ADR-243-firestore-mcp-server.md) |
+| **ADR-244** | Role Management Admin Console — RBAC UI for User & Permission Management | 📋 PROPOSED | 2026-03-19 | Security & Auth | [📄](./adrs/ADR-244-role-management-admin-console.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -460,6 +461,7 @@
 | **ADR-068** | API Rate Limiting System | ✅ APPROVED | [View](./adrs/ADR-068-api-rate-limiting-system.md) |
 | **ADR-072** | AI Inbox HTML Rendering with Enterprise Sanitization | ✅ IMPLEMENTED | [View](./adrs/ADR-072-ai-inbox-html-rendering.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | [View](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
+| **ADR-244** | Role Management Admin Console | 📋 PROPOSED | [View](./adrs/ADR-244-role-management-admin-console.md) |
 
 ---
 

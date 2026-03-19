@@ -24,13 +24,25 @@ interface RateBucket {
 const rateBuckets = new Map<string, RateBucket>();
 
 const RATE_LIMITS: Record<string, { maxRequests: number; windowMs: number }> = {
+  // Firestore rate limits
   read: { maxRequests: 60, windowMs: 60_000 },
   write: { maxRequests: 20, windowMs: 60_000 },
   delete: { maxRequests: 5, windowMs: 60_000 },
+  // Storage rate limits (separate buckets)
+  storage_read: { maxRequests: 30, windowMs: 60_000 },
+  storage_write: { maxRequests: 10, windowMs: 60_000 },
+  storage_delete: { maxRequests: 3, windowMs: 60_000 },
 };
 
 export function checkRateLimit(operation: string): { allowed: boolean; reason: string } {
-  const category = operation === 'delete' ? 'delete' : operation === 'create' || operation === 'update' ? 'write' : 'read';
+  // Storage operations use their own rate limit buckets
+  const category = operation.startsWith('storage_')
+    ? operation
+    : operation === 'delete'
+      ? 'delete'
+      : operation === 'create' || operation === 'update'
+        ? 'write'
+        : 'read';
   const limit = RATE_LIMITS[category];
   if (!limit) return { allowed: true, reason: 'No rate limit configured' };
 
