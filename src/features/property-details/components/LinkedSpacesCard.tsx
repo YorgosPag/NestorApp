@@ -243,10 +243,13 @@ export function LinkedSpacesCard({
       allocationCode: parking.number,
     };
 
-    setDraftLinkedSpaces(prev => [...prev, newLinkedSpace]);
+    setDraftLinkedSpaces(prev => {
+      const updated = [...prev, newLinkedSpace];
+      persistLinkedSpaces(updated);
+      return updated;
+    });
     setSelectedParkingId(SELECT_CLEAR_VALUE);
-    setSaveStatus('idle');
-  }, [parkingOptions, draftLinkedSpaces, selectedInclusion]);
+  }, [parkingOptions, draftLinkedSpaces, selectedInclusion, persistLinkedSpaces]);
 
   // 🏢 ENTERPRISE: Auto-add storage to draft on dropdown selection (no "+" button needed)
   const handleStorageSelected = useCallback((storageId: string) => {
@@ -273,49 +276,44 @@ export function LinkedSpacesCard({
       allocationCode: storage.name,
     };
 
-    setDraftLinkedSpaces(prev => [...prev, newLinkedSpace]);
+    setDraftLinkedSpaces(prev => {
+      const updated = [...prev, newLinkedSpace];
+      persistLinkedSpaces(updated);
+      return updated;
+    });
     setSelectedStorageId(SELECT_CLEAR_VALUE);
-    setSaveStatus('idle');
-  }, [storageOptions, draftLinkedSpaces, selectedInclusion]);
+  }, [storageOptions, draftLinkedSpaces, selectedInclusion, persistLinkedSpaces]);
 
-  // 🏢 ENTERPRISE: Remove space from draft (user action only)
-  const handleRemoveSpace = useCallback((spaceId: string) => {
-    setDraftLinkedSpaces(prev => prev.filter(ls => ls.spaceId !== spaceId));
-    setSaveStatus('idle');
-  }, []);
-
-  // 🏢 ENTERPRISE: Auto-save — whenever draft changes, persist to Firestore automatically.
-  // No manual save button needed. Selections auto-add to draft → auto-save fires.
-  const prevDraftRef = React.useRef(JSON.stringify(currentLinkedSpaces));
-  useEffect(() => {
-    const draftJson = JSON.stringify(draftLinkedSpaces);
-    // Skip if unchanged or if this is the initial render
-    if (draftJson === prevDraftRef.current) return;
+  // 🏢 ENTERPRISE: Immediate save — persists linkedSpaces to Firestore right away.
+  // No debounce, no useEffect. Called directly from add/remove handlers.
+  const persistLinkedSpaces = useCallback(async (newDraft: LinkedSpace[]) => {
     if (!unitId) return;
+    setSaving(true);
+    setSaveStatus('idle');
+    try {
+      await apiClient.patch(`/api/units/${unitId}`, {
+        linkedSpaces: newDraft,
+      });
+      logger.info(`[LinkedSpacesCard] Saved ${newDraft.length} linked spaces`);
+      setSaveStatus('success');
+      onLinkedSpacesChanged?.(newDraft);
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    } catch (error) {
+      logger.error('[LinkedSpacesCard] Save error:', { error });
+      setSaveStatus('error');
+    } finally {
+      setSaving(false);
+    }
+  }, [unitId, onLinkedSpacesChanged]);
 
-    prevDraftRef.current = draftJson;
-
-    const saveTimer = setTimeout(async () => {
-      setSaving(true);
-      setSaveStatus('idle');
-      try {
-        await apiClient.patch(`/api/units/${unitId}`, {
-          linkedSpaces: draftLinkedSpaces,
-        });
-        logger.info(`[LinkedSpacesCard] Auto-saved ${draftLinkedSpaces.length} linked spaces`);
-        setSaveStatus('success');
-        onLinkedSpacesChanged?.(draftLinkedSpaces);
-        setTimeout(() => setSaveStatus('idle'), 3000);
-      } catch (error) {
-        logger.error('[LinkedSpacesCard] Auto-save error:', { error });
-        setSaveStatus('error');
-      } finally {
-        setSaving(false);
-      }
-    }, 500); // 500ms debounce — instant feel, prevents double-saves
-
-    return () => clearTimeout(saveTimer);
-  }, [draftLinkedSpaces, unitId, onLinkedSpacesChanged]);
+  // 🏢 ENTERPRISE: Remove space — update draft + save immediately
+  const handleRemoveSpace = useCallback((spaceId: string) => {
+    setDraftLinkedSpaces(prev => {
+      const updated = prev.filter(ls => ls.spaceId !== spaceId);
+      persistLinkedSpaces(updated);
+      return updated;
+    });
+  }, [persistLinkedSpaces]);
 
   // 🏢 ENTERPRISE: Get space name for display
   const getSpaceName = (space: LinkedSpace): string => {
