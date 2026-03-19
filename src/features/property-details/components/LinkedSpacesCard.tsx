@@ -218,7 +218,40 @@ export function LinkedSpacesCard({
   // ✅ PATTERN: Draft state initialized in useState, updated only by user action
   // ============================================================================
 
-  // 🏢 ENTERPRISE: Auto-add parking to draft on dropdown selection (no "+" button needed)
+  // ============================================================================
+  // 🏢 GOOGLE-LEVEL: Optimistic Update Pattern
+  //
+  // 1. UI updates INSTANTLY (optimistic)
+  // 2. PATCH fires in background
+  // 3. On failure → rollback to previous state + show error
+  // ============================================================================
+
+  const persistLinkedSpaces = useCallback(async (
+    newDraft: LinkedSpace[],
+    rollback: LinkedSpace[],
+  ) => {
+    if (!unitId) return;
+    setSaving(true);
+    try {
+      await apiClient.patch(`/api/units/${unitId}`, {
+        linkedSpaces: newDraft,
+      });
+      logger.info(`[LinkedSpacesCard] Saved ${newDraft.length} linked spaces`);
+      setSaveStatus('success');
+      onLinkedSpacesChanged?.(newDraft);
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    } catch (error) {
+      logger.error('[LinkedSpacesCard] Save failed — rolling back', { error });
+      // ROLLBACK: restore previous state
+      setDraftLinkedSpaces(rollback);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 5000);
+    } finally {
+      setSaving(false);
+    }
+  }, [unitId, onLinkedSpacesChanged]);
+
+  // 🏢 ENTERPRISE: Add parking — optimistic update + background save
   const handleParkingSelected = useCallback((parkingId: string) => {
     if (!parkingId || isSelectClearValue(parkingId)) {
       setSelectedParkingId(SELECT_CLEAR_VALUE);
@@ -228,9 +261,7 @@ export function LinkedSpacesCard({
     const parking = parkingOptions.find(p => p.id === parkingId);
     if (!parking) return;
 
-    // Check if already linked
     if (draftLinkedSpaces.some(ls => ls.spaceId === parkingId)) {
-      logger.warn('[LinkedSpacesCard] Parking already linked');
       setSelectedParkingId(SELECT_CLEAR_VALUE);
       return;
     }
@@ -243,15 +274,15 @@ export function LinkedSpacesCard({
       allocationCode: parking.number,
     };
 
-    setDraftLinkedSpaces(prev => {
-      const updated = [...prev, newLinkedSpace];
-      persistLinkedSpaces(updated);
-      return updated;
-    });
+    // Optimistic: update UI first, then save
+    const previous = draftLinkedSpaces;
+    const updated = [...previous, newLinkedSpace];
+    setDraftLinkedSpaces(updated);
     setSelectedParkingId(SELECT_CLEAR_VALUE);
+    persistLinkedSpaces(updated, previous);
   }, [parkingOptions, draftLinkedSpaces, selectedInclusion, persistLinkedSpaces]);
 
-  // 🏢 ENTERPRISE: Auto-add storage to draft on dropdown selection (no "+" button needed)
+  // 🏢 ENTERPRISE: Add storage — optimistic update + background save
   const handleStorageSelected = useCallback((storageId: string) => {
     if (!storageId || isSelectClearValue(storageId)) {
       setSelectedStorageId(SELECT_CLEAR_VALUE);
@@ -261,9 +292,7 @@ export function LinkedSpacesCard({
     const storage = storageOptions.find(s => s.id === storageId);
     if (!storage) return;
 
-    // Check if already linked
     if (draftLinkedSpaces.some(ls => ls.spaceId === storageId)) {
-      logger.warn('[LinkedSpacesCard] Storage already linked');
       setSelectedStorageId(SELECT_CLEAR_VALUE);
       return;
     }
@@ -276,44 +305,21 @@ export function LinkedSpacesCard({
       allocationCode: storage.name,
     };
 
-    setDraftLinkedSpaces(prev => {
-      const updated = [...prev, newLinkedSpace];
-      persistLinkedSpaces(updated);
-      return updated;
-    });
+    // Optimistic: update UI first, then save
+    const previous = draftLinkedSpaces;
+    const updated = [...previous, newLinkedSpace];
+    setDraftLinkedSpaces(updated);
     setSelectedStorageId(SELECT_CLEAR_VALUE);
+    persistLinkedSpaces(updated, previous);
   }, [storageOptions, draftLinkedSpaces, selectedInclusion, persistLinkedSpaces]);
 
-  // 🏢 ENTERPRISE: Immediate save — persists linkedSpaces to Firestore right away.
-  // No debounce, no useEffect. Called directly from add/remove handlers.
-  const persistLinkedSpaces = useCallback(async (newDraft: LinkedSpace[]) => {
-    if (!unitId) return;
-    setSaving(true);
-    setSaveStatus('idle');
-    try {
-      await apiClient.patch(`/api/units/${unitId}`, {
-        linkedSpaces: newDraft,
-      });
-      logger.info(`[LinkedSpacesCard] Saved ${newDraft.length} linked spaces`);
-      setSaveStatus('success');
-      onLinkedSpacesChanged?.(newDraft);
-      setTimeout(() => setSaveStatus('idle'), 3000);
-    } catch (error) {
-      logger.error('[LinkedSpacesCard] Save error:', { error });
-      setSaveStatus('error');
-    } finally {
-      setSaving(false);
-    }
-  }, [unitId, onLinkedSpacesChanged]);
-
-  // 🏢 ENTERPRISE: Remove space — update draft + save immediately
+  // 🏢 ENTERPRISE: Remove space — optimistic update + background save
   const handleRemoveSpace = useCallback((spaceId: string) => {
-    setDraftLinkedSpaces(prev => {
-      const updated = prev.filter(ls => ls.spaceId !== spaceId);
-      persistLinkedSpaces(updated);
-      return updated;
-    });
-  }, [persistLinkedSpaces]);
+    const previous = draftLinkedSpaces;
+    const updated = previous.filter(ls => ls.spaceId !== spaceId);
+    setDraftLinkedSpaces(updated);
+    persistLinkedSpaces(updated, previous);
+  }, [draftLinkedSpaces, persistLinkedSpaces]);
 
   // 🏢 ENTERPRISE: Get space name for display
   const getSpaceName = (space: LinkedSpace): string => {
