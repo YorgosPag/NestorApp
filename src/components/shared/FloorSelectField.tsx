@@ -20,6 +20,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { formatFloorLabel } from '@/lib/intl-utils';
 
 // =============================================================================
@@ -96,7 +97,7 @@ export function FloorSelectField({
   const loadFloors = useCallback(async (bId: string) => {
     setLoading(true);
     try {
-      const result = await apiClient.get<FloorsApiResponse>(`/api/floors?buildingId=${bId}`);
+      const result = await apiClient.get<FloorsApiResponse>(`${API_ROUTES.FLOORS.LIST}?buildingId=${bId}`);
       const options: FloorOption[] = (result?.floors ?? [])
         .map((f) => ({
           id: f.id,

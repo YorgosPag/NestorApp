@@ -13,6 +13,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency, formatDate as formatDateIntl } from '@/lib/intl-utils';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 
 // =============================================================================
 // TYPES
@@ -87,7 +88,7 @@ export function TransactionChainCard({ unitId }: TransactionChainCardProps) {
     async function fetchInvoices() {
       try {
         const response = await apiClient.get<InvoiceListResponse>(
-          `/api/accounting/invoices?unitId=${encodeURIComponent(unitId)}`
+          `${API_ROUTES.ACCOUNTING.INVOICES.LIST}?unitId=${encodeURIComponent(unitId)}`
         );
         if (!cancelled && response.items) {
           setInvoices(response.items);

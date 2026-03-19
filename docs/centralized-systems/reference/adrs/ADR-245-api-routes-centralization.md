@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | PHASE_A_COMPLETE — Registry extended. Phase B SPECs ready (SPEC-245B1, SPEC-245B2) |
+| **Status** | PHASE_B1_COMPLETE — High-priority consumers migrated. SPEC-245B2 remaining. |
 | **Date** | 2026-03-19 |
 | **Category** | Backend Systems / Infrastructure |
 | **Canonical Location** | `src/config/domain-constants.ts` → `API_ROUTES` |
@@ -488,6 +488,7 @@ ESLint rule που απαγορεύει hardcoded `/api/` strings εκτός `do
 | 2026-03-19 | Status: PLANNING — Αναμένει συζήτηση πριν υλοποίηση | Γιώργος Παγώνης |
 | 2026-03-19 | **Phase A COMPLETE** — API_ROUTES extended from 2→95+ entries. Nested structure with type-safe builders. Backward-compat aliases for AUTH. 2 existing consumers migrated. | Claude Code |
 | 2026-03-19 | **Phase B SPECs CREATED** — SPEC-245B1 (high-priority, ~35 files, ~105 instances) + SPEC-245B2 (lower-priority, mostly already migrated). Audit revealed ~30 files already use API_ROUTES. | Claude Code |
+| 2026-03-19 | **Phase B1 COMPLETE** — SPEC-245B1 executed. 6 αρχεία χρειάστηκαν αλλαγές (BuildingSelectorCard, FloorSelectField, LinkedSpacesCard, SalesUnitListCard, TransactionChainCard, entity-linking/config). ~50 αρχεία ήταν ήδη migrated. Zero hardcoded `/api/` strings remain in scope. | Claude Code |
 
 ---
 

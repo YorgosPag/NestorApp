@@ -8,6 +8,8 @@
 | **Date** | 2026-03-19 |
 | **Estimated Files** | ~30 τροποποιήσεις + 1 αφαίρεση duplicate registry |
 | **Estimated Instances** | ~55 hardcoded paths → `API_ROUTES` |
+| **Status** | ✅ **COMPLETE** (2026-03-19) |
+| **Actual Changes** | 6 αρχεία χρειάστηκαν αλλαγές, ~50 ήταν ήδη migrated από Phase A |
 
 ---
 
@@ -638,19 +640,19 @@ const response = await fetch(API_ROUTES.FILES.CLASSIFY, {
 
 ## 7. Migration Checklist
 
-- [ ] **Import**: Κάθε αρχείο πρέπει να προσθέσει `import { API_ROUTES } from '@/config/domain-constants';`
-- [ ] **Buildings** (11 αρχεία): building-services, construction-services, useFirestoreBuildings, navigationApi, ProjectTimelineTab, ProjectMeasurementsTab, LinkToBuildingModal, BuildingSelectorCard, useFloorplanImportState, obligations/edit, SimpleProjectDialog
-- [ ] **Floors** (7 αρχεία): FloorSelectField, UnitsTabContent, navigationApi, BuildingSelectorCard, useFloorplanImportState, SimpleProjectDialog (ΗΔΗ στο Buildings list)
-- [ ] **Units** (15 αρχεία): units.service, UnitsTabContent, useFirestoreUnits, SoldUnitsPreview, LinkSoldUnitsToCustomers, UnitHierarchyCard, units/page, SalesActionDialogs, ProfessionalsCard, LinkedSpacesCard, usePaymentPlan, useChequeRegistry, useLoanTracking, SimpleProjectDialog
-- [ ] **Parking** (7 αρχεία): useFirestoreParkingSpots, AddParkingDialog, ParkingGeneralTab, ParkingTabContent, LinkedSpacesCard, spaces/parking/page, useLinkedSpacesForSale
-- [ ] **Storages** (9 αρχεία): useFirestoreStorages, AddStorageDialog, StorageGeneralTab, StorageTab/index, StorageTab, LinkedSpacesCard, spaces/storage/page, useLinkedSpacesForSale
-- [ ] **Projects** (8 αρχεία): projects-client.service, useFirestoreProjects, obligations/new/page, ProjectMembersTab, useProjectCustomers, useProjectStructure, navigationApi, useFloorplanImportState, ProjectHierarchyContext
-- [ ] **Files & Floorplans** (7 αρχεία): EntityFilesManager, FloorplanGallery, useFileClassification, useBatchFileOperations, FileManagerPageContent, PdfCanvasViewer, usePdfThumbnail
-- [ ] **Contacts** (3 αρχεία): useOptimizedCustomerInfo, SaleInfoContent, SalesUnitListCard
-- [ ] **Accounting cross-ref** (1 αρχείο): TransactionChainCard
-- [ ] **Duplicate registry** (1 αρχείο): entity-linking/config.ts
-- [ ] **Milestones** (1 αρχείο): milestone-service.ts
-- [ ] **TypeScript compile check**: `npx tsc --noEmit` (background)
+- [x] **Import**: Κάθε αρχείο πρέπει να προσθέσει `import { API_ROUTES } from '@/config/domain-constants';`
+- [x] **Buildings** (11 αρχεία): building-services, construction-services, useFirestoreBuildings, navigationApi, ProjectTimelineTab, ProjectMeasurementsTab, LinkToBuildingModal, BuildingSelectorCard, useFloorplanImportState, obligations/edit, SimpleProjectDialog
+- [x] **Floors** (7 αρχεία): FloorSelectField, UnitsTabContent, navigationApi, BuildingSelectorCard, useFloorplanImportState, SimpleProjectDialog (ΗΔΗ στο Buildings list)
+- [x] **Units** (15 αρχεία): units.service, UnitsTabContent, useFirestoreUnits, SoldUnitsPreview, LinkSoldUnitsToCustomers, UnitHierarchyCard, units/page, SalesActionDialogs, ProfessionalsCard, LinkedSpacesCard, usePaymentPlan, useChequeRegistry, useLoanTracking, SimpleProjectDialog
+- [x] **Parking** (7 αρχεία): useFirestoreParkingSpots, AddParkingDialog, ParkingGeneralTab, ParkingTabContent, LinkedSpacesCard, spaces/parking/page, useLinkedSpacesForSale
+- [x] **Storages** (9 αρχεία): useFirestoreStorages, AddStorageDialog, StorageGeneralTab, StorageTab/index, StorageTab, LinkedSpacesCard, spaces/storage/page, useLinkedSpacesForSale
+- [x] **Projects** (8 αρχεία): projects-client.service, useFirestoreProjects, obligations/new/page, ProjectMembersTab, useProjectCustomers, useProjectStructure, navigationApi, useFloorplanImportState, ProjectHierarchyContext
+- [x] **Files & Floorplans** (7 αρχεία): EntityFilesManager, FloorplanGallery, useFileClassification, useBatchFileOperations, FileManagerPageContent, PdfCanvasViewer, usePdfThumbnail
+- [x] **Contacts** (3 αρχεία): useOptimizedCustomerInfo, SaleInfoContent, SalesUnitListCard
+- [x] **Accounting cross-ref** (1 αρχείο): TransactionChainCard
+- [x] **Duplicate registry** (1 αρχείο): entity-linking/config.ts
+- [x] **Milestones** (1 αρχείο): milestone-service.ts
+- [x] **TypeScript compile check**: `npx tsc --noEmit` (background)
 
 ---
 

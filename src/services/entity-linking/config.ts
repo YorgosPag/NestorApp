@@ -10,6 +10,7 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { API_ROUTES } from '@/config/domain-constants';
 import { REALTIME_EVENTS } from '@/services/realtime';
 import type { EntityLinkingConfig, EntityRelationship, EntityType } from './types';
 
@@ -84,11 +85,11 @@ export const ENTITY_LINKING_CONFIG: EntityLinkingConfig = {
  * API endpoints for fetching available entities
  */
 export const ENTITY_API_ENDPOINTS: Record<EntityType, string> = {
-  company: '/api/companies',
-  project: '/api/projects',
-  building: '/api/buildings',
-  unit: '/api/units',
-  floor: '/api/floors',
+  company: API_ROUTES.COMPANIES.LIST,
+  project: API_ROUTES.PROJECTS.LIST,
+  building: API_ROUTES.BUILDINGS.LIST,
+  unit: API_ROUTES.UNITS.LIST,
+  floor: API_ROUTES.FLOORS.LIST,
 } as const;
 
 // ============================================================================

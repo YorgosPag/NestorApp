@@ -24,6 +24,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -146,7 +147,7 @@ export function BuildingSelectorCard({
           buildings: Array<{ id: string; name?: string }>;
         }
 
-        const result = await apiClient.get<BuildingsApiResponse>('/api/buildings');
+        const result = await apiClient.get<BuildingsApiResponse>(API_ROUTES.BUILDINGS.LIST);
 
         const buildingsData = result?.buildings || [];
         logger.info(`[BuildingSelectorCard] API returned ${buildingsData.length} buildings`);
@@ -203,7 +204,7 @@ export function BuildingSelectorCard({
           floors: Array<{ id: string; name?: string; number?: number; buildingId?: string }>;
         }
 
-        const result = await apiClient.get<FloorsApiResponse>(`/api/floors?buildingId=${draftBuildingId}`);
+        const result = await apiClient.get<FloorsApiResponse>(`${API_ROUTES.FLOORS.LIST}?buildingId=${draftBuildingId}`);
         const floorsData = result?.floors || [];
 
         // Filter floors that belong to this building and sort by floor number

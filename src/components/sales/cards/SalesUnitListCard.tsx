@@ -20,6 +20,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { Unit, CommercialStatus } from '@/types/unit';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 
 // =============================================================================
 // 🏢 TYPES
@@ -164,7 +165,7 @@ export function SalesUnitListCard({
 
     let cancelled = false;
     apiClient.get<{ contact: { displayName: string } }>(
-      `/api/contacts/${encodeURIComponent(contactId)}`
+      API_ROUTES.CONTACTS.BY_ID(encodeURIComponent(contactId))
     ).then((data) => {
       if (!cancelled && data?.contact?.displayName) {
         setResolvedBuyerName(data.contact.displayName);

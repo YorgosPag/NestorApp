@@ -32,7 +32,7 @@ import { useTranslation } from 'react-i18next';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: Domain constants for space types + Select clear value
-import { ALLOCATION_SPACE_TYPES, SPACE_INCLUSION_TYPES, SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
+import { API_ROUTES, ALLOCATION_SPACE_TYPES, SPACE_INCLUSION_TYPES, SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
 import type { LinkedSpace } from '@/types/unit';
 import type { SpaceInclusionType } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -153,7 +153,7 @@ export function LinkedSpacesCard({
         }
 
         // apiClient.get() unwraps { success, data } → returns data directly
-        const result = await apiClient.get<ParkingApiResponse>(`/api/parking?buildingId=${buildingId}`);
+        const result = await apiClient.get<ParkingApiResponse>(`${API_ROUTES.PARKING.LIST}?buildingId=${buildingId}`);
         const parkingData = result?.parkingSpots || [];
 
         setParkingOptions(parkingData);
@@ -190,7 +190,7 @@ export function LinkedSpacesCard({
 
         // apiClient.get() unwraps { success, data } → returns data directly
         // Storages API supports buildingId filter
-        const result = await apiClient.get<StorageApiResponse>(`/api/storages?buildingId=${buildingId}`);
+        const result = await apiClient.get<StorageApiResponse>(`${API_ROUTES.STORAGES.LIST}?buildingId=${buildingId}`);
         const storageData = result?.storages || [];
 
         setStorageOptions(storageData);
@@ -233,7 +233,7 @@ export function LinkedSpacesCard({
     if (!unitId) return;
     setSaving(true);
     try {
-      await apiClient.patch(`/api/units/${unitId}`, {
+      await apiClient.patch(API_ROUTES.UNITS.BY_ID(unitId), {
         linkedSpaces: newDraft,
       });
       logger.info(`[LinkedSpacesCard] Saved ${newDraft.length} linked spaces`);
