@@ -24,6 +24,7 @@ import { requireBuildingInTenant, TenantIsolationError } from '@/lib/auth/tenant
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
+import { mapParkingDoc } from '@/lib/firestore-mappers';
 
 const logger = createModuleLogger('ParkingRoute');
 
@@ -234,7 +235,7 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
         .where('buildingId', '==', requestedBuildingId)
         .get();
 
-      const parkingSpots = mapParkingDocs(snapshot.docs);
+      const parkingSpots = snapshot.docs.map(doc => mapParkingDoc(doc.id, doc.data() as Record<string, unknown>));
       logger.info('Found parking spots for building', { buildingId: requestedBuildingId, count: parkingSpots.length });
 
       return NextResponse.json({
@@ -264,7 +265,7 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
         .where('projectId', '==', requestedProjectId)
         .get();
 
-      const parkingSpots = mapParkingDocs(snapshot.docs);
+      const parkingSpots = snapshot.docs.map(doc => mapParkingDoc(doc.id, doc.data() as Record<string, unknown>));
       logger.info('Found parking spots for project', { projectId: requestedProjectId, count: parkingSpots.length });
 
       return NextResponse.json({
@@ -313,31 +314,5 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
 }
 
 // ============================================================================
-// DATA MAPPER — Firestore docs to typed parking spots
+// DATA MAPPER — Centralized in @/lib/firestore-mappers (SSoT)
 // ============================================================================
-
-function mapParkingDocs(docs: FirebaseFirestore.QueryDocumentSnapshot[]): CanonicalParkingSpot[] {
-  return docs.map(doc => {
-    const data = doc.data() as Record<string, unknown>;
-    const spot: CanonicalParkingSpot = {
-      id: doc.id,
-      number: (data.number as string) || (data.code as string) || `P-${doc.id.slice(0, 4)}`,
-      buildingId: (data.buildingId as string) || null,
-      projectId: (data.projectId as string) || undefined,
-      locationZone: (data.locationZone as CanonicalParkingSpot['locationZone']) || null,
-      type: data.type as CanonicalParkingSpot['type'],
-      status: data.status as CanonicalParkingSpot['status'],
-      floor: data.floor as string | undefined,
-      floorId: data.floorId as string | undefined,
-      location: data.location as string | undefined,
-      area: data.area as number | undefined,
-      price: data.price as number | undefined,
-      notes: data.notes as string | undefined,
-      companyId: data.companyId as string | undefined,
-      createdBy: data.createdBy as string | undefined,
-      createdAt: (data.createdAt as { toDate?: () => Date })?.toDate?.() || data.createdAt as Date | undefined,
-      updatedAt: (data.updatedAt as { toDate?: () => Date })?.toDate?.() || data.updatedAt as Date | undefined,
-    };
-    return spot;
-  });
-}

@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 231 ADRs + 5 SPECs (242A-E) | Last Updated: 2026-03-19
+**📊 Stats**: 232 ADRs + 5 SPECs (242A-E) | Last Updated: 2026-03-19
 
 ---
 
@@ -270,6 +270,7 @@
 | ↳ SPEC-242C | Portfolio Dashboard & Debt Maturity Wall | ✅ IMPLEMENTED | 2026-03-18 | — | [📄](./adrs/specs/SPEC-242C-portfolio-dashboard.md) |
 | ↳ SPEC-242D | Monte Carlo Simulation & Equity Waterfall | ✅ IMPLEMENTED | 2026-03-18 | — | [📄](./adrs/specs/SPEC-242D-monte-carlo-waterfall.md) |
 | ↳ SPEC-242E | Forward Curves, Hedging Simulator & NL Financial Query | 🟡 SESSION 1/2 (Curves+Hedging done, NL Query pending) | 2026-03-18 | — | [📄](./adrs/specs/SPEC-242E-forward-curves-hedging-ai.md) |
+| **ADR-243** | Centralized Firestore→API Mappers (SSoT) | ✅ IMPLEMENTED | 2026-03-19 | Entity Systems | — |
 | **ADR-243** | Custom MCP Server — Firestore + Firebase Storage Access for Claude Code (v1.1.0: 15 tools) | ✅ IMPLEMENTED | 2026-03-19 | Infrastructure | [📄](./adrs/ADR-243-firestore-mcp-server.md) |
 | **ADR-244** | Role Management Admin Console — RBAC UI for User & Permission Management | 📋 PROPOSED | 2026-03-19 | Security & Auth | [📄](./adrs/ADR-244-role-management-admin-console.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |

@@ -7,8 +7,8 @@ import type { Storage, StorageType, StorageStatus } from '@/types/storage/contra
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
-import { normalizeToDate } from '@/lib/date-local';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
+import { mapStorageDoc, isValidStorageType, isValidStorageStatus } from '@/lib/firestore-mappers';
 
 const logger = createModuleLogger('StoragesRoute');
 
@@ -32,91 +32,8 @@ const logger = createModuleLogger('StoragesRoute');
 // ============================================================================
 
 // ============================================================================
-// FIRESTORE RAW DATA INTERFACE
+// DATA MAPPER — Centralized in @/lib/firestore-mappers (SSoT)
 // ============================================================================
-
-/**
- * 🏢 Enterprise: Raw Firestore storage document data interface
- * Represents the actual data structure stored in Firestore
- */
-interface FirestoreStorageData {
-  name?: string;
-  type?: string;
-  status?: string;
-  building?: string;
-  floor?: string;
-  area?: number;
-  description?: string;
-  price?: number;
-  projectId?: string;
-  owner?: string;
-  notes?: string;
-  lastUpdated?: unknown;
-  createdAt?: unknown;
-  updatedAt?: unknown;
-  [key: string]: unknown;
-}
-
-// ============================================================================
-// DATA MAPPER - ENTERPRISE PATTERN
-// ============================================================================
-
-/**
- * 🏢 Enterprise Data Mapper: Firestore → Storage
- *
- * Transforms raw Firestore data to type-safe Storage.
- * Follows the Data Mapper pattern used in SAP, Salesforce, Microsoft Dynamics.
- *
- * @param docId - Firestore document ID
- * @param data - Raw Firestore document data
- * @returns Type-safe Storage object
- */
-function mapFirestoreToStorage(docId: string, data: FirestoreStorageData): Storage {
-  // Validate and cast type
-  const rawType = data.type || 'small';
-  const type: StorageType = isValidStorageType(rawType) ? rawType : 'small';
-
-  // Validate and cast status
-  const rawStatus = data.status || 'available';
-  const status: StorageStatus = isValidStorageStatus(rawStatus) ? rawStatus : 'available';
-
-  // Convert timestamps
-  const lastUpdated = normalizeToDate(data.lastUpdated);
-
-  return {
-    id: docId,
-    name: data.name || `Storage ${docId.substring(0, 6)}`,
-    type,
-    status,
-    building: data.building || '',
-    // 🏢 ENTERPRISE: buildingId field (added via migration 006)
-    buildingId: data.buildingId as string | undefined,
-    companyId: data.companyId as string | undefined,
-    floor: data.floor || '',
-    floorId: data.floorId as string | undefined,
-    area: typeof data.area === 'number' ? data.area : 0,
-    description: data.description,
-    price: typeof data.price === 'number' ? data.price : undefined,
-    projectId: data.projectId,
-    owner: data.owner,
-    notes: data.notes,
-    lastUpdated: lastUpdated || undefined
-  };
-}
-
-/**
- * 🔧 Helper: Validate StorageType
- */
-function isValidStorageType(type: string): type is StorageType {
-  return ['storage', 'large', 'small', 'basement', 'ground', 'special', 'garage', 'warehouse'].includes(type);
-}
-
-/**
- * 🔧 Helper: Validate StorageStatus
- */
-function isValidStorageStatus(status: string): status is StorageStatus {
-  return ['available', 'occupied', 'maintenance', 'reserved', 'sold', 'unavailable'].includes(status);
-}
 
 
 // ============================================================================
@@ -232,9 +149,7 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
     const allStorages: Storage[] = [];
 
     snapshot.docs.forEach(doc => {
-      const rawData = doc.data() as FirestoreStorageData;
-      const storage = mapFirestoreToStorage(doc.id, rawData);
-      allStorages.push(storage);
+      allStorages.push(mapStorageDoc(doc.id, doc.data() as Record<string, unknown>));
     });
 
     // 🏢 ENTERPRISE: Tenant isolation — filter by companyId for buildingId queries
