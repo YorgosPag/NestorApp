@@ -12,10 +12,10 @@ import {
   type MigrationStats
 } from '@/services/enterprise-id-migration.service';
 import {
-import { getErrorMessage } from '@/lib/error-utils';
   EntityType,
   isValidEntityType
 } from '@/services/relationships/enterprise-relationship-engine.contracts';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // ============================================================================
 // INTERFACES

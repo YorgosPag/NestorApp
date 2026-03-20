@@ -30,9 +30,9 @@ import {
   getProposedItemStats,
 } from '@/services/ai-pipeline/pipeline-queue-service';
 import {
-import { getErrorMessage } from '@/lib/error-utils';
   processOperatorDecision,
 } from '@/services/ai-pipeline/operator-inbox-service';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('OPERATOR_INBOX_API');
 

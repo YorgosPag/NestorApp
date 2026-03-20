@@ -28,11 +28,11 @@ import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('FloorplanProcessRoute');
 import type {
-import { getErrorMessage } from '@/lib/error-utils';
   FloorplanProcessedData,
   DxfSceneData,
   DxfSceneEntity,
 } from '@/types/file-record';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // ============================================================================
 // TYPES

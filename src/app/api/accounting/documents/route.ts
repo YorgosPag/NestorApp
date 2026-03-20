@@ -28,11 +28,11 @@ import type { IDocumentAnalyzer } from '@/subapps/accounting/types/interfaces';
 import { createOpenAIDocumentAnalyzer } from '@/subapps/accounting/services/external/openai-document-analyzer';
 import { DocumentAnalyzerStub } from '@/subapps/accounting/services/external/document-analyzer.stub';
 import type {
-import { getErrorMessage } from '@/lib/error-utils';
   DocumentProcessingStatus,
   DocumentType,
   ReceivedExpenseDocument,
 } from '@/subapps/accounting/types';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // VALID CONSTANTS

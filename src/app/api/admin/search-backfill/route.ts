@@ -34,7 +34,6 @@ import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 // 🏢 ENTERPRISE: Import from centralized search types (ADR-029 - ZERO duplicates)
 import {
-import { getErrorMessage } from '@/lib/error-utils';
   SEARCH_ENTITY_TYPES,
   SEARCH_AUDIENCE,
   type SearchEntityType,
@@ -42,6 +41,7 @@ import { getErrorMessage } from '@/lib/error-utils';
   type SearchDocumentInput,
   type SearchIndexConfig,
 } from '@/types/search';
+import { getErrorMessage } from '@/lib/error-utils';
 
 /**
  * Create error response with standard format.

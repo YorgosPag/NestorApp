@@ -14,10 +14,10 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { EuriborService } from '@/services/euribor.service';
 import { calculateFullResult, buildComparisonScenarios } from '@/lib/npv-engine';
 import type {
-import { getErrorMessage } from '@/lib/error-utils';
   CostCalculationRequest,
   CostCalculationResponse,
 } from '@/types/interest-calculator';
+import { getErrorMessage } from '@/lib/error-utils';
 
 async function handlePost(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
