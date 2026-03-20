@@ -23,6 +23,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { apiSuccess } from '@/lib/api/ApiErrorHandler';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { logAuditEvent } from '@/lib/auth/audit';
 
 const logger = createModuleLogger('NavigationCompanyRoute');
 
@@ -132,6 +133,11 @@ async function handleRemoveCompany(request: NextRequest, ctx: AuthContext): Prom
   await batch.commit();
 
   logger.info('[NavCompany] Company removed from navigation', { contactId, docsRemoved: snapshot.size, by: ctx.email });
+
+  await logAuditEvent(ctx, 'data_deleted', contactId, 'api', {
+    newValue: { type: 'status', value: { entity: 'navigation_company', docsRemoved: snapshot.size } },
+    metadata: { reason: 'Company removed from navigation' },
+  });
 
   return apiSuccess({ removed: true, count: snapshot.size }, 'Company removed from navigation');
 }

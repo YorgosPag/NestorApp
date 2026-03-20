@@ -578,6 +578,59 @@ export async function logCommunicationRejected(
 }
 
 // =============================================================================
+// FINANCIAL AUDIT LOGGING (ADR-255 SPEC-255E)
+// =============================================================================
+
+/**
+ * Log a financial status transition (cheque/loan FSM).
+ *
+ * @param ctx - Authenticated context
+ * @param entityType - Target entity type ('cheque' | 'loan')
+ * @param entityId - Entity document ID
+ * @param fromStatus - Previous FSM status
+ * @param toStatus - New FSM status
+ * @param metadata - Optional additional context (unitId, planId, etc.)
+ */
+export async function logFinancialTransition(
+  ctx: AuthContext,
+  entityType: 'cheque' | 'loan',
+  entityId: string,
+  fromStatus: string,
+  toStatus: string,
+  metadata?: Record<string, string | number | boolean | null>
+): Promise<void> {
+  await logAuditEvent(ctx, 'financial_transition', entityId, entityType, {
+    previousValue: { type: 'financial_status', value: fromStatus },
+    newValue: { type: 'financial_status', value: toStatus },
+    metadata: {
+      reason: `${entityType} transitioned: ${fromStatus} → ${toStatus}`,
+      ...(metadata ? { path: JSON.stringify(metadata) } : {}),
+    },
+  });
+}
+
+/**
+ * Log an entity deletion with context.
+ *
+ * @param ctx - Authenticated context
+ * @param entityType - Target entity type
+ * @param entityId - Entity document ID
+ * @param metadata - Optional deletion context
+ */
+export async function logEntityDeletion(
+  ctx: AuthContext,
+  entityType: AuditTargetType,
+  entityId: string,
+  metadata?: Record<string, string | number | boolean | null>
+): Promise<void> {
+  await logAuditEvent(ctx, 'data_deleted', entityId, entityType, {
+    previousValue: null,
+    newValue: { type: 'status', value: { deleted: true, ...metadata } },
+    metadata: { reason: `${entityType} deleted` },
+  });
+}
+
+// =============================================================================
 // REQUEST METADATA EXTRACTION
 // =============================================================================
 
