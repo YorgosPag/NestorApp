@@ -16,7 +16,7 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
+import { withAuth, logAuditEvent, logFinancialTransition } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
@@ -84,7 +84,7 @@ async function handlePatch(
   const { id } = await segmentData!.params;
 
   const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const { repository } = createAccountingServices();
         const body = (await req.json()) as PatchDocumentBody;
@@ -109,6 +109,8 @@ async function handlePatch(
             status: 'rejected',
             notes: body.notes ?? document.notes,
           });
+
+          await logFinancialTransition(ctx, 'invoice', id, document.status ?? 'pending', 'rejected').catch(() => {/* non-blocking */});
 
           return NextResponse.json({ success: true, data: { documentId: id, status: 'rejected' } });
         }
@@ -161,6 +163,10 @@ async function handlePatch(
           journalEntryId,
           notes: body.notes ?? document.notes,
         });
+
+        await logFinancialTransition(ctx, 'invoice', id, document.status ?? 'pending', 'confirmed', {
+          journalEntryId,
+        }).catch(() => {/* non-blocking */});
 
         return NextResponse.json({
           success: true,

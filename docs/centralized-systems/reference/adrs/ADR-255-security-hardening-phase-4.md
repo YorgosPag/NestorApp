@@ -29,7 +29,7 @@
 | 2 | API Route Tenant Checks | [SPEC-255B](./specs/SPEC-255B-api-route-tenant-checks.md) | ~20 routes missing checks | **P0** | 4h | ✅ IMPLEMENTED |
 | 3 | Client-Side Writes Migration | [SPEC-255C](./specs/SPEC-255C-client-writes-migration.md) | 19 files (3 CRITICAL) | **P1** | 8h | 📋 PLANNED |
 | 4 | Input Validation — Zod | [SPEC-255D](./specs/SPEC-255D-input-validation-zod.md) | 73 routes without Zod | **P2** | incremental | 📋 PLANNED |
-| 5 | Financial Audit Trail | [SPEC-255E](./specs/SPEC-255E-audit-trail-financial-ops.md) | ~15 transitions + ~35 DELETEs | **P1** | 6h | ✅ IMPLEMENTED (partial — 5 transitions + 1 DELETE) |
+| 5 | Financial Audit Trail | [SPEC-255E](./specs/SPEC-255E-audit-trail-financial-ops.md) | ~15 transitions + ~35 DELETEs | **P1** | 6h | ✅ IMPLEMENTED (13 routes: cheque PATCH, loan PATCH, payment POST, invoice PATCH/DELETE, document confirm/reject, journal PATCH/DELETE, category PATCH/DELETE, APY cert PATCH, commission PATCH, agreement PATCH/DELETE) |
 | 6 | Cleanup Test Endpoints | [SPEC-255F](./specs/SPEC-255F-cleanup-test-endpoints.md) | 1 endpoint | **P0** | 0.5h | ✅ ALREADY DONE (pre-existing) |
 
 **Συνολικό effort**: ~20.5h | **Κρίσιμο P0**: ~6.5h

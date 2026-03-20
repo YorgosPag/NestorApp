@@ -3,7 +3,7 @@
 > **Parent**: [ADR-255](../ADR-255-security-hardening-phase-4.md)
 > **Priority**: P1
 > **Effort**: 6h
-> **Status**: 📋 PLANNED
+> **Status**: ✅ IMPLEMENTED (2026-03-21)
 
 ---
 

@@ -9,7 +9,7 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
+import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
@@ -55,6 +55,10 @@ async function handlePatch(
         if (!result.success) {
           return NextResponse.json({ success: false, error: result.error }, { status: 409 });
         }
+
+        await logAuditEvent(ctx, 'data_updated', loanId, 'loan', {
+          metadata: { reason: 'Loan fields updated', unitId, planId },
+        }).catch(() => {/* non-blocking */});
 
         return NextResponse.json({ success: true });
       } catch (error) {

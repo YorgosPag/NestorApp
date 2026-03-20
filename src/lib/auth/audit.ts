@@ -582,10 +582,10 @@ export async function logCommunicationRejected(
 // =============================================================================
 
 /**
- * Log a financial status transition (cheque/loan FSM).
+ * Log a financial status transition (cheque/loan/invoice/commission FSM).
  *
  * @param ctx - Authenticated context
- * @param entityType - Target entity type ('cheque' | 'loan')
+ * @param entityType - Target entity type
  * @param entityId - Entity document ID
  * @param fromStatus - Previous FSM status
  * @param toStatus - New FSM status
@@ -593,7 +593,7 @@ export async function logCommunicationRejected(
  */
 export async function logFinancialTransition(
   ctx: AuthContext,
-  entityType: 'cheque' | 'loan',
+  entityType: 'cheque' | 'loan' | 'invoice' | 'payment' | 'commission',
   entityId: string,
   fromStatus: string,
   toStatus: string,

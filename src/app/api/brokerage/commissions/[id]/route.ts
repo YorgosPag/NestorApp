@@ -11,7 +11,7 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
+import { withAuth, logFinancialTransition } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -58,6 +58,8 @@ async function handlePatch(request: NextRequest, segmentData?: RouteContext): Pr
             { status: 400 }
           );
         }
+
+        await logFinancialTransition(ctx, 'commission', id, 'unknown', body.paymentStatus).catch(() => {/* non-blocking */});
 
         return NextResponse.json({ success: true }, { status: 200 });
       } catch (error) {

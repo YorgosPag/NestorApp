@@ -25,7 +25,7 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
+import { withAuth, logAuditEvent, logEntityDeletion } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import {
   withStandardRateLimit,
@@ -84,7 +84,7 @@ async function handlePatch(
   const { id } = await segmentData!.params;
 
   const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         let body: UpdateCustomCategoryInput;
         try {
@@ -107,6 +107,10 @@ async function handlePatch(
         }
 
         await repository.updateCustomCategory(id, body);
+
+        await logAuditEvent(ctx, 'data_updated', id, 'category', {
+          metadata: { reason: 'Custom category updated', code: existing.code },
+        }).catch(() => {/* non-blocking */});
 
         logger.info('Custom category updated', { id });
 
@@ -133,7 +137,7 @@ async function handleDelete(
   const { id } = await segmentData!.params;
 
   const handler = withAuth(
-    async (_req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const { repository } = createAccountingServices();
         const existing = await repository.getCustomCategory(id);
@@ -155,6 +159,7 @@ async function handleDelete(
         if (isUsed) {
           // Soft delete — deactivate only, preserve referential integrity
           await repository.updateCustomCategory(id, { isActive: false });
+          await logEntityDeletion(ctx, 'category', id, { action: 'soft_deleted', code: existing.code }).catch(() => {/* non-blocking */});
           logger.info('Custom category soft-deleted (in use)', { id, code: existing.code });
           return NextResponse.json({
             success: true,
@@ -164,6 +169,7 @@ async function handleDelete(
         }
 
         // Hard delete — no references exist
+        await logEntityDeletion(ctx, 'category', id, { action: 'hard_deleted', code: existing.code }).catch(() => {/* non-blocking */});
         await repository.deleteCustomCategory(id);
         logger.info('Custom category hard-deleted (unused)', { id, code: existing.code });
         return NextResponse.json({

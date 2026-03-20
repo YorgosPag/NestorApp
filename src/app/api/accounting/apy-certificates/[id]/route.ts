@@ -18,7 +18,7 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
+import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import {
   withStandardRateLimit,
@@ -87,7 +87,7 @@ async function handlePatch(
   const { id } = await segmentData!.params;
 
   const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         let body: PatchAPYCertificateBody;
         try {
@@ -117,6 +117,10 @@ async function handlePatch(
         if (body.notes !== undefined) allowedUpdates.notes = body.notes;
 
         await repository.updateAPYCertificate(id, allowedUpdates);
+
+        await logAuditEvent(ctx, 'data_updated', id, 'apy_certificate', {
+          metadata: { reason: 'APY certificate updated' },
+        }).catch(() => {/* non-blocking */});
 
         logger.info('APY certificate updated', { id, updates: Object.keys(allowedUpdates) });
 

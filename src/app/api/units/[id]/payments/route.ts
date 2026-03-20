@@ -13,7 +13,7 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
+import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
@@ -86,6 +86,11 @@ async function handlePost(
         if (!result.success) {
           return NextResponse.json({ success: false, error: result.error }, { status: 409 });
         }
+
+        await logAuditEvent(ctx, 'data_created', result.payment?.id ?? unitId, 'payment', {
+          newValue: { type: 'financial_status', value: { amount: body.amount, method: body.method } },
+          metadata: { reason: 'Payment recorded', unitId },
+        }).catch(() => {/* non-blocking */});
 
         return NextResponse.json({ success: true, data: result.payment }, { status: 201 });
       } catch (error) {

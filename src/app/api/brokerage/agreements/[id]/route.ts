@@ -11,7 +11,7 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
+import { withAuth, logAuditEvent, logEntityDeletion } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -56,6 +56,10 @@ async function handlePatch(request: NextRequest, segmentData?: RouteContext): Pr
           );
         }
 
+        await logAuditEvent(ctx, 'data_updated', id, 'agreement', {
+          metadata: { reason: 'Brokerage agreement updated' },
+        }).catch(() => {/* non-blocking */});
+
         return NextResponse.json({ success: true }, { status: 200 });
       } catch (error) {
         const message = getErrorMessage(error, 'Failed to update brokerage agreement');
@@ -95,6 +99,8 @@ async function handleDelete(request: NextRequest, segmentData?: RouteContext): P
             { status: 400 }
           );
         }
+
+        await logEntityDeletion(ctx, 'agreement', id).catch(() => {/* non-blocking */});
 
         return NextResponse.json({ success: true }, { status: 200 });
       } catch (error) {

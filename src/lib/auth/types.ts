@@ -273,6 +273,14 @@ export const AUDIT_TARGET_TYPES = {
   'opportunity': true,    // CRM opportunities (ADR-255 SPEC-255B)
   'cheque': true,         // Financial cheques (ADR-255 SPEC-255E)
   'loan': true,           // Financial loans (ADR-255 SPEC-255E)
+  'payment': true,        // Payment records (ADR-255 SPEC-255E)
+  'invoice': true,        // Fiscal invoices (ADR-255 SPEC-255E)
+  'journal_entry': true,  // Accounting journal entries (ADR-255 SPEC-255E)
+  'expense_document': true, // AI-processed expense documents (ADR-255 SPEC-255E)
+  'category': true,       // Accounting custom categories (ADR-255 SPEC-255E)
+  'apy_certificate': true, // Tax withholding certificates (ADR-255 SPEC-255E)
+  'commission': true,     // Brokerage commissions (ADR-255 SPEC-255E)
+  'agreement': true,      // Brokerage agreements (ADR-255 SPEC-255E)
   'role': true,
   'grant': true,
   'api': true,

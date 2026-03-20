@@ -10,7 +10,7 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
+import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ChequeRegistryService } from '@/services/cheque-registry.service';
@@ -72,6 +72,10 @@ async function handlePatch(
         if (!result.success) {
           return NextResponse.json({ success: false, error: result.error }, { status: 409 });
         }
+
+        await logAuditEvent(ctx, 'data_updated', chequeId, 'cheque', {
+          metadata: { reason: 'Cheque fields updated', unitId: id },
+        }).catch(() => {/* non-blocking */});
 
         return NextResponse.json({ success: true });
       } catch (error) {

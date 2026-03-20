@@ -17,7 +17,7 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
+import { withAuth, logAuditEvent, logEntityDeletion } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
@@ -74,7 +74,7 @@ async function handlePatch(
   const { id } = await segmentData!.params;
 
   const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const { repository } = createAccountingServices();
         const body = (await req.json()) as UpdateJournalEntryInput;
@@ -96,6 +96,10 @@ async function handlePatch(
         }
 
         await repository.updateJournalEntry(id, body);
+
+        await logAuditEvent(ctx, 'data_updated', id, 'journal_entry', {
+          metadata: { reason: 'Journal entry updated' },
+        }).catch(() => {/* non-blocking */});
 
         return NextResponse.json({
           success: true,
@@ -127,7 +131,7 @@ async function handleDelete(
   const { id } = await segmentData!.params;
 
   const handler = withAuth(
-    async (_req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const { repository } = createAccountingServices();
 
@@ -139,6 +143,11 @@ async function handleDelete(
             { status: 404 }
           );
         }
+
+        await logEntityDeletion(ctx, 'journal_entry', id, {
+          type: existing.type ?? 'unknown',
+          category: existing.category ?? 'unknown',
+        }).catch(() => {/* non-blocking */});
 
         await repository.deleteJournalEntry(id);
 
