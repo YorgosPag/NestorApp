@@ -15,6 +15,8 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ChequeRegistryService } from '@/services/cheque-registry.service';
 import type { EndorseInput } from '@/types/cheque-registry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
+import { logFinancialTransition } from '@/lib/auth/audit';
 
 type SegmentData = { params: Promise<{ id: string; chequeId: string }> };
 
@@ -22,10 +24,11 @@ async function handlePost(
   request: NextRequest,
   segmentData?: SegmentData
 ): Promise<NextResponse> {
-  const { chequeId } = await segmentData!.params;
+  const { id: unitId, chequeId } = await segmentData!.params;
 
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      await requireUnitInTenant({ ctx, unitId, path: '/api/units/[id]/cheques/[chequeId]/endorse' });
       try {
         const body = (await req.json()) as EndorseInput;
 
@@ -41,6 +44,8 @@ async function handlePost(
         if (!result.success) {
           return NextResponse.json({ success: false, error: result.error }, { status: 409 });
         }
+
+        await logFinancialTransition(ctx, 'cheque', chequeId, 'active', 'endorsed', { unitId });
 
         return NextResponse.json({ success: true }, { status: 201 });
       } catch (error) {

@@ -16,6 +16,7 @@ import { PaymentPlanService } from '@/services/payment-plan.service';
 import { LoanTrackingService } from '@/services/loan-tracking.service';
 import type { UpdateLoanInput } from '@/types/loan-tracking';
 import { getErrorMessage } from '@/lib/error-utils';
+import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
 
 type SegmentData = { params: Promise<{ id: string; loanId: string }> };
 
@@ -31,6 +32,8 @@ async function handlePatch(
 
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      await requireUnitInTenant({ ctx, unitId, path: '/api/units/[id]/payment-plan/loans/[loanId]' });
+
       try {
         const body = (await req.json()) as UpdateLoanInput & { planId?: string };
 

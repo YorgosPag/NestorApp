@@ -30,6 +30,7 @@ import { validateContactForSale, isServiceContact } from '@/types/contacts/helpe
 import type { Contact } from '@/types/contacts/contracts';
 import type { CommercialTransactionType } from '@/types/contacts/helpers';
 import { getErrorMessage } from '@/lib/error-utils';
+import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
 
 const logger = createModuleLogger('UnitIdRoute');
 
@@ -97,10 +98,9 @@ export const PATCH = withStandardRateLimit(
 
         if (!doc.exists) throw new ApiError(404, 'Unit not found');
 
+        await requireUnitInTenant({ ctx, unitId: id, path: '/api/units/[id]' });
+
         const existing = doc.data() as Record<string, unknown>;
-        if (ctx.globalRole !== 'super_admin' && existing.companyId && existing.companyId !== ctx.companyId) {
-          throw new ApiError(403, 'Access denied');
-        }
 
         const body: UnitPatchPayload = await request.json();
 
@@ -394,10 +394,9 @@ export const DELETE = withStandardRateLimit(
 
         if (!doc.exists) throw new ApiError(404, 'Unit not found');
 
+        await requireUnitInTenant({ ctx, unitId: id, path: '/api/units/[id]' });
+
         const existing = doc.data() as Record<string, unknown>;
-        if (ctx.globalRole !== 'super_admin' && existing.companyId && existing.companyId !== ctx.companyId) {
-          throw new ApiError(403, 'Access denied');
-        }
 
         // 🛡️ ADR-226: Guarded deletion (checks dependencies → blocks or deletes + audit)
         await executeDeletion(adminDb, 'unit', id, ctx.uid, ctx.companyId);

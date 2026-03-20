@@ -19,6 +19,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import type { AuditAction } from '@/types/audit-trail';
+import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
 
 // ============================================================================
 // TYPES
@@ -52,17 +53,14 @@ export const POST = withStandardRateLimit(
       const id = extractIdFromUrl(request.url);
       if (!id) throw new ApiError(400, 'Unit ID is required');
 
+      await requireUnitInTenant({ ctx, unitId: id, path: '/api/units/[id]/activity' });
+
       // Validate unit exists
       const docRef = db.collection(COLLECTIONS.UNITS).doc(id);
       const doc = await docRef.get();
       if (!doc.exists) throw new ApiError(404, 'Unit not found');
 
       const existing = doc.data() as Record<string, unknown>;
-
-      // Tenant isolation (super_admin bypass)
-      if (ctx.globalRole !== 'super_admin' && existing.companyId && existing.companyId !== ctx.companyId) {
-        throw new ApiError(403, 'Access denied');
-      }
 
       // Parse and validate body
       const body: ActivityPayload = await request.json();

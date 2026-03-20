@@ -21,6 +21,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { OpportunitiesServerService } from '@/services/opportunities-server.service';
 import { getErrorMessage } from '@/lib/error-utils';
+import { requireOpportunityInTenant } from '@/lib/auth/tenant-isolation';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -37,6 +38,9 @@ async function handlePatch(
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
+        // 🔒 ADR: Centralized tenant isolation (existence + companyId + audit logging)
+        await requireOpportunityInTenant({ ctx, opportunityId: id, path: '/api/opportunities/[id]' });
+
         const body = await req.json();
 
         const result = await OpportunitiesServerService.update(
@@ -76,6 +80,9 @@ async function handleDelete(
   const handler = withAuth(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
+        // 🔒 ADR: Centralized tenant isolation (existence + companyId + audit logging)
+        await requireOpportunityInTenant({ ctx, opportunityId: id, path: '/api/opportunities/[id]' });
+
         const result = await OpportunitiesServerService.remove(
           id,
           ctx.companyId

@@ -16,6 +16,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ChequeRegistryService } from '@/services/cheque-registry.service';
 import type { UpdateChequeInput } from '@/types/cheque-registry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
 
 type SegmentData = { params: Promise<{ id: string; chequeId: string }> };
 
@@ -27,10 +28,11 @@ async function handleGet(
   request: NextRequest,
   segmentData?: SegmentData
 ): Promise<NextResponse> {
-  const { chequeId } = await segmentData!.params;
+  const { id, chequeId } = await segmentData!.params;
 
   const handler = withAuth(
-    async (_req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      await requireUnitInTenant({ ctx, unitId: id, path: '/api/units/[id]/cheques/[chequeId]' });
       try {
         const result = await ChequeRegistryService.getCheque(chequeId);
         if (!result.success) {
@@ -57,10 +59,11 @@ async function handlePatch(
   request: NextRequest,
   segmentData?: SegmentData
 ): Promise<NextResponse> {
-  const { chequeId } = await segmentData!.params;
+  const { id, chequeId } = await segmentData!.params;
 
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      await requireUnitInTenant({ ctx, unitId: id, path: '/api/units/[id]/cheques/[chequeId]' });
       try {
         const body = (await req.json()) as UpdateChequeInput;
 

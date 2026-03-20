@@ -19,6 +19,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import type { CreatePaymentInput } from '@/types/payment-plan';
 import { getErrorMessage } from '@/lib/error-utils';
+import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
 
 type SegmentData = { params: Promise<{ id: string }> };
 
@@ -33,7 +34,8 @@ async function handleGet(
   const { id: unitId } = await segmentData!.params;
 
   const handler = withAuth(
-    async (_req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      await requireUnitInTenant({ ctx, unitId, path: '/api/units/[id]/payments' });
       try {
         const payments = await PaymentPlanService.getPayments(unitId);
         return NextResponse.json({ success: true, data: payments });
@@ -61,6 +63,7 @@ async function handlePost(
 
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      await requireUnitInTenant({ ctx, unitId, path: '/api/units/[id]/payments' });
       try {
         const body = (await req.json()) as CreatePaymentInput;
 

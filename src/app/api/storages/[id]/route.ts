@@ -20,6 +20,7 @@ import { executeDeletion } from '@/lib/firestore/deletion-guard';
 import { linkEntity } from '@/lib/firestore/entity-linking.service';
 import { propagateSpaceAllocationCodeChange } from '@/lib/firestore/cascade-propagation.service';
 import { getErrorMessage } from '@/lib/error-utils';
+import { requireStorageInTenant } from '@/lib/auth/tenant-isolation';
 
 const logger = createModuleLogger('StoragesIdRoute');
 
@@ -60,15 +61,12 @@ export const PATCH = withStandardRateLimit(
       if (!id) throw new ApiError(400, 'Storage ID is required');
 
       try {
+        // 🔒 ADR: Centralized tenant isolation (existence + companyId + audit logging)
+        await requireStorageInTenant({ ctx, storageId: id, path: '/api/storages/[id]' });
+
         const docRef = adminDb.collection(COLLECTIONS.STORAGE).doc(id);
         const doc = await docRef.get();
-
-        if (!doc.exists) throw new ApiError(404, 'Storage unit not found');
-
         const existing = doc.data() as Record<string, unknown>;
-        if (ctx.globalRole !== 'super_admin' && existing.companyId && existing.companyId !== ctx.companyId) {
-          throw new ApiError(403, 'Access denied');
-        }
 
         const body: StoragePatchPayload = await request.json();
 
@@ -145,15 +143,11 @@ export const DELETE = withStandardRateLimit(
       if (!id) throw new ApiError(400, 'Storage ID is required');
 
       try {
+        // 🔒 ADR: Centralized tenant isolation (existence + companyId + audit logging)
+        await requireStorageInTenant({ ctx, storageId: id, path: '/api/storages/[id]' });
+
         const docRef = adminDb.collection(COLLECTIONS.STORAGE).doc(id);
-        const doc = await docRef.get();
-
-        if (!doc.exists) throw new ApiError(404, 'Storage unit not found');
-
-        const existing = doc.data() as Record<string, unknown>;
-        if (ctx.globalRole !== 'super_admin' && existing.companyId && existing.companyId !== ctx.companyId) {
-          throw new ApiError(403, 'Access denied');
-        }
+        const existing = (await docRef.get()).data() as Record<string, unknown>;
 
         // 🛡️ ADR-226: Guarded deletion (checks dependencies + conditional block for sold storage)
         await executeDeletion(adminDb, 'storage', id, ctx.uid, ctx.companyId);

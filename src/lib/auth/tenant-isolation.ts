@@ -186,3 +186,187 @@ export async function requireBuildingInTenant(params: {
   // Success - return validated building data
   return data!;
 }
+
+// =============================================================================
+// ADR-255 SPEC-255B — Additional Entity Tenant Isolation
+// =============================================================================
+
+/** Minimal unit data required for tenant verification. */
+export interface TenantUnit {
+  companyId: string;
+  name?: string;
+  buildingId?: string;
+}
+
+/** Minimal storage data required for tenant verification. */
+export interface TenantStorage {
+  companyId: string;
+  name?: string;
+  buildingId?: string;
+}
+
+/** Minimal parking data required for tenant verification. */
+export interface TenantParking {
+  companyId: string;
+  number?: string;
+  projectId?: string;
+}
+
+/** Minimal opportunity data required for tenant verification. */
+export interface TenantOpportunity {
+  companyId: string;
+  name?: string;
+  stage?: string;
+}
+
+/**
+ * 🔒 Require unit to belong to authenticated user's tenant.
+ */
+export async function requireUnitInTenant(params: {
+  ctx: AuthContext;
+  unitId: string;
+  path: string;
+}): Promise<TenantUnit> {
+  const { ctx, unitId, path } = params;
+
+  if (!getAdminFirestore()) {
+    throw new Error('Firebase Admin not initialized');
+  }
+
+  const doc = await getAdminFirestore().collection(COLLECTIONS.UNITS).doc(unitId).get();
+
+  if (!doc.exists) {
+    await logAuditEvent(ctx, 'access_denied', unitId, 'unit', {
+      metadata: { path, reason: 'Unit not found' },
+    });
+    throw new TenantIsolationError('Unit not found', 404, 'NOT_FOUND');
+  }
+
+  const data = doc.data() as TenantUnit | undefined;
+  const isSuperAdmin = isRoleBypass(ctx.globalRole);
+
+  if (!isSuperAdmin) {
+    if (!data?.companyId || data.companyId !== ctx.companyId) {
+      await logAuditEvent(ctx, 'access_denied', unitId, 'unit', {
+        metadata: { path, reason: 'Tenant isolation violation - companyId mismatch' },
+      });
+      throw new TenantIsolationError('Access denied', 403, 'FORBIDDEN');
+    }
+  }
+
+  return data!;
+}
+
+/**
+ * 🔒 Require storage to belong to authenticated user's tenant.
+ */
+export async function requireStorageInTenant(params: {
+  ctx: AuthContext;
+  storageId: string;
+  path: string;
+}): Promise<TenantStorage> {
+  const { ctx, storageId, path } = params;
+
+  if (!getAdminFirestore()) {
+    throw new Error('Firebase Admin not initialized');
+  }
+
+  const doc = await getAdminFirestore().collection(COLLECTIONS.STORAGE).doc(storageId).get();
+
+  if (!doc.exists) {
+    await logAuditEvent(ctx, 'access_denied', storageId, 'storage', {
+      metadata: { path, reason: 'Storage not found' },
+    });
+    throw new TenantIsolationError('Storage not found', 404, 'NOT_FOUND');
+  }
+
+  const data = doc.data() as TenantStorage | undefined;
+  const isSuperAdmin = isRoleBypass(ctx.globalRole);
+
+  if (!isSuperAdmin) {
+    if (!data?.companyId || data.companyId !== ctx.companyId) {
+      await logAuditEvent(ctx, 'access_denied', storageId, 'storage', {
+        metadata: { path, reason: 'Tenant isolation violation - companyId mismatch' },
+      });
+      throw new TenantIsolationError('Access denied', 403, 'FORBIDDEN');
+    }
+  }
+
+  return data!;
+}
+
+/**
+ * 🔒 Require parking space to belong to authenticated user's tenant.
+ */
+export async function requireParkingInTenant(params: {
+  ctx: AuthContext;
+  parkingId: string;
+  path: string;
+}): Promise<TenantParking> {
+  const { ctx, parkingId, path } = params;
+
+  if (!getAdminFirestore()) {
+    throw new Error('Firebase Admin not initialized');
+  }
+
+  const doc = await getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES).doc(parkingId).get();
+
+  if (!doc.exists) {
+    await logAuditEvent(ctx, 'access_denied', parkingId, 'parking', {
+      metadata: { path, reason: 'Parking space not found' },
+    });
+    throw new TenantIsolationError('Parking space not found', 404, 'NOT_FOUND');
+  }
+
+  const data = doc.data() as TenantParking | undefined;
+  const isSuperAdmin = isRoleBypass(ctx.globalRole);
+
+  if (!isSuperAdmin) {
+    if (!data?.companyId || data.companyId !== ctx.companyId) {
+      await logAuditEvent(ctx, 'access_denied', parkingId, 'parking', {
+        metadata: { path, reason: 'Tenant isolation violation - companyId mismatch' },
+      });
+      throw new TenantIsolationError('Access denied', 403, 'FORBIDDEN');
+    }
+  }
+
+  return data!;
+}
+
+/**
+ * 🔒 Require opportunity to belong to authenticated user's tenant.
+ */
+export async function requireOpportunityInTenant(params: {
+  ctx: AuthContext;
+  opportunityId: string;
+  path: string;
+}): Promise<TenantOpportunity> {
+  const { ctx, opportunityId, path } = params;
+
+  if (!getAdminFirestore()) {
+    throw new Error('Firebase Admin not initialized');
+  }
+
+  const doc = await getAdminFirestore().collection(COLLECTIONS.OPPORTUNITIES).doc(opportunityId).get();
+
+  if (!doc.exists) {
+    await logAuditEvent(ctx, 'access_denied', opportunityId, 'opportunity', {
+      metadata: { path, reason: 'Opportunity not found' },
+    });
+    throw new TenantIsolationError('Opportunity not found', 404, 'NOT_FOUND');
+  }
+
+  const data = doc.data() as TenantOpportunity | undefined;
+  const isSuperAdmin = isRoleBypass(ctx.globalRole);
+
+  if (!isSuperAdmin) {
+    if (!data?.companyId || data.companyId !== ctx.companyId) {
+      await logAuditEvent(ctx, 'access_denied', opportunityId, 'opportunity', {
+        metadata: { path, reason: 'Tenant isolation violation - companyId mismatch' },
+      });
+      throw new TenantIsolationError('Access denied', 403, 'FORBIDDEN');
+    }
+  }
+
+  return data!;
+}

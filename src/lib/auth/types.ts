@@ -251,6 +251,8 @@ export const AUDIT_ACTIONS = {
   'member_added': true,              // User added as project member
   'member_removed': true,            // User removed from project
   'member_updated': true,            // Project member role/permissions updated
+  // Financial operations (ADR-255 SPEC-255E — Financial Audit Trail)
+  'financial_transition': true,      // Cheque/loan status transition (FSM)
 } as const;
 
 /**
@@ -266,6 +268,11 @@ export const AUDIT_TARGET_TYPES = {
   'project': true,
   'building': true,       // Building entities (AUTHZ Phase 2)
   'unit': true,
+  'storage': true,        // Storage units (ADR-255 SPEC-255B)
+  'parking': true,        // Parking spaces (ADR-255 SPEC-255B)
+  'opportunity': true,    // CRM opportunities (ADR-255 SPEC-255B)
+  'cheque': true,         // Financial cheques (ADR-255 SPEC-255E)
+  'loan': true,           // Financial loans (ADR-255 SPEC-255E)
   'role': true,
   'grant': true,
   'api': true,
@@ -283,7 +290,7 @@ export type AuditTargetType = keyof typeof AUDIT_TARGET_TYPES;
  * Typed audit change value (NO any!).
  */
 export interface AuditChangeValue {
-  type: 'role' | 'permission' | 'grant' | 'status' | 'membership' | 'webhook' | 'building_update' | 'building_delete' | 'project_create' | 'communication_status' | 'task_linked' | 'project_member';
+  type: 'role' | 'permission' | 'grant' | 'status' | 'membership' | 'webhook' | 'building_update' | 'building_delete' | 'project_create' | 'communication_status' | 'task_linked' | 'project_member' | 'financial_status';
   value: string | string[] | Record<string, unknown>;
 }
 

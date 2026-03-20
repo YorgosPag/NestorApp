@@ -17,6 +17,7 @@ import { PaymentPlanService } from '@/services/payment-plan.service';
 import { LoanTrackingService } from '@/services/loan-tracking.service';
 import type { CreateLoanInput } from '@/types/loan-tracking';
 import { getErrorMessage } from '@/lib/error-utils';
+import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
 
 type SegmentData = { params: Promise<{ id: string }> };
 
@@ -31,7 +32,9 @@ async function handleGet(
   const { id: unitId } = await segmentData!.params;
 
   const handler = withAuth(
-    async (_req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      await requireUnitInTenant({ ctx, unitId, path: '/api/units/[id]/payment-plan/loans' });
+
       try {
         const plan = await PaymentPlanService.getActivePaymentPlan(unitId);
         if (!plan) {
@@ -66,6 +69,8 @@ async function handlePost(
 
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      await requireUnitInTenant({ ctx, unitId, path: '/api/units/[id]/payment-plan/loans' });
+
       try {
         const body = (await req.json()) as CreateLoanInput & { planId?: string };
 

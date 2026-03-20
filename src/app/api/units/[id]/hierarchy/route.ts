@@ -12,6 +12,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
+import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
 
 const logger = createModuleLogger('UnitHierarchyRoute');
 
@@ -58,7 +59,7 @@ export const GET = withStandardRateLimit(
   withAuth<ApiSuccessResponse<UnitHierarchyResponse>>(
     async (
       request: NextRequest,
-      _ctx: AuthContext,
+      ctx: AuthContext,
       _cache: PermissionCache,
     ) => {
       const adminDb = getAdminFirestore();
@@ -75,6 +76,8 @@ export const GET = withStandardRateLimit(
       if (!unitId) {
         throw new ApiError(400, 'Unit ID is required');
       }
+
+      await requireUnitInTenant({ ctx, unitId, path: '/api/units/[id]/hierarchy' });
 
       // 1. Fetch unit
       const unitDoc = await adminDb.collection(COLLECTIONS.UNITS).doc(unitId).get();

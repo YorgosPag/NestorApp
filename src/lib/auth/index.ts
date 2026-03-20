@@ -171,6 +171,8 @@ export {
   logDirectOperation,
   logSystemOperation,
   logWebhookEvent,
+  logFinancialTransition,
+  logEntityDeletion,
   extractRequestMetadata,
 } from './audit';
 
@@ -181,10 +183,18 @@ export {
 export type {
   TenantProject,
   TenantBuilding,
+  TenantUnit,
+  TenantStorage,
+  TenantParking,
+  TenantOpportunity,
 } from './tenant-isolation';
 
 export {
   TenantIsolationError,
   requireProjectInTenant,
   requireBuildingInTenant,
+  requireUnitInTenant,
+  requireStorageInTenant,
+  requireParkingInTenant,
+  requireOpportunityInTenant,
 } from './tenant-isolation';

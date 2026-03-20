@@ -21,6 +21,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import type { CreatePaymentPlanInput, UpdatePaymentPlanInput } from '@/types/payment-plan';
 import { getErrorMessage } from '@/lib/error-utils';
+import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
 
 // =============================================================================
 // VALIDATION SCHEMAS — ADR-252 Phase 3 Security Hardening
@@ -63,7 +64,8 @@ async function handleGet(
   const { id: unitId } = await segmentData!.params;
 
   const handler = withAuth(
-    async (_req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      await requireUnitInTenant({ ctx, unitId, path: '/api/units/[id]/payment-plan' });
       try {
         const plan = await PaymentPlanService.getActivePaymentPlan(unitId);
         return NextResponse.json({ success: true, data: plan });
@@ -91,6 +93,7 @@ async function handlePost(
 
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      await requireUnitInTenant({ ctx, unitId, path: '/api/units/[id]/payment-plan' });
       try {
         const rawBody: unknown = await req.json();
         const parsed = createPaymentPlanSchema.safeParse(rawBody);
@@ -137,6 +140,7 @@ async function handlePatch(
 
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      await requireUnitInTenant({ ctx, unitId, path: '/api/units/[id]/payment-plan' });
       try {
         const body = (await req.json()) as UpdatePaymentPlanInput & { planId: string };
 
@@ -179,6 +183,7 @@ async function handleDelete(
 
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      await requireUnitInTenant({ ctx, unitId, path: '/api/units/[id]/payment-plan' });
       try {
         const { searchParams } = new URL(req.url);
         const planId = searchParams.get('planId');

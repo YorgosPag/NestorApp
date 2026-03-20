@@ -16,6 +16,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ChequeRegistryService } from '@/services/cheque-registry.service';
 import type { CreateChequeInput } from '@/types/cheque-registry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
 
 type SegmentData = { params: Promise<{ id: string }> };
 
@@ -30,7 +31,8 @@ async function handleGet(
   const { id: unitId } = await segmentData!.params;
 
   const handler = withAuth(
-    async (_req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      await requireUnitInTenant({ ctx, unitId, path: '/api/units/[id]/cheques' });
       try {
         const result = await ChequeRegistryService.getChequesByUnit(unitId);
         if (!result.success) {
@@ -61,6 +63,7 @@ async function handlePost(
 
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      await requireUnitInTenant({ ctx, unitId, path: '/api/units/[id]/cheques' });
       try {
         const body = (await req.json()) as CreateChequeInput;
 

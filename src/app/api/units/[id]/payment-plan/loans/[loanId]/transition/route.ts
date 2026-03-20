@@ -16,6 +16,8 @@ import { PaymentPlanService } from '@/services/payment-plan.service';
 import { LoanTrackingService } from '@/services/loan-tracking.service';
 import type { LoanTransitionInput } from '@/types/loan-tracking';
 import { getErrorMessage } from '@/lib/error-utils';
+import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
+import { logFinancialTransition } from '@/lib/auth/audit';
 
 type SegmentData = { params: Promise<{ id: string; loanId: string }> };
 
@@ -27,6 +29,8 @@ async function handlePost(
 
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      await requireUnitInTenant({ ctx, unitId, path: '/api/units/[id]/payment-plan/loans/[loanId]/transition' });
+
       try {
         const body = (await req.json()) as LoanTransitionInput & { planId?: string };
 
@@ -56,6 +60,8 @@ async function handlePost(
         if (!result.success) {
           return NextResponse.json({ success: false, error: result.error }, { status: 409 });
         }
+
+        await logFinancialTransition(ctx, 'loan', loanId, 'unknown', body.targetStatus, { unitId, planId });
 
         return NextResponse.json({ success: true });
       } catch (error) {

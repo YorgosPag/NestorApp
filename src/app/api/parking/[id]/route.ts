@@ -28,6 +28,7 @@ const logger = createModuleLogger('ParkingIdRoute');
 
 import type { ParkingSpotType, ParkingSpotStatus, ParkingLocationZone } from '@/types/parking';
 import { getErrorMessage } from '@/lib/error-utils';
+import { requireParkingInTenant } from '@/lib/auth/tenant-isolation';
 
 interface ParkingPatchPayload {
   number?: string;
@@ -62,16 +63,12 @@ export const PATCH = withStandardRateLimit(
       if (!id) throw new ApiError(400, 'Parking spot ID is required');
 
       try {
-        // Verify document exists and belongs to tenant
+        // 🔒 ADR: Centralized tenant isolation (existence + companyId + audit logging)
+        await requireParkingInTenant({ ctx, parkingId: id, path: '/api/parking/[id]' });
+
         const docRef = adminDb.collection(COLLECTIONS.PARKING_SPACES).doc(id);
         const doc = await docRef.get();
-
-        if (!doc.exists) throw new ApiError(404, 'Parking spot not found');
-
         const existing = doc.data() as Record<string, unknown>;
-        if (ctx.globalRole !== 'super_admin' && existing.companyId && existing.companyId !== ctx.companyId) {
-          throw new ApiError(403, 'Access denied');
-        }
 
         const body: ParkingPatchPayload = await request.json();
 
@@ -150,15 +147,11 @@ export const DELETE = withStandardRateLimit(
       if (!id) throw new ApiError(400, 'Parking spot ID is required');
 
       try {
+        // 🔒 ADR: Centralized tenant isolation (existence + companyId + audit logging)
+        await requireParkingInTenant({ ctx, parkingId: id, path: '/api/parking/[id]' });
+
         const docRef = adminDb.collection(COLLECTIONS.PARKING_SPACES).doc(id);
-        const doc = await docRef.get();
-
-        if (!doc.exists) throw new ApiError(404, 'Parking spot not found');
-
-        const existing = doc.data() as Record<string, unknown>;
-        if (ctx.globalRole !== 'super_admin' && existing.companyId && existing.companyId !== ctx.companyId) {
-          throw new ApiError(403, 'Access denied');
-        }
+        const existing = (await docRef.get()).data() as Record<string, unknown>;
 
         // 🛡️ ADR-226: Guarded deletion (checks dependencies + conditional block for sold parking)
         await executeDeletion(adminDb, 'parking', id, ctx.uid, ctx.companyId);
