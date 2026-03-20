@@ -15,6 +15,7 @@
 
 import 'server-only';
 
+import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -23,6 +24,18 @@ import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { requireProjectInTenant } from '@/lib/auth/tenant-isolation';
 import { getErrorMessage } from '@/lib/error-utils';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const EfkaDeclarationSchema = z.object({
+  employerVatNumber: z.string().max(20).nullable().optional(),
+  projectAddress: z.string().max(500).nullable().optional(),
+  projectDescription: z.string().max(2000).nullable().optional(),
+  startDate: z.string().max(30).nullable().optional(),
+  estimatedEndDate: z.string().max(30).nullable().optional(),
+  estimatedWorkerCount: z.number().int().min(0).max(9999).nullable().optional(),
+  projectCategory: z.string().max(50).nullable().optional(),
+  status: z.string().max(50).optional(),
+}).passthrough();
 
 type SegmentData = { params: Promise<{ projectId: string }> };
 
@@ -41,9 +54,11 @@ async function handlePatch(
       await requireProjectInTenant({ ctx, projectId, path: '/api/projects/[projectId]/efka-declaration' });
 
       try {
-        const body = (await req.json()) as Record<string, unknown>;
+        const parsed = safeParseBody(EfkaDeclarationSchema, await req.json());
+        if (parsed.error) return parsed.error;
+        const body = parsed.data;
 
-        if (!body || Object.keys(body).length === 0) {
+        if (Object.keys(body).length === 0) {
           return NextResponse.json(
             { success: false, error: 'No update fields provided' },
             { status: 400 }

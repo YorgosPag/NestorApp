@@ -15,6 +15,7 @@
 
 import 'server-only';
 
+import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -22,13 +23,30 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import type {
   JournalEntryFilters,
-  CreateJournalEntryInput,
   EntryType,
   AccountCategory,
   FiscalQuarter,
   PaymentMethod,
 } from '@/subapps/accounting/types';
 import { getErrorMessage } from '@/lib/error-utils';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const CreateJournalEntrySchema = z.object({
+  date: z.string().min(10).max(30),
+  type: z.enum(['income', 'expense']),
+  category: z.string().min(1).max(100),
+  description: z.string().min(1).max(2000),
+  netAmount: z.number().positive().max(999_999_999),
+  vatRate: z.number().min(0).max(100).optional(),
+  vatAmount: z.number().min(0).max(999_999_999).optional(),
+  grossAmount: z.number().min(0).max(999_999_999).optional(),
+  vatDeductible: z.boolean().optional(),
+  paymentMethod: z.string().max(50).optional(),
+  contactId: z.string().max(128).nullable().optional(),
+  contactName: z.string().max(200).nullable().optional(),
+  invoiceId: z.string().max(128).nullable().optional(),
+  notes: z.string().max(5000).nullable().optional(),
+}).passthrough();
 
 // =============================================================================
 // GET — List Journal Entries
@@ -107,21 +125,9 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
     async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const { repository } = createAccountingServices();
-        const body = (await req.json()) as CreateJournalEntryInput;
-
-        if (!body.date || !body.type || !body.category || !body.description) {
-          return NextResponse.json(
-            { success: false, error: 'date, type, category, and description are required' },
-            { status: 400 }
-          );
-        }
-
-        if (typeof body.netAmount !== 'number' || body.netAmount <= 0) {
-          return NextResponse.json(
-            { success: false, error: 'netAmount must be a positive number' },
-            { status: 400 }
-          );
-        }
+        const parsed = safeParseBody(CreateJournalEntrySchema, await req.json());
+        if (parsed.error) return parsed.error;
+        const body = parsed.data;
 
         const { id } = await repository.createJournalEntry(body);
 

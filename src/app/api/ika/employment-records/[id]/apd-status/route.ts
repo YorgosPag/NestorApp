@@ -12,6 +12,7 @@
 
 import 'server-only';
 
+import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -19,13 +20,14 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getErrorMessage } from '@/lib/error-utils';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
 
 type SegmentData = { params: Promise<{ id: string }> };
 
-interface PatchApdStatusBody {
-  status: 'pending' | 'submitted' | 'accepted' | 'rejected';
-  referenceNumber?: string;
-}
+const PatchApdStatusSchema = z.object({
+  status: z.enum(['pending', 'submitted', 'accepted', 'rejected']),
+  referenceNumber: z.string().max(100).optional(),
+});
 
 // =============================================================================
 // PATCH — Update APD Status
@@ -40,14 +42,9 @@ async function handlePatch(
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const body = (await req.json()) as PatchApdStatusBody;
-
-        if (!body.status) {
-          return NextResponse.json(
-            { success: false, error: 'status is required' },
-            { status: 400 }
-          );
-        }
+        const parsed = safeParseBody(PatchApdStatusSchema, await req.json());
+        if (parsed.error) return parsed.error;
+        const body = parsed.data;
 
         const db = getAdminFirestore();
         const docRef = db.collection(COLLECTIONS.EMPLOYMENT_RECORDS).doc(id);

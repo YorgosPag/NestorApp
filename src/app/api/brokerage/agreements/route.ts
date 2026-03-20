@@ -10,19 +10,37 @@
  */
 import 'server-only';
 
+import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getErrorMessage } from '@/lib/error-utils';
 import { BrokerageServerService } from '@/services/brokerage-server.service';
-import type { CreateBrokerageAgreementInput } from '@/types/brokerage';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const CreateAgreementSchema = z.object({
+  agentContactId: z.string().min(1).max(128),
+  agentName: z.string().min(1).max(200),
+  scope: z.enum(['project', 'unit']),
+  projectId: z.string().min(1).max(128),
+  unitId: z.string().max(128).nullable().optional(),
+  exclusivity: z.enum(['exclusive', 'non_exclusive', 'semi_exclusive']),
+  commissionType: z.enum(['percentage', 'fixed', 'tiered']),
+  commissionPercentage: z.number().min(0).max(100).nullable().optional(),
+  commissionFixedAmount: z.number().min(0).max(999_999_999).nullable().optional(),
+  startDate: z.string().min(10).max(30),
+  endDate: z.string().max(30).nullable().optional(),
+  notes: z.string().max(5000).nullable().optional(),
+});
 
 async function handlePost(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const body = await req.json() as CreateBrokerageAgreementInput;
+        const parsed = safeParseBody(CreateAgreementSchema, await req.json());
+        if (parsed.error) return parsed.error;
+        const body = parsed.data;
 
         const result = await BrokerageServerService.createAgreement(
           body,

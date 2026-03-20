@@ -20,6 +20,7 @@
 
 import 'server-only';
 
+import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -28,9 +29,23 @@ import {
   withSensitiveRateLimit,
 } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import type { CreateCustomCategoryInput } from '@/subapps/accounting/types';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const CreateCategorySchema = z.object({
+  type: z.enum(['income', 'expense']),
+  label: z.string().min(1).max(200),
+  description: z.string().min(1).max(1000),
+  mydataCode: z.string().min(1).max(50),
+  e3Code: z.string().min(1).max(50),
+  defaultVatRate: z.number().min(0).max(100),
+  vatDeductible: z.boolean(),
+  vatDeductiblePercent: z.union([z.literal(0), z.literal(50), z.literal(100)]),
+  sortOrder: z.number().int().min(0).max(9999).optional(),
+  icon: z.string().max(50).optional(),
+  kadCode: z.string().max(50).nullable().optional(),
+});
 
 const logger = createModuleLogger('CUSTOM_CATEGORIES');
 
@@ -48,6 +63,7 @@ interface CreateCategoryBody {
   vatDeductible: boolean;
   vatDeductiblePercent: 0 | 50 | 100;
   sortOrder?: number;
+  // Note: Zod validation via CreateCategorySchema replaces manual checks
   icon?: string;
   kadCode?: string | null;
 }
@@ -86,22 +102,9 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
     async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        let body: CreateCategoryBody;
-        try {
-          body = (await req.json()) as CreateCategoryBody;
-        } catch {
-          return NextResponse.json(
-            { success: false, error: 'Invalid JSON body' },
-            { status: 400 }
-          );
-        }
-
-        if (!body.type || !body.label?.trim() || !body.mydataCode || !body.e3Code) {
-          return NextResponse.json(
-            { success: false, error: 'Missing required fields: type, label, mydataCode, e3Code' },
-            { status: 400 }
-          );
-        }
+        const parsed = safeParseBody(CreateCategorySchema, await req.json());
+        if (parsed.error) return parsed.error;
+        const body = parsed.data;
 
         if (body.type !== 'income' && body.type !== 'expense') {
           return NextResponse.json(

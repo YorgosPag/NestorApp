@@ -2,8 +2,8 @@
 
 > **Parent**: [ADR-255](../ADR-255-security-hardening-phase-4.md)
 > **Priority**: P2 (Incremental)
-> **Effort**: Ongoing (migrate-on-touch)
-> **Status**: 📋 PLANNED
+> **Effort**: ~4h
+> **Status**: ✅ IMPLEMENTED (2026-03-21) — 42 routes with Zod schemas
 
 ---
 

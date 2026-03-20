@@ -15,17 +15,31 @@
 
 import 'server-only';
 
+import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import type {
-  InvoiceFilters,
-  InvoiceType,
-  CreateInvoiceInput,
-} from '@/subapps/accounting/types';
+import type { InvoiceFilters, InvoiceType } from '@/subapps/accounting/types';
 import { getErrorMessage } from '@/lib/error-utils';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const VALID_INVOICE_TYPES = [
+  'service_invoice', 'sales_invoice', 'retail_receipt',
+  'service_receipt', 'credit_invoice', 'service_invoice_eu', 'service_invoice_3rd',
+] as const;
+
+const CreateInvoiceSchema = z.object({
+  series: z.string().min(1).max(20),
+  type: z.enum(VALID_INVOICE_TYPES),
+  issueDate: z.string().min(10).max(30),
+  dueDate: z.string().max(30).nullable().optional(),
+  contactId: z.string().max(128).nullable().optional(),
+  contactName: z.string().max(200).nullable().optional(),
+  lineItems: z.array(z.record(z.unknown())).optional(),
+  notes: z.string().max(5000).nullable().optional(),
+}).passthrough();
 
 // =============================================================================
 // GET — List Invoices
@@ -101,27 +115,9 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
     async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const { service, repository } = createAccountingServices();
-        const body = (await req.json()) as CreateInvoiceInput;
-
-        if (!body.series || !body.type || !body.issueDate) {
-          return NextResponse.json(
-            { success: false, error: 'series, type, and issueDate are required' },
-            { status: 400 }
-          );
-        }
-
-        // 🔒 SECURITY (ADR-252 SV-H2): Runtime enum validation for invoice type
-        // Prevents arbitrary strings from reaching Firestore
-        const VALID_INVOICE_TYPES: readonly InvoiceType[] = [
-          'service_invoice', 'sales_invoice', 'retail_receipt',
-          'service_receipt', 'credit_invoice', 'service_invoice_eu', 'service_invoice_3rd',
-        ] as const;
-        if (!VALID_INVOICE_TYPES.includes(body.type)) {
-          return NextResponse.json(
-            { success: false, error: `Invalid invoice type: ${body.type}` },
-            { status: 400 }
-          );
-        }
+        const parsed = safeParseBody(CreateInvoiceSchema, await req.json());
+        if (parsed.error) return parsed.error;
+        const body = parsed.data;
 
         // Create the invoice
         const { id, number } = await repository.createInvoice(body);

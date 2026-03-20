@@ -16,6 +16,7 @@
 
 import 'server-only';
 
+import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -24,21 +25,22 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateEventId } from '@/services/enterprise-id.service';
 import { getErrorMessage } from '@/lib/error-utils';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
-interface CreateAttendanceEventBody {
-  projectId: string;
-  contactId: string;
-  eventType: 'check_in' | 'check_out' | 'break_start' | 'break_end';
-  method: 'manual' | 'qr_code' | 'gps' | 'nfc';
-  notes?: string;
-  coordinates?: { lat: number; lng: number };
-  deviceId?: string;
-  approvedBy?: string;
-}
+const CreateAttendanceEventSchema = z.object({
+  projectId: z.string().min(1).max(128),
+  contactId: z.string().min(1).max(128),
+  eventType: z.enum(['check_in', 'check_out', 'break_start', 'break_end']),
+  method: z.enum(['manual', 'qr_code', 'gps', 'nfc']),
+  notes: z.string().max(2000).optional(),
+  coordinates: z.object({ lat: z.number(), lng: z.number() }).optional(),
+  deviceId: z.string().max(200).optional(),
+  approvedBy: z.string().max(128).optional(),
+});
 
 // =============================================================================
 // POST — Create Attendance Event (Immutable)
@@ -48,15 +50,9 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const body = (await req.json()) as CreateAttendanceEventBody;
-
-        // Validation
-        if (!body.projectId || !body.contactId || !body.eventType || !body.method) {
-          return NextResponse.json(
-            { success: false, error: 'projectId, contactId, eventType, method are required' },
-            { status: 400 }
-          );
-        }
+        const parsed = safeParseBody(CreateAttendanceEventSchema, await req.json());
+        if (parsed.error) return parsed.error;
+        const body = parsed.data;
 
         const now = new Date().toISOString();
         const eventId = generateEventId();

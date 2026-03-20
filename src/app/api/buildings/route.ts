@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -14,6 +15,26 @@ import { normalizeToMillis } from '@/lib/date-local';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const CreateBuildingSchema = z.object({
+  name: z.string().min(1).max(200),
+  description: z.string().max(2000).optional(),
+  address: z.string().max(500).optional(),
+  city: z.string().max(200).optional(),
+  totalArea: z.number().min(0).max(999_999_999).optional(),
+  builtArea: z.number().min(0).max(999_999_999).optional(),
+  floors: z.number().int().min(0).max(999).optional(),
+  units: z.number().int().min(0).max(9999).optional(),
+  totalValue: z.number().min(0).max(999_999_999).optional(),
+  startDate: z.string().max(30).optional(),
+  completionDate: z.string().max(30).optional(),
+  status: z.string().max(50).optional(),
+  projectId: z.string().max(128).optional(),
+  companyId: z.string().max(128).optional(),
+  company: z.string().max(200).optional(),
+  addresses: z.array(z.record(z.unknown())).optional(),
+}).passthrough();
 
 const logger = createModuleLogger('BuildingsRoute');
 
@@ -146,7 +167,9 @@ export const POST = withStandardRateLimit(
   withAuth<ApiSuccessResponse<BuildingCreateResponse>>(
     async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
     try {
-      const body: BuildingCreatePayload = await request.json();
+      const parsed = safeParseBody(CreateBuildingSchema, await request.json());
+      if (parsed.error) throw new ApiError(400, 'Validation failed');
+      const body = parsed.data;
 
       // Entity-specific fields: exclude common fields handled by createEntity
       const { companyId: _c, ...bodyFields } = body;

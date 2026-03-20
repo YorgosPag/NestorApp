@@ -17,6 +17,7 @@
 
 import 'server-only';
 
+import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -28,6 +29,26 @@ import { createAccountingServices } from '@/subapps/accounting/services/create-a
 import type { APYCertificate } from '@/subapps/accounting/types';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const CreateAPYSchema = z.object({
+  fiscalYear: z.number().int().min(2020).max(2099),
+  customerId: z.string().max(128).nullable(),
+  provider: z.object({
+    name: z.string().max(200),
+    vatNumber: z.string().max(20),
+    taxOffice: z.string().max(200).optional(),
+  }).passthrough(),
+  customer: z.object({
+    name: z.string().max(200),
+    vatNumber: z.string().min(1).max(20),
+    taxOffice: z.string().max(200).optional(),
+  }).passthrough(),
+  lineItems: z.array(z.record(z.unknown())).min(1),
+  totalNetAmount: z.number().min(0).max(999_999_999),
+  totalWithholdingAmount: z.number().min(0).max(999_999_999),
+  notes: z.string().max(5000).nullable().optional(),
+});
 
 const logger = createModuleLogger('APY_CERTIFICATES');
 
@@ -92,16 +113,8 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
     async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        let body: CreateAPYCertificateBody;
-        try {
-          body = (await req.json()) as CreateAPYCertificateBody;
-        } catch {
-          return NextResponse.json(
-            { success: false, error: 'Invalid JSON body' },
-            { status: 400 }
-          );
-        }
-
+        const parsed = safeParseBody(CreateAPYSchema, await req.json());
+        if (parsed.error) return parsed.error;
         const {
           fiscalYear,
           customerId,
@@ -111,27 +124,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
           totalNetAmount,
           totalWithholdingAmount,
           notes,
-        } = body;
-
-        // ── Validation ──────────────────────────────────────────────────
-        if (!fiscalYear || typeof fiscalYear !== 'number') {
-          return NextResponse.json(
-            { success: false, error: 'fiscalYear is required' },
-            { status: 400 }
-          );
-        }
-        if (!customer?.vatNumber) {
-          return NextResponse.json(
-            { success: false, error: 'customer.vatNumber is required' },
-            { status: 400 }
-          );
-        }
-        if (!lineItems || lineItems.length === 0) {
-          return NextResponse.json(
-            { success: false, error: 'lineItems cannot be empty' },
-            { status: 400 }
-          );
-        }
+        } = parsed.data;
 
         const { repository } = createAccountingServices();
 

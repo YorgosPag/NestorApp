@@ -15,6 +15,7 @@
 
 import 'server-only';
 
+import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -22,6 +23,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getErrorMessage } from '@/lib/error-utils';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
 
 export const maxDuration = 30;
 
@@ -29,24 +31,24 @@ export const maxDuration = 30;
 // TYPES
 // =============================================================================
 
-interface WorkerStampsSummaryInput {
-  contactId: string;
-  daysWorked: number;
-  insuranceClassNumber?: number;
-  stampsCount: number;
-  imputedDailyWage?: number;
-  employerContribution: number;
-  employeeContribution: number;
-  totalContribution: number;
-  hasIssues?: boolean;
-}
+const WorkerSummarySchema = z.object({
+  contactId: z.string().min(1).max(128),
+  daysWorked: z.number().int().min(0).max(31),
+  insuranceClassNumber: z.number().int().optional(),
+  stampsCount: z.number().int().min(0),
+  imputedDailyWage: z.number().min(0).optional(),
+  employerContribution: z.number().min(0),
+  employeeContribution: z.number().min(0),
+  totalContribution: z.number().min(0),
+  hasIssues: z.boolean().optional(),
+});
 
-interface SaveEmploymentRecordsBody {
-  projectId: string;
-  month: number;
-  year: number;
-  workerSummaries: WorkerStampsSummaryInput[];
-}
+const SaveEmploymentRecordsSchema = z.object({
+  projectId: z.string().min(1).max(128),
+  month: z.number().int().min(1).max(12),
+  year: z.number().int().min(2020).max(2099),
+  workerSummaries: z.array(WorkerSummarySchema),
+});
 
 // =============================================================================
 // POST — Batch Save Employment Records
@@ -56,22 +58,9 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const body = (await req.json()) as SaveEmploymentRecordsBody;
-
-        // Validation
-        if (!body.projectId || !body.month || !body.year || !Array.isArray(body.workerSummaries)) {
-          return NextResponse.json(
-            { success: false, error: 'projectId, month, year, workerSummaries are required' },
-            { status: 400 }
-          );
-        }
-
-        if (body.month < 1 || body.month > 12) {
-          return NextResponse.json(
-            { success: false, error: 'month must be 1-12' },
-            { status: 400 }
-          );
-        }
+        const parsed = safeParseBody(SaveEmploymentRecordsSchema, await req.json());
+        if (parsed.error) return parsed.error;
+        const body = parsed.data;
 
         const db = getAdminFirestore();
         const now = new Date().toISOString();
