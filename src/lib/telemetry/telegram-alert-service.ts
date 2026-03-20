@@ -16,7 +16,7 @@
  * @enterprise Production Error Monitoring
  */
 
-import 'server-only';
+// Runtime server-side guard (no 'server-only' import to avoid pages/ directory conflicts)
 
 // ============================================================================
 // TYPES
@@ -162,8 +162,9 @@ export async function sendTelegramAlert(
   metadata?: AlertMetadata
 ): Promise<void> {
   try {
-    // No alerts in development
+    // No alerts in development or client-side
     if (process.env.NODE_ENV !== 'production') return;
+    if (typeof window !== 'undefined') return;
 
     const fingerprint = createFingerprint(module, message);
     if (isRateLimited(fingerprint)) return;
