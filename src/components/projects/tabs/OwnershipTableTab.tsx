@@ -209,9 +209,29 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
 
   // --- Handlers ---
   const handleAutoPopulate = useCallback(async () => {
+    // Pre-check: are there buildings linked to this project?
+    if (buildingIds.length === 0) {
+      showError(t('common:ownership.errors.noBuildings', {
+        defaultValue: 'Δεν βρέθηκαν κτίρια συνδεδεμένα με αυτό το έργο. Συνδέστε πρώτα ένα κτίριο με το έργο (Κτίριο → Γενικά → Έργο).',
+      }));
+      return;
+    }
+
     await autoPopulate();
-    showSuccess(t('common:ownership.actions.autoPopulate'));
-  }, [autoPopulate, showSuccess, t]);
+
+    // Post-check: did we get any rows?
+    const rowCount = table?.rows?.length ?? 0;
+    if (rowCount === 0) {
+      showError(t('common:ownership.errors.noUnits', {
+        defaultValue: 'Τα κτίρια δεν περιέχουν μονάδες. Προσθέστε μονάδες με εμβαδόν στα κτίρια πρώτα.',
+      }));
+    } else {
+      showSuccess(t('common:ownership.actions.autoPopulateSuccess', {
+        defaultValue: `Συμπληρώθηκαν ${rowCount} εγγραφές. Πατήστε "Υπολογισμός" για να υπολογιστούν τα χιλιοστά.`,
+        count: rowCount,
+      }));
+    }
+  }, [autoPopulate, buildingIds.length, table?.rows?.length, showSuccess, showError, t]);
 
   const handleCalculate = useCallback(() => {
     calculate();
