@@ -51,9 +51,9 @@ const PARSE_EVENT_SCHEMA = {
 // POST — Parse natural language to calendar event (authenticated + rate-limited)
 // =============================================================================
 
-async function handlePost(request: NextRequest): Promise<NextResponse> {
+async function handlePost(request: NextRequest): Promise<Response> {
   const handler = withStandardRateLimit(
-    withAuth(async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    withAuth<unknown>(async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const body = await req.json() as { text: string; currentDate: string; locale: string };
         const { text, currentDate, locale } = body;

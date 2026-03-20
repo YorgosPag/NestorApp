@@ -19,7 +19,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
-import type { UpdatePaymentPlanInput } from '@/types/payment-plan';
+import type { CreatePaymentPlanInput, UpdatePaymentPlanInput } from '@/types/payment-plan';
 import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
@@ -102,8 +102,9 @@ async function handlePost(
           );
         }
 
+        const input: CreatePaymentPlanInput = { ...parsed.data, unitId } as CreatePaymentPlanInput;
         const result = await PaymentPlanService.createPaymentPlan(
-          { ...parsed.data, unitId },
+          input,
           ctx.uid
         );
 
