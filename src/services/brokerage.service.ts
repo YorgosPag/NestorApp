@@ -1,13 +1,14 @@
 /**
  * =============================================================================
- * BrokerageService — Μεσιτικές Συμφωνίες & Προμήθειες
+ * BrokerageService — Μεσιτικές Συμφωνίες & Προμήθειες (Client)
  * =============================================================================
  *
- * CRUD + validation + commission recording για μεσιτικές συμβάσεις.
- * Ελληνική αγορά ακινήτων — ΓΕ.ΜΗ. αδειοδοτημένοι μεσίτες.
+ * Client-side service: READ operations use Firestore directly,
+ * WRITE operations route through server-side API for security.
  *
  * @module services/brokerage.service
  * @enterprise ADR-230 - Contract Workflow (SPEC-230B)
+ * @enterprise ADR-252 - Security Audit (server-side write enforcement)
  */
 
 import {
@@ -15,8 +16,6 @@ import {
   doc,
   getDoc,
   getDocs,
-  setDoc,
-  updateDoc,
   query,
   where,
 } from 'firebase/firestore';
@@ -24,7 +23,6 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import { generateBrokerageId, generateCommissionId } from '@/services/enterprise-id.service';
 import type {
   BrokerageAgreement,
   BrokerageStatus,
@@ -36,14 +34,44 @@ import type {
   ExclusivityValidationInput,
   ExclusivityValidationIssue,
 } from '@/types/brokerage';
-import { calculateCommission } from '@/types/brokerage';
-import { getCompanyId } from '@/config/tenant';
 
 const logger = createModuleLogger('BrokerageService');
 
 // ============================================================================
-// ID GENERATION — delegated to enterprise-id.service.ts
+// API RESPONSE TYPES
 // ============================================================================
+
+interface ApiSuccessResponse {
+  success: true;
+  data?: { id: string };
+}
+
+interface ApiErrorResponse {
+  success: false;
+  error: string;
+  validation?: ExclusivityValidationResult | null;
+}
+
+type ApiResponse = ApiSuccessResponse | ApiErrorResponse;
+
+// ============================================================================
+// API HELPER
+// ============================================================================
+
+async function callApi(
+  url: string,
+  method: 'POST' | 'PATCH' | 'DELETE',
+  body?: Record<string, unknown>
+): Promise<ApiResponse> {
+  const response = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+
+  const data = await response.json() as ApiResponse;
+  return data;
+}
 
 // ============================================================================
 // BROKERAGE SERVICE
@@ -51,39 +79,19 @@ const logger = createModuleLogger('BrokerageService');
 
 export class BrokerageService {
   // ==========================================================================
-  // AGREEMENTS — CRUD
+  // AGREEMENTS — WRITE (via server API)
   // ==========================================================================
 
   /**
-   * Δημιουργία μεσιτικής σύμβασης.
-   * Ελέγχει exclusivity πριν τη δημιουργία.
+   * Δημιουργία μεσιτικής σύμβασης — routed through server API.
+   * Server handles exclusivity validation and ID generation.
    */
   static async createAgreement(
     input: CreateBrokerageAgreementInput,
-    createdBy: string
+    _createdBy: string
   ): Promise<{ success: boolean; id?: string; error?: string; validation?: ExclusivityValidationResult }> {
     try {
-      // ALWAYS validate exclusivity (both exclusive AND non-exclusive)
-      const validation = await this.validateExclusivity({
-        projectId: input.projectId,
-        unitId: input.unitId ?? null,
-        scope: input.scope,
-        exclusivity: input.exclusivity,
-      });
-      if (!validation.canProceed) {
-        const firstError = validation.issues.find((i) => i.severity === 'error');
-        return {
-          success: false,
-          error: firstError?.messageKey ?? 'Exclusivity conflict',
-          validation,
-        };
-      }
-
-      const id = generateBrokerageId();
-      const now = new Date().toISOString();
-
-      const agreement: BrokerageAgreement = {
-        id,
+      const result = await callApi('/api/brokerage/agreements', 'POST', {
         agentContactId: input.agentContactId,
         agentName: input.agentName,
         scope: input.scope,
@@ -93,29 +101,88 @@ export class BrokerageService {
         commissionType: input.commissionType,
         commissionPercentage: input.commissionPercentage ?? null,
         commissionFixedAmount: input.commissionFixedAmount ?? null,
-        status: 'active',
         startDate: input.startDate,
         endDate: input.endDate ?? null,
-        terminatedAt: null,
-        companyId: getCompanyId(),
         notes: input.notes ?? null,
-        createdBy,
-        createdAt: now,
-        updatedAt: now,
-      };
+      });
 
-      await setDoc(doc(db, COLLECTIONS.BROKERAGE_AGREEMENTS, id), agreement);
+      if (!result.success) {
+        return {
+          success: false,
+          error: result.error,
+          validation: result.validation ?? undefined,
+        };
+      }
 
-      logger.info(`[BrokerageService] Created agreement ${id} for agent ${input.agentContactId}`);
-      return { success: true, id };
+      return { success: true, id: result.data?.id };
     } catch (error) {
       logger.error('[BrokerageService] Failed to create agreement:', error);
       return {
         success: false,
-        error: getErrorMessage(error),
+        error: getErrorMessage(error, 'Failed to create agreement'),
       };
     }
   }
+
+  /**
+   * Ενημέρωση μεσιτικής σύμβασης — routed through server API.
+   */
+  static async updateAgreement(
+    id: string,
+    updates: Partial<Pick<BrokerageAgreement,
+      'exclusivity' | 'commissionType' | 'commissionPercentage' |
+      'commissionFixedAmount' | 'startDate' | 'endDate' | 'notes' | 'scope' | 'unitId'
+    >>,
+    _updatedBy: string
+  ): Promise<{ success: boolean; error?: string; validation?: ExclusivityValidationResult }> {
+    try {
+      const result = await callApi(`/api/brokerage/agreements/${id}`, 'PATCH', updates as Record<string, unknown>);
+
+      if (!result.success) {
+        return {
+          success: false,
+          error: result.error,
+          validation: result.validation ?? undefined,
+        };
+      }
+
+      return { success: true };
+    } catch (error) {
+      logger.error('[BrokerageService] Failed to update agreement:', error);
+      return {
+        success: false,
+        error: getErrorMessage(error, 'Failed to update agreement'),
+      };
+    }
+  }
+
+  /**
+   * Τερματισμός μεσιτικής σύμβασης — routed through server API.
+   */
+  static async terminateAgreement(
+    id: string,
+    _updatedBy: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const result = await callApi(`/api/brokerage/agreements/${id}`, 'DELETE');
+
+      if (!result.success) {
+        return { success: false, error: result.error };
+      }
+
+      return { success: true };
+    } catch (error) {
+      logger.error('[BrokerageService] Failed to terminate agreement:', error);
+      return {
+        success: false,
+        error: getErrorMessage(error, 'Failed to terminate agreement'),
+      };
+    }
+  }
+
+  // ==========================================================================
+  // AGREEMENTS — READ (client-side Firestore)
+  // ==========================================================================
 
   /**
    * Λίστα μεσιτικών συμβάσεων για project/unit.
@@ -161,101 +228,14 @@ export class BrokerageService {
     }
   }
 
-  /**
-   * Τερματισμός μεσιτικής σύμβασης.
-   */
-  static async terminateAgreement(
-    id: string,
-    updatedBy: string
-  ): Promise<{ success: boolean; error?: string }> {
-    try {
-      const now = new Date().toISOString();
-      await updateDoc(doc(db, COLLECTIONS.BROKERAGE_AGREEMENTS, id), {
-        status: 'terminated',
-        terminatedAt: now,
-        updatedAt: now,
-      });
-
-      logger.info(`[BrokerageService] Terminated agreement ${id}`);
-      return { success: true };
-    } catch (error) {
-      logger.error('[BrokerageService] Failed to terminate agreement:', error);
-      return {
-        success: false,
-        error: getErrorMessage(error),
-      };
-    }
-  }
-
-  /**
-   * Ενημέρωση μεσιτικής σύμβασης.
-   */
-  static async updateAgreement(
-    id: string,
-    updates: Partial<Pick<BrokerageAgreement,
-      'exclusivity' | 'commissionType' | 'commissionPercentage' |
-      'commissionFixedAmount' | 'startDate' | 'endDate' | 'notes' | 'scope' | 'unitId'
-    >>,
-    updatedBy: string
-  ): Promise<{ success: boolean; error?: string; validation?: ExclusivityValidationResult }> {
-    try {
-      // If exclusivity, scope, or unitId change → re-validate
-      const needsValidation = updates.exclusivity !== undefined
-        || updates.scope !== undefined
-        || updates.unitId !== undefined;
-
-      if (needsValidation) {
-        // Fetch current agreement to merge with updates
-        const current = await this.getAgreementById(id);
-        if (!current) {
-          return { success: false, error: 'Agreement not found' };
-        }
-
-        const mergedScope = updates.scope ?? current.scope;
-        const mergedUnitId = updates.unitId !== undefined ? updates.unitId : current.unitId;
-        const mergedExclusivity = updates.exclusivity ?? current.exclusivity;
-
-        const validation = await this.validateExclusivity({
-          projectId: current.projectId,
-          unitId: mergedUnitId,
-          scope: mergedScope,
-          exclusivity: mergedExclusivity,
-          excludeAgreementId: id, // exclude self
-        });
-
-        if (!validation.canProceed) {
-          const firstError = validation.issues.find((i) => i.severity === 'error');
-          return {
-            success: false,
-            error: firstError?.messageKey ?? 'Exclusivity conflict',
-            validation,
-          };
-        }
-      }
-
-      const now = new Date().toISOString();
-      await updateDoc(doc(db, COLLECTIONS.BROKERAGE_AGREEMENTS, id), {
-        ...updates,
-        updatedAt: now,
-      });
-
-      logger.info(`[BrokerageService] Updated agreement ${id}`);
-      return { success: true };
-    } catch (error) {
-      logger.error('[BrokerageService] Failed to update agreement:', error);
-      return {
-        success: false,
-        error: getErrorMessage(error),
-      };
-    }
-  }
-
   // ==========================================================================
-  // EXCLUSIVITY VALIDATION
+  // EXCLUSIVITY VALIDATION (client-side for UI feedback)
   // ==========================================================================
 
   /**
    * Ελέγχει κανόνες αποκλειστικότητας (5 Business Rules).
+   * Kept client-side for immediate UI feedback.
+   * Server ALSO validates on write — this is supplementary.
    *
    * Rule 1: Exclusive unit → BLOCKS everything on that unit
    * Rule 2: Exclusive project → BLOCKS everything on the project
@@ -461,30 +441,19 @@ export class BrokerageService {
   }
 
   // ==========================================================================
-  // COMMISSION RECORDS
+  // COMMISSION RECORDS — WRITE (via server API)
   // ==========================================================================
 
   /**
-   * Εγγραφή προμήθειας κατά πώληση.
-   * Fire-and-forget — καλείται από SellDialog.
+   * Εγγραφή προμήθειας κατά πώληση — routed through server API.
+   * Commission calculation happens ONLY on the server.
    */
   static async recordCommission(
     input: RecordCommissionInput,
-    createdBy: string
+    _createdBy: string
   ): Promise<{ success: boolean; id?: string; error?: string }> {
     try {
-      const id = generateCommissionId();
-      const now = new Date().toISOString();
-
-      const commissionAmount = calculateCommission({
-        commissionType: input.commissionType,
-        salePrice: input.salePrice,
-        commissionPercentage: input.commissionPercentage,
-        commissionFixedAmount: input.commissionFixedAmount,
-      });
-
-      const record: CommissionRecord = {
-        id,
+      const result = await callApi('/api/brokerage/commissions', 'POST', {
         brokerageAgreementId: input.brokerageAgreementId,
         agentContactId: input.agentContactId,
         agentName: input.agentName,
@@ -492,31 +461,28 @@ export class BrokerageService {
         projectId: input.projectId,
         buyerContactId: input.buyerContactId,
         salePrice: input.salePrice,
-        commissionAmount,
         commissionType: input.commissionType,
         commissionPercentage: input.commissionPercentage,
-        paymentStatus: 'pending',
-        paidAt: null,
-        companyId: getCompanyId(),
-        createdBy,
-        createdAt: now,
-        updatedAt: now,
-      };
+        commissionFixedAmount: input.commissionFixedAmount,
+      });
 
-      await setDoc(doc(db, COLLECTIONS.COMMISSION_RECORDS, id), record);
+      if (!result.success) {
+        return { success: false, error: result.error };
+      }
 
-      logger.info(
-        `[BrokerageService] Recorded commission ${id}: ${commissionAmount}€ for agent ${input.agentContactId}`
-      );
-      return { success: true, id };
+      return { success: true, id: result.data?.id };
     } catch (error) {
       logger.error('[BrokerageService] Failed to record commission:', error);
       return {
         success: false,
-        error: getErrorMessage(error),
+        error: getErrorMessage(error, 'Failed to record commission'),
       };
     }
   }
+
+  // ==========================================================================
+  // COMMISSION RECORDS — READ (client-side Firestore)
+  // ==========================================================================
 
   /**
    * Ανάκτηση commission records για unit.
@@ -536,35 +502,31 @@ export class BrokerageService {
   }
 
   /**
-   * Ενημέρωση κατάστασης πληρωμής.
+   * Ενημέρωση κατάστασης πληρωμής — routed through server API.
    */
   static async updateCommissionPayment(
     id: string,
     paymentStatus: CommissionPaymentStatus
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const now = new Date().toISOString();
-      const updates: Record<string, string | null> = {
+      const result = await callApi(`/api/brokerage/commissions/${id}`, 'PATCH', {
         paymentStatus,
-        updatedAt: now,
-      };
+      });
 
-      if (paymentStatus === 'paid') {
-        updates.paidAt = now;
+      if (!result.success) {
+        return { success: false, error: result.error };
       }
 
-      await updateDoc(doc(db, COLLECTIONS.COMMISSION_RECORDS, id), updates);
-
-      logger.info(`[BrokerageService] Commission ${id} → ${paymentStatus}`);
       return { success: true };
     } catch (error) {
       logger.error('[BrokerageService] Failed to update commission payment:', error);
       return {
         success: false,
-        error: getErrorMessage(error),
+        error: getErrorMessage(error, 'Failed to update commission payment'),
       };
     }
   }
+
   // ==========================================================================
   // PERSONA GUARD — Protect persona removal when active records exist
   // ==========================================================================
@@ -572,6 +534,7 @@ export class BrokerageService {
   /**
    * Ελέγχει αν ο μεσίτης (agentContactId) έχει ενεργές συμβάσεις ή εγγραφές
    * προμηθειών. Χρησιμοποιείται για να μπλοκάρει την αφαίρεση persona.
+   * Read-only — stays client-side.
    */
   static async hasActiveRecords(
     agentContactId: string

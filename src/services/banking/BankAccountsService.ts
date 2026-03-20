@@ -19,14 +19,9 @@ import {
   doc,
   getDocs,
   getDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
   query,
   where,
   orderBy,
-  writeBatch,
-  serverTimestamp,
   type Unsubscribe,
   type DocumentData,
   type QueryDocumentSnapshot
@@ -41,7 +36,8 @@ import type {
   BankAccountUpdate,
   CurrencyCode,
 } from '@/types/contacts/banking';
-import { validateIBAN, cleanIBAN, isCurrencyCode } from '@/types/contacts/banking';
+import { isCurrencyCode } from '@/types/contacts/banking';
+import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('BankAccountsService');
 
@@ -85,27 +81,6 @@ function docToBankAccount(
     isActive: data.isActive ?? true,
     createdAt: normalizeToDate(data.createdAt) ?? new Date(),
     updatedAt: normalizeToDate(data.updatedAt) ?? new Date()
-  };
-}
-
-/**
- * Convert BankAccountInput to Firestore data
- */
-function bankAccountToDoc(
-  account: BankAccountInput
-): Record<string, unknown> {
-  return {
-    bankName: account.bankName,
-    bankCode: account.bankCode ?? null,
-    iban: cleanIBAN(account.iban),
-    accountNumber: account.accountNumber ?? null,
-    branch: account.branch ?? null,
-    accountType: account.accountType,
-    currency: account.currency,
-    isPrimary: account.isPrimary,
-    holderName: account.holderName ?? null,
-    notes: account.notes ?? null,
-    isActive: account.isActive
   };
 }
 
@@ -271,64 +246,46 @@ export class BankAccountsService {
   }
 
   // ==========================================================================
-  // CREATE OPERATIONS
+  // CREATE OPERATIONS (routed through server-side API — ADR-252)
   // ==========================================================================
 
   /**
-   * Add a new bank account for a contact
+   * Add a new bank account for a contact via server-side API.
    *
    * @param contactId - The contact ID
    * @param account - The account data
    * @returns The new account ID
-   * @throws Error if IBAN validation fails
+   * @throws Error if validation or API call fails
    */
   static async addAccount(
     contactId: string,
     account: BankAccountInput
   ): Promise<string> {
     try {
-      // Validate IBAN
-      const ibanValidation = validateIBAN(account.iban);
-      if (!ibanValidation.valid) {
-        throw new Error(ibanValidation.error || 'Invalid IBAN');
+      const response = await fetch(`/api/contacts/${contactId}/bank-accounts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(account),
+      });
+
+      const result: unknown = await response.json();
+      const data = result as { success: boolean; accountId?: string; error?: string };
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error ?? 'Failed to create bank account');
       }
 
-      const accountsRef = this.getAccountsCollection(contactId);
-
-      // If this is set as primary, unset other primary accounts first
-      if (account.isPrimary) {
-        await this.unsetAllPrimary(contactId);
+      const accountId = data.accountId;
+      if (!accountId) {
+        throw new Error('Server did not return an account ID');
       }
 
-      // Check for duplicate IBAN
-      const cleanedIban = cleanIBAN(account.iban);
-      const existingAccounts = await this.getAccounts(contactId, true);
-      const duplicateIban = existingAccounts.find(
-        acc => cleanIBAN(acc.iban) === cleanedIban
-      );
-
-      if (duplicateIban) {
-        throw new Error('Αυτό το IBAN υπάρχει ήδη για αυτή την επαφή');
-      }
-
-      // Create the document with enterprise ID (SOS N.6)
-      const { generateBankAccountId } = await import('@/services/enterprise-id.service');
-      const enterpriseId = generateBankAccountId();
-      const docData = {
-        ...bankAccountToDoc(account),
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      };
-
-      const docRef = doc(accountsRef, enterpriseId);
-      await setDoc(docRef, docData);
-
-      logger.info(`[BankAccountsService] Created account ${enterpriseId} for contact ${contactId}`);
-
-      return enterpriseId;
+      logger.info(`[BankAccountsService] Created account ${accountId} for contact ${contactId}`);
+      return accountId;
     } catch (error) {
-      logger.error('[BankAccountsService] Error adding account:', error);
-      throw error;
+      const msg = getErrorMessage(error, 'Failed to create bank account');
+      logger.error('[BankAccountsService] Error adding account:', msg);
+      throw new Error(msg);
     }
   }
 
@@ -337,7 +294,7 @@ export class BankAccountsService {
   // ==========================================================================
 
   /**
-   * Update an existing bank account
+   * Update an existing bank account via server-side API.
    *
    * @param contactId - The contact ID
    * @param accountId - The account ID
@@ -349,61 +306,32 @@ export class BankAccountsService {
     updates: BankAccountUpdate
   ): Promise<void> {
     try {
-      // Validate IBAN if it's being updated
-      if (updates.iban) {
-        const ibanValidation = validateIBAN(updates.iban);
-        if (!ibanValidation.valid) {
-          throw new Error(ibanValidation.error || 'Invalid IBAN');
+      const response = await fetch(
+        `/api/contacts/${contactId}/bank-accounts/${accountId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updates),
         }
+      );
 
-        // Check for duplicate IBAN (excluding current account)
-        const cleanedIban = cleanIBAN(updates.iban);
-        const existingAccounts = await this.getAccounts(contactId, true);
-        const duplicateIban = existingAccounts.find(
-          acc => acc.id !== accountId && cleanIBAN(acc.iban) === cleanedIban
-        );
+      const result: unknown = await response.json();
+      const data = result as { success: boolean; error?: string };
 
-        if (duplicateIban) {
-          throw new Error('Αυτό το IBAN υπάρχει ήδη για αυτή την επαφή');
-        }
+      if (!response.ok || !data.success) {
+        throw new Error(data.error ?? 'Failed to update bank account');
       }
-
-      const docRef = this.getAccountDoc(contactId, accountId);
-
-      // If setting as primary, unset other primary accounts first
-      if (updates.isPrimary) {
-        await this.unsetAllPrimary(contactId, accountId);
-      }
-
-      // Build update data
-      const updateData: Record<string, unknown> = {
-        updatedAt: serverTimestamp()
-      };
-
-      // Add non-undefined fields
-      if (updates.bankName !== undefined) updateData.bankName = updates.bankName;
-      if (updates.bankCode !== undefined) updateData.bankCode = updates.bankCode ?? null;
-      if (updates.iban !== undefined) updateData.iban = cleanIBAN(updates.iban);
-      if (updates.accountNumber !== undefined) updateData.accountNumber = updates.accountNumber ?? null;
-      if (updates.branch !== undefined) updateData.branch = updates.branch ?? null;
-      if (updates.accountType !== undefined) updateData.accountType = updates.accountType;
-      if (updates.currency !== undefined) updateData.currency = updates.currency;
-      if (updates.isPrimary !== undefined) updateData.isPrimary = updates.isPrimary;
-      if (updates.holderName !== undefined) updateData.holderName = updates.holderName ?? null;
-      if (updates.notes !== undefined) updateData.notes = updates.notes ?? null;
-      if (updates.isActive !== undefined) updateData.isActive = updates.isActive;
-
-      await updateDoc(docRef, updateData);
 
       logger.info(`[BankAccountsService] Updated account ${accountId} for contact ${contactId}`);
     } catch (error) {
-      logger.error('[BankAccountsService] Error updating account:', error);
-      throw error;
+      const msg = getErrorMessage(error, 'Failed to update bank account');
+      logger.error('[BankAccountsService] Error updating account:', msg);
+      throw new Error(msg);
     }
   }
 
   /**
-   * Set a specific account as the primary account
+   * Set a specific account as the primary account via server-side API.
    *
    * @param contactId - The contact ID
    * @param accountId - The account ID to set as primary
@@ -412,26 +340,12 @@ export class BankAccountsService {
     contactId: string,
     accountId: string
   ): Promise<void> {
-    try {
-      // Unset all other primary accounts
-      await this.unsetAllPrimary(contactId, accountId);
-
-      // Set this account as primary
-      const docRef = this.getAccountDoc(contactId, accountId);
-      await updateDoc(docRef, {
-        isPrimary: true,
-        updatedAt: serverTimestamp()
-      });
-
-      logger.info(`[BankAccountsService] Set account ${accountId} as primary for contact ${contactId}`);
-    } catch (error) {
-      logger.error('[BankAccountsService] Error setting primary account:', error);
-      throw error;
-    }
+    await this.updateAccount(contactId, accountId, { isPrimary: true });
+    logger.info(`[BankAccountsService] Set account ${accountId} as primary for contact ${contactId}`);
   }
 
   /**
-   * Toggle account active status
+   * Toggle account active status via server-side API.
    *
    * @param contactId - The contact ID
    * @param accountId - The account ID
@@ -442,18 +356,8 @@ export class BankAccountsService {
     accountId: string,
     isActive: boolean
   ): Promise<void> {
-    try {
-      const docRef = this.getAccountDoc(contactId, accountId);
-      await updateDoc(docRef, {
-        isActive,
-        updatedAt: serverTimestamp()
-      });
-
-      logger.info(`[BankAccountsService] Set account ${accountId} active=${isActive} for contact ${contactId}`);
-    } catch (error) {
-      logger.error('[BankAccountsService] Error toggling account active:', error);
-      throw error;
-    }
+    await this.updateAccount(contactId, accountId, { isActive });
+    logger.info(`[BankAccountsService] Set account ${accountId} active=${isActive} for contact ${contactId}`);
   }
 
   // ==========================================================================
@@ -461,29 +365,41 @@ export class BankAccountsService {
   // ==========================================================================
 
   /**
-   * Delete a bank account
+   * Soft-delete a bank account via server-side API (sets isActive: false).
    *
    * @param contactId - The contact ID
-   * @param accountId - The account ID to delete
+   * @param accountId - The account ID to soft-delete
    */
   static async deleteAccount(
     contactId: string,
     accountId: string
   ): Promise<void> {
     try {
-      const docRef = this.getAccountDoc(contactId, accountId);
-      await deleteDoc(docRef);
+      const response = await fetch(
+        `/api/contacts/${contactId}/bank-accounts/${accountId}`,
+        {
+          method: 'DELETE',
+        }
+      );
 
-      logger.info(`[BankAccountsService] Deleted account ${accountId} for contact ${contactId}`);
+      const result: unknown = await response.json();
+      const data = result as { success: boolean; error?: string };
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error ?? 'Failed to delete bank account');
+      }
+
+      logger.info(`[BankAccountsService] Soft-deleted account ${accountId} for contact ${contactId}`);
     } catch (error) {
-      logger.error('[BankAccountsService] Error deleting account:', error);
-      throw error;
+      const msg = getErrorMessage(error, 'Failed to delete bank account');
+      logger.error('[BankAccountsService] Error deleting account:', msg);
+      throw new Error(msg);
     }
   }
 
   /**
-   * Delete all bank accounts for a contact
-   * Used when deleting a contact
+   * Delete all bank accounts for a contact.
+   * Iterates and soft-deletes each account via the server-side API.
    *
    * @param contactId - The contact ID
    */
@@ -495,19 +411,16 @@ export class BankAccountsService {
         return;
       }
 
-      const batch = writeBatch(db);
-
+      // Soft-delete each account sequentially via API
       for (const account of accounts) {
-        const docRef = this.getAccountDoc(contactId, account.id);
-        batch.delete(docRef);
+        await this.deleteAccount(contactId, account.id);
       }
 
-      await batch.commit();
-
-      logger.info(`[BankAccountsService] Deleted ${accounts.length} accounts for contact ${contactId}`);
+      logger.info(`[BankAccountsService] Soft-deleted ${accounts.length} accounts for contact ${contactId}`);
     } catch (error) {
-      logger.error('[BankAccountsService] Error deleting all accounts:', error);
-      throw error;
+      const msg = getErrorMessage(error, 'Failed to delete all bank accounts');
+      logger.error('[BankAccountsService] Error deleting all accounts:', msg);
+      throw new Error(msg);
     }
   }
 
@@ -551,38 +464,6 @@ export class BankAccountsService {
     );
   }
 
-  // ==========================================================================
-  // PRIVATE HELPERS
-  // ==========================================================================
-
-  /**
-   * Unset isPrimary for all accounts except the specified one
-   */
-  private static async unsetAllPrimary(
-    contactId: string,
-    exceptAccountId?: string
-  ): Promise<void> {
-    const accountsRef = this.getAccountsCollection(contactId);
-    const q = query(accountsRef, where('isPrimary', '==', true));
-    const snapshot = await getDocs(q);
-
-    if (snapshot.empty) {
-      return;
-    }
-
-    const batch = writeBatch(db);
-
-    for (const docSnap of snapshot.docs) {
-      if (docSnap.id !== exceptAccountId) {
-        batch.update(docSnap.ref, {
-          isPrimary: false,
-          updatedAt: serverTimestamp()
-        });
-      }
-    }
-
-    await batch.commit();
-  }
 }
 
 // ============================================================================

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ✅ PHASE_1_IMPLEMENTED |
+| **Status** | ✅ PHASE_2_IMPLEMENTED |
 | **Date** | 2026-03-19 |
 | **Category** | Security / Infrastructure |
 | **Depends On** | ADR-249, ADR-250 |
@@ -406,7 +406,7 @@ Test: Malformed requests, expired webhooks, NaN parameters
 |------|--------|-------|
 | Default Deny Rules | ✅ PASS | Root-level deny in Firestore rules |
 | Authentication Required | ✅ PASS | `withAuth()` on all protected routes |
-| Tenant Isolation | ⚠️ PARTIAL | 8 collections done, 9+ remaining |
+| Tenant Isolation | ✅ PASS | All collections secured with belongsToCompany() + legacy fallbacks |
 | Rate Limiting | ✅ PASS | 86+ routes with multi-tier limits |
 | Input Validation | ⚠️ PARTIAL | TypeScript types, no centralized Zod framework |
 | XSS Prevention | ⚠️ PARTIAL | Render-time DOMPurify, missing ingestion-time sanitization |
@@ -441,3 +441,9 @@ Test: Malformed requests, expired webhooks, NaN parameters
 | | **Firestore Rules (9 fixes):** FR-C1 (cadFiles tenant isolation), FR-C2 (file_shares CREATE companyId enforcement + UPDATE tenant-scoped), FR-C3 (companies own-company-only READ), FR-H1 (boq_items CREATE/READ/UPDATE/DELETE tenant check), FR-H2 (ownership_tables full tenant isolation), FR-H3 (6 collections: contact_relationships, contact_links, attendance_qr_tokens, boq_categories, employment_records, attendance_events — tenant-scoped READ), FR-M1 (system collection → isCompanyAdmin() + merged duplicate blocks, removed dangerous duplicate config block with open writes) |
 | | **Server-side (5 fixes):** SV-C1 (path traversal prevention — `sanitizeStoragePath()` in photo upload), AR-M3 (SSRF prevention — `validateFetchUrl()` + AbortSignal.timeout in watermark API), SV-H1 (email HTML defense-in-depth — `sanitizeHtmlForStorage()` before Firestore write), SV-H2 (invoice type runtime enum validation), SV-M1 (webhook timestamp replay rejection — 5 min max age) |
 | | **New file:** `src/lib/security/path-sanitizer.ts` — centralized security utilities |
+| 2026-03-20 | **PHASE 2 IMPLEMENTED** — 3 critical security fixes (race conditions + cross-tenant + server validation): |
+| | **1. Payment Plan Transactions (Data Corruption Fix):** 6 methods wrapped in `db.runTransaction()` — `recordPayment()`, `resyncTotalAmount()`, `addInstallment()`, `updateInstallment()`, `removeInstallment()`, `syncPaymentSummary()`. New `computeSummaryFromPlan()` pure function for inline summary computation within transactions. All payment + plan + summary writes now atomic. |
+| | **2. Firestore Rules Cross-Tenant Fix (FR-H3 complete):** 6 collections secured — `contact_relationships`, `contact_links`, `attendance_events`, `attendance_qr_tokens`, `employment_records`, `cadFiles`. Pattern: `belongsToCompany(resource.data.companyId)` with legacy fallback for docs without companyId. `cadFiles` restricted to creator + super admin. |
+| | **3. Server-Side API Routes (4 collections):** `opportunities`, `brokerage_agreements`, `commission_records`, `bank_accounts` — client-side writes replaced with server-validated API routes. 8 new API route files, 3 new server services, 3 client services modified. Pattern: `withAuth()` + `withSensitiveRateLimit` + `getErrorMessage()`. CompanyId from `AuthContext` (not client payload). Tenant isolation on all update/delete. |
+| | **New files (11):** `src/services/opportunities-server.service.ts`, `src/services/brokerage-server.service.ts`, `src/services/banking/bank-accounts-server.service.ts`, `src/app/api/opportunities/route.ts`, `src/app/api/opportunities/[id]/route.ts`, `src/app/api/brokerage/agreements/route.ts`, `src/app/api/brokerage/agreements/[id]/route.ts`, `src/app/api/brokerage/commissions/route.ts`, `src/app/api/brokerage/commissions/[id]/route.ts`, `src/app/api/contacts/[id]/bank-accounts/route.ts`, `src/app/api/contacts/[id]/bank-accounts/[accountId]/route.ts` |
+| | **Modified files (5):** `src/services/payment-plan.service.ts` (6 methods → transactions), `firestore.rules` (6 collections secured), `src/services/opportunities-client.service.ts`, `src/services/brokerage.service.ts`, `src/services/banking/BankAccountsService.ts` (writes → API calls) |

@@ -4,20 +4,17 @@
  * ENTERPRISE: Client-side Opportunities Service
  *
  * ADR-214 Phase 4: READ method delegated to firestoreQueryService.
+ * ADR-252 Security Fix: WRITE operations routed through server-side API routes.
  * SECURITY FIX: tenant filtering auto-injected (was previously MISSING).
  *
- * Provides client-side CRUD operations for Opportunities with real-time sync.
- * Uses Firebase client SDK for direct Firestore operations.
+ * Provides client-side READ + server-routed WRITE operations for Opportunities.
  * Dispatches events via RealtimeService for cross-page synchronization.
  *
- * NOTE: Server-side operations (server actions) are in opportunities.service.ts
- * This file is for client-side operations that need immediate real-time dispatch.
+ * WRITE operations: POST/PATCH/DELETE via /api/opportunities (server-side validation)
+ * READ operations: Client-side via firestoreQueryService (tenant-aware)
  */
 
-import { doc, updateDoc, setDoc, deleteDoc, serverTimestamp, orderBy, type DocumentData } from 'firebase/firestore';
-import { generateOpportunityId } from '@/services/enterprise-id.service';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { orderBy, type DocumentData } from 'firebase/firestore';
 import { firestoreQueryService } from '@/services/firestore';
 import type { Opportunity } from '@/types/crm';
 // Centralized real-time service for cross-page sync
@@ -56,24 +53,26 @@ export interface OpportunityUpdatePayload {
 }
 
 /**
- * Δημιουργία νέας ευκαιρίας στο Firebase (Client-side)
+ * Δημιουργία νέας ευκαιρίας μέσω API (ADR-252 Security Fix)
  */
 export async function createOpportunityClient(
   data: OpportunityCreatePayload
 ): Promise<{ success: boolean; opportunityId?: string; error?: string }> {
   try {
-    logger.info('Creating new opportunity');
+    logger.info('Creating new opportunity via API');
 
-    // ADR-210: Enterprise ID generation — setDoc with pre-generated ID
-    const id = generateOpportunityId();
-    const opportunityRef = doc(db, COLLECTIONS.OPPORTUNITIES, id);
-    await setDoc(opportunityRef, {
-      ...data,
-      id,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
+    const response = await fetch('/api/opportunities', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
     });
+    const result = await response.json();
 
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+
+    const id = result.data.id;
     logger.info('Opportunity created', { opportunityId: id });
 
     // Centralized Real-time Service (cross-page sync)
@@ -90,31 +89,32 @@ export async function createOpportunityClient(
     });
 
     return { success: true, opportunityId: id };
-
   } catch (error) {
     logger.error('Error creating opportunity', { error });
-    return {
-      success: false,
-      error: getErrorMessage(error)
-    };
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
 /**
- * Ενημέρωση ευκαιρίας στο Firebase (Client-side)
+ * Ενημέρωση ευκαιρίας μέσω API (ADR-252 Security Fix)
  */
 export async function updateOpportunityClient(
   opportunityId: string,
   updates: OpportunityUpdatePayload
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    logger.info('Updating opportunity', { opportunityId });
+    logger.info('Updating opportunity via API', { opportunityId });
 
-    const opportunityRef = doc(db, COLLECTIONS.OPPORTUNITIES, opportunityId);
-    await updateDoc(opportunityRef, {
-      ...updates,
-      updatedAt: serverTimestamp()
+    const response = await fetch(`/api/opportunities/${opportunityId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
     });
+    const result = await response.json();
+
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
 
     logger.info('Opportunity updated successfully', { opportunityId });
 
@@ -134,27 +134,29 @@ export async function updateOpportunityClient(
     });
 
     return { success: true };
-
   } catch (error) {
     logger.error('Error updating opportunity', { opportunityId, error });
-    return {
-      success: false,
-      error: getErrorMessage(error)
-    };
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
 /**
- * Διαγραφή ευκαιρίας από το Firebase (Client-side)
+ * Διαγραφή ευκαιρίας μέσω API (ADR-252 Security Fix)
  */
 export async function deleteOpportunityClient(
   opportunityId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    logger.info('Deleting opportunity', { opportunityId });
+    logger.info('Deleting opportunity via API', { opportunityId });
 
-    const opportunityRef = doc(db, COLLECTIONS.OPPORTUNITIES, opportunityId);
-    await deleteDoc(opportunityRef);
+    const response = await fetch(`/api/opportunities/${opportunityId}`, {
+      method: 'DELETE',
+    });
+    const result = await response.json();
+
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
 
     logger.info('Opportunity deleted successfully', { opportunityId });
 
@@ -165,13 +167,9 @@ export async function deleteOpportunityClient(
     });
 
     return { success: true };
-
   } catch (error) {
     logger.error('Error deleting opportunity', { opportunityId, error });
-    return {
-      success: false,
-      error: getErrorMessage(error)
-    };
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 

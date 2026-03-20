@@ -1,0 +1,110 @@
+/**
+ * =============================================================================
+ * PATCH/DELETE /api/brokerage/agreements/[id]
+ * =============================================================================
+ *
+ * PATCH — Update brokerage agreement (with exclusivity re-validation)
+ * DELETE — Terminate brokerage agreement
+ *
+ * @enterprise ADR-252 - Security Audit (server-side write enforcement)
+ */
+import 'server-only';
+
+import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { getErrorMessage } from '@/lib/error-utils';
+import { BrokerageServerService } from '@/services/brokerage-server.service';
+import type { BrokerageAgreement } from '@/types/brokerage';
+
+type RouteContext = { params: Promise<{ id: string }> };
+
+// ============================================================================
+// PATCH — Update Agreement
+// ============================================================================
+
+async function handlePatch(request: NextRequest, segmentData?: RouteContext): Promise<NextResponse> {
+  const handler = withAuth(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      try {
+        const { id } = await segmentData!.params;
+
+        if (!id || typeof id !== 'string') {
+          return NextResponse.json(
+            { success: false, error: 'Agreement ID is required' },
+            { status: 400 }
+          );
+        }
+
+        const body = await req.json() as Partial<Pick<BrokerageAgreement,
+          'exclusivity' | 'commissionType' | 'commissionPercentage' |
+          'commissionFixedAmount' | 'startDate' | 'endDate' | 'notes' | 'scope' | 'unitId'
+        >>;
+
+        const result = await BrokerageServerService.updateAgreement(
+          id,
+          body,
+          ctx.companyId,
+          ctx.uid
+        );
+
+        if (!result.success) {
+          return NextResponse.json(
+            { success: false, error: result.error, validation: result.validation ?? null },
+            { status: 400 }
+          );
+        }
+
+        return NextResponse.json({ success: true }, { status: 200 });
+      } catch (error) {
+        const message = getErrorMessage(error, 'Failed to update brokerage agreement');
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
+      }
+    }
+  );
+  return handler(request);
+}
+
+// ============================================================================
+// DELETE — Terminate Agreement
+// ============================================================================
+
+async function handleDelete(request: NextRequest, segmentData?: RouteContext): Promise<NextResponse> {
+  const handler = withAuth(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      try {
+        const { id } = await segmentData!.params;
+
+        if (!id || typeof id !== 'string') {
+          return NextResponse.json(
+            { success: false, error: 'Agreement ID is required' },
+            { status: 400 }
+          );
+        }
+
+        const result = await BrokerageServerService.terminateAgreement(
+          id,
+          ctx.companyId,
+          ctx.uid
+        );
+
+        if (!result.success) {
+          return NextResponse.json(
+            { success: false, error: result.error },
+            { status: 400 }
+          );
+        }
+
+        return NextResponse.json({ success: true }, { status: 200 });
+      } catch (error) {
+        const message = getErrorMessage(error, 'Failed to terminate brokerage agreement');
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
+      }
+    }
+  );
+  return handler(request);
+}
+
+export const PATCH = withSensitiveRateLimit(handlePatch);
+export const DELETE = withSensitiveRateLimit(handleDelete);

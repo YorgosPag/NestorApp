@@ -252,69 +252,86 @@ export class PaymentPlanService {
     updatedBy: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const plan = await this.getActivePaymentPlan(unitId);
-      if (!plan) return { success: true }; // No plan → nothing to sync
+      const db = getDb();
 
-      const oldTotal = plan.totalAmount;
-      if (newSalePrice === oldTotal) return { success: true }; // No change
-
-      // Only resync negotiation/draft plans automatically
-      if (plan.status !== 'negotiation' && plan.status !== 'draft') {
-        logger.info(`[PaymentPlanService] Skipping resync: plan ${plan.id} is ${plan.status} (not draft/negotiation)`);
+      // First, find the active plan ID (read-only query — outside transaction)
+      const activePlan = await this.getActivePaymentPlan(unitId);
+      if (!activePlan) return { success: true }; // No plan → nothing to sync
+      if (newSalePrice === activePlan.totalAmount) return { success: true };
+      if (activePlan.status !== 'negotiation' && activePlan.status !== 'draft') {
+        logger.info(`[PaymentPlanService] Skipping resync: plan ${activePlan.id} is ${activePlan.status}`);
         return { success: true };
       }
 
-      const delta = newSalePrice - oldTotal; // positive = increase, negative = decrease
-      const updatedInstallments = [...plan.installments];
-      const totalUnpaid = updatedInstallments
-        .filter((inst) => inst.paidAmount < inst.amount)
-        .reduce((s, inst) => s + (inst.amount - inst.paidAmount), 0);
+      const planRef = db.collection(planCollectionPath(unitId)).doc(activePlan.id);
+      const unitRef = db.collection(COLLECTIONS.UNITS).doc(unitId);
 
-      if (delta < 0 && Math.abs(delta) > totalUnpaid) {
-        return {
-          success: false,
-          error: `Η νέα τιμή (${newSalePrice}) θα μειώσει το πλάνο κατά ${Math.abs(delta)} αλλά το αδιάθετο υπόλοιπο είναι μόνο ${totalUnpaid}.`,
-        };
-      }
+      await db.runTransaction(async (tx) => {
+        const planSnap = await tx.get(planRef);
+        if (!planSnap.exists) return;
+        const plan = { id: planSnap.id, ...planSnap.data() } as PaymentPlan;
 
-      if (totalUnpaid > 0) {
-        for (const inst of updatedInstallments) {
-          const unpaid = inst.amount - inst.paidAmount;
-          if (unpaid <= 0) continue;
-          const share = Math.round((unpaid / totalUnpaid) * delta * 100) / 100;
-          inst.amount = Math.round((inst.amount + share) * 100) / 100;
-          inst.percentage = newSalePrice > 0
-            ? Math.round((inst.amount / newSalePrice) * 10000) / 100
-            : 0;
+        // Re-validate inside transaction (state may have changed)
+        if (newSalePrice === plan.totalAmount) return;
+        if (plan.status !== 'negotiation' && plan.status !== 'draft') return;
+
+        const oldTotal = plan.totalAmount;
+        const delta = newSalePrice - oldTotal;
+        const updatedInstallments = [...plan.installments];
+        const totalUnpaid = updatedInstallments
+          .filter((inst) => inst.paidAmount < inst.amount)
+          .reduce((s, inst) => s + (inst.amount - inst.paidAmount), 0);
+
+        if (delta < 0 && Math.abs(delta) > totalUnpaid) {
+          throw new Error(
+            `Η νέα τιμή (${newSalePrice}) θα μειώσει το πλάνο κατά ${Math.abs(delta)} αλλά το αδιάθετο υπόλοιπο είναι μόνο ${totalUnpaid}.`
+          );
         }
-      } else if (delta > 0 && updatedInstallments.length > 0) {
-        // All paid — append a new "adjustment" installment for the increase
-        const pendingCount = updatedInstallments.filter((i) => i.status === 'pending').length;
-        if (pendingCount > 0) {
-          const share = Math.round((delta / pendingCount) * 100) / 100;
+
+        if (totalUnpaid > 0) {
           for (const inst of updatedInstallments) {
-            if (inst.status !== 'pending') continue;
+            const unpaid = inst.amount - inst.paidAmount;
+            if (unpaid <= 0) continue;
+            const share = Math.round((unpaid / totalUnpaid) * delta * 100) / 100;
             inst.amount = Math.round((inst.amount + share) * 100) / 100;
+            inst.percentage = newSalePrice > 0
+              ? Math.round((inst.amount / newSalePrice) * 10000) / 100
+              : 0;
+          }
+        } else if (delta > 0 && updatedInstallments.length > 0) {
+          const pendingCount = updatedInstallments.filter((i) => i.status === 'pending').length;
+          if (pendingCount > 0) {
+            const share = Math.round((delta / pendingCount) * 100) / 100;
+            for (const inst of updatedInstallments) {
+              if (inst.status !== 'pending') continue;
+              inst.amount = Math.round((inst.amount + share) * 100) / 100;
+            }
           }
         }
-      }
 
-      // Re-index
-      const reindexed = updatedInstallments.map((inst, i) => ({ ...inst, index: i }));
-      const newTotal = reindexed.reduce((s, i) => s + i.amount, 0);
+        const reindexed = updatedInstallments.map((inst, i) => ({ ...inst, index: i }));
+        const newTotal = reindexed.reduce((s, i) => s + i.amount, 0);
 
-      const db = getDb();
-      await db.collection(planCollectionPath(unitId)).doc(plan.id).update({
-        installments: reindexed,
-        totalAmount: newTotal,
-        remainingAmount: newTotal - plan.paidAmount,
-        updatedAt: new Date().toISOString(),
-        updatedBy,
+        const updatedPlan: PaymentPlan = {
+          ...plan,
+          installments: reindexed,
+          totalAmount: newTotal,
+          remainingAmount: newTotal - plan.paidAmount,
+        };
+        const summary = this.computeSummaryFromPlan(updatedPlan, plan.id);
+
+        tx.update(planRef, {
+          installments: reindexed,
+          totalAmount: newTotal,
+          remainingAmount: newTotal - plan.paidAmount,
+          updatedAt: new Date().toISOString(),
+          updatedBy,
+        });
+        tx.update(unitRef, { 'commercial.paymentSummary': summary });
+
+        logger.info(`[PaymentPlanService] Resynced plan ${plan.id}: ${oldTotal} → ${newTotal} (delta: ${delta})`);
       });
 
-      await this.syncPaymentSummary(unitId, plan.id);
-
-      logger.info(`[PaymentPlanService] Resynced plan ${plan.id}: ${oldTotal} → ${newTotal} (delta: ${delta})`);
       return { success: true };
     } catch (error) {
       logger.error('[PaymentPlanService] Failed to resync total amount:', error);
@@ -445,82 +462,92 @@ export class PaymentPlanService {
     insertAtIndex?: number
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const plan = await this.getPaymentPlan(unitId, planId);
-      if (!plan) return { success: false, error: 'Payment plan not found' };
-      if (plan.status !== 'negotiation' && plan.status !== 'draft') {
-        return { success: false, error: 'Μπορείτε να προσθέσετε δόσεις μόνο σε negotiation/draft' };
-      }
+      const db = getDb();
+      const planRef = db.collection(planCollectionPath(unitId)).doc(planId);
+      const unitRef = db.collection(COLLECTIONS.UNITS).doc(unitId);
 
-      const newInstallment: Installment = {
-        index: 0, // Will be re-indexed below
-        label: input.label,
-        type: input.type,
-        amount: input.amount,
-        percentage: input.percentage,
-        dueDate: input.dueDate,
-        status: 'pending',
-        paidAmount: 0,
-        paidDate: null,
-        paymentIds: [],
-        notes: input.notes ?? null,
-      };
+      await db.runTransaction(async (tx) => {
+        const planSnap = await tx.get(planRef);
+        if (!planSnap.exists) throw new Error('Payment plan not found');
+        const plan = { id: planSnap.id, ...planSnap.data() } as PaymentPlan;
 
-      // ── Validate & redistribute amounts: keep totalAmount constant ──
-      const existingInstallments = plan.installments;
-      const totalUnpaid = existingInstallments
-        .filter((inst) => inst.paidAmount < inst.amount)
-        .reduce((s, inst) => s + (inst.amount - inst.paidAmount), 0);
-      const addedAmount = newInstallment.amount;
+        if (plan.status !== 'negotiation' && plan.status !== 'draft') {
+          throw new Error('Μπορείτε να προσθέσετε δόσεις μόνο σε negotiation/draft');
+        }
 
-      // Guard: new installment cannot exceed 95% of unpaid (leave min balance)
-      const maxAllowed = Math.round(totalUnpaid * 0.95 * 100) / 100;
-      if (existingInstallments.length > 0 && addedAmount > maxAllowed) {
-        const fmt = (v: number) => new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
-        return {
-          success: false,
-          error: `Το ποσό ${fmt(addedAmount)} υπερβαίνει το μέγιστο επιτρεπτό ${fmt(maxAllowed)} (95% του αδιάθετου υπολοίπου ${fmt(totalUnpaid)}). Οι υπόλοιπες δόσεις πρέπει να διατηρήσουν ελάχιστο υπόλοιπο.`,
+        const newInstallment: Installment = {
+          index: 0,
+          label: input.label,
+          type: input.type,
+          amount: input.amount,
+          percentage: input.percentage,
+          dueDate: input.dueDate,
+          status: 'pending',
+          paidAmount: 0,
+          paidDate: null,
+          paymentIds: [],
+          notes: input.notes ?? null,
         };
-      }
 
-      if (totalUnpaid > 0 && addedAmount > 0 && addedAmount <= totalUnpaid) {
-        const reductionRatio = addedAmount / totalUnpaid;
-        for (const inst of existingInstallments) {
-          const unpaidPortion = inst.amount - inst.paidAmount;
-          if (unpaidPortion <= 0) continue;
-          const reduction = Math.round(unpaidPortion * reductionRatio * 100) / 100;
-          inst.amount = Math.round((inst.amount - reduction) * 100) / 100;
+        const existingInstallments = plan.installments;
+        const totalUnpaid = existingInstallments
+          .filter((inst) => inst.paidAmount < inst.amount)
+          .reduce((s, inst) => s + (inst.amount - inst.paidAmount), 0);
+        const addedAmount = newInstallment.amount;
+
+        const maxAllowed = Math.round(totalUnpaid * 0.95 * 100) / 100;
+        if (existingInstallments.length > 0 && addedAmount > maxAllowed) {
+          const fmt = (v: number) => new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
+          throw new Error(
+            `Το ποσό ${fmt(addedAmount)} υπερβαίνει το μέγιστο επιτρεπτό ${fmt(maxAllowed)} (95% του αδιάθετου υπολοίπου ${fmt(totalUnpaid)}). Οι υπόλοιπες δόσεις πρέπει να διατηρήσουν ελάχιστο υπόλοιπο.`
+          );
+        }
+
+        if (totalUnpaid > 0 && addedAmount > 0 && addedAmount <= totalUnpaid) {
+          const reductionRatio = addedAmount / totalUnpaid;
+          for (const inst of existingInstallments) {
+            const unpaidPortion = inst.amount - inst.paidAmount;
+            if (unpaidPortion <= 0) continue;
+            const reduction = Math.round(unpaidPortion * reductionRatio * 100) / 100;
+            inst.amount = Math.round((inst.amount - reduction) * 100) / 100;
+            if (plan.totalAmount > 0) {
+              inst.percentage = Math.round((inst.amount / plan.totalAmount) * 10000) / 100;
+            }
+          }
           if (plan.totalAmount > 0) {
-            inst.percentage = Math.round((inst.amount / plan.totalAmount) * 10000) / 100;
+            newInstallment.percentage = Math.round((newInstallment.amount / plan.totalAmount) * 10000) / 100;
           }
         }
-        if (plan.totalAmount > 0) {
-          newInstallment.percentage = Math.round((newInstallment.amount / plan.totalAmount) * 10000) / 100;
+
+        let updatedInstallments: Installment[];
+        if (insertAtIndex !== undefined && insertAtIndex >= 0 && insertAtIndex < existingInstallments.length) {
+          updatedInstallments = [...existingInstallments];
+          updatedInstallments.splice(insertAtIndex, 0, newInstallment);
+        } else {
+          updatedInstallments = [...existingInstallments, newInstallment];
         }
-      }
+        updatedInstallments = updatedInstallments.map((inst, i) => ({ ...inst, index: i }));
+        const newTotal = updatedInstallments.reduce((s, i) => s + i.amount, 0);
 
-      let updatedInstallments: Installment[];
-      if (insertAtIndex !== undefined && insertAtIndex >= 0 && insertAtIndex < existingInstallments.length) {
-        updatedInstallments = [...existingInstallments];
-        updatedInstallments.splice(insertAtIndex, 0, newInstallment);
-      } else {
-        updatedInstallments = [...existingInstallments, newInstallment];
-      }
-      // Re-index all installments
-      updatedInstallments = updatedInstallments.map((inst, i) => ({ ...inst, index: i }));
-      const newTotal = updatedInstallments.reduce((s, i) => s + i.amount, 0);
+        const updatedPlan: PaymentPlan = {
+          ...plan,
+          installments: updatedInstallments,
+          totalAmount: newTotal,
+          remainingAmount: newTotal - plan.paidAmount,
+        };
+        const summary = this.computeSummaryFromPlan(updatedPlan, planId);
 
-      const db = getDb();
-      await db.collection(planCollectionPath(unitId)).doc(planId).update({
-        installments: updatedInstallments,
-        totalAmount: newTotal,
-        remainingAmount: newTotal - plan.paidAmount,
-        updatedAt: new Date().toISOString(),
-        updatedBy,
+        tx.update(planRef, {
+          installments: updatedInstallments,
+          totalAmount: newTotal,
+          remainingAmount: newTotal - plan.paidAmount,
+          updatedAt: new Date().toISOString(),
+          updatedBy,
+        });
+        tx.update(unitRef, { 'commercial.paymentSummary': summary });
       });
 
-      await this.syncPaymentSummary(unitId, planId);
-
-      logger.info(`[PaymentPlanService] Added installment #${newInstallment.index} to plan ${planId}`);
+      logger.info(`[PaymentPlanService] Added installment to plan ${planId}`);
       return { success: true };
     } catch (error) {
       logger.error('[PaymentPlanService] Failed to add installment:', error);
@@ -542,94 +569,103 @@ export class PaymentPlanService {
     updatedBy: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const plan = await this.getPaymentPlan(unitId, planId);
-      if (!plan) return { success: false, error: 'Payment plan not found' };
+      const db = getDb();
+      const planRef = db.collection(planCollectionPath(unitId)).doc(planId);
+      const unitRef = db.collection(COLLECTIONS.UNITS).doc(unitId);
 
-      if (index < 0 || index >= plan.installments.length) {
-        return { success: false, error: `Δόση #${index} δεν βρέθηκε` };
-      }
+      await db.runTransaction(async (tx) => {
+        const planSnap = await tx.get(planRef);
+        if (!planSnap.exists) throw new Error('Payment plan not found');
+        const plan = { id: planSnap.id, ...planSnap.data() } as PaymentPlan;
 
-      // Active plans: only notes can be updated
-      if (plan.status === 'active') {
-        if (input.label || input.amount !== undefined || input.percentage !== undefined || input.dueDate) {
-          return { success: false, error: 'Σε ενεργό plan μπορείτε να αλλάξετε μόνο σημειώσεις' };
+        if (index < 0 || index >= plan.installments.length) {
+          throw new Error(`Δόση #${index} δεν βρέθηκε`);
         }
-      } else if (plan.status !== 'negotiation' && plan.status !== 'draft') {
-        return { success: false, error: 'Δεν μπορείτε να τροποποιήσετε δόσεις σε αυτό το status' };
-      }
 
-      const updated = [...plan.installments];
-      const inst = { ...updated[index] };
-      const oldAmount = inst.amount;
-
-      if (input.label !== undefined) inst.label = input.label;
-      if (input.amount !== undefined) inst.amount = input.amount;
-      if (input.percentage !== undefined) inst.percentage = input.percentage;
-      if (input.dueDate !== undefined) inst.dueDate = input.dueDate;
-      if (input.notes !== undefined) inst.notes = input.notes ?? null;
-
-      updated[index] = inst;
-
-      // ── Redistribute delta to keep totalAmount constant ──
-      const amountDelta = inst.amount - oldAmount;
-      if (amountDelta > 0 && input.amount !== undefined) {
-        const othersUnpaid = updated
-          .filter((item, i) => i !== index && item.paidAmount < item.amount)
-          .reduce((s, item) => s + (item.amount - item.paidAmount), 0);
-
-        const maxIncrease = Math.round(othersUnpaid * 0.95 * 100) / 100;
-        if (amountDelta > maxIncrease) {
-          const fmt = (v: number) => new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
-          return {
-            success: false,
-            error: `Η αύξηση κατά ${fmt(amountDelta)} υπερβαίνει το μέγιστο ${fmt(maxIncrease)} (95% του αδιάθετου υπολοίπου ${fmt(othersUnpaid)}).`,
-          };
+        if (plan.status === 'active') {
+          if (input.label || input.amount !== undefined || input.percentage !== undefined || input.dueDate) {
+            throw new Error('Σε ενεργό plan μπορείτε να αλλάξετε μόνο σημειώσεις');
+          }
+        } else if (plan.status !== 'negotiation' && plan.status !== 'draft') {
+          throw new Error('Δεν μπορείτε να τροποποιήσετε δόσεις σε αυτό το status');
         }
-      }
-      if (amountDelta !== 0 && input.amount !== undefined) {
-        const othersUnpaid = updated
-          .filter((item, i) => i !== index && item.paidAmount < item.amount)
-          .reduce((s, item) => s + (item.amount - item.paidAmount), 0);
 
-        if (othersUnpaid > 0 && Math.abs(amountDelta) <= othersUnpaid) {
-          for (let i = 0; i < updated.length; i++) {
-            if (i === index) continue;
-            const unpaid = updated[i].amount - updated[i].paidAmount;
-            if (unpaid <= 0) continue;
-            const adjustment = Math.round((unpaid / othersUnpaid) * amountDelta * 100) / 100;
-            updated[i] = {
-              ...updated[i],
-              amount: Math.round((updated[i].amount - adjustment) * 100) / 100,
-            };
-            if (plan.totalAmount > 0) {
-              updated[i] = {
-                ...updated[i],
-                percentage: Math.round((updated[i].amount / plan.totalAmount) * 10000) / 100,
-              };
-            }
+        const updated = [...plan.installments];
+        const inst = { ...updated[index] };
+        const oldAmount = inst.amount;
+
+        if (input.label !== undefined) inst.label = input.label;
+        if (input.amount !== undefined) inst.amount = input.amount;
+        if (input.percentage !== undefined) inst.percentage = input.percentage;
+        if (input.dueDate !== undefined) inst.dueDate = input.dueDate;
+        if (input.notes !== undefined) inst.notes = input.notes ?? null;
+
+        updated[index] = inst;
+
+        const amountDelta = inst.amount - oldAmount;
+        if (amountDelta > 0 && input.amount !== undefined) {
+          const othersUnpaid = updated
+            .filter((item, i) => i !== index && item.paidAmount < item.amount)
+            .reduce((s, item) => s + (item.amount - item.paidAmount), 0);
+
+          const maxIncrease = Math.round(othersUnpaid * 0.95 * 100) / 100;
+          if (amountDelta > maxIncrease) {
+            const fmt = (v: number) => new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
+            throw new Error(
+              `Η αύξηση κατά ${fmt(amountDelta)} υπερβαίνει το μέγιστο ${fmt(maxIncrease)} (95% του αδιάθετου υπολοίπου ${fmt(othersUnpaid)}).`
+            );
           }
         }
-        // Update edited installment percentage too
-        if (plan.totalAmount > 0) {
-          updated[index] = {
-            ...updated[index],
-            percentage: Math.round((updated[index].amount / plan.totalAmount) * 10000) / 100,
-          };
+        if (amountDelta !== 0 && input.amount !== undefined) {
+          const othersUnpaid = updated
+            .filter((item, i) => i !== index && item.paidAmount < item.amount)
+            .reduce((s, item) => s + (item.amount - item.paidAmount), 0);
+
+          if (othersUnpaid > 0 && Math.abs(amountDelta) <= othersUnpaid) {
+            for (let i = 0; i < updated.length; i++) {
+              if (i === index) continue;
+              const unpaid = updated[i].amount - updated[i].paidAmount;
+              if (unpaid <= 0) continue;
+              const adjustment = Math.round((unpaid / othersUnpaid) * amountDelta * 100) / 100;
+              updated[i] = {
+                ...updated[i],
+                amount: Math.round((updated[i].amount - adjustment) * 100) / 100,
+              };
+              if (plan.totalAmount > 0) {
+                updated[i] = {
+                  ...updated[i],
+                  percentage: Math.round((updated[i].amount / plan.totalAmount) * 10000) / 100,
+                };
+              }
+            }
+          }
+          if (plan.totalAmount > 0) {
+            updated[index] = {
+              ...updated[index],
+              percentage: Math.round((updated[index].amount / plan.totalAmount) * 10000) / 100,
+            };
+          }
         }
-      }
 
-      const newTotal = updated.reduce((s, i) => s + i.amount, 0);
+        const newTotal = updated.reduce((s, i) => s + i.amount, 0);
 
-      const db = getDb();
-      await db.collection(planCollectionPath(unitId)).doc(planId).update({
-        installments: updated,
-        totalAmount: newTotal,
-        remainingAmount: newTotal - plan.paidAmount,
-        updatedAt: new Date().toISOString(),
-        updatedBy,
+        const updatedPlan: PaymentPlan = {
+          ...plan,
+          installments: updated,
+          totalAmount: newTotal,
+          remainingAmount: newTotal - plan.paidAmount,
+        };
+        const summary = this.computeSummaryFromPlan(updatedPlan, planId);
+
+        tx.update(planRef, {
+          installments: updated,
+          totalAmount: newTotal,
+          remainingAmount: newTotal - plan.paidAmount,
+          updatedAt: new Date().toISOString(),
+          updatedBy,
+        });
+        tx.update(unitRef, { 'commercial.paymentSummary': summary });
       });
-
-      await this.syncPaymentSummary(unitId, planId);
 
       logger.info(`[PaymentPlanService] Updated installment #${index} in plan ${planId}`);
       return { success: true };
@@ -652,67 +688,77 @@ export class PaymentPlanService {
     updatedBy: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const plan = await this.getPaymentPlan(unitId, planId);
-      if (!plan) return { success: false, error: 'Payment plan not found' };
-      if (plan.status !== 'negotiation' && plan.status !== 'draft') {
-        return { success: false, error: 'Μπορείτε να αφαιρέσετε δόσεις μόνο σε negotiation/draft' };
-      }
-      if (index < 0 || index >= plan.installments.length) {
-        return { success: false, error: `Δόση #${index} δεν βρέθηκε` };
-      }
-      if (plan.installments[index].paidAmount > 0) {
-        return { success: false, error: 'Δεν μπορείτε να αφαιρέσετε πληρωμένη δόση' };
-      }
+      const db = getDb();
+      const planRef = db.collection(planCollectionPath(unitId)).doc(planId);
+      const unitRef = db.collection(COLLECTIONS.UNITS).doc(unitId);
 
-      // ── Redistribute: give removed amount back to remaining installments ──
-      const removedAmount = plan.installments[index].amount;
-      const remaining = plan.installments.filter((_, i) => i !== index);
+      await db.runTransaction(async (tx) => {
+        const planSnap = await tx.get(planRef);
+        if (!planSnap.exists) throw new Error('Payment plan not found');
+        const plan = { id: planSnap.id, ...planSnap.data() } as PaymentPlan;
 
-      if (removedAmount > 0 && remaining.length > 0) {
-        // Find installments that can receive the redistributed amount
-        const unpaidInstallments = remaining.filter((inst) => inst.paidAmount < inst.amount);
-        const totalUnpaidRemaining = unpaidInstallments
-          .reduce((s, inst) => s + (inst.amount - inst.paidAmount), 0);
+        if (plan.status !== 'negotiation' && plan.status !== 'draft') {
+          throw new Error('Μπορείτε να αφαιρέσετε δόσεις μόνο σε negotiation/draft');
+        }
+        if (index < 0 || index >= plan.installments.length) {
+          throw new Error(`Δόση #${index} δεν βρέθηκε`);
+        }
+        if (plan.installments[index].paidAmount > 0) {
+          throw new Error('Δεν μπορείτε να αφαιρέσετε πληρωμένη δόση');
+        }
 
-        if (totalUnpaidRemaining > 0) {
-          // Proportional redistribution based on unpaid portions
-          for (const inst of remaining) {
-            const unpaidPortion = inst.amount - inst.paidAmount;
-            if (unpaidPortion <= 0) continue;
-            const addBack = Math.round((unpaidPortion / totalUnpaidRemaining) * removedAmount * 100) / 100;
-            inst.amount = Math.round((inst.amount + addBack) * 100) / 100;
-            if (plan.totalAmount > 0) {
-              inst.percentage = Math.round((inst.amount / plan.totalAmount) * 10000) / 100;
+        const removedAmount = plan.installments[index].amount;
+        const remaining = plan.installments.filter((_, i) => i !== index);
+
+        if (removedAmount > 0 && remaining.length > 0) {
+          const unpaidInstallments = remaining.filter((inst) => inst.paidAmount < inst.amount);
+          const totalUnpaidRemaining = unpaidInstallments
+            .reduce((s, inst) => s + (inst.amount - inst.paidAmount), 0);
+
+          if (totalUnpaidRemaining > 0) {
+            for (const inst of remaining) {
+              const unpaidPortion = inst.amount - inst.paidAmount;
+              if (unpaidPortion <= 0) continue;
+              const addBack = Math.round((unpaidPortion / totalUnpaidRemaining) * removedAmount * 100) / 100;
+              inst.amount = Math.round((inst.amount + addBack) * 100) / 100;
+              if (plan.totalAmount > 0) {
+                inst.percentage = Math.round((inst.amount / plan.totalAmount) * 10000) / 100;
+              }
             }
-          }
-        } else {
-          // Edge case: all remaining have 0 unpaid → distribute equally among pending
-          const pendingInstallments = remaining.filter((inst) => inst.status === 'pending');
-          const count = pendingInstallments.length || remaining.length;
-          const shareEach = Math.round((removedAmount / count) * 100) / 100;
-          const targets = pendingInstallments.length > 0 ? pendingInstallments : remaining;
-          for (const inst of targets) {
-            inst.amount = Math.round((inst.amount + shareEach) * 100) / 100;
-            if (plan.totalAmount > 0) {
-              inst.percentage = Math.round((inst.amount / plan.totalAmount) * 10000) / 100;
+          } else {
+            const pendingInstallments = remaining.filter((inst) => inst.status === 'pending');
+            const count = pendingInstallments.length || remaining.length;
+            const shareEach = Math.round((removedAmount / count) * 100) / 100;
+            const targets = pendingInstallments.length > 0 ? pendingInstallments : remaining;
+            for (const inst of targets) {
+              inst.amount = Math.round((inst.amount + shareEach) * 100) / 100;
+              if (plan.totalAmount > 0) {
+                inst.percentage = Math.round((inst.amount / plan.totalAmount) * 10000) / 100;
+              }
             }
           }
         }
-      }
 
-      const updated = remaining.map((inst, i) => ({ ...inst, index: i }));
-      const newTotal = updated.reduce((s, i) => s + i.amount, 0);
+        const updated = remaining.map((inst, i) => ({ ...inst, index: i }));
+        const newTotal = updated.reduce((s, i) => s + i.amount, 0);
 
-      const db = getDb();
-      await db.collection(planCollectionPath(unitId)).doc(planId).update({
-        installments: updated,
-        totalAmount: newTotal,
-        remainingAmount: newTotal - plan.paidAmount,
-        updatedAt: new Date().toISOString(),
-        updatedBy,
+        const updatedPlan: PaymentPlan = {
+          ...plan,
+          installments: updated,
+          totalAmount: newTotal,
+          remainingAmount: newTotal - plan.paidAmount,
+        };
+        const summary = this.computeSummaryFromPlan(updatedPlan, planId);
+
+        tx.update(planRef, {
+          installments: updated,
+          totalAmount: newTotal,
+          remainingAmount: newTotal - plan.paidAmount,
+          updatedAt: new Date().toISOString(),
+          updatedBy,
+        });
+        tx.update(unitRef, { 'commercial.paymentSummary': summary });
       });
-
-      await this.syncPaymentSummary(unitId, planId);
 
       logger.info(`[PaymentPlanService] Removed installment #${index} from plan ${planId}`);
       return { success: true };
@@ -741,152 +787,155 @@ export class PaymentPlanService {
     createdBy: string
   ): Promise<{ success: boolean; payment?: PaymentRecord; error?: string }> {
     try {
-      const plan = await this.getPaymentPlan(unitId, input.paymentPlanId);
-      if (!plan) return { success: false, error: 'Payment plan not found' };
-
-      if (plan.status === 'completed' || plan.status === 'cancelled') {
-        return { success: false, error: 'Δεν μπορείτε να καταγράψετε πληρωμή σε ολοκληρωμένο/ακυρωμένο plan' };
-      }
-
+      // Pre-validate input (no I/O needed)
       if (input.amount <= 0) {
         return { success: false, error: 'Το ποσό πρέπει να είναι θετικό' };
       }
 
-      const targetIdx = input.installmentIndex;
-      if (targetIdx < 0 || targetIdx >= plan.installments.length) {
-        return { success: false, error: `Δόση #${targetIdx} δεν βρέθηκε` };
-      }
-
-      // Sequential payment check
-      if (plan.config.sequentialPaymentRequired) {
-        for (let i = 0; i < targetIdx; i++) {
-          const prev = plan.installments[i];
-          if (prev.status !== 'paid' && prev.status !== 'waived') {
-            return {
-              success: false,
-              error: `Η δόση #${i} (${prev.label}) πρέπει να εξοφληθεί πρώτα`,
-            };
-          }
-        }
-      }
-
-      const targetInst = plan.installments[targetIdx];
-      const targetRemaining = targetInst.amount - targetInst.paidAmount;
-
-      if (targetRemaining <= 0) {
-        return { success: false, error: `Η δόση #${targetIdx} (${targetInst.label}) είναι ήδη εξοφλημένη` };
-      }
-
-      // Calculate allocations
-      const allocations: SplitAllocation[] = [];
-      let remainingPayment = input.amount;
-      const updatedInstallments = [...plan.installments.map((inst) => ({ ...inst }))];
-
-      // Apply to target installment
-      const applyToTarget = Math.min(remainingPayment, targetRemaining);
-      updatedInstallments[targetIdx].paidAmount += applyToTarget;
-      updatedInstallments[targetIdx].status = this.computeInstallmentStatus(
-        updatedInstallments[targetIdx]
-      );
-      if (updatedInstallments[targetIdx].status === 'paid') {
-        updatedInstallments[targetIdx].paidDate = input.paymentDate;
-      }
-      allocations.push({ installmentIndex: targetIdx, amount: applyToTarget });
-      remainingPayment -= applyToTarget;
-
-      // Overpayment auto-apply
-      let overpaymentAmount = 0;
-      if (remainingPayment > 0 && plan.config.autoApplyOverpayment) {
-        for (let i = targetIdx + 1; i < updatedInstallments.length && remainingPayment > 0; i++) {
-          const inst = updatedInstallments[i];
-          const instRemaining = inst.amount - inst.paidAmount;
-          if (instRemaining <= 0) continue;
-
-          const applyAmount = Math.min(remainingPayment, instRemaining);
-          inst.paidAmount += applyAmount;
-          inst.status = this.computeInstallmentStatus(inst);
-          if (inst.status === 'paid') {
-            inst.paidDate = input.paymentDate;
-          }
-          allocations.push({ installmentIndex: i, amount: applyAmount });
-          remainingPayment -= applyAmount;
-        }
-      }
-
-      if (remainingPayment > 0) {
-        overpaymentAmount = remainingPayment;
-      }
-
-      // Create payment record
-      const paymentId = generatePaymentRecordId();
-      const now = new Date().toISOString();
-
-      const paymentRecord: PaymentRecord = {
-        id: paymentId,
-        paymentPlanId: input.paymentPlanId,
-        installmentIndex: targetIdx,
-        amount: input.amount,
-        method: input.method,
-        paymentDate: input.paymentDate,
-        methodDetails: input.methodDetails,
-        splitAllocations: allocations,
-        overpaymentAmount,
-        invoiceId: null,
-        transactionChainId: null,
-        notes: input.notes ?? null,
-        createdAt: now,
-        createdBy,
-        updatedAt: now,
-      };
-
-      // Update installment paymentIds
-      for (const alloc of allocations) {
-        const inst = updatedInstallments[alloc.installmentIndex];
-        if (!inst.paymentIds.includes(paymentId)) {
-          inst.paymentIds = [...inst.paymentIds, paymentId];
-        }
-      }
-
-      // Recalculate plan amounts
-      const newPaidAmount = updatedInstallments.reduce((s, i) => s + i.paidAmount, 0);
-      const newRemainingAmount = plan.totalAmount - newPaidAmount;
-
-      // Check if all paid → completed
-      const allPaid = updatedInstallments.every(
-        (i) => i.status === 'paid' || i.status === 'waived'
-      );
-      const newStatus = allPaid ? 'completed' : plan.status;
-
-      // Batch write: payment record + plan update
       const db = getDb();
-      const batch = db.batch();
+      const planRef = db.collection(planCollectionPath(unitId)).doc(input.paymentPlanId);
+      const unitRef = db.collection(COLLECTIONS.UNITS).doc(unitId);
 
-      batch.set(
-        db.collection(paymentCollectionPath(unitId)).doc(paymentId),
-        paymentRecord
-      );
+      const paymentId = generatePaymentRecordId();
+      const paymentRef = db.collection(paymentCollectionPath(unitId)).doc(paymentId);
 
-      batch.update(
-        db.collection(planCollectionPath(unitId)).doc(input.paymentPlanId),
-        {
+      const paymentRecord = await db.runTransaction(async (tx) => {
+        const planSnap = await tx.get(planRef);
+        if (!planSnap.exists) throw new Error('Payment plan not found');
+        const plan = { id: planSnap.id, ...planSnap.data() } as PaymentPlan;
+
+        if (plan.status === 'completed' || plan.status === 'cancelled') {
+          throw new Error('Δεν μπορείτε να καταγράψετε πληρωμή σε ολοκληρωμένο/ακυρωμένο plan');
+        }
+
+        const targetIdx = input.installmentIndex;
+        if (targetIdx < 0 || targetIdx >= plan.installments.length) {
+          throw new Error(`Δόση #${targetIdx} δεν βρέθηκε`);
+        }
+
+        // Sequential payment check
+        if (plan.config.sequentialPaymentRequired) {
+          for (let i = 0; i < targetIdx; i++) {
+            const prev = plan.installments[i];
+            if (prev.status !== 'paid' && prev.status !== 'waived') {
+              throw new Error(`Η δόση #${i} (${prev.label}) πρέπει να εξοφληθεί πρώτα`);
+            }
+          }
+        }
+
+        const targetInst = plan.installments[targetIdx];
+        const targetRemaining = targetInst.amount - targetInst.paidAmount;
+
+        if (targetRemaining <= 0) {
+          throw new Error(`Η δόση #${targetIdx} (${targetInst.label}) είναι ήδη εξοφλημένη`);
+        }
+
+        // Calculate allocations
+        const allocations: SplitAllocation[] = [];
+        let remainingPayment = input.amount;
+        const updatedInstallments = [...plan.installments.map((inst) => ({ ...inst }))];
+
+        // Apply to target installment
+        const applyToTarget = Math.min(remainingPayment, targetRemaining);
+        updatedInstallments[targetIdx].paidAmount += applyToTarget;
+        updatedInstallments[targetIdx].status = this.computeInstallmentStatus(
+          updatedInstallments[targetIdx]
+        );
+        if (updatedInstallments[targetIdx].status === 'paid') {
+          updatedInstallments[targetIdx].paidDate = input.paymentDate;
+        }
+        allocations.push({ installmentIndex: targetIdx, amount: applyToTarget });
+        remainingPayment -= applyToTarget;
+
+        // Overpayment auto-apply
+        let overpaymentAmount = 0;
+        if (remainingPayment > 0 && plan.config.autoApplyOverpayment) {
+          for (let i = targetIdx + 1; i < updatedInstallments.length && remainingPayment > 0; i++) {
+            const inst = updatedInstallments[i];
+            const instRemaining = inst.amount - inst.paidAmount;
+            if (instRemaining <= 0) continue;
+
+            const applyAmount = Math.min(remainingPayment, instRemaining);
+            inst.paidAmount += applyAmount;
+            inst.status = this.computeInstallmentStatus(inst);
+            if (inst.status === 'paid') {
+              inst.paidDate = input.paymentDate;
+            }
+            allocations.push({ installmentIndex: i, amount: applyAmount });
+            remainingPayment -= applyAmount;
+          }
+        }
+
+        if (remainingPayment > 0) {
+          overpaymentAmount = remainingPayment;
+        }
+
+        const now = new Date().toISOString();
+
+        const record: PaymentRecord = {
+          id: paymentId,
+          paymentPlanId: input.paymentPlanId,
+          installmentIndex: targetIdx,
+          amount: input.amount,
+          method: input.method,
+          paymentDate: input.paymentDate,
+          methodDetails: input.methodDetails,
+          splitAllocations: allocations,
+          overpaymentAmount,
+          invoiceId: null,
+          transactionChainId: null,
+          notes: input.notes ?? null,
+          createdAt: now,
+          createdBy,
+          updatedAt: now,
+        };
+
+        // Update installment paymentIds
+        for (const alloc of allocations) {
+          const inst = updatedInstallments[alloc.installmentIndex];
+          if (!inst.paymentIds.includes(paymentId)) {
+            inst.paymentIds = [...inst.paymentIds, paymentId];
+          }
+        }
+
+        // Recalculate plan amounts
+        const newPaidAmount = updatedInstallments.reduce((s, i) => s + i.paidAmount, 0);
+        const newRemainingAmount = plan.totalAmount - newPaidAmount;
+
+        const allPaid = updatedInstallments.every(
+          (i) => i.status === 'paid' || i.status === 'waived'
+        );
+        const newStatus = allPaid ? 'completed' : plan.status;
+
+        // Build updated plan snapshot for summary computation
+        const updatedPlan: PaymentPlan = {
+          ...plan,
+          installments: updatedInstallments,
+          paidAmount: newPaidAmount,
+          remainingAmount: newRemainingAmount,
+          status: newStatus,
+        };
+        const summary = this.computeSummaryFromPlan(updatedPlan, plan.id);
+
+        // Atomic writes: payment + plan + summary
+        tx.set(paymentRef, record);
+        tx.update(planRef, {
           installments: updatedInstallments,
           paidAmount: newPaidAmount,
           remainingAmount: newRemainingAmount,
           status: newStatus,
           updatedAt: now,
           updatedBy: createdBy,
-        }
-      );
+        });
+        tx.update(unitRef, { 'commercial.paymentSummary': summary });
 
-      await batch.commit();
-
-      // Sync summary
-      await this.syncPaymentSummary(unitId, input.paymentPlanId);
+        return record;
+      });
 
       logger.info(
-        `[PaymentPlanService] Recorded payment ${paymentId}: €${input.amount} for installment #${targetIdx}` +
-        (allocations.length > 1 ? ` (split across ${allocations.length} installments)` : '') +
-        (overpaymentAmount > 0 ? ` (overpayment: €${overpaymentAmount})` : '')
+        `[PaymentPlanService] Recorded payment ${paymentId}: €${input.amount} for installment #${input.installmentIndex}` +
+        (paymentRecord.splitAllocations.length > 1 ? ` (split across ${paymentRecord.splitAllocations.length} installments)` : '') +
+        (paymentRecord.overpaymentAmount > 0 ? ` (overpayment: €${paymentRecord.overpaymentAmount})` : '')
       );
 
       return { success: true, payment: paymentRecord };
@@ -966,74 +1015,82 @@ export class PaymentPlanService {
   // ==========================================================================
 
   /**
+   * Pure function: compute PaymentSummary from a plan snapshot (no I/O).
+   * Used inside transactions to avoid extra Firestore reads.
+   */
+  private static computeSummaryFromPlan(plan: PaymentPlan, planId: string): PaymentSummary {
+    const now = new Date().toISOString();
+    const paidInstallments = plan.installments.filter(
+      (i) => i.status === 'paid' || i.status === 'waived'
+    ).length;
+
+    const overdueInstallments = plan.installments.filter((i) => {
+      if (i.status === 'paid' || i.status === 'waived') return false;
+      return i.dueDate < now && i.paidAmount < i.amount;
+    }).length;
+
+    const nextInstallment = plan.installments.find(
+      (i) => i.status === 'pending' || i.status === 'due' || i.status === 'partial'
+    );
+
+    // Resolve loans (Phase 2 — SPEC-234C)
+    const loans: LoanTracking[] = plan.loans && plan.loans.length > 0
+      ? plan.loans
+      : (plan.loan && plan.loan.status !== 'not_applicable'
+        ? [migrateLoanInfoToTracking(plan.loan, 'migrated_loan')]
+        : []);
+
+    const primaryLoan = loans.find(l => l.isPrimary) ?? loans[0] ?? null;
+
+    const totalApprovedLoanAmount = loans.reduce<number | null>((sum, l) => {
+      if (l.approvedAmount === null) return sum;
+      return (sum ?? 0) + l.approvedAmount;
+    }, null);
+
+    const totalDisbursedAmount = loans.reduce((sum, l) => sum + l.disbursedAmount, 0);
+
+    return {
+      planStatus: plan.status,
+      totalAmount: plan.totalAmount,
+      paidAmount: plan.paidAmount,
+      remainingAmount: plan.remainingAmount,
+      paidPercentage: plan.totalAmount > 0
+        ? Math.round((plan.paidAmount / plan.totalAmount) * 10000) / 100
+        : 0,
+      totalInstallments: plan.installments.length,
+      paidInstallments,
+      overdueInstallments,
+      nextInstallmentAmount: nextInstallment?.amount ?? null,
+      nextInstallmentDate: nextInstallment?.dueDate ?? null,
+      loanStatus: plan.loan.status,
+      primaryLoanStatus: primaryLoan?.status ?? 'not_applicable',
+      primaryLoanBank: primaryLoan?.bankName ?? null,
+      totalApprovedLoanAmount,
+      totalDisbursedAmount,
+      paymentPlanId: planId,
+    };
+  }
+
+  /**
    * Sync denormalized PaymentSummary to unit.commercial.paymentSummary.
+   * Wrapped in its own transaction for standalone recalculation.
    */
   static async syncPaymentSummary(unitId: string, planId: string): Promise<void> {
     try {
-      const plan = await this.getPaymentPlan(unitId, planId);
-      if (!plan) return;
-
-      const now = new Date().toISOString();
-      const paidInstallments = plan.installments.filter(
-        (i) => i.status === 'paid' || i.status === 'waived'
-      ).length;
-
-      const overdueInstallments = plan.installments.filter((i) => {
-        if (i.status === 'paid' || i.status === 'waived') return false;
-        return i.dueDate < now && i.paidAmount < i.amount;
-      }).length;
-
-      // Find next unpaid installment
-      const nextInstallment = plan.installments.find(
-        (i) => i.status === 'pending' || i.status === 'due' || i.status === 'partial'
-      );
-
-      // Resolve loans (Phase 2 — SPEC-234C)
-      const loans: LoanTracking[] = plan.loans && plan.loans.length > 0
-        ? plan.loans
-        : (plan.loan && plan.loan.status !== 'not_applicable'
-          ? [migrateLoanInfoToTracking(plan.loan, 'migrated_loan')]
-          : []);
-
-      const primaryLoan = loans.find(l => l.isPrimary) ?? loans[0] ?? null;
-
-      const totalApprovedLoanAmount = loans.reduce<number | null>((sum, l) => {
-        if (l.approvedAmount === null) return sum;
-        return (sum ?? 0) + l.approvedAmount;
-      }, null);
-
-      const totalDisbursedAmount = loans.reduce((sum, l) => sum + l.disbursedAmount, 0);
-
-      const summary: PaymentSummary = {
-        planStatus: plan.status,
-        totalAmount: plan.totalAmount,
-        paidAmount: plan.paidAmount,
-        remainingAmount: plan.remainingAmount,
-        paidPercentage: plan.totalAmount > 0
-          ? Math.round((plan.paidAmount / plan.totalAmount) * 10000) / 100
-          : 0,
-        totalInstallments: plan.installments.length,
-        paidInstallments,
-        overdueInstallments,
-        nextInstallmentAmount: nextInstallment?.amount ?? null,
-        nextInstallmentDate: nextInstallment?.dueDate ?? null,
-        loanStatus: plan.loan.status,
-        primaryLoanStatus: primaryLoan?.status ?? 'not_applicable',
-        primaryLoanBank: primaryLoan?.bankName ?? null,
-        totalApprovedLoanAmount,
-        totalDisbursedAmount,
-        paymentPlanId: planId,
-      };
-
       const db = getDb();
-      await db.collection(COLLECTIONS.UNITS).doc(unitId).update({
-        'commercial.paymentSummary': summary,
+      await db.runTransaction(async (tx) => {
+        const planRef = db.collection(planCollectionPath(unitId)).doc(planId);
+        const planSnap = await tx.get(planRef);
+        if (!planSnap.exists) return;
+
+        const plan = { id: planSnap.id, ...planSnap.data() } as PaymentPlan;
+        const summary = this.computeSummaryFromPlan(plan, planId);
+
+        const unitRef = db.collection(COLLECTIONS.UNITS).doc(unitId);
+        tx.update(unitRef, { 'commercial.paymentSummary': summary });
       });
 
-      logger.info(
-        `[PaymentPlanService] Synced summary for unit ${unitId}: ` +
-        `${summary.paidPercentage}% paid, ${paidInstallments}/${summary.totalInstallments} installments`
-      );
+      logger.info(`[PaymentPlanService] Synced summary for unit ${unitId}`);
     } catch (error) {
       logger.error('[PaymentPlanService] Failed to sync summary:', error);
     }
