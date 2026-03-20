@@ -1,9 +1,16 @@
 /**
- * TEMPORARY — minimal test endpoint. DELETE after testing.
+ * TEMPORARY test endpoint for Telegram alert verification.
+ * DELETE after testing.
  */
 
 import { NextResponse } from 'next/server';
+import { sendTelegramAlert } from '@/lib/telemetry/telegram-alert-service';
 
-export function GET(): NextResponse {
-  return NextResponse.json({ ok: true, time: Date.now() });
+export async function GET(): Promise<NextResponse> {
+  await sendTelegramAlert('error', 'TestAlertRoute', 'Test alert — verifying Telegram monitoring is active', {
+    test: 'true',
+    timestamp: new Date().toISOString(),
+  });
+
+  return NextResponse.json({ ok: true, message: 'Alert sent. Check Telegram.' });
 }
