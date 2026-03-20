@@ -36,8 +36,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, getDocs, updateDoc, doc, serverTimestamp, FieldValue, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getAdminFirestore, FieldValue, Timestamp } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
@@ -173,6 +172,7 @@ async function handleForceUniformSchemaExecute(request: NextRequest, ctx: AuthCo
   }
 
   try {
+    const db = getAdminFirestore();
     logger.info('[Navigation/ForceUniform] Starting total schema standardization');
 
     const result: UniformSchemaResult = {
@@ -188,7 +188,7 @@ async function handleForceUniformSchemaExecute(request: NextRequest, ctx: AuthCo
 
     // STEP 1: Get ALL navigation documents
     logger.info('[Navigation/ForceUniform] Step 1: Loading all navigation_companies documents');
-    const navigationSnapshot = await getDocs(collection(db, COLLECTIONS.NAVIGATION));
+    const navigationSnapshot = await db.collection(COLLECTIONS.NAVIGATION).get();
 
     logger.info('[Navigation/ForceUniform] Found documents to standardize', { count: navigationSnapshot.docs.length });
     result.stats.documentsProcessed = navigationSnapshot.docs.length;
@@ -217,10 +217,10 @@ async function handleForceUniformSchemaExecute(request: NextRequest, ctx: AuthCo
           contactId: currentData.contactId || 'MISSING_CONTACT_ID',
 
           // STANDARDIZE AUDIT METADATA
-          addedAt: currentData.addedAt || serverTimestamp(),
+          addedAt: currentData.addedAt || FieldValue.serverTimestamp(),
           addedBy: currentData.addedBy || 'legacy-system',
-          createdAt: currentData.createdAt || currentData.addedAt || serverTimestamp(),
-          updatedAt: serverTimestamp(),
+          createdAt: currentData.createdAt || currentData.addedAt || FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
 
           // FORCE ENTERPRISE CONTROL
           version: getNextVersion(currentData),
@@ -229,24 +229,24 @@ async function handleForceUniformSchemaExecute(request: NextRequest, ctx: AuthCo
 
           // MANDATORY ENTERPRISE METADATA
           schemaVersion: '1.0.0',
-          lastVerified: serverTimestamp(),
+          lastVerified: FieldValue.serverTimestamp(),
           complianceLevel: 'enterprise',
 
           // ADD MIGRATION INFO (tracking the transformation)
           migrationInfo: {
-            migratedAt: serverTimestamp(),
+            migratedAt: FieldValue.serverTimestamp(),
             migratedBy: 'enterprise-force-uniform-schema-system',
             reason: 'FORCE uniform schema - eliminating field count inconsistency',
             previousSchema: {
               fieldCount: beforeFields.length,
               fields: beforeFields,
-              timestamp: serverTimestamp()
+              timestamp: FieldValue.serverTimestamp()
             }
           }
         };
 
         // EXECUTE FORCED UPDATE - COMPLETE SCHEMA REPLACEMENT
-        await updateDoc(doc(db, COLLECTIONS.NAVIGATION, docId), uniformSchema);
+        await db.collection(COLLECTIONS.NAVIGATION).doc(docId).update(uniformSchema);
 
         const afterFields = Object.keys(uniformSchema);
 
@@ -282,7 +282,7 @@ async function handleForceUniformSchemaExecute(request: NextRequest, ctx: AuthCo
 
     // STEP 3: VALIDATION - Ensure ALL documents now have IDENTICAL schema
     logger.info('[Navigation/ForceUniform] Step 3: Validating uniform schema compliance');
-    const validationSnapshot = await getDocs(collection(db, COLLECTIONS.NAVIGATION));
+    const validationSnapshot = await db.collection(COLLECTIONS.NAVIGATION).get();
 
     let allFieldCounts: number[] = [];
     for (const doc of validationSnapshot.docs) {

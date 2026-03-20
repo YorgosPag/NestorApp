@@ -1,6 +1,6 @@
 // /home/user/studio/src/app/api/communications/webhooks/telegram/shared/types.ts
 
-import type { Timestamp } from 'firebase/firestore';
+import type { Timestamp } from 'firebase-admin/firestore';
 
 export type Direction = 'inbound' | 'outbound';
 

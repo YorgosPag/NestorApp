@@ -25,11 +25,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, logMigrationExecuted, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
-import { db, storage } from '@/lib/firebase';
-import { collection, doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getAdminFirestore, getAdminStorage, Timestamp } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { processClientBatch, BATCH_SIZE_READ } from '@/lib/admin-batch-utils';
+import { processAdminBatch, BATCH_SIZE_READ } from '@/lib/admin-batch-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -110,7 +108,8 @@ class DxfMigrationAPI {
     logger.info('Analyzing DXF data in Firestore', { collection: COLLECTIONS.CAD_FILES });
 
     // ADR-214 Phase 8: Batch processing to prevent unbounded reads
-    const cadFilesRef = collection(db, COLLECTIONS.CAD_FILES);
+    const db = getAdminFirestore();
+    const cadFilesRef = db.collection(COLLECTIONS.CAD_FILES);
 
     const analysis: AnalysisResult = {
       totalDocs: 0,
@@ -121,9 +120,8 @@ class DxfMigrationAPI {
       logs: []
     };
 
-    await processClientBatch(
+    await processAdminBatch(
       cadFilesRef,
-      [],
       BATCH_SIZE_READ,
       (docs) => {
         analysis.totalDocs += docs.length;
@@ -205,10 +203,11 @@ class DxfMigrationAPI {
 
         if (!this.dryRun) {
           // ADR-214 Phase 8: Fixed N+1 bug — getDoc by ID instead of full collection scan
-          const docRef = doc(db, COLLECTIONS.CAD_FILES, fileInfo.id);
-          const actualDoc = await getDoc(docRef);
+          const db = getAdminFirestore();
+          const docRef = db.collection(COLLECTIONS.CAD_FILES).doc(fileInfo.id);
+          const actualDoc = await docRef.get();
 
-          if (!actualDoc.exists()) {
+          if (!actualDoc.exists) {
             throw new Error('Document not found');
           }
 
@@ -219,21 +218,27 @@ class DxfMigrationAPI {
           const sceneBytes = new TextEncoder().encode(sceneJson);
 
           const storagePath = `dxf-scenes/${fileInfo.id}/scene.json`;
-          const storageRef = ref(storage, storagePath);
+          const bucket = getAdminStorage().bucket();
+          const file = bucket.file(storagePath);
 
           logs.push(`      📤 Uploading to: ${storagePath}`);
 
-          const snapshot = await uploadBytes(storageRef, sceneBytes, {
+          await file.save(Buffer.from(sceneBytes), {
             contentType: 'application/json',
-            customMetadata: {
-              fileName: fileInfo.fileName,
-              originalSize: fileInfo.sizeBytes.toString(),
-              entityCount: fileInfo.entityCount.toString()
+            metadata: {
+              metadata: {
+                fileName: fileInfo.fileName,
+                originalSize: fileInfo.sizeBytes.toString(),
+                entityCount: fileInfo.entityCount.toString()
+              }
             }
           });
 
-          // 2. Get download URL
-          const downloadURL = await getDownloadURL(snapshot.ref);
+          // 2. Get download URL (signed URL, 7 days expiry)
+          const [downloadURL] = await file.getSignedUrl({
+            action: 'read',
+            expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
+          });
           logs.push(`      🔗 Storage URL generated`);
 
           // 3. Update Firestore with metadata only
@@ -254,7 +259,7 @@ class DxfMigrationAPI {
             }
           };
 
-          await setDoc(doc(db, COLLECTIONS.CAD_FILES, fileInfo.id), newMetadata);
+          await db.collection(COLLECTIONS.CAD_FILES).doc(fileInfo.id).set(newMetadata);
           logs.push(`      ✅ Metadata updated in Firestore`);
         }
 

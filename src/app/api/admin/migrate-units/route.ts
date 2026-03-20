@@ -26,10 +26,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, deleteDoc, doc, addDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { processClientBatch, BATCH_SIZE_READ, BATCH_SIZE_WRITE } from '@/lib/admin-batch-utils';
+import { processAdminBatch, BATCH_SIZE_READ, BATCH_SIZE_WRITE } from '@/lib/admin-batch-utils';
+import { generateUnitId } from '@/services/enterprise-id.service';
 
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
@@ -165,18 +165,18 @@ async function handleMigrateUnitsPreview(request: NextRequest, ctx: AuthContext)
     logger.info('Analyzing units for migration...');
 
     // ADR-214 Phase 8: Batch processing to prevent unbounded reads
+    const db = getAdminFirestore();
     const units: UnitData[] = [];
-    await processClientBatch(
-      collection(db, COLLECTIONS.UNITS),
-      [],
+    await processAdminBatch(
+      db.collection(COLLECTIONS.UNITS),
       BATCH_SIZE_READ,
       (docs) => {
         for (const docSnap of docs) {
           const data = docSnap.data();
           units.push({
             id: docSnap.id,
-            name: data.name || 'UNNAMED',
-            buildingId: data.buildingId,
+            name: (data.name as string) || 'UNNAMED',
+            buildingId: data.buildingId as string | undefined,
             ...data,
           });
         }
@@ -266,18 +266,18 @@ async function handleMigrateUnitsExecute(request: NextRequest, ctx: AuthContext)
     logger.info('Starting unit migration...');
 
     // Step 1: Get all units (ADR-214 Phase 8: batched)
+    const db = getAdminFirestore();
     const units: UnitData[] = [];
-    await processClientBatch(
-      collection(db, COLLECTIONS.UNITS),
-      [],
+    await processAdminBatch(
+      db.collection(COLLECTIONS.UNITS),
       BATCH_SIZE_WRITE,
       (docs) => {
         for (const docSnap of docs) {
           const data = docSnap.data();
           units.push({
             id: docSnap.id,
-            name: data.name || 'UNNAMED',
-            buildingId: data.buildingId,
+            name: (data.name as string) || 'UNNAMED',
+            buildingId: data.buildingId as string | undefined,
             ...data,
           });
         }
@@ -295,7 +295,7 @@ async function handleMigrateUnitsExecute(request: NextRequest, ctx: AuthContext)
     let deletedCount = 0;
     for (const unit of legacyUnits) {
       try {
-        await deleteDoc(doc(db, COLLECTIONS.UNITS, unit.id));
+        await db.collection(COLLECTIONS.UNITS).doc(unit.id).delete();
         deletedCount++;
         logger.info('Deleted unit', { unitId: unit.id, unitName: unit.name });
       } catch (err) {
@@ -319,10 +319,11 @@ async function handleMigrateUnitsExecute(request: NextRequest, ctx: AuthContext)
           updatedAt: new Date().toISOString(),
         };
 
-        // 🏢 ENTERPRISE: addDoc creates auto-generated Firebase ID (20 chars)
-        const docRef = await addDoc(collection(db, COLLECTIONS.UNITS), newUnit);
-        createdUnits.push({ id: docRef.id, name: template.name });
-        logger.info('Created unit', { unitId: docRef.id, unitName: template.name });
+        // 🏢 ENTERPRISE: ADR-017 compliant — enterprise-id.service generates IDs
+        const unitId = generateUnitId();
+        await db.collection(COLLECTIONS.UNITS).doc(unitId).set(newUnit);
+        createdUnits.push({ id: unitId, name: template.name });
+        logger.info('Created unit', { unitId, unitName: template.name });
       } catch (err) {
         logger.error('Failed to create unit', { unitName: template.name, error: err });
       }

@@ -22,8 +22,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
@@ -80,8 +79,9 @@ async function handleFixUnitProjectExecute(request: NextRequest, ctx: AuthContex
 
     logger.info('Updating unit projectId', { unitId, newProjectId });
 
-    const unitRef = doc(db, COLLECTIONS.UNITS, unitId);
-    await updateDoc(unitRef, {
+    const db = getAdminFirestore();
+    const unitRef = db.collection(COLLECTIONS.UNITS).doc(unitId);
+    await unitRef.update({
       projectId: newProjectId,
       updatedAt: new Date().toISOString(),
     });

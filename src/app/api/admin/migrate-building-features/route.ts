@@ -25,10 +25,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { processClientBatch, BATCH_SIZE_READ, BATCH_SIZE_WRITE } from '@/lib/admin-batch-utils';
+import { processAdminBatch, BATCH_SIZE_READ, BATCH_SIZE_WRITE } from '@/lib/admin-batch-utils';
 import { isBuildingFeatureKey, type BuildingFeatureKey } from '@/types/building/features';
 
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
@@ -282,18 +281,18 @@ async function handleMigrateBuildingFeaturesPreview(request: NextRequest, ctx: A
     logger.info('Analyzing buildings for feature migration...');
 
     // ADR-214 Phase 8: Batch processing to prevent unbounded reads
+    const db = getAdminFirestore();
     const buildings: BuildingDoc[] = [];
-    await processClientBatch(
-      collection(db, COLLECTIONS.BUILDINGS),
-      [],
+    await processAdminBatch(
+      db.collection(COLLECTIONS.BUILDINGS),
       BATCH_SIZE_READ,
       (docs) => {
         for (const docSnap of docs) {
           const data = docSnap.data();
           buildings.push({
             id: docSnap.id,
-            name: data.name || 'UNNAMED',
-            features: data.features || [],
+            name: (data.name as string) || 'UNNAMED',
+            features: (data.features as string[]) || [],
           });
         }
       },
@@ -383,18 +382,18 @@ async function handleMigrateBuildingFeaturesExecute(request: NextRequest, ctx: A
     const force = searchParams.get('force') === 'true';
 
     // ADR-214 Phase 8: Batch processing to prevent unbounded reads
+    const db = getAdminFirestore();
     const buildings: BuildingDoc[] = [];
-    await processClientBatch(
-      collection(db, COLLECTIONS.BUILDINGS),
-      [],
+    await processAdminBatch(
+      db.collection(COLLECTIONS.BUILDINGS),
       BATCH_SIZE_WRITE,
       (docs) => {
         for (const docSnap of docs) {
           const data = docSnap.data();
           buildings.push({
             id: docSnap.id,
-            name: data.name || 'UNNAMED',
-            features: data.features || [],
+            name: (data.name as string) || 'UNNAMED',
+            features: (data.features as string[]) || [],
           });
         }
       },
@@ -433,7 +432,7 @@ async function handleMigrateBuildingFeaturesExecute(request: NextRequest, ctx: A
       }
 
       try {
-        await updateDoc(doc(db, COLLECTIONS.BUILDINGS, preview.id), {
+        await db.collection(COLLECTIONS.BUILDINGS).doc(preview.id).update({
           features: preview.migratedFeatures,
           updatedAt: new Date().toISOString(),
           _featuresMigratedAt: new Date().toISOString(),

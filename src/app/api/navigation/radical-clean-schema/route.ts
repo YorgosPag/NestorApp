@@ -31,8 +31,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, getDocs, deleteDoc, setDoc, doc, serverTimestamp, Timestamp, FieldValue } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getAdminFirestore, FieldValue, Timestamp } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
@@ -123,6 +122,7 @@ async function handleRadicalCleanupExecute(request: NextRequest, ctx: AuthContex
   }
 
   try {
+    const db = getAdminFirestore();
     logger.info('[Navigation/RadicalClean] Starting total schema cleanup - DELETE and RECREATE all documents');
 
     const result: RadicalCleanupResult = {
@@ -138,7 +138,7 @@ async function handleRadicalCleanupExecute(request: NextRequest, ctx: AuthContex
 
     // STEP 1: Get all navigation documents
     logger.info('[Navigation/RadicalClean] Step 1: Loading all navigation documents');
-    const navigationSnapshot = await getDocs(collection(db, COLLECTIONS.NAVIGATION));
+    const navigationSnapshot = await db.collection(COLLECTIONS.NAVIGATION).get();
 
     logger.info('[Navigation/RadicalClean] Found documents to recreate', { count: navigationSnapshot.docs.length });
     result.stats.documentsProcessed = navigationSnapshot.docs.length;
@@ -162,30 +162,30 @@ async function handleRadicalCleanupExecute(request: NextRequest, ctx: AuthContex
         logger.info('[Navigation/RadicalClean] Recreating document', { docId, originalContactId, beforeFieldCount });
 
         // STEP 2A: DELETE the entire document
-        await deleteDoc(doc(db, COLLECTIONS.NAVIGATION, docId));
+        await db.collection(COLLECTIONS.NAVIGATION).doc(docId).delete();
         logger.info('[Navigation/RadicalClean] Document deleted', { docId });
 
         // STEP 2B: CREATE brand new document with PURE enterprise schema
         const pureSchema: PureEnterpriseNavigationSchema = {
           // PRESERVE ONLY ESSENTIAL DATA
           contactId: originalContactId || 'MISSING_CONTACT_ID',
-          addedAt: currentData.addedAt || serverTimestamp(),
+          addedAt: currentData.addedAt || FieldValue.serverTimestamp(),
           addedBy: currentData.addedBy || 'legacy-system',
           status: 'active',
 
           // PURE ENTERPRISE METADATA
           version: 1, // Reset version to 1
           schemaVersion: '2.0.0-pure',
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
 
           // COMPLIANCE FIELDS
           complianceLevel: 'enterprise',
-          lastCleaned: serverTimestamp()
+          lastCleaned: FieldValue.serverTimestamp()
         };
 
         // CREATE the new clean document
-        await setDoc(doc(db, COLLECTIONS.NAVIGATION, docId), pureSchema);
+        await db.collection(COLLECTIONS.NAVIGATION).doc(docId).set(pureSchema);
 
         const afterFieldCount = Object.keys(pureSchema).length;
 
@@ -215,7 +215,7 @@ async function handleRadicalCleanupExecute(request: NextRequest, ctx: AuthContex
 
     // STEP 3: FINAL VALIDATION - Check uniformity
     logger.info('[Navigation/RadicalClean] Step 3: Final validation - checking schema uniformity');
-    const validationSnapshot = await getDocs(collection(db, COLLECTIONS.NAVIGATION));
+    const validationSnapshot = await db.collection(COLLECTIONS.NAVIGATION).get();
 
     let allFieldCounts: number[] = [];
     let allFieldSets: string[][] = [];

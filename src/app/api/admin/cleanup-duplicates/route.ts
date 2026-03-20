@@ -26,10 +26,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { processClientBatch, BATCH_SIZE_READ, BATCH_SIZE_WRITE } from '@/lib/admin-batch-utils';
+import { processAdminBatch, BATCH_SIZE_READ, BATCH_SIZE_WRITE } from '@/lib/admin-batch-utils';
 
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
@@ -86,19 +85,19 @@ async function handleCleanupDuplicatesPreview(request: NextRequest, ctx: AuthCon
     logger.info('Analyzing duplicate units...');
 
     // ADR-214 Phase 8: Batch processing to prevent unbounded reads
+    const db = getAdminFirestore();
     const units: UnitRecord[] = [];
-    await processClientBatch(
-      collection(db, COLLECTIONS.UNITS),
-      [],
+    await processAdminBatch(
+      db.collection(COLLECTIONS.UNITS),
       BATCH_SIZE_READ,
       (docs) => {
         for (const docSnap of docs) {
           const data = docSnap.data();
           units.push({
             id: docSnap.id,
-            name: data.name || 'UNNAMED',
-            buildingId: data.buildingId,
-            floorId: data.floorId,
+            name: (data.name as string) || 'UNNAMED',
+            buildingId: data.buildingId as string | undefined,
+            floorId: data.floorId as string | undefined,
           });
         }
       },
@@ -199,19 +198,19 @@ async function handleCleanupDuplicatesExecute(request: NextRequest, ctx: AuthCon
     logger.info('Starting duplicate cleanup...');
 
     // ADR-214 Phase 8: Batch processing to prevent unbounded reads
+    const db = getAdminFirestore();
     const units: UnitRecord[] = [];
-    await processClientBatch(
-      collection(db, COLLECTIONS.UNITS),
-      [],
+    await processAdminBatch(
+      db.collection(COLLECTIONS.UNITS),
       BATCH_SIZE_WRITE,
       (docs) => {
         for (const docSnap of docs) {
           const data = docSnap.data();
           units.push({
             id: docSnap.id,
-            name: data.name || 'UNNAMED',
-            buildingId: data.buildingId,
-            floorId: data.floorId,
+            name: (data.name as string) || 'UNNAMED',
+            buildingId: data.buildingId as string | undefined,
+            floorId: data.floorId as string | undefined,
           });
         }
       },
@@ -255,7 +254,7 @@ async function handleCleanupDuplicatesExecute(request: NextRequest, ctx: AuthCon
 
     for (const id of idsToDelete) {
       try {
-        await deleteDoc(doc(db, COLLECTIONS.UNITS, id));
+        await db.collection(COLLECTIONS.UNITS).doc(id).delete();
         deletedCount++;
         logger.info('Deleted duplicate unit', { unitId: id });
       } catch (err) {

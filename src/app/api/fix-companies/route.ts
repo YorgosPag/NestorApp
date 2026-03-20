@@ -25,8 +25,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
@@ -81,16 +80,15 @@ async function handleFixCompaniesExecute(request: NextRequest, ctx: AuthContext)
   logger.info('Starting company fix process...');
 
   try {
-    // Get all contacts with type 'company'
-    const companiesQuery = query(
-      collection(db, COLLECTIONS.CONTACTS),
-      where('type', '==', 'company')
-    );
+    const db = getAdminFirestore();
 
-    const snapshot = await getDocs(companiesQuery);
+    // Get all contacts with type 'company'
+    const snapshot = await db.collection(COLLECTIONS.CONTACTS)
+      .where('type', '==', 'company')
+      .get();
     logger.info('Found companies', { count: snapshot.size });
 
-    const batch = writeBatch(db);
+    const batch = db.batch();
     let changesCount = 0;
     const results: CompanyFixResult[] = [];
 

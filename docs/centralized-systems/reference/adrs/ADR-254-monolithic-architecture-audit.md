@@ -2,12 +2,12 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | 📋 DOCUMENTED |
+| **Status** | ✅ PHASE 1+2 IMPLEMENTED |
 | **Date** | 2026-03-20 |
 | **Category** | Architecture / Performance |
 | **Depends On** | ADR-253 (Security Audit), ADR-061 (Path Aliases) |
 | **Scope** | Full application: Build Performance, Module Boundaries, Dependency Chains |
-| **Action** | DOCUMENTATION ONLY — Zero code changes |
+| **Action** | Phase 1+2 IMPLEMENTED (2026-03-20): 12 routes migrated + KAD JSON extraction |
 
 ---
 
@@ -304,8 +304,8 @@ error-utils (342) ← firebaseAdmin (178) ← COLLECTIONS (272)
 
 | Priority | Action | Files | Impact |
 |----------|--------|-------|--------|
-| 🔴 P0 | **Migrate 12 API routes to Admin SDK** | 12 | ~50-60MB memory savings |
-| 🔴 P0 | **Convert greek-kad-codes.ts to JSON** | 1 | ~10,537 lines removed from tsc |
+| ✅ P0 | **~~Migrate 12 API routes to Admin SDK~~** | 12 | ~50-60MB memory savings — **DONE 2026-03-20** |
+| ✅ P0 | **~~Convert greek-kad-codes.ts to JSON~~** | 1 | ~10,537 lines removed from tsc — **DONE 2026-03-20** |
 | 🟡 P1 | **Direct imports for ai-pipeline** | 10-20 | Eliminate barrel pull-in |
 
 **Expected result:** Vercel OOM resolved, build time reduction ~20-30%.
@@ -382,3 +382,4 @@ error-utils (342) ← firebaseAdmin (178) ← COLLECTIONS (272)
 | Date | Author | Description |
 |------|--------|-------------|
 | 2026-03-20 | Claude (AI) | Initial audit — 6 critical findings, 3-phase roadmap |
+| 2026-03-20 | Claude (AI) | **Phase 1+2 IMPLEMENTED**: 12 API routes migrated Client→Admin SDK, KAD codes extracted to JSON. Bonus: migrate-units addDoc→setDoc+enterprise-id (ADR-017 compliance) |

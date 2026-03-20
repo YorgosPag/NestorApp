@@ -31,8 +31,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, query, getDocs, where, doc, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateNavigationId } from '@/services/enterprise-id.service';
 
@@ -105,6 +104,7 @@ async function handleAutoFixExecute(request: NextRequest, ctx: AuthContext): Pro
   }
 
   try {
+    const db = getAdminFirestore();
     logger.info('[Navigation/AutoFix] Starting navigation companies repair');
 
     const result: AutoFixResult = {
@@ -121,19 +121,17 @@ async function handleAutoFixExecute(request: NextRequest, ctx: AuthContext): Pro
 
     // STEP 1: Get all companies from contacts collection
     logger.info('[Navigation/AutoFix] Step 1: Fetching all companies from contacts');
-    const companiesQuery = query(
-      collection(db, COLLECTIONS.CONTACTS),
-      where('type', '==', 'company'),
-      where('status', '==', 'active')
-    );
-    const companiesSnapshot = await getDocs(companiesQuery);
+    const companiesSnapshot = await db.collection(COLLECTIONS.CONTACTS)
+      .where('type', '==', 'company')
+      .where('status', '==', 'active')
+      .get();
 
     logger.info('[Navigation/AutoFix] Found active companies', { count: companiesSnapshot.docs.length });
     result.stats.companiesChecked = companiesSnapshot.docs.length;
 
     // STEP 2: Get all projects and group by companyId
     logger.info('[Navigation/AutoFix] Step 2: Analyzing projects distribution');
-    const projectsSnapshot = await getDocs(collection(db, COLLECTIONS.PROJECTS));
+    const projectsSnapshot = await db.collection(COLLECTIONS.PROJECTS).get();
 
     // Group projects by companyId
     const projectsByCompany: Record<string, ProjectRecord[]> = {};
@@ -152,7 +150,7 @@ async function handleAutoFixExecute(request: NextRequest, ctx: AuthContext): Pro
 
     // STEP 3: Get existing navigation companies
     logger.info('[Navigation/AutoFix] Step 3: Checking existing navigation companies');
-    const navigationSnapshot = await getDocs(collection(db, COLLECTIONS.NAVIGATION));
+    const navigationSnapshot = await db.collection(COLLECTIONS.NAVIGATION).get();
     const existingNavigationCompanyIds = new Set(
       navigationSnapshot.docs.map(doc => doc.data().contactId)
     );
@@ -185,7 +183,7 @@ async function handleAutoFixExecute(request: NextRequest, ctx: AuthContext): Pro
             // ADR-252 Phase 3: Include companyId for tenant-scoped Firestore rules
             // For auto-fix, the contactId IS the companyId (company's own contact doc)
             const navId = generateNavigationId();
-            await setDoc(doc(db, COLLECTIONS.NAVIGATION, navId), {
+            await db.collection(COLLECTIONS.NAVIGATION).doc(navId).set({
               contactId: companyId,
               companyId: companyId,
               addedAt: new Date(),

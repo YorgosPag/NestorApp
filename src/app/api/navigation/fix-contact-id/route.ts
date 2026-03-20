@@ -31,8 +31,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, query, getDocs, where, updateDoc, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
@@ -98,6 +97,7 @@ async function handleFixContactIdExecute(request: NextRequest, ctx: AuthContext)
   }
 
   try {
+    const db = getAdminFirestore();
     logger.info('[Navigation/FixContactId] Starting contactId correction');
 
     const result: ContactIdFixResult = {
@@ -113,11 +113,9 @@ async function handleFixContactIdExecute(request: NextRequest, ctx: AuthContext)
 
     // STEP 1: Find navigation_companies με λάθος contactId "pagonis"
     logger.info('[Navigation/FixContactId] Step 1: Searching for wrong contactId entries');
-    const navigationQuery = query(
-      collection(db, COLLECTIONS.NAVIGATION),
-      where('contactId', '==', 'pagonis')
-    );
-    const navigationSnapshot = await getDocs(navigationQuery);
+    const navigationSnapshot = await db.collection(COLLECTIONS.NAVIGATION)
+      .where('contactId', '==', 'pagonis')
+      .get();
 
     logger.info('[Navigation/FixContactId] Found documents with wrong contactId', { count: navigationSnapshot.docs.length });
     result.stats.documentsChecked = navigationSnapshot.docs.length;
@@ -132,20 +130,16 @@ async function handleFixContactIdExecute(request: NextRequest, ctx: AuthContext)
     logger.info('[Navigation/FixContactId] Step 2: Verifying target company exists');
     const { LEGACY_TENANT_COMPANY_ID: targetContactId } = await import('@/config/tenant');
 
-    const contactsQuery = query(
-      collection(db, COLLECTIONS.CONTACTS),
-      where('__name__', '==', targetContactId)
-    );
-    const contactsSnapshot = await getDocs(contactsQuery);
+    const contactDoc = await db.collection(COLLECTIONS.CONTACTS).doc(targetContactId).get();
 
-    if (contactsSnapshot.docs.length === 0) {
+    if (!contactDoc.exists) {
       result.success = false;
       result.message = `Target company with ID "${targetContactId}" not found in contacts collection. Cannot proceed with fix.`;
       return NextResponse.json(result, { status: 400 });
     }
 
-    const targetCompany = contactsSnapshot.docs[0].data();
-    const companyName = targetCompany.companyName || 'Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.';
+    const targetCompany = contactDoc.data();
+    const companyName = (targetCompany?.companyName as string) || 'Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.';
 
     logger.info('[Navigation/FixContactId] Target company verified', { companyName });
 
@@ -160,7 +154,7 @@ async function handleFixContactIdExecute(request: NextRequest, ctx: AuthContext)
         logger.info('[Navigation/FixContactId] Fixing document', { docId, oldContactId: docData.contactId, newContactId: targetContactId });
 
         // Update the document
-        await updateDoc(doc(db, COLLECTIONS.NAVIGATION, docId), {
+        await db.collection(COLLECTIONS.NAVIGATION).doc(docId).update({
           contactId: targetContactId,
           fixedAt: new Date(),
           fixedBy: 'enterprise-critical-fix-system',
