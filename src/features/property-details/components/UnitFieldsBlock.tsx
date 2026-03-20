@@ -191,7 +191,7 @@ export function UnitFieldsBlock({
     buildingId: property.buildingId ?? '',
     floorLevel: property.floor ?? 0,
     unitType: (property.type as UnitTypeImport) || undefined,
-    disabled: codeOverridden || !isEditing,
+    disabled: codeOverridden || !!property.code,
   });
 
   const [formData, setFormData] = useState({
@@ -291,17 +291,20 @@ export function UnitFieldsBlock({
   }, [property]);
 
   // ADR-233: Auto-populate code when suggestion arrives and code is empty
+  // Runs regardless of isEditing so the code is visible immediately
   useEffect(() => {
-    if (suggestedCode && !codeOverridden && !formData.code && isEditing) {
+    if (suggestedCode && !codeOverridden && !formData.code) {
       setFormData(prev => ({ ...prev, code: suggestedCode }));
     }
-  }, [suggestedCode, codeOverridden, formData.code, isEditing]);
+  }, [suggestedCode, codeOverridden, formData.code]);
 
   // ── Build updates from form data ──
   const buildUpdatesFromForm = useCallback((): Partial<Property> => {
+    // ADR-233: Use suggested code as fallback if user hasn't typed a custom one
+    const resolvedCode = formData.code || suggestedCode || undefined;
     const updates: Partial<Property> = {
       name: formData.name,
-      code: formData.code || undefined,
+      code: resolvedCode,
       type: formData.type,
       operationalStatus: formData.operationalStatus,
       commercialStatus: formData.commercialStatus,
@@ -364,7 +367,7 @@ export function UnitFieldsBlock({
     }
 
     return updates;
-  }, [formData, isMultiLevel]);
+  }, [formData, isMultiLevel, suggestedCode]);
 
   // ── Save handler ──
   const handleSave = useCallback(async () => {
@@ -379,7 +382,7 @@ export function UnitFieldsBlock({
         const unitData = {
           ...updates,
           name: formData.name || t('navigation.actions.newUnit.defaultName', { defaultValue: 'Νέα Μονάδα' }),
-          code: formData.code || '',
+          code: formData.code || suggestedCode || '',
           type: formData.type || 'apartment',
           status: 'reserved' as const,
           operationalStatus: 'draft' as const,
