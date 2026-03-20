@@ -75,6 +75,15 @@ export default function CrmNotificationsPage() {
     }
   }, [testNotificationId]);
 
+  // 🔒 ADR-253: Production guard — test notifications are dev-only
+  if (process.env.NODE_ENV === 'production') {
+    return (
+      <main className="flex items-center justify-center min-h-screen">
+        <p className="text-muted-foreground">Notification testing is disabled in production.</p>
+      </main>
+    );
+  }
+
   // 🏢 ENTERPRISE: Dashboard stats
   const dashboardStats: DashboardStat[] = [
     { title: t('notifications.stats.total'), value: notifications.length, icon: Bell, color: 'blue' },

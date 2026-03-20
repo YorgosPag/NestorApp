@@ -27,6 +27,7 @@ import {
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FileAuditService } from './file-audit.service';
+import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 
 // ============================================================================
 // TYPES
@@ -88,10 +89,10 @@ export const FileCommentService = {
     });
 
     // Fire-and-forget audit
-    FileAuditService.log(input.fileId, 'comment', input.authorId, {
+    safeFireAndForget(FileAuditService.log(input.fileId, 'comment', input.authorId, {
       commentId: enterpriseId,
       parentId: input.parentId ?? null,
-    }).catch(() => {});
+    }), 'FileComment.addComment');
 
     return enterpriseId;
   },

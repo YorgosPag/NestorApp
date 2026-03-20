@@ -25,6 +25,7 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { FileAuditService } from '@/services/file-audit.service';
+import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 
 const logger = createModuleLogger('FileShareService');
 
@@ -159,10 +160,10 @@ export class FileShareService {
     });
 
     // Audit trail
-    FileAuditService.log(input.fileId, 'share', input.createdBy, input.companyId, {
+    safeFireAndForget(FileAuditService.log(input.fileId, 'share', input.createdBy, input.companyId, {
       expiresInHours,
       requiresPassword: !!input.password,
-    }).catch(() => {});
+    }), 'FileShare.createLink');
 
     return token;
   }

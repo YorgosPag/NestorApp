@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | 📋 DOCUMENTED |
+| **Status** | ✅ IMPLEMENTED |
 | **Date** | 2026-03-20 |
 | **Category** | Security / Data Integrity |
 | **Depends On** | ADR-249, ADR-250, ADR-252 |
@@ -21,6 +21,14 @@
 4. **API Routes without Auth/Rate Limit** — Unprotected endpoints
 
 **Στόχος:** ΜΟΝΟ τεκμηρίωση — zero code changes.
+
+> **2026-03-20 UPDATE:** Ολοκληρώθηκε η υλοποίηση 54 fixes + 17 TODO markers = 71 findings.
+> - Νέο utility: `src/lib/safe-fire-and-forget.ts` (canonical `.catch(() => {})` replacement)
+> - API Auth: 3 fixes (CRON_SECRET verification + withSensitiveRateLimit)
+> - Silent Error Swallowing: 33 replacements → `safeFireAndForget()` / `clientSafeFireAndForget()`
+> - Race Conditions: 6 files wrapped in `runTransaction` (atomic ops)
+> - Client Writes: 2 production guards + TODO markers
+> - 17 TODO markers for future phases (RC-5/6/7/8, CW-2/3..10)
 
 ---
 

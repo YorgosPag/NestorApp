@@ -31,7 +31,7 @@ import {
   signInWithPopup,
   MultiFactorResolver
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, increment } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { sessionService, EnterpriseSessionService } from '@/services/session';
 import { twoFactorService } from '@/services/two-factor/EnterpriseTwoFactorService';
@@ -370,16 +370,13 @@ async function syncUserProfileToFirestore(
         authProvider,
       };
 
-      await setDoc(userDocRef, newProfile);
+      await setDoc(userDocRef, newProfile, { merge: true });
       logger.info('[AuthContext] User profile created successfully');
     } else {
       // UPDATE: Only system fields (preserve user-edited & admin-managed data)
       logger.info('[AuthContext] Updating Firestore user profile:', { uid: firebaseUser.uid });
 
       const existingData = userSnapshot.data();
-      const currentLoginCount = typeof existingData.loginCount === 'number'
-        ? existingData.loginCount
-        : 0;
 
       await setDoc(userDocRef, {
         // Auth-authoritative fields (always sync from Auth provider)
@@ -389,7 +386,7 @@ async function syncUserProfileToFirestore(
         emailVerified: firebaseUser.emailVerified,
         // System fields
         lastLoginAt: now,
-        loginCount: currentLoginCount + 1,
+        loginCount: increment(1),
         updatedAt: now,
         // Claims (may change after admin actions)
         companyId: typeof customClaims.companyId === 'string'

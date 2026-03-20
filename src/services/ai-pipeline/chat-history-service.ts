@@ -86,35 +86,37 @@ export class ChatHistoryService {
           : message.content,
       };
 
-      const doc = await docRef.get();
+      await db.runTransaction(async (transaction) => {
+        const doc = await transaction.get(docRef);
 
-      if (doc.exists) {
-        const data = doc.data() as ChatHistoryDocument;
-        let messages = data.messages ?? [];
+        if (doc.exists) {
+          const data = doc.data() as ChatHistoryDocument;
+          let messages = data.messages ?? [];
 
-        // Add new message
-        messages.push(truncatedMessage);
+          // Add new message
+          messages.push(truncatedMessage);
 
-        // Prune oldest if over limit
-        if (messages.length > MAX_MESSAGES_PER_USER) {
-          messages = messages.slice(-MAX_MESSAGES_PER_USER);
+          // Prune oldest if over limit
+          if (messages.length > MAX_MESSAGES_PER_USER) {
+            messages = messages.slice(-MAX_MESSAGES_PER_USER);
+          }
+
+          transaction.update(docRef, {
+            messages,
+            lastUpdated: new Date().toISOString(),
+          });
+        } else {
+          // Create new document
+          const newDoc: ChatHistoryDocument = {
+            channelSenderId,
+            companyId: getCompanyId(),
+            messages: [truncatedMessage],
+            lastUpdated: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+          };
+          transaction.set(docRef, newDoc);
         }
-
-        await docRef.update({
-          messages,
-          lastUpdated: new Date().toISOString(),
-        });
-      } else {
-        // Create new document
-        const newDoc: ChatHistoryDocument = {
-          channelSenderId,
-          companyId: getCompanyId(),
-          messages: [truncatedMessage],
-          lastUpdated: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-        };
-        await docRef.set(newDoc);
-      }
+      });
     } catch (error) {
       // Non-fatal — chat history failure should not break the pipeline
       logger.warn('Failed to add chat history message', {

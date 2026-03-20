@@ -26,6 +26,7 @@ import { computeLegalPhase, CONTRACT_PHASE_ORDER } from '@/types/legal-contracts
 import type { BrokerageAgreement } from '@/types/brokerage';
 import { BrokerageService } from '@/services/brokerage.service';
 import { getErrorMessage } from '@/lib/error-utils';
+import { clientSafeFireAndForget } from '@/lib/safe-fire-and-forget';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -152,7 +153,7 @@ export function useLegalContracts(unitId: string | null, projectId?: string): Us
       );
       if (data.success) {
         // Refetch contracts — don't let refetch failure mask successful creation
-        fetchContracts().catch(() => {});
+        clientSafeFireAndForget(fetchContracts(), 'LegalContracts.refetch');
       }
       return { success: data.success, error: data.error };
     } catch (err) {

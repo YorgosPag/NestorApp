@@ -24,6 +24,7 @@ import { sendReplyViaMailgun } from '@/services/ai-pipeline/shared/mailgun-sende
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { getErrorMessage } from '@/lib/error-utils';
+import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 
 const logger = createModuleLogger('api/notifications/professional-assigned');
 
@@ -334,7 +335,7 @@ async function handleAssignmentNotification(
     });
 
     // Audit trail: email sent
-    EntityAuditService.recordChange({
+    safeFireAndForget(EntityAuditService.recordChange({
       entityType: 'unit',
       entityId: unitId,
       entityName: hierarchy.unitName,
@@ -348,7 +349,7 @@ async function handleAssignmentNotification(
       performedBy: ctx.uid,
       performedByName: ctx.email ?? null,
       companyId: ctx.companyId,
-    }).catch(() => {});
+    }), 'ProfessionalAssigned.auditTrail');
 
     return NextResponse.json({ success: true, emailSent: true });
   } catch (error) {

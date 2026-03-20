@@ -28,6 +28,7 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FileAuditService } from './file-audit.service';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
+import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 
 // ============================================================================
 // TYPES
@@ -115,10 +116,10 @@ export const FileApprovalService = {
       updatedAt: null,
     });
 
-    FileAuditService.log(input.fileId, 'approval_request', input.requestedBy, {
+    safeFireAndForget(FileAuditService.log(input.fileId, 'approval_request', input.requestedBy, {
       approvalId: enterpriseId,
       approverCount: input.approvers.length,
-    }).catch(() => {});
+    }), 'FileApproval.requestApproval');
 
     return enterpriseId;
   },
@@ -209,11 +210,11 @@ export const FileApprovalService = {
       updatedAt: serverTimestamp(),
     });
 
-    FileAuditService.log(data.fileId, 'approval_approve', userId, {
+    safeFireAndForget(FileAuditService.log(data.fileId, 'approval_approve', userId, {
       approvalId,
       step: stepIdx + 1,
       allApproved,
-    }).catch(() => {});
+    }), 'FileApproval.approve');
   },
 
   /**
@@ -253,11 +254,11 @@ export const FileApprovalService = {
       updatedAt: serverTimestamp(),
     });
 
-    FileAuditService.log(data.fileId, 'approval_reject', userId, {
+    safeFireAndForget(FileAuditService.log(data.fileId, 'approval_reject', userId, {
       approvalId,
       step: stepIdx + 1,
       reason,
-    }).catch(() => {});
+    }), 'FileApproval.reject');
   },
 
   /**
@@ -269,8 +270,8 @@ export const FileApprovalService = {
       updatedAt: serverTimestamp(),
     });
 
-    FileAuditService.log(fileId, 'approval_cancel', userId, {
+    safeFireAndForget(FileAuditService.log(fileId, 'approval_cancel', userId, {
       approvalId,
-    }).catch(() => {});
+    }), 'FileApproval.cancel');
   },
 };

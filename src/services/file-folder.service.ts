@@ -26,6 +26,7 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FileAuditService } from './file-audit.service';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
+import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 
 // ============================================================================
 // TYPES
@@ -153,9 +154,9 @@ export const FileFolderService = {
     });
 
     // Fire-and-forget audit
-    FileAuditService.log(fileId, 'move', userId, {
+    safeFireAndForget(FileAuditService.log(fileId, 'move', userId, {
       targetFolderId: folderId,
-    }).catch(() => {});
+    }), 'FileFolder.moveToFolder');
   },
 
   /**
@@ -178,9 +179,9 @@ export const FileFolderService = {
 
     // Fire-and-forget audit for each file
     for (const fileId of fileIds) {
-      FileAuditService.log(fileId, 'move', userId, {
+      safeFireAndForget(FileAuditService.log(fileId, 'move', userId, {
         targetFolderId: folderId,
-      }).catch(() => {});
+      }), 'FileFolder.moveToFolder');
     }
   },
 

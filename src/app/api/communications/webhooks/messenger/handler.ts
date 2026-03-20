@@ -29,6 +29,7 @@ import type {
 import { getCompanyId } from '@/config/tenant';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 
 const logger = createModuleLogger('MessengerWebhookHandler');
 
@@ -205,7 +206,7 @@ async function processMessagingEvent(event: MessengerMessagingEvent): Promise<vo
     // Suggestion buttons — treat as new user message
     if (qrPayload.startsWith('sug_')) {
       await markMessengerSeen(psid);
-      sendMessengerMessage(psid, '\u23F3 \u0395\u03C0\u03B5\u03BE\u03B5\u03C1\u03B3\u03AC\u03B6\u03BF\u03BC\u03B1\u03B9...').catch(() => {});
+      safeFireAndForget(sendMessengerMessage(psid, '\u23F3 \u0395\u03C0\u03B5\u03BE\u03B5\u03C1\u03B3\u03AC\u03B6\u03BF\u03BC\u03B1\u03B9...'), 'Messenger.ackMessage');
       pendingPipelineMessages.push({
         psid,
         senderName: 'Messenger User',
@@ -232,7 +233,7 @@ async function processMessagingEvent(event: MessengerMessagingEvent): Promise<vo
   const messageText = extractMessengerMessageText(message);
   if (messageText.trim().length > 0) {
     // Send immediate "processing" acknowledgment (non-blocking)
-    sendMessengerMessage(psid, '\u23F3 \u0395\u03C0\u03B5\u03BE\u03B5\u03C1\u03B3\u03AC\u03B6\u03BF\u03BC\u03B1\u03B9...').catch(() => {});
+    safeFireAndForget(sendMessengerMessage(psid, '\u23F3 \u0395\u03C0\u03B5\u03BE\u03B5\u03C1\u03B3\u03AC\u03B6\u03BF\u03BC\u03B1\u03B9...'), 'Messenger.ackMessage');
 
     pendingPipelineMessages.push({
       psid,

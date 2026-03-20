@@ -31,6 +31,7 @@ import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import type { FileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
 import { FileAuditService } from '@/services/file-audit.service';
+import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 
 const logger = createModuleLogger('FileVersionService');
 
@@ -177,10 +178,10 @@ export class FileVersionService {
     logger.info('FileRecord updated to new version', { fileId, newRevision });
 
     // 🏢 ENTERPRISE: Audit trail (ADR-191 Phase 3.1)
-    FileAuditService.log(fileId, 'version_create', input.createdBy, undefined, {
+    safeFireAndForget(FileAuditService.log(fileId, 'version_create', input.createdBy, undefined, {
       newRevision,
       originalFilename: input.originalFilename,
-    }).catch(() => {});
+    }), 'FileVersion.createVersion');
 
     return newRevision;
   }
@@ -287,10 +288,10 @@ export class FileVersionService {
     });
 
     // 🏢 ENTERPRISE: Audit trail (ADR-191 Phase 3.1)
-    FileAuditService.log(fileId, 'version_rollback', performedBy, undefined, {
+    safeFireAndForget(FileAuditService.log(fileId, 'version_rollback', performedBy, undefined, {
       targetVersion: targetVersionNumber,
       newRevision: rollbackRevision,
-    }).catch(() => {});
+    }), 'FileVersion.rollbackVersion');
 
     return rollbackRevision;
   }

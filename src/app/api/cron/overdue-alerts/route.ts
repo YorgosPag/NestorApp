@@ -34,8 +34,8 @@ function verifyCronAuthorization(request: NextRequest): boolean {
   const cronSecret = process.env.CRON_SECRET;
 
   if (!cronSecret) {
-    logger.warn('CRON_SECRET not configured - allowing unauthenticated access');
-    return true;
+    logger.error('CRON_SECRET not configured — blocking unauthenticated access');
+    return false;
   }
 
   if (authHeader === `Bearer ${cronSecret}`) {

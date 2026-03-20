@@ -13,6 +13,7 @@ import { useRealtimeBuildings, useRealtimeUnits, REALTIME_EVENTS, RealtimeServic
 import { NavigationApiService } from './services/navigationApi';
 // 🔐 ENTERPRISE: Auth hook for bootstrap gating
 import { useAuth } from '@/auth/hooks/useAuth';
+import { clientSafeFireAndForget } from '@/lib/safe-fire-and-forget';
 import type {
   NavigationState,
   NavigationActions,
@@ -321,7 +322,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   const selectCompany = (companyId: string) => {
     actions.selectCompany(companyId, state, updateState);
     // Load projects for this specific company (optional, as we already have all projects)
-    dataHook.loadProjectsForCompany(companyId).catch(() => {});
+    clientSafeFireAndForget(dataHook.loadProjectsForCompany(companyId), 'Navigation.loadProjects');
   };
 
   const loadProjectsForCompany = async (companyId: string) => {

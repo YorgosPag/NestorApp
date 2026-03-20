@@ -241,22 +241,19 @@ export async function enqueueInboundEmail(params: {
     const adminDb = getAdminFirestore();
     const queueCollection = adminDb.collection(COLLECTIONS.EMAIL_INGESTION_QUEUE);
 
-    // Step 2: Check for duplicate (idempotency)
-    // CRITICAL: This query REQUIRES a Firestore composite index on (providerMessageId ASC, provider ASC)
-    // Index defined in: firestore.indexes.json → email_ingestion_queue
-    // See: ADR-071, ADR-073
-    const duplicateCheck = await queueCollection
-      .where('providerMessageId', '==', params.providerMessageId)
-      .where('provider', '==', params.provider)
-      .limit(1)
-      .get();
+    // Step 2: Deterministic document ID for idempotent dedup (ADR-253-RC-12)
+    // Format: eq_{provider}_{providerMessageId} — eliminates race between query + add
+    const deterministicId = `eq_${params.provider}_${params.providerMessageId}`;
+    const docRef = queueCollection.doc(deterministicId);
 
-    if (!duplicateCheck.empty) {
+    // Check if already exists
+    const existingDoc = await docRef.get();
+    if (existingDoc.exists) {
       logger.info('Duplicate email detected, skipping queue', {
         providerMessageId: params.providerMessageId,
-        existingQueueId: duplicateCheck.docs[0].id,
+        existingQueueId: deterministicId,
       });
-      return { queueId: duplicateCheck.docs[0].id, status: 'duplicate' };
+      return { queueId: deterministicId, status: 'duplicate' };
     }
 
     // Step 3: Serialize attachments (parallel downloads for inline, metadata only for deferred)
@@ -287,7 +284,7 @@ export async function enqueueInboundEmail(params: {
       emailReceivedAt: params.emailReceivedAt,
     };
 
-    const docRef = await queueCollection.add(queueItem);
+    await docRef.set(queueItem);
 
     const elapsed = Date.now() - startTime;
 
@@ -296,7 +293,7 @@ export async function enqueueInboundEmail(params: {
     const exceededSLA = elapsed > 1000;
 
     logger.info('Email queued successfully', {
-      queueId: docRef.id,
+      queueId: deterministicId,
       provider: params.provider,
       companyId: routing.companyId,
       attachmentCount: serializedAttachments.length,
@@ -313,14 +310,14 @@ export async function enqueueInboundEmail(params: {
     // 🏢 ENTERPRISE: Alert if SLA exceeded (production monitoring)
     if (exceededSLA) {
       logger.warn('Webhook SLA exceeded - performance degradation detected', {
-        queueId: docRef.id,
+        queueId: deterministicId,
         targetMs: 1000,
         actualMs: elapsed,
         exceedanceMs: elapsed - 1000,
       });
     }
 
-    return { queueId: docRef.id, status: 'queued' };
+    return { queueId: deterministicId, status: 'queued' };
   } catch (error) {
     const elapsed = Date.now() - startTime;
     logger.error('Failed to enqueue email', {
@@ -768,46 +765,47 @@ export async function markQueueItemFailed(
   const adminDb = getAdminFirestore();
   const docRef = adminDb.collection(COLLECTIONS.EMAIL_INGESTION_QUEUE).doc(queueId);
 
-  // Get current item to check retry count
-  const doc = await docRef.get();
-  const data = doc.data();
+  await adminDb.runTransaction(async (transaction) => {
+    const doc = await transaction.get(docRef);
+    const data = doc.data();
 
-  if (!data) {
-    logger.warn('Queue item not found for failure update', { queueId });
-    return;
-  }
+    if (!data) {
+      logger.warn('Queue item not found for failure update', { queueId });
+      return;
+    }
 
-  const currentRetryCount = data.retryCount || 0;
-  const maxRetries = data.maxRetries || EMAIL_QUEUE_CONFIG.MAX_RETRIES;
-  const now = new Date();
+    const currentRetryCount = data.retryCount || 0;
+    const maxRetries = data.maxRetries || EMAIL_QUEUE_CONFIG.MAX_RETRIES;
+    const now = new Date();
 
-  // Determine new status
-  const newStatus: EmailIngestionQueueStatus =
-    currentRetryCount >= maxRetries ? QUEUE_STATUS.DEAD_LETTER : QUEUE_STATUS.FAILED;
+    // Determine new status
+    const newStatus: EmailIngestionQueueStatus =
+      currentRetryCount >= maxRetries ? QUEUE_STATUS.DEAD_LETTER : QUEUE_STATUS.FAILED;
 
-  // Build retry history entry
-  const retryHistoryEntry = {
-    attemptedAt: now,
-    error: error.message,
-  };
+    // Build retry history entry
+    const retryHistoryEntry = {
+      attemptedAt: now,
+      error: error.message,
+    };
 
-  await docRef.update({
-    status: newStatus,
-    lastError: {
-      message: error.message,
-      code: error.code,
-      occurredAt: now,
-    },
-    retryHistory: FieldValue.arrayUnion(retryHistoryEntry),
-    ...(newStatus === QUEUE_STATUS.DEAD_LETTER ? { completedAt: now } : {}),
-  });
+    transaction.update(docRef, {
+      status: newStatus,
+      lastError: {
+        message: error.message,
+        code: error.code,
+        occurredAt: now,
+      },
+      retryHistory: FieldValue.arrayUnion(retryHistoryEntry),
+      ...(newStatus === QUEUE_STATUS.DEAD_LETTER ? { completedAt: now } : {}),
+    });
 
-  logger.warn('Queue item marked as failed', {
-    queueId,
-    newStatus,
-    retryCount: currentRetryCount,
-    maxRetries,
-    error: error.message,
+    logger.warn('Queue item marked as failed', {
+      queueId,
+      newStatus,
+      retryCount: currentRetryCount,
+      maxRetries,
+      error: error.message,
+    });
   });
 }
 

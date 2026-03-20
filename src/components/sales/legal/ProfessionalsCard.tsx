@@ -32,6 +32,7 @@ import { ContactSearchManager } from '@/components/contacts/relationships/Contac
 import { toast } from 'sonner';
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
 import type { EntityAssociationLink } from '@/types/entity-associations';
+import { clientSafeFireAndForget } from '@/lib/safe-fire-and-forget';
 import type { LegalContract, LegalProfessionalRole } from '@/types/legal-contracts';
 
 // ============================================================================
@@ -210,14 +211,14 @@ export function ProfessionalsCard({
 
         // Audit trail: professional assigned
         const roleLabel = getRoleLabel(role);
-        fetch(API_ROUTES.ENTITY_ACTIVITY('unit', unitId), {
+        clientSafeFireAndForget(fetch(API_ROUTES.ENTITY_ACTIVITY('unit', unitId), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'professional_assigned',
             changes: [{ field: 'professional', oldValue: null, newValue: contact.name, label: roleLabel }],
           }),
-        }).catch(() => {});
+        }), 'ProfessionalsCard.auditAssign');
 
         // Ask user whether to send email notification
         setPendingEmail({
@@ -310,14 +311,14 @@ export function ProfessionalsCard({
 
         // Audit trail: professional removed
         const roleLabel = getRoleLabel(role);
-        fetch(API_ROUTES.ENTITY_ACTIVITY('unit', unitId), {
+        clientSafeFireAndForget(fetch(API_ROUTES.ENTITY_ACTIVITY('unit', unitId), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'professional_removed',
             changes: [{ field: 'professional', oldValue: contactName, newValue: null, label: roleLabel }],
           }),
-        }).catch(() => {});
+        }), 'ProfessionalsCard.auditRemove');
 
         // Ask user whether to send removal email
         setPendingEmail({

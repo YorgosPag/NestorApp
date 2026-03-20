@@ -161,8 +161,18 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
 
         // Trigger AI analysis (non-blocking — update status when done)
         processDocumentAsync(id, body.fileUrl, body.mimeType, repository, documentAnalyzer)
-          .catch((err) => {
-            logger.error('[documents/route] AI processing failed', { id, error: err });
+          .catch(async (err) => {
+            logger.error('[documents/route] AI processing failed', { id, error: getErrorMessage(err) });
+            // A7: Prevent zombie — mark document as error status
+            try {
+              await repository.updateExpenseDocument(id, {
+                status: 'review',
+                notes: `AI processing failed: ${getErrorMessage(err)}`,
+                updatedAt: isoNow(),
+              });
+            } catch (statusErr) {
+              logger.error('[documents/route] Failed to set error status', { id, error: getErrorMessage(statusErr) });
+            }
           });
 
         return NextResponse.json(

@@ -30,6 +30,7 @@ import type {
 import { getCompanyId } from '@/config/tenant';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 
 const logger = createModuleLogger('WhatsAppWebhookHandler');
 
@@ -222,7 +223,7 @@ async function processIncomingMessage(
     // Suggestion buttons — treat as new user message, feed to pipeline
     if (buttonId.startsWith('sug_')) {
       await markWhatsAppMessageRead(message.id);
-      sendWhatsAppMessage(message.from, '\u23F3 \u0395\u03C0\u03B5\u03BE\u03B5\u03C1\u03B3\u03AC\u03B6\u03BF\u03BC\u03B1\u03B9...').catch(() => {});
+      safeFireAndForget(sendWhatsAppMessage(message.from, '\u23F3 \u0395\u03C0\u03B5\u03BE\u03B5\u03C1\u03B3\u03AC\u03B6\u03BF\u03BC\u03B1\u03B9...'), 'WhatsApp.ackMessage');
       pendingPipelineMessages.push({
         phoneNumber: message.from,
         senderName: contact?.profile?.name ?? message.from,
@@ -250,9 +251,7 @@ async function processIncomingMessage(
   const messageText = extractMessageText(message);
   if (messageText.trim().length > 0) {
     // Send immediate "processing" acknowledgment (non-blocking)
-    sendWhatsAppMessage(message.from, '\u23F3 \u0395\u03C0\u03B5\u03BE\u03B5\u03C1\u03B3\u03AC\u03B6\u03BF\u03BC\u03B1\u03B9...').catch(() => {
-      // Non-fatal — don't block pipeline feed if ack fails
-    });
+    safeFireAndForget(sendWhatsAppMessage(message.from, '\u23F3 \u0395\u03C0\u03B5\u03BE\u03B5\u03C1\u03B3\u03AC\u03B6\u03BF\u03BC\u03B1\u03B9...'), 'WhatsApp.ackMessage');
 
     pendingPipelineMessages.push({
       phoneNumber: message.from,

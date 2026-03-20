@@ -168,6 +168,15 @@ export default function DatabaseUpdatePage() {
     relationships: false
   });
 
+  // 🔒 ADR-253: Production guard — database mutations are dev-only
+  if (process.env.NODE_ENV === 'production') {
+    return (
+      <main className="flex items-center justify-center min-h-screen">
+        <p className="text-muted-foreground">Database update tools are disabled in production.</p>
+      </main>
+    );
+  }
+
   // ========================================================================
   // UTILITY FUNCTIONS
   // ========================================================================

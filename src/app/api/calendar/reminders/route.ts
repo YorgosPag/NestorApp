@@ -15,8 +15,14 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateNotificationId } from '@/services/enterprise-id.service';
 import { getErrorMessage } from '@/lib/error-utils';
+import { NextRequest } from 'next/server';
+import { createModuleLogger } from '@/lib/telemetry';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+
+const logger = createModuleLogger('CALENDAR_REMINDERS_CRON');
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 interface ReminderTask {
   id: string;
@@ -28,7 +34,20 @@ interface ReminderTask {
   companyId: string | null;
 }
 
-export async function GET() {
+async function handleGET(request: NextRequest) {
+  // Verify cron authorization
+  const authHeader = request.headers.get('authorization');
+  const cronSecret = process.env.CRON_SECRET;
+
+  if (!cronSecret) {
+    logger.error('CRON_SECRET env var not configured — blocking cron execution');
+    return NextResponse.json({ error: 'Cron secret not configured' }, { status: 500 });
+  }
+
+  if (authHeader !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const adminDb = getAdminFirestore();
     const now = new Date().toISOString();
@@ -92,3 +111,5 @@ export async function GET() {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const GET = withSensitiveRateLimit(handleGET);

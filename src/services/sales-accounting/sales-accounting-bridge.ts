@@ -18,6 +18,7 @@ import { getCategoryByCode } from '@/subapps/accounting/config/account-categorie
 import { generateTransactionId } from '@/services/enterprise-id.service';
 import { notifyAccountingOffice, notifyBuyerReservation, notifyBuyerCancellation, notifyBuyerSale } from './accounting-notification';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 import type { CreateInvoiceInput } from '@/subapps/accounting/types/invoice';
 import type { InvoiceIssuer, InvoiceCustomer } from '@/subapps/accounting/types/invoice';
 import type { MyDataIncomeType } from '@/subapps/accounting/types/common';
@@ -309,7 +310,7 @@ export class SalesAccountingBridge {
       // 4. Audit trail: invoice created
       const invoiceTypeLabel = invoiceInput.type === 'credit_invoice' ? 'Πιστωτικό' : 'Τιμολόγιο';
       const companyId = await this.resolveUnitCompanyId(unitId);
-      EntityAuditService.recordChange({
+      safeFireAndForget(EntityAuditService.recordChange({
         entityType: 'unit',
         entityId: unitId,
         entityName: null,
@@ -323,7 +324,7 @@ export class SalesAccountingBridge {
         performedBy: 'system',
         performedByName: 'Σύστημα',
         companyId: companyId ?? 'unknown',
-      }).catch(() => {});
+      }), 'SalesAccountingBridge.auditTrail');
 
       return {
         success: true,

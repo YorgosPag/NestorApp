@@ -261,7 +261,9 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
             else logger.warn('Floorplan processing returned error', { fileId, status: res.status });
           })
           .catch((err) => logger.warn('Floorplan processing request failed', { fileId, error: String(err) }));
-      }).catch(() => {});
+      }).catch((err: unknown) => {
+        console.warn('[useFloorplanUpload] Failed to get token for processing', err);
+      });
 
       setProgress(100);
 

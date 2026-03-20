@@ -62,6 +62,7 @@ import { RealtimeService } from '@/services/realtime';
 import { contactLinkConverter, fileLinkConverter } from '@/lib/firestore/converters/association.converter';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 const logger = createModuleLogger('AssociationService');
 import type {
   ContactLink,
@@ -194,7 +195,7 @@ export class AssociationService {
 
       // 📜 Audit trail: contact linked (fire-and-forget)
       if (targetEntityType && targetEntityId) {
-        fetch(API_ROUTES.AUDIT_TRAIL.RECORD, {
+        safeFireAndForget(fetch(API_ROUTES.AUDIT_TRAIL.RECORD, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -209,7 +210,7 @@ export class AssociationService {
               label: `Σύνδεση (${role ?? 'γενική'})`,
             }],
           }),
-        }).catch(() => {});
+        }), 'Association.auditTrail');
       }
 
       return {
@@ -559,7 +560,7 @@ export class AssociationService {
 
       // 📜 Audit trail: contact unlinked (fire-and-forget)
       if (linkData.targetEntityType && linkData.targetEntityId) {
-        fetch(API_ROUTES.AUDIT_TRAIL.RECORD, {
+        safeFireAndForget(fetch(API_ROUTES.AUDIT_TRAIL.RECORD, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -574,7 +575,7 @@ export class AssociationService {
               label: `Αποσύνδεση (${linkData.role ?? 'γενική'})`,
             }],
           }),
-        }).catch(() => {});
+        }), 'Association.auditTrail');
       }
 
       return {

@@ -217,6 +217,7 @@ export class FirestoreBOQRepository implements IBOQRepository {
   }
 
   async update(id: string, data: UpdateBOQItemInput): Promise<BOQItem | null> {
+    // TODO(ADR-253-RC-5): Wrap in runTransaction for atomic read-then-write
     try {
       const current = await this.getById(id);
       if (!current) {
@@ -264,6 +265,7 @@ export class FirestoreBOQRepository implements IBOQRepository {
   }
 
   async duplicate(id: string): Promise<BOQItem | null> {
+    // TODO(ADR-253-RC-5): Wrap in runTransaction for atomic read-then-write
     try {
       const original = await this.getById(id);
       if (!original) return null;

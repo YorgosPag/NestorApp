@@ -26,7 +26,7 @@ import {
   reauthenticateWithCredential,
   EmailAuthProvider
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc, Firestore, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, Firestore, serverTimestamp, runTransaction } from 'firebase/firestore';
 import QRCode from 'qrcode';
 import { auth } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -511,37 +511,39 @@ export class EnterpriseTwoFactorService {
     try {
       const hashedCode = await hashBackupCode(backupCode);
       const docRef = doc(this.db, FIRESTORE_COLLECTION, userId);
-      const docSnap = await getDoc(docRef);
 
-      if (!docSnap.exists()) {
-        return { success: false, error: 'No backup codes found' };
-      }
+      await runTransaction(this.db, async (transaction) => {
+        const docSnap = await transaction.get(docRef);
 
-      const data = docSnap.data();
-      const backupCodesData = data.backupCodes;
+        if (!docSnap.exists()) {
+          throw new Error('No backup codes found');
+        }
 
-      if (!backupCodesData?.codes) {
-        return { success: false, error: 'No backup codes found' };
-      }
+        const data = docSnap.data();
+        const backupCodesData = data.backupCodes;
 
-      const codes = backupCodesData.codes as BackupCode[];
-      const codeIndex = codes.findIndex(c => c.code === hashedCode && !c.used);
+        if (!backupCodesData?.codes) {
+          throw new Error('No backup codes found');
+        }
 
-      if (codeIndex === -1) {
-        return { success: false, error: 'Invalid or already used backup code' };
-      }
+        const codes = backupCodesData.codes as BackupCode[];
+        const codeIndex = codes.findIndex(c => c.code === hashedCode && !c.used);
 
-      // Mark code as used
-      codes[codeIndex].used = true;
-      codes[codeIndex].usedAt = new Date();
+        if (codeIndex === -1) {
+          throw new Error('Invalid or already used backup code');
+        }
 
-      await updateDoc(docRef, {
-        'backupCodes.codes': codes,
-        'backupCodes.remainingCount': codes.filter(c => !c.used).length
+        // Mark code as used
+        codes[codeIndex].used = true;
+        codes[codeIndex].usedAt = new Date();
+
+        transaction.update(docRef, {
+          'backupCodes.codes': codes,
+          'backupCodes.remainingCount': codes.filter(c => !c.used).length
+        });
       });
 
       logger.info('✅ [2FA] Backup code verified and marked as used');
-
       return { success: true };
     } catch (error) {
       logger.error('❌ [2FA] Backup code verification failed:', error);

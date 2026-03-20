@@ -286,8 +286,8 @@ export function useAutoSave<T>(
       // (Google Docs pattern — never lose data on navigation)
       if (debounceTimerRef.current) {
         const finalData = dataRef.current;
-        saveFnRef.current(finalData).catch(() => {
-          // Silent fail — component already unmounted
+        saveFnRef.current(finalData).catch((err: unknown) => {
+          console.warn('[useAutoSave] Unmount flush failed (component unmounted)', err);
         });
       }
     };

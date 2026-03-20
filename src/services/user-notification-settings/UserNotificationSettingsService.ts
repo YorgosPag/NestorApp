@@ -96,6 +96,7 @@ class UserNotificationSettingsService {
    * Creates default settings if none exist
    */
   public async getSettings(userId: string): Promise<UserNotificationSettings> {
+    // TODO(ADR-253-RC-8): Wrap in runTransaction for atomic operations
     if (!this.db) {
       throw new Error('UserNotificationSettingsService not initialized');
     }
@@ -228,6 +229,7 @@ class UserNotificationSettingsService {
     category: NotificationCategory,
     enabled: boolean
   ): Promise<void> {
+    // TODO(ADR-253-RC-8): Wrap in runTransaction for atomic operations
     if (!this.db) {
       throw new Error('UserNotificationSettingsService not initialized');
     }

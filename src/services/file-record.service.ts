@@ -66,6 +66,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { RealtimeService } from '@/services/realtime';
 // 🏢 ENTERPRISE: Audit trail for file operations (ADR-191 Phase 3.1)
 import { FileAuditService } from '@/services/file-audit.service';
+import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 
 // ============================================================================
 // MODULE LOGGER
@@ -559,7 +560,7 @@ export class FileRecordService {
     });
 
     // 🏢 ENTERPRISE: Audit trail (ADR-191 Phase 3.1)
-    FileAuditService.log(fileId, 'delete', trashedBy).catch(() => {});
+    safeFireAndForget(FileAuditService.log(fileId, 'delete', trashedBy), 'FileRecord.trashFile', { fileId });
   }
 
   /**
@@ -619,7 +620,7 @@ export class FileRecordService {
     });
 
     // 🏢 ENTERPRISE: Audit trail (ADR-191 Phase 3.1)
-    FileAuditService.log(fileId, 'restore', restoredBy).catch(() => {});
+    safeFireAndForget(FileAuditService.log(fileId, 'restore', restoredBy), 'FileRecord.restoreFile', { fileId });
   }
 
   /**
@@ -737,7 +738,7 @@ export class FileRecordService {
     logger.info('Hold placed on FileRecord', { fileId, holdType });
 
     // 🏢 ENTERPRISE: Audit trail (ADR-191 Phase 3.1)
-    FileAuditService.log(fileId, 'hold_place', placedBy, undefined, { holdType, reason }).catch(() => {});
+    safeFireAndForget(FileAuditService.log(fileId, 'hold_place', placedBy, undefined, { holdType, reason }), 'FileRecord.holdPlace', { fileId });
   }
 
   /**
@@ -759,7 +760,7 @@ export class FileRecordService {
     logger.info('Hold released on FileRecord', { fileId });
 
     // 🏢 ENTERPRISE: Audit trail (ADR-191 Phase 3.1)
-    FileAuditService.log(fileId, 'hold_release', releasedBy).catch(() => {});
+    safeFireAndForget(FileAuditService.log(fileId, 'hold_release', releasedBy), 'FileRecord.holdRelease', { fileId });
   }
 
   // ==========================================================================
@@ -907,7 +908,7 @@ export class FileRecordService {
     });
 
     // 🏢 ENTERPRISE: Audit trail (ADR-191 Phase 3.1)
-    FileAuditService.log(fileId, 'rename', renamedBy, undefined, { newDisplayName: newDisplayName.trim() }).catch(() => {});
+    safeFireAndForget(FileAuditService.log(fileId, 'rename', renamedBy, undefined, { newDisplayName: newDisplayName.trim() }), 'FileRecord.renameFile', { fileId });
   }
 
   /**

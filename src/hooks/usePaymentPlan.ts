@@ -15,6 +15,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { API_ROUTES } from '@/config/domain-constants';
 import { getErrorMessage } from '@/lib/error-utils';
+import { clientSafeFireAndForget } from '@/lib/safe-fire-and-forget';
 import type {
   PaymentPlan,
   PaymentRecord,
@@ -113,7 +114,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
             body: JSON.stringify(input),
           }
         );
-        if (data.success) fetchData().catch(() => {});
+        if (data.success) clientSafeFireAndForget(fetchData(), 'PaymentPlan.refetch');
         return { success: data.success, error: data.error };
       } catch (err) {
         return { success: false, error: getErrorMessage(err) };

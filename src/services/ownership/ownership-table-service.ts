@@ -20,6 +20,7 @@ import {
   orderBy,
   serverTimestamp,
   Timestamp,
+  runTransaction,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
@@ -155,71 +156,74 @@ export async function finalizeTable(
   userId: string,
 ): Promise<void> {
   const docRef = doc(db, COLLECTIONS.OWNERSHIP_TABLES, tableId);
-  const snapshot = await getDoc(docRef);
 
-  if (!snapshot.exists()) {
-    throw new Error(`Table ${tableId} not found`);
-  }
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(docRef);
 
-  const currentData = snapshot.data() as Omit<OwnershipPercentageTable, 'id'>;
+    if (!snapshot.exists()) {
+      throw new Error(`Table ${tableId} not found`);
+    }
 
-  // Validate total
-  const total = currentData.rows.reduce(
-    (sum: number, r: { millesimalShares: number }) => sum + r.millesimalShares,
-    0,
-  );
-  if (total !== TOTAL_SHARES_TARGET) {
-    throw new Error(
-      `Cannot finalize: total shares = ${total}‰, expected ${TOTAL_SHARES_TARGET}‰`,
+    const currentData = snapshot.data() as Omit<OwnershipPercentageTable, 'id'>;
+
+    // Validate total
+    const total = currentData.rows.reduce(
+      (sum: number, r: { millesimalShares: number }) => sum + r.millesimalShares,
+      0,
     );
-  }
+    if (total !== TOTAL_SHARES_TARGET) {
+      throw new Error(
+        `Cannot finalize: total shares = ${total}‰, expected ${TOTAL_SHARES_TARGET}‰`,
+      );
+    }
 
-  // Create revision
-  const revisionId = `rev_v${currentData.version}`;
-  const revisionRef = doc(
-    db,
-    COLLECTIONS.OWNERSHIP_TABLES,
-    tableId,
-    SUBCOLLECTIONS.OWNERSHIP_REVISIONS,
-    revisionId,
-  );
+    // Create revision
+    const revisionId = `rev_v${currentData.version}`;
+    const revisionRef = doc(
+      db,
+      COLLECTIONS.OWNERSHIP_TABLES,
+      tableId,
+      SUBCOLLECTIONS.OWNERSHIP_REVISIONS,
+      revisionId,
+    );
 
-  const revision: Omit<OwnershipTableRevision, 'id'> = {
-    version: currentData.version,
-    snapshot: {
-      projectId: currentData.projectId,
-      buildingIds: currentData.buildingIds,
-      createdAt: currentData.createdAt,
-      updatedAt: currentData.updatedAt,
-      zonePrice: currentData.zonePrice,
-      commercialityCoefficient: currentData.commercialityCoefficient,
-      calculationMethod: currentData.calculationMethod,
-      rows: currentData.rows,
-      totalShares: currentData.totalShares,
-      summaryByCategory: currentData.summaryByCategory,
-      bartex: currentData.bartex,
-      notes: currentData.notes,
-      deedNumber: currentData.deedNumber,
-      notary: currentData.notary,
-      kaekCodes: currentData.kaekCodes,
-      status: 'finalized',
-    },
-    finalizedBy: userId,
-    finalizedAt: Timestamp.now(),
-    changeReason: null,
-  };
+    const revision: Omit<OwnershipTableRevision, 'id'> = {
+      version: currentData.version,
+      snapshot: {
+        projectId: currentData.projectId,
+        buildingIds: currentData.buildingIds,
+        createdAt: currentData.createdAt,
+        updatedAt: currentData.updatedAt,
+        zonePrice: currentData.zonePrice,
+        commercialityCoefficient: currentData.commercialityCoefficient,
+        calculationMethod: currentData.calculationMethod,
+        rows: currentData.rows,
+        totalShares: currentData.totalShares,
+        summaryByCategory: currentData.summaryByCategory,
+        bartex: currentData.bartex,
+        notes: currentData.notes,
+        deedNumber: currentData.deedNumber,
+        notary: currentData.notary,
+        kaekCodes: currentData.kaekCodes,
+        status: 'finalized',
+      },
+      finalizedBy: userId,
+      finalizedAt: Timestamp.now(),
+      changeReason: null,
+    };
 
-  await setDoc(revisionRef, revision);
+    transaction.set(revisionRef, revision);
 
-  // Update table status
-  await setDoc(
-    docRef,
-    {
-      status: 'finalized' as OwnershipTableStatus,
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true },
-  );
+    // Update table status
+    transaction.set(
+      docRef,
+      {
+        status: 'finalized' as OwnershipTableStatus,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true },
+    );
+  });
 }
 
 /**
@@ -231,27 +235,30 @@ export async function unlockTable(
   reason: string,
 ): Promise<void> {
   const docRef = doc(db, COLLECTIONS.OWNERSHIP_TABLES, tableId);
-  const snapshot = await getDoc(docRef);
 
-  if (!snapshot.exists()) {
-    throw new Error(`Table ${tableId} not found`);
-  }
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(docRef);
 
-  const currentData = snapshot.data() as Omit<OwnershipPercentageTable, 'id'>;
+    if (!snapshot.exists()) {
+      throw new Error(`Table ${tableId} not found`);
+    }
 
-  if (currentData.status !== 'finalized') {
-    throw new Error(`Table ${tableId} is not finalized (status: ${currentData.status})`);
-  }
+    const currentData = snapshot.data() as Omit<OwnershipPercentageTable, 'id'>;
 
-  await setDoc(
-    docRef,
-    {
-      status: 'draft' as OwnershipTableStatus,
-      version: currentData.version + 1,
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true },
-  );
+    if (currentData.status !== 'finalized') {
+      throw new Error(`Table ${tableId} is not finalized (status: ${currentData.status})`);
+    }
+
+    transaction.set(
+      docRef,
+      {
+        status: 'draft' as OwnershipTableStatus,
+        version: currentData.version + 1,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true },
+    );
+  });
 }
 
 // ============================================================================

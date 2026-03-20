@@ -15,6 +15,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { API_ROUTES } from '@/config/domain-constants';
 import { getErrorMessage } from '@/lib/error-utils';
+import { clientSafeFireAndForget } from '@/lib/safe-fire-and-forget';
 import type {
   ChequeRecord,
   CreateChequeInput,
@@ -100,7 +101,7 @@ export function useChequeRegistry(unitId: string | null): UseChequeRegistryRetur
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(input),
         });
-        if (res.success) fetchData().catch(() => {});
+        if (res.success) clientSafeFireAndForget(fetchData(), 'ChequeRegistry.refetch');
         return { success: res.success, error: res.error };
       } catch (err) {
         return { success: false, error: getErrorMessage(err) };

@@ -25,6 +25,7 @@ import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { getErrorMessage } from '@/lib/error-utils';
+import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 
 // =============================================================================
 // TYPES
@@ -170,7 +171,7 @@ async function handlePost(
           revert: 'Επαναφορά',
         };
         const spaceTypeLabels = { parking: 'Παρκινγκ', storage: 'Αποθήκη' };
-        EntityAuditService.recordChange({
+        safeFireAndForget(EntityAuditService.recordChange({
           entityType: 'unit',
           entityId: unitId,
           entityName: null,
@@ -184,7 +185,7 @@ async function handlePost(
           performedBy: ctx.uid,
           performedByName: ctx.email ?? null,
           companyId: ctx.companyId,
-        }).catch(() => {});
+        }), 'AppurtenanceSync.auditTrail');
 
         return NextResponse.json({
           success: true,

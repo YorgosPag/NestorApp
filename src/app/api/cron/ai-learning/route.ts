@@ -13,19 +13,20 @@
  * @see ADR-173 (AI Self-Improvement System)
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getLearningService } from '@/services/ai-pipeline/learning-service';
 import { getFeedbackService } from '@/services/ai-pipeline/feedback-service';
 import { getToolAnalyticsService } from '@/services/ai-pipeline/tool-analytics-service';
 import { getChatHistoryService } from '@/services/ai-pipeline/chat-history-service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 const logger = createModuleLogger('CRON_AI_LEARNING');
 
 export const maxDuration = 60;
 
-export async function GET(request: Request): Promise<NextResponse> {
+async function handleGET(request: NextRequest): Promise<NextResponse> {
   const startTime = Date.now();
 
   // Verify cron authorization (Vercel sets this header)
@@ -97,3 +98,5 @@ export async function GET(request: Request): Promise<NextResponse> {
     }, { status: 500 });
   }
 }
+
+export const GET = withSensitiveRateLimit(handleGET);

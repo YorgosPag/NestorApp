@@ -93,6 +93,7 @@ export class EntityLinkingService {
    * @returns Promise<LinkResult> - Success or error result
    */
   static async linkEntity(params: LinkEntityParams): Promise<LinkResult> {
+    // TODO(ADR-253-RC-6): Wrap in runTransaction for atomic link/unlink
     const { entityId, entityType, parentId, parentType } = params;
     const startTime = Date.now();
 
@@ -236,6 +237,7 @@ export class EntityLinkingService {
    * @returns Promise<LinkResult> - Success or error result
    */
   static async unlinkEntity(params: UnlinkEntityParams): Promise<LinkResult> {
+    // TODO(ADR-253-RC-6): Wrap in runTransaction for atomic link/unlink
     const { entityId, entityType } = params;
     const startTime = Date.now();
 

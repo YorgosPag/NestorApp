@@ -139,6 +139,7 @@ export const DocumentTemplateService = {
   /**
    * Update a template
    */
+  // TODO(ADR-253-RC-7): Wrap in runTransaction for atomic operations
   async updateTemplate(
     templateId: string,
     updates: Partial<Pick<DocumentTemplate, 'name' | 'description' | 'category' | 'content' | 'variables'>>

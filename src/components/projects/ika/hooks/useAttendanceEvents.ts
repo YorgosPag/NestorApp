@@ -27,6 +27,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AttendanceEvent, AttendanceEventType, AttendanceMethod } from '../contracts';
 import { createModuleLogger } from '@/lib/telemetry';
 
+// TODO(ADR-253-CW-2): Move Firestore writes to server-side API route
 const logger = createModuleLogger('useAttendanceEvents');
 
 /** Parameters for creating a new attendance event */
