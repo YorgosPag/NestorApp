@@ -212,27 +212,72 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
 
   // --- Handlers ---
   const handleAutoPopulate = useCallback(async () => {
-    // Pre-check: are there buildings linked to this project?
+    // ── Step 1: Check buildings linked to project ──
     if (buildingIds.length === 0) {
-      showError(t('common:ownership.errors.noBuildings', {
-        defaultValue: 'Δεν βρέθηκαν κτίρια συνδεδεμένα με αυτό το έργο. Συνδέστε πρώτα ένα κτίριο με το έργο (Κτίριο → Γενικά → Έργο).',
-      }));
+      showError('Δεν βρέθηκαν κτίρια συνδεδεμένα με αυτό το έργο. Συνδέστε πρώτα ένα κτίριο με το έργο (Κτίριο → Γενικά → Έργο).');
       return;
     }
 
-    const rowCount = await autoPopulate();
+    // ── Step 2: Check floors exist in buildings ──
+    try {
+      const { collection, query, where, getDocs } = await import('firebase/firestore');
+      const { db } = await import('@/lib/firebase');
+      const { COLLECTIONS } = await import('@/config/firestore-collections');
 
-    if (rowCount === 0) {
-      showError(t('common:ownership.errors.noUnits', {
-        defaultValue: 'Τα κτίρια δεν περιέχουν μονάδες. Προσθέστε μονάδες με εμβαδόν στα κτίρια πρώτα.',
-      }));
-    } else {
-      showSuccess(t('common:ownership.actions.autoPopulateSuccess', {
-        defaultValue: `Συμπληρώθηκαν ${rowCount} εγγραφές. Πατήστε "Υπολογισμός" για να υπολογιστούν τα χιλιοστά.`,
-        count: rowCount,
-      }));
+      let totalFloors = 0;
+      let totalUnits = 0;
+      let unitsWithoutArea = 0;
+      let unitsWithoutFloor = 0;
+
+      for (const bId of buildingIds) {
+        const floorsSnap = await getDocs(query(collection(db, COLLECTIONS.FLOORS), where('buildingId', '==', bId)));
+        totalFloors += floorsSnap.size;
+
+        const unitsSnap = await getDocs(query(collection(db, COLLECTIONS.UNITS), where('buildingId', '==', bId)));
+        totalUnits += unitsSnap.size;
+
+        for (const unitDoc of unitsSnap.docs) {
+          const data = unitDoc.data();
+          const area = (data.area as number) ?? (data.areaSqm as number) ?? 0;
+          if (area <= 0) unitsWithoutArea++;
+          if (!data.floorId) unitsWithoutFloor++;
+        }
+      }
+
+      // ── Step 3: Report issues ──
+      const issues: string[] = [];
+
+      if (totalFloors === 0) {
+        issues.push('Δεν υπάρχουν όροφοι στα κτίρια. Προσθέστε ορόφους πρώτα.');
+      }
+      if (totalUnits === 0) {
+        issues.push('Δεν υπάρχουν μονάδες στα κτίρια. Προσθέστε μονάδες πρώτα.');
+      }
+      if (unitsWithoutArea > 0) {
+        issues.push(`${unitsWithoutArea} μονάδ${unitsWithoutArea === 1 ? 'α' : 'ες'} χωρίς εμβαδόν — ο υπολογισμός χιλιοστών θα είναι λανθασμένος.`);
+      }
+      if (unitsWithoutFloor > 0) {
+        issues.push(`${unitsWithoutFloor} μονάδ${unitsWithoutFloor === 1 ? 'α' : 'ες'} χωρίς σύνδεση με όροφο — ο συντελεστής ορόφου δεν θα υπολογιστεί.`);
+      }
+
+      if (totalUnits === 0) {
+        showError(issues.join('\n'));
+        return;
+      }
+
+      // ── Step 4: Proceed with auto-populate ──
+      const rowCount = await autoPopulate();
+
+      if (issues.length > 0) {
+        // Has data but with warnings
+        showError(`Συμπληρώθηκαν ${rowCount} εγγραφές, αλλά:\n${issues.join('\n')}`);
+      } else {
+        showSuccess(`Συμπληρώθηκαν ${rowCount} εγγραφές. Πατήστε "Υπολογισμός" για να υπολογιστούν τα χιλιοστά.`);
+      }
+    } catch {
+      showError('Σφάλμα κατά τον έλεγχο δεδομένων. Δοκιμάστε ξανά.');
     }
-  }, [autoPopulate, buildingIds.length, showSuccess, showError, t]);
+  }, [autoPopulate, buildingIds, showSuccess, showError]);
 
   const handleCalculate = useCallback(() => {
     calculate();
