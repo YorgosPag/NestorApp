@@ -14,6 +14,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
+import { validateFetchUrl } from '@/lib/security/path-sanitizer';
 
 export const maxDuration = 30;
 
@@ -32,8 +33,19 @@ async function handler(
       );
     }
 
-    // Fetch original PDF
-    const pdfResponse = await fetch(url);
+    // 🔒 SECURITY (ADR-252 AR-M3): Validate URL to prevent SSRF
+    const urlCheck = validateFetchUrl(url);
+    if (!urlCheck.valid) {
+      return NextResponse.json(
+        { error: 'Invalid URL', details: urlCheck.reason },
+        { status: 400 }
+      );
+    }
+
+    // Fetch original PDF with timeout (SSRF defense-in-depth)
+    const pdfResponse = await fetch(urlCheck.url, {
+      signal: AbortSignal.timeout(10_000),
+    });
     if (!pdfResponse.ok) {
       return NextResponse.json(
         { error: 'Failed to fetch PDF' },

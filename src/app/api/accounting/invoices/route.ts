@@ -110,6 +110,19 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
           );
         }
 
+        // 🔒 SECURITY (ADR-252 SV-H2): Runtime enum validation for invoice type
+        // Prevents arbitrary strings from reaching Firestore
+        const VALID_INVOICE_TYPES: readonly InvoiceType[] = [
+          'service_invoice', 'sales_invoice', 'retail_receipt',
+          'service_receipt', 'credit_invoice', 'service_invoice_eu', 'service_invoice_3rd',
+        ] as const;
+        if (!VALID_INVOICE_TYPES.includes(body.type)) {
+          return NextResponse.json(
+            { success: false, error: `Invalid invoice type: ${body.type}` },
+            { status: 400 }
+          );
+        }
+
         // Create the invoice
         const { id, number } = await repository.createInvoice(body);
 

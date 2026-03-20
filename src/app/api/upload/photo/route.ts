@@ -7,6 +7,7 @@ import { FileNamingService } from '@/services/FileNamingService';
 import { generateTempId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { sanitizeStoragePath } from '@/lib/security/path-sanitizer';
 
 const logger = createModuleLogger('UploadPhotoRoute');
 
@@ -73,7 +74,22 @@ async function handleUploadPhoto(request: NextRequest, ctx: AuthContext) {
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
-    const folderPath = formData.get('folderPath') as string || 'contacts/photos';
+    const rawFolderPath = formData.get('folderPath') as string || 'contacts/photos';
+
+    // 🔒 SECURITY (ADR-252 SV-C1): Sanitize folder path to prevent path traversal
+    const pathCheck = sanitizeStoragePath(rawFolderPath);
+    if (!pathCheck.valid) {
+      logger.warn('[Upload/Photo] Path traversal attempt blocked', {
+        rawPath: rawFolderPath,
+        reason: pathCheck.reason,
+        userId: ctx.uid,
+      });
+      return NextResponse.json(
+        { error: 'Invalid folder path', details: pathCheck.reason },
+        { status: 400 }
+      );
+    }
+    const folderPath = pathCheck.sanitizedPath;
 
     // 🏢 ENTERPRISE: Get contact data for proper filename generation
     const contactDataJson = formData.get('contactData') as string;

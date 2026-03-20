@@ -59,6 +59,13 @@ function getFormString(formData: FormData, keys: string[]): string | undefined {
   return undefined;
 }
 
+/**
+ * Maximum age of a webhook timestamp before it's considered a replay attack.
+ * 5 minutes = 300 seconds. Mailgun typically delivers within seconds.
+ * @enterprise ADR-252 SV-M1: Webhook Timestamp Replay Prevention
+ */
+const MAX_WEBHOOK_AGE_SECONDS = 300;
+
 function verifyMailgunSignature(params: {
   timestamp?: string;
   token?: string;
@@ -78,6 +85,12 @@ function verifyMailgunSignature(params: {
 
   if (!timestamp || !token || !signature) {
     return { valid: false, reason: 'signature_fields_missing' };
+  }
+
+  // 🔒 SECURITY (ADR-252 SV-M1): Reject replayed webhooks older than 5 minutes
+  const webhookAge = Math.abs(Math.floor(Date.now() / 1000) - parseInt(timestamp, 10));
+  if (isNaN(webhookAge) || webhookAge > MAX_WEBHOOK_AGE_SECONDS) {
+    return { valid: false, reason: 'timestamp_expired' };
   }
 
   const digest = createHmac('sha256', signingKey)

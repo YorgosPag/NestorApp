@@ -95,17 +95,24 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 👥 CONTACT_RELATIONSHIPS COLLECTION - AUTHENTICATED ACCESS
+    // 👥 CONTACT_RELATIONSHIPS COLLECTION - TENANT ISOLATION (ADR-252 FR-H3)
     // =========================================================================
-    // 📅 Updated: 2026-02-13 — Fixed broken rules (sourceContactId ≠ auth.uid)
-    // 🔒 Pattern: Same as contact_links — authenticated + createdBy ownership
-    // ⚠️ Previous rules compared contact doc IDs to auth UIDs (always failed)
+    // 📅 Updated: 2026-03-20 (ADR-252 FR-H3 — tenant isolation on READ)
+    // 🔒 Pattern: Tenant-scoped via companyId + createdBy ownership fallback
     // =========================================================================
     match /contact_relationships/{relationshipId} {
 
-      // 📖 READ: Any authenticated user (relationships are internal business data)
-      // App-level filtering handles which relationships a user sees
-      allow read: if isAuthenticated();
+      // 📖 READ: Tenant-scoped
+      // 🔒 SECURITY (ADR-252 FR-H3): Was `isAuthenticated()` → now tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.keys().hasAny(['createdBy'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
 
       // ✍️ CREATE: Authenticated with required fields
       allow create: if isAuthenticated()
@@ -134,17 +141,26 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 🔗 CONTACT_LINKS COLLECTION - ASSOCIATION SERVICE (ADR-090)
+    // 🔗 CONTACT_LINKS COLLECTION - TENANT ISOLATION (ADR-252 FR-H3)
     // =========================================================================
     // Links contacts to entities (projects, companies, units) via AssociationService
     // Used by: IKA Workers tab, contact association features
     // Fields: sourceContactId, targetEntityType, targetEntityId, status, createdBy
+    // 📅 Updated: 2026-03-20 (ADR-252 FR-H3 — tenant isolation on READ)
     // =========================================================================
     match /contact_links/{linkId} {
 
-      // 📖 READ: Any authenticated user (links are internal metadata)
-      // 🔒 SECURITY: Entity-level access is enforced at the target (projects, contacts)
-      allow read: if isAuthenticated();
+      // 📖 READ: Tenant-scoped
+      // 🔒 SECURITY (ADR-252 FR-H3): Was `isAuthenticated()` → now tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.keys().hasAny(['createdBy'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
 
       // ✍️ CREATE: Authenticated users with required fields
       allow create: if isAuthenticated()
@@ -179,8 +195,17 @@ service cloud.firestore {
     // =========================================================================
     match /attendance_events/{eventId} {
 
-      // 📖 READ: Any authenticated user
-      allow read: if isAuthenticated();
+      // 📖 READ: Tenant-scoped via projectId
+      // 🔒 SECURITY (ADR-252 FR-H3): Was `isAuthenticated()` → now tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       || (resource.data.keys().hasAny(['projectId'])
+                           && resource.data.projectId is string
+                           && belongsToProjectCompany(resource.data.projectId))
+                     );
 
       // ✍️ CREATE ONLY: Authenticated user with required fields + valid enums
       allow create: if isAuthenticated()
@@ -214,8 +239,17 @@ service cloud.firestore {
     // =========================================================================
     match /attendance_qr_tokens/{tokenId} {
 
-      // 📖 READ: Any authenticated user (admin views active tokens)
-      allow read: if isAuthenticated();
+      // 📖 READ: Tenant-scoped via projectId or companyId
+      // 🔒 SECURITY (ADR-252 FR-H3): Was `isAuthenticated()` → now tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       || (resource.data.keys().hasAny(['projectId'])
+                           && resource.data.projectId is string
+                           && belongsToProjectCompany(resource.data.projectId))
+                     );
 
       // 🚫 CREATE/UPDATE/DELETE: Server-only via Admin SDK
       // Tokens are managed exclusively by the server (API routes)
@@ -234,8 +268,17 @@ service cloud.firestore {
     // =========================================================================
     match /employment_records/{recordId} {
 
-      // 📖 READ: Any authenticated user
-      allow read: if isAuthenticated();
+      // 📖 READ: Tenant-scoped via projectId
+      // 🔒 SECURITY (ADR-252 FR-H3): Was `isAuthenticated()` → now tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       || (resource.data.keys().hasAny(['projectId'])
+                           && resource.data.projectId is string
+                           && belongsToProjectCompany(resource.data.projectId))
+                     );
 
       // ✍️ CREATE: Authenticated user with required fields
       allow create: if isAuthenticated()
@@ -264,26 +307,44 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 🎨 CAD_FILES COLLECTION - ENTERPRISE DXF STORAGE (Firebase Storage + Metadata)
+    // 🎨 CAD_FILES COLLECTION - ENTERPRISE TENANT ISOLATION (ADR-252 FR-C1)
     // =========================================================================
     // Internal storage for DXF scene metadata (actual scene data in Firebase Storage)
     // Used by: DxfFirestoreService, BuildingFloorplanService, FloorFloorplanService
+    // 📅 Updated: 2026-03-20 (ADR-252 Security Fixes — tenant isolation)
     // =========================================================================
     match /cadFiles/{fileId} {
 
-      // 📖 READ: Any authenticated user (internal DXF storage)
-      allow read: if request.auth != null;
+      // 📖 READ: Tenant-scoped via companyId or creator fallback
+      // 🔒 SECURITY (ADR-252 FR-C1): Was `auth != null` → now tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // LEGACY FALLBACK: cadFiles without companyId — creator only
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.keys().hasAny(['createdBy'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
 
-      // ✍️ CREATE/UPDATE: Authenticated users with basic validation
-      // Note: Scene data is stored in Firebase Storage, not Firestore
-      // This collection only contains metadata (fileName, storageUrl, etc.)
-      allow create, update: if request.auth != null
+      // ✍️ CREATE/UPDATE: Authenticated users with basic validation + companyId
+      allow create, update: if isAuthenticated()
                             && request.resource.data.keys().hasAll(['fileName'])
                             && request.resource.data.fileName is string
                             && request.resource.data.fileName.size() > 0;
 
-      // 🗑️ DELETE: Authenticated users
-      allow delete: if request.auth != null;
+      // 🗑️ DELETE: Tenant-scoped (creator or super admin)
+      // 🔒 SECURITY (ADR-252 FR-C1): Was `auth != null` → now restricted
+      allow delete: if isAuthenticated()
+                    && (
+                         isSuperAdminOnly()
+                         || (resource.data.keys().hasAny(['companyId'])
+                             && belongsToCompany(resource.data.companyId))
+                         || (!resource.data.keys().hasAny(['companyId'])
+                             && resource.data.keys().hasAny(['createdBy'])
+                             && resource.data.createdBy == request.auth.uid)
+                       );
     }
 
     // =========================================================================
@@ -434,12 +495,19 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 🏢 COMPANIES COLLECTION - READ-ONLY FOR AUTHENTICATED
+    // 🏢 COMPANIES COLLECTION - TENANT-SCOPED READ (ADR-252 FR-C3)
     // =========================================================================
+    // 📅 Updated: 2026-03-20 (ADR-252 FR-C3 — own company only)
+    // 🔒 SECURITY: Users can only read their OWN company document
     match /companies/{companyId} {
 
-      // 📖 READ: Μόνο authenticated users
-      allow read: if request.auth != null;
+      // 📖 READ: Own company only (token.companyId must match document ID)
+      // 🔒 SECURITY (ADR-252 FR-C3): Was `auth != null` → now tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || getUserCompanyId() == companyId
+                     );
 
       // ✍️ CREATE/UPDATE/DELETE: ΌΧΙ από client - μόνο admin/server
       allow write: if false;
@@ -1435,17 +1503,19 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // ⚙️ SYSTEM COLLECTION - SYSTEM CONFIGURATION
+    // ⚙️ SYSTEM COLLECTION - ADMIN-ONLY READ (ADR-252 FR-M1)
     // =========================================================================
     // 🏢 ENTERPRISE: System-wide configuration and templates
-    // 📅 Added: 2026-01-17 (Permission-denied fix)
+    // 📅 Updated: 2026-03-20 (ADR-252 FR-M1 — restrict to company admin)
+    // 🔒 SECURITY: System config contains sensitive routing rules, integrations
+    // NOTE: Merged duplicate block (was at lines ~1442 and ~2549)
     match /system/{docId} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && isCompanyAdmin();
       allow write: if false; // Admin/server only
 
       // 📁 Subcollections (e.g., project-templates)
       match /{subcollection}/{subDocId} {
-        allow read: if isAuthenticated();
+        allow read: if isAuthenticated() && isCompanyAdmin();
         allow write: if false; // Admin/server only
       }
     }
@@ -1722,17 +1792,13 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // ⚙️ CONFIG - ENTERPRISE SERVICE CONFIGURATIONS
+    // ⚙️ CONFIG - DUPLICATE REMOVED (ADR-252 Security Fix)
     // =========================================================================
-    // 📅 Added: 2026-01-17 (Permission-denied fix - CRITICAL collection)
-    // 🏢 ENTERPRISE: System-wide configuration (channels, integrations, etc.)
-    match /config/{configId} {
-      // 📖 READ: Authenticated users (app needs config)
-      allow read: if isAuthenticated();
-
-      // ✍️ CREATE/UPDATE/DELETE: Only admin users
-      allow create, update, delete: if isAuthenticated();
-    }
+    // 📅 Removed: 2026-03-20 — This was a DANGEROUS duplicate with open writes
+    // 🔒 SECURITY: The first config block (above) has `allow write: if false`
+    //    but this duplicate had `allow create, update, delete: if isAuthenticated()`
+    //    Firestore uses most-permissive-wins, so ANY auth user could write config!
+    // =========================================================================
 
     // =========================================================================
     // 🔗 RELATIONSHIPS - ENTERPRISE TENANT ISOLATION (PR-1B)
@@ -2330,17 +2396,24 @@ service cloud.firestore {
     // 🔗 FILE_SHARES - ENTERPRISE SHAREABLE LINKS (ADR-191 Phase 4.2)
     // =========================================================================
     // 📅 Added: 2026-03-09 (ADR-191 - Enterprise Document Management)
+    // 📅 Updated: 2026-03-20 (ADR-252 FR-C2 — tenant isolation on write)
     // 🏢 ENTERPRISE: Shareable file links with expiration and password
-    // 🔒 READ: Public (for share validation) + Authenticated (management)
-    // ✏️ WRITE: Authenticated users can create, update download count
+    // 🔒 READ: Public (for share token validation on /shared/[token] page)
+    // ✏️ WRITE: Tenant-scoped (companyId required)
     match /file_shares/{shareId} {
       // 📖 READ: Public (for share token validation on /shared/[token] page)
+      // 🔒 SECURITY: Share links must remain publicly readable for anonymous access
       allow read: if true;
-      // ✍️ CREATE: Authenticated users only
-      allow create: if isAuthenticated();
-      // 📝 UPDATE: Allow download count increment (public) OR authenticated management
-      // SECURITY: Only downloadCount and lastDownloadedAt can be updated by public
-      allow update: if isAuthenticated()
+      // ✍️ CREATE: Authenticated users with companyId enforcement
+      // 🔒 SECURITY (ADR-252 FR-C2): Was `isAuthenticated()` → now enforces companyId
+      allow create: if isAuthenticated()
+                    && request.resource.data.keys().hasAll(['companyId', 'createdBy'])
+                    && (isSuperAdminOnly() || request.resource.data.companyId == getUserCompanyId());
+      // 📝 UPDATE: Authenticated tenant member OR public download counter
+      // SECURITY: Public can ONLY increment downloadCount and lastDownloadedAt
+      allow update: if (isAuthenticated()
+                        && (isSuperAdminOnly()
+                            || belongsToCompany(resource.data.companyId)))
                     || (
                          // Public can only increment download counter
                          request.resource.data.diff(resource.data).affectedKeys()
@@ -2542,20 +2615,11 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // ⚙️ SYSTEM - SYSTEM CONFIGURATION
+    // ⚙️ SYSTEM - DUPLICATE REMOVED (ADR-252 FR-M1)
     // =========================================================================
-    // 📅 Added: 2026-01-17 (Permission-denied fix - MEDIUM priority)
-    // Note: Already had partial rules, adding subcollection support
-    match /system/{docId} {
-      allow read: if isAuthenticated();
-      allow write: if false; // Server-side only
-
-      // Subcollections (e.g., system/config/channels)
-      match /{subcollection}/{subDocId} {
-        allow read: if isAuthenticated();
-        allow write: if false; // Server-side only
-      }
-    }
+    // 📅 Removed: 2026-03-20 — Merged into single system/{docId} block above
+    // 🔒 SECURITY: Duplicate blocks caused most-permissive-wins in Firestore
+    // =========================================================================
 
     // =========================================================================
     // 🔍 SEARCH_DOCUMENTS COLLECTION - GLOBAL SEARCH INDEX (ADR-029)
@@ -2615,13 +2679,21 @@ service cloud.firestore {
     // CRUD from client-side SDK (useBOQItems hook).
     // Governance flow: draft → submitted → approved → certified → locked.
     // Cost fields computed at runtime (NEVER stored as totals).
+    // 📅 Updated: 2026-03-20 (ADR-252 FR-H1 — tenant isolation)
     // =========================================================================
     match /boq_items/{itemId} {
 
-      // 📖 READ: Authenticated user
-      allow read: if isAuthenticated();
+      // 📖 READ: Tenant-scoped
+      // 🔒 SECURITY (ADR-252 FR-H1): Was `isAuthenticated()` → now tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                     );
 
-      // ✍️ CREATE: Authenticated user with required fields
+      // ✍️ CREATE: Authenticated user with required fields + tenant check
+      // 🔒 SECURITY (ADR-252 FR-H1): companyId MUST match user's company claim
       allow create: if isAuthenticated()
                     && resource == null
                     && request.resource.data.keys().hasAll([
@@ -2630,6 +2702,7 @@ service cloud.firestore {
                          'estimatedQuantity', 'createdAt', 'updatedAt'
                        ])
                     && request.resource.data.companyId is string
+                    && (isSuperAdminOnly() || request.resource.data.companyId == getUserCompanyId())
                     && request.resource.data.projectId is string
                     && request.resource.data.buildingId is string
                     && request.resource.data.categoryCode is string
@@ -2640,8 +2713,9 @@ service cloud.firestore {
                        ]
                     && request.resource.data.estimatedQuantity is number;
 
-      // ✏️ UPDATE: Authenticated user (buildingId and projectId immutable)
+      // ✏️ UPDATE: Tenant-scoped (buildingId and projectId immutable)
       allow update: if isAuthenticated()
+                    && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId))
                     && request.resource.data.buildingId == resource.data.buildingId
                     && request.resource.data.projectId == resource.data.projectId
                     && request.resource.data.companyId == resource.data.companyId
@@ -2649,8 +2723,9 @@ service cloud.firestore {
                          'draft', 'submitted', 'approved', 'certified', 'locked'
                        ];
 
-      // 🗑️ DELETE: Authenticated user (only draft/submitted items — locked cannot be deleted)
+      // 🗑️ DELETE: Tenant-scoped (only draft/submitted items)
       allow delete: if isAuthenticated()
+                    && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId))
                     && resource.data.status in ['draft', 'submitted'];
     }
 
@@ -2663,8 +2738,16 @@ service cloud.firestore {
     // =========================================================================
     match /boq_categories/{categoryId} {
 
-      // 📖 READ: Authenticated user
-      allow read: if isAuthenticated();
+      // 📖 READ: Tenant-scoped
+      // 🔒 SECURITY (ADR-252 FR-H3): Was `isAuthenticated()` → now tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // LEGACY: categories without companyId (system defaults) readable by all auth users
+                       || !resource.data.keys().hasAny(['companyId'])
+                     );
 
       // 🚫 WRITE: Reserved for future admin UI
       allow create, update, delete: if false;
@@ -2754,19 +2837,53 @@ service cloud.firestore {
     // =========================================================================
     // 📊 OWNERSHIP_TABLES COLLECTION — ADR-235 (Πίνακας Χιλιοστών)
     // =========================================================================
-    // 🔒 Authenticated users: full CRUD (family team — same as units/projects)
+    // 📅 Updated: 2026-03-20 (ADR-252 FR-H2 — tenant isolation)
+    // 🔒 SECURITY: Tenant-scoped via companyId + legacy creator fallback
     // =========================================================================
     match /ownership_tables/{tableId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.keys().hasAny(['createdBy'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+      // ✍️ CREATE: companyId must match user claim
+      allow create: if isAuthenticated()
+                    && (isSuperAdminOnly() || request.resource.data.companyId == getUserCompanyId());
+      // 📝 UPDATE: Tenant-scoped
+      allow update: if isAuthenticated()
+                    && (
+                         isSuperAdminOnly()
+                         || (resource.data.keys().hasAny(['companyId'])
+                             && belongsToCompany(resource.data.companyId))
+                         || (!resource.data.keys().hasAny(['companyId'])
+                             && resource.data.keys().hasAny(['createdBy'])
+                             && resource.data.createdBy == request.auth.uid)
+                       );
+      // 🗑️ DELETE: Super admin only
       allow delete: if isAuthenticated() && isSuperAdminOnly();
     }
 
-    // Revisions subcollection
+    // Revisions subcollection — inherits parent tenant isolation
     match /ownership_tables/{tableId}/revisions/{revisionId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || belongsToCompany(
+                            get(/databases/$(database)/documents/ownership_tables/$(tableId)).data.companyId
+                          )
+                     );
+      allow create: if isAuthenticated()
+                    && (
+                         isSuperAdminOnly()
+                         || belongsToCompany(
+                              get(/databases/$(database)/documents/ownership_tables/$(tableId)).data.companyId
+                            )
+                       );
     }
 
     // =========================================================================

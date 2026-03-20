@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | 📋 DOCUMENTED |
+| **Status** | ✅ PHASE_1_IMPLEMENTED |
 | **Date** | 2026-03-19 |
 | **Category** | Security / Infrastructure |
 | **Depends On** | ADR-249, ADR-250 |
@@ -437,3 +437,7 @@ Test: Malformed requests, expired webhooks, NaN parameters
 | Date | Change |
 |------|--------|
 | 2026-03-19 | Initial creation — 18 findings across 3 axes (5 Critical, 5 High, 8 Medium) |
+| 2026-03-20 | **PHASE 1 IMPLEMENTED** — 11 unique fixes across Firestore Rules + Server-side: |
+| | **Firestore Rules (9 fixes):** FR-C1 (cadFiles tenant isolation), FR-C2 (file_shares CREATE companyId enforcement + UPDATE tenant-scoped), FR-C3 (companies own-company-only READ), FR-H1 (boq_items CREATE/READ/UPDATE/DELETE tenant check), FR-H2 (ownership_tables full tenant isolation), FR-H3 (6 collections: contact_relationships, contact_links, attendance_qr_tokens, boq_categories, employment_records, attendance_events — tenant-scoped READ), FR-M1 (system collection → isCompanyAdmin() + merged duplicate blocks, removed dangerous duplicate config block with open writes) |
+| | **Server-side (5 fixes):** SV-C1 (path traversal prevention — `sanitizeStoragePath()` in photo upload), AR-M3 (SSRF prevention — `validateFetchUrl()` + AbortSignal.timeout in watermark API), SV-H1 (email HTML defense-in-depth — `sanitizeHtmlForStorage()` before Firestore write), SV-H2 (invoice type runtime enum validation), SV-M1 (webhook timestamp replay rejection — 5 min max age) |
+| | **New file:** `src/lib/security/path-sanitizer.ts` — centralized security utilities |

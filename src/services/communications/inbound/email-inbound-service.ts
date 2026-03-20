@@ -26,6 +26,7 @@ import {
   buildFinalizeFileRecordUpdate,
   type FileSourceMetadata,
 } from '@/services/file-record';
+import { sanitizeHtmlForStorage } from '@/lib/security/path-sanitizer';
 import { createAIAnalysisProvider } from '@/services/ai-analysis/providers/ai-provider-factory';
 import {
   isDocumentClassifyAnalysis,
@@ -567,8 +568,10 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
   // 🏢 ENTERPRISE: Dual-content storage pattern (Gmail/Outlook/Salesforce)
   // Priority: HTML with formatting > Plain text > Subject as fallback
   // HTML content preserves colors, fonts, and formatting from the original email
-  // Security Note: Sanitization happens at render time in SafeHTMLContent (ADR-072)
-  const emailContent = input.contentHtml || input.contentText || input.subject;
+  // 🔒 SECURITY (ADR-252 SV-H1): Server-side sanitization BEFORE storage (defense-in-depth)
+  // Client-side DOMPurify still runs at render time (ADR-072) as second layer
+  const sanitizedHtml = sanitizeHtmlForStorage(input.contentHtml);
+  const emailContent = sanitizedHtml || input.contentText || input.subject;
 
   // Build communication object, excluding undefined values for Firestore compatibility
   const communication: Omit<Communication, 'id' | 'createdAt' | 'updatedAt'> = {
