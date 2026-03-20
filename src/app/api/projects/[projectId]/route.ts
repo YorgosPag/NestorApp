@@ -34,6 +34,7 @@
  * - Hard delete with cascade options
  */
 
+import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth, logAuditEvent } from '@/lib/auth';
@@ -50,6 +51,27 @@ import { executeDeletion } from '@/lib/firestore/deletion-guard';
 import { linkEntity } from '@/lib/firestore/entity-linking.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const ProjectUpdateSchema = z.object({
+  name: z.string().max(500).optional(),
+  title: z.string().max(500).optional(),
+  description: z.string().max(5000).optional(),
+  status: z.string().max(50).optional(),
+  companyId: z.string().max(128).nullable().optional(),
+  company: z.string().max(200).nullable().optional(),
+  linkedCompanyId: z.string().max(128).nullable().optional(),
+  linkedCompanyName: z.string().max(200).nullable().optional(),
+  address: z.string().max(500).optional(),
+  city: z.string().max(200).optional(),
+  addresses: z.array(z.record(z.unknown())).optional(),
+  progress: z.number().min(0).max(100).optional(),
+  totalValue: z.number().min(0).max(999_999_999).optional(),
+  totalArea: z.number().min(0).max(999_999_999).optional(),
+  startDate: z.string().max(30).nullable().optional(),
+  completionDate: z.string().max(30).nullable().optional(),
+  _v: z.number().int().optional(),
+}).passthrough();
 
 const logger = createModuleLogger('ProjectRoute');
 
@@ -266,8 +288,9 @@ async function handleUpdateProject(
   logger.info('[Projects/Update] User updating project', { email: ctx.email, projectId });
 
   // 1. Parse request body (SPEC-256A: extract _v for version check)
-  const rawBody: ProjectUpdatePayload & { _v?: number } = await request.json();
-  const { _v: expectedVersion, ...body } = rawBody;
+  const parsed = safeParseBody(ProjectUpdateSchema, await request.json());
+  if (parsed.error) throw new ApiError(400, 'Validation failed');
+  const { _v: expectedVersion, ...body } = parsed.data;
 
   if (!body || Object.keys(body).length === 0) {
     throw new ApiError(400, 'No update fields provided');

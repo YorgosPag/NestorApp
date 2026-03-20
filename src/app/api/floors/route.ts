@@ -13,6 +13,7 @@
  * - Tenant isolation: Query filtered by ctx.companyId
  */
 
+import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
@@ -30,6 +31,26 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 import type { ConflictResponseBody } from '@/types/versioning';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const CreateFloorSchema = z.object({
+  number: z.number().int(),
+  name: z.string().min(1).max(200),
+  buildingId: z.string().min(1).max(128),
+  buildingName: z.string().max(200).optional(),
+  projectId: z.string().max(128).optional(),
+  projectName: z.string().max(200).optional(),
+  units: z.number().int().min(0).max(9999).optional(),
+  elevation: z.number().min(-999).max(9999).optional(),
+});
+
+const UpdateFloorSchema = z.object({
+  floorId: z.string().min(1).max(128),
+  number: z.number().int().optional(),
+  name: z.string().max(200).optional(),
+  elevation: z.number().min(-999).max(9999).optional(),
+  _v: z.number().int().optional(),
+}).passthrough();
 
 const logger = createModuleLogger('FloorsRoute');
 
@@ -227,20 +248,11 @@ export const POST = withStandardRateLimit(
   withAuth<ApiSuccessResponse<FloorCreateResponse>>(
     async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
-        const body = await request.json() as CreateFloorRequest;
+        const parsed = safeParseBody(CreateFloorSchema, await request.json());
+        if (parsed.error) throw new ApiError(400, 'Validation failed');
+        const body = parsed.data;
 
         logger.info('[Floors/Create] Creating floor', { companyId: ctx.companyId, userId: ctx.uid });
-
-        // Validation
-        if (typeof body.number !== 'number') {
-          throw new ApiError(400, 'Floor number is required and must be a number');
-        }
-        if (!body.name || typeof body.name !== 'string') {
-          throw new ApiError(400, 'Floor name is required');
-        }
-        if (!body.buildingId || typeof body.buildingId !== 'string') {
-          throw new ApiError(400, 'Building ID is required');
-        }
 
         // Entity-specific fields (common fields handled by createEntity)
         const entitySpecificFields: Record<string, unknown> = {
@@ -316,12 +328,9 @@ export const PATCH = withStandardRateLimit(
     const handler = withAuth<FloorUpdateResponse>(
       async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<FloorUpdateResponse>> => {
         try {
-          const rawBody = await req.json() as UpdateFloorRequest & { _v?: number };
-          const { _v: expectedVersion, ...body } = rawBody;
-
-          if (!body.floorId || typeof body.floorId !== 'string') {
-            return NextResponse.json({ success: false, error: 'Floor ID is required' }, { status: 400 });
-          }
+          const parsedFloor = safeParseBody(UpdateFloorSchema, await req.json());
+          if (parsedFloor.error) return parsedFloor.error;
+          const { _v: expectedVersion, ...body } = parsedFloor.data;
 
           const db = getAdminFirestore();
           const floorRef = db.collection(COLLECTIONS.FLOORS).doc(body.floorId);

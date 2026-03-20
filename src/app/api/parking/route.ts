@@ -14,6 +14,7 @@
  * @rateLimit STANDARD (60 req/min) - Parking spots retrieval
  */
 
+import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -46,6 +47,21 @@ const logger = createModuleLogger('ParkingRoute');
 // ADR-191: Import canonical types — single source of truth
 import type { ParkingSpot as CanonicalParkingSpot } from '@/types/parking';
 import { getErrorMessage } from '@/lib/error-utils';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const CreateParkingSchema = z.object({
+  number: z.string().min(1).max(50),
+  buildingId: z.string().max(128).optional(),
+  projectId: z.string().max(128).optional(),
+  type: z.string().max(50).optional(),
+  status: z.string().max(50).optional(),
+  locationZone: z.string().max(100).optional(),
+  floor: z.string().max(50).optional(),
+  location: z.string().max(200).optional(),
+  area: z.number().min(0).max(999_999).optional(),
+  price: z.number().min(0).max(999_999_999).optional(),
+  notes: z.string().max(5000).optional(),
+});
 
 /**
  * 🅿️ API Response interface - CANONICAL FORMAT
@@ -120,12 +136,9 @@ export const POST = withStandardRateLimit(
   withAuth<ApiSuccessResponse<ParkingCreateResponse>>(
     async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
-        const body: ParkingCreatePayload = await request.json();
-
-        // Validation
-        if (!body.number?.trim()) {
-          throw new ApiError(400, 'Parking spot number is required');
-        }
+        const parsed = safeParseBody(CreateParkingSchema, await request.json());
+        if (parsed.error) throw new ApiError(400, 'Validation failed');
+        const body = parsed.data;
 
         const buildingId = body.buildingId?.trim() || null;
         const resolvedProjectId = body.projectId?.trim() || null;

@@ -138,7 +138,7 @@ export function StorageGeneralTab({
   const router = useRouter();
 
   // 🏢 SPEC-256A: Optimistic versioning — track _v in ref
-  const versionRef = useRef<number | undefined>((storage as Record<string, unknown>)._v as number | undefined);
+  const versionRef = useRef<number | undefined>((storage as unknown as { _v?: number })._v);
   const [isConflicted, setIsConflicted] = useState(false);
   const [conflictData, setConflictData] = useState<ConflictResponseBody | null>(null);
 
@@ -148,7 +148,7 @@ export function StorageGeneralTab({
   // Reset form when a DIFFERENT storage is selected (not on edit mode toggle)
   useEffect(() => {
     setForm(buildFormState(storage));
-    versionRef.current = (storage as Record<string, unknown>)._v as number | undefined;
+    versionRef.current = (storage as unknown as { _v?: number })._v;
     setIsConflicted(false);
     setConflictData(null);
   }, [storage.id]);
@@ -281,17 +281,16 @@ export function StorageGeneralTab({
     } catch (err) {
       // SPEC-256A: Catch 409 version conflict
       if (ApiClientError.isApiClientError(err) && err.statusCode === 409) {
-        const body: ConflictResponseBody = (err as Record<string, unknown>).body as ConflictResponseBody ?? {
+        setIsConflicted(true);
+        setConflictData({
           code: 'VERSION_CONFLICT',
-          error: 'Version conflict',
+          error: err.message || 'Version conflict',
           errorCode: 'VERSION_CONFLICT',
           currentVersion: -1,
-          expectedVersion: -1,
+          expectedVersion: versionRef.current ?? -1,
           updatedAt: new Date().toISOString(),
           updatedBy: 'unknown',
-        };
-        setIsConflicted(true);
-        setConflictData(body);
+        });
         return false;
       }
       logger.error('Failed to save storage', { error: err instanceof Error ? err.message : String(err) });

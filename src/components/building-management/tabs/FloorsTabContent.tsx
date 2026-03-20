@@ -17,7 +17,7 @@
 
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { apiClient } from '@/lib/api/enterprise-api-client';
+import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +41,7 @@ interface FloorRecord {
   elevation?: number | null;
   buildingId: string;
   units?: number;
+  _v?: number; // SPEC-256A: Optimistic versioning
 }
 
 interface FloorsApiResponse {
@@ -92,6 +93,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
   const [editNumber, setEditNumber] = useState('');
   const [editName, setEditName] = useState('');
   const [editElevation, setEditElevation] = useState('');
+  const [editVersion, setEditVersion] = useState<number | undefined>(undefined); // SPEC-256A
   const [saving, setSaving] = useState(false);
 
   // Delete state
@@ -170,6 +172,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
     setEditNumber(String(floor.number));
     setEditName(floor.name);
     setEditElevation(floor.elevation != null ? String(floor.elevation) : '');
+    setEditVersion(floor._v); // SPEC-256A
   };
 
   const cancelEdit = () => {
@@ -180,12 +183,17 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
     if (!editingId || !editName.trim()) return;
     setSaving(true);
     try {
-      const result = await apiClient.patch<FloorMutationResponse>(API_ROUTES.FLOORS.LIST, {
+      // SPEC-256A: Include _v for optimistic versioning
+      const payload: Record<string, unknown> = {
         floorId: editingId,
         number: parseInt(editNumber, 10),
         name: editName.trim(),
         elevation: editElevation ? parseFloat(editElevation) : null,
-      });
+      };
+      if (editVersion !== undefined) {
+        payload._v = editVersion;
+      }
+      const result = await apiClient.patch<FloorMutationResponse>(API_ROUTES.FLOORS.LIST, payload);
       if (result?.success) {
         setEditingId(null);
         toast.success(t('tabs.floors.editSuccess', { defaultValue: 'Ο όροφος ενημερώθηκε' }));
@@ -194,6 +202,13 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
         toast.error(result?.error ?? t('tabs.floors.editError', { defaultValue: 'Αποτυχία ενημέρωσης ορόφου' }));
       }
     } catch (err) {
+      // SPEC-256A: 409 conflict → toast + refresh
+      if (ApiClientError.isApiClientError(err) && err.statusCode === 409) {
+        toast.error('Σύγκρουση εκδόσεων — κάποιος άλλος ενημέρωσε αυτόν τον όροφο. Ανανεώστε.');
+        setEditingId(null);
+        await fetchFloors();
+        return;
+      }
       toast.error(t('tabs.floors.editError', { defaultValue: 'Αποτυχία ενημέρωσης ορόφου' }));
       console.error('[FloorsTab] Edit error:', err);
     } finally {

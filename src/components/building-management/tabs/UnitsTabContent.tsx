@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
-import { apiClient } from '@/lib/api/enterprise-api-client';
+import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { createUnit } from '@/services/units.service';
 import { useNotifications } from '@/providers/NotificationProvider';
@@ -140,6 +140,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   const [editFloor, setEditFloor] = useState('');
   const [editArea, setEditArea] = useState('');
   const [editStatus, setEditStatus] = useState('for-sale');
+  const [editVersion, setEditVersion] = useState<number | undefined>(undefined); // SPEC-256A
   const [saving, setSaving] = useState(false);
 
   // Delete & Unlink state
@@ -311,6 +312,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
     setEditFloor(unit.floor ? String(unit.floor) : '');
     setEditArea(unit.area ? String(unit.area) : '');
     setEditStatus(unit.status || 'for-sale');
+    setEditVersion((unit as unknown as { _v?: number })._v); // SPEC-256A
   };
 
   const cancelEdit = () => {
@@ -321,17 +323,29 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
     if (!editingId || !editName.trim()) return;
     setSaving(true);
     try {
-      await apiClient.patch(API_ROUTES.UNITS.BY_ID(editingId), {
+      // SPEC-256A: Include _v for optimistic versioning
+      const payload: Record<string, unknown> = {
         name: editName.trim(),
         type: editType || undefined,
         floor: editFloor ? parseInt(editFloor, 10) : undefined,
         area: editArea ? parseFloat(editArea) : undefined,
         status: editStatus || undefined,
-      });
+      };
+      if (editVersion !== undefined) {
+        payload._v = editVersion;
+      }
+      await apiClient.patch(API_ROUTES.UNITS.BY_ID(editingId), payload);
       success('Η μονάδα ενημερώθηκε');
       setEditingId(null);
       await fetchUnits();
     } catch (err) {
+      // SPEC-256A: 409 conflict → specific error message
+      if (ApiClientError.isApiClientError(err) && err.statusCode === 409) {
+        notifyError('Σύγκρουση εκδόσεων — κάποιος άλλος ενημέρωσε αυτή τη μονάδα. Ανανεώστε τη σελίδα.');
+        setEditingId(null);
+        await fetchUnits();
+        return;
+      }
       const msg = err instanceof Error ? err.message : 'Σφάλμα ενημέρωσης';
       notifyError(msg);
     } finally {

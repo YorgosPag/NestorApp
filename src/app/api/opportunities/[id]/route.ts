@@ -15,6 +15,7 @@
 
 import 'server-only';
 
+import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -22,6 +23,17 @@ import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { OpportunitiesServerService } from '@/services/opportunities-server.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { requireOpportunityInTenant } from '@/lib/auth/tenant-isolation';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const UpdateOpportunitySchema = z.object({
+  stage: z.string().max(50).optional(),
+  value: z.number().min(0).max(999_999_999).optional(),
+  probability: z.number().min(0).max(100).optional(),
+  notes: z.string().max(5000).optional(),
+  source: z.string().max(100).optional(),
+  expectedCloseDate: z.string().max(30).nullable().optional(),
+  lostReason: z.string().max(500).optional(),
+}).passthrough();
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -41,7 +53,9 @@ async function handlePatch(
         // 🔒 ADR: Centralized tenant isolation (existence + companyId + audit logging)
         await requireOpportunityInTenant({ ctx, opportunityId: id, path: '/api/opportunities/[id]' });
 
-        const body = await req.json();
+        const parsed = safeParseBody(UpdateOpportunitySchema, await req.json());
+        if (parsed.error) return parsed.error;
+        const body = parsed.data;
 
         const result = await OpportunitiesServerService.update(
           id,

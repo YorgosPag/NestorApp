@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -11,6 +12,22 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
 import { mapStorageDoc, isValidStorageType, isValidStorageStatus } from '@/lib/firestore-mappers';
 import { getErrorMessage } from '@/lib/error-utils';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const CreateStorageSchema = z.object({
+  name: z.string().min(1).max(200),
+  buildingId: z.string().max(128).optional(),
+  type: z.string().max(50).optional(),
+  status: z.string().max(50).optional(),
+  floor: z.string().max(50).optional(),
+  floorId: z.string().max(128).optional(),
+  area: z.number().min(0).max(999_999).optional(),
+  price: z.number().min(0).max(999_999_999).optional(),
+  description: z.string().max(2000).optional(),
+  notes: z.string().max(5000).optional(),
+  projectId: z.string().max(128).optional(),
+  building: z.string().max(200).optional(),
+});
 
 const logger = createModuleLogger('StoragesRoute');
 
@@ -214,12 +231,9 @@ export const POST = withStandardRateLimit(
   withAuth<ApiSuccessResponse<StorageCreateResponse>>(
     async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
-        const body: StorageCreatePayload = await request.json();
-
-        // Validation
-        if (!body.name?.trim()) {
-          throw new ApiError(400, 'Storage name is required');
-        }
+        const parsed = safeParseBody(CreateStorageSchema, await request.json());
+        if (parsed.error) throw new ApiError(400, 'Validation failed');
+        const body = parsed.data;
 
         const buildingId = body.buildingId?.trim() || null;
 

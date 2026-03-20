@@ -7,6 +7,7 @@
  * @see ADR-184 (Building Spaces Tabs)
  */
 
+import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -32,6 +33,22 @@ import type { CommercialTransactionType } from '@/types/contacts/helpers';
 import { getErrorMessage } from '@/lib/error-utils';
 import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const UnitPatchSchema = z.object({
+  name: z.string().max(500).optional(),
+  type: z.string().max(50).optional(),
+  status: z.string().max(50).optional(),
+  floor: z.string().max(50).optional(),
+  area: z.number().min(0).max(999_999).nullable().optional(),
+  price: z.number().min(0).max(999_999_999).nullable().optional(),
+  description: z.string().max(5000).optional(),
+  buildingId: z.string().max(128).optional(),
+  projectId: z.string().max(128).optional(),
+  companyId: z.string().max(128).optional(),
+  isMultiLevel: z.boolean().optional(),
+  _v: z.number().int().optional(),
+}).passthrough();
 
 const logger = createModuleLogger('UnitIdRoute');
 
@@ -104,8 +121,9 @@ export const PATCH = withStandardRateLimit(
 
         const existing = doc.data() as Record<string, unknown>;
 
-        const rawUnitBody: UnitPatchPayload & { _v?: number } = await request.json();
-        const { _v: expectedVersion, ...body } = rawUnitBody;
+        const parsed = safeParseBody(UnitPatchSchema, await request.json());
+        if (parsed.error) throw new ApiError(400, 'Validation failed');
+        const { _v: expectedVersion, ...body } = parsed.data;
 
         // ================================================================
         // VALIDATION: Field locking based on commercialStatus

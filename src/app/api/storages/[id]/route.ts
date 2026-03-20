@@ -7,6 +7,7 @@
  * @see ADR-184 (Building Spaces Tabs)
  */
 
+import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -21,6 +22,21 @@ import { propagateSpaceAllocationCodeChange } from '@/lib/firestore/cascade-prop
 import { getErrorMessage } from '@/lib/error-utils';
 import { requireStorageInTenant } from '@/lib/auth/tenant-isolation';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const UpdateStorageSchema = z.object({
+  name: z.string().max(200).optional(),
+  type: z.string().max(50).optional(),
+  status: z.string().max(50).optional(),
+  floor: z.string().max(50).nullable().optional(),
+  floorId: z.string().max(128).nullable().optional(),
+  area: z.number().min(0).max(999_999).nullable().optional(),
+  price: z.number().min(0).max(999_999_999).nullable().optional(),
+  description: z.string().max(2000).nullable().optional(),
+  notes: z.string().max(5000).nullable().optional(),
+  buildingId: z.string().max(128).nullable().optional(),
+  _v: z.number().int().optional(),
+}).passthrough();
 
 const logger = createModuleLogger('StoragesIdRoute');
 
@@ -69,8 +85,9 @@ export const PATCH = withStandardRateLimit(
         const doc = await docRef.get();
         const existing = doc.data() as Record<string, unknown>;
 
-        const rawStorageBody: StoragePatchPayload & { _v?: number } = await request.json();
-        const { _v: expectedVersion, ...body } = rawStorageBody;
+        const parsed = safeParseBody(UpdateStorageSchema, await request.json());
+        if (parsed.error) throw new ApiError(400, 'Validation failed');
+        const { _v: expectedVersion, ...body } = parsed.data;
 
         // SPEC-256A: updatedAt + updatedBy injected by withVersionCheck
         const updateData: Record<string, unknown> = {};

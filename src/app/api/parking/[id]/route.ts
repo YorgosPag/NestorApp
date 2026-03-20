@@ -7,6 +7,7 @@
  * @see ADR-184 (Building Spaces Tabs)
  */
 
+import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -29,6 +30,22 @@ import type { ParkingSpotType, ParkingSpotStatus, ParkingLocationZone } from '@/
 import { getErrorMessage } from '@/lib/error-utils';
 import { requireParkingInTenant } from '@/lib/auth/tenant-isolation';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const UpdateParkingSchema = z.object({
+  number: z.string().max(50).optional(),
+  type: z.string().max(50).optional(),
+  status: z.string().max(50).optional(),
+  locationZone: z.string().max(100).nullable().optional(),
+  floor: z.string().max(50).nullable().optional(),
+  location: z.string().max(200).nullable().optional(),
+  area: z.number().min(0).max(999_999).nullable().optional(),
+  price: z.number().min(0).max(999_999_999).nullable().optional(),
+  notes: z.string().max(5000).nullable().optional(),
+  buildingId: z.string().max(128).nullable().optional(),
+  projectId: z.string().max(128).optional(),
+  _v: z.number().int().optional(),
+}).passthrough();
 
 interface ParkingPatchPayload {
   number?: string;
@@ -71,8 +88,9 @@ export const PATCH = withStandardRateLimit(
         const doc = await docRef.get();
         const existing = doc.data() as Record<string, unknown>;
 
-        const rawParkingBody: ParkingPatchPayload & { _v?: number } = await request.json();
-        const { _v: expectedVersion, ...body } = rawParkingBody;
+        const parsed = safeParseBody(UpdateParkingSchema, await request.json());
+        if (parsed.error) throw new ApiError(400, 'Validation failed');
+        const { _v: expectedVersion, ...body } = parsed.data;
 
         // Build update object — only include provided fields
         // SPEC-256A: updatedAt + updatedBy injected by withVersionCheck

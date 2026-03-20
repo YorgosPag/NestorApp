@@ -450,5 +450,6 @@ describe('withVersionCheck', () => {
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-03-21 | FORM ROLLOUT: 5 entities integrated — Projects (auto-save+ConflictDialog via useVersionedSave), Parking+Storages (manual save+ConflictDialog via useRef _v), Units+Floors (inline edit+toast on 409). Projects migrated from server action to API route. | Claude Code |
 | 2026-03-21 | IMPLEMENTED: 3 new files (types, config, version-check), 6 routes migrated, useVersionedSave hook, ConflictDialog, 409 handling in enterprise-api-client, i18n keys, GeneralTabContent prototype integration | Claude Code |
 | 2026-03-20 | Initial SPEC — Phase 1 specification | Claude Code |

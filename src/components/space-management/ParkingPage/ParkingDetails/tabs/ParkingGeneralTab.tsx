@@ -130,7 +130,7 @@ export function ParkingGeneralTab({
   const router = useRouter();
 
   // 🏢 SPEC-256A: Optimistic versioning — track _v in ref
-  const versionRef = useRef<number | undefined>((parking as Record<string, unknown>)._v as number | undefined);
+  const versionRef = useRef<number | undefined>((parking as unknown as { _v?: number })._v);
   const [isConflicted, setIsConflicted] = useState(false);
   const [conflictData, setConflictData] = useState<ConflictResponseBody | null>(null);
 
@@ -140,7 +140,7 @@ export function ParkingGeneralTab({
   // Reset form when a DIFFERENT parking spot is selected (not on edit mode toggle)
   useEffect(() => {
     setForm(buildFormState(parking));
-    versionRef.current = (parking as Record<string, unknown>)._v as number | undefined;
+    versionRef.current = (parking as unknown as { _v?: number })._v;
     setIsConflicted(false);
     setConflictData(null);
   }, [parking.id]);
@@ -269,17 +269,16 @@ export function ParkingGeneralTab({
     } catch (err) {
       // SPEC-256A: Catch 409 version conflict
       if (ApiClientError.isApiClientError(err) && err.statusCode === 409) {
-        const body: ConflictResponseBody = (err as Record<string, unknown>).body as ConflictResponseBody ?? {
+        setIsConflicted(true);
+        setConflictData({
           code: 'VERSION_CONFLICT',
-          error: 'Version conflict',
+          error: err.message || 'Version conflict',
           errorCode: 'VERSION_CONFLICT',
           currentVersion: -1,
-          expectedVersion: -1,
+          expectedVersion: versionRef.current ?? -1,
           updatedAt: new Date().toISOString(),
           updatedBy: 'unknown',
-        };
-        setIsConflicted(true);
-        setConflictData(body);
+        });
         return false;
       }
       logger.error('Failed to save parking spot', { error: err instanceof Error ? err.message : String(err) });
