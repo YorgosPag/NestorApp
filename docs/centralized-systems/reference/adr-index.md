@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 241 ADRs + 9 SPECs (242A-E, 245B3, 249A-C) | Last Updated: 2026-03-20
+**📊 Stats**: 242 ADRs + 15 SPECs (242A-E, 245B3, 249A-C, 255A-F) | Last Updated: 2026-03-20
 
 ---
 
@@ -24,7 +24,7 @@
 | 📂 **Entity Systems** | 14 | [View](#entity-systems) |
 | 🔧 **Tools & Keyboard** | 8 | [View](#tools-keyboard) |
 | 🔍 **Filters & Search** | 1 | [View](#filters-search) |
-| 🔒 **Security & Auth** | 10 | [View](#security-auth) |
+| 🔒 **Security & Auth** | 11 | [View](#security-auth) |
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
@@ -293,6 +293,13 @@
 | **ADR-252** | Comprehensive Security Audit (Firestore Rules, API Routes, Server-side Validation) — 18 findings | 📋 DOCUMENTED | 2026-03-19 | Security / Infrastructure | [📄](./adrs/ADR-252-comprehensive-security-audit.md) |
 | **ADR-253** | Deep Security & Data Integrity Audit — 71 findings IMPLEMENTED (Error Swallowing, Race Conditions, Client Writes, Auth Gaps) | ✅ IMPLEMENTED | 2026-03-20 | Security / Data Integrity | [📄](./adrs/ADR-253-deep-integrity-audit.md) |
 | **ADR-254** | Monolithic Architecture Audit — 6 findings (Mixed SDKs, Barrel Exports, God Files, Cross-Domain Coupling, Mega-Files, Deep Dependencies) | 📋 DOCUMENTED | 2026-03-20 | Architecture / Performance | [📄](./adrs/ADR-254-monolithic-architecture-audit.md) |
+| **ADR-255** | Security Hardening Phase 4 — Tenant Isolation, Validation, Audit Trail (6 SPECs) | 📋 PLANNED | 2026-03-20 | Security & Auth | [📄](./adrs/ADR-255-security-hardening-phase-4.md) |
+| ↳ SPEC-255A | Firestore Rules — Tenant Isolation (`file_comments`, `file_audit_log`) | 📋 PLANNED | 2026-03-20 | — | [📄](./adrs/specs/SPEC-255A-firestore-rules-tenant-isolation.md) |
+| ↳ SPEC-255B | API Route Tenant Checks (~20 routes: units, storages, parking, opportunities) | 📋 PLANNED | 2026-03-20 | — | [📄](./adrs/specs/SPEC-255B-api-route-tenant-checks.md) |
+| ↳ SPEC-255C | Client-Side Writes Migration (19 files, 3 CRITICAL) | 📋 PLANNED | 2026-03-20 | — | [📄](./adrs/specs/SPEC-255C-client-writes-migration.md) |
+| ↳ SPEC-255D | Input Validation — Zod (73 routes, incremental migrate-on-touch) | 📋 PLANNED | 2026-03-20 | — | [📄](./adrs/specs/SPEC-255D-input-validation-zod.md) |
+| ↳ SPEC-255E | Audit Trail — Financial Operations (~15 transitions + ~35 DELETEs) | 📋 PLANNED | 2026-03-20 | — | [📄](./adrs/specs/SPEC-255E-audit-trail-financial-ops.md) |
+| ↳ SPEC-255F | Cleanup Test Endpoints (`/api/test-alert` removal) | 📋 PLANNED | 2026-03-20 | — | [📄](./adrs/specs/SPEC-255F-cleanup-test-endpoints.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -487,6 +494,7 @@
 | **ADR-252** | Comprehensive Security Audit (Firestore Rules, API Routes, Server-side Validation) | 📋 DOCUMENTED | [View](./adrs/ADR-252-comprehensive-security-audit.md) |
 | **ADR-253** | Deep Security & Data Integrity Audit (Error Swallowing, Race Conditions, Client Writes) | ✅ IMPLEMENTED | [View](./adrs/ADR-253-deep-integrity-audit.md) |
 | **ADR-254** | Monolithic Architecture Audit (Mixed SDKs, Barrel Exports, God Files, Dependencies) | 📋 DOCUMENTED | [View](./adrs/ADR-254-monolithic-architecture-audit.md) |
+| **ADR-255** | Security Hardening Phase 4 — Tenant Isolation, Validation, Audit Trail (6 SPECs) | 📋 PLANNED | [View](./adrs/ADR-255-security-hardening-phase-4.md) |
 
 ---
 
