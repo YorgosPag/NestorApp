@@ -372,6 +372,10 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
       condition: 'not-null',
       message: 'Η θέση στάθμευσης έχει πωληθεί και δεν μπορεί να διαγραφεί.',
     },
+    // TODO: ADR-AUDIT — Add check for unit.linkedSpaces[] referencing this parking spot.
+    // Firestore cannot query array-of-objects by nested field (spaceId).
+    // Options: (1) denormalize linkedUnitId on parking doc, (2) Cloud Function trigger.
+    // Current protection: conditionalBlock catches sold spots (buyerContactId set by appurtenance-sync).
     dependencies: [
       {
         collection: COLLECTIONS.CONTACT_LINKS,
@@ -390,6 +394,7 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
       condition: 'not-null',
       message: 'Η αποθήκη έχει πωληθεί και δεν μπορεί να διαγραφεί.',
     },
+    // TODO: ADR-AUDIT — Same as parking: add check for unit.linkedSpaces[] referencing this storage.
     dependencies: [
       {
         collection: COLLECTIONS.CONTACT_LINKS,

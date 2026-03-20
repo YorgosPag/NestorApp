@@ -9,16 +9,20 @@
  * Each section wrapped in Card for visual separation.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
 import { MapPin, StickyNote, Building2 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { apiClient } from '@/lib/api/enterprise-api-client';
+import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
+// 🏢 SPEC-256A: Optimistic versioning — conflict detection
+import { ConflictDialog } from '@/components/shared/ConflictDialog';
+import type { ConflictResponseBody } from '@/types/versioning';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -65,6 +69,7 @@ interface StorageFormState {
   floor: string;
   floorId: string;
   area: string;
+  price: string;
   description: string;
   notes: string;
 }
@@ -109,6 +114,7 @@ function buildFormState(storage: Storage): StorageFormState {
     floor: storage.floor || '',
     floorId: storage.floorId || '',
     area: storage.area !== undefined ? String(storage.area) : '',
+    price: storage.price !== undefined ? String(storage.price) : '',
     description: storage.description || '',
     notes: storage.notes || '',
   };
@@ -129,6 +135,12 @@ export function StorageGeneralTab({
   const iconSizes = useIconSizes();
   const typography = useTypography();
   const { t } = useTranslation('storage');
+  const router = useRouter();
+
+  // 🏢 SPEC-256A: Optimistic versioning — track _v in ref
+  const versionRef = useRef<number | undefined>((storage as Record<string, unknown>)._v as number | undefined);
+  const [isConflicted, setIsConflicted] = useState(false);
+  const [conflictData, setConflictData] = useState<ConflictResponseBody | null>(null);
 
   // Form state — always bound to inputs (disabled when not editing)
   const [form, setForm] = useState<StorageFormState>(() => buildFormState(storage));
@@ -136,6 +148,9 @@ export function StorageGeneralTab({
   // Reset form when a DIFFERENT storage is selected (not on edit mode toggle)
   useEffect(() => {
     setForm(buildFormState(storage));
+    versionRef.current = (storage as Record<string, unknown>)._v as number | undefined;
+    setIsConflicted(false);
+    setConflictData(null);
   }, [storage.id]);
 
   // Building link callbacks
@@ -186,6 +201,7 @@ export function StorageGeneralTab({
         if (form.floor.trim()) payload.floor = form.floor.trim();
         if (form.floorId) payload.floorId = form.floorId;
         if (form.area) payload.area = parseFloat(form.area);
+        if (form.price) payload.price = parseFloat(form.price);
         if (form.description.trim()) payload.description = form.description.trim();
         if (form.notes.trim()) payload.notes = form.notes.trim();
 
@@ -215,6 +231,9 @@ export function StorageGeneralTab({
       const newArea = form.area ? parseFloat(form.area) : undefined;
       if (newArea !== storage.area) payload.area = newArea ?? null;
 
+      const newPrice = form.price ? parseFloat(form.price) : undefined;
+      if (newPrice !== storage.price) payload.price = newPrice ?? null;
+
       if (form.description.trim() !== (storage.description || '')) payload.description = form.description.trim();
       if (form.notes.trim() !== (storage.notes || '')) payload.notes = form.notes.trim();
 
@@ -227,7 +246,20 @@ export function StorageGeneralTab({
         return true;
       }
 
-      await apiClient.patch<StoragePatchResult>(API_ROUTES.STORAGES.BY_ID(storage.id), payload);
+      // SPEC-256A: Include _v for optimistic versioning
+      if (versionRef.current !== undefined) {
+        payload._v = versionRef.current;
+      }
+
+      const result = await apiClient.patch<StoragePatchResult & { _v?: number }>(
+        API_ROUTES.STORAGES.BY_ID(storage.id),
+        payload,
+      );
+
+      // SPEC-256A: Update local version from response
+      if (typeof result?._v === 'number') {
+        versionRef.current = result._v;
+      }
 
       // Dispatch realtime event for cross-page sync
       RealtimeService.dispatch('STORAGE_UPDATED', {
@@ -247,6 +279,21 @@ export function StorageGeneralTab({
       onEditingChange?.(false);
       return true;
     } catch (err) {
+      // SPEC-256A: Catch 409 version conflict
+      if (ApiClientError.isApiClientError(err) && err.statusCode === 409) {
+        const body: ConflictResponseBody = (err as Record<string, unknown>).body as ConflictResponseBody ?? {
+          code: 'VERSION_CONFLICT',
+          error: 'Version conflict',
+          errorCode: 'VERSION_CONFLICT',
+          currentVersion: -1,
+          expectedVersion: -1,
+          updatedAt: new Date().toISOString(),
+          updatedBy: 'unknown',
+        };
+        setIsConflicted(true);
+        setConflictData(body);
+        return false;
+      }
       logger.error('Failed to save storage', { error: err instanceof Error ? err.message : String(err) });
       return false;
     }
@@ -264,8 +311,26 @@ export function StorageGeneralTab({
     };
   }, [handleSave, onSaveRef]);
 
+  // SPEC-256A: Force save handler for ConflictDialog (retries without _v)
+  const handleForceSave = useCallback(async () => {
+    versionRef.current = undefined; // Remove version → force-write
+    setIsConflicted(false);
+    setConflictData(null);
+    if (onSaveRef?.current) {
+      await onSaveRef.current();
+    }
+  }, [onSaveRef]);
+
   return (
     <div className="p-4 space-y-4">
+      {/* 🏢 SPEC-256A: Version conflict dialog */}
+      <ConflictDialog
+        open={isConflicted}
+        conflict={conflictData}
+        onReload={() => router.refresh()}
+        onForceSave={handleForceSave}
+        onClose={() => { setIsConflicted(false); setConflictData(null); }}
+      />
       {/* Building Link + Floor — side by side at the top */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <EntityLinkCard key={buildingLink.linkCardKey} {...buildingLink.linkCardProps} />
@@ -357,6 +422,18 @@ export function StorageGeneralTab({
                 value={form.area}
                 onChange={(e) => updateField('area', e.target.value)}
                 placeholder="m²"
+                className="h-8 text-sm"
+                disabled={!isEditing}
+              />
+            </fieldset>
+            <fieldset className="space-y-1.5">
+              <Label className="text-muted-foreground text-xs">{t('general.fields.price')}</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={form.price}
+                onChange={(e) => updateField('price', e.target.value)}
+                placeholder="€"
                 className="h-8 text-sm"
                 disabled={!isEditing}
               />
