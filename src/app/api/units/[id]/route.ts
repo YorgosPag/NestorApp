@@ -110,6 +110,7 @@ export const PATCH = withStandardRateLimit(
 
       const id = extractIdFromUrl(request.url);
       if (!id) throw new ApiError(400, 'Unit ID is required');
+      if (id === '__new__') throw new ApiError(400, 'Cannot update placeholder unit — save it first');
 
       try {
         const docRef = adminDb.collection(COLLECTIONS.UNITS).doc(id);
