@@ -39,6 +39,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('NavigationFixContactIdRoute');
 
@@ -179,7 +180,7 @@ async function handleFixContactIdExecute(request: NextRequest, ctx: AuthContext)
         logger.info('[Navigation/FixContactId] Successfully fixed document', { docId });
 
       } catch (error) {
-        logger.error('[Navigation/FixContactId] Failed to fix document', { docId: navDoc.id, error: error instanceof Error ? error.message : String(error) });
+        logger.error('[Navigation/FixContactId] Failed to fix document', { docId: navDoc.id, error: getErrorMessage(error) });
         result.stats.errors++;
         result.fixes.push({
           documentId: navDoc.id,
@@ -241,18 +242,18 @@ async function handleFixContactIdExecute(request: NextRequest, ctx: AuthContext)
       },
       `ContactId fix by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      logger.error('[Navigation/FixContactId] Audit logging failed (non-blocking)', { error: err instanceof Error ? err.message : String(err) });
+      logger.error('[Navigation/FixContactId] Audit logging failed (non-blocking)', { error: getErrorMessage(err) });
     });
 
     return NextResponse.json({ ...result, executionTimeMs: duration });
 
   } catch (error: unknown) {
-    logger.error('[Navigation/FixContactId] Enterprise critical fix failed', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('[Navigation/FixContactId] Enterprise critical fix failed', { error: getErrorMessage(error) });
     const duration = Date.now() - startTime;
 
     return NextResponse.json({
       success: false,
-      message: `Critical fix failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      message: `Critical fix failed: ${getErrorMessage(error)}`,
       fixes: [],
       stats: {
         documentsChecked: 0,

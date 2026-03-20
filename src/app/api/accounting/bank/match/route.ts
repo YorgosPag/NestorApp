@@ -24,6 +24,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // TYPES
@@ -87,7 +88,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
           },
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to match bank transaction';
+        const message = getErrorMessage(error, 'Failed to match bank transaction');
         return NextResponse.json(
           { success: false, error: message },
           { status: 500 }

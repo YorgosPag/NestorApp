@@ -16,6 +16,7 @@
 import { AI_ANALYSIS_DEFAULTS } from '@/config/ai-analysis-config';
 import { getTelegramFile, downloadTelegramFile } from './media-download';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('WhisperTranscription');
 
@@ -114,7 +115,7 @@ export async function transcribeVoiceMessage(
     logger.info('[Whisper] Transcribed', { chars: transcribedText.length, preview: transcribedText.substring(0, 80) });
     return { success: true, text: transcribedText };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = getErrorMessage(error);
     const isTimeout = message.includes('abort');
     logger.error(`[Whisper] ${isTimeout ? 'Timeout' : 'Error'}`, { error: message });
     return {

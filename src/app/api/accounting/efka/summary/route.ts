@@ -24,6 +24,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { isPartnership, isLlc, isCorporation } from '@/subapps/accounting/utils/entity-guards';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // GET — EFKA Annual Summary
@@ -86,7 +87,7 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
           data: summary,
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to get EFKA summary';
+        const message = getErrorMessage(error, 'Failed to get EFKA summary');
         return NextResponse.json(
           { success: false, error: message },
           { status: 500 }

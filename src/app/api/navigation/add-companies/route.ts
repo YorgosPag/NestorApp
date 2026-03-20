@@ -34,6 +34,7 @@ import { generateNavigationId } from '@/services/enterprise-id.service';
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('NavigationAddCompaniesRoute');
 
@@ -100,7 +101,7 @@ async function handleAddCompaniesExecute(request: NextRequest, ctx: AuthContext)
         logger.info('[Navigation/AddCompanies] Added to navigation', { contactId, entryId: navId });
 
       } catch (navigationError) {
-        logger.error('[Navigation/AddCompanies] Error adding company to navigation', { contactId, error: navigationError instanceof Error ? navigationError.message : String(navigationError) });
+        logger.error('[Navigation/AddCompanies] Error adding company to navigation', { contactId, error: getErrorMessage(navigationError) });
         // Continue with the next companies even if one fails
       }
     }
@@ -125,7 +126,7 @@ async function handleAddCompaniesExecute(request: NextRequest, ctx: AuthContext)
       },
       `Bulk company add by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      logger.error('[Navigation/AddCompanies] Audit logging failed (non-blocking)', { error: err instanceof Error ? err.message : String(err) });
+      logger.error('[Navigation/AddCompanies] Audit logging failed (non-blocking)', { error: getErrorMessage(err) });
     });
 
     return NextResponse.json({
@@ -138,12 +139,12 @@ async function handleAddCompaniesExecute(request: NextRequest, ctx: AuthContext)
     });
 
   } catch (error: unknown) {
-    logger.error('[Navigation/AddCompanies] Error in add-companies API', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('[Navigation/AddCompanies] Error in add-companies API', { error: getErrorMessage(error) });
     const duration = Date.now() - startTime;
 
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: getErrorMessage(error),
       details: 'Failed to add companies to navigation',
       executionTimeMs: duration
     }, { status: 500 });

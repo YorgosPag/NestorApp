@@ -5,6 +5,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('ContactUnitsRoute');
 
@@ -322,7 +323,7 @@ export async function GET(
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Άγνωστο σφάλμα φόρτωσης μονάδων επαφής',
+        error: getErrorMessage(error, 'Άγνωστο σφάλμα φόρτωσης μονάδων επαφής'),
         errorCategory,
         contactId: contactId || null,
         timestamp: new Date().toISOString(),

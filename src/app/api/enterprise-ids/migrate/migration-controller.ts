@@ -12,6 +12,7 @@ import {
   type MigrationStats
 } from '@/services/enterprise-id-migration.service';
 import {
+import { getErrorMessage } from '@/lib/error-utils';
   EntityType,
   isValidEntityType
 } from '@/services/relationships/enterprise-relationship-engine.contracts';
@@ -65,7 +66,7 @@ export class MigrationController {
     try {
       this.migrationService.setMigrationPhase(config.phase);
     } catch (error) {
-      return this.createFailureResult('Invalid phase', [error instanceof Error ? error.message : 'Unknown phase error'], config.phase);
+      return this.createFailureResult('Invalid phase', [getErrorMessage(error, 'Unknown phase error')], config.phase);
     }
 
     // TODO: Actual migration logic will use existing services

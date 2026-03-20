@@ -14,6 +14,7 @@ import { NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateNotificationId } from '@/services/enterprise-id.service';
+import { getErrorMessage } from '@/lib/error-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -87,7 +88,7 @@ export async function GET() {
       tasks: reminders.map((r) => ({ id: r.id, title: r.title })),
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = getErrorMessage(error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

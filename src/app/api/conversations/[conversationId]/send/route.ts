@@ -41,6 +41,7 @@ import type { MessageDocument } from '@/server/types/conversations.firestore';
 import type { TelegramSendPayload } from '@/app/api/communications/webhooks/telegram/telegram/types';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('ConversationSendRoute');
 
@@ -156,7 +157,7 @@ async function storeOutboundMessage(
     return messageDocId;
 
   } catch (error) {
-    logger.error('Failed to store outbound message', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('Failed to store outbound message', { error: getErrorMessage(error) });
     return null;
   }
 }

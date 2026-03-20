@@ -16,6 +16,7 @@
 
 import type { InstagramSendResponse, InstagramSendResult } from './types';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('InstagramClient');
 
@@ -85,7 +86,7 @@ export async function sendInstagramMessage(
     logger.error('Instagram send error', { error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: getErrorMessage(error),
     };
   }
 }

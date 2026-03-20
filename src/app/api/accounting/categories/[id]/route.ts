@@ -34,6 +34,7 @@ import {
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import type { UpdateCustomCategoryInput } from '@/subapps/accounting/types';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('CUSTOM_CATEGORY_DETAIL');
 
@@ -62,7 +63,7 @@ async function handleGet(
 
         return NextResponse.json({ success: true, data: category });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to get custom category';
+        const message = getErrorMessage(error, 'Failed to get custom category');
         logger.error('Custom category get error', { id, error: message });
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
@@ -111,7 +112,7 @@ async function handlePatch(
 
         return NextResponse.json({ success: true });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to update custom category';
+        const message = getErrorMessage(error, 'Failed to update custom category');
         logger.error('Custom category update error', { id, error: message });
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
@@ -171,7 +172,7 @@ async function handleDelete(
           message: 'Η κατηγορία διαγράφηκε οριστικά',
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to delete custom category';
+        const message = getErrorMessage(error, 'Failed to delete custom category');
         logger.error('Custom category delete error', { id, error: message });
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }

@@ -18,6 +18,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { LegalContractService } from '@/services/legal-contract.service';
 import type { UpdateContractInput } from '@/types/legal-contracts';
+import { getErrorMessage } from '@/lib/error-utils';
 
 type SegmentData = { params: Promise<{ id: string }> };
 
@@ -44,7 +45,7 @@ async function handleGet(
 
         return NextResponse.json({ success: true, data: contract });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to get contract';
+        const message = getErrorMessage(error, 'Failed to get contract');
         return NextResponse.json(
           { success: false, error: message },
           { status: 500 }
@@ -83,7 +84,7 @@ async function handlePatch(
 
         return NextResponse.json({ success: true });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to update contract';
+        const message = getErrorMessage(error, 'Failed to update contract');
         return NextResponse.json(
           { success: false, error: message },
           { status: 500 }

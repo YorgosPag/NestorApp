@@ -5,6 +5,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('FixProjectIdsRoute');
 
@@ -81,7 +82,7 @@ export const POST = withHeavyRateLimit(
         return NextResponse.json({
           success: false,
           error: 'Misconfigured environment',
-          details: configError instanceof Error ? configError.message : 'Missing required server configuration'
+          details: getErrorMessage(configError, 'Missing required server configuration')
         }, { status: 500 });
       }
 
@@ -125,7 +126,7 @@ export const POST = withHeavyRateLimit(
       return NextResponse.json({
         success: false,
         error: 'Failed to fix building project IDs',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: getErrorMessage(error)
       }, { status: 500 });
     }
   },

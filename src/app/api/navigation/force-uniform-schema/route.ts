@@ -45,6 +45,7 @@ import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('NavigationForceUniformRoute');
 
@@ -264,7 +265,7 @@ async function handleForceUniformSchemaExecute(request: NextRequest, ctx: AuthCo
         logger.info('[Navigation/ForceUniform] Document standardized', { docId, beforeFields: beforeFields.length, afterFields: afterFields.length });
 
       } catch (error) {
-        logger.error('[Navigation/ForceUniform] Failed to standardize document', { docId: navDoc.id, error: error instanceof Error ? error.message : String(error) });
+        logger.error('[Navigation/ForceUniform] Failed to standardize document', { docId: navDoc.id, error: getErrorMessage(error) });
         result.stats.errors++;
         result.transformations.push({
           documentId: navDoc.id,
@@ -333,18 +334,18 @@ async function handleForceUniformSchemaExecute(request: NextRequest, ctx: AuthCo
       },
       `Schema enforcement by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      logger.error('[Navigation/ForceUniform] Audit logging failed (non-blocking)', { error: err instanceof Error ? err.message : String(err) });
+      logger.error('[Navigation/ForceUniform] Audit logging failed (non-blocking)', { error: getErrorMessage(err) });
     });
 
     return NextResponse.json({ ...result, executionTimeMs: duration });
 
   } catch (error: unknown) {
-    logger.error('[Navigation/ForceUniform] Enterprise force uniform schema failed', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('[Navigation/ForceUniform] Enterprise force uniform schema failed', { error: getErrorMessage(error) });
     const duration = Date.now() - startTime;
 
     return NextResponse.json({
       success: false,
-      message: `Force uniform schema failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      message: `Force uniform schema failed: ${getErrorMessage(error)}`,
       transformations: [],
       stats: {
         documentsProcessed: 0,

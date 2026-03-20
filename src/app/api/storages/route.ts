@@ -10,6 +10,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
 import { mapStorageDoc, isValidStorageType, isValidStorageStatus } from '@/lib/firestore-mappers';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('StoragesRoute');
 
@@ -174,12 +175,12 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
     });
 
   } catch (error) {
-    logger.error('Error fetching storages', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('Error fetching storages', { error: getErrorMessage(error) });
 
     return NextResponse.json({
       success: false,
       error: 'Failed to fetch storages',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: getErrorMessage(error)
     }, { status: 500 });
   }
 }
@@ -261,8 +262,8 @@ export const POST = withStandardRateLimit(
         );
       } catch (error) {
         if (error instanceof ApiError) throw error;
-        logger.error('Error creating storage', { error: error instanceof Error ? error.message : String(error) });
-        throw new ApiError(500, error instanceof Error ? error.message : 'Failed to create storage unit');
+        logger.error('Error creating storage', { error: getErrorMessage(error) });
+        throw new ApiError(500, getErrorMessage(error, 'Failed to create storage unit'));
       }
     },
     { permissions: 'units:units:create' }

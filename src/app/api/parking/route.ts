@@ -45,6 +45,7 @@ const logger = createModuleLogger('ParkingRoute');
 
 // ADR-191: Import canonical types — single source of truth
 import type { ParkingSpot as CanonicalParkingSpot } from '@/types/parking';
+import { getErrorMessage } from '@/lib/error-utils';
 
 /**
  * 🅿️ API Response interface - CANONICAL FORMAT
@@ -184,8 +185,8 @@ export const POST = withStandardRateLimit(
         );
       } catch (error) {
         if (error instanceof ApiError) throw error;
-        logger.error('Error creating parking spot', { error: error instanceof Error ? error.message : String(error) });
-        throw new ApiError(500, error instanceof Error ? error.message : 'Failed to create parking spot');
+        logger.error('Error creating parking spot', { error: getErrorMessage(error) });
+        throw new ApiError(500, getErrorMessage(error, 'Failed to create parking spot'));
       }
     },
     { permissions: 'units:units:create' }
@@ -304,12 +305,12 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
     });
 
   } catch (error) {
-    logger.error('Error fetching parking spots', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('Error fetching parking spots', { error: getErrorMessage(error) });
 
     return NextResponse.json({
       success: false,
       error: 'Failed to fetch parking spots',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: getErrorMessage(error)
     }, { status: 500 });
   }
 }

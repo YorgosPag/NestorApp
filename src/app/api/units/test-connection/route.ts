@@ -23,6 +23,7 @@ import { BUILDING_IDS, BuildingIdUtils } from '@/config/building-ids-config';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('UnitsTestConnectionRoute');
 
@@ -126,7 +127,7 @@ const getHandler = async (request: NextRequest) => {
 
       } catch (error) {
         logger.error('[Units/TestConnection] Error', {
-          error: error instanceof Error ? error.message : String(error),
+          error: getErrorMessage(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });
@@ -134,7 +135,7 @@ const getHandler = async (request: NextRequest) => {
         return NextResponse.json({
           success: false,
           error: 'Failed to test connection',
-          details: error instanceof Error ? error.message : 'Unknown error'
+          details: getErrorMessage(error)
         }, { status: 500 });
       }
     },

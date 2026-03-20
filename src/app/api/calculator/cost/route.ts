@@ -14,6 +14,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { EuriborService } from '@/services/euribor.service';
 import { calculateFullResult, buildComparisonScenarios } from '@/lib/npv-engine';
 import type {
+import { getErrorMessage } from '@/lib/error-utils';
   CostCalculationRequest,
   CostCalculationResponse,
 } from '@/types/interest-calculator';
@@ -83,7 +84,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         };
         return NextResponse.json(response);
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Calculation failed';
+        const message = getErrorMessage(error, 'Calculation failed');
         return NextResponse.json(
           { success: false, error: message } satisfies CostCalculationResponse,
           { status: 500 }

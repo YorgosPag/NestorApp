@@ -27,6 +27,7 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { withAuth, type AuthenticatedHandler } from '@/lib/auth/middleware';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('AI_ANALYTICS_ENDPOINT');
 
@@ -202,7 +203,7 @@ const handleGet: AuthenticatedHandler<AnalyticsResponse> = async () => {
     return NextResponse.json(response);
   } catch (error) {
     logger.error('Failed to generate AI analytics', {
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
 
     return NextResponse.json(

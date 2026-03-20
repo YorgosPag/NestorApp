@@ -34,6 +34,7 @@ import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('FixCompaniesRoute');
 
@@ -167,7 +168,7 @@ async function handleFixCompaniesExecute(request: NextRequest, ctx: AuthContext)
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to fix companies',
+        error: getErrorMessage(error, 'Failed to fix companies'),
         executionTimeMs: duration,
       },
       { status: 500 }

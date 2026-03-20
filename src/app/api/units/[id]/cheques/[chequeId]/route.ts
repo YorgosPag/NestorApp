@@ -15,6 +15,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ChequeRegistryService } from '@/services/cheque-registry.service';
 import type { UpdateChequeInput } from '@/types/cheque-registry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 type SegmentData = { params: Promise<{ id: string; chequeId: string }> };
 
@@ -37,7 +38,7 @@ async function handleGet(
         }
         return NextResponse.json({ success: true, data: result.cheque });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to get cheque';
+        const message = getErrorMessage(error, 'Failed to get cheque');
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     }
@@ -71,7 +72,7 @@ async function handlePatch(
 
         return NextResponse.json({ success: true });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to update cheque';
+        const message = getErrorMessage(error, 'Failed to update cheque');
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     }

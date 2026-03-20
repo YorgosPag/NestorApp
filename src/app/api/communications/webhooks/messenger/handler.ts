@@ -28,6 +28,7 @@ import type {
 } from './types';
 import { getCompanyId } from '@/config/tenant';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('MessengerWebhookHandler');
 
@@ -119,7 +120,7 @@ export async function handlePOST(request: NextRequest): Promise<NextResponse> {
           });
         } catch (error) {
           logger.warn('[Messenger->Pipeline] after(): pipeline batch failed (cron will retry)', {
-            error: error instanceof Error ? error.message : String(error),
+            error: getErrorMessage(error),
           });
         }
       });
@@ -288,7 +289,7 @@ async function handleFeedbackQuickReply(payload: string, psid: string): Promise<
     logger.info('Messenger feedback recorded', { feedbackDocId, sentiment, psid: psid.slice(-4) });
   } catch (error) {
     logger.warn('Messenger feedback handler error', {
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
   }
 }
@@ -336,7 +337,7 @@ async function handleCategoryQuickReply(payload: string, psid: string): Promise<
     logger.info('Messenger negative category recorded', { feedbackDocId, category });
   } catch (error) {
     logger.warn('Messenger category handler error', {
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
   }
 }
@@ -379,7 +380,7 @@ async function feedMessengerToPipeline(msg: {
     }
   } catch (error) {
     logger.warn('[Messenger->Pipeline] Non-fatal error', {
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
   }
 }

@@ -22,6 +22,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { isoToday, getQuarterFromDate } from '@/subapps/accounting/services/repository/firestore-helpers';
 import type { ExpenseCategory, CreateJournalEntryInput } from '@/subapps/accounting/types';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // GET — Single Expense Document
@@ -48,7 +49,7 @@ async function handleGet(
 
         return NextResponse.json({ success: true, data: document });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to get document';
+        const message = getErrorMessage(error, 'Failed to get document');
         return NextResponse.json(
           { success: false, error: message },
           { status: 500 }
@@ -170,7 +171,7 @@ async function handlePatch(
           },
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to update document';
+        const message = getErrorMessage(error, 'Failed to update document');
         return NextResponse.json(
           { success: false, error: message },
           { status: 500 }

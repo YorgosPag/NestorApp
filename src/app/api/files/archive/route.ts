@@ -20,6 +20,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('FileArchiveRoute');
 
@@ -115,7 +116,7 @@ async function handlePost(
 
         processedCount++;
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+        const msg = getErrorMessage(err);
         errors.push(`${fileId}: ${msg}`);
         logger.error('Archive operation failed', { fileId, error: msg });
       }
@@ -129,7 +130,7 @@ async function handlePost(
       errors,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Archive failed';
+    const message = getErrorMessage(err, 'Archive failed');
     logger.error(`Archive error: ${message}`);
     return NextResponse.json(
       { success: false, processedCount: 0, errors: [message] },

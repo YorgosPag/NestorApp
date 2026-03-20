@@ -27,6 +27,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('FloorplanSceneRoute');
 
@@ -262,10 +263,10 @@ async function handleGetScene(
     });
 
   } catch (error) {
-    logger.error('[FloorplanScene] Error', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('[FloorplanScene] Error', { error: getErrorMessage(error) });
 
     const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error';
+      getErrorMessage(error);
 
     return NextResponse.json(
       {

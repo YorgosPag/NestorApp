@@ -19,6 +19,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // GET — List Invoice Series
@@ -33,7 +34,7 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
 
         return NextResponse.json({ success: true, data: series });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to list invoice series';
+        const message = getErrorMessage(error, 'Failed to list invoice series');
         return NextResponse.json(
           { success: false, error: message },
           { status: 500 }

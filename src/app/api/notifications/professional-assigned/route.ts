@@ -23,6 +23,7 @@ import { buildProfessionalAssignmentEmail, buildProfessionalRemovalEmail } from 
 import { sendReplyViaMailgun } from '@/services/ai-pipeline/shared/mailgun-sender';
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('api/notifications/professional-assigned');
 
@@ -351,7 +352,7 @@ async function handleAssignmentNotification(
 
     return NextResponse.json({ success: true, emailSent: true });
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = getErrorMessage(error);
     logger.error('Professional assignment notification failed', { error: msg });
     return NextResponse.json(
       { success: false, emailSent: false, error: msg },

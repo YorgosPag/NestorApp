@@ -18,6 +18,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { LegalContractService } from '@/services/legal-contract.service';
 import type { CreateContractInput, ContractPhase } from '@/types/legal-contracts';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // GET — List Contracts for Unit
@@ -40,7 +41,7 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
         const contracts = await LegalContractService.getContractsForUnit(unitId);
         return NextResponse.json({ success: true, data: contracts });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to list contracts';
+        const message = getErrorMessage(error, 'Failed to list contracts');
         return NextResponse.json(
           { success: false, error: message },
           { status: 500 }
@@ -94,7 +95,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
           { status: 201 }
         );
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to create contract';
+        const message = getErrorMessage(error, 'Failed to create contract');
         return NextResponse.json(
           { success: false, error: message },
           { status: 500 }

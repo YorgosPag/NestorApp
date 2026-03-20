@@ -17,6 +17,7 @@ import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // 🏢 ENTERPRISE: Extended timeout for Storage downloads
 export const maxDuration = 30;
@@ -83,7 +84,7 @@ export async function GET(
           },
         });
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage = getErrorMessage(error);
         return NextResponse.json({ error: errorMessage }, { status: 500 });
       }
     },

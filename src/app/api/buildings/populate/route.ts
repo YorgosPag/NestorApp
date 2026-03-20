@@ -16,6 +16,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { FIELDS } from '@/config/firestore-field-constants';
+import { getErrorMessage } from '@/lib/error-utils';
 
 /**
  * ENTERPRISE POPULATE ROUTE: Create Buildings from Templates
@@ -149,7 +150,7 @@ export const GET = withStandardRateLimit(
         return NextResponse.json(
           {
             success: false,
-            error: (error as Error).message,
+            error: getErrorMessage(error),
             suggestion: 'Add ADMIN_COMPANY_NAME to .env.local',
             operationId,
           },
@@ -214,14 +215,14 @@ export const GET = withStandardRateLimit(
       });
     } catch (error) {
       audit(operationId, 'VERIFY_BUILDINGS_ERROR', {
-        error: (error as Error).message,
+        error: getErrorMessage(error),
       });
 
       return NextResponse.json(
         {
           success: false,
           error: 'Buildings verification failed',
-          details: (error as Error).message,
+          details: getErrorMessage(error),
           operationId,
         },
         { status: 500 }

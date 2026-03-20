@@ -31,6 +31,7 @@ import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('NormalizeFloorsRoute');
 
@@ -203,7 +204,7 @@ async function handleFloorsNormalization(
         logger.info('Batch committed successfully', { floorsInBatch: batchFloors.length });
       } catch (error) {
         failedInserts += batchFloors.length;
-        logger.error('Batch failed', { error: error instanceof Error ? error.message : 'Unknown error' });
+        logger.error('Batch failed', { error: getErrorMessage(error) });
       }
     }
 
@@ -319,7 +320,7 @@ async function handleFloorsNormalization(
 
   } catch (error) {
     const executionTime = Date.now() - startTime;
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = getErrorMessage(error);
 
     logger.error('ENTERPRISE NORMALIZATION FAILED', { error: errorMessage });
 

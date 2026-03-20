@@ -5,6 +5,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('AddRealContactsRoute');
 
@@ -157,7 +158,7 @@ export const POST = withStandardRateLimit(
         logger.error('Error in add-real-contacts API', { error });
         return NextResponse.json({
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: getErrorMessage(error),
           details: 'Failed to add contacts to database'
         }, { status: 500 });
       }

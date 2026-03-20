@@ -22,6 +22,7 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { ENTITY_STATUS } from '@/constants/entity-status-values';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('FixCompanyIdsRoute');
 
@@ -178,14 +179,14 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
 
       } catch (error) {
         logger.error('[Projects/FixCompanyIds] Error', {
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: getErrorMessage(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });
 
         return NextResponse.json({
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: getErrorMessage(error)
         }, { status: 500 });
       }
     },

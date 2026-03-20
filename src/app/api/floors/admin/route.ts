@@ -21,6 +21,7 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { groupByKey } from '@/utils/collection-utils';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('FloorsAdminRoute');
 
@@ -149,7 +150,7 @@ export async function GET(request: NextRequest) {
 
       } catch (error) {
         logger.error('[Floors/Admin] Error', {
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: getErrorMessage(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });
@@ -157,7 +158,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
           success: false,
           error: 'Failed to fetch admin floors',
-          details: error instanceof Error ? error.message : 'Unknown error'
+          details: getErrorMessage(error)
         }, { status: 500 });
       }
     },

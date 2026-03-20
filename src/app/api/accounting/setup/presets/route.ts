@@ -21,6 +21,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import type { ServicePreset } from '@/subapps/accounting/types';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // VALIDATION
@@ -77,7 +78,7 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
 
         return NextResponse.json({ success: true, data: presets });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to fetch service presets';
+        const message = getErrorMessage(error, 'Failed to fetch service presets');
         return NextResponse.json(
           { success: false, error: message },
           { status: 500 }
@@ -125,7 +126,7 @@ async function handlePut(request: NextRequest): Promise<NextResponse> {
 
         return NextResponse.json({ success: true });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to save service presets';
+        const message = getErrorMessage(error, 'Failed to save service presets');
         return NextResponse.json(
           { success: false, error: message },
           { status: 500 }

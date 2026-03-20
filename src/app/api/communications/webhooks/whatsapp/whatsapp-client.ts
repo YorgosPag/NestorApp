@@ -16,6 +16,7 @@ import type {
   WhatsAppSendResult,
 } from './types';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('WhatsAppClient');
 
@@ -99,7 +100,7 @@ export async function sendWhatsAppMessage(
     logger.error('WhatsApp send error', { error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: getErrorMessage(error),
     };
   }
 }
@@ -179,7 +180,7 @@ export async function sendWhatsAppButtons(
     logger.error('WhatsApp interactive button send error', { error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: getErrorMessage(error),
     };
   }
 }

@@ -18,6 +18,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('reverse-geocoding-api');
 
@@ -128,7 +129,7 @@ async function fetchNominatimReverse(url: string): Promise<NominatimReverseResul
 
     return data;
   } catch (error) {
-    logger.warn('Nominatim reverse fetch error', { error: String(error) });
+    logger.warn('Nominatim reverse fetch error', { error: getErrorMessage(error) });
     return null;
   }
 }
@@ -225,7 +226,7 @@ async function handleGet(request: NextRequest): Promise<Response> {
 
     return NextResponse.json(formatReverseResult(result));
   } catch (error) {
-    logger.error('Reverse geocoding API error', { error: String(error) });
+    logger.error('Reverse geocoding API error', { error: getErrorMessage(error) });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

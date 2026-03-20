@@ -20,6 +20,7 @@ import { validateQrToken } from '@/services/attendance/qr-token-service';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('api/attendance/qr/validate');
 
@@ -81,7 +82,7 @@ const baseGET = async (request: NextRequest): Promise<NextResponse<ValidateQrRes
     });
   } catch (error) {
     logger.error('QR validation error', {
-      error: error instanceof Error ? error.message : 'Unknown',
+      error: getErrorMessage(error, 'Unknown'),
     });
 
     return NextResponse.json(

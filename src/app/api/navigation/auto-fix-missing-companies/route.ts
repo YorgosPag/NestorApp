@@ -40,6 +40,7 @@ import { generateNavigationId } from '@/services/enterprise-id.service';
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('NavigationAutoFixRoute');
 
@@ -199,7 +200,7 @@ async function handleAutoFixExecute(request: NextRequest, ctx: AuthContext): Pro
             logger.info('[Navigation/AutoFix] FIXED: Added company to navigation', { companyName, projectCount });
 
           } catch (error) {
-            logger.error('[Navigation/AutoFix] Failed to add company to navigation', { companyName, error: error instanceof Error ? error.message : String(error) });
+            logger.error('[Navigation/AutoFix] Failed to add company to navigation', { companyName, error: getErrorMessage(error) });
             result.fixes.push({
               companyId,
               companyName,
@@ -282,18 +283,18 @@ async function handleAutoFixExecute(request: NextRequest, ctx: AuthContext): Pro
       },
       `Navigation auto-fix by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      logger.error('[Navigation/AutoFix] Audit logging failed (non-blocking)', { error: err instanceof Error ? err.message : String(err) });
+      logger.error('[Navigation/AutoFix] Audit logging failed (non-blocking)', { error: getErrorMessage(err) });
     });
 
     return NextResponse.json({ ...result, executionTimeMs: duration });
 
   } catch (error: unknown) {
-    logger.error('[Navigation/AutoFix] Enterprise auto-fix failed', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('[Navigation/AutoFix] Enterprise auto-fix failed', { error: getErrorMessage(error) });
     const duration = Date.now() - startTime;
 
     return NextResponse.json({
       success: false,
-      message: `Auto-fix failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      message: `Auto-fix failed: ${getErrorMessage(error)}`,
       fixes: [],
       stats: {
         companiesChecked: 0,

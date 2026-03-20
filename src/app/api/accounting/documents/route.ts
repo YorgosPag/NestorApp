@@ -28,6 +28,7 @@ import type { IDocumentAnalyzer } from '@/subapps/accounting/types/interfaces';
 import { createOpenAIDocumentAnalyzer } from '@/subapps/accounting/services/external/openai-document-analyzer';
 import { DocumentAnalyzerStub } from '@/subapps/accounting/services/external/document-analyzer.stub';
 import type {
+import { getErrorMessage } from '@/lib/error-utils';
   DocumentProcessingStatus,
   DocumentType,
   ReceivedExpenseDocument,
@@ -75,7 +76,7 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
 
         return NextResponse.json({ success: true, data: documents });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to list documents';
+        const message = getErrorMessage(error, 'Failed to list documents');
         return NextResponse.json(
           { success: false, error: message },
           { status: 500 }
@@ -169,7 +170,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
           { status: 201 }
         );
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to create document';
+        const message = getErrorMessage(error, 'Failed to create document');
         return NextResponse.json(
           { success: false, error: message },
           { status: 500 }

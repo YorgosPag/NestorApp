@@ -18,6 +18,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { HOLD_TYPES } from '@/config/domain-constants';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('CronFilePurge');
 
@@ -90,7 +91,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       } catch (err) {
         logger.error('Failed to purge file', {
           fileId: doc.id,
-          error: err instanceof Error ? err.message : String(err),
+          error: getErrorMessage(err),
         });
       }
     }
@@ -104,7 +105,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       totalChecked: snapshot.size,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Purge cron failed';
+    const message = getErrorMessage(err, 'Purge cron failed');
     logger.error(`Cron purge error: ${message}`);
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }

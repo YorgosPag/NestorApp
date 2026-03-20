@@ -36,6 +36,7 @@ import { withAuth, logSystemOperation, extractRequestMetadata } from '@/lib/auth
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withTelegramRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('TelegramWebhookAdminRoute');
 
@@ -87,7 +88,7 @@ async function callTelegramApi<T>(method: string, params?: Record<string, unknow
   } catch (error) {
     return {
       ok: false,
-      description: error instanceof Error ? error.message : 'Unknown error'
+      description: getErrorMessage(error)
     };
   }
 }

@@ -34,6 +34,7 @@ import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 // 🏢 ENTERPRISE: Import from centralized search types (ADR-029 - ZERO duplicates)
 import {
+import { getErrorMessage } from '@/lib/error-utils';
   SEARCH_ENTITY_TYPES,
   SEARCH_AUDIENCE,
   type SearchEntityType,
@@ -920,7 +921,7 @@ export const POST = withSensitiveRateLimit(withAuth<BackfillApiResponse>(
       );
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = getErrorMessage(error);
       logger.error('Search Backfill error', { error: errorMessage });
       return createErrorResponse(errorMessage, 500);
     }
@@ -1154,7 +1155,7 @@ export const PATCH = withAuth<MigrationApiResponse>(
       );
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = getErrorMessage(error);
       logger.error('Contact Migration error', { error: errorMessage });
       return createErrorResponse(errorMessage, 500);
     }

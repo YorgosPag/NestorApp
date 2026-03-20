@@ -22,6 +22,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { AI_ANALYSIS_DEFAULTS } from '@/config/ai-analysis-config';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // LOGGER
@@ -174,7 +175,7 @@ export const POST = withHeavyRateLimit(
           text: transcribedText,
         });
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+        const message = getErrorMessage(err);
         const isTimeout = message.includes('abort');
 
         logger.error(`${isTimeout ? 'Timeout' : 'Error'}: ${message}`);

@@ -31,6 +31,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { processClientBatch, BATCH_SIZE_READ } from '@/lib/admin-batch-utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('MigrateDxfRoute');
 
@@ -261,7 +262,7 @@ class DxfMigrationAPI {
         migratedCount++;
 
       } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage = getErrorMessage(error);
         const errorMsg = `Failed to migrate ${fileInfo.fileName}: ${errorMessage}`;
         logs.push(`   ❌ ${errorMsg}`);
         errors.push(errorMsg);
@@ -382,7 +383,7 @@ async function handleMigrateDxfPreview(
     return NextResponse.json({
       success: false,
       error: 'DRY RUN Analysis failed',
-      details: error instanceof Error ? error.message : String(error)
+      details: getErrorMessage(error)
     }, { status: 500 });
   }
 }
@@ -501,7 +502,7 @@ async function handleMigrateDxfExecute(
     return NextResponse.json({
       success: false,
       error: 'LIVE Migration failed',
-      details: error instanceof Error ? error.message : String(error)
+      details: getErrorMessage(error)
     }, { status: 500 });
   }
 }

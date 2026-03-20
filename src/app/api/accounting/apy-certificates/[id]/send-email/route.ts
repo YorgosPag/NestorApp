@@ -34,6 +34,7 @@ import { wrapInBrandedTemplate } from '@/services/email-templates/base-email-tem
 import { sendReplyViaMailgun } from '@/services/ai-pipeline/shared/mailgun-sender';
 import type { APYEmailSendRecord } from '@/subapps/accounting/types';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('APY_SEND_EMAIL');
 
@@ -209,7 +210,7 @@ async function handlePost(
         });
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : 'Failed to send APY certificate email';
+          getErrorMessage(error, 'Failed to send APY certificate email');
         logger.error('APY certificate email endpoint error', { certificateId: id, error: message });
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }

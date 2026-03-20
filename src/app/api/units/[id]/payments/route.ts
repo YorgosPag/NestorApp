@@ -18,6 +18,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import type { CreatePaymentInput } from '@/types/payment-plan';
+import { getErrorMessage } from '@/lib/error-utils';
 
 type SegmentData = { params: Promise<{ id: string }> };
 
@@ -37,7 +38,7 @@ async function handleGet(
         const payments = await PaymentPlanService.getPayments(unitId);
         return NextResponse.json({ success: true, data: payments });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to get payments';
+        const message = getErrorMessage(error, 'Failed to get payments');
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     }
@@ -85,7 +86,7 @@ async function handlePost(
 
         return NextResponse.json({ success: true, data: result.payment }, { status: 201 });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to record payment';
+        const message = getErrorMessage(error, 'Failed to record payment');
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     }

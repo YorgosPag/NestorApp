@@ -27,6 +27,7 @@ import {
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import type { APYCertificate } from '@/subapps/accounting/types';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('APY_CERTIFICATES');
 
@@ -73,7 +74,7 @@ async function handleGet(
 
         return NextResponse.json({ success: true, data: certificates });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to list APY certificates';
+        const message = getErrorMessage(error, 'Failed to list APY certificates');
         logger.error('APY certificates list error', { error: message });
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
@@ -171,7 +172,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
 
         return NextResponse.json({ success: true, data: { id: result.id } }, { status: 201 });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to create APY certificate';
+        const message = getErrorMessage(error, 'Failed to create APY certificate');
         logger.error('APY certificate create error', { error: message });
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }

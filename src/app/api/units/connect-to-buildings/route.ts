@@ -21,6 +21,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('UnitsConnectBuildingsRoute');
 
@@ -187,7 +188,7 @@ export const POST = withHeavyRateLimit(
 
       } catch (error) {
         logger.error('[Units/ConnectToBuildings] Error', {
-          error: error instanceof Error ? error.message : String(error),
+          error: getErrorMessage(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });
@@ -195,7 +196,7 @@ export const POST = withHeavyRateLimit(
         return NextResponse.json({
           success: false,
           error: 'Failed to connect units to buildings',
-          details: error instanceof Error ? error.message : 'Unknown error'
+          details: getErrorMessage(error)
         }, { status: 500 });
       }
     },

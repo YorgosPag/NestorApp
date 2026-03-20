@@ -10,6 +10,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { EuriborService } from '@/services/euribor.service';
 import type { BankSpreadConfig, BankSpreadsResponse } from '@/types/interest-calculator';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // GET — Read current spreads
@@ -26,7 +27,7 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
         const config = await EuriborService.getBankSpreads();
         return NextResponse.json({ success: true, config } satisfies BankSpreadsResponse);
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to read spreads';
+        const message = getErrorMessage(error, 'Failed to read spreads');
         return NextResponse.json(
           { success: false, error: message } satisfies BankSpreadsResponse,
           { status: 500 }
@@ -84,7 +85,7 @@ async function handlePut(request: NextRequest): Promise<NextResponse> {
 
         return NextResponse.json({ success: true, config } satisfies BankSpreadsResponse);
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to update spreads';
+        const message = getErrorMessage(error, 'Failed to update spreads');
         return NextResponse.json(
           { success: false, error: message } satisfies BankSpreadsResponse,
           { status: 500 }

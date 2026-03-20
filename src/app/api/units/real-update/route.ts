@@ -26,6 +26,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateContactId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { validateUnitFieldLocking } from '@/lib/firestore/unit-field-locking';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('UnitsRealUpdateRoute');
 
@@ -127,7 +128,7 @@ const postHandler = async (request: NextRequest) => {
               createdContacts.push(contact);
               logger.info('[Units/RealUpdate] Contact already exists', { contactName: contact.name });
             } else {
-              logger.error('[Units/RealUpdate] Error creating contact', { contactName: contact.name, error: error instanceof Error ? error.message : String(error) });
+              logger.error('[Units/RealUpdate] Error creating contact', { contactName: contact.name, error: getErrorMessage(error) });
             }
           }
         }
@@ -170,7 +171,7 @@ const postHandler = async (request: NextRequest) => {
             logger.info('[Units/RealUpdate] Unit linked to contact', { unitName: unit.name, contactName: contact.name });
 
           } catch (error) {
-            logger.error('[Units/RealUpdate] Error updating unit', { unitName: unit.name, error: error instanceof Error ? error.message : String(error) });
+            logger.error('[Units/RealUpdate] Error updating unit', { unitName: unit.name, error: getErrorMessage(error) });
           }
         }
 
@@ -187,7 +188,7 @@ const postHandler = async (request: NextRequest) => {
 
       } catch (error) {
         logger.error('[Units/RealUpdate] Error', {
-          error: error instanceof Error ? error.message : String(error),
+          error: getErrorMessage(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });
@@ -195,7 +196,7 @@ const postHandler = async (request: NextRequest) => {
         return NextResponse.json({
           success: false,
           error: 'Failed to perform real database update',
-          details: error instanceof Error ? error.message : 'Unknown error'
+          details: getErrorMessage(error)
         }, { status: 500 });
       }
     },

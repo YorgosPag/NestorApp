@@ -18,6 +18,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createModuleLogger } from '@/lib/telemetry';
 import { OverdueAlertService } from '@/services/overdue-alert.service';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('OVERDUE_ALERTS_CRON');
 
@@ -85,7 +86,7 @@ async function handleGET(request: NextRequest): Promise<Response> {
     });
   } catch (error) {
     const elapsedMs = Date.now() - startTime;
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = getErrorMessage(error);
 
     logger.error('Overdue alerts scan error', { error: errorMessage, trigger, elapsedMs });
 

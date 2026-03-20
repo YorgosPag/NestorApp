@@ -19,6 +19,7 @@ import type { UserRecord } from 'firebase-admin/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('MfaEnrollCompleteRoute');
 
@@ -114,7 +115,7 @@ async function handlePOST(request: NextRequest): Promise<NextResponse<MfaEnrollC
       message: 'MFA enrollment synced',
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = getErrorMessage(error);
     return NextResponse.json(
       {
         success: false,

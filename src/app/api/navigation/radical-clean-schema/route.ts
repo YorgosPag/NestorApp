@@ -40,6 +40,7 @@ import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('NavigationRadicalCleanRoute');
 
@@ -200,7 +201,7 @@ async function handleRadicalCleanupExecute(request: NextRequest, ctx: AuthContex
         logger.info('[Navigation/RadicalClean] Document recreated', { docId, beforeFieldCount, afterFieldCount, newFields: Object.keys(pureSchema) });
 
       } catch (error) {
-        logger.error('[Navigation/RadicalClean] Failed to recreate document', { docId: navDoc.id, error: error instanceof Error ? error.message : String(error) });
+        logger.error('[Navigation/RadicalClean] Failed to recreate document', { docId: navDoc.id, error: getErrorMessage(error) });
         result.stats.errors++;
         result.operations.push({
           documentId: navDoc.id,
@@ -279,18 +280,18 @@ async function handleRadicalCleanupExecute(request: NextRequest, ctx: AuthContex
       },
       `CRITICAL: Radical schema cleanup by ${ctx.globalRole} ${ctx.email} - DELETED ALL documents`
     ).catch((err: unknown) => {
-      logger.error('[Navigation/RadicalClean] Audit logging failed (non-blocking)', { error: err instanceof Error ? err.message : String(err) });
+      logger.error('[Navigation/RadicalClean] Audit logging failed (non-blocking)', { error: getErrorMessage(err) });
     });
 
     return NextResponse.json(result);
 
   } catch (error: unknown) {
-    logger.error('[Navigation/RadicalClean] Radical enterprise cleanup failed', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('[Navigation/RadicalClean] Radical enterprise cleanup failed', { error: getErrorMessage(error) });
     const duration = Date.now() - startTime;
 
     return NextResponse.json({
       success: false,
-      message: `Radical cleanup failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      message: `Radical cleanup failed: ${getErrorMessage(error)}`,
       operations: [],
       stats: {
         documentsProcessed: 0,

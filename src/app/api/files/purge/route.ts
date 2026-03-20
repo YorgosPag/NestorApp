@@ -20,6 +20,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { HOLD_TYPES } from '@/config/domain-constants';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('FilePurgeRoute');
 
@@ -122,7 +123,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<PurgeResu
 
         purgedCount++;
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+        const msg = getErrorMessage(err);
         errors.push(`${doc.id}: ${msg}`);
         logger.error('Failed to purge file', { fileId: doc.id, error: msg });
       }
@@ -137,7 +138,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<PurgeResu
       errors,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Purge failed';
+    const message = getErrorMessage(err, 'Purge failed');
     logger.error(`Purge error: ${message}`);
     return NextResponse.json(
       { success: false, purgedCount: 0, skippedCount: 0, errors: [message] },

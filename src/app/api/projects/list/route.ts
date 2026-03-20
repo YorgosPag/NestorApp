@@ -37,6 +37,7 @@ import { generateProjectId, generateNavigationId } from '@/services/enterprise-i
 import { projectCodeService } from '@/services/project-code.service';
 import { isRoleBypass } from '@/lib/auth/roles';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('ProjectsListRoute');
 
@@ -372,7 +373,7 @@ export const POST = withHighRateLimit(
 
       } catch (error) {
         logger.error('[Projects] Error creating project', { error });
-        throw new ApiError(500, error instanceof Error ? error.message : 'Failed to create project');
+        throw new ApiError(500, getErrorMessage(error, 'Failed to create project'));
       }
     },
     { permissions: 'projects:projects:create' }

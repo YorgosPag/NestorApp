@@ -10,6 +10,7 @@ import { FieldValue, type QuerySnapshot, type DocumentData } from 'firebase-admi
 import type { BuildingMilestone } from '@/types/building/milestone';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeToISO } from '@/lib/date-local';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('MilestonesRoute');
 
@@ -61,7 +62,7 @@ export async function GET(
           .orderBy('order', 'asc')
           .get();
       } catch (firestoreError) {
-        const errMsg = firestoreError instanceof Error ? firestoreError.message : String(firestoreError);
+        const errMsg = getErrorMessage(firestoreError);
 
         // Composite index not yet built — return empty instead of 500
         if (errMsg.includes('FAILED_PRECONDITION') || errMsg.includes('index')) {

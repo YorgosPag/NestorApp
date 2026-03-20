@@ -22,6 +22,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import type { UpdateJournalEntryInput } from '@/subapps/accounting/types';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // GET — Single Journal Entry
@@ -48,7 +49,7 @@ async function handleGet(
 
         return NextResponse.json({ success: true, data: entry });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to fetch journal entry';
+        const message = getErrorMessage(error, 'Failed to fetch journal entry');
         return NextResponse.json(
           { success: false, error: message },
           { status: 500 }
@@ -101,7 +102,7 @@ async function handlePatch(
           data: { entryId: id, updated: true },
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to update journal entry';
+        const message = getErrorMessage(error, 'Failed to update journal entry');
         return NextResponse.json(
           { success: false, error: message },
           { status: 500 }
@@ -146,7 +147,7 @@ async function handleDelete(
           data: { entryId: id, deleted: true },
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to delete journal entry';
+        const message = getErrorMessage(error, 'Failed to delete journal entry');
         return NextResponse.json(
           { success: false, error: message },
           { status: 500 }

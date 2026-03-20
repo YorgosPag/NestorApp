@@ -29,6 +29,7 @@ import type {
 } from './types';
 import { getCompanyId } from '@/config/tenant';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('WhatsAppWebhookHandler');
 
@@ -127,7 +128,7 @@ export async function handlePOST(request: NextRequest): Promise<NextResponse> {
         } catch (error) {
           // Non-fatal: daily cron will retry pipeline items
           logger.warn('[WhatsApp->Pipeline] after(): pipeline batch failed (cron will retry)', {
-            error: error instanceof Error ? error.message : String(error),
+            error: getErrorMessage(error),
           });
         }
       });
@@ -308,7 +309,7 @@ async function handleFeedbackButton(buttonId: string, senderPhone: string): Prom
   } catch (error) {
     // Non-fatal
     logger.warn('WhatsApp feedback handler error', {
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
   }
 }
@@ -356,7 +357,7 @@ async function handleCategoryButton(buttonId: string, senderPhone: string): Prom
     logger.info('WhatsApp negative category recorded', { feedbackDocId, category });
   } catch (error) {
     logger.warn('WhatsApp category handler error', {
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
   }
 }
@@ -404,7 +405,7 @@ async function feedWhatsAppToPipeline(msg: {
   } catch (error) {
     // Non-fatal: pipeline failure should never break the WhatsApp webhook
     logger.warn('[WhatsApp->Pipeline] Non-fatal error', {
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
   }
 }

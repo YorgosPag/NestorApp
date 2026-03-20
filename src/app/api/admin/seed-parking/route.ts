@@ -39,6 +39,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { processAdminBatch, BATCH_SIZE_READ } from '@/lib/admin-batch-utils';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('SeedParkingRoute');
 
@@ -318,7 +319,7 @@ async function handleSeedParkingPreview(
     return NextResponse.json({
       success: false,
       error: 'Failed to preview parking spots',
-      details: error instanceof Error ? error.message : 'Unknown error',
+      details: getErrorMessage(error),
     }, { status: 500 });
   }
 }
@@ -453,7 +454,7 @@ async function handleSeedParkingExecute(
     return NextResponse.json({
       success: false,
       error: 'Failed to seed parking spots',
-      details: error instanceof Error ? error.message : 'Unknown error',
+      details: getErrorMessage(error),
     }, { status: 500 });
   }
 }
@@ -535,7 +536,7 @@ async function handleSeedParkingDelete(
     return NextResponse.json({
       success: false,
       error: 'Failed to delete parking spots',
-      details: error instanceof Error ? error.message : 'Unknown error',
+      details: getErrorMessage(error),
     }, { status: 500 });
   }
 }
@@ -786,7 +787,7 @@ async function handleForeignKeyValidation(
     return NextResponse.json({
       success: false,
       error: 'Failed to validate FK',
-      details: error instanceof Error ? error.message : 'Unknown error',
+      details: getErrorMessage(error),
       migrationId,
     }, { status: 500 });
   }

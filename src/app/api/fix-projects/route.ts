@@ -39,6 +39,7 @@ const logger = createModuleLogger('FixProjectsRoute');
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { getErrorMessage } from '@/lib/error-utils';
 
 /**
  * POST - Execute Project CompanyId Fix (withAuth protected)
@@ -205,7 +206,7 @@ async function handleFixProjectsExecute(request: NextRequest, ctx: AuthContext):
     });
 
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = getErrorMessage(error);
     logger.error('Fix Projects Error', { error: errorMessage });
     const duration = Date.now() - startTime;
 

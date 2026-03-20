@@ -23,6 +23,7 @@ import { validateGeofenceConfig } from '@/services/attendance/geofence-service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { logAuditEvent } from '@/lib/auth/audit';
 import type { GeofenceConfig } from '@/components/projects/ika/contracts';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('api/attendance/geofence');
 
@@ -82,7 +83,7 @@ const baseGET = async (request: NextRequest) => {
         return NextResponse.json({ success: true, geofence });
       } catch (error) {
         logger.error('Geofence GET failed', {
-          error: error instanceof Error ? error.message : 'Unknown',
+          error: getErrorMessage(error, 'Unknown'),
           userId: ctx.uid,
         });
 
@@ -193,7 +194,7 @@ const basePOST = async (request: NextRequest) => {
         }).catch((auditError) => {
           // Audit failure must not block the response
           logger.warn('Geofence audit log failed', {
-            error: auditError instanceof Error ? auditError.message : 'Unknown',
+            error: getErrorMessage(auditError, 'Unknown'),
           });
         });
 
@@ -209,7 +210,7 @@ const basePOST = async (request: NextRequest) => {
         return NextResponse.json({ success: true, geofence: geofenceConfig });
       } catch (error) {
         logger.error('Geofence POST failed', {
-          error: error instanceof Error ? error.message : 'Unknown',
+          error: getErrorMessage(error, 'Unknown'),
           userId: ctx.uid,
         });
 

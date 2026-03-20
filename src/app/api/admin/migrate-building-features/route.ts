@@ -36,6 +36,7 @@ import { withAuth, logMigrationExecuted, extractRequestMetadata } from '@/lib/au
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('MigrateBuildingFeaturesRoute');
 
@@ -333,7 +334,7 @@ async function handleMigrateBuildingFeaturesPreview(request: NextRequest, ctx: A
       {
         success: false,
         error: 'Failed to analyze buildings',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        details: getErrorMessage(error),
         executionTimeMs: duration,
       },
       { status: 500 }
@@ -453,7 +454,7 @@ async function handleMigrateBuildingFeaturesExecute(request: NextRequest, ctx: A
           id: preview.id,
           name: preview.name,
           status: 'error',
-          error: err instanceof Error ? err.message : 'Unknown error',
+          error: getErrorMessage(err),
         });
       }
     }
@@ -516,7 +517,7 @@ async function handleMigrateBuildingFeaturesExecute(request: NextRequest, ctx: A
       {
         success: false,
         error: 'Failed to migrate building features',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        details: getErrorMessage(error),
         executionTimeMs: duration,
       },
       { status: 500 }

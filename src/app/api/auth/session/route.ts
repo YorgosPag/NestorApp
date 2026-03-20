@@ -18,6 +18,7 @@ import { getAdminAuth } from '@/lib/firebaseAdmin';
 import { getCurrentRuntimeEnvironment } from '@/config/environment-security-config';
 import { SESSION_COOKIE_CONFIG, getSessionCookieDurationMs } from '@/lib/auth/security-policy';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // ============================================================================
 // TYPES
@@ -118,7 +119,7 @@ const postHandler = async (request: NextRequest): Promise<NextResponse<SessionRe
 
     return response;
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = getErrorMessage(error);
     return NextResponse.json(
       {
         success: false,

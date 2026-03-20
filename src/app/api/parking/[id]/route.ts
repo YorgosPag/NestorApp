@@ -27,6 +27,7 @@ const logger = createModuleLogger('ParkingIdRoute');
 // ============================================================================
 
 import type { ParkingSpotType, ParkingSpotStatus, ParkingLocationZone } from '@/types/parking';
+import { getErrorMessage } from '@/lib/error-utils';
 
 interface ParkingPatchPayload {
   number?: string;
@@ -98,7 +99,7 @@ export const PATCH = withStandardRateLimit(
         if (body.number?.trim() && body.number.trim() !== (existing.number as string)) {
           propagateSpaceAllocationCodeChange(id, body.number.trim(), (existing.buildingId as string) ?? null)
             .catch((err) => logger.warn('allocationCode cascade failed (non-blocking)', {
-              id, error: err instanceof Error ? err.message : String(err),
+              id, error: getErrorMessage(err),
             }));
         }
 
@@ -112,7 +113,7 @@ export const PATCH = withStandardRateLimit(
             apiPath: '/api/parking/[id] (PATCH)',
           }).catch((err) => {
             logger.warn('linkEntity failed (non-blocking)', {
-              id, error: err instanceof Error ? err.message : String(err),
+              id, error: getErrorMessage(err),
             });
           });
         }
@@ -127,8 +128,8 @@ export const PATCH = withStandardRateLimit(
         return apiSuccess<ParkingMutationResult>({ id }, 'Parking spot updated');
       } catch (error) {
         if (error instanceof ApiError) throw error;
-        logger.error('Error updating parking spot', { id, error: error instanceof Error ? error.message : String(error) });
-        throw new ApiError(500, error instanceof Error ? error.message : 'Failed to update parking spot');
+        logger.error('Error updating parking spot', { id, error: getErrorMessage(error) });
+        throw new ApiError(500, getErrorMessage(error, 'Failed to update parking spot'));
       }
     },
     { permissions: 'units:units:update' }
@@ -173,8 +174,8 @@ export const DELETE = withStandardRateLimit(
         return apiSuccess<ParkingMutationResult>({ id }, 'Parking spot deleted');
       } catch (error) {
         if (error instanceof ApiError) throw error;
-        logger.error('Error deleting parking spot', { id, error: error instanceof Error ? error.message : String(error) });
-        throw new ApiError(500, error instanceof Error ? error.message : 'Failed to delete parking spot');
+        logger.error('Error deleting parking spot', { id, error: getErrorMessage(error) });
+        throw new ApiError(500, getErrorMessage(error, 'Failed to delete parking spot'));
       }
     },
     { permissions: 'units:units:delete' }

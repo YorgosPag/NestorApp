@@ -24,6 +24,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import type { FiscalQuarter } from '@/subapps/accounting/types';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // GET — VAT Summary (Quarter or Annual)
@@ -77,7 +78,7 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
 
         return NextResponse.json({ success: true, data: summary });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to get VAT summary';
+        const message = getErrorMessage(error, 'Failed to get VAT summary');
         return NextResponse.json(
           { success: false, error: message },
           { status: 500 }

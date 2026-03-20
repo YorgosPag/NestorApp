@@ -10,6 +10,7 @@ import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts';
 import type { Contact } from '@/types/contacts';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('ContactRoute');
 
@@ -259,7 +260,7 @@ export async function GET(
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Άγνωστο σφάλμα φόρτωσης επαφής',
+        error: getErrorMessage(error, 'Άγνωστο σφάλμα φόρτωσης επαφής'),
         errorCategory,
         contactId: contactId || null,
         timestamp: new Date().toISOString()

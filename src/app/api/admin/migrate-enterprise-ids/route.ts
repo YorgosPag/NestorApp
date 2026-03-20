@@ -51,6 +51,7 @@ import {
 } from '@/services/enterprise-id.service';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('MigrateEnterpriseIds');
 
@@ -543,7 +544,7 @@ export const POST = withSensitiveRateLimit(
             subcollectionsMigrated, referencesUpdated,
           });
         } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
+          const msg = getErrorMessage(err);
           errors.push({ id: bldg.id, collection: COLLECTIONS.BUILDINGS, error: msg });
           logger.error('Building migration failed', { id: bldg.id, error: msg });
         }
@@ -578,7 +579,7 @@ export const POST = withSensitiveRateLimit(
             type: contact.type, referencesUpdated,
           });
         } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
+          const msg = getErrorMessage(err);
           errors.push({ id: contact.id, collection: COLLECTIONS.CONTACTS, error: msg });
           logger.error('Contact migration failed', { id: contact.id, error: msg });
         }
@@ -630,7 +631,7 @@ export const POST = withSensitiveRateLimit(
               referencesUpdated: config?.hasInternalId ? 1 : 0,
             });
           } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
+            const msg = getErrorMessage(err);
             errors.push({
               id: legacyDoc.id,
               collection: legacyDoc.collection,

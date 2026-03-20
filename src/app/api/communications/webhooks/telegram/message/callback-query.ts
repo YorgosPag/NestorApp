@@ -15,6 +15,7 @@ import {
 } from '@/services/ai-pipeline/feedback-keyboard';
 import { getFeedbackService } from '@/services/ai-pipeline/feedback-service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 /** Phase 6F: Result type for suggestion callbacks that need pipeline re-feed */
 export interface SuggestionCallbackResult {
@@ -184,7 +185,7 @@ async function handleSuggestionCallback(
     };
   } catch (error) {
     logger.warn('Failed to handle suggestion callback', {
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
     return null;
   }

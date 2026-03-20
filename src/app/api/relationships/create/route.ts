@@ -23,6 +23,7 @@ import type {
   RelationshipOperationResult
 } from '@/services/relationships/enterprise-relationship-engine.contracts';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('RelationshipsCreateRoute');
 
@@ -174,7 +175,7 @@ async function handleCreateRelationship(request: NextRequest, ctx: AuthContext):
 
   } catch (error) {
     // 🚨 ENTERPRISE ERROR HANDLING
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const errorMessage = getErrorMessage(error, 'Unknown error occurred');
 
     const errorResult: RelationshipOperationResult = {
       success: false,
@@ -194,7 +195,7 @@ async function handleCreateRelationship(request: NextRequest, ctx: AuthContext):
       }]
     };
 
-    logger.error('[Relationships/Create] Enterprise Relationship API Error', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('[Relationships/Create] Enterprise Relationship API Error', { error: getErrorMessage(error) });
     return NextResponse.json(errorResult, { status: 500 });
   }
 }
@@ -255,7 +256,7 @@ async function validateEntityOwnership(
         return false;
     }
   } catch (error) {
-    logger.error('[Relationships/Create] Error validating entity ownership', { entityType, entityId, error: error instanceof Error ? error.message : String(error) });
+    logger.error('[Relationships/Create] Error validating entity ownership', { entityType, entityId, error: getErrorMessage(error) });
     return false;
   }
 }

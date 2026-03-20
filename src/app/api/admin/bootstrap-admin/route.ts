@@ -25,6 +25,7 @@ import { getAdminAuth, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('BootstrapAdminRoute');
 
@@ -240,7 +241,7 @@ async function handleBootstrapPost(request: NextRequest): Promise<NextResponse<B
         {
           success: false,
           message: 'Failed to set custom claims',
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: getErrorMessage(error)
         },
         { status: 500 }
       );
@@ -281,7 +282,7 @@ async function handleBootstrapPost(request: NextRequest): Promise<NextResponse<B
         {
           success: false,
           message: 'Custom claims set but Firestore doc failed',
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: getErrorMessage(error),
           warning: 'User can authenticate but may have issues with permissions'
         },
         { status: 207 } // 207 Multi-Status (partial success)
@@ -315,7 +316,7 @@ async function handleBootstrapPost(request: NextRequest): Promise<NextResponse<B
       {
         success: false,
         message: 'Internal server error',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: getErrorMessage(error)
       },
       { status: 500 }
     );

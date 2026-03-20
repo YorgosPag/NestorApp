@@ -19,6 +19,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
 import { linkEntity } from '@/lib/firestore/entity-linking.service';
 import { propagateSpaceAllocationCodeChange } from '@/lib/firestore/cascade-propagation.service';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('StoragesIdRoute');
 
@@ -93,7 +94,7 @@ export const PATCH = withStandardRateLimit(
         if (body.name?.trim() && body.name.trim() !== (existing.name as string)) {
           propagateSpaceAllocationCodeChange(id, body.name.trim(), (existing.buildingId as string) ?? null)
             .catch((err) => logger.warn('allocationCode cascade failed (non-blocking)', {
-              id, error: err instanceof Error ? err.message : String(err),
+              id, error: getErrorMessage(err),
             }));
         }
 
@@ -107,7 +108,7 @@ export const PATCH = withStandardRateLimit(
             apiPath: '/api/storages/[id] (PATCH)',
           }).catch((err) => {
             logger.warn('linkEntity failed (non-blocking)', {
-              id, error: err instanceof Error ? err.message : String(err),
+              id, error: getErrorMessage(err),
             });
           });
         }
@@ -122,8 +123,8 @@ export const PATCH = withStandardRateLimit(
         return apiSuccess<StorageMutationResult>({ id }, 'Storage unit updated');
       } catch (error) {
         if (error instanceof ApiError) throw error;
-        logger.error('Error updating storage', { id, error: error instanceof Error ? error.message : String(error) });
-        throw new ApiError(500, error instanceof Error ? error.message : 'Failed to update storage unit');
+        logger.error('Error updating storage', { id, error: getErrorMessage(error) });
+        throw new ApiError(500, getErrorMessage(error, 'Failed to update storage unit'));
       }
     },
     { permissions: 'units:units:update' }
@@ -168,8 +169,8 @@ export const DELETE = withStandardRateLimit(
         return apiSuccess<StorageMutationResult>({ id }, 'Storage unit deleted');
       } catch (error) {
         if (error instanceof ApiError) throw error;
-        logger.error('Error deleting storage', { id, error: error instanceof Error ? error.message : String(error) });
-        throw new ApiError(500, error instanceof Error ? error.message : 'Failed to delete storage unit');
+        logger.error('Error deleting storage', { id, error: getErrorMessage(error) });
+        throw new ApiError(500, getErrorMessage(error, 'Failed to delete storage unit'));
       }
     },
     { permissions: 'units:units:delete' }

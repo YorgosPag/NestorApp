@@ -3,6 +3,7 @@
 import { ADMIN_CONFIG } from './config';
 import type { InlineKeyboardMarkup, TelegramResponse } from './types';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('TelegramAdminClient');
 
@@ -54,6 +55,6 @@ export async function sendMessageToTelegram(
             return { success: false, error: 'Request timed out' };
         }
         logger.error('Error sending message to Telegram', { error });
-        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+        return { success: false, error: getErrorMessage(error) };
     }
 }

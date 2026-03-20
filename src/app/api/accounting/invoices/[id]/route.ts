@@ -22,6 +22,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import type { UpdateInvoiceInput, MyDataDocumentStatus } from '@/subapps/accounting/types';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // GET — Single Invoice
@@ -48,7 +49,7 @@ async function handleGet(
 
         return NextResponse.json({ success: true, data: invoice });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to fetch invoice';
+        const message = getErrorMessage(error, 'Failed to fetch invoice');
         return NextResponse.json(
           { success: false, error: message },
           { status: 500 }
@@ -114,7 +115,7 @@ async function handlePatch(
           data: { invoiceId: id, updated: true },
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to update invoice';
+        const message = getErrorMessage(error, 'Failed to update invoice');
         return NextResponse.json(
           { success: false, error: message },
           { status: 500 }
@@ -177,7 +178,7 @@ async function handleDelete(
           data: { invoiceId: id, cancelled: true },
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to cancel invoice';
+        const message = getErrorMessage(error, 'Failed to cancel invoice');
         return NextResponse.json(
           { success: false, error: message },
           { status: 500 }

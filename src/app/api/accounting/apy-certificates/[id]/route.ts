@@ -26,6 +26,7 @@ import {
 } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('APY_CERTIFICATE_DETAIL');
 
@@ -65,7 +66,7 @@ async function handleGet(
 
         return NextResponse.json({ success: true, data: cert });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to get APY certificate';
+        const message = getErrorMessage(error, 'Failed to get APY certificate');
         logger.error('APY certificate get error', { id, error: message });
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
@@ -121,7 +122,7 @@ async function handlePatch(
 
         return NextResponse.json({ success: true });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to update APY certificate';
+        const message = getErrorMessage(error, 'Failed to update APY certificate');
         logger.error('APY certificate update error', { id, error: message });
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }

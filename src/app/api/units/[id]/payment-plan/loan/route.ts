@@ -17,6 +17,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import type { LoanInfo } from '@/types/payment-plan';
+import { getErrorMessage } from '@/lib/error-utils';
 
 type SegmentData = { params: Promise<{ id: string }> };
 
@@ -51,7 +52,7 @@ async function handlePatch(
 
         return NextResponse.json({ success: true });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to update loan info';
+        const message = getErrorMessage(error, 'Failed to update loan info');
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     }

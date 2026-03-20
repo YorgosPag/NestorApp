@@ -20,6 +20,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { generateDailyQrToken } from '@/services/attendance/qr-token-service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('api/attendance/qr/generate');
 
@@ -108,7 +109,7 @@ const basePOST = async (request: NextRequest) => {
         });
       } catch (error) {
         logger.error('QR generation failed', {
-          error: error instanceof Error ? error.message : 'Unknown',
+          error: getErrorMessage(error, 'Unknown'),
           userId: ctx.uid,
         });
 

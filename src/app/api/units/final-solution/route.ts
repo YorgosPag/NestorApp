@@ -23,6 +23,7 @@ import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { generateTempId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { validateUnitFieldLocking } from '@/lib/firestore/unit-field-locking';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('UnitsFinalSolutionRoute');
 
@@ -169,11 +170,11 @@ export async function POST(request: NextRequest) {
             logger.info('[Units/FinalSolution] Unit linked to contact', { unitName: unit.name, unitId: unit.id, contactName: contact.name, contactId: contact.id });
 
           } catch (error) {
-            logger.error('[Units/FinalSolution] Failed to update unit', { unitName: unit.name, error: error instanceof Error ? error.message : String(error) });
+            logger.error('[Units/FinalSolution] Failed to update unit', { unitName: unit.name, error: getErrorMessage(error) });
             failedUpdates.push({
               unitId: unit.id,
               unitName: unit.name,
-              error: error instanceof Error ? error.message : 'Unknown error'
+              error: getErrorMessage(error)
             });
           }
         }
@@ -191,7 +192,7 @@ export async function POST(request: NextRequest) {
 
       } catch (error) {
         logger.error('[Units/FinalSolution] Error', {
-          error: error instanceof Error ? error.message : String(error),
+          error: getErrorMessage(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });
@@ -199,7 +200,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: false,
           error: 'Final solution failed',
-          details: error instanceof Error ? error.message : 'Unknown error'
+          details: getErrorMessage(error)
         }, { status: 500 });
       }
     },

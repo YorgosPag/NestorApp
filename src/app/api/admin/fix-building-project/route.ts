@@ -31,6 +31,7 @@ import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('FixBuildingProjectRoute');
 
@@ -122,7 +123,7 @@ async function handleFixBuildingProjectExecute(request: NextRequest, ctx: AuthCo
       {
         success: false,
         error: 'Failed to update building',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        details: getErrorMessage(error),
         executionTimeMs: duration,
       },
       { status: 500 }

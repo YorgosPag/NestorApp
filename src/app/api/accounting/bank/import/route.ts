@@ -30,6 +30,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import type {
+import { getErrorMessage } from '@/lib/error-utils';
   BankTransaction,
   ImportBatch,
   TransactionDirection,
@@ -336,7 +337,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
             await repository.createBankTransaction(transactionData);
             importedCount++;
           } catch (txError) {
-            const txMsg = txError instanceof Error ? txError.message : 'Unknown error';
+            const txMsg = getErrorMessage(txError);
             errors.push(`Row ${rowNum}: ${txMsg}`);
             skippedCount++;
           }
@@ -364,7 +365,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
 
         return NextResponse.json({ batch: completedBatch });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to import bank transactions';
+        const message = getErrorMessage(error, 'Failed to import bank transactions');
         return NextResponse.json(
           { error: message },
           { status: 500 }

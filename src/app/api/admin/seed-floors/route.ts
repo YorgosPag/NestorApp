@@ -39,6 +39,7 @@ import { generateFloorId } from '@/services/enterprise-id.service';
 import { FieldValue } from 'firebase-admin/firestore';
 import { createModuleLogger } from '@/lib/telemetry';
 import { processAdminBatch, BATCH_SIZE_READ } from '@/lib/admin-batch-utils';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('SeedFloorsRoute');
 
@@ -243,7 +244,7 @@ async function handleSeedFloorsPreview(
     return NextResponse.json({
       success: false,
       error: 'Failed to preview floors',
-      details: error instanceof Error ? error.message : 'Unknown error',
+      details: getErrorMessage(error),
     }, { status: 500 });
   }
 }
@@ -387,7 +388,7 @@ async function handleSeedFloorsExecute(
     return NextResponse.json({
       success: false,
       error: 'Failed to seed floors',
-      details: error instanceof Error ? error.message : 'Unknown error',
+      details: getErrorMessage(error),
     }, { status: 500 });
   }
 }
@@ -471,7 +472,7 @@ async function handleSeedFloorsDelete(
     return NextResponse.json({
       success: false,
       error: 'Failed to delete floors',
-      details: error instanceof Error ? error.message : 'Unknown error',
+      details: getErrorMessage(error),
     }, { status: 500 });
   }
 }

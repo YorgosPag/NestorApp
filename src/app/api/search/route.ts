@@ -36,6 +36,7 @@ import {
 } from '@/types/search';
 import { getSearchIndexConfig, extractStats } from '@/config/search-index-config';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('SearchRoute');
 
@@ -254,7 +255,7 @@ const handleGET = withAuth<ApiSuccessResponse<SearchResponseData>>(
         }
       } catch (error) {
         // 🚨 Index missing error handling
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage = getErrorMessage(error);
 
         if (errorMessage.includes('index') || errorMessage.includes('FAILED_PRECONDITION')) {
           logger.error('[Search] Missing Firestore index. Run: firebase deploy --only firestore:indexes', { entityType });

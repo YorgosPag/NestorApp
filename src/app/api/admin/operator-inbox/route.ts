@@ -30,6 +30,7 @@ import {
   getProposedItemStats,
 } from '@/services/ai-pipeline/pipeline-queue-service';
 import {
+import { getErrorMessage } from '@/lib/error-utils';
   processOperatorDecision,
 } from '@/services/ai-pipeline/operator-inbox-service';
 
@@ -116,7 +117,7 @@ export const GET = withAuth<OperatorInboxGetResponse>(
         elapsedMs: elapsed,
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = getErrorMessage(error);
       const elapsed = Date.now() - startTime;
 
       logger.error('Operator inbox GET error', {
@@ -199,7 +200,7 @@ export const POST = withAuth<OperatorInboxPostResponse>(
       }, { status: result.success ? 200 : 500 });
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = getErrorMessage(error);
       const elapsed = Date.now() - startTime;
 
       logger.error('Operator inbox POST error', {

@@ -21,6 +21,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('NotificationsAckRoute');
 
@@ -103,14 +104,14 @@ const basePOST = async (request: NextRequest) => {
         });
       } catch (error) {
         logger.error('[Notifications/Ack] Error', {
-          error: error instanceof Error ? error.message : String(error),
+          error: getErrorMessage(error),
           userId: ctx.uid
         });
 
         return NextResponse.json({
           success: false,
           error: 'Failed to mark notifications as read',
-          details: error instanceof Error ? error.message : 'Unknown error'
+          details: getErrorMessage(error)
         }, { status: 500 });
       }
     },

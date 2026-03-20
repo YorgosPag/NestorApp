@@ -21,6 +21,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import type { Member } from '@/subapps/accounting/types/entity';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // VALIDATION
@@ -65,7 +66,7 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
 
         return NextResponse.json({ success: true, data: members });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to fetch members';
+        const message = getErrorMessage(error, 'Failed to fetch members');
         return NextResponse.json(
           { success: false, error: message },
           { status: 500 }
@@ -122,7 +123,7 @@ async function handlePut(request: NextRequest): Promise<NextResponse> {
 
         return NextResponse.json({ success: true });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to save members';
+        const message = getErrorMessage(error, 'Failed to save members');
         return NextResponse.json(
           { success: false, error: message },
           { status: 500 }

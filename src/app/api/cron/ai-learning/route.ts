@@ -19,6 +19,7 @@ import { getFeedbackService } from '@/services/ai-pipeline/feedback-service';
 import { getToolAnalyticsService } from '@/services/ai-pipeline/tool-analytics-service';
 import { getChatHistoryService } from '@/services/ai-pipeline/chat-history-service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('CRON_AI_LEARNING');
 
@@ -79,7 +80,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       ...results,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = getErrorMessage(error);
     const durationMs = Date.now() - startTime;
 
     logger.error('AI learning cron failed', {

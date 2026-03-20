@@ -19,6 +19,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { createModuleLogger } from '@/lib/telemetry';
 import { deflateRawSync } from 'zlib';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('BatchDownloadRoute');
 
@@ -257,7 +258,7 @@ async function handleBatchDownload(request: NextRequest, ctx: AuthContext) {
   } catch (error) {
     logger.error('Batch download error', { error });
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown' },
+      { error: 'Internal server error', details: getErrorMessage(error, 'Unknown') },
       { status: 500 }
     );
   }

@@ -32,6 +32,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { ENTITY_STATUS } from '@/constants/entity-status-values';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('ExecuteAdminMigrationRoute');
 
@@ -260,7 +261,7 @@ async function handleAdminSdkMigration(
 
   } catch (error) {
     const executionTime = Date.now() - startTime;
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = getErrorMessage(error);
 
     logger.error('ADMIN MIGRATION FAILED', { error: errorMessage });
 

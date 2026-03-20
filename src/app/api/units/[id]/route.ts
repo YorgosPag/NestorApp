@@ -29,6 +29,7 @@ import type { PersonaData, ClientPersona } from '@/types/contacts/personas';
 import { validateContactForSale, isServiceContact } from '@/types/contacts/helpers';
 import type { Contact } from '@/types/contacts/contracts';
 import type { CommercialTransactionType } from '@/types/contacts/helpers';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('UnitIdRoute');
 
@@ -300,7 +301,7 @@ export const PATCH = withStandardRateLimit(
               logger.warn('Payment plan resync failed (non-blocking)', {
                 unitId: id,
                 newPrice,
-                error: err instanceof Error ? err.message : String(err),
+                error: getErrorMessage(err),
               });
             });
           }
@@ -319,7 +320,7 @@ export const PATCH = withStandardRateLimit(
           }).catch((err) => {
             logger.warn('linkEntity failed (non-blocking)', {
               unitId: id,
-              error: err instanceof Error ? err.message : String(err),
+              error: getErrorMessage(err),
             });
           });
         }
@@ -342,7 +343,7 @@ export const PATCH = withStandardRateLimit(
             activateClientPersona(adminDb, buyerContactId).catch((err) => {
               logger.warn('Auto-persona activation failed (non-blocking)', {
                 buyerContactId,
-                error: err instanceof Error ? err.message : String(err),
+                error: getErrorMessage(err),
               });
             });
           }
@@ -366,8 +367,8 @@ export const PATCH = withStandardRateLimit(
         return apiSuccess<UnitMutationResult>({ id }, 'Unit updated');
       } catch (error) {
         if (error instanceof ApiError) throw error;
-        logger.error('Error updating unit', { id, error: error instanceof Error ? error.message : String(error) });
-        throw new ApiError(500, error instanceof Error ? error.message : 'Failed to update unit');
+        logger.error('Error updating unit', { id, error: getErrorMessage(error) });
+        throw new ApiError(500, getErrorMessage(error, 'Failed to update unit'));
       }
     },
     { permissions: 'units:units:update' }
@@ -412,8 +413,8 @@ export const DELETE = withStandardRateLimit(
         return apiSuccess<UnitMutationResult>({ id }, 'Unit deleted');
       } catch (error) {
         if (error instanceof ApiError) throw error;
-        logger.error('Error deleting unit', { id, error: error instanceof Error ? error.message : String(error) });
-        throw new ApiError(500, error instanceof Error ? error.message : 'Failed to delete unit');
+        logger.error('Error deleting unit', { id, error: getErrorMessage(error) });
+        throw new ApiError(500, getErrorMessage(error, 'Failed to delete unit'));
       }
     },
     { permissions: 'units:units:delete' }

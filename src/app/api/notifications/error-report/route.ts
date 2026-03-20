@@ -35,6 +35,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateNotificationId } from '@/services/enterprise-id.service';
 import type { Severity } from '@/types/notification';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('NotificationsErrorReportRoute');
 
@@ -253,7 +254,7 @@ async function handleErrorReport(
 
   } catch (error) {
     const duration = Date.now() - startTime;
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = getErrorMessage(error);
 
     logger.error('[ErrorReport] Failed', { durationMs: duration, error: errorMessage });
 

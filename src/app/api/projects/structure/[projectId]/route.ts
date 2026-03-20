@@ -27,6 +27,7 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('ProjectStructureRoute');
 
@@ -216,7 +217,7 @@ export const GET = withStandardRateLimit(async function GET(
 
       } catch (error) {
         logger.error('[Projects/Structure] Error', {
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: getErrorMessage(error),
           projectId,
           userId: ctx.uid,
           companyId: ctx.companyId
@@ -224,7 +225,7 @@ export const GET = withStandardRateLimit(async function GET(
 
         return NextResponse.json({
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to load project structure',
+          error: getErrorMessage(error, 'Failed to load project structure'),
           projectId
         }, { status: 500 });
       }

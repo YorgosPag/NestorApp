@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('DownloadRoute');
 
@@ -160,7 +161,7 @@ async function handleDownload(request: NextRequest, ctx: AuthContext) {
     return NextResponse.json(
       {
         error: 'Internal server error during download',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: getErrorMessage(error)
       },
       { status: 500 }
     );

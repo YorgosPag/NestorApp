@@ -25,6 +25,7 @@ import { transcribeVoiceMessage } from './telegram/whisper-transcription';
 import { getCompanyId } from '@/config/tenant';
 import { createModuleLogger } from '@/lib/telemetry';
 import { FIELDS } from '@/config/firestore-field-constants';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('TelegramHandler');
 
@@ -272,7 +273,7 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<Proc
       didFeedSuggestion = true;
     } catch (error) {
       logger.warn('[Suggestion->Pipeline] Non-fatal error', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
     }
   }
@@ -353,7 +354,7 @@ async function feedTelegramToPipeline(message: TelegramMessage['message'], overr
     }
   } catch (error) {
     // Non-fatal: pipeline failure should never break the Telegram bot
-    logger.warn('[Telegram->Pipeline] Non-fatal error', { error: error instanceof Error ? error.message : String(error) });
+    logger.warn('[Telegram->Pipeline] Non-fatal error', { error: getErrorMessage(error) });
   }
 }
 
@@ -442,7 +443,7 @@ export async function handlePOST(request: NextRequest): Promise<NextResponse> {
         } catch (error) {
           // Non-fatal: daily cron will retry pipeline items
           logger.warn('[Telegram->Pipeline] after(): pipeline batch failed (cron will retry)', {
-            error: error instanceof Error ? error.message : String(error),
+            error: getErrorMessage(error),
           });
         }
       });
@@ -563,7 +564,7 @@ export async function handleGET(): Promise<NextResponse> {
           global_all_buildings: { count: allBuildings.length, data: allBuildings },
         };
       } catch (err) {
-        diagnostic = { error: err instanceof Error ? err.message : String(err) };
+        diagnostic = { error: getErrorMessage(err) };
       }
     }
 

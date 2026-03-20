@@ -7,6 +7,7 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { ENTITY_STATUS } from '@/constants/entity-status-values';
 import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('ListCompaniesRoute');
 
@@ -91,7 +92,7 @@ export const GET = withHighRateLimit(
         return NextResponse.json(
           {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: getErrorMessage(error)
           },
           { status: 500 }
         );

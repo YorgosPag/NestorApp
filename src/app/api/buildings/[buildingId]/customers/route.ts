@@ -7,6 +7,7 @@ import { withAuth, requireBuildingInTenant, TenantIsolationError } from '@/lib/a
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('BuildingCustomersRoute');
 
@@ -176,7 +177,7 @@ export async function GET(
           customers: [],
           buildingId,
           summary: { customersCount: 0, soldUnitsCount: 0 },
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: getErrorMessage(error)
         }, { status: 500 });
       }
     },

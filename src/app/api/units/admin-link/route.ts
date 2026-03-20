@@ -21,6 +21,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('UnitsAdminLinkRoute');
 
@@ -137,7 +138,7 @@ export async function POST(request: NextRequest) {
 
             createdContacts.push({ id: contactId, name: contactName });
           } catch (contactError) {
-            logger.error('[Units/AdminLink] Failed to create contact', { contactName, error: contactError instanceof Error ? contactError.message : String(contactError) });
+            logger.error('[Units/AdminLink] Failed to create contact', { contactName, error: getErrorMessage(contactError) });
           }
         }
 
@@ -164,7 +165,7 @@ export async function POST(request: NextRequest) {
 
             linked++;
           } catch (updateError) {
-            logger.error('[Units/AdminLink] Failed to update unit', { unitId: unit.id, error: updateError instanceof Error ? updateError.message : String(updateError) });
+            logger.error('[Units/AdminLink] Failed to update unit', { unitId: unit.id, error: getErrorMessage(updateError) });
           }
         }
 
@@ -181,14 +182,14 @@ export async function POST(request: NextRequest) {
 
       } catch (error) {
         logger.error('[Units/AdminLink] Error', {
-          error: error instanceof Error ? error.message : String(error),
+          error: getErrorMessage(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });
 
         return NextResponse.json({
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: getErrorMessage(error),
           details: 'Check server logs for more info'
         }, { status: 500 });
       }

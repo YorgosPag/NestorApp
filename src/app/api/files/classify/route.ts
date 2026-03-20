@@ -22,6 +22,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { createAIAnalysisProvider } from '@/services/ai-analysis/providers/ai-provider-factory';
 import { isDocumentClassifyAnalysis } from '@/schemas/ai-analysis';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('FileClassifyRoute');
 
@@ -235,7 +236,7 @@ async function handlePost(
       signals: result.signals,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Classification failed';
+    const message = getErrorMessage(err, 'Classification failed');
     logger.error(`Classification error: ${message}`);
     return NextResponse.json(
       { success: false, fileId: '', error: message },

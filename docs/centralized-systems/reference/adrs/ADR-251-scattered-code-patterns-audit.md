@@ -352,7 +352,7 @@ const result = schema.safeParse(formData);
 |--------|---------|--------|----------------|
 | `useAsyncData` adoption | 10 files | 60+ files | `grep -r "import.*useAsyncData" src/ \| wc -l` |
 | Direct sonner imports | 14 files | 0 files | `grep -r "from 'sonner'" src/ \| grep -v NotificationProvider \| wc -l` |
-| `getErrorMessage` adoption | 41 files | 60+ files | `grep -r "import.*getErrorMessage" src/ \| wc -l` |
+| `getErrorMessage` adoption | 41 files → **327 files** | ~~60+ files~~ ✅ DONE | `grep -r "import.*getErrorMessage" src/ \| wc -l` |
 | `useConfirmDialog` adoption | ~10 files | 25+ files | `grep -r "useConfirmDialog" src/ \| wc -l` |
 | Page loading consistency | 37 files | all page files | `grep -r "PageLoadingState" src/ \| wc -l` |
 
@@ -383,3 +383,4 @@ const result = schema.safeParse(formData);
 |------|--------|
 | 2026-03-19 | Initial audit completed. 6 findings documented with real Grep data. |
 | 2026-03-19 | 6 SPEC files created (SPEC-251A through SPEC-251F) — one per finding with full implementation details. |
+| 2026-03-20 | **SPEC-251A COMPLETE**: Batch 2 migrated 175 API route files (349 replacements). Total: 286 files across Batch 1+2. Finding #1 fully resolved. |

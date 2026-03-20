@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { getErrorMessage } from '@/lib/error-utils';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
@@ -101,7 +102,7 @@ Return structured data in the specified JSON format.`;
         { status: 502 }
       );
     }
-    const message = error instanceof Error ? error.message : 'Parse failed';
+    const message = getErrorMessage(error, 'Parse failed');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

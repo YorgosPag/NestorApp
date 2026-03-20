@@ -34,6 +34,7 @@ import { withAuth, logDirectOperation, extractRequestMetadata } from '@/lib/auth
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('FixProjectsDirectRoute');
 
@@ -114,7 +115,7 @@ async function handleFixProjectsDirectExecute(request: NextRequest, ctx: AuthCon
 
               logger.info('Successfully updated project', { projectId });
             } catch (error) {
-              const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+              const errorMessage = getErrorMessage(error);
               logger.error('Failed to update project', { projectId, error: errorMessage });
 
               errors.push({
@@ -237,7 +238,7 @@ async function handleFixProjectsDirectExecute(request: NextRequest, ctx: AuthCon
 
   } catch (error: unknown) {
     const totalExecutionTime = Date.now() - startTime;
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = getErrorMessage(error);
 
     logger.error('DIRECT FIX SYSTEM ERROR', { error: errorMessage });
 
@@ -303,7 +304,7 @@ async function handleFixProjectsDirectInfo(request: NextRequest, ctx: AuthContex
     });
 
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = getErrorMessage(error);
 
     return NextResponse.json({
       success: false,

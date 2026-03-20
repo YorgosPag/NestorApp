@@ -21,6 +21,7 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { isRoleBypass } from '@/lib/auth/roles';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('UnitsRoute');
 
@@ -122,7 +123,7 @@ export const GET = withStandardRateLimit(
 
       } catch (error) {
         logger.error('[Units/List] Error', {
-          error: error instanceof Error ? error.message : String(error),
+          error: getErrorMessage(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });
@@ -130,7 +131,7 @@ export const GET = withStandardRateLimit(
         return NextResponse.json({
           success: false,
           error: 'Failed to fetch units',
-          details: error instanceof Error ? error.message : 'Unknown error'
+          details: getErrorMessage(error)
         }, { status: 500 });
       }
     },
@@ -266,7 +267,7 @@ export const POST = withStandardRateLimit(
 
       } catch (error) {
         logger.error('[Units/LinkSold] Error', {
-          error: error instanceof Error ? error.message : String(error),
+          error: getErrorMessage(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });
@@ -274,7 +275,7 @@ export const POST = withStandardRateLimit(
         return NextResponse.json({
           success: false,
           error: 'Failed to link units to contacts',
-          details: error instanceof Error ? error.message : 'Unknown error'
+          details: getErrorMessage(error)
         }, { status: 500 });
       }
     },

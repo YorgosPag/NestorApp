@@ -19,6 +19,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createSampleNotifications } from '@/services/notificationService';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('NotificationsSeedRoute');
 
@@ -72,7 +73,7 @@ const basePOST = async (request: NextRequest) => {
         });
       } catch (error) {
         logger.error('[Notifications/Seed] Error', {
-          error: error instanceof Error ? error.message : String(error),
+          error: getErrorMessage(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });
@@ -80,7 +81,7 @@ const basePOST = async (request: NextRequest) => {
         return NextResponse.json({
           success: false,
           error: 'Failed to create sample notifications',
-          details: error instanceof Error ? error.message : 'Unknown error'
+          details: getErrorMessage(error)
         }, { status: 500 });
       }
     },

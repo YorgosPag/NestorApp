@@ -17,6 +17,7 @@ import type {
   MessengerQuickReplyButton,
 } from './types';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('MessengerClient');
 
@@ -87,7 +88,7 @@ export async function sendMessengerMessage(
     logger.error('Messenger send error', { error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: getErrorMessage(error),
     };
   }
 }
@@ -158,7 +159,7 @@ export async function sendMessengerQuickReplies(
     logger.error('Messenger quick reply send error', { error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: getErrorMessage(error),
     };
   }
 }

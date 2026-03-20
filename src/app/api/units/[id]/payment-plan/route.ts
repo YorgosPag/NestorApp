@@ -19,6 +19,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import type { CreatePaymentPlanInput, UpdatePaymentPlanInput } from '@/types/payment-plan';
+import { getErrorMessage } from '@/lib/error-utils';
 
 type SegmentData = { params: Promise<{ id: string }> };
 
@@ -38,7 +39,7 @@ async function handleGet(
         const plan = await PaymentPlanService.getActivePaymentPlan(unitId);
         return NextResponse.json({ success: true, data: plan });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to get payment plan';
+        const message = getErrorMessage(error, 'Failed to get payment plan');
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     }
@@ -82,7 +83,7 @@ async function handlePost(
 
         return NextResponse.json({ success: true, data: result.plan }, { status: 201 });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to create payment plan';
+        const message = getErrorMessage(error, 'Failed to create payment plan');
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     }
@@ -124,7 +125,7 @@ async function handlePatch(
 
         return NextResponse.json({ success: true });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to update payment plan';
+        const message = getErrorMessage(error, 'Failed to update payment plan');
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     }
@@ -166,7 +167,7 @@ async function handleDelete(
 
         return NextResponse.json({ success: true });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to delete payment plan';
+        const message = getErrorMessage(error, 'Failed to delete payment plan');
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     }

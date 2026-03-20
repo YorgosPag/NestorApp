@@ -21,6 +21,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { generateRequestId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('MessagesDeleteRoute');
 
@@ -144,7 +145,7 @@ async function handleDeleteMessages(
       result.failed++;
       result.errors.push({
         messageId,
-        reason: error instanceof Error ? error.message : 'Unknown error',
+        reason: getErrorMessage(error),
       });
     }
   }
@@ -156,7 +157,7 @@ async function handleDeleteMessages(
       result.deleted = validDeletes.length;
       logger.info('[Messages/Delete] Deleted messages', { count: validDeletes.length });
     } catch (error) {
-      logger.error('[Messages/Delete] Batch commit failed', { error: error instanceof Error ? error.message : String(error) });
+      logger.error('[Messages/Delete] Batch commit failed', { error: getErrorMessage(error) });
       throw new ApiError(500, 'Failed to delete messages');
     }
   }

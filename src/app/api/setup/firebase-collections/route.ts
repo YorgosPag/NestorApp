@@ -34,6 +34,7 @@ import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('FirebaseCollectionsRoute');
 
@@ -138,7 +139,7 @@ async function handleFirebaseCollectionsSetup(request: NextRequest, ctx: AuthCon
     return NextResponse.json({
       success: false,
       error: 'Failed to setup Firebase collections',
-      details: error instanceof Error ? error.message : 'Unknown error',
+      details: getErrorMessage(error),
       executionTimeMs: duration
     }, { status: 500 });
   }

@@ -5,6 +5,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { TelegramSendPayload, TelegramSendResult } from './telegram/types';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('TelegramService');
 
@@ -42,7 +43,7 @@ export async function sendTelegramMessage(messageData: TelegramSendPayload): Pro
 
   } catch (error) {
     logger.error('Error sending Telegram message', { error });
-    return { success: false, error: (error as Error).message };
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 

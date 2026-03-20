@@ -5,6 +5,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('UpdateExistingContactsRoute');
 
@@ -89,7 +90,7 @@ export const POST = withStandardRateLimit(
         logger.info('Updated contact', { contactId, role: typedAssignment.role, tags: typedAssignment.tags });
 
       } catch (contactError) {
-        const errorMessage = contactError instanceof Error ? contactError.message : 'Unknown error';
+        const errorMessage = getErrorMessage(contactError);
         logger.error(`Error updating contact ${contactId}`, { error: errorMessage });
 
         errors.push({
@@ -116,7 +117,7 @@ export const POST = withStandardRateLimit(
         logger.error('Error in update-existing API', { error });
         return NextResponse.json({
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: getErrorMessage(error),
           details: 'Failed to update existing contacts'
         }, { status: 500 });
       }

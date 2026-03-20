@@ -2,6 +2,7 @@
 
 import type { TelegramSendPayload, TelegramSendResult, TelegramSetReactionPayload, TelegramReactionType } from "./types";
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('TelegramClient');
 
@@ -38,7 +39,7 @@ export async function sendTelegramMessage(payload: TelegramSendPayload): Promise
 
   } catch (error) {
     logger.error('Error sending Telegram message', { error });
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -111,6 +112,6 @@ export async function sendTelegramReaction(
 
   } catch (error) {
     logger.error('Error setting Telegram reaction', { error });
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: getErrorMessage(error) };
   }
 }

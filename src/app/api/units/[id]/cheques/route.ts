@@ -15,6 +15,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ChequeRegistryService } from '@/services/cheque-registry.service';
 import type { CreateChequeInput } from '@/types/cheque-registry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 type SegmentData = { params: Promise<{ id: string }> };
 
@@ -37,7 +38,7 @@ async function handleGet(
         }
         return NextResponse.json({ success: true, data: result.cheques });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to get cheques';
+        const message = getErrorMessage(error, 'Failed to get cheques');
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     }
@@ -71,7 +72,7 @@ async function handlePost(
 
         return NextResponse.json({ success: true, data: result.cheque }, { status: 201 });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to create cheque';
+        const message = getErrorMessage(error, 'Failed to create cheque');
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     }

@@ -15,6 +15,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import { LoanTrackingService } from '@/services/loan-tracking.service';
 import type { UpdateLoanInput } from '@/types/loan-tracking';
+import { getErrorMessage } from '@/lib/error-utils';
 
 type SegmentData = { params: Promise<{ id: string; loanId: string }> };
 
@@ -54,7 +55,7 @@ async function handlePatch(
 
         return NextResponse.json({ success: true });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to update loan';
+        const message = getErrorMessage(error, 'Failed to update loan');
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     }

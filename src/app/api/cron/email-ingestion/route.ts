@@ -33,6 +33,7 @@ import {
   getEmailIngestionQueueHealth,
 } from '@/server/comms/workers/email-ingestion-worker';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('EMAIL_INGESTION_CRON');
 
@@ -116,7 +117,7 @@ async function executeBatchProcessing(trigger: CronTrigger): Promise<Response> {
 
   } catch (error) {
     const elapsed = Date.now() - startTime;
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = getErrorMessage(error);
 
     logger.error('Email ingestion batch error', {
       trigger,
@@ -173,7 +174,7 @@ async function handleGET(request: NextRequest): Promise<Response> {
     });
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = getErrorMessage(error);
 
     return NextResponse.json({
       ok: false,

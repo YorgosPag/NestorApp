@@ -29,6 +29,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('SetupAdminConfigRoute');
 
@@ -165,7 +166,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: false,
           message: 'Failed to save admin configuration',
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: getErrorMessage(error)
         }, { status: 500 });
       }
     },
@@ -232,7 +233,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
           success: false,
           message: 'Failed to check admin configuration',
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: getErrorMessage(error)
         }, { status: 500 });
       }
     },

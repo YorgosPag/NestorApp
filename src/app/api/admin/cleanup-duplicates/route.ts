@@ -36,6 +36,7 @@ import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('CleanupDuplicatesRoute');
 
@@ -151,7 +152,7 @@ async function handleCleanupDuplicatesPreview(request: NextRequest, ctx: AuthCon
       {
         success: false,
         error: 'Failed to analyze duplicates',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        details: getErrorMessage(error),
         executionTimeMs: duration,
       },
       { status: 500 }
@@ -308,7 +309,7 @@ async function handleCleanupDuplicatesExecute(request: NextRequest, ctx: AuthCon
       {
         success: false,
         error: 'Failed to cleanup duplicates',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        details: getErrorMessage(error),
         executionTimeMs: duration,
       },
       { status: 500 }

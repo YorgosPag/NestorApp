@@ -30,6 +30,7 @@ import {
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import type { CreateCustomCategoryInput } from '@/subapps/accounting/types';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('CUSTOM_CATEGORIES');
 
@@ -67,7 +68,7 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
 
         return NextResponse.json({ success: true, data: categories });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to list custom categories';
+        const message = getErrorMessage(error, 'Failed to list custom categories');
         logger.error('Custom categories list error', { error: message });
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
@@ -137,7 +138,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
 
         return NextResponse.json({ success: true, data: result }, { status: 201 });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to create custom category';
+        const message = getErrorMessage(error, 'Failed to create custom category');
         logger.error('Custom category create error', { error: message });
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }

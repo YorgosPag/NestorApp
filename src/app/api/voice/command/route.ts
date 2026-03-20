@@ -34,6 +34,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { InAppChannelAdapter } from '@/services/ai-pipeline/channel-adapters/inapp-channel-adapter';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { VoiceCommandDoc, SubmitCommandResult } from '@/types/voice-command';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // LOGGER
@@ -188,7 +189,7 @@ export const POST = withStandardRateLimit(
           // Non-fatal: daily cron will retry pipeline items
           logger.warn('Pipeline batch trigger failed (cron will retry)', {
             commandId,
-            error: error instanceof Error ? error.message : String(error),
+            error: getErrorMessage(error),
           });
         }
       });

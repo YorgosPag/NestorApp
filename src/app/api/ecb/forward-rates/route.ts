@@ -11,6 +11,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { EuriborService } from '@/services/euribor.service';
 import { buildForwardCurveResult } from '@/lib/forward-curve-engine';
 import type { ForwardCurveResult } from '@/types/interest-calculator';
+import { getErrorMessage } from '@/lib/error-utils';
 
 interface ForwardRatesResponse {
   success: boolean;
@@ -31,7 +32,7 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
         const response: ForwardRatesResponse = { success: true, result };
         return NextResponse.json(response);
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to derive forward rates';
+        const message = getErrorMessage(error, 'Failed to derive forward rates');
         return NextResponse.json(
           { success: false, error: message } satisfies ForwardRatesResponse,
           { status: 500 }

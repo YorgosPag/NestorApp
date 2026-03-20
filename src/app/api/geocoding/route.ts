@@ -21,6 +21,7 @@ import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { normalizeGreekText } from '@/services/ai-pipeline/shared/greek-text-utils';
 import { transliterateGreeklish, containsGreek } from '@/services/ai-pipeline/shared/greek-nlp';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('geocoding-api');
 
@@ -170,7 +171,7 @@ async function fetchNominatim(url: string): Promise<NominatimResult | null> {
     const data: NominatimResult[] = await response.json();
     return data.length > 0 ? data[0] : null;
   } catch (error) {
-    logger.warn('Nominatim fetch error', { error: String(error) });
+    logger.warn('Nominatim fetch error', { error: getErrorMessage(error) });
     return null;
   }
 }
@@ -465,7 +466,7 @@ async function handlePost(request: NextRequest): Promise<Response> {
 
     return NextResponse.json(result);
   } catch (error) {
-    logger.error('Geocoding API error', { error: String(error) });
+    logger.error('Geocoding API error', { error: getErrorMessage(error) });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -21,6 +21,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { propagateContactNameChange } from '@/lib/firestore/cascade-propagation.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('ContactNameCascadeRoute');
 
@@ -75,7 +76,7 @@ async function handlePost(
           },
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to cascade contact name';
+        const message = getErrorMessage(error, 'Failed to cascade contact name');
         logger.error('Contact name cascade failed', { contactId, error: message });
         return NextResponse.json(
           { success: false, error: message },

@@ -33,6 +33,7 @@ import { withAuth, logDirectOperation, extractRequestMetadata } from '@/lib/auth
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('CreateCleanProjectsRoute');
 
@@ -293,7 +294,7 @@ async function handleCreateCleanProjectsExecute(request: NextRequest, ctx: AuthC
 
   } catch (error: unknown) {
     const totalExecutionTime = Date.now() - startTime;
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = getErrorMessage(error);
 
     logger.error('CLEAN PROJECT CREATION ERROR', { error: errorMessage });
 

@@ -28,6 +28,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('FloorplanProcessRoute');
 import type {
+import { getErrorMessage } from '@/lib/error-utils';
   FloorplanProcessedData,
   DxfSceneData,
   DxfSceneEntity,
@@ -474,7 +475,7 @@ async function handleProcessFloorplan(
     // 🔍 ENTERPRISE: Detailed error logging for debugging
     const firebaseError = error as FirebaseAdminError | null;
     const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error';
+      getErrorMessage(error);
     const errorStack =
       error instanceof Error ? error.stack : undefined;
 

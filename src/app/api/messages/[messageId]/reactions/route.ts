@@ -32,6 +32,7 @@ import type { MessageReactionsMap } from '@/types/conversations';
 import { QUICK_REACTION_EMOJIS } from '@/types/conversations';
 import { sendTelegramReaction } from '@/app/api/communications/webhooks/telegram/telegram/client';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('MessageReactionsRoute');
 
@@ -421,6 +422,6 @@ async function syncReactionToTelegram(
     }
   } catch (error) {
     // Log but don't throw - Telegram sync is non-blocking
-    logger.error('[Reactions->Telegram] Unexpected error during sync', { operationId, error: error instanceof Error ? error.message : String(error) });
+    logger.error('[Reactions->Telegram] Unexpected error during sync', { operationId, error: getErrorMessage(error) });
   }
 }

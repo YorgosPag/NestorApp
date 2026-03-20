@@ -22,6 +22,7 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { processAdminBatch, BATCH_SIZE_WRITE } from '@/lib/admin-batch-utils';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('UnitsForceUpdateRoute');
 
@@ -156,11 +157,11 @@ export async function POST(request: NextRequest) {
             logger.info('[Units/ForceUpdate] Unit updated successfully', { unitName: unit.name });
 
           } catch (error) {
-            logger.error('[Units/ForceUpdate] Error updating unit', { unitName: unit.name, error: error instanceof Error ? error.message : String(error) });
+            logger.error('[Units/ForceUpdate] Error updating unit', { unitName: unit.name, error: getErrorMessage(error) });
             failedUpdates.push({
               unitId: unit.id,
               unitName: unit.name,
-              error: error instanceof Error ? error.message : 'Unknown error'
+              error: getErrorMessage(error)
             });
           }
         }
@@ -178,7 +179,7 @@ export async function POST(request: NextRequest) {
 
       } catch (error) {
         logger.error('[Units/ForceUpdate] Error', {
-          error: error instanceof Error ? error.message : String(error),
+          error: getErrorMessage(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });
@@ -186,7 +187,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: false,
           error: 'Force update failed',
-          details: error instanceof Error ? error.message : 'Unknown error'
+          details: getErrorMessage(error)
         }, { status: 500 });
       }
     },

@@ -12,6 +12,7 @@ import { MigrationPhase, type MigrationStats } from '@/services/enterprise-id-mi
 import { EntityType, isValidEntityType } from '@/services/relationships/enterprise-relationship-engine.contracts';
 import { MigrationController, type MigrationConfig } from './migration-controller';
 import { withAuth } from '@/lib/auth/middleware';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const controller = new MigrationController();
 
@@ -54,7 +55,7 @@ export const GET = withAuth<MigrationStatusResponse>(
         message: 'Failed to get status',
         stats: {} as MigrationStats,
         phase: MigrationPhase.DUAL_SUPPORT,
-        errors: [error instanceof Error ? error.message : 'Unknown error']
+        errors: [getErrorMessage(error)]
       }, { status: 500 });
     }
   },
@@ -85,7 +86,7 @@ export const POST = withAuth<MigrationExecutionResponse>(
       return NextResponse.json({
         success: false,
         message: 'Migration failed',
-        errors: [error instanceof Error ? error.message : 'Unknown error']
+        errors: [getErrorMessage(error)]
       }, { status: 500 });
     }
   },

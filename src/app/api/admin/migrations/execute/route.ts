@@ -33,6 +33,7 @@ import { createEnterpriseArchitectureConsolidationMigration } from '@/database/m
 import { migration as projectCodesMigration, executeDryRun as projectCodesDryRun, executeMigration as projectCodesExecute } from '@/database/migrations/005_assign_project_codes';
 import { migration as storageBuildingMigration, dryRun as storageBuildingDryRun, execute as storageBuildingExecute } from '@/database/migrations/006_normalize_storage_building_references';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('MigrationExecuteRoute');
 
@@ -299,7 +300,7 @@ async function handleMigrationExecution(
 
   } catch (error) {
     const totalExecutionTime = Date.now() - startTime;
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = getErrorMessage(error);
 
     logger.error('MIGRATION SYSTEM ERROR', { error: errorMessage });
 
@@ -395,7 +396,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = getErrorMessage(error);
 
     return NextResponse.json(
       {

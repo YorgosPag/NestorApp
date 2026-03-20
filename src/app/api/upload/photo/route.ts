@@ -6,6 +6,7 @@ import { getAdminStorage } from '@/lib/firebaseAdmin';
 import { FileNamingService } from '@/services/FileNamingService';
 import { generateTempId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('UploadPhotoRoute');
 
@@ -134,7 +135,7 @@ async function handleUploadPhoto(request: NextRequest, ctx: AuthContext) {
         });
 
       } catch (error) {
-        logger.error('[Upload/Photo] FileNamingService failed, using fallback', { error: error instanceof Error ? error.message : String(error) });
+        logger.error('[Upload/Photo] FileNamingService failed, using fallback', { error: getErrorMessage(error) });
 
         // 🏢 ENTERPRISE: Fallback with crypto-secure ID generation
         const timestamp = Date.now();
@@ -198,7 +199,7 @@ async function handleUploadPhoto(request: NextRequest, ctx: AuthContext) {
     });
 
   } catch (error) {
-    logger.error('[Upload/Photo] Upload failed', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('[Upload/Photo] Upload failed', { error: getErrorMessage(error) });
 
     // DETAILED ERROR LOGGING for Firebase Admin Storage debugging
     // ENTERPRISE: Type-safe error handling
@@ -214,7 +215,7 @@ async function handleUploadPhoto(request: NextRequest, ctx: AuthContext) {
 
     return NextResponse.json({
       error: 'Firebase Admin Storage upload failed',
-      details: error instanceof Error ? error.message : String(error),
+      details: getErrorMessage(error),
       errorCode: firebaseError?.code
     }, { status: 500 });
   }

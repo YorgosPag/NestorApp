@@ -7,6 +7,7 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { generateContactId } from '@/services/enterprise-id.service';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('CreateSampleContactsRoute');
 
@@ -353,7 +354,7 @@ export const POST = withStandardRateLimit(
         logger.error('Error creating sample contacts', { error });
         return NextResponse.json({
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: getErrorMessage(error),
           details: 'Failed to create contacts in database'
         }, { status: 500 });
       }

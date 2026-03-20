@@ -16,6 +16,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import { LoanTrackingService } from '@/services/loan-tracking.service';
 import type { CreateLoanInput } from '@/types/loan-tracking';
+import { getErrorMessage } from '@/lib/error-utils';
 
 type SegmentData = { params: Promise<{ id: string }> };
 
@@ -42,7 +43,7 @@ async function handleGet(
         }
         return NextResponse.json({ success: true, data: result.loans });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to get loans';
+        const message = getErrorMessage(error, 'Failed to get loans');
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     }
@@ -89,7 +90,7 @@ async function handlePost(
 
         return NextResponse.json({ success: true, data: result.loan }, { status: 201 });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to add loan';
+        const message = getErrorMessage(error, 'Failed to add loan');
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     }

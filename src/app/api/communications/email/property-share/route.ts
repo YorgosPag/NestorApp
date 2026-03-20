@@ -8,6 +8,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { createModuleLogger } from '@/lib/telemetry';
 // Ensure Firebase Admin is initialized
 import '@/server/admin/admin-guards';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('PropertyShareRoute');
 
@@ -359,7 +360,7 @@ export const POST = withAuth<PropertyShareResponse>(
 
       } catch (error) {
         const duration = Date.now() - startTime;
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage = getErrorMessage(error);
         logEmailAttempt(clientIP, false, data, errorMessage, duration);
 
         return NextResponse.json(
@@ -373,7 +374,7 @@ export const POST = withAuth<PropertyShareResponse>(
 
     } catch (error) {
       const duration = Date.now() - startTime;
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = getErrorMessage(error);
 
       logEmailAttempt(clientIP, false, {}, errorMessage, duration);
 

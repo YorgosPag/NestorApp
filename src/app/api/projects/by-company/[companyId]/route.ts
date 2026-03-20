@@ -30,6 +30,7 @@ import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
 import { isRoleBypass } from '@/lib/auth/roles';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('ProjectsByCompanyRoute');
 
@@ -205,14 +206,14 @@ export const GET = withStandardRateLimit(async function GET(
             name: error.name,
             message: error.message,
             stack: error.stack
-          } : { message: String(error) },
+          } : { message: getErrorMessage(error) },
           timestamp: new Date().toISOString()
         });
 
         return NextResponse.json(
           {
             success: false,
-            error: error instanceof Error ? error.message : 'Failed to load projects',
+            error: getErrorMessage(error, 'Failed to load projects'),
             companyId: companyId
           },
           { status: 500 }

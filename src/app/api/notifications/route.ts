@@ -21,6 +21,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { fetchNotifications } from '@/services/notificationService';
 import type { Notification } from '@/types/notification';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // Response types for type-safe withAuth
 // ?? ENTERPRISE: NotificationItem mirrors Notification for API responses
@@ -89,7 +90,7 @@ const baseGET = async (request: NextRequest) => {
         });
       } catch (error) {
         logger.error('Notifications fetch failed', {
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: getErrorMessage(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });
@@ -97,7 +98,7 @@ const baseGET = async (request: NextRequest) => {
         return NextResponse.json({
           success: false,
           error: 'Failed to fetch notifications',
-          details: error instanceof Error ? error.message : 'Unknown error'
+          details: getErrorMessage(error)
         }, { status: 500 });
       }
     },

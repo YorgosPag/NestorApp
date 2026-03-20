@@ -29,6 +29,7 @@ import { withAuth, logSystemOperation, extractRequestMetadata } from '@/lib/auth
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('BootstrapCompanyRoute');
 
@@ -71,7 +72,7 @@ export const GET = withAuth(
       });
     } catch (error) {
       logger.error('[BootstrapCompany] GET failed', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
       return NextResponse.json(
         { success: false, error: 'Failed to check company status' },
@@ -148,7 +149,7 @@ export const POST = withSensitiveRateLimit(
           `Company document materialized by ${ctx.email}`
         ).catch((err: unknown) => {
           logger.error('[BootstrapCompany] Audit log failed (non-blocking)', {
-            error: err instanceof Error ? err.message : String(err),
+            error: getErrorMessage(err),
             metadata,
           });
         });
@@ -169,13 +170,13 @@ export const POST = withSensitiveRateLimit(
       } catch (error) {
         const duration = Date.now() - startTime;
         logger.error('[BootstrapCompany] POST failed', {
-          error: error instanceof Error ? error.message : String(error),
+          error: getErrorMessage(error),
           duration,
         });
         return NextResponse.json(
           {
             success: false,
-            error: `Bootstrap failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            error: `Bootstrap failed: ${getErrorMessage(error)}`,
             executionTimeMs: duration,
           },
           { status: 500 }

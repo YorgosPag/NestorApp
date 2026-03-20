@@ -21,6 +21,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import type {
+import { getErrorMessage } from '@/lib/error-utils';
   InvoiceFilters,
   InvoiceType,
   CreateInvoiceInput,
@@ -77,7 +78,7 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
 
         return NextResponse.json({ success: true, data: result });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to list invoices';
+        const message = getErrorMessage(error, 'Failed to list invoices');
         return NextResponse.json(
           { success: false, error: message },
           { status: 500 }
@@ -127,7 +128,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
           { status: 201 }
         );
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to create invoice';
+        const message = getErrorMessage(error, 'Failed to create invoice');
         return NextResponse.json(
           { success: false, error: message },
           { status: 500 }

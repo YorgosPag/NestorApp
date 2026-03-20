@@ -37,6 +37,7 @@ import {
 import { sendReplyViaMailgun } from '@/services/ai-pipeline/shared/mailgun-sender';
 import type { EmailSendRecord, UpdateInvoiceInput } from '@/subapps/accounting/types';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('INVOICE_EMAIL');
 
@@ -240,7 +241,7 @@ async function handlePost(
           },
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to send invoice email';
+        const message = getErrorMessage(error, 'Failed to send invoice email');
         logger.error('Invoice email endpoint error', { invoiceId: id, error: message });
         return NextResponse.json(
           { success: false, error: message },

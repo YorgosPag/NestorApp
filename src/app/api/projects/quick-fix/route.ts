@@ -22,6 +22,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('QuickFixRoute');
 
@@ -243,7 +244,7 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
             results.push({
               projectId: fix.projectId,
               action: 'failed',
-              error: error instanceof Error ? error.message : 'Unknown error'
+              error: getErrorMessage(error)
             });
           }
         }
@@ -258,14 +259,14 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
 
       } catch (error) {
         logger.error('[Projects/QuickFix] Error', {
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: getErrorMessage(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });
 
         return NextResponse.json({
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: getErrorMessage(error)
         }, { status: 500 });
       }
     },

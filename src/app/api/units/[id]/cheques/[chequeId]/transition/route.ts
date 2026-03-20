@@ -14,6 +14,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ChequeRegistryService } from '@/services/cheque-registry.service';
 import type { ChequeTransitionInput } from '@/types/cheque-registry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 type SegmentData = { params: Promise<{ id: string; chequeId: string }> };
 
@@ -43,7 +44,7 @@ async function handlePost(
 
         return NextResponse.json({ success: true });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to transition cheque';
+        const message = getErrorMessage(error, 'Failed to transition cheque');
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     }

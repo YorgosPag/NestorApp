@@ -13,6 +13,7 @@ import { linkEntity } from '@/lib/firestore/entity-linking.service';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
 import { normalizeToMillis } from '@/lib/date-local';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('BuildingsRoute');
 
@@ -176,7 +177,7 @@ export const POST = withStandardRateLimit(
     } catch (error) {
       if (error instanceof ApiError) throw error;
       logger.error('[Buildings] Error creating building', { error });
-      throw new ApiError(500, error instanceof Error ? error.message : 'Failed to create building');
+      throw new ApiError(500, getErrorMessage(error, 'Failed to create building'));
     }
     },
     { permissions: 'buildings:buildings:create' }
@@ -287,7 +288,7 @@ export const PATCH = withStandardRateLimit(
         }).catch((err) => {
           logger.warn('[Buildings] linkEntity failed (non-blocking)', {
             buildingId,
-            error: err instanceof Error ? err.message : String(err),
+            error: getErrorMessage(err),
           });
         });
       }
@@ -311,7 +312,7 @@ export const PATCH = withStandardRateLimit(
 
     } catch (error) {
       logger.error('[Buildings] Error updating building', { error });
-      throw new ApiError(500, error instanceof Error ? error.message : 'Failed to update building');
+      throw new ApiError(500, getErrorMessage(error, 'Failed to update building'));
     }
     },
     { permissions: 'buildings:buildings:update' }

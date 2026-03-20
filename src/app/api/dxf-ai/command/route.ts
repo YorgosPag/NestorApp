@@ -31,6 +31,7 @@ import type {
 } from '@/subapps/dxf-viewer/ai-assistant/types';
 import { DXF_AI_LIMITS } from '@/subapps/dxf-viewer/config/ai-assistant-config';
 import type { AgenticToolDefinition } from '@/services/ai-pipeline/tools/agentic-tool-definitions';
+import { getErrorMessage } from '@/lib/error-utils';
 
 export const maxDuration = 60;
 
@@ -389,7 +390,7 @@ async function handler(
       processingTimeMs,
     });
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    const errorMessage = getErrorMessage(err);
     logger.error(`DXF AI error: ${errorMessage}`);
 
     return NextResponse.json(

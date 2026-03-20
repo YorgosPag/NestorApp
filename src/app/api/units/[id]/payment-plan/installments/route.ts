@@ -19,6 +19,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import type { CreateInstallmentInput, UpdateInstallmentInput } from '@/types/payment-plan';
+import { getErrorMessage } from '@/lib/error-utils';
 
 type SegmentData = { params: Promise<{ id: string }> };
 
@@ -80,7 +81,7 @@ async function handlePost(
 
         return NextResponse.json({ success: true }, { status: 201 });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to add installment';
+        const message = getErrorMessage(error, 'Failed to add installment');
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     }
@@ -133,7 +134,7 @@ async function handlePatch(
 
         return NextResponse.json({ success: true });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to update installment';
+        const message = getErrorMessage(error, 'Failed to update installment');
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     }
@@ -184,7 +185,7 @@ async function handleDelete(
 
         return NextResponse.json({ success: true });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to remove installment';
+        const message = getErrorMessage(error, 'Failed to remove installment');
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     }

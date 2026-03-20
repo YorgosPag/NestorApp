@@ -21,6 +21,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('FloorsEnterpriseAuditRoute');
 
@@ -115,7 +116,7 @@ const getHandler = async (request: NextRequest) => {
           }
           logger.info('Normalized floors count', { documentCount: audit.collections.normalizedFloors.documentCount });
         } catch (error) {
-          logger.error('Normalized floors error', { error: error instanceof Error ? error.message : String(error) });
+          logger.error('Normalized floors error', { error: getErrorMessage(error) });
         }
 
         // ============================================================================
@@ -150,7 +151,7 @@ const getHandler = async (request: NextRequest) => {
           }
           logger.info('Subcollection floors count', { total: audit.collections.subcollectionFloors.totalSubcollectionFloors });
         } catch (error) {
-          logger.error('Subcollections error', { error: error instanceof Error ? error.message : String(error) });
+          logger.error('Subcollections error', { error: getErrorMessage(error) });
         }
 
         // ============================================================================
@@ -212,7 +213,7 @@ const getHandler = async (request: NextRequest) => {
 
       } catch (error) {
         logger.error('[Floors/EnterpriseAudit] Error', {
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: getErrorMessage(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });

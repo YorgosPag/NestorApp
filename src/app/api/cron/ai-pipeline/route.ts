@@ -36,6 +36,7 @@ import {
 } from '@/server/ai/workers/ai-pipeline-worker';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { QUEUE_STATUS } from '@/constants/entity-status-values';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('AI_PIPELINE_CRON');
 
@@ -131,7 +132,7 @@ async function executeBatchProcessing(trigger: CronTrigger): Promise<Response> {
         };
       } catch (diagError) {
         diagnostic = {
-          error: diagError instanceof Error ? diagError.message : 'Diagnostic error',
+          error: getErrorMessage(diagError, 'Diagnostic error'),
         };
       }
     }
@@ -149,7 +150,7 @@ async function executeBatchProcessing(trigger: CronTrigger): Promise<Response> {
 
   } catch (error) {
     const elapsed = Date.now() - startTime;
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = getErrorMessage(error);
 
     logger.error('AI pipeline batch error', {
       trigger,
@@ -240,7 +241,7 @@ async function handleGET(request: NextRequest): Promise<Response> {
         };
       });
     } catch (diagError) {
-      diagnostic.error = diagError instanceof Error ? diagError.message : 'Diagnostic error';
+      diagnostic.error = getErrorMessage(diagError, 'Diagnostic error');
     }
 
     return NextResponse.json({
@@ -257,7 +258,7 @@ async function handleGET(request: NextRequest): Promise<Response> {
     });
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = getErrorMessage(error);
 
     return NextResponse.json({
       ok: false,

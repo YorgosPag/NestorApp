@@ -27,6 +27,7 @@ import { createAccountingServices } from '@/subapps/accounting/services/create-a
 import { isPartnership, isLlc, isCorporation } from '@/subapps/accounting/utils/entity-guards';
 import { getProfessionalTaxForEntity } from '@/subapps/accounting/services/config/tax-config';
 import type { TaxResult, TaxInstallment } from '@/subapps/accounting/types';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // RESPONSE TYPE
@@ -123,7 +124,7 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
         const response: TaxDashboardResponse = { taxResult, installments };
         return NextResponse.json(response);
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to load tax dashboard';
+        const message = getErrorMessage(error, 'Failed to load tax dashboard');
         return NextResponse.json(
           { error: message },
           { status: 500 }

@@ -24,6 +24,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // TYPES
@@ -191,7 +192,7 @@ async function handlePost(
           unitId,
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to sync appurtenances';
+        const message = getErrorMessage(error, 'Failed to sync appurtenances');
         console.error('[appurtenance-sync] Error:', message);
         return NextResponse.json(
           { success: false, error: message },

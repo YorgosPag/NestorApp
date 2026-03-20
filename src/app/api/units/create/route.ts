@@ -6,6 +6,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
 import type { UnitType } from '@/types/unit';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('UnitsCreateRoute');
 
@@ -126,8 +127,8 @@ export const POST = withStandardRateLimit(
         );
       } catch (error) {
         if (error instanceof ApiError) throw error;
-        logger.error('[Units] Error creating unit', { error: error instanceof Error ? error.message : String(error) });
-        throw new ApiError(500, error instanceof Error ? error.message : 'Failed to create unit');
+        logger.error('[Units] Error creating unit', { error: getErrorMessage(error) });
+        throw new ApiError(500, getErrorMessage(error, 'Failed to create unit'));
       }
     },
     { permissions: 'units:units:create' }

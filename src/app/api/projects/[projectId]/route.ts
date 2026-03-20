@@ -48,6 +48,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
 import { linkEntity } from '@/lib/firestore/entity-linking.service';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('ProjectRoute');
 
@@ -322,7 +323,7 @@ async function handleUpdateProject(
     }).catch((err) => {
       logger.warn('[Projects/Update] linkEntity failed (non-blocking)', {
         projectId,
-        error: err instanceof Error ? err.message : String(err),
+        error: getErrorMessage(err),
       });
     });
   }

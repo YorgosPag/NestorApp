@@ -28,6 +28,7 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('ProjectCustomersRoute');
 
@@ -240,13 +241,13 @@ export const GET = withStandardRateLimit(async function GET(
       } catch (error) {
         logger.error('[Projects/Customers] Error', {
           errorType: error instanceof Error ? error.constructor.name : typeof error,
-          errorMessage: error instanceof Error ? error.message : String(error),
+          errorMessage: getErrorMessage(error),
           errorStack: error instanceof Error ? error.stack : 'No stack trace'
         });
 
         return NextResponse.json({
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to load project customers',
+          error: getErrorMessage(error, 'Failed to load project customers'),
           customers: [],
           projectId,
           summary: { customersCount: 0, soldUnitsCount: 0 },

@@ -27,6 +27,7 @@ import type {
 } from './types';
 import { getCompanyId } from '@/config/tenant';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('InstagramWebhookHandler');
 
@@ -116,7 +117,7 @@ export async function handlePOST(request: NextRequest): Promise<NextResponse> {
           });
         } catch (error) {
           logger.warn('[Instagram->Pipeline] after(): pipeline batch failed (cron will retry)', {
-            error: error instanceof Error ? error.message : String(error),
+            error: getErrorMessage(error),
           });
         }
       });
@@ -291,7 +292,7 @@ async function handleTextBasedFeedback(
     return { handled: false };
   } catch (error) {
     logger.warn('Instagram text feedback handler error (non-fatal)', {
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
     return { handled: false };
   }
@@ -333,7 +334,7 @@ async function feedInstagramToPipeline(msg: {
     }
   } catch (error) {
     logger.warn('[Instagram->Pipeline] Non-fatal error', {
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
   }
 }

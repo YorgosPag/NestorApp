@@ -25,6 +25,7 @@ import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { processQrCheckIn } from '@/services/attendance/attendance-server-service';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { QrCheckInPayload, QrCheckInResponse } from '@/components/projects/ika/contracts';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('api/attendance/check-in');
 
@@ -141,7 +142,7 @@ const basePOST = async (request: NextRequest): Promise<NextResponse<QrCheckInRes
     return NextResponse.json(result, { status });
   } catch (error) {
     logger.error('Check-in endpoint error', {
-      error: error instanceof Error ? error.message : 'Unknown',
+      error: getErrorMessage(error, 'Unknown'),
     });
 
     return NextResponse.json(

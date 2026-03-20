@@ -10,6 +10,7 @@ import type { CompanyContact, ContactStatus } from '@/types/contacts';
 import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeToDate } from '@/lib/date-local';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('CompaniesRoute');
 
@@ -288,7 +289,7 @@ async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promi
 
     // Enhanced error details for debugging
     const errorDetails = {
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: getErrorMessage(error),
       stack: error instanceof Error ? error.stack : 'No stack trace',
       type: typeof error,
       timestamp: new Date().toISOString()

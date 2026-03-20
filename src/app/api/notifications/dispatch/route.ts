@@ -31,6 +31,7 @@ import {
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('NotificationsDispatchRoute');
 
@@ -145,7 +146,7 @@ async function handleDispatch(request: NextRequest, ctx: AuthContext): Promise<N
         contactName = conversationData?.contactName || contactName;
       }
     } catch (error) {
-      logger.error('[Notifications/Dispatch] Failed to fetch contact name', { error: error instanceof Error ? error.message : String(error) });
+      logger.error('[Notifications/Dispatch] Failed to fetch contact name', { error: getErrorMessage(error) });
       // Continue with default name
     }
 
@@ -180,7 +181,7 @@ async function handleDispatch(request: NextRequest, ctx: AuthContext): Promise<N
       notificationId: result.notificationId,
     });
   } catch (error) {
-    logger.error('[Notifications/Dispatch] Unexpected error', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('[Notifications/Dispatch] Unexpected error', { error: getErrorMessage(error) });
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

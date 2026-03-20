@@ -20,6 +20,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { SalesAccountingBridge } from '@/services/sales-accounting';
 import type { SalesAccountingEvent } from '@/services/sales-accounting';
+import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // VALIDATION
@@ -112,7 +113,7 @@ async function handlePost(
 
         return NextResponse.json({ success: true, data: result });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to process accounting event';
+        const message = getErrorMessage(error, 'Failed to process accounting event');
         console.error('[accounting-event] Error:', message);
         return NextResponse.json(
           { success: false, error: message },
@@ -146,7 +147,7 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json({
       route: 'sales-accounting-event',
       status: 'error',
-      error: error instanceof Error ? error.message : 'unknown',
+      error: getErrorMessage(error, 'unknown'),
     });
   }
 }
