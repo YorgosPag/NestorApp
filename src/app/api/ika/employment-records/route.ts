@@ -150,9 +150,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
 
         await logAuditEvent(ctx, 'data_created', body.projectId, 'project', {
           metadata: {
-            reason: 'Employment records batch saved (ΕΦΚΑ compliance)',
-            month: String(body.month),
-            year: String(body.year),
+            reason: `Employment records batch saved — ΕΦΚΑ compliance (${body.month}/${body.year}, created: ${created}, updated: ${updated})`,
           },
         }).catch(() => {/* non-blocking */});
 

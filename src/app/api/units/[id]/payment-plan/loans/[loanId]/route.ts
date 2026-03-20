@@ -57,7 +57,7 @@ async function handlePatch(
         }
 
         await logAuditEvent(ctx, 'data_updated', loanId, 'loan', {
-          metadata: { reason: 'Loan fields updated', unitId, planId },
+          metadata: { reason: `Loan fields updated (unit: ${unitId}, plan: ${planId})` },
         }).catch(() => {/* non-blocking */});
 
         return NextResponse.json({ success: true });

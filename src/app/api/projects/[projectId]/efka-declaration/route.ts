@@ -37,8 +37,8 @@ async function handlePatch(
   const { projectId } = await segmentData!.params;
 
   const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, cache: PermissionCache): Promise<NextResponse> => {
-      await requireProjectInTenant({ ctx, cache, projectId, path: '/api/projects/[projectId]/efka-declaration' });
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      await requireProjectInTenant({ ctx, projectId, path: '/api/projects/[projectId]/efka-declaration' });
 
       try {
         const body = (await req.json()) as Record<string, unknown>;

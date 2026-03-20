@@ -80,7 +80,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         await db.collection(COLLECTIONS.ATTENDANCE_EVENTS).doc(eventId).set(eventData);
 
         await logAuditEvent(ctx, 'data_created', eventId, 'project', {
-          metadata: { reason: 'Attendance event created (ΣΕΠΕ compliance)', projectId: body.projectId },
+          metadata: { reason: `Attendance event created — ΣΕΠΕ compliance (project: ${body.projectId})` },
         }).catch(() => {/* non-blocking */});
 
         return NextResponse.json({ success: true, data: { id: eventId } }, { status: 201 });

@@ -89,7 +89,7 @@ async function handlePost(
 
         await logAuditEvent(ctx, 'data_created', result.payment?.id ?? unitId, 'payment', {
           newValue: { type: 'financial_status', value: { amount: body.amount, method: body.method } },
-          metadata: { reason: 'Payment recorded', unitId },
+          metadata: { reason: `Payment recorded (unit: ${unitId}, amount: ${body.amount})` },
         }).catch(() => {/* non-blocking */});
 
         return NextResponse.json({ success: true, data: result.payment }, { status: 201 });
