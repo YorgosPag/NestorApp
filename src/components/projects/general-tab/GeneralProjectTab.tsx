@@ -168,10 +168,8 @@ export function GeneralProjectTab({
         linkedCompanyName: undefined, // Will be resolved by cascade if needed
       });
       if (result.success) {
-        setProjectData(prev => ({
-          ...prev,
-          companyId: prev.companyId, // Keep tenant companyId unchanged
-        }));
+        // NOTE: Do NOT setProjectData here — it triggers auto-save which
+        // overwrites other fields (e.g., description) with stale form state
         RealtimeService.dispatch('PROJECT_UPDATED', {
           projectId: project.id,
           updates: { linkedCompanyId: newId ?? undefined },
