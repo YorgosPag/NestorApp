@@ -19,15 +19,12 @@ import {
   where,
   orderBy,
   getDocs,
-  doc,
-  setDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AttendanceEvent, AttendanceEventType, AttendanceMethod } from '../contracts';
 import { createModuleLogger } from '@/lib/telemetry';
 
-// TODO(ADR-253-CW-2): Move Firestore writes to server-side API route
 const logger = createModuleLogger('useAttendanceEvents');
 
 /** Parameters for creating a new attendance event */
@@ -159,31 +156,29 @@ export function useAttendanceEvents(
     return () => { mounted = false; };
   }, [projectId, selectedDate, refreshKey]);
 
-  // Create a new immutable attendance event
+  // Create a new immutable attendance event (server-side — SPEC-255C)
   const addEvent = useCallback(async (params: CreateAttendanceEventParams): Promise<boolean> => {
     try {
-      const now = new Date().toISOString();
+      const response = await fetch('/api/ika/attendance-events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: params.projectId,
+          contactId: params.contactId,
+          eventType: params.eventType,
+          method: params.method,
+          notes: params.notes,
+          coordinates: params.coordinates,
+          deviceId: params.deviceId,
+          approvedBy: params.approvedBy,
+        }),
+      });
 
-      const eventData = {
-        projectId: params.projectId,
-        contactId: params.contactId,
-        eventType: params.eventType,
-        method: params.method,
-        timestamp: now,
-        coordinates: params.coordinates ?? null,
-        deviceId: params.deviceId ?? null,
-        recordedBy: params.recordedBy,
-        notes: params.notes ?? null,
-        approvedBy: params.approvedBy ?? null,
-        createdAt: now,
-      };
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ error: 'Server error' }));
+        throw new Error(data.error ?? 'Failed to create attendance event');
+      }
 
-      const { generateEventId } = await import('@/services/enterprise-id.service');
-      const enterpriseId = generateEventId();
-      const docRef = doc(db, COLLECTIONS.ATTENDANCE_EVENTS, enterpriseId);
-      await setDoc(docRef, eventData);
-
-      // Refresh the events list
       refetch();
       return true;
     } catch (err) {

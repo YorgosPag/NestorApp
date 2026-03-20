@@ -13,7 +13,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { EfkaDeclarationData, EfkaDeclarationStatus } from '../contracts';
@@ -122,31 +122,33 @@ export function useEfkaDeclaration(projectId: string | undefined): UseEfkaDeclar
     return () => { mounted = false; };
   }, [projectId, refreshKey]);
 
-  // Save partial updates to declaration
+  // Save partial updates to declaration (server-side — SPEC-255C)
   const saveDeclaration = useCallback(async (updates: Partial<EfkaDeclarationData>): Promise<boolean> => {
     if (!projectId) return false;
 
     try {
-      const projectRef = doc(db, COLLECTIONS.PROJECTS, projectId);
+      const response = await fetch(`/api/projects/${projectId}/efka-declaration`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
 
-      // Build the update object with dot notation for nested field
-      const updatePayload: Record<string, unknown> = {
-        updatedAt: serverTimestamp(),
-      };
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ error: 'Server error' }));
+        throw new Error(data.error ?? 'Failed to save declaration');
+      }
 
-      // Merge updates into efkaDeclaration
+      const result = await response.json();
+
+      // Optimistic update: merge locally
       const currentDeclaration = declaration ?? createDefaultEfkaDeclaration('system');
-      const mergedDeclaration: EfkaDeclarationData = {
+      const mergedDeclaration: EfkaDeclarationData = result.data ?? {
         ...currentDeclaration,
         ...updates,
         updatedAt: new Date().toISOString(),
       };
 
-      updatePayload['efkaDeclaration'] = mergedDeclaration;
-
-      await updateDoc(projectRef, updatePayload);
       setDeclaration(mergedDeclaration);
-
       return true;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save declaration';
@@ -161,18 +163,23 @@ export function useEfkaDeclaration(projectId: string | undefined): UseEfkaDeclar
     return saveDeclaration({ status });
   }, [saveDeclaration]);
 
-  // Initialize declaration if it doesn't exist
+  // Initialize declaration if it doesn't exist (server-side — SPEC-255C)
   const initializeDeclaration = useCallback(async (userId: string): Promise<boolean> => {
     if (!projectId || declaration) return false;
 
     try {
       const newDeclaration = createDefaultEfkaDeclaration(userId);
-      const projectRef = doc(db, COLLECTIONS.PROJECTS, projectId);
 
-      await updateDoc(projectRef, {
-        efkaDeclaration: newDeclaration,
-        updatedAt: serverTimestamp(),
+      const response = await fetch(`/api/projects/${projectId}/efka-declaration`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newDeclaration),
       });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ error: 'Server error' }));
+        throw new Error(data.error ?? 'Failed to initialize declaration');
+      }
 
       setDeclaration(newDeclaration);
       return true;

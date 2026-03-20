@@ -18,9 +18,6 @@ import {
   query,
   where,
   getDocs,
-  updateDoc,
-  doc,
-  writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -141,65 +138,25 @@ export function useEmploymentRecords(
     return () => { mounted = false; };
   }, [projectId, month, year, refreshKey]);
 
-  // Batch save employment records for a month
+  // Batch save employment records for a month (server-side — SPEC-255C)
   const saveRecords = useCallback(async (params: SaveEmploymentRecordsParams): Promise<boolean> => {
     try {
-      const now = new Date().toISOString();
-      const batch = writeBatch(db);
-      const collRef = collection(db, COLLECTIONS.EMPLOYMENT_RECORDS);
-
-      // Build a map of existing records by contactId for updates
-      const existingMap = new Map<string, EmploymentRecord>();
-      for (const record of records) {
-        existingMap.set(record.contactId, record);
-      }
-
-      for (const ws of params.workerSummaries) {
-        // Skip workers with issues (no insurance class)
-        if (ws.hasIssues) continue;
-
-        const existing = existingMap.get(ws.contactId);
-        const recordData = {
+      const response = await fetch('/api/ika/employment-records', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           projectId: params.projectId,
-          contactId: ws.contactId,
           month: params.month,
           year: params.year,
-          totalDaysWorked: ws.daysWorked,
-          totalHoursWorked: ws.daysWorked * 8,
-          overtimeHours: 0,
-          insuranceClassNumber: ws.insuranceClassNumber ?? 0,
-          stampsCount: ws.stampsCount,
-          dailyWage: ws.imputedDailyWage ?? 0,
-          employerContribution: ws.employerContribution,
-          employeeContribution: ws.employeeContribution,
-          totalContribution: ws.totalContribution,
-          apdStatus: 'pending' as ApdStatus,
-          apdSubmissionDate: null,
-          apdReferenceNumber: null,
-          updatedAt: now,
-        };
+          workerSummaries: params.workerSummaries,
+        }),
+      });
 
-        if (existing) {
-          // Update existing record (preserve APD status if already submitted)
-          const updateData = {
-            ...recordData,
-            apdStatus: existing.apdStatus === 'pending' ? 'pending' : existing.apdStatus,
-            apdSubmissionDate: existing.apdSubmissionDate,
-            apdReferenceNumber: existing.apdReferenceNumber,
-          };
-          const recordRef = doc(db, COLLECTIONS.EMPLOYMENT_RECORDS, existing.id);
-          batch.update(recordRef, updateData);
-        } else {
-          // Create new record
-          const newRef = doc(collRef);
-          batch.set(newRef, {
-            ...recordData,
-            createdAt: now,
-          });
-        }
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ error: 'Server error' }));
+        throw new Error(data.error ?? 'Failed to save employment records');
       }
 
-      await batch.commit();
       refetch();
       return true;
     } catch (err) {
@@ -208,32 +165,26 @@ export function useEmploymentRecords(
       logger.error('[useEmploymentRecords] Save error:', { error: message });
       return false;
     }
-  }, [records, refetch]);
+  }, [refetch]);
 
-  // Update a single record's APD status
+  // Update a single record's APD status (server-side — SPEC-255C)
   const updateApdStatus = useCallback(async (
     recordId: string,
     status: ApdStatus,
     referenceNumber?: string
   ): Promise<boolean> => {
     try {
-      const now = new Date().toISOString();
-      const recordRef = doc(db, COLLECTIONS.EMPLOYMENT_RECORDS, recordId);
+      const response = await fetch(`/api/ika/employment-records/${recordId}/apd-status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, referenceNumber }),
+      });
 
-      const updateData: Record<string, unknown> = {
-        apdStatus: status,
-        updatedAt: now,
-      };
-
-      if (status === 'submitted') {
-        updateData.apdSubmissionDate = now;
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ error: 'Server error' }));
+        throw new Error(data.error ?? 'Failed to update APD status');
       }
 
-      if (referenceNumber !== undefined) {
-        updateData.apdReferenceNumber = referenceNumber;
-      }
-
-      await updateDoc(recordRef, updateData);
       refetch();
       return true;
     } catch (err) {
