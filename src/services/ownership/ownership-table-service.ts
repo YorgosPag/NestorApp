@@ -300,7 +300,7 @@ export async function autoPopulateRows(
         buildingId,
         buildingName,
         entityRef: { collection: 'units', id: unitDoc.id },
-        entityCode: (data.entityCode as string) ?? (data.unitCode as string) ?? `U-${ordinal}`,
+        entityCode: (data.entityCode as string) ?? (data.code as string) ?? (data.unitCode as string) ?? `U-${ordinal}`,
         description: (data.name as string) ?? (data.description as string) ?? '',
         category: 'main',
         floor: String(data.floor ?? data.floorNumber ?? ''),
