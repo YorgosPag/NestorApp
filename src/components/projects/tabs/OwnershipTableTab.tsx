@@ -25,8 +25,6 @@ import { TOTAL_SHARES_TARGET } from '@/types/ownership-table';
 import { useOwnershipTable } from '@/hooks/ownership/useOwnershipTable';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
-import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -52,7 +50,6 @@ import {
   Unlock,
   RefreshCw,
   Save,
-  Trash2,
   Plus,
   AlertTriangle,
   CheckCircle,
@@ -147,7 +144,6 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
   const resolvedProjectId = projectId ?? data.id;
   const { t } = useTranslation();
   const { success: showSuccess, error: showError } = useNotifications();
-  const { confirm, dialogProps } = useConfirmDialog();
 
   // Building IDs — fetch from Firestore (buildings where projectId matches)
   const [buildingIds, setBuildingIds] = useState<string[]>([]);
@@ -185,7 +181,6 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
     autoPopulate,
     calculate,
     updateRow,
-    removeRow,
     updateTableField,
     save,
     finalize,
@@ -633,26 +628,7 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
                             </Select>
                           )}
                         </TableCell>
-                        {!isLocked && (
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-destructive"
-                              onClick={async () => {
-                                const ok = await confirm({
-                                  title: 'Εξαίρεση από πίνακα χιλιοστών',
-                                  description: `Η μονάδα "${row.description}" θα αφαιρεθεί από τον υπολογισμό χιλιοστών. Δεν διαγράφεται από τη βάση — μπορείτε να την επαναφέρετε με "Αυτόματη Συμπλήρωση".`,
-                                  variant: 'destructive',
-                                  confirmText: 'Εξαίρεση',
-                                  cancelText: 'Ακύρωση',
-                                });
-                                if (ok) removeRow(globalIndex);
-                              }}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </TableCell>
+                        {/* Μονάδα κτιρίου = υποχρεωτικά στον πίνακα. Για αφαίρεση → αποσύνδεση από κτίριο. */}
                         )}
                       </TableRow>
                     );
@@ -778,8 +754,6 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
         <p className="text-sm text-destructive">{error}</p>
       )}
 
-      {/* Enterprise confirm dialog */}
-      <ConfirmDialog {...dialogProps} />
     </section>
   );
 }
