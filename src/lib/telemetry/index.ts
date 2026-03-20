@@ -23,7 +23,6 @@ export {
   ConsoleOutput,
   DevNullOutput,
   CompositeOutput,
-  TelegramAlertOutput,
 
   // Types & Interfaces
   LogLevel,
@@ -35,6 +34,7 @@ export {
   createModuleLogger,
   getLogger,
   setLogger,
+  registerLogOutput,
 } from './Logger';
 
 // Default export
