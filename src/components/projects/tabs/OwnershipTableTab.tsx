@@ -14,7 +14,7 @@
  * @module components/projects/tabs/OwnershipTableTab
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import type { Project } from '@/types/project';
 import type {
   CalculationMethod,
@@ -146,8 +146,26 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
   const { t } = useTranslation();
   const { success: showSuccess, error: showError } = useNotifications();
 
-  // Building IDs from project structure (fetch from sub-documents)
-  const [buildingIds] = useState<string[]>(() => []);
+  // Building IDs — fetch from Firestore (buildings where projectId matches)
+  const [buildingIds, setBuildingIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    async function fetchBuildingIds() {
+      try {
+        const { collection, query, where, getDocs } = await import('firebase/firestore');
+        const { db } = await import('@/lib/firebase');
+        const { COLLECTIONS } = await import('@/config/firestore-collections');
+        const snap = await getDocs(
+          query(collection(db, COLLECTIONS.BUILDINGS), where('projectId', '==', resolvedProjectId))
+        );
+        const ids = snap.docs.map(d => d.id);
+        setBuildingIds(ids);
+      } catch {
+        // Silent — ownership table will just show empty
+      }
+    }
+    fetchBuildingIds();
+  }, [resolvedProjectId]);
 
   // Unlock dialog state
   const [showUnlockInput, setShowUnlockInput] = useState(false);
