@@ -113,6 +113,7 @@ export async function updateTask(id: string, updates: Partial<CrmTask>): Promise
 
 /**
  * Delete a task
+ * TODO: ADR-AUDIT — Add subtask cleanup (delete or reassign subtasks before deleting parent)
  */
 export async function deleteTask(id: string): Promise<void> {
   await tasksRepository.delete(id);

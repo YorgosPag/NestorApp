@@ -95,9 +95,12 @@ export async function updateOpportunity(opportunityId: string, updates: Partial<
   }
 }
 
-/** Διαγραφή ευκαιρίας */
+/** Διαγραφή ευκαιρίας — TODO: Add cascade cleanup for related records */
 export async function deleteOpportunity(opportunityId: string): Promise<{ success: boolean }> {
   try {
+    // TODO: ADR-AUDIT — Before deleting, clean up related records:
+    // - communications referencing this opportunity
+    // - contact_links with targetEntityId === opportunityId
     await deleteDoc(doc(db, OPPORTUNITIES_COLLECTION, opportunityId));
     return { success: true };
   } catch (error) {

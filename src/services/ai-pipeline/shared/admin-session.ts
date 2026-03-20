@@ -118,7 +118,7 @@ export async function setAdminSession(
       expiresAt: new Date(Date.now() + SESSION_TTL_MS).toISOString(),
     };
 
-    await docRef.set(session);
+    await docRef.set(session, { merge: true });
 
     logger.debug('Admin session updated', {
       adminIdentifier,

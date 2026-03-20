@@ -152,8 +152,11 @@ export const DocumentTemplateService = {
 
   /**
    * Delete a template
+   * TODO: ADR-AUDIT — Check for documents generated from this template before deleting
    */
   async deleteTemplate(templateId: string): Promise<void> {
+    // TODO: ADR-AUDIT — Query file_documents where templateId === templateId
+    // If any exist, block deletion or warn user
     await deleteDoc(doc(db, COLLECTIONS.DOCUMENT_TEMPLATES, templateId));
   },
 

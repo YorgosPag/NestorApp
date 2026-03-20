@@ -242,6 +242,7 @@ export class FirestoreBOQRepository implements IBOQRepository {
     }
   }
 
+  // TODO: ADR-AUDIT — Add dependency check before deletion (linked measurements, cost records)
   async delete(id: string): Promise<boolean> {
     try {
       const docRef = doc(db, COLLECTIONS.BOQ_ITEMS, id);

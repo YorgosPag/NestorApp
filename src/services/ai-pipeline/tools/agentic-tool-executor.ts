@@ -400,7 +400,7 @@ export class AgenticToolExecutor {
 
     if (documentId) {
       if (mode === 'create') {
-        await db.collection(collection).doc(documentId).set(writeData);
+        await db.collection(collection).doc(documentId).set(writeData, { merge: true });
       } else {
         await db.collection(collection).doc(documentId).update(writeData);
       }
