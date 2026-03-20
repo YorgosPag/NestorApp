@@ -28,18 +28,18 @@
 
 | Axis | Critical | High | Medium | Low | Total |
 |------|----------|------|--------|-----|-------|
-| **1. Silent Error Swallowing** | 6 | 12 | 15 | 6 | 39 |
-| **2. Race Conditions** | 3 | 4 | 2 | 0 | 9 |
-| **3. Client-Side Writes** | 2 | 5 | 3 | 0 | 10 |
-| **4. API Auth Gaps** | 1 | 0 | 0 | 0 | 1 |
-| **TOTAL** | **12** | **21** | **20** | **6** | **59** |
+| **1. Silent Error Swallowing** | 8 | 14 | 15 | 6 | 43 |
+| **2. Race Conditions** | 6 | 5 | 2 | 0 | 13 |
+| **3. Client-Side Writes** | 4 | 5 | 3 | 0 | 12 |
+| **4. API Auth Gaps** | 4 | 2 | 0 | 0 | 6 |
+| **TOTAL** | **22** | **26** | **20** | **6** | **74** |
 
 **Positive highlights (σωστά patterns):**
-- Queue services (`pipeline-queue-service`, `email-queue-service`) use `runTransaction()` correctly
+- Queue claim services (`pipeline-queue-service`, `email-queue-service`) use `runTransaction()` correctly for claim operations
 - `FieldValue.increment()` used in 8 files for atomic counter updates
 - Attendance routes have proper rate limiting (withHeavyRateLimit)
-- Webhook endpoints use HMAC-SHA256 signature verification
-- Cron routes verify `CRON_SECRET` header
+- Mailgun webhook uses HMAC-SHA256 signature verification with timing-safe comparison
+- Cron routes `ai-pipeline` and `email-ingestion` have both `CRON_SECRET` + `withSensitiveRateLimit`
 - 86+ API routes have rate limiting (multi-tier)
 - Deletion guard uses proper dependency checking + cascade batching
 
@@ -66,7 +66,31 @@ These are audit log writes that silently fail. If the audit service is down, ALL
 
 **Fix pattern:** Replace `.catch(() => {})` with `.catch(err => ErrorTracker.capture(err, { context: 'audit-trail', fileId }))` — at minimum, surface the failure to Telegram alerts.
 
-### 3.2 Pattern B: Approval Workflow Silent Failures (HIGH — 4 instances)
+### 3.2 Pattern A2: Document AI Processing — Perpetual "Processing" State (CRITICAL — 1 instance)
+
+| # | File | Line | Code | Business Impact |
+|---|------|------|------|-----------------|
+| A7 | `src/app/api/accounting/documents/route.ts` | 163-166 | `processDocumentAsync(...).catch((err) => { logger.error(...) });` | Document locked in "processing" status forever. User sees no error. AI classification silently failed — document becomes unusable zombie. |
+
+**Severity:** 🔴 CRITICAL — Document stuck in limbo, no retry, no timeout, no user notification.
+
+### 3.3 Pattern A3: Auto-Save Silent Flush on Unmount (CRITICAL — 1 instance)
+
+| # | File | Line | Code | Business Impact |
+|---|------|------|------|-----------------|
+| A8 | `src/hooks/useAutoSave.ts` | unmount | `saveFnRef.current(finalData).catch(() => {});` | When user navigates away, unsaved data is silently lost if save fails. NO toast, NO retry, NO warning. |
+
+**Severity:** 🔴 CRITICAL — Silent data loss on page navigation. User believes data was saved.
+
+### 3.4 Pattern B: Notification Client Silent Fallback Chain (HIGH — 1 instance)
+
+| # | File | Line | Code | Business Impact |
+|---|------|------|------|-----------------|
+| B0 | `src/api/notificationClient.ts` | 107-139 | `try { await tryWS(); } catch {} try { await trySSE(); } catch {} await tryPoll();` | WebSocket→SSE→Polling fallback chain: ALL failures silent. User has no idea real-time notifications are broken, sees stale data indefinitely. |
+
+**Severity:** 🟠 HIGH — Real-time notifications completely broken without user awareness.
+
+### 3.5 Pattern B2: Approval Workflow Silent Failures (HIGH — 4 instances)
 
 | # | File | Line | Code | Business Impact |
 |---|------|------|------|-----------------|
@@ -77,7 +101,7 @@ These are audit log writes that silently fail. If the audit service is down, ALL
 
 **Severity:** 🟠 HIGH — Approvers may never know their action was requested.
 
-### 3.3 Pattern C: Business Data Operation Silent Failures (HIGH — 8 instances)
+### 3.6 Pattern C: Business Data Operation Silent Failures (HIGH — 8 instances)
 
 | # | File | Line | Code | Business Impact |
 |---|------|------|------|-----------------|
@@ -92,7 +116,7 @@ These are audit log writes that silently fail. If the audit service is down, ALL
 
 **Severity:** 🟠 HIGH — Business-critical audit trails silently lost.
 
-### 3.4 Pattern D: Communication Channel Silent Failures (MEDIUM — 5 instances)
+### 3.7 Pattern D: Communication Channel Silent Failures (MEDIUM — 5 instances)
 
 | # | File | Line | Code | Business Impact |
 |---|------|------|------|-----------------|
@@ -104,7 +128,7 @@ These are audit log writes that silently fail. If the audit service is down, ALL
 
 **Severity:** 🟡 MEDIUM — User experience degraded but no data loss.
 
-### 3.5 Pattern E: Navigation & UI Silent Failures (MEDIUM — 5 instances)
+### 3.8 Pattern E: Navigation & UI Silent Failures (MEDIUM — 5 instances)
 
 | # | File | Line | Code | Business Impact |
 |---|------|------|------|-----------------|
@@ -116,7 +140,7 @@ These are audit log writes that silently fail. If the audit service is down, ALL
 
 **Severity:** 🟡 MEDIUM — UI shows stale data after mutations, user must manually refresh.
 
-### 3.6 Pattern F: Server-Side Operation Failures (MEDIUM — 5 instances)
+### 3.9 Pattern F: Server-Side Operation Failures (MEDIUM — 5 instances)
 
 | # | File | Line | Code | Business Impact |
 |---|------|------|------|-----------------|
@@ -128,7 +152,7 @@ These are audit log writes that silently fail. If the audit service is down, ALL
 
 **Severity:** 🟡 MEDIUM
 
-### 3.7 Pattern G: Acceptable `.catch(() => {})` (LOW — 6 instances)
+### 3.10 Pattern G: Acceptable `.catch(() => {})` (LOW — 6 instances)
 
 These are acceptable uses where silent failure is the correct behavior:
 
@@ -141,7 +165,7 @@ These are acceptable uses where silent failure is the correct behavior:
 | G5 | `src/services/ai-pipeline/agentic-loop.ts` | 261 | `response.text().catch(() => '')` — same pattern |
 | G6 | `src/services/entity-audit.service.ts` | 181-182 | Display name resolution — cosmetic only |
 
-### 3.8 Pattern H: Console-Log-Only Error Handling (161 occurrences)
+### 3.11 Pattern H: Console-Log-Only Error Handling (161 occurrences)
 
 **161 catch blocks** across **114 files** log errors with `console.error` or `logger.error` but take no corrective action. While better than silent swallowing, these errors are invisible to users and to monitoring (unless Telegram alerts are configured for that module).
 
@@ -282,11 +306,50 @@ await setDoc(userDocRef, { loginCount: FieldValue.increment(1) }, { merge: true 
 | **Severity** | 🔴 CRITICAL |
 | **Fix** | MUST use `runTransaction()` to atomically verify + mark as used |
 
+### 4.11 RC-10: Chat History Non-Atomic Read-Then-Write (CRITICAL)
+
+| Field | Detail |
+|-------|--------|
+| **File** | `src/services/ai-pipeline/chat-history-service.ts` |
+| **Lines** | 89-116 |
+| **Pattern** | `getDoc()` → push message to array → `update()` / `set()` |
+| **Race Scenario A** | Two rapid messages for same user: Thread 1 reads 19 messages, Thread 2 reads 19 messages → both add message 20 → **one message LOST** |
+| **Race Scenario B** | New user, first message: both threads see `!exists` → both `set()` → **first message OVERWRITTEN** |
+| **Business Impact** | Lost AI conversation history, poisoned training data (ADR-171), user confusion |
+| **Severity** | 🔴 CRITICAL |
+| **Fix** | Wrap `addMessage()` in `runTransaction()` |
+
+### 4.12 RC-11: Email Queue Failure Status Race (CRITICAL)
+
+| Field | Detail |
+|-------|--------|
+| **File** | `src/services/communications/inbound/email-queue-service.ts` |
+| **Lines** | 764-812 |
+| **Pattern** | `getDoc()` → read `retryCount` → decide status (FAILED vs DEAD_LETTER) → `update()` |
+| **Race Scenario** | Worker A reads `retryCount: 2`, Worker B increments to `3` via transaction, Worker A writes `status: FAILED` (should be `DEAD_LETTER` since `3 >= maxRetries`) |
+| **Business Impact** | Zombie emails retry forever instead of going to dead letter queue. Resource waste, lost email data. |
+| **Severity** | 🔴 CRITICAL |
+| **Fix** | Move retry count check + status decision inside `runTransaction()` |
+
+**Note:** The retry `increment()` itself is atomic (`FieldValue.increment(1)` at line 589), but the status decision at lines 764-812 reads stale data.
+
+### 4.13 RC-12: Email Queue Non-Atomic Duplicate Check (HIGH)
+
+| Field | Detail |
+|-------|--------|
+| **File** | `src/services/communications/inbound/email-queue-service.ts` |
+| **Lines** | 244-260 |
+| **Pattern** | Query `where('providerMessageId', '==', ...)` → check empty → `add()` |
+| **Race Scenario** | Two webhook calls for same email arrive simultaneously → both find no duplicate → both `add()` → **same email enqueued TWICE** |
+| **Business Impact** | Double email processing, duplicate communications created, AI pipeline processes email twice |
+| **Severity** | 🟠 HIGH |
+| **Fix** | Use document ID derived from `providerMessageId` with `setDoc()` (idempotent) instead of `add()` + query |
+
 ---
 
 ## 5. Axis 3: Client-Side Firestore Writes without Server Validation
 
-**Summary:** 10+ client-side locations write directly to Firestore. Any client with Firebase auth can modify these documents by calling the Firestore SDK directly — bypassing all business logic, validation, and authorization checks.
+**Summary:** 12+ client-side locations write directly to Firestore. Any client with Firebase auth can modify these documents by calling the Firestore SDK directly — bypassing all business logic, validation, and authorization checks.
 
 ### 5.1 Firestore Rules ≠ Business Validation
 
@@ -413,6 +476,28 @@ Firestore Rules **CANNOT** verify:
 | **Risk** | Limited to DXF viewer workspace, no business data |
 | **Severity** | 🟡 MEDIUM |
 
+### 5.12 Critical: Database Update Page — addDoc without Enterprise IDs (CW-11)
+
+| Field | Detail |
+|-------|--------|
+| **File** | `src/app/admin/database-update/page.tsx` |
+| **Lines** | 29-35 |
+| **Collection** | `contacts`, `units`, `projects` |
+| **Operation** | `addDoc(collection(db, COLLECTIONS.CONTACTS), {...})` |
+| **Risk** | Uses `addDoc()` instead of `setDoc()` + enterprise-id.service (violates ADR-017). No validation of email format, name format, tags. No duplicate check. No tenant isolation enforcement. No audit trail. |
+| **Severity** | 🔴 CRITICAL |
+
+### 5.13 Critical: CRM Notifications Page — Spoofable Notifications (CW-12)
+
+| Field | Detail |
+|-------|--------|
+| **File** | `src/app/crm/notifications/page.tsx` |
+| **Lines** | 45-55 |
+| **Collection** | `notifications` |
+| **Operation** | `addDoc()` to create + `deleteDoc()` to remove notifications |
+| **Risk** | Any authenticated user can create notifications for ANY other user (spoof). Can also delete any notification. No authorization check that sender has permission. |
+| **Severity** | 🔴 CRITICAL |
+
 ---
 
 ## 6. Axis 4: API Routes without Auth/Rate Limit
@@ -429,7 +514,7 @@ Firestore Rules **CANNOT** verify:
 | Rate Limit only (webhooks) | 8 | Webhooks verified via HMAC ✅ |
 | `CRON_SECRET` only | 3 | Cron jobs ✅ |
 | Custom auth (internal) | 5 | Custom verification ✅ |
-| **UNPROTECTED** | **1** | ⚠️ Needs fix |
+| **UNPROTECTED** | **6** | ⚠️ Needs fix |
 
 ### 6.2 AR-1: Calendar Reminders — No Auth, No Rate Limit (CRITICAL)
 
@@ -445,7 +530,58 @@ Firestore Rules **CANNOT** verify:
 | **Severity** | 🔴 CRITICAL |
 | **Fix** | Add `CRON_SECRET` verification (same pattern as `cron/file-purge` and `cron/ai-learning`) |
 
-### 6.3 Routes Correctly Protected (Reference)
+### 6.3 AR-2: MFA Enroll Complete — No Auth (CRITICAL)
+
+| Field | Detail |
+|-------|--------|
+| **File** | `src/app/api/auth/mfa/enroll/complete/route.ts` |
+| **Method** | POST |
+| **Auth** | ❌ NONE |
+| **Rate Limit** | ❌ NONE |
+| **What It Does** | Completes MFA enrollment for a user |
+| **Risk** | Unauthenticated users can complete MFA enrollment for any user |
+| **Severity** | 🔴 CRITICAL |
+| **Fix** | Add session verification + `withHeavyRateLimit` |
+
+### 6.4 AR-3: Cron Overdue Alerts — No Auth, No Rate Limit (CRITICAL)
+
+| Field | Detail |
+|-------|--------|
+| **File** | `src/app/api/cron/overdue-alerts/route.ts` |
+| **Method** | GET |
+| **Auth** | ❌ NONE (no `CRON_SECRET` check) |
+| **Rate Limit** | ❌ NONE |
+| **What It Does** | Queries overdue appointments, creates notifications system-wide |
+| **Risk** | Public trigger for system-wide notification spam |
+| **Severity** | 🔴 CRITICAL |
+| **Fix** | Add `CRON_SECRET` verification |
+
+### 6.5 AR-4: Enterprise IDs Migrate — No Auth (HIGH)
+
+| Field | Detail |
+|-------|--------|
+| **File** | `src/app/api/enterprise-ids/migrate/route.ts` |
+| **Method** | POST |
+| **Auth** | ❌ NONE |
+| **Rate Limit** | ❌ NONE |
+| **What It Does** | Migrates enterprise ID formats across documents |
+| **Risk** | Public access to data migration — can corrupt document IDs |
+| **Severity** | 🟠 HIGH |
+| **Fix** | Add `withAuth()` + super_admin check |
+
+### 6.6 AR-5: AI Learning Cron — Bypassable Auth (HIGH)
+
+| Field | Detail |
+|-------|--------|
+| **File** | `src/app/api/cron/ai-learning/route.ts` |
+| **Method** | GET |
+| **Auth** | ⚠️ `CRON_SECRET` check — but if env var missing, logs warning and **allows unauthenticated access** |
+| **Rate Limit** | ❌ NONE |
+| **Risk** | If `CRON_SECRET` not configured, anyone can trigger AI retraining + feedback deletion |
+| **Severity** | 🟠 HIGH |
+| **Fix** | Make auth mandatory — return 500 if `CRON_SECRET` not set (don't proceed) |
+
+### 6.7 Routes Correctly Protected (Reference)
 
 All other routes examined have appropriate protection:
 
@@ -469,11 +605,19 @@ All other routes examined have appropriate protection:
 | ID | Finding | Axis | Effort | Impact |
 |----|---------|------|--------|--------|
 | RC-9 | 2FA code replay (no transaction) | Race Condition | 2h | Security bypass |
+| RC-10 | Chat history message loss (no transaction) | Race Condition | 2h | AI conversation data loss |
+| RC-11 | Email queue zombie status race | Race Condition | 2h | Emails retry forever |
 | RC-2 | Ownership table double-finalize | Race Condition | 2h | Legal document corruption |
 | RC-3 | Ownership table version skip | Race Condition | 1h | Version integrity |
 | AR-1 | Calendar reminders no auth | API Auth | 30min | DoS + notification spam |
+| AR-2 | MFA enroll complete no auth | API Auth | 1h | MFA bypass |
+| AR-3 | Cron overdue-alerts no auth | API Auth | 30min | Notification spam |
 | CW-1 | Auth profile self-modification | Client Writes | 4h | Privilege escalation risk |
 | CW-2 | Client-side attendance events | Client Writes | 2h | Time fraud |
+| CW-11 | database-update addDoc (no enterprise IDs) | Client Writes | 3h | Data integrity violation |
+| CW-12 | CRM notifications spoofing | Client Writes | 2h | Notification spoofing |
+| A7 | Document AI perpetual "processing" | Error Swallowing | 2h | Zombie documents |
+| A8 | Auto-save silent flush on unmount | Error Swallowing | 2h | Silent data loss |
 
 ### 🟠 P1 — Fix This Sprint (Data Integrity)
 
@@ -483,7 +627,10 @@ All other routes examined have appropriate protection:
 | RC-1 | Login count race | Race Condition | 30min | Analytics accuracy |
 | RC-4 | Profile creation race | Race Condition | 1h | Data loss |
 | RC-5 | BOQ read-modify-write | Race Condition | 2h | Measurement data loss |
+| RC-12 | Email queue duplicate enqueue | Race Condition | 2h | Double email processing |
 | CW-5-7 | Worker/employment/EFKA client writes | Client Writes | 6h | Labor compliance |
+| AR-4 | Enterprise IDs migrate no auth | API Auth | 1h | ID corruption |
+| AR-5 | AI learning cron bypassable auth | API Auth | 30min | AI model tampering |
 
 ### 🟡 P2 — Fix Next Sprint (Quality)
 
@@ -560,3 +707,4 @@ For each client-side write, the migration path is:
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-03-20 | Initial audit — 4 axes, 59 findings documented | Claude (ADR-253) |
+| 2026-03-20 | Update: +15 findings from 3 parallel audit agents (74 total). Added RC-10/11/12, AR-2/3/4/5, CW-11/12, A7/A8, B0 | Claude (ADR-253) |
