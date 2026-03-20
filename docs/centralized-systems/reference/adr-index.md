@@ -301,7 +301,7 @@
 | ↳ SPEC-255E | Audit Trail — Financial Operations (~15 transitions + ~35 DELETEs) | 📋 PLANNED | 2026-03-20 | — | [📄](./adrs/specs/SPEC-255E-audit-trail-financial-ops.md) |
 | ↳ SPEC-255F | Cleanup Test Endpoints (`/api/test-alert` removal) | 📋 PLANNED | 2026-03-20 | — | [📄](./adrs/specs/SPEC-255F-cleanup-test-endpoints.md) |
 | **ADR-256** | Concurrency Conflict Analysis & Remediation Roadmap (34 forms audited, 3-phase fix plan) | 📋 DOCUMENTED | 2026-03-20 | Data & State / Security | [📄](./adrs/ADR-256-concurrency-conflict-analysis.md) |
-| ↳ SPEC-256A | Optimistic Versioning — `_v` field, `withVersionCheck` transaction, `ConflictDialog` (12 routes) | 📋 PLANNED | 2026-03-20 | — | [📄](./adrs/specs/SPEC-256A-optimistic-versioning.md) |
+| ↳ SPEC-256A | Optimistic Versioning — `_v` field, `withVersionCheck` transaction, `ConflictDialog` (6 routes migrated) | ✅ IMPLEMENTED | 2026-03-21 | — | [📄](./adrs/specs/SPEC-256A-optimistic-versioning.md) |
 | ↳ SPEC-256B | Stale Data Detection — `useDocumentSync` + `StaleDataBanner` (12 forms, 8 collections) | 📋 PLANNED | 2026-03-20 | — | [📄](./adrs/specs/SPEC-256B-stale-data-detection.md) |
 | ↳ SPEC-256C | Field-Level Merge — Three-Way Merge Engine + Per-Field Resolution Dialog (OPTIONAL) | 📋 PLANNED | 2026-03-20 | — | [📄](./adrs/specs/SPEC-256C-field-level-merge.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |

@@ -7,13 +7,12 @@
  * @see ADR-184 (Building Spaces Tabs)
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FieldValue } from 'firebase-admin/firestore';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
@@ -21,6 +20,7 @@ import { linkEntity } from '@/lib/firestore/entity-linking.service';
 import { propagateSpaceAllocationCodeChange } from '@/lib/firestore/cascade-propagation.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { requireStorageInTenant } from '@/lib/auth/tenant-isolation';
+import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 
 const logger = createModuleLogger('StoragesIdRoute');
 
@@ -45,6 +45,7 @@ interface StoragePatchPayload {
 
 interface StorageMutationResult {
   id: string;
+  _v?: number;
 }
 
 // ============================================================================
@@ -68,12 +69,11 @@ export const PATCH = withStandardRateLimit(
         const doc = await docRef.get();
         const existing = doc.data() as Record<string, unknown>;
 
-        const body: StoragePatchPayload = await request.json();
+        const rawStorageBody: StoragePatchPayload & { _v?: number } = await request.json();
+        const { _v: expectedVersion, ...body } = rawStorageBody;
 
-        const updateData: Record<string, unknown> = {
-          updatedAt: FieldValue.serverTimestamp(),
-          updatedBy: ctx.uid,
-        };
+        // SPEC-256A: updatedAt + updatedBy injected by withVersionCheck
+        const updateData: Record<string, unknown> = {};
 
         if (body.name?.trim()) updateData.name = body.name.trim();
         if (body.type) updateData.type = body.type;
@@ -86,7 +86,15 @@ export const PATCH = withStandardRateLimit(
         if (body.notes !== undefined) updateData.notes = body.notes?.trim() || null;
         if (body.buildingId !== undefined) updateData.buildingId = body.buildingId ?? null;
 
-        await docRef.update(updateData);
+        // SPEC-256A: Version-checked write
+        const versionResult = await withVersionCheck({
+          db: adminDb,
+          collection: COLLECTIONS.STORAGE,
+          docId: id,
+          expectedVersion,
+          updates: updateData,
+          userId: ctx.uid,
+        });
 
         // 🔗 ADR-247 F-4: Cascade allocationCode to linkedSpaces on units
         if (body.name?.trim() && body.name.trim() !== (existing.name as string)) {
@@ -118,8 +126,11 @@ export const PATCH = withStandardRateLimit(
           metadata: { reason: 'Storage unit updated via API' },
         });
 
-        return apiSuccess<StorageMutationResult>({ id }, 'Storage unit updated');
+        return apiSuccess<StorageMutationResult>({ id, _v: versionResult.newVersion }, 'Storage unit updated');
       } catch (error) {
+        if (error instanceof ConflictError) {
+          return NextResponse.json(error.body, { status: error.statusCode });
+        }
         if (error instanceof ApiError) throw error;
         logger.error('Error updating storage', { id, error: getErrorMessage(error) });
         throw new ApiError(500, getErrorMessage(error, 'Failed to update storage unit'));

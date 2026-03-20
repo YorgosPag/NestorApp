@@ -28,6 +28,8 @@ import { groupByKey } from '@/utils/collection-utils';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
+import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
+import type { ConflictResponseBody } from '@/types/versioning';
 
 const logger = createModuleLogger('FloorsRoute');
 
@@ -304,14 +306,18 @@ interface UpdateFloorRequest {
   elevation?: number | null;
 }
 
-type FloorUpdateResponse = { success: true; message: string } | { success: false; error: string; details?: string };
+type FloorUpdateResponse =
+  | { success: true; message: string; _v?: number }
+  | { success: false; error: string; details?: string }
+  | ConflictResponseBody;
 
 export const PATCH = withStandardRateLimit(
   async (request: NextRequest) => {
     const handler = withAuth<FloorUpdateResponse>(
       async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<FloorUpdateResponse>> => {
         try {
-          const body = await req.json() as UpdateFloorRequest;
+          const rawBody = await req.json() as UpdateFloorRequest & { _v?: number };
+          const { _v: expectedVersion, ...body } = rawBody;
 
           if (!body.floorId || typeof body.floorId !== 'string') {
             return NextResponse.json({ success: false, error: 'Floor ID is required' }, { status: 400 });
@@ -339,14 +345,22 @@ export const PATCH = withStandardRateLimit(
             return NextResponse.json({ success: false, error: 'No fields to update' }, { status: 400 });
           }
 
-          updates.updatedAt = FieldValue.serverTimestamp();
-          updates.updatedBy = ctx.uid;
+          // SPEC-256A: Version-checked write
+          const versionResult = await withVersionCheck({
+            db,
+            collection: COLLECTIONS.FLOORS,
+            docId: body.floorId,
+            expectedVersion,
+            updates,
+            userId: ctx.uid,
+          });
+          logger.info('[Floors/Update] Floor updated', { floorId: body.floorId, _v: versionResult.newVersion });
 
-          await floorRef.update(updates);
-          logger.info('[Floors/Update] Floor updated', { floorId: body.floorId });
-
-          return NextResponse.json({ success: true, message: `Floor "${body.floorId}" updated` });
+          return NextResponse.json({ success: true, message: `Floor "${body.floorId}" updated`, _v: versionResult.newVersion });
         } catch (error) {
+          if (error instanceof ConflictError) {
+            return NextResponse.json(error.body, { status: error.statusCode });
+          }
           logger.error('[Floors/Update] Error', { error: getErrorMessage(error, 'Unknown') });
           return NextResponse.json({ success: false, error: 'Failed to update floor', details: getErrorMessage(error, 'Unknown') }, { status: 500 });
         }

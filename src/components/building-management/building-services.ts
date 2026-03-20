@@ -11,7 +11,7 @@
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type BuildingUpdatedPayload } from '@/services/realtime';
 // 🏢 ENTERPRISE: Centralized API client (Fortune-500 pattern)
-import { apiClient } from '@/lib/api/enterprise-api-client';
+import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 // 🏢 ENTERPRISE: Multi-address support (ADR-167)
 import type { ProjectAddress } from '@/types/project/addresses';
@@ -54,21 +54,26 @@ export interface BuildingUpdatePayload {
  */
 export async function updateBuilding(
   buildingId: string,
-  updates: BuildingUpdatePayload
-): Promise<{ success: boolean; error?: string }> {
+  updates: BuildingUpdatePayload & { _v?: number }
+): Promise<{ success: boolean; error?: string; _v?: number }> {
   try {
     logger.info('Updating building via API', { buildingId });
 
     // 🏢 ENTERPRISE: Use centralized API client (automatic Bearer token)
     // 🔒 SECURITY: apiClient handles Firebase ID token injection
-    await apiClient.patch(API_ROUTES.BUILDINGS.LIST, { buildingId, ...updates });
+    // SPEC-256A: _v included in payload for optimistic versioning
+    const response = await apiClient.patch<{ data: { buildingId: string; updated: boolean; _v?: number } }>(
+      API_ROUTES.BUILDINGS.LIST,
+      { buildingId, ...updates }
+    );
 
     logger.info('Building updated successfully', { buildingId });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     // Dispatch ALL changed fields so components update their local state
+    const { _v: _versionField, ...fieldsToDispatch } = updates;
     const dispatchUpdates: BuildingUpdatedPayload['updates'] = {};
-    for (const [key, value] of Object.entries(updates)) {
+    for (const [key, value] of Object.entries(fieldsToDispatch)) {
       if (value !== undefined) {
         (dispatchUpdates as Record<string, unknown>)[key] = value;
       }
@@ -79,9 +84,13 @@ export async function updateBuilding(
       timestamp: Date.now()
     });
 
-    return { success: true };
+    return { success: true, _v: response?.data?._v };
 
   } catch (error) {
+    // SPEC-256A: Re-throw 409 conflicts so useVersionedSave can handle them
+    if (ApiClientError.isApiClientError(error) && error.statusCode === 409) {
+      throw error;
+    }
     logger.error('updateBuilding failed', { error });
     return {
       success: false,

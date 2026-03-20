@@ -7,7 +7,7 @@
  * @see ADR-184 (Building Spaces Tabs)
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -31,6 +31,7 @@ import type { Contact } from '@/types/contacts/contracts';
 import type { CommercialTransactionType } from '@/types/contacts/helpers';
 import { getErrorMessage } from '@/lib/error-utils';
 import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
+import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 
 const logger = createModuleLogger('UnitIdRoute');
 
@@ -77,6 +78,7 @@ interface UnitPatchPayload extends Record<string, unknown> {
 
 interface UnitMutationResult {
   id: string;
+  _v?: number;
 }
 
 // ============================================================================
@@ -102,7 +104,8 @@ export const PATCH = withStandardRateLimit(
 
         const existing = doc.data() as Record<string, unknown>;
 
-        const body: UnitPatchPayload = await request.json();
+        const rawUnitBody: UnitPatchPayload & { _v?: number } = await request.json();
+        const { _v: expectedVersion, ...body } = rawUnitBody;
 
         // ================================================================
         // VALIDATION: Field locking based on commercialStatus
@@ -247,10 +250,8 @@ export const PATCH = withStandardRateLimit(
           }
         }
 
-        const updateData: Record<string, unknown> = {
-          updatedAt: FieldValue.serverTimestamp(),
-          updatedBy: ctx.uid,
-        };
+        // SPEC-256A: updatedAt + updatedBy injected by withVersionCheck
+        const updateData: Record<string, unknown> = {};
 
         // Pass through all fields except forbidden ones
         // Handles both core fields (name, status, etc.) and extended fields (layout, areas, orientation, etc.)
@@ -289,7 +290,15 @@ export const PATCH = withStandardRateLimit(
           }
         }
 
-        await docRef.update(updateData);
+        // SPEC-256A: Version-checked write
+        const versionResult = await withVersionCheck({
+          db: adminDb,
+          collection: COLLECTIONS.UNITS,
+          docId: id,
+          expectedVersion,
+          updates: updateData,
+          userId: ctx.uid,
+        });
 
         // ── Resync payment plan when sale price changes ──
         const newCommercial = updateData.commercial as Record<string, unknown> | undefined;
@@ -364,8 +373,11 @@ export const PATCH = withStandardRateLimit(
           }).catch(() => { /* fire-and-forget */ });
         }
 
-        return apiSuccess<UnitMutationResult>({ id }, 'Unit updated');
+        return apiSuccess<UnitMutationResult>({ id, _v: versionResult.newVersion }, 'Unit updated');
       } catch (error) {
+        if (error instanceof ConflictError) {
+          return NextResponse.json(error.body, { status: error.statusCode });
+        }
         if (error instanceof ApiError) throw error;
         logger.error('Error updating unit', { id, error: getErrorMessage(error) });
         throw new ApiError(500, getErrorMessage(error, 'Failed to update unit'));

@@ -2065,6 +2065,16 @@
     "count": "{count, plural, one {# record} other {# records}}",
     "deleteFirst": "Please delete the following dependencies first:"
   },
+  "versioning": {
+    "conflictTitle": "Version conflict",
+    "conflictMessage": "This record was modified by another user since you last loaded it. Choose how to proceed.",
+    "reload": "Reload data",
+    "forceSave": "Overwrite",
+    "lastChangedBy": "Last changed by: {user}, {time}",
+    "secondsAgo": "{count, plural, one {# second} other {# seconds}} ago",
+    "minutesAgo": "{count, plural, one {# minute} other {# minutes}} ago",
+    "hoursAgo": "{count, plural, one {# hour} other {# hours}} ago"
+  },
   "doyPicker": {
     "search": "Search Tax Office...",
     "notFound": "No tax office found — add new",

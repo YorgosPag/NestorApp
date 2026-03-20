@@ -49,6 +49,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
 import { linkEntity } from '@/lib/firestore/entity-linking.service';
 import { getErrorMessage } from '@/lib/error-utils';
+import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 
 const logger = createModuleLogger('ProjectRoute');
 
@@ -86,6 +87,7 @@ interface ProjectUpdatePayload {
 interface ProjectUpdateResponse {
   projectId: string;
   updated: boolean;
+  _v?: number;
 }
 
 interface ProjectDeleteResponse {
@@ -236,7 +238,15 @@ async function handlePatch(
 
   const handler = withAuth<ApiSuccessResponse<ProjectUpdateResponse>>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      return handleUpdateProject(req, ctx, projectId);
+      try {
+        return await handleUpdateProject(req, ctx, projectId);
+      } catch (error) {
+        // SPEC-256A: Return 409 on version conflict
+        if (error instanceof ConflictError) {
+          return NextResponse.json(error.body, { status: error.statusCode });
+        }
+        throw error;
+      }
     },
     { permissions: 'projects:projects:update' }
   );
@@ -255,8 +265,9 @@ async function handleUpdateProject(
 
   logger.info('[Projects/Update] User updating project', { email: ctx.email, projectId });
 
-  // 1. Parse request body
-  const body: ProjectUpdatePayload = await request.json();
+  // 1. Parse request body (SPEC-256A: extract _v for version check)
+  const rawBody: ProjectUpdatePayload & { _v?: number } = await request.json();
+  const { _v: expectedVersion, ...body } = rawBody;
 
   if (!body || Object.keys(body).length === 0) {
     throw new ApiError(400, 'No update fields provided');
@@ -290,8 +301,6 @@ async function handleUpdateProject(
   const { companyId: _immutableCompanyId, ...safeBody } = body;
   const updateData: Record<string, unknown> = {
     ...safeBody,
-    updatedAt: FieldValue.serverTimestamp(),
-    updatedBy: ctx.uid,
   };
 
   // 🏢 ENTERPRISE: Remove undefined fields RECURSIVELY (Firestore rejects undefined at any depth)
@@ -299,8 +308,15 @@ async function handleUpdateProject(
 
   logger.info('[Projects/Update] Updating fields', { fieldsCount: Object.keys(cleanData).length });
 
-  // 5. Update project using Admin SDK
-  await projectRef.update(cleanData);
+  // 5. SPEC-256A: Version-checked write
+  const versionResult = await withVersionCheck({
+    db: getAdminFirestore(),
+    collection: COLLECTIONS.PROJECTS,
+    docId: projectId,
+    expectedVersion,
+    updates: cleanData,
+    userId: ctx.uid,
+  });
 
   const duration = Date.now() - startTime;
   logger.info('[Projects/Update] Project updated successfully', { projectId, durationMs: duration });
@@ -346,6 +362,7 @@ async function handleUpdateProject(
     {
       projectId,
       updated: true,
+      _v: versionResult.newVersion,
     },
     `Project updated successfully in ${duration}ms`
   );

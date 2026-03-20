@@ -2064,6 +2064,16 @@
     "count": "{count, plural, one {# εγγραφή} other {# εγγραφές}}",
     "deleteFirst": "Διαγράψτε πρώτα τις παρακάτω εξαρτήσεις:"
   },
+  "versioning": {
+    "conflictTitle": "Σύγκρουση εκδόσεων",
+    "conflictMessage": "Τα δεδομένα τροποποιήθηκαν από άλλον χρήστη μετά την τελευταία σας φόρτωση. Επιλέξτε πώς θέλετε να συνεχίσετε.",
+    "reload": "Ανανέωση δεδομένων",
+    "forceSave": "Αντικατάσταση",
+    "lastChangedBy": "Τελευταία τροποποίηση: {user}, {time}",
+    "secondsAgo": "{count, plural, one {# δευτερόλεπτο} other {# δευτερόλεπτα}} πριν",
+    "minutesAgo": "{count, plural, one {# λεπτό} other {# λεπτά}} πριν",
+    "hoursAgo": "{count, plural, one {# ώρα} other {# ώρες}} πριν"
+  },
   "doyPicker": {
     "search": "Αναζήτηση Δ.Ο.Υ...",
     "notFound": "Δεν βρέθηκε Δ.Ο.Υ. — προσθέστε νέα",

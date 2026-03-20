@@ -1,11 +1,10 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
-import { FieldValue } from 'firebase-admin/firestore';
 import { isRoleBypass } from '@/lib/auth/roles';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -14,6 +13,7 @@ import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
 import { normalizeToMillis } from '@/lib/date-local';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
 import { getErrorMessage } from '@/lib/error-utils';
+import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 
 const logger = createModuleLogger('BuildingsRoute');
 
@@ -212,6 +212,7 @@ interface BuildingUpdatePayload {
 interface BuildingUpdateResponse {
   buildingId: string;
   updated: boolean;
+  _v?: number;
 }
 
 /**
@@ -232,9 +233,9 @@ export const PATCH = withStandardRateLimit(
     }
 
     try {
-      // Parse request body
+      // Parse request body (SPEC-256A: extract _v for version check)
       const body = await request.json();
-      const { buildingId, ...updates } = body as { buildingId: string } & BuildingUpdatePayload;
+      const { buildingId, _v: expectedVersion, ...updates } = body as { buildingId: string; _v?: number } & BuildingUpdatePayload;
 
       if (!buildingId) {
         throw new ApiError(400, 'Building ID is required');
@@ -268,14 +269,17 @@ export const PATCH = withStandardRateLimit(
 
       logger.info('[Buildings] Updating building for tenant', { buildingId, companyId: ctx.companyId });
 
-      // 🏗️ UPDATE: Use Admin SDK (bypasses Firestore rules)
-      await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).update({
-        ...cleanUpdates,
-        updatedAt: FieldValue.serverTimestamp(),
-        updatedBy: ctx.uid,
+      // 🏗️ UPDATE: Version-checked write (SPEC-256A)
+      const versionResult = await withVersionCheck({
+        db: adminDb,
+        collection: COLLECTIONS.BUILDINGS,
+        docId: buildingId,
+        expectedVersion,
+        updates: cleanUpdates,
+        userId: ctx.uid,
       });
 
-      logger.info('[Buildings] Building updated', { buildingId, email: ctx.email });
+      logger.info('[Buildings] Building updated', { buildingId, email: ctx.email, _v: versionResult.newVersion });
 
       // 🔗 ADR-239: Centralized linking — change detection + cascade + entity audit
       if ('projectId' in cleanUpdates) {
@@ -306,11 +310,15 @@ export const PATCH = withStandardRateLimit(
       });
 
       return apiSuccess<BuildingUpdateResponse>(
-        { buildingId, updated: true },
+        { buildingId, updated: true, _v: versionResult.newVersion },
         'Building updated successfully'
       );
 
     } catch (error) {
+      // SPEC-256A: Return 409 on version conflict
+      if (error instanceof ConflictError) {
+        return NextResponse.json(error.body, { status: error.statusCode });
+      }
       logger.error('[Buildings] Error updating building', { error });
       throw new ApiError(500, getErrorMessage(error, 'Failed to update building'));
     }

@@ -20,6 +20,10 @@ import { useCompanyId } from '@/hooks/useCompanyId';
 // 🏢 ADR-248: Centralized auto-save system
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { AutoSaveStatusIndicator } from '@/components/shared/AutoSaveStatusIndicator';
+// 🏢 SPEC-256A: Optimistic versioning — conflict detection
+import { useVersionedSave } from '@/hooks/useVersionedSave';
+import { ConflictDialog } from '@/components/shared/ConflictDialog';
+import { useRouter } from 'next/navigation';
 
 const logger = createModuleLogger('GeneralTabContent');
 
@@ -58,6 +62,7 @@ export function GeneralTabContent({
   onBuildingCreated,
 }: GeneralTabContentProps) {
   const { t } = useTranslation('building');
+  const router = useRouter();
   // 🏢 ADR-201: Centralized companyId resolution (building → user fallback)
   const resolvedCompanyId = useCompanyId({ building })?.companyId ?? '';
 
@@ -173,10 +178,8 @@ export function GeneralTabContent({
     didSaveRef.current = false;
   }, [effectiveIsEditing, building]);
 
-  // 🏢 ADR-248: Centralized auto-save with actual Firestore persistence
-  const autoSaveFn = useCallback(async (data: ReturnType<typeof buildFormData>) => {
-    if (isCreateMode) return;
-
+  // 🏢 SPEC-256A: Optimistic versioning — wraps updateBuilding with _v tracking
+  const versionedSaveFn = useCallback(async (data: ReturnType<typeof buildFormData> & { _v?: number }) => {
     const result = await updateBuilding(String(building.id), {
       name: data.name,
       description: data.description,
@@ -184,12 +187,24 @@ export function GeneralTabContent({
       completionDate: data.completionDate,
       address: data.address,
       city: data.city,
+      _v: data._v,
     });
+    return result;
+  }, [building.id]);
 
-    if (!result.success) {
-      throw new Error(result.error || 'Auto-save failed');
-    }
-  }, [building.id, isCreateMode]);
+  const versioned = useVersionedSave<ReturnType<typeof buildFormData>>({
+    initialVersion: (building._v as number | undefined),
+    saveFn: versionedSaveFn,
+    onConflict: (body) => {
+      logger.warn('Version conflict detected', { buildingId: building.id, conflict: body });
+    },
+  });
+
+  // 🏢 ADR-248: Centralized auto-save with actual Firestore persistence
+  const autoSaveFn = useCallback(async (data: ReturnType<typeof buildFormData>) => {
+    if (isCreateMode) return;
+    await versioned.save(data);
+  }, [isCreateMode, versioned]);
 
   const {
     status: autoSaveStatus,
@@ -198,7 +213,7 @@ export function GeneralTabContent({
     retry: autoSaveRetry,
   } = useAutoSave(formData, {
     saveFn: autoSaveFn,
-    enabled: effectiveIsEditing && !isCreateMode,
+    enabled: effectiveIsEditing && !isCreateMode && !versioned.isConflicted,
   });
 
   /**
@@ -248,7 +263,6 @@ export function GeneralTabContent({
         logger.info('Building created successfully', { buildingId: result.buildingId });
         didSaveRef.current = true;
         setEffectiveEditing(false);
-        setLastSaved(new Date());
         onBuildingCreated?.(result.buildingId);
         return true;
 
@@ -263,7 +277,6 @@ export function GeneralTabContent({
         logger.info('Building updated successfully');
         didSaveRef.current = true;
         setEffectiveEditing(false);
-        setLastSaved(new Date());
         return true;
       }
 
@@ -295,8 +308,29 @@ export function GeneralTabContent({
     }
   };
 
+  // 🏢 SPEC-256A: ConflictDialog handlers
+  const handleConflictReload = useCallback(() => {
+    router.refresh();
+  }, [router]);
+
+  const handleConflictForceSave = useCallback(async () => {
+    await versioned.forceSave(formData);
+  }, [versioned, formData]);
+
+  const handleConflictClose = useCallback(() => {
+    versioned.resetConflict();
+  }, [versioned]);
+
   return (
     <section className="space-y-2">
+      {/* 🏢 SPEC-256A: Version conflict dialog */}
+      <ConflictDialog
+        open={versioned.isConflicted}
+        conflict={versioned.conflictData}
+        onReload={handleConflictReload}
+        onForceSave={handleConflictForceSave}
+        onClose={handleConflictClose}
+      />
       <Header
         building={building}
         isEditing={effectiveIsEditing}

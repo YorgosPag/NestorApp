@@ -3,7 +3,7 @@
 > **Parent**: [ADR-256](../ADR-256-concurrency-conflict-analysis.md)
 > **Priority**: P0 (CRITICAL)
 > **Effort**: ~5 days
-> **Status**: 📋 PLANNED
+> **Status**: ✅ IMPLEMENTED
 
 ---
 
@@ -450,4 +450,5 @@ describe('withVersionCheck', () => {
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-03-21 | IMPLEMENTED: 3 new files (types, config, version-check), 6 routes migrated, useVersionedSave hook, ConflictDialog, 409 handling in enterprise-api-client, i18n keys, GeneralTabContent prototype integration | Claude Code |
 | 2026-03-20 | Initial SPEC — Phase 1 specification | Claude Code |

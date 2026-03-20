@@ -494,6 +494,15 @@ export class EnterpriseApiClient {
           requestId
         );
 
+      case 409:
+        throw new ApiClientError(
+          errorMessage || 'Version conflict',
+          409,
+          errorCode || 'VERSION_CONFLICT',
+          response,
+          requestId
+        );
+
       case 429:
         throw new ApiClientError(
           errorMessage || 'Too many requests',
