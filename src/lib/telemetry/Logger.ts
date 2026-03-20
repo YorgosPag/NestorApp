@@ -122,18 +122,49 @@ export class CompositeOutput implements LogOutput {
 // GLOBAL OUTPUT REGISTRY (for server-side outputs like Telegram alerts)
 // ============================================================================
 
-/**
- * Additional LogOutputs registered at runtime (e.g., via instrumentation.ts).
- * This keeps Logger.ts 100% isomorphic — server-only outputs register themselves.
- */
 const registeredOutputs: LogOutput[] = [];
+let alertOutputRegistered = false;
 
 /**
  * Register an additional LogOutput to be attached to all future module loggers.
- * Call this from server-side initialization (e.g., Next.js instrumentation.ts).
  */
 export function registerLogOutput(output: LogOutput): void {
   registeredOutputs.push(output);
+}
+
+/**
+ * Lazy one-time registration of Telegram alert output.
+ * Runs only on server-side, only in production, only once.
+ * Dynamic import keeps Logger.ts isomorphic — bundler includes
+ * telegram-alert-service as a separate async chunk.
+ */
+function ensureTelegramAlertRegistered(): void {
+  if (alertOutputRegistered) return;
+  if (typeof window !== 'undefined') return;
+  if (process.env.NODE_ENV !== 'production') return;
+
+  alertOutputRegistered = true;
+
+  import('./telegram-alert-service')
+    .then(({ sendTelegramAlert }) => {
+      registerLogOutput({
+        write(entry: LogEntry) {
+          if (entry.level !== LogLevel.ERROR) return;
+          try {
+            const moduleMatch = entry.message.match(/^\[([^\]]+)\]/);
+            const mod = moduleMatch ? moduleMatch[1] : 'Unknown';
+            const msg = moduleMatch
+              ? entry.message.substring(moduleMatch[0].length).trim()
+              : entry.message;
+            void sendTelegramAlert(
+              'error', mod, msg,
+              entry.metadata as Record<string, string> | undefined
+            );
+          } catch { /* alerting must never break the logger */ }
+        }
+      });
+    })
+    .catch(() => { /* swallow — service unavailable */ });
 }
 
 // ============================================================================
@@ -349,6 +380,9 @@ export function createLogger(correlationId?: string): Logger {
  */
 export function createModuleLogger(moduleName: string, level?: LogLevel): Logger {
   const defaultLevel = process.env.NODE_ENV === 'production' ? LogLevel.WARN : LogLevel.DEBUG;
+
+  // Lazy-register Telegram alerts (one-time, server-side, production only)
+  ensureTelegramAlertRegistered();
 
   // Build output: ConsoleOutput + any registered outputs (e.g., Telegram alerts)
   const output = registeredOutputs.length > 0
