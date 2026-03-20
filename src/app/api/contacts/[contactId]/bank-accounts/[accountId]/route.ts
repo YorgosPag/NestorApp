@@ -31,7 +31,7 @@ export const dynamic = 'force-dynamic';
 // ROUTE CONTEXT
 // ============================================================================
 
-type RouteContext = { params: Promise<{ id: string; accountId: string }> };
+type RouteContext = { params: Promise<{ contactId: string; accountId: string }> };
 
 // ============================================================================
 // HELPERS
@@ -61,7 +61,7 @@ async function handlePatch(
       _cache: PermissionCache
     ): Promise<NextResponse> => {
       try {
-        const { id: contactId, accountId } = await segmentData!.params;
+        const { contactId, accountId } = await segmentData!.params;
 
         // Validate path params
         if (!contactId || !accountId) {
@@ -213,7 +213,7 @@ async function handleDelete(
       _cache: PermissionCache
     ): Promise<NextResponse> => {
       try {
-        const { id: contactId, accountId } = await segmentData!.params;
+        const { contactId, accountId } = await segmentData!.params;
 
         // Validate path params
         if (!contactId || !accountId) {

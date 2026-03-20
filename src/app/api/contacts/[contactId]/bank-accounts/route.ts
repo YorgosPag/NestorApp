@@ -52,7 +52,7 @@ interface CreateBankAccountBody {
 // ROUTE CONTEXT
 // ============================================================================
 
-type RouteContext = { params: Promise<{ id: string }> };
+type RouteContext = { params: Promise<{ contactId: string }> };
 
 // ============================================================================
 // POST HANDLER
@@ -69,7 +69,7 @@ async function handlePost(
       _cache: PermissionCache
     ): Promise<NextResponse> => {
       try {
-        const { id: contactId } = await segmentData!.params;
+        const { contactId } = await segmentData!.params;
 
         // Validate contactId
         if (!contactId || typeof contactId !== 'string' || contactId.trim().length === 0) {
