@@ -154,6 +154,8 @@ export interface OwnershipTableRow {
   /** Όροφος */
   readonly floor: string;
   /** Καθαρό εμβαδόν (τ.μ.) */
+  readonly areaNetSqm: number;
+  /** Μικτό εμβαδόν (τ.μ.) — χρησιμοποιείται στον υπολογισμό χιλιοστών */
   readonly areaSqm: number;
   /** Ύψος ορόφου (μ.) — χρησιμοποιείται μόνο στη Μέθοδο Γ (Κατ' Όγκον) */
   readonly heightM: number | null;

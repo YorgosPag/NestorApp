@@ -517,13 +517,15 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
               <TableHead className="w-20">{t('common:ownership.columns.category')}</TableHead>
               <TableHead className="w-20">{t('common:ownership.columns.floor')}</TableHead>
               <TableHead className="w-24 text-right">
+                {t('common:ownership.columns.areaNet', { defaultValue: 'Καθαρά (m²)' })}
+              </TableHead>
+              <TableHead className="w-24 text-right">
                 {t('common:ownership.columns.areaSqm')}
               </TableHead>
               <TableHead className="w-24 text-right">
                 {t('common:ownership.columns.millesimalShares')}
               </TableHead>
-              <TableHead className="w-28">{t('common:ownership.columns.ownerParty')}</TableHead>
-              {!isLocked && <TableHead className="w-10" />}
+              <TableHead className="w-40">{t('common:ownership.columns.ownerParty')}</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -563,6 +565,9 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
                           </Badge>
                         </TableCell>
                         <TableCell>{row.floor}</TableCell>
+                        <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                          {row.areaNetSqm > 0 ? row.areaNetSqm.toFixed(2) : '—'}
+                        </TableCell>
                         <TableCell className="text-right font-mono">
                           {isLocked ? (
                             row.areaSqm.toFixed(2)
@@ -629,7 +634,6 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
                           )}
                         </TableCell>
                         {/* Μονάδα κτιρίου = υποχρεωτικά στον πίνακα. Για αφαίρεση → αποσύνδεση από κτίριο. */}
-                        )}
                       </TableRow>
                     );
                   })}
