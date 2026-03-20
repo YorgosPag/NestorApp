@@ -137,6 +137,18 @@ function formatAlertMessage(
     lines.push(`\u{1F464} ${metadata.userEmail}`);
   }
 
+  // Show relevant metadata fields (error details, IDs, etc.)
+  if (metadata) {
+    const skipKeys = new Set(['stack', 'url', 'userEmail', 'test']);
+    const details = Object.entries(metadata)
+      .filter(([k, v]) => !skipKeys.has(k) && v !== undefined && v !== null && v !== '')
+      .map(([k, v]) => `${k}: ${String(v).substring(0, 100)}`)
+      .slice(0, 5);
+    if (details.length > 0) {
+      lines.push(`\u{1F4CB} ${details.join(' | ')}`);
+    }
+  }
+
   lines.push(`\u{1F550} ${timestamp}`);
 
   return lines.join('\n');
