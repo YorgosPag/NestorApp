@@ -708,12 +708,16 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 🧭 NAVIGATION_COMPANIES COLLECTION - DEV-FRIENDLY READ ACCESS
+    // 🧭 NAVIGATION_COMPANIES COLLECTION - TENANT-SCOPED READ ACCESS
     // =========================================================================
     // 🏢 ENTERPRISE: Εταιρείες που εμφανίζονται χειροκίνητα στην πλοήγηση
     // Περιέχει contactIds που αντιστοιχούν σε εταιρείες στη contacts collection
+    // 🔒 ADR-252 Phase 3: Tenant isolation — super_admin βλέπει όλα,
+    //    οι υπόλοιποι μόνο τα documents με companyId == δικό τους
     match /navigation_companies/{navCompanyId} {
-      allow read: if isAuthenticated(); // Authenticated users only
+      allow read: if isAuthenticated()
+                  && (isSuperAdminOnly()
+                      || belongsToCompany(resource.data.companyId));
       allow write: if false; // Admin/server only
     }
 

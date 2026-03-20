@@ -14,12 +14,41 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
-import type { CreatePaymentPlanInput, UpdatePaymentPlanInput } from '@/types/payment-plan';
+import type { UpdatePaymentPlanInput } from '@/types/payment-plan';
 import { getErrorMessage } from '@/lib/error-utils';
+
+// =============================================================================
+// VALIDATION SCHEMAS — ADR-252 Phase 3 Security Hardening
+// =============================================================================
+
+const installmentSchema = z.object({
+  label: z.string().min(1).max(200),
+  type: z.enum(['reservation', 'down_payment', 'stage_payment', 'final_payment', 'custom']),
+  amount: z.number().positive().max(100_000_000),
+  percentage: z.number().min(0).max(100),
+  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}/, 'Invalid date format (expected YYYY-MM-DD)'),
+  notes: z.string().max(2000).nullable().optional(),
+});
+
+const createPaymentPlanSchema = z.object({
+  buyerContactId: z.string().min(1).max(200),
+  buyerName: z.string().min(1).max(500),
+  buildingId: z.string().min(1).max(200),
+  projectId: z.string().min(1).max(200),
+  totalAmount: z.number().positive().max(100_000_000),
+  installments: z.array(installmentSchema).min(1).max(120),
+  taxRegime: z.enum(['vat_24', 'vat_suspension_3', 'transfer_tax_3', 'custom']).optional(),
+  taxRate: z.number().min(0).max(100).optional(),
+  config: z.record(z.unknown()).optional(),
+  loan: z.record(z.unknown()).optional(),
+  loans: z.array(z.record(z.unknown())).optional(),
+  notes: z.string().max(5000).optional(),
+});
 
 type SegmentData = { params: Promise<{ id: string }> };
 
@@ -63,17 +92,18 @@ async function handlePost(
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const body = (await req.json()) as Omit<CreatePaymentPlanInput, 'unitId'>;
+        const rawBody: unknown = await req.json();
+        const parsed = createPaymentPlanSchema.safeParse(rawBody);
 
-        if (!body.buyerContactId || !body.buyerName || !body.totalAmount || !body.installments) {
+        if (!parsed.success) {
           return NextResponse.json(
-            { success: false, error: 'buyerContactId, buyerName, totalAmount, and installments are required' },
+            { success: false, error: parsed.error.issues[0].message },
             { status: 400 }
           );
         }
 
         const result = await PaymentPlanService.createPaymentPlan(
-          { ...body, unitId },
+          { ...parsed.data, unitId },
           ctx.uid
         );
 

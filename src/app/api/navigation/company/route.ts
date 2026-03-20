@@ -73,9 +73,11 @@ async function handleAddCompany(request: NextRequest, ctx: AuthContext): Promise
   }
 
   // Add via Admin SDK (bypasses Firestore rules) — ADR-210: enterprise ID
+  // ADR-252 Phase 3: Include companyId for tenant-scoped Firestore rules
   const navId = generateNavigationId();
   await adminDb.collection(COLLECTIONS.NAVIGATION).doc(navId).set({
     contactId,
+    companyId: ctx.companyId ?? null,
     addedAt: new Date(),
     addedBy: ctx.uid
   });

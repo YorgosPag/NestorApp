@@ -13,12 +13,24 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { LegalContractService } from '@/services/legal-contract.service';
-import type { UpdateContractInput } from '@/types/legal-contracts';
 import { getErrorMessage } from '@/lib/error-utils';
+
+// =============================================================================
+// VALIDATION SCHEMA — ADR-252 Phase 3 Security Hardening
+// =============================================================================
+
+const updateContractSchema = z.object({
+  contractAmount: z.number().min(0).max(100_000_000).nullable().optional(),
+  depositAmount: z.number().min(0).max(100_000_000).nullable().optional(),
+  depositTerms: z.enum(['forfeit', 'double_return', 'refund']).nullable().optional(),
+  notes: z.string().max(5000).nullable().optional(),
+  fileIds: z.array(z.string().min(1).max(200)).max(50).optional(),
+}).strict();
 
 type SegmentData = { params: Promise<{ id: string }> };
 
@@ -71,9 +83,17 @@ async function handlePatch(
     async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const { id } = await segmentData!.params;
-        const body = (await req.json()) as UpdateContractInput;
+        const rawBody: unknown = await req.json();
+        const parsed = updateContractSchema.safeParse(rawBody);
 
-        const result = await LegalContractService.updateContract(id, body);
+        if (!parsed.success) {
+          return NextResponse.json(
+            { success: false, error: parsed.error.issues[0].message },
+            { status: 400 }
+          );
+        }
+
+        const result = await LegalContractService.updateContract(id, parsed.data);
 
         if (!result.success) {
           return NextResponse.json(

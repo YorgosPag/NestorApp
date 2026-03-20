@@ -6,10 +6,14 @@
  * POST: Takes natural text, returns structured event data via OpenAI SDK.
  *
  * @module app/api/calendar/parse-event/route
+ * @security withAuth + withStandardRateLimit (ADR-252 Phase 3)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getErrorMessage } from '@/lib/error-utils';
 
 export const dynamic = 'force-dynamic';
@@ -43,24 +47,30 @@ const PARSE_EVENT_SCHEMA = {
   additionalProperties: false as const,
 };
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json() as { text: string; currentDate: string; locale: string };
-    const { text, currentDate, locale } = body;
+// =============================================================================
+// POST — Parse natural language to calendar event (authenticated + rate-limited)
+// =============================================================================
 
-    if (!text?.trim()) {
-      return NextResponse.json({ error: 'Text is required' }, { status: 400 });
-    }
+async function handlePost(request: NextRequest): Promise<NextResponse> {
+  const handler = withStandardRateLimit(
+    withAuth(async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      try {
+        const body = await req.json() as { text: string; currentDate: string; locale: string };
+        const { text, currentDate, locale } = body;
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'OpenAI not configured' }, { status: 500 });
-    }
+        if (!text?.trim()) {
+          return NextResponse.json({ error: 'Text is required' }, { status: 400 });
+        }
 
-    const client = new OpenAI({ apiKey });
-    const model = process.env.OPENAI_TEXT_MODEL ?? 'gpt-4o-mini';
+        const apiKey = process.env.OPENAI_API_KEY;
+        if (!apiKey) {
+          return NextResponse.json({ error: 'OpenAI not configured' }, { status: 500 });
+        }
 
-    const systemPrompt = `You are an event parser. Extract calendar event details from natural language input.
+        const client = new OpenAI({ apiKey });
+        const model = process.env.OPENAI_TEXT_MODEL ?? 'gpt-4o-mini';
+
+        const systemPrompt = `You are an event parser. Extract calendar event details from natural language input.
 Today's date is ${currentDate}. The user's locale is ${locale}.
 Support both Greek and English input. Infer reasonable defaults:
 - If no time specified, default to 09:00
@@ -69,40 +79,48 @@ Support both Greek and English input. Infer reasonable defaults:
 - For relative dates: "αύριο"/"tomorrow" = tomorrow, "Δευτέρα"/"Monday" = next Monday, etc.
 Return structured data in the specified JSON format.`;
 
-    const completion = await client.chat.completions.create({
-      model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: text },
-      ],
-      response_format: {
-        type: 'json_schema',
-        json_schema: {
-          name: 'parsed_event',
-          strict: true,
-          schema: PARSE_EVENT_SCHEMA,
-        },
-      },
-      temperature: 0.1,
-      max_tokens: 500,
-    });
+        const completion = await client.chat.completions.create({
+          model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: text },
+          ],
+          response_format: {
+            type: 'json_schema',
+            json_schema: {
+              name: 'parsed_event',
+              strict: true,
+              schema: PARSE_EVENT_SCHEMA,
+            },
+          },
+          temperature: 0.1,
+          max_tokens: 500,
+        });
 
-    const content = completion.choices[0]?.message?.content;
+        const content = completion.choices[0]?.message?.content;
 
-    if (!content) {
-      return NextResponse.json({ error: 'No response from AI' }, { status: 500 });
-    }
+        if (!content) {
+          return NextResponse.json({ error: 'No response from AI' }, { status: 500 });
+        }
 
-    const parsed = JSON.parse(content) as ParsedEventResult;
-    return NextResponse.json({ result: parsed });
-  } catch (error) {
-    if (error instanceof OpenAI.APIError) {
-      return NextResponse.json(
-        { error: `OpenAI error (${error.status}): ${error.message}` },
-        { status: 502 }
-      );
-    }
-    const message = getErrorMessage(error, 'Parse failed');
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+        const parsed = JSON.parse(content) as ParsedEventResult;
+        return NextResponse.json({ result: parsed });
+      } catch (error) {
+        if (error instanceof OpenAI.APIError) {
+          return NextResponse.json(
+            { error: `OpenAI error (${error.status}): ${error.message}` },
+            { status: 502 }
+          );
+        }
+        const message = getErrorMessage(error, 'Parse failed');
+        return NextResponse.json({ error: message }, { status: 500 });
+      }
+    })
+  );
+
+  return handler(request);
+}
+
+export async function POST(request: NextRequest) {
+  return handlePost(request);
 }

@@ -182,9 +182,12 @@ async function handleAutoFixExecute(request: NextRequest, ctx: AuthContext): Pro
 
           // Add to navigation_companies collection
           try {
+            // ADR-252 Phase 3: Include companyId for tenant-scoped Firestore rules
+            // For auto-fix, the contactId IS the companyId (company's own contact doc)
             const navId = generateNavigationId();
             await setDoc(doc(db, COLLECTIONS.NAVIGATION, navId), {
               contactId: companyId,
+              companyId: companyId,
               addedAt: new Date(),
               addedBy: 'enterprise-auto-fix-system'
             });

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ✅ PHASE_2_IMPLEMENTED |
+| **Status** | ✅ PHASE_3_IMPLEMENTED |
 | **Date** | 2026-03-19 |
 | **Category** | Security / Infrastructure |
 | **Depends On** | ADR-249, ADR-250 |
@@ -447,3 +447,10 @@ Test: Malformed requests, expired webhooks, NaN parameters
 | | **3. Server-Side API Routes (4 collections):** `opportunities`, `brokerage_agreements`, `commission_records`, `bank_accounts` — client-side writes replaced with server-validated API routes. 8 new API route files, 3 new server services, 3 client services modified. Pattern: `withAuth()` + `withSensitiveRateLimit` + `getErrorMessage()`. CompanyId from `AuthContext` (not client payload). Tenant isolation on all update/delete. |
 | | **New files (11):** `src/services/opportunities-server.service.ts`, `src/services/brokerage-server.service.ts`, `src/services/banking/bank-accounts-server.service.ts`, `src/app/api/opportunities/route.ts`, `src/app/api/opportunities/[id]/route.ts`, `src/app/api/brokerage/agreements/route.ts`, `src/app/api/brokerage/agreements/[id]/route.ts`, `src/app/api/brokerage/commissions/route.ts`, `src/app/api/brokerage/commissions/[id]/route.ts`, `src/app/api/contacts/[id]/bank-accounts/route.ts`, `src/app/api/contacts/[id]/bank-accounts/[accountId]/route.ts` |
 | | **Modified files (5):** `src/services/payment-plan.service.ts` (6 methods → transactions), `firestore.rules` (6 collections secured), `src/services/opportunities-client.service.ts`, `src/services/brokerage.service.ts`, `src/services/banking/BankAccountsService.ts` (writes → API calls) |
+| 2026-03-20 | **PHASE 3 IMPLEMENTED** — 4 targeted security fixes from focused audit: |
+| | **1. Calendar Parse-Event Auth (HIGH):** Added `withAuth()` + `withStandardRateLimit` to `POST /api/calendar/parse-event`. Previously exposed OpenAI API credits to unauthenticated callers. |
+| | **2. Navigation Companies Tenant Isolation (MEDIUM):** Firestore rule updated from `isAuthenticated()` to `isSuperAdminOnly() \|\| belongsToCompany(resource.data.companyId)`. Server-side routes (`company/route.ts`, `auto-fix-missing-companies/route.ts`) now write `companyId` field. Migration endpoint: `POST /api/admin/migrate-nav-company-id`. |
+| | **3. Contracts PATCH Validation (HIGH):** Added Zod schema to `PATCH /api/contracts/[id]` — validates `contractAmount` (0–100M), `depositAmount` (0–100M), `depositTerms` enum, `notes` (max 5000), `fileIds` (max 50). `.strict()` rejects unknown fields. |
+| | **4. Payment Plan POST Validation (HIGH):** Added Zod schema to `POST /api/units/[id]/payment-plan` — validates installments array (min 1, max 120), each with positive amount (max 100M), percentage (0–100), ISO date format, label (max 200), type enum. Total amount, buyer fields validated. |
+| | **Modified files (5):** `src/app/api/calendar/parse-event/route.ts`, `src/app/api/contracts/[id]/route.ts`, `src/app/api/units/[id]/payment-plan/route.ts`, `firestore.rules`, `src/app/api/navigation/company/route.ts`, `src/app/api/navigation/auto-fix-missing-companies/route.ts` |
+| | **New file (1):** `src/app/api/admin/migrate-nav-company-id/route.ts` — one-time migration for existing navigation_companies documents |
