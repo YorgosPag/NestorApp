@@ -167,8 +167,8 @@ export function useOwnershipTable(
   }, [loadTable]);
 
   // --- Auto-populate ---
-  const autoPopulate = useCallback(async () => {
-    if (!projectId || !table) return;
+  const autoPopulate = useCallback(async (): Promise<number> => {
+    if (!projectId || !table) return 0;
 
     setLoading(true);
     setError(null);
@@ -176,7 +176,7 @@ export function useOwnershipTable(
     try {
       const rows = await autoPopulateRows(projectId, buildingIds);
 
-      if (!isMounted.current) return;
+      if (!isMounted.current) return 0;
 
       setTable(prev => {
         if (!prev) return prev;
@@ -190,10 +190,12 @@ export function useOwnershipTable(
       });
 
       runValidation(rows);
+      return rows.length;
     } catch (err) {
       if (isMounted.current) {
         setError(getErrorMessage(err, 'Failed to auto-populate'));
       }
+      return 0;
     } finally {
       if (isMounted.current) {
         setLoading(false);

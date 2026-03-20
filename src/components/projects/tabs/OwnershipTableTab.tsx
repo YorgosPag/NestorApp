@@ -217,10 +217,8 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
       return;
     }
 
-    await autoPopulate();
+    const rowCount = await autoPopulate();
 
-    // Post-check: did we get any rows?
-    const rowCount = table?.rows?.length ?? 0;
     if (rowCount === 0) {
       showError(t('common:ownership.errors.noUnits', {
         defaultValue: 'Τα κτίρια δεν περιέχουν μονάδες. Προσθέστε μονάδες με εμβαδόν στα κτίρια πρώτα.',
@@ -231,7 +229,7 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
         count: rowCount,
       }));
     }
-  }, [autoPopulate, buildingIds.length, table?.rows?.length, showSuccess, showError, t]);
+  }, [autoPopulate, buildingIds.length, showSuccess, showError, t]);
 
   const handleCalculate = useCallback(() => {
     calculate();
@@ -593,7 +591,13 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
                               variant="ghost"
                               size="icon"
                               className="h-7 w-7 text-destructive"
-                              onClick={() => removeRow(globalIndex)}
+                              onClick={() => {
+                                if (window.confirm(
+                                  `Εξαίρεση "${row.description}" από τον πίνακα χιλιοστών;\n\nΗ μονάδα δεν διαγράφεται — απλά δεν θα συμμετέχει στον υπολογισμό. Μπορείτε να την επαναφέρετε με "Αυτόματη Συμπλήρωση".`
+                                )) {
+                                  removeRow(globalIndex);
+                                }
+                              }}
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
