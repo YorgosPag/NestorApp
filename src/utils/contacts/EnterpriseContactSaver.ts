@@ -363,6 +363,46 @@ export class EnterpriseContactSaver {
     // Merge new data
     Object.assign(updatedData, newData);
 
+    // 🏢 ENTERPRISE: Clean up orphaned fields when contact type switches
+    const oldType = existingContact.type;
+    const newType = (newData as Record<string, unknown>).type as string | undefined;
+    if (newType && oldType !== newType) {
+      const record = updatedData as Record<string, unknown>;
+      if (newType === 'company') {
+        // Switching TO company → clear individual-only fields
+        delete record.firstName;
+        delete record.lastName;
+        delete record.fatherName;
+        delete record.motherName;
+        delete record.birthDate;
+        delete record.birthCountry;
+        delete record.gender;
+        delete record.amka;
+        delete record.documentType;
+        delete record.documentNumber;
+        delete record.documentIssuer;
+        delete record.documentIssueDate;
+        delete record.documentExpiryDate;
+        delete record.personas;
+      } else if (newType === 'individual') {
+        // Switching TO individual → clear company-only fields
+        delete record.companyName;
+        delete record.tradeName;
+        delete record.legalForm;
+        delete record.gemiNumber;
+        delete record.gemiStatus;
+        delete record.gemiStatusDate;
+        delete record.chamber;
+        delete record.capitalAmount;
+        delete record.extraordinaryCapital;
+        delete record.shareholders;
+        delete record.representatives;
+        delete record.branches;
+        delete record.companyAddresses;
+      }
+      logger.info('ENTERPRISE SAVER: Type switch cleanup', { from: oldType, to: newType });
+    }
+
     // Replace addresses with the new set (company multi-address or single primary)
     if (newData.addresses && newData.addresses.length > 0) {
       updatedData.addresses = newData.addresses;
