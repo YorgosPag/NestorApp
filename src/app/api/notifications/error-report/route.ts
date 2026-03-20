@@ -36,6 +36,7 @@ import { generateNotificationId } from '@/services/enterprise-id.service';
 import type { Severity } from '@/types/notification';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { sendTelegramAlert } from '@/lib/telemetry/telegram-alert-service';
 
 const logger = createModuleLogger('NotificationsErrorReportRoute');
 
@@ -246,6 +247,13 @@ async function handleErrorReport(
 
     const duration = Date.now() - startTime;
     logger.info('[ErrorReport] Created notification', { notificationId, durationMs: duration });
+
+    // Instant Telegram push for client-side errors (fire-and-forget)
+    void sendTelegramAlert('client-error', 'ErrorBoundary', body.message, {
+      url: body.url,
+      userEmail: ctx.email || ctx.uid,
+      stack: body.stack,
+    });
 
     return NextResponse.json({
       success: true,

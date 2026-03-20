@@ -22,6 +22,8 @@ export {
   Logger,
   ConsoleOutput,
   DevNullOutput,
+  CompositeOutput,
+  TelegramAlertOutput,
 
   // Types & Interfaces
   LogLevel,
