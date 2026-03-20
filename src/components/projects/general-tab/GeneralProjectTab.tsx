@@ -11,10 +11,13 @@ import { PermitsAndStatusTab } from '../PermitsAndStatusTab';
 import { useAutosave } from './hooks/useAutosave';
 import type { GeneralProjectTabProps, ProjectFormData } from './types';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { updateProject } from '@/services/projects.service';
-import { createProject } from '@/services/projects-client.service';
+import { updateProjectClient, createProject } from '@/services/projects-client.service';
 import { RealtimeService } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
+// 🏢 SPEC-256A: Optimistic versioning — conflict detection
+import { useVersionedSave } from '@/hooks/useVersionedSave';
+import { ConflictDialog } from '@/components/shared/ConflictDialog';
+import { useRouter } from 'next/navigation';
 // 🏢 ENTERPRISE: Company linking via EntityLinkCard (ADR-200)
 import { Building2 } from 'lucide-react';
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
@@ -81,12 +84,11 @@ export function GeneralProjectTab({
     location: project.location || '',
   });
 
-  // 🏢 ADR-248: Centralized auto-save with actual Firestore persistence
-  const autoSaveFn = useCallback(async (data: ProjectFormData) => {
-    // Skip auto-save in create mode (no projectId yet)
-    if (isCreateMode) return;
+  const router = useRouter();
 
-    const updatePayload: Parameters<typeof updateProject>[1] = {
+  // 🏢 SPEC-256A: Versioned save function (sends _v to API, returns new _v)
+  const versionedSaveFn = useCallback(async (data: ProjectFormData & { _v?: number }) => {
+    const result = await updateProjectClient(project.id, {
       name: data.name,
       title: data.licenseTitle,
       status: data.status,
@@ -108,17 +110,28 @@ export function GeneralProjectTab({
       duration: typeof data.duration === 'number' ? data.duration : undefined,
       startDate: data.startDate || undefined,
       completionDate: data.completionDate || undefined,
-    };
+      _v: data._v,
+    });
+    return result;
+  }, [project.id]);
 
-    const result = await updateProject(project.id, updatePayload);
-    if (!result.success) {
-      throw new Error(result.error || 'Auto-save failed');
-    }
-  }, [project.id, isCreateMode]);
+  const versioned = useVersionedSave<ProjectFormData>({
+    initialVersion: (project._v as number | undefined),
+    saveFn: versionedSaveFn,
+    onConflict: (body) => {
+      logger.warn('Version conflict detected', { projectId: project.id, conflict: body });
+    },
+  });
+
+  // 🏢 ADR-248: Centralized auto-save with versioned persistence
+  const autoSaveFn = useCallback(async (data: ProjectFormData) => {
+    if (isCreateMode) return;
+    await versioned.save(data);
+  }, [isCreateMode, versioned]);
 
   const { autoSaving, lastSaved, status: autoSaveStatus, error: autoSaveError, retry: autoSaveRetry } = useAutosave(
     projectData,
-    isEditing && !isCreateMode,
+    isEditing && !isCreateMode && !versioned.isConflicted,
     { saveFn: autoSaveFn }
   );
 
@@ -168,9 +181,8 @@ export function GeneralProjectTab({
   const saveCompanyLink = useCallback(async (newId: string | null) => {
     try {
       // 🏢 ADR-232: Save to linkedCompanyId (NOT companyId — that's tenant isolation)
-      const result = await updateProject(project.id, {
+      const result = await updateProjectClient(project.id, {
         linkedCompanyId: newId ?? null,
-        linkedCompanyName: undefined, // Will be resolved by cascade if needed
       });
       if (result.success) {
         // NOTE: Do NOT setProjectData here — it triggers auto-save which
@@ -241,47 +253,13 @@ export function GeneralProjectTab({
         onProjectCreated?.(result.projectId);
 
       } else {
-        // 🏢 ENTERPRISE: Standard update flow (PATCH)
+        // 🏢 ENTERPRISE: Standard update flow via versioned save
         logger.info('Updating project...', { data: projectData });
-
-        // 🔒 ADR-232: companyId is IMMUTABLE (tenant key) — NEVER send in update payload
-        const updatePayload: Parameters<typeof updateProject>[1] = {
-          name: projectData.name,
-          title: projectData.licenseTitle,
-          status: projectData.status,
-          description: projectData.description,
-          client: projectData.client || undefined,
-          location: projectData.location || undefined,
-          type: projectData.type || undefined,
-          priority: projectData.priority || undefined,
-          riskLevel: projectData.riskLevel || undefined,
-          complexity: projectData.complexity || undefined,
-          budget: typeof projectData.budget === 'number' ? projectData.budget : undefined,
-          totalValue: typeof projectData.totalValue === 'number' ? projectData.totalValue : undefined,
-          totalArea: typeof projectData.totalArea === 'number' ? projectData.totalArea : undefined,
-          duration: typeof projectData.duration === 'number' ? projectData.duration : undefined,
-          startDate: projectData.startDate || undefined,
-          completionDate: projectData.completionDate || undefined,
-        };
-
-        const result = await updateProject(project.id, updatePayload);
-
-        if (!result.success) {
-          throw new Error(result.error || 'Failed to save project');
-        }
+        // SPEC-256A: Use versioned.save for conflict detection on manual save too
+        await versioned.save(projectData);
 
         logger.info('Project updated successfully');
         setIsEditing(false);
-
-        RealtimeService.dispatch('PROJECT_UPDATED', {
-          projectId: project.id,
-          updates: {
-            name: projectData.name,
-            title: projectData.licenseTitle,
-            status: projectData.status,
-          },
-          timestamp: Date.now()
-        });
       }
 
     } catch (error) {
@@ -299,8 +277,29 @@ export function GeneralProjectTab({
     }
   }, [registerSaveCallback, handleSave]);
 
+  // 🏢 SPEC-256A: ConflictDialog handlers
+  const handleConflictReload = useCallback(() => {
+    router.refresh();
+  }, [router]);
+
+  const handleConflictForceSave = useCallback(async () => {
+    await versioned.forceSave(projectData);
+  }, [versioned, projectData]);
+
+  const handleConflictClose = useCallback(() => {
+    versioned.resetConflict();
+  }, [versioned]);
+
   return (
     <>
+      {/* 🏢 SPEC-256A: Version conflict dialog */}
+      <ConflictDialog
+        open={versioned.isConflicted}
+        conflict={versioned.conflictData}
+        onReload={handleConflictReload}
+        onForceSave={handleConflictForceSave}
+        onClose={handleConflictClose}
+      />
       <GeneralProjectHeader
         autoSaving={autoSaving}
         lastSaved={lastSaved}

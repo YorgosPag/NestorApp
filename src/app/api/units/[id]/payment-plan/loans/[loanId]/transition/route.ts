@@ -9,15 +9,22 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import { LoanTrackingService } from '@/services/loan-tracking.service';
-import type { LoanTransitionInput } from '@/types/loan-tracking';
 import { getErrorMessage } from '@/lib/error-utils';
 import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
 import { logFinancialTransition } from '@/lib/auth/audit';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const LoanTransitionSchema = z.object({
+  targetStatus: z.string().min(1).max(50),
+  notes: z.string().max(2000).optional(),
+  planId: z.string().max(128).optional(),
+});
 
 type SegmentData = { params: Promise<{ id: string; loanId: string }> };
 
@@ -32,7 +39,9 @@ async function handlePost(
       await requireUnitInTenant({ ctx, unitId, path: '/api/units/[id]/payment-plan/loans/[loanId]/transition' });
 
       try {
-        const body = (await req.json()) as LoanTransitionInput & { planId?: string };
+        const parsed = safeParseBody(LoanTransitionSchema, await req.json());
+        if (parsed.error) return parsed.error;
+        const body = parsed.data;
 
         let planId = body.planId;
         if (!planId) {
@@ -44,13 +53,6 @@ async function handlePost(
             );
           }
           planId = plan.id;
-        }
-
-        if (!body.targetStatus) {
-          return NextResponse.json(
-            { success: false, error: 'targetStatus is required' },
-            { status: 400 }
-          );
         }
 
         const result = await LoanTrackingService.transitionLoanStatus(

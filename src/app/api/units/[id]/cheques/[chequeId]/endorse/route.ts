@@ -9,14 +9,23 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ChequeRegistryService } from '@/services/cheque-registry.service';
-import type { EndorseInput } from '@/types/cheque-registry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
 import { logFinancialTransition } from '@/lib/auth/audit';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const EndorseSchema = z.object({
+  endorserName: z.string().min(1).max(200),
+  endorseeName: z.string().min(1).max(200),
+  endorserTaxId: z.string().max(20).optional(),
+  endorseeTaxId: z.string().max(20).optional(),
+  notes: z.string().max(2000).optional(),
+});
 
 type SegmentData = { params: Promise<{ id: string; chequeId: string }> };
 
@@ -30,14 +39,9 @@ async function handlePost(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       await requireUnitInTenant({ ctx, unitId, path: '/api/units/[id]/cheques/[chequeId]/endorse' });
       try {
-        const body = (await req.json()) as EndorseInput;
-
-        if (!body.endorserName?.trim() || !body.endorseeName?.trim()) {
-          return NextResponse.json(
-            { success: false, error: 'endorserName and endorseeName are required' },
-            { status: 400 }
-          );
-        }
+        const parsed = safeParseBody(EndorseSchema, await req.json());
+        if (parsed.error) return parsed.error;
+        const body = parsed.data;
 
         const result = await ChequeRegistryService.endorseCheque(chequeId, body, ctx.uid);
 

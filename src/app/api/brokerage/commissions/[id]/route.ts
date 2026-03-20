@@ -11,18 +11,19 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { withAuth, logFinancialTransition } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getErrorMessage } from '@/lib/error-utils';
 import { BrokerageServerService } from '@/services/brokerage-server.service';
-import type { CommissionPaymentStatus } from '@/types/brokerage';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const UpdatePaymentSchema = z.object({
+  paymentStatus: z.enum(['pending', 'paid', 'cancelled']),
+});
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-interface UpdatePaymentBody {
-  paymentStatus: CommissionPaymentStatus;
-}
 
 async function handlePatch(request: NextRequest, segmentData?: RouteContext): Promise<NextResponse> {
   const handler = withAuth(
@@ -37,14 +38,9 @@ async function handlePatch(request: NextRequest, segmentData?: RouteContext): Pr
           );
         }
 
-        const body = await req.json() as UpdatePaymentBody;
-
-        if (!body.paymentStatus) {
-          return NextResponse.json(
-            { success: false, error: 'paymentStatus is required' },
-            { status: 400 }
-          );
-        }
+        const parsed = safeParseBody(UpdatePaymentSchema, await req.json());
+        if (parsed.error) return parsed.error;
+        const body = parsed.data;
 
         const result = await BrokerageServerService.updateCommissionPayment(
           id,

@@ -17,12 +17,26 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { withAuth, logAuditEvent, logFinancialTransition, logEntityDeletion } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import type { UpdateInvoiceInput, MyDataDocumentStatus } from '@/subapps/accounting/types';
+import type { MyDataDocumentStatus } from '@/subapps/accounting/types';
 import { getErrorMessage } from '@/lib/error-utils';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const UpdateInvoiceSchema = z.object({
+  type: z.string().max(50).optional(),
+  issueDate: z.string().max(30).optional(),
+  dueDate: z.string().max(30).nullable().optional(),
+  contactId: z.string().max(128).nullable().optional(),
+  contactName: z.string().max(200).nullable().optional(),
+  lineItems: z.array(z.record(z.unknown())).optional(),
+  payments: z.array(z.record(z.unknown())).optional(),
+  notes: z.string().max(5000).nullable().optional(),
+  mydata: z.record(z.unknown()).optional(),
+}).passthrough();
 
 // =============================================================================
 // GET — Single Invoice
@@ -77,9 +91,11 @@ async function handlePatch(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const { repository } = createAccountingServices();
-        const body = (await req.json()) as UpdateInvoiceInput;
+        const parsed = safeParseBody(UpdateInvoiceSchema, await req.json());
+        if (parsed.error) return parsed.error;
+        const body = parsed.data;
 
-        if (!body || Object.keys(body).length === 0) {
+        if (Object.keys(body).length === 0) {
           return NextResponse.json(
             { success: false, error: 'No update fields provided' },
             { status: 400 }

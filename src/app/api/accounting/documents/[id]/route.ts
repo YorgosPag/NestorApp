@@ -16,6 +16,7 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { withAuth, logAuditEvent, logFinancialTransition } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -23,6 +24,17 @@ import { createAccountingServices } from '@/subapps/accounting/services/create-a
 import { isoToday, getQuarterFromDate } from '@/subapps/accounting/services/repository/firestore-helpers';
 import type { ExpenseCategory, CreateJournalEntryInput } from '@/subapps/accounting/types';
 import { getErrorMessage } from '@/lib/error-utils';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const PatchDocumentSchema = z.object({
+  action: z.enum(['confirm', 'reject']),
+  confirmedCategory: z.string().max(100).optional(),
+  confirmedNetAmount: z.number().min(0).max(999_999_999).optional(),
+  confirmedVatAmount: z.number().min(0).max(999_999_999).optional(),
+  confirmedDate: z.string().max(30).optional(),
+  confirmedIssuerName: z.string().max(200).optional(),
+  notes: z.string().max(5000).optional(),
+});
 
 // =============================================================================
 // GET — Single Expense Document
@@ -67,16 +79,6 @@ export const GET = withStandardRateLimit(handleGet);
 // PATCH — Confirm/Reject Document
 // =============================================================================
 
-interface PatchDocumentBody {
-  action: 'confirm' | 'reject';
-  confirmedCategory?: ExpenseCategory;
-  confirmedNetAmount?: number;
-  confirmedVatAmount?: number;
-  confirmedDate?: string;
-  confirmedIssuerName?: string;
-  notes?: string;
-}
-
 async function handlePatch(
   request: NextRequest,
   segmentData?: { params: Promise<{ id: string }> }
@@ -87,14 +89,9 @@ async function handlePatch(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const { repository } = createAccountingServices();
-        const body = (await req.json()) as PatchDocumentBody;
-
-        if (!body.action || (body.action !== 'confirm' && body.action !== 'reject')) {
-          return NextResponse.json(
-            { success: false, error: 'action must be "confirm" or "reject"' },
-            { status: 400 }
-          );
-        }
+        const parsed = safeParseBody(PatchDocumentSchema, await req.json());
+        if (parsed.error) return parsed.error;
+        const body = parsed.data;
 
         const document = await repository.getExpenseDocument(id);
         if (!document) {

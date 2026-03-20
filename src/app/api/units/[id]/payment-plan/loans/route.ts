@@ -10,14 +10,25 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import { LoanTrackingService } from '@/services/loan-tracking.service';
-import type { CreateLoanInput } from '@/types/loan-tracking';
 import { getErrorMessage } from '@/lib/error-utils';
 import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const CreateLoanSchema = z.object({
+  bankName: z.string().min(1).max(200),
+  isPrimary: z.boolean().optional(),
+  requestedAmount: z.number().min(0).max(999_999_999).optional(),
+  disbursementType: z.enum(['single', 'phased', 'construction_draw']).optional(),
+  interestRateType: z.enum(['fixed', 'variable', 'mixed']).optional(),
+  notes: z.string().max(5000).optional(),
+  planId: z.string().max(128).optional(),
+});
 
 type SegmentData = { params: Promise<{ id: string }> };
 
@@ -72,7 +83,9 @@ async function handlePost(
       await requireUnitInTenant({ ctx, unitId, path: '/api/units/[id]/payment-plan/loans' });
 
       try {
-        const body = (await req.json()) as CreateLoanInput & { planId?: string };
+        const parsed = safeParseBody(CreateLoanSchema, await req.json());
+        if (parsed.error) return parsed.error;
+        const body = parsed.data;
 
         // Get active plan or use provided planId
         let planId = body.planId;

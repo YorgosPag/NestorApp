@@ -17,12 +17,30 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { withAuth, logAuditEvent, logEntityDeletion } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import type { UpdateJournalEntryInput } from '@/subapps/accounting/types';
 import { getErrorMessage } from '@/lib/error-utils';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const UpdateJournalEntrySchema = z.object({
+  date: z.string().max(30).optional(),
+  type: z.enum(['income', 'expense']).optional(),
+  category: z.string().max(100).optional(),
+  description: z.string().max(2000).optional(),
+  netAmount: z.number().min(0).max(999_999_999).optional(),
+  vatRate: z.number().min(0).max(100).optional(),
+  vatAmount: z.number().min(0).max(999_999_999).optional(),
+  grossAmount: z.number().min(0).max(999_999_999).optional(),
+  vatDeductible: z.boolean().optional(),
+  paymentMethod: z.string().max(50).optional(),
+  contactId: z.string().max(128).nullable().optional(),
+  contactName: z.string().max(200).nullable().optional(),
+  invoiceId: z.string().max(128).nullable().optional(),
+  notes: z.string().max(5000).nullable().optional(),
+}).passthrough();
 
 // =============================================================================
 // GET — Single Journal Entry
@@ -77,9 +95,11 @@ async function handlePatch(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const { repository } = createAccountingServices();
-        const body = (await req.json()) as UpdateJournalEntryInput;
+        const parsed = safeParseBody(UpdateJournalEntrySchema, await req.json());
+        if (parsed.error) return parsed.error;
+        const body = parsed.data;
 
-        if (!body || Object.keys(body).length === 0) {
+        if (Object.keys(body).length === 0) {
           return NextResponse.json(
             { success: false, error: 'No update fields provided' },
             { status: 400 }

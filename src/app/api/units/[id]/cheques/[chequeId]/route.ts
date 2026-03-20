@@ -10,13 +10,24 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ChequeRegistryService } from '@/services/cheque-registry.service';
-import type { UpdateChequeInput } from '@/types/cheque-registry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const UpdateChequeSchema = z.object({
+  bankBranch: z.string().max(200).optional(),
+  drawerTaxId: z.string().max(20).optional(),
+  accountNumber: z.string().max(50).optional(),
+  crossedCheque: z.boolean().optional(),
+  notes: z.string().max(2000).optional(),
+  depositBankName: z.string().max(200).optional(),
+  depositAccountNumber: z.string().max(50).optional(),
+}).strict();
 
 type SegmentData = { params: Promise<{ id: string; chequeId: string }> };
 
@@ -65,7 +76,9 @@ async function handlePatch(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       await requireUnitInTenant({ ctx, unitId: id, path: '/api/units/[id]/cheques/[chequeId]' });
       try {
-        const body = (await req.json()) as UpdateChequeInput;
+        const parsed = safeParseBody(UpdateChequeSchema, await req.json());
+        if (parsed.error) return parsed.error;
+        const body = parsed.data;
 
         const result = await ChequeRegistryService.updateCheque(chequeId, body, ctx.uid);
 

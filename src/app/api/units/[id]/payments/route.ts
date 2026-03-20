@@ -13,13 +13,24 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
-import type { CreatePaymentInput } from '@/types/payment-plan';
 import { getErrorMessage } from '@/lib/error-utils';
 import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const CreatePaymentSchema = z.object({
+  paymentPlanId: z.string().min(1).max(128),
+  installmentIndex: z.number().int().min(0),
+  amount: z.number().positive().max(999_999_999),
+  method: z.enum(['cash', 'bank_transfer', 'cheque', 'card', 'offset']),
+  paymentDate: z.string().min(10).max(30),
+  methodDetails: z.record(z.unknown()),
+  notes: z.string().max(2000).optional(),
+});
 
 type SegmentData = { params: Promise<{ id: string }> };
 
@@ -65,21 +76,9 @@ async function handlePost(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       await requireUnitInTenant({ ctx, unitId, path: '/api/units/[id]/payments' });
       try {
-        const body = (await req.json()) as CreatePaymentInput;
-
-        if (!body.paymentPlanId || body.installmentIndex === undefined || !body.amount || !body.method) {
-          return NextResponse.json(
-            { success: false, error: 'paymentPlanId, installmentIndex, amount, method are required' },
-            { status: 400 }
-          );
-        }
-
-        if (!body.paymentDate || !body.methodDetails) {
-          return NextResponse.json(
-            { success: false, error: 'paymentDate and methodDetails are required' },
-            { status: 400 }
-          );
-        }
+        const parsed = safeParseBody(CreatePaymentSchema, await req.json());
+        if (parsed.error) return parsed.error;
+        const body = parsed.data;
 
         const result = await PaymentPlanService.recordPayment(unitId, body, ctx.uid);
 

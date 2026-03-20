@@ -9,14 +9,20 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ChequeRegistryService } from '@/services/cheque-registry.service';
-import type { ChequeTransitionInput } from '@/types/cheque-registry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
 import { logFinancialTransition } from '@/lib/auth/audit';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const ChequeTransitionSchema = z.object({
+  targetStatus: z.string().min(1).max(50),
+  notes: z.string().max(2000).optional(),
+});
 
 type SegmentData = { params: Promise<{ id: string; chequeId: string }> };
 
@@ -30,14 +36,9 @@ async function handlePost(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       await requireUnitInTenant({ ctx, unitId, path: '/api/units/[id]/cheques/[chequeId]/transition' });
       try {
-        const body = (await req.json()) as ChequeTransitionInput;
-
-        if (!body.targetStatus) {
-          return NextResponse.json(
-            { success: false, error: 'targetStatus is required' },
-            { status: 400 }
-          );
-        }
+        const parsed = safeParseBody(ChequeTransitionSchema, await req.json());
+        if (parsed.error) return parsed.error;
+        const body = parsed.data;
 
         const result = await ChequeRegistryService.transitionStatus(chequeId, body, ctx.uid);
 

@@ -18,6 +18,7 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import {
@@ -27,19 +28,19 @@ import {
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const PatchAPYSchema = z.object({
+  isReceived: z.boolean().optional(),
+  receivedAt: z.string().max(30).nullable().optional(),
+  notes: z.string().max(5000).nullable().optional(),
+});
 
 const logger = createModuleLogger('APY_CERTIFICATE_DETAIL');
 
 // =============================================================================
 // TYPES
 // =============================================================================
-
-/** Only mutable fields are patchable — immutable fields are rejected */
-interface PatchAPYCertificateBody {
-  isReceived?: boolean;
-  receivedAt?: string | null;
-  notes?: string | null;
-}
 
 // =============================================================================
 // GET — Single Certificate
@@ -89,15 +90,9 @@ async function handlePatch(
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        let body: PatchAPYCertificateBody;
-        try {
-          body = (await req.json()) as PatchAPYCertificateBody;
-        } catch {
-          return NextResponse.json(
-            { success: false, error: 'Invalid JSON body' },
-            { status: 400 }
-          );
-        }
+        const parsed = safeParseBody(PatchAPYSchema, await req.json());
+        if (parsed.error) return parsed.error;
+        const body = parsed.data;
 
         const { repository } = createAccountingServices();
 
@@ -110,13 +105,7 @@ async function handlePatch(
           );
         }
 
-        // Only allow mutable fields
-        const allowedUpdates: PatchAPYCertificateBody = {};
-        if (body.isReceived !== undefined) allowedUpdates.isReceived = body.isReceived;
-        if (body.receivedAt !== undefined) allowedUpdates.receivedAt = body.receivedAt;
-        if (body.notes !== undefined) allowedUpdates.notes = body.notes;
-
-        await repository.updateAPYCertificate(id, allowedUpdates);
+        await repository.updateAPYCertificate(id, body);
 
         await logAuditEvent(ctx, 'data_updated', id, 'apy_certificate', {
           metadata: { reason: 'APY certificate updated' },

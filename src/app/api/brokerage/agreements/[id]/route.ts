@@ -11,12 +11,25 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { withAuth, logAuditEvent, logEntityDeletion } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getErrorMessage } from '@/lib/error-utils';
 import { BrokerageServerService } from '@/services/brokerage-server.service';
-import type { BrokerageAgreement } from '@/types/brokerage';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const UpdateAgreementSchema = z.object({
+  exclusivity: z.enum(['exclusive', 'non_exclusive', 'semi_exclusive']).optional(),
+  commissionType: z.enum(['percentage', 'fixed', 'tiered']).optional(),
+  commissionPercentage: z.number().min(0).max(100).nullable().optional(),
+  commissionFixedAmount: z.number().min(0).max(999_999_999).nullable().optional(),
+  startDate: z.string().max(30).optional(),
+  endDate: z.string().max(30).nullable().optional(),
+  notes: z.string().max(5000).nullable().optional(),
+  scope: z.enum(['project', 'unit']).optional(),
+  unitId: z.string().max(128).nullable().optional(),
+});
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -37,10 +50,9 @@ async function handlePatch(request: NextRequest, segmentData?: RouteContext): Pr
           );
         }
 
-        const body = await req.json() as Partial<Pick<BrokerageAgreement,
-          'exclusivity' | 'commissionType' | 'commissionPercentage' |
-          'commissionFixedAmount' | 'startDate' | 'endDate' | 'notes' | 'scope' | 'unitId'
-        >>;
+        const parsed = safeParseBody(UpdateAgreementSchema, await req.json());
+        if (parsed.error) return parsed.error;
+        const body = parsed.data;
 
         const result = await BrokerageServerService.updateAgreement(
           id,

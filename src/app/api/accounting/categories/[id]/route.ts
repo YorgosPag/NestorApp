@@ -25,6 +25,7 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { withAuth, logAuditEvent, logEntityDeletion } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import {
@@ -32,9 +33,21 @@ import {
   withSensitiveRateLimit,
 } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import type { UpdateCustomCategoryInput } from '@/subapps/accounting/types';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+const UpdateCategorySchema = z.object({
+  label: z.string().max(200).optional(),
+  description: z.string().max(1000).optional(),
+  defaultVatRate: z.number().min(0).max(100).optional(),
+  vatDeductible: z.boolean().optional(),
+  vatDeductiblePercent: z.union([z.literal(0), z.literal(50), z.literal(100)]).optional(),
+  sortOrder: z.number().int().min(0).max(9999).optional(),
+  icon: z.string().max(50).optional(),
+  kadCode: z.string().max(50).nullable().optional(),
+  isActive: z.boolean().optional(),
+}).passthrough();
 
 const logger = createModuleLogger('CUSTOM_CATEGORY_DETAIL');
 
@@ -86,15 +99,9 @@ async function handlePatch(
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        let body: UpdateCustomCategoryInput;
-        try {
-          body = (await req.json()) as UpdateCustomCategoryInput;
-        } catch {
-          return NextResponse.json(
-            { success: false, error: 'Invalid JSON body' },
-            { status: 400 }
-          );
-        }
+        const parsed = safeParseBody(UpdateCategorySchema, await req.json());
+        if (parsed.error) return parsed.error;
+        const body = parsed.data;
 
         const { repository } = createAccountingServices();
         const existing = await repository.getCustomCategory(id);

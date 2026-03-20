@@ -21,7 +21,7 @@ import type { ProjectAddress } from '@/types/project/addresses';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
 // 🏢 ENTERPRISE: Centralized API client (Fortune-500 pattern)
-import { apiClient } from '@/lib/api/enterprise-api-client';
+import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -69,6 +69,28 @@ export interface ProjectUpdatePayload {
   city?: string;
   // 🏢 ENTERPRISE: Multi-address support (ADR-167)
   addresses?: ProjectAddress[];
+  /** 🏢 ADR-232: Business entity link (separate from tenant companyId) */
+  linkedCompanyId?: string | null;
+  // Extended project fields
+  buildingBlock?: string;
+  protocolNumber?: string;
+  licenseNumber?: string;
+  issuingAuthority?: string;
+  issueDate?: string;
+  client?: string;
+  location?: string;
+  type?: string;
+  priority?: string;
+  riskLevel?: string;
+  complexity?: string;
+  budget?: number;
+  totalValue?: number;
+  totalArea?: number;
+  duration?: number;
+  startDate?: string;
+  completionDate?: string;
+  // 🏢 SPEC-256A: Optimistic versioning
+  _v?: number;
 }
 
 /**
@@ -129,20 +151,25 @@ export async function createProject(
 export async function updateProjectClient(
   projectId: string,
   updates: ProjectUpdatePayload
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; _v?: number }> {
   try {
     logger.info('Updating project via API', { projectId });
 
     // 🏢 ENTERPRISE: Use centralized API client (automatic Bearer token)
     // 🔒 SECURITY: apiClient handles Firebase ID token injection
-    await apiClient.patch(API_ROUTES.PROJECTS.BY_ID(projectId), updates);
+    // SPEC-256A: _v included in payload for optimistic versioning
+    const response = await apiClient.patch<{ _v?: number }>(
+      API_ROUTES.PROJECTS.BY_ID(projectId),
+      updates
+    );
 
     logger.info('Project updated successfully', { projectId });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     // Dynamic dispatch: only include non-undefined fields to avoid overwriting existing values
+    const { _v: _versionField, ...fieldsToDispatch } = updates;
     const dispatchUpdates: ProjectUpdatedPayload['updates'] = {};
-    for (const [key, value] of Object.entries(updates)) {
+    for (const [key, value] of Object.entries(fieldsToDispatch)) {
       if (value !== undefined) {
         (dispatchUpdates as Record<string, unknown>)[key] = value;
       }
@@ -153,9 +180,13 @@ export async function updateProjectClient(
       timestamp: Date.now()
     });
 
-    return { success: true };
+    return { success: true, _v: response?._v };
 
   } catch (error) {
+    // SPEC-256A: Re-throw 409 conflicts so useVersionedSave can handle them
+    if (ApiClientError.isApiClientError(error) && error.statusCode === 409) {
+      throw error;
+    }
     logger.error('Error updating project', { projectId, error });
     return {
       success: false,

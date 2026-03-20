@@ -9,15 +9,19 @@
  * Each section wrapped in Card for visual separation.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus } from '@/hooks/useFirestoreParkingSpots';
 import { Car, MapPin, Building2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { apiClient } from '@/lib/api/enterprise-api-client';
+import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
+// 🏢 SPEC-256A: Optimistic versioning — conflict detection
+import { ConflictDialog } from '@/components/shared/ConflictDialog';
+import type { ConflictResponseBody } from '@/types/versioning';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -123,6 +127,12 @@ export function ParkingGeneralTab({
   const iconSizes = useIconSizes();
   const typography = useTypography();
   const { t } = useTranslation('parking');
+  const router = useRouter();
+
+  // 🏢 SPEC-256A: Optimistic versioning — track _v in ref
+  const versionRef = useRef<number | undefined>((parking as Record<string, unknown>)._v as number | undefined);
+  const [isConflicted, setIsConflicted] = useState(false);
+  const [conflictData, setConflictData] = useState<ConflictResponseBody | null>(null);
 
   // Form state — always bound to inputs (disabled when not editing)
   const [form, setForm] = useState<ParkingFormState>(() => buildFormState(parking));
@@ -130,6 +140,9 @@ export function ParkingGeneralTab({
   // Reset form when a DIFFERENT parking spot is selected (not on edit mode toggle)
   useEffect(() => {
     setForm(buildFormState(parking));
+    versionRef.current = (parking as Record<string, unknown>)._v as number | undefined;
+    setIsConflicted(false);
+    setConflictData(null);
   }, [parking.id]);
 
   // Building link callbacks
@@ -221,7 +234,20 @@ export function ParkingGeneralTab({
         return true;
       }
 
-      await apiClient.patch<ParkingPatchResult>(API_ROUTES.PARKING.BY_ID(parking.id), payload);
+      // SPEC-256A: Include _v for optimistic versioning
+      if (versionRef.current !== undefined) {
+        payload._v = versionRef.current;
+      }
+
+      const result = await apiClient.patch<ParkingPatchResult & { _v?: number }>(
+        API_ROUTES.PARKING.BY_ID(parking.id),
+        payload,
+      );
+
+      // SPEC-256A: Update local version from response
+      if (typeof result?._v === 'number') {
+        versionRef.current = result._v;
+      }
 
       // Dispatch realtime event for cross-page sync
       RealtimeService.dispatch('PARKING_UPDATED', {
@@ -241,6 +267,21 @@ export function ParkingGeneralTab({
       onEditingChange?.(false);
       return true;
     } catch (err) {
+      // SPEC-256A: Catch 409 version conflict
+      if (ApiClientError.isApiClientError(err) && err.statusCode === 409) {
+        const body: ConflictResponseBody = (err as Record<string, unknown>).body as ConflictResponseBody ?? {
+          code: 'VERSION_CONFLICT',
+          error: 'Version conflict',
+          errorCode: 'VERSION_CONFLICT',
+          currentVersion: -1,
+          expectedVersion: -1,
+          updatedAt: new Date().toISOString(),
+          updatedBy: 'unknown',
+        };
+        setIsConflicted(true);
+        setConflictData(body);
+        return false;
+      }
       logger.error('Failed to save parking spot', { error: err instanceof Error ? err.message : String(err) });
       return false;
     }
@@ -258,8 +299,26 @@ export function ParkingGeneralTab({
     };
   }, [handleSave, onSaveRef]);
 
+  // SPEC-256A: Force save handler for ConflictDialog (retries without _v)
+  const handleForceSave = useCallback(async () => {
+    versionRef.current = undefined; // Remove version → force-write
+    setIsConflicted(false);
+    setConflictData(null);
+    if (onSaveRef?.current) {
+      await onSaveRef.current();
+    }
+  }, [onSaveRef]);
+
   return (
     <div className="p-4 space-y-4">
+      {/* 🏢 SPEC-256A: Version conflict dialog */}
+      <ConflictDialog
+        open={isConflicted}
+        conflict={conflictData}
+        onReload={() => router.refresh()}
+        onForceSave={handleForceSave}
+        onClose={() => { setIsConflicted(false); setConflictData(null); }}
+      />
       {/* Building Link + Floor — side by side at the top */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <EntityLinkCard key={buildingLink.linkCardKey} {...buildingLink.linkCardProps} />
