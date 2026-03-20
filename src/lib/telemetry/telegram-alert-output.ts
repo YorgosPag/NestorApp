@@ -11,8 +11,6 @@
  * @enterprise Production Error Monitoring
  */
 
-import 'server-only';
-
 import type { LogEntry, LogOutput } from './Logger';
 import { LogLevel } from './Logger';
 import { sendTelegramAlert } from './telegram-alert-service';
