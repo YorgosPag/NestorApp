@@ -58,6 +58,8 @@ interface FilePreviewPanelProps {
   file: FileRecord | null;
   /** Close preview */
   onClose: () => void;
+  /** Tenant isolation — company ID for comments */
+  companyId?: string;
   /** Current user ID (for version rollback) */
   currentUserId?: string;
   /** Current user display name (for comments) */
@@ -211,7 +213,7 @@ function UnsupportedPreview({
 // MAIN COMPONENT
 // ============================================================================
 
-export function FilePreviewPanel({ file, onClose, currentUserId, currentUserName, onRefresh, className }: FilePreviewPanelProps) {
+export function FilePreviewPanel({ file, onClose, companyId, currentUserId, currentUserName, onRefresh, className }: FilePreviewPanelProps) {
   const { t } = useTranslation('files');
   const [showVersions, setShowVersions] = useState(false);
   const [showAudit, setShowAudit] = useState(false);
@@ -434,10 +436,11 @@ export function FilePreviewPanel({ file, onClose, currentUserId, currentUserName
       )}
 
       {/* Comments panel (collapsible — ADR-191 Phase 4.3) */}
-      {showComments && currentUserId && (
+      {showComments && currentUserId && companyId && (
         <div className="border-b">
           <CommentsPanel
             fileId={file.id}
+            companyId={companyId}
             currentUserId={currentUserId}
             currentUserName={currentUserName || 'User'}
           />

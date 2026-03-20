@@ -39,6 +39,8 @@ import {
 export interface CommentsPanelProps {
   /** File ID to show comments for */
   fileId: string;
+  /** Tenant isolation — company ID for Firestore rules */
+  companyId: string;
   /** Current user ID */
   currentUserId: string;
   /** Current user display name */
@@ -200,6 +202,7 @@ function CommentItem({
 
 export function CommentsPanel({
   fileId,
+  companyId,
   currentUserId,
   currentUserName,
   className,
@@ -252,6 +255,7 @@ export function CommentsPanel({
         setEditingComment(null);
       } else {
         await FileCommentService.addComment({
+          companyId,
           fileId,
           parentId: replyingTo ?? undefined,
           text,
@@ -264,7 +268,7 @@ export function CommentsPanel({
     } finally {
       setSubmitting(false);
     }
-  }, [newText, editingComment, fileId, replyingTo, currentUserId, currentUserName]);
+  }, [newText, editingComment, companyId, fileId, replyingTo, currentUserId, currentUserName]);
 
   const handleDelete = useCallback(async (commentId: string) => {
     await FileCommentService.deleteComment(commentId);

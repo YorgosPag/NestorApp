@@ -36,6 +36,8 @@ import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 export interface FileComment {
   /** Document ID (auto-generated) */
   id: string;
+  /** Tenant isolation — company that owns this comment */
+  companyId: string;
   /** File this comment belongs to */
   fileId: string;
   /** Parent comment ID (null for top-level comments) */
@@ -57,6 +59,7 @@ export interface FileComment {
 }
 
 export interface CreateCommentInput {
+  companyId: string;
   fileId: string;
   parentId?: string;
   text: string;
@@ -77,6 +80,7 @@ export const FileCommentService = {
     const enterpriseId = generateCommentId();
     const docRef = doc(db, COLLECTIONS.FILE_COMMENTS, enterpriseId);
     await setDoc(docRef, {
+      companyId: input.companyId,
       fileId: input.fileId,
       parentId: input.parentId ?? null,
       text: input.text,
@@ -88,8 +92,8 @@ export const FileCommentService = {
       resolvedBy: null,
     });
 
-    // Fire-and-forget audit
-    safeFireAndForget(FileAuditService.log(input.fileId, 'comment', input.authorId, {
+    // Fire-and-forget audit (with companyId for tenant isolation)
+    safeFireAndForget(FileAuditService.log(input.fileId, 'comment', input.authorId, input.companyId, {
       commentId: enterpriseId,
       parentId: input.parentId ?? null,
     }), 'FileComment.addComment');

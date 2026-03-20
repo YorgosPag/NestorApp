@@ -1121,6 +1121,7 @@ export function FileManagerPageContent() {
                       <FilePreviewPanel
                         file={selectedFile}
                         onClose={() => setSelectedFile(null)}
+                        companyId={companyId}
                         currentUserId={user?.uid}
                         currentUserName={user?.displayName || undefined}
                         onRefresh={refetch}

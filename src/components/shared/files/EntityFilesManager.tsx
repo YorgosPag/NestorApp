@@ -1290,6 +1290,7 @@ export function EntityFilesManager({
                     <FilePreviewPanel
                       file={selectedFile}
                       onClose={() => setSelectedFile(null)}
+                      companyId={companyId}
                       currentUserId={currentUserId}
                       onRefresh={refetch}
                     />
