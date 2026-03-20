@@ -31,8 +31,8 @@
 | **1. Silent Error Swallowing** | 8 | 14 | 15 | 6 | 43 |
 | **2. Race Conditions** | 6 | 5 | 2 | 0 | 13 |
 | **3. Client-Side Writes** | 4 | 5 | 3 | 0 | 12 |
-| **4. API Auth Gaps** | 4 | 2 | 0 | 0 | 6 |
-| **TOTAL** | **22** | **26** | **20** | **6** | **74** |
+| **4. API Auth Gaps** | 1 | 1 | 1 | 0 | 3 (+2 false positives removed) |
+| **TOTAL** | **19** | **25** | **21** | **6** | **71** |
 
 **Positive highlights (σωστά patterns):**
 - Queue claim services (`pipeline-queue-service`, `email-queue-service`) use `runTransaction()` correctly for claim operations
@@ -514,7 +514,9 @@ Firestore Rules **CANNOT** verify:
 | Rate Limit only (webhooks) | 8 | Webhooks verified via HMAC ✅ |
 | `CRON_SECRET` only | 3 | Cron jobs ✅ |
 | Custom auth (internal) | 5 | Custom verification ✅ |
-| **UNPROTECTED** | **6** | ⚠️ Needs fix |
+| **UNPROTECTED** | **1** | calendar/reminders — zero protection |
+| **Bypassable Auth** | **1** | overdue-alerts — works only if CRON_SECRET set |
+| **Missing Rate Limit** | **1** | ai-learning — auth OK, rate limit missing |
 
 ### 6.2 AR-1: Calendar Reminders — No Auth, No Rate Limit (CRITICAL)
 
@@ -530,56 +532,50 @@ Firestore Rules **CANNOT** verify:
 | **Severity** | 🔴 CRITICAL |
 | **Fix** | Add `CRON_SECRET` verification (same pattern as `cron/file-purge` and `cron/ai-learning`) |
 
-### 6.3 AR-2: MFA Enroll Complete — No Auth (CRITICAL)
+### 6.3 ~~AR-2~~: MFA Enroll Complete — PROPERLY PROTECTED ✅
 
 | Field | Detail |
 |-------|--------|
 | **File** | `src/app/api/auth/mfa/enroll/complete/route.ts` |
 | **Method** | POST |
-| **Auth** | ❌ NONE |
-| **Rate Limit** | ❌ NONE |
-| **What It Does** | Completes MFA enrollment for a user |
-| **Risk** | Unauthenticated users can complete MFA enrollment for any user |
-| **Severity** | 🔴 CRITICAL |
-| **Fix** | Add session verification + `withHeavyRateLimit` |
+| **Auth** | ✅ `verifyIdToken(idToken)` — requires valid Firebase ID token (line 75) |
+| **Rate Limit** | ✅ `withSensitiveRateLimit` (20 req/min) |
+| **Status** | **FALSE POSITIVE** — properly protected via token verification + rate limit |
 
-### 6.4 AR-3: Cron Overdue Alerts — No Auth, No Rate Limit (CRITICAL)
+### 6.4 AR-3: Cron Overdue Alerts — Bypassable Auth (HIGH)
 
 | Field | Detail |
 |-------|--------|
 | **File** | `src/app/api/cron/overdue-alerts/route.ts` |
 | **Method** | GET |
-| **Auth** | ❌ NONE (no `CRON_SECRET` check) |
-| **Rate Limit** | ❌ NONE |
-| **What It Does** | Queries overdue appointments, creates notifications system-wide |
-| **Risk** | Public trigger for system-wide notification spam |
-| **Severity** | 🔴 CRITICAL |
-| **Fix** | Add `CRON_SECRET` verification |
+| **Auth** | ⚠️ `CRON_SECRET` check — but if env var missing, **allows unauthenticated access** (line 37: `return true`) |
+| **Rate Limit** | ✅ `withSensitiveRateLimit` |
+| **What It Does** | Queries overdue installments, creates notifications system-wide |
+| **Risk** | If `CRON_SECRET` not configured, anyone can trigger overdue alert processing |
+| **Severity** | 🟠 HIGH (downgraded: has rate limiting, risk only if env var missing) |
+| **Fix** | Make auth mandatory — return 500 if `CRON_SECRET` not set (same pattern as `ai-learning` line 36-37) |
 
-### 6.5 AR-4: Enterprise IDs Migrate — No Auth (HIGH)
+### 6.5 ~~AR-4~~: Enterprise IDs Migrate — PROPERLY PROTECTED ✅
 
 | Field | Detail |
 |-------|--------|
 | **File** | `src/app/api/enterprise-ids/migrate/route.ts` |
-| **Method** | POST |
-| **Auth** | ❌ NONE |
-| **Rate Limit** | ❌ NONE |
-| **What It Does** | Migrates enterprise ID formats across documents |
-| **Risk** | Public access to data migration — can corrupt document IDs |
-| **Severity** | 🟠 HIGH |
-| **Fix** | Add `withAuth()` + super_admin check |
+| **Method** | GET, POST |
+| **Auth** | ✅ `withAuth()` (lines 47, 72) |
+| **Rate Limit** | ❌ Missing (low risk — admin-only) |
+| **Status** | **FALSE POSITIVE** — protected via `withAuth()`, only missing rate limit (P3) |
 
-### 6.6 AR-5: AI Learning Cron — Bypassable Auth (HIGH)
+### 6.6 AR-5: AI Learning Cron — Missing Rate Limit (MEDIUM)
 
 | Field | Detail |
 |-------|--------|
 | **File** | `src/app/api/cron/ai-learning/route.ts` |
 | **Method** | GET |
-| **Auth** | ⚠️ `CRON_SECRET` check — but if env var missing, logs warning and **allows unauthenticated access** |
+| **Auth** | ✅ `CRON_SECRET` — properly blocks if env var missing (returns 500) |
 | **Rate Limit** | ❌ NONE |
-| **Risk** | If `CRON_SECRET` not configured, anyone can trigger AI retraining + feedback deletion |
-| **Severity** | 🟠 HIGH |
-| **Fix** | Make auth mandatory — return 500 if `CRON_SECRET` not set (don't proceed) |
+| **Risk** | Authenticated (with CRON_SECRET) but no rate limit — someone with the secret could trigger unlimited retraining |
+| **Severity** | 🟡 MEDIUM (downgraded: auth is proper, only rate limit missing) |
+| **Fix** | Add `withSensitiveRateLimit` (same as `ai-pipeline` and `email-ingestion` crons) |
 
 ### 6.7 Routes Correctly Protected (Reference)
 
@@ -610,8 +606,7 @@ All other routes examined have appropriate protection:
 | RC-2 | Ownership table double-finalize | Race Condition | 2h | Legal document corruption |
 | RC-3 | Ownership table version skip | Race Condition | 1h | Version integrity |
 | AR-1 | Calendar reminders no auth | API Auth | 30min | DoS + notification spam |
-| AR-2 | MFA enroll complete no auth | API Auth | 1h | MFA bypass |
-| AR-3 | Cron overdue-alerts no auth | API Auth | 30min | Notification spam |
+| AR-3 | Cron overdue-alerts bypassable auth | API Auth | 30min | Notification spam if CRON_SECRET missing |
 | CW-1 | Auth profile self-modification | Client Writes | 4h | Privilege escalation risk |
 | CW-2 | Client-side attendance events | Client Writes | 2h | Time fraud |
 | CW-11 | database-update addDoc (no enterprise IDs) | Client Writes | 3h | Data integrity violation |
@@ -629,8 +624,7 @@ All other routes examined have appropriate protection:
 | RC-5 | BOQ read-modify-write | Race Condition | 2h | Measurement data loss |
 | RC-12 | Email queue duplicate enqueue | Race Condition | 2h | Double email processing |
 | CW-5-7 | Worker/employment/EFKA client writes | Client Writes | 6h | Labor compliance |
-| AR-4 | Enterprise IDs migrate no auth | API Auth | 1h | ID corruption |
-| AR-5 | AI learning cron bypassable auth | API Auth | 30min | AI model tampering |
+| AR-5 | AI learning cron missing rate limit | API Auth | 30min | Unlimited retraining |
 
 ### 🟡 P2 — Fix Next Sprint (Quality)
 
@@ -707,4 +701,5 @@ For each client-side write, the migration path is:
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-03-20 | Initial audit — 4 axes, 59 findings documented | Claude (ADR-253) |
-| 2026-03-20 | Update: +15 findings from 3 parallel audit agents (74 total). Added RC-10/11/12, AR-2/3/4/5, CW-11/12, A7/A8, B0 | Claude (ADR-253) |
+| 2026-03-20 | Update: +15 findings from 3 parallel audit agents. Added RC-10/11/12, AR-3/5, CW-11/12, A7/A8, B0 | Claude (ADR-253) |
+| 2026-03-20 | Verification pass: AR-2 (MFA) and AR-4 (enterprise-ids) confirmed false positives — both properly protected. AR-3 downgraded to HIGH. Final count: 71 | Claude (ADR-253) |
