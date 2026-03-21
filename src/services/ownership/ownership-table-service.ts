@@ -13,10 +13,10 @@ import {
   doc,
   getDoc,
   setDoc,
+  deleteDoc,
   collection,
   getDocs,
   query,
-  where,
   orderBy,
   serverTimestamp,
   Timestamp,
@@ -24,13 +24,15 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { getBuildingSpaces } from '@/services/building-spaces.service';
+import type { ResolvedSpaceDoc } from '@/services/building-spaces.service';
 import type {
   OwnershipPercentageTable,
   MutableOwnershipPercentageTable,
   OwnershipTableRevision,
   MutableOwnershipTableRow,
   OwnershipTableStatus,
-  CalculationMethod,
+  LinkedSpaceDetail,
 } from '@/types/ownership-table';
 import { TOTAL_SHARES_TARGET } from '@/types/ownership-table';
 import {
@@ -136,7 +138,7 @@ export async function saveTable(
   const { id, ...data } = table;
 
   const summary = calculateCategorySummary(data.rows);
-  const totalShares = data.rows.reduce((sum, r) => sum + r.millesimalShares, 0);
+  const totalShares = data.rows.filter(r => r.participatesInCalculation !== false).reduce((sum, r) => sum + r.millesimalShares, 0);
 
   const updateData = {
     ...data,
@@ -166,11 +168,13 @@ export async function finalizeTable(
 
     const currentData = snapshot.data() as Omit<OwnershipPercentageTable, 'id'>;
 
-    // Validate total
-    const total = currentData.rows.reduce(
-      (sum: number, r: { millesimalShares: number }) => sum + r.millesimalShares,
-      0,
-    );
+    // Validate total (only participating rows)
+    const total = currentData.rows
+      .filter((r: { participatesInCalculation?: boolean }) => r.participatesInCalculation !== false)
+      .reduce(
+        (sum: number, r: { millesimalShares: number }) => sum + r.millesimalShares,
+        0,
+      );
     if (total !== TOTAL_SHARES_TARGET) {
       throw new Error(
         `Cannot finalize: total shares = ${total}‰, expected ${TOTAL_SHARES_TARGET}‰`,
@@ -261,13 +265,70 @@ export async function unlockTable(
   });
 }
 
+/**
+ * Delete a draft ownership table. Only drafts can be deleted.
+ * Throws if table is finalized/registered.
+ */
+export async function deleteDraftTable(projectId: string): Promise<void> {
+  const tableId = generateTableId(projectId);
+  const docRef = doc(db, COLLECTIONS.OWNERSHIP_TABLES, tableId);
+  const snapshot = await getDoc(docRef);
+
+  if (!snapshot.exists()) return;
+
+  const data = snapshot.data();
+  if (data.status === 'finalized' || data.status === 'registered') {
+    throw new Error('Δεν μπορεί να διαγραφεί οριστικοποιημένος πίνακας');
+  }
+
+  await deleteDoc(docRef);
+}
+
 // ============================================================================
 // AUTO-POPULATE
 // ============================================================================
 
 /**
- * Fetch units + closed parking + storage with millesimalShares from Firestore
- * Returns rows ready for calculation
+ * Resolve a LinkedSpaceDetail from a space document or fallback data.
+ */
+function resolveLinkedSpaceDetail(
+  spaceId: string,
+  spaceType: 'parking' | 'storage',
+  allocationCode: string | undefined,
+  spaceLookup: ReadonlyMap<string, { entityCode: string; spaceType: 'parking' | 'storage' }>,
+  parking: ReadonlyArray<ResolvedSpaceDoc>,
+  storage: ReadonlyArray<ResolvedSpaceDoc>,
+): LinkedSpaceDetail {
+  const lookupEntry = spaceLookup.get(spaceId);
+  const entityCode = lookupEntry?.entityCode ?? allocationCode ?? spaceId.slice(-6);
+
+  // Find the actual document for full data
+  const doc = spaceType === 'parking'
+    ? parking.find(p => p.id === spaceId)
+    : storage.find(s => s.id === spaceId);
+
+  const docData = doc?.data;
+
+  return {
+    spaceId,
+    entityCode,
+    spaceType,
+    description: (docData?.name as string)
+      ?? (docData?.description as string)
+      ?? (spaceType === 'parking' ? 'Θέση Στάθμευσης' : 'Αποθήκη'),
+    floor: String(docData?.floor ?? docData?.floorNumber ?? '—'),
+    areaNetSqm: (docData?.area as number) ?? 0,
+    areaSqm: (docData?.area as number) ?? (docData?.areaSqm as number) ?? 0,
+  };
+}
+
+/**
+ * Fetch units and resolve their linked spaces (parking/storage) as tree children.
+ *
+ * Architecture:
+ * - Linked parking/storage = παρακολουθήματα (appurtenances) → tree children of parent unit
+ * - Unlinked parking/storage = αυτοτελείς → standalone rows (if any exist without unit linkage)
+ * - Units = κύριες ιδιοκτησίες → main rows with linkedSpacesSummary
  */
 export async function autoPopulateRows(
   projectId: string,
@@ -276,114 +337,178 @@ export async function autoPopulateRows(
   const rows: MutableOwnershipTableRow[] = [];
   let ordinal = 0;
 
-  // For each building, fetch units, then parking, then storage
-  for (const buildingId of buildingIds) {
-    // --- Fetch building name ---
-    const buildingDoc = await getDoc(doc(db, COLLECTIONS.BUILDINGS, buildingId));
-    const buildingName = buildingDoc.exists()
-      ? (buildingDoc.data().name as string) ?? buildingId
-      : buildingId;
+  const { parking, storage, units, spaceLookup } = await getBuildingSpaces(buildingIds);
 
-    // --- UNITS (always have millesimal shares) ---
-    const unitsRef = collection(db, COLLECTIONS.UNITS);
-    const unitsQuery = query(
-      unitsRef,
-      where('buildingId', '==', buildingId),
-    );
-    const unitsSnap = await getDocs(unitsQuery);
-
-    for (const unitDoc of unitsSnap.docs) {
-      const data = unitDoc.data();
-      ordinal++;
-      rows.push({
-        ordinal,
-        buildingId,
-        buildingName,
-        entityRef: { collection: 'units', id: unitDoc.id },
-        entityCode: (data.entityCode as string) ?? (data.code as string) ?? (data.unitCode as string) ?? `U-${ordinal}`,
-        description: (data.name as string) ?? (data.description as string) ?? '',
-        category: 'main',
-        floor: String(data.floor ?? data.floorNumber ?? ''),
-        areaNetSqm: ((data.areas as Record<string, number> | undefined)?.net as number) ?? (data.area as number) ?? 0,
-        areaSqm: ((data.areas as Record<string, number> | undefined)?.gross as number) ?? (data.area as number) ?? 0,
-        heightM: null,
-        millesimalShares: 0,
-        isManualOverride: false,
-        coefficients: null,
-        ownerParty: 'unassigned',
-        buyerContactId: null,
-      });
-    }
-
-    // --- CLOSED PARKING (with millesimalShares > 0) ---
-    const parkingRef = collection(db, COLLECTIONS.PARKING_SPACES);
-    const parkingQuery = query(
-      parkingRef,
-      where('buildingId', '==', buildingId),
-    );
-    const parkingSnap = await getDocs(parkingQuery);
-
-    for (const parkDoc of parkingSnap.docs) {
-      const data = parkDoc.data();
-      const shares = (data.millesimalShares as number) ?? 0;
-      // Only include if it has millesimal shares (= closed parking/garage)
-      if (shares > 0 || data.type === 'closed' || data.type === 'garage') {
-        ordinal++;
-        rows.push({
-          ordinal,
-          buildingId,
-          buildingName,
-          entityRef: { collection: 'parking_spots', id: parkDoc.id },
-          entityCode: (data.entityCode as string) ?? (data.code as string) ?? `P-${ordinal}`,
-          description: (data.name as string) ?? (data.description as string) ?? 'Θέση Στάθμευσης',
-          category: 'auxiliary',
-          floor: String(data.floor ?? data.floorNumber ?? 'Υπόγειο'),
-          areaNetSqm: (data.area as number) ?? 0,
-          areaSqm: (data.area as number) ?? (data.areaSqm as number) ?? 0,
-          heightM: null,
-          millesimalShares: 0,
-          isManualOverride: false,
-          coefficients: null,
-          ownerParty: 'unassigned',
-          buyerContactId: null,
-        });
-      }
-    }
-
-    // --- STORAGE UNITS (with millesimalShares > 0) ---
-    const storageRef = collection(db, COLLECTIONS.STORAGE);
-    const storageQuery = query(
-      storageRef,
-      where('buildingId', '==', buildingId),
-    );
-    const storageSnap = await getDocs(storageQuery);
-
-    for (const storDoc of storageSnap.docs) {
-      const data = storDoc.data();
-      const shares = (data.millesimalShares as number) ?? 0;
-      if (shares > 0 || data.hasMillesimalShares === true) {
-        ordinal++;
-        rows.push({
-          ordinal,
-          buildingId,
-          buildingName,
-          entityRef: { collection: 'storage_units', id: storDoc.id },
-          entityCode: (data.entityCode as string) ?? (data.code as string) ?? `S-${ordinal}`,
-          description: (data.name as string) ?? (data.description as string) ?? 'Αποθήκη',
-          category: 'auxiliary',
-          floor: String(data.floor ?? data.floorNumber ?? 'Υπόγειο'),
-          areaNetSqm: (data.area as number) ?? 0,
-          areaSqm: (data.area as number) ?? (data.areaSqm as number) ?? 0,
-          heightM: null,
-          millesimalShares: 0,
-          isManualOverride: false,
-          coefficients: null,
-          ownerParty: 'unassigned',
-          buyerContactId: null,
-        });
-      }
+  // --- Collect all spaceIds that are linked to units ---
+  const linkedSpaceIds = new Set<string>();
+  for (const { data } of units) {
+    const rawLinked = (data.linkedSpaces as Array<{ spaceId: string }>) ?? [];
+    for (const ls of rawLinked) {
+      if (ls.spaceId) linkedSpaceIds.add(ls.spaceId);
     }
   }
 
+  // --- UNLINKED parking/storage → standalone rows (αυτοτελείς ιδιοκτησίες) ---
+  for (const parkDoc of parking) {
+    if (linkedSpaceIds.has(parkDoc.id)) continue; // Skip — will appear as tree child
+    const lookup = spaceLookup.get(parkDoc.id);
+    const entityCode = lookup?.entityCode ?? `P-${parkDoc.id.slice(-4)}`;
+    const docBuildingId = (parkDoc.data.buildingId as string) ?? buildingIds[0] ?? '';
+    const docBuildingName = units.find(u => u.buildingId === docBuildingId)?.buildingName ?? docBuildingId;
+    ordinal++;
+    rows.push({
+      ordinal,
+      buildingId: docBuildingId,
+      buildingName: docBuildingName,
+      entityRef: { collection: 'parking_spots', id: parkDoc.id },
+      entityCode,
+      description: (parkDoc.data.name as string) ?? 'Θέση Στάθμευσης',
+      category: 'auxiliary',
+      floor: String(parkDoc.data.floor ?? parkDoc.data.floorNumber ?? '—'),
+      areaNetSqm: (parkDoc.data.area as number) ?? 0,
+      areaSqm: (parkDoc.data.area as number) ?? 0,
+      heightM: null,
+      millesimalShares: 0,
+      isManualOverride: false,
+      coefficients: null,
+      participatesInCalculation: false,
+      linkedSpacesSummary: null,
+      ownerParty: 'unassigned',
+      buyerContactId: null,
+    });
+  }
+
+  for (const storDoc of storage) {
+    if (linkedSpaceIds.has(storDoc.id)) continue; // Skip — will appear as tree child
+    const lookup = spaceLookup.get(storDoc.id);
+    const entityCode = lookup?.entityCode ?? `S-${storDoc.id.slice(-4)}`;
+    const docBuildingId = (storDoc.data.buildingId as string) ?? buildingIds[0] ?? '';
+    const docBuildingName = units.find(u => u.buildingId === docBuildingId)?.buildingName ?? docBuildingId;
+    ordinal++;
+    rows.push({
+      ordinal,
+      buildingId: docBuildingId,
+      buildingName: docBuildingName,
+      entityRef: { collection: 'storage_units', id: storDoc.id },
+      entityCode,
+      description: (storDoc.data.name as string) ?? 'Αποθήκη',
+      category: 'auxiliary',
+      floor: String(storDoc.data.floor ?? storDoc.data.floorNumber ?? '—'),
+      areaNetSqm: (storDoc.data.area as number) ?? 0,
+      areaSqm: (storDoc.data.area as number) ?? 0,
+      heightM: null,
+      millesimalShares: 0,
+      isManualOverride: false,
+      coefficients: null,
+      participatesInCalculation: true,
+      linkedSpacesSummary: null,
+      ownerParty: 'unassigned',
+      buyerContactId: null,
+    });
+  }
+
+  // --- UNIT rows with fully resolved linkedSpacesSummary ---
+  for (const { id, data, buildingId, buildingName } of units) {
+    ordinal++;
+
+    const rawLinked = (data.linkedSpaces as Array<{
+      spaceId: string;
+      spaceType: string;
+      allocationCode?: string;
+    }>) ?? [];
+
+    const linkedSpacesSummary: LinkedSpaceDetail[] | null = rawLinked.length > 0
+      ? rawLinked.map(ls =>
+          resolveLinkedSpaceDetail(
+            ls.spaceId,
+            (ls.spaceType === 'parking' ? 'parking' : 'storage') as 'parking' | 'storage',
+            ls.allocationCode,
+            spaceLookup,
+            parking,
+            storage,
+          ),
+        )
+      : null;
+
+    rows.push({
+      ordinal,
+      buildingId,
+      buildingName,
+      entityRef: { collection: 'units', id },
+      entityCode: (data.entityCode as string) ?? (data.code as string) ?? (data.unitCode as string) ?? `U-${ordinal}`,
+      description: (data.name as string) ?? (data.description as string) ?? '',
+      category: 'main',
+      floor: String(data.floor ?? data.floorNumber ?? ''),
+      areaNetSqm: ((data.areas as Record<string, number> | undefined)?.net as number) ?? (data.area as number) ?? 0,
+      areaSqm: ((data.areas as Record<string, number> | undefined)?.gross as number) ?? (data.area as number) ?? 0,
+      heightM: null,
+      millesimalShares: 0,
+      isManualOverride: false,
+      coefficients: null,
+      participatesInCalculation: true,
+      linkedSpacesSummary,
+      ownerParty: 'unassigned',
+      buyerContactId: null,
+    });
+  }
+
   return rows;
+}
+
+// ============================================================================
+// ENRICH LINKED SPACES (for saved tables missing linkedSpacesSummary)
+// ============================================================================
+
+/**
+ * Enrich saved rows with linkedSpacesSummary data.
+ *
+ * When a table is loaded from Firestore, rows saved before linkedSpacesSummary
+ * was implemented will have null. This function re-resolves them by reading
+ * the unit documents' linkedSpaces field from Firestore.
+ *
+ * Works even if parking/storage documents don't exist as separate Firestore
+ * documents — falls back to allocationCode from the unit's linkedSpaces data.
+ */
+export async function enrichRowsWithLinkedSpaces(
+  rows: MutableOwnershipTableRow[],
+  buildingIds: string[],
+): Promise<MutableOwnershipTableRow[]> {
+  const needsEnrichment = rows.some(
+    r => r.entityRef.collection === 'units' && r.linkedSpacesSummary === null,
+  );
+
+  if (!needsEnrichment || buildingIds.length === 0) return rows;
+
+  const { parking, storage, units, spaceLookup } = await getBuildingSpaces(buildingIds);
+  const unitDataMap = new Map(units.map(u => [u.id, u.data]));
+
+  return rows.map(row => {
+    if (row.entityRef.collection !== 'units' || row.linkedSpacesSummary !== null) {
+      return row;
+    }
+
+    const unitData = unitDataMap.get(row.entityRef.id);
+    if (!unitData) return row;
+
+    const rawLinked = (unitData.linkedSpaces as Array<{
+      spaceId: string;
+      spaceType: string;
+      allocationCode?: string;
+    }>) ?? [];
+
+    if (rawLinked.length === 0) return row;
+
+    const linkedSpacesSummary: LinkedSpaceDetail[] = rawLinked.map(ls =>
+      resolveLinkedSpaceDetail(
+        ls.spaceId,
+        (ls.spaceType === 'parking' ? 'parking' : 'storage') as 'parking' | 'storage',
+        ls.allocationCode,
+        spaceLookup,
+        parking,
+        storage,
+      ),
+    );
+
+    return { ...row, linkedSpacesSummary };
+  });
 }

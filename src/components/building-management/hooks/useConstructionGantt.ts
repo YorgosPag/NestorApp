@@ -201,39 +201,37 @@ export function useConstructionGantt(buildingId: string): UseConstructionGanttRe
         .filter((task) => task.phaseId === phase.id)
         .sort((a, b) => a.order - b.order);
 
-      let ganttTasks: Task[];
+      // ALWAYS include synthetic phase bar + real tasks
+      // Phase bar is always first → enables visual cascade during drag
+      const phaseGanttStatus = mapPhaseStatusToGantt(phase.status);
+      const syntheticPhaseBar: Task = {
+        id: `phase-bar-${phase.id}`,
+        name: phase.name,
+        startDate: parseLocalDate(phase.plannedStartDate),
+        endDate: parseLocalDate(phase.plannedEndDate),
+        percent: phase.progress,
+        dependencies: [],
+        taskStatus: phaseGanttStatus,
+        color: phase.barColor ?? GANTT_STATUS_COLORS[phaseGanttStatus],
+        barColor: phase.barColor,
+      };
 
-      if (phaseTasks.length > 0) {
-        // Phase has real tasks → show them as bars
-        ganttTasks = phaseTasks.map((task) => {
-          const ganttStatus = mapTaskStatusToGantt(task.status);
-          return {
-            id: task.id,
-            name: task.name,
-            startDate: parseLocalDate(task.plannedStartDate),
-            endDate: parseLocalDate(task.plannedEndDate),
-            percent: task.progress,
-            dependencies: task.dependencies ?? [],
-            taskStatus: ganttStatus,
-            color: task.barColor ?? GANTT_STATUS_COLORS[ganttStatus],
-            barColor: task.barColor,
-          };
-        });
-      } else {
-        // Phase has no tasks → create synthetic bar from phase dates
-        const ganttStatus = mapPhaseStatusToGantt(phase.status);
-        ganttTasks = [{
-          id: `phase-bar-${phase.id}`,
-          name: phase.name,
-          startDate: parseLocalDate(phase.plannedStartDate),
-          endDate: parseLocalDate(phase.plannedEndDate),
-          percent: phase.progress,
-          dependencies: [],
+      const realTasks: Task[] = phaseTasks.map((task) => {
+        const ganttStatus = mapTaskStatusToGantt(task.status);
+        return {
+          id: task.id,
+          name: task.name,
+          startDate: parseLocalDate(task.plannedStartDate),
+          endDate: parseLocalDate(task.plannedEndDate),
+          percent: task.progress,
+          dependencies: task.dependencies ?? [],
           taskStatus: ganttStatus,
-          color: phase.barColor ?? GANTT_STATUS_COLORS[ganttStatus],
-          barColor: phase.barColor,
-        }];
-      }
+          color: task.barColor ?? GANTT_STATUS_COLORS[ganttStatus],
+          barColor: task.barColor,
+        };
+      });
+
+      const ganttTasks: Task[] = [syntheticPhaseBar, ...realTasks];
 
       return {
         id: phase.id,

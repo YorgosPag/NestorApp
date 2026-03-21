@@ -152,20 +152,65 @@ export function roundWithLargestRemainder(
 // ============================================================================
 
 /**
+ * Split rows into participating (in calculation) and non-participating (informational).
+ * Non-participating rows keep millesimalShares: 0.
+ */
+function splitByParticipation(
+  rows: ReadonlyArray<MutableOwnershipTableRow>,
+): { participating: MutableOwnershipTableRow[]; indices: number[] } {
+  const participating: MutableOwnershipTableRow[] = [];
+  const indices: number[] = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i].participatesInCalculation !== false) {
+      participating.push(rows[i]);
+      indices.push(i);
+    }
+  }
+
+  return { participating, indices };
+}
+
+/**
+ * Apply calculated shares to participating rows, keep non-participating at 0.
+ */
+function mergeCalculatedShares(
+  rows: ReadonlyArray<MutableOwnershipTableRow>,
+  shares: number[],
+  indices: number[],
+  coefficientsMap?: Map<number, { floorCoefficient: number; valueCoefficient: number }>,
+): MutableOwnershipTableRow[] {
+  const result = rows.map(row => ({
+    ...row,
+    millesimalShares: row.participatesInCalculation !== false ? row.millesimalShares : 0,
+    isManualOverride: false,
+    coefficients: coefficientsMap ? null : row.coefficients,
+  }));
+
+  for (let j = 0; j < indices.length; j++) {
+    const idx = indices[j];
+    result[idx] = {
+      ...result[idx],
+      millesimalShares: shares[j],
+      isManualOverride: false,
+      coefficients: coefficientsMap?.get(j) ?? null,
+    };
+  }
+
+  return result;
+}
+
+/**
  * Μέθοδος Α: Κατ' Εμβαδόν — shares_i = (area_i / totalArea) × 1000
  */
 export function calculateByArea(
   rows: ReadonlyArray<MutableOwnershipTableRow>,
 ): MutableOwnershipTableRow[] {
-  const rawShares = rows.map(row => row.areaSqm);
+  const { participating, indices } = splitByParticipation(rows);
+  const rawShares = participating.map(row => row.areaSqm);
   const shares = roundWithLargestRemainder(rawShares);
 
-  return rows.map((row, i) => ({
-    ...row,
-    millesimalShares: shares[i],
-    isManualOverride: false,
-    coefficients: null,
-  }));
+  return mergeCalculatedShares(rows, shares, indices);
 }
 
 /**
@@ -177,31 +222,24 @@ export function calculateByValue(
   zonePrice: number,
   commercialityCoefficient: number,
 ): MutableOwnershipTableRow[] {
-  const table = getFloorCoefficientTable(commercialityCoefficient);
+  const { participating, indices } = splitByParticipation(rows);
+  const coeffTable = getFloorCoefficientTable(commercialityCoefficient);
 
-  const rowsWithCoefficients = rows.map(row => {
-    const floorCoeff = getFloorCoefficient(row.floor, table);
+  const coefficientsMap = new Map<number, CalculationCoefficients>();
+  const rawShares: number[] = [];
+
+  for (let j = 0; j < participating.length; j++) {
+    const row = participating[j];
+    const floorCoeff = getFloorCoefficient(row.floor, coeffTable);
     const valueCoeff = row.coefficients?.valueCoefficient ?? 1.0;
 
-    const coefficients: CalculationCoefficients = {
-      floorCoefficient: floorCoeff,
-      valueCoefficient: valueCoeff,
-    };
+    coefficientsMap.set(j, { floorCoefficient: floorCoeff, valueCoefficient: valueCoeff });
+    rawShares.push(row.areaSqm * zonePrice * floorCoeff * valueCoeff);
+  }
 
-    const value = row.areaSqm * zonePrice * floorCoeff * valueCoeff;
-
-    return { row, coefficients, value };
-  });
-
-  const rawShares = rowsWithCoefficients.map(r => r.value);
   const shares = roundWithLargestRemainder(rawShares);
 
-  return rowsWithCoefficients.map((r, i) => ({
-    ...r.row,
-    millesimalShares: shares[i],
-    isManualOverride: false,
-    coefficients: r.coefficients,
-  }));
+  return mergeCalculatedShares(rows, shares, indices, coefficientsMap);
 }
 
 /**
@@ -210,18 +248,14 @@ export function calculateByValue(
 export function calculateByVolume(
   rows: ReadonlyArray<MutableOwnershipTableRow>,
 ): MutableOwnershipTableRow[] {
-  const rawShares = rows.map(row => {
+  const { participating, indices } = splitByParticipation(rows);
+  const rawShares = participating.map(row => {
     const height = row.heightM ?? 3.0; // Default floor height: 3m
     return row.areaSqm * height;
   });
   const shares = roundWithLargestRemainder(rawShares);
 
-  return rows.map((row, i) => ({
-    ...row,
-    millesimalShares: shares[i],
-    isManualOverride: false,
-    coefficients: null,
-  }));
+  return mergeCalculatedShares(rows, shares, indices);
 }
 
 // ============================================================================
@@ -229,13 +263,15 @@ export function calculateByVolume(
 // ============================================================================
 
 /**
- * Validate that total shares = 1000 and all rows have valid shares
+ * Validate that total shares = 1000 and all participating rows have valid shares.
+ * Non-participating rows (participatesInCalculation === false) are excluded.
  */
 export function validateTotal(
-  rows: ReadonlyArray<Pick<OwnershipTableRow, 'millesimalShares' | 'ordinal' | 'entityCode'>>,
+  rows: ReadonlyArray<Pick<OwnershipTableRow, 'millesimalShares' | 'ordinal' | 'entityCode' | 'participatesInCalculation'>>,
 ): OwnershipValidationResult {
   const errors: string[] = [];
-  const total = rows.reduce((sum, row) => sum + row.millesimalShares, 0);
+  const participating = rows.filter(r => r.participatesInCalculation !== false);
+  const total = participating.reduce((sum, row) => sum + row.millesimalShares, 0);
 
   if (total !== TOTAL_SHARES_TARGET) {
     errors.push(
@@ -243,7 +279,7 @@ export function validateTotal(
     );
   }
 
-  for (const row of rows) {
+  for (const row of participating) {
     if (row.millesimalShares < MIN_SHARES_PER_ROW) {
       errors.push(
         `Γραμμή ${row.ordinal} (${row.entityCode}): ${row.millesimalShares}‰ < ${MIN_SHARES_PER_ROW}‰ (ελάχιστο)`,
@@ -269,10 +305,11 @@ export function validateTotal(
 // ============================================================================
 
 /**
- * Calculate category summary from rows
+ * Calculate category summary from rows.
+ * Only participating rows count towards shares totals.
  */
 export function calculateCategorySummary(
-  rows: ReadonlyArray<Pick<OwnershipTableRow, 'category' | 'millesimalShares'>>,
+  rows: ReadonlyArray<Pick<OwnershipTableRow, 'category' | 'millesimalShares' | 'participatesInCalculation'>>,
 ): { main: CategorySummary; auxiliary: CategorySummary } {
   let mainCount = 0;
   let mainShares = 0;
@@ -280,6 +317,7 @@ export function calculateCategorySummary(
   let auxShares = 0;
 
   for (const row of rows) {
+    if (row.participatesInCalculation === false) continue;
     if (row.category === 'main') {
       mainCount++;
       mainShares += row.millesimalShares;

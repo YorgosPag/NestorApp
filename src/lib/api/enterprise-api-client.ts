@@ -67,7 +67,7 @@ export interface ApiRequestConfig {
   headers?: Record<string, string>;
   /** Query parameters */
   params?: Record<string, string | number | boolean>;
-  /** Request timeout in milliseconds (default: 30000) */
+  /** Request timeout in milliseconds (default: 60000) */
   timeout?: number;
   /** Retry failed requests (default: true για 5xx errors) */
   retry?: boolean;
@@ -262,7 +262,7 @@ export class EnterpriseApiClient {
       body,
       headers = {},
       params,
-      timeout = 30000,
+      timeout = 60000,
       retry = true,
       maxRetries = 3,
       skipAuth = false,

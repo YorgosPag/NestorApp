@@ -54,6 +54,7 @@ import {
   AlertTriangle,
   CheckCircle,
   FileText,
+  Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -129,8 +130,9 @@ function ownerLabel(party: OwnerParty, t: (key: string) => string): string {
   return map[party] ?? party;
 }
 
-/** Category label */
-function categoryLabel(cat: string, t: (key: string) => string): string {
+/** Category label — parking rows show "Πληροφοριακά" instead of "Βοηθητικά" */
+function categoryLabel(cat: string, t: (key: string) => string, participates?: boolean): string {
+  if (participates === false) return 'Πληροφοριακά';
   return cat === 'main'
     ? t('common:ownership.categoryMain')
     : t('common:ownership.categoryAuxiliary');
@@ -169,6 +171,8 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
   // Unlock dialog state
   const [showUnlockInput, setShowUnlockInput] = useState(false);
   const [unlockReason, setUnlockReason] = useState('');
+  // Delete confirmation state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const {
     table,
@@ -179,6 +183,7 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
     validation,
     revisions,
     isLocked,
+    orphanedBuildingIds,
     autoPopulate,
     calculate,
     updateRow,
@@ -186,6 +191,7 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
     save,
     finalize,
     unlock,
+    deleteDraft,
     reload,
   } = useOwnershipTable(resolvedProjectId, buildingIds);
 
@@ -306,6 +312,16 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
     }
   }, [unlock, unlockReason, showSuccess, showError, t]);
 
+  const handleDeleteDraft = useCallback(async () => {
+    try {
+      await deleteDraft();
+      showSuccess('Ο πίνακας χιλιοστών διαγράφηκε.');
+      setShowDeleteConfirm(false);
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Σφάλμα κατά τη διαγραφή');
+    }
+  }, [deleteDraft, showSuccess, showError]);
+
   const handleMethodChange = useCallback((method: string) => {
     updateTableField('calculationMethod', method);
     calculate(method as CalculationMethod);
@@ -334,7 +350,7 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
 
   if (!table) return null;
 
-  const totalShares = table.rows.reduce((sum, r) => sum + r.millesimalShares, 0);
+  const totalShares = table.rows.filter(r => r.participatesInCalculation !== false).reduce((sum, r) => sum + r.millesimalShares, 0);
 
   return (
     <section className="space-y-6">
@@ -352,6 +368,69 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
           </span>
         )}
       </header>
+
+      {/* ============================================================ */}
+      {/* ORPHANED BUILDINGS WARNING */}
+      {/* ============================================================ */}
+      {orphanedBuildingIds.length > 0 && table.rows.length > 0 && (
+        <section className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950/30">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <article className="flex-1 space-y-2">
+            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+              Αποσυνδεμένα κτίρια στον πίνακα
+            </p>
+            <p className="text-sm text-amber-700 dark:text-amber-300">
+              {orphanedBuildingIds.length === 1
+                ? 'Ένα κτίριο που αναφέρεται στον πίνακα δεν είναι πλέον συνδεδεμένο με αυτό το έργο.'
+                : `${orphanedBuildingIds.length} κτίρια που αναφέρονται στον πίνακα δεν είναι πλέον συνδεδεμένα με αυτό το έργο.`}
+              {' '}Μπορείτε να επανασυνδέσετε τα κτίρια ή να διαγράψετε τον πίνακα και να τον δημιουργήσετε εκ νέου.
+            </p>
+            {!isLocked && (
+              <nav className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAutoPopulate}
+                  disabled={loading || buildingIds.length === 0}
+                >
+                  <RefreshCw className="mr-1 h-3 w-3" />
+                  Ανανέωση πίνακα
+                </Button>
+                {!showDeleteConfirm ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/30"
+                  >
+                    <Trash2 className="mr-1 h-3 w-3" />
+                    Διαγραφή πίνακα
+                  </Button>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <span className="text-xs text-red-600 dark:text-red-400">Σίγουρα;</span>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleDeleteDraft}
+                      disabled={saving}
+                    >
+                      Ναι, διέγραψε
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowDeleteConfirm(false)}
+                    >
+                      Άκυρο
+                    </Button>
+                  </span>
+                )}
+              </nav>
+            )}
+          </article>
+        </section>
+      )}
 
       {/* ============================================================ */}
       {/* CONTROLS: Method selector + Zone price + ΣΕ */}
@@ -476,6 +555,40 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
             {t('common:ownership.actions.unlock')}
           </Button>
         )}
+
+        {/* Delete draft — always visible for non-locked tables */}
+        {!isLocked && table.rows.length > 0 && (
+          !showDeleteConfirm ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/30"
+            >
+              <Trash2 className="mr-1 h-4 w-4" />
+              Διαγραφή
+            </Button>
+          ) : (
+            <span className="flex items-center gap-2">
+              <span className="text-xs text-red-600 dark:text-red-400">Σίγουρα;</span>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDeleteDraft}
+                disabled={saving}
+              >
+                Ναι, διέγραψε
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Άκυρο
+              </Button>
+            </span>
+          )
+        )}
       </nav>
 
       {/* Unlock reason input */}
@@ -544,24 +657,29 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
                   </TableRow>
 
                   {/* Rows */}
-                  {rows.map(row => {
+                  {rows.map((row, visibleIdx) => {
                     const globalIndex = table.rows.findIndex(
                       r => r.entityRef.id === row.entityRef.id,
                     );
+                    const isNonParticipating = row.participatesInCalculation === false;
 
                     return (
+                      <React.Fragment key={row.entityRef.id}>
                       <TableRow
-                        key={row.entityRef.id}
                         className={cn(
                           row.isManualOverride && 'bg-amber-50/50 dark:bg-amber-950/20',
+                          isNonParticipating && 'bg-blue-50/30 dark:bg-blue-950/20',
                         )}
                       >
-                        <TableCell className="text-muted-foreground">{row.ordinal}</TableCell>
+                        <TableCell className="text-muted-foreground">{visibleIdx + 1}</TableCell>
                         <TableCell className="font-mono text-xs">{row.entityCode}</TableCell>
                         <TableCell>{row.description}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="text-xs">
-                            {categoryLabel(row.category, t)}
+                          <Badge variant="outline" className={cn(
+                            'text-xs',
+                            isNonParticipating && 'border-blue-300 text-blue-600 dark:border-blue-700 dark:text-blue-400',
+                          )}>
+                            {categoryLabel(row.category, t, row.participatesInCalculation)}
                           </Badge>
                         </TableCell>
                         <TableCell>{row.floor}</TableCell>
@@ -572,7 +690,9 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
                           {row.areaSqm > 0 ? row.areaSqm.toFixed(2) : '—'}
                         </TableCell>
                         <TableCell className="text-right">
-                          {isLocked ? (
+                          {isNonParticipating ? (
+                            <span className="font-mono text-xs text-muted-foreground">—</span>
+                          ) : isLocked ? (
                             <span className="font-mono font-semibold">{row.millesimalShares}‰</span>
                           ) : (
                             <Input
@@ -621,18 +741,73 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
                         <TableCell className="text-xs text-muted-foreground font-mono">
                           {(row as Record<string, unknown>).finalContract as string ?? '—'}
                         </TableCell>
-                        {/* Μονάδα κτιρίου = υποχρεωτικά στον πίνακα. Για αφαίρεση → αποσύνδεση από κτίριο. */}
                       </TableRow>
+
+                      {/* Linked spaces as tree-branch child rows */}
+                      {row.linkedSpacesSummary && row.linkedSpacesSummary.length > 0 &&
+                        row.linkedSpacesSummary.map((ls, idx) => {
+                          const isLast = idx === (row.linkedSpacesSummary?.length ?? 0) - 1;
+
+                          return (
+                            <TableRow
+                              key={`${row.entityRef.id}-ls-${idx}`}
+                              className="bg-muted/20 dark:bg-muted/10"
+                            >
+                              <TableCell className="pl-5 text-muted-foreground text-xs select-none">
+                                {isLast ? '└─' : '├─'}
+                              </TableCell>
+                              <TableCell className="font-mono text-xs">
+                                {ls.spaceType === 'parking' ? '🅿️' : '📦'} {ls.entityCode}
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground">
+                                {ls.description}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="text-xs border-blue-300 text-blue-600 dark:border-blue-700 dark:text-blue-400">
+                                  Βοηθητικά
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-xs">{ls.floor}</TableCell>
+                              <TableCell className="text-right font-mono text-xs">
+                                {ls.areaNetSqm > 0 ? ls.areaNetSqm.toFixed(2) : '—'}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-xs">
+                                {ls.areaSqm > 0 ? ls.areaSqm.toFixed(2) : '—'}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {ls.spaceType === 'storage' ? (
+                                  <span className="font-mono text-xs">0‰</span>
+                                ) : (
+                                  <span className="font-mono text-xs text-muted-foreground">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground">
+                                {ownerLabel(row.ownerParty, t)}
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground">
+                                {row.buyerContactId ? (row as Record<string, unknown>).buyerName as string ?? '—' : '—'}
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground font-mono">
+                                {(row as Record<string, unknown>).preliminaryContract as string ?? '—'}
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground font-mono">
+                                {(row as Record<string, unknown>).finalContract as string ?? '—'}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      }
+                      </React.Fragment>
                     );
                   })}
 
-                  {/* Building subtotal */}
+                  {/* Building subtotal — only participating rows */}
                   <TableRow className="bg-muted/30 font-medium">
                     <TableCell colSpan={6} className="text-right">
                       {t('common:ownership.subtotal')} — {buildingName}
                     </TableCell>
                     <TableCell className="text-right font-mono font-bold">
-                      {subtotal}‰
+                      {rows.filter(r => r.participatesInCalculation !== false).reduce((sum, r) => sum + r.millesimalShares, 0)}‰
                     </TableCell>
                     <TableCell colSpan={isLocked ? 1 : 2} />
                   </TableRow>

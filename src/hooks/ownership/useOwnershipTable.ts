@@ -11,7 +11,7 @@
 
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import type {
   OwnershipPercentageTable,
   MutableOwnershipPercentageTable,
@@ -29,7 +29,9 @@ import {
   saveTable,
   finalizeTable as finalizeTableService,
   unlockTable as unlockTableService,
+  deleteDraftTable,
   autoPopulateRows,
+  enrichRowsWithLinkedSpaces,
   getRevisions,
 } from '@/services/ownership/ownership-table-service';
 import {
@@ -63,6 +65,8 @@ export interface UseOwnershipTableReturn {
   revisions: OwnershipTableRevision[];
   /** Whether table is locked (finalized/registered) */
   isLocked: boolean;
+  /** Building IDs in table that are no longer linked to the project */
+  orphanedBuildingIds: string[];
 
   // --- Actions ---
   /** Auto-populate rows from Firestore entities */
@@ -83,6 +87,8 @@ export interface UseOwnershipTableReturn {
   finalize: (userId: string) => Promise<void>;
   /** Unlock a finalized table */
   unlock: (userId: string, reason: string) => Promise<void>;
+  /** Delete a draft table */
+  deleteDraft: () => Promise<void>;
   /** Reload table from Firestore */
   reload: () => Promise<void>;
 }
@@ -109,6 +115,15 @@ export function useOwnershipTable(
   }, []);
 
   const isLocked = table?.status === 'finalized' || table?.status === 'registered';
+
+  // --- Detect orphaned buildings (in table but not linked to project) ---
+  const orphanedBuildingIds = useMemo(() => {
+    const tableBuildingIds = table?.buildingIds ?? [];
+    if (tableBuildingIds.length === 0) return [];
+    if (buildingIds.length === 0) return [...tableBuildingIds];
+    const currentSet = new Set(buildingIds);
+    return tableBuildingIds.filter(id => !currentSet.has(id));
+  }, [table, buildingIds]);
 
   // --- Validate rows when they change ---
   const runValidation = useCallback((rows: MutableOwnershipTableRow[]) => {
@@ -137,10 +152,18 @@ export function useOwnershipTable(
 
       if (!isMounted.current) return;
 
+      const clonedRows = existing.rows.map(r => ({ ...r }));
+
+      // Enrich saved rows that are missing linkedSpacesSummary
+      const enrichedRows = await enrichRowsWithLinkedSpaces(
+        clonedRows,
+        buildingIds,
+      );
+
       const mutable: MutableOwnershipPercentageTable = {
         ...existing,
         buildingIds: [...existing.buildingIds],
-        rows: existing.rows.map(r => ({ ...r })),
+        rows: enrichedRows,
         kaekCodes: existing.kaekCodes ? [...existing.kaekCodes] : null,
         summaryByCategory: { ...existing.summaryByCategory },
         bartex: existing.bartex ? { ...existing.bartex } : null,
@@ -187,7 +210,7 @@ export function useOwnershipTable(
           ...prev,
           rows,
           buildingIds: [...buildingIds],
-          totalShares: rows.reduce((sum, r) => sum + r.millesimalShares, 0),
+          totalShares: rows.filter(r => r.participatesInCalculation !== false).reduce((sum, r) => sum + r.millesimalShares, 0),
           summaryByCategory: calculateCategorySummary(rows),
         };
       });
@@ -237,7 +260,7 @@ export function useOwnershipTable(
         ...prev,
         rows: newRows,
         calculationMethod: calcMethod,
-        totalShares: newRows.reduce((sum, r) => sum + r.millesimalShares, 0),
+        totalShares: newRows.filter(r => r.participatesInCalculation !== false).reduce((sum, r) => sum + r.millesimalShares, 0),
         summaryByCategory: calculateCategorySummary(newRows),
       };
     });
@@ -286,7 +309,7 @@ export function useOwnershipTable(
       }
 
       newRows[index] = row;
-      const totalShares = newRows.reduce((sum, r) => sum + r.millesimalShares, 0);
+      const totalShares = newRows.filter(r => r.participatesInCalculation !== false).reduce((sum, r) => sum + r.millesimalShares, 0);
 
       runValidation(newRows);
 
@@ -309,7 +332,7 @@ export function useOwnershipTable(
       return {
         ...prev,
         rows: newRows,
-        totalShares: newRows.reduce((sum, r) => sum + r.millesimalShares, 0),
+        totalShares: newRows.filter(r => r.participatesInCalculation !== false).reduce((sum, r) => sum + r.millesimalShares, 0),
         summaryByCategory: calculateCategorySummary(newRows),
       };
     });
@@ -326,7 +349,7 @@ export function useOwnershipTable(
       return {
         ...prev,
         rows: newRows,
-        totalShares: newRows.reduce((sum, r) => sum + r.millesimalShares, 0),
+        totalShares: newRows.filter(r => r.participatesInCalculation !== false).reduce((sum, r) => sum + r.millesimalShares, 0),
         summaryByCategory: calculateCategorySummary(newRows),
       };
     });
@@ -413,6 +436,31 @@ export function useOwnershipTable(
     }
   }, [table]);
 
+  // --- Delete draft ---
+  const deleteDraft = useCallback(async () => {
+    if (!projectId) return;
+    if (isLocked) return;
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      await deleteDraftTable(projectId);
+      if (isMounted.current) {
+        setTable(null);
+        setValidation(null);
+        setRevisions([]);
+        setIsDirty(false);
+        setSaving(false);
+      }
+    } catch (err) {
+      if (isMounted.current) {
+        setError(getErrorMessage(err, 'Failed to delete draft'));
+        setSaving(false);
+      }
+    }
+  }, [projectId, isLocked]);
+
   // --- Reload ---
   const reload = useCallback(async () => {
     await loadTable();
@@ -427,6 +475,7 @@ export function useOwnershipTable(
     validation,
     revisions,
     isLocked,
+    orphanedBuildingIds,
     autoPopulate,
     calculate,
     updateRow,
@@ -436,6 +485,7 @@ export function useOwnershipTable(
     save,
     finalize,
     unlock,
+    deleteDraft,
     reload,
   };
 }

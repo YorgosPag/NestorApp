@@ -134,6 +134,27 @@ export interface CalculationCoefficients {
 }
 
 /**
+ * Παρακολούθημα (parking/storage) linked σε unit — πλήρη data για tree-branch display.
+ * Τα παρακολουθήματα ΔΕΝ εμφανίζονται ως standalone rows — μόνο ως children του parent unit.
+ */
+export interface LinkedSpaceDetail {
+  /** Firestore document ID του parking/storage */
+  readonly spaceId: string;
+  /** Κωδικός (π.χ. "A-PK-0.02", "ΑΠΟΘΗΚΗ 1") */
+  readonly entityCode: string;
+  /** Τύπος χώρου */
+  readonly spaceType: 'parking' | 'storage';
+  /** Περιγραφή */
+  readonly description: string;
+  /** Όροφος */
+  readonly floor: string;
+  /** Καθαρό εμβαδόν (τ.μ.) */
+  readonly areaNetSqm: number;
+  /** Μικτό εμβαδόν (τ.μ.) — συνήθως ίδιο με καθαρό για parking/storage */
+  readonly areaSqm: number;
+}
+
+/**
  * Μία γραμμή στον πίνακα ποσοστών — αντιπροσωπεύει μία αυτοτελή ιδιοκτησία
  */
 export interface OwnershipTableRow {
@@ -165,6 +186,10 @@ export interface OwnershipTableRow {
   readonly isManualOverride: boolean;
   /** Συντελεστές (Μέθοδος Β) — null για μεθόδους Α, Γ */
   readonly coefficients: CalculationCoefficients | null;
+  /** Αν συμμετέχει στον υπολογισμό χιλιοστών (false = ενημερωτικό, π.χ. parking) */
+  readonly participatesInCalculation: boolean;
+  /** Συνδεδεμένοι χώροι — πλήρη data για tree-branch rendering */
+  readonly linkedSpacesSummary: ReadonlyArray<LinkedSpaceDetail> | null;
   /** Ιδιοκτήτης (αντιπαροχή) */
   readonly ownerParty: OwnerParty;
   /** Contact ID αγοραστή (αν πωλήθηκε) */

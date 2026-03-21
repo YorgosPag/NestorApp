@@ -249,6 +249,10 @@ export function GanttView({ building }: GanttViewProps) {
   const hoveredTaskRef = useRef('');
   const isDraggingRef = useRef(false);
 
+  // Visual cascade: track dragged phase bar for real-time child movement
+  const draggedPhaseGroupIdRef = useRef<string | null>(null);
+  const phaseBarOriginalLeftRef = useRef(0);
+
   // Close context menu on outside click — delayed activation to prevent
   // the triggering right-click from immediately closing
   const [contextMenuClickEnabled, setContextMenuClickEnabled] = useState(false);
@@ -316,11 +320,33 @@ export function GanttView({ building }: GanttViewProps) {
     }
     // Only mark as dragging if mousedown is on a task bar or its handles
     const target = e.target as HTMLElement;
-    const isOnTask = target.closest('.rmg-task-item') !== null;
-    if (isOnTask) {
+    const taskItem = target.closest('.rmg-task-item') as HTMLElement | null;
+    if (taskItem) {
       isDraggingRef.current = true;
+
+      // Detect if this is a phase bar → enable visual cascade
+      const dataTaskId = taskItem.getAttribute('data-task-id');
+      if (dataTaskId?.startsWith('phase-bar-')) {
+        const groupId = dataTaskId.replace('phase-bar-', '');
+        draggedPhaseGroupIdRef.current = groupId;
+        phaseBarOriginalLeftRef.current = parseFloat(taskItem.style.left || '0');
+      } else {
+        // Fallback: match by name against taskGroups
+        const taskNameEl = taskItem.querySelector('.rmg-task-item-name');
+        const taskName = taskNameEl?.textContent?.trim() ?? '';
+        for (const group of taskGroups) {
+          const matched = group.tasks.find(
+            (tsk) => tsk.id.startsWith('phase-bar-') && tsk.name === taskName
+          );
+          if (matched) {
+            draggedPhaseGroupIdRef.current = group.id;
+            phaseBarOriginalLeftRef.current = parseFloat(taskItem.style.left || '0');
+            break;
+          }
+        }
+      }
     }
-  }, []);
+  }, [taskGroups]);
 
   // Detect which task bar was right-clicked — opens custom context menu
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
@@ -551,6 +577,15 @@ export function GanttView({ building }: GanttViewProps) {
   // Small delay on reset to prevent tooltip flicker at drag end
   useEffect(() => {
     const handleMouseUp = () => {
+      // Reset visual cascade transforms before library re-renders with real positions
+      if (draggedPhaseGroupIdRef.current && ganttChartRef.current) {
+        const items = ganttChartRef.current.querySelectorAll('.rmg-task-item');
+        items.forEach((el) => {
+          (el as HTMLElement).style.transform = '';
+        });
+        draggedPhaseGroupIdRef.current = null;
+        phaseBarOriginalLeftRef.current = 0;
+      }
       setTimeout(() => { isDraggingRef.current = false; }, 300);
     };
     window.addEventListener('mouseup', handleMouseUp);
@@ -738,6 +773,21 @@ export function GanttView({ building }: GanttViewProps) {
           const newStart = new Date(newStartMs);
           const newEnd = new Date(newEndMs);
           const durationDays = Math.max(1, Math.ceil((newEndMs - newStartMs) / MS_PER_DAY));
+
+          // Case 3: Visual cascade — phase bar drag moves children in real-time
+          if (draggedPhaseGroupIdRef.current) {
+            const offsetPx = taskLeft - phaseBarOriginalLeftRef.current;
+            // Find sibling task elements in the same row and apply translateX
+            const parentRow = taskEl.closest('.rmg-task-row');
+            if (parentRow) {
+              const siblings = parentRow.querySelectorAll('.rmg-task-item');
+              siblings.forEach((el) => {
+                if (el !== taskEl) {
+                  (el as HTMLElement).style.transform = `translateX(${offsetPx}px)`;
+                }
+              });
+            }
+          }
 
           setTooltipData((prev) => {
             if (!prev) return null;
