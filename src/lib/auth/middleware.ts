@@ -238,9 +238,25 @@ export function withAuth<T = unknown>(
       }
     }
 
-    // Step 6: Call handler with authenticated context + automatic error handling
+    // Step 6: Call handler with authenticated context + automatic error handling + performance tracking
+    const requestStart = Date.now();
     try {
-      return await handler(request, ctx, cache);
+      const response = await handler(request, ctx, cache);
+
+      // 🏢 ENTERPRISE: Performance tracking — alert if route takes > 5s
+      const duration = Date.now() - requestStart;
+      if (duration >= 5000 && typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
+        import('@/lib/telemetry/telegram-alert-service')
+          .then(({ sendTelegramAlert }) => {
+            void sendTelegramAlert('slow', 'API', `${request.method} ${request.nextUrl.pathname} — ${(duration / 1000).toFixed(1)}s`, {
+              duration: `${duration}ms`,
+              method: request.method,
+            });
+          })
+          .catch(() => { /* swallow */ });
+      }
+
+      return response;
     } catch (error) {
       // 🏢 ENTERPRISE: Central error handling - no need for per-endpoint wrappers
       return await apiErrorHandler.handleError(error, request, {

@@ -20,7 +20,7 @@
 // TYPES
 // ============================================================================
 
-type AlertLevel = 'error' | 'client-error';
+type AlertLevel = 'error' | 'client-error' | 'slow';
 
 interface AlertMetadata {
   url?: string;
@@ -115,8 +115,18 @@ function formatAlertMessage(
   message: string,
   metadata?: AlertMetadata
 ): string {
-  const emoji = level === 'client-error' ? '\u{1F534}' : '\u{1F6A8}'; // red circle or siren
-  const label = level === 'client-error' ? 'CLIENT ERROR' : 'ERROR';
+  const emojiMap: Record<AlertLevel, string> = {
+    'error': '\u{1F6A8}',        // siren
+    'client-error': '\u{1F534}', // red circle
+    'slow': '\u{1F422}',         // turtle
+  };
+  const labelMap: Record<AlertLevel, string> = {
+    'error': 'ERROR',
+    'client-error': 'CLIENT ERROR',
+    'slow': 'SLOW',
+  };
+  const emoji = emojiMap[level];
+  const label = labelMap[level];
   const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
 
   const lines: string[] = [
@@ -198,4 +208,40 @@ export async function sendTelegramAlert(
   } catch {
     // Swallow all errors — alerting must NEVER break the application
   }
+}
+
+// ============================================================================
+// PERFORMANCE TRACKING
+// ============================================================================
+
+const SLOW_THRESHOLD_MS = 5000; // 5 seconds
+
+/**
+ * Track API route performance. Call at start of handler, returns end() function.
+ * If duration exceeds threshold, sends a Telegram slow alert.
+ *
+ * @example
+ * ```typescript
+ * const endTrack = trackApiPerformance('ProjectsRoute', '/api/projects');
+ * // ... handler logic ...
+ * endTrack(); // Sends alert if > 5s
+ * ```
+ */
+export function trackApiPerformance(
+  module: string,
+  route: string,
+  thresholdMs: number = SLOW_THRESHOLD_MS
+): () => void {
+  const start = Date.now();
+
+  return () => {
+    const duration = Date.now() - start;
+    if (duration >= thresholdMs) {
+      void sendTelegramAlert('slow', module, `${route} — ${(duration / 1000).toFixed(1)}s`, {
+        route,
+        duration: `${duration}ms`,
+        threshold: `${thresholdMs}ms`,
+      });
+    }
+  };
 }
