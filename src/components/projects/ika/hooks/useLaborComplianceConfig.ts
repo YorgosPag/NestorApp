@@ -5,43 +5,38 @@
  * useLaborComplianceConfig — Hook for reading labor compliance configuration
  * =============================================================================
  *
- * Reads insurance classes and contribution rates from Firestore
- * (system/settings.laborCompliance). Falls back to DEFAULT_LABOR_COMPLIANCE_CONFIG
- * when no config is stored yet.
+ * Reads insurance classes and contribution rates via server-side API route.
+ * Falls back to DEFAULT_LABOR_COMPLIANCE_CONFIG when no config exists.
  *
  * @module components/projects/ika/hooks/useLaborComplianceConfig
  * @enterprise ADR-090 — IKA/EFKA Labor Compliance System (Phase 3)
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
 import type { LaborComplianceConfig } from '../contracts';
 import { DEFAULT_LABOR_COMPLIANCE_CONFIG } from '../contracts';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useLaborComplianceConfig');
 
+interface LaborComplianceApiResponse {
+  success: boolean;
+  config: {
+    insuranceClasses: LaborComplianceConfig['insuranceClasses'] | null;
+    contributionRates: LaborComplianceConfig['contributionRates'] | null;
+    lastUpdated: string | null;
+  } | null;
+}
+
 interface UseLaborComplianceConfigReturn {
-  /** Labor compliance configuration (insurance classes + contribution rates) */
   config: LaborComplianceConfig;
-  /** Loading state */
   isLoading: boolean;
-  /** Error message */
   error: string | null;
-  /** Whether data comes from Firestore (true) or hardcoded defaults (false) */
   isFromFirestore: boolean;
-  /** Re-fetch from Firestore */
   refetch: () => void;
 }
 
-/**
- * Hook for reading labor compliance configuration.
- *
- * Reads from `settings/labor_compliance` document (dedicated document).
- * If not found, returns DEFAULT_LABOR_COMPLIANCE_CONFIG with KPK 781 rates.
- */
 export function useLaborComplianceConfig(): UseLaborComplianceConfigReturn {
   const [config, setConfig] = useState<LaborComplianceConfig>(DEFAULT_LABOR_COMPLIANCE_CONFIG);
   const [isLoading, setIsLoading] = useState(true);
@@ -61,23 +56,19 @@ export function useLaborComplianceConfig(): UseLaborComplianceConfigReturn {
         setIsLoading(true);
         setError(null);
 
-        const settingsRef = doc(db, COLLECTIONS.SETTINGS, SYSTEM_DOCS.LABOR_COMPLIANCE_SETTINGS);
-        const snapshot = await getDoc(settingsRef);
+        const result = await apiClient.get<LaborComplianceApiResponse>('/api/settings/labor-compliance');
 
         if (!mounted) return;
 
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          if (data?.insuranceClasses && data?.contributionRates) {
-            setConfig({
-              insuranceClasses: data.insuranceClasses,
-              contributionRates: data.contributionRates,
-              lastUpdated: data.lastUpdated ?? DEFAULT_LABOR_COMPLIANCE_CONFIG.lastUpdated,
-            });
-            setIsFromFirestore(true);
-          }
+        if (result?.config?.insuranceClasses && result?.config?.contributionRates) {
+          setConfig({
+            insuranceClasses: result.config.insuranceClasses,
+            contributionRates: result.config.contributionRates,
+            lastUpdated: result.config.lastUpdated ?? DEFAULT_LABOR_COMPLIANCE_CONFIG.lastUpdated,
+          });
+          setIsFromFirestore(true);
         }
-        // If document doesn't exist, keep defaults
+        // If no config, keep defaults
       } catch (err) {
         if (mounted) {
           const message = err instanceof Error ? err.message : 'Failed to load labor compliance config';

@@ -139,13 +139,14 @@ export const LaborComplianceService = {
   // --------------------------------------------------------------------------
 
   /**
-   * Read the full document from Firestore. Returns null if not yet created.
+   * Read the full document via server-side API route.
+   * Returns null if not yet created.
    */
   async getFullDocument(): Promise<LaborComplianceDocument | null> {
     try {
-      const snapshot = await getDoc(getDocRef());
-      if (!snapshot.exists()) return null;
-      return snapshot.data() as LaborComplianceDocument;
+      const { apiClient } = await import('@/lib/api/enterprise-api-client');
+      const result = await apiClient.get<{ success: boolean; config: LaborComplianceDocument | null }>('/api/settings/labor-compliance');
+      return result?.config ?? null;
     } catch (err) {
       const msg = getErrorMessage(err);
       logger.error('Failed to read labor compliance document', { error: msg });
