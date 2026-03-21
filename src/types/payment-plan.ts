@@ -289,6 +289,18 @@ export interface PaymentPlan {
   buyerName: string;
   status: PaymentPlanStatus;
 
+  // --- ADR-244: Multi-owner support ---
+  /** Ομάδα πλάνων — συνδέει joint/individual plans μιας συναλλαγής */
+  planGroupId?: string | null;
+  /** Τύπος: κοινό (1 πλάνο for all) ή ατομικό (1 πλάνο per owner) */
+  planType?: 'joint' | 'individual';
+  /** Ιδιοκτήτης αυτού του πλάνου — null = κοινό πλάνο (all owners) */
+  ownerContactId?: string | null;
+  /** Ονοματεπώνυμο ιδιοκτήτη */
+  ownerName?: string | null;
+  /** Ποσοστό ιδιοκτησίας (π.χ. 70 = 70%) */
+  ownershipPct?: number | null;
+
   // --- Ποσά ---
   totalAmount: number;
   paidAmount: number;
@@ -367,6 +379,12 @@ export interface CreatePaymentPlanInput {
   /** Phase 2 — multi-bank loan inputs */
   loans?: import('./loan-tracking').CreateLoanInput[];
   notes?: string;
+  // ADR-244: Multi-owner support
+  planGroupId?: string;
+  planType?: 'joint' | 'individual';
+  ownerContactId?: string | null;
+  ownerName?: string | null;
+  ownershipPct?: number | null;
 }
 
 /** Input για δημιουργία installment */

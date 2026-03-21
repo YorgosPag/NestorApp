@@ -19,14 +19,17 @@ import { LoanTrackingService } from '@/services/loan-tracking.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { DISBURSEMENT_TYPES, INTEREST_RATE_TYPES } from '@/types/loan-tracking';
 
-const CreateLoanSchema = z.object({
+const CreateLoanFieldsSchema = z.object({
   bankName: z.string().min(1).max(200),
   isPrimary: z.boolean().optional(),
   requestedAmount: z.number().min(0).max(999_999_999).optional(),
-  disbursementType: z.enum(['single', 'phased', 'construction_draw']).optional(),
-  interestRateType: z.enum(['fixed', 'variable', 'mixed']).optional(),
+  disbursementType: z.enum(DISBURSEMENT_TYPES).optional(),
+  interestRateType: z.enum(INTEREST_RATE_TYPES).optional(),
   notes: z.string().max(5000).optional(),
+});
+const CreateLoanSchema = CreateLoanFieldsSchema.extend({
   planId: z.string().max(128).optional(),
 });
 
@@ -100,7 +103,8 @@ async function handlePost(
           planId = plan.id;
         }
 
-        const result = await LoanTrackingService.addLoan(unitId, planId, body, ctx.uid);
+        const loanInput = CreateLoanFieldsSchema.parse(body);
+        const result = await LoanTrackingService.addLoan(unitId, planId, loanInput, ctx.uid);
 
         if (!result.success) {
           return NextResponse.json({ success: false, error: result.error }, { status: 409 });

@@ -31,11 +31,32 @@ import type {
 // TYPES
 // ============================================================================
 
+/** ADR-244: Input for creating split plans — owners array triggers server-side split */
+interface CreateSplitPlansInput {
+  owners: Array<{ contactId: string; name: string; ownershipPct: number }>;
+  buyerContactId: string;
+  buyerName: string;
+  buildingId: string;
+  projectId: string;
+  totalAmount: number;
+  installments: CreateInstallmentInput[];
+  taxRegime?: string;
+  taxRate?: number;
+  planType: 'individual';
+}
+
 interface UsePaymentPlanReturn {
+  /** @deprecated Use plans[] for multi-owner support (ADR-244) */
   plan: PaymentPlan | null;
+  /** ADR-244: All active payment plans (0, 1, or N for split plans) */
+  plans: PaymentPlan[];
+  /** ADR-244: Plan group type — 'none' (no plans), 'joint' (1 plan), 'individual' (N plans) */
+  planGroup: 'none' | 'joint' | 'individual';
   payments: PaymentRecord[];
   isLoading: boolean;
   error: string | null;
+  /** ADR-244: Create split plans (1 per owner) */
+  createSplitPlans: (input: CreateSplitPlansInput) => Promise<{ success: boolean; error?: string }>;
   refetch: () => void;
   createPlan: (input: Omit<CreatePaymentPlanInput, 'unitId'>) => Promise<{ success: boolean; error?: string }>;
   updatePlan: (planId: string, updates: UpdatePaymentPlanInput) => Promise<{ success: boolean; error?: string }>;
@@ -66,10 +87,17 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 // ============================================================================
 
 export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
-  const [plan, setPlan] = useState<PaymentPlan | null>(null);
+  const [plans, setPlans] = useState<PaymentPlan[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Backward compat: plan = first plan, planGroup = derived
+  const plan = plans[0] ?? null;
+  const planGroup: 'none' | 'joint' | 'individual' =
+    plans.length === 0 ? 'none' :
+    plans.length === 1 ? (plans[0].planType ?? 'joint') :
+    'individual';
 
   // Fetch plan + payments
   const fetchData = useCallback(async () => {
@@ -80,7 +108,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
 
     try {
       const [planRes, paymentsRes] = await Promise.all([
-        fetchJson<{ success: boolean; data: PaymentPlan | null }>(
+        fetchJson<{ success: boolean; data: PaymentPlan | PaymentPlan[] | null }>(
           API_ROUTES.UNITS.PAYMENT_PLAN(unitId)
         ),
         fetchJson<{ success: boolean; data: PaymentRecord[] }>(
@@ -88,7 +116,13 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
         ),
       ]);
 
-      setPlan(planRes.data ?? null);
+      // ADR-244: Handle both single plan (legacy) and array (multi-owner) responses
+      const planData = planRes.data;
+      if (Array.isArray(planData)) {
+        setPlans(planData);
+      } else {
+        setPlans(planData ? [planData] : []);
+      }
       setPayments(paymentsRes.data ?? []);
     } catch (err) {
       setError(getErrorMessage(err));
@@ -115,6 +149,28 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
           }
         );
         if (data.success) clientSafeFireAndForget(fetchData(), 'PaymentPlan.refetch');
+        return { success: data.success, error: data.error };
+      } catch (err) {
+        return { success: false, error: getErrorMessage(err) };
+      }
+    },
+    [unitId, fetchData]
+  );
+
+  // ADR-244: Create split plans (1 per owner)
+  const createSplitPlans = useCallback(
+    async (input: CreateSplitPlansInput) => {
+      if (!unitId) return { success: false, error: 'No unit selected' };
+      try {
+        const data = await fetchJson<{ success: boolean; error?: string }>(
+          API_ROUTES.UNITS.PAYMENT_PLAN(unitId),
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(input),
+          }
+        );
+        if (data.success) clientSafeFireAndForget(fetchData(), 'PaymentPlan.refetchAfterSplit');
         return { success: data.success, error: data.error };
       } catch (err) {
         return { success: false, error: getErrorMessage(err) };
@@ -273,6 +329,9 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
 
   return {
     plan,
+    plans,
+    planGroup,
+    createSplitPlans,
     payments,
     isLoading,
     error,

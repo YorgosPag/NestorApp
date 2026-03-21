@@ -26,35 +26,31 @@ import type { LoanInfo, LoanStatus } from './payment-plan';
  *
  * Exit from ANY state: → rejected | cancelled
  */
-export type LoanTrackingStatus =
-  | 'not_applicable'
-  | 'exploring'
-  | 'applied'
-  | 'pre_approved'
-  | 'appraisal_pending'
-  | 'appraisal_completed'
-  | 'legal_review'
-  | 'approved'
-  | 'collateral_pending'
-  | 'collateral_registered'
-  | 'disbursement_pending'
-  | 'partially_disbursed'
-  | 'fully_disbursed'
-  | 'rejected'
-  | 'cancelled';
+/** Loan tracking status — SSoT array for Zod schemas */
+export const LOAN_TRACKING_STATUSES = [
+  'not_applicable', 'exploring', 'applied', 'pre_approved',
+  'appraisal_pending', 'appraisal_completed', 'legal_review',
+  'approved', 'collateral_pending', 'collateral_registered',
+  'disbursement_pending', 'partially_disbursed', 'fully_disbursed',
+  'rejected', 'cancelled',
+] as const;
+export type LoanTrackingStatus = (typeof LOAN_TRACKING_STATUSES)[number];
 
 // =============================================================================
 // 🏦 SUPPORTING ENUMS
 // =============================================================================
 
-/** Τύπος εκταμίευσης */
-export type DisbursementType = 'lump_sum' | 'phased';
+/** Τύπος εκταμίευσης — SSoT array for Zod schemas */
+export const DISBURSEMENT_TYPES = ['lump_sum', 'phased'] as const;
+export type DisbursementType = (typeof DISBURSEMENT_TYPES)[number];
 
-/** Τύπος εγγύησης */
-export type CollateralType = 'mortgage' | 'pre_notation' | 'personal_guarantee' | 'other';
+/** Τύπος εγγύησης — SSoT array for Zod schemas */
+export const COLLATERAL_TYPES = ['mortgage', 'pre_notation', 'personal_guarantee', 'other'] as const;
+export type CollateralType = (typeof COLLATERAL_TYPES)[number];
 
-/** Τύπος επιτοκίου */
-export type InterestRateType = 'fixed' | 'variable' | 'mixed';
+/** Τύπος επιτοκίου — SSoT array for Zod schemas */
+export const INTEREST_RATE_TYPES = ['fixed', 'variable', 'mixed'] as const;
+export type InterestRateType = (typeof INTEREST_RATE_TYPES)[number];
 
 /** Τύπος εγγραφής επικοινωνίας */
 export type CommunicationEntryType = 'phone' | 'email' | 'meeting' | 'document' | 'note';

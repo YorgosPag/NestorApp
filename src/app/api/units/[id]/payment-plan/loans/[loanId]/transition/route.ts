@@ -19,10 +19,13 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
 import { logFinancialTransition } from '@/lib/auth/audit';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { LOAN_TRACKING_STATUSES } from '@/types/loan-tracking';
 
-const LoanTransitionSchema = z.object({
-  targetStatus: z.string().min(1).max(50),
+const LoanTransitionFieldsSchema = z.object({
+  targetStatus: z.enum(LOAN_TRACKING_STATUSES),
   notes: z.string().max(2000).optional(),
+});
+const LoanTransitionSchema = LoanTransitionFieldsSchema.extend({
   planId: z.string().max(128).optional(),
 });
 
@@ -55,8 +58,9 @@ async function handlePost(
           planId = plan.id;
         }
 
+        const transitionInput = LoanTransitionFieldsSchema.parse(body);
         const result = await LoanTrackingService.transitionLoanStatus(
-          unitId, planId, loanId, body, ctx.uid
+          unitId, planId, loanId, transitionInput, ctx.uid
         );
 
         if (!result.success) {

@@ -18,8 +18,10 @@ import { LoanTrackingService } from '@/services/loan-tracking.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { DISBURSEMENT_TYPES, COLLATERAL_TYPES, INTEREST_RATE_TYPES } from '@/types/loan-tracking';
 
-const UpdateLoanSchema = z.object({
+/** Loan update fields — planId is routing-only, stripped before service call */
+const UpdateLoanFieldsSchema = z.object({
   bankName: z.string().max(200).optional(),
   bankBranch: z.string().max(200).optional(),
   bankReferenceNumber: z.string().max(100).optional(),
@@ -29,13 +31,13 @@ const UpdateLoanSchema = z.object({
   approvedAmount: z.number().min(0).max(999_999_999).optional(),
   ltvPercentage: z.number().min(0).max(100).optional(),
   interestRate: z.number().min(0).max(100).optional(),
-  interestRateType: z.enum(['fixed', 'variable', 'mixed']).optional(),
+  interestRateType: z.enum(INTEREST_RATE_TYPES).optional(),
   termYears: z.number().int().min(1).max(50).optional(),
   monthlyPayment: z.number().min(0).max(999_999_999).optional(),
   dstiRatio: z.number().min(0).max(100).optional(),
   bankFees: z.number().min(0).max(999_999_999).optional(),
-  disbursementType: z.enum(['single', 'phased', 'construction_draw']).optional(),
-  collateralType: z.enum(['mortgage', 'prenotation', 'pledge', 'guarantee', 'none']).optional(),
+  disbursementType: z.enum(DISBURSEMENT_TYPES).optional(),
+  collateralType: z.enum(COLLATERAL_TYPES).optional(),
   collateralAmount: z.number().min(0).max(999_999_999).optional(),
   collateralRegistrationNumber: z.string().max(100).optional(),
   collateralRegistrationDate: z.string().max(30).optional(),
@@ -44,6 +46,8 @@ const UpdateLoanSchema = z.object({
   appraiserName: z.string().max(200).optional(),
   preApprovalExpiryDate: z.string().max(30).optional(),
   notes: z.string().max(5000).optional(),
+});
+const UpdateLoanSchema = UpdateLoanFieldsSchema.extend({
   planId: z.string().max(128).optional(),
 });
 
@@ -80,7 +84,7 @@ async function handlePatch(
           planId = plan.id;
         }
 
-        const { planId: _removed, ...updateInput } = body;
+        const updateInput = UpdateLoanFieldsSchema.parse(body);
         const result = await LoanTrackingService.updateLoan(unitId, planId, loanId, updateInput, ctx.uid);
 
         if (!result.success) {

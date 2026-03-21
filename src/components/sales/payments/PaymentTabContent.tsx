@@ -36,6 +36,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import type { Unit } from '@/types/unit';
+import type { PropertyOwnerEntry } from '@/types/ownership-table';
+import type { CreateInstallmentInput, CreatePaymentPlanInput } from '@/types/payment-plan';
+import { formatOwnerNames, getPrimaryBuyerContactId } from '@/lib/ownership/owner-utils';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Badge } from '@/components/ui/badge';
 
 // ============================================================================
 // COMPONENT
@@ -49,6 +54,9 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
   const { t } = useTranslation('payments');
   const {
     plan,
+    plans,
+    planGroup,
+    createSplitPlans,
     isLoading,
     error,
     refetch,
@@ -59,6 +67,31 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
     updateInstallment,
     removeInstallment,
   } = usePaymentPlan(unit.id);
+
+  // ADR-244: Multi-owner support
+  const owners = (unit.commercial?.owners ?? null) as PropertyOwnerEntry[] | null;
+  const resolvedProjectId = (unit as Unit & { projectId?: string }).projectId ?? unit.project ?? '';
+
+  // ADR-244: Create split plans — delegates to hook (SSoT for API calls)
+  const handleCreateSplit = useCallback(async (
+    splitOwners: PropertyOwnerEntry[],
+    baseInput: Omit<CreatePaymentPlanInput, 'unitId' | 'buyerContactId' | 'buyerName' | 'totalAmount' | 'installments'>,
+    totalPrice: number,
+    baseInstallments: CreateInstallmentInput[],
+  ): Promise<{ success: boolean; error?: string }> => {
+    return createSplitPlans({
+      owners: splitOwners.map(o => ({ contactId: o.contactId, name: o.name, ownershipPct: o.ownershipPct })),
+      buyerContactId: getPrimaryBuyerContactId(splitOwners) ?? '',
+      buyerName: formatOwnerNames(splitOwners) ?? '',
+      buildingId: unit.buildingId,
+      projectId: resolvedProjectId,
+      totalAmount: totalPrice,
+      installments: baseInstallments,
+      taxRegime: baseInput.taxRegime as string | undefined,
+      taxRate: baseInput.taxRate as number | undefined,
+      planType: 'individual',
+    });
+  }, [createSplitPlans, unit.buildingId, resolvedProjectId]);
 
   // 🏢 ADR-241: Fullscreen state
   const fullscreen = useFullscreen();
@@ -133,9 +166,7 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
     );
   }
 
-  // projectId may exist in Firestore data even though Unit type only declares `project`
-  const unitData = unit as Unit & { projectId?: string };
-  const resolvedProjectId = unitData.projectId ?? unit.project ?? '';
+  // resolvedProjectId defined above (before callbacks)
   const buyerContactId = unit.commercial?.buyerContactId ?? '';
   const buyerName = unit.commercial?.buyerName ?? '';
   const suggestedAmount = unit.commercial?.finalPrice ?? unit.commercial?.askingPrice ?? 0;
@@ -182,12 +213,15 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
           buyerName={buyerName}
           suggestedAmount={suggestedAmount}
           onCreate={createPlan}
+          owners={owners ?? undefined}
+          onCreateSplit={handleCreateSplit}
         />
       </section>
     );
   }
 
-  // Plan exists
+  // Plan exists — ADR-244: handle multi-plan (accordion per owner)
+  const isMultiPlan = plans.length > 1;
   const selectedInstallment = plan.installments[selectedInstallmentIdx];
 
   return (
@@ -244,17 +278,52 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
         </nav>
       </header>
 
-      {/* Overview */}
-      <PaymentPlanOverview plan={plan} />
+      {/* ADR-244: Multi-plan accordion (individual plans per owner) */}
+      {isMultiPlan ? (
+        <Accordion type="single" collapsible defaultValue={plans[0].id}>
+          {plans.map((p) => (
+            <AccordionItem key={p.id} value={p.id}>
+              <AccordionTrigger className="text-sm">
+                <span className="flex items-center gap-2">
+                  {p.ownerName ?? p.buyerName}
+                  {p.ownershipPct != null && (
+                    <Badge variant="secondary" className="tabular-nums text-xs">
+                      {p.ownershipPct}%
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className="tabular-nums text-xs">
+                    €{p.totalAmount.toLocaleString('el-GR')}
+                  </Badge>
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="space-y-3 pt-2">
+                <PaymentPlanOverview plan={p} />
+                <InstallmentSchedule
+                  installments={p.installments}
+                  planStatus={p.status}
+                  onPayInstallment={handlePayInstallment}
+                  onEditInstallment={handleEditInstallment}
+                  onAddInstallment={handleAddInstallment}
+                />
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      ) : (
+        <>
+          {/* Overview */}
+          <PaymentPlanOverview plan={plan} />
 
-      {/* Installment Schedule */}
-      <InstallmentSchedule
-        installments={plan.installments}
-        planStatus={plan.status}
-        onPayInstallment={handlePayInstallment}
-        onEditInstallment={handleEditInstallment}
-        onAddInstallment={handleAddInstallment}
-      />
+          {/* Installment Schedule */}
+          <InstallmentSchedule
+            installments={plan.installments}
+            planStatus={plan.status}
+            onPayInstallment={handlePayInstallment}
+            onEditInstallment={handleEditInstallment}
+            onAddInstallment={handleAddInstallment}
+          />
+        </>
+      )}
 
       {/* Loan Tracking (Phase 2 — SPEC-234C) */}
       <LoanTrackingSection unitId={unit.id} />

@@ -45,6 +45,9 @@ export const ENTERPRISE_ID_PREFIXES = {
   RELATIONSHIP: 'rel',
   MEMBER: 'mbr',
 
+  // ADR-244: Property ownership
+  LANDOWNER: 'lown',
+
   // ==========================================================================
   // LEGAL DOCUMENTS & OBLIGATIONS
   // ==========================================================================
@@ -178,6 +181,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   BROKERAGE: 'brk',
   COMMISSION: 'com',
   PAYMENT_PLAN: 'pp',
+  PLAN_GROUP: 'ppg',
   PAYMENT_RECORD: 'pay',
   LOAN: 'loan',
   CHEQUE: 'chq',
@@ -413,6 +417,14 @@ export class EnterpriseIdService {
    */
   generateMemberId(): string {
     return this.generateId(ENTERPRISE_ID_PREFIXES.MEMBER).id;
+  }
+
+  /**
+   * 🏘️ Generate Landowner ID (ADR-244 — Property Ownership)
+   * Format: lown_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateLandownerId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.LANDOWNER).id;
   }
 
   /**
@@ -1081,6 +1093,11 @@ export class EnterpriseIdService {
     return this.generateId(ENTERPRISE_ID_PREFIXES.PAYMENT_PLAN).id;
   }
 
+  /** ADR-244: Plan group ID — groups joint/individual plans for a single transaction */
+  generatePlanGroupId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.PLAN_GROUP).id;
+  }
+
   /**
    * 💳 Generate Payment Record ID (ADR-234)
    * Format: pay_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
@@ -1234,6 +1251,7 @@ export const generateMemberId = () => enterpriseIdService.generateMemberId();
 export const generateWorkspaceId = () => enterpriseIdService.generateWorkspaceId();
 export const generateAddressId = () => enterpriseIdService.generateAddressId();
 export const generateOpportunityId = () => enterpriseIdService.generateOpportunityId();
+export const generateLandownerId = () => enterpriseIdService.generateLandownerId();
 
 // =============================================================================
 // LEGAL DOCUMENTS & OBLIGATIONS
@@ -1332,6 +1350,7 @@ export const generateCommissionId = () => enterpriseIdService.generateCommission
 // PAYMENT PLAN & INSTALLMENTS (ADR-234)
 // =============================================================================
 export const generatePaymentPlanId = () => enterpriseIdService.generatePaymentPlanId();
+export const generatePlanGroupId = () => enterpriseIdService.generatePlanGroupId();
 export const generatePaymentRecordId = () => enterpriseIdService.generatePaymentRecordId();
 export const generateLoanId = () => enterpriseIdService.generateLoanId();
 export const generateChequeId = () => enterpriseIdService.generateChequeId();

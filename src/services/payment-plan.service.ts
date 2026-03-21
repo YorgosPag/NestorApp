@@ -18,7 +18,7 @@ import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import { generatePaymentPlanId, generatePaymentRecordId } from '@/services/enterprise-id.service';
+import { generatePaymentPlanId, generatePlanGroupId, generatePaymentRecordId } from '@/services/enterprise-id.service';
 import type {
   PaymentPlan,
   PaymentPlanStatus,
@@ -78,16 +78,24 @@ export class PaymentPlanService {
    */
   static async createPaymentPlan(
     input: CreatePaymentPlanInput,
-    createdBy: string
+    createdBy: string,
+    options?: { skipSummarySync?: boolean },
   ): Promise<{ success: boolean; plan?: PaymentPlan; error?: string }> {
     try {
-      // Validate single active plan
-      const existing = await this.getActivePaymentPlan(input.unitId);
-      if (existing && existing.status !== 'cancelled') {
-        return {
-          success: false,
-          error: 'Υπάρχει ήδη ενεργό πρόγραμμα αποπληρωμής για αυτή τη μονάδα',
-        };
+      // ADR-244: Validate single active plan GROUP (allows N plans with same planGroupId)
+      const existingPlans = await this.getPaymentPlans(input.unitId);
+      const activePlans = existingPlans.filter(p => p.status !== 'cancelled');
+      if (activePlans.length > 0) {
+        // Allow if same plan group (individual plans being created together)
+        const hasDifferentGroup = activePlans.some(p =>
+          input.planGroupId ? p.planGroupId !== input.planGroupId : true
+        );
+        if (hasDifferentGroup) {
+          return {
+            success: false,
+            error: 'Υπάρχει ήδη ενεργό πρόγραμμα αποπληρωμής για αυτή τη μονάδα',
+          };
+        }
       }
 
       // Validate amounts
@@ -131,6 +139,12 @@ export class PaymentPlanService {
         buyerContactId: input.buyerContactId,
         buyerName: input.buyerName,
         status: 'negotiation',
+        // ADR-244: Multi-owner fields
+        planGroupId: input.planGroupId ?? null,
+        planType: input.planType ?? 'joint',
+        ownerContactId: input.ownerContactId ?? null,
+        ownerName: input.ownerName ?? null,
+        ownershipPct: input.ownershipPct ?? null,
         totalAmount: input.totalAmount,
         paidAmount: 0,
         remainingAmount: input.totalAmount,
@@ -150,8 +164,10 @@ export class PaymentPlanService {
       const db = getDb();
       await db.collection(planCollectionPath(input.unitId)).doc(id).set(plan);
 
-      // Sync summary to unit
-      await this.syncPaymentSummary(input.unitId, id);
+      // Sync summary to unit (skippable for batch operations like createSplitPaymentPlans)
+      if (!options?.skipSummarySync) {
+        await this.syncPaymentSummary(input.unitId, id);
+      }
 
       logger.info(`[PaymentPlanService] Created plan ${id} for unit ${input.unitId}`);
       return { success: true, plan };
@@ -166,6 +182,7 @@ export class PaymentPlanService {
 
   /**
    * Ανάκτηση ενεργού payment plan (non-cancelled).
+   * @deprecated Use getPaymentPlans() for multi-plan support (ADR-244)
    */
   static async getActivePaymentPlan(unitId: string): Promise<PaymentPlan | null> {
     try {
@@ -181,6 +198,100 @@ export class PaymentPlanService {
     } catch (error) {
       logger.error('[PaymentPlanService] Failed to get active plan:', error);
       return null;
+    }
+  }
+
+  /**
+   * ADR-244: Ανάκτηση ΟΛΩΝ των non-cancelled payment plans (multi-owner support).
+   */
+  static async getPaymentPlans(unitId: string): Promise<PaymentPlan[]> {
+    try {
+      const db = getDb();
+      const snapshot = await db
+        .collection(planCollectionPath(unitId))
+        .where(FIELDS.STATUS, 'in', ['negotiation', 'draft', 'active', 'completed'])
+        .get();
+      if (snapshot.empty) return [];
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PaymentPlan));
+    } catch (error) {
+      logger.error('[PaymentPlanService] Failed to get payment plans:', error);
+      return [];
+    }
+  }
+
+  /**
+   * ADR-244: Δημιουργία ξεχωριστών πλάνων αποπληρωμής ανά ιδιοκτήτη.
+   * Generates 1 planGroupId, creates N plans with proportional amounts.
+   */
+  static async createSplitPaymentPlans(
+    unitId: string,
+    owners: Array<{ contactId: string; name: string; ownershipPct: number }>,
+    baseInput: {
+      buildingId: string;
+      projectId: string;
+      taxRegime: import('@/types/payment-plan').SaleTaxRegime;
+      taxRate: number;
+      config?: Partial<import('@/types/payment-plan').PaymentPlanConfig>;
+      loan?: Partial<import('@/types/payment-plan').LoanInfo>;
+      notes?: string;
+    },
+    totalPrice: number,
+    baseInstallments: CreateInstallmentInput[],
+    createdBy: string,
+  ): Promise<{ success: boolean; plans?: PaymentPlan[]; error?: string }> {
+    try {
+      const groupId = generatePlanGroupId();
+      const createdPlans: PaymentPlan[] = [];
+
+      for (const owner of owners) {
+        const ownerAmount = Math.round((totalPrice * owner.ownershipPct / 100) * 100) / 100;
+
+        // Scale installments proportionally
+        const scaledInstallments: CreateInstallmentInput[] = baseInstallments.map(inst => ({
+          ...inst,
+          amount: Math.round((inst.amount * owner.ownershipPct / 100) * 100) / 100,
+        }));
+
+        // Adjust last installment for rounding
+        const scaledSum = scaledInstallments.reduce((s, i) => s + i.amount, 0);
+        if (scaledInstallments.length > 0 && Math.abs(scaledSum - ownerAmount) > 0.01) {
+          scaledInstallments[scaledInstallments.length - 1].amount += ownerAmount - scaledSum;
+        }
+
+        const result = await this.createPaymentPlan(
+          {
+            ...baseInput,
+            unitId,
+            buyerContactId: owner.contactId,
+            buyerName: owner.name,
+            totalAmount: ownerAmount,
+            installments: scaledInstallments,
+            planGroupId: groupId,
+            planType: 'individual',
+            ownerContactId: owner.contactId,
+            ownerName: owner.name,
+            ownershipPct: owner.ownershipPct,
+          },
+          createdBy,
+          { skipSummarySync: true },
+        );
+
+        if (!result.success) {
+          return { success: false, error: result.error };
+        }
+        if (result.plan) {
+          createdPlans.push(result.plan);
+        }
+      }
+
+      // Sync aggregated summary across ALL plans (overrides per-plan syncs)
+      await this.syncAggregatedPaymentSummary(unitId);
+
+      logger.info(`[PaymentPlanService] Created ${createdPlans.length} split plans (group: ${groupId}) for unit ${unitId}`);
+      return { success: true, plans: createdPlans };
+    } catch (error) {
+      logger.error('[PaymentPlanService] Failed to create split plans:', error);
+      return { success: false, error: getErrorMessage(error) };
     }
   }
 
@@ -1093,6 +1204,66 @@ export class PaymentPlanService {
       logger.info(`[PaymentPlanService] Synced summary for unit ${unitId}`);
     } catch (error) {
       logger.error('[PaymentPlanService] Failed to sync summary:', error);
+    }
+  }
+
+  /**
+   * ADR-244: Sync aggregated payment summary across ALL active plans.
+   * Used after creating split plans — aggregates totals from N plans into
+   * a single unit.commercial.paymentSummary.
+   */
+  static async syncAggregatedPaymentSummary(unitId: string): Promise<void> {
+    try {
+      const plans = await this.getPaymentPlans(unitId);
+      if (plans.length === 0) return;
+
+      // If single plan, delegate to existing per-plan sync
+      if (plans.length === 1) {
+        await this.syncPaymentSummary(unitId, plans[0].id);
+        return;
+      }
+
+      // Aggregate across all plans
+      const totalAmount = plans.reduce((s, p) => s + p.totalAmount, 0);
+      const paidAmount = plans.reduce((s, p) => s + p.paidAmount, 0);
+      const remainingAmount = plans.reduce((s, p) => s + p.remainingAmount, 0);
+
+      // Find next due installment across all plans
+      const allInstallments = plans.flatMap(p =>
+        p.installments.map(inst => ({ ...inst, planId: p.id }))
+      );
+      const pendingInstallments = allInstallments
+        .filter(i => i.status === 'pending' || i.status === 'due')
+        .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+
+      const next = pendingInstallments[0] ?? null;
+      const overdueCount = allInstallments.filter(
+        i => (i.status === 'pending' || i.status === 'due') && new Date(i.dueDate) < new Date()
+      ).length;
+
+      const summary: PaymentSummary = {
+        paymentPlanId: plans[0].id,
+        planStatus: plans.every(p => p.status === 'completed') ? 'completed' : plans[0].status,
+        totalAmount,
+        paidAmount,
+        remainingAmount,
+        paidPercentage: totalAmount > 0 ? Math.round((paidAmount / totalAmount) * 100) : 0,
+        totalInstallments: allInstallments.length,
+        paidInstallments: allInstallments.filter(i => i.status === 'paid').length,
+        overdueInstallments: overdueCount,
+        nextInstallmentDate: next?.dueDate ?? null,
+        nextInstallmentAmount: next?.amount ?? null,
+        loanStatus: 'not_applicable',
+      };
+
+      const db = getDb();
+      await db.collection(COLLECTIONS.UNITS).doc(unitId).update({
+        'commercial.paymentSummary': summary,
+      });
+
+      logger.info(`[PaymentPlanService] Synced aggregated summary for unit ${unitId} (${plans.length} plans)`);
+    } catch (error) {
+      logger.error('[PaymentPlanService] Failed to sync aggregated summary:', error);
     }
   }
 

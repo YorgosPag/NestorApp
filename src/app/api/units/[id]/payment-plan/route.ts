@@ -33,7 +33,7 @@ const installmentSchema = z.object({
   amount: z.number().positive().max(100_000_000),
   percentage: z.number().min(0).max(100),
   dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}/, 'Invalid date format (expected YYYY-MM-DD)'),
-  notes: z.string().max(2000).nullable().optional(),
+  notes: z.string().max(2000).optional(),
 });
 
 const createPaymentPlanSchema = z.object({
@@ -49,6 +49,18 @@ const createPaymentPlanSchema = z.object({
   loan: z.record(z.unknown()).optional(),
   loans: z.array(z.record(z.unknown())).optional(),
   notes: z.string().max(5000).optional(),
+  // ADR-244: Multi-owner support
+  planType: z.enum(['joint', 'individual']).optional(),
+  planGroupId: z.string().max(128).optional(),
+  ownerContactId: z.string().max(200).nullable().optional(),
+  ownerName: z.string().max(500).nullable().optional(),
+  ownershipPct: z.number().min(0).max(100).nullable().optional(),
+  /** Split mode: owners array — when present, creates N individual plans */
+  owners: z.array(z.object({
+    contactId: z.string().min(1).max(200),
+    name: z.string().min(1).max(500),
+    ownershipPct: z.number().min(0).max(100),
+  })).optional(),
 });
 
 type SegmentData = { params: Promise<{ id: string }> };
@@ -67,8 +79,9 @@ async function handleGet(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       await requireUnitInTenant({ ctx, unitId, path: '/api/units/[id]/payment-plan' });
       try {
-        const plan = await PaymentPlanService.getActivePaymentPlan(unitId);
-        return NextResponse.json({ success: true, data: plan });
+        // ADR-244: Return ALL active plans (supports multi-owner split)
+        const plans = await PaymentPlanService.getPaymentPlans(unitId);
+        return NextResponse.json({ success: true, data: plans });
       } catch (error) {
         const message = getErrorMessage(error, 'Failed to get payment plan');
         return NextResponse.json({ success: false, error: message }, { status: 500 });
@@ -105,11 +118,35 @@ async function handlePost(
           );
         }
 
-        const input: CreatePaymentPlanInput = { ...parsed.data, unitId } as CreatePaymentPlanInput;
-        const result = await PaymentPlanService.createPaymentPlan(
-          input,
-          ctx.uid
-        );
+        const { owners: splitOwners, ...planFields } = parsed.data;
+
+        // ADR-244: If owners[] present → split mode (create N individual plans)
+        if (splitOwners && splitOwners.length > 1) {
+          const result = await PaymentPlanService.createSplitPaymentPlans(
+            unitId,
+            splitOwners,
+            {
+              buildingId: planFields.buildingId,
+              projectId: planFields.projectId,
+              taxRegime: planFields.taxRegime ?? 'vat_24',
+              taxRate: planFields.taxRate ?? 24,
+              config: planFields.config,
+              loan: planFields.loan,
+              notes: planFields.notes,
+            },
+            planFields.totalAmount,
+            planFields.installments,
+            ctx.uid,
+          );
+          if (!result.success) {
+            return NextResponse.json({ success: false, error: result.error }, { status: 409 });
+          }
+          return NextResponse.json({ success: true, data: result.plans }, { status: 201 });
+        }
+
+        // Standard: single/joint plan
+        const input: CreatePaymentPlanInput = { ...planFields, unitId } as CreatePaymentPlanInput;
+        const result = await PaymentPlanService.createPaymentPlan(input, ctx.uid);
 
         if (!result.success) {
           return NextResponse.json({ success: false, error: result.error }, { status: 409 });

@@ -33,6 +33,10 @@ import type {
   CreateInstallmentInput,
   SaleTaxRegime,
 } from '@/types/payment-plan';
+import type { PropertyOwnerEntry } from '@/types/ownership-table';
+import { formatOwnerNames } from '@/lib/ownership/owner-utils';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { formatCurrency } from '@/lib/intl-utils';
 
 // ============================================================================
 // TYPES
@@ -48,6 +52,15 @@ interface CreatePaymentPlanWizardProps {
   buyerName: string;
   suggestedAmount: number;
   onCreate: (input: Omit<CreatePaymentPlanInput, 'unitId'>) => Promise<{ success: boolean; error?: string }>;
+  /** ADR-244: Multi-owner support — if >1, shows joint/individual step */
+  owners?: PropertyOwnerEntry[];
+  /** ADR-244: Create split plans (individual mode) */
+  onCreateSplit?: (
+    owners: PropertyOwnerEntry[],
+    baseInput: Omit<CreatePaymentPlanInput, 'unitId' | 'buyerContactId' | 'buyerName' | 'totalAmount' | 'installments'>,
+    totalPrice: number,
+    baseInstallments: CreateInstallmentInput[],
+  ) => Promise<{ success: boolean; error?: string }>;
 }
 
 const TAX_REGIMES: { value: SaleTaxRegime; rate: number }[] = [
@@ -70,8 +83,20 @@ export function CreatePaymentPlanWizard({
   buyerName,
   suggestedAmount,
   onCreate,
+  owners,
+  onCreateSplit,
 }: CreatePaymentPlanWizardProps) {
   const { t } = useTranslation('payments');
+
+  // ADR-244: Multi-owner step — only shown when >1 owner
+  const hasMultipleOwners = (owners?.length ?? 0) > 1;
+  const [planMode, setPlanMode] = useState<'joint' | 'individual'>('joint');
+
+  // Step offset: if multi-owner, step 0 = plan type, step 1 = template, step 2 = installments
+  // If single owner, step 0 = template, step 1 = installments (no plan type step)
+  const STEP_PLAN_TYPE = 0;
+  const STEP_TEMPLATE = hasMultipleOwners ? 1 : 0;
+  const STEP_INSTALLMENTS = hasMultipleOwners ? 2 : 1;
 
   const [step, setStep] = useState(0);
   const [selectedTemplateId, setSelectedTemplateId] = useState(PAYMENT_PLAN_TEMPLATES[0].id);
@@ -140,8 +165,8 @@ export function CreatePaymentPlanWizard({
     []
   );
 
-  // When moving to step 2, compute installments
-  const goToStep2 = useCallback(() => {
+  // When moving to installment config step, compute installments
+  const goToInstallmentStep = useCallback(() => {
     if (!selectedTemplate) return;
     const total = parseFloat(totalAmount);
     if (isNaN(total) || total <= 0) {
@@ -149,8 +174,8 @@ export function CreatePaymentPlanWizard({
       return;
     }
     setInstallments(computeInstallments(selectedTemplate, total));
-    setStep(1);
-  }, [selectedTemplate, totalAmount, computeInstallments]);
+    setStep(STEP_INSTALLMENTS);
+  }, [selectedTemplate, totalAmount, computeInstallments, STEP_INSTALLMENTS]);
 
   // Update individual installment amount
   const updateInstallmentAmount = useCallback((idx: number, newAmount: string) => {
@@ -171,16 +196,32 @@ export function CreatePaymentPlanWizard({
     const taxRate = TAX_REGIMES.find((r) => r.value === taxRegime)?.rate ?? 0;
 
     setSubmitting(true);
-    const result = await onCreate({
-      buildingId,
-      projectId,
-      buyerContactId,
-      buyerName,
-      totalAmount: total,
-      taxRegime,
-      taxRate,
-      installments,
-    });
+
+    let result: { success: boolean; error?: string };
+
+    if (planMode === 'individual' && hasMultipleOwners && onCreateSplit && owners) {
+      // ADR-244: Create split plans (1 per owner, proportional amounts)
+      result = await onCreateSplit(
+        owners,
+        { buildingId, projectId, taxRegime, taxRate },
+        total,
+        installments,
+      );
+    } else {
+      // Standard: joint plan or single buyer
+      result = await onCreate({
+        buildingId,
+        projectId,
+        buyerContactId,
+        buyerName: hasMultipleOwners && owners ? (formatOwnerNames(owners) ?? buyerName) : buyerName,
+        totalAmount: total,
+        taxRegime,
+        taxRate,
+        installments,
+        planType: hasMultipleOwners ? 'joint' : undefined,
+      });
+    }
+
     setSubmitting(false);
 
     if (result.success) {
@@ -190,7 +231,7 @@ export function CreatePaymentPlanWizard({
     } else {
       toast.error(result.error ?? t('errors.createFailed'));
     }
-  }, [totalAmount, taxRegime, installments, buildingId, projectId, buyerContactId, buyerName, onCreate, onOpenChange, t]);
+  }, [totalAmount, taxRegime, installments, buildingId, projectId, buyerContactId, buyerName, planMode, hasMultipleOwners, owners, onCreate, onCreateSplit, onOpenChange, t]);
 
   const installmentSum = installments.reduce((s, i) => s + i.amount, 0);
   const total = parseFloat(totalAmount) || 0;
@@ -205,8 +246,45 @@ export function CreatePaymentPlanWizard({
           </DialogTitle>
         </DialogHeader>
 
-        {/* Step 0: Template + Amount */}
-        {step === 0 && (
+        {/* ADR-244: Step 0 — Plan Type (only for multi-owner) */}
+        {hasMultipleOwners && step === STEP_PLAN_TYPE && owners && (
+          <section className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {t('wizard.planTypeDescription', { defaultValue: 'Επιλέξτε τον τύπο πλάνου αποπληρωμής' })}
+            </p>
+            <RadioGroup value={planMode} onValueChange={(v) => setPlanMode(v as 'joint' | 'individual')}>
+              <label className="flex items-start gap-3 rounded-lg border p-3 cursor-pointer hover:bg-muted/50">
+                <RadioGroupItem value="joint" className="mt-0.5" />
+                <article>
+                  <p className="text-sm font-medium">
+                    {t('wizard.jointPlan', { defaultValue: 'Κοινό πλάνο (ένα για όλους)' })}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatOwnerNames(owners)} — {formatCurrency(suggestedAmount)}
+                  </p>
+                </article>
+              </label>
+              <label className="flex items-start gap-3 rounded-lg border p-3 cursor-pointer hover:bg-muted/50">
+                <RadioGroupItem value="individual" className="mt-0.5" />
+                <article>
+                  <p className="text-sm font-medium">
+                    {t('wizard.individualPlans', { defaultValue: 'Ξεχωριστά πλάνα (ένα ανά ιδιοκτήτη)' })}
+                  </p>
+                  <ul className="mt-1 space-y-0.5">
+                    {owners.map((owner) => (
+                      <li key={owner.contactId} className="text-xs text-muted-foreground">
+                        {owner.name} ({owner.ownershipPct}%) = {formatCurrency(Math.round(suggestedAmount * owner.ownershipPct / 100))}
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              </label>
+            </RadioGroup>
+          </section>
+        )}
+
+        {/* Template + Amount step */}
+        {step === STEP_TEMPLATE && (
           <div className="space-y-4">
             <div className="space-y-1">
               <Label>{t('wizard.selectTemplate')}</Label>
@@ -259,8 +337,8 @@ export function CreatePaymentPlanWizard({
           </div>
         )}
 
-        {/* Step 1: Configure Installments */}
-        {step === 1 && (
+        {/* Configure Installments step */}
+        {step === STEP_INSTALLMENTS && (
           <div className="space-y-3 max-h-80 overflow-y-auto">
             {installments.map((inst, idx) => (
               <fieldset key={idx} className="flex items-center gap-2">
@@ -296,14 +374,24 @@ export function CreatePaymentPlanWizard({
             </Button>
           )}
 
-          {step === 0 && (
-            <Button onClick={goToStep2}>
-              {t('wizard.step2')}
+          {/* Plan type step → Template step */}
+          {hasMultipleOwners && step === STEP_PLAN_TYPE && (
+            <Button onClick={() => setStep(STEP_TEMPLATE)}>
+              {t('wizard.step2', { defaultValue: 'Επόμενο' })}
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           )}
 
-          {step === 1 && (
+          {/* Template step → Installments step */}
+          {step === STEP_TEMPLATE && (
+            <Button onClick={goToInstallmentStep}>
+              {t('wizard.step2', { defaultValue: 'Επόμενο' })}
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          )}
+
+          {/* Installments step → Create */}
+          {step === STEP_INSTALLMENTS && (
             <Button onClick={handleCreate} disabled={submitting || !sumMatch}>
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {t('wizard.reviewAndCreate')}
