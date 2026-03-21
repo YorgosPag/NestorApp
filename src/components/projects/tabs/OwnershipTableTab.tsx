@@ -517,16 +517,15 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
               <TableHead>{t('common:ownership.columns.description')}</TableHead>
               <TableHead className="w-20">{t('common:ownership.columns.category')}</TableHead>
               <TableHead className="w-20">{t('common:ownership.columns.floor')}</TableHead>
-              <TableHead className="w-24 text-right">
-                {t('common:ownership.columns.areaNet', { defaultValue: 'Καθαρά (m²)' })}
-              </TableHead>
-              <TableHead className="w-24 text-right">
-                {t('common:ownership.columns.areaSqm')}
-              </TableHead>
+              <TableHead className="w-24 text-right">Καθαρά (τ.μ.)</TableHead>
+              <TableHead className="w-24 text-right">Μικτά (τ.μ.)</TableHead>
               <TableHead className="w-24 text-right">
                 {t('common:ownership.columns.millesimalShares')}
               </TableHead>
-              <TableHead className="w-40">{t('common:ownership.columns.ownerParty')}</TableHead>
+              <TableHead className="w-36">Κατανομή</TableHead>
+              <TableHead>Ιδιοκτήτης</TableHead>
+              <TableHead className="w-32">Προσύμφωνο</TableHead>
+              <TableHead className="w-32">Οριστικό</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -539,7 +538,7 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
                 <React.Fragment key={buildingId}>
                   {/* Building group header */}
                   <TableRow className="bg-muted/50">
-                    <TableCell colSpan={isLocked ? 8 : 9} className="font-semibold">
+                    <TableCell colSpan={12} className="font-semibold">
                       {buildingName}
                     </TableCell>
                   </TableRow>
@@ -566,24 +565,11 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
                           </Badge>
                         </TableCell>
                         <TableCell>{row.floor}</TableCell>
-                        <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                        <TableCell className="text-right font-mono text-xs">
                           {row.areaNetSqm > 0 ? row.areaNetSqm.toFixed(2) : '—'}
                         </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {isLocked ? (
-                            row.areaSqm.toFixed(2)
-                          ) : (
-                            <Input
-                              type="number"
-                              min={0}
-                              step={0.01}
-                              value={row.areaSqm || ''}
-                              onChange={e =>
-                                updateRow(globalIndex, 'areaSqm', parseFloat(e.target.value) || 0)
-                              }
-                              className="h-7 w-20 text-right font-mono text-xs"
-                            />
-                          )}
+                        <TableCell className="text-right font-mono text-xs">
+                          {row.areaSqm > 0 ? row.areaSqm.toFixed(2) : '—'}
                         </TableCell>
                         <TableCell className="text-right">
                           {isLocked ? (
@@ -618,21 +604,22 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="contractor">
-                                  {t('common:ownership.ownerContractor')}
-                                </SelectItem>
-                                <SelectItem value="landowner">
-                                  {t('common:ownership.ownerLandowner')}
-                                </SelectItem>
-                                <SelectItem value="buyer">
-                                  {t('common:ownership.ownerBuyer')}
-                                </SelectItem>
-                                <SelectItem value="unassigned">
-                                  {t('common:ownership.ownerUnassigned')}
-                                </SelectItem>
+                                <SelectItem value="contractor">Εργολάβος</SelectItem>
+                                <SelectItem value="landowner">Οικοπεδούχος</SelectItem>
+                                <SelectItem value="buyer">Αγοραστής</SelectItem>
+                                <SelectItem value="unassigned">Αδιάθετο</SelectItem>
                               </SelectContent>
                             </Select>
                           )}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {row.buyerContactId ? (row as Record<string, unknown>).buyerName as string ?? '—' : '—'}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground font-mono">
+                          {(row as Record<string, unknown>).preliminaryContract as string ?? '—'}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground font-mono">
+                          {(row as Record<string, unknown>).finalContract as string ?? '—'}
                         </TableCell>
                         {/* Μονάδα κτιρίου = υποχρεωτικά στον πίνακα. Για αφαίρεση → αποσύνδεση από κτίριο. */}
                       </TableRow>
