@@ -53,6 +53,8 @@ export interface UseOwnershipTableReturn {
   loading: boolean;
   /** Saving state */
   saving: boolean;
+  /** Whether table has unsaved changes */
+  isDirty: boolean;
   /** Error message */
   error: string | null;
   /** Validation result */
@@ -96,6 +98,7 @@ export function useOwnershipTable(
   const [table, setTable] = useState<MutableOwnershipPercentageTable | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validation, setValidation] = useState<OwnershipValidationResult | null>(null);
   const [revisions, setRevisions] = useState<OwnershipTableRevision[]>([]);
@@ -190,6 +193,7 @@ export function useOwnershipTable(
       });
 
       runValidation(rows);
+      setIsDirty(true);
       return rows.length;
     } catch (err) {
       if (isMounted.current) {
@@ -239,6 +243,7 @@ export function useOwnershipTable(
     });
 
     runValidation(newRows);
+    setIsDirty(true);
   }, [table, runValidation]);
 
   // --- Update row ---
@@ -292,6 +297,7 @@ export function useOwnershipTable(
         summaryByCategory: calculateCategorySummary(newRows),
       };
     });
+    setIsDirty(true);
   }, [runValidation]);
 
   // --- Add row ---
@@ -345,6 +351,7 @@ export function useOwnershipTable(
       await saveTable(table);
       if (isMounted.current) {
         setSaving(false);
+        setIsDirty(false);
       }
     } catch (err) {
       if (isMounted.current) {
@@ -415,6 +422,7 @@ export function useOwnershipTable(
     table,
     loading,
     saving,
+    isDirty,
     error,
     validation,
     revisions,

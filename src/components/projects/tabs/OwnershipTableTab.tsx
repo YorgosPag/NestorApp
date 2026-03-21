@@ -174,6 +174,7 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
     table,
     loading,
     saving,
+    isDirty,
     error,
     validation,
     revisions,
@@ -436,7 +437,7 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
           variant="default"
           size="sm"
           onClick={handleSave}
-          disabled={isLocked || saving}
+          disabled={isLocked || saving || !isDirty}
         >
           <Save className="mr-1 h-4 w-4" />
           {t('common:buttons.save')}
