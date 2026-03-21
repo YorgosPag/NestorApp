@@ -1219,6 +1219,7 @@
           "today": "Today"
         },
         "status": {
+          "planning": "Planning",
           "notStarted": "Not Started",
           "inProgress": "In Progress",
           "completed": "Completed",
