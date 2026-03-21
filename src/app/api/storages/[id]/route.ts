@@ -28,7 +28,7 @@ const UpdateStorageSchema = z.object({
   name: z.string().max(200).optional(),
   type: z.string().max(50).optional(),
   status: z.string().max(50).optional(),
-  floor: z.string().max(50).nullable().optional(),
+  floor: z.union([z.string().max(50), z.number()]).nullable().optional(),
   floorId: z.string().max(128).nullable().optional(),
   area: z.number().min(0).max(999_999).nullable().optional(),
   price: z.number().min(0).max(999_999_999).nullable().optional(),
