@@ -22,9 +22,8 @@ export function useFirestoreNotifications(opts: FirestoreNotificationOptions) {
   const { ingest, setStatus, setError } = useNotificationCenter();
 
   useEffect(() => {
-    // Skip if disabled or SSR
-    if (typeof window === 'undefined' || opts.enabled === false) return;
-
+    // Skip if disabled, SSR, or no authenticated user
+    if (typeof window === 'undefined' || opts.enabled === false || !opts.userId) return;
 
     setStatus('loading');
 
