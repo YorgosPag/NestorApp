@@ -283,30 +283,81 @@ export function useConstructionGantt(buildingId: string): UseConstructionGanttRe
         ? toLocalDateString(updatedTask.endDate)
         : String(updatedTask.endDate);
 
-      // Synthetic phase bars → update the phase, not a task
+      // ================================================================
+      // Synthetic phase bars → update phase + CASCADE to all children
+      // ================================================================
       if (updatedTask.id.startsWith('phase-bar-')) {
         const phaseId = groupId;
+        const phase = phases.find((p) => p.id === phaseId);
+        if (!phase) return;
+
+        // Calculate day offset from original phase dates
+        const oldStart = parseLocalDate(phase.plannedStartDate).getTime();
+        const newStart = parseLocalDate(startDate).getTime();
+        const offsetMs = newStart - oldStart;
+
+        // Optimistic update: phase
         setPhases((prev) =>
-          prev.map((phase) =>
-            phase.id === phaseId
+          prev.map((p) =>
+            p.id === phaseId
               ? {
-                  ...phase,
+                  ...p,
                   plannedStartDate: startDate,
                   plannedEndDate: endDate,
-                  progress: updatedTask.percent ?? phase.progress,
+                  progress: updatedTask.percent ?? p.progress,
                 }
-              : phase
+              : p
           )
         );
+
+        // Persist phase
         await updateConstructionPhase(buildingId, phaseId, {
           plannedStartDate: startDate,
           plannedEndDate: endDate,
           progress: updatedTask.percent,
         });
+
+        // CASCADE: Move all children tasks by same offset (if phase was moved, not just resized)
+        if (offsetMs !== 0) {
+          const childTasks = tasks.filter((t) => t.phaseId === phaseId);
+          if (childTasks.length > 0) {
+            // Optimistic update: all children
+            setTasks((prev) =>
+              prev.map((task) => {
+                if (task.phaseId !== phaseId) return task;
+                const taskStart = parseLocalDate(task.plannedStartDate);
+                const taskEnd = parseLocalDate(task.plannedEndDate);
+                taskStart.setTime(taskStart.getTime() + offsetMs);
+                taskEnd.setTime(taskEnd.getTime() + offsetMs);
+                return {
+                  ...task,
+                  plannedStartDate: toLocalDateString(taskStart),
+                  plannedEndDate: toLocalDateString(taskEnd),
+                };
+              })
+            );
+
+            // Persist all children (parallel, non-blocking)
+            await Promise.all(
+              childTasks.map((task) => {
+                const taskStart = parseLocalDate(task.plannedStartDate);
+                const taskEnd = parseLocalDate(task.plannedEndDate);
+                taskStart.setTime(taskStart.getTime() + offsetMs);
+                taskEnd.setTime(taskEnd.getTime() + offsetMs);
+                return updateConstructionTask(buildingId, task.id, {
+                  plannedStartDate: toLocalDateString(taskStart),
+                  plannedEndDate: toLocalDateString(taskEnd),
+                });
+              })
+            );
+          }
+        }
         return;
       }
 
-      // Real task → optimistic update + persist
+      // ================================================================
+      // Real task → optimistic update + persist + auto-expand phase
+      // ================================================================
       setTasks((prev) =>
         prev.map((task) =>
           task.id === updatedTask.id
@@ -325,8 +376,38 @@ export function useConstructionGantt(buildingId: string): UseConstructionGanttRe
         plannedEndDate: endDate,
         progress: updatedTask.percent,
       });
+
+      // Auto-expand phase if task exceeds phase boundaries
+      const phase = phases.find((p) => p.id === groupId);
+      if (phase) {
+        const phaseStart = parseLocalDate(phase.plannedStartDate);
+        const phaseEnd = parseLocalDate(phase.plannedEndDate);
+        const taskStart = parseLocalDate(startDate);
+        const taskEnd = parseLocalDate(endDate);
+        let phaseChanged = false;
+        const newPhaseStart = taskStart < phaseStart ? toLocalDateString(taskStart) : phase.plannedStartDate;
+        const newPhaseEnd = taskEnd > phaseEnd ? toLocalDateString(taskEnd) : phase.plannedEndDate;
+
+        if (newPhaseStart !== phase.plannedStartDate || newPhaseEnd !== phase.plannedEndDate) {
+          phaseChanged = true;
+        }
+
+        if (phaseChanged) {
+          setPhases((prev) =>
+            prev.map((p) =>
+              p.id === groupId
+                ? { ...p, plannedStartDate: newPhaseStart, plannedEndDate: newPhaseEnd }
+                : p
+            )
+          );
+          await updateConstructionPhase(buildingId, groupId, {
+            plannedStartDate: newPhaseStart,
+            plannedEndDate: newPhaseEnd,
+          });
+        }
+      }
     },
-    [buildingId]
+    [buildingId, phases, tasks]
   );
 
   const handleTaskClick = useCallback(
