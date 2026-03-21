@@ -551,7 +551,7 @@ export function GanttView({ building }: GanttViewProps) {
   // Small delay on reset to prevent tooltip flicker at drag end
   useEffect(() => {
     const handleMouseUp = () => {
-      setTimeout(() => { isDraggingRef.current = false; }, 100);
+      setTimeout(() => { isDraggingRef.current = false; }, 300);
     };
     window.addEventListener('mouseup', handleMouseUp);
     window.addEventListener('pointerup', handleMouseUp);
@@ -713,16 +713,20 @@ export function GanttView({ building }: GanttViewProps) {
           continue;
         }
 
-        // Case 2: Task item left/width changed (resize drag) → recalculate dates
-        if (target.classList?.contains('rmg-task-item') && isDraggingRef.current) {
+        // Case 2: Task item left/width changed (resize/move drag) → recalculate dates
+        // Check both the target AND its parent for rmg-task-item class
+        const taskEl = target.classList?.contains('rmg-task-item')
+          ? target
+          : target.closest('.rmg-task-item') as HTMLElement | null;
+        if (taskEl && isDraggingRef.current) {
           const scrollContainer = container.querySelector('.rmg-timeline-container') as HTMLElement | null;
           if (!scrollContainer) continue;
 
           const totalWidth = scrollContainer.scrollWidth;
           if (totalWidth <= 0) continue;
 
-          const taskLeft = parseFloat(target.style.left || '0');
-          const taskWidth = parseFloat(target.style.width || '0');
+          const taskLeft = parseFloat(taskEl.style.left || '0');
+          const taskWidth = parseFloat(taskEl.style.width || '0');
           if (taskWidth <= 0) continue;
 
           const boundsStart = timelineBounds.startDate.getTime();
