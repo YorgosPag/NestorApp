@@ -309,7 +309,7 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
       : getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES)
           .where(FIELDS.COMPANY_ID, '==', ctx.companyId).get());
 
-    const parkingSpots = mapParkingDocs(snapshot.docs);
+    const parkingSpots = snapshot.docs.map(doc => mapParkingDoc(doc.id, doc.data() as Record<string, unknown>));
     logger.info('Found parking spots for company', { count: parkingSpots.length });
 
     return NextResponse.json({
