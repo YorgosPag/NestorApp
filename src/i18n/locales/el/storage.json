@@ -74,13 +74,18 @@
       "small": "Μικρή",
       "basement": "Υπόγεια",
       "ground": "Ισόγεια",
-      "special": "Ειδική"
+      "special": "Ειδική",
+      "storage": "Αποθήκη",
+      "garage": "Γκαράζ",
+      "warehouse": "Αποθήκευση"
     },
     "statuses": {
       "available": "Διαθέσιμη",
       "occupied": "Κατειλημμένη",
       "reserved": "Κρατημένη",
-      "maintenance": "Συντήρηση"
+      "maintenance": "Συντήρηση",
+      "sold": "Πωλημένη",
+      "unavailable": "Μη Διαθέσιμη"
     },
     "status": {
       "available": "Διαθέσιμο",

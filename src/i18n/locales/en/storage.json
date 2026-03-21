@@ -73,13 +73,18 @@
       "small": "Small",
       "basement": "Basement",
       "ground": "Ground Floor",
-      "special": "Special"
+      "special": "Special",
+      "storage": "Storage",
+      "garage": "Garage",
+      "warehouse": "Warehouse"
     },
     "statuses": {
       "available": "Available",
       "occupied": "Occupied",
       "reserved": "Reserved",
-      "maintenance": "Maintenance"
+      "maintenance": "Maintenance",
+      "sold": "Sold",
+      "unavailable": "Unavailable"
     },
     "status": {
       "available": "Available",
