@@ -207,6 +207,33 @@ export const DELETE = withStandardRateLimit(
 );
 
 // ============================================================================
+// GET — Fetch Single Parking Spot
+// ============================================================================
+
+export const GET = withStandardRateLimit(
+  withAuth<ApiSuccessResponse<Record<string, unknown>>>(
+    async (request: NextRequest, ctx: AuthContext) => {
+      const adminDb = getAdminFirestore();
+      if (!adminDb) throw new ApiError(503, 'Database unavailable');
+
+      const id = extractIdFromUrl(request.url);
+      if (!id) throw new ApiError(400, 'Parking spot ID is required');
+
+      // 🔒 ADR: Centralized tenant isolation
+      await requireParkingInTenant({ ctx, parkingId: id, path: '/api/parking/[id]' });
+
+      const docRef = adminDb.collection(COLLECTIONS.PARKING_SPACES).doc(id);
+      const doc = await docRef.get();
+
+      if (!doc.exists) throw new ApiError(404, 'Parking spot not found');
+
+      return apiSuccess({ id: doc.id, ...doc.data() }, 'Parking spot loaded');
+    },
+    { permissions: 'units:units:read' }
+  )
+);
+
+// ============================================================================
 // HELPERS
 // ============================================================================
 

@@ -200,6 +200,33 @@ export const DELETE = withStandardRateLimit(
 );
 
 // ============================================================================
+// GET — Fetch Single Storage Unit
+// ============================================================================
+
+export const GET = withStandardRateLimit(
+  withAuth<ApiSuccessResponse<Record<string, unknown>>>(
+    async (request: NextRequest, ctx: AuthContext) => {
+      const adminDb = getAdminFirestore();
+      if (!adminDb) throw new ApiError(503, 'Database unavailable');
+
+      const id = extractIdFromUrl(request.url);
+      if (!id) throw new ApiError(400, 'Storage ID is required');
+
+      // 🔒 ADR: Centralized tenant isolation
+      await requireStorageInTenant({ ctx, storageId: id, path: '/api/storages/[id]' });
+
+      const docRef = adminDb.collection(COLLECTIONS.STORAGE).doc(id);
+      const doc = await docRef.get();
+
+      if (!doc.exists) throw new ApiError(404, 'Storage unit not found');
+
+      return apiSuccess({ id: doc.id, ...doc.data() }, 'Storage unit loaded');
+    },
+    { permissions: 'units:units:read' }
+  )
+);
+
+// ============================================================================
 // HELPERS
 // ============================================================================
 
