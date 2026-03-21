@@ -100,7 +100,8 @@ export const PATCH = withStandardRateLimit(
         if (body.number?.trim()) updateData.number = body.number.trim();
         if (body.type) updateData.type = body.type;
         if (body.status) updateData.status = body.status;
-        if (body.floor !== undefined) updateData.floor = body.floor?.trim() || null;
+        if (body.floor !== undefined) updateData.floor = typeof body.floor === 'number' ? body.floor : (body.floor?.trim() || null);
+        if (body.floorId !== undefined) updateData.floorId = body.floorId || null;
         if (body.location !== undefined) updateData.location = body.location?.trim() || null;
         if (body.area !== undefined) updateData.area = typeof body.area === 'number' ? body.area : null;
         if (body.price !== undefined) updateData.price = typeof body.price === 'number' ? body.price : null;
