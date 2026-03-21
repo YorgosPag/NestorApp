@@ -21,7 +21,7 @@ import {
   type ContactMatch,
   type CreateContactParams,
 } from '../../shared/contact-lookup';
-import { sendChannelReply } from '../../shared/channel-reply-dispatcher';
+import { sendChannelReply, extractChannelIds } from '../../shared/channel-reply-dispatcher';
 import { setAdminSession, buildAdminIdentifier } from '../../shared/admin-session';
 import { extractPhoneFromText, extractEmailFromText } from '@/lib/validation/phone-validation';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -184,20 +184,13 @@ export class AdminCreateContactModule implements IUCModule {
       const phone = params.phone as string | null;
       const contactType = (params.contactType as string) ?? 'individual';
 
-      const telegramChatId = (params.telegramChatId as string)
-        ?? (ctx.intake.rawPayload.chatId as string)
-        ?? ctx.intake.normalized.sender.telegramId
-        ?? undefined;
-
       // ── Case 1: Duplicate found ──
       if (duplicateContactId) {
         const dupMsg = `Υπάρχει ήδη επαφή "${duplicateContactName ?? ''}" με email ${email ?? ''} (ID: ${duplicateContactId}). Δεν δημιουργήθηκε νέα επαφή.`;
 
         await sendChannelReply({
           channel: ctx.intake.channel,
-          recipientEmail: ctx.intake.normalized.sender.email ?? undefined,
-          telegramChatId: telegramChatId ?? undefined,
-          inAppCommandId: (ctx.intake.rawPayload?.commandId as string) ?? undefined,
+          ...extractChannelIds(ctx),
           subject: 'Διπλότυπη επαφή',
           textBody: dupMsg,
           requestId: ctx.requestId,
@@ -270,9 +263,7 @@ export class AdminCreateContactModule implements IUCModule {
 
       const confirmResult = await sendChannelReply({
         channel: ctx.intake.channel,
-        recipientEmail: ctx.intake.normalized.sender.email ?? undefined,
-        telegramChatId: telegramChatId ?? undefined,
-        inAppCommandId: (ctx.intake.rawPayload?.commandId as string) ?? undefined,
+        ...extractChannelIds(ctx),
         subject: 'Νέα επαφή δημιουργήθηκε',
         textBody: confirmText,
         requestId: ctx.requestId,
@@ -301,15 +292,9 @@ export class AdminCreateContactModule implements IUCModule {
 
       // If it's a duplicate error from createContactServerSide, notify admin
       if (errorMessage.startsWith('DUPLICATE_CONTACT:')) {
-        const telegramChatId = (ctx.intake.rawPayload.chatId as string)
-          ?? ctx.intake.normalized.sender.telegramId
-          ?? undefined;
-
         await sendChannelReply({
           channel: ctx.intake.channel,
-          recipientEmail: ctx.intake.normalized.sender.email ?? undefined,
-          telegramChatId: telegramChatId ?? undefined,
-          inAppCommandId: (ctx.intake.rawPayload?.commandId as string) ?? undefined,
+          ...extractChannelIds(ctx),
           subject: 'Διπλότυπη επαφή',
           textBody: errorMessage.replace('DUPLICATE_CONTACT: ', ''),
           requestId: ctx.requestId,

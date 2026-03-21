@@ -55,7 +55,7 @@ import type { ChatMessage } from './agentic-loop';
 import { getChatHistoryService } from './chat-history-service';
 import { AGENTIC_TOOL_DEFINITIONS } from './tools/agentic-tool-definitions';
 import type { AgenticContext } from './tools/agentic-tool-executor';
-import { sendChannelReply } from './shared/channel-reply-dispatcher';
+import { sendChannelReply, extractChannelIds } from './shared/channel-reply-dispatcher';
 // ADR-173: AI Self-Improvement imports
 import { getFeedbackService } from './feedback-service';
 import { createFeedbackKeyboard, createSuggestedActionsKeyboard } from './feedback-keyboard';
@@ -372,27 +372,13 @@ export class PipelineOrchestrator {
         });
       }
 
-      // 5. Send reply via channel dispatcher
-      const telegramChatId = ctx.intake.normalized.sender.telegramId
-        ?? (ctx.intake.rawPayload?.chatId as string | undefined)
-        ?? undefined;
-      const whatsappPhone = ctx.intake.normalized.sender.whatsappPhone
-        ?? (ctx.intake.rawPayload?.phoneNumber as string | undefined)
-        ?? undefined;
-      const messengerPsid = ctx.intake.normalized.sender.messengerUserId
-        ?? (ctx.intake.rawPayload?.psid as string | undefined)
-        ?? undefined;
-      const instagramIgsid = ctx.intake.normalized.sender.instagramUserId
-        ?? (ctx.intake.rawPayload?.igsid as string | undefined)
-        ?? undefined;
+      // 5. Send reply via channel dispatcher (SSoT: extractChannelIds)
+      const channelIds = extractChannelIds(ctx);
+      const { telegramChatId, whatsappPhone, messengerPsid, instagramIgsid } = channelIds;
 
       await sendChannelReply({
+        ...channelIds,
         channel: ctx.intake.channel,
-        recipientEmail: ctx.intake.normalized.sender.email,
-        telegramChatId,
-        whatsappPhone,
-        messengerPsid,
-        instagramIgsid,
         textBody: agenticResult.answer,
         requestId: ctx.requestId,
       });
@@ -599,28 +585,11 @@ export class PipelineOrchestrator {
       ctx = this.transitionState(ctx, PipelineState.FAILED);
       const auditId = await this.auditService.record(ctx, 'failed', 'ADR-171-agentic');
 
-      // Send error reply to user
+      // Send error reply to user (SSoT: extractChannelIds)
       try {
-        const telegramChatId = ctx.intake.normalized.sender.telegramId
-          ?? (ctx.intake.rawPayload?.chatId as string | undefined)
-          ?? undefined;
-        const whatsappPhone = ctx.intake.normalized.sender.whatsappPhone
-          ?? (ctx.intake.rawPayload?.phoneNumber as string | undefined)
-          ?? undefined;
-        const messengerPsidErr = ctx.intake.normalized.sender.messengerUserId
-          ?? (ctx.intake.rawPayload?.psid as string | undefined)
-          ?? undefined;
-        const instagramIgsidErr = ctx.intake.normalized.sender.instagramUserId
-          ?? (ctx.intake.rawPayload?.igsid as string | undefined)
-          ?? undefined;
-
         await sendChannelReply({
+          ...extractChannelIds(ctx),
           channel: ctx.intake.channel,
-          recipientEmail: ctx.intake.normalized.sender.email,
-          telegramChatId,
-          whatsappPhone,
-          messengerPsid: messengerPsidErr,
-          instagramIgsid: instagramIgsidErr,
           textBody: 'Συγγνώμη, αντιμετώπισα ένα πρόβλημα κατά την επεξεργασία. Δοκίμασε ξανά.',
           requestId: ctx.requestId,
         });

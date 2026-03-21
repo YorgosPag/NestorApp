@@ -18,7 +18,7 @@ import 'server-only';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
-import { sendChannelReply } from '../../shared/channel-reply-dispatcher';
+import { sendChannelReply, extractChannelIds } from '../../shared/channel-reply-dispatcher';
 import { generateAdminConversationalReply } from '../../shared/ai-reply-generator';
 import type {
   IUCModule,
@@ -103,11 +103,6 @@ export class AdminFallbackModule implements IUCModule {
       const actions = ctx.approval?.modifiedActions ?? ctx.proposal?.suggestedActions ?? [];
       const action = actions.find(a => a.type === 'admin_fallback_reply');
 
-      const telegramChatId = (action?.params.telegramChatId as string)
-        ?? (ctx.intake.rawPayload.chatId as string)
-        ?? (ctx.intake.normalized.sender.telegramId)
-        ?? undefined;
-
       // ── Conversational AI: check pre-generated reply from tool calling first ──
       const originalMessage = ctx.intake.normalized.contentText ?? '';
       let replyText = ADMIN_HELP_TEXT;
@@ -132,9 +127,7 @@ export class AdminFallbackModule implements IUCModule {
 
       const replyResult = await sendChannelReply({
         channel: ctx.intake.channel,
-        recipientEmail: ctx.intake.normalized.sender.email ?? undefined,
-        telegramChatId: telegramChatId ?? undefined,
-        inAppCommandId: (ctx.intake.rawPayload?.commandId as string) ?? undefined,
+        ...extractChannelIds(ctx),
         subject: 'Admin Assistant',
         textBody: replyText,
         requestId: ctx.requestId,

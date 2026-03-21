@@ -28,7 +28,7 @@ import {
   getContactMissingFields,
   type ContactNameSearchResult,
 } from '../../shared/contact-lookup';
-import { sendChannelReply } from '../../shared/channel-reply-dispatcher';
+import { sendChannelReply, extractChannelIds } from '../../shared/channel-reply-dispatcher';
 import {
   getAdminSession,
   setAdminSession,
@@ -291,18 +291,11 @@ export class AdminUpdateContactModule implements IUCModule {
       const errorMsg = params.error as string | null;
       const multipleMatches = params.multipleMatches as Array<{ contactId: string; name: string }> | null;
 
-      const telegramChatId = (params.telegramChatId as string)
-        ?? (ctx.intake.rawPayload.chatId as string)
-        ?? ctx.intake.normalized.sender.telegramId
-        ?? undefined;
-
       // ── Case 1: Error (no contact, no field, no value) ──
       if (errorMsg && !contactId) {
         await sendChannelReply({
           channel: ctx.intake.channel,
-          recipientEmail: ctx.intake.normalized.sender.email ?? undefined,
-          telegramChatId: telegramChatId ?? undefined,
-          inAppCommandId: (ctx.intake.rawPayload?.commandId as string) ?? undefined,
+          ...extractChannelIds(ctx),
           subject: 'Ενημέρωση επαφής',
           textBody: errorMsg,
           requestId: ctx.requestId,
@@ -321,9 +314,7 @@ export class AdminUpdateContactModule implements IUCModule {
 
         await sendChannelReply({
           channel: ctx.intake.channel,
-          recipientEmail: ctx.intake.normalized.sender.email ?? undefined,
-          telegramChatId: telegramChatId ?? undefined,
-          inAppCommandId: (ctx.intake.rawPayload?.commandId as string) ?? undefined,
+          ...extractChannelIds(ctx),
           subject: 'Ενημέρωση επαφής',
           textBody: lines.join('\n'),
           requestId: ctx.requestId,
@@ -339,9 +330,7 @@ export class AdminUpdateContactModule implements IUCModule {
         const msg = errorMsg ?? 'Ελλιπή στοιχεία για ενημέρωση.';
         await sendChannelReply({
           channel: ctx.intake.channel,
-          recipientEmail: ctx.intake.normalized.sender.email ?? undefined,
-          telegramChatId: telegramChatId ?? undefined,
-          inAppCommandId: (ctx.intake.rawPayload?.commandId as string) ?? undefined,
+          ...extractChannelIds(ctx),
           subject: 'Ενημέρωση επαφής',
           textBody: msg,
           requestId: ctx.requestId,
@@ -354,9 +343,7 @@ export class AdminUpdateContactModule implements IUCModule {
         const msg = errorMsg ?? `Δεν αναγνωρίστηκε η τιμή για "${fieldLabel ?? field}".`;
         await sendChannelReply({
           channel: ctx.intake.channel,
-          recipientEmail: ctx.intake.normalized.sender.email ?? undefined,
-          telegramChatId: telegramChatId ?? undefined,
-          inAppCommandId: (ctx.intake.rawPayload?.commandId as string) ?? undefined,
+          ...extractChannelIds(ctx),
           subject: 'Ενημέρωση επαφής',
           textBody: msg,
           requestId: ctx.requestId,
@@ -410,9 +397,7 @@ export class AdminUpdateContactModule implements IUCModule {
 
       const replyResult = await sendChannelReply({
         channel: ctx.intake.channel,
-        recipientEmail: ctx.intake.normalized.sender.email ?? undefined,
-        telegramChatId: telegramChatId ?? undefined,
-        inAppCommandId: (ctx.intake.rawPayload?.commandId as string) ?? undefined,
+        ...extractChannelIds(ctx),
         subject: 'Ενημέρωση επαφής',
         textBody: ackLines.join('\n'),
         requestId: ctx.requestId,

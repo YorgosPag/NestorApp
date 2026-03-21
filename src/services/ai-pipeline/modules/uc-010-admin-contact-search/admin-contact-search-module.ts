@@ -25,7 +25,7 @@ import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { findContactByName, listContacts, getContactMissingFields } from '../../shared/contact-lookup';
 import type { ContactTypeFilter } from '../../shared/contact-lookup';
-import { sendChannelReply } from '../../shared/channel-reply-dispatcher';
+import { sendChannelReply, extractChannelIds } from '../../shared/channel-reply-dispatcher';
 import { PipelineIntentType } from '@/types/ai-pipeline';
 import type {
   IUCModule,
@@ -347,16 +347,9 @@ export class AdminContactSearchModule implements IUCModule {
         replyText = `${header}\n\n${lines.join('\n\n')}`;
       }
 
-      const telegramChatId = (params.telegramChatId as string)
-        ?? (ctx.intake.rawPayload.chatId as string)
-        ?? (ctx.intake.normalized.sender.telegramId)
-        ?? undefined;
-
       const replyResult = await sendChannelReply({
         channel: ctx.intake.channel,
-        recipientEmail: ctx.intake.normalized.sender.email ?? undefined,
-        telegramChatId: telegramChatId ?? undefined,
-        inAppCommandId: (ctx.intake.rawPayload?.commandId as string) ?? undefined,
+        ...extractChannelIds(ctx),
         subject: `Αποτελέσματα αναζήτησης: ${searchTerm}`,
         textBody: replyText,
         requestId: ctx.requestId,

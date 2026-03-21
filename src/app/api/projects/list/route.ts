@@ -32,6 +32,9 @@ import { fieldToISO } from '@/lib/date-local';
 import { getString, getNumber, getArray } from '@/lib/firestore/field-extractors';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { FieldValue } from 'firebase-admin/firestore';
+import type { ProjectSummary, ProjectStatus } from '@/types/project';
+import type { ProjectAddress } from '@/types/project/addresses';
+import type { LandownerEntry } from '@/types/ownership-table';
 import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
 import { generateProjectId, generateNavigationId } from '@/services/enterprise-id.service';
 import { projectCodeService } from '@/services/project-code.service';
@@ -45,29 +48,11 @@ const logger = createModuleLogger('ProjectsListRoute');
 // TYPES - Project List Response
 // ============================================================================
 
-interface ProjectListItem {
-  id: string;
-  name: string;
-  title: string;
-  status: string;
-  company: string;
-  companyId: string;
-  /** 🏢 ADR-232: Business entity link */
-  linkedCompanyId: string | null;
-  address: string;
-  city: string;
-  // 🏢 ENTERPRISE: Multi-address support (ADR-167)
-  addresses?: unknown[];
-  progress: number;
-  totalValue: number;
-  totalArea: number;
-  startDate: string;
-  completionDate: string;
-  lastUpdate: string;
-}
+// 🏢 SSoT: ProjectSummary from @/types/project (via Pick<Project, ...>)
+// Eliminates duplicate ProjectListItem interface — fields defined ONCE in Project type.
 
 interface ProjectListResponse {
-  projects: ProjectListItem[];
+  projects: ProjectSummary[];
   count: number;
   loadedAt: string;
   source: 'cache' | 'firestore';
@@ -101,13 +86,20 @@ function getTenantCacheKey(companyId: string, isSuperAdmin: boolean): string {
 // ============================================================================
 
 /**
- * 🔒 ENTERPRISE: Normalize status to canonical values
+ * 🔒 ENTERPRISE: Normalize status to canonical ProjectStatus values
  */
-function normalizeStatus(status: string): string {
+const VALID_STATUSES: ReadonlySet<ProjectStatus> = new Set<ProjectStatus>([
+  'planning', 'in_progress', 'completed', 'on_hold', 'cancelled',
+]);
+
+function normalizeStatus(status: string | undefined): ProjectStatus {
   if (status === 'construction' || status === 'active') {
     return 'in_progress';
   }
-  return status || 'unknown';
+  if (status && VALID_STATUSES.has(status as ProjectStatus)) {
+    return status as ProjectStatus;
+  }
+  return 'planning';
 }
 
 // ============================================================================
@@ -188,27 +180,31 @@ export const GET = withHighRateLimit(
     return status !== 'archived' && status !== 'deleted';
   });
 
-  const projects: ProjectListItem[] = activeDocs.map(doc => {
+  const projects: ProjectSummary[] = activeDocs.map(doc => {
     const data = doc.data() as Record<string, unknown>;
 
     return {
       id: doc.id,
       name: getString(data, 'name', 'Unnamed Project'),
-      title: getString(data, 'title'),
+      title: getString(data, 'title', ''),
       status: normalizeStatus(getString(data, 'status')),
-      company: getString(data, 'company'),
-      companyId: getString(data, 'companyId'),
+      company: getString(data, 'company', ''),
+      companyId: getString(data, 'companyId', ''),
       linkedCompanyId: getString(data, 'linkedCompanyId') || null,
-      address: getString(data, 'address'),
-      city: getString(data, 'city'),
+      address: getString(data, 'address', ''),
+      city: getString(data, 'city', ''),
       // 🏢 ENTERPRISE: Multi-address support (ADR-167)
-      addresses: getArray(data, 'addresses'),
-      progress: getNumber(data, 'progress'),
-      totalValue: getNumber(data, 'totalValue'),
-      totalArea: getNumber(data, 'totalArea'),
+      addresses: getArray<ProjectAddress>(data, 'addresses'),
+      progress: getNumber(data, 'progress', 0),
+      totalValue: getNumber(data, 'totalValue', 0),
+      totalArea: getNumber(data, 'totalArea', 0),
       startDate: fieldToISO(data, 'startDate'),
       completionDate: fieldToISO(data, 'completionDate'),
-      lastUpdate: fieldToISO(data, 'lastUpdate') || fieldToISO(data, 'updatedAt')
+      lastUpdate: fieldToISO(data, 'lastUpdate') || fieldToISO(data, 'updatedAt'),
+      // 🏢 ADR-244: Landowner + bartex data
+      landowners: getArray<LandownerEntry>(data, 'landowners') ?? null,
+      bartexPercentage: getNumber(data, 'bartexPercentage') ?? null,
+      landownerContactIds: getArray<string>(data, 'landownerContactIds') ?? null,
     };
   });
 

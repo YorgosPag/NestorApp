@@ -17,7 +17,7 @@
 import 'server-only';
 
 import { PipelineChannel } from '@/types/ai-pipeline';
-import type { PipelineChannelValue } from '@/types/ai-pipeline';
+import type { PipelineChannelValue, PipelineContext } from '@/types/ai-pipeline';
 import { sendReplyViaMailgun } from './mailgun-sender';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -64,6 +64,46 @@ export interface ChannelReplyResult {
   error?: string;
   /** Channel used for sending */
   channel: PipelineChannelValue;
+}
+
+// ============================================================================
+// CHANNEL ID EXTRACTION — SSoT for all sendChannelReply() callers
+// ============================================================================
+
+/** Channel-specific IDs extracted from PipelineContext */
+export type ChannelIds = Pick<ChannelReplyParams,
+  | 'recipientEmail' | 'telegramChatId' | 'whatsappPhone'
+  | 'messengerPsid' | 'instagramIgsid' | 'inAppCommandId'
+>;
+
+/**
+ * Extract all channel-specific IDs from a PipelineContext.
+ * SSoT: ONE place to add new channels — used by orchestrator + all UC modules.
+ *
+ * @example
+ * ```ts
+ * await sendChannelReply({
+ *   ...extractChannelIds(ctx),
+ *   channel: ctx.intake.channel,
+ *   textBody: 'Hello!',
+ *   requestId: ctx.requestId,
+ * });
+ * ```
+ */
+export function extractChannelIds(ctx: PipelineContext): ChannelIds {
+  return {
+    recipientEmail: ctx.intake.normalized.sender.email,
+    telegramChatId: ctx.intake.normalized.sender.telegramId
+      ?? (ctx.intake.rawPayload?.chatId as string | undefined),
+    whatsappPhone: ctx.intake.normalized.sender.whatsappPhone
+      ?? (ctx.intake.rawPayload?.phoneNumber as string | undefined),
+    messengerPsid: ctx.intake.normalized.sender.messengerUserId
+      ?? (ctx.intake.rawPayload?.psid as string | undefined),
+    instagramIgsid: ctx.intake.normalized.sender.instagramUserId
+      ?? (ctx.intake.rawPayload?.igsid as string | undefined),
+    // ADR-164: In-app voice command ID
+    inAppCommandId: ctx.intake.rawPayload?.commandId as string | undefined,
+  };
 }
 
 // ============================================================================

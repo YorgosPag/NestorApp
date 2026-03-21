@@ -25,7 +25,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { findContactByEmail, type ContactMatch } from '../../shared/contact-lookup';
-import { sendChannelReply } from '../../shared/channel-reply-dispatcher';
+import { sendChannelReply, extractChannelIds } from '../../shared/channel-reply-dispatcher';
 import { checkAvailability, type AvailabilityResult } from '../../shared/availability-check';
 import { generateAIReply } from '../../shared/ai-reply-generator';
 import { getSenderHistory, type SenderHistoryResult } from '../../shared/sender-history';
@@ -411,10 +411,6 @@ export class AppointmentModule implements IUCModule {
       const senderEmail = (params.senderEmail as string) ?? '';
       const draftReply = (params.draftReply as string) ?? '';
       const originalSubject = ctx.intake.normalized.subject ?? 'Αίτημα Ραντεβού';
-      const channel = ctx.intake.channel;
-      const telegramChatId = (ctx.intake.rawPayload.chatId as string)
-        ?? (ctx.intake.normalized.sender.telegramId)
-        ?? undefined;
 
       const replyText = draftReply || buildAppointmentReply({
         senderName: (params.senderName as string) ?? senderEmail,
@@ -424,10 +420,8 @@ export class AppointmentModule implements IUCModule {
       });
 
       const replyResult = await sendChannelReply({
-        channel,
-        recipientEmail: senderEmail || undefined,
-        telegramChatId: telegramChatId || undefined,
-        inAppCommandId: (ctx.intake.rawPayload?.commandId as string) ?? undefined,
+        channel: ctx.intake.channel,
+        ...extractChannelIds(ctx),
         subject: `Re: ${originalSubject}`,
         textBody: replyText,
         requestId: ctx.requestId,

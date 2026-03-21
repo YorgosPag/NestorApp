@@ -16,7 +16,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { findContactByName, type ContactNameSearchResult } from '../../shared/contact-lookup';
-import { sendChannelReply } from '../../shared/channel-reply-dispatcher';
+import { sendChannelReply, extractChannelIds } from '../../shared/channel-reply-dispatcher';
 import { sendReplyViaMailgun } from '../../shared/mailgun-sender';
 import { PipelineIntentType } from '@/types/ai-pipeline';
 import type {
@@ -298,16 +298,9 @@ export class AdminSendEmailModule implements IUCModule {
       if (!recipientEmail) {
         const noEmailMsg = `Δεν βρέθηκε email για "${recipientName}". Ελέγξτε τα στοιχεία της επαφής.`;
 
-        const telegramChatId = (params.telegramChatId as string)
-          ?? (ctx.intake.rawPayload.chatId as string)
-          ?? (ctx.intake.normalized.sender.telegramId)
-          ?? undefined;
-
         await sendChannelReply({
           channel: ctx.intake.channel,
-          recipientEmail: ctx.intake.normalized.sender.email ?? undefined,
-          telegramChatId: telegramChatId ?? undefined,
-          inAppCommandId: (ctx.intake.rawPayload?.commandId as string) ?? undefined,
+          ...extractChannelIds(ctx),
           subject: `Αποτυχία αποστολής email`,
           textBody: noEmailMsg,
           requestId: ctx.requestId,
@@ -348,16 +341,9 @@ export class AdminSendEmailModule implements IUCModule {
         ? `Email στάλθηκε στον ${recipientName} (${recipientEmail}).`
         : `Αποτυχία αποστολής email στον ${recipientName}: ${mailResult.error ?? 'unknown error'}`;
 
-      const telegramChatId = (params.telegramChatId as string)
-        ?? (ctx.intake.rawPayload.chatId as string)
-        ?? (ctx.intake.normalized.sender.telegramId)
-        ?? undefined;
-
       const confirmResult = await sendChannelReply({
         channel: ctx.intake.channel,
-        recipientEmail: ctx.intake.normalized.sender.email ?? undefined,
-        telegramChatId: telegramChatId ?? undefined,
-        inAppCommandId: (ctx.intake.rawPayload?.commandId as string) ?? undefined,
+        ...extractChannelIds(ctx),
         subject: 'Επιβεβαίωση αποστολής',
         textBody: confirmText,
         requestId: ctx.requestId,

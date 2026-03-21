@@ -235,6 +235,16 @@ export class AgenticToolExecutor {
       MAX_QUERY_RESULTS
     );
 
+    // 🔍 DEBUG: Log exact query for troubleshooting
+    logger.info('firestore_query details', {
+      requestId: ctx.requestId,
+      collection,
+      filters: JSON.stringify(filters),
+      orderBy,
+      orderDirection,
+      limit,
+    });
+
     const db = getAdminFirestore();
     let query: FirebaseFirestore.Query = db.collection(collection);
 
@@ -255,7 +265,53 @@ export class AgenticToolExecutor {
     // Apply limit
     query = query.limit(limit);
 
-    const snapshot = await query.get();
+    let snapshot: FirebaseFirestore.QuerySnapshot;
+    try {
+      snapshot = await query.get();
+    } catch (queryError) {
+      const msg = getErrorMessage(queryError);
+      if (!msg.includes('FAILED_PRECONDITION')) throw queryError;
+
+      // FAILED_PRECONDITION = missing composite index — progressive fallback
+      // Step 1: Retry without orderBy
+      const nestedFilters = filters.filter(f => f.field.includes('.'));
+      const flatFilters = filters.filter(f => !f.field.includes('.'));
+
+      logger.warn('Missing composite index, progressive fallback', {
+        requestId: ctx.requestId,
+        collection,
+        droppedOrderBy: orderBy ?? 'none',
+        nestedFiltersDropped: nestedFilters.map(f => f.field),
+        remainingFilters: flatFilters.map(f => f.field),
+      });
+
+      // Build fallback: flat filters only (no nested/dotted fields, no orderBy)
+      let fallbackQuery: FirebaseFirestore.Query = db.collection(collection);
+      for (const filter of flatFilters) {
+        const op = this.mapOperator(filter.operator);
+        if (op) {
+          fallbackQuery = fallbackQuery.where(filter.field, op, this.coerceFilterValue(filter.value));
+        }
+      }
+      fallbackQuery = fallbackQuery.limit(limit);
+
+      try {
+        snapshot = await fallbackQuery.get();
+      } catch (fallbackError) {
+        // Last resort: companyId-only query
+        const companyFilter = flatFilters.find(f => f.field === 'companyId');
+        if (companyFilter) {
+          logger.warn('Fallback also failed, trying companyId-only', { requestId: ctx.requestId, collection });
+          let lastResort: FirebaseFirestore.Query = db.collection(collection);
+          lastResort = lastResort.where('companyId', '==', this.coerceFilterValue(companyFilter.value));
+          lastResort = lastResort.limit(limit);
+          snapshot = await lastResort.get();
+        } else {
+          throw fallbackError;
+        }
+      }
+    }
+
     const results = snapshot.docs.map(doc => ({
       id: doc.id,
       ...this.redactSensitiveFields(doc.data()),

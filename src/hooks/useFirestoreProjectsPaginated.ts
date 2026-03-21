@@ -3,6 +3,10 @@ import { orderBy, where, startAfter, type QueryConstraint, type DocumentSnapshot
 import { firestoreQueryService } from '@/services/firestore';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
+// 🏢 SSoT: ProjectSummary from @/types/project (via Pick<Project, ...>)
+import type { ProjectSummary } from '@/types/project';
+import type { LandownerEntry } from '@/types/ownership-table';
+import type { ProjectAddress } from '@/types/project/addresses';
 import { createModuleLogger } from '@/lib/telemetry';
 import { applyUpdates } from '@/lib/utils';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -17,25 +21,12 @@ const logger = createModuleLogger('useFirestoreProjectsPaginated');
 // ✅ Loads projects in pages instead of all at once
 // 🛡️ Memory efficient with Firebase cursors
 // 📊 Supports filtering by status + client-side search
+// 🏢 SSoT: Uses ProjectSummary (Pick<Project, ...>) — ZERO duplicate interfaces
 //
 // =============================================================================
 
-export interface FirestoreProject {
-  id: string;
-  name: string;
-  title: string;
-  status: 'planning' | 'in_progress' | 'completed' | 'on_hold' | 'cancelled';
-  company: string;
-  companyId: string;
-  address: string;
-  city: string;
-  progress: number;
-  totalValue: number;
-  startDate: string;
-  completionDate: string;
-  lastUpdate: string;
-  totalArea: number;
-}
+// 🏢 SSoT: Re-export for backward compatibility
+export type FirestoreProject = ProjectSummary;
 
 export interface ProjectFilters {
   companyId?: string;
@@ -59,7 +50,7 @@ export interface UseFirestoreProjectsPaginatedResult {
 // DOCUMENT TRANSFORM
 // ==========================================================================
 
-function toProject(raw: DocumentData & { id: string }): FirestoreProject {
+function toProject(raw: DocumentData & { id: string }): ProjectSummary {
   let mappedStatus = raw.status as string;
   if (raw.status === 'construction' || raw.status === 'active') {
     mappedStatus = 'in_progress';
@@ -69,17 +60,23 @@ function toProject(raw: DocumentData & { id: string }): FirestoreProject {
     id: raw.id,
     name: (raw.name as string) || '',
     title: (raw.title as string) || '',
-    status: mappedStatus as FirestoreProject['status'],
+    status: mappedStatus as ProjectSummary['status'],
     company: (raw.company as string) || '',
     companyId: (raw.companyId as string) || '',
+    linkedCompanyId: (raw.linkedCompanyId as string) || null,
     address: (raw.address as string) || '',
     city: (raw.city as string) || '',
+    addresses: Array.isArray(raw.addresses) ? raw.addresses as ProjectAddress[] : undefined,
     progress: (raw.progress as number) || 0,
     totalValue: (raw.totalValue as number) || 0,
+    totalArea: (raw.totalArea as number) || 0,
     startDate: (raw.startDate as string) || '',
     completionDate: (raw.completionDate as string) || '',
     lastUpdate: (raw.lastUpdate as string) || '',
-    totalArea: (raw.totalArea as number) || 0,
+    // 🏢 ADR-244: Landowner + bartex data
+    landowners: Array.isArray(raw.landowners) ? raw.landowners as LandownerEntry[] : null,
+    bartexPercentage: typeof raw.bartexPercentage === 'number' ? raw.bartexPercentage : null,
+    landownerContactIds: Array.isArray(raw.landownerContactIds) ? raw.landownerContactIds as string[] : null,
   };
 }
 
@@ -87,21 +84,21 @@ export function useFirestoreProjectsPaginated(
   initialFilters: ProjectFilters = {},
   pageSize: number = 20
 ): UseFirestoreProjectsPaginatedResult {
-  const [projects, setProjects] = useState<FirestoreProject[]>([]);
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasNext, setHasNext] = useState(false);
   const [filters, setFilters] = useState<ProjectFilters>(initialFilters);
 
   // Refs to avoid stale closure issues in loadNext/refresh callbacks
-  const allProjectsRef = useRef<FirestoreProject[]>([]);
+  const allProjectsRef = useRef<ProjectSummary[]>([]);
   const lastDocRef = useRef<DocumentSnapshot | null>(null);
 
   // ==========================================================================
   // CLIENT-SIDE SEARCH FILTER
   // ==========================================================================
 
-  const filteredProjects = useCallback((allProjects: FirestoreProject[]): FirestoreProject[] => {
+  const filteredProjects = useCallback((allProjects: ProjectSummary[]): ProjectSummary[] => {
     if (!filters.searchTerm) return allProjects;
 
     const searchLower = filters.searchTerm.toLowerCase();

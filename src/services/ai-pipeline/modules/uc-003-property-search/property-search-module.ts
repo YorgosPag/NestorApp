@@ -25,7 +25,7 @@ import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { extractSearchCriteria, type PropertySearchCriteria } from '@/services/property-search.service';
 import { findContactByEmail, type ContactMatch } from '../../shared/contact-lookup';
-import { sendChannelReply } from '../../shared/channel-reply-dispatcher';
+import { sendChannelReply, extractChannelIds } from '../../shared/channel-reply-dispatcher';
 import {
   PipelineIntentType,
 } from '@/types/ai-pipeline';
@@ -461,16 +461,9 @@ export class PropertySearchModule implements IUCModule {
       });
 
       // ── Send reply via channel dispatcher (ADR-132) ──
-      const channel = ctx.intake.channel;
-      const telegramChatId = (ctx.intake.rawPayload.chatId as string)
-        ?? (ctx.intake.normalized.sender.telegramId)
-        ?? undefined;
-
       const replyResult = await sendChannelReply({
-        channel,
-        recipientEmail: senderEmail || undefined,
-        telegramChatId: telegramChatId || undefined,
-        inAppCommandId: (ctx.intake.rawPayload?.commandId as string) ?? undefined,
+        channel: ctx.intake.channel,
+        ...extractChannelIds(ctx),
         subject: `Re: ${originalSubject}`,
         textBody: draftReply,
         requestId: ctx.requestId,
@@ -491,7 +484,7 @@ export class PropertySearchModule implements IUCModule {
         searchCriteria: (params.criteriaSummary as string) ?? null,
         matchingUnitsCount: (params.matchingUnitsCount as number) ?? 0,
         totalAvailable: (params.totalAvailable as number) ?? 0,
-        channel,
+        channel: ctx.intake.channel,
         status: replyResult.success ? 'sent' : 'send_failed',
         replyMessageId: replyResult.messageId ?? null,
         replyError: replyResult.error ?? null,

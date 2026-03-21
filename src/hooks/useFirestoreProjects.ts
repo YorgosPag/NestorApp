@@ -3,7 +3,8 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ProjectUpdatedPayload, type ProjectCreatedPayload, type ProjectDeletedPayload } from '@/services/realtime';
-import type { ProjectAddress } from '@/types/project/addresses';
+// 🏢 SSoT: ProjectSummary from @/types/project (via Pick<Project, ...>)
+import type { ProjectSummary } from '@/types/project';
 import { createModuleLogger } from '@/lib/telemetry';
 import { applyUpdates } from '@/lib/utils';
 import { API_ROUTES } from '@/config/domain-constants';
@@ -17,28 +18,12 @@ const logger = createModuleLogger('useFirestoreProjects');
  * Option A Architecture: Διαχωρισμένο από /api/audit/bootstrap
  *
  * @module hooks/useFirestoreProjects
- * @version 3.0.0
- * @enterprise Phase 4 - Authenticated API Client + Auth-Ready Gating
+ * @version 4.0.0
+ * @enterprise Phase 5 - SSoT via ProjectSummary (Pick<Project, ...>)
  */
 
-export interface FirestoreProject {
-  id: string;
-  name: string;
-  title: string;
-  status: 'planning' | 'in_progress' | 'completed' | 'on_hold' | 'cancelled';
-  company: string;
-  companyId: string;
-  address: string;
-  city: string;
-  // 🏢 ENTERPRISE: Multi-address support (ADR-167)
-  addresses?: ProjectAddress[];
-  progress: number;
-  totalValue: number;
-  startDate: string;
-  completionDate: string;
-  lastUpdate: string;
-  totalArea: number;
-}
+// 🏢 SSoT: Re-export for backward compatibility — consumers that import FirestoreProject
+export type FirestoreProject = ProjectSummary;
 
 // ============================================================================
 // API RESPONSE TYPE - UNWRAPPED DATA
@@ -51,7 +36,7 @@ export interface FirestoreProject {
  * But apiClient.get() unwraps it and returns just the data object.
  */
 interface ProjectListData {
-  projects: FirestoreProject[];
+  projects: ProjectSummary[];
   count: number;
   loadedAt: string;
   source: 'cache' | 'firestore';

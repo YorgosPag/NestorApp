@@ -32,7 +32,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { findContactByEmail, type ContactMatch } from '../../shared/contact-lookup';
 import { getSenderHistory, type SenderHistoryResult } from '../../shared/sender-history';
 import { generateAIReply } from '../../shared/ai-reply-generator';
-import { sendChannelReply } from '../../shared/channel-reply-dispatcher';
+import { sendChannelReply, extractChannelIds } from '../../shared/channel-reply-dispatcher';
 import {
   PipelineIntentType,
 } from '@/types/ai-pipeline';
@@ -339,19 +339,12 @@ export class DocumentRequestModule implements IUCModule {
       const draftReply = (params.draftReply as string) ?? '';
       const senderEmail = (params.senderEmail as string) ?? '';
       const originalSubject = ctx.intake.normalized.subject ?? 'Αίτημα';
-      const channel = ctx.intake.channel;
-      const telegramChatId = (params.telegramChatId as string)
-        ?? (ctx.intake.rawPayload.chatId as string)
-        ?? (ctx.intake.normalized.sender.telegramId)
-        ?? undefined;
 
       const requestType = (params.requestType as DocumentRequestType) ?? 'document';
 
       const replyResult = await sendChannelReply({
-        channel,
-        recipientEmail: senderEmail || undefined,
-        telegramChatId: telegramChatId || undefined,
-        inAppCommandId: (ctx.intake.rawPayload?.commandId as string) ?? undefined,
+        channel: ctx.intake.channel,
+        ...extractChannelIds(ctx),
         subject: `Re: ${originalSubject}`,
         textBody: draftReply || buildDocumentRequestReply({
           senderName: (params.senderName as string) ?? senderEmail,
