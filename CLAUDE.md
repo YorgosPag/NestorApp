@@ -10,6 +10,12 @@
 - **ΓΙΑΤΙ:** Κάθε push = Vercel build = κατανάλωση credits ($). Ο Γιώργος πληρώνει.
 - **ΜΗΔΕΝΙΚΗ ΕΞΑΙΡΕΣΗ.** Αυτός ο κανόνας υπερισχύει ΟΛΩΝ των άλλων κανόνων.
 
+### 💰 VERCEL BUILD COST OPTIMIZATION (vercel.json)
+- **`autoCancel: true`** — Αν γίνουν πολλά pushes σερί, ακυρώνει τα παλιά builds, χτίζει μόνο το τελευταίο.
+- **`ignoreCommand: bash scripts/ignore-build.sh`** — Αν ένα push περιέχει ΜΟΝΟ αλλαγές σε μη-app αρχεία (`.md`, `docs/`, `scripts/`, κλπ), το build κάνει **skip εντελώς** (0 λεπτά, 0 κόστος).
+- **App αρχεία που πυροδοτούν build:** `src/`, `public/`, `packages/`, `next.config.*`, `package.json`, `package-lock.json`, `tsconfig.*`, `vercel.json`, `.env*`
+- **Αρχεία που ΔΕΝ πυροδοτούν build:** `*.md`, `docs/`, `scripts/`, `adrs/`, `CLAUDE.md`, `BACKUP_SUMMARY.json`, `recovery/`
+
 SOS. SOS. N.0 ΔΙΑΒΑΖΕΙΣ ΤΑ ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ ΣΥΣΤΗΜΑΤΑ:
    MASTER HUB: C:\Nestor_Pagonis\docs\centralized-systems\README.md
    ADR INDEX: C:\Nestor_Pagonis\docs\centralized-systems\reference\adr-index.md
