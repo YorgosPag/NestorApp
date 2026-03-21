@@ -190,6 +190,24 @@ export function StorageTab({ building }: StorageTabProps) {
     fetchStorageUnits();
   }, [fetchStorageUnits]);
 
+  // 🔄 Real-time sync: refetch when storages change from other pages
+  useEffect(() => {
+    const unsubCreated = RealtimeService.subscribe('STORAGE_CREATED', () => {
+      logger.debug('STORAGE_CREATED event — refetching');
+      fetchStorageUnits();
+    });
+    const unsubUpdated = RealtimeService.subscribe('STORAGE_UPDATED', () => {
+      logger.debug('STORAGE_UPDATED event — refetching');
+      fetchStorageUnits();
+    });
+    const unsubDeleted = RealtimeService.subscribe('STORAGE_DELETED', () => {
+      logger.debug('STORAGE_DELETED event — refetching');
+      fetchStorageUnits();
+    });
+
+    return () => { unsubCreated(); unsubUpdated(); unsubDeleted(); };
+  }, [fetchStorageUnits]);
+
   const filteredUnits = useMemo(() =>
     filterUnits(units, searchTerm, filterType, filterStatus, filterFloor),
     [units, searchTerm, filterType, filterStatus, filterFloor]
