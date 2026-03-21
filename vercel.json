@@ -1,5 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "autoCancel": true
+  },
+  "ignoreCommand": "bash scripts/ignore-build.sh",
   "crons": [
     {
       "path": "/api/cron/email-ingestion",
