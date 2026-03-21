@@ -44,6 +44,8 @@ import { ActivityTab } from '@/components/shared/audit/ActivityTab';
 import { ProjectBrokersTab } from '@/components/projects/tabs/ProjectBrokersTab';
 // 🏢 ENTERPRISE: Ownership percentage table (ADR-235)
 import { OwnershipTableTab } from '@/components/projects/tabs/OwnershipTableTab';
+// 🏢 ENTERPRISE: Landowners management tab (ADR-244 / SPEC-244A)
+import { ProjectLandownersTab } from '@/components/projects/tabs/ProjectLandownersTab';
 
 // ============================================================================
 // PROJECT COMPONENT MAPPING
@@ -79,6 +81,8 @@ export const PROJECT_COMPONENT_MAPPING = {
   'ProjectBrokersTab': ProjectBrokersTab,
   // 🏢 ENTERPRISE: Ownership percentage table (ADR-235)
   'OwnershipTableTab': OwnershipTableTab,
+  // 🏢 ENTERPRISE: Landowners management tab (ADR-244 / SPEC-244A)
+  'ProjectLandownersTab': ProjectLandownersTab,
 } as const;
 
 // ============================================================================

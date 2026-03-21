@@ -1,5 +1,6 @@
 // 🏢 ENTERPRISE: Multi-address support (ADR-167)
 import type { ProjectAddress } from './project/addresses';
+import type { LandownerEntry } from '@/types/ownership-table';
 
 export type ProjectStatus = 'planning' | 'in_progress' | 'completed' | 'on_hold' | 'cancelled';
 
@@ -89,7 +90,39 @@ export interface Project {
   // 👷 IKA/EFKA LABOR COMPLIANCE (ADR-090)
   /** EFKA declaration data — αναγγελία έργου στο e-ΕΦΚΑ */
   efkaDeclaration?: import('@/components/projects/ika/contracts').EfkaDeclarationData;
+
+  /** ADR-244: Οικοπεδούχοι — SSoT, χρησιμοποιείται στο Bartex + πίνακα ποσοστών */
+  landowners?: LandownerEntry[] | null;
+  /** ADR-244: Ποσοστό αντιπαροχής (%) — αν ισχύει σενάριο αντιπαροχής */
+  bartexPercentage?: number | null;
+  /** ADR-244: Denormalized contact IDs for Firestore array-contains queries */
+  landownerContactIds?: string[] | null;
 }
+
+/**
+ * ProjectSummary — Subset of Project for list/grid views and detail tabs.
+ * SSoT: Derived via Pick — κάθε νέο πεδίο στο Project αρκεί να προστεθεί στο Pick.
+ *
+ * Used by:
+ * - /api/projects/list (API response type)
+ * - useFirestoreProjects hook
+ * - useFirestoreProjectsPaginated hook
+ */
+export type ProjectSummary = Pick<Project,
+  | 'id' | 'name' | 'title' | 'status' | 'company' | 'companyId'
+  | 'address' | 'city' | 'addresses'
+  | 'progress' | 'totalValue' | 'totalArea'
+  | 'landowners' | 'bartexPercentage' | 'landownerContactIds'
+> & {
+  /** ADR-232: Business entity link */
+  linkedCompanyId: string | null;
+  /** ISO string — always defined (empty string default) */
+  startDate: string;
+  /** ISO string — always defined (empty string default) */
+  completionDate: string;
+  /** Computed: fieldToISO(updatedAt || lastUpdate) */
+  lastUpdate: string;
+};
 
 export interface ProjectCustomer {
   contactId: string;
@@ -121,6 +154,7 @@ export type ProjectUpdatePayload = Partial<Omit<Project, 'id' | 'createdAt' | 'u
   /** 🏢 ADR-232: Business entity link */
   linkedCompanyId?: string | null;
   linkedCompanyName?: string | null;
+
 };
 
 export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {

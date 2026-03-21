@@ -24,9 +24,11 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
-import { ContactSearchManager } from '@/components/contacts/relationships/ContactSearchManager';
 import { TabbedAddNewContactDialog } from '@/components/contacts/dialogs/TabbedAddNewContactDialog';
+import { OwnersList } from '@/components/shared/owners/OwnersList';
+import { isOwnersValid, formatOwnerNames, getPrimaryBuyerContactId, buildOwnerFields } from '@/lib/ownership/owner-utils';
 import { AppurtenancesSection } from './AppurtenancesSection';
+import type { PropertyOwnerEntry } from '@/types/ownership-table';
 import { useLinkedSpacesForSale } from '@/hooks/sales/useLinkedSpacesForSale';
 import { useContactEmailWatch } from '@/hooks/sales/useContactEmailWatch';
 import { useUnitHierarchyValidation } from '@/hooks/sales/useUnitHierarchyValidation';
@@ -42,12 +44,11 @@ import { calculateCommission } from '@/types/brokerage';
 import type { BrokerageAgreement } from '@/types/brokerage';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('SalesActionDialogs');
-import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
 import type { Unit } from '@/types/unit';
 
-/** Resolve projectId — Firestore uses `projectId`, legacy code uses `project` */
-function resolveProjectId(unit: Record<string, unknown>): string | undefined {
-  return (unit.projectId as string | undefined) ?? (unit.project as string | undefined);
+/** Resolve projectId — Unit.project is the canonical field */
+function resolveProjectId(unit: Unit): string {
+  return unit.project;
 }
 
 // =============================================================================
@@ -210,12 +211,16 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const [deposit, setDeposit] = useState<string>('');
-  const [buyerContactId, setBuyerContactId] = useState<string>('');
-  const [buyerName, setBuyerName] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string>('');
 
-  // Real-time email watch — updates live when contact card is edited in another tab
+  // ADR-244: Multi-buyer owners state (replaces single buyerContactId/buyerName)
+  const [owners, setOwners] = useState<PropertyOwnerEntry[]>([]);
+  // ADR-244: Computed backward-compat fields (SSoT helpers from OwnersList)
+  const buyerContactId = getPrimaryBuyerContactId(owners) ?? '';
+  const buyerName = formatOwnerNames(owners) ?? '';
+
+  // Real-time email watch — tracks primary buyer's email
   const { hasEmail: buyerHasEmail } = useContactEmailWatch(buyerContactId);
 
   // Real-time hierarchy validation — updates live when unit is linked to building/floor
@@ -245,10 +250,6 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
     onOpenChange(isOpen);
   }, [onOpenChange]);
 
-  const handleContactSelect = useCallback((contact: ContactSummary | null) => {
-    setBuyerContactId(contact?.id ?? '');
-    setBuyerName(contact?.name ?? '');
-  }, []);
 
   // 🏢 ENTERPRISE: Switch to new contact dialog — hides Reserve, shows Contact form
   const handleOpenNewContact = useCallback(() => {
@@ -277,8 +278,8 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
           askingPrice: unit.commercial?.askingPrice ?? null,
           finalPrice: unit.commercial?.finalPrice ?? null,
           reservationDeposit: deposit ? Number(deposit) : null,
-          buyerContactId: buyerContactId || null,
-          buyerName: buyerName || null,
+          // ADR-244: Dual-write (SSoT helper)
+          ...buildOwnerFields(owners),
           reservationDate: new Date().toISOString(),
           saleDate: unit.commercial?.saleDate ?? null,
           cancellationDate: unit.commercial?.cancellationDate ?? null,
@@ -352,8 +353,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
         apiClient.post(API_ROUTES.SALES.APPURTENANCE_SYNC(unit.id), {
           action: 'reserve',
           spaces: syncPayload,
-          buyerContactId: buyerContactId || null,
-          buyerName: buyerName || null,
+          ...buildOwnerFields(owners),
         }).catch((err: unknown) => {
           logger.warn('Appurtenance sync fire-and-forget failed', { error: err });
         });
@@ -367,7 +367,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
     } finally {
       setSaving(false);
     }
-  }, [deposit, buyerContactId, buyerName, unit, onOpenChange, onSuccess, linkedSpaces, t]);
+  }, [deposit, owners, buyerContactId, buyerName, unit, onOpenChange, onSuccess, linkedSpaces, t]);
 
   return (
     <>
@@ -387,39 +387,31 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
           </DialogHeader>
 
           <section className="space-y-3 py-2">
-            {/* 🏢 ENTERPRISE: Contact search dropdown with create-new button */}
-            <fieldset className="space-y-1">
-              <ContactSearchManager
-                selectedContactId={buyerContactId}
-                onContactSelect={handleContactSelect}
-                label={t('sales.dialogs.reserve.buyerName', { defaultValue: 'Αγοραστής' })}
-                placeholder={t('sales.dialogs.reserve.buyerPlaceholder', { defaultValue: 'Αναζήτηση επαφής...' })}
-                allowedContactTypes={['individual', 'company']}
-              />
-              {!buyerContactId && (
-                <p className="text-xs text-destructive">
-                  {t('sales.dialogs.reserve.buyerRequired', { defaultValue: 'Η επιλογή αγοραστή είναι υποχρεωτική' })}
-                </p>
-              )}
-              {buyerContactId && !buyerHasEmail && (
-                <p className="flex items-center gap-1.5 text-xs text-orange-600">
-                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                  {t('sales.dialogs.reserve.noEmailWarning', {
-                    defaultValue: 'Ο αγοραστής δεν έχει email — δεν θα σταλεί επιβεβαίωση κράτησης. Ενημερώστε την καρτέλα του.',
-                  })}
-                </p>
-              )}
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="gap-1 text-xs text-muted-foreground"
-                onClick={handleOpenNewContact}
-              >
-                <UserPlus className={iconSizes.xs} />
-                {t('sales.dialogs.reserve.newContact', { defaultValue: 'Δημιουργία νέας επαφής' })}
-              </Button>
-            </fieldset>
+            {/* ADR-244: Multi-buyer OwnersList (replaces single ContactSearchManager) */}
+            <OwnersList
+              owners={owners}
+              onChange={setOwners}
+              defaultRole="buyer"
+              disabled={saving}
+            />
+            {buyerContactId && !buyerHasEmail && (
+              <p className="flex items-center gap-1.5 text-xs text-orange-600">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                {t('sales.dialogs.reserve.noEmailWarning', {
+                  defaultValue: 'Ο αγοραστής δεν έχει email — δεν θα σταλεί επιβεβαίωση κράτησης. Ενημερώστε την καρτέλα του.',
+                })}
+              </p>
+            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="gap-1 text-xs text-muted-foreground"
+              onClick={handleOpenNewContact}
+            >
+              <UserPlus className={iconSizes.xs} />
+              {t('sales.dialogs.reserve.newContact', { defaultValue: 'Δημιουργία νέας επαφής' })}
+            </Button>
 
             <fieldset className="space-y-1">
               <Label className="text-sm font-medium">
@@ -489,7 +481,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
               {t('common.cancel', { defaultValue: 'Ακύρωση' })}
             </Button>
-            <Button onClick={handleSave} disabled={saving || !buyerContactId || !hierarchy.isValid || !hasAskingPrice || !hasArea}>
+            <Button onClick={handleSave} disabled={saving || !isOwnersValid(owners) || !hierarchy.isValid || !hasAskingPrice || !hasArea}>
               {saving
                 ? t('common.saving', { defaultValue: 'Αποθήκευση...' })
                 : t('sales.dialogs.reserve.confirm', { defaultValue: 'Κράτηση' })}
@@ -521,13 +513,26 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string>('');
 
-  // Buyer state: initialized from existing commercial data (if reserved → sell flow)
+  // ADR-244: Multi-buyer owners state — initialized from existing commercial data
+  const existingOwners = (unit.commercial?.owners as PropertyOwnerEntry[] | null | undefined) ?? null;
   const existingBuyerId = unit.commercial?.buyerContactId ?? '';
   const existingBuyerName = unit.commercial?.buyerName ?? '';
-  const [buyerContactId, setBuyerContactId] = useState<string>(existingBuyerId);
-  const [buyerName, setBuyerName] = useState<string>(existingBuyerName);
 
-  // Real-time email watch — updates live when contact card is edited in another tab
+  // Initialize owners: prefer existing owners[], fallback to single buyer → owners[1]
+  const [owners, setOwners] = useState<PropertyOwnerEntry[]>(() => {
+    if (existingOwners && existingOwners.length > 0) return existingOwners;
+    if (existingBuyerId) {
+      return [{ contactId: existingBuyerId, name: existingBuyerName, ownershipPct: 100, role: 'buyer' as const, paymentPlanId: null }];
+    }
+    return [];
+  });
+
+  // ADR-244: Computed backward-compat fields (SSoT helpers from OwnersList)
+  const buyerContactId = getPrimaryBuyerContactId(owners) ?? '';
+  const buyerName = formatOwnerNames(owners) ?? '';
+  const hasExistingOwners = Boolean(existingOwners?.length || existingBuyerId);
+
+  // Real-time email watch — tracks primary buyer's email
   const { hasEmail: buyerHasEmail } = useContactEmailWatch(buyerContactId);
 
   // Real-time hierarchy validation — updates live when unit is linked to building/floor
@@ -550,21 +555,27 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
   useEffect(() => {
     if (open) {
       setFinalPrice(unit.commercial?.askingPrice?.toString() ?? '');
-      setBuyerContactId(unit.commercial?.buyerContactId ?? '');
-      setBuyerName(unit.commercial?.buyerName ?? '');
       setSelectedBrokerId('none');
+
+      // ADR-244: Sync owners from unit data
+      const unitOwners = (unit.commercial?.owners as PropertyOwnerEntry[] | null | undefined) ?? null;
+      const unitBuyerId = unit.commercial?.buyerContactId ?? '';
+      const unitBuyerName = unit.commercial?.buyerName ?? '';
+      if (unitOwners && unitOwners.length > 0) {
+        setOwners(unitOwners);
+      } else if (unitBuyerId) {
+        setOwners([{ contactId: unitBuyerId, name: unitBuyerName, ownershipPct: 100, role: 'buyer' as const, paymentPlanId: null }]);
+      } else {
+        setOwners([]);
+      }
 
       // Fetch active brokerage agreements
       BrokerageService.getAgreements(resolveProjectId(unit) ?? '', unit.id, 'active')
         .then(setBrokerAgreements)
         .catch(() => setBrokerAgreements([]));
     }
-  }, [open, unit.commercial?.askingPrice, unit.commercial?.buyerContactId, unit.commercial?.buyerName, unit.project, unit.id]);
+  }, [open, unit.commercial?.askingPrice, unit.commercial?.buyerContactId, unit.commercial?.buyerName, unit.commercial?.owners, unit.project, unit.id]);
 
-  const handleBuyerSelect = useCallback((contact: ContactSummary | null) => {
-    setBuyerContactId(contact?.id ?? '');
-    setBuyerName(contact?.name ?? '');
-  }, []);
 
   const handleSave = useCallback(async () => {
     const price = Number(finalPrice);
@@ -579,8 +590,8 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
           askingPrice: unit.commercial?.askingPrice ?? null,
           finalPrice: price,
           reservationDeposit: unit.commercial?.reservationDeposit ?? null,
-          buyerContactId: buyerContactId || null,
-          buyerName: buyerName || null,
+          // ADR-244: Dual-write (SSoT helper)
+          ...buildOwnerFields(owners),
           reservationDate: unit.commercial?.reservationDate ?? null,
           saleDate: new Date().toISOString(),
           cancellationDate: unit.commercial?.cancellationDate ?? null,
@@ -650,8 +661,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
         apiClient.post(API_ROUTES.SALES.APPURTENANCE_SYNC(unit.id), {
           action: 'sell',
           spaces: syncPayload,
-          buyerContactId: buyerContactId || null,
-          buyerName: buyerName || null,
+          ...buildOwnerFields(owners),
         }).catch((err: unknown) => {
           logger.warn('Appurtenance sync fire-and-forget failed', { error: err });
         });
@@ -665,7 +675,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
     } finally {
       setSaving(false);
     }
-  }, [finalPrice, buyerContactId, buyerName, unit, onOpenChange, onSuccess, linkedSpaces, selectedBrokerId, brokerAgreements, t]);
+  }, [finalPrice, owners, buyerContactId, buyerName, unit, onOpenChange, onSuccess, linkedSpaces, selectedBrokerId, brokerAgreements, t]);
 
   const askingPrice = unit.commercial?.askingPrice;
   const discount = askingPrice && Number(finalPrice) > 0
@@ -688,38 +698,22 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
         </DialogHeader>
 
         <section className="space-y-3 py-2">
-          {/* Buyer selection — read-only if already set from reserve, editable otherwise */}
-          <fieldset className="space-y-1">
-            {existingBuyerId ? (
-              <p className="text-sm">
-                <span className="font-medium">{t('sales.dialogs.reserve.buyerName', { defaultValue: 'Αγοραστής' })}:</span>{' '}
-                <span className="text-foreground">{buyerName || existingBuyerId}</span>
-              </p>
-            ) : (
-              <>
-                <ContactSearchManager
-                  selectedContactId={buyerContactId}
-                  onContactSelect={handleBuyerSelect}
-                  label={t('sales.dialogs.reserve.buyerName', { defaultValue: 'Αγοραστής' })}
-                  placeholder={t('sales.dialogs.reserve.buyerPlaceholder', { defaultValue: 'Αναζήτηση επαφής...' })}
-                  allowedContactTypes={['individual', 'company']}
-                />
-                {!buyerContactId && (
-                  <p className="text-xs text-destructive">
-                    {t('sales.dialogs.reserve.buyerRequired', { defaultValue: 'Η επιλογή αγοραστή είναι υποχρεωτική' })}
-                  </p>
-                )}
-                {buyerContactId && !buyerHasEmail && (
-                  <p className="flex items-center gap-1.5 text-xs text-orange-600">
-                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                    {t('sales.dialogs.reserve.noEmailWarning', {
-                      defaultValue: 'Ο αγοραστής δεν έχει email — δεν θα σταλεί επιβεβαίωση κράτησης. Ενημερώστε την καρτέλα του.',
-                    })}
-                  </p>
-                )}
-              </>
-            )}
-          </fieldset>
+          {/* ADR-244: Multi-buyer OwnersList — read-only if coming from reservation */}
+          <OwnersList
+            owners={owners}
+            onChange={setOwners}
+            defaultRole="buyer"
+            disabled={saving}
+            readOnly={hasExistingOwners}
+          />
+          {!hasExistingOwners && buyerContactId && !buyerHasEmail && (
+            <p className="flex items-center gap-1.5 text-xs text-orange-600">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              {t('sales.dialogs.reserve.noEmailWarning', {
+                defaultValue: 'Ο αγοραστής δεν έχει email — δεν θα σταλεί επιβεβαίωση πώλησης. Ενημερώστε την καρτέλα του.',
+              })}
+            </p>
+          )}
 
           {askingPrice && (
             <p className="text-sm text-muted-foreground">
@@ -859,7 +853,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
           </Button>
           <Button
             onClick={handleSave}
-            disabled={saving || !finalPrice || Number(finalPrice) <= 0 || !buyerContactId || !hierarchy.isValid || !sellHasArea}
+            disabled={saving || !finalPrice || Number(finalPrice) <= 0 || !isOwnersValid(owners) || !hierarchy.isValid || !sellHasArea}
             className="bg-green-600 hover:bg-green-700 text-white"
           >
             {saving

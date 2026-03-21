@@ -1950,6 +1950,7 @@ export const PROJECT_TAB_LABELS = {
   HISTORY: 'tabs.labels.history',
   BROKERS: 'tabs.labels.brokers',
   OWNERSHIP_TABLE: 'tabs.labels.ownershipTable',
+  LANDOWNERS: 'tabs.labels.landowners',
 } as const;
 
 /**
@@ -1975,6 +1976,7 @@ export const PROJECT_TAB_DESCRIPTIONS = {
   HISTORY: 'tabs.descriptions.history',
   BROKERS: 'tabs.descriptions.brokers',
   OWNERSHIP_TABLE: 'tabs.descriptions.ownershipTable',
+  LANDOWNERS: 'tabs.descriptions.landowners',
 } as const;
 
 /**

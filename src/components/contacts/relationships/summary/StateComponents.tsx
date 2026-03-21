@@ -20,6 +20,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ADR-244: Project roles (landowner, buyer — derived view)
+import { ProjectRolesSection } from './ProjectRolesSection';
 
 // ============================================================================
 // TYPES
@@ -35,6 +37,8 @@ interface EmptyStateProps extends StateComponentProps {
   readonly?: boolean;
   /** Callback when add button is clicked */
   onManageRelationships?: () => void;
+  /** Contact ID — for showing project roles even when no contact relationships exist */
+  contactId?: string;
 }
 
 // ============================================================================
@@ -116,7 +120,8 @@ export const LoadingState: React.FC<StateComponentProps> = ({ className }) => {
 export const EmptyState: React.FC<EmptyStateProps> = ({
   className,
   readonly = false,
-  onManageRelationships
+  onManageRelationships,
+  contactId,
 }) => {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
@@ -143,6 +148,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       </CardTitle>
     </CardHeader>
     <CardContent>
+      {/* ADR-244: Project roles appear even when no contact relationships exist */}
+      {contactId && <ProjectRolesSection contactId={contactId} />}
+
       <div className="text-center py-8">
         <Users className={"h-12 w-12 mx-auto mb-4 " + colors.text.muted} />
         <h3 className="font-medium mb-2">{t('relationships.summary.empty.title')}</h3>

@@ -120,6 +120,20 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     component: 'OwnershipTableTab',
   },
 
+  // -------------------------------------------------------------------------
+  // 4.5. ΟΙΚΟΠΕΔΟΥΧΟΙ (ADR-244 / SPEC-244A)
+  // -------------------------------------------------------------------------
+  {
+    id: 'landowners',
+    label: PROJECT_TAB_LABELS.LANDOWNERS,
+    value: 'landowners',
+    icon: 'landmark',
+    description: PROJECT_TAB_DESCRIPTIONS.LANDOWNERS,
+    order: 4.5,
+    enabled: true,
+    component: 'ProjectLandownersTab',
+  },
+
   // =========================================================================
   // ΑΝΘΡΩΠΟΙ — Ποιος εμπλέκεται
   // =========================================================================

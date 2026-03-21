@@ -821,6 +821,7 @@
       "buildingLocations": "Addresses",
       "brokers": "Brokers",
       "ownershipTable": "Ownership Table",
+      "landowners": "Landowners",
       "locations": "Addresses"
     },
     "descriptions": {
@@ -842,6 +843,7 @@
       "history": "Change history",
       "brokers": "Brokerage agreements and sales assignments",
       "ownershipTable": "Ownership percentage table (millesimal shares) for each property",
+      "landowners": "Manage landowners and bartex percentage",
       "locations": "Manage project addresses"
     },
     "floors": {
@@ -910,7 +912,8 @@
         "statusLabel": "Status",
         "actions": "Actions",
         "items": "items",
-        "categoryTotal": "Category total"
+        "categoryTotal": "Category total",
+        "subtotal": "Subtotal"
       },
       "editor": {
         "createTitle": "New Item",
@@ -960,7 +963,9 @@
         "edit": "Edit",
         "delete": "Delete",
         "deleteConfirm": "Are you sure you want to delete this item?",
-        "duplicate": "Duplicate"
+        "duplicate": "Duplicate",
+        "expandAll": "Expand all",
+        "collapseAll": "Collapse all"
       },
       "units": {
         "m": "m",

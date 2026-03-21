@@ -19,7 +19,7 @@ import type { Timestamp } from 'firebase/firestore';
 export type CalculationMethod = 'area' | 'value' | 'volume';
 
 /** Κατηγορία ιδιοκτησίας στον πίνακα */
-export type PropertyCategory = 'main' | 'auxiliary';
+export type PropertyCategory = 'main' | 'auxiliary' | 'air_rights';
 
 /** Ιδιοκτήτης στο σενάριο αντιπαροχής */
 export type OwnerParty = 'contractor' | 'landowner' | 'buyer' | 'unassigned';
@@ -116,6 +116,29 @@ export interface LandownerEntry {
 }
 
 /**
+ * Ρόλος ιδιοκτήτη σε ακίνητο (ADR-244 — Multi-Buyer Co-Ownership)
+ */
+export type PropertyOwnerRole = 'buyer' | 'co_buyer' | 'landowner';
+
+/**
+ * Ιδιοκτήτης/Συνιδιοκτήτης ακινήτου (ADR-244).
+ * Ενιαίο type για αγοραστές, συν-αγοραστές, οικοπεδούχους.
+ * Pattern: LandownerEntry (ίδια δομή, extended με role + paymentPlanId)
+ */
+export interface PropertyOwnerEntry {
+  /** Contact ID */
+  readonly contactId: string;
+  /** Ονοματεπώνυμο (denormalized for display) */
+  readonly name: string;
+  /** Ποσοστό ιδιοκτησίας (0-100, π.χ. 50 = 50%) */
+  readonly ownershipPct: number;
+  /** Ρόλος: αγοραστής, συν-αγοραστής, οικοπεδούχος */
+  readonly role: PropertyOwnerRole;
+  /** Σύνδεση με ξεχωριστό πλάνο αποπληρωμής — null = κοινό πλάνο */
+  readonly paymentPlanId: string | null;
+}
+
+/**
  * Entity reference — σε ποιο Firestore document αναφέρεται η γραμμή
  */
 export interface OwnershipEntityRef {
@@ -152,6 +175,15 @@ export interface LinkedSpaceDetail {
   readonly areaNetSqm: number;
   /** Μικτό εμβαδόν (τ.μ.) — συνήθως ίδιο με καθαρό για parking/storage */
   readonly areaSqm: number;
+  /**
+   * Αυτοτελή χιλιοστά — μόνο storage.
+   * true = η αποθήκη-παρακολούθημα έχει δικά της χιλιοστά στον πίνακα (σύσταση το ορίζει).
+   * false (default) = ακολουθεί τη μονάδα, δεν συμμετέχει στον υπολογισμό.
+   * Parking = πάντα false.
+   */
+  readonly hasOwnShares: boolean;
+  /** Χιλιοστά — ενεργό μόνο αν hasOwnShares = true (χειροκίνητα, ίδια λογική με αέρα) */
+  readonly millesimalShares: number;
 }
 
 /**
@@ -194,6 +226,12 @@ export interface OwnershipTableRow {
   readonly ownerParty: OwnerParty;
   /** Contact ID αγοραστή (αν πωλήθηκε) */
   readonly buyerContactId: string | null;
+  /** Ονοματεπώνυμο αγοραστή (denormalized for display) */
+  readonly buyerName: string | null;
+  /** Αριθμός προσυμφώνου */
+  readonly preliminaryContract: string | null;
+  /** Αριθμός οριστικού συμβολαίου */
+  readonly finalContract: string | null;
 }
 
 /**

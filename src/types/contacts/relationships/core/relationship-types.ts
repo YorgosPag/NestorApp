@@ -60,7 +60,11 @@ export type RelationshipType =
   | 'competitor'               // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.COMPETITOR
   | 'friend'                   // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.FRIEND
   | 'family'                   // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.FAMILY
-  | 'other';                   // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.OTHER
+  | 'other'                    // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.OTHER
+  // ADR-244: Property ownership roles
+  | 'property_buyer'           // Αγοραστής ακινήτου
+  | 'property_co_buyer'        // Συν-αγοραστής ακινήτου
+  | 'property_landowner';      // Οικοπεδούχος
 
 /**
  * 📊 Relationship Status - Lifecycle Management
@@ -109,6 +113,13 @@ export const EMPLOYMENT_RELATIONSHIP_TYPES: RelationshipType[] = [
  */
 export const OWNERSHIP_RELATIONSHIP_TYPES: RelationshipType[] = [
   'shareholder', 'board_member', 'chairman', 'ceo', 'partner'
+];
+
+/**
+ * 🏘️ ADR-244: Property ownership relationship types
+ */
+export const PROPERTY_RELATIONSHIP_TYPES: RelationshipType[] = [
+  'property_buyer', 'property_co_buyer', 'property_landowner'
 ];
 
 /**

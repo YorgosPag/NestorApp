@@ -17,6 +17,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Direct Firestore writes removed - now using Admin SDK via API endpoints
 import type { Project, ProjectStatus } from '@/types/project';
+import type { LandownerEntry } from '@/types/ownership-table';
 import type { ProjectAddress } from '@/types/project/addresses';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
@@ -91,6 +92,12 @@ export interface ProjectUpdatePayload {
   completionDate?: string;
   // 🏢 SPEC-256A: Optimistic versioning
   _v?: number;
+  /** ADR-244: Οικοπεδούχοι — SSoT */
+  landowners?: LandownerEntry[] | null;
+  /** ADR-244: Ποσοστό αντιπαροχής (%) */
+  bartexPercentage?: number | null;
+  /** ADR-244: Denormalized contact IDs for queries */
+  landownerContactIds?: string[] | null;
 }
 
 /**

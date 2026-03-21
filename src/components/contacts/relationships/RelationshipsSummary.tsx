@@ -32,6 +32,7 @@ import { OrganizationTree } from './OrganizationTree';
 // 🎯 ENTERPRISE: Import modular components
 import { StatisticsSection } from './summary/StatisticsSection';
 import { RecentRelationshipsSection } from './summary/RecentRelationshipsSection';
+import { ProjectRolesSection } from './summary/ProjectRolesSection';
 import { ActionsSection } from './summary/ActionsSection';
 import { NewContactState, LoadingState, EmptyState } from './summary/StateComponents';
 
@@ -173,6 +174,7 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
         className={className}
         readonly={readonly}
         onManageRelationships={onManageRelationships}
+        contactId={contactId}
       />
     );
   }
@@ -218,6 +220,9 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
               </div>
             </div>
           )}
+
+          {/* 🏗️ ADR-244: Project Roles (landowner, buyer — derived from project data) */}
+          <ProjectRolesSection contactId={contactId} />
 
           {/* 🔍 Recent Relationships */}
           <RecentRelationshipsSection

@@ -3,6 +3,7 @@ import { PropertyStatus } from '@/constants/property-statuses-enterprise';
 import type { Timestamp } from 'firebase/firestore';
 import type { LegalPhase } from '@/types/legal-contracts';
 import type { PaymentSummary } from '@/types/payment-plan';
+import type { PropertyOwnerEntry } from '@/types/ownership-table';
 import type { AllocationSpaceType, SpaceInclusionType } from '@/config/domain-constants';
 import type {
   OrientationType,
@@ -110,6 +111,9 @@ export interface UnitCommercialData {
 
   /** Όνομα αγοραστή (denormalized για εμφάνιση σε κάρτες/emails χωρίς extra fetch) */
   buyerName: string | null;
+
+  /** Πολλαπλοί ιδιοκτήτες (ADR-244 Phase 0). Συνυπάρχει με buyerContactId. */
+  owners?: PropertyOwnerEntry[] | null;
 
   /** Ημερομηνία κράτησης */
   reservationDate: Timestamp | null;
@@ -448,6 +452,10 @@ export interface Unit {
 
   /** Private unit amenities */
   unitAmenities?: AmenityCodeType[];
+
+  // === OWNERSHIP TABLE ===
+  /** Χιλιοστά ιδιοκτησίας — read-only, ενημερώνεται αυτόματα κατά την οριστικοποίηση πίνακα ποσοστών */
+  millesimalShares?: number | null;
 
   // === LINKED SPACES ===
   /** Relationships to parking and storage spaces */

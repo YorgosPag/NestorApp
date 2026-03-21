@@ -44,6 +44,14 @@ interface SyncRequestBody {
   spaces: SyncSpacePayload[];
   buyerContactId: string | null;
   buyerName: string | null;
+  /** ADR-244: Multi-buyer owners — propagated to linked spaces */
+  owners?: Array<{
+    contactId: string;
+    name: string;
+    ownershipPct: number;
+    role: string;
+    paymentPlanId: string | null;
+  }> | null;
 }
 
 const VALID_ACTIONS: readonly SyncAction[] = ['reserve', 'sell', 'revert'];
@@ -128,6 +136,7 @@ async function handlePost(
                   commercialStatus: 'reserved',
                   'commercial.buyerContactId': buyerContactId ?? null,
                   'commercial.buyerName': buyerName ?? null,
+                  'commercial.owners': body.owners ?? null,
                   'commercial.askingPrice': space.salePrice ?? null,
                   'commercial.reservationDate': now,
                   'commercial.linkedUnitId': unitId,
@@ -139,6 +148,7 @@ async function handlePost(
                   commercialStatus: 'sold',
                   'commercial.buyerContactId': buyerContactId ?? null,
                   'commercial.buyerName': buyerName ?? null,
+                  'commercial.owners': body.owners ?? null,
                   'commercial.finalPrice': space.salePrice ?? null,
                   'commercial.saleDate': now,
                   'commercial.linkedUnitId': unitId,
@@ -150,6 +160,7 @@ async function handlePost(
                   commercialStatus: null,
                   'commercial.buyerContactId': null,
                   'commercial.buyerName': null,
+                  'commercial.owners': null,
                   'commercial.askingPrice': null,
                   'commercial.finalPrice': null,
                   'commercial.reservationDeposit': null,
