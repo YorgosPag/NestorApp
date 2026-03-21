@@ -56,6 +56,9 @@ export function UserMenu() {
   const { user, signOut } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  // No user = no menu (after logout or before login)
+  if (!user && !isLoggingOut) return null;
+
   /**
    * 🏢 ENTERPRISE: Optimistic Logout Pattern
    *
