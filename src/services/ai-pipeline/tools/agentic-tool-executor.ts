@@ -23,6 +23,8 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { getCollectionSchemaInfo } from '@/config/firestore-schema-map';
 // ADR-173: Tool analytics
 import { getToolAnalyticsService } from '../tool-analytics-service';
+// 🧠 Query Strategy Memory — learns from FAILED_PRECONDITION errors
+import { recordQueryStrategy } from '../query-strategy-service';
 import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -105,6 +107,11 @@ const ALLOWED_WRITE_COLLECTIONS = new Set([
   COLLECTIONS.APPOINTMENTS,
   COLLECTIONS.ACTIVITIES,
   COLLECTIONS.LEADS,
+  COLLECTIONS.UNITS,
+  COLLECTIONS.PROJECTS,
+  COLLECTIONS.BUILDINGS,
+  COLLECTIONS.CONSTRUCTION_PHASES,
+  COLLECTIONS.CONSTRUCTION_TASKS,
 ]);
 
 /**
@@ -200,6 +207,41 @@ export class AgenticToolExecutor {
       return result;
     } catch (error) {
       const errorMessage = getErrorMessage(error);
+
+      // 🏢 ENTERPRISE: FAILED_PRECONDITION = missing index → broad query fallback
+      // Instead of returning empty results, fetch ALL docs and let AI filter
+      if (errorMessage.includes('FAILED_PRECONDITION') && toolName === 'firestore_query') {
+        logger.warn('Tool hit missing index, executing broad fallback query', {
+          tool: toolName,
+          requestId: ctx.requestId,
+        });
+        try {
+          const fallbackArgs = args as Record<string, unknown>;
+          const collection = String(fallbackArgs.collection ?? '');
+          const db = getAdminFirestore();
+          const companyId = ctx.companyId;
+          const limit = Math.min(typeof fallbackArgs.limit === 'number' ? fallbackArgs.limit : 20, 50);
+
+          let broadQuery: FirebaseFirestore.Query = db.collection(collection);
+          broadQuery = broadQuery.where('companyId', '==', companyId);
+          broadQuery = broadQuery.limit(limit);
+
+          const snapshot = await broadQuery.get();
+          const results = snapshot.docs.map(doc => {
+            const raw = this.redactSensitiveFields(doc.data());
+            return { id: doc.id, ...this.flattenNestedFields(raw) };
+          });
+
+          return { success: true, data: this.truncateResult(results), count: results.length };
+        } catch {
+          // If even broad query fails, return empty
+          return { success: true, data: [], count: 0 };
+        }
+      }
+      if (errorMessage.includes('FAILED_PRECONDITION')) {
+        return { success: true, data: [], count: 0 };
+      }
+
       logger.error('Tool execution error', {
         tool: toolName,
         requestId: ctx.requestId,
@@ -235,87 +277,36 @@ export class AgenticToolExecutor {
       MAX_QUERY_RESULTS
     );
 
-    // 🔍 DEBUG: Log exact query for troubleshooting
-    logger.info('firestore_query details', {
-      requestId: ctx.requestId,
-      collection,
-      filters: JSON.stringify(filters),
-      orderBy,
-      orderDirection,
-      limit,
-    });
+    // 🏢 ENTERPRISE: Pre-strip non-queryable filters — they cause FAILED_PRECONDITION.
+    // 1. Nested fields (dots): commercial.askingPrice → don't exist as top-level Firestore fields
+    // 2. Flattened fields (_prefix): _installmentsOverdue → created AFTER query by flattenNestedFields
+    const isNonQueryable = (field: string) => field.includes('.') || field.startsWith('_');
+    const nestedDropped = filters.filter(f => isNonQueryable(f.field));
+    const safeFilters = filters.filter(f => !isNonQueryable(f.field));
 
-    const db = getAdminFirestore();
-    let query: FirebaseFirestore.Query = db.collection(collection);
-
-    // Apply filters with value type coercion
-    for (const filter of filters) {
-      const op = this.mapOperator(filter.operator);
-      if (op) {
-        const coercedValue = this.coerceFilterValue(filter.value);
-        query = query.where(filter.field, op, coercedValue);
-      }
-    }
-
-    // Apply ordering
-    if (orderBy) {
-      query = query.orderBy(orderBy, orderDirection);
-    }
-
-    // Apply limit
-    query = query.limit(limit);
-
-    let snapshot: FirebaseFirestore.QuerySnapshot;
-    try {
-      snapshot = await query.get();
-    } catch (queryError) {
-      const msg = getErrorMessage(queryError);
-      if (!msg.includes('FAILED_PRECONDITION')) throw queryError;
-
-      // FAILED_PRECONDITION = missing composite index — progressive fallback
-      // Step 1: Retry without orderBy
-      const nestedFilters = filters.filter(f => f.field.includes('.'));
-      const flatFilters = filters.filter(f => !f.field.includes('.'));
-
-      logger.warn('Missing composite index, progressive fallback', {
+    if (nestedDropped.length > 0) {
+      logger.info('Stripped nested filters (would cause FAILED_PRECONDITION)', {
         requestId: ctx.requestId,
         collection,
-        droppedOrderBy: orderBy ?? 'none',
-        nestedFiltersDropped: nestedFilters.map(f => f.field),
-        remainingFilters: flatFilters.map(f => f.field),
+        dropped: nestedDropped.map(f => `${f.field} ${f.operator} ${f.value}`),
+        kept: safeFilters.map(f => f.field),
       });
-
-      // Build fallback: flat filters only (no nested/dotted fields, no orderBy)
-      let fallbackQuery: FirebaseFirestore.Query = db.collection(collection);
-      for (const filter of flatFilters) {
-        const op = this.mapOperator(filter.operator);
-        if (op) {
-          fallbackQuery = fallbackQuery.where(filter.field, op, this.coerceFilterValue(filter.value));
-        }
-      }
-      fallbackQuery = fallbackQuery.limit(limit);
-
-      try {
-        snapshot = await fallbackQuery.get();
-      } catch (fallbackError) {
-        // Last resort: companyId-only query
-        const companyFilter = flatFilters.find(f => f.field === 'companyId');
-        if (companyFilter) {
-          logger.warn('Fallback also failed, trying companyId-only', { requestId: ctx.requestId, collection });
-          let lastResort: FirebaseFirestore.Query = db.collection(collection);
-          lastResort = lastResort.where('companyId', '==', this.coerceFilterValue(companyFilter.value));
-          lastResort = lastResort.limit(limit);
-          snapshot = await lastResort.get();
-        } else {
-          throw fallbackError;
-        }
-      }
+      // 🧠 Record strategy (fire-and-forget)
+      recordQueryStrategy({
+        collection,
+        failedFilters: nestedDropped.map(f => f.field),
+        failedReason: 'STRIPPED_NESTED_FILTER',
+        successfulFilters: safeFilters.map(f => f.field),
+      }).catch(() => { /* non-fatal */ });
     }
 
-    const results = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...this.redactSensitiveFields(doc.data()),
-    }));
+    const db = getAdminFirestore();
+    const snapshot = await this.executeWithFallback(db, collection, safeFilters, orderBy, orderDirection, limit, ctx);
+
+    const results = snapshot.docs.map(doc => {
+      const raw = this.redactSensitiveFields(doc.data());
+      return { id: doc.id, ...this.flattenNestedFields(raw) };
+    });
 
     return {
       success: true,
@@ -379,21 +370,34 @@ export class AgenticToolExecutor {
     const rawFilters = Array.isArray(args.filters) ? args.filters as QueryFilter[] : [];
     const filters = this.enforceCompanyScope(rawFilters, ctx.companyId, collection);
 
+    // 🏢 Pre-strip nested filters (same as firestore_query)
+    const safeFilters = filters.filter(f => !f.field.includes('.'));
+
     const db = getAdminFirestore();
     let query: FirebaseFirestore.Query = db.collection(collection);
 
-    for (const filter of filters) {
+    for (const filter of safeFilters) {
       const op = this.mapOperator(filter.operator);
       if (op) {
-        const coercedValue = this.coerceFilterValue(filter.value);
-        query = query.where(filter.field, op, coercedValue);
+        query = query.where(filter.field, op, this.coerceFilterValue(filter.value));
       }
     }
 
-    const countResult = await query.count().get();
-    const count = countResult.data().count;
-
-    return { success: true, data: { count }, count };
+    try {
+      const countResult = await query.count().get();
+      return { success: true, data: { count: countResult.data().count }, count: countResult.data().count };
+    } catch (err) {
+      const msg = getErrorMessage(err);
+      if (!msg.includes('FAILED_PRECONDITION')) throw err;
+      // Fallback: count with companyId only
+      const companyFilter = safeFilters.find(f => f.field === 'companyId');
+      let fallback: FirebaseFirestore.Query = db.collection(collection);
+      if (companyFilter) {
+        fallback = fallback.where('companyId', '==', this.coerceFilterValue(companyFilter.value));
+      }
+      const fallbackResult = await fallback.count().get();
+      return { success: true, data: { count: fallbackResult.data().count }, count: fallbackResult.data().count };
+    }
   }
 
   /**
@@ -488,9 +492,12 @@ export class AgenticToolExecutor {
       return { success: false, error: 'contactName is required' };
     }
 
-    // Search for contact
+    // Search for contact — supports Greek↔Latin name matching
     const db = getAdminFirestore();
-    const searchTerm = contactName.toLowerCase();
+    const searchWords = contactName.toLowerCase().split(/\s+/).filter(Boolean);
+    // Also generate Latin transliterations of Greek search words
+    const latinWords = searchWords.map(w => this.greekToLatin(w)).filter(Boolean);
+    const allSearchWords = [...new Set([...searchWords, ...latinWords])];
 
     const contactsSnap = await db
       .collection(COLLECTIONS.CONTACTS)
@@ -500,12 +507,13 @@ export class AgenticToolExecutor {
 
     const matchingContacts = contactsSnap.docs.filter(doc => {
       const data = doc.data();
-      const displayName = String(data.displayName ?? '').toLowerCase();
-      const firstName = String(data.firstName ?? '').toLowerCase();
-      const lastName = String(data.lastName ?? '').toLowerCase();
-      return displayName.includes(searchTerm)
-        || firstName.includes(searchTerm)
-        || lastName.includes(searchTerm);
+      // Build searchable text from ALL name fields
+      const searchableText = [
+        data.displayName, data.firstName, data.lastName, data.name, data.tradeName,
+      ].filter(Boolean).map(v => String(v).toLowerCase()).join(' ');
+
+      // Any search word (Greek OR Latin) must match
+      return allSearchWords.some(word => searchableText.includes(word));
     });
 
     if (matchingContacts.length === 0) {
@@ -514,7 +522,10 @@ export class AgenticToolExecutor {
 
     const contact = matchingContacts[0];
     const contactData = contact.data();
-    const email = String(contactData.email ?? '');
+    // Email can be top-level string OR in emails[] array (Nestor contact format)
+    const emailsArray = Array.isArray(contactData.emails) ? contactData.emails as Array<{ email?: string; isPrimary?: boolean }> : [];
+    const primaryEmail = emailsArray.find(e => e.isPrimary)?.email ?? emailsArray[0]?.email;
+    const email = String(primaryEmail ?? contactData.email ?? '');
 
     if (!email) {
       return {
@@ -522,6 +533,20 @@ export class AgenticToolExecutor {
         error: `Contact "${contactData.displayName ?? contactName}" has no email address`,
       };
     }
+
+    // 🏢 ENTERPRISE: Wrap in branded HTML template (logo, colors, footer)
+    const { wrapInBrandedTemplate, escapeHtml } = await import(
+      '@/services/email-templates'
+    );
+
+    const recipientName = String(contactData.displayName ?? contactData.firstName ?? contactName);
+    const contentHtml = `
+      <p style="margin: 0 0 16px;">Αγαπητέ/ή ${escapeHtml(recipientName)},</p>
+      <p style="margin: 0 0 16px;">${escapeHtml(body)}</p>
+      <p style="margin: 24px 0 0; color: #6B7280;">Με εκτίμηση,<br/>Pagonis Energo</p>
+    `;
+
+    const htmlBody = wrapInBrandedTemplate({ contentHtml });
 
     // Send email via channel reply dispatcher
     const { sendChannelReply } = await import(
@@ -533,6 +558,7 @@ export class AgenticToolExecutor {
       recipientEmail: email,
       subject,
       textBody: body,
+      htmlBody,
       requestId: ctx.requestId,
     });
 
@@ -610,6 +636,10 @@ export class AgenticToolExecutor {
     ctx: AgenticContext
   ): Promise<ToolResult> {
     const searchTerm = String(args.searchTerm ?? '').toLowerCase();
+    // Generate Latin transliteration for Greek↔Latin name matching
+    const searchTermLatin = this.greekToLatin(searchTerm);
+    const allSearchTerms = [searchTerm, ...(searchTermLatin ? [searchTermLatin] : [])];
+
     const collections = Array.isArray(args.collections)
       ? (args.collections as string[]).filter(c => ALLOWED_READ_COLLECTIONS.has(c))
       : [];
@@ -627,7 +657,7 @@ export class AgenticToolExecutor {
     let totalCount = 0;
 
     // Search text fields in each collection
-    const searchFields = ['name', 'displayName', 'title', 'description', 'firstName', 'lastName'];
+    const searchFields = ['name', 'displayName', 'title', 'description', 'firstName', 'lastName', 'tradeName'];
 
     for (const collection of collections) {
       const snap = await db
@@ -641,7 +671,10 @@ export class AgenticToolExecutor {
           const data = doc.data();
           return searchFields.some(field => {
             const val = data[field];
-            return typeof val === 'string' && val.toLowerCase().includes(searchTerm);
+            if (typeof val !== 'string') return false;
+            const valLower = val.toLowerCase();
+            // Match any search term (original Greek OR Latin transliteration)
+            return allSearchTerms.some(term => valLower.includes(term));
           });
         })
         .slice(0, limit)
@@ -666,6 +699,106 @@ export class AgenticToolExecutor {
   // ==========================================================================
   // SECURITY HELPERS
   // ==========================================================================
+
+  /**
+   * Execute Firestore query with progressive fallback — NEVER throws FAILED_PRECONDITION.
+   * Fallback chain: full query → drop orderBy → drop nested filters → companyId only → no filters.
+   */
+  private async executeWithFallback(
+    db: FirebaseFirestore.Firestore,
+    collection: string,
+    filters: QueryFilter[],
+    orderBy: string | null,
+    orderDirection: 'asc' | 'desc',
+    limit: number,
+    ctx: AgenticContext,
+  ): Promise<FirebaseFirestore.QuerySnapshot> {
+    const nestedFilters = filters.filter(f => f.field.includes('.'));
+    const flatFilters = filters.filter(f => !f.field.includes('.'));
+    const companyFilter = filters.find(f => f.field === 'companyId');
+
+    // Chain of fallback attempts — each progressively simpler
+    const attempts: Array<{ label: string; build: () => FirebaseFirestore.Query }> = [
+      {
+        label: 'full query',
+        build: () => {
+          let q: FirebaseFirestore.Query = db.collection(collection);
+          for (const f of filters) {
+            const op = this.mapOperator(f.operator);
+            if (op) q = q.where(f.field, op, this.coerceFilterValue(f.value));
+          }
+          if (orderBy) q = q.orderBy(orderBy, orderDirection);
+          return q.limit(limit);
+        },
+      },
+      {
+        label: 'without orderBy',
+        build: () => {
+          let q: FirebaseFirestore.Query = db.collection(collection);
+          for (const f of filters) {
+            const op = this.mapOperator(f.operator);
+            if (op) q = q.where(f.field, op, this.coerceFilterValue(f.value));
+          }
+          return q.limit(limit);
+        },
+      },
+      {
+        label: 'flat filters only (no nested)',
+        build: () => {
+          let q: FirebaseFirestore.Query = db.collection(collection);
+          for (const f of flatFilters) {
+            const op = this.mapOperator(f.operator);
+            if (op) q = q.where(f.field, op, this.coerceFilterValue(f.value));
+          }
+          return q.limit(limit);
+        },
+      },
+      {
+        label: 'companyId only',
+        build: () => {
+          let q: FirebaseFirestore.Query = db.collection(collection);
+          if (companyFilter) {
+            q = q.where('companyId', '==', this.coerceFilterValue(companyFilter.value));
+          }
+          return q.limit(limit);
+        },
+      },
+    ];
+
+    for (const attempt of attempts) {
+      try {
+        const snapshot = await attempt.build().get();
+        if (attempt.label !== 'full query') {
+          logger.warn('Query fallback succeeded', {
+            requestId: ctx.requestId,
+            collection,
+            fallbackLevel: attempt.label,
+            droppedNested: nestedFilters.map(f => f.field),
+          });
+          // 🧠 Record strategy (fire-and-forget)
+          const droppedFields = [...nestedFilters.map(f => f.field), ...(orderBy ? [orderBy] : [])];
+          if (droppedFields.length > 0) {
+            recordQueryStrategy({
+              collection,
+              failedFilters: droppedFields,
+              failedReason: 'FAILED_PRECONDITION',
+              successfulFilters: flatFilters.map(f => f.field),
+            }).catch(() => { /* non-fatal */ });
+          }
+        }
+        return snapshot;
+      } catch (err) {
+        const msg = getErrorMessage(err);
+        if (!msg.includes('FAILED_PRECONDITION')) throw err; // Only catch index errors
+        logger.warn(`Query attempt "${attempt.label}" failed, trying next`, {
+          requestId: ctx.requestId, collection,
+        });
+      }
+    }
+
+    // Should never reach here, but just in case
+    return db.collection(collection).limit(limit).get();
+  }
 
   /**
    * Ensure companyId filter is present in all queries (tenant isolation)
@@ -750,6 +883,74 @@ export class AgenticToolExecutor {
       'not-in': 'not-in',
     };
     return operatorMap[op] ?? null;
+  }
+
+  /**
+   * Flatten nested objects into top-level keys for AI readability.
+   * gpt-4o-mini struggles with deeply nested JSON — this makes key fields
+   * immediately visible (e.g., "paymentRemaining: 100000" instead of
+   * commercial.paymentSummary.remainingAmount).
+   */
+  private flattenNestedFields(data: Record<string, unknown>): Record<string, unknown> {
+    const result = { ...data };
+
+    // Flatten commercial object (units)
+    const commercial = data.commercial as Record<string, unknown> | undefined;
+    if (commercial && typeof commercial === 'object') {
+      if (commercial.askingPrice != null) result._askingPrice = commercial.askingPrice;
+      if (commercial.finalPrice != null) result._finalPrice = commercial.finalPrice;
+      if (commercial.buyerName != null) result._buyerName = commercial.buyerName;
+      if (commercial.buyerContactId != null) result._buyerContactId = commercial.buyerContactId;
+      if (commercial.reservationDate != null) result._reservationDate = commercial.reservationDate;
+      if (commercial.saleDate != null) result._saleDate = commercial.saleDate;
+
+      // Flatten paymentSummary (most important for financial queries)
+      const ps = commercial.paymentSummary as Record<string, unknown> | undefined;
+      if (ps && typeof ps === 'object') {
+        if (ps.totalAmount != null) result._paymentTotal = ps.totalAmount;
+        if (ps.paidAmount != null) result._paymentPaid = ps.paidAmount;
+        if (ps.remainingAmount != null) result._paymentRemaining = ps.remainingAmount;
+        if (ps.paidPercentage != null) result._paymentPaidPct = ps.paidPercentage;
+        if (ps.totalInstallments != null) result._installmentsTotal = ps.totalInstallments;
+        if (ps.paidInstallments != null) result._installmentsPaid = ps.paidInstallments;
+        if (ps.overdueInstallments != null) result._installmentsOverdue = ps.overdueInstallments;
+        if (ps.nextInstallmentAmount != null) result._nextInstallmentAmount = ps.nextInstallmentAmount;
+        if (ps.nextInstallmentDate != null) result._nextInstallmentDate = ps.nextInstallmentDate;
+      }
+
+      // Remove original nested object to save tokens
+      delete result.commercial;
+    }
+
+    // Flatten areas object (units)
+    const areas = data.areas as Record<string, unknown> | undefined;
+    if (areas && typeof areas === 'object') {
+      if (areas.gross != null) result._areaGross = areas.gross;
+      if (areas.net != null) result._areaNet = areas.net;
+      if (areas.balcony != null) result._areaBalcony = areas.balcony;
+      if (areas.terrace != null) result._areaTerrace = areas.terrace;
+      if (areas.garden != null) result._areaGarden = areas.garden;
+      delete result.areas;
+    }
+
+    return result;
+  }
+
+  /**
+   * Transliterate Greek text to Latin characters for name matching.
+   * Handles common Greek→Latin mappings (Γεώργιος → georgios, Παγώνης → pagonis).
+   */
+  private greekToLatin(text: string): string {
+    const map: Record<string, string> = {
+      'α': 'a', 'ά': 'a', 'β': 'v', 'γ': 'g', 'δ': 'd', 'ε': 'e', 'έ': 'e',
+      'ζ': 'z', 'η': 'i', 'ή': 'i', 'θ': 'th', 'ι': 'i', 'ί': 'i', 'ϊ': 'i',
+      'κ': 'k', 'λ': 'l', 'μ': 'm', 'ν': 'n', 'ξ': 'x', 'ο': 'o', 'ό': 'o',
+      'π': 'p', 'ρ': 'r', 'σ': 's', 'ς': 's', 'τ': 't', 'υ': 'y', 'ύ': 'y',
+      'φ': 'f', 'χ': 'ch', 'ψ': 'ps', 'ω': 'o', 'ώ': 'o',
+    };
+    // Only transliterate if text contains Greek characters
+    if (!/[α-ωά-ώ]/i.test(text)) return '';
+    return text.split('').map(c => map[c] ?? c).join('');
   }
 
   /**

@@ -50,6 +50,8 @@ export interface ChannelReplyParams {
   subject?: string;
   /** Reply text body */
   textBody: string;
+  /** HTML body (email only — branded template) */
+  htmlBody?: string;
   /** Pipeline request ID for correlation */
   requestId: string;
 }
@@ -177,7 +179,7 @@ export async function sendChannelReply(
  * Dispatch reply via Mailgun email
  */
 async function dispatchEmail(params: ChannelReplyParams): Promise<ChannelReplyResult> {
-  const { recipientEmail, subject, textBody, requestId } = params;
+  const { recipientEmail, subject, textBody, htmlBody, requestId } = params;
 
   if (!recipientEmail) {
     logger.warn('Email dispatch: no recipient email', { requestId });
@@ -192,6 +194,7 @@ async function dispatchEmail(params: ChannelReplyParams): Promise<ChannelReplyRe
     to: recipientEmail,
     subject: subject ?? 'Απάντηση',
     textBody,
+    htmlBody,
   });
 
   return {
