@@ -77,6 +77,39 @@ export async function handleCallbackQuery(
       return createContactResponse(chatId);
 
     default:
+        // Property detail callback (detail_{unitId})
+        if (data && data.startsWith('detail_')) {
+          return handlePropertyDetailCallback(data, chatId);
+        }
+
+        // Photos callback (photos_{unitId})
+        if (data && data.startsWith('photos_')) {
+          return handlePropertyPhotosCallback(data, chatId);
+        }
+
+        // Book appointment callback (book_{unitId})
+        if (data && data.startsWith('book_')) {
+          const unitId = data.replace('book_', '');
+          return {
+            method: 'sendMessage',
+            chat_id: chatId,
+            text: '📅 Για να κλείσετε ραντεβού επίσκεψης, επικοινωνήστε μαζί μας:\n\n📱 <b>6974050023</b>\n📧 <b>georgios.pagonis@gmail.com</b>\n\nΑναφέρετε τον κωδικό ακινήτου για γρηγορότερη εξυπηρέτηση.',
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '↩️ Πίσω στο ακίνητο', callback_data: `detail_${unitId}` }],
+                [{ text: '🔍 Νέα Αναζήτηση', callback_data: 'new_search' }],
+              ],
+            },
+          };
+        }
+
+        // Back to search results (back_search_{type})
+        if (data && data.startsWith('back_search_')) {
+          const propertyType = data.replace('back_search_', '');
+          return await handleEnhancedPropertySearch(`${propertyType} διαθέσιμα`, chatId, userId);
+        }
+
         // Phase 6F: Check suggestion callbacks FIRST (before feedback)
         if (data && isSuggestionCallback(data)) {
           return handleSuggestionCallback(data, chatId, userId);
@@ -93,6 +126,174 @@ export async function handleCallbackQuery(
         }
 
         return null;
+  }
+}
+
+/**
+ * Handle property detail callback — fetch unit from Firestore and display full details
+ */
+/**
+ * Handle property photos callback — send photos from unit document
+ */
+async function handlePropertyPhotosCallback(
+  data: string,
+  chatId: number | string,
+): Promise<TelegramSendPayload | null> {
+  const unitId = data.replace('photos_', '');
+
+  try {
+    const { getAdminFirestore } = await import('@/lib/firebaseAdmin');
+    const db = getAdminFirestore();
+    const doc = await db.collection('units').doc(unitId).get();
+
+    if (!doc.exists) return null;
+
+    const u = doc.data() as Record<string, unknown>;
+    const photos = Array.isArray(u.multiplePhotoURLs) ? u.multiplePhotoURLs as string[] : [];
+    const singlePhoto = u.photoURL as string | undefined;
+    const allPhotos = photos.length > 0 ? photos : (singlePhoto ? [singlePhoto] : []);
+
+    if (allPhotos.length === 0) {
+      return {
+        method: 'sendMessage',
+        chat_id: chatId,
+        text: '📸 Δεν υπάρχουν φωτογραφίες για αυτό το ακίνητο.',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '↩️ Πίσω στο ακίνητο', callback_data: `detail_${unitId}` }],
+          ],
+        },
+      };
+    }
+
+    // Send first photo with caption
+    return {
+      method: 'sendPhoto',
+      chat_id: chatId,
+      photo: allPhotos[0],
+      caption: `📸 ${u.name ?? u.code ?? ''} (${allPhotos.length} φωτογραφίες)`,
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '↩️ Πίσω στο ακίνητο', callback_data: `detail_${unitId}` }],
+          [{ text: '🔍 Νέα Αναζήτηση', callback_data: 'new_search' }],
+        ],
+      },
+    };
+  } catch (error) {
+    logger.error('Property photos error', { unitId, error: getErrorMessage(error) });
+    return null;
+  }
+}
+
+async function handlePropertyDetailCallback(
+  data: string,
+  chatId: number | string,
+): Promise<TelegramSendPayload | null> {
+  const unitId = data.replace('detail_', '');
+
+  try {
+    const { getAdminFirestore } = await import('@/lib/firebaseAdmin');
+    const db = getAdminFirestore();
+    const doc = await db.collection('units').doc(unitId).get();
+
+    if (!doc.exists) {
+      return {
+        method: 'sendMessage',
+        chat_id: chatId,
+        text: '❌ Το ακίνητο δεν βρέθηκε.',
+      };
+    }
+
+    const u = doc.data() as Record<string, unknown>;
+    const commercial = u.commercial as Record<string, unknown> | undefined;
+    const areas = u.areas as Record<string, unknown> | undefined;
+    const layout = u.layout as Record<string, unknown> | undefined;
+
+    // Greek translations for property types and statuses
+    const typeLabels: Record<string, string> = {
+      apartment: 'Διαμέρισμα', studio: 'Στούντιο', maisonette: 'Μεζονέτα',
+      shop: 'Κατάστημα', office: 'Γραφείο', storage: 'Αποθήκη',
+      apartment_1br: 'Διαμέρισμα 1 υπνοδ.', penthouse: 'Ρετιρέ', loft: 'Loft',
+    };
+    const statusLabels: Record<string, string> = {
+      available: 'Διαθέσιμο', reserved: 'Κρατημένο', sold: 'Πωλημένο', rented: 'Ενοικιασμένο',
+    };
+
+    const lines: string[] = [];
+    lines.push(`🏠 <b>${u.name ?? u.code ?? unitId}</b>`);
+    lines.push('');
+    if (u.code) lines.push(`📍 Κωδικός: ${u.code}`);
+    if (u.type) lines.push(`🏗️ Τύπος: ${typeLabels[String(u.type)] ?? u.type}`);
+    if (u.floor !== undefined) lines.push(`🏢 Όροφος: ${u.floor}`);
+    if (u.status) lines.push(`📊 Κατάσταση: ${statusLabels[String(u.status)] ?? u.status}`);
+    lines.push('');
+
+    // Areas
+    if (areas) {
+      lines.push('<b>📐 Εμβαδά:</b>');
+      if (areas.gross) lines.push(`  Μικτό: ${areas.gross} τ.μ.`);
+      if (areas.net) lines.push(`  Καθαρό: ${areas.net} τ.μ.`);
+      if (areas.balcony) lines.push(`  Μπαλκόνι: ${areas.balcony} τ.μ.`);
+      if (areas.terrace) lines.push(`  Βεράντα: ${areas.terrace} τ.μ.`);
+      if (areas.garden) lines.push(`  Κήπος: ${areas.garden} τ.μ.`);
+      lines.push('');
+    }
+
+    // Layout
+    if (layout) {
+      const parts: string[] = [];
+      if (layout.bedrooms) parts.push(`${layout.bedrooms} υπνοδ.`);
+      if (layout.bathrooms) parts.push(`${layout.bathrooms} μπάνια`);
+      if (layout.wc) parts.push(`${layout.wc} WC`);
+      if (parts.length > 0) {
+        lines.push(`🛏️ Διαρρύθμιση: ${parts.join(', ')}`);
+        lines.push('');
+      }
+    }
+
+    // Commercial — ONLY show price to public (NO buyer name, NO reservation info)
+    if (commercial) {
+      if (commercial.askingPrice) {
+        lines.push(`💰 <b>Τιμή: ${Number(commercial.askingPrice).toLocaleString('el-GR')} €</b>`);
+      }
+      // buyer/reservation info is PRIVATE — not shown to public customers
+    }
+
+    const text = lines.join('\n');
+
+    // Build smart action buttons
+    const hasPhotos = !!(u.photoURL || (Array.isArray(u.multiplePhotoURLs) && (u.multiplePhotoURLs as string[]).length > 0));
+    const keyboard: Array<Array<{ text: string; callback_data: string }>> = [];
+
+    // Row 1: Photos (if available) + Appointment
+    const row1: Array<{ text: string; callback_data: string }> = [];
+    if (hasPhotos) {
+      row1.push({ text: '📸 Φωτογραφίες', callback_data: `photos_${unitId}` });
+    }
+    row1.push({ text: '📅 Κλείσε ραντεβού', callback_data: `book_${unitId}` });
+    keyboard.push(row1);
+
+    // Row 2: Back to results + New search
+    keyboard.push([
+      { text: '↩️ Πίσω στα αποτελέσματα', callback_data: `back_search_${u.type ?? 'apartment'}` },
+      { text: '🔍 Νέα Αναζήτηση', callback_data: 'new_search' },
+    ]);
+
+    // Row 3: Contact
+    keyboard.push([
+      { text: '📞 Επικοινωνία', callback_data: 'contact_agent' },
+    ]);
+
+    return {
+      method: 'sendMessage',
+      chat_id: chatId,
+      text,
+      parse_mode: 'HTML',
+      reply_markup: { inline_keyboard: keyboard },
+    };
+  } catch (error) {
+    logger.error('Property detail error', { unitId, error: getErrorMessage(error) });
+    return null;
   }
 }
 

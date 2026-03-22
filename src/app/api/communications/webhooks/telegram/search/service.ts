@@ -37,18 +37,29 @@ export async function handleEnhancedPropertySearch(text: string, chatId: string 
     // Format and return results
     const formattedResults = formatSearchResultsForTelegram(searchResult);
 
+    // Build detail buttons for each property (max 3)
+    const detailButtons = searchResult.properties.slice(0, 3).map(p => ({
+      text: `📋 ${p.code || p.name || p.id.slice(-6)}`,
+      callback_data: `detail_${p.id}`,
+    }));
+
+    // Build keyboard: detail buttons (1 per row) + contact/search row
+    const keyboard: Array<Array<{ text: string; callback_data: string }>> = [];
+    for (const btn of detailButtons) {
+      keyboard.push([btn]);
+    }
+    keyboard.push([
+      { text: '📞 Επικοινωνία', callback_data: 'contact_agent' },
+      { text: '🔍 Νέα Αναζήτηση', callback_data: 'new_search' },
+    ]);
+
     return {
       method: 'sendMessage',
       chat_id: chatId,
       text: formattedResults,
       parse_mode: 'HTML',
       reply_markup: {
-        inline_keyboard: [
-          [
-            { text: '📞 Επικοινωνία', callback_data: 'contact_agent' },
-            { text: '🔍 Νέα Αναζήτηση', callback_data: 'new_search' }
-          ]
-        ]
+        inline_keyboard: keyboard,
       }
     };
 
