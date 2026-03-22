@@ -106,7 +106,7 @@ const DEFAULT_CONFIG: AgenticLoopConfig = {
   maxIterations: 15,
   // 55s for Vercel (60s limit), but localhost has no limit
   totalTimeoutMs: process.env.NODE_ENV === 'production' ? 55_000 : 120_000,
-  perCallTimeoutMs: 15_000,
+  perCallTimeoutMs: 30_000,
   maxToolResultChars: 12_000,
 };
 
@@ -200,6 +200,19 @@ CONCRETE ΠΑΡΑΔΕΙΓΜΑΤΑ:
 Ερώτηση: "Τιμή ακινήτου Y"
 → firestore_query("units", filters: [{field: "name", operator: "==", value: "Y"}])
 → Διάβασε _askingPrice από το αποτέλεσμα
+
+Ερώτηση: "Ποιοι πελάτες δεν έχουν πληρώσει" / "εκκρεμείς δόσεις" / "οφειλές"
+→ firestore_query("units") ΧΩΡΙΣ filters
+→ Κοίτα ΚΑΘΕ unit: αν _paymentPaid == 0 ΚΑΙ _paymentTotal > 0 → δεν έχει πληρώσει τίποτα
+→ Κοίτα ΚΑΘΕ unit: αν _installmentsOverdue > 0 → έχει ληξιπρόθεσμες δόσεις
+→ Ο _buyerName δείχνει ποιος πελάτης χρωστάει
+→ ΔΕΝ υπάρχει collection "payments" ή "invoices" για δόσεις ακινήτων — ΟΛΑ είναι ΜΕΣΑ στα units
+
+Ερώτηση: "Στείλε email σε πελάτες με οφειλές + δημιούργησε task"
+→ ΒΗΜΑ 1: firestore_query("units") → βρες units με _installmentsOverdue > 0
+→ ΒΗΜΑ 2: Για κάθε unit, πάρε _buyerContactId → firestore_get_document("contacts", _buyerContactId) → πάρε email
+→ ΒΗΜΑ 3: send_email_to_contact για κάθε πελάτη
+→ ΒΗΜΑ 4: firestore_write("tasks", create) για κάθε πελάτη με dueDate = σήμερα + 3 μέρες
 
 ΣΗΜΑΝΤΙΚΟ: Τα nested πεδία επιστρέφονται FLAT (με prefix _):
 - _askingPrice, _finalPrice, _buyerName, _buyerContactId, _reservationDate, _saleDate

@@ -492,12 +492,18 @@ export class AgenticToolExecutor {
       return { success: false, error: 'contactName is required' };
     }
 
-    // Search for contact — supports Greek↔Latin name matching
+    // Search for contact — supports Greek↔Latin + fuzzy substring matching
     const db = getAdminFirestore();
     const searchWords = contactName.toLowerCase().split(/\s+/).filter(Boolean);
-    // Also generate Latin transliterations of Greek search words
+    // Generate Latin transliterations of Greek search words
     const latinWords = searchWords.map(w => this.greekToLatin(w)).filter(Boolean);
-    const allSearchWords = [...new Set([...searchWords, ...latinWords])];
+    // Generate short stems (first 3-4 chars) for fuzzy matching
+    // "Γιώργου" → stem "γιωργ" which matches "γεωργ" less well, but
+    // Latin "giorg" matches "georgi" via substring
+    const stems = [...searchWords, ...latinWords]
+      .filter(w => w.length >= 3)
+      .map(w => w.substring(0, Math.min(w.length, 4)));
+    const allSearchTerms = [...new Set([...searchWords, ...latinWords, ...stems])];
 
     const contactsSnap = await db
       .collection(COLLECTIONS.CONTACTS)
@@ -507,13 +513,17 @@ export class AgenticToolExecutor {
 
     const matchingContacts = contactsSnap.docs.filter(doc => {
       const data = doc.data();
-      // Build searchable text from ALL name fields
-      const searchableText = [
+      // Build searchable text from ALL name fields + Latin transliteration
+      const nameFields = [
         data.displayName, data.firstName, data.lastName, data.name, data.tradeName,
-      ].filter(Boolean).map(v => String(v).toLowerCase()).join(' ');
+      ].filter(Boolean).map(v => String(v).toLowerCase());
+      const searchableText = nameFields.join(' ');
+      // Also add Latin version of stored names for reverse matching
+      const latinText = nameFields.map(n => this.greekToLatin(n)).filter(Boolean).join(' ');
+      const fullText = `${searchableText} ${latinText}`;
 
-      // Any search word (Greek OR Latin) must match
-      return allSearchWords.some(word => searchableText.includes(word));
+      // Any search term (Greek, Latin, or stem) must match in full text
+      return allSearchTerms.some(term => fullText.includes(term));
     });
 
     if (matchingContacts.length === 0) {
@@ -636,9 +646,13 @@ export class AgenticToolExecutor {
     ctx: AgenticContext
   ): Promise<ToolResult> {
     const searchTerm = String(args.searchTerm ?? '').toLowerCase();
-    // Generate Latin transliteration for Greek↔Latin name matching
-    const searchTermLatin = this.greekToLatin(searchTerm);
-    const allSearchTerms = [searchTerm, ...(searchTermLatin ? [searchTermLatin] : [])];
+    // Split into words and generate Latin transliterations + stems per word
+    const words = searchTerm.split(/\s+/).filter(w => w.length >= 2);
+    const latinWords = words.map(w => this.greekToLatin(w)).filter(Boolean);
+    const stems = [...words, ...latinWords]
+      .filter(w => w.length >= 3)
+      .map(w => w.substring(0, Math.min(w.length, 4)));
+    const allSearchTerms = [...new Set([...words, ...latinWords, ...stems])];
 
     const collections = Array.isArray(args.collections)
       ? (args.collections as string[]).filter(c => ALLOWED_READ_COLLECTIONS.has(c))
@@ -673,8 +687,10 @@ export class AgenticToolExecutor {
             const val = data[field];
             if (typeof val !== 'string') return false;
             const valLower = val.toLowerCase();
-            // Match any search term (original Greek OR Latin transliteration)
-            return allSearchTerms.some(term => valLower.includes(term));
+            const valLatin = this.greekToLatin(valLower);
+            const fullVal = valLatin ? `${valLower} ${valLatin}` : valLower;
+            // Match any search term against original + transliterated value
+            return allSearchTerms.some(term => fullVal.includes(term));
           });
         })
         .slice(0, limit)
