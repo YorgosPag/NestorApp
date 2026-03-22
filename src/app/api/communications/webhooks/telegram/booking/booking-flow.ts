@@ -39,27 +39,56 @@ interface BookingSession {
   date: string;
   time: string;
   step: 'awaiting_contact';
-  createdAt: number;
+  createdAt: string;
 }
 
-/** In-memory booking sessions (per serverless instance) */
-const bookingSessions = new Map<string, BookingSession>();
-
-/** Clean up sessions older than 10 minutes */
-function pruneOldSessions(): void {
-  const cutoff = Date.now() - 10 * 60 * 1000;
-  for (const [key, session] of bookingSessions) {
-    if (session.createdAt < cutoff) bookingSessions.delete(key);
-  }
-}
+const BOOKING_SESSIONS_COLLECTION = 'booking_sessions';
+const SESSION_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 /**
  * Check if user has an active booking session (awaiting contact info).
- * Called by the Telegram handler when a TEXT message (not callback) arrives.
+ * Stored in Firestore — works across serverless instances.
  */
-export function hasActiveBookingSession(userId: string): boolean {
-  pruneOldSessions();
-  return bookingSessions.has(userId);
+export async function hasActiveBookingSession(userId: string): Promise<boolean> {
+  try {
+    const db = getAdminFirestore();
+    const doc = await db.collection(BOOKING_SESSIONS_COLLECTION).doc(userId).get();
+    if (!doc.exists) return false;
+    const data = doc.data() as BookingSession;
+    // Check TTL
+    const age = Date.now() - new Date(data.createdAt).getTime();
+    if (age > SESSION_TTL_MS) {
+      await doc.ref.delete().catch(() => {});
+      return false;
+    }
+    return data.step === 'awaiting_contact';
+  } catch {
+    return false;
+  }
+}
+
+/** Save booking session to Firestore */
+async function saveSession(userId: string, session: BookingSession): Promise<void> {
+  const db = getAdminFirestore();
+  await db.collection(BOOKING_SESSIONS_COLLECTION).doc(userId).set(session);
+}
+
+/** Delete booking session from Firestore */
+async function deleteSession(userId: string): Promise<void> {
+  const db = getAdminFirestore();
+  await db.collection(BOOKING_SESSIONS_COLLECTION).doc(userId).delete().catch(() => {});
+}
+
+/** Get booking session from Firestore */
+async function getSession(userId: string): Promise<BookingSession | null> {
+  try {
+    const db = getAdminFirestore();
+    const doc = await db.collection(BOOKING_SESSIONS_COLLECTION).doc(userId).get();
+    if (!doc.exists) return null;
+    return doc.data() as BookingSession;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -72,7 +101,7 @@ export async function handleBookingContactInput(
   firstName?: string,
   lastName?: string,
 ): Promise<TelegramSendPayload | null> {
-  const session = bookingSessions.get(userId);
+  const session = await getSession(userId);
   if (!session) return null;
 
   // Extract name and phone from text or Telegram profile
@@ -101,7 +130,7 @@ export async function handleBookingContactInput(
   );
 
   // Clean up session
-  bookingSessions.delete(userId);
+  await deleteSession(userId);
 
   return result;
 }
@@ -116,7 +145,7 @@ export async function handleBookingSharedContact(
   firstName?: string,
   lastName?: string,
 ): Promise<TelegramSendPayload | null> {
-  const session = bookingSessions.get(userId);
+  const session = await getSession(userId);
   if (!session) return null;
 
   const customerName = [firstName, lastName].filter(Boolean).join(' ') || `User ${userId}`;
@@ -367,14 +396,14 @@ async function confirmAndSave(
   const unitName = unit?.name ?? unit?.code ?? unitIdOrSuffix;
   const dateLabel = formatDateGreek(date);
 
-  // Store session — wait for contact info
-  bookingSessions.set(userId, {
+  // Store session in Firestore — works across serverless instances
+  await saveSession(userId, {
     unitId: resolvedId,
     unitName,
     date,
     time,
     step: 'awaiting_contact',
-    createdAt: Date.now(),
+    createdAt: new Date().toISOString(),
   });
 
   return {

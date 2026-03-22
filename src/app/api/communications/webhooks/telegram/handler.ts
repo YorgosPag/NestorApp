@@ -197,7 +197,7 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<Proc
       // Handle shared contact (request_contact button)
       if (webhookData.message.contact && userId) {
         const { hasActiveBookingSession, handleBookingSharedContact } = await import('./booking/booking-flow');
-        if (hasActiveBookingSession(userId)) {
+        if (await hasActiveBookingSession(userId)) {
           const contact = webhookData.message.contact;
           const response = await handleBookingSharedContact(
             userId,
@@ -216,7 +216,7 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<Proc
       // Handle text input during booking (name + phone)
       if (effectiveMessageText.trim().length > 0 && userId) {
         const { hasActiveBookingSession, handleBookingContactInput } = await import('./booking/booking-flow');
-        if (hasActiveBookingSession(userId)) {
+        if (await hasActiveBookingSession(userId)) {
           // Cancel booking if user types "Ακύρωση"
           if (effectiveMessageText.includes('Ακύρωση')) {
             return {
