@@ -267,9 +267,12 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<Proc
       // Admin message: Send immediate ack, skip generic bot response
       // The pipeline will handle the response via UC modules
       logger.info('Super admin detected - skipping bot response, pipeline will handle');
+      const adminFirstName = webhookData.message.from?.first_name;
       await sendTelegramMessage({
         chat_id: webhookData.message.chat.id,
-        text: '⏳ Επεξεργάζομαι την εντολή σας...',
+        text: adminFirstName
+          ? `⏳ Γεια σου ${adminFirstName}, επεξεργάζομαι...`
+          : '⏳ Επεξεργάζομαι την εντολή σας...',
       });
 
       // Store admin inbound message in CRM (conversations + messages collections)
