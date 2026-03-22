@@ -159,6 +159,7 @@ ${schema}
 9. Τα values σε φίλτρα ΠΑΝΤΑ ως string (ακόμα και αριθμούς: "42", booleans: "true")
 10. ΚΡΙΣΙΜΟ: ΠΑΝΤΑ κάλεσε tools πριν πεις ότι κάτι δεν δουλεύει! Μην παραιτηθείς χωρίς να δοκιμάσεις
 ΑΠΑΓΟΡΕΥΕΤΑΙ να ζητάς "περισσότερες πληροφορίες" ή "κωδικό ακινήτου" — ΨΑΞΕ ΠΡΩΤΑ!
+ΚΡΙΣΙΜΟ: Αν δεν βρεις κάτι που ζητήθηκε (π.χ. φωτογραφία έργου, αρχείο, έγγραφο), ΕΝΗΜΕΡΩΣΕ τον χρήστη ότι ΔΕΝ υπάρχει — ΜΗΝ στέλνεις κάτι άλλο αντί αυτού. Ο χρήστης πρέπει να ξέρει τι λείπει.
 - Αν ρωτήσουν "δείξε μου ακίνητο" χωρίς όνομα → φέρε ΟΛΑ τα ακίνητα και δείξε λίστα
 - Αν ρωτήσουν "πες μου για τον Γιάννη" → ψάξε contacts με firstName "Γιάννη"
 - ΠΟΤΕ μη λες "χρειάζομαι περισσότερα στοιχεία" — ΨΑΞΕ ΚΑΙ ΒΡΕΣ ΤΑ ΜΟΝΟΣ ΣΟΥ
@@ -213,6 +214,14 @@ CONCRETE ΠΑΡΑΔΕΙΓΜΑΤΑ:
 → ΒΗΜΑ 2: Για κάθε unit, πάρε _buyerContactId → firestore_get_document("contacts", _buyerContactId) → πάρε email
 → ΒΗΜΑ 3: send_email_to_contact για κάθε πελάτη
 → ΒΗΜΑ 4: firestore_write("tasks", create) για κάθε πελάτη με dueDate = σήμερα + 3 μέρες
+
+ΣΗΜΑΝΤΙΚΟ — ΠΡΟΓΡΑΜΜΑ ΑΠΟΠΛΗΡΩΜΗΣ (ΔΟΣΕΙΣ ΑΝΑ ΦΑΣΗ):
+- Οι δόσεις αποπληρωμής αποθηκεύονται σε SUBCOLLECTION: units/{unitId}/payment_plans
+- Για να τις βρεις: firestore_query("units/{unitId}/payment_plans") — αντικατέστησε {unitId} με το πραγματικό ID
+- ΠΡΩΤΑ βρες το unitId μέσω firestore_query("units") → πάρε το id
+- ΜΕΤΑ κάνε firestore_query("units/{id}/payment_plans")
+- Κάθε payment plan έχει installments[] array με: label (φάση), amount, percentage, dueDate, status
+- Παράδειγμα labels: "Κράτηση", "Θεμελίωση", "Σκελετός", "Τοιχοποιία", "Δάπεδα", "Κουφώματα", "Αποπεράτωση"
 
 ΣΗΜΑΝΤΙΚΟ: Τα nested πεδία επιστρέφονται FLAT (με prefix _):
 - _askingPrice, _finalPrice, _buyerName, _buyerContactId, _reservationDate, _saleDate

@@ -264,7 +264,10 @@ export class AgenticToolExecutor {
   ): Promise<ToolResult> {
     const collection = String(args.collection ?? '');
 
-    if (!ALLOWED_READ_COLLECTIONS.has(collection)) {
+    // Allow both top-level collections AND subcollections (e.g. units/{id}/payment_plans)
+    const isAllowed = ALLOWED_READ_COLLECTIONS.has(collection)
+      || ALLOWED_READ_COLLECTIONS.has(collection.split('/')[0]);
+    if (!isAllowed) {
       return { success: false, error: `Collection "${collection}" is not accessible` };
     }
 
@@ -325,7 +328,10 @@ export class AgenticToolExecutor {
     const collection = String(args.collection ?? '');
     const documentId = String(args.documentId ?? '');
 
-    if (!ALLOWED_READ_COLLECTIONS.has(collection)) {
+    // Allow both top-level collections AND subcollections (e.g. units/{id}/payment_plans)
+    const isAllowed = ALLOWED_READ_COLLECTIONS.has(collection)
+      || ALLOWED_READ_COLLECTIONS.has(collection.split('/')[0]);
+    if (!isAllowed) {
       return { success: false, error: `Collection "${collection}" is not accessible` };
     }
 
@@ -363,7 +369,10 @@ export class AgenticToolExecutor {
   ): Promise<ToolResult> {
     const collection = String(args.collection ?? '');
 
-    if (!ALLOWED_READ_COLLECTIONS.has(collection)) {
+    // Allow both top-level collections AND subcollections (e.g. units/{id}/payment_plans)
+    const isAllowed = ALLOWED_READ_COLLECTIONS.has(collection)
+      || ALLOWED_READ_COLLECTIONS.has(collection.split('/')[0]);
+    if (!isAllowed) {
       return { success: false, error: `Collection "${collection}" is not accessible` };
     }
 
@@ -429,7 +438,9 @@ export class AgenticToolExecutor {
       data = args.data as Record<string, unknown>;
     }
 
-    if (!ALLOWED_WRITE_COLLECTIONS.has(collection)) {
+    const isWriteAllowed = ALLOWED_WRITE_COLLECTIONS.has(collection)
+      || ALLOWED_WRITE_COLLECTIONS.has(collection.split('/')[0]);
+    if (!isWriteAllowed) {
       return { success: false, error: `Write to "${collection}" is not allowed` };
     }
 
@@ -859,7 +870,9 @@ export class AgenticToolExecutor {
       COLLECTIONS.CONSTRUCTION_PHASES,
       COLLECTIONS.CONSTRUCTION_TASKS,
     ]);
-    if (collectionsWithOptionalCompanyId.has(collection)) {
+    // Subcollections (e.g. units/{id}/payment_plans) don't have companyId — skip
+    const isSubcollection = collection.includes('/');
+    if (collectionsWithOptionalCompanyId.has(collection) || isSubcollection) {
       return filters.filter(f => f.field !== 'companyId');
     }
 
