@@ -558,6 +558,31 @@ export class AgenticToolExecutor {
 
     const htmlBody = wrapInBrandedTemplate({ contentHtml });
 
+    // Download attachments from Firebase Storage (if provided)
+    const attachmentPaths = Array.isArray(args.attachmentPaths) ? args.attachmentPaths as string[] : [];
+    const attachments: Array<{ filename: string; content: Buffer; contentType: string }> = [];
+
+    if (attachmentPaths.length > 0) {
+      const { getStorage } = await import('firebase-admin/storage');
+      const bucket = getStorage().bucket();
+
+      for (const storagePath of attachmentPaths.slice(0, 5)) { // Max 5 attachments
+        try {
+          const file = bucket.file(storagePath);
+          const [buffer] = await file.download();
+          const [metadata] = await file.getMetadata();
+          const filename = storagePath.split('/').pop() ?? 'attachment';
+          attachments.push({
+            filename,
+            content: buffer,
+            contentType: String(metadata.contentType ?? 'application/octet-stream'),
+          });
+        } catch {
+          logger.warn('Failed to download attachment', { path: storagePath });
+        }
+      }
+    }
+
     // Send email via channel reply dispatcher
     const { sendChannelReply } = await import(
       '@/services/ai-pipeline/shared/channel-reply-dispatcher'
@@ -569,6 +594,7 @@ export class AgenticToolExecutor {
       subject,
       textBody: body,
       htmlBody,
+      attachments: attachments.length > 0 ? attachments : undefined,
       requestId: ctx.requestId,
     });
 

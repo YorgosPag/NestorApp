@@ -182,12 +182,12 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
     },
   },
 
-  // ── 5. send_email_to_contact: Send email via Mailgun ──
+  // ── 5. send_email_to_contact: Send email via Mailgun (with optional attachments) ──
   {
     type: 'function',
     function: {
       name: 'send_email_to_contact',
-      description: 'Send an email to a contact. Searches for the contact by name first, then sends the email to their registered email address.',
+      description: 'Send an email to a contact. Searches for the contact by name, then sends email to their registered address. Can include file attachments from Firebase Storage.',
       parameters: {
         type: 'object',
         properties: {
@@ -203,8 +203,13 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
             type: 'string',
             description: 'Email body text',
           },
+          attachmentPaths: {
+            type: ['array', 'null'],
+            items: { type: 'string' },
+            description: 'Firebase Storage paths to attach (e.g. ["contacts/photos/file.jpg", "documents/report.pdf"]). Use null if no attachments.',
+          },
         },
-        required: ['contactName', 'subject', 'body'],
+        required: ['contactName', 'subject', 'body', 'attachmentPaths'],
         additionalProperties: false,
       },
       strict: true,

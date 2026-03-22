@@ -52,6 +52,8 @@ export interface ChannelReplyParams {
   textBody: string;
   /** HTML body (email only — branded template) */
   htmlBody?: string;
+  /** File attachments (email only) */
+  attachments?: Array<{ filename: string; content: Buffer | Blob; contentType: string }>;
   /** Pipeline request ID for correlation */
   requestId: string;
 }
@@ -195,6 +197,7 @@ async function dispatchEmail(params: ChannelReplyParams): Promise<ChannelReplyRe
     subject: subject ?? 'Απάντηση',
     textBody,
     htmlBody,
+    attachments: params.attachments,
   });
 
   return {

@@ -30,6 +30,25 @@ import { getErrorMessage } from '@/lib/error-utils';
 const logger = createModuleLogger('TelegramHandler');
 
 // ============================================================================
+// DEDUPLICATION: Prevent Telegram retry from processing same message twice
+// Telegram retries webhooks if response takes >15s — this guard ignores dupes.
+// ============================================================================
+
+const PROCESSED_UPDATES = new Set<number>();
+const MAX_PROCESSED_SIZE = 500;
+
+function isDuplicateUpdate(updateId: number): boolean {
+  if (PROCESSED_UPDATES.has(updateId)) return true;
+  PROCESSED_UPDATES.add(updateId);
+  // Prune old entries to prevent memory leak
+  if (PROCESSED_UPDATES.size > MAX_PROCESSED_SIZE) {
+    const oldest = [...PROCESSED_UPDATES].slice(0, 100);
+    oldest.forEach(id => PROCESSED_UPDATES.delete(id));
+  }
+  return false;
+}
+
+// ============================================================================
 // SECURITY: SECRET TOKEN VALIDATION (B5 - Enterprise Policy Documentation)
 // ============================================================================
 //
@@ -418,6 +437,14 @@ export async function handlePOST(request: NextRequest): Promise<NextResponse> {
 
     // 3. Parse and process webhook data
     const webhookData = await request.json();
+
+    // 3a. DEDUPLICATION: Telegram retries if response >15s — ignore duplicates
+    const updateId = webhookData.update_id as number | undefined;
+    if (updateId && isDuplicateUpdate(updateId)) {
+      logger.info('Duplicate update_id ignored', { updateId });
+      return NextResponse.json({ ok: true, status: 'duplicate_ignored' });
+    }
+
     logger.info('Processing webhook data');
 
     const updateResult = await processTelegramUpdate(webhookData);
