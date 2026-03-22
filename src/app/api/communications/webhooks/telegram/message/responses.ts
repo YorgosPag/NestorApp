@@ -9,6 +9,7 @@
  */
 
 import type { TelegramSendPayload } from '../telegram/types';
+import type { ResolvedContact } from '@/services/contact-recognition/contact-linker';
 import {
   getTemplateResolver,
   type TelegramLocale
@@ -366,5 +367,126 @@ export function createTooManyResultsResponse(
     chat_id: chatId,
     text: tooManyText,
     parse_mode: 'HTML'
+  };
+}
+
+// ============================================================================
+// PERSONA-AWARE RESPONSE
+// ============================================================================
+
+/** Persona menu config — SSoT for per-role buttons */
+const PERSONA_MENUS: Record<string, {
+  greeting: string;
+  buttons: Array<Array<{ text: string; callback_data: string }>>;
+}> = {
+  client: {
+    greeting: 'Πώς μπορώ να σε βοηθήσω σήμερα;',
+    buttons: [
+      [
+        { text: '🏠 Τα ακίνητά μου', callback_data: 'property_search' },
+        { text: '💰 Πληρωμές', callback_data: 'my_payments' },
+      ],
+      [
+        { text: '📅 Ραντεβού', callback_data: 'my_appointments' },
+        { text: '📞 Επικοινωνία', callback_data: 'contact_agent' },
+      ],
+    ],
+  },
+  engineer: {
+    greeting: 'Πώς μπορώ να σε βοηθήσω;',
+    buttons: [
+      [
+        { text: '🏗️ Φάσεις κατασκευής', callback_data: 'construction_phases' },
+        { text: '📐 Μετρήσεις', callback_data: 'measurements' },
+      ],
+      [
+        { text: '📁 Αρχεία', callback_data: 'project_files' },
+        { text: '📞 Επικοινωνία', callback_data: 'contact_agent' },
+      ],
+    ],
+  },
+  lawyer: {
+    greeting: 'Πώς μπορώ να σε εξυπηρετήσω;',
+    buttons: [
+      [
+        { text: '📄 Έγγραφα', callback_data: 'legal_documents' },
+        { text: '📋 Συμβόλαια', callback_data: 'contracts' },
+      ],
+      [
+        { text: '📞 Επικοινωνία', callback_data: 'contact_agent' },
+      ],
+    ],
+  },
+  notary: {
+    greeting: 'Πώς μπορώ να σε εξυπηρετήσω;',
+    buttons: [
+      [
+        { text: '📄 Έγγραφα', callback_data: 'legal_documents' },
+        { text: '📋 Συμβόλαια', callback_data: 'contracts' },
+      ],
+      [
+        { text: '📞 Επικοινωνία', callback_data: 'contact_agent' },
+      ],
+    ],
+  },
+  supplier: {
+    greeting: 'Πώς μπορώ να σε βοηθήσω;',
+    buttons: [
+      [
+        { text: '📦 Παραγγελίες', callback_data: 'orders' },
+        { text: '🧾 Τιμολόγια', callback_data: 'invoices' },
+      ],
+      [
+        { text: '📞 Επικοινωνία', callback_data: 'contact_agent' },
+      ],
+    ],
+  },
+  real_estate_agent: {
+    greeting: 'Πώς μπορώ να σε βοηθήσω;',
+    buttons: [
+      [
+        { text: '🏠 Διαθέσιμα ακίνητα', callback_data: 'property_search' },
+        { text: '💰 Προμήθειες', callback_data: 'commissions' },
+      ],
+      [
+        { text: '📞 Επικοινωνία', callback_data: 'contact_agent' },
+      ],
+    ],
+  },
+};
+
+/**
+ * Create persona-aware response for known contacts.
+ * Uses first name + informal tone (ενικός) for recognized contacts.
+ */
+export function createPersonaAwareResponse(
+  chatId: string | number,
+  contact: ResolvedContact,
+  _messageText: string,
+): TelegramSendPayload {
+  const firstName = contact.firstName || contact.displayName;
+  const persona = contact.primaryPersona;
+
+  // Get menu config (fallback to client for unknown personas)
+  const menu = (persona && PERSONA_MENUS[persona]) ?? PERSONA_MENUS.client ?? {
+    greeting: 'Πώς μπορώ να σε βοηθήσω;',
+    buttons: [
+      [
+        { text: '🔍 Αναζήτηση', callback_data: 'property_search' },
+        { text: '📞 Επικοινωνία', callback_data: 'contact_agent' },
+      ],
+    ],
+  };
+
+  const text = `👋 Γεια σου <b>${firstName}</b>!\n\n${menu.greeting}`;
+
+  return {
+    method: 'sendMessage',
+    chat_id: chatId,
+    text,
+    parse_mode: 'HTML',
+    reply_markup: {
+      inline_keyboard: menu.buttons,
+    },
   };
 }

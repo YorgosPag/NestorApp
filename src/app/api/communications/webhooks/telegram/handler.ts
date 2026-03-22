@@ -304,8 +304,38 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<Proc
         }
       }
     } else {
-      logger.info('Processing regular message');
-      telegramResponse = await processMessage(webhookData.message, effectiveMessageText);
+      // ── Contact Recognition — persona-aware responses ──
+      const senderId = String(webhookData.message.from?.id ?? '');
+      const senderName = [webhookData.message.from?.first_name, webhookData.message.from?.last_name]
+        .filter(Boolean).join(' ');
+
+      let resolvedContact: import('@/services/contact-recognition/contact-linker').ResolvedContact | null = null;
+      if (senderId && !isBotCommand) {
+        try {
+          const { resolveContactFromTelegram } = await import('@/services/contact-recognition/contact-linker');
+          resolvedContact = await resolveContactFromTelegram(senderId, senderName);
+        } catch {
+          // Non-fatal
+        }
+      }
+
+      if (resolvedContact) {
+        logger.info('Known contact detected', {
+          contactId: resolvedContact.contactId,
+          name: resolvedContact.displayName,
+          personas: resolvedContact.activePersonas,
+        });
+        // Persona-aware response
+        const { createPersonaAwareResponse } = await import('./message/responses');
+        telegramResponse = createPersonaAwareResponse(
+          webhookData.message.chat.id,
+          resolvedContact,
+          effectiveMessageText,
+        );
+      } else {
+        logger.info('Processing regular message (unknown contact)');
+        telegramResponse = await processMessage(webhookData.message, effectiveMessageText);
+      }
     }
 
     // ── ADR-132: Feed to AI Pipeline ──
