@@ -67,7 +67,7 @@ export async function searchProperties(
         q = q.where(FIELDS.TYPE, '==', criteria.type);
       }
 
-      q = q.orderBy('price').limit(10);
+      q = q.limit(10);
 
       const querySnapshot = await getDocs(q);
 

@@ -49,7 +49,7 @@ const INITIAL_ADMINS = [
         chatId: '5618410820',
       },
       email: {
-        addresses: ['gpagonis@layera.gr'],
+        addresses: ['georgios.pagonis@gmail.com'],
       },
     },
     isActive: true,

@@ -8,7 +8,15 @@
  * @created 2026-01-13
  */
 
-import { PROPERTY_TYPE_LABELS } from '@/constants/property-statuses-enterprise';
+// 🏢 Direct Greek labels for Telegram buttons (i18n keys don't resolve in API routes)
+const TELEGRAM_LABELS: Record<string, string> = {
+  apartment: 'Διαμέρισμα',
+  studio: 'Στούντιο',
+  maisonette: 'Μεζονέτα',
+  shop: 'Κατάστημα',
+  office: 'Γραφείο',
+  storage: 'Αποθήκη',
+};
 
 // ============================================================================
 // TYPES
@@ -51,7 +59,7 @@ export interface KeywordCatalogEntry {
 export const TELEGRAM_TYPE_CATALOG: TypeCatalogEntry[] = [
   {
     canonical: 'apartment',
-    labelEl: PROPERTY_TYPE_LABELS.apartment,
+    labelEl: TELEGRAM_LABELS.apartment,
     labelEn: 'Apartment',
     synonyms: [
       'διαμέρισμα', 'διαμερίσματα', 'διαμερισμα', 'διαμερισματα',
@@ -64,7 +72,7 @@ export const TELEGRAM_TYPE_CATALOG: TypeCatalogEntry[] = [
   },
   {
     canonical: 'studio',
-    labelEl: PROPERTY_TYPE_LABELS.studio,
+    labelEl: TELEGRAM_LABELS.studio,
     labelEn: 'Studio',
     synonyms: [
       'στούντιο', 'στουντιο', 'studio', 'studios',
@@ -77,7 +85,7 @@ export const TELEGRAM_TYPE_CATALOG: TypeCatalogEntry[] = [
   },
   {
     canonical: 'maisonette',
-    labelEl: PROPERTY_TYPE_LABELS.maisonette,
+    labelEl: TELEGRAM_LABELS.maisonette,
     labelEn: 'Maisonette',
     synonyms: [
       'μεζονέτα', 'μεζονετα', 'μεζονέτες', 'μεζονετες',
@@ -90,7 +98,7 @@ export const TELEGRAM_TYPE_CATALOG: TypeCatalogEntry[] = [
   },
   {
     canonical: 'shop',
-    labelEl: PROPERTY_TYPE_LABELS.shop,
+    labelEl: TELEGRAM_LABELS.shop,
     labelEn: 'Shop',
     synonyms: [
       'κατάστημα', 'καταστημα', 'καταστήματα', 'καταστηματα',
@@ -104,7 +112,7 @@ export const TELEGRAM_TYPE_CATALOG: TypeCatalogEntry[] = [
   },
   {
     canonical: 'office',
-    labelEl: PROPERTY_TYPE_LABELS.office,
+    labelEl: TELEGRAM_LABELS.office,
     labelEn: 'Office',
     synonyms: [
       'γραφείο', 'γραφειο', 'γραφεία', 'γραφεια',
@@ -117,7 +125,7 @@ export const TELEGRAM_TYPE_CATALOG: TypeCatalogEntry[] = [
   },
   {
     canonical: 'storage',
-    labelEl: PROPERTY_TYPE_LABELS.storage,
+    labelEl: TELEGRAM_LABELS.storage,
     labelEn: 'Storage',
     synonyms: [
       'αποθήκη', 'αποθηκη', 'αποθήκες', 'αποθηκες',

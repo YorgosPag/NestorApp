@@ -37,7 +37,7 @@ export default function TermsOfServicePage() {
 
       <h2>6. Contact</h2>
       <p>
-        For questions about these terms, contact us at: <strong>gpagonis@layera.gr</strong>
+        For questions about these terms, contact us at: <strong>georgios.pagonis@gmail.com</strong>
       </p>
     </main>
   );

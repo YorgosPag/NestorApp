@@ -12,7 +12,7 @@ export default function DataDeletionPage() {
 
       <ol>
         <li>
-          Send an email to <strong>gpagonis@layera.gr</strong> with the subject
+          Send an email to <strong>georgios.pagonis@gmail.com</strong> with the subject
           line &quot;Data Deletion Request&quot;
         </li>
         <li>
@@ -33,7 +33,7 @@ export default function DataDeletionPage() {
 
       <h2>Contact</h2>
       <p>
-        For questions about data deletion, contact us at: <strong>gpagonis@layera.gr</strong>
+        For questions about data deletion, contact us at: <strong>georgios.pagonis@gmail.com</strong>
       </p>
     </main>
   );

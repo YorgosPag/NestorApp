@@ -1,8 +1,8 @@
 {
   "start": {
-    "welcome": "Welcome to Layera Bot!",
-    "description": "I'm here to help you find the ideal property.",
-    "callToAction": "Press Search to start or Contact to call us."
+    "welcome": "Welcome to Nestor App!",
+    "description": "I'm your AI assistant for construction project and property management.",
+    "callToAction": "You can ask me questions, request reports, or give commands."
   },
   "help": {
     "title": "Available commands:",

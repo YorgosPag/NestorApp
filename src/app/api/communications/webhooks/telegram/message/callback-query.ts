@@ -58,14 +58,20 @@ export async function handleCallbackQuery(
     case 'property_stats':
       return await createStatsResponse(chatId);
 
+    case 'search_apartment':
     case 'search_apartments':
-      return await handleEnhancedPropertySearch('\u03B4\u03B9\u03B1\u03BC\u03B5\u03C1\u03AF\u03C3\u03BC\u03B1\u03C4\u03B1 \u03B4\u03B9\u03B1\u03B8\u03AD\u03C3\u03B9\u03BC\u03B1', chatId, userId);
+      return await handleEnhancedPropertySearch('διαμερίσματα διαθέσιμα', chatId, userId);
 
+    case 'search_studio':
+      return await handleEnhancedPropertySearch('στούντιο διαθέσιμα', chatId, userId);
+
+    case 'search_maisonette':
     case 'search_maisonettes':
-      return await handleEnhancedPropertySearch('\u03BC\u03B5\u03B6\u03BF\u03BD\u03AD\u03C4\u03B5\u03C2 \u03B4\u03B9\u03B1\u03B8\u03AD\u03C3\u03B9\u03BC\u03B5\u03C2', chatId, userId);
+      return await handleEnhancedPropertySearch('μεζονέτες διαθέσιμες', chatId, userId);
 
+    case 'search_shop':
     case 'search_stores':
-      return await handleEnhancedPropertySearch('\u03BA\u03B1\u03C4\u03B1\u03C3\u03C4\u03AE\u03BC\u03B1\u03C4\u03B1 \u03B4\u03B9\u03B1\u03B8\u03AD\u03C3\u03B9\u03BC\u03B1', chatId, userId);
+      return await handleEnhancedPropertySearch('καταστήματα διαθέσιμα', chatId, userId);
 
     case 'contact_agent':
       return createContactResponse(chatId);

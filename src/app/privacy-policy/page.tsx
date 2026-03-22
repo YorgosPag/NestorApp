@@ -41,12 +41,12 @@ export default function PrivacyPolicyPage() {
       <h2>6. Your Rights</h2>
       <p>
         Under GDPR, you have the right to access, correct, or delete your personal data.
-        Contact us at <strong>gpagonis@layera.gr</strong> to exercise your rights.
+        Contact us at <strong>georgios.pagonis@gmail.com</strong> to exercise your rights.
       </p>
 
       <h2>7. Contact</h2>
       <p>
-        For privacy-related inquiries, contact us at: <strong>gpagonis@layera.gr</strong>
+        For privacy-related inquiries, contact us at: <strong>georgios.pagonis@gmail.com</strong>
       </p>
     </main>
   );

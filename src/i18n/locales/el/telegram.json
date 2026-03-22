@@ -1,8 +1,8 @@
 {
   "start": {
-    "welcome": "Καλώς ήρθατε στο Layera Bot!",
-    "description": "Είμαι εδώ για να σας βοηθήσω να βρείτε το ιδανικό ακίνητο.",
-    "callToAction": "Πατήστε Αναζήτηση για να ξεκινήσετε ή Επικοινωνία για να μας καλέσετε."
+    "welcome": "Καλώς ήρθατε στο Nestor App!",
+    "description": "Είμαι ο AI βοηθός σας για τη διαχείριση κατασκευαστικών έργων και ακινήτων.",
+    "callToAction": "Μπορείτε να μου κάνετε ερωτήσεις, να ζητήσετε αναφορές, ή να δώσετε εντολές."
   },
   "help": {
     "title": "Διαθέσιμες εντολές:",
@@ -28,10 +28,10 @@
       "description": "Επιλέξτε κατηγορία ή πληκτρολογήστε την αναζήτησή σας."
     },
     "results": {
-      "found": "Βρέθηκαν {count} ακίνητα",
+      "found": "Βρέθηκαν {{count}} ακίνητα",
       "foundOne": "Βρέθηκε 1 ακίνητο",
-      "showing": "Εμφάνιση {shown} από {total}",
-      "criteria": "Κριτήρια: {criteria}"
+      "showing": "Εμφάνιση {{shown}} από {{total}}",
+      "criteria": "Κριτήρια: {{criteria}}"
     },
     "noResults": {
       "title": "Δεν βρέθηκαν ακίνητα",
@@ -42,25 +42,25 @@
       "suggestion": "Παρακαλώ διευκρινίστε τον τύπο ακινήτου, την περιοχή ή τον προϋπολογισμό σας."
     },
     "tooManyResults": {
-      "title": "Βρέθηκαν πολλά αποτελέσματα ({count})",
+      "title": "Βρέθηκαν πολλά αποτελέσματα ({{count}})",
       "suggestion": "Προσθέστε περισσότερα φίλτρα για πιο ακριβή αποτελέσματα."
     }
   },
   "stats": {
     "title": "Στατιστικά Ακινήτων",
-    "total": "Σύνολο ακινήτων: {count}",
-    "available": "Διαθέσιμα: {count}",
-    "sold": "Πωλημένα: {count}",
-    "reserved": "Δεσμευμένα: {count}",
-    "averagePrice": "Μέση τιμή: {price}",
+    "total": "Σύνολο ακινήτων: {{count}}",
+    "available": "Διαθέσιμα: {{count}}",
+    "sold": "Πωλημένα: {{count}}",
+    "reserved": "Δεσμευμένα: {{count}}",
+    "averagePrice": "Μέση τιμή: {{price}}",
     "noData": "Δεν υπάρχουν διαθέσιμα στατιστικά"
   },
   "contact": {
     "title": "Επικοινωνία",
-    "company": "{companyName}",
-    "phone": "Τηλέφωνο: {phone}",
-    "email": "Email: {email}",
-    "website": "Website: {website}",
+    "company": "{{companyName}}",
+    "phone": "Τηλέφωνο: {{phone}}",
+    "email": "Email: {{email}}",
+    "website": "Website: {{website}}",
     "callToAction": "Θα χαρούμε να σας εξυπηρετήσουμε!"
   },
   "errors": {
