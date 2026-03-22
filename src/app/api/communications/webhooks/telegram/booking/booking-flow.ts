@@ -77,7 +77,8 @@ export function decodeBookingCallback(raw: string): BookingCallbackData | null {
 
 /** Check if callback data is a booking callback */
 export function isBookingCallback(data: string): boolean {
-  return data.startsWith('bkd') || data.startsWith('bkt') || data.startsWith('bkc') || data.startsWith('book_');
+  return data.startsWith('bkd') || data.startsWith('bkt') || data.startsWith('bkc')
+    || data.startsWith('book_') || data.startsWith('appt_');
 }
 
 // ============================================================================
@@ -139,6 +140,11 @@ export async function handleBookingCallback(
   if (data.startsWith('book_') && !data.startsWith('bookdate_') && !data.startsWith('booktime_')) {
     const unitId = data.replace('book_', '');
     return showDatePicker(unitId, chatId);
+  }
+
+  // Admin appointment actions (approve/reject/reschedule)
+  if (data.startsWith('appt_')) {
+    return handleAdminAppointmentAction(data, chatId);
   }
 
   // New type-safe format
@@ -284,8 +290,8 @@ async function confirmAndSave(
       appointmentId, unitId: resolvedId, date, time, userId,
     });
 
-    // Notify admin (fire-and-forget)
-    notifyAdmin(unitName, dateLabel, time, userId).catch(() => { /* non-fatal */ });
+    // Notify admin with action buttons (fire-and-forget)
+    notifyAdmin(appointmentId, unitName, dateLabel, time, userId, chatId).catch(() => { /* non-fatal */ });
 
     return {
       method: 'sendMessage',
@@ -327,21 +333,187 @@ async function confirmAndSave(
 // ADMIN NOTIFICATION
 // ============================================================================
 
-async function notifyAdmin(unitName: string, dateLabel: string, time: string, userId: string): Promise<void> {
+async function notifyAdmin(
+  appointmentId: string,
+  unitName: string,
+  dateLabel: string,
+  time: string,
+  userId: string,
+  customerChatId: number | string,
+): Promise<void> {
   const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID ?? '5618410820';
 
   const { sendTelegramMessage } = await import('../telegram/client');
   await sendTelegramMessage({
     chat_id: Number(adminChatId),
     text: [
-      '📅 <b>Νέο ραντεβού!</b>',
+      '📅 <b>Νέο αίτημα ραντεβού!</b>',
       '',
       `🏠 ${unitName}`,
       `📅 ${dateLabel} στις ${time}`,
       `👤 Telegram User #${userId}`,
       '',
-      'Ελέγξτε το στο CRM Calendar.',
+      'Τι θέλετε να κάνετε;',
     ].join('\n'),
     parse_mode: 'HTML',
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: '✅ Επιβεβαίωση', callback_data: `appt_approve_${appointmentId}_${customerChatId}` },
+          { text: '❌ Ακύρωση', callback_data: `appt_reject_${appointmentId}_${customerChatId}` },
+        ],
+        [
+          { text: '🔄 Πρόταση αλλαγής', callback_data: `appt_reschedule_${appointmentId}_${customerChatId}` },
+        ],
+      ],
+    },
   });
+}
+
+// ============================================================================
+// ADMIN APPOINTMENT ACTIONS (approve / reject / reschedule)
+// ============================================================================
+
+/**
+ * Parse admin callback: appt_{action}_{appointmentId}_{customerChatId}
+ */
+function parseAdminCallback(data: string): { action: string; appointmentId: string; customerChatId: string } | null {
+  const match = data.match(/^appt_(approve|reject|reschedule)_([^_]+)_(.+)$/);
+  if (!match) return null;
+  return { action: match[1], appointmentId: match[2], customerChatId: match[3] };
+}
+
+/**
+ * Handle admin appointment action — approve, reject, or reschedule
+ */
+async function handleAdminAppointmentAction(
+  data: string,
+  adminChatId: number | string,
+): Promise<TelegramSendPayload | null> {
+  const parsed = parseAdminCallback(data);
+  if (!parsed) return null;
+
+  const { action, appointmentId, customerChatId } = parsed;
+  const db = getAdminFirestore();
+  const appointmentRef = db.collection(COLLECTIONS.APPOINTMENTS).doc(appointmentId);
+  const appointmentDoc = await appointmentRef.get();
+
+  if (!appointmentDoc.exists) {
+    return {
+      method: 'sendMessage',
+      chat_id: adminChatId,
+      text: '❌ Το ραντεβού δεν βρέθηκε.',
+    };
+  }
+
+  const apptData = appointmentDoc.data();
+  const unitName = apptData?.unitName ?? 'Ακίνητο';
+  const requestedDate = apptData?.appointment?.requestedDate ?? '';
+  const requestedTime = apptData?.appointment?.requestedTime ?? '';
+  const dateLabel = requestedDate ? formatDateGreek(requestedDate) : '';
+
+  const { sendTelegramMessage } = await import('../telegram/client');
+
+  switch (action) {
+    case 'approve': {
+      await appointmentRef.update({
+        status: 'approved',
+        'appointment.confirmedDate': requestedDate,
+        'appointment.confirmedTime': requestedTime,
+        approvedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+
+      // Notify customer
+      await sendTelegramMessage({
+        chat_id: Number(customerChatId),
+        text: [
+          '✅ <b>Το ραντεβού σας επιβεβαιώθηκε!</b>',
+          '',
+          `🏠 ${unitName}`,
+          `📅 ${dateLabel} στις ${requestedTime}`,
+          '',
+          'Σας περιμένουμε! 😊',
+        ].join('\n'),
+        parse_mode: 'HTML',
+      });
+
+      return {
+        method: 'sendMessage',
+        chat_id: adminChatId,
+        text: `✅ Ραντεβού <b>επιβεβαιώθηκε</b> — ${unitName}, ${dateLabel} ${requestedTime}.\nΟ πελάτης ειδοποιήθηκε.`,
+        parse_mode: 'HTML',
+      };
+    }
+
+    case 'reject': {
+      await appointmentRef.update({
+        status: 'rejected',
+        updatedAt: new Date().toISOString(),
+      });
+
+      // Notify customer
+      await sendTelegramMessage({
+        chat_id: Number(customerChatId),
+        text: [
+          '😔 <b>Το ραντεβού σας δεν μπόρεσε να επιβεβαιωθεί.</b>',
+          '',
+          `🏠 ${unitName}`,
+          `📅 ${dateLabel} στις ${requestedTime}`,
+          '',
+          'Παρακαλώ επιλέξτε νέα ημερομηνία ή επικοινωνήστε μαζί μας.',
+        ].join('\n'),
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '📅 Νέο ραντεβού', callback_data: 'new_search' }],
+            [{ text: '📞 Επικοινωνία', callback_data: 'contact_agent' }],
+          ],
+        },
+      });
+
+      return {
+        method: 'sendMessage',
+        chat_id: adminChatId,
+        text: `❌ Ραντεβού <b>ακυρώθηκε</b> — ${unitName}, ${dateLabel} ${requestedTime}.\nΟ πελάτης ειδοποιήθηκε.`,
+        parse_mode: 'HTML',
+      };
+    }
+
+    case 'reschedule': {
+      await appointmentRef.update({
+        status: 'rescheduled',
+        updatedAt: new Date().toISOString(),
+      });
+
+      // Notify customer to rebook
+      await sendTelegramMessage({
+        chat_id: Number(customerChatId),
+        text: [
+          '🔄 <b>Αλλαγή ραντεβού</b>',
+          '',
+          `Η ώρα ${requestedTime} στις ${dateLabel} δεν είναι διαθέσιμη για το ${unitName}.`,
+          '',
+          'Παρακαλώ επιλέξτε νέα ημερομηνία:',
+        ].join('\n'),
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '📅 Επιλογή νέας ημερομηνίας', callback_data: `book_${apptData?.unitId ?? ''}` }],
+            [{ text: '📞 Επικοινωνία', callback_data: 'contact_agent' }],
+          ],
+        },
+      });
+
+      return {
+        method: 'sendMessage',
+        chat_id: adminChatId,
+        text: `🔄 Ο πελάτης ειδοποιήθηκε να επιλέξει νέα ημερομηνία για ${unitName}.`,
+        parse_mode: 'HTML',
+      };
+    }
+
+    default:
+      return null;
+  }
 }
