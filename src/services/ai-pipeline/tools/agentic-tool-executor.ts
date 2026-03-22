@@ -25,6 +25,8 @@ import { getCollectionSchemaInfo } from '@/config/firestore-schema-map';
 import { getToolAnalyticsService } from '../tool-analytics-service';
 // 🧠 Query Strategy Memory — learns from FAILED_PRECONDITION errors
 import { recordQueryStrategy } from '../query-strategy-service';
+// 🏢 SSoT: Greek↔Latin transliteration from greek-nlp
+import { greekToLatin } from '../shared/greek-nlp';
 import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -513,7 +515,7 @@ export class AgenticToolExecutor {
     const db = getAdminFirestore();
     const searchWords = contactName.toLowerCase().split(/\s+/).filter(Boolean);
     // Generate Latin transliterations of Greek search words
-    const latinWords = searchWords.map(w => this.greekToLatin(w)).filter(Boolean);
+    const latinWords = searchWords.map(w => greekToLatin(w)).filter(Boolean);
     // Generate short stems (first 3-4 chars) for fuzzy matching
     // "Γιώργου" → stem "γιωργ" which matches "γεωργ" less well, but
     // Latin "giorg" matches "georgi" via substring
@@ -536,7 +538,7 @@ export class AgenticToolExecutor {
       ].filter(Boolean).map(v => String(v).toLowerCase());
       const searchableText = nameFields.join(' ');
       // Also add Latin version of stored names for reverse matching
-      const latinText = nameFields.map(n => this.greekToLatin(n)).filter(Boolean).join(' ');
+      const latinText = nameFields.map(n => greekToLatin(n)).filter(Boolean).join(' ');
       const fullText = `${searchableText} ${latinText}`;
 
       // Any search term (Greek, Latin, or stem) must match in full text
@@ -688,7 +690,7 @@ export class AgenticToolExecutor {
     // 1. Find contact (reuse fuzzy Greek↔Latin matching)
     const db = getAdminFirestore();
     const searchWords = contactName.toLowerCase().split(/\s+/).filter(Boolean);
-    const latinWords = searchWords.map(w => this.greekToLatin(w)).filter(Boolean);
+    const latinWords = searchWords.map(w => greekToLatin(w)).filter(Boolean);
     const stems = [...searchWords, ...latinWords]
       .filter(w => w.length >= 3)
       .map(w => w.substring(0, Math.min(w.length, 4)));
@@ -705,7 +707,7 @@ export class AgenticToolExecutor {
       const nameFields = [data.displayName, data.firstName, data.lastName, data.name]
         .filter(Boolean).map(v => String(v).toLowerCase());
       const fullText = nameFields.join(' ');
-      const latinText = nameFields.map(n => this.greekToLatin(n)).filter(Boolean).join(' ');
+      const latinText = nameFields.map(n => greekToLatin(n)).filter(Boolean).join(' ');
       return allSearchTerms.some(term => `${fullText} ${latinText}`.includes(term));
     });
 
@@ -790,7 +792,7 @@ export class AgenticToolExecutor {
     const searchTerm = String(args.searchTerm ?? '').toLowerCase();
     // Split into words and generate Latin transliterations + stems per word
     const words = searchTerm.split(/\s+/).filter(w => w.length >= 2);
-    const latinWords = words.map(w => this.greekToLatin(w)).filter(Boolean);
+    const latinWords = words.map(w => greekToLatin(w)).filter(Boolean);
     const stems = [...words, ...latinWords]
       .filter(w => w.length >= 3)
       .map(w => w.substring(0, Math.min(w.length, 4)));
@@ -829,7 +831,7 @@ export class AgenticToolExecutor {
             const val = data[field];
             if (typeof val !== 'string') return false;
             const valLower = val.toLowerCase();
-            const valLatin = this.greekToLatin(valLower);
+            const valLatin = greekToLatin(valLower);
             const fullVal = valLatin ? `${valLower} ${valLatin}` : valLower;
             // Match any search term against original + transliterated value
             return allSearchTerms.some(term => fullVal.includes(term));
@@ -1094,23 +1096,6 @@ export class AgenticToolExecutor {
     }
 
     return result;
-  }
-
-  /**
-   * Transliterate Greek text to Latin characters for name matching.
-   * Handles common Greek→Latin mappings (Γεώργιος → georgios, Παγώνης → pagonis).
-   */
-  private greekToLatin(text: string): string {
-    const map: Record<string, string> = {
-      'α': 'a', 'ά': 'a', 'β': 'v', 'γ': 'g', 'δ': 'd', 'ε': 'e', 'έ': 'e',
-      'ζ': 'z', 'η': 'i', 'ή': 'i', 'θ': 'th', 'ι': 'i', 'ί': 'i', 'ϊ': 'i',
-      'κ': 'k', 'λ': 'l', 'μ': 'm', 'ν': 'n', 'ξ': 'x', 'ο': 'o', 'ό': 'o',
-      'π': 'p', 'ρ': 'r', 'σ': 's', 'ς': 's', 'τ': 't', 'υ': 'y', 'ύ': 'y',
-      'φ': 'f', 'χ': 'ch', 'ψ': 'ps', 'ω': 'o', 'ώ': 'o',
-    };
-    // Only transliterate if text contains Greek characters
-    if (!/[α-ωά-ώ]/i.test(text)) return '';
-    return text.split('').map(c => map[c] ?? c).join('');
   }
 
   /**

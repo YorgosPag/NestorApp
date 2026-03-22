@@ -195,6 +195,23 @@ export function containsGreek(text: string): boolean {
  * @param text - Greeklish text (e.g., "ktirio", "pliromi")
  * @returns Greek transliteration (e.g., "\u03BA\u03C4\u03B9\u03C1\u03B9\u03BF", "\u03C0\u03BB\u03B9\u03C1\u03BF\u03BC\u03B9")
  */
+/**
+ * Greek → Latin transliteration for name matching.
+ * SSoT: Used by contact-linker, agentic-tool-executor, search tools.
+ * Returns empty string if input has no Greek characters.
+ */
+export function greekToLatin(text: string): string {
+  const map: Record<string, string> = {
+    'α': 'a', 'ά': 'a', 'β': 'v', 'γ': 'g', 'δ': 'd', 'ε': 'e', 'έ': 'e',
+    'ζ': 'z', 'η': 'i', 'ή': 'i', 'θ': 'th', 'ι': 'i', 'ί': 'i', 'ϊ': 'i',
+    'κ': 'k', 'λ': 'l', 'μ': 'm', 'ν': 'n', 'ξ': 'x', 'ο': 'o', 'ό': 'o',
+    'π': 'p', 'ρ': 'r', 'σ': 's', 'ς': 's', 'τ': 't', 'υ': 'y', 'ύ': 'y',
+    'φ': 'f', 'χ': 'ch', 'ψ': 'ps', 'ω': 'o', 'ώ': 'o',
+  };
+  if (!containsGreek(text)) return '';
+  return text.split('').map(c => map[c] ?? c).join('');
+}
+
 export function transliterateGreeklish(text: string): string {
   if (containsGreek(text)) return text;
 

@@ -20,6 +20,7 @@ import 'server-only';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { PersonaType } from '@/types/contacts/personas';
+import { greekToLatin } from '@/services/ai-pipeline/shared/greek-nlp';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ContactLinker');
@@ -185,19 +186,6 @@ export async function resolveContactFromTelegram(
 // ============================================================================
 // HEURISTIC MATCHING
 // ============================================================================
-
-/** Greek→Latin transliteration for name matching */
-function greekToLatin(text: string): string {
-  const map: Record<string, string> = {
-    'α': 'a', 'ά': 'a', 'β': 'v', 'γ': 'g', 'δ': 'd', 'ε': 'e', 'έ': 'e',
-    'ζ': 'z', 'η': 'i', 'ή': 'i', 'θ': 'th', 'ι': 'i', 'ί': 'i',
-    'κ': 'k', 'λ': 'l', 'μ': 'm', 'ν': 'n', 'ξ': 'x', 'ο': 'o', 'ό': 'o',
-    'π': 'p', 'ρ': 'r', 'σ': 's', 'ς': 's', 'τ': 't', 'υ': 'y', 'ύ': 'y',
-    'φ': 'f', 'χ': 'ch', 'ψ': 'ps', 'ω': 'o', 'ώ': 'o',
-  };
-  if (!/[α-ωά-ώ]/i.test(text)) return '';
-  return text.split('').map(c => map[c] ?? c).join('');
-}
 
 /**
  * Find contact by display name (fuzzy matching).
