@@ -161,7 +161,7 @@ export async function handleBookingSharedContact(
     phoneNumber,
   );
 
-  bookingSessions.delete(userId);
+  await deleteSession(userId);
   return result;
 }
 
