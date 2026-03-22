@@ -241,7 +241,57 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
     },
   },
 
-  // ── 7. get_collection_schema: Get schema info about a collection ──
+  // ── 7. send_messenger_message: Send Messenger message to contact ──
+  {
+    type: 'function',
+    function: {
+      name: 'send_messenger_message',
+      description: 'Send a Facebook Messenger message to a contact. Searches for the contact by name, finds their Messenger PSID from external_identities, and sends the message. The contact must have previously messaged the Facebook Page.',
+      parameters: {
+        type: 'object',
+        properties: {
+          contactName: {
+            type: 'string',
+            description: 'Contact name to search for',
+          },
+          text: {
+            type: 'string',
+            description: 'Message text to send',
+          },
+        },
+        required: ['contactName', 'text'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  // ── 8. send_instagram_message: Send Instagram DM to contact ──
+  {
+    type: 'function',
+    function: {
+      name: 'send_instagram_message',
+      description: 'Send an Instagram Direct Message to a contact. Searches for the contact by name, finds their Instagram IGSID from external_identities, and sends the message. The contact must have previously messaged the Instagram Business account.',
+      parameters: {
+        type: 'object',
+        properties: {
+          contactName: {
+            type: 'string',
+            description: 'Contact name to search for',
+          },
+          text: {
+            type: 'string',
+            description: 'Message text to send',
+          },
+        },
+        required: ['contactName', 'text'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  // ── 9. get_collection_schema: Get schema info about a collection ──
   {
     type: 'function',
     function: {

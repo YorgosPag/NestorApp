@@ -180,6 +180,12 @@ export class AgenticToolExecutor {
         case 'send_telegram_message':
           result = await this.executeSendTelegram(args, ctx);
           break;
+        case 'send_messenger_message':
+          result = await this.executeSendSocialMessage(args, ctx, 'messenger');
+          break;
+        case 'send_instagram_message':
+          result = await this.executeSendSocialMessage(args, ctx, 'instagram');
+          break;
         case 'get_collection_schema':
           result = await this.executeGetCollectionSchema(args);
           break;
@@ -659,6 +665,105 @@ export class AgenticToolExecutor {
   /**
    * get_collection_schema: Return schema info about a collection
    */
+  /**
+   * send_messenger_message / send_instagram_message: Send social message to contact
+   * SSoT: Single method for both Messenger + Instagram — only the channel differs.
+   */
+  private async executeSendSocialMessage(
+    args: Record<string, unknown>,
+    ctx: AgenticContext,
+    channel: 'messenger' | 'instagram',
+  ): Promise<ToolResult> {
+    if (!ctx.isAdmin) {
+      return { success: false, error: 'Social messaging is restricted to admin only' };
+    }
+
+    const contactName = String(args.contactName ?? '');
+    const text = String(args.text ?? '');
+
+    if (!contactName || !text) {
+      return { success: false, error: 'contactName and text are required' };
+    }
+
+    // 1. Find contact (reuse fuzzy Greek↔Latin matching)
+    const db = getAdminFirestore();
+    const searchWords = contactName.toLowerCase().split(/\s+/).filter(Boolean);
+    const latinWords = searchWords.map(w => this.greekToLatin(w)).filter(Boolean);
+    const stems = [...searchWords, ...latinWords]
+      .filter(w => w.length >= 3)
+      .map(w => w.substring(0, Math.min(w.length, 4)));
+    const allSearchTerms = [...new Set([...searchWords, ...latinWords, ...stems])];
+
+    const contactsSnap = await db
+      .collection(COLLECTIONS.CONTACTS)
+      .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
+      .limit(50)
+      .get();
+
+    const matchingContacts = contactsSnap.docs.filter(doc => {
+      const data = doc.data();
+      const nameFields = [data.displayName, data.firstName, data.lastName, data.name]
+        .filter(Boolean).map(v => String(v).toLowerCase());
+      const fullText = nameFields.join(' ');
+      const latinText = nameFields.map(n => this.greekToLatin(n)).filter(Boolean).join(' ');
+      return allSearchTerms.some(term => `${fullText} ${latinText}`.includes(term));
+    });
+
+    if (matchingContacts.length === 0) {
+      return { success: false, error: `Contact "${contactName}" not found` };
+    }
+
+    const contactId = matchingContacts[0].id;
+    const contactData = matchingContacts[0].data();
+    const contactDisplayName = String(contactData.displayName ?? contactData.firstName ?? contactName);
+
+    // 2. Find social identity (PSID for Messenger, IGSID for Instagram)
+    const platform = channel === 'messenger' ? 'messenger' : 'instagram';
+    const identitiesSnap = await db
+      .collection(COLLECTIONS.EXTERNAL_IDENTITIES)
+      .where('contactId', '==', contactId)
+      .where('platform', '==', platform)
+      .limit(1)
+      .get();
+
+    if (identitiesSnap.empty) {
+      return {
+        success: false,
+        error: `Ο ${contactDisplayName} δεν έχει ${channel === 'messenger' ? 'Messenger' : 'Instagram'} identity. Πρέπει να έχει στείλει πρώτα μήνυμα στη σελίδα σου.`,
+      };
+    }
+
+    const identity = identitiesSnap.docs[0].data();
+    const recipientId = String(identity.platformUserId ?? identity.psid ?? identity.igsid ?? '');
+
+    if (!recipientId) {
+      return { success: false, error: `No ${platform} user ID found for ${contactDisplayName}` };
+    }
+
+    // 3. Send message via channel dispatcher
+    const { sendChannelReply } = await import(
+      '@/services/ai-pipeline/shared/channel-reply-dispatcher'
+    );
+
+    const result = await sendChannelReply({
+      channel,
+      ...(channel === 'messenger' ? { messengerPsid: recipientId } : { instagramIgsid: recipientId }),
+      textBody: text,
+      requestId: ctx.requestId,
+    });
+
+    return {
+      success: result.success,
+      data: {
+        recipientName: contactDisplayName,
+        platform: channel,
+        recipientId,
+        messageId: result.messageId ?? null,
+      },
+      error: result.error,
+    };
+  }
+
   private async executeGetCollectionSchema(
     args: Record<string, unknown>
   ): Promise<ToolResult> {
