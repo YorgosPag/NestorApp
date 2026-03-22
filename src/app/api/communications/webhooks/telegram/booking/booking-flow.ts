@@ -30,6 +30,113 @@ import { getErrorMessage } from '@/lib/error-utils';
 const logger = createModuleLogger('TelegramBooking');
 
 // ============================================================================
+// BOOKING SESSION — Tracks multi-step state per user
+// ============================================================================
+
+interface BookingSession {
+  unitId: string;
+  unitName: string;
+  date: string;
+  time: string;
+  step: 'awaiting_contact';
+  createdAt: number;
+}
+
+/** In-memory booking sessions (per serverless instance) */
+const bookingSessions = new Map<string, BookingSession>();
+
+/** Clean up sessions older than 10 minutes */
+function pruneOldSessions(): void {
+  const cutoff = Date.now() - 10 * 60 * 1000;
+  for (const [key, session] of bookingSessions) {
+    if (session.createdAt < cutoff) bookingSessions.delete(key);
+  }
+}
+
+/**
+ * Check if user has an active booking session (awaiting contact info).
+ * Called by the Telegram handler when a TEXT message (not callback) arrives.
+ */
+export function hasActiveBookingSession(userId: string): boolean {
+  pruneOldSessions();
+  return bookingSessions.has(userId);
+}
+
+/**
+ * Handle text input during booking session (user provides name + phone).
+ */
+export async function handleBookingContactInput(
+  userId: string,
+  chatId: number | string,
+  text: string,
+  firstName?: string,
+  lastName?: string,
+): Promise<TelegramSendPayload | null> {
+  const session = bookingSessions.get(userId);
+  if (!session) return null;
+
+  // Extract name and phone from text or Telegram profile
+  const telegramName = [firstName, lastName].filter(Boolean).join(' ');
+  const inputParts = text.trim().split(/\s+/);
+
+  // Try to detect phone number in the input
+  const phonePattern = /\d{10,}/;
+  const phoneMatch = text.match(phonePattern);
+  const phone = phoneMatch ? phoneMatch[0] : null;
+
+  // Name: use input text (minus phone) or Telegram profile name
+  const nameFromInput = inputParts.filter(p => !phonePattern.test(p)).join(' ');
+  const customerName = nameFromInput.length >= 2 ? nameFromInput : telegramName || `User ${userId}`;
+
+  // Save appointment
+  const result = await saveAppointment(
+    session.unitId,
+    session.unitName,
+    session.date,
+    session.time,
+    chatId,
+    userId,
+    customerName,
+    phone,
+  );
+
+  // Clean up session
+  bookingSessions.delete(userId);
+
+  return result;
+}
+
+/**
+ * Handle shared contact (Telegram request_contact button).
+ */
+export async function handleBookingSharedContact(
+  userId: string,
+  chatId: number | string,
+  phoneNumber: string,
+  firstName?: string,
+  lastName?: string,
+): Promise<TelegramSendPayload | null> {
+  const session = bookingSessions.get(userId);
+  if (!session) return null;
+
+  const customerName = [firstName, lastName].filter(Boolean).join(' ') || `User ${userId}`;
+
+  const result = await saveAppointment(
+    session.unitId,
+    session.unitName,
+    session.date,
+    session.time,
+    chatId,
+    userId,
+    customerName,
+    phoneNumber,
+  );
+
+  bookingSessions.delete(userId);
+  return result;
+}
+
+// ============================================================================
 // CALLBACK DATA CODEC — Type-safe encoding/decoding
 // ============================================================================
 
@@ -246,7 +353,7 @@ async function showTimePicker(
 }
 
 /**
- * Step 3: Confirm and save appointment in Firestore
+ * Step 3: Ask for contact info before saving
  */
 async function confirmAndSave(
   unitIdOrSuffix: string,
@@ -258,7 +365,55 @@ async function confirmAndSave(
   const unit = await resolveUnit(unitIdOrSuffix);
   const resolvedId = unit?.id ?? unitIdOrSuffix;
   const unitName = unit?.name ?? unit?.code ?? unitIdOrSuffix;
+  const dateLabel = formatDateGreek(date);
 
+  // Store session — wait for contact info
+  bookingSessions.set(userId, {
+    unitId: resolvedId,
+    unitName,
+    date,
+    time,
+    step: 'awaiting_contact',
+    createdAt: Date.now(),
+  });
+
+  return {
+    method: 'sendMessage',
+    chat_id: chatId,
+    text: [
+      `📋 <b>Ραντεβού: ${unitName}</b>`,
+      `📅 ${dateLabel} στις ${time}`,
+      '',
+      '📱 Για να ολοκληρωθεί η κράτηση, πατήστε <b>"Κοινοποίηση τηλεφώνου"</b> ή πληκτρολογήστε:',
+      '',
+      '<b>Ονοματεπώνυμο Τηλέφωνο</b>',
+      'π.χ. <i>Γιάννης Παπαδόπουλος 6971234567</i>',
+    ].join('\n'),
+    parse_mode: 'HTML',
+    reply_markup: {
+      keyboard: [
+        [{ text: '📱 Κοινοποίηση τηλεφώνου', request_contact: true }],
+        [{ text: '❌ Ακύρωση' }],
+      ],
+      resize_keyboard: true,
+      one_time_keyboard: true,
+    },
+  };
+}
+
+/**
+ * Save appointment to Firestore (called after contact info collected)
+ */
+async function saveAppointment(
+  unitId: string,
+  unitName: string,
+  date: string,
+  time: string,
+  chatId: number | string,
+  userId: string,
+  customerName: string,
+  phone: string | null,
+): Promise<TelegramSendPayload> {
   try {
     const db = getAdminFirestore();
     const companyId = getCompanyId();
@@ -270,7 +425,8 @@ async function confirmAndSave(
       status: 'pending_approval',
       source: { channel: 'telegram', userId },
       requester: {
-        name: `Telegram User ${userId}`,
+        name: customerName,
+        phone: phone ?? null,
         contactId: null,
         isKnownContact: false,
       },
@@ -278,21 +434,22 @@ async function confirmAndSave(
         requestedDate: date,
         requestedTime: time,
         description: `Επίσκεψη ακινήτου: ${unitName}`,
-        notes: `Unit ID: ${resolvedId}`,
+        notes: `Unit ID: ${unitId}`,
       },
-      unitId: resolvedId,
+      unitId,
       unitName,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
 
     logger.info('Appointment booked via Telegram', {
-      appointmentId, unitId: resolvedId, date, time, userId,
+      appointmentId, unitId, date, time, userId, customerName, phone,
     });
 
     // Notify admin with action buttons (fire-and-forget)
-    notifyAdmin(appointmentId, unitName, dateLabel, time, userId, chatId).catch(() => { /* non-fatal */ });
+    notifyAdmin(appointmentId, unitName, dateLabel, time, customerName, phone, chatId).catch(() => { /* non-fatal */ });
 
+    // Remove custom keyboard
     return {
       method: 'sendMessage',
       chat_id: chatId,
@@ -302,16 +459,13 @@ async function confirmAndSave(
         `🏠 Ακίνητο: <b>${unitName}</b>`,
         `📅 Ημερομηνία: <b>${dateLabel}</b>`,
         `🕐 Ώρα: <b>${time}</b>`,
+        `👤 Όνομα: <b>${customerName}</b>`,
+        ...(phone ? [`📱 Τηλέφωνο: <b>${phone}</b>`] : []),
         '',
         '⏳ Θα λάβετε επιβεβαίωση σύντομα.',
       ].join('\n'),
       parse_mode: 'HTML',
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: '🔍 Αναζήτηση ακινήτων', callback_data: 'new_search' }],
-          [{ text: '📞 Επικοινωνία', callback_data: 'contact_agent' }],
-        ],
-      },
+      reply_markup: { remove_keyboard: true },
     };
   } catch (error) {
     logger.error('Booking error', { error: getErrorMessage(error) });
@@ -319,12 +473,7 @@ async function confirmAndSave(
       method: 'sendMessage',
       chat_id: chatId,
       text: '😔 Παρουσιάστηκε σφάλμα. Δοκιμάστε ξανά ή επικοινωνήστε μαζί μας.',
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: '📅 Δοκιμάστε ξανά', callback_data: `book_${resolvedId}` }],
-          [{ text: '📞 Επικοινωνία', callback_data: 'contact_agent' }],
-        ],
-      },
+      reply_markup: { remove_keyboard: true },
     };
   }
 }
@@ -338,7 +487,8 @@ async function notifyAdmin(
   unitName: string,
   dateLabel: string,
   time: string,
-  userId: string,
+  customerName: string,
+  phone: string | null,
   customerChatId: number | string,
 ): Promise<void> {
   const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID ?? '5618410820';
@@ -351,7 +501,8 @@ async function notifyAdmin(
       '',
       `🏠 ${unitName}`,
       `📅 ${dateLabel} στις ${time}`,
-      `👤 Telegram User #${userId}`,
+      `👤 ${customerName}`,
+      ...(phone ? [`📱 ${phone}`] : []),
       '',
       'Τι θέλετε να κάνετε;',
     ].join('\n'),

@@ -87,8 +87,8 @@ export async function handleCallbackQuery(
           return handlePropertyPhotosCallback(data, chatId);
         }
 
-        // 📅 Booking flow (date → time → confirm) — delegated to booking module
-        if (data && (data.startsWith('book_') || data.startsWith('bk'))) {
+        // 📅 Booking + admin appointment actions — delegated to booking module
+        if (data) {
           const { isBookingCallback, handleBookingCallback } = await import('../booking/booking-flow');
           if (isBookingCallback(data)) {
             return handleBookingCallback(data, chatId, userId);

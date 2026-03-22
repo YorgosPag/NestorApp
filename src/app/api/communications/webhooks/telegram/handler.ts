@@ -189,6 +189,62 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<Proc
 
     const isBotCommand = effectiveMessageText.startsWith('/');
 
+    // ── Booking Session: Contact info collection ──
+    // Check if user is in an active booking session (awaiting name + phone)
+    if (!isBotCommand) {
+      const userId = String(webhookData.message.from?.id ?? '');
+
+      // Handle shared contact (request_contact button)
+      if (webhookData.message.contact && userId) {
+        const { hasActiveBookingSession, handleBookingSharedContact } = await import('./booking/booking-flow');
+        if (hasActiveBookingSession(userId)) {
+          const contact = webhookData.message.contact;
+          const response = await handleBookingSharedContact(
+            userId,
+            webhookData.message.chat.id,
+            contact.phone_number,
+            contact.first_name,
+            contact.last_name,
+          );
+          if (response) {
+            telegramResponse = response;
+            return { telegramResponse, needsPipelineBatch: false };
+          }
+        }
+      }
+
+      // Handle text input during booking (name + phone)
+      if (effectiveMessageText.trim().length > 0 && userId) {
+        const { hasActiveBookingSession, handleBookingContactInput } = await import('./booking/booking-flow');
+        if (hasActiveBookingSession(userId)) {
+          // Cancel booking if user types "Ακύρωση"
+          if (effectiveMessageText.includes('Ακύρωση')) {
+            return {
+              telegramResponse: {
+                method: 'sendMessage',
+                chat_id: webhookData.message.chat.id,
+                text: '❌ Η κράτηση ακυρώθηκε.',
+                reply_markup: { remove_keyboard: true },
+              },
+              needsPipelineBatch: false,
+            };
+          }
+
+          const response = await handleBookingContactInput(
+            userId,
+            webhookData.message.chat.id,
+            effectiveMessageText,
+            webhookData.message.from?.first_name,
+            webhookData.message.from?.last_name,
+          );
+          if (response) {
+            telegramResponse = response;
+            return { telegramResponse, needsPipelineBatch: false };
+          }
+        }
+      }
+    }
+
     // ── ADR-145: Super Admin Detection ──
     // Check if sender is a super admin BEFORE generic bot response
     let isAdminSender = false;
