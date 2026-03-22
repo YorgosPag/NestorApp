@@ -87,21 +87,12 @@ export async function handleCallbackQuery(
           return handlePropertyPhotosCallback(data, chatId);
         }
 
-        // Book appointment callback (book_{unitId})
-        if (data && data.startsWith('book_')) {
-          const unitId = data.replace('book_', '');
-          return {
-            method: 'sendMessage',
-            chat_id: chatId,
-            text: '📅 Για να κλείσετε ραντεβού επίσκεψης, επικοινωνήστε μαζί μας:\n\n📱 <b>6974050023</b>\n📧 <b>georgios.pagonis@gmail.com</b>\n\nΑναφέρετε τον κωδικό ακινήτου για γρηγορότερη εξυπηρέτηση.',
-            parse_mode: 'HTML',
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: '↩️ Πίσω στο ακίνητο', callback_data: `detail_${unitId}` }],
-                [{ text: '🔍 Νέα Αναζήτηση', callback_data: 'new_search' }],
-              ],
-            },
-          };
+        // 📅 Booking flow (date → time → confirm) — delegated to booking module
+        if (data && (data.startsWith('book_') || data.startsWith('bk'))) {
+          const { isBookingCallback, handleBookingCallback } = await import('../booking/booking-flow');
+          if (isBookingCallback(data)) {
+            return handleBookingCallback(data, chatId, userId);
+          }
         }
 
         // Back to search results (back_search_{type})
