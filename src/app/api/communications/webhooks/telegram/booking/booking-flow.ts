@@ -78,7 +78,7 @@ export function decodeBookingCallback(raw: string): BookingCallbackData | null {
 /** Check if callback data is a booking callback */
 export function isBookingCallback(data: string): boolean {
   return data.startsWith('bkd') || data.startsWith('bkt') || data.startsWith('bkc')
-    || data.startsWith('book_') || data.startsWith('appt_');
+    || data.startsWith('book_') || data.startsWith('aa_') || data.startsWith('ar_') || data.startsWith('as_');
 }
 
 // ============================================================================
@@ -142,8 +142,8 @@ export async function handleBookingCallback(
     return showDatePicker(unitId, chatId);
   }
 
-  // Admin appointment actions (approve/reject/reschedule)
-  if (data.startsWith('appt_')) {
+  // Admin appointment actions (aa_=approve, ar_=reject, as_=reschedule)
+  if (data.startsWith('aa_') || data.startsWith('ar_') || data.startsWith('as_')) {
     return handleAdminAppointmentAction(data, chatId);
   }
 
@@ -359,11 +359,11 @@ async function notifyAdmin(
     reply_markup: {
       inline_keyboard: [
         [
-          { text: '✅ Επιβεβαίωση', callback_data: `appt_approve_${appointmentId}_${customerChatId}` },
-          { text: '❌ Ακύρωση', callback_data: `appt_reject_${appointmentId}_${customerChatId}` },
+          { text: '✅ Επιβεβαίωση', callback_data: `aa_${appointmentId.replace('ent_', '')}_${customerChatId}` },
+          { text: '❌ Ακύρωση', callback_data: `ar_${appointmentId.replace('ent_', '')}_${customerChatId}` },
         ],
         [
-          { text: '🔄 Πρόταση αλλαγής', callback_data: `appt_reschedule_${appointmentId}_${customerChatId}` },
+          { text: '🔄 Πρόταση αλλαγής', callback_data: `as_${appointmentId.replace('ent_', '')}_${customerChatId}` },
         ],
       ],
     },
@@ -375,12 +375,15 @@ async function notifyAdmin(
 // ============================================================================
 
 /**
- * Parse admin callback: appt_{action}_{appointmentId}_{customerChatId}
+ * Parse admin callback: aa_{idSuffix}_{customerChatId} (approve)
+ *                       ar_{idSuffix}_{customerChatId} (reject)
+ *                       as_{idSuffix}_{customerChatId} (reschedule)
  */
-function parseAdminCallback(data: string): { action: string; appointmentId: string; customerChatId: string } | null {
-  const match = data.match(/^appt_(approve|reject|reschedule)_([^_]+)_(.+)$/);
+function parseAdminCallback(data: string): { action: string; appointmentIdSuffix: string; customerChatId: string } | null {
+  const match = data.match(/^(aa|ar|as)_([^_]+)_(.+)$/);
   if (!match) return null;
-  return { action: match[1], appointmentId: match[2], customerChatId: match[3] };
+  const actionMap: Record<string, string> = { aa: 'approve', ar: 'reject', as: 'reschedule' };
+  return { action: actionMap[match[1]], appointmentIdSuffix: match[2], customerChatId: match[3] };
 }
 
 /**
@@ -393,9 +396,12 @@ async function handleAdminAppointmentAction(
   const parsed = parseAdminCallback(data);
   if (!parsed) return null;
 
-  const { action, appointmentId, customerChatId } = parsed;
+  const { action, appointmentIdSuffix, customerChatId } = parsed;
   const db = getAdminFirestore();
-  const appointmentRef = db.collection(COLLECTIONS.APPOINTMENTS).doc(appointmentId);
+
+  // Reconstruct full ID: ent_{uuid}
+  const fullId = `ent_${appointmentIdSuffix}`;
+  const appointmentRef = db.collection(COLLECTIONS.APPOINTMENTS).doc(fullId);
   const appointmentDoc = await appointmentRef.get();
 
   if (!appointmentDoc.exists) {
