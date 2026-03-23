@@ -76,7 +76,7 @@ export function SalesUnitListCard({
 
   const commercialStatus = unit.commercialStatus ?? 'unavailable';
   const hasCommercialStatus = !!unit.commercialStatus;
-  const badgeConfig = COMMERCIAL_STATUS_BADGE[commercialStatus];
+  const badgeConfig = COMMERCIAL_STATUS_BADGE[commercialStatus] ?? COMMERCIAL_STATUS_BADGE['unavailable'];
 
   // Badge — units without commercialStatus show "Νέα" (not "unavailable")
   const badges = useMemo(() => [{
