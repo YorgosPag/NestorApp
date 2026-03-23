@@ -31,6 +31,7 @@ import type {
   PipelineStateValue,
   ApprovalDecision,
   AdminCommandMeta,
+  ContactMeta,
 } from '@/types/ai-pipeline';
 import { PipelineState } from '@/types/ai-pipeline';
 
@@ -61,6 +62,8 @@ export interface EnqueuePipelineParams {
   intakeMessage: IntakeMessage;
   /** ADR-145: Admin command metadata (set by channel adapter when sender is super admin) */
   adminCommandMeta?: AdminCommandMeta | null;
+  /** RBAC: Resolved contact with project roles */
+  contactMeta?: ContactMeta | null;
 }
 
 /**
@@ -84,6 +87,8 @@ export async function enqueuePipelineItem(
     intake: params.intakeMessage,
     // ADR-145: Attach admin command metadata if present
     ...(params.adminCommandMeta ? { adminCommandMeta: params.adminCommandMeta } : {}),
+    // RBAC: Attach contact metadata if present
+    ...(params.contactMeta ? { contactMeta: params.contactMeta } : {}),
     startedAt: now,
     stepDurations: {},
     errors: [],

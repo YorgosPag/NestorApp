@@ -18,7 +18,7 @@
  */
 
 import { getErrorMessage } from '@/lib/error-utils';
-import type { IntakeMessage, AdminCommandMeta } from '@/types/ai-pipeline';
+import type { IntakeMessage, AdminCommandMeta, ContactMeta } from '@/types/ai-pipeline';
 import { PipelineChannel } from '@/types/ai-pipeline';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { enqueuePipelineItem } from '../pipeline-queue-service';
@@ -42,6 +42,8 @@ export interface TelegramFeedParams {
   messageId: string;
   /** Resolved company ID */
   companyId: string;
+  /** Resolved contact with project roles (RBAC) */
+  contactMeta?: ContactMeta | null;
 }
 
 /** Result of feeding a Telegram message to the pipeline */
@@ -104,6 +106,7 @@ export class TelegramChannelAdapter {
         channel: PipelineChannel.TELEGRAM,
         intakeMessage,
         ...(adminCommandMeta ? { adminCommandMeta } : {}),
+        ...(params.contactMeta ? { contactMeta: params.contactMeta } : {}),
       });
 
       return {

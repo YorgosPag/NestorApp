@@ -25,7 +25,7 @@
  */
 
 import 'server-only';
-
+// RBAC v2 — force recompile
 import { AI_ANALYSIS_DEFAULTS } from '@/config/ai-analysis-config';
 import { getCompressedSchema } from '@/config/firestore-schema-map';
 import { getAgenticToolExecutor } from './tools/agentic-tool-executor';
@@ -33,6 +33,8 @@ import type { AgenticContext } from './tools/agentic-tool-executor';
 import type { AgenticToolDefinition } from './tools/agentic-tool-definitions';
 // ADR-173: Prompt enhancement with learned patterns
 import { enhanceSystemPrompt } from './prompt-enhancer';
+// RBAC: SSoT access matrix
+import { AI_ROLE_ACCESS_MATRIX, resolveAccessConfig, UNLINKED_ACCESS, UNKNOWN_USER_ACCESS } from '@/config/ai-role-access-matrix';
 import { safeJsonParse } from '@/lib/json-utils';
 import { isNonEmptyString } from '@/lib/type-guards';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
@@ -111,6 +113,42 @@ const DEFAULT_CONFIG: AgenticLoopConfig = {
 };
 
 // ============================================================================
+// RBAC: ROLE-BASED ACCESS DESCRIPTION (SSoT: ai-role-access-matrix.ts)
+// ============================================================================
+
+function buildRoleDescription(ctx: AgenticContext): string {
+  // Super Admin — full access (SSoT: matrix.super_admin)
+  if (ctx.isAdmin) {
+    return AI_ROLE_ACCESS_MATRIX.super_admin.promptDescription;
+  }
+
+  const contact = ctx.contactMeta;
+
+  // Unknown user
+  if (!contact) {
+    return UNKNOWN_USER_ACCESS.promptDescription;
+  }
+
+  const roles = contact.projectRoles;
+  const linkedProjectIds = [...new Set(roles.map(r => r.projectId).filter(Boolean))];
+
+  // Known contact but no project links
+  if (linkedProjectIds.length === 0) {
+    return `Ο χρήστης είναι ο/η ${contact.displayName} (${contact.primaryPersona ?? 'επαφή'}).\n${UNLINKED_ACCESS.promptDescription}`;
+  }
+
+  // Resolve access from SSoT matrix
+  const accessConfig = resolveAccessConfig(roles);
+  const projectIdList = linkedProjectIds.join(', ');
+
+  return `Ο χρήστης είναι ο/η ${contact.displayName} (${contact.primaryPersona ?? 'επαφή'}).
+Συνδεδεμένα έργα: ${projectIdList}
+
+${accessConfig.promptDescription}
+ΠΕΡΙΟΡΙΣΜΟΣ: ΜΟΝΟ δεδομένα που ανήκουν στα παραπάνω projects.`;
+}
+
+// ============================================================================
 // AGENTIC SYSTEM PROMPT BUILDER
 // ============================================================================
 
@@ -132,10 +170,8 @@ function buildAgenticSystemPrompt(ctx: AgenticContext, chatHistory: ChatMessage[
     : ctx.channel === 'email' ? 'Email'
     : ctx.channel ?? 'Εφαρμογή';
 
-  // ADR-174: Different persona for admin vs customer
-  const roleDescription = ctx.isAdmin
-    ? 'Ο χρήστης είναι ο Super Admin. Έχεις ΠΛΗΡΗ πρόσβαση σε ΟΛΑ τα δεδομένα — μπορείς να ΔΙΑΒΑΖΕΙΣ ΚΑΙ ΝΑ ΓΡΑΦΕΙΣ σε ΟΛΑ τα collections (contacts, units, projects, buildings, construction_phases, construction_tasks, appointments, tasks, leads). ΠΟΤΕ μη λες "δεν έχω δικαίωμα" — ΕΧΕΙΣ. Αν κάτι αποτύχει, ΔΟΚΙΜΑΣΕ.'
-    : 'Ο χρήστης είναι πελάτης/ενδιαφερόμενος. Βοήθησέ τον ευγενικά με πληροφορίες για ακίνητα, ραντεβού, και γενικές ερωτήσεις. ΜΗΝ αποκαλύπτεις εσωτερικά δεδομένα εταιρείας (κόστη, κέρδη, εσωτερικές σημειώσεις). Μπορείς να ψάχνεις ακίνητα (units) και να δίνεις βασικές πληροφορίες (τ.μ., τιμή, τύπος, διαθεσιμότητα).';
+  // ADR-174: Role-based access description (RBAC)
+  const roleDescription = buildRoleDescription(ctx);
 
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
@@ -260,7 +296,32 @@ CONCRETE ΠΑΡΑΔΕΙΓΜΑΤΑ:
 - Αν δεν βρεις ούτε έτσι, χρησιμοποίησε search_text αντί firestore_query
 - ΠΟΤΕ μη λες "δεν βρέθηκε" αν δεν δοκίμασες ΚΑΙ τις δύο γραφές
 
+⚠️⚠️⚠️ ΚΡΙΣΙΜΟ — ΑΠΟΣΑΦΗΝΙΣΗ ΟΝΟΜΑΤΟΣ ΠΡΙΝ ΟΠΟΙΑΔΗΠΟΤΕ ΕΝΕΡΓΕΙΑ:
+
+ΚΑΝΟΝΑΣ 1 — ΟΝΟΜΑΤΕΠΩΝΥΜΟ (π.χ. "Γιάννης Παπαδόπουλος"):
+Αν ο χρήστης δίνει ΟΝΟΜΑ + ΕΠΩΝΥΜΟ → ψάξε ΚΑΙ firstName ΚΑΙ lastName. Αν ταιριάζει ΑΚΡΙΒΩΣ 1 επαφή → ΠΡΟΧΩΡΑ ΑΜΕΣΑ χωρίς ερώτηση. ΜΗΝ εμφανίζεις λίστα.
+
+ΚΑΝΟΝΑΣ 2 — ΜΟΝΟ ΜΙΚΡΟ ΟΝΟΜΑ (π.χ. "Γιάννης"):
+Αν ο χρήστης δίνει ΜΟΝΟ firstName ΧΩΡΙΣ ΕΠΩΝΥΜΟ:
+ΒΗΜΑ 1: search_text ή firestore_query("contacts") → πάρε ΟΛΑ τα αποτελέσματα
+ΒΗΜΑ 2: ΜΕΤΡΑ πόσα έχουν αυτό το firstName
+ΒΗΜΑ 3: Αν ΠΑΝΩ ΑΠΟ 1 → ΣΤΑΜΑΤΑ. ΜΗΝ ΠΡΟΧΩΡΗΣΕΙΣ. ΜΗΝ ΔΙΑΛΕΓΕΙΣ. ΡΩΤΑ:
+"⚠️ Βρήκα [Ν] επαφές με το όνομα [Χ]:
+1. [Ονοματεπώνυμο] — [ρόλος/επάγγελμα] — [τηλέφωνο]
+2. [Ονοματεπώνυμο] — [ρόλος/επάγγελμα] — [τηλέφωνο]
+Ποιον εννοείς;"
+ΒΗΜΑ 4: ΠΕΡΙΜΕΝΕ — ΜΗΝ κάνεις ραντεβού, email, ρόλο, ή ΟΤΙΔΗΠΟΤΕ μέχρι ο χρήστης να απαντήσει
+Αν ΜΟΝΟ 1 αποτέλεσμα → προχώρα κανονικά
+
 ΣΤΡΑΤΗΓΙΚΗ ΑΝΑΖΗΤΗΣΗΣ:
+ΚΡΙΣΙΜΟ — ΕΡΩΤΗΣΕΙΣ ΓΙΑ ΡΟΛΟ ΕΠΑΦΗΣ:
+Όταν ρωτάνε "τι ρόλο έχει ο X", "ποιος είναι ο X", "πού δουλεύει ο X" → ΥΠΟΧΡΕΩΤΙΚΑ 2 βήματα:
+  ΒΗΜΑ 1: search_text ή firestore_query("contacts") → πάρε persona + contactId
+  ΒΗΜΑ 2: firestore_query("contact_links", [{field: "sourceContactId", operator: "==", value: "<contactId>"}]) → πάρε ρόλους σε έργα
+  Αν βρεις contact_links → firestore_get_document("projects", targetEntityId) → πάρε project name
+  Παρουσίασε: "Ο X είναι [persona] και [role] στο έργο [project name]"
+  ΜΗΝ σταματάς μόνο στο contacts — ΠΑΝΤΑ ψάξε και contact_links!
+- Για "ποιοι δουλεύουν στο έργο X": βρες projectId → firestore_query("contact_links", [{field: "targetEntityId", operator: "==", value: projectId}]) → για κάθε link, πάρε contact name
 - Για "ποια έργα έχουν X": ξεκίνα από projects query
 - Για "φάσεις κατασκευής": query construction_phases → για κάθε μοναδικό buildingId κάνε get_document("buildings") → για κάθε projectId κάνε get_document("projects") → παρουσίασε ομαδοποιημένα ανά Έργο > Κτήριο > Φάσεις
 - Για "στατιστικά": χρήσε firestore_count αντί πλήρες query
@@ -273,6 +334,36 @@ CONCRETE ΠΑΡΑΔΕΙΓΜΑΤΑ:
 - Αν ρωτήσουν "πώς γίνεται X" ή "τι είναι X", ΜΗΝ δίνεις generic Wikipedia απαντήσεις. Ψάξε στα δεδομένα αν υπάρχει σχετική πληροφορία.
 - Αν query αποτύχει λόγω "index" ή "permission" error, δοκίμασε χωρίς φίλτρα — ΜΗ λες στον χρήστη για "δείκτες βάσης δεδομένων".
 - Κράτα τις απαντήσεις ΣΥΝΤΟΜΕΣ (max 5-6 γραμμές). Μην γράφεις essays.
+
+ΔΙΑΧΕΙΡΙΣΗ PERSONAS ΕΠΑΦΩΝ:
+Κάθε επαφή μπορεί να έχει πεδίο "personas" (array). Ο admin μπορεί να ζητήσει "δήλωσε τον X ως μηχανικό/δικηγόρο/πελάτη/κλπ".
+Βήματα:
+1. Ψάξε την επαφή: search_text ή firestore_query("contacts")
+2. Πάρε το τρέχον document: firestore_get_document("contacts", docId)
+3. Αν ΔΕΝ υπάρχει πεδίο "personas", δημιούργησε νέο array
+4. Αν ΥΠΑΡΧΕΙ, πρόσθεσε νέο persona χωρίς να αφαιρέσεις τα υπάρχοντα
+5. Κάνε firestore_write mode "update" με ΟΛΟ το personas array (παλιά + νέο)
+
+Δομή persona object:
+{ "personaType": "engineer|client|lawyer|notary|supplier|real_estate_agent", "status": "active", "activatedAt": "<ISO date σήμερα>", "deactivatedAt": null, "notes": null }
+Αν engineer, πρόσθεσε: "engineerSpecialty": "civil_engineer|architect|mechanical_engineer|electrical_engineer|surveyor", "teeRegistryNumber": "", "licenseClass": ""
+Αν client, πρόσθεσε: "clientSince": "<ISO date σήμερα>"
+
+Τύποι personas: client (πελάτης/αγοραστής), engineer (μηχανικός), lawyer (δικηγόρος), notary (συμβολαιογράφος), supplier (προμηθευτής), real_estate_agent (μεσίτης)
+
+ΜΟΡΦΟΠΟΙΗΣΗ ΑΠΑΝΤΗΣΕΩΝ — STATUS INDICATORS:
+ΚΑΘΕ απάντηση ξεκινάει ΥΠΟΧΡΕΩΤΙΚΑ με ένα status emoji ανάλογα το αποτέλεσμα:
+✅ = Επιτυχία (η ενέργεια ολοκληρώθηκε)
+⚠️ = Προσοχή (σύγκρουση, χρειάζεται απόφαση από τον χρήστη)
+❌ = Αποτυχία (η ενέργεια δεν εκτελέστηκε — π.χ. δεν βρέθηκε email, δεν στάλθηκε μήνυμα)
+ℹ️ = Πληροφορία (απλή απάντηση σε ερώτηση, χωρίς ενέργεια)
+Παραδείγματα:
+- "✅ Το ραντεβού κλείστηκε για αύριο στις 10:00."
+- "⚠️ Σύγκρουση ραντεβού: Έχετε ήδη ραντεβού στις 10:00 στο εργοτάξιο. Θέλετε να κλείσω παρόλα αυτά;"
+- "❌ Αποτυχία ειδοποίησης: Δεν μπόρεσα να ενημερώσω τον Γιάννη μέσω Telegram."
+- "ℹ️ Ο Γιάννης Παπαδόπουλος είναι επιβλέπων στο έργο Yorgos' projects."
+ΚΡΙΣΙΜΟ: Αν μια ενέργεια πέτυχε ΑΛΛΑ μια δευτερεύουσα απέτυχε, βάλε ΚΑΙ τα δύο:
+"✅ Το ραντεβού κλείστηκε.\n❌ Δεν μπόρεσα να ενημερώσω τον Γιάννη μέσω Telegram."
 
 11. ΜΗΝ τελειώνεις ΠΟΤΕ με "Αν χρειάζεσαι...", "Μη διστάσεις...", "Ενημέρωσέ με", "Πώς μπορώ να σε εξυπηρετήσω" ή παρόμοιες γενικές φράσεις. Δώσε μόνο την ουσιαστική απάντηση.
 12. Στο τέλος ΚΑΘΕ απάντησης, πρόσθεσε ένα block [SUGGESTIONS] με 2-3 σύντομες follow-up ερωτήσεις. ΚΡΙΣΙΜΟ: Τα suggestions πρέπει να σχετίζονται ΑΜΕΣΑ με αυτό που ρώτησε ο χρήστης ΚΑΙ τα δεδομένα που βρέθηκαν. ΜΗΝ βάζεις τα ίδια generic suggestions κάθε φορά.

@@ -156,13 +156,14 @@ export class PipelineOrchestrator {
       return this.executeAgenticPath(ctx);
     }
 
-    // ── ADR-174: WhatsApp/Messenger/Instagram messages → agentic path ──
-    // Customer messages from Meta channels use the agentic loop for immediate auto-reply.
+    // ── ADR-174: All messaging channels → agentic path ──
+    // Customer messages from Telegram/WhatsApp/Messenger/Instagram use the agentic loop
+    // for immediate auto-reply with RBAC (role-based access control).
     // The legacy modular path (UC modules) requires manual approval for most
-    // intents (complaint, general_inquiry), leaving the user without any response.
-    // Agentic path generates a conversational reply autonomously.
+    // intents, leaving the user without any response.
     if (
-      ctx.intake.channel === PipelineChannel.WHATSAPP
+      ctx.intake.channel === PipelineChannel.TELEGRAM
+      || ctx.intake.channel === PipelineChannel.WHATSAPP
       || ctx.intake.channel === PipelineChannel.MESSENGER
       || ctx.intake.channel === PipelineChannel.INSTAGRAM
     ) {
@@ -323,16 +324,17 @@ export class PipelineOrchestrator {
         return !failurePatterns.some(p => msg.content.includes(p));
       });
 
-      // 2. Build agentic context
+      // 2. Build agentic context (RBAC: proper isAdmin from adminCommandMeta)
       const agenticCtx: AgenticContext = {
         companyId: ctx.companyId,
-        isAdmin: true,
+        isAdmin: ctx.adminCommandMeta?.isAdminCommand === true,
         channel: ctx.intake.channel,
         channelSenderId,
         requestId: ctx.requestId,
         telegramChatId: ctx.intake.normalized.sender.telegramId
           ?? ctx.intake.rawPayload?.chatId as string
           ?? undefined,
+        contactMeta: ctx.contactMeta ?? null,
       };
 
       // 3. Execute agentic loop

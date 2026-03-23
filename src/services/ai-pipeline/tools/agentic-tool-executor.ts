@@ -27,6 +27,8 @@ import { getToolAnalyticsService } from '../tool-analytics-service';
 import { recordQueryStrategy } from '../query-strategy-service';
 // 🏢 SSoT: Greek↔Latin transliteration from greek-nlp
 import { greekToLatin } from '../shared/greek-nlp';
+// RBAC: SSoT access matrix
+import { resolveAccessConfig, UNLINKED_ACCESS, deriveBlockedFieldSet } from '@/config/ai-role-access-matrix';
 import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -46,6 +48,10 @@ export interface AgenticContext {
   requestId: string;
   /** Telegram chatId for send_telegram_message */
   telegramChatId?: string;
+  /** RBAC: Resolved contact with project roles */
+  contactMeta?: import('@/types/ai-pipeline').ContactMeta | null;
+  /** RBAC cache: resolved once per request by resolveRoleAccess(), reused by redactRoleBlockedFields() */
+  _resolvedAccess?: import('@/config/ai-role-access-matrix').RoleAccessConfig;
 }
 
 export interface ToolResult {
@@ -59,7 +65,7 @@ export interface ToolResult {
 interface QueryFilter {
   field: string;
   operator: string;
-  value: string | number | boolean | null;
+  value: string | number | boolean | null | string[];
 }
 
 // ============================================================================
@@ -114,6 +120,7 @@ const ALLOWED_WRITE_COLLECTIONS = new Set([
   COLLECTIONS.BUILDINGS,
   COLLECTIONS.CONSTRUCTION_PHASES,
   COLLECTIONS.CONSTRUCTION_TASKS,
+  COLLECTIONS.CONTACT_LINKS,
 ]);
 
 /**
@@ -143,6 +150,66 @@ const MAX_RESULT_JSON_LENGTH = 8000; // ~3000 tokens
 // ============================================================================
 
 export class AgenticToolExecutor {
+
+  // ── RBAC: Role-Based Access Enforcement (SSoT: ai-role-access-matrix.ts) ──
+
+  /**
+   * Enforce role-based access at query level.
+   * Reads allowed/blocked collections from SSoT config.
+   * Admin bypasses all checks.
+   */
+  /**
+   * Resolve access config ONCE per context and cache it.
+   * All downstream methods (enforceRoleAccess, redactRoleBlockedFields) read from cache.
+   */
+  private getAccessConfig(ctx: AgenticContext): import('@/config/ai-role-access-matrix').RoleAccessConfig {
+    if (ctx._resolvedAccess) return ctx._resolvedAccess;
+
+    const roles = ctx.contactMeta?.projectRoles ?? [];
+    const linkedProjectIds = [...new Set(roles.map(r => r.projectId).filter(Boolean))];
+    const config = linkedProjectIds.length > 0
+      ? resolveAccessConfig(roles)
+      : UNLINKED_ACCESS;
+
+    ctx._resolvedAccess = config;
+    return config;
+  }
+
+  private enforceRoleAccess(
+    collection: string,
+    filters: QueryFilter[],
+    ctx: AgenticContext
+  ): { allowed: true; filters: QueryFilter[] } | { allowed: false; result: ToolResult } {
+    // Admin bypasses
+    if (ctx.isAdmin) return { allowed: true, filters };
+
+    const accessConfig = this.getAccessConfig(ctx);
+    const linkedProjectIds = [...new Set(
+      (ctx.contactMeta?.projectRoles ?? []).map(r => r.projectId).filter(Boolean),
+    )];
+
+    // allowedCollections is the ONLY gate — if not in the list, denied
+    const allowedSet = new Set(accessConfig.allowedCollections);
+    if (!allowedSet.has(collection)) {
+      return { allowed: false, result: { success: false, error: 'Δεν έχετε πρόσβαση σε αυτά τα δεδομένα.' } };
+    }
+
+    // Inject projectId filter for project-scoped collections (buildings, units)
+    const projectScopedByProjectId = new Set([COLLECTIONS.BUILDINGS, COLLECTIONS.UNITS]);
+    if (projectScopedByProjectId.has(collection) && linkedProjectIds.length > 0) {
+      const hasProjectFilter = filters.some(f => f.field === 'projectId');
+      if (!hasProjectFilter) {
+        filters = [...filters, {
+          field: 'projectId',
+          operator: 'in',
+          value: linkedProjectIds.slice(0, 30),
+        }];
+      }
+    }
+
+    return { allowed: true, filters };
+  }
+
   /**
    * Execute a tool call and return the result
    */
@@ -236,7 +303,7 @@ export class AgenticToolExecutor {
 
           const snapshot = await broadQuery.get();
           const results = snapshot.docs.map(doc => {
-            const raw = this.redactSensitiveFields(doc.data());
+            const raw = this.redactRoleBlockedFields(this.redactSensitiveFields(doc.data()), ctx);
             return { id: doc.id, ...this.flattenNestedFields(raw) };
           });
 
@@ -280,7 +347,12 @@ export class AgenticToolExecutor {
     }
 
     const rawFilters = Array.isArray(args.filters) ? args.filters as QueryFilter[] : [];
-    const filters = this.enforceCompanyScope(rawFilters, ctx.companyId, collection);
+
+    // RBAC: Enforce role-based access (safety net)
+    const accessCheck = this.enforceRoleAccess(collection, rawFilters, ctx);
+    if (!accessCheck.allowed) return accessCheck.result;
+
+    const filters = this.enforceCompanyScope(accessCheck.filters, ctx.companyId, collection);
     const orderBy = typeof args.orderBy === 'string' ? args.orderBy : null;
     const orderDirection = args.orderDirection === 'desc' ? 'desc' : 'asc';
     const limit = Math.min(
@@ -315,7 +387,7 @@ export class AgenticToolExecutor {
     const snapshot = await this.executeWithFallback(db, collection, safeFilters, orderBy, orderDirection, limit, ctx);
 
     const results = snapshot.docs.map(doc => {
-      const raw = this.redactSensitiveFields(doc.data());
+      const raw = this.redactRoleBlockedFields(this.redactSensitiveFields(doc.data()), ctx);
       return { id: doc.id, ...this.flattenNestedFields(raw) };
     });
 
@@ -363,7 +435,7 @@ export class AgenticToolExecutor {
 
     return {
       success: true,
-      data: { id: doc.id, ...this.redactSensitiveFields(data) },
+      data: { id: doc.id, ...this.redactRoleBlockedFields(this.redactSensitiveFields(data), ctx) },
       count: 1,
     };
   }
@@ -385,7 +457,12 @@ export class AgenticToolExecutor {
     }
 
     const rawFilters = Array.isArray(args.filters) ? args.filters as QueryFilter[] : [];
-    const filters = this.enforceCompanyScope(rawFilters, ctx.companyId, collection);
+
+    // RBAC: Enforce role-based access (safety net)
+    const countAccessCheck = this.enforceRoleAccess(collection, rawFilters, ctx);
+    if (!countAccessCheck.allowed) return countAccessCheck.result;
+
+    const filters = this.enforceCompanyScope(countAccessCheck.filters, ctx.companyId, collection);
 
     // 🏢 Pre-strip nested filters (same as firestore_query)
     const safeFilters = filters.filter(f => !f.field.includes('.'));
@@ -840,7 +917,7 @@ export class AgenticToolExecutor {
         .slice(0, limit)
         .map(doc => ({
           id: doc.id,
-          ...this.redactSensitiveFields(doc.data()),
+          ...this.redactRoleBlockedFields(this.redactSensitiveFields(doc.data()), ctx),
         }));
 
       if (matches.length > 0) {
@@ -1007,7 +1084,9 @@ export class AgenticToolExecutor {
    *   "null" → null
    *   everything else → string
    */
-  private coerceFilterValue(value: string | number | boolean | null): string | number | boolean | null {
+  private coerceFilterValue(value: string | number | boolean | null | string[]): string | number | boolean | null | string[] {
+    // Arrays pass through (for 'in' operator)
+    if (Array.isArray(value)) return value;
     if (typeof value !== 'string') return value;
 
     // Boolean coercion
@@ -1111,6 +1190,64 @@ export class AgenticToolExecutor {
       } else {
         result[key] = value;
       }
+    }
+    return result;
+  }
+
+  /**
+   * RBAC: Redact fields blocked by the role access matrix.
+   *
+   * SSoT: blockedFields in ai-role-access-matrix.ts defines NESTED form only.
+   * deriveBlockedFieldSet() auto-generates flat forms (_askingPrice from commercial.askingPrice).
+   * Zero manual duplication, zero heuristics.
+   */
+  private redactRoleBlockedFields(
+    data: Record<string, unknown>,
+    ctx: AgenticContext
+  ): Record<string, unknown> {
+    if (ctx.isAdmin) return data;
+
+    const accessConfig = this.getAccessConfig(ctx);
+
+    if (accessConfig.blockedFields.length === 0) return data;
+
+    // Auto-derive flat + nested field set from SSoT nested definitions
+    const allBlocked = deriveBlockedFieldSet(accessConfig.blockedFields);
+
+    // Build nested parent→children map for object-level redaction
+    const blockedNested = new Map<string, Set<string>>();
+    for (const field of accessConfig.blockedFields) {
+      const dotIdx = field.indexOf('.');
+      if (dotIdx !== -1) {
+        const parent = field.substring(0, dotIdx);
+        const child = field.substring(dotIdx + 1);
+        if (!blockedNested.has(parent)) blockedNested.set(parent, new Set());
+        blockedNested.get(parent)!.add(child);
+      }
+    }
+
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(data)) {
+      // Flat field match (auto-derived: '_askingPrice', '_buyerName', etc.)
+      if (allBlocked.has(key)) continue;
+
+      // Nested object redaction (e.g. 'commercial' → remove blocked children)
+      if (blockedNested.has(key) && typeof value === 'object' && value !== null) {
+        const blockedChildren = blockedNested.get(key)!;
+        const nested = value as Record<string, unknown>;
+        const cleaned: Record<string, unknown> = {};
+        for (const [nk, nv] of Object.entries(nested)) {
+          if (!blockedChildren.has(nk)) {
+            cleaned[nk] = nv;
+          }
+        }
+        if (Object.keys(cleaned).length > 0) {
+          result[key] = cleaned;
+        }
+        continue;
+      }
+
+      result[key] = value;
     }
     return result;
   }

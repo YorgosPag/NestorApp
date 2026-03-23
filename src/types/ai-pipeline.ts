@@ -379,6 +379,32 @@ export interface AdminCommandMeta {
 }
 
 // ============================================================================
+// CONTACT METADATA (RBAC — Role-Based Access Control)
+// ============================================================================
+
+/**
+ * Resolved contact info with project roles.
+ * Flows from channel adapter → pipeline → agentic loop for access control.
+ */
+export interface ContactMeta {
+  /** Firestore contact document ID */
+  contactId: string;
+  /** Display name */
+  displayName: string;
+  /** First name (for greeting) */
+  firstName: string;
+  /** Primary persona type (engineer, client, lawyer, etc.) */
+  primaryPersona: string | null;
+  /** Project/entity roles from contact_links */
+  projectRoles: Array<{
+    projectId: string;
+    role: string;
+    entityType: string;
+    entityId: string;
+  }>;
+}
+
+// ============================================================================
 // PIPELINE CONTEXT (carries data through all 7 steps)
 // ============================================================================
 
@@ -436,6 +462,9 @@ export interface PipelineContext {
 
   /** Admin command metadata — present when sender is a super admin */
   adminCommandMeta?: AdminCommandMeta | null;
+
+  /** Resolved contact metadata with project roles (RBAC) */
+  contactMeta?: ContactMeta | null;
 
   /** Lookup results per module (moduleId → data). Used when multiple modules contribute. */
   multiLookupData?: Record<string, Record<string, unknown>>;

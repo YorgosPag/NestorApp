@@ -208,7 +208,7 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<Proc
           );
           if (response) {
             telegramResponse = response;
-            return { telegramResponse, needsPipelineBatch: false };
+            return { needsPipelineBatch: false };
           }
         }
       }
@@ -219,15 +219,13 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<Proc
         if (await hasActiveBookingSession(userId)) {
           // Cancel booking if user types "Ακύρωση"
           if (effectiveMessageText.includes('Ακύρωση')) {
-            return {
-              telegramResponse: {
-                method: 'sendMessage',
-                chat_id: webhookData.message.chat.id,
-                text: '❌ Η κράτηση ακυρώθηκε.',
-                reply_markup: { remove_keyboard: true },
-              },
-              needsPipelineBatch: false,
+            telegramResponse = {
+              method: 'sendMessage',
+              chat_id: webhookData.message.chat.id,
+              text: '❌ Η κράτηση ακυρώθηκε.',
+              reply_markup: { remove_keyboard: true },
             };
+            return { needsPipelineBatch: false };
           }
 
           const response = await handleBookingContactInput(
@@ -239,7 +237,7 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<Proc
           );
           if (response) {
             telegramResponse = response;
-            return { telegramResponse, needsPipelineBatch: false };
+            return { needsPipelineBatch: false };
           }
         }
       }
@@ -307,13 +305,13 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<Proc
         }
       }
     } else {
-      // ── Contact Recognition — persona-aware responses ──
+      // ── Contact Recognition — ALWAYS resolve (including bot commands) ──
       const senderId = String(webhookData.message.from?.id ?? '');
       const senderName = [webhookData.message.from?.first_name, webhookData.message.from?.last_name]
         .filter(Boolean).join(' ');
 
       let resolvedContact: import('@/services/contact-recognition/contact-linker').ResolvedContact | null = null;
-      if (senderId && !isBotCommand) {
+      if (senderId && isFirebaseAvailable()) {
         try {
           const { resolveContactFromTelegram } = await import('@/services/contact-recognition/contact-linker');
           resolvedContact = await resolveContactFromTelegram(senderId, senderName);
@@ -327,14 +325,29 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<Proc
           contactId: resolvedContact.contactId,
           name: resolvedContact.displayName,
           personas: resolvedContact.activePersonas,
+          isBotCommand,
         });
-        // Persona-aware response
-        const { createPersonaAwareResponse } = await import('./message/responses');
-        telegramResponse = createPersonaAwareResponse(
-          webhookData.message.chat.id,
-          resolvedContact,
-          effectiveMessageText,
-        );
+
+        if (isBotCommand && effectiveMessageText.startsWith('/start')) {
+          // /start from known contact → persona-aware welcome
+          const { createPersonaAwareResponse } = await import('./message/responses');
+          telegramResponse = createPersonaAwareResponse(
+            webhookData.message.chat.id,
+            resolvedContact,
+            effectiveMessageText,
+          );
+        } else if (isBotCommand) {
+          // Other bot commands (/help, /search, etc.) → standard handler
+          telegramResponse = await processMessage(webhookData.message, effectiveMessageText);
+        } else {
+          // Regular message from known contact → persona-aware response
+          const { createPersonaAwareResponse } = await import('./message/responses');
+          telegramResponse = createPersonaAwareResponse(
+            webhookData.message.chat.id,
+            resolvedContact,
+            effectiveMessageText,
+          );
+        }
       } else {
         logger.info('Processing regular message (unknown contact)');
         telegramResponse = await processMessage(webhookData.message, effectiveMessageText);
@@ -441,6 +454,24 @@ async function feedTelegramToPipeline(message: TelegramMessage['message'], overr
   // Centralized company ID (ADR-210)
   const companyId = getCompanyId();
 
+  // RBAC: Resolve contact with project roles (cached, 0 extra reads if already resolved)
+  let contactMeta: import('@/types/ai-pipeline').ContactMeta | undefined;
+  try {
+    const { resolveContactFromTelegram } = await import('@/services/contact-recognition/contact-linker');
+    const resolved = await resolveContactFromTelegram(userId, userName);
+    if (resolved) {
+      contactMeta = {
+        contactId: resolved.contactId,
+        displayName: resolved.displayName,
+        firstName: resolved.firstName,
+        primaryPersona: resolved.primaryPersona,
+        projectRoles: resolved.projectRoles,
+      };
+    }
+  } catch {
+    // Non-fatal
+  }
+
   try {
     const { TelegramChannelAdapter } = await import(
       '@/services/ai-pipeline/channel-adapters/telegram-channel-adapter'
@@ -453,6 +484,7 @@ async function feedTelegramToPipeline(message: TelegramMessage['message'], overr
       messageText,
       messageId,
       companyId,
+      contactMeta,
     });
 
     if (result.enqueued) {

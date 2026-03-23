@@ -1,3 +1,4 @@
+/** @rebuild 2026-03-23T14:25 — RBAC + disambiguation + status indicators */
 /**
  * =============================================================================
  * AI PIPELINE WORKER

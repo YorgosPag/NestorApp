@@ -29,6 +29,14 @@ const logger = createModuleLogger('ContactLinker');
 // TYPES
 // ============================================================================
 
+/** Project/entity role from contact_links */
+export interface ProjectRoleLink {
+  projectId: string;
+  role: string;
+  entityType: string;
+  entityId: string;
+}
+
 export interface ResolvedContact {
   /** Firestore contact document ID */
   contactId: string;
@@ -44,6 +52,8 @@ export interface ResolvedContact {
   phone: string | null;
   /** Email (if available) */
   email: string | null;
+  /** Project/entity roles from contact_links (RBAC) */
+  projectRoles: ProjectRoleLink[];
 }
 
 // ============================================================================
@@ -156,6 +166,31 @@ export async function resolveContactFromTelegram(
     const emails = Array.isArray(contact.emails) ? contact.emails as Array<{ email?: string; isPrimary?: boolean }> : [];
     const phones = Array.isArray(contact.phones) ? contact.phones as Array<{ number?: string; isPrimary?: boolean }> : [];
 
+    // Step 5: Fetch project roles from contact_links (RBAC)
+    let projectRoles: ProjectRoleLink[] = [];
+    try {
+      const linksSnap = await db
+        .collection(COLLECTIONS.CONTACT_LINKS)
+        .where('sourceContactId', '==', contactId)
+        .where('status', '==', 'active')
+        .limit(20)
+        .get();
+
+      projectRoles = linksSnap.docs.map(doc => {
+        const data = doc.data();
+        return {
+          projectId: data.targetEntityType === 'project'
+            ? String(data.targetEntityId ?? '')
+            : '',
+          role: String(data.role ?? 'unknown'),
+          entityType: String(data.targetEntityType ?? 'project'),
+          entityId: String(data.targetEntityId ?? ''),
+        };
+      });
+    } catch {
+      // Non-fatal: if contact_links query fails, proceed without roles
+    }
+
     const result: ResolvedContact = {
       contactId,
       displayName: String(contact.displayName ?? `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim()),
@@ -164,6 +199,7 @@ export async function resolveContactFromTelegram(
       primaryPersona: activePersonas.length > 0 ? activePersonas[0] : null,
       phone: phones.find(p => p.isPrimary)?.number ?? phones[0]?.number ?? null,
       email: emails.find(e => e.isPrimary)?.email ?? emails[0]?.email ?? null,
+      projectRoles,
     };
 
     setCache(cacheKey, result);

@@ -108,12 +108,12 @@ export async function handleCallbackQuery(
 
         // ADR-173 Phase 2: Check category callbacks BEFORE rating callbacks
         if (data && isCategoryCallback(data)) {
-          return handleCategoryCallback(data, chatId);
+          return handleCategoryCallback(data, chatId, callbackQuery.message.message_id);
         }
 
         // ADR-173: Check if this is a feedback callback (thumbs up/down)
         if (data && isFeedbackCallback(data)) {
-          return handleFeedbackRatingCallback(data, chatId);
+          return handleFeedbackRatingCallback(data, chatId, callbackQuery.message.message_id);
         }
 
         return null;
@@ -290,11 +290,13 @@ async function handlePropertyDetailCallback(
 
 /**
  * Handle thumbs up/down rating callback.
+ * Removes feedback buttons after click (one-time use).
  * On thumbs down, sends follow-up category keyboard.
  */
 async function handleFeedbackRatingCallback(
   data: string,
-  chatId: number | string
+  chatId: number | string,
+  messageId: number
 ): Promise<TelegramSendPayload | null> {
   const parsed = parseFeedbackCallback(data);
   if (!parsed) return null;
@@ -302,12 +304,14 @@ async function handleFeedbackRatingCallback(
   try {
     await getFeedbackService().updateRating(parsed.feedbackDocId, parsed.rating);
 
+    // Remove feedback buttons from original message (one-time use)
     if (parsed.rating === 'positive') {
-      return {
-        chat_id: chatId,
-        text: '\u{1F44D} \u0395\u03C5\u03C7\u03B1\u03C1\u03B9\u03C3\u03C4\u03CE!',
-      };
+      await removeFeedbackButtons(chatId, messageId, '\u{1F44D} \u0395\u03C5\u03C7\u03B1\u03C1\u03B9\u03C3\u03C4\u03CE!');
+      return null; // No separate message needed — edited in place
     }
+
+    // Negative: replace feedback message, then send category keyboard
+    await removeFeedbackButtons(chatId, messageId, '\u{1F44E} \u0394\u03B5\u03BD \u03AE\u03C4\u03B1\u03BD \u03C7\u03C1\u03AE\u03C3\u03B9\u03BC\u03B7.');
 
     // Negative: Send follow-up category keyboard
     return {
@@ -322,11 +326,40 @@ async function handleFeedbackRatingCallback(
 }
 
 /**
+ * Replace feedback message with confirmation text and remove buttons.
+ * Uses editMessageText to replace both text AND inline keyboard.
+ */
+async function removeFeedbackButtons(
+  chatId: number | string,
+  messageId: number,
+  replacementText?: string
+): Promise<void> {
+  try {
+    await fetch(
+      `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/editMessageText`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          message_id: messageId,
+          text: replacementText ?? '✅ Feedback καταγράφηκε.',
+          reply_markup: { inline_keyboard: [] },
+        }),
+      }
+    );
+  } catch {
+    // Non-fatal: if edit fails, feedback was already recorded
+  }
+}
+
+/**
  * Handle negative feedback category selection.
  */
 async function handleCategoryCallback(
   data: string,
-  chatId: number | string
+  chatId: number | string,
+  messageId: number
 ): Promise<TelegramSendPayload | null> {
   const parsed = parseCategoryCallback(data);
   if (!parsed) return null;
@@ -334,10 +367,9 @@ async function handleCategoryCallback(
   try {
     await getFeedbackService().updateNegativeCategory(parsed.feedbackDocId, parsed.category);
 
-    return {
-      chat_id: chatId,
-      text: '\u2705 \u0395\u03C5\u03C7\u03B1\u03C1\u03B9\u03C3\u03C4\u03CE \u03B3\u03B9\u03B1 \u03C4\u03BF feedback! \u0398\u03B1 \u03B2\u03B5\u03BB\u03C4\u03B9\u03C9\u03B8\u03CE.',
-    };
+    // Replace category message with confirmation (one-time use)
+    await removeFeedbackButtons(chatId, messageId, '\u2705 \u0395\u03C5\u03C7\u03B1\u03C1\u03B9\u03C3\u03C4\u03CE \u03B3\u03B9\u03B1 \u03C4\u03BF feedback! \u0398\u03B1 \u03B2\u03B5\u03BB\u03C4\u03B9\u03C9\u03B8\u03CE.');
+    return null; // No separate message — edited in place
   } catch {
     return null;
   }

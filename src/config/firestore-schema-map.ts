@@ -142,6 +142,11 @@ export const FIRESTORE_SCHEMA_MAP: Record<string, CollectionSchema> = {
       notes: 'string?',
       tags: 'string[]?',
       createdAt: 'Timestamp',
+      // Personas: ρόλοι της επαφής (array of objects)
+      'personas': 'array of { personaType: client|engineer|lawyer|notary|supplier|real_estate_agent, status: active|inactive, activatedAt: ISO string, deactivatedAt: string|null, notes: string|null, teeRegistryNumber?: string (μόνο engineer), engineerSpecialty?: architect|civil_engineer|mechanical_engineer|electrical_engineer|surveyor|chemical_engineer (μόνο engineer), licenseClass?: string (μόνο engineer) }',
+      // Emails & Phones (arrays)
+      'emails': 'array of { email: string, type: personal|work, isPrimary: boolean }?',
+      'phones': 'array of { number: string, type: mobile|home|work, isPrimary: boolean, countryCode?: string }?',
     },
   },
 
@@ -206,8 +211,10 @@ export const FIRESTORE_SCHEMA_MAP: Record<string, CollectionSchema> = {
       title: 'string',
       companyId: 'string',
       contactId: 'string? (->contacts)',
-      date: 'Timestamp',
-      time: 'string?',
+      date: 'Timestamp (ISO ημερομηνία έναρξης)',
+      time: 'string? (ώρα έναρξης π.χ. "10:00")',
+      endTime: 'string? (ώρα λήξης π.χ. "11:00" — αν δεν δοθεί, default +1 ώρα)',
+      durationMinutes: 'number? (διάρκεια σε λεπτά — default 60)',
       location: 'string?',
       status: 'scheduled|completed|cancelled?',
       notes: 'string?',
@@ -317,14 +324,20 @@ export const FIRESTORE_SCHEMA_MAP: Record<string, CollectionSchema> = {
   },
 
   contact_links: {
-    description: 'Συνδέσεις επαφών με entities (μονάδες, έργα)',
+    description: 'Συνδέσεις επαφών με entities (μονάδες, έργα) — RBAC. Χρησιμοποίησε sourceContactId + targetEntityType + targetEntityId + role.',
     fields: {
-      contactId: 'string (->contacts)',
-      entityType: 'unit|project|building',
-      entityId: 'string',
-      role: 'buyer|tenant|owner|contractor|architect|engineer?',
+      sourceContactId: 'string (->contacts, ID επαφής)',
+      targetEntityType: 'project|building|unit (τύπος entity)',
+      targetEntityId: 'string (ID του project/building/unit)',
+      role: 'supervisor|architect|engineer|contractor|buyer|tenant|owner|lawyer|notary|realtor|accountant (ρόλος στο entity)',
+      status: 'active|inactive',
       companyId: 'string',
+      reason: 'string? (λόγος σύνδεσης)',
       createdAt: 'Timestamp?',
+    },
+    relationships: {
+      'sourceContactId': 'contacts.id',
+      'targetEntityId': 'projects.id | buildings.id | units.id',
     },
   },
 
