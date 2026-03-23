@@ -15,6 +15,19 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { matchesSearchTerm } from '@/lib/search/search';
+import { getErrorMessage } from '@/lib/error-utils';
+import { useFullscreen } from '@/hooks/useFullscreen';
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTypography } from '@/hooks/useTypography';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useAuth } from '@/hooks/useAuth';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { InfoLabel } from '@/components/sales/payments/financial-intelligence/InfoLabel';
+import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import type { Project } from '@/types/project';
 import type {
   CalculationMethod,
@@ -23,8 +36,10 @@ import type {
 } from '@/types/ownership-table';
 import { TOTAL_SHARES_TARGET } from '@/types/ownership-table';
 import { useOwnershipTable } from '@/hooks/ownership/useOwnershipTable';
+import { getBuildingIdsByProject, validateBuildingData } from '@/services/ownership/ownership-table-service';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -55,12 +70,30 @@ import {
   CheckCircle,
   FileText,
   Trash2,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  ChevronRight,
+  ChevronDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import type { SortDirection } from '@/components/building-management/shared/types';
 
 // ============================================================================
 // TYPES
 // ============================================================================
+
+/** Column definition for the ownership table — config-driven rendering */
+interface OwnershipColumnDef {
+  readonly key: string;
+  readonly labelKey: string;
+  readonly width?: string;
+  readonly alignRight?: boolean;
+  readonly filterable?: boolean;
+  readonly sortValue?: (row: MutableOwnershipTableRow) => string | number;
+  readonly whitespace?: boolean;
+}
 
 interface OwnershipTableTabProps {
   data: Project;
@@ -71,12 +104,12 @@ interface OwnershipTableTabProps {
 // HELPER COMPONENTS
 // ============================================================================
 
-/** Status badge with color coding */
+/** Status badge — colors via COLOR_BRIDGE (semantic, theme-aware) */
 function StatusBadge({ status, t }: { status: string; t: (key: string) => string }) {
   const variants: Record<string, string> = {
-    draft: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-    finalized: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-    registered: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+    draft: cn(COLOR_BRIDGE.bg.warningSubtle, COLOR_BRIDGE.text.warning),
+    finalized: cn(COLOR_BRIDGE.bg.successSubtle, COLOR_BRIDGE.text.success),
+    registered: cn(COLOR_BRIDGE.bg.infoSubtle, COLOR_BRIDGE.text.info),
   };
   const labels: Record<string, string> = {
     draft: t('common:ownership.statusDraft'),
@@ -91,7 +124,7 @@ function StatusBadge({ status, t }: { status: string; t: (key: string) => string
   );
 }
 
-/** Validation indicator */
+/** Validation indicator — colors via COLOR_BRIDGE */
 function ValidationIndicator({
   total,
   valid,
@@ -103,7 +136,7 @@ function ValidationIndicator({
 }) {
   if (valid) {
     return (
-      <span className="inline-flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
+      <span className={cn('inline-flex items-center gap-1 text-sm', COLOR_BRIDGE.text.success)}>
         <CheckCircle className="h-4 w-4" />
         {t('common:ownership.validation.totalCorrect')}
       </span>
@@ -111,7 +144,7 @@ function ValidationIndicator({
   }
 
   return (
-    <span className="inline-flex items-center gap-1 text-sm text-red-600 dark:text-red-400">
+    <span className={cn('inline-flex items-center gap-1 text-sm', COLOR_BRIDGE.text.error)}>
       <AlertTriangle className="h-4 w-4" />
       {total}‰ / {TOTAL_SHARES_TARGET}‰ ({total - TOTAL_SHARES_TARGET > 0 ? '+' : ''}
       {total - TOTAL_SHARES_TARGET})
@@ -130,12 +163,50 @@ function ownerLabel(party: OwnerParty, t: (key: string) => string): string {
   return map[party] ?? party;
 }
 
-/** Category label — parking rows show "Πληροφοριακά" instead of "Βοηθητικά" */
+/** Category label */
 function categoryLabel(cat: string, t: (key: string) => string, participates?: boolean): string {
-  if (participates === false) return 'Πληροφοριακά';
+  if (cat === 'air_rights') return t('common:ownership.categoryAirRights');
+  if (participates === false) return t('common:ownership.categoryInformational');
   return cat === 'main'
     ? t('common:ownership.categoryMain')
     : t('common:ownership.categoryAuxiliary');
+}
+
+// ============================================================================
+// COLUMN CONFIG — SSoT for headers, filters, sorting
+// ============================================================================
+
+/** Ownership table column definitions. ALL headers, filters, sort derive from this. */
+function buildColumns(t: (key: string) => string): OwnershipColumnDef[] {
+  return [
+    { key: 'ordinal', labelKey: 'common:ownership.columns.ordinal', width: 'w-10', whitespace: true },
+    { key: 'code', labelKey: 'common:ownership.columns.entityCode', width: 'w-32', whitespace: true, filterable: true, sortValue: r => r.entityCode },
+    { key: 'description', labelKey: 'common:ownership.columns.description', whitespace: true, filterable: true, sortValue: r => r.description },
+    { key: 'category', labelKey: 'common:ownership.columns.category', width: 'w-16', whitespace: true, filterable: true, sortValue: r => r.category },
+    { key: 'floor', labelKey: 'common:ownership.columns.floor', width: 'w-14', whitespace: true, filterable: true, sortValue: r => r.floor },
+    { key: 'netArea', labelKey: 'common:ownership.columns.areaNet', width: 'w-28', whitespace: true, alignRight: true, filterable: true, sortValue: r => r.areaNetSqm },
+    { key: 'grossArea', labelKey: 'common:ownership.columns.areaGross', width: 'w-20', whitespace: true, alignRight: true, filterable: true, sortValue: r => r.areaSqm },
+    { key: 'shares', labelKey: 'common:ownership.columns.millesimalShares', width: 'w-28', whitespace: true, alignRight: true, filterable: true, sortValue: r => r.millesimalShares },
+    { key: 'allocation', labelKey: 'common:ownership.columns.allocation', width: 'w-32', whitespace: true, filterable: true, sortValue: r => r.ownerParty },
+    { key: 'buyer', labelKey: 'common:ownership.columns.ownerParty', whitespace: true, filterable: true, sortValue: r => r.buyerName ?? '' },
+    { key: 'preliminary', labelKey: 'common:ownership.columns.preliminary', width: 'w-28', whitespace: true, filterable: true, sortValue: r => r.preliminaryContract ?? '' },
+    { key: 'final', labelKey: 'common:ownership.columns.final', width: 'w-28', whitespace: true, filterable: true, sortValue: r => r.finalContract ?? '' },
+  ];
+}
+
+/** Row background color based on category/state — via COLOR_BRIDGE */
+function getRowClassName(row: MutableOwnershipTableRow): string {
+  if (row.category === 'air_rights') return COLOR_BRIDGE.bg.purple;
+  if (row.isManualOverride) return COLOR_BRIDGE.bg.warningLight;
+  if (row.participatesInCalculation === false) return COLOR_BRIDGE.bg.infoSubtle;
+  return '';
+}
+
+/** Category badge color — via COLOR_BRIDGE */
+function getCategoryBadgeClass(row: MutableOwnershipTableRow): string {
+  if (row.category === 'air_rights') return cn(COLOR_BRIDGE.border.info, COLOR_BRIDGE.text.info);
+  if (row.participatesInCalculation === false) return cn(COLOR_BRIDGE.border.info, COLOR_BRIDGE.text.info);
+  return '';
 }
 
 // ============================================================================
@@ -146,33 +217,37 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
   const resolvedProjectId = projectId ?? data.id;
   const { t } = useTranslation();
   const { success: showSuccess, error: showError } = useNotifications();
+  const { user } = useAuth();
+  const router = useRouter();
+  const fullscreen = useFullscreen();
+  const spacingTokens = useSpacingTokens();
+  const iconSizes = useIconSizes();
+  const typography = useTypography();
+  const borders = useBorderTokens();
+  const { confirm, dialogProps } = useConfirmDialog();
 
   // Building IDs — fetch from Firestore (buildings where projectId matches)
   const [buildingIds, setBuildingIds] = useState<string[]>([]);
 
   useEffect(() => {
-    async function fetchBuildingIds() {
-      try {
-        const { collection, query, where, getDocs } = await import('firebase/firestore');
-        const { db } = await import('@/lib/firebase');
-        const { COLLECTIONS } = await import('@/config/firestore-collections');
-        const snap = await getDocs(
-          query(collection(db, COLLECTIONS.BUILDINGS), where('projectId', '==', resolvedProjectId))
-        );
-        const ids = snap.docs.map(d => d.id);
-        setBuildingIds(ids);
-      } catch {
-        // Silent — ownership table will just show empty
-      }
-    }
-    fetchBuildingIds();
+    getBuildingIdsByProject(resolvedProjectId)
+      .then(setBuildingIds)
+      .catch(() => { /* Silent — ownership table will just show empty */ });
   }, [resolvedProjectId]);
 
   // Unlock dialog state
   const [showUnlockInput, setShowUnlockInput] = useState(false);
   const [unlockReason, setUnlockReason] = useState('');
-  // Delete confirmation state
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // Tree children accordion state — expanded unit IDs
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const toggleRowExpand = useCallback((entityId: string) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(entityId)) next.delete(entityId);
+      else next.add(entityId);
+      return next;
+    });
+  }, []);
 
   const {
     table,
@@ -187,6 +262,9 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
     autoPopulate,
     calculate,
     updateRow,
+    addAirRightsRow,
+    updateLinkedSpace,
+    removeRow,
     updateTableField,
     save,
     finalize,
@@ -212,79 +290,161 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
     return groups;
   }, [table?.rows]);
 
+  // --- Column config (SSoT for headers, filters, sorting) ---
+  const columns = useMemo(() => buildColumns(t), [t]);
+
+  // --- Per-column search filters (config-driven, reuses centralized matchesSearchTerm) ---
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
+  const updateColumnFilter = useCallback((col: string, value: string) => {
+    setColumnFilters(prev => ({ ...prev, [col]: value }));
+  }, []);
+
+  const hasActiveFilters = Object.values(columnFilters).some(v => v.trim() !== '');
+
+  const filteredGroupedRows = useMemo(() => {
+    if (!hasActiveFilters) return groupedRows;
+
+    const filtered = new Map<string, MutableOwnershipTableRow[]>();
+    for (const [buildingId, rows] of groupedRows) {
+      const matchingRows = rows.filter(row => {
+        for (const col of columns) {
+          const filterValue = columnFilters[col.key];
+          if (!filterValue || !col.filterable || !col.sortValue) continue;
+          if (!matchesSearchTerm([String(col.sortValue(row))], filterValue)) return false;
+        }
+        return true;
+      });
+      if (matchingRows.length > 0) {
+        filtered.set(buildingId, matchingRows);
+      }
+    }
+    return filtered;
+  }, [groupedRows, columnFilters, hasActiveFilters, columns]);
+
+  // --- Column sorting (config-driven, same pattern as BuildingSpaceTable) ---
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  const toggleSort = useCallback((col: string) => {
+    setSortColumn(prev => {
+      if (prev === col) {
+        setSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+        return col;
+      }
+      setSortDirection('asc');
+      return col;
+    });
+  }, []);
+
+  const sortedGroupedRows = useMemo(() => {
+    if (!sortColumn) return filteredGroupedRows;
+
+    const colDef = columns.find(c => c.key === sortColumn);
+    if (!colDef?.sortValue) return filteredGroupedRows;
+
+    const extractor = colDef.sortValue;
+    const sorted = new Map<string, MutableOwnershipTableRow[]>();
+
+    for (const [buildingId, rows] of filteredGroupedRows) {
+      const sortedRows = [...rows].sort((a, b) => {
+        const av = extractor(a);
+        const bv = extractor(b);
+        if (typeof av === 'number' && typeof bv === 'number') {
+          return sortDirection === 'asc' ? av - bv : bv - av;
+        }
+        const cmp = String(av).localeCompare(String(bv), 'el');
+        return sortDirection === 'asc' ? cmp : -cmp;
+      });
+      sorted.set(buildingId, sortedRows);
+    }
+    return sorted;
+  }, [filteredGroupedRows, sortColumn, sortDirection, columns]);
+
   // --- Handlers ---
   const handleAutoPopulate = useCallback(async () => {
-    // ── Step 1: Check buildings linked to project ──
     if (buildingIds.length === 0) {
-      showError('Δεν βρέθηκαν κτίρια συνδεδεμένα με αυτό το έργο. Συνδέστε πρώτα ένα κτίριο με το έργο (Κτίριο → Γενικά → Έργο).');
+      showError(t('common:ownership.messages.noBuildings'));
       return;
     }
 
-    // ── Step 2: Check floors exist in buildings ──
     try {
-      const { collection, query, where, getDocs } = await import('firebase/firestore');
-      const { db } = await import('@/lib/firebase');
-      const { COLLECTIONS } = await import('@/config/firestore-collections');
-
-      let totalFloors = 0;
-      let totalUnits = 0;
-      let unitsWithoutArea = 0;
-      let unitsWithoutFloor = 0;
-
-      for (const bId of buildingIds) {
-        const floorsSnap = await getDocs(query(collection(db, COLLECTIONS.FLOORS), where('buildingId', '==', bId)));
-        totalFloors += floorsSnap.size;
-
-        const unitsSnap = await getDocs(query(collection(db, COLLECTIONS.UNITS), where('buildingId', '==', bId)));
-        totalUnits += unitsSnap.size;
-
-        for (const unitDoc of unitsSnap.docs) {
-          const data = unitDoc.data();
-          const area = (data.area as number) ?? (data.areaSqm as number) ?? 0;
-          if (area <= 0) unitsWithoutArea++;
-          if (!data.floorId) unitsWithoutFloor++;
-        }
-      }
-
-      // ── Step 3: Report issues ──
+      const validation = await validateBuildingData(buildingIds);
       const issues: string[] = [];
 
-      if (totalFloors === 0) {
-        issues.push('Δεν υπάρχουν όροφοι στα κτίρια. Προσθέστε ορόφους πρώτα.');
-      }
-      if (totalUnits === 0) {
-        issues.push('Δεν υπάρχουν μονάδες στα κτίρια. Προσθέστε μονάδες πρώτα.');
-      }
-      if (unitsWithoutArea > 0) {
-        issues.push(`${unitsWithoutArea} μονάδ${unitsWithoutArea === 1 ? 'α' : 'ες'} χωρίς εμβαδόν — ο υπολογισμός χιλιοστών θα είναι λανθασμένος.`);
-      }
-      if (unitsWithoutFloor > 0) {
-        issues.push(`${unitsWithoutFloor} μονάδ${unitsWithoutFloor === 1 ? 'α' : 'ες'} χωρίς σύνδεση με όροφο — ο συντελεστής ορόφου δεν θα υπολογιστεί.`);
-      }
+      if (validation.totalFloors === 0) issues.push(t('common:ownership.messages.noFloors'));
+      if (validation.totalUnits === 0) issues.push(t('common:ownership.messages.noUnits'));
+      if (validation.unitsWithoutArea > 0) issues.push(t('common:ownership.messages.unitsWithoutArea', { count: validation.unitsWithoutArea }));
+      if (validation.unitsWithoutFloor > 0) issues.push(t('common:ownership.messages.unitsWithoutFloor', { count: validation.unitsWithoutFloor }));
 
-      if (totalUnits === 0) {
+      if (validation.totalUnits === 0) {
         showError(issues.join('\n'));
         return;
       }
 
-      // ── Step 4: Proceed with auto-populate ──
       const rowCount = await autoPopulate();
 
       if (issues.length > 0) {
-        // Has data but with warnings
-        showError(`Συμπληρώθηκαν ${rowCount} εγγραφές, αλλά:\n${issues.join('\n')}`);
+        showError(`${t('common:ownership.messages.populateWithWarnings', { count: rowCount })}\n${issues.join('\n')}`);
       } else {
-        showSuccess(`Συμπληρώθηκαν ${rowCount} εγγραφές. Πατήστε "Υπολογισμός" για να υπολογιστούν τα χιλιοστά.`);
+        showSuccess(t('common:ownership.messages.populateSuccess', { count: rowCount }));
       }
-    } catch {
-      showError('Σφάλμα κατά τον έλεγχο δεδομένων. Δοκιμάστε ξανά.');
+    } catch (err) {
+      showError(getErrorMessage(err, t('common:ownership.messages.dataCheckError')));
     }
-  }, [autoPopulate, buildingIds, showSuccess, showError]);
+  }, [autoPopulate, buildingIds, showSuccess, showError, t]);
 
   const handleCalculate = useCallback(() => {
+    const rows = table?.rows ?? [];
+
+    // Check: air rights without millesimal shares
+    const emptyAirRights = rows.filter(
+      r => r.category === 'air_rights' && r.millesimalShares === 0,
+    );
+    if (emptyAirRights.length > 0) {
+      showError(t('common:ownership.messages.airRightsNoShares', { count: emptyAirRights.length }));
+      return;
+    }
+
+    // Check: participating rows (units/storage) without area — blocks calculation
+    const noAreaRows = rows.filter(
+      r => r.participatesInCalculation && !r.isManualOverride && r.areaSqm <= 0,
+    );
+    if (noAreaRows.length > 0) {
+      const codes = noAreaRows.map(r => r.entityCode).join(', ');
+      showError(t('common:ownership.messages.noAreaRows', { count: noAreaRows.length, codes }));
+      return;
+    }
+
+    // Warning: linked parking/storage without area — informational only
+    const warnings: string[] = [];
+    for (const row of rows) {
+      if (!row.linkedSpacesSummary) continue;
+      for (const ls of row.linkedSpacesSummary) {
+        if (ls.areaNetSqm <= 0) {
+          warnings.push(`${ls.entityCode} (${ls.spaceType === 'parking' ? t('common:ownership.categoryInformational') : t('common:ownership.categoryAuxiliary')})`);
+        }
+      }
+    }
+
     calculate();
-    showSuccess(t('common:ownership.actions.calculate'));
-  }, [calculate, showSuccess, t]);
+
+    // Record calculation method + timestamp in notes
+    const methodLabels: Record<string, string> = {
+      area: t('common:ownership.methodArea'),
+      value: t('common:ownership.methodValue'),
+      volume: t('common:ownership.methodVolume'),
+    };
+    const methodName = methodLabels[table?.calculationMethod ?? 'area'] ?? table?.calculationMethod;
+    const timestamp = new Date().toLocaleString('el-GR');
+    const note = `${t('common:ownership.messages.calculationNote', { method: methodName, date: timestamp })}`;
+    updateTableField('notes', note);
+
+    if (warnings.length > 0) {
+      showSuccess(`${t('common:ownership.actions.calculate')} — ${t('common:ownership.messages.spacesNoArea', { count: warnings.length, codes: warnings.join(', ') })}`);
+    } else {
+      showSuccess(t('common:ownership.actions.calculate'));
+    }
+  }, [calculate, table, showSuccess, showError, updateTableField, t]);
 
   const handleSave = useCallback(async () => {
     await save();
@@ -292,35 +452,42 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
   }, [save, showSuccess, t]);
 
   const handleFinalize = useCallback(async () => {
+    if (!user?.uid) return;
     try {
-      await finalize('current-user'); // TODO: Replace with actual userId from auth
+      await finalize(user.uid);
       showSuccess(t('common:ownership.actions.finalize'));
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'Error');
+      showError(getErrorMessage(err, t('common:ownership.messages.deleteError')));
     }
-  }, [finalize, showSuccess, showError, t]);
+  }, [finalize, user, showSuccess, showError, t]);
 
   const handleUnlock = useCallback(async () => {
-    if (!unlockReason.trim()) return;
+    if (!unlockReason.trim() || !user?.uid) return;
     try {
-      await unlock('current-user', unlockReason); // TODO: Replace with actual userId
+      await unlock(user.uid, unlockReason);
       showSuccess(t('common:ownership.actions.unlock'));
       setShowUnlockInput(false);
       setUnlockReason('');
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'Error');
+      showError(getErrorMessage(err));
     }
-  }, [unlock, unlockReason, showSuccess, showError, t]);
+  }, [unlock, unlockReason, user, showSuccess, showError, t]);
 
   const handleDeleteDraft = useCallback(async () => {
+    const ok = await confirm({
+      title: t('common:ownership.actions.deleteTable'),
+      description: t('common:ownership.messages.orphanedAdvice'),
+      variant: 'destructive',
+      confirmText: t('common:ownership.actions.confirmDelete'),
+    });
+    if (!ok) return;
     try {
       await deleteDraft();
-      showSuccess('Ο πίνακας χιλιοστών διαγράφηκε.');
-      setShowDeleteConfirm(false);
+      showSuccess(t('common:ownership.messages.tableDeleted'));
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'Σφάλμα κατά τη διαγραφή');
+      showError(getErrorMessage(err, t('common:ownership.messages.deleteError')));
     }
-  }, [deleteDraft, showSuccess, showError]);
+  }, [deleteDraft, confirm, showSuccess, showError, t]);
 
   const handleMethodChange = useCallback((method: string) => {
     updateTableField('calculationMethod', method);
@@ -330,8 +497,8 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
   // --- Loading state ---
   if (loading && !table) {
     return (
-      <section className="flex items-center justify-center p-8">
-        <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+      <section className={cn('flex items-center justify-center', spacingTokens.padding.xl)}>
+        <RefreshCw className={cn(iconSizes.lg, 'animate-spin text-muted-foreground')} />
       </section>
     );
   }
@@ -339,9 +506,9 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
   // --- Error state ---
   if (error && !table) {
     return (
-      <section className="p-6">
+      <section className={spacingTokens.padding.lg}>
         <p className="text-destructive">{error}</p>
-        <Button variant="outline" onClick={reload} className="mt-2">
+        <Button variant="outline" onClick={reload} className={spacingTokens.margin.top.sm}>
           {t('common:buttons.refresh')}
         </Button>
       </section>
@@ -350,82 +517,82 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
 
   if (!table) return null;
 
-  const totalShares = table.rows.filter(r => r.participatesInCalculation !== false).reduce((sum, r) => sum + r.millesimalShares, 0);
+  const totalShares = table.rows
+    .filter(r => r.participatesInCalculation !== false)
+    .reduce((sum, r) => {
+      let rowTotal = r.millesimalShares;
+      if (r.linkedSpacesSummary) {
+        for (const ls of r.linkedSpacesSummary) {
+          if (ls.hasOwnShares) rowTotal += ls.millesimalShares;
+        }
+      }
+      return sum + rowTotal;
+    }, 0);
 
   return (
-    <section className="space-y-6">
+    <>
+    <FullscreenOverlay
+      isFullscreen={fullscreen.isFullscreen}
+      onToggle={fullscreen.toggle}
+      ariaLabel={t('common:ownership.title')}
+      className={spacingTokens.spaceBetween.sm}
+      fullscreenClassName={cn(spacingTokens.spaceBetween.sm, spacingTokens.padding.sm, 'overflow-auto')}
+    >
       {/* ============================================================ */}
       {/* HEADER: Method, Zone Price, Status */}
       {/* ============================================================ */}
-      <header className="flex flex-wrap items-center gap-4">
-        <h2 className="text-lg font-semibold">
+      <header className={cn('flex flex-wrap items-center', spacingTokens.gap.sm)}>
+        <h2 className={typography.heading.md}>
           {t('common:ownership.title')}
         </h2>
         <StatusBadge status={table.status} t={t} />
         {table.version > 1 && (
-          <span className="text-xs text-muted-foreground">
+          <span className={typography.special.tertiary}>
             {t('common:ownership.version')} {table.version}
           </span>
         )}
+        <FullscreenToggleButton
+          isFullscreen={fullscreen.isFullscreen}
+          onToggle={fullscreen.toggle}
+        />
       </header>
 
       {/* ============================================================ */}
       {/* ORPHANED BUILDINGS WARNING */}
       {/* ============================================================ */}
       {orphanedBuildingIds.length > 0 && table.rows.length > 0 && (
-        <section className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950/30">
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
-          <article className="flex-1 space-y-2">
-            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-              Αποσυνδεμένα κτίρια στον πίνακα
+        <section className={cn('flex items-start rounded-lg border', spacingTokens.gap.sm, spacingTokens.padding.md, COLOR_BRIDGE.border.warning, COLOR_BRIDGE.bg.warningSubtle)}>
+          <AlertTriangle className={cn('mt-0.5 shrink-0', iconSizes.md, COLOR_BRIDGE.text.warning)} />
+          <article className={cn('flex-1', spacingTokens.spaceBetween.sm)}>
+            <p className={cn('text-sm font-medium', COLOR_BRIDGE.text.warning)}>
+              {t('common:ownership.messages.orphanedTitle')}
             </p>
-            <p className="text-sm text-amber-700 dark:text-amber-300">
+            <p className={cn('text-sm', COLOR_BRIDGE.text.warning)}>
               {orphanedBuildingIds.length === 1
-                ? 'Ένα κτίριο που αναφέρεται στον πίνακα δεν είναι πλέον συνδεδεμένο με αυτό το έργο.'
-                : `${orphanedBuildingIds.length} κτίρια που αναφέρονται στον πίνακα δεν είναι πλέον συνδεδεμένα με αυτό το έργο.`}
-              {' '}Μπορείτε να επανασυνδέσετε τα κτίρια ή να διαγράψετε τον πίνακα και να τον δημιουργήσετε εκ νέου.
+                ? t('common:ownership.messages.orphanedSingle')
+                : t('common:ownership.messages.orphanedMultiple', { count: orphanedBuildingIds.length })}
+              {' '}{t('common:ownership.messages.orphanedAdvice')}
             </p>
             {!isLocked && (
-              <nav className="flex gap-2">
+              <nav className={cn('flex', spacingTokens.gap.sm)}>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleAutoPopulate}
                   disabled={loading || buildingIds.length === 0}
                 >
-                  <RefreshCw className="mr-1 h-3 w-3" />
-                  Ανανέωση πίνακα
+                  <RefreshCw className={cn('mr-1', iconSizes.xs)} />
+                  {t('common:ownership.actions.refreshTable')}
                 </Button>
-                {!showDeleteConfirm ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/30"
-                  >
-                    <Trash2 className="mr-1 h-3 w-3" />
-                    Διαγραφή πίνακα
-                  </Button>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <span className="text-xs text-red-600 dark:text-red-400">Σίγουρα;</span>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={handleDeleteDraft}
-                      disabled={saving}
-                    >
-                      Ναι, διέγραψε
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowDeleteConfirm(false)}
-                    >
-                      Άκυρο
-                    </Button>
-                  </span>
-                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDeleteDraft}
+                  className={cn(COLOR_BRIDGE.border.error, COLOR_BRIDGE.text.error)}
+                >
+                  <Trash2 className={cn('mr-1', iconSizes.xs)} />
+                  {t('common:ownership.actions.deleteTable')}
+                </Button>
               </nav>
             )}
           </article>
@@ -435,18 +602,21 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
       {/* ============================================================ */}
       {/* CONTROLS: Method selector + Zone price + ΣΕ */}
       {/* ============================================================ */}
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <section className={cn('grid grid-cols-1 sm:grid-cols-3', spacingTokens.gap.sm)}>
         {/* Method selector */}
-        <fieldset className="space-y-1" disabled={isLocked}>
-          <label className="text-sm font-medium">
-            {t('common:ownership.method')}
-          </label>
+        <fieldset className={spacingTokens.spaceBetween.xs} disabled={isLocked}>
+          <InfoLabel
+            htmlFor="ownership-method"
+            label={t('common:ownership.method')}
+            tooltip={t('common:ownership.tooltips.method')}
+            className={typography.label.sm}
+          />
           <Select
             value={table.calculationMethod}
             onValueChange={handleMethodChange}
             disabled={isLocked}
           >
-            <SelectTrigger>
+            <SelectTrigger className="h-9">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -458,10 +628,13 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
         </fieldset>
 
         {/* Zone price */}
-        <fieldset className="space-y-1" disabled={isLocked}>
-          <label className="text-sm font-medium">
-            {t('common:ownership.zonePrice')}
-          </label>
+        <fieldset className={spacingTokens.spaceBetween.xs} disabled={isLocked}>
+          <InfoLabel
+            htmlFor="ownership-zone-price"
+            label={t('common:ownership.zonePrice')}
+            tooltip={t('common:ownership.tooltips.zonePrice')}
+            className={typography.label.sm}
+          />
           <Input
             type="number"
             min={0}
@@ -473,10 +646,13 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
         </fieldset>
 
         {/* Commerciality coefficient */}
-        <fieldset className="space-y-1" disabled={isLocked}>
-          <label className="text-sm font-medium">
-            {t('common:ownership.commercialityCoefficient')}
-          </label>
+        <fieldset className={spacingTokens.spaceBetween.xs} disabled={isLocked}>
+          <InfoLabel
+            htmlFor="ownership-commerciality"
+            label={t('common:ownership.commercialityCoefficient')}
+            tooltip={t('common:ownership.tooltips.commerciality')}
+            className={typography.label.sm}
+          />
           <Input
             type="number"
             min={0}
@@ -493,24 +669,51 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
       {/* ============================================================ */}
       {/* ACTION BAR */}
       {/* ============================================================ */}
-      <nav className="flex flex-wrap items-center gap-2">
+      <nav className={cn('flex flex-wrap items-center', spacingTokens.gap.sm)}>
         <Button
           variant="outline"
           size="sm"
           onClick={handleAutoPopulate}
           disabled={isLocked || loading}
         >
-          <RefreshCw className="mr-1 h-4 w-4" />
+          <RefreshCw className={cn('mr-1', iconSizes.sm)} />
           {t('common:ownership.actions.autoPopulate')}
         </Button>
+        {table.rows.some(r => r.linkedSpacesSummary && r.linkedSpacesSummary.length > 0) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const allWithChildren = table.rows
+                .filter(r => r.linkedSpacesSummary && r.linkedSpacesSummary.length > 0)
+                .map(r => r.entityRef.id);
+              const allExpanded = allWithChildren.every(id => expandedRows.has(id));
+              setExpandedRows(allExpanded ? new Set() : new Set(allWithChildren));
+            }}
+          >
+            {expandedRows.size > 0
+              ? <ChevronDown className={iconSizes.sm} />
+              : <ChevronRight className={iconSizes.sm} />
+            }
+          </Button>
+        )}
         <Button
           variant="outline"
           size="sm"
           onClick={handleCalculate}
           disabled={isLocked || table.rows.length === 0}
         >
-          <Calculator className="mr-1 h-4 w-4" />
+          <Calculator className={cn('mr-1', iconSizes.sm)} />
           {t('common:ownership.actions.calculate')}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={addAirRightsRow}
+          disabled={isLocked}
+        >
+          <Plus className={cn('mr-1', iconSizes.sm)} />
+          {t('common:ownership.actions.addAirRights')}
         </Button>
         <Button
           variant="default"
@@ -518,7 +721,7 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
           onClick={handleSave}
           disabled={isLocked || saving || !isDirty}
         >
-          <Save className="mr-1 h-4 w-4" />
+          <Save className={cn('mr-1', iconSizes.sm)} />
           {t('common:buttons.save')}
         </Button>
 
@@ -534,14 +737,14 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
         )}
 
         {/* Finalize / Unlock */}
-        {!isLocked && table.rows.length > 0 && validation?.valid && (
+        {!isLocked && table.rows.length > 0 && (
           <Button
             variant="default"
             size="sm"
             onClick={handleFinalize}
-            disabled={saving}
+            disabled={saving || !(validation?.valid)}
           >
-            <Lock className="mr-1 h-4 w-4" />
+            <Lock className={cn('mr-1', iconSizes.sm)} />
             {t('common:ownership.actions.finalize')}
           </Button>
         )}
@@ -551,49 +754,28 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
             size="sm"
             onClick={() => setShowUnlockInput(true)}
           >
-            <Unlock className="mr-1 h-4 w-4" />
+            <Unlock className={cn('mr-1', iconSizes.sm)} />
             {t('common:ownership.actions.unlock')}
           </Button>
         )}
 
-        {/* Delete draft — always visible for non-locked tables */}
+        {/* Delete draft — uses centralized ConfirmDialog */}
         {!isLocked && table.rows.length > 0 && (
-          !showDeleteConfirm ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowDeleteConfirm(true)}
-              className="border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/30"
-            >
-              <Trash2 className="mr-1 h-4 w-4" />
-              Διαγραφή
-            </Button>
-          ) : (
-            <span className="flex items-center gap-2">
-              <span className="text-xs text-red-600 dark:text-red-400">Σίγουρα;</span>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleDeleteDraft}
-                disabled={saving}
-              >
-                Ναι, διέγραψε
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowDeleteConfirm(false)}
-              >
-                Άκυρο
-              </Button>
-            </span>
-          )
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDeleteDraft}
+            className={cn(COLOR_BRIDGE.border.error, COLOR_BRIDGE.text.error)}
+          >
+            <Trash2 className={cn('mr-1', iconSizes.sm)} />
+            {t('common:buttons.delete')}
+          </Button>
         )}
       </nav>
 
       {/* Unlock reason input */}
       {showUnlockInput && (
-        <section className="flex items-center gap-2">
+        <section className={cn('flex items-center', spacingTokens.gap.sm)}>
           <Input
             placeholder={t('common:ownership.unlockReason')}
             value={unlockReason}
@@ -617,33 +799,63 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
       {/* TABLE */}
       {/* ============================================================ */}
       {table.rows.length === 0 ? (
-        <section className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-          <FileText className="mx-auto mb-2 h-8 w-8" />
+        <section className={cn(borders.quick.dashed, 'text-center text-muted-foreground', spacingTokens.padding.xl)}>
+          <FileText className={cn('mx-auto mb-2', iconSizes.xl)} />
           <p>{t('common:ownership.empty')}</p>
         </section>
       ) : (
-        <Table>
-          <TableHeader>
+        <section className="max-h-[calc(100vh-280px)] overflow-auto rounded-lg border">
+        <Table size="compact">
+          <TableHeader className="sticky top-0 z-10 bg-background">
+            {/* Headers — config-driven from columns array */}
             <TableRow>
-              <TableHead className="w-12">{t('common:ownership.columns.ordinal')}</TableHead>
-              <TableHead className="w-24">{t('common:ownership.columns.entityCode')}</TableHead>
-              <TableHead>{t('common:ownership.columns.description')}</TableHead>
-              <TableHead className="w-20">{t('common:ownership.columns.category')}</TableHead>
-              <TableHead className="w-20">{t('common:ownership.columns.floor')}</TableHead>
-              <TableHead className="w-24 text-right">Καθαρά (τ.μ.)</TableHead>
-              <TableHead className="w-24 text-right">Μικτά (τ.μ.)</TableHead>
-              <TableHead className="w-24 text-right">
-                {t('common:ownership.columns.millesimalShares')}
-              </TableHead>
-              <TableHead className="w-36">Κατανομή</TableHead>
-              <TableHead>Ιδιοκτήτης</TableHead>
-              <TableHead className="w-32">Προσύμφωνο</TableHead>
-              <TableHead className="w-32">Οριστικό</TableHead>
+              {columns.map(col => {
+                const isSortable = !!col.sortValue;
+                const isActive = sortColumn === col.key;
+                return (
+                  <TableHead
+                    key={col.key}
+                    className={cn(
+                      col.width,
+                      col.whitespace && 'whitespace-nowrap',
+                      col.alignRight && 'text-right',
+                      isSortable && 'cursor-pointer select-none hover:text-foreground',
+                    )}
+                    onClick={isSortable ? () => toggleSort(col.key) : undefined}
+                  >
+                    <span className="inline-flex items-center gap-0.5">
+                      {t(col.labelKey)}
+                      {isSortable && (
+                        isActive
+                          ? sortDirection === 'asc'
+                            ? <ArrowUp className={cn(iconSizes.xs, 'text-foreground')} />
+                            : <ArrowDown className={cn(iconSizes.xs, 'text-foreground')} />
+                          : <ArrowUpDown className={cn(iconSizes.xs, 'text-muted-foreground/50')} />
+                      )}
+                    </span>
+                  </TableHead>
+                );
+              })}
+            </TableRow>
+            {/* Filters — config-driven from columns array */}
+            <TableRow className="bg-background">
+              {columns.map(col => (
+                <TableHead key={`filter-${col.key}`}>
+                  {col.filterable ? (
+                    <Input
+                      placeholder="🔍"
+                      value={columnFilters[col.key] ?? ''}
+                      onChange={e => updateColumnFilter(col.key, e.target.value)}
+                      className={typography.body.xs}
+                    />
+                  ) : null}
+                </TableHead>
+              ))}
             </TableRow>
           </TableHeader>
 
           <TableBody>
-            {Array.from(groupedRows.entries()).map(([buildingId, rows]) => {
+            {Array.from(sortedGroupedRows.entries()).map(([buildingId, rows]) => {
               const buildingName = rows[0]?.buildingName ?? buildingId;
               const subtotal = rows.reduce((sum, r) => sum + r.millesimalShares, 0);
 
@@ -651,7 +863,7 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
                 <React.Fragment key={buildingId}>
                   {/* Building group header */}
                   <TableRow className="bg-muted/50">
-                    <TableCell colSpan={12} className="font-semibold">
+                    <TableCell colSpan={12} className={typography.heading.sm}>
                       {buildingName}
                     </TableCell>
                   </TableRow>
@@ -662,38 +874,66 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
                       r => r.entityRef.id === row.entityRef.id,
                     );
                     const isNonParticipating = row.participatesInCalculation === false;
+                    const isAirRights = row.category === 'air_rights';
+                    const hasChildren = row.linkedSpacesSummary && row.linkedSpacesSummary.length > 0;
+                    const isExpanded = expandedRows.has(row.entityRef.id);
 
                     return (
                       <React.Fragment key={row.entityRef.id}>
-                      <TableRow
-                        className={cn(
-                          row.isManualOverride && 'bg-amber-50/50 dark:bg-amber-950/20',
-                          isNonParticipating && 'bg-blue-50/30 dark:bg-blue-950/20',
-                        )}
-                      >
-                        <TableCell className="text-muted-foreground">{visibleIdx + 1}</TableCell>
-                        <TableCell className="font-mono text-xs">{row.entityCode}</TableCell>
+                      <TableRow className={getRowClassName(row)}>
+                        <TableCell className="text-muted-foreground">
+                          <span className="inline-flex items-center">
+                            {hasChildren ? (
+                              <button
+                                type="button"
+                                onClick={() => toggleRowExpand(row.entityRef.id)}
+                                className="mr-0.5 text-muted-foreground hover:text-foreground"
+                              >
+                                {isExpanded
+                                  ? <ChevronDown className={iconSizes.xs} />
+                                  : <ChevronRight className={iconSizes.xs} />
+                                }
+                              </button>
+                            ) : (
+                              <span className={cn('mr-0.5 inline-block', iconSizes.xs)} />
+                            )}
+                            {visibleIdx + 1}
+                          </span>
+                        </TableCell>
+                        <TableCell className={typography.special.codeId}>
+                          {row.entityRef.collection === 'units' && (
+                            <NAVIGATION_ENTITIES.unit.icon className={cn('inline mr-1', iconSizes.xs, NAVIGATION_ENTITIES.unit.color)} />
+                          )}
+                          {row.entityRef.collection === 'units' ? (
+                            <button
+                              type="button"
+                              className="hover:underline cursor-pointer"
+                              onClick={() => router.push(`/spaces/apartments?unitId=${row.entityRef.id}`)}
+                            >
+                              {row.entityCode}
+                            </button>
+                          ) : (
+                            row.entityCode
+                          )}
+                        </TableCell>
                         <TableCell>{row.description}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={cn(
-                            'text-xs',
-                            isNonParticipating && 'border-blue-300 text-blue-600 dark:border-blue-700 dark:text-blue-400',
-                          )}>
+                          <Badge variant="outline" className={cn('text-xs', getCategoryBadgeClass(row))}>
                             {categoryLabel(row.category, t, row.participatesInCalculation)}
                           </Badge>
                         </TableCell>
                         <TableCell>{row.floor}</TableCell>
-                        <TableCell className="text-right font-mono text-xs">
+                        <TableCell className={cn('text-right', typography.special.codeId)}>
                           {row.areaNetSqm > 0 ? row.areaNetSqm.toFixed(2) : '—'}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-xs">
+                        <TableCell className={cn('text-right', typography.special.codeId)}>
                           {row.areaSqm > 0 ? row.areaSqm.toFixed(2) : '—'}
                         </TableCell>
                         <TableCell className="text-right">
                           {isNonParticipating ? (
-                            <span className="font-mono text-xs text-muted-foreground">—</span>
+                            <span className={cn(typography.special.codeId, 'text-muted-foreground')}>—</span>
                           ) : isLocked ? (
-                            <span className="font-mono font-semibold">{row.millesimalShares}‰</span>
+                            <span className={cn(typography.special.codeId, 'font-semibold')}>{row.millesimalShares}‰</span>
                           ) : (
                             <Input
                               type="number"
@@ -706,7 +946,7 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
                                   parseInt(e.target.value, 10) || 0,
                                 )
                               }
-                              className="h-7 w-20 text-right font-mono text-xs"
+                              className="w-20 text-right font-mono text-xs"
                             />
                           )}
                         </TableCell>
@@ -720,31 +960,42 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
                                 updateRow(globalIndex, 'ownerParty', val as OwnerParty)
                               }
                             >
-                              <SelectTrigger className="h-7 text-xs">
+                              <SelectTrigger className={typography.body.xs}>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="contractor">Εργολάβος</SelectItem>
-                                <SelectItem value="landowner">Οικοπεδούχος</SelectItem>
-                                <SelectItem value="buyer">Αγοραστής</SelectItem>
-                                <SelectItem value="unassigned">Αδιάθετο</SelectItem>
+                                <SelectItem value="contractor">{t('common:ownership.ownerContractor')}</SelectItem>
+                                <SelectItem value="landowner">{t('common:ownership.ownerLandowner')}</SelectItem>
+                                <SelectItem value="buyer">{t('common:ownership.ownerBuyer')}</SelectItem>
+                                <SelectItem value="unassigned">{t('common:ownership.ownerUnassigned')}</SelectItem>
                               </SelectContent>
                             </Select>
                           )}
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {row.buyerContactId ? (row as Record<string, unknown>).buyerName as string ?? '—' : '—'}
+                        <TableCell className={typography.special.tertiary}>
+                          {row.buyerName ?? '—'}
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground font-mono">
-                          {(row as Record<string, unknown>).preliminaryContract as string ?? '—'}
+                        <TableCell className={typography.special.codeId}>
+                          {row.preliminaryContract ?? '—'}
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground font-mono">
-                          {(row as Record<string, unknown>).finalContract as string ?? '—'}
+                        <TableCell className={typography.special.codeId}>
+                          {isAirRights && !isLocked ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeRow(globalIndex)}
+                              className={cn('h-6 w-6 p-0', COLOR_BRIDGE.text.error, COLOR_BRIDGE.bg.dangerHover)}
+                            >
+                              <Trash2 className={iconSizes.xs} />
+                            </Button>
+                          ) : (
+                            row.finalContract ?? '—'
+                          )}
                         </TableCell>
                       </TableRow>
 
-                      {/* Linked spaces as tree-branch child rows */}
-                      {row.linkedSpacesSummary && row.linkedSpacesSummary.length > 0 &&
+                      {/* Linked spaces as tree-branch child rows (accordion) */}
+                      {isExpanded && row.linkedSpacesSummary && row.linkedSpacesSummary.length > 0 &&
                         row.linkedSpacesSummary.map((ls, idx) => {
                           const isLast = idx === (row.linkedSpacesSummary?.length ?? 0) - 1;
 
@@ -756,42 +1007,80 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
                               <TableCell className="pl-5 text-muted-foreground text-xs select-none">
                                 {isLast ? '└─' : '├─'}
                               </TableCell>
-                              <TableCell className="font-mono text-xs">
-                                {ls.spaceType === 'parking' ? '🅿️' : '📦'} {ls.entityCode}
+                              <TableCell className={cn(typography.special.codeId, 'whitespace-nowrap')}>
+                                {ls.spaceType === 'parking'
+                                  ? <NAVIGATION_ENTITIES.parking.icon className={cn('inline', iconSizes.xs, NAVIGATION_ENTITIES.parking.color)} />
+                                  : <NAVIGATION_ENTITIES.storage.icon className={cn('inline', iconSizes.xs, NAVIGATION_ENTITIES.storage.color)} />
+                                }
+                                {' '}
+                                <button
+                                  type="button"
+                                  className="hover:underline cursor-pointer"
+                                  onClick={() => router.push(
+                                    ls.spaceType === 'parking'
+                                      ? `/spaces/parking?parkingId=${ls.spaceId}`
+                                      : `/spaces/storage?storageId=${ls.spaceId}`,
+                                  )}
+                                >
+                                  {ls.entityCode}
+                                </button>
                               </TableCell>
-                              <TableCell className="text-xs text-muted-foreground">
+                              <TableCell className={typography.special.tertiary}>
                                 {ls.description}
                               </TableCell>
                               <TableCell>
-                                <Badge variant="outline" className="text-xs border-blue-300 text-blue-600 dark:border-blue-700 dark:text-blue-400">
-                                  Βοηθητικά
-                                </Badge>
+                                {ls.spaceType === 'storage' && !isLocked ? (
+                                  <label className={cn('inline-flex items-center cursor-pointer', spacingTokens.gap.xs)}>
+                                    <input
+                                      type="checkbox"
+                                      checked={ls.hasOwnShares}
+                                      onChange={e => updateLinkedSpace(globalIndex, idx, 'hasOwnShares', e.target.checked)}
+                                      className="accent-current"
+                                    />
+                                    <span className={typography.body.xs}>‰</span>
+                                  </label>
+                                ) : (
+                                  <Badge variant="outline" className={cn(typography.body.xs, COLOR_BRIDGE.border.info, COLOR_BRIDGE.text.info)}>
+                                    {t('common:ownership.categoryAuxiliary')}
+                                  </Badge>
+                                )}
                               </TableCell>
-                              <TableCell className="text-xs">{ls.floor}</TableCell>
-                              <TableCell className="text-right font-mono text-xs">
+                              <TableCell className={typography.body.xs}>{ls.floor}</TableCell>
+                              <TableCell className={cn('text-right', typography.special.codeId)}>
                                 {ls.areaNetSqm > 0 ? ls.areaNetSqm.toFixed(2) : '—'}
                               </TableCell>
-                              <TableCell className="text-right font-mono text-xs">
+                              <TableCell className={cn('text-right', typography.special.codeId)}>
                                 {ls.areaSqm > 0 ? ls.areaSqm.toFixed(2) : '—'}
                               </TableCell>
                               <TableCell className="text-right">
                                 {ls.spaceType === 'storage' ? (
-                                  <span className="font-mono text-xs">0‰</span>
+                                  ls.hasOwnShares ? (
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      value={ls.millesimalShares || ''}
+                                      onChange={e => updateLinkedSpace(globalIndex, idx, 'millesimalShares', parseInt(e.target.value, 10) || 0)}
+                                      className={cn('w-20 text-right', typography.special.codeId)}
+                                      disabled={isLocked}
+                                    />
+                                  ) : (
+                                    <span className={cn(typography.special.codeId, 'text-muted-foreground')}>—</span>
+                                  )
                                 ) : (
-                                  <span className="font-mono text-xs text-muted-foreground">—</span>
+                                  <span className={cn(typography.special.codeId, 'text-muted-foreground')}>—</span>
                                 )}
                               </TableCell>
-                              <TableCell className="text-xs text-muted-foreground">
+                              <TableCell className={typography.special.tertiary}>
                                 {ownerLabel(row.ownerParty, t)}
                               </TableCell>
-                              <TableCell className="text-xs text-muted-foreground">
-                                {row.buyerContactId ? (row as Record<string, unknown>).buyerName as string ?? '—' : '—'}
+                              <TableCell className={typography.special.tertiary}>
+                                {row.buyerName ?? '—'}
                               </TableCell>
-                              <TableCell className="text-xs text-muted-foreground font-mono">
-                                {(row as Record<string, unknown>).preliminaryContract as string ?? '—'}
+                              <TableCell className={typography.special.codeId}>
+                                {row.preliminaryContract ?? '—'}
                               </TableCell>
-                              <TableCell className="text-xs text-muted-foreground font-mono">
-                                {(row as Record<string, unknown>).finalContract as string ?? '—'}
+                              <TableCell className={typography.special.codeId}>
+                                {row.finalContract ?? '—'}
                               </TableCell>
                             </TableRow>
                           );
@@ -826,8 +1115,8 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
                 className={cn(
                   'text-right font-mono text-lg font-bold',
                   totalShares === TOTAL_SHARES_TARGET
-                    ? 'text-green-600 dark:text-green-400'
-                    : 'text-red-600 dark:text-red-400',
+                    ? COLOR_BRIDGE.text.success
+                    : COLOR_BRIDGE.text.error,
                 )}
               >
                 {totalShares}‰
@@ -836,28 +1125,29 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
             </TableRow>
           </TableFooter>
         </Table>
+        </section>
       )}
 
       {/* ============================================================ */}
       {/* BARTEX SUMMARY */}
       {/* ============================================================ */}
       {table.bartex && (
-        <section className="rounded-lg border p-4">
-          <h3 className="mb-2 font-semibold">{t('common:ownership.bartex.title')}</h3>
-          <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+        <section className={cn(borders.quick.card, spacingTokens.padding.md)}>
+          <h3 className={cn(spacingTokens.margin.bottom.sm, typography.heading.sm)}>{t('common:ownership.bartex.title')}</h3>
+          <dl className={cn('grid grid-cols-2 text-sm sm:grid-cols-4', spacingTokens.gap.sm)}>
             <div>
               <dt className="text-muted-foreground">{t('common:ownership.bartex.percentage')}</dt>
-              <dd className="font-semibold">{table.bartex.bartexPercentage}%</dd>
+              <dd className={typography.heading.xs}>{table.bartex.bartexPercentage}%</dd>
             </div>
             <div>
               <dt className="text-muted-foreground">{t('common:ownership.bartex.contractor')}</dt>
-              <dd className="font-mono font-semibold">
+              <dd className={cn(typography.special.codeId, 'font-semibold')}>
                 {table.bartex.contractorShares}‰ ({(table.bartex.contractorShares / 10).toFixed(1)}%)
               </dd>
             </div>
             <div>
               <dt className="text-muted-foreground">{t('common:ownership.bartex.landowners')}</dt>
-              <dd className="font-mono font-semibold">
+              <dd className={cn(typography.special.codeId, 'font-semibold')}>
                 {table.bartex.totalLandownerShares}‰ (
                 {(table.bartex.totalLandownerShares / 10).toFixed(1)}%)
               </dd>
@@ -870,22 +1160,22 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
       {/* CATEGORY SUMMARY */}
       {/* ============================================================ */}
       {table.rows.length > 0 && (
-        <section className="grid grid-cols-2 gap-4 text-sm">
-          <article className="rounded-lg border p-3">
+        <section className={cn('grid grid-cols-2 text-sm', spacingTokens.gap.md)}>
+          <article className={cn(borders.quick.card, spacingTokens.padding.sm)}>
             <h4 className="text-muted-foreground">{t('common:ownership.categoryMain')}</h4>
-            <p className="text-xl font-bold">
+            <p className={typography.heading.lg}>
               {table.summaryByCategory.main.shares}‰
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className={typography.special.tertiary}>
               {table.summaryByCategory.main.count} {t('common:ownership.categoryMain').toLowerCase()}
             </p>
           </article>
-          <article className="rounded-lg border p-3">
+          <article className={cn(borders.quick.card, spacingTokens.padding.sm)}>
             <h4 className="text-muted-foreground">{t('common:ownership.categoryAuxiliary')}</h4>
-            <p className="text-xl font-bold">
+            <p className={typography.heading.lg}>
               {table.summaryByCategory.auxiliary.shares}‰
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className={typography.special.tertiary}>
               {table.summaryByCategory.auxiliary.count} {t('common:ownership.categoryAuxiliary').toLowerCase()}
             </p>
           </article>
@@ -893,17 +1183,26 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
       )}
 
       {/* ============================================================ */}
+      {/* CALCULATION NOTE */}
+      {/* ============================================================ */}
+      {table.notes && (
+        <p className={cn(typography.special.tertiary, 'italic')}>
+          {table.notes}
+        </p>
+      )}
+
+      {/* ============================================================ */}
       {/* REVISION HISTORY */}
       {/* ============================================================ */}
       {revisions.length > 0 && (
-        <details className="rounded-lg border p-3">
+        <details className={cn(borders.quick.card, spacingTokens.padding.sm)}>
           <summary className="cursor-pointer font-medium">
             {t('common:ownership.revisionHistory')} ({revisions.length})
           </summary>
-          <ul className="mt-2 space-y-1 text-sm">
+          <ul className={cn('text-sm', spacingTokens.margin.top.sm, spacingTokens.spaceBetween.xs)}>
             {revisions.map(rev => (
-              <li key={rev.id} className="flex items-center gap-2 text-muted-foreground">
-                <Badge variant="outline" className="text-xs">
+              <li key={rev.id} className={cn('flex items-center text-muted-foreground', spacingTokens.gap.sm)}>
+                <Badge variant="outline" className={typography.body.xs}>
                   v{rev.version}
                 </Badge>
                 <span>{rev.finalizedAt?.toDate?.().toLocaleDateString?.() ?? '—'}</span>
@@ -918,9 +1217,11 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
 
       {/* Error display */}
       {error && (
-        <p className="text-sm text-destructive">{error}</p>
+        <p className={cn(typography.body.sm, 'text-destructive')}>{error}</p>
       )}
 
-    </section>
+    </FullscreenOverlay>
+    <ConfirmDialog {...dialogProps} />
+    </>
   );
 }

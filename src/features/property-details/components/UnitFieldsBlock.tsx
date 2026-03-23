@@ -757,6 +757,16 @@ export function UnitFieldsBlock({
                 })}
               </div>
             )}
+            {/* Millesimal shares — read-only, from ownership table */}
+            {property.millesimalShares != null && property.millesimalShares > 0 && (
+              <dl className="flex items-baseline gap-1.5 mt-2 pt-2 border-t border-border">
+                <dt className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Lock className="h-3 w-3" />
+                  {t('fields.millesimalShares', { defaultValue: 'Χιλιοστά (‰)' })}:
+                </dt>
+                <dd className="text-xs font-semibold">{property.millesimalShares}‰</dd>
+              </dl>
+            )}
           </CardContent>
         </Card>
       </section>

@@ -11,7 +11,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
-import { MapPin, StickyNote, Building2 } from 'lucide-react';
+import { MapPin, StickyNote, Building2, Lock } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
@@ -425,6 +425,16 @@ export function StorageGeneralTab({
                 disabled={!isEditing}
               />
             </fieldset>
+            {/* Millesimal shares — read-only, from ownership table */}
+            {storage.millesimalShares != null && storage.millesimalShares > 0 && (
+              <fieldset className="space-y-1.5">
+                <Label className="text-muted-foreground text-xs flex items-center gap-1">
+                  <Lock className="h-3 w-3" />
+                  {t('general.fields.millesimalShares', { defaultValue: 'Χιλιοστά (‰)' })}
+                </Label>
+                <p className="text-sm font-semibold">{storage.millesimalShares}‰</p>
+              </fieldset>
+            )}
             <fieldset className="space-y-1.5">
               <Label className="text-muted-foreground text-xs">{t('general.fields.price')}</Label>
               <Input

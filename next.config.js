@@ -257,7 +257,26 @@ const nextConfig = {
   compress: true,
 
   // [CACHE] HEADERS για caching — Edge Request Optimization
+  // DEV: no-cache headers ώστε ο browser να μην κρατάει παλιά modules
+  // PROD: aggressive caching για performance
   async headers() {
+    const isDev = process.env.NODE_ENV === 'development';
+
+    // Development: prevent ALL browser caching
+    if (isDev) {
+      return [
+        {
+          source: '/(.*)',
+          headers: [
+            { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, proxy-revalidate' },
+            { key: 'Pragma', value: 'no-cache' },
+            { key: 'Expires', value: '0' },
+          ],
+        },
+      ];
+    }
+
+    // Production: optimized caching
     return [
       // ── Static assets: immutable forever (hashed filenames) ──
       {

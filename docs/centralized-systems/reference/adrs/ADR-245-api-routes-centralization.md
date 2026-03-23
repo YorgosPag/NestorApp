@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | ✅ PHASE_B_COMPLETE — All consumer migrations done. Zero hardcoded client-side API paths. |
+| **Status** | ✅ PHASE_C_COMPLETE — Scattered code eliminated. Route helpers centralized. N+1 batch resolved. |
 | **Date** | 2026-03-19 |
 | **Category** | Backend Systems / Infrastructure |
 | **Canonical Location** | `src/config/domain-constants.ts` → `API_ROUTES` |
@@ -490,6 +490,7 @@ ESLint rule που απαγορεύει hardcoded `/api/` strings εκτός `do
 | 2026-03-19 | **Phase B1 COMPLETE** — SPEC-245B1 executed. 6 αρχεία χρειάστηκαν αλλαγές (BuildingSelectorCard, FloorSelectField, LinkedSpacesCard, SalesUnitListCard, TransactionChainCard, entity-linking/config). ~50 αρχεία ήταν ήδη migrated. Zero hardcoded `/api/` strings remain in scope. | Claude Code |
 | 2026-03-19 | **Phase B2 COMPLETE** — SPEC-245B2 executed. New `API_ROUTES.GEOCODING` entry. Rate limit config: 2 exact-match paths migrated (SEARCH, PROJECTS.LIST), 9 prefix-only paths unchanged. Geographic config fallback migrated. Phase B fully complete. | Claude Code |
 | 2026-03-19 | **COLLECTIONS Centralization** — Ίδιο pattern εφαρμόστηκε σε Firestore collection names. +3 νέα entries στο COLLECTIONS (FLOOR_FLOORPLANS, FILE_WEBHOOKS) + SUBCOLLECTIONS (COMPANY_AUDIT_LOGS). 55 hardcoded strings σε 12 αρχεία αντικαταστάθηκαν με COLLECTIONS.XXX references. 100% adoption — zero active hardcoded collection names. | Claude Code |
+| 2026-03-21 | **Phase C: Scattered Code Elimination** — (1) Centralized `extractIdFromUrl` + `extractNestedIdFromUrl` + `extractUidFromPath` σε `src/lib/api/route-helpers.ts` — αφαίρεση 7 local copies. (2) Νέο `POST /api/spaces/batch-resolve` endpoint — eliminates N+1 fetches σε `useLinkedSpacesForSale`. (3) Νέο `GET /api/units/[id]` handler (ίδιο pattern με parking/storages). (4) `API_ROUTES.SPACES.BATCH_RESOLVE` entry. | Claude Code |
 
 ---
 

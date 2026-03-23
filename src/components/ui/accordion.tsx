@@ -315,6 +315,10 @@ export interface EnterpriseAccordionProps {
   items: EnterpriseAccordionItem[];
   type?: 'single' | 'multiple';
   defaultValue?: string | string[];
+  /** Controlled value — overrides defaultValue when provided */
+  value?: string | string[];
+  /** Callback for controlled mode — fires when expanded items change */
+  onValueChange?: (value: string | string[]) => void;
   variant?: AccordionVariant;
   size?: AccordionSize;
   collapsible?: boolean;
@@ -328,21 +332,29 @@ export function EnterpriseAccordion({
   items,
   type = 'single',
   defaultValue,
+  value,
+  onValueChange,
   variant = 'default',
   size = 'md',
   collapsible = true,
   className
 }: EnterpriseAccordionProps) {
-  // 🏢 ENTERPRISE: Type-safe conditional props with const assertions
+  // 🏢 ENTERPRISE: Type-safe conditional props — supports both controlled and uncontrolled
+  const isControlled = value !== undefined;
+
   const accordionProps = type === 'single'
     ? {
         type: 'single' as const,
-        defaultValue: defaultValue as string | undefined,
-        collapsible
+        collapsible,
+        ...(isControlled
+          ? { value: value as string, onValueChange: onValueChange as (v: string) => void }
+          : { defaultValue: defaultValue as string | undefined }),
       }
     : {
         type: 'multiple' as const,
-        defaultValue: defaultValue as string[] | undefined
+        ...(isControlled
+          ? { value: value as string[], onValueChange: onValueChange as (v: string[]) => void }
+          : { defaultValue: defaultValue as string[] | undefined }),
       };
 
   return (

@@ -370,3 +370,61 @@ export async function requireOpportunityInTenant(params: {
 
   return data!;
 }
+
+// =============================================================================
+// BATCH TENANT FILTER — for pre-fetched Firestore snapshots
+// =============================================================================
+
+/**
+ * 🔒 Filter already-fetched Firestore snapshots by tenant ownership.
+ *
+ * Use this when you've already batch-fetched documents via `getAll()` and need
+ * to apply tenant isolation without re-reading each document individually.
+ *
+ * Unlike `require*InTenant()`, this does NOT throw — it silently excludes
+ * documents that don't belong to the tenant (treating them as "not found").
+ * Super admins bypass the filter.
+ *
+ * Audit logging: denied IDs are batch-logged in a single audit event
+ * (consistent with `require*InTenant()` which logs each denial individually).
+ *
+ * @param snapshots  Pre-fetched Firestore document snapshots
+ * @param ctx        Authenticated user context
+ * @param path       API path for audit trail (e.g. '/api/spaces/batch-resolve')
+ * @returns Object with `allowed` (tenant-matching docs) and `denied` (IDs that failed tenant check)
+ */
+export async function filterSnapshotsByTenant(
+  snapshots: ReadonlyArray<FirebaseFirestore.DocumentSnapshot>,
+  ctx: AuthContext,
+  path: string,
+): Promise<{ allowed: FirebaseFirestore.DocumentSnapshot[]; denied: string[] }> {
+  const isSuperAdmin = isRoleBypass(ctx.globalRole);
+  const allowed: FirebaseFirestore.DocumentSnapshot[] = [];
+  const denied: string[] = [];
+
+  for (const snap of snapshots) {
+    if (!snap.exists) continue;
+    if (isSuperAdmin) {
+      allowed.push(snap);
+      continue;
+    }
+    const data = snap.data();
+    if (data?.companyId && data.companyId === ctx.companyId) {
+      allowed.push(snap);
+    } else {
+      denied.push(snap.id);
+    }
+  }
+
+  // Audit log denied access attempts (batch — one event for all denials)
+  if (denied.length > 0) {
+    await logAuditEvent(ctx, 'access_denied', denied.join(','), 'unit', {
+      metadata: {
+        path,
+        reason: `Tenant isolation violation - ${denied.length} document(s) denied: ${denied.join(', ')}`,
+      },
+    });
+  }
+
+  return { allowed, denied };
+}

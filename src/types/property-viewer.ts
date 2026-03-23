@@ -75,6 +75,8 @@ export interface Property {
     price?: number;
 
     area?: number;
+    /** Χιλιοστά ιδιοκτησίας — read-only, from ownership table */
+    millesimalShares?: number | null;
     project: string;
     description?: string;
     buildingId: string;

@@ -16,6 +16,7 @@ import 'server-only';
 
 import { getLearningService } from './learning-service';
 import { getToolAnalyticsService } from './tool-analytics-service';
+import { getQueryStrategyHints } from './query-strategy-service';
 import { sanitizeForPromptInjection } from './shared/prompt-sanitizer';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -42,10 +43,11 @@ const MAX_WARNING_CHARS = 300;  // ~100 tokens
  */
 export async function enhanceSystemPrompt(userQuery: string): Promise<string> {
   try {
-    // Fetch patterns and warnings in parallel
-    const [patterns, warnings] = await Promise.all([
+    // Fetch patterns, warnings, and query strategies in parallel
+    const [patterns, warnings, strategyHints] = await Promise.all([
       getLearningService().findRelevantPatterns(userQuery, 3),
       getToolAnalyticsService().getToolWarnings(),
+      getQueryStrategyHints(),
     ]);
 
     const sections: string[] = [];
@@ -97,6 +99,11 @@ export async function enhanceSystemPrompt(userQuery: string): Promise<string> {
       }
 
       sections.push(warningsText);
+    }
+
+    // Build query strategy hints section (learned from FAILED_PRECONDITION errors)
+    if (strategyHints.length > 0) {
+      sections.push(strategyHints);
     }
 
     return sections.join('');

@@ -14,6 +14,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import type { Unit, LinkedSpace } from '@/types/unit';
 import type { SpaceInclusionType } from '@/config/domain-constants';
 import type { SaleLineItem } from '@/services/sales-accounting/types';
+import type { BatchResolveResponse } from '@/types/spaces';
 
 // =============================================================================
 // TYPES
@@ -83,51 +84,54 @@ export function useLinkedSpacesForSale(unit: Unit): UseLinkedSpacesForSaleResult
 
     setLoading(true);
 
-    // Resolve prices from Firestore for each linked space
+    // Batch-resolve all linked spaces in a single API call (replaces N+1 individual GETs)
     const resolveSpaces = async () => {
       try {
-        const resolved = await Promise.all(
-          linkedSpaces
-            .filter((ls): ls is LinkedSpace & { spaceType: 'parking' | 'storage' } =>
-              ls.spaceType === 'parking' || ls.spaceType === 'storage'
-            )
-            .map(async (ls) => {
-              let resolvedPrice = ls.salePrice ?? 0;
-              let resolvedArea = 0;
-
-              // Fetch current data from the space document (price + area)
-              try {
-                const endpoint = ls.spaceType === 'parking'
-                  ? API_ROUTES.PARKING.BY_ID(ls.spaceId)
-                  : API_ROUTES.STORAGES.BY_ID(ls.spaceId);
-                const data = await apiClient.get<{
-                  area?: number;
-                  commercial?: { askingPrice?: number };
-                }>(endpoint);
-                resolvedArea = data?.area ?? 0;
-                if (resolvedPrice === 0) {
-                  resolvedPrice = data?.commercial?.askingPrice ?? 0;
-                }
-              } catch {
-                // Space might not exist or have data — defaults apply
-              }
-
-              const hasValidArea = resolvedArea > 0;
-
-              return {
-                spaceId: ls.spaceId,
-                spaceType: ls.spaceType,
-                inclusion: ls.inclusion,
-                allocationCode: ls.allocationCode ?? '',
-                displayName: buildDisplayName(ls),
-                // Auto-uncheck if area is 0 — cannot include space without area
-                checked: hasValidArea && isDefaultChecked(ls.inclusion),
-                salePrice: resolvedPrice,
-                isRented: ls.inclusion === 'rented',
-                area: resolvedArea,
-              };
-            })
+        const validSpaces = linkedSpaces.filter(
+          (ls): ls is LinkedSpace & { spaceType: 'parking' | 'storage' } =>
+            ls.spaceType === 'parking' || ls.spaceType === 'storage'
         );
+
+        if (validSpaces.length === 0) {
+          setSpaces([]);
+          return;
+        }
+
+        const spaceIds = validSpaces.map((ls) => ls.spaceId);
+
+        // Single batch call instead of N individual GETs
+        const result = await apiClient.post<BatchResolveResponse>(
+          API_ROUTES.SPACES.BATCH_RESOLVE, { spaceIds }
+        );
+
+        // Build lookup map from batch result
+        const spaceLookup = new Map(
+          (result?.spaces ?? []).map((s) => [s.id, s])
+        );
+
+        const resolved: ResolvedLinkedSpace[] = validSpaces.map((ls) => {
+          const fetched = spaceLookup.get(ls.spaceId);
+          let resolvedPrice = ls.salePrice ?? 0;
+          const resolvedArea = fetched?.area ?? 0;
+
+          if (resolvedPrice === 0) {
+            resolvedPrice = fetched?.commercial?.askingPrice ?? 0;
+          }
+
+          const hasValidArea = resolvedArea > 0;
+
+          return {
+            spaceId: ls.spaceId,
+            spaceType: ls.spaceType,
+            inclusion: ls.inclusion,
+            allocationCode: ls.allocationCode ?? '',
+            displayName: buildDisplayName(ls),
+            checked: hasValidArea && isDefaultChecked(ls.inclusion),
+            salePrice: resolvedPrice,
+            isRented: ls.inclusion === 'rented',
+            area: resolvedArea,
+          };
+        });
 
         setSpaces(resolved);
       } catch {

@@ -152,41 +152,74 @@ export function roundWithLargestRemainder(
 // ============================================================================
 
 /**
- * Split rows into participating (in calculation) and non-participating (informational).
- * Non-participating rows keep millesimalShares: 0.
+ * Split rows into:
+ * - participating: auto-calculated (not manual override, not non-participating)
+ * - linkedStorageEntries: linked storage with hasOwnShares (participate in auto-calculation)
+ * - manualTotal: sum of manually overridden shares (air rights only)
+ *
+ * Manual override rows keep their shares as-is.
+ * Linked storage with hasOwnShares participate alongside units in the auto-calculation.
  */
 function splitByParticipation(
   rows: ReadonlyArray<MutableOwnershipTableRow>,
-): { participating: MutableOwnershipTableRow[]; indices: number[] } {
+): {
+  participating: MutableOwnershipTableRow[];
+  indices: number[];
+  manualTotal: number;
+  linkedStorageAreas: number[];
+  linkedStoragePositions: Array<{ rowIndex: number; spaceIndex: number }>;
+} {
   const participating: MutableOwnershipTableRow[] = [];
   const indices: number[] = [];
+  const linkedStorageAreas: number[] = [];
+  const linkedStoragePositions: Array<{ rowIndex: number; spaceIndex: number }> = [];
+  let manualTotal = 0;
 
   for (let i = 0; i < rows.length; i++) {
-    if (rows[i].participatesInCalculation !== false) {
-      participating.push(rows[i]);
-      indices.push(i);
+    const row = rows[i];
+    if (row.participatesInCalculation === false) continue;
+    if (row.isManualOverride) {
+      manualTotal += row.millesimalShares;
+      continue;
+    }
+    participating.push(row);
+    indices.push(i);
+
+    // Linked storage with own shares — participate in calculation
+    if (row.linkedSpacesSummary) {
+      for (let j = 0; j < row.linkedSpacesSummary.length; j++) {
+        const ls = row.linkedSpacesSummary[j];
+        if (ls.hasOwnShares) {
+          linkedStorageAreas.push(ls.areaSqm > 0 ? ls.areaSqm : ls.areaNetSqm);
+          linkedStoragePositions.push({ rowIndex: i, spaceIndex: j });
+        }
+      }
     }
   }
 
-  return { participating, indices };
+  return { participating, indices, manualTotal, linkedStorageAreas, linkedStoragePositions };
 }
 
 /**
- * Apply calculated shares to participating rows, keep non-participating at 0.
+ * Apply calculated shares to participating rows + linked storage.
+ * The shares array contains: [row0, row1, ..., linkedStorage0, linkedStorage1, ...]
+ * First `indices.length` entries go to rows, remaining go to linked storage.
  */
 function mergeCalculatedShares(
   rows: ReadonlyArray<MutableOwnershipTableRow>,
   shares: number[],
   indices: number[],
+  linkedStoragePositions: Array<{ rowIndex: number; spaceIndex: number }>,
   coefficientsMap?: Map<number, { floorCoefficient: number; valueCoefficient: number }>,
 ): MutableOwnershipTableRow[] {
   const result = rows.map(row => ({
     ...row,
     millesimalShares: row.participatesInCalculation !== false ? row.millesimalShares : 0,
-    isManualOverride: false,
+    isManualOverride: row.isManualOverride,
     coefficients: coefficientsMap ? null : row.coefficients,
   }));
 
+  // Assign shares to participating rows
   for (let j = 0; j < indices.length; j++) {
     const idx = indices[j];
     result[idx] = {
@@ -197,20 +230,33 @@ function mergeCalculatedShares(
     };
   }
 
+  // Assign shares to linked storage entries
+  const rowSharesCount = indices.length;
+  for (let k = 0; k < linkedStoragePositions.length; k++) {
+    const { rowIndex, spaceIndex } = linkedStoragePositions[k];
+    const storageShares = shares[rowSharesCount + k] ?? 0;
+    const row = result[rowIndex];
+    if (row.linkedSpacesSummary) {
+      const newSpaces = [...row.linkedSpacesSummary];
+      newSpaces[spaceIndex] = { ...newSpaces[spaceIndex], millesimalShares: storageShares };
+      result[rowIndex] = { ...row, linkedSpacesSummary: newSpaces };
+    }
+  }
+
   return result;
 }
 
 /**
- * Μέθοδος Α: Κατ' Εμβαδόν — shares_i = (area_i / totalArea) × 1000
+ * Μέθοδος Α: Κατ' Εμβαδόν — shares_i = (area_i / totalArea) × (1000 - manualTotal)
  */
 export function calculateByArea(
   rows: ReadonlyArray<MutableOwnershipTableRow>,
 ): MutableOwnershipTableRow[] {
-  const { participating, indices } = splitByParticipation(rows);
-  const rawShares = participating.map(row => row.areaSqm);
-  const shares = roundWithLargestRemainder(rawShares);
+  const { participating, indices, manualTotal, linkedStorageAreas, linkedStoragePositions } = splitByParticipation(rows);
+  const rawShares = [...participating.map(row => row.areaSqm), ...linkedStorageAreas];
+  const shares = roundWithLargestRemainder(rawShares, TOTAL_SHARES_TARGET - manualTotal);
 
-  return mergeCalculatedShares(rows, shares, indices);
+  return mergeCalculatedShares(rows, shares, indices, linkedStoragePositions);
 }
 
 /**
@@ -222,7 +268,7 @@ export function calculateByValue(
   zonePrice: number,
   commercialityCoefficient: number,
 ): MutableOwnershipTableRow[] {
-  const { participating, indices } = splitByParticipation(rows);
+  const { participating, indices, manualTotal, linkedStorageAreas, linkedStoragePositions } = splitByParticipation(rows);
   const coeffTable = getFloorCoefficientTable(commercialityCoefficient);
 
   const coefficientsMap = new Map<number, CalculationCoefficients>();
@@ -237,25 +283,36 @@ export function calculateByValue(
     rawShares.push(row.areaSqm * zonePrice * floorCoeff * valueCoeff);
   }
 
-  const shares = roundWithLargestRemainder(rawShares);
+  // Linked storage — use area × zonePrice (basement coefficient for storage)
+  for (const area of linkedStorageAreas) {
+    rawShares.push(area * zonePrice * coeffTable.basement * 1.0);
+  }
 
-  return mergeCalculatedShares(rows, shares, indices, coefficientsMap);
+  const shares = roundWithLargestRemainder(rawShares, TOTAL_SHARES_TARGET - manualTotal);
+
+  return mergeCalculatedShares(rows, shares, indices, linkedStoragePositions, coefficientsMap);
 }
 
 /**
- * Μέθοδος Γ: Κατ' Όγκον — shares_i = (area_i × height_i / totalVolume) × 1000
+ * Μέθοδος Γ: Κατ' Όγκον — shares_i = (area_i × height_i / totalVolume) × (1000 - manualTotal)
  */
 export function calculateByVolume(
   rows: ReadonlyArray<MutableOwnershipTableRow>,
 ): MutableOwnershipTableRow[] {
-  const { participating, indices } = splitByParticipation(rows);
+  const { participating, indices, manualTotal, linkedStorageAreas, linkedStoragePositions } = splitByParticipation(rows);
   const rawShares = participating.map(row => {
-    const height = row.heightM ?? 3.0; // Default floor height: 3m
+    const height = row.heightM ?? 3.0;
     return row.areaSqm * height;
   });
-  const shares = roundWithLargestRemainder(rawShares);
 
-  return mergeCalculatedShares(rows, shares, indices);
+  // Linked storage — use area × default height (2.5m for storage)
+  for (const area of linkedStorageAreas) {
+    rawShares.push(area * 2.5);
+  }
+
+  const shares = roundWithLargestRemainder(rawShares, TOTAL_SHARES_TARGET - manualTotal);
+
+  return mergeCalculatedShares(rows, shares, indices, linkedStoragePositions);
 }
 
 // ============================================================================

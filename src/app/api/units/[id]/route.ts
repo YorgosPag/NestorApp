@@ -32,6 +32,7 @@ import type { Contact } from '@/types/contacts/contracts';
 import type { CommercialTransactionType } from '@/types/contacts/helpers';
 import { getErrorMessage } from '@/lib/error-utils';
 import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
+import { extractIdFromUrl } from '@/lib/api/route-helpers';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 
@@ -453,13 +454,35 @@ export const DELETE = withStandardRateLimit(
 );
 
 // ============================================================================
-// HELPERS
+// GET — Fetch Single Unit
 // ============================================================================
 
-function extractIdFromUrl(url: string): string | null {
-  const segments = new URL(url).pathname.split('/');
-  return segments[segments.length - 1] || null;
-}
+export const GET = withStandardRateLimit(
+  withAuth<ApiSuccessResponse<Record<string, unknown>>>(
+    async (request: NextRequest, ctx: AuthContext) => {
+      const adminDb = getAdminFirestore();
+      if (!adminDb) throw new ApiError(503, 'Database unavailable');
+
+      const id = extractIdFromUrl(request.url);
+      if (!id) throw new ApiError(400, 'Unit ID is required');
+
+      // 🔒 ADR: Centralized tenant isolation
+      await requireUnitInTenant({ ctx, unitId: id, path: '/api/units/[id]' });
+
+      const docRef = adminDb.collection(COLLECTIONS.UNITS).doc(id);
+      const doc = await docRef.get();
+
+      if (!doc.exists) throw new ApiError(404, 'Unit not found');
+
+      return apiSuccess({ id: doc.id, ...doc.data() }, 'Unit loaded');
+    },
+    { permissions: 'units:units:view' }
+  )
+);
+
+// ============================================================================
+// HELPERS
+// ============================================================================
 
 /**
  * Activate "client" persona on a contact if not already active.

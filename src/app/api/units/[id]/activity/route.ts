@@ -17,6 +17,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+import { extractNestedIdFromUrl } from '@/lib/api/route-helpers';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import type { AuditAction } from '@/types/audit-trail';
 import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
@@ -50,7 +51,7 @@ export const POST = withStandardRateLimit(
       const db = getAdminFirestore();
       if (!db) throw new ApiError(503, 'Database unavailable');
 
-      const id = extractIdFromUrl(request.url);
+      const id = extractNestedIdFromUrl(request.url, 'units');
       if (!id) throw new ApiError(400, 'Unit ID is required');
 
       await requireUnitInTenant({ ctx, unitId: id, path: '/api/units/[id]/activity' });
@@ -91,14 +92,4 @@ export const POST = withStandardRateLimit(
   ),
 );
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function extractIdFromUrl(url: string): string | null {
-  // URL: /api/units/[id]/activity
-  const segments = new URL(url).pathname.split('/');
-  const unitsIdx = segments.indexOf('units');
-  if (unitsIdx === -1 || unitsIdx + 1 >= segments.length) return null;
-  return segments[unitsIdx + 1] || null;
-}
+// Helper: extractNestedIdFromUrl → centralized in @/lib/api/route-helpers

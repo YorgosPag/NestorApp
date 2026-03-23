@@ -197,4 +197,5 @@ export {
   requireStorageInTenant,
   requireParkingInTenant,
   requireOpportunityInTenant,
+  filterSnapshotsByTenant,
 } from './tenant-isolation';

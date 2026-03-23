@@ -15,6 +15,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+import { extractIdFromUrl } from '@/lib/api/route-helpers';
 import { createModuleLogger } from '@/lib/telemetry';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
 import { linkEntity } from '@/lib/firestore/entity-linking.service';
@@ -95,7 +96,7 @@ export const PATCH = withStandardRateLimit(
         if (body.name?.trim()) updateData.name = body.name.trim();
         if (body.type) updateData.type = body.type;
         if (body.status) updateData.status = body.status;
-        if (body.floor !== undefined) updateData.floor = body.floor?.trim() || null;
+        if (body.floor !== undefined) updateData.floor = typeof body.floor === 'string' ? body.floor.trim() || null : body.floor ?? null;
         if (body.floorId !== undefined) updateData.floorId = body.floorId || null;
         if (body.area !== undefined) updateData.area = typeof body.area === 'number' ? body.area : null;
         if (body.price !== undefined) updateData.price = typeof body.price === 'number' ? body.price : null;
@@ -222,15 +223,8 @@ export const GET = withStandardRateLimit(
 
       return apiSuccess({ id: doc.id, ...doc.data() }, 'Storage unit loaded');
     },
-    { permissions: 'units:units:read' }
+    { permissions: 'units:units:view' }
   )
 );
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function extractIdFromUrl(url: string): string | null {
-  const segments = new URL(url).pathname.split('/');
-  return segments[segments.length - 1] || null;
-}
+// Helper: extractIdFromUrl → centralized in @/lib/api/route-helpers

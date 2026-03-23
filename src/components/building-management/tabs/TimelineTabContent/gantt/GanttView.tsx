@@ -88,6 +88,8 @@ import type { GanttExportFormat } from '@/services/gantt-export';
 import { useConstructionGantt } from '../../../hooks/useConstructionGantt';
 import { ConstructionPhaseDialog } from '../../../dialogs/ConstructionPhaseDialog';
 import type { GanttTaskStatus } from './gantt-mock-data';
+import { useGanttDragObserver } from './hooks/useGanttDragObserver';
+import { useGanttCascadeDrag } from './hooks/useGanttCascadeDrag';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -249,9 +251,69 @@ export function GanttView({ building }: GanttViewProps) {
   const hoveredTaskRef = useRef('');
   const isDraggingRef = useRef(false);
 
-  // Visual cascade: track dragged phase bar for real-time child movement
-  const draggedPhaseGroupIdRef = useRef<string | null>(null);
-  const phaseBarOriginalLeftRef = useRef(0);
+  // Timeline bounds — aligned to month boundaries for correct bar positioning
+  const timelineBounds = useMemo(() => {
+    const now = new Date();
+    let earliest = now;
+    let latest = now;
+
+    for (const group of taskGroups) {
+      for (const task of group.tasks) {
+        const start = task.startDate instanceof Date ? task.startDate : new Date(task.startDate);
+        const end = task.endDate instanceof Date ? task.endDate : new Date(task.endDate);
+        if (start < earliest) earliest = start;
+        if (end > latest) latest = end;
+      }
+    }
+
+    // Pad: 3 months before earliest, 12 months after latest
+    // CRITICAL: Align to 1st of month — the library renders header columns
+    // from the 1st of each month, so the startDate must match for correct alignment
+    const startDate = new Date(earliest);
+    startDate.setMonth(startDate.getMonth() - 3);
+    startDate.setDate(1);
+    startDate.setHours(0, 0, 0, 0);
+
+    const endDate = new Date(latest);
+    endDate.setMonth(endDate.getMonth() + 13);
+    endDate.setDate(0); // last day of the +12 month
+    endDate.setHours(23, 59, 59, 999);
+
+    return { startDate, endDate };
+  }, [taskGroups]);
+
+  // 🏢 ENTERPRISE: Visual cascade drag hook (encapsulates all cascade refs + logic)
+  const cascadeDrag = useGanttCascadeDrag({
+    containerRef: ganttChartRef,
+    taskGroups,
+  });
+
+  // 🏢 ENTERPRISE: Shared MutationObserver — progress + position + cascade (SSoT)
+  useGanttDragObserver({
+    containerRef: ganttChartRef,
+    timelineBounds,
+    isDraggingRef,
+    shouldSkipMutation: cascadeDrag.isCascading,
+    onProgressMutation: (progressPct) => {
+      setTooltipData((prev) => {
+        if (!prev) return null;
+        if (prev.progress === progressPct) return prev;
+        return { ...prev, progress: progressPct };
+      });
+    },
+    onTaskPositionMutation: (event) => {
+      cascadeDrag.onTaskPositionMutation(event);
+      setTooltipData((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          startDate: formatDateShort(event.newStartDate),
+          endDate: formatDateShort(event.newEndDate),
+          duration: event.durationDays,
+        };
+      });
+    },
+  });
 
   // Close context menu on outside click — delayed activation to prevent
   // the triggering right-click from immediately closing
@@ -323,30 +385,9 @@ export function GanttView({ building }: GanttViewProps) {
     const taskItem = target.closest('.rmg-task-item') as HTMLElement | null;
     if (taskItem) {
       isDraggingRef.current = true;
-
-      // Detect if this is a phase bar → enable visual cascade
-      const dataTaskId = taskItem.getAttribute('data-task-id');
-      if (dataTaskId?.startsWith('phase-bar-')) {
-        const groupId = dataTaskId.replace('phase-bar-', '');
-        draggedPhaseGroupIdRef.current = groupId;
-        phaseBarOriginalLeftRef.current = parseFloat(taskItem.style.left || '0');
-      } else {
-        // Fallback: match by name against taskGroups
-        const taskNameEl = taskItem.querySelector('.rmg-task-item-name');
-        const taskName = taskNameEl?.textContent?.trim() ?? '';
-        for (const group of taskGroups) {
-          const matched = group.tasks.find(
-            (tsk) => tsk.id.startsWith('phase-bar-') && tsk.name === taskName
-          );
-          if (matched) {
-            draggedPhaseGroupIdRef.current = group.id;
-            phaseBarOriginalLeftRef.current = parseFloat(taskItem.style.left || '0');
-            break;
-          }
-        }
-      }
+      cascadeDrag.onDragStart(taskItem, taskItem.getAttribute('data-task-id') ?? '');
     }
-  }, [taskGroups]);
+  }, []);
 
   // Detect which task bar was right-clicked — opens custom context menu
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
@@ -577,15 +618,7 @@ export function GanttView({ building }: GanttViewProps) {
   // Small delay on reset to prevent tooltip flicker at drag end
   useEffect(() => {
     const handleMouseUp = () => {
-      // Reset visual cascade transforms before library re-renders with real positions
-      if (draggedPhaseGroupIdRef.current && ganttChartRef.current) {
-        const items = ganttChartRef.current.querySelectorAll('.rmg-task-item');
-        items.forEach((el) => {
-          (el as HTMLElement).style.transform = '';
-        });
-        draggedPhaseGroupIdRef.current = null;
-        phaseBarOriginalLeftRef.current = 0;
-      }
+      cascadeDrag.onDragEnd();
       setTimeout(() => { isDraggingRef.current = false; }, 300);
     };
     window.addEventListener('mouseup', handleMouseUp);
@@ -691,126 +724,6 @@ export function GanttView({ building }: GanttViewProps) {
       }
     }
   }, [taskGroups]); // eslint-disable-line react-hooks/exhaustive-deps -- intentionally watches only taskGroups
-
-  // Timeline bounds — aligned to month boundaries for correct bar positioning
-  const timelineBounds = useMemo(() => {
-    const now = new Date();
-    let earliest = now;
-    let latest = now;
-
-    for (const group of taskGroups) {
-      for (const task of group.tasks) {
-        const start = task.startDate instanceof Date ? task.startDate : new Date(task.startDate);
-        const end = task.endDate instanceof Date ? task.endDate : new Date(task.endDate);
-        if (start < earliest) earliest = start;
-        if (end > latest) latest = end;
-      }
-    }
-
-    // Pad: 3 months before earliest, 12 months after latest
-    // CRITICAL: Align to 1st of month — the library renders header columns
-    // from the 1st of each month, so the startDate must match for correct alignment
-    const startDate = new Date(earliest);
-    startDate.setMonth(startDate.getMonth() - 3);
-    startDate.setDate(1);
-    startDate.setHours(0, 0, 0, 0);
-
-    const endDate = new Date(latest);
-    endDate.setMonth(endDate.getMonth() + 13);
-    endDate.setDate(0); // last day of the +12 month
-    endDate.setHours(23, 59, 59, 999);
-
-    return { startDate, endDate };
-  }, [taskGroups]);
-
-  // 🏢 ENTERPRISE: Real-time tooltip update during progress slider drag AND resize drag
-  // Observes DOM mutations on .rmg-progress-fill width% AND .rmg-task-item left/width
-  useEffect(() => {
-    const container = ganttChartRef.current;
-    if (!container) return;
-
-    const MS_PER_DAY = 86_400_000;
-
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        const target = mutation.target as HTMLElement;
-
-        // Case 1: Progress fill width changed → update progress %
-        if (target.classList?.contains('rmg-progress-fill')) {
-          const widthStr = target.style.width;
-          if (!widthStr) continue;
-          const progressPct = Math.round(parseFloat(widthStr));
-          setTooltipData((prev) => {
-            if (!prev) return null;
-            if (prev.progress === progressPct) return prev;
-            return { ...prev, progress: progressPct };
-          });
-          continue;
-        }
-
-        // Case 2: Task item left/width changed (resize/move drag) → recalculate dates
-        // Check both the target AND its parent for rmg-task-item class
-        const taskEl = target.classList?.contains('rmg-task-item')
-          ? target
-          : target.closest('.rmg-task-item') as HTMLElement | null;
-        if (taskEl && isDraggingRef.current) {
-          const scrollContainer = container.querySelector('.rmg-timeline-container') as HTMLElement | null;
-          if (!scrollContainer) continue;
-
-          const totalWidth = scrollContainer.scrollWidth;
-          if (totalWidth <= 0) continue;
-
-          const taskLeft = parseFloat(taskEl.style.left || '0');
-          const taskWidth = parseFloat(taskEl.style.width || '0');
-          if (taskWidth <= 0) continue;
-
-          const boundsStart = timelineBounds.startDate.getTime();
-          const boundsEnd = timelineBounds.endDate.getTime();
-          const totalMs = boundsEnd - boundsStart;
-
-          const newStartMs = boundsStart + (taskLeft / totalWidth) * totalMs;
-          const newEndMs = boundsStart + ((taskLeft + taskWidth) / totalWidth) * totalMs;
-          const newStart = new Date(newStartMs);
-          const newEnd = new Date(newEndMs);
-          const durationDays = Math.max(1, Math.ceil((newEndMs - newStartMs) / MS_PER_DAY));
-
-          // Case 3: Visual cascade — phase bar drag moves children in real-time
-          if (draggedPhaseGroupIdRef.current) {
-            const offsetPx = taskLeft - phaseBarOriginalLeftRef.current;
-            // Find sibling task elements in the same row and apply translateX
-            const parentRow = taskEl.closest('.rmg-task-row');
-            if (parentRow) {
-              const siblings = parentRow.querySelectorAll('.rmg-task-item');
-              siblings.forEach((el) => {
-                if (el !== taskEl) {
-                  (el as HTMLElement).style.transform = `translateX(${offsetPx}px)`;
-                }
-              });
-            }
-          }
-
-          setTooltipData((prev) => {
-            if (!prev) return null;
-            return {
-              ...prev,
-              startDate: formatDateShort(newStart),
-              endDate: formatDateShort(newEnd),
-              duration: durationDays,
-            };
-          });
-          continue;
-        }
-      }
-    });
-
-    observer.observe(container, {
-      attributes: true,
-      attributeFilter: ['style'],
-      subtree: true,
-    });
-
-    return () => observer.disconnect();
-  }, [timelineBounds]);
 
   // 🏢 ENTERPRISE: Auto-scroll to today on initial mount
   useEffect(() => {

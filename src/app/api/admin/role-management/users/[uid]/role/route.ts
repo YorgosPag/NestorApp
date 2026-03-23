@@ -31,6 +31,7 @@ import { getAdminAuth, getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { extractUidFromPath } from '@/lib/api/route-helpers';
 
 const logger = createModuleLogger('RoleManagement:ChangeRole');
 
@@ -49,19 +50,6 @@ type ChangeRoleInput = z.infer<typeof ChangeRoleSchema>;
 // HELPERS
 // =============================================================================
 
-/**
- * Extract target uid from the request URL path.
- * Path format: /api/admin/role-management/users/[uid]/role
- */
-function extractUidFromPath(request: NextRequest): string | null {
-  const segments = request.nextUrl.pathname.split('/');
-  // Find index of 'users' and get the next segment
-  const usersIdx = segments.lastIndexOf('users');
-  if (usersIdx === -1 || usersIdx + 1 >= segments.length) return null;
-  const uid = segments[usersIdx + 1];
-  return uid && uid !== 'role' ? uid : null;
-}
-
 // =============================================================================
 // PATCH — Change Global Role
 // =============================================================================
@@ -73,7 +61,7 @@ export const PATCH = withSensitiveRateLimit(
       ctx: AuthContext,
       _cache: PermissionCache
     ): Promise<NextResponse> => {
-      const targetUid = extractUidFromPath(request);
+      const targetUid = extractUidFromPath(request, 'role');
 
       if (!targetUid) {
         return NextResponse.json(

@@ -11,17 +11,18 @@
 
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/hooks/useAuth';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { useBOQItems } from '@/hooks/useBOQItems';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { BOQSummaryCards } from './MeasurementsTabContent/BOQSummaryCards';
 import { BOQFilterBar } from './MeasurementsTabContent/BOQFilterBar';
-import { BOQCategoryAccordion } from './MeasurementsTabContent/BOQCategoryAccordion';
+import { BOQCategoryAccordion, getCategoryCodes } from './MeasurementsTabContent/BOQCategoryAccordion';
 import { BOQItemEditor } from './MeasurementsTabContent/BOQItemEditor';
 import { Button } from '@/components/ui/button';
-import { Ruler, Plus, AlertCircle } from 'lucide-react';
+import { Ruler, Plus, AlertCircle, ChevronRight, ChevronDown } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -71,9 +72,21 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
     user?.uid ?? ''
   );
 
+  const iconSizes = useIconSizes();
+
   // Editor dialog state
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<BOQItem | null>(null);
+
+  // Accordion expand/collapse state (controlled mode)
+  const allCategoryCodes = useMemo(() => getCategoryCodes(filteredItems), [filteredItems]);
+  const [expandedCategories, setExpandedCategories] = useState<string[]>(allCategoryCodes);
+
+  const handleToggleAllCategories = useCallback(() => {
+    setExpandedCategories(prev =>
+      prev.length === allCategoryCodes.length ? [] : [...allCategoryCodes]
+    );
+  }, [allCategoryCodes]);
 
   // --- HANDLERS ---
 
@@ -209,6 +222,22 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
             <Plus className="h-4 w-4 mr-2" />
             {t('tabs.measurements.actions.newItem')}
           </Button>
+          {allCategoryCodes.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleToggleAllCategories}
+              aria-label={expandedCategories.length === allCategoryCodes.length
+                ? t('tabs.measurements.actions.collapseAll')
+                : t('tabs.measurements.actions.expandAll')
+              }
+            >
+              {expandedCategories.length === allCategoryCodes.length
+                ? <ChevronDown className={iconSizes.sm} />
+                : <ChevronRight className={iconSizes.sm} />
+              }
+            </Button>
+          )}
           {/* 🏢 ADR-241: Fullscreen toggle */}
           <FullscreenToggleButton isFullscreen={fullscreen.isFullscreen} onToggle={fullscreen.toggle} />
         </nav>
@@ -221,6 +250,8 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
         onEdit={handleEdit}
         onDelete={(item) => void handleDelete(item)}
         onStatusChange={handleStatusChange}
+        expandedCategories={expandedCategories}
+        onExpandedChange={(expanded) => setExpandedCategories(expanded as string[])}
       />
 
       {/* Editor Dialog */}

@@ -603,6 +603,11 @@ export const API_ROUTES = {
     BY_ID: (id: string) => `/api/storages/${id}` as const,
   },
 
+  // ── Spaces (cross-type) ────────────────────────────────────────────
+  SPACES: {
+    BATCH_RESOLVE: '/api/spaces/batch-resolve',
+  },
+
   // ── Contacts ──────────────────────────────────────────────────────────
   CONTACTS: {
     BY_ID: (id: string) => `/api/contacts/${id}` as const,

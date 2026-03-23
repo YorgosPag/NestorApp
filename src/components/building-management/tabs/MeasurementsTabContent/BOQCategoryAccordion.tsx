@@ -2,7 +2,7 @@
  * BOQCategoryAccordion — ATOE category groups with item tables
  *
  * Groups BOQ items by categoryCode, displays in EnterpriseAccordion.
- * Each section has a table with item rows.
+ * Each section has a table with item rows + subtotal footer.
  *
  * @module components/building-management/tabs/MeasurementsTabContent/BOQCategoryAccordion
  * @see ADR-175 §4.4.3 (Category Accordion)
@@ -17,6 +17,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -41,6 +42,10 @@ interface BOQCategoryAccordionProps {
   onEdit: (item: BOQItem) => void;
   onDelete: (item: BOQItem) => void;
   onStatusChange: (item: BOQItem, status: BOQItemStatus) => void;
+  /** Controlled expanded categories (for expand/collapse all) */
+  expandedCategories?: string[];
+  /** Callback when user manually expands/collapses a category */
+  onExpandedChange?: (expanded: string[]) => void;
 }
 
 interface CategoryGroup {
@@ -92,6 +97,8 @@ export function BOQCategoryAccordion({
   onEdit,
   onDelete,
   onStatusChange,
+  expandedCategories,
+  onExpandedChange,
 }: BOQCategoryAccordionProps) {
   const { t } = useTranslation('building');
 
@@ -142,6 +149,8 @@ export function BOQCategoryAccordion({
     content: (
       <CategoryItemsTable
         items={group.items}
+        totalCost={group.totalCost}
+        categoryName={`${group.code} — ${group.name}`}
         onEdit={onEdit}
         onDelete={onDelete}
         onStatusChange={onStatusChange}
@@ -152,15 +161,30 @@ export function BOQCategoryAccordion({
 
   if (groups.length === 0) return null;
 
+  // Controlled vs uncontrolled: if expandedCategories is provided, use controlled mode
+  const isControlled = expandedCategories !== undefined;
+
   return (
     <EnterpriseAccordion
       items={accordionItems}
       type="multiple"
       variant="card"
       size="md"
-      defaultValue={groups.map((g) => g.code)}
+      {...(isControlled
+        ? { value: expandedCategories, onValueChange: onExpandedChange as (v: string | string[]) => void }
+        : { defaultValue: groups.map((g) => g.code) }
+      )}
     />
   );
+}
+
+/** Returns all category codes from items — used by parent for expand/collapse all */
+export function getCategoryCodes(items: BOQItem[]): string[] {
+  const codes = new Set<string>();
+  for (const item of items) {
+    codes.add(item.categoryCode);
+  }
+  return Array.from(codes);
 }
 
 // ============================================================================
@@ -169,13 +193,15 @@ export function BOQCategoryAccordion({
 
 interface CategoryItemsTableProps {
   items: BOQItem[];
+  totalCost: number;
+  categoryName: string;
   onEdit: (item: BOQItem) => void;
   onDelete: (item: BOQItem) => void;
   onStatusChange: (item: BOQItem, status: BOQItemStatus) => void;
   t: (key: string) => string;
 }
 
-function CategoryItemsTable({ items, onEdit, onDelete, t }: CategoryItemsTableProps) {
+function CategoryItemsTable({ items, totalCost, categoryName, onEdit, onDelete, t }: CategoryItemsTableProps) {
   return (
     <Table>
       <TableHeader>
@@ -254,6 +280,17 @@ function CategoryItemsTable({ items, onEdit, onDelete, t }: CategoryItemsTablePr
           );
         })}
       </TableBody>
+      <TableFooter>
+        <TableRow>
+          <TableCell colSpan={5} className="text-right font-medium text-sm">
+            {t('tabs.measurements.table.subtotal')} — {categoryName}
+          </TableCell>
+          <TableCell className="text-right tabular-nums font-bold">
+            {formatCurrency(totalCost)}
+          </TableCell>
+          <TableCell colSpan={2} />
+        </TableRow>
+      </TableFooter>
     </Table>
   );
 }

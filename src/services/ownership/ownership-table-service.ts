@@ -17,6 +17,7 @@ import {
   collection,
   getDocs,
   query,
+  where,
   orderBy,
   serverTimestamp,
   Timestamp,
@@ -85,6 +86,62 @@ export async function getRevisions(
     id: d.id,
     ...d.data(),
   })) as OwnershipTableRevision[];
+}
+
+// ============================================================================
+// PROJECT DATA QUERIES (used by component — keeps Firestore logic in service)
+// ============================================================================
+
+/**
+ * Get building IDs linked to a project.
+ */
+export async function getBuildingIdsByProject(projectId: string): Promise<string[]> {
+  const snap = await getDocs(
+    query(collection(db, COLLECTIONS.BUILDINGS), where('projectId', '==', projectId)),
+  );
+  return snap.docs.map(d => d.id);
+}
+
+/** Validation result for building data before auto-populate */
+export interface BuildingDataValidation {
+  readonly totalFloors: number;
+  readonly totalUnits: number;
+  readonly unitsWithoutArea: number;
+  readonly unitsWithoutFloor: number;
+}
+
+/**
+ * Validate building data before auto-populate.
+ * Checks floors, units, areas, floor assignments.
+ */
+export async function validateBuildingData(
+  buildingIds: string[],
+): Promise<BuildingDataValidation> {
+  let totalFloors = 0;
+  let totalUnits = 0;
+  let unitsWithoutArea = 0;
+  let unitsWithoutFloor = 0;
+
+  for (const bId of buildingIds) {
+    const floorsSnap = await getDocs(
+      query(collection(db, COLLECTIONS.FLOORS), where('buildingId', '==', bId)),
+    );
+    totalFloors += floorsSnap.size;
+
+    const unitsSnap = await getDocs(
+      query(collection(db, COLLECTIONS.UNITS), where('buildingId', '==', bId)),
+    );
+    totalUnits += unitsSnap.size;
+
+    for (const unitDoc of unitsSnap.docs) {
+      const data = unitDoc.data();
+      const area = (data.area as number) ?? (data.areaSqm as number) ?? 0;
+      if (area <= 0) unitsWithoutArea++;
+      if (!data.floorId) unitsWithoutFloor++;
+    }
+  }
+
+  return { totalFloors, totalUnits, unitsWithoutArea, unitsWithoutFloor };
 }
 
 // ============================================================================
@@ -228,6 +285,43 @@ export async function finalizeTable(
       { merge: true },
     );
   });
+
+  // After finalize: write millesimalShares to unit/storage Firestore documents
+  const tableDoc = await getDoc(docRef);
+  if (tableDoc.exists()) {
+    const rows = (tableDoc.data().rows ?? []) as OwnershipPercentageTable['rows'];
+    const writes: Promise<void>[] = [];
+
+    for (const row of rows) {
+      // Units — write millesimalShares
+      if (row.entityRef.collection === 'units') {
+        writes.push(
+          setDoc(
+            doc(db, COLLECTIONS.UNITS, row.entityRef.id),
+            { millesimalShares: row.millesimalShares },
+            { merge: true },
+          ),
+        );
+      }
+
+      // Linked storage with own shares — write millesimalShares
+      if (row.linkedSpacesSummary) {
+        for (const ls of row.linkedSpacesSummary) {
+          if (ls.hasOwnShares && ls.millesimalShares > 0) {
+            writes.push(
+              setDoc(
+                doc(db, COLLECTIONS.STORAGE, ls.spaceId),
+                { millesimalShares: ls.millesimalShares },
+                { merge: true },
+              ),
+            );
+          }
+        }
+      }
+    }
+
+    await Promise.all(writes);
+  }
 }
 
 /**
@@ -319,6 +413,8 @@ function resolveLinkedSpaceDetail(
     floor: String(docData?.floor ?? docData?.floorNumber ?? '—'),
     areaNetSqm: (docData?.area as number) ?? 0,
     areaSqm: (docData?.area as number) ?? (docData?.areaSqm as number) ?? 0,
+    hasOwnShares: false,
+    millesimalShares: 0,
   };
 }
 
@@ -375,6 +471,9 @@ export async function autoPopulateRows(
       linkedSpacesSummary: null,
       ownerParty: 'unassigned',
       buyerContactId: null,
+      buyerName: null,
+      preliminaryContract: null,
+      finalContract: null,
     });
   }
 
@@ -404,6 +503,9 @@ export async function autoPopulateRows(
       linkedSpacesSummary: null,
       ownerParty: 'unassigned',
       buyerContactId: null,
+      buyerName: null,
+      preliminaryContract: null,
+      finalContract: null,
     });
   }
 
@@ -449,6 +551,9 @@ export async function autoPopulateRows(
       linkedSpacesSummary,
       ownerParty: 'unassigned',
       buyerContactId: null,
+      buyerName: null,
+      preliminaryContract: null,
+      finalContract: null,
     });
   }
 

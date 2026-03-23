@@ -17,7 +17,7 @@ import 'server-only';
 import { getAdminFirestore, isFirebaseAdminAvailable, FieldValue } from '@/lib/firebaseAdmin';
 import type { Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { validateCompanyExists } from '@/services/company-document.service';
+import { validateCompanyExists, ensureCompanyDocument } from '@/services/company-document.service';
 
 import type {
   AuthContext,
@@ -28,6 +28,7 @@ import type {
   AuditMetadata,
 } from './types';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getErrorMessage } from '@/lib/error-utils';
 const logger = createModuleLogger('audit');
 
 // =============================================================================
@@ -161,17 +162,25 @@ export async function logAuditEvent(
   }
 
   try {
-    // 🏢 ENTERPRISE: Validate company document exists before writing audit logs.
-    // Prevents phantom document creation (ADR-210 Phase 3).
+    // 🏢 ENTERPRISE: Ensure company document exists before writing audit logs.
+    // If missing, materialize it (ADR-210 Phase 3) — audit events must NEVER be lost.
     // Uses cached check (5-min TTL) to avoid Firestore read on every audit event.
     const companyExists = await validateCompanyExists(ctx.companyId);
     if (!companyExists) {
-      logger.error('[AUDIT] Company document not found — skipping to prevent phantom creation', {
+      logger.warn('[AUDIT] Company document not found — materializing to preserve audit trail', {
         companyId: ctx.companyId,
         action,
         actorId: ctx.uid,
       });
-      return;
+      try {
+        await ensureCompanyDocument(ctx.companyId, undefined, ctx.uid);
+      } catch (materializeError) {
+        logger.error('[AUDIT] Failed to materialize company document — audit event lost', {
+          companyId: ctx.companyId,
+          error: getErrorMessage(materializeError),
+        });
+        return;
+      }
     }
 
     // Write to tenant-scoped collection: /companies/{companyId}/audit_logs/{autoId}

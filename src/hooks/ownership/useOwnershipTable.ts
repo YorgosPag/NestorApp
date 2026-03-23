@@ -70,13 +70,17 @@ export interface UseOwnershipTableReturn {
 
   // --- Actions ---
   /** Auto-populate rows from Firestore entities */
-  autoPopulate: () => Promise<void>;
+  autoPopulate: () => Promise<number>;
   /** Calculate millesimal shares with current method */
   calculate: (method?: CalculationMethod) => void;
   /** Update a specific cell in a row */
   updateRow: (index: number, field: keyof MutableOwnershipTableRow, value: string | number | boolean | OwnerParty) => void;
+  /** Update a linked space field (hasOwnShares, millesimalShares) */
+  updateLinkedSpace: (rowIndex: number, spaceIndex: number, field: 'hasOwnShares' | 'millesimalShares', value: boolean | number) => void;
   /** Add a manual row */
   addRow: (row: MutableOwnershipTableRow) => void;
+  /** Add air rights (δικαίωμα υψούν) row */
+  addAirRightsRow: () => void;
   /** Remove a row by index */
   removeRow: (index: number) => void;
   /** Update table-level fields */
@@ -323,6 +327,38 @@ export function useOwnershipTable(
     setIsDirty(true);
   }, [runValidation]);
 
+  // --- Update linked space (hasOwnShares / millesimalShares) ---
+  const updateLinkedSpace = useCallback((
+    rowIndex: number,
+    spaceIndex: number,
+    field: 'hasOwnShares' | 'millesimalShares',
+    value: boolean | number,
+  ) => {
+    setTable(prev => {
+      if (!prev) return prev;
+      const newRows = [...prev.rows];
+      const row = { ...newRows[rowIndex] };
+      if (!row.linkedSpacesSummary) return prev;
+
+      const newSpaces = [...row.linkedSpacesSummary];
+      const space = { ...newSpaces[spaceIndex] };
+
+      if (field === 'hasOwnShares') {
+        space.hasOwnShares = value as boolean;
+        if (!value) space.millesimalShares = 0;
+      } else {
+        space.millesimalShares = value as number;
+      }
+
+      newSpaces[spaceIndex] = space;
+      row.linkedSpacesSummary = newSpaces;
+      newRows[rowIndex] = row;
+
+      return { ...prev, rows: newRows };
+    });
+    setIsDirty(true);
+  }, []);
+
   // --- Add row ---
   const addRow = useCallback((row: MutableOwnershipTableRow) => {
     setTable(prev => {
@@ -336,6 +372,47 @@ export function useOwnershipTable(
         summaryByCategory: calculateCategorySummary(newRows),
       };
     });
+  }, [runValidation]);
+
+  // --- Add air rights row (δικαίωμα υψούν / αέρας) ---
+  const addAirRightsRow = useCallback(() => {
+    setTable(prev => {
+      if (!prev) return prev;
+      const existingAirRights = prev.rows.filter(r => r.category === 'air_rights').length;
+      const ordinal = prev.rows.length + 1;
+      const airRow: MutableOwnershipTableRow = {
+        ordinal,
+        buildingId: prev.buildingIds?.[0] ?? '',
+        buildingName: '',
+        entityRef: { collection: 'units', id: `air_rights_${Date.now()}` },
+        entityCode: `ΔΥ-${String(existingAirRights + 1).padStart(2, '0')}`,
+        description: 'Δικαίωμα υψούν / αέρας',
+        category: 'air_rights',
+        floor: '—',
+        areaNetSqm: 0,
+        areaSqm: 0,
+        heightM: null,
+        millesimalShares: 0,
+        isManualOverride: true,
+        coefficients: null,
+        participatesInCalculation: true,
+        linkedSpacesSummary: null,
+        ownerParty: 'unassigned',
+        buyerContactId: null,
+        buyerName: null,
+        preliminaryContract: null,
+        finalContract: null,
+      };
+      const newRows = [...prev.rows, airRow];
+      runValidation(newRows);
+      return {
+        ...prev,
+        rows: newRows,
+        totalShares: newRows.filter(r => r.participatesInCalculation !== false).reduce((sum, r) => sum + r.millesimalShares, 0),
+        summaryByCategory: calculateCategorySummary(newRows),
+      };
+    });
+    setIsDirty(true);
   }, [runValidation]);
 
   // --- Remove row ---
@@ -479,7 +556,9 @@ export function useOwnershipTable(
     autoPopulate,
     calculate,
     updateRow,
+    updateLinkedSpace,
     addRow,
+    addAirRightsRow,
     removeRow,
     updateTableField,
     save,

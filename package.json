@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "build:tokens": "node scripts/build-design-tokens.js",
-    "dev": "next dev --turbopack",
+    "dev": "cross-env NODE_OPTIONS=--max-old-space-size=8192 next dev --turbopack",
     "dev:watch": "pnpm run build:tokens && concurrently -k -n next,tokens -c blue,yellow \"next dev --turbopack\" \"node scripts/build-design-tokens.js --watch\"",
     "dev:vercel": "pnpm run build:tokens && npx vercel dev",
     "dev:with-tokens": "pnpm run build:tokens && next dev --turbopack",
@@ -191,6 +191,7 @@
     "axe-core": "^4.10.3",
     "concurrently": "^9.1.0",
     "copy-webpack-plugin": "13.0.1",
+    "cross-env": "10.1.0",
     "eslint": "^9.33.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
