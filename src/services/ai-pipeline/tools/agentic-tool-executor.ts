@@ -31,6 +31,7 @@ import { greekToLatin } from '../shared/greek-nlp';
 import { resolveAccessConfig, UNLINKED_ACCESS, deriveBlockedFieldSet } from '@/config/ai-role-access-matrix';
 import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { captureMessage as sentryCaptureMessage } from '@/lib/telemetry/sentry';
 import { getErrorMessage } from '@/lib/error-utils';
 // SPEC-257D/E/F: SSoT enums for tool validation (same source as tool definition schemas)
 import { COMPLAINT_SEVERITIES, CONTACT_FIELD_TYPES, FILE_SOURCE_TYPES } from './agentic-tool-definitions';
@@ -66,6 +67,8 @@ export interface ToolResult {
   error?: string;
   /** Number of results returned (for queries) */
   count?: number;
+  /** Flags degraded results (e.g., FAILED_PRECONDITION fallback — AI should caveat its answer) */
+  warning?: string;
 }
 
 interface QueryFilter {
@@ -73,6 +76,14 @@ interface QueryFilter {
   operator: string;
   value: string | number | boolean | null | string[];
 }
+
+// ============================================================================
+// AI-FACING ERROR MESSAGES (SSoT — returned to AI inside ToolResult.error)
+// ============================================================================
+const AI_ERRORS = {
+  NO_LINKED_UNITS: 'Δεν βρέθηκαν συνδεδεμένα ακίνητα. Επικοινωνήστε με τον διαχειριστή.',
+  UNRECOGNIZED_USER: 'Πρέπει να είστε αναγνωρισμένος χρήστης.',
+} as const;
 
 // ============================================================================
 // SECURITY: COLLECTION WHITELIST
@@ -208,7 +219,7 @@ export class AgenticToolExecutor {
       // Safety guard: unit-scoped role without linked units → deny unit-sensitive collections
       const unitSensitive = new Set([COLLECTIONS.UNITS, COLLECTIONS.DOCUMENTS, COLLECTIONS.PAYMENTS]);
       if (unitSensitive.has(collection)) {
-        return { allowed: false, result: { success: false, error: 'Δεν βρέθηκαν συνδεδεμένα ακίνητα. Επικοινωνήστε με τον διαχειριστή.' } };
+        return { allowed: false, result: { success: false, error: AI_ERRORS.NO_LINKED_UNITS } };
       }
       // Non-unit collections (buildings, appointments) — allow without scoping
       return { allowed: true, filters };
@@ -343,15 +354,25 @@ export class AgenticToolExecutor {
       const errorMessage = getErrorMessage(error);
 
       // 🏢 ENTERPRISE: FAILED_PRECONDITION = missing index → broad query fallback
-      // Instead of returning empty results, fetch ALL docs and let AI filter
+      // Instead of returning empty results, fetch ALL docs and let AI filter.
+      // ADR-259C: Log full error (contains index creation link) + flag results as unfiltered.
       if (errorMessage.includes('FAILED_PRECONDITION') && toolName === 'firestore_query') {
-        logger.warn('Tool hit missing index, executing broad fallback query', {
+        const fallbackArgs = args as Record<string, unknown>;
+        const collection = String(fallbackArgs.collection ?? '');
+
+        logger.warn('Missing Firestore index — fallback to broad query', {
           tool: toolName,
+          collection,
           requestId: ctx.requestId,
+          indexError: errorMessage,
         });
+        // ADR-259D: Capture missing index as Sentry warning (includes auto-create link)
+        sentryCaptureMessage(`Missing Firestore index: ${collection}`, 'warning', {
+          tags: { component: 'tool-executor', collection },
+          extra: { requestId: ctx.requestId, indexError: errorMessage },
+        });
+
         try {
-          const fallbackArgs = args as Record<string, unknown>;
-          const collection = String(fallbackArgs.collection ?? '');
           const db = getAdminFirestore();
           const companyId = ctx.companyId;
           const limit = Math.min(typeof fallbackArgs.limit === 'number' ? fallbackArgs.limit : 20, 50);
@@ -366,14 +387,29 @@ export class AgenticToolExecutor {
             return { id: doc.id, ...this.flattenNestedFields(raw) };
           });
 
-          return { success: true, data: this.truncateResult(results), count: results.length };
+          return {
+            success: true,
+            data: this.truncateResult(results),
+            count: results.length,
+            warning: `[FALLBACK] Results may be incomplete — missing Firestore index for "${collection}". Filters were not fully applied.`,
+          };
         } catch {
-          // If even broad query fails, return empty
-          return { success: true, data: [], count: 0 };
+          // If even broad query fails, return empty with warning
+          return {
+            success: true,
+            data: [],
+            count: 0,
+            warning: `[FALLBACK] Broad query also failed for "${collection}". No results available.`,
+          };
         }
       }
       if (errorMessage.includes('FAILED_PRECONDITION')) {
-        return { success: true, data: [], count: 0 };
+        return {
+          success: true,
+          data: [],
+          count: 0,
+          warning: `[FALLBACK] Missing index for non-query tool "${toolName}". No results available.`,
+        };
       }
 
       logger.error('Tool execution error', {
@@ -651,12 +687,12 @@ export class AgenticToolExecutor {
     // ── 1. Security: Must be a recognized contact with linked units ──
     const contact = ctx.contactMeta;
     if (!contact) {
-      return { success: false, error: 'Πρέπει να είστε αναγνωρισμένος χρήστης για να αναφέρετε πρόβλημα.' };
+      return { success: false, error: AI_ERRORS.UNRECOGNIZED_USER };
     }
 
     const linkedUnitIds = contact.linkedUnitIds ?? [];
     if (linkedUnitIds.length === 0) {
-      return { success: false, error: 'Δεν βρέθηκαν συνδεδεμένα ακίνητα.' };
+      return { success: false, error: AI_ERRORS.NO_LINKED_UNITS };
     }
 
     // ── 2. Validate inputs ──
@@ -826,7 +862,7 @@ export class AgenticToolExecutor {
     // ── 1. Security: Must be a recognized contact ──
     const contact = ctx.contactMeta;
     if (!contact?.contactId) {
-      return { success: false, error: 'Πρέπει να είστε αναγνωρισμένος χρήστης για να ενημερώσετε στοιχεία.' };
+      return { success: false, error: AI_ERRORS.UNRECOGNIZED_USER };
     }
 
     // ── 2. Validate fieldType ──
@@ -969,12 +1005,12 @@ export class AgenticToolExecutor {
     // ── 1. Security: Must be a recognized contact with linked units ──
     const contact = ctx.contactMeta;
     if (!contact) {
-      return { success: false, error: 'Πρέπει να είστε αναγνωρισμένος χρήστης.' };
+      return { success: false, error: AI_ERRORS.UNRECOGNIZED_USER };
     }
 
     const linkedUnitIds = contact.linkedUnitIds ?? [];
     if (linkedUnitIds.length === 0) {
-      return { success: false, error: 'Δεν βρέθηκαν συνδεδεμένα ακίνητα.' };
+      return { success: false, error: AI_ERRORS.NO_LINKED_UNITS };
     }
 
     // ── 2. Validate inputs ──

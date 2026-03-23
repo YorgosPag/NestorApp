@@ -17,6 +17,7 @@
 export type PropertyStatus =
   | 'for-sale'
   | 'for-rent'
+  | 'for-sale-and-rent' // 🩵 Πώληση & Ενοικίαση (ADR-258: Twin Architecture)
   | 'reserved'
   | 'sold'
   | 'landowner'
@@ -32,6 +33,7 @@ export type PropertyStatus =
 export const PROPERTY_STATUS_LABELS: Record<PropertyStatus, string> = {
   'for-sale': 'properties:status.forSale',
   'for-rent': 'properties:status.forRent',
+  'for-sale-and-rent': 'properties:status.forSaleAndRent',
   'reserved': 'properties:status.reserved',
   'sold': 'properties:status.sold',
   'landowner': 'properties:status.landowner',
@@ -45,6 +47,7 @@ export const PROPERTY_STATUS_LABELS: Record<PropertyStatus, string> = {
 export const PROPERTY_STATUS_COLORS: Record<PropertyStatus, string> = {
   'for-sale': 'hsl(var(--status-success))',     // 🟢 Πράσινο - διαθέσιμο
   'for-rent': 'hsl(var(--status-info))',       // 🔵 Μπλε - ενεργό
+  'for-sale-and-rent': 'hsl(var(--status-teal))', // 🩵 Teal - πώληση & ενοικίαση (ADR-258)
   'reserved': 'hsl(var(--status-warning))',    // 🟡 Πορτοκαλί - δεσμευμένο
   'sold': 'hsl(var(--status-error))',          // 🔴 Κόκκινο - πωλημένο
   'landowner': 'hsl(var(--status-purple))',    // 🟣 Μοβ - ειδική κατάσταση

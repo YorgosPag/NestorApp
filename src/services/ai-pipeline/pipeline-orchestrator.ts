@@ -59,6 +59,9 @@ import { sendChannelReply, extractChannelIds } from './shared/channel-reply-disp
 // ADR-173: AI Self-Improvement imports
 import { getFeedbackService } from './feedback-service';
 import { createFeedbackKeyboard, createSuggestedActionsKeyboard } from './feedback-keyboard';
+// ADR-259A: AI Usage Tracking + Cost Protection
+import { AI_COST_CONFIG } from '@/config/ai-analysis-config';
+import { checkDailyCap, recordUsage } from './ai-usage.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -337,6 +340,67 @@ export class PipelineOrchestrator {
         contactMeta: ctx.contactMeta ?? null,
       };
 
+      // 2b. ADR-259A: Daily cap check (customers only — admin unlimited)
+      if (!agenticCtx.isAdmin) {
+        const capCheck = await checkDailyCap(channelSenderId, ctx.intake.channel);
+        if (!capCheck.allowed) {
+          orchestratorLogger.info('Daily cap exceeded', {
+            requestId: ctx.requestId,
+            channelSenderId,
+            used: capCheck.used,
+            limit: capCheck.limit,
+          });
+          await sendChannelReply({
+            ...extractChannelIds(ctx),
+            channel: ctx.intake.channel,
+            textBody: `Ξεπεράσατε το ημερήσιο όριο μηνυμάτων (${capCheck.limit}). Δοκιμάστε ξανά αύριο.`,
+            requestId: ctx.requestId,
+          });
+          ctx = this.transitionState(ctx, PipelineState.UNDERSTOOD);
+          ctx = this.transitionState(ctx, PipelineState.AUDITED);
+          await this.auditService.record(ctx, 'auto_processed', 'ADR-259A-daily-cap');
+          return {
+            success: true,
+            requestId: ctx.requestId,
+            finalState: ctx.state,
+            context: ctx,
+          };
+        }
+      }
+
+      // 2c. ADR-259C: Empty linkedUnitIds early-exit (customers only)
+      // Prevents wasting OpenAI tokens when buyer has no linked properties.
+      // The agentic loop would eventually fail via enforceRoleAccess, but silently.
+      if (!agenticCtx.isAdmin && agenticCtx.contactMeta?.linkedUnitIds?.length === 0) {
+        orchestratorLogger.info('No linked units — early exit', {
+          requestId: ctx.requestId,
+          channelSenderId,
+          contactId: agenticCtx.contactMeta?.contactId ?? 'unknown',
+        });
+
+        // SSoT: Use i18n response builder via Telegram (only channel with buyer agentic path)
+        const channelIds = extractChannelIds(ctx);
+        if (channelIds.telegramChatId) {
+          const { sendTelegramMessage } = await import(
+            '@/app/api/communications/webhooks/telegram/telegram/client'
+          );
+          const { createNoLinkedUnitsResponse } = await import(
+            '@/app/api/communications/webhooks/telegram/message/responses'
+          );
+          await sendTelegramMessage(createNoLinkedUnitsResponse(Number(channelIds.telegramChatId)));
+        }
+
+        ctx = this.transitionState(ctx, PipelineState.UNDERSTOOD);
+        ctx = this.transitionState(ctx, PipelineState.AUDITED);
+        await this.auditService.record(ctx, 'auto_processed', 'ADR-259C-no-linked-units');
+        return {
+          success: true,
+          requestId: ctx.requestId,
+          finalState: ctx.state,
+          context: ctx,
+        };
+      }
+
       // 3. Execute agentic loop
       orchestratorLogger.info('Starting agentic path', {
         requestId: ctx.requestId,
@@ -352,13 +416,26 @@ export class PipelineOrchestrator {
         agenticCtx
       );
 
+      // 3b. ADR-259A: Record token usage (fire-and-forget, non-fatal)
+      if (agenticResult.totalUsage.total_tokens > 0) {
+        recordUsage(
+          channelSenderId,
+          ctx.intake.channel,
+          agenticResult.totalUsage,
+        ).catch(() => { /* non-fatal */ });
+      }
+
       // 4. Save to chat history — ONLY if the agentic loop succeeded
       //    (don't poison history with "max iterations" or error responses)
       const now = new Date().toISOString();
+      // ADR-259A: Use role-aware max iterations from SSoT for failure threshold
+      const maxIter = agenticCtx.isAdmin
+        ? AI_COST_CONFIG.LIMITS.ADMIN_MAX_ITERATIONS
+        : AI_COST_CONFIG.LIMITS.CUSTOMER_MAX_ITERATIONS;
       const isFailedResponse = agenticResult.answer.includes('Ξεπέρασα το μέγιστο')
         || agenticResult.answer.includes('πολύ χρόνο')
         || agenticResult.answer.includes('Δεν μπόρεσα')
-        || agenticResult.iterations >= 7;
+        || agenticResult.iterations >= maxIter;
 
       if (!isFailedResponse) {
         await chatHistoryService.addMessage(channelSenderId, {

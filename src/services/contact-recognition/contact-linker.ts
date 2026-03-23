@@ -21,6 +21,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { PersonaType } from '@/types/contacts/personas';
 import { greekToLatin } from '@/services/ai-pipeline/shared/greek-nlp';
+import { getCompanyId } from '@/config/tenant';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ContactLinker');
@@ -251,8 +252,11 @@ async function findContactByName(
     .map(w => w.substring(0, Math.min(w.length, 4)));
   const allTerms = [...new Set([...words, ...latinWords, ...stems])];
 
+  // 🔒 SPEC-259B: Tenant-scoped — only search contacts within current company
+  const companyId = getCompanyId();
   const contactsSnap = await db
     .collection(COLLECTIONS.CONTACTS)
+    .where('companyId', '==', companyId)
     .limit(50)
     .get();
 

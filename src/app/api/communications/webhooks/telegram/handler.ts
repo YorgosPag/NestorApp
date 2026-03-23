@@ -26,6 +26,7 @@ import { getCompanyId } from '@/config/tenant';
 import { createModuleLogger } from '@/lib/telemetry';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { getErrorMessage } from '@/lib/error-utils';
+import { captureException as sentryCaptureException } from '@/lib/telemetry/sentry';
 
 const logger = createModuleLogger('TelegramHandler');
 
@@ -349,7 +350,16 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<Proc
           );
         }
       } else {
-        logger.info('Processing regular message (unknown contact)');
+        // ADR-259C: Contact not recognized — send explicit user message
+        logger.info('Unknown contact — sending recognition failure message', {
+          senderId,
+          senderName,
+        });
+        if (!isBotCommand) {
+          const { createContactNotRecognizedResponse } = await import('./message/responses');
+          await sendTelegramMessage(createContactNotRecognizedResponse(webhookData.message.chat.id));
+        }
+        // Still process message for bot commands (/start, /help) and pipeline enqueue
         telegramResponse = await processMessage(webhookData.message, effectiveMessageText);
       }
     }
@@ -473,12 +483,12 @@ async function feedTelegramToPipeline(message: TelegramMessage['message'], overr
     // Non-fatal
   }
 
-  try {
+  // ADR-259C: Retry once on enqueue failure + user notification
+  const enqueue = async () => {
     const { TelegramChannelAdapter } = await import(
       '@/services/ai-pipeline/channel-adapters/telegram-channel-adapter'
     );
-
-    const result = await TelegramChannelAdapter.feedToPipeline({
+    return TelegramChannelAdapter.feedToPipeline({
       chatId,
       userId,
       userName,
@@ -487,15 +497,34 @@ async function feedTelegramToPipeline(message: TelegramMessage['message'], overr
       companyId,
       contactMeta,
     });
+  };
 
+  try {
+    const result = await enqueue();
     if (result.enqueued) {
       logger.info('[Telegram->Pipeline] Enqueued', { requestId: result.requestId });
     } else {
       logger.warn('[Telegram->Pipeline] Failed', { error: result.error });
     }
-  } catch (error) {
-    // Non-fatal: pipeline failure should never break the Telegram bot
-    logger.warn('[Telegram->Pipeline] Non-fatal error', { error: getErrorMessage(error) });
+  } catch (firstError) {
+    logger.warn('[Telegram->Pipeline] First attempt failed, retrying once', {
+      error: getErrorMessage(firstError),
+    });
+    try {
+      const retryResult = await enqueue();
+      if (retryResult.enqueued) {
+        logger.info('[Telegram->Pipeline] Retry succeeded', { requestId: retryResult.requestId });
+      } else {
+        logger.warn('[Telegram->Pipeline] Retry returned non-enqueued', { error: retryResult.error });
+      }
+    } catch (retryError) {
+      logger.error('[Telegram->Pipeline] Failed after retry', { error: getErrorMessage(retryError) });
+      // Non-blocking: notify user that processing failed
+      import('./message/responses').then(({ createPipelineRetryFailedResponse }) => {
+        sendTelegramMessage(createPipelineRetryFailedResponse(Number(chatId)))
+          .catch(() => { /* non-fatal */ });
+      }).catch(() => { /* non-fatal */ });
+    }
   }
 }
 
@@ -551,14 +580,20 @@ export async function handlePOST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ ok: true, rejected: true, error: secretValidation.error }, { status: 200 });
     }
 
-    // 2. Check Firebase availability
+    // 2. Parse webhook JSON first (no Firebase needed — pure HTTP parsing)
+    const webhookData = await request.json();
+    const webhookChatId = webhookData.message?.chat?.id
+      ?? webhookData.callback_query?.message?.chat?.id;
+
+    // 2b. ADR-259C: Check Firebase availability — send user message if unavailable
     if (!isFirebaseAvailable()) {
-      logger.warn('Firebase not available, returning minimal response');
+      logger.warn('Firebase not available, notifying user');
+      if (webhookChatId) {
+        const { createDatabaseUnavailableResponse } = await import('./message/responses');
+        await sendTelegramMessage(createDatabaseUnavailableResponse(webhookChatId));
+      }
       return NextResponse.json({ ok: true, status: 'firebase_unavailable' });
     }
-
-    // 3. Parse and process webhook data
-    const webhookData = await request.json();
 
     // 3a. DEDUPLICATION: Telegram retries if response >15s — ignore duplicates
     const updateId = webhookData.update_id as number | undefined;
@@ -602,6 +637,11 @@ export async function handlePOST(request: NextRequest): Promise<NextResponse> {
 
   } catch (error) {
     logger.error('Telegram webhook error', { error });
+    // ADR-259D: Capture webhook errors in Sentry
+    sentryCaptureException(error, {
+      tags: { component: 'telegram-webhook' },
+      extra: { source: 'handlePOST' },
+    });
     return NextResponse.json({ ok: true, error: 'internal_error' });
   }
 }

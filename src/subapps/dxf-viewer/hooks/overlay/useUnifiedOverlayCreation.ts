@@ -41,7 +41,8 @@ export function useUnifiedOverlayCreation() {
           levelId: '', // will be set by overlay store based on currentLevelId
           kind: opts.kind || 'unit', // Χρήση επιλεγμένου kind ή default
           polygon: points.map(p => [p.x, p.y] as [number, number]),
-          status: opts.status || 'for-sale', // Χρήση επιλεγμένου status ή default
+          // ADR-258: status δεν αποθηκεύεται πλέον — χρωματισμός βάσει entity.commercialStatus
+          ...(opts.status ? { status: opts.status } : {}),
           style: {
             stroke: style.strokeColor,
             fill: style.fillColor,

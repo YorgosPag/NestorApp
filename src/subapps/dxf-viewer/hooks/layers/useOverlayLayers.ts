@@ -74,10 +74,9 @@ interface DraggingEdgeMidpointState {
 }
 
 /**
- * Status type for overlays
- * Includes all possible status values from the application
+ * Status type for overlays — SSoT: uses centralized PropertyStatus (ADR-258)
  */
-type OverlayStatus = 'for-sale' | 'for-rent' | 'reserved' | 'sold' | 'landowner' | 'rented' | 'under-negotiation' | 'coming-soon' | 'off-market' | 'unavailable';
+type OverlayStatus = RegionStatus;
 
 /**
  * Props for useOverlayLayers hook

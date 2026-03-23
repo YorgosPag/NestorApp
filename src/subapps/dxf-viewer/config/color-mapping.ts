@@ -6,6 +6,7 @@ import { UI_COLORS, withOpacity } from './color-config';
 export const STATUS_COLORS_MAPPING: Record<PropertyStatus, { stroke: string; fill: string }> = {
   'for-sale': { stroke: UI_COLORS.SUCCESS, fill: withOpacity(UI_COLORS.SUCCESS, 0.5) },    // 🟢 Green - success
   'for-rent': { stroke: UI_COLORS.INFO, fill: withOpacity(UI_COLORS.INFO, 0.5) },    // 🔵 Blue - info
+  'for-sale-and-rent': { stroke: UI_COLORS.TEAL, fill: withOpacity(UI_COLORS.TEAL, 0.5) }, // 🩵 Teal - dual listing (ADR-258)
   'reserved': { stroke: UI_COLORS.WARNING, fill: withOpacity(UI_COLORS.WARNING, 0.5) },    // 🟡 Orange - warning
   'sold': { stroke: UI_COLORS.ERROR, fill: withOpacity(UI_COLORS.ERROR, 0.5) },        // 🔴 Red - error
   'landowner': { stroke: UI_COLORS.LIGHT_PURPLE, fill: withOpacity(UI_COLORS.LIGHT_PURPLE, 0.5) },   // 🟣 Purple - special
@@ -66,4 +67,29 @@ export function getKindFromLabel(label: string): OverlayKind | null {
   }
 
   return null;
+}
+
+// ============================================================================
+// 🏢 ADR-258: CommercialStatus → PropertyStatus Mapping (Twin Architecture)
+// ============================================================================
+// Κεντρική mapping function — parking/storage χρησιμοποιούν SpaceCommercialStatus
+// (υποσύνολο του CommercialStatus, χωρίς for-rent/for-sale-and-rent/rented)
+import type { CommercialStatus } from '../../../types/unit';
+import type { SpaceCommercialStatus } from '../../../types/sales-shared';
+
+const COMMERCIAL_TO_PROPERTY_STATUS: Record<string, PropertyStatus> = {
+  'for-sale': 'for-sale',
+  'for-rent': 'for-rent',
+  'for-sale-and-rent': 'for-sale-and-rent',
+  'reserved': 'reserved',
+  'sold': 'sold',
+  'rented': 'rented',
+  'unavailable': 'unavailable',
+};
+
+export function commercialToPropertyStatus(
+  status: CommercialStatus | SpaceCommercialStatus | undefined
+): PropertyStatus {
+  if (!status) return 'unavailable';
+  return COMMERCIAL_TO_PROPERTY_STATUS[status] ?? 'unavailable';
 }

@@ -28,6 +28,7 @@ export type SemanticIntent =
 export const STATUS_TO_SEMANTIC: Record<PropertyStatus, SemanticIntent> = {
   // 🟢 SUCCESS - Available, positive outcomes
   'for-sale': 'success',
+  'for-sale-and-rent': 'success', // ADR-258: Πώληση & Ενοικίαση
   'coming-soon': 'success',
 
   // 🟡 WARNING - Conditional, attention required

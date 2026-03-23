@@ -37,6 +37,28 @@ export const AI_ANALYSIS_DEFAULTS = {
   },
 } as const;
 
+// ============================================================================
+// AI COST CONFIGURATION — ADR-259A: Usage Tracking + Cost Protection
+// ============================================================================
+
+/** OpenAI model pricing (USD per 1M tokens) and pipeline safety limits */
+export const AI_COST_CONFIG = {
+  PRICING: {
+    'gpt-4o-mini': { inputPer1MTokens: 0.15, outputPer1MTokens: 0.60 },
+    'gpt-4o': { inputPer1MTokens: 2.50, outputPer1MTokens: 10.00 },
+  },
+  LIMITS: {
+    /** Max agentic loop iterations for customer (buyer) messages */
+    CUSTOMER_MAX_ITERATIONS: 8,
+    /** Max agentic loop iterations for admin (super_admin) messages */
+    ADMIN_MAX_ITERATIONS: 15,
+    /** Max AI messages per day per customer (admin: unlimited) */
+    CUSTOMER_DAILY_MESSAGE_CAP: 50,
+  },
+} as const;
+
+export type AiModelId = keyof typeof AI_COST_CONFIG.PRICING;
+
 export const AI_ANALYSIS_PROMPTS = {
   /** @deprecated Use MULTI_INTENT_SYSTEM for new pipeline. Kept for backward compatibility. */
   MESSAGE_INTENT_SYSTEM: `You are an AI classifier for a Greek real estate & construction management company (κτηματομεσιτικό/κατασκευαστικό γραφείο). Analyze incoming messages and return JSON matching the schema.

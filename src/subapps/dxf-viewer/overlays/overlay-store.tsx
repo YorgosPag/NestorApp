@@ -133,7 +133,8 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     const newOverlay: Record<string, unknown> = {
       levelId: state.currentLevelId,
       companyId: user?.companyId ?? null,
-      status: overlayData.status || 'for-sale',
+      // ADR-258: status δεν αποθηκεύεται πλέον σε νέα overlays — χρωματισμός βάσει entity.commercialStatus
+      ...(overlayData.status ? { status: overlayData.status } : {}),
       kind: overlayData.kind || 'unit',
       polygon: polygonForFirestore,
       createdBy: user.uid,
@@ -201,7 +202,8 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     const overlayDoc: Record<string, unknown> = {
       levelId: overlay.levelId,
       companyId: user?.companyId ?? null,
-      status: overlay.status || 'for-sale',
+      // ADR-258: status δεν αποθηκεύεται σε νέα overlays — backward compat για restore
+      ...(overlay.status ? { status: overlay.status } : {}),
       kind: overlay.kind || 'unit',
       polygon: polygonForFirestore,
       createdBy: overlay.createdBy || user?.uid || SYSTEM_IDENTITY.ID,

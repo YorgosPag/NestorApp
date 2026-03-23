@@ -26,7 +26,7 @@
 
 import 'server-only';
 // RBAC v2 — force recompile
-import { AI_ANALYSIS_DEFAULTS } from '@/config/ai-analysis-config';
+import { AI_ANALYSIS_DEFAULTS, AI_COST_CONFIG } from '@/config/ai-analysis-config';
 import { getCompressedSchema } from '@/config/firestore-schema-map';
 import { getAgenticToolExecutor } from './tools/agentic-tool-executor';
 import type { AgenticContext } from './tools/agentic-tool-executor';
@@ -38,6 +38,7 @@ import { AI_ROLE_ACCESS_MATRIX, resolveAccessConfig, UNLINKED_ACCESS, UNKNOWN_US
 import { safeJsonParse } from '@/lib/json-utils';
 import { isNonEmptyString } from '@/lib/type-guards';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { captureMessage as sentryCaptureMessage } from '@/lib/telemetry/sentry';
 
 const logger = createModuleLogger('AGENTIC_LOOP');
 
@@ -63,6 +64,13 @@ export interface ChatMessage {
   }>;
 }
 
+/** ADR-259A: Token usage from a single OpenAI API call */
+export interface OpenAIUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+}
+
 export interface AgenticResult {
   answer: string;
   suggestions: string[];
@@ -73,6 +81,8 @@ export interface AgenticResult {
   }>;
   iterations: number;
   totalDurationMs: number;
+  /** ADR-259A: Aggregated token usage across all iterations */
+  totalUsage: OpenAIUsage;
 }
 
 // ── Chat Completions API types ──
@@ -105,7 +115,8 @@ interface ChatCompletionChoice {
 }
 
 const DEFAULT_CONFIG: AgenticLoopConfig = {
-  maxIterations: 15,
+  // SSoT: AI_COST_CONFIG.LIMITS — overridden per role in executeAgenticLoop()
+  maxIterations: AI_COST_CONFIG.LIMITS.ADMIN_MAX_ITERATIONS,
   // 55s for Vercel (60s limit), but localhost has no limit
   totalTimeoutMs: process.env.NODE_ENV === 'production' ? 55_000 : 120_000,
   perCallTimeoutMs: 30_000,
@@ -405,6 +416,7 @@ async function callChatCompletions(
 ): Promise<{
   message: ChatCompletionChoice['message'];
   finishReason: string;
+  usage: OpenAIUsage;
 }> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -451,6 +463,7 @@ async function callChatCompletions(
 
     const payload = await response.json() as {
       choices?: ChatCompletionChoice[];
+      usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
     };
 
     const choice = payload.choices?.[0];
@@ -458,9 +471,14 @@ async function callChatCompletions(
       throw new Error('OpenAI returned no choices');
     }
 
+    const usage: OpenAIUsage = payload.usage
+      ? { prompt_tokens: payload.usage.prompt_tokens, completion_tokens: payload.usage.completion_tokens, total_tokens: payload.usage.total_tokens }
+      : { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+
     return {
       message: choice.message,
       finishReason: choice.finish_reason,
+      usage,
     };
   } finally {
     clearTimeout(timeout);
@@ -488,10 +506,16 @@ export async function executeAgenticLoop(
   context: AgenticContext,
   config?: Partial<AgenticLoopConfig>
 ): Promise<AgenticResult> {
-  const cfg = { ...DEFAULT_CONFIG, ...config };
+  // ADR-259A: Role-aware maxIterations (customer: 8, admin: 15)
+  const roleMaxIterations = context.isAdmin
+    ? AI_COST_CONFIG.LIMITS.ADMIN_MAX_ITERATIONS
+    : AI_COST_CONFIG.LIMITS.CUSTOMER_MAX_ITERATIONS;
+  const cfg = { ...DEFAULT_CONFIG, maxIterations: roleMaxIterations, ...config };
   const startTime = Date.now();
   const executor = getAgenticToolExecutor();
   const allToolCalls: AgenticResult['toolCalls'] = [];
+  // ADR-259A: Aggregate token usage across all iterations
+  const totalUsage: OpenAIUsage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
 
   // ADR-173: Fetch learned patterns for dynamic prompt enhancement
   const learnedPatterns = await enhanceSystemPrompt(userMessage);
@@ -534,12 +558,18 @@ export async function executeAgenticLoop(
         iteration,
         elapsedMs: elapsed,
       });
+      // ADR-259D: Capture timeout as Sentry warning
+      sentryCaptureMessage('Agentic loop timeout', 'warning', {
+        tags: { component: 'agentic-loop', channel: context.channel, isAdmin: String(context.isAdmin) },
+        extra: { requestId: context.requestId, iteration, elapsedMs: elapsed, toolCalls: allToolCalls.length },
+      });
       return {
         answer: 'Η αναζήτηση πήρε πολύ χρόνο. Δοκίμασε μια πιο συγκεκριμένη ερώτηση.',
         suggestions: [],
         toolCalls: allToolCalls,
         iterations: iteration + 1,
         totalDurationMs: Date.now() - startTime,
+        totalUsage,
       };
     }
 
@@ -550,6 +580,11 @@ export async function executeAgenticLoop(
     );
 
     const response = await callChatCompletions(messages, tools, remainingTimeMs);
+
+    // ADR-259A: Aggregate token usage
+    totalUsage.prompt_tokens += response.usage.prompt_tokens;
+    totalUsage.completion_tokens += response.usage.completion_tokens;
+    totalUsage.total_tokens += response.usage.total_tokens;
 
     // Check for tool calls
     const toolCalls = response.message.tool_calls;
@@ -584,6 +619,11 @@ export async function executeAgenticLoop(
           ? resultStr.substring(0, cfg.maxToolResultChars) + '...[truncated]'
           : resultStr;
 
+        // ADR-259C: Append warning to tool result so AI knows data may be degraded
+        const toolResultContent = result.warning
+          ? `${truncatedResult}\n⚠️ WARNING: ${result.warning}`
+          : truncatedResult;
+
         allToolCalls.push({
           name: toolName,
           args: argsString,
@@ -593,7 +633,7 @@ export async function executeAgenticLoop(
         // Add tool result message with matching tool_call_id
         messages.push({
           role: 'tool',
-          content: truncatedResult,
+          content: toolResultContent,
           tool_call_id: tc.id,
         });
       }
@@ -625,6 +665,7 @@ export async function executeAgenticLoop(
       toolCalls: allToolCalls,
       iterations: iteration + 1,
       totalDurationMs: Date.now() - startTime,
+      totalUsage,
     };
   }
 
@@ -643,6 +684,10 @@ export async function executeAgenticLoop(
     });
 
     const summaryResponse = await callChatCompletions(messages, [], cfg.perCallTimeoutMs);
+    // ADR-259A: Aggregate summary call usage
+    totalUsage.prompt_tokens += summaryResponse.usage.prompt_tokens;
+    totalUsage.completion_tokens += summaryResponse.usage.completion_tokens;
+    totalUsage.total_tokens += summaryResponse.usage.total_tokens;
     const summaryContent = summaryResponse.message?.content;
 
     if (summaryContent) {
@@ -653,11 +698,18 @@ export async function executeAgenticLoop(
         toolCalls: allToolCalls,
         iterations: cfg.maxIterations,
         totalDurationMs: Date.now() - startTime,
+        totalUsage,
       };
     }
   } catch {
     // Non-fatal — fall through to default message
   }
+
+  // ADR-259D: Capture max iterations exhaustion as Sentry warning
+  sentryCaptureMessage('Agentic loop exhausted max iterations', 'warning', {
+    tags: { component: 'agentic-loop', channel: context.channel, isAdmin: String(context.isAdmin) },
+    extra: { requestId: context.requestId, maxIterations: cfg.maxIterations, toolCalls: allToolCalls.length, totalTokens: totalUsage.total_tokens },
+  });
 
   return {
     answer: 'Η αναζήτηση ήταν πολύπλοκη αλλά δεν κατάφερα να ολοκληρώσω. Δοκίμασε πιο συγκεκριμένη ερώτηση.',
@@ -665,6 +717,7 @@ export async function executeAgenticLoop(
     toolCalls: allToolCalls,
     iterations: cfg.maxIterations,
     totalDurationMs: Date.now() - startTime,
+    totalUsage,
   };
 }
 

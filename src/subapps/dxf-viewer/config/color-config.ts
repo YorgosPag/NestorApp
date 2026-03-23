@@ -173,6 +173,7 @@ const UI_COLORS_BASE = {
   LIGHT_PURPLE: '#a855f7',   // Coming soon
   LIGHT_GRAY_OFF_MARKET: '#9ca3af',     // Off market - enterprise status color
   DARK_GRAY: '#6b7280',      // Unavailable
+  TEAL: '#14b8a6',           // 🩵 For-sale-and-rent (ADR-258: Twin Architecture)
 
   // Constraint system colors (για compatibility με constraints/config.ts)
   YELLOW: '#FFFF00',         // Polar constraints
@@ -251,6 +252,20 @@ export const OPACITY = {
   DISABLED: 0.4,      // 🏢 ADR-134: Disabled menu items
   VERY_LOW: 0.3,      // Grid opacity
   FAINT: 0.1,         // Barely visible elements
+} as const;
+
+// 🏢 ADR-258: SSoT overlay opacity per rendering context (Twin Architecture)
+// DXF Viewer: αχνό (δεν κρύβει αρχιτεκτονικές γραμμές)
+// FloorplanGallery: έντονο (εμπορική κατάσταση κυριαρχεί)
+export const OVERLAY_OPACITY = {
+  /** DXF Viewer fill — αχνό, δεν κρύβει DXF γραμμές */
+  DXF_FILL: 0.2,
+  /** FloorplanGallery fill — εμπορική κατάσταση κυριαρχεί */
+  GALLERY_FILL: 0.5,
+  /** FloorplanGallery hover state */
+  GALLERY_HOVER: 0.7,
+  /** Unavailable / off-market / muted / unlinked */
+  MUTED: 0.375,
 } as const;
 
 // Color utility functions

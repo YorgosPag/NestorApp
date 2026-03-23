@@ -11,9 +11,9 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { SceneModel } from '../types/scene';
-import type { OverlayEditorMode, OverlayKind, Status, Overlay } from '../overlays/types';
+import type { OverlayEditorMode, OverlayKind, Status, Overlay, UpdateOverlayData } from '../overlays/types';
 import type { ToolType } from '../ui/toolbar/types';
 import { ColorManager } from '../ui/components/ColorManager';
 import type { FloatingPanelHandle } from '../ui/FloatingPanelContainer';
@@ -72,7 +72,7 @@ interface FloatingPanelsSectionProps {
   // 🏢 ENTERPRISE (2026-01-25): Selection REMOVED - ADR-030
   // Selection is now handled by useUniversalSelection() from systems/selection/
   overlayStore: {
-    update: (id: string, updates: Partial<Overlay>) => void;
+    update: (id: string, updates: UpdateOverlayData) => void;
     overlays: Record<string, Overlay>;
   };
 
@@ -132,6 +132,14 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
 
   // 🏢 ENTERPRISE (2026-01-26): Event Bus for delete command - ADR-032
   const eventBus = useEventBus();
+
+  // 🏢 ADR-258B: Auto-select new overlay after polygon save → opens Properties Panel
+  useEffect(() => {
+    const cleanup = eventBus.on('overlay:polygon-saved', ({ overlayId }) => {
+      universalSelection.select(overlayId, 'overlay');
+    });
+    return cleanup;
+  }, [eventBus, universalSelection]);
 
   // 🏢 ENTERPRISE (2026-01-26): Smart Delete Handler - ADR-032
   // Emits event to CanvasSection which has access to selectedGrips state
@@ -235,6 +243,7 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
       {/* 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030 */}
       <DraggableOverlayProperties
         overlay={selectedOverlay}
+        overlays={overlayStore.overlays}
         onUpdate={(overlayId, updates) =>
           overlayStore.update(overlayId, updates)
         }

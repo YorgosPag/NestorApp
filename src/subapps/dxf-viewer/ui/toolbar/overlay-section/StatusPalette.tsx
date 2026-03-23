@@ -4,6 +4,10 @@
  *
  * 🏢 ADR-050: UNIFIED TOOLBAR INTEGRATION (2027-01-27)
  * 8 colored status buttons με centralized STATUS_COLORS
+ *
+ * @deprecated ADR-258: StatusPalette αφαιρέθηκε από το toolbar — ο χρωματισμός
+ * γίνεται πλέον δυναμικά βάσει entity.commercialStatus (Twin Architecture).
+ * Διατηρείται για backward compatibility reference. ΜΗΝ χρησιμοποιείς σε νέο κώδικα.
  */
 
 'use client';

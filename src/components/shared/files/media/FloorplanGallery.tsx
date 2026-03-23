@@ -71,7 +71,7 @@ import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import type { FileRecord, DxfSceneData, DxfSceneEntity } from '@/types/file-record';
 import type { FloorOverlayItem } from '@/hooks/useFloorOverlays';
 import { getStatusColors } from '@/subapps/dxf-viewer/config/color-mapping';
-import { UI_COLORS, withOpacity } from '@/subapps/dxf-viewer/config/color-config';
+import { UI_COLORS, withOpacity, OVERLAY_OPACITY } from '@/subapps/dxf-viewer/config/color-config';
 import { isPointInPolygon } from '@core/polygon-system/utils/polygon-utils';
 import type { UniversalPolygon } from '@core/polygon-system/types';
 
@@ -330,10 +330,10 @@ function renderDxfToCanvas(
 // OVERLAY RENDERING (SPEC-237B — Overlay Bridge Core)
 // ============================================================================
 
-/** Fallback colors when no status is set */
+/** Fallback colors when no status / unlinked — ADR-258 SSoT opacity */
 const OVERLAY_FALLBACK = {
   stroke: UI_COLORS.DARK_GRAY,
-  fill: withOpacity(UI_COLORS.DARK_GRAY, 0.375),
+  fill: withOpacity(UI_COLORS.DARK_GRAY, OVERLAY_OPACITY.MUTED),
 } as const;
 
 /**
@@ -364,11 +364,12 @@ function drawOverlayPolygons(
   for (const overlay of overlays) {
     if (overlay.polygon.length < 3) continue;
 
-    const colors = getStatusColors(overlay.status ?? 'unavailable') ?? OVERLAY_FALLBACK;
+    // 🏢 ADR-258D: Dynamic coloring via resolvedStatus (entity.commercialStatus → PropertyStatus)
+    const colors = getStatusColors(overlay.resolvedStatus) ?? OVERLAY_FALLBACK;
     const isHighlighted = !!(highlightedUnitId && overlay.linked?.unitId === highlightedUnitId);
 
     ctx.fillStyle = isHighlighted
-      ? withOpacity(colors.stroke, 0.7)
+      ? withOpacity(colors.stroke, OVERLAY_OPACITY.GALLERY_HOVER)
       : colors.fill;
     ctx.strokeStyle = colors.stroke;
     ctx.lineWidth = isHighlighted ? 3 : 2;

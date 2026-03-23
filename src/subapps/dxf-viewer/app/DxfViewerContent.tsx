@@ -949,6 +949,16 @@ Check console for detailed metrics`;
     return cleanup;
   }, [eventBus, setSelectedEntityIds]);
 
+  // 🏢 ENTERPRISE: Centralized notification for polygon save errors (replaces browser alert)
+  React.useEffect(() => {
+    const cleanup = eventBus.on('overlay:save-error', ({ reason }) => {
+      if (reason === 'no-level-selected') {
+        notifications.warning('Παρακαλώ επιλέξτε ένα επίπεδο (Level) πρώτα για να αποθηκευτεί το polygon.', { duration: 4000 });
+      }
+    });
+    return cleanup;
+  }, [eventBus, notifications]);
+
   // ✅ PERFORMANCE: Memoize selection set to avoid recreating on every call
   const selectionIdSet = React.useMemo(() =>
     new Set(selectedEntityIds || []),

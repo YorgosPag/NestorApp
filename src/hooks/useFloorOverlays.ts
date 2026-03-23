@@ -16,7 +16,7 @@
  * @enterprise ADR-237 / SPEC-237B — Overlay Bridge Core
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   collection,
   query,
@@ -27,6 +27,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useEntityStatusResolver } from './useEntityStatusResolver';
 import type { OverlayKind } from '@/subapps/dxf-viewer/overlays/types';
 import type { PropertyStatus } from '@/constants/property-statuses-enterprise';
 
@@ -36,9 +37,9 @@ const logger = createModuleLogger('useFloorOverlays');
 // TYPES
 // ============================================================================
 
-export interface FloorOverlayItem {
+/** Internal raw overlay item — before entity status enrichment */
+interface RawFloorOverlayItem {
   id: string;
-  /** Polygon vertices in DXF world coordinates — Firestore native {x,y} format */
   polygon: Array<{ x: number; y: number }>;
   kind: OverlayKind;
   status?: PropertyStatus;
@@ -49,6 +50,14 @@ export interface FloorOverlayItem {
     storageId?: string;
   };
   levelId: string;
+}
+
+/** Public enriched overlay item — includes dynamic resolvedStatus (ADR-258 SPEC-258C) */
+export interface FloorOverlayItem extends RawFloorOverlayItem {
+  /** @deprecated ADR-258: Use resolvedStatus instead — static status baked at draw-time */
+  status?: PropertyStatus;
+  /** Dynamic status resolved from linked entity's commercialStatus (ADR-258 SPEC-258C) */
+  resolvedStatus: PropertyStatus;
 }
 
 interface UseFloorOverlaysReturn {
@@ -121,7 +130,7 @@ function normalizePolygon(raw: unknown): Array<{ x: number; y: number }> {
  * @param floorId - The floor ID to load overlays for (from Level.floorId)
  */
 export function useFloorOverlays(floorId: string | null): UseFloorOverlaysReturn {
-  const [overlays, setOverlays] = useState<ReadonlyArray<FloorOverlayItem>>([]);
+  const [rawOverlays, setRawOverlays] = useState<ReadonlyArray<RawFloorOverlayItem>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -136,7 +145,7 @@ export function useFloorOverlays(floorId: string | null): UseFloorOverlaysReturn
     };
 
     if (!floorId) {
-      setOverlays([]);
+      setRawOverlays([]);
       setLoading(false);
       setError(null);
       return cleanupOverlaySubs;
@@ -146,12 +155,12 @@ export function useFloorOverlays(floorId: string | null): UseFloorOverlaysReturn
     setError(null);
 
     // Accumulator: levelId → overlay items (for merge across levels)
-    const overlaysByLevel = new Map<string, FloorOverlayItem[]>();
+    const overlaysByLevel = new Map<string, RawFloorOverlayItem[]>();
 
     const mergeAndSet = () => {
-      const merged: FloorOverlayItem[] = [];
+      const merged: RawFloorOverlayItem[] = [];
       overlaysByLevel.forEach((items) => merged.push(...items));
-      setOverlays(merged);
+      setRawOverlays(merged);
     };
 
     // Step 1: Query levels where floorId matches
@@ -168,7 +177,7 @@ export function useFloorOverlays(floorId: string | null): UseFloorOverlaysReturn
         const levelIds = levelsSnapshot.docs.map((doc) => doc.id);
 
         if (levelIds.length === 0) {
-          setOverlays([]);
+          setRawOverlays([]);
           setLoading(false);
           logger.debug('No levels found for floor', { data: { floorId } });
           return;
@@ -186,7 +195,7 @@ export function useFloorOverlays(floorId: string | null): UseFloorOverlaysReturn
           const unsubItems = onSnapshot(
             itemsQuery,
             (itemsSnapshot) => {
-              const items: FloorOverlayItem[] = [];
+              const items: RawFloorOverlayItem[] = [];
 
               itemsSnapshot.docs.forEach((doc) => {
                 const data = doc.data() as Record<string, unknown>;
@@ -243,7 +252,18 @@ export function useFloorOverlays(floorId: string | null): UseFloorOverlaysReturn
     };
   }, [floorId]);
 
-  return { overlays, loading, error };
+  // ── ADR-258 SPEC-258C: Resolve entity statuses in real-time ─────────
+  const statusMap = useEntityStatusResolver(rawOverlays);
+
+  const enrichedOverlays = useMemo<ReadonlyArray<FloorOverlayItem>>(() =>
+    rawOverlays.map((overlay) => ({
+      ...overlay,
+      resolvedStatus: statusMap.get(overlay.id) ?? overlay.status ?? 'unavailable',
+    })),
+    [rawOverlays, statusMap]
+  );
+
+  return { overlays: enrichedOverlays, loading, error };
 }
 
 export default useFloorOverlays;

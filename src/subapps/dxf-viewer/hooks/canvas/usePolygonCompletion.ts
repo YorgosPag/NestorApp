@@ -115,19 +115,22 @@ export function usePolygonCompletion({
 
     if (!levelManager.currentLevelId) {
       derr('usePolygonCompletion', '❌ Cannot save polygon - no level selected!');
-      // TODO: Show notification to user
-      alert('Παρακαλώ επιλέξτε ένα επίπεδο (Level) πρώτα για να αποθηκευτεί το polygon.');
+      // 🏢 ENTERPRISE: Use EventBus → centralized notification system (NOT browser alert)
+      eventBus.emit('overlay:save-error', { reason: 'no-level-selected' });
       return false;
     }
 
     try {
-      await overlayStore.add({
+      // ADR-258: status δεν αποθηκεύεται πλέον — χρωματισμός βάσει entity.commercialStatus
+      const overlayId = await overlayStore.add({
         levelId: levelManager.currentLevelId,
         kind: currentKind,
         polygon: polygon, // 🔧 FIX: Use passed polygon, not stale draftPolygon
-        status: currentStatus,
         label: `Overlay ${Date.now()}`, // Temporary label
       });
+
+      // 🏢 ADR-258B: Auto-select new overlay → opens Properties Panel for entity linking
+      eventBus.emit('overlay:polygon-saved', { overlayId });
 
       return true;
     } catch (error) {

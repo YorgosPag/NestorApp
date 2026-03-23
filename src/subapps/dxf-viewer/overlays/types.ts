@@ -29,6 +29,7 @@ export interface Overlay {
   levelId: string;            // τρέχον Level ως «plan holder» (προς το παρόν)
   kind: OverlayKind;          // unit/parking/storage/footprint
   polygon: Array<[number, number]>; // world coords, κλειστό polyline
+  /** @deprecated ADR-258: Χρωματισμός γίνεται δυναμικά βάσει linked entity → commercialStatus */
   status?: Status;
   label?: string;             // A-12, P-034 κτλ
   linked?: { 
@@ -49,8 +50,11 @@ export type CreateOverlayData = Omit<Overlay, 'id' | 'createdAt' | 'updatedAt' |
 
 /**
  * Patch data για updates
+ * ADR-258B: `linked` accepts `null` to clear the entity link (Firestore rejects undefined but accepts null)
  */
-export type UpdateOverlayData = Partial<Pick<Overlay, 'polygon' | 'status' | 'label' | 'kind' | 'linked' | 'style'>>;
+export type UpdateOverlayData = Partial<Pick<Overlay, 'polygon' | 'status' | 'label' | 'kind' | 'style'>> & {
+  linked?: Overlay['linked'] | null;
+};
 
 /**
  * 🎯 OVERLAY STATUS KEYS - Only the 5 basic statuses for overlay toolbar

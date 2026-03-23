@@ -68,7 +68,10 @@
     "database": "Temporary connection issue. Please try again later.",
     "rateLimit": "Too many requests. Please wait a moment.",
     "notUnderstood": "I didn't understand your search. Try /help for instructions.",
-    "searchError": "Error during search"
+    "searchError": "Error during search",
+    "contactNotRecognized": "We couldn't identify you. Please contact our office to link your Telegram account.",
+    "noLinkedUnits": "No properties found linked to your account. Please contact the administrator.",
+    "pipelineRetryFailed": "Sorry, we couldn't process your message. Please try again shortly."
   },
   "security": {
     "forbidden": "I cannot provide bulk data. Please ask about a specific property.",

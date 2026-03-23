@@ -490,3 +490,59 @@ export function createPersonaAwareResponse(
     },
   };
 }
+
+// ============================================================================
+// ADR-259C: SILENT FAILURE RECOVERY RESPONSES
+// ============================================================================
+
+/**
+ * Create contact not recognized response (ADR-259C Failure #1)
+ */
+export function createContactNotRecognizedResponse(
+  chatId: string | number,
+  locale: TelegramLocale = 'el'
+): TelegramSendPayload {
+  const t = getTemplateResolver(locale);
+  const company = getCompanyConfig();
+
+  return {
+    method: 'sendMessage',
+    chat_id: chatId,
+    text: `🔒 ${t.getText('errors.contactNotRecognized')}\n\n📞 <b>${t.getText('contact.phone', { phone: company.phone })}</b>`,
+    parse_mode: 'HTML',
+  };
+}
+
+/**
+ * Create pipeline retry failed response (ADR-259C Failure #4)
+ */
+export function createPipelineRetryFailedResponse(
+  chatId: string | number,
+  locale: TelegramLocale = 'el'
+): TelegramSendPayload {
+  const t = getTemplateResolver(locale);
+
+  return {
+    method: 'sendMessage',
+    chat_id: chatId,
+    text: `⚠️ ${t.getText('errors.pipelineRetryFailed')}`,
+  };
+}
+
+/**
+ * Create no linked units response (ADR-259C Failure #2)
+ */
+export function createNoLinkedUnitsResponse(
+  chatId: string | number,
+  locale: TelegramLocale = 'el'
+): TelegramSendPayload {
+  const t = getTemplateResolver(locale);
+  const company = getCompanyConfig();
+
+  return {
+    method: 'sendMessage',
+    chat_id: chatId,
+    text: `🏠 ${t.getText('errors.noLinkedUnits')}\n\n📞 <b>${t.getText('contact.phone', { phone: company.phone })}</b>`,
+    parse_mode: 'HTML',
+  };
+}

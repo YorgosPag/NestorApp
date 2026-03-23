@@ -176,6 +176,8 @@ export const ENTERPRISE_ID_PREFIXES = {
   FEEDBACK: 'fb',
   PIPELINE_AUDIT: 'paud',
   ENTITY_AUDIT: 'eaud',
+  /** ADR-259A: AI usage tracking — deterministic composite key per user/month */
+  AI_USAGE: 'aiu',
   CONTRACT: 'lc',
   PIPELINE_QUEUE: 'pq',
   BROKERAGE: 'brk',
@@ -1067,6 +1069,16 @@ export class EnterpriseIdService {
    */
   generatePipelineQueueId(): string {
     return this.generateId(ENTERPRISE_ID_PREFIXES.PIPELINE_QUEUE).id;
+  }
+
+  /**
+   * 💰 Generate AI Usage Document ID (deterministic composite key)
+   * Format: aiu_{channel}_{userId}_{YYYY-MM}
+   * One document per user per month — used with setDoc({merge:true}) for atomic updates.
+   * @see ADR-259A (OpenAI Usage Tracking + Cost Protection)
+   */
+  generateAiUsageDocId(channel: string, userId: string, month: string): string {
+    return `${ENTERPRISE_ID_PREFIXES.AI_USAGE}_${channel}_${userId}_${month}`;
   }
 
   /**

@@ -36,5 +36,11 @@ export {
   setLogger,
 } from './Logger';
 
+// ADR-259D: Sentry error capture helpers
+export {
+  captureException as sentryCaptureException,
+  captureMessage as sentryCaptureMessage,
+} from './sentry';
+
 // Default export
 export { default } from './Logger';

@@ -70,7 +70,11 @@ export type { InstagramFeedParams, InstagramFeedResult } from './channel-adapter
 
 // ADR-171: Agentic Loop
 export { executeAgenticLoop } from './agentic-loop';
-export type { AgenticResult, ChatMessage, AgenticLoopConfig } from './agentic-loop';
+export type { AgenticResult, ChatMessage, AgenticLoopConfig, OpenAIUsage } from './agentic-loop';
+
+// ADR-259A: AI Usage Tracking + Cost Protection
+export { recordUsage, checkDailyCap, getMonthlyUsage, calculateCost } from './ai-usage.service';
+export type { AiUsageDocument, DailyCapCheck } from './ai-usage.service';
 
 // ADR-171: Chat History Service
 export { ChatHistoryService, getChatHistoryService } from './chat-history-service';

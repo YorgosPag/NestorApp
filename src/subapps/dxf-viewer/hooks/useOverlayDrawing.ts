@@ -19,6 +19,7 @@ import type { SceneModel } from '../types/entities';
 const STATUS_ENGLISH_LABELS: Record<Status, string> = { // ✅ ENTERPRISE FIX: Complete Status type mapping
   'for-sale': 'For Sale',
   'for-rent': 'For Rent',
+  'for-sale-and-rent': 'For Sale & Rent',
   'reserved': 'Reserved',
   'sold': 'Sold',
   'landowner': 'Landowner',
@@ -120,12 +121,12 @@ export const useOverlayDrawing = ({
       // Save as: [[x1,y1], [x2,y2], ...] NOT flat format
 
       // Save overlay to Firestore
+      // ADR-258: status δεν αποθηκεύεται πλέον — χρωματισμός βάσει entity.commercialStatus
       const overlayId = await overlayStore?.add({
         levelId: currentLevel.id,
         kind: overlayKind,
         polygon: draftPolygon, // ✅ Keep nested format
-        status: overlayStatus,
-        label: `${STATUS_ENGLISH_LABELS[overlayStatus]} ${Date.now()}`,
+        label: `Overlay ${Date.now()}`,
         linked: undefined, // ✅ ENTERPRISE: Use undefined instead of null for optional property
       });
 

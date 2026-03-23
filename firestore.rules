@@ -1303,8 +1303,41 @@ service cloud.firestore {
     // 🏢 ENTERPRISE: User profile και active sessions management
     // 🔒 OWNERSHIP-BASED: Κάθε χρήστης μπορεί να διαχειρίζεται ΜΟΝΟ τα δικά του
     match /users/{userId} {
-      // 📖 READ/WRITE: Μόνο ο ίδιος ο χρήστης
-      allow read, write: if isOwner(userId);
+      // 📖 READ: Own profile + same-company users + super admin (SPEC-259B)
+      // 🔒 SECURITY: Tenant-scoped — prevents cross-company user enumeration
+      // 📅 Updated: 2026-03-23 (SPEC-259B — Firestore Security Hardening)
+      allow read: if isAuthenticated()
+                  && (
+                       // Own profile — always allowed
+                       request.auth.uid == userId
+                       // Same company — for team/colleague visibility
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && resource.data.companyId != null
+                           && belongsToCompany(resource.data.companyId))
+                       // Super admin — system-wide access
+                       || isSuperAdminOnly()
+                     );
+
+      // 📝 UPDATE: Own profile or company admin
+      allow update: if isAuthenticated()
+                    && (
+                         request.auth.uid == userId
+                         || (resource.data.keys().hasAny(['companyId'])
+                             && resource.data.companyId != null
+                             && isCompanyAdminOfCompany(resource.data.companyId))
+                       );
+
+      // ✅ CREATE: Own profile (signup) or company admin (invite)
+      allow create: if isAuthenticated()
+                    && (
+                         request.auth.uid == userId
+                         || (request.resource.data.keys().hasAny(['companyId'])
+                             && request.resource.data.companyId != null
+                             && isCompanyAdminOfCompany(request.resource.data.companyId))
+                       );
+
+      // 🗑️ DELETE: Απαγορεύεται — user documents δεν σβήνονται
+      allow delete: if false;
 
       // 🔐 SESSIONS SUBCOLLECTION - Enterprise Active Sessions Management
       match /sessions/{sessionId} {
@@ -1339,15 +1372,15 @@ service cloud.firestore {
     // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1B)
     // 🏢 ENTERPRISE: Workspaces are company-scoped
     match /workspaces/{workspaceId} {
-      // 📖 READ: Tenant-scoped
+      // 📖 READ: Tenant-scoped (SPEC-259B — legacy fallback removed)
+      // 🔒 SECURITY: Only same-company users or super admin
+      // 📅 Updated: 2026-03-23 (SPEC-259B — removed dangerous legacy fallback)
+      // ℹ️ Pre-check: 0 workspaces without companyId (2026-03-23)
       allow read: if isAuthenticated()
                   && (
                        isSuperAdminOnly()
                        || (resource.data.keys().hasAny(['companyId'])
                            && belongsToCompany(resource.data.companyId))
-                       // Legacy fallback: all authenticated until migration
-                       // ⚠️ NOTE: Remove after companyId migration
-                       || !resource.data.keys().hasAny(['companyId'])
                      );
 
       // ✍️ WRITE: Admin/server only (via Firebase Admin SDK)

@@ -392,7 +392,8 @@ export function overlayToRegion(overlay: Overlay): Region {
   return {
     id: overlay.id,
     vertices: overlay.polygon.map(overlayVertexToPoint2D),
-    status: overlay.status ?? 'for-sale',
+    // ADR-258: Αν δεν υπάρχει status, fallback σε 'unavailable' (λευκό/γκρι αντί hardcoded 'for-sale')
+    status: overlay.status ?? 'unavailable',
     layer: 'base',
     metadata: overlay.linked ? { linked: overlay.linked } : undefined,
     locked: false,

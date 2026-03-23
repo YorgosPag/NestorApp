@@ -3,7 +3,7 @@ import type { Region, RegionStatus } from '../types/overlay';
 import type { ViewTransform } from '../rendering/types/Types';
 import type { GripSettings } from '../types/gripSettings';
 import { getStatusColors } from '../config/color-mapping'; // 🔺 Κεντρική function για ελληνικά/αγγλικά mapping
-import { UI_COLORS, OPACITY } from '../config/color-config'; // 🏢 ADR-119: Centralized Opacity
+import { UI_COLORS, OPACITY, OVERLAY_OPACITY } from '../config/color-config'; // 🏢 ADR-119 + ADR-258
 // 🏢 ADR-151: Centralized Simple Coordinate Transforms
 import { worldToScreenSimple } from '../rendering/core/CoordinateTransforms';
 // 🏢 ADR-044: Centralized Line Widths
@@ -67,10 +67,18 @@ export class OverlayDrawingEngine {
     
     // 🐛 DEBUG: Ελέγχουμε τι παίρνουμε στον renderer
 
-    // 🔺 ΚΕΝΤΡΙΚΗ ΛΟΓΙΚΗ: Χρήση getStatusColors() για ελληνικά/αγγλικά mapping
-    const statusColors = getStatusColors(region.status);
-    const fillColor = region.style?.fill || statusColors?.fill || UI_COLORS.BUTTON_PRIMARY;
-    const fillOpacity = region.style?.opacity ?? region.opacity ?? 0.3;
+    // 🏢 ADR-258: Twin Architecture — Dynamic overlay coloring
+    // Linked overlays: χρώμα βάσει status (20% fill opacity — αχνό, δεν κρύβει DXF γραμμές)
+    // Unlinked overlays: λευκό (rgba(255,255,255,0.05) — σχεδόν αόρατο fill)
+    const hasLinkedEntity = !!(region.metadata as Record<string, unknown> | undefined)?.linked;
+    const hasStatus = region.status && region.status !== 'unavailable';
+    const statusColors = hasStatus ? getStatusColors(region.status) : null;
+
+    const fillColor = region.style?.fill
+      || (hasLinkedEntity || hasStatus ? statusColors?.fill : undefined)
+      || UI_COLORS.WHITE;
+    const fillOpacity = region.style?.opacity
+      ?? (hasLinkedEntity || hasStatus ? OVERLAY_OPACITY.DXF_FILL : OVERLAY_OPACITY.DXF_FILL);
 
     // 🐛 FIX: Επαναφορά globalCompositeOperation για να μη "μαυρίζει" από blend
     ctx.globalCompositeOperation = 'source-over';
@@ -85,8 +93,10 @@ export class OverlayDrawingEngine {
     
     // Check if region is hovered (has grip interaction)
     const isHovered = options.gripInteractionState?.hovered?.entityId === region.id;
-    // 🔺 ΚΕΝΤΡΙΚΗ ΛΟΓΙΚΗ: Χρήση ίδιων statusColors για consistency
-    const strokeColor = region.style?.stroke || statusColors?.stroke || UI_COLORS.BUTTON_SECONDARY;
+    // 🏢 ADR-258: Linked → status stroke color, Unlinked → λευκό stroke
+    const strokeColor = region.style?.stroke
+      || (hasLinkedEntity || hasStatus ? statusColors?.stroke : undefined)
+      || UI_COLORS.WHITE;
     const lineWidth = region.style?.lineWidth || 2;
 
     if (isHovered) {

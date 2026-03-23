@@ -78,6 +78,7 @@ export interface OverlayListCardProps {
 const STATUS_BADGE_VARIANTS: Record<Status, ListCardBadgeVariant> = {
   'for-sale': 'info',              // Προς Πώληση
   'for-rent': 'secondary',         // Προς Ενοικίαση
+  'for-sale-and-rent': 'info',     // Πώληση & Ενοικίαση (ADR-258)
   'reserved': 'warning',           // Κρατημένο
   'sold': 'success',               // Πωλήθηκε
   'rented': 'success',             // Ενοικιάστηκε

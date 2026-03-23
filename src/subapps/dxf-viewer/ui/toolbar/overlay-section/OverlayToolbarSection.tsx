@@ -17,7 +17,6 @@ import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import {
   OverlayModeButtons,
-  StatusPalette,
   KindSelector,
   PolygonControls,
   OverlayActions
@@ -85,13 +84,7 @@ export const OverlayToolbarSection: React.FC<OverlayToolbarSectionProps> = ({
 
           <div className="w-px h-6 bg-border" />
 
-          {/* Status Palette (8 colored buttons) */}
-          <StatusPalette
-            currentStatus={state.currentStatus}
-            onStatusChange={handlers.onStatusChange}
-          />
-
-          <div className="w-px h-6 bg-border" />
+          {/* 🏢 ADR-258: StatusPalette αφαιρέθηκε — χρωματισμός γίνεται δυναμικά βάσει entity.commercialStatus */}
 
           {/* Kind Selector (4 icon buttons) */}
           <KindSelector

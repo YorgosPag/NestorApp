@@ -25,6 +25,8 @@ import { PANEL_LAYOUT, PANEL_ANCHORING, PanelPositionCalculator } from '../../co
 interface DraggableOverlayPropertiesProps {
   /** Overlay to display, or null for empty state */
   overlay: Overlay | null;
+  /** All overlays on current level — for linked entity detection (ADR-258B) */
+  overlays: Record<string, Overlay>;
   onUpdate: (overlayId: string, updates: UpdateOverlayData) => void;
   onClose: () => void;
 }
@@ -71,6 +73,7 @@ const SSR_FALLBACK_POSITION = { x: 100, y: 100 };
  */
 export const DraggableOverlayProperties: React.FC<DraggableOverlayPropertiesProps> = ({
   overlay,
+  overlays,
   onUpdate,
   onClose
 }) => {
@@ -93,6 +96,7 @@ export const DraggableOverlayProperties: React.FC<DraggableOverlayPropertiesProp
       <FloatingPanel.Content>
         <OverlayProperties
           overlay={overlay}
+          overlays={overlays}
           onUpdate={onUpdate}
         />
       </FloatingPanel.Content>

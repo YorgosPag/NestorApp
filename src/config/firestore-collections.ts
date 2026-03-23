@@ -174,6 +174,9 @@ export const COLLECTIONS = {
   /** 🧠 AI Query Strategy Memory — remembers which query approaches work/fail per collection */
   AI_QUERY_STRATEGIES: 'ai_query_strategies',
 
+  // 💰 AI USAGE TRACKING (ADR-259A: Cost Protection — per-user monthly token/cost tracking)
+  AI_USAGE: process.env.NEXT_PUBLIC_AI_USAGE_COLLECTION || 'ai_usage',
+
   // 📋 SYSTEM AUDIT LOGS (Webhook/system-level audit events)
   SYSTEM_AUDIT_LOGS: process.env.NEXT_PUBLIC_SYSTEM_AUDIT_LOGS_COLLECTION || 'system_audit_logs',
 

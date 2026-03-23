@@ -27,7 +27,7 @@ import type {
   AuditChangeValue,
   AuditMetadata,
 } from './types';
-import { createModuleLogger } from '@/lib/telemetry';
+import { createModuleLogger, sentryCaptureMessage } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 const logger = createModuleLogger('audit');
 
@@ -133,6 +133,14 @@ export async function logAuditEvent(
       timestamp: new Date().toISOString(),
     });
     return;
+  }
+
+  // ADR-259D: Capture access denials in Sentry for security monitoring
+  if (action === 'access_denied') {
+    sentryCaptureMessage('Tenant isolation: access denied', 'warning', {
+      tags: { component: 'tenant-isolation', targetType },
+      extra: { actorId: ctx.uid, companyId: ctx.companyId, targetId, reason: options.metadata?.reason, path: options.metadata?.path },
+    });
   }
 
   // 🏢 ENTERPRISE: Build entry and sanitize undefined values for Firestore

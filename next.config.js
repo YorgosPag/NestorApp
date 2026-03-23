@@ -1,3 +1,5 @@
+const { withSentryConfig } = require('@sentry/nextjs');
+
 /** @type {import('next').NextConfig} */
 // Vercel rebuild trigger: 2026-03-23
 const nextConfig = {
@@ -352,4 +354,12 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+// ADR-259D: Wrap with Sentry for error monitoring + source map upload
+module.exports = withSentryConfig(nextConfig, {
+  // Suppress Sentry webpack plugin logs during build
+  silent: true,
+  // Hide source maps from client bundles (security)
+  hideSourceMaps: true,
+  // Disable Sentry telemetry
+  telemetry: false,
+});
