@@ -1,4 +1,5 @@
 /** @type {import('next').NextConfig} */
+// Vercel rebuild trigger: 2026-03-23
 const nextConfig = {
   // [FAST] FAST DEV MODE - Skip checks για άμεσο startup
   typescript: {
