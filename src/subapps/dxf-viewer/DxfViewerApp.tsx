@@ -85,7 +85,7 @@ export function DxfViewerApp(props: DxfViewerAppProps) {
                   <CursorSystem>
                       <SelectionSystem>
                         <ToolbarsSystem>
-                          <LevelsSystem enableFirestore={process.env.NODE_ENV === 'production'}>
+                          <LevelsSystem enableFirestore>
                             <OverlayStoreProvider>
                               <CanvasProvider>
                                 <DxfViewerContent {...props} />
