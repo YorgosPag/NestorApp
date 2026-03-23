@@ -466,6 +466,7 @@ async function feedTelegramToPipeline(message: TelegramMessage['message'], overr
         firstName: resolved.firstName,
         primaryPersona: resolved.primaryPersona,
         projectRoles: resolved.projectRoles,
+        linkedUnitIds: resolved.linkedUnitIds,
       };
     }
   } catch {

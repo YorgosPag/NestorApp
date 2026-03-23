@@ -5,8 +5,9 @@
 | **ADR** | ADR-257 (Customer AI Access Control) |
 | **Phase** | 7 of 7 |
 | **Priority** | HIGH — AI currently says "δεν έχω πληροφορία" |
-| **Status** | PENDING |
+| **Status** | IMPLEMENTED |
 | **Depends On** | None (independent) |
+| **Implemented** | 2026-03-23 |
 
 ---
 
@@ -14,146 +15,65 @@
 
 Δημιουργία knowledge base με τυπικές διαδικασίες (πώληση, μεταβίβαση, δάνειο) και απαιτούμενα δικαιολογητικά, ώστε ο AI να απαντά αντί να λέει "δεν έχω πληροφορία".
 
-## Current State
+## Architecture Decision: Config File + Dedicated Tool
 
-Buyer ρωτάει: "Τι δικαιολογητικά χρειάζομαι για τον συμβολαιογράφο;"
-AI απαντάει: "ℹ️ Δεν έχω πρόσβαση σε πληροφορίες σχετικά με τα δικαιολογητικά..."
-Αυτό είναι **ΜΗ ΑΠΟΔΕΚΤΟ** για buyer-facing AI.
+**SSoT Config**: `src/config/legal-procedures-kb.ts` — 4 procedures, typed interfaces, keyword search helper.
 
-## Target State
+**Tool**: `search_knowledge_base(query)` — keyword match + document availability check.
 
-AI απαντάει:
-```
-✅ Για το οριστικό συμβόλαιο χρειάζεστε:
-1. Τοπογραφικό διάγραμμα
-2. Οικοδομική άδεια
-3. Βεβαίωση μηχανικού (Ν.4495/2017)
-4. Πιστοποιητικό ενεργειακής απόδοσης (ΠΕΑ)
-5. Φορολογική ενημερότητα
-6. Κτηματολογικό φύλλο
+**AI Flow**:
+1. Buyer asks about documents/procedures
+2. AI calls `search_knowledge_base("συμβολαιογράφος")`
+3. Tool matches procedure, checks which `source:"system"` docs exist in `files` collection
+4. Returns enriched result with `availableInSystem` markers
+5. AI formats response with checklist + offers to send available docs (via `deliver_file_to_chat`)
 
-Από αυτά, τα #1, #2, #3, #4 τα έχω ήδη. Θέλεις να σου τα στείλω;
-```
+## Knowledge Base Content (4 Procedures)
 
-## Implementation Approach
+| ID | Title | Category | Documents |
+|----|-------|----------|-----------|
+| `final_contract` | Οριστικό Συμβόλαιο Αγοραπωλησίας | sale | 8 docs |
+| `preliminary_contract` | Προσύμφωνο Αγοραπωλησίας | sale | 3 docs |
+| `bank_loan` | Αίτηση Στεγαστικού Δανείου | finance | 7 docs |
+| `property_transfer` | Μεταβίβαση Ακινήτου (μετά εξόφληση) | transfer | 4 docs |
 
-### Option A: Firestore Document (Recommended)
-- Document: `settings/knowledge_base`
-- Structure: `{ procedures: [ { id, title, category, keywords, requiredDocuments, description } ] }`
-- Admin μπορεί να ενημερώσει μέσω AI ή web UI
+## Document Sources
 
-### Option B: Config File (Fallback)
-- Αρχείο: `src/config/legal-procedures-config.ts`
-- Static — αλλάζει μόνο με deploy
+| Source | Label | Description |
+|--------|-------|-------------|
+| `system` | Διαθέσιμο στο σύστημα | Cross-referenced with `files` collection via `storageKey` |
+| `buyer` | Από τον αγοραστή | Buyer must provide |
+| `seller` | Από τον πωλητή | Developer/seller provides |
+| `engineer` | Από τον μηχανικό | Engineer provides |
+| `bank` | Από την τράπεζα | Bank provides |
+| `municipality` | Από τον δήμο | Municipality provides |
+| `cadastral_office` | Από το κτηματολόγιο | Cadastral office provides |
 
-**Recommendation:** Option A (dynamic, admin-editable)
-
-## Knowledge Base Content
-
-### Procedure 1: Οριστικό Συμβόλαιο (Αγοραπωλησία)
-```json
-{
-  "id": "final_contract",
-  "title": "Οριστικό Συμβόλαιο Αγοραπωλησίας",
-  "category": "sale",
-  "keywords": ["συμβόλαιο", "αγοραπωλησία", "μεταβίβαση", "συμβολαιογράφος"],
-  "requiredDocuments": [
-    { "name": "Τοπογραφικό διάγραμμα", "source": "system", "storageKey": "topographic" },
-    { "name": "Οικοδομική άδεια", "source": "system", "storageKey": "building_permit" },
-    { "name": "Βεβαίωση μηχανικού (Ν.4495/2017)", "source": "engineer", "storageKey": null },
-    { "name": "Πιστοποιητικό Ενεργειακής Απόδοσης (ΠΕΑ)", "source": "system", "storageKey": "energy_cert" },
-    { "name": "Φορολογική ενημερότητα", "source": "buyer", "storageKey": null },
-    { "name": "Κτηματολογικό φύλλο", "source": "system", "storageKey": "cadastral" },
-    { "name": "Βεβαίωση ΕΝΦΙΑ", "source": "seller", "storageKey": null },
-    { "name": "Πιστοποιητικό μη οφειλής ΤΑΠ", "source": "municipality", "storageKey": null }
-  ],
-  "description": "Υπογράφεται ενώπιον συμβολαιογράφου. Μεταβιβάζει κυριότητα."
-}
-```
-
-### Procedure 2: Προσύμφωνο
-```json
-{
-  "id": "preliminary_contract",
-  "title": "Προσύμφωνο Αγοραπωλησίας",
-  "category": "sale",
-  "keywords": ["προσύμφωνο", "κράτηση", "δέσμευση"],
-  "requiredDocuments": [
-    { "name": "Ταυτότητα/Διαβατήριο", "source": "buyer" },
-    { "name": "ΑΦΜ", "source": "buyer" },
-    { "name": "Εκκαθαριστικό εφορίας", "source": "buyer" }
-  ]
-}
-```
-
-### Procedure 3: Δάνειο Τράπεζα
-```json
-{
-  "id": "bank_loan",
-  "title": "Αίτηση Στεγαστικού Δανείου",
-  "category": "finance",
-  "keywords": ["δάνειο", "τράπεζα", "στεγαστικό"],
-  "requiredDocuments": [
-    { "name": "Εκκαθαριστικό εφορίας (2 τελευταία)", "source": "buyer" },
-    { "name": "Βεβαίωση εργοδότη", "source": "buyer" },
-    { "name": "Μισθοδοτικές καταστάσεις (6 μηνών)", "source": "buyer" },
-    { "name": "Εκτίμηση ακινήτου", "source": "bank" },
-    { "name": "Προσύμφωνο αγοραπωλησίας", "source": "system" },
-    { "name": "Τοπογραφικό", "source": "system" },
-    { "name": "Οικοδομική άδεια", "source": "system" }
-  ]
-}
-```
-
-### Procedure 4: Μεταβίβαση (μετά εξόφληση)
-```json
-{
-  "id": "property_transfer",
-  "title": "Μεταβίβαση Ακινήτου",
-  "category": "transfer",
-  "keywords": ["μεταβίβαση", "εξοφλητήριο", "κτηματολόγιο"],
-  "requiredDocuments": [
-    { "name": "Εξοφλητήριο", "source": "system" },
-    { "name": "Οριστικό συμβόλαιο", "source": "system" },
-    { "name": "Πιστοποιητικό κτηματολογίου", "source": "cadastral_office" },
-    { "name": "Πιστοποιητικό μη οφειλής ΤΑΠ", "source": "municipality" }
-  ]
-}
-```
-
-## Files to Modify
+## Files Modified
 
 | File | Action | Details |
 |------|--------|---------|
-| Firestore `settings/knowledge_base` | CREATE | Knowledge base document |
-| `src/services/ai-pipeline/agentic-loop.ts` | MODIFY | System prompt: read KB + match buyer question |
-| `src/services/ai-pipeline/tools/agentic-tool-definitions.ts` | MODIFY | New tool: `search_knowledge_base` |
-| `src/services/ai-pipeline/tools/agentic-tool-executor.ts` | MODIFY | Executor: query KB, match keywords |
-| `src/config/firestore-collections.ts` | VERIFY | Αν χρειάζεται νέο collection |
+| `src/config/legal-procedures-kb.ts` | NEW | SSoT config: 4 procedures, types, `searchProcedures()`, `DOCUMENT_SOURCE_LABELS` |
+| `src/services/ai-pipeline/tools/agentic-tool-definitions.ts` | MODIFY | +`search_knowledge_base` tool definition |
+| `src/services/ai-pipeline/tools/agentic-tool-executor.ts` | MODIFY | +`executeSearchKnowledgeBase()` with keyword match + availability check |
+| `src/config/ai-role-access-matrix.ts` | MODIFY | +`KNOWLEDGE_BASE_PROMPT` shared const, appended to buyer/owner/tenant |
+| `docs/.../ADR-257-customer-ai-access-control.md` | MODIFY | +changelog entry |
 
-## AI Behavior
+## SSoT Pattern
 
-```
-Buyer: "Τι χρειάζομαι για τον συμβολαιογράφο;"
-
-AI:
-1. search_knowledge_base(keywords: ["συμβολαιογράφο"]) → matches "final_contract"
-2. Reads requiredDocuments list
-3. Checks which docs exist in system (source: "system") via documents collection
-4. Responds:
-   "✅ Για το οριστικό συμβόλαιο χρειάζεστε:
-   1. Τοπογραφικό ✅ (το έχουμε — θέλεις να στο στείλω;)
-   2. Οικοδομική άδεια ✅ (το έχουμε)
-   3. Βεβαίωση μηχανικού — χρειάζεται από τον μηχανικό
-   4. ΠΕΑ ✅ (το έχουμε)
-   5. Φορολογική ενημερότητα — χρειάζεται από εσάς (εφορία)
-   ..."
-```
+| SSoT | Location | Consumers |
+|------|----------|-----------|
+| `LEGAL_PROCEDURES` | `legal-procedures-kb.ts` | executor search |
+| `DOCUMENT_SOURCE_LABELS` | `legal-procedures-kb.ts` | executor response formatting |
+| `PROCEDURE_CATEGORIES` | `legal-procedures-kb.ts` | type safety |
+| `searchProcedures()` | `legal-procedures-kb.ts` | executor (single search implementation) |
+| `KNOWLEDGE_BASE_PROMPT` | `ai-role-access-matrix.ts` | buyer/owner/tenant prompts |
 
 ## Acceptance Criteria
 
-- [ ] Buyer ρωτάει "τι χρειάζομαι για τον συμβολαιογράφο;" → πλήρης λίστα
-- [ ] AI αναγνωρίζει ποια docs υπάρχουν ήδη στο σύστημα
-- [ ] AI προσφέρει να στείλει τα διαθέσιμα ως συνημμένα
-- [ ] Admin μπορεί να ενημερώσει KB μέσω AI ή web UI
-- [ ] Keywords matching: "δάνειο" → bank_loan procedure
+- [x] Buyer ρωτάει "τι χρειάζομαι για τον συμβολαιογράφο;" → πλήρης λίστα
+- [x] AI αναγνωρίζει ποια docs υπάρχουν ήδη στο σύστημα (availableInSystem)
+- [x] AI προσφέρει να στείλει τα διαθέσιμα (μέσω deliver_file_to_chat)
+- [x] Keywords matching: "δάνειο" → bank_loan procedure
+- [x] "μεταβίβαση" → property_transfer procedure
+- [x] No match → suggestion message with valid keywords

@@ -119,7 +119,7 @@ export interface CrmTask {
   companyId?: string; // 🏢 ENTERPRISE: Tenant isolation
   title: string;
   description?: string | null;
-  type: 'call' | 'email' | 'meeting' | 'viewing' | 'document' | 'follow_up' | 'other';
+  type: 'call' | 'email' | 'meeting' | 'viewing' | 'document' | 'follow_up' | 'complaint' | 'other';
   leadId?: string;
   opportunityId?: string;
   contactId?: string | null;

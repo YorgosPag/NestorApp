@@ -32,6 +32,12 @@ import { resolveAccessConfig, UNLINKED_ACCESS, deriveBlockedFieldSet } from '@/c
 import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
+// SPEC-257D/E/F: SSoT enums for tool validation (same source as tool definition schemas)
+import { COMPLAINT_SEVERITIES, CONTACT_FIELD_TYPES, FILE_SOURCE_TYPES } from './agentic-tool-definitions';
+import type { ComplaintSeverity, ContactFieldType, FileSourceType } from './agentic-tool-definitions';
+// SSoT types: CrmTask priority, contact array entry types
+import type { CrmTask } from '@/types/crm';
+import type { PhoneInfo, EmailInfo, SocialMediaInfo } from '@/types/contacts/contracts';
 
 const logger = createModuleLogger('AGENTIC_TOOL_EXECUTOR');
 
@@ -104,6 +110,8 @@ const ALLOWED_READ_COLLECTIONS = new Set([
   COLLECTIONS.ACCOUNTING_BANK_TRANSACTIONS,
   COLLECTIONS.ACCOUNTING_JOURNAL_ENTRIES,
   COLLECTIONS.ACCOUNTING_FIXED_ASSETS,
+  COLLECTIONS.FILES,        // SPEC-257F: file delivery
+  COLLECTIONS.FLOORPLANS,   // SPEC-257F: floorplan delivery
 ]);
 
 /**
@@ -194,7 +202,46 @@ export class AgenticToolExecutor {
       return { allowed: false, result: { success: false, error: 'Δεν έχετε πρόσβαση σε αυτά τα δεδομένα.' } };
     }
 
-    // Inject projectId filter for project-scoped collections (buildings, units)
+    // SPEC-257B: Unit-level scoping for buyer/owner/tenant
+    const linkedUnitIds = ctx.contactMeta?.linkedUnitIds ?? [];
+    if (accessConfig.scopeLevel === 'unit' && linkedUnitIds.length === 0) {
+      // Safety guard: unit-scoped role without linked units → deny unit-sensitive collections
+      const unitSensitive = new Set([COLLECTIONS.UNITS, COLLECTIONS.DOCUMENTS, COLLECTIONS.PAYMENTS]);
+      if (unitSensitive.has(collection)) {
+        return { allowed: false, result: { success: false, error: 'Δεν βρέθηκαν συνδεδεμένα ακίνητα. Επικοινωνήστε με τον διαχειριστή.' } };
+      }
+      // Non-unit collections (buildings, appointments) — allow without scoping
+      return { allowed: true, filters };
+    }
+    if (accessConfig.scopeLevel === 'unit' && linkedUnitIds.length > 0) {
+      // Units collection: filter by document's stored `id` field
+      if (collection === COLLECTIONS.UNITS) {
+        const hasIdFilter = filters.some(f => f.field === 'id');
+        if (!hasIdFilter) {
+          filters = [...filters, {
+            field: 'id',
+            operator: 'in',
+            value: linkedUnitIds.slice(0, 30),
+          }];
+        }
+      }
+      // Documents, payments: filter by unitId
+      const unitIdScopedCollections = new Set([COLLECTIONS.DOCUMENTS, COLLECTIONS.PAYMENTS, COLLECTIONS.TASKS]);
+      if (unitIdScopedCollections.has(collection)) {
+        const hasUnitFilter = filters.some(f => f.field === 'unitId');
+        if (!hasUnitFilter) {
+          filters = [...filters, {
+            field: 'unitId',
+            operator: 'in',
+            value: linkedUnitIds.slice(0, 30),
+          }];
+        }
+      }
+      // Buildings: allow without extra filter (parent building access OK)
+      return { allowed: true, filters };
+    }
+
+    // Project-level scoping for supervisor/architect/engineer/contractor (existing behavior)
     const projectScopedByProjectId = new Set([COLLECTIONS.BUILDINGS, COLLECTIONS.UNITS]);
     if (projectScopedByProjectId.has(collection) && linkedProjectIds.length > 0) {
       const hasProjectFilter = filters.some(f => f.field === 'projectId');
@@ -260,6 +307,18 @@ export class AgenticToolExecutor {
           break;
         case 'search_text':
           result = await this.executeSearchText(args, ctx);
+          break;
+        case 'create_complaint_task':
+          result = await this.executeCreateComplaintTask(args, ctx);
+          break;
+        case 'append_contact_info':
+          result = await this.executeAppendContactInfo(args, ctx);
+          break;
+        case 'deliver_file_to_chat':
+          result = await this.executeDeliverFileToChat(args, ctx);
+          break;
+        case 'search_knowledge_base':
+          result = await this.executeSearchKnowledgeBase(args, ctx);
           break;
         default:
           result = { success: false, error: `Unknown tool: ${toolName}` };
@@ -567,6 +626,728 @@ export class AgenticToolExecutor {
     }
 
     return { success: false, error: 'documentId required for update mode' };
+  }
+
+  // ==========================================================================
+  // SPEC-257D: COMPLAINT TRIAGE — CUSTOMER COMPLAINT TASK CREATION
+  // ==========================================================================
+
+  /**
+   * create_complaint_task: Customer (buyer/owner/tenant) reports a problem.
+   * Creates a CRM task with enterprise ID + optional admin notification.
+   *
+   * Security:
+   * - Only linked customers with units can use this (no admin required)
+   * - unitId validated against ctx.contactMeta.linkedUnitIds
+   * - Server derives contactId/projectId/companyId — AI provides only
+   *   title, description, severity, unitId
+   *
+   * @see SPEC-257D (Complaint Triage System)
+   */
+  private async executeCreateComplaintTask(
+    args: Record<string, unknown>,
+    ctx: AgenticContext
+  ): Promise<ToolResult> {
+    // ── 1. Security: Must be a recognized contact with linked units ──
+    const contact = ctx.contactMeta;
+    if (!contact) {
+      return { success: false, error: 'Πρέπει να είστε αναγνωρισμένος χρήστης για να αναφέρετε πρόβλημα.' };
+    }
+
+    const linkedUnitIds = contact.linkedUnitIds ?? [];
+    if (linkedUnitIds.length === 0) {
+      return { success: false, error: 'Δεν βρέθηκαν συνδεδεμένα ακίνητα.' };
+    }
+
+    // ── 2. Validate inputs ──
+    const title = String(args.title ?? '').trim();
+    const description = String(args.description ?? '').trim();
+    const severity = String(args.severity ?? 'normal');
+    const unitId = String(args.unitId ?? '').trim();
+
+    if (!title || !description) {
+      return { success: false, error: 'Απαιτούνται τίτλος και περιγραφή παραπόνου.' };
+    }
+
+    if (!COMPLAINT_SEVERITIES.includes(severity as ComplaintSeverity)) {
+      return { success: false, error: `severity must be one of: ${COMPLAINT_SEVERITIES.join(', ')}` };
+    }
+
+    // ── 3. Security: unitId must belong to caller's linked units ──
+    if (!linkedUnitIds.includes(unitId)) {
+      return { success: false, error: 'Δεν έχετε πρόσβαση σε αυτό το ακίνητο.' };
+    }
+
+    // ── 4. Map severity → CrmTask priority ──
+    const SEVERITY_TO_PRIORITY: Record<ComplaintSeverity, CrmTask['priority']> = {
+      urgent: 'urgent',
+      normal: 'high',
+      low: 'low',
+    };
+    const priority = SEVERITY_TO_PRIORITY[severity as ComplaintSeverity] ?? 'high';
+
+    // ── 5. Resolve projectId from unit document ──
+    const db = getAdminFirestore();
+    let projectId: string | null = null;
+    try {
+      const unitDoc = await db.collection(COLLECTIONS.UNITS).doc(unitId).get();
+      if (unitDoc.exists) {
+        projectId = String(unitDoc.data()?.projectId ?? '') || null;
+      }
+    } catch {
+      // Non-fatal: task still created without projectId
+      logger.warn('Failed to resolve projectId for complaint task', { unitId });
+    }
+
+    // ── 6. Create task with enterprise ID ──
+    const { generateTaskId } = await import('@/services/enterprise-id.service');
+    const taskId = generateTaskId();
+    const now = new Date().toISOString();
+
+    const taskData: Record<string, unknown> = {
+      companyId: ctx.companyId,
+      title: `Παράπονο: ${title}`,
+      description,
+      type: 'complaint',
+      priority,
+      status: 'pending',
+      contactId: contact.contactId,
+      unitId,
+      projectId: projectId ?? null,
+      assignedTo: '',
+      createdAt: now,
+      updatedAt: now,
+      metadata: {
+        source: 'ai_complaint_triage',
+        channel: ctx.channel,
+        severity,
+        reportedBy: contact.displayName,
+      },
+    };
+
+    await db.collection(COLLECTIONS.TASKS).doc(taskId).set(taskData);
+
+    // ── 7. Audit trail ──
+    await this.auditWrite(ctx, COLLECTIONS.TASKS, taskId, 'create', taskData);
+
+    logger.info('Complaint task created', {
+      taskId,
+      severity,
+      priority,
+      unitId,
+      contactId: contact.contactId,
+      requestId: ctx.requestId,
+    });
+
+    // ── 8. URGENT: Server-side admin notification via Telegram ──
+    let notifiedAdmin = false;
+    if (severity === 'urgent') {
+      try {
+        const { getAdminTelegramChatId } = await import(
+          '@/services/ai-pipeline/shared/super-admin-resolver'
+        );
+        const adminChatId = await getAdminTelegramChatId();
+        if (adminChatId) {
+          const { sendChannelReply } = await import(
+            '@/services/ai-pipeline/shared/channel-reply-dispatcher'
+          );
+          const truncatedDesc = description.length > 200
+            ? `${description.substring(0, 200)}…`
+            : description;
+          await sendChannelReply({
+            channel: 'telegram',
+            telegramChatId: adminChatId,
+            textBody: `🚨 ΕΠΕΙΓΟΝ ΠΑΡΑΠΟΝΟ\n\n📋 ${title}\n👤 ${contact.displayName}\n🏠 Unit: ${unitId}\n\n${truncatedDesc}`,
+            requestId: ctx.requestId,
+          });
+          notifiedAdmin = true;
+        }
+      } catch (notifyError) {
+        // Non-fatal: task was created, notification is best-effort
+        logger.warn('Failed to send admin notification for urgent complaint', {
+          taskId,
+          requestId: ctx.requestId,
+          error: getErrorMessage(notifyError),
+        });
+      }
+    }
+
+    return {
+      success: true,
+      data: { taskId, priority, severity, notifiedAdmin },
+      count: 1,
+    };
+  }
+
+  // ==========================================================================
+  // SPEC-257E: APPEND-ONLY CONTACT UPDATES
+  // ==========================================================================
+
+  /** Label → PhoneInfo.type mapping (Greek + English, defined ONCE) — type derived from SSoT */
+  private static readonly PHONE_LABEL_MAP: Record<string, PhoneInfo['type']> = {
+    'εργασία': 'work', 'δουλειά': 'work', 'work': 'work', 'γραφείο': 'work',
+    'σπίτι': 'home', 'home': 'home',
+    'κινητό': 'mobile', 'mobile': 'mobile',
+    'fax': 'fax', 'φαξ': 'fax',
+  };
+
+  /** Label → EmailInfo.type mapping — type derived from SSoT */
+  private static readonly EMAIL_LABEL_MAP: Record<string, EmailInfo['type']> = {
+    'προσωπικό': 'personal', 'personal': 'personal', 'προσωπικά': 'personal',
+    'εργασία': 'work', 'δουλειά': 'work', 'work': 'work', 'γραφείο': 'work',
+  };
+
+  /** Label → SocialMediaInfo.platform mapping — type derived from SSoT */
+  private static readonly SOCIAL_PLATFORM_MAP: Record<string, SocialMediaInfo['platform']> = {
+    'facebook': 'facebook', 'fb': 'facebook',
+    'twitter': 'twitter', 'x': 'twitter',
+    'linkedin': 'linkedin',
+    'instagram': 'instagram', 'insta': 'instagram',
+    'youtube': 'youtube',
+    'github': 'github',
+  };
+
+  /**
+   * append_contact_info: Customer adds phone/email/social to OWN contact.
+   * APPEND-ONLY — cannot delete or modify existing entries.
+   *
+   * Security:
+   * - Only recognized contacts can use this (no admin required)
+   * - Server uses ctx.contactMeta.contactId — AI cannot specify contactId
+   * - Validates phone/email format via SSoT validators
+   * - Duplicate detection by value before append
+   *
+   * @see SPEC-257E (Append-Only Contact Updates)
+   */
+  private async executeAppendContactInfo(
+    args: Record<string, unknown>,
+    ctx: AgenticContext
+  ): Promise<ToolResult> {
+    // ── 1. Security: Must be a recognized contact ──
+    const contact = ctx.contactMeta;
+    if (!contact?.contactId) {
+      return { success: false, error: 'Πρέπει να είστε αναγνωρισμένος χρήστης για να ενημερώσετε στοιχεία.' };
+    }
+
+    // ── 2. Validate fieldType ──
+    const fieldType = String(args.fieldType ?? '');
+    const value = String(args.value ?? '').trim();
+    const label = String(args.label ?? '').trim().toLowerCase();
+
+    if (!CONTACT_FIELD_TYPES.includes(fieldType as ContactFieldType)) {
+      return { success: false, error: `fieldType must be one of: ${CONTACT_FIELD_TYPES.join(', ')}` };
+    }
+    if (!value) {
+      return { success: false, error: 'value is required' };
+    }
+
+    // ── 3. Validate value format (SSoT validators) ──
+    if (fieldType === 'phone') {
+      const { isValidPhone } = await import('@/lib/validation/phone-validation');
+      if (!isValidPhone(value)) {
+        return { success: false, error: `Μη έγκυρο τηλέφωνο: "${value}". Αποδεκτά: ελληνικό (69XXXXXXXX, 2XXXXXXXXX) ή διεθνές (+XXXXXXXXXXX).` };
+      }
+    } else if (fieldType === 'email') {
+      const { isValidEmail } = await import('@/lib/validation/email-validation');
+      if (!isValidEmail(value)) {
+        return { success: false, error: `Μη έγκυρο email: "${value}".` };
+      }
+    }
+    // social: any non-empty string is valid (username or URL)
+
+    // ── 4. Fetch current contact document ──
+    const db = getAdminFirestore();
+    const contactDoc = await db.collection(COLLECTIONS.CONTACTS).doc(contact.contactId).get();
+    if (!contactDoc.exists) {
+      return { success: false, error: 'Η επαφή δεν βρέθηκε.' };
+    }
+    const contactData = contactDoc.data() as Record<string, unknown>;
+
+    // ── 5. Duplicate check + Append ──
+    const updatePayload: Record<string, unknown> = {
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (fieldType === 'phone') {
+      const { cleanPhoneNumber } = await import('@/lib/validation/phone-validation');
+      const cleanedPhone = cleanPhoneNumber(value);
+      const currentPhones = (contactData.phones ?? []) as Array<{ number: string }>;
+      if (currentPhones.some(p => cleanPhoneNumber(p.number) === cleanedPhone)) {
+        return { success: false, error: `Το τηλέφωνο ${value} υπάρχει ήδη.` };
+      }
+      const phoneType = AgenticToolExecutor.PHONE_LABEL_MAP[label] ?? 'mobile';
+      const newEntry = {
+        number: cleanedPhone,
+        type: phoneType,
+        isPrimary: false,
+        ...(label && !AgenticToolExecutor.PHONE_LABEL_MAP[label] ? { label } : {}),
+      };
+      updatePayload.phones = [...currentPhones, newEntry];
+    } else if (fieldType === 'email') {
+      const normalizedEmail = value.toLowerCase().trim();
+      const currentEmails = (contactData.emails ?? []) as Array<{ email: string }>;
+      if (currentEmails.some(e => e.email.toLowerCase() === normalizedEmail)) {
+        return { success: false, error: `Το email ${value} υπάρχει ήδη.` };
+      }
+      const emailType = AgenticToolExecutor.EMAIL_LABEL_MAP[label] ?? 'personal';
+      const newEntry = {
+        email: normalizedEmail,
+        type: emailType,
+        isPrimary: false,
+        ...(label && !AgenticToolExecutor.EMAIL_LABEL_MAP[label] ? { label } : {}),
+      };
+      updatePayload.emails = [...currentEmails, newEntry];
+    } else {
+      // social
+      const currentSocial = (contactData.socialMedia ?? []) as Array<{ username: string; url?: string }>;
+      if (currentSocial.some(s => s.username === value || s.url === value)) {
+        return { success: false, error: `Το social media ${value} υπάρχει ήδη.` };
+      }
+      const platform = AgenticToolExecutor.SOCIAL_PLATFORM_MAP[label] ?? 'other';
+      const { isValidUrl } = await import('@/lib/validation/email-validation');
+      const newEntry = {
+        platform,
+        username: value,
+        ...(isValidUrl(value) ? { url: value } : {}),
+        ...(label && !AgenticToolExecutor.SOCIAL_PLATFORM_MAP[label] ? { label } : {}),
+      };
+      updatePayload.socialMedia = [...currentSocial, newEntry];
+    }
+
+    // ── 6. Update contact document ──
+    await db.collection(COLLECTIONS.CONTACTS).doc(contact.contactId).update(updatePayload);
+
+    // ── 7. Audit trail ──
+    await this.auditWrite(ctx, COLLECTIONS.CONTACTS, contact.contactId, 'append', updatePayload);
+
+    logger.info('Contact info appended', {
+      contactId: contact.contactId,
+      fieldType,
+      requestId: ctx.requestId,
+    });
+
+    return {
+      success: true,
+      data: { contactId: contact.contactId, fieldType, value, added: true },
+      count: 1,
+    };
+  }
+
+  // ==========================================================================
+  // SPEC-257F: DELIVER FILE TO CHAT (Photo / Floorplan / Document)
+  // ==========================================================================
+
+  /**
+   * SPEC-257F: Image content types recognized as photos (sent via sendPhoto).
+   * Everything else (PDF, DXF, etc.) is sent as a document.
+   */
+  private static readonly PHOTO_CONTENT_TYPES: ReadonlySet<string> = new Set([
+    'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+  ]);
+
+  /** File extensions recognized as photos */
+  private static readonly PHOTO_EXTENSIONS: ReadonlySet<string> = new Set([
+    'jpg', 'jpeg', 'png', 'webp', 'gif',
+  ]);
+
+  /**
+   * deliver_file_to_chat: Send photo/floorplan/document to the current chat.
+   * Entity-reference pattern: AI provides sourceType + entityId, server resolves URL.
+   *
+   * Security:
+   * - Only recognized contacts with linkedUnitIds can use this
+   * - unit_photo: unitId must be in linkedUnitIds
+   * - file: file's entity must belong to accessible unit/project
+   * - floorplan: floorplan's projectId must be in linked projects
+   *
+   * @see SPEC-257F (Photo & Floorplan Delivery)
+   */
+  private async executeDeliverFileToChat(
+    args: Record<string, unknown>,
+    ctx: AgenticContext
+  ): Promise<ToolResult> {
+    // ── 1. Security: Must be a recognized contact with linked units ──
+    const contact = ctx.contactMeta;
+    if (!contact) {
+      return { success: false, error: 'Πρέπει να είστε αναγνωρισμένος χρήστης.' };
+    }
+
+    const linkedUnitIds = contact.linkedUnitIds ?? [];
+    if (linkedUnitIds.length === 0) {
+      return { success: false, error: 'Δεν βρέθηκαν συνδεδεμένα ακίνητα.' };
+    }
+
+    // ── 2. Validate inputs ──
+    const sourceType = String(args.sourceType ?? '');
+    const sourceId = String(args.sourceId ?? '').trim();
+    const caption = args.caption != null ? String(args.caption).trim() : undefined;
+
+    if (!FILE_SOURCE_TYPES.includes(sourceType as FileSourceType)) {
+      return { success: false, error: `sourceType must be one of: ${FILE_SOURCE_TYPES.join(', ')}` };
+    }
+    if (!sourceId) {
+      return { success: false, error: 'sourceId is required' };
+    }
+
+    const db = getAdminFirestore();
+
+    // ── 3. Resolve URL based on sourceType ──
+    let mediaUrls: Array<{ url: string; mediaType: 'photo' | 'document'; filename: string; contentType: string }> = [];
+
+    if (sourceType === 'unit_photo') {
+      // ── 3a. Unit photos: validate unit access, fetch photoURL / multiplePhotoURLs ──
+      if (!linkedUnitIds.includes(sourceId)) {
+        return { success: false, error: 'Δεν έχετε πρόσβαση σε αυτό το ακίνητο.' };
+      }
+
+      const unitDoc = await db.collection(COLLECTIONS.UNITS).doc(sourceId).get();
+      if (!unitDoc.exists) {
+        return { success: false, error: 'Το ακίνητο δεν βρέθηκε.' };
+      }
+
+      const unitData = unitDoc.data() as Record<string, unknown>;
+      const allPhotoUrls: string[] = [];
+
+      if (typeof unitData.photoURL === 'string' && unitData.photoURL) {
+        allPhotoUrls.push(unitData.photoURL);
+      }
+      if (Array.isArray(unitData.multiplePhotoURLs)) {
+        for (const url of unitData.multiplePhotoURLs) {
+          if (typeof url === 'string' && url && !allPhotoUrls.includes(url)) {
+            allPhotoUrls.push(url);
+          }
+        }
+      }
+
+      if (allPhotoUrls.length === 0) {
+        return { success: false, error: 'Δεν υπάρχουν φωτογραφίες για αυτό το ακίνητο.' };
+      }
+
+      mediaUrls = allPhotoUrls.map((url, i) => ({
+        url,
+        mediaType: 'photo' as const,
+        filename: `photo_${i + 1}.jpg`,
+        contentType: 'image/jpeg',
+      }));
+
+    } else if (sourceType === 'file') {
+      // ── 3b. File record: validate entity access chain ──
+      const fileDoc = await db.collection(COLLECTIONS.FILES).doc(sourceId).get();
+      if (!fileDoc.exists) {
+        return { success: false, error: 'Το αρχείο δεν βρέθηκε.' };
+      }
+
+      const fileData = fileDoc.data() as Record<string, unknown>;
+      if (fileData.isDeleted) {
+        return { success: false, error: 'Το αρχείο έχει διαγραφεί.' };
+      }
+
+      // Access validation: entity must belong to buyer's accessible scope
+      const entityType = String(fileData.entityType ?? '');
+      const entityId = String(fileData.entityId ?? '');
+      const fileProjectId = String(fileData.projectId ?? '');
+
+      const linkedProjectIds = [...new Set(
+        (contact.projectRoles ?? []).map(r => r.projectId).filter(Boolean),
+      )];
+
+      let hasAccess = false;
+      if (entityType === 'unit') {
+        hasAccess = linkedUnitIds.includes(entityId);
+      } else if (entityType === 'building' || entityType === 'project') {
+        hasAccess = linkedProjectIds.includes(fileProjectId);
+      } else {
+        // For other entity types, check project ownership
+        hasAccess = fileProjectId ? linkedProjectIds.includes(fileProjectId) : false;
+      }
+
+      if (!hasAccess) {
+        return { success: false, error: 'Δεν έχετε πρόσβαση σε αυτό το αρχείο.' };
+      }
+
+      const downloadUrl = String(fileData.downloadUrl ?? '');
+      if (!downloadUrl) {
+        return { success: false, error: 'Το αρχείο δεν είναι διαθέσιμο αυτή τη στιγμή.' };
+      }
+
+      const ext = String(fileData.ext ?? '').toLowerCase();
+      const ct = String(fileData.contentType ?? 'application/octet-stream');
+      const isPhoto = AgenticToolExecutor.PHOTO_CONTENT_TYPES.has(ct)
+        || AgenticToolExecutor.PHOTO_EXTENSIONS.has(ext);
+
+      mediaUrls = [{
+        url: downloadUrl,
+        mediaType: isPhoto ? 'photo' : 'document',
+        filename: String(fileData.originalFilename ?? fileData.displayName ?? `file.${ext}`),
+        contentType: ct,
+      }];
+
+    } else if (sourceType === 'floorplan') {
+      // ── 3c. Floorplan: validate project access ──
+      const fpDoc = await db.collection(COLLECTIONS.FLOORPLANS).doc(sourceId).get();
+      if (!fpDoc.exists) {
+        return { success: false, error: 'Η κάτοψη δεν βρέθηκε.' };
+      }
+
+      const fpData = fpDoc.data() as Record<string, unknown>;
+      const fpProjectId = String(fpData.projectId ?? '');
+
+      const linkedProjectIds = [...new Set(
+        (contact.projectRoles ?? []).map(r => r.projectId).filter(Boolean),
+      )];
+
+      if (!linkedProjectIds.includes(fpProjectId)) {
+        return { success: false, error: 'Δεν έχετε πρόσβαση σε αυτή την κάτοψη.' };
+      }
+
+      // Check for sendable format (PDF or image URL)
+      const pdfImageUrl = String(fpData.pdfImageUrl ?? '');
+      const fpDownloadUrl = String(fpData.downloadUrl ?? '');
+      const fileType = String(fpData.fileType ?? '');
+
+      let resolvedUrl = '';
+      let resolvedMediaType: 'photo' | 'document' = 'document';
+
+      if (pdfImageUrl) {
+        // PDF floorplan rendered as image
+        resolvedUrl = pdfImageUrl;
+        resolvedMediaType = 'photo';
+      } else if (fpDownloadUrl) {
+        // File-record-based floorplan (PDF or image)
+        resolvedUrl = fpDownloadUrl;
+        resolvedMediaType = fileType === 'pdf' ? 'document' : 'photo';
+      } else if (fpData.scene) {
+        // DXF scene data — compressed JSON, cannot be sent as file
+        return { success: false, error: 'Η κάτοψη αυτή είναι μόνο σε μορφή CAD (DXF). Δεν είναι δυνατή η αποστολή μέσω μηνύματος.' };
+      } else {
+        return { success: false, error: 'Η κάτοψη δεν είναι διαθέσιμη σε μορφή αρχείου.' };
+      }
+
+      const fpName = String(fpData.fileName ?? fpData.type ?? 'floorplan');
+      mediaUrls = [{
+        url: resolvedUrl,
+        mediaType: resolvedMediaType,
+        filename: fpName.includes('.') ? fpName : `${fpName}.pdf`,
+        contentType: resolvedMediaType === 'photo' ? 'image/png' : 'application/pdf',
+      }];
+    }
+
+    // ── 4. Send via channel (supports multiple photos) ──
+    const { sendChannelMediaReply } = await import(
+      '@/services/ai-pipeline/shared/channel-reply-dispatcher'
+    );
+
+    let sentCount = 0;
+    let lastError = '';
+    const totalFiles = mediaUrls.length;
+
+    // Build channel-specific IDs from context
+    // telegramChatId is explicit; for other channels, channelSenderId carries the recipient address
+    const channelIds: Record<string, string | undefined> = {
+      telegramChatId: ctx.telegramChatId,
+      recipientEmail: ctx.channel === 'email' ? ctx.channelSenderId : undefined,
+      whatsappPhone: ctx.channel === 'whatsapp' ? ctx.channelSenderId : undefined,
+      messengerPsid: ctx.channel === 'messenger' ? ctx.channelSenderId : undefined,
+      instagramIgsid: ctx.channel === 'instagram' ? ctx.channelSenderId : undefined,
+    };
+
+    for (let i = 0; i < mediaUrls.length; i++) {
+      const media = mediaUrls[i];
+      const fileCaption = caption
+        ?? (totalFiles > 1 ? `${media.filename} (${i + 1}/${totalFiles})` : media.filename);
+
+      const sendResult = await sendChannelMediaReply({
+        channel: ctx.channel as import('@/types/ai-pipeline').PipelineChannelValue,
+        ...channelIds,
+        mediaUrl: media.url,
+        mediaType: media.mediaType,
+        caption: fileCaption,
+        filename: media.filename,
+        contentType: media.contentType,
+        requestId: ctx.requestId,
+      });
+
+      if (sendResult.success) {
+        sentCount++;
+      } else {
+        lastError = sendResult.error ?? 'Αποτυχία αποστολής';
+      }
+    }
+
+    // ── 5. Audit trail (fire-and-forget) ──
+    this.auditWrite(ctx, 'file_delivery', sourceId, 'deliver', {
+      sourceType,
+      sourceId,
+      sentCount,
+      totalFiles,
+      channel: ctx.channel,
+    }).catch(() => { /* non-fatal */ });
+
+    logger.info('File delivery completed', {
+      sourceType,
+      sourceId,
+      sentCount,
+      totalFiles,
+      channel: ctx.channel,
+      requestId: ctx.requestId,
+    });
+
+    if (sentCount === 0) {
+      return { success: false, error: lastError || 'Αποτυχία αποστολής αρχείων.' };
+    }
+
+    return {
+      success: true,
+      data: { sourceType, sourceId, sentCount, totalFiles },
+      count: sentCount,
+    };
+  }
+
+  // ==========================================================================
+  // SPEC-257G: KNOWLEDGE BASE — Legal Procedures & Required Documents
+  // ==========================================================================
+
+  /**
+   * search_knowledge_base: Search legal procedures and check document availability.
+   *
+   * Flow:
+   * 1. Keyword match against LEGAL_PROCEDURES config (SSoT)
+   * 2. For matching procedures, check which source:"system" docs exist in files collection
+   * 3. Return enriched result with availability markers
+   *
+   * Security: Available to all customer roles (buyer/owner/tenant).
+   * No admin restriction — this is informational, read-only.
+   *
+   * @see SPEC-257G (Knowledge Base — Procedures & Documents)
+   */
+  private async executeSearchKnowledgeBase(
+    args: Record<string, unknown>,
+    ctx: AgenticContext
+  ): Promise<ToolResult> {
+    const query = String(args.query ?? '').trim();
+    if (!query) {
+      return { success: false, error: 'query is required' };
+    }
+
+    // ── 1. Search procedures by keyword ──
+    const { searchProcedures, DOCUMENT_SOURCE_LABELS } = await import(
+      '@/config/legal-procedures-kb'
+    );
+
+    const matches = searchProcedures(query);
+
+    if (matches.length === 0) {
+      return {
+        success: true,
+        data: {
+          message: 'Δεν βρέθηκε σχετική διαδικασία.',
+          suggestion: 'Δοκιμάστε: "συμβόλαιο", "δάνειο", "μεταβίβαση", "προσύμφωνο"',
+          procedures: [],
+        },
+        count: 0,
+      };
+    }
+
+    // ── 2. For top match(es), check document availability ──
+    const db = getAdminFirestore();
+    const linkedUnitIds = ctx.contactMeta?.linkedUnitIds ?? [];
+    const linkedProjectIds = [...new Set(
+      (ctx.contactMeta?.projectRoles ?? []).map(r => r.projectId).filter(Boolean),
+    )];
+
+    // Collect all searchTerms from system documents that need availability check
+    // Map: searchTerm → Set of document names that use this term
+    const termToDocNames = new Map<string, Set<string>>();
+    for (const { procedure } of matches.slice(0, 2)) {
+      for (const doc of procedure.requiredDocuments) {
+        if (doc.source === 'system' && doc.searchTerms.length > 0) {
+          for (const term of doc.searchTerms) {
+            const existing = termToDocNames.get(term) ?? new Set();
+            existing.add(doc.name);
+            termToDocNames.set(term, existing);
+          }
+        }
+      }
+    }
+
+    // Query files collection and match against searchTerms
+    const availableDocNames = new Set<string>();
+
+    if (termToDocNames.size > 0 && (linkedUnitIds.length > 0 || linkedProjectIds.length > 0)) {
+      try {
+        const filesQuery = db.collection(COLLECTIONS.FILES)
+          .where('companyId', '==', ctx.companyId)
+          .where('status', '==', 'ready')
+          .limit(100);
+
+        const filesSnap = await filesQuery.get();
+
+        for (const fileDoc of filesSnap.docs) {
+          const data = fileDoc.data();
+          const purpose = String(data.purpose ?? '').toLowerCase();
+          const category = String(data.category ?? '').toLowerCase();
+          const displayName = String(data.displayName ?? '').toLowerCase();
+          const entityId = String(data.entityId ?? '');
+          const projectId = String(data.projectId ?? '');
+
+          // Check if file is accessible to this user
+          const isAccessible =
+            linkedUnitIds.includes(entityId) ||
+            linkedProjectIds.includes(projectId) ||
+            linkedProjectIds.includes(entityId);
+
+          if (!isAccessible) continue;
+
+          // Combine all searchable text from file record
+          const searchableText = `${purpose} ${category} ${displayName}`;
+
+          // Match search terms against file record fields
+          for (const [term, docNames] of termToDocNames) {
+            if (searchableText.includes(term.toLowerCase())) {
+              for (const name of docNames) {
+                availableDocNames.add(name);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        // Non-fatal: proceed without availability info
+        logger.warn('Failed to check document availability for KB', {
+          requestId: ctx.requestId,
+          error: getErrorMessage(err),
+        });
+      }
+    }
+
+    // ── 3. Build enriched response ──
+    const enrichedProcedures = matches.slice(0, 2).map(({ procedure, matchScore }) => ({
+      id: procedure.id,
+      title: procedure.title,
+      category: procedure.category,
+      description: procedure.description,
+      matchScore,
+      requiredDocuments: procedure.requiredDocuments.map(doc => ({
+        name: doc.name,
+        source: doc.source,
+        sourceLabel: DOCUMENT_SOURCE_LABELS[doc.source],
+        availableInSystem: availableDocNames.has(doc.name),
+        canBeSent: availableDocNames.has(doc.name),
+      })),
+    }));
+
+    logger.info('Knowledge base search completed', {
+      query,
+      matchCount: matches.length,
+      topMatch: enrichedProcedures[0]?.id,
+      availableDocsCount: availableKeys.size,
+      requestId: ctx.requestId,
+    });
+
+    return {
+      success: true,
+      data: { procedures: enrichedProcedures },
+      count: enrichedProcedures.length,
+    };
   }
 
   /**

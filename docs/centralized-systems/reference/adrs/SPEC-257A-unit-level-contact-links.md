@@ -5,7 +5,7 @@
 | **ADR** | ADR-257 (Customer AI Access Control) |
 | **Phase** | 1 of 7 |
 | **Priority** | CRITICAL — all other phases depend on this |
-| **Status** | PENDING |
+| **Status** | IMPLEMENTED (2026-03-23) |
 
 ---
 
@@ -85,12 +85,38 @@ for (const owner of commercial.owners) {
 
 ## Acceptance Criteria
 
-- [ ] Reservation creates unit-level contact_link automatically
-- [ ] Co-buyers get separate links with correct role
-- [ ] Admin can create via Telegram AI
-- [ ] Cancellation deactivates link (inactive, not deleted)
-- [ ] Zero duplicate links (check before create)
+- [x] Reservation creates unit-level contact_link automatically
+- [x] Co-buyers get separate links with correct role
+- [x] Admin can create via Telegram AI (already worked via agentic firestore_write)
+- [x] Cancellation deactivates link (inactive, not deleted)
+- [x] Zero duplicate links (check before create — idempotent upsert)
 
 ## Dependencies
 
 - None (first phase)
+
+---
+
+## Implementation Notes (2026-03-23)
+
+### Architecture
+
+- **Server-side only** — All logic in `src/app/api/units/[id]/route.ts` using Admin SDK
+- **Fire-and-forget pattern** — Same as `activateClientPersona()`, non-blocking
+- **ID generation inlined** — Mirrors `AssociationService.generateContactLinkId()` to avoid client SDK import
+- **Batch deactivation** — Uses Firestore batch write for atomic cancellation
+
+### Helpers Added to route.ts
+
+| Function | Purpose |
+|----------|---------|
+| `generateContactLinkId()` | ID: `cl_{contactId}_unit_{unitId}_{role}` |
+| `mapOwnerRoleToLinkRole()` | PropertyOwnerRole → contact_link role |
+| `upsertUnitContactLink()` | Idempotent: active→skip, inactive→reactivate, missing→create |
+| `autoCreateUnitContactLinks()` | Primary buyer + co-buyers (ADR-244) |
+| `deactivateUnitContactLinks()` | Batch soft-delete on cancellation |
+
+### Triggers
+
+- **Create**: `commercialStatus` → `reserved` ή `sold` (PATCH handler)
+- **Deactivate**: `commercialStatus` αλλάζει ΑΠΟ `reserved`/`sold` ΣΕ οτιδήποτε άλλο

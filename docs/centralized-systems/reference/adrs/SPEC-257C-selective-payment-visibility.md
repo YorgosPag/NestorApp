@@ -5,7 +5,7 @@
 | **ADR** | ADR-257 (Customer AI Access Control) |
 | **Phase** | 3 of 7 |
 | **Priority** | HIGH — core buyer functionality |
-| **Status** | PENDING |
+| **Status** | IMPLEMENTED (2026-03-23) |
 | **Depends On** | SPEC-257B (unit-level scoping must work) |
 
 ---
@@ -100,8 +100,22 @@ owner: {
 
 ## Acceptance Criteria
 
-- [ ] Buyer ρωτάει "πόσα χρωστάω;" → βλέπει υπόλοιπο + επόμενη δόση
-- [ ] Buyer ΔΕΝ βλέπει paidAmount, totalAmount, paidPercentage
-- [ ] Buyer ΔΕΝ βλέπει askingPrice
-- [ ] Owner βλέπει finalPrice + ΟΛΑ payment fields
-- [ ] Tenant ΔΕΝ βλέπει τίποτα payment-related
+- [x] Buyer ρωτάει "πόσα χρωστάω;" → βλέπει υπόλοιπο + επόμενη δόση
+- [x] Buyer ΔΕΝ βλέπει paidAmount, totalAmount, paidPercentage
+- [x] Buyer ΔΕΝ βλέπει askingPrice
+- [x] Owner βλέπει finalPrice + ΟΛΑ payment fields
+- [x] Tenant ΔΕΝ βλέπει τίποτα payment-related
+
+---
+
+## Implementation Notes (2026-03-23)
+
+Pure SSoT config change — ΜΟΝΟ `ai-role-access-matrix.ts`. Η redaction logic ήδη υποστηρίζει partial nested blocking.
+
+| Change | Detail |
+|--------|--------|
+| New constant | `BUYER_BLOCKED_PAYMENT_FIELDS` — 7 fields blocked for buyer |
+| Buyer | Added `BUYER_IDENTITY_FIELDS` + `BUYER_BLOCKED_PAYMENT_FIELDS` |
+| Owner | Changed from `[]` to `['commercial.askingPrice']` |
+| Tenant | Added `PAYMENT_SUMMARY_FIELDS` (entire object blocked) |
+| Prompts | Updated to mention visible payment info per role |

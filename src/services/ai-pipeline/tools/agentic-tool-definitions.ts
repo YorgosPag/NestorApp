@@ -28,7 +28,23 @@ export interface AgenticToolDefinition {
 }
 
 // ============================================================================
-// 8 AGENTIC TOOL DEFINITIONS (Chat Completions API format)
+// SHARED ENUMS — SSoT for tool definitions + executor validation
+// ============================================================================
+
+/** SPEC-257D: Complaint severity levels (SSoT — used in tool def enum + executor validation) */
+export const COMPLAINT_SEVERITIES = ['urgent', 'normal', 'low'] as const;
+export type ComplaintSeverity = typeof COMPLAINT_SEVERITIES[number];
+
+/** SPEC-257E: Contact field types (SSoT — used in tool def enum + executor validation) */
+export const CONTACT_FIELD_TYPES = ['phone', 'email', 'social'] as const;
+export type ContactFieldType = typeof CONTACT_FIELD_TYPES[number];
+
+/** SPEC-257F: File source types (SSoT — used in tool def enum + executor validation) */
+export const FILE_SOURCE_TYPES = ['unit_photo', 'file', 'floorplan'] as const;
+export type FileSourceType = typeof FILE_SOURCE_TYPES[number];
+
+// ============================================================================
+// AGENTIC TOOL DEFINITIONS (Chat Completions API format)
 // ============================================================================
 
 export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
@@ -336,6 +352,121 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
           },
         },
         required: ['searchTerm', 'collections', 'limit'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  // ── 9. create_complaint_task: Customer complaint triage (SPEC-257D) ──
+  {
+    type: 'function' as const,
+    function: {
+      name: 'create_complaint_task',
+      description: 'Customer (buyer/owner/tenant) reports a problem with their unit. Creates a task and notifies admin for urgent issues. Use ONLY when a linked customer reports an issue with their property.',
+      parameters: {
+        type: 'object',
+        properties: {
+          title: {
+            type: 'string',
+            description: 'Short complaint title in Greek, e.g. "Υγρασία στο μπάνιο"',
+          },
+          description: {
+            type: 'string',
+            description: 'Full complaint description from the customer message',
+          },
+          severity: {
+            type: 'string',
+            description: 'Complaint severity: urgent (structural/safety), normal (wear/material), low (aesthetic/neighbour)',
+            enum: [...COMPLAINT_SEVERITIES],
+          },
+          unitId: {
+            type: 'string',
+            description: 'The unit ID this complaint is about (must be from customer linked units)',
+          },
+        },
+        required: ['title', 'description', 'severity', 'unitId'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  // ── 10. append_contact_info: Customer append-only contact update (SPEC-257E) ──
+  {
+    type: 'function' as const,
+    function: {
+      name: 'append_contact_info',
+      description: 'Add new phone, email, or social media to your own contact record. APPEND ONLY — cannot delete or modify existing entries. Use when a customer wants to add contact info.',
+      parameters: {
+        type: 'object',
+        properties: {
+          fieldType: {
+            type: 'string',
+            description: 'Type of contact info to add',
+            enum: [...CONTACT_FIELD_TYPES],
+          },
+          value: {
+            type: 'string',
+            description: 'The value: phone number (e.g. 6974050025), email address (e.g. user@mail.com), or social media username/URL',
+          },
+          label: {
+            type: 'string',
+            description: 'Label for the entry. Phone: εργασία/σπίτι/κινητό. Email: εργασία/προσωπικό. Social: platform name (facebook/instagram/linkedin/twitter)',
+          },
+        },
+        required: ['fieldType', 'value', 'label'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  // ── 11. deliver_file_to_chat: Send photo/floorplan/document to customer (SPEC-257F) ──
+  {
+    type: 'function' as const,
+    function: {
+      name: 'deliver_file_to_chat',
+      description: 'Send a photo, floorplan, or document to the current chat. The file is fetched server-side and sent via the active channel (Telegram/Email/etc). Use when a customer asks to see photos, floorplans, or receive documents.',
+      parameters: {
+        type: 'object',
+        properties: {
+          sourceType: {
+            type: 'string',
+            description: 'Source type: unit_photo (photos from unit), file (document from files collection), floorplan (floor plan from floorplans collection)',
+            enum: [...FILE_SOURCE_TYPES],
+          },
+          sourceId: {
+            type: 'string',
+            description: 'Entity ID: unitId for unit_photo, fileId for file, floorplanId for floorplan',
+          },
+          caption: {
+            type: ['string', 'null'],
+            description: 'Optional caption for the sent file. Null for auto-generated caption.',
+          },
+        },
+        required: ['sourceType', 'sourceId', 'caption'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  // ── 12. search_knowledge_base: Legal procedures & required documents (SPEC-257G) ──
+  {
+    type: 'function' as const,
+    function: {
+      name: 'search_knowledge_base',
+      description: 'Search the knowledge base for real estate procedures and required documents. Use when a buyer/owner asks about required documents, notary procedures, bank loans, property transfer, or any legal process. Returns the procedure details, required documents, and which documents are already available in the system.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description: 'Search query in Greek, e.g. "συμβολαιογράφος", "δάνειο τράπεζα", "μεταβίβαση", "τι χρειάζομαι"',
+          },
+        },
+        required: ['query'],
         additionalProperties: false,
       },
       strict: true,

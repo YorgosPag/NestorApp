@@ -28,12 +28,19 @@ export const PHONE_REGEX = /^(\+30)?(69\d{8}|2\d{9})$|^\+[1-9]\d{9,14}$/;
 // ============================================================================
 
 /**
+ * Normalize a phone number by stripping spaces, dashes, parentheses.
+ * SSoT for phone cleaning — used by validators and storage.
+ */
+export function cleanPhoneNumber(phone: string): string {
+  return phone.replace(/[\s\-()]/g, '');
+}
+
+/**
  * Validate any phone number (Greek or international).
  * Strips spaces, dashes, parentheses before testing.
  */
 export function isValidPhone(phone: string): boolean {
-  const cleaned = phone.replace(/[\s\-()]/g, '');
-  return PHONE_REGEX.test(cleaned);
+  return PHONE_REGEX.test(cleanPhoneNumber(phone));
 }
 
 /**
@@ -41,8 +48,7 @@ export function isValidPhone(phone: string): boolean {
  * Strips spaces, dashes, parentheses before testing.
  */
 export function isValidGreekPhone(phone: string): boolean {
-  const cleaned = phone.replace(/[\s\-()]/g, '');
-  return GREEK_PHONE_REGEX.test(cleaned);
+  return GREEK_PHONE_REGEX.test(cleanPhoneNumber(phone));
 }
 
 // ============================================================================

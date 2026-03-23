@@ -222,6 +222,12 @@ export interface TelegramSendPayload {
   parse_mode?: 'HTML' | 'Markdown' | 'MarkdownV2';
   reply_markup?: TelegramReplyMarkup;
   callback_query_id?: string;
+  /** SPEC-257F: Photo URL for sendPhoto method */
+  photo?: string;
+  /** SPEC-257F: Document URL for sendDocument method */
+  document?: string;
+  /** SPEC-257F: Caption for photo/document messages */
+  caption?: string;
 }
 
 /** Telegram API response result */

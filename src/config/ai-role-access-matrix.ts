@@ -41,6 +41,8 @@ export interface RoleAccessConfig {
   blockedFields: readonly string[];
   /** System prompt description for AI (ελληνικά) */
   promptDescription: string;
+  /** Scoping level: 'project' = filter by projectId, 'unit' = filter by unit ID (SPEC-257B) */
+  scopeLevel: 'project' | 'unit';
 }
 
 // ============================================================================
@@ -59,7 +61,7 @@ const BUYER_IDENTITY_FIELDS = [
   'commercial.buyerName',
 ] as const;
 
-/** Payment summary fields — hidden from external roles */
+/** Payment summary fields — hidden from external roles (must match PaymentSummary type) */
 const PAYMENT_SUMMARY_FIELDS = [
   'commercial.paymentSummary',
   'commercial.paymentSummary.totalAmount',
@@ -71,7 +73,71 @@ const PAYMENT_SUMMARY_FIELDS = [
   'commercial.paymentSummary.overdueInstallments',
   'commercial.paymentSummary.nextInstallmentAmount',
   'commercial.paymentSummary.nextInstallmentDate',
+  'commercial.paymentSummary.planStatus',
+  'commercial.paymentSummary.paymentPlanId',
 ] as const;
+
+/**
+ * Payment fields VISIBLE to buyer (SPEC-257C — allow list).
+ * Everything else in PAYMENT_SUMMARY_FIELDS is auto-blocked.
+ * Add new fields here ONLY if buyer should see them.
+ */
+const BUYER_VISIBLE_PAYMENT_FIELDS: ReadonlySet<string> = new Set([
+  'commercial.paymentSummary.remainingAmount',
+  'commercial.paymentSummary.nextInstallmentAmount',
+  'commercial.paymentSummary.nextInstallmentDate',
+  'commercial.paymentSummary.overdueInstallments',
+]);
+
+/**
+ * Payment fields BLOCKED for buyer — derived from PAYMENT_SUMMARY_FIELDS minus visible set.
+ * SSOT: new fields added to PAYMENT_SUMMARY_FIELDS are auto-blocked for buyer.
+ * Excludes 'commercial.paymentSummary' (parent key that blocks entire object).
+ */
+const BUYER_BLOCKED_PAYMENT_FIELDS: readonly string[] = PAYMENT_SUMMARY_FIELDS
+  .filter(f => f !== 'commercial.paymentSummary' && !BUYER_VISIBLE_PAYMENT_FIELDS.has(f));
+
+/**
+ * SPEC-257D: Complaint triage prompt — shared across buyer/owner/tenant (SSOT).
+ * Defined ONCE, appended to each customer role's promptDescription.
+ */
+const COMPLAINT_TRIAGE_PROMPT = `
+ΠΑΡΑΠΟΝΑ/ΠΡΟΒΛΗΜΑΤΑ:
+Αν αναφέρει πρόβλημα στο ακίνητο, χρησιμοποίησε create_complaint_task.
+Σοβαρότητα: urgent (υγρασία/πλημμύρα/ρωγμή/διαρροή/ηλεκτρολογικό/θέρμανση/ασανσέρ) | normal (φθορά/υλικό/πόρτα/παράθυρο/βαφή) | low (αισθητικό/γείτονας/θόρυβος/εκτός αρμοδιότητας)
+Μετά τη δημιουργία: urgent → "✅ Καταγράφηκε ως ΕΠΕΙΓΟΝ. Θα ειδοποιηθεί αμέσως ο υπεύθυνος." | normal/low → "✅ Λάβαμε το μήνυμά σας. Θα εξεταστεί σύντομα."`;
+
+/**
+ * SPEC-257E: Contact update prompt — shared across buyer/owner/tenant (SSOT).
+ * Defined ONCE, appended to each customer role's promptDescription.
+ */
+const CONTACT_UPDATE_PROMPT = `
+ΕΝΗΜΕΡΩΣΗ ΣΤΟΙΧΕΙΩΝ ΕΠΙΚΟΙΝΩΝΙΑΣ:
+Μπορείς να ΠΡΟΣΘΕΣΕΙΣ νέο τηλέφωνο, email ή social media χρησιμοποιώντας append_contact_info.
+ΔΕΝ μπορείς να ΔΙΑΓΡΑΨΕΙΣ ή ΤΡΟΠΟΠΟΙΗΣΕΙΣ υπάρχοντα στοιχεία — μόνο ο διαχειριστής.
+Παράδειγμα: "πρόσθεσε 6974050025 ως εργασία" → append_contact_info(fieldType:"phone", value:"6974050025", label:"εργασία")`;
+
+/**
+ * SPEC-257F: File delivery prompt — shared across buyer/owner/tenant (SSOT).
+ * Defined ONCE, appended to each customer role's promptDescription.
+ */
+const FILE_DELIVERY_PROMPT = `
+ΑΠΟΣΤΟΛΗ ΑΡΧΕΙΩΝ (φωτογραφίες, κατόψεις, έγγραφα):
+Μπορείς να στείλεις αρχεία στον χρήστη χρησιμοποιώντας deliver_file_to_chat.
+- Φωτογραφίες unit: deliver_file_to_chat(sourceType:"unit_photo", sourceId:"<unitId>", caption:null)
+- Κάτοψη: Πρώτα ψάξε floorplans collection → deliver_file_to_chat(sourceType:"floorplan", sourceId:"<floorplanId>", caption:null)
+- Έγγραφα: Πρώτα ψάξε files collection → deliver_file_to_chat(sourceType:"file", sourceId:"<fileId>", caption:null)
+ΣΗΜΑΝΤΙΚΟ: Μπορείς να στείλεις ΜΟΝΟ αρχεία που ανήκουν στα δικά units του χρήστη.`;
+
+/**
+ * SPEC-257G: Knowledge base prompt — shared across buyer/owner/tenant (SSOT).
+ * Defined ONCE, appended to each customer role's promptDescription.
+ */
+const KNOWLEDGE_BASE_PROMPT = `
+ΔΙΑΔΙΚΑΣΙΕΣ & ΔΙΚΑΙΟΛΟΓΗΤΙΚΑ:
+Αν ρωτήσει για δικαιολογητικά, συμβολαιογράφο, δάνειο, μεταβίβαση ή νομικές διαδικασίες → search_knowledge_base(query).
+Η απάντηση περιλαμβάνει: ποια δικαιολογητικά χρειάζονται, ποιος τα παρέχει, και ποια υπάρχουν ήδη στο σύστημα.
+Αν υπάρχουν διαθέσιμα έγγραφα, πρόσφερε να τα στείλεις (deliver_file_to_chat).`;
 
 /** All financial fields combined */
 const ALL_FINANCIAL_FIELDS = [
@@ -109,6 +175,9 @@ const CUSTOMER_COLLECTIONS = [
   COLLECTIONS.BUILDINGS,
   COLLECTIONS.DOCUMENTS,
   COLLECTIONS.APPOINTMENTS,
+  COLLECTIONS.TASKS,        // SPEC-257D: complaint task visibility (unit-scoped)
+  COLLECTIONS.FILES,        // SPEC-257F: file delivery (photos, documents)
+  COLLECTIONS.FLOORPLANS,   // SPEC-257F: floorplan delivery
 ] as const;
 
 // ============================================================================
@@ -174,6 +243,7 @@ CONFLICT DETECTION (overlap, ΟΧΙ μόνο exact match):
 Αν ο admin πει ναι → στείλε ειδοποίηση (email ή Telegram ανάλογα τι είναι διαθέσιμο).
 Αν ο admin πει όχι → τέλος.
 ΜΗΝ στέλνεις ειδοποίηση χωρίς έγκριση.`,
+    scopeLevel: 'project',
   },
 
   // ── ΕΠΙΒΛΕΠΩΝ ΜΗΧΑΝΙΚΟΣ — All technical data ──
@@ -186,6 +256,7 @@ CONFLICT DETECTION (overlap, ΟΧΙ μόνο exact match):
 - projects, buildings, units, construction_phases, construction_tasks
 - documents, μετρήσεις, tasks, ραντεβού
 ΑΠΑΓΟΡΕΥΕΤΑΙ: τιμές πώλησης, πληρωμές, leads, εσωτερικά κόστη/κέρδη, δεδομένα άλλων έργων.`,
+    scopeLevel: 'project',
   },
 
   // ── ΕΡΓΟΛΑΒΟΣ — Construction-focused ──
@@ -204,6 +275,7 @@ CONFLICT DETECTION (overlap, ΟΧΙ μόνο exact match):
 ΠΡΟΣΒΑΣΗ: Κατασκευαστικά δεδομένα των συνδεδεμένων έργων:
 - construction_phases, construction_tasks, documents, tasks
 ΑΠΑΓΟΡΕΥΕΤΑΙ: ακίνητα (units), τιμές, πληρωμές, contacts πελατών, leads.`,
+    scopeLevel: 'project',
   },
 
   // ── ΑΡΧΙΤΕΚΤΟΝΑΣ / ΜΗΧΑΝΙΚΟΣ — Shared base config ──
@@ -224,6 +296,7 @@ CONFLICT DETECTION (overlap, ΟΧΙ μόνο exact match):
 - ΜΟΝΟ VIEW: construction_phases (τίτλος, κατάσταση)
 - ΟΧΙ: construction_tasks, contacts, κόστη, πληρωμές, μετρήσεις
 ΜΟΝΟ δεδομένα συνδεδεμένων έργων.`,
+    scopeLevel: 'project',
   },
 
   // engineer = same access as architect (DRY: reference same collections/fields)
@@ -243,22 +316,30 @@ CONFLICT DETECTION (overlap, ΟΧΙ μόνο exact match):
   buyer: {
     label: 'Αγοραστής',
     allowedCollections: CUSTOMER_COLLECTIONS,
-    blockedFields: COMMERCIAL_PRICING_FIELDS,
+    blockedFields: [
+      ...COMMERCIAL_PRICING_FIELDS,
+      ...BUYER_IDENTITY_FIELDS,
+      ...BUYER_BLOCKED_PAYMENT_FIELDS,
+    ],
     promptDescription: `ΡΟΛΟΣ: ΑΓΟΡΑΣΤΗΣ/ΠΕΛΑΤΗΣ
 ΒΑΣΙΚΗ ΠΡΟΣΒΑΣΗ:
-- ΝΑΙ: units (μόνο τα δικά), buildings (βασικά), documents (δικά), ραντεβού
-- ΟΧΙ: construction_phases, construction_tasks, contacts, εσωτερικά δεδομένα`,
+- ΝΑΙ: units (μόνο τα δικά), buildings (βασικά), documents (δικά), ραντεβού, tasks (δικά)
+- ΠΛΗΡΩΜΕΣ: υπόλοιπο οφειλής, επόμενη δόση (ποσό + ημ/νία), ληξιπρόθεσμες
+- ΟΧΙ: τιμές λίστας, αναλυτικά ποσά πληρωμών, construction, contacts, εσωτερικά${COMPLAINT_TRIAGE_PROMPT}${CONTACT_UPDATE_PROMPT}${FILE_DELIVERY_PROMPT}${KNOWLEDGE_BASE_PROMPT}`,
+    scopeLevel: 'unit',
   },
 
   // owner = same as buyer but without price redaction
   owner: {
     label: 'Ιδιοκτήτης',
     allowedCollections: CUSTOMER_COLLECTIONS,
-    blockedFields: [],
+    blockedFields: ['commercial.askingPrice'],
     promptDescription: `ΡΟΛΟΣ: ΙΔΙΟΚΤΗΤΗΣ
 ΒΑΣΙΚΗ ΠΡΟΣΒΑΣΗ:
-- ΝΑΙ: units (μόνο τα δικά), buildings (βασικά), documents, ραντεβού
-- ΟΧΙ: κατασκευαστικά, contacts, leads, εσωτερικά δεδομένα`,
+- ΝΑΙ: units (μόνο τα δικά), buildings (βασικά), documents, ραντεβού, tasks (δικά)
+- ΠΛΗΡΩΜΕΣ: πλήρης πρόσβαση — τελική τιμή, υπόλοιπο, δόσεις, αναλυτικά ποσά
+- ΟΧΙ: τιμή λίστας, κατασκευαστικά, contacts, leads, εσωτερικά${COMPLAINT_TRIAGE_PROMPT}${CONTACT_UPDATE_PROMPT}${FILE_DELIVERY_PROMPT}${KNOWLEDGE_BASE_PROMPT}`,
+    scopeLevel: 'unit',
   },
 
   // ── ΕΝΟΙΚΙΑΣΤΗΣ — Minimum access ──
@@ -269,11 +350,12 @@ CONFLICT DETECTION (overlap, ΟΧΙ μόνο exact match):
       COLLECTIONS.BUILDINGS,
       COLLECTIONS.APPOINTMENTS,
     ],
-    blockedFields: [...COMMERCIAL_PRICING_FIELDS, ...BUYER_IDENTITY_FIELDS],
+    blockedFields: [...COMMERCIAL_PRICING_FIELDS, ...BUYER_IDENTITY_FIELDS, ...PAYMENT_SUMMARY_FIELDS],
     promptDescription: `ΡΟΛΟΣ: ΕΝΟΙΚΙΑΣΤΗΣ
 ΕΛΑΧΙΣΤΗ ΠΡΟΣΒΑΣΗ:
-- ΝΑΙ: units (μόνο το δικό), buildings (βασικά), ραντεβού
-- ΟΧΙ: κατασκευαστικά, έγγραφα, contacts, τιμές`,
+- ΝΑΙ: units (μόνο το δικό), buildings (βασικά), ραντεβού, tasks (δικά)
+- ΟΧΙ: κατασκευαστικά, έγγραφα, contacts, τιμές, πληρωμές${COMPLAINT_TRIAGE_PROMPT}${CONTACT_UPDATE_PROMPT}${FILE_DELIVERY_PROMPT}${KNOWLEDGE_BASE_PROMPT}`,
+    scopeLevel: 'unit',
   },
 
 } as const satisfies Record<string, RoleAccessConfig>;
@@ -292,6 +374,7 @@ export const UNLINKED_ACCESS: RoleAccessConfig = {
 - Δώσεις πληροφορίες ακινήτων (units: τ.μ., τιμή, τύπος)
 - Κλείσεις ραντεβού
 ΜΗΝ δίνεις πρόσβαση σε εσωτερικά δεδομένα (φάσεις, εργασίες, μετρήσεις, contacts).`,
+  scopeLevel: 'project',
 };
 
 /** Unknown user = same access as unlinked (single reference, zero duplication) */

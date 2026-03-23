@@ -63,6 +63,7 @@ import { contactLinkConverter, fileLinkConverter } from '@/lib/firestore/convert
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
+import { generateContactLinkId } from '@/lib/contact-link-id';
 const logger = createModuleLogger('AssociationService');
 import type {
   ContactLink,
@@ -750,8 +751,7 @@ export class AssociationService {
     targetEntityId?: string,
     role?: string
   ): string {
-    const base = `cl_${contactId}_${targetEntityType}_${targetEntityId}`;
-    return role ? `${base}_${role}` : base;
+    return generateContactLinkId(contactId, targetEntityType, targetEntityId, role);
   }
 
   /**

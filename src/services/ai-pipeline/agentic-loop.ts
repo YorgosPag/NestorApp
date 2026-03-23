@@ -139,8 +139,19 @@ function buildRoleDescription(ctx: AgenticContext): string {
 
   // Resolve access from SSoT matrix
   const accessConfig = resolveAccessConfig(roles);
-  const projectIdList = linkedProjectIds.join(', ');
 
+  // SPEC-257B: Unit-scoped roles show linked units instead of projects
+  const linkedUnitIds = contact.linkedUnitIds ?? [];
+  if (accessConfig.scopeLevel === 'unit' && linkedUnitIds.length > 0) {
+    const unitIdList = linkedUnitIds.join(', ');
+    return `Ο χρήστης είναι ο/η ${contact.displayName} (${contact.primaryPersona ?? 'επαφή'}).
+Συνδεδεμένα units: ${unitIdList}
+
+${accessConfig.promptDescription}
+ΠΕΡΙΟΡΙΣΜΟΣ: ΜΟΝΟ δεδομένα που ανήκουν στα παραπάνω units. ΜΗΝ ψάχνεις άλλα units.`;
+  }
+
+  const projectIdList = linkedProjectIds.join(', ');
   return `Ο χρήστης είναι ο/η ${contact.displayName} (${contact.primaryPersona ?? 'επαφή'}).
 Συνδεδεμένα έργα: ${projectIdList}
 

@@ -266,6 +266,21 @@ export async function isSuperAdminFirebaseUid(
 }
 
 /**
+ * Get the first active super admin's Telegram chatId for notifications.
+ * SPEC-257D: Used by complaint triage to notify admin of urgent issues.
+ * Benefits from the same 5-min cache as all other resolver functions.
+ */
+export async function getAdminTelegramChatId(): Promise<string | null> {
+  const registry = await getRegistry();
+  if (!registry?.admins) return null;
+
+  const activeAdmin = registry.admins.find(
+    a => a.isActive && a.channels.telegram?.chatId
+  );
+  return activeAdmin?.channels.telegram?.chatId ?? null;
+}
+
+/**
  * Force-refresh the registry cache.
  * Useful after updating the registry document.
  */

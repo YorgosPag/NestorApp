@@ -5,92 +5,94 @@
 | **ADR** | ADR-257 (Customer AI Access Control) |
 | **Phase** | 5 of 7 |
 | **Priority** | MEDIUM |
-| **Status** | PENDING |
+| **Status** | IMPLEMENTED |
 | **Depends On** | SPEC-257B (buyer must be identified) |
+| **Implemented** | 2026-03-23 |
 
 ---
 
 ## Objective
 
-Ο buyer μπορεί να ΠΡΟΣΘΕΣΕΙ νέα στοιχεία επικοινωνίας (τηλέφωνο, email, social) αλλά ΟΧΙ να ΔΙΑΓΡΑΨΕΙ ή ΤΡΟΠΟΠΟΙΗΣΕΙ υπάρχοντα.
+Ο buyer/owner/tenant μπορεί να **ΠΡΟΣΘΕΣΕΙ** νέα στοιχεία επικοινωνίας (τηλέφωνο, email, social media) αλλά **ΟΧΙ** να ΔΙΑΓΡΑΨΕΙ ή ΤΡΟΠΟΠΟΙΗΣΕΙ υπάρχοντα.
 
-## Λογική (Append-Only)
+**Λογική**: Αποφυγή σεναρίου οφειλέτης αλλάζει τηλέφωνο → χάνεται επικοινωνία. Μόνο admin κάνει delete/edit.
 
-- Αποφυγή σεναρίου: οφειλέτης αλλάζει τηλέφωνο → χάνεται επικοινωνία
-- Μόνο ο admin κάνει delete/edit
-- Audit trail: κάθε προσθήκη καταγράφεται
+## Architecture Decision: Dedicated Tool `append_contact_info`
 
-## Files to Modify
+Η `firestore_write` είναι **admin-only**. Αντί να ανοίξουμε generic write, dedicated tool που:
+
+1. **ΟΧΙ contactId στα params** — server uses `ctx.contactMeta.contactId` (buyer edits ONLY own contact)
+2. **Server-side validation** — `isValidPhone()` + `isValidEmail()` (SSoT validators ADR-212/ADR-209)
+3. **Duplicate detection** — checks existing array by value before append
+4. **Proper typed objects** — constructs `PhoneInfo`/`EmailInfo`/`SocialMediaInfo` with correct enums
+5. **Audit trail** — via existing `auditWrite()` (mode: 'append')
+
+## Implementation Details
+
+### Tool Parameters (AI provides)
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `fieldType` | `'phone' \| 'email' \| 'social'` | Type of contact info |
+| `value` | string | Phone number, email, or username/URL |
+| `label` | string | Label: εργασία/σπίτι/κινητό (phone), εργασία/προσωπικό (email), platform name (social) |
+
+### Label → Type Mapping (static readonly, defined ONCE in executor)
+```
+Phone: εργασία→work, σπίτι→home, κινητό→mobile, fax→fax, default→mobile
+Email: εργασία→work, προσωπικό→personal, default→personal
+Social: facebook, instagram, linkedin, twitter, youtube, github, default→other
+```
+
+### Entry Construction (server-side)
+```typescript
+// Phone
+{ number: cleaned, type: 'mobile'|'work'|..., isPrimary: false }
+
+// Email
+{ email: normalized, type: 'personal'|'work'|'other', isPrimary: false }
+
+// Social
+{ platform: 'facebook'|..., username: value, url?: value (if valid URL) }
+```
+
+### Security
+- `isPrimary: false` always — buyer cannot change primary contact
+- Append-only: reads current array, appends new entry, writes full array back
+- No `FieldValue.arrayUnion()` — manual dedup by value (arrayUnion uses deep equality on objects)
+
+## Files Modified
 
 | File | Action | Details |
 |------|--------|---------|
-| `src/services/ai-pipeline/tools/agentic-tool-definitions.ts` | MODIFY | Νέο tool: `append_contact_info` |
-| `src/services/ai-pipeline/tools/agentic-tool-executor.ts` | MODIFY | Executor για append (arrayUnion) |
-| `src/config/ai-role-access-matrix.ts` | MODIFY | Buyer prompt: append instructions |
-| `src/services/ai-pipeline/agentic-loop.ts` | MODIFY | System prompt: "μπορείς να προσθέσεις, ΟΧΙ να διαγράψεις" |
+| `src/services/ai-pipeline/tools/agentic-tool-definitions.ts` | MODIFY | +`append_contact_info` tool definition |
+| `src/services/ai-pipeline/tools/agentic-tool-executor.ts` | MODIFY | +switch case, +label maps (static readonly), +`executeAppendContactInfo()` |
+| `src/config/ai-role-access-matrix.ts` | MODIFY | +`CONTACT_UPDATE_PROMPT` shared const, appended to 3 customer roles |
 
-## Implementation Steps
+## Existing Functions Reused (ZERO duplication)
 
-### Step 1: New tool definition
+- `isValidPhone()` — `@/lib/validation/phone-validation` (SSoT ADR-212)
+- `isValidEmail()` — `@/lib/validation/email-validation` (SSoT ADR-209)
+- `isValidUrl()` — `@/lib/validation/email-validation`
+- `this.auditWrite()` — executor audit method
+- `PhoneInfo`, `EmailInfo`, `SocialMediaInfo` — `@/types/contacts/contracts`
+- `COLLECTIONS.CONTACTS` — `firestore-collections.ts`
 
-```typescript
-{
-  name: 'append_contact_info',
-  description: 'Append new contact info (phone, email, social) to a contact. APPEND ONLY — cannot delete or modify existing entries.',
-  parameters: {
-    contactId: 'string',
-    fieldType: 'phone|email|social',
-    value: 'string (phone number, email address, or social URL)',
-    label: 'string? (optional label like "εργασία", "προσωπικό")',
-  }
-}
-```
+## Security Matrix
 
-### Step 2: Executor implementation
-
-```typescript
-// Use Firestore arrayUnion — atomic append, no duplicates
-const fieldMap = {
-  phone: 'phones',
-  email: 'emails',
-  social: 'socialMedia',
-};
-const arrayField = fieldMap[fieldType];
-const newEntry = { value, type: label ?? 'other', isPrimary: false };
-
-await db.collection('contacts').doc(contactId).update({
-  [arrayField]: FieldValue.arrayUnion(newEntry),
-  updatedAt: new Date().toISOString(),
-});
-```
-
-### Step 3: Security — Non-admin can ONLY append to OWN contact
-
-```typescript
-if (!ctx.isAdmin && ctx.contactMeta?.contactId !== contactId) {
-  return { success: false, error: 'Μπορείτε να ενημερώσετε μόνο τα δικά σας στοιχεία.' };
-}
-```
-
-### Step 4: Prompt guidance
-
-```
-ΕΝΗΜΕΡΩΣΗ ΣΤΟΙΧΕΙΩΝ ΕΠΙΚΟΙΝΩΝΙΑΣ:
-Ο buyer μπορεί να ΠΡΟΣΘΕΣΕΙ νέο τηλέφωνο, email, ή social media.
-ΔΕΝ μπορεί να ΔΙΑΓΡΑΨΕΙ ή να ΑΛΛΑΞΕΙ υπάρχοντα.
-Χρησιμοποίησε: append_contact_info(contactId, fieldType, value, label)
-```
-
-## Existing Functions to Reuse
-
-- `FieldValue.arrayUnion()` — Firestore atomic array append
-- `COLLECTIONS.CONTACTS` — in write whitelist
-- Contact schema: `phones[]`, `emails[]`, `socialMedia[]` arrays
+| Threat | Mitigation |
+|--------|------------|
+| Buyer updates another's contact | Server uses `ctx.contactMeta.contactId` — no AI input |
+| Buyer deletes entries | Tool is APPEND-ONLY — read + append + write |
+| Invalid phone/email | SSoT validators reject invalid format |
+| Duplicate entries | Check by value (cleaned/normalized) before append |
+| Buyer changes primary | `isPrimary: false` always — hardcoded |
 
 ## Acceptance Criteria
 
-- [ ] Buyer λέει "πρόσθεσε το 6974050025 ως εργασία" → appends στο phones[]
-- [ ] Buyer λέει "πρόσθεσε email test@gmail.com" → appends στο emails[]
-- [ ] Buyer ΔΕΝ μπορεί να αλλάξει υπάρχον τηλέφωνο
-- [ ] Buyer ΔΕΝ μπορεί να αλλάξει στοιχεία ΑΛΛΟΥ contact
-- [ ] Admin μπορεί να κάνει ΟΛΑ (append + edit + delete)
+- [x] Buyer "πρόσθεσε 6974050025 ως εργασία" → appends to phones[]
+- [x] Buyer "πρόσθεσε email test@gmail.com" → appends to emails[]
+- [x] Buyer "πρόσθεσε instagram @myuser" → appends to socialMedia[]
+- [x] Buyer ΔΕΝ μπορεί να αλλάξει υπάρχον τηλέφωνο (prompt says no)
+- [x] Buyer ΔΕΝ μπορεί να αλλάξει στοιχεία ΑΛΛΟΥ contact (server enforces)
+- [x] Duplicate phone → error "Το τηλέφωνο υπάρχει ήδη"
+- [x] Invalid phone → error with format hint

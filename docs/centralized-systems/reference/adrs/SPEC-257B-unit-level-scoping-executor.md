@@ -5,7 +5,7 @@
 | **ADR** | ADR-257 (Customer AI Access Control) |
 | **Phase** | 2 of 7 |
 | **Priority** | CRITICAL — security enforcement |
-| **Status** | PENDING |
+| **Status** | IMPLEMENTED (2026-03-23) |
 | **Depends On** | SPEC-257A (unit-level links must exist) |
 
 ---
@@ -82,11 +82,11 @@ if (role is buyer/owner/tenant && linkedUnitIds.length > 0) {
 
 ## Acceptance Criteria
 
-- [ ] Buyer queries units → sees ONLY their own unit(s)
-- [ ] Buyer queries documents → sees ONLY documents linked to their unit
-- [ ] Buyer can see parent building (no unit filter on buildings)
-- [ ] Admin still sees everything (bypass)
-- [ ] Supervisor/architect still scoped by project (unchanged)
+- [x] Buyer queries units → sees ONLY their own unit(s)
+- [x] Buyer queries documents → sees ONLY documents linked to their unit
+- [x] Buyer can see parent building (no unit filter on buildings)
+- [x] Admin still sees everything (bypass)
+- [x] Supervisor/architect still scoped by project (unchanged)
 
 ## Security Verification
 
@@ -94,4 +94,32 @@ if (role is buyer/owner/tenant && linkedUnitIds.length > 0) {
 Test: Buyer for unit A-1 queries: firestore_query("units", [])
 Expected: Returns ONLY unit A-1
 NOT: All units in project
+```
+
+---
+
+## Implementation Notes (2026-03-23)
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `types/ai-pipeline.ts` | Added `linkedUnitIds: string[]` to `ContactMeta` |
+| `contact-linker.ts` | Derives `linkedUnitIds` from projectRoles (entityType='unit') |
+| `telegram/handler.ts` | Passes `linkedUnitIds` to ContactMeta |
+| `ai-role-access-matrix.ts` | Added `scopeLevel: 'project' \| 'unit'` to `RoleAccessConfig` |
+| `agentic-tool-executor.ts` | Unit-level filter injection in `enforceRoleAccess()` |
+| `agentic-loop.ts` | System prompt shows linked units for unit-scoped roles |
+
+### Security Decision Tree
+
+```
+enforceRoleAccess():
+  1. Admin? → BYPASS
+  2. Collection not in allowedCollections? → DENY
+  3. scopeLevel='unit' AND linkedUnitIds.length > 0?
+     → units: inject `id IN [linkedUnitIds]`
+     → documents/payments: inject `unitId IN [linkedUnitIds]`
+     → buildings: allow (parent access)
+  4. Else → project-level: inject `projectId IN [linkedProjectIds]`
 ```

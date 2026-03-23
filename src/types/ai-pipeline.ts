@@ -402,6 +402,8 @@ export interface ContactMeta {
     entityType: string;
     entityId: string;
   }>;
+  /** Unit IDs from contact_links where targetEntityType='unit' (SPEC-257B) */
+  linkedUnitIds: string[];
 }
 
 // ============================================================================

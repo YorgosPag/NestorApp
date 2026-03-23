@@ -30,6 +30,8 @@ import type { PersonaData, ClientPersona } from '@/types/contacts/personas';
 import { validateContactForSale, isServiceContact } from '@/types/contacts/helpers';
 import type { Contact } from '@/types/contacts/contracts';
 import type { CommercialTransactionType } from '@/types/contacts/helpers';
+import type { PropertyOwnerRole } from '@/types/ownership-table';
+import { generateContactLinkId } from '@/lib/contact-link-id';
 import { getErrorMessage } from '@/lib/error-utils';
 import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
 import { extractIdFromUrl } from '@/lib/api/route-helpers';
@@ -271,6 +273,15 @@ export const PATCH = withStandardRateLimit(
           }
         }
 
+        // SPEC-257A: Detect cancellation state transition (used AFTER successful write)
+        const wasSoldOrReserved =
+          existing.commercialStatus === 'reserved' || existing.commercialStatus === 'sold';
+        const isNoLongerSoldOrReserved =
+          !!body.commercialStatus
+          && body.commercialStatus !== 'reserved'
+          && body.commercialStatus !== 'sold';
+        const isCancellation = wasSoldOrReserved && isNoLongerSoldOrReserved;
+
         // SPEC-256A: updatedAt + updatedBy injected by withVersionCheck
         const updateData: Record<string, unknown> = {};
 
@@ -362,21 +373,44 @@ export const PATCH = withStandardRateLimit(
         });
 
         // ================================================================
-        // AUTO-PERSONA: Activate "client" persona on buyer contact
+        // POST-WRITE SIDE EFFECTS (fire-and-forget, non-blocking)
+        // All side effects run AFTER successful Firestore write to avoid
+        // inconsistent state on write failure (version conflict, etc.)
         // ================================================================
         if (isCommercialTransaction) {
-          const buyerContactId =
-            (updateData.commercial as Record<string, unknown> | undefined)?.buyerContactId as string | null
-            ?? (body.commercial as Record<string, unknown> | undefined)?.buyerContactId as string | null;
+          const buyerContactId = (newCommercial?.buyerContactId as string | null) ?? null;
 
           if (buyerContactId) {
+            // AUTO-PERSONA: Activate "client" persona on buyer contact
             activateClientPersona(adminDb, buyerContactId).catch((err) => {
               logger.warn('Auto-persona activation failed (non-blocking)', {
                 buyerContactId,
                 error: getErrorMessage(err),
               });
             });
+
+            // SPEC-257A: Auto-create unit-level contact links
+            const ownersArr = newCommercial?.owners as
+              ReadonlyArray<{ contactId: string; role: PropertyOwnerRole }> | null ?? null;
+
+            autoCreateUnitContactLinks(adminDb, id, buyerContactId, ownersArr, ctx.companyId, ctx.uid)
+              .catch((err) => {
+                logger.warn('SPEC-257A: Auto-link failed (non-blocking)', {
+                  unitId: id,
+                  error: getErrorMessage(err),
+                });
+              });
           }
+        }
+
+        // SPEC-257A: Deactivate links on cancellation (AFTER successful write)
+        if (isCancellation) {
+          deactivateUnitContactLinks(adminDb, id, ctx.uid).catch((err) => {
+            logger.warn('SPEC-257A: Deactivate links failed (non-blocking)', {
+              unitId: id,
+              error: getErrorMessage(err),
+            });
+          });
         }
 
         // Entity audit trail (fire-and-forget)
@@ -517,4 +551,126 @@ async function activateClientPersona(
   });
 
   logger.info('Client persona auto-activated', { contactId });
+}
+
+// ============================================================================
+// SPEC-257A: Unit-Level Contact Links (Server-Side, Admin SDK)
+// ============================================================================
+
+/**
+ * Map PropertyOwnerRole (ADR-244) to contact_link role (ADR-032).
+ */
+function mapOwnerRoleToLinkRole(ownerRole: PropertyOwnerRole): string {
+  switch (ownerRole) {
+    case 'buyer':
+    case 'co_buyer':
+      return 'buyer';
+    case 'landowner':
+      return 'owner';
+    default:
+      return 'buyer';
+  }
+}
+
+/**
+ * Upsert a single unit-level contact link.
+ * Idempotent: active link → skip, inactive → reactivate, missing → create.
+ */
+async function upsertUnitContactLink(
+  db: FirebaseFirestore.Firestore,
+  contactId: string,
+  unitId: string,
+  role: string,
+  companyId: string,
+  userId: string,
+): Promise<void> {
+  const linkId = generateContactLinkId(contactId, 'unit', unitId, role);
+  const linkRef = db.collection(COLLECTIONS.CONTACT_LINKS).doc(linkId);
+  const existing = await linkRef.get();
+
+  if (existing.exists) {
+    const data = existing.data();
+    if (data?.status === 'active') return; // idempotent — already linked
+    // Reactivate inactive link
+    await linkRef.update({
+      status: 'active',
+      updatedBy: userId,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    logger.info('Reactivated unit contact link', { linkId });
+    return;
+  }
+
+  // Create new link
+  await linkRef.set({
+    id: linkId,
+    sourceWorkspaceId: companyId,
+    sourceContactId: contactId,
+    targetEntityType: 'unit',
+    targetEntityId: unitId,
+    role,
+    status: 'active',
+    createdAt: FieldValue.serverTimestamp(),
+    createdBy: userId,
+    reason: 'Auto-created on reservation/sale',
+  });
+  logger.info('Created unit contact link', { linkId, contactId, unitId, role });
+}
+
+/**
+ * Auto-create unit-level contact links for buyer + co-buyers.
+ * Fire-and-forget — called after successful reservation/sale.
+ */
+async function autoCreateUnitContactLinks(
+  db: FirebaseFirestore.Firestore,
+  unitId: string,
+  buyerContactId: string,
+  owners: ReadonlyArray<{ contactId: string; role: PropertyOwnerRole }> | null,
+  companyId: string,
+  userId: string,
+): Promise<void> {
+  // 1. Primary buyer link
+  await upsertUnitContactLink(db, buyerContactId, unitId, 'buyer', companyId, userId);
+
+  // 2. Co-buyers from owners[] (ADR-244)
+  if (owners?.length) {
+    for (const owner of owners) {
+      if (owner.contactId === buyerContactId) continue; // skip primary — already linked above
+      const linkRole = mapOwnerRoleToLinkRole(owner.role);
+      await upsertUnitContactLink(db, owner.contactId, unitId, linkRole, companyId, userId);
+    }
+  }
+}
+
+/**
+ * Deactivate all active unit-level contact links for a unit.
+ * Called when a reservation/sale is cancelled (soft delete — audit trail).
+ */
+async function deactivateUnitContactLinks(
+  db: FirebaseFirestore.Firestore,
+  unitId: string,
+  userId: string,
+): Promise<void> {
+  const linksSnap = await db.collection(COLLECTIONS.CONTACT_LINKS)
+    .where('targetEntityType', '==', 'unit')
+    .where('targetEntityId', '==', unitId)
+    .where('status', '==', 'active')
+    .get();
+
+  if (linksSnap.empty) return;
+
+  const batch = db.batch();
+  for (const linkDoc of linksSnap.docs) {
+    batch.update(linkDoc.ref, {
+      status: 'inactive',
+      updatedBy: userId,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  }
+  await batch.commit();
+
+  logger.info('Deactivated unit contact links on cancellation', {
+    unitId,
+    count: linksSnap.size,
+  });
 }
