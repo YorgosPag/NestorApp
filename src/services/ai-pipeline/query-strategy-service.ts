@@ -16,6 +16,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { generateQueryStrategyDocId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -60,7 +61,7 @@ export async function recordQueryStrategy(params: {
 }): Promise<void> {
   try {
     const db = getAdminFirestore();
-    const docId = `${params.collection}_${params.failedFilters.sort().join('_')}`;
+    const docId = generateQueryStrategyDocId(params.collection, params.failedFilters);
 
     const docRef = db.collection(COLLECTIONS.AI_QUERY_STRATEGIES).doc(docId);
     const existing = await docRef.get();

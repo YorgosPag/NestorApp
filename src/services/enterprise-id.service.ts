@@ -171,6 +171,8 @@ export const ENTERPRISE_ID_PREFIXES = {
   // AI LEARNING
   // ==========================================================================
   LEARNED_PATTERN: 'lp',
+  /** AI Query Strategy Memory — deterministic composite key per collection/filters */
+  QUERY_STRATEGY: 'qstr',
 
   // ==========================================================================
   // BANKING
@@ -1148,6 +1150,16 @@ export class EnterpriseIdService {
   }
 
   /**
+   * 🧠 Generate AI Query Strategy Document ID (deterministic composite key)
+   * Format: qstr_{collection}_{sortedFailedFilters}
+   * One document per collection/filter combo — upsert pattern with setDoc/update.
+   */
+  generateQueryStrategyDocId(collection: string, failedFilters: string[]): string {
+    const filterKey = [...failedFilters].sort().join('_');
+    return `${ENTERPRISE_ID_PREFIXES.QUERY_STRATEGY}_${collection}_${filterKey}`;
+  }
+
+  /**
    * 🤝 Generate Brokerage Agreement ID
    * Format: brk_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
    */
@@ -1463,6 +1475,12 @@ export const generateBankAccountId = () => enterpriseIdService.generateBankAccou
 // =============================================================================
 export const generateDebtMaturityId = () => enterpriseIdService.generateDebtMaturityId();
 export const generateBudgetVarianceId = () => enterpriseIdService.generateBudgetVarianceId();
+
+// =============================================================================
+// AI QUERY STRATEGY (deterministic composite key)
+// =============================================================================
+export const generateQueryStrategyDocId = (collection: string, failedFilters: string[]) =>
+  enterpriseIdService.generateQueryStrategyDocId(collection, failedFilters);
 
 // =============================================================================
 // OPTIMISTIC & TEMPORARY
