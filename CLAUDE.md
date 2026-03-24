@@ -57,24 +57,28 @@ SOS. SOS. N.7 ΑΔΙΑΠΡΑΓΜΑΤΕΥΤΟ — GOOGLE-LEVEL QUALITY:
 - Optimistic updates, proper state management, zero race conditions
 - Αν η πρώτη λύση δεν είναι Google-level → μην την κάνεις commit, ξαναγράψε τη σωστά
 - Παραδείγματα: Google Docs auto-save, Gmail instant actions, Google Contacts patterns
-SOS. SOS. N.8 ΑΞΙΟΛΟΓΗΣΗ ORCHESTRATOR vs SINGLE AGENT (ADR-261):
-**Πριν ξεκινήσεις ΚΑΘΕ εργασία**, αξιολόγησε αν αξίζει ο Multi-Agent Orchestrator:
+SOS. SOS. N.8 ΑΞΙΟΛΟΓΗΣΗ ΕΡΓΑΣΙΑΣ — ΤΡΟΠΟΣ ΕΚΤΕΛΕΣΗΣ (ADR-261):
+**Πριν ξεκινήσεις ΚΑΘΕ εργασία**, αξιολόγησε τον σωστό τρόπο εκτέλεσης:
 
-| Κριτήριο | Μόνος μου (single agent) | Orchestrator |
-|----------|--------------------------|--------------|
-| Αρχεία | 1-4 αρχεία | 5+ αρχεία |
-| Τομείς | 1 τομέας (π.χ. μόνο frontend) | 2+ τομείς (frontend + backend + docs) |
-| Τύπος | Bugfix, μικρή αλλαγή, refactor ενός αρχείου | Νέο feature, cross-cutting refactoring |
+| Κριτήριο | Απλή εκτέλεση (χωρίς plan) | Plan Mode πρώτα | Orchestrator (πολλοί agents) |
+|----------|---------------------------|-----------------|------------------------------|
+| Αρχεία | 1-2 αρχεία | 3-5 αρχεία | 5+ αρχεία |
+| Τομείς | 1 τομέας | 1-2 τομείς | 2+ τομείς |
+| Τύπος | Bugfix, μικρή αλλαγή | Νέο feature, refactor πολλών αρχείων | Cross-cutting feature, μεγάλο refactoring |
+| Ρίσκο | Χαμηλό — ξέρω τι κάνω | Μέτριο — χρειάζεται στρατηγική | Υψηλό — πολλά κομμάτια πρέπει να δέσουν |
 
-**Αν ο orchestrator αξίζει** → ΠΡΙΝ ξεκινήσεις, ενημέρωσε τον Γιώργο:
+**Λογική αξιολόγησης:**
+1. **Απλή εκτέλεση** → Προχώρα αμέσως, μην ρωτάς
+2. **Plan Mode** → Μπες μόνος σου σε plan mode, δείξε τι θα κάνεις, περίμενε έγκριση
+3. **Orchestrator** → Ενημέρωσε τον Γιώργο ΠΡΩΤΑ:
 ```
 Αυτό το task αγγίζει ~X αρχεία σε Y τομείς.
-Πρόταση: Χρησιμοποίησε orchestrator (~ZK tokens, Nx).
-Θέλεις orchestrator ή να το κάνω μόνος μου;
+Πρόταση: Orchestrator (~ZK tokens, Nx) ή Plan Mode;
 ```
 - Αν πει "orchestrator" → `npx tsx scripts/orchestrator/index.ts "task"`
-- Αν πει "μόνος σου" ή δεν απαντήσει → προχώρα κανονικά
+- Αν πει "plan" ή "μόνος σου" → Plan Mode ή απλή εκτέλεση
 - **ΜΗΝ τρέχεις orchestrator χωρίς έγκριση Γιώργου** (καταναλώνει ~2.5-3.5x tokens)
+- **Plan Mode μπαίνεις ΜΟΝΟΣ ΣΟΥ** όταν χρειάζεται — δεν χρειάζεται έγκριση
 
 SOS. SOS. N.9 CONTEXT HEALTH INDICATOR — ΥΠΟΧΡΕΩΤΙΚΟ ΣΤΟ ΤΕΛΟΣ ΚΑΘΕ ΕΡΓΑΣΙΑΣ:
 **Μετά από ΚΑΘΕ ολοκληρωμένη εργασία**, εμφάνισε context indicator:
