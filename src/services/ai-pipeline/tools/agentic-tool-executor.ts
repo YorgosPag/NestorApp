@@ -1105,6 +1105,12 @@ export class AgenticToolExecutor {
     // ── 7. Audit trail ──
     await this.auditWrite(ctx, COLLECTIONS.CONTACTS, contact.contactId, 'append', updatePayload);
 
+    // ── 8. UI sync signal (server→client bridge) ──
+    const { emitContactSyncSignal } = await import(
+      '@/services/ai-pipeline/shared/contact-lookup'
+    );
+    emitContactSyncSignal('CONTACT_UPDATED', contact.contactId, ctx.companyId);
+
     logger.info('Contact info appended', {
       contactId: contact.contactId,
       fieldType,

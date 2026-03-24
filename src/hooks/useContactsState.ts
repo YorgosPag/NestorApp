@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { Contact } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
@@ -13,6 +13,9 @@ import { RealtimeService, type ContactUpdatedPayload, type ContactCreatedPayload
 import { createModuleLogger } from '@/lib/telemetry';
 // 🔐 ENTERPRISE: Defense-in-depth — auth guard (same pattern as useRealtimeBuildings)
 import { useAuth } from '@/hooks/useAuth';
+// 🔔 Server→Client bridge: detect AI agent writes via signal document
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
+import type { DocumentData } from 'firebase/firestore';
 
 const logger = createModuleLogger('useContactsState');
 
@@ -180,6 +183,51 @@ export function useContactsState() {
 
     return unsubscribe;
   }, []);
+
+  // 🔔 Layer 1: Tab visibility — refresh contacts when user returns to the tab
+  // Covers: User sends Telegram command → switches back to browser
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        logger.info('Tab became visible — refreshing contacts');
+        forceDataRefresh();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [forceDataRefresh]);
+
+  // 🔔 Layer 2: Firestore signal bridge — detect server-side AI agent writes
+  // Server writes to config/ui_sync_signal after contact create/update → client picks up
+  const signalInitialized = useRef(false);
+  useEffect(() => {
+    if (authLoading || !user) return;
+
+    const unsub = firestoreQueryService.subscribeDoc<DocumentData>(
+      'CONFIG',
+      'ui_sync_signal',
+      (doc) => {
+        // Skip the initial snapshot (first load — not a real signal)
+        if (!signalInitialized.current) {
+          signalInitialized.current = true;
+          return;
+        }
+        if (doc?.source === 'ai_agent') {
+          logger.info('AI agent sync signal received', {
+            action: doc.action,
+            entityId: doc.entityId,
+          });
+          forceDataRefresh();
+        }
+      },
+      (err) => logger.warn('Signal subscription error', { error: err.message })
+    );
+
+    return () => {
+      unsub();
+      signalInitialized.current = false;
+    };
+  }, [user, authLoading, forceDataRefresh]);
 
   // Effect to handle initial contact selection from URL or default
   useEffect(() => {

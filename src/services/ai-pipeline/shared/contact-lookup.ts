@@ -127,7 +127,7 @@ export async function findContactByEmail(
  * Strips whitespace, dashes, dots, parentheses, and Greek country code (+30 / 0030).
  */
 function normalizePhone(phone: string): string {
-  let normalized = phone.replace(/[\s\-.\(\)]/g, '');
+  let normalized = phone.replace(/[\s\-.()]/g, '');
   if (normalized.startsWith('+30')) normalized = normalized.slice(3);
   if (normalized.startsWith('0030')) normalized = normalized.slice(4);
   return normalized;
@@ -827,8 +827,49 @@ export async function createContactServerSide(
     createdBy: params.createdBy,
   });
 
+  // 🔔 Signal UI to refresh contacts (server→client bridge)
+  emitContactSyncSignal('CONTACT_CREATED', contactId, params.companyId);
+
   return {
     contactId,
     displayName,
   };
+}
+
+// ============================================================================
+// UI SYNC SIGNAL — SERVER→CLIENT BRIDGE (ADR-227 Extension)
+// ============================================================================
+
+type ContactSyncAction = 'CONTACT_CREATED' | 'CONTACT_UPDATED' | 'CONTACT_DELETED';
+
+/**
+ * Write a sync signal to `config/ui_sync_signal` so the client's onSnapshot
+ * picks up server-side contact mutations and triggers a UI refresh.
+ *
+ * Uses Admin SDK (bypasses Firestore security rules).
+ * Client subscribes via `firestoreQueryService.subscribeDoc('CONFIG', 'ui_sync_signal')`.
+ *
+ * Fire-and-forget — failure is non-blocking (the primary Firestore onSnapshot
+ * is the main mechanism; this is defense-in-depth).
+ */
+export function emitContactSyncSignal(
+  action: ContactSyncAction,
+  entityId: string,
+  companyId: string
+): void {
+  try {
+    const db = getAdminFirestore();
+    // Fire-and-forget: don't await — UI sync is best-effort, not critical path
+    void db.collection(COLLECTIONS.CONFIG).doc('ui_sync_signal').set({
+      action,
+      entityId,
+      companyId,
+      timestamp: FieldValue.serverTimestamp(),
+      source: 'ai_agent',
+    }).catch(err => {
+      logger.warn('Failed to emit contact sync signal', { error: getErrorMessage(err) });
+    });
+  } catch {
+    // Non-blocking — if Admin SDK isn't available, skip silently
+  }
 }

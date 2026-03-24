@@ -26,6 +26,7 @@ import {
   removeContactField,
   getContactById,
   getContactMissingFields,
+  emitContactSyncSignal,
   type ContactNameSearchResult,
 } from '../../shared/contact-lookup';
 import { sendChannelReply, extractChannelIds } from '../../shared/channel-reply-dispatcher';
@@ -358,6 +359,7 @@ export class AdminUpdateContactModule implements IUCModule {
       if (actionMode === 'remove') {
         // ── REMOVE mode ──
         await removeContactField(contactId, field, adminName);
+        emitContactSyncSignal('CONTACT_UPDATED', contactId, ctx.companyId);
         sideEffects.push(`contact_field_removed:${contactId}:${field}`);
 
         logger.info('UC-016 EXECUTE: Contact field removed', {
@@ -370,6 +372,7 @@ export class AdminUpdateContactModule implements IUCModule {
       } else {
         // ── SET mode ──
         await updateContactField(contactId, field, value!, adminName);
+        emitContactSyncSignal('CONTACT_UPDATED', contactId, ctx.companyId);
         sideEffects.push(`contact_updated:${contactId}:${field}`);
 
         logger.info('UC-016 EXECUTE: Contact field updated', {
