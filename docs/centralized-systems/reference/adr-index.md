@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 243 ADRs + 18 SPECs (242A-E, 245B3, 249A-C, 255A-F, 256A-C) | Last Updated: 2026-03-20
+**📊 Stats**: 251 ADRs | Last Updated: 2026-03-24
 
 ---
 
@@ -19,16 +19,16 @@
 | 🎨 **UI Components** | 12 | [View](#ui-components) |
 | 🎨 **Design System** | 7 | [View](#design-system) |
 | 🖼️ **Canvas & Rendering** | 39 | [View](#canvas-rendering) |
-| 📊 **Data & State** | 11 | [View](#data-state) |
+| 📊 **Data & State** | 12 | [View](#data-state) |
 | ✏️ **Drawing System** | 16 | [View](#drawing-system) |
-| 📂 **Entity Systems** | 14 | [View](#entity-systems) |
+| 📂 **Entity Systems** | 15 | [View](#entity-systems) |
 | 🔧 **Tools & Keyboard** | 8 | [View](#tools-keyboard) |
 | 🔍 **Filters & Search** | 1 | [View](#filters-search) |
-| 🔒 **Security & Auth** | 11 | [View](#security-auth) |
+| 🔒 **Security & Auth** | 8 | [View](#security-auth) |
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 63 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 69 | [View](#uncategorized) |
 
 ---
 
@@ -261,49 +261,31 @@
 | **ADR-235** | Πίνακας Ποσοστών Συνιδιοκτησίας (Ownership Percentage Table) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-235-ownership-percentage-table.md) |
 | **ADR-236** | Multi-Level Property Management (Πολυεπίπεδη Διαχείριση Ακινήτων) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-236-multi-level-property-management.md) |
 | **ADR-237** | Polygon Overlay Bridge (DXF Viewer → Δημόσια Σελίδα Ακινήτων) | ✅ ✅ IMPLEMENTED (4/4 SPECs complete) | 2026-03-16 | Canvas & Rendering / Property Management | [📄](./adrs/ADR-237-polygon-overlay-bridge.md) |
-| **ADR-238** | Entity Creation Centralization | 📋 PLANNING | 2026-03-17 | Entity Systems | [📄](./adrs/ADR-238-entity-creation-centralization.md) |
-| **ADR-239** | Entity Linking Centralization | ✅ IMPLEMENTED | 2026-03-17 | Entity Systems | [📄](./adrs/ADR-239-entity-linking-centralization.md) |
-| **ADR-241** | Fullscreen Container Centralization | ✅ IMPLEMENTED | 2026-03-18 | UI Components | [📄](./adrs/ADR-241-fullscreen-container-centralization.md) |
-| **ADR-242** | Smart Financial Intelligence Suite — Enterprise Features for InterestCostDialog | 🟡 IN PROGRESS (A✅B✅C✅D✅E🟡) | 2026-03-18 | Entity Systems / Sales & Finance | [📄](./adrs/ADR-242-smart-financial-intelligence-suite.md) |
-| ↳ SPEC-242A | Sensitivity Analysis & DSCR Stress Testing | ✅ IMPLEMENTED | 2026-03-18 | — | [📄](./adrs/specs/SPEC-242A-sensitivity-dscr.md) |
-| ↳ SPEC-242B | Construction Loan Draw Schedule & Interest Reserve | ✅ IMPLEMENTED | 2026-03-18 | — | [📄](./adrs/specs/SPEC-242B-draw-schedule.md) |
-| ↳ SPEC-242C | Portfolio Dashboard & Debt Maturity Wall | ✅ IMPLEMENTED | 2026-03-18 | — | [📄](./adrs/specs/SPEC-242C-portfolio-dashboard.md) |
-| ↳ SPEC-242D | Monte Carlo Simulation & Equity Waterfall | ✅ IMPLEMENTED | 2026-03-18 | — | [📄](./adrs/specs/SPEC-242D-monte-carlo-waterfall.md) |
-| ↳ SPEC-242E | Forward Curves, Hedging Simulator & NL Financial Query | 🟡 SESSION 1/2 (Curves+Hedging done, NL Query pending) | 2026-03-18 | — | [📄](./adrs/specs/SPEC-242E-forward-curves-hedging-ai.md) |
-| **ADR-243** | Centralized Firestore→API Mappers (SSoT) | ✅ IMPLEMENTED | 2026-03-19 | Entity Systems | — |
-| **ADR-243** | Custom MCP Server — Firestore + Firebase Storage Access for Claude Code (v1.1.0: 15 tools) | ✅ IMPLEMENTED | 2026-03-19 | Infrastructure | [📄](./adrs/ADR-243-firestore-mcp-server.md) |
-| **ADR-244** | Role Management Admin Console — RBAC UI for User & Permission Management | 📋 PROPOSED | 2026-03-19 | Security & Auth | [📄](./adrs/ADR-244-role-management-admin-console.md) |
-| **ADR-245** | API Routes Centralization — Zero Hardcoded Endpoints | ✅ PHASE_A_COMPLETE | 2026-03-19 | Infrastructure | [📄](./adrs/ADR-245-api-routes-centralization.md) |
-| **SPEC-245B3** | Hardcoded Strings Centralization — Doc IDs, Field Names, Status Values | ✅ IMPLEMENTED | 2026-03-19 | Infrastructure | [📄](./adrs/specs/SPEC-245B3-hardcoded-strings-centralization.md) |
-| **ADR-246** | Universal Firestore→API Mapper Centralization (27+ scattered → 1 SSoT) | ✅ APPROVED | 2026-03-19 | Data Access Layer / Entity Systems | [📄](./adrs/ADR-246-universal-firestore-mapper-centralization.md) |
-| **ADR-247** | Entity Relationship Integrity Audit (5 findings, 6 protected areas) | ✅ APPROVED | 2026-03-19 | Entity Systems / Data Integrity | [📄](./adrs/ADR-247-entity-relationship-integrity-audit.md) |
-| **ADR-248** | Centralized Auto-Save System (Google-Level) — 8+ boilerplate patterns → 1 hook | ✅ IMPLEMENTED | 2026-03-19 | UI / State Management / Data Persistence | [📄](./adrs/ADR-248-centralized-auto-save.md) |
-| **ADR-249** | Comprehensive Server-Side Integrity Audit (8 findings, P0/P1/P2 roadmap) | ✅ DOCUMENTED | 2026-03-19 | Entity Systems / Data Integrity / Security | [📄](./adrs/ADR-249-comprehensive-server-integrity-audit.md) |
-| ↳ SPEC-249A | Critical Server Guards (Invoice Immutability, Field Locking, Floor Uniqueness) | 📋 PENDING | 2026-03-19 | — | [📄](./adrs/specs/SPEC-249A-critical-server-guards.md) |
-| ↳ SPEC-249B | Name Cascade & Data Quality (buyerName, contactName, Cross-Company) | 📋 PENDING | 2026-03-19 | — | [📄](./adrs/specs/SPEC-249B-name-cascade-data-quality.md) |
-| ↳ SPEC-249C | Defense in Depth (unitCoverage Drift, Installment Sum) | 📋 PENDING | 2026-03-19 | — | [📄](./adrs/specs/SPEC-249C-defense-in-depth.md) |
-| **ADR-250** | Codebase Audit Findings — Security, Indexes, Centralization | 📋 DOCUMENTED | 2026-03-19 | Infrastructure / Security / Data Integrity | [📄](./adrs/ADR-250-codebase-audit-findings.md) |
-| **ADR-251** | Scattered Code Patterns Audit & Consolidation Roadmap (6 findings, migrate-on-touch) | ✅ DOCUMENTED | 2026-03-19 | Centralization / Code Quality | [📄](./adrs/ADR-251-scattered-code-patterns-audit.md) |
-| ↳ SPEC-251A | Error Handling Centralization → `getErrorMessage()` (inline patterns → centralized) | 📋 PENDING | 2026-03-19 | — | [📄](./adrs/specs/SPEC-251A-error-handling-centralization.md) |
-| ↳ SPEC-251B | Data Fetching → `useAsyncData` (117 files triple useState → centralized hook) | 📋 PENDING | 2026-03-19 | — | [📄](./adrs/specs/SPEC-251B-data-fetching-useAsyncData.md) |
-| ↳ SPEC-251C | Toast/Notification Consolidation (14 direct sonner imports → NotificationProvider) | 📋 PENDING | 2026-03-19 | — | [📄](./adrs/specs/SPEC-251C-toast-notification-consolidation.md) |
-| ↳ SPEC-251D | Loading States Centralization → `useAsyncData` + `PageLoadingState` (189 files) | 📋 PENDING | 2026-03-19 | — | [📄](./adrs/specs/SPEC-251D-loading-states-centralization.md) |
-| ↳ SPEC-251E | Dialog State Centralization → `useConfirmDialog` (44 files manual state) | 📋 PENDING | 2026-03-19 | — | [📄](./adrs/specs/SPEC-251E-dialog-state-centralization.md) |
-| ↳ SPEC-251F | Form Validation → Zod Schemas (~6 files manual validation) | 📋 PENDING | 2026-03-19 | — | [📄](./adrs/specs/SPEC-251F-form-validation-zod.md) |
-| **ADR-252** | Comprehensive Security Audit (Firestore Rules, API Routes, Server-side Validation) — 18 findings | 📋 DOCUMENTED | 2026-03-19 | Security / Infrastructure | [📄](./adrs/ADR-252-comprehensive-security-audit.md) |
-| **ADR-253** | Deep Security & Data Integrity Audit — 71 findings IMPLEMENTED (Error Swallowing, Race Conditions, Client Writes, Auth Gaps) | ✅ IMPLEMENTED | 2026-03-20 | Security / Data Integrity | [📄](./adrs/ADR-253-deep-integrity-audit.md) |
-| **ADR-254** | Monolithic Architecture Audit — 6 findings (Mixed SDKs, Barrel Exports, God Files, Cross-Domain Coupling, Mega-Files, Deep Dependencies) | 📋 DOCUMENTED | 2026-03-20 | Architecture / Performance | [📄](./adrs/ADR-254-monolithic-architecture-audit.md) |
-| **ADR-255** | Security Hardening Phase 4 — Tenant Isolation, Validation, Audit Trail (6 SPECs) | 📋 PLANNED | 2026-03-20 | Security & Auth | [📄](./adrs/ADR-255-security-hardening-phase-4.md) |
-| ↳ SPEC-255A | Firestore Rules — Tenant Isolation (`file_comments`, `file_audit_log`) | 📋 PLANNED | 2026-03-20 | — | [📄](./adrs/specs/SPEC-255A-firestore-rules-tenant-isolation.md) |
-| ↳ SPEC-255B | API Route Tenant Checks (~20 routes: units, storages, parking, opportunities) | 📋 PLANNED | 2026-03-20 | — | [📄](./adrs/specs/SPEC-255B-api-route-tenant-checks.md) |
-| ↳ SPEC-255C | Client-Side Writes Migration (19 files, 3 CRITICAL) | 📋 PLANNED | 2026-03-20 | — | [📄](./adrs/specs/SPEC-255C-client-writes-migration.md) |
-| ↳ SPEC-255D | Input Validation — Zod (73 routes, incremental migrate-on-touch) | 📋 PLANNED | 2026-03-20 | — | [📄](./adrs/specs/SPEC-255D-input-validation-zod.md) |
-| ↳ SPEC-255E | Audit Trail — Financial Operations (~15 transitions + ~35 DELETEs) | 📋 PLANNED | 2026-03-20 | — | [📄](./adrs/specs/SPEC-255E-audit-trail-financial-ops.md) |
-| ↳ SPEC-255F | Cleanup Test Endpoints (`/api/test-alert` removal) | 📋 PLANNED | 2026-03-20 | — | [📄](./adrs/specs/SPEC-255F-cleanup-test-endpoints.md) |
-| **ADR-256** | Concurrency Conflict Analysis & Remediation Roadmap (34 forms audited, 3-phase fix plan) | 📋 DOCUMENTED | 2026-03-20 | Data & State / Security | [📄](./adrs/ADR-256-concurrency-conflict-analysis.md) |
-| ↳ SPEC-256A | Optimistic Versioning — `_v` field, `withVersionCheck` transaction, `ConflictDialog` (6 routes migrated) | ✅ IMPLEMENTED | 2026-03-21 | — | [📄](./adrs/specs/SPEC-256A-optimistic-versioning.md) |
-| ↳ SPEC-256B | Stale Data Detection — `useDocumentSync` + `StaleDataBanner` (12 forms, 8 collections) | 📋 PLANNED | 2026-03-20 | — | [📄](./adrs/specs/SPEC-256B-stale-data-detection.md) |
-| ↳ SPEC-256C | Field-Level Merge — Three-Way Merge Engine + Per-Field Resolution Dialog (OPTIONAL) | 📋 PLANNED | 2026-03-20 | — | [📄](./adrs/specs/SPEC-256C-field-level-merge.md) |
+| **ADR-238** | Entity Creation Centralization | ✅ PHASE 2 COMPLETE | 2026-03-17 | Entity Systems | [📄](./adrs/ADR-238-entity-creation-centralization.md) |
+| **ADR-239** | Entity Linking Centralization | ✅ ✅ IMPLEMENTED | 2026-03-17 | Entity Systems | [📄](./adrs/ADR-239-entity-linking-centralization.md) |
+| **ADR-240** | Floorplan Pipeline Unification — Wizard → ΚΑΤΟΨΗ ΟΡΟΦΟΥ | ✅ ✅ IMPLEMENTED | 2026-03-17 | Entity Systems / File Storage | [📄](./adrs/ADR-240-floorplan-pipeline-unification.md) |
+| **ADR-241** | Fullscreen — Composition Architecture | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-241-fullscreen-container-centralization.md) |
+| **ADR-242** | Smart Financial Intelligence Suite — Enterprise Features for InterestCostDialog | ✅ 🟡 IN PROGRESS — SPEC-242A✅ B✅ C✅ D✅ E🟡 | 2026-03-18 | Entity Systems / Sales & Finance | [📄](./adrs/ADR-242-smart-financial-intelligence-suite.md) |
+| **ADR-243** | Custom Firestore MCP Server — Secure Database Access for Claude Code | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-243-firestore-mcp-server.md) |
+| **ADR-244** | Πολλαπλοί Αγοραστές & Συνιδιοκτησία Ακινήτων | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-244-multi-buyer-co-ownership.md) |
+| **ADR-244** | Role Management Admin Console | ✅ IMPLEMENTED (Phase A + Phase B) | 2026-03-19 | Security & Auth | [📄](./adrs/ADR-244-role-management-admin-console.md) |
+| **ADR-245** | API Routes Centralization — Zero Hardcoded Endpoints | ✅ ✅ PHASE_C_COMPLETE — Scattered code eliminated. Route helpers centralized. N+1 batch resolved. | 2026-03-19 | Backend Systems / Infrastructure | [📄](./adrs/ADR-245-api-routes-centralization.md) |
+| **ADR-246** | Καθολική Κεντρικοποίηση Firestore→API Mappers | ✅ APPROVED | 2026-03-19 | Data Access Layer / Entity Systems | [📄](./adrs/ADR-246-universal-firestore-mapper-centralization.md) |
+| **ADR-247** | Entity Relationship Integrity Audit | ✅ IMPLEMENTED | 2026-03-19 | Entity Systems / Data Integrity | [📄](./adrs/ADR-247-entity-relationship-integrity-audit.md) |
+| **ADR-248** | Centralized Auto-Save System (Google-Level) | ✅ IMPLEMENTED (Phase 1 + 2) | 2026-03-19 | UI / State Management / Data Persistence | [📄](./adrs/ADR-248-centralized-auto-save.md) |
+| **ADR-249** | Comprehensive Server-Side Integrity Audit | ✅ DOCUMENTED | 2026-03-19 | Entity Systems / Data Integrity / Security | [📄](./adrs/ADR-249-comprehensive-server-integrity-audit.md) |
+| **ADR-250** | Codebase Audit Findings — Security, Indexes, Centralization | ✅ PARTIALLY IMPLEMENTED (P0 fixes done) | 2026-03-19 | Infrastructure / Security / Data Integrity | [📄](./adrs/ADR-250-codebase-audit-findings.md) |
+| **ADR-251** | Scattered Code Patterns Audit & Consolidation Roadmap | ✅ DOCUMENTED | 2026-03-19 | Uncategorized | [📄](./adrs/ADR-251-scattered-code-patterns-audit.md) |
+| **ADR-252** | Comprehensive Security Audit | ✅ ✅ PHASE_3_IMPLEMENTED | 2026-03-19 | Security / Infrastructure | [📄](./adrs/ADR-252-comprehensive-security-audit.md) |
+| **ADR-253** | Deep Security & Data Integrity Audit | ✅ ✅ IMPLEMENTED | 2026-03-20 | Security / Data Integrity | [📄](./adrs/ADR-253-deep-integrity-audit.md) |
+| **ADR-254** | Monolithic Architecture Audit — Ευρήματα & Roadmap | ✅ ✅ PHASE 1+2 IMPLEMENTED | 2026-03-20 | Architecture / Performance | [📄](./adrs/ADR-254-monolithic-architecture-audit.md) |
+| **ADR-255** | Security Hardening Phase 4 — Tenant Isolation, Validation, Audit Trail | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-255-security-hardening-phase-4.md) |
+| **ADR-256** | Concurrency Conflict Analysis & Remediation Roadmap | ✅ DOCUMENTED | 2026-03-20 | Data & State / Security | [📄](./adrs/ADR-256-concurrency-conflict-analysis.md) |
+| **ADR-257** | Customer AI Access Control (Buyer/Owner/Tenant) | ✅ DRAFT | 2026-03-23 | AI Architecture / RBAC / Security | [📄](./adrs/ADR-257-customer-ai-access-control.md) |
+| **ADR-258** | Twin Architecture — Dynamic Overlay Coloring from Unit CommercialStatus | ✅ 📋 PLANNED | 2026-03-23 | Canvas & Rendering / Property Management / DXF Viewer | [📄](./adrs/ADR-258-twin-architecture-dynamic-overlay-coloring.md) |
+| **ADR-259** | Production Readiness Audit — 6 Critical Findings | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-259-production-readiness-audit.md) |
+| **ADR-260** | Καθολικός Κατάλογος Firestore Collections | ✅ ACTIVE | 2026-03-24 | Data & State | [📄](./adrs/ADR-260-firestore-collections-catalog.md) |
+| **ADR-261** | Multi-Agent Orchestrator (Claude Agent SDK) | ✅ IMPLEMENTED | 2026-03-24 | Infrastructure | [📄](./adrs/ADR-261-multi-agent-orchestrator.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -332,7 +314,6 @@
 | **ADR-128** | Switch Status Variant (Green ON / Red OFF) | ✅ APPROVED | [View](./adrs/ADR-128-switch-status-variant-green-on-red-off.md) |
 | **ADR-135** | Menu Icons Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-135-menu-icons-centralization.md) |
 | **ADR-144** | Icon Click Sequence Colors Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-144-icon-click-sequence-colors-centralization.md) |
-| **ADR-241** | Fullscreen Container Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-241-fullscreen-container-centralization.md) |
 
 ---
 
@@ -411,6 +392,7 @@
 | **ADR-101** | Deep Clone Centralization | ✅ APPROVED | [View](./adrs/ADR-101-deep-clone-centralization.md) |
 | **ADR-108** | Text Metrics Ratios Centralization | ✅ APPROVED | [View](./adrs/ADR-108-text-metrics-ratios-centralization.md) |
 | **ADR-125** | Context Creation Pattern (Provider Colocation) | ✅ APPROVED | [View](./adrs/ADR-125-context-creation-pattern-provider-colocation.md) |
+| **ADR-260** | Καθολικός Κατάλογος Firestore Collections | ✅ ACTIVE | [View](./adrs/ADR-260-firestore-collections-catalog.md) |
 
 ---
 
@@ -454,8 +436,8 @@
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | [View](./adrs/ADR-018-1-photos-tab-base-template.md) |
 | **ADR-230** | Contract Workflow — Legal Process (Σύστημα Συμβολαίων / Νομική Διαδικασία Πώλησης) | ✅ IMPLEMENTED — All 5 phases completed (2026-03-14) | [View](./adrs/ADR-230-contract-workflow-legal-process.md) |
 | **ADR-233** | Entity Coding System — Κωδικοποίηση Οντοτήτων | ✅ ✅ ACCEPTED | [View](./adrs/ADR-233-entity-coding-system.md) |
-| **ADR-238** | Entity Creation Centralization | 📋 PLANNING | [View](./adrs/ADR-238-entity-creation-centralization.md) |
-| **ADR-239** | Entity Linking Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-239-entity-linking-centralization.md) |
+| **ADR-238** | Entity Creation Centralization | ✅ PHASE 2 COMPLETE | [View](./adrs/ADR-238-entity-creation-centralization.md) |
+| **ADR-239** | Entity Linking Centralization | ✅ ✅ IMPLEMENTED | [View](./adrs/ADR-239-entity-linking-centralization.md) |
 
 ---
 
@@ -493,13 +475,7 @@
 | **ADR-068** | API Rate Limiting System | ✅ APPROVED | [View](./adrs/ADR-068-api-rate-limiting-system.md) |
 | **ADR-072** | AI Inbox HTML Rendering with Enterprise Sanitization | ✅ IMPLEMENTED | [View](./adrs/ADR-072-ai-inbox-html-rendering.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | [View](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
-| **ADR-244** | Role Management Admin Console | 📋 PROPOSED | [View](./adrs/ADR-244-role-management-admin-console.md) |
-| **ADR-245** | API Routes Centralization — Zero Hardcoded Endpoints | ✅ PHASE_A_COMPLETE | [View](./adrs/ADR-245-api-routes-centralization.md) |
-| **ADR-252** | Comprehensive Security Audit (Firestore Rules, API Routes, Server-side Validation) | 📋 DOCUMENTED | [View](./adrs/ADR-252-comprehensive-security-audit.md) |
-| **ADR-253** | Deep Security & Data Integrity Audit (Error Swallowing, Race Conditions, Client Writes) | ✅ IMPLEMENTED | [View](./adrs/ADR-253-deep-integrity-audit.md) |
-| **ADR-254** | Monolithic Architecture Audit (Mixed SDKs, Barrel Exports, God Files, Dependencies) | 📋 DOCUMENTED | [View](./adrs/ADR-254-monolithic-architecture-audit.md) |
-| **ADR-255** | Security Hardening Phase 4 — Tenant Isolation, Validation, Audit Trail (6 SPECs) | 📋 PLANNED | [View](./adrs/ADR-255-security-hardening-phase-4.md) |
-| **ADR-256** | Concurrency Conflict Analysis & Remediation Roadmap (34 forms, 3-phase plan) | 📋 DOCUMENTED | [View](./adrs/ADR-256-concurrency-conflict-analysis.md) |
+| **ADR-244** | Role Management Admin Console | ✅ IMPLEMENTED (Phase A + Phase B) | [View](./adrs/ADR-244-role-management-admin-console.md) |
 
 ---
 
@@ -600,6 +576,12 @@
 | **ADR-232** | Tenant Isolation vs Business Entity Link Separation | ✅ APPROVED | [View](./adrs/ADR-232-tenant-company-separation.md) |
 | **ADR-235** | Πίνακας Ποσοστών Συνιδιοκτησίας (Ownership Percentage Table) | ✅ APPROVED | [View](./adrs/ADR-235-ownership-percentage-table.md) |
 | **ADR-236** | Multi-Level Property Management (Πολυεπίπεδη Διαχείριση Ακινήτων) | ✅ APPROVED | [View](./adrs/ADR-236-multi-level-property-management.md) |
+| **ADR-241** | Fullscreen — Composition Architecture | ✅ APPROVED | [View](./adrs/ADR-241-fullscreen-container-centralization.md) |
+| **ADR-243** | Custom Firestore MCP Server — Secure Database Access for Claude Code | ✅ APPROVED | [View](./adrs/ADR-243-firestore-mcp-server.md) |
+| **ADR-244** | Πολλαπλοί Αγοραστές & Συνιδιοκτησία Ακινήτων | ✅ APPROVED | [View](./adrs/ADR-244-multi-buyer-co-ownership.md) |
+| **ADR-251** | Scattered Code Patterns Audit & Consolidation Roadmap | ✅ DOCUMENTED | [View](./adrs/ADR-251-scattered-code-patterns-audit.md) |
+| **ADR-255** | Security Hardening Phase 4 — Tenant Isolation, Validation, Audit Trail | ✅ APPROVED | [View](./adrs/ADR-255-security-hardening-phase-4.md) |
+| **ADR-259** | Production Readiness Audit — 6 Critical Findings | ✅ APPROVED | [View](./adrs/ADR-259-production-readiness-audit.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
