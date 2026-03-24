@@ -497,11 +497,14 @@ export class PipelineOrchestrator {
             const { sendTelegramMessage } = await import(
               '@/app/api/communications/webhooks/telegram/telegram/client'
             );
+            // tc.result = JSON.stringify(result.data) — flat structure, NOT wrapped in { data: ... }
             const parsed = JSON.parse(duplicateToolCall.result) as {
-              data?: { requestedContact?: Record<string, unknown>; matches?: Array<Record<string, unknown>> };
+              duplicateDetected?: boolean;
+              requestedContact?: Record<string, unknown>;
+              matches?: Array<Record<string, unknown>>;
             };
-            if (parsed.data?.requestedContact && parsed.data?.matches) {
-              const rc = parsed.data.requestedContact;
+            if (parsed.requestedContact && parsed.matches) {
+              const rc = parsed.requestedContact;
               const pendingId = await storePendingContactAction({
                 type: 'duplicate_contact',
                 requestedContact: {
@@ -513,7 +516,7 @@ export class PipelineOrchestrator {
                   companyName: rc.companyName ? String(rc.companyName) : null,
                 },
                 companyId: ctx.companyId,
-                matches: parsed.data.matches as unknown as import('./shared/contact-lookup').DuplicateMatch[],
+                matches: parsed.matches as unknown as import('./shared/contact-lookup').DuplicateMatch[],
                 chatId: String(telegramChatId),
               });
 
