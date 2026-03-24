@@ -126,6 +126,20 @@ const ALLOWED_READ_COLLECTIONS = new Set([
 ]);
 
 /**
+ * 🏢 ENTERPRISE: Map Firestore collections → SyncEntityType for AI sync bridge.
+ * When a write happens to a mapped collection, emitEntitySyncSignal is called
+ * so the client UI refreshes in real-time.
+ */
+const COLLECTION_TO_SYNC_ENTITY: Record<string, import('@/services/realtime/types').SyncEntityType> = {
+  [COLLECTIONS.CONTACTS]: 'contacts',
+  [COLLECTIONS.TASKS]: 'tasks',
+  [COLLECTIONS.BUILDINGS]: 'buildings',
+  [COLLECTIONS.PROJECTS]: 'projects',
+  [COLLECTIONS.OPPORTUNITIES]: 'opportunities',
+  [COLLECTIONS.COMMUNICATIONS]: 'communications',
+};
+
+/**
  * Collections allowed for write operations (admin only, very restricted)
  */
 const ALLOWED_WRITE_COLLECTIONS = new Set([
@@ -649,6 +663,9 @@ export class AgenticToolExecutor {
       // Audit log
       await this.auditWrite(ctx, collection, enterpriseId, mode, writeData);
 
+      // 🔔 AI sync bridge — notify UI of server-side mutation
+      AgenticToolExecutor.emitSyncSignalIfMapped(collection, 'CREATED', enterpriseId, ctx.companyId);
+
       return { success: true, data: { id: enterpriseId }, count: 1 };
     }
 
@@ -660,6 +677,10 @@ export class AgenticToolExecutor {
       }
 
       await this.auditWrite(ctx, collection, documentId, mode, writeData);
+
+      // 🔔 AI sync bridge — notify UI of server-side mutation
+      const action = mode === 'create' ? 'CREATED' as const : 'UPDATED' as const;
+      AgenticToolExecutor.emitSyncSignalIfMapped(collection, action, documentId, ctx.companyId);
 
       return { success: true, data: { id: documentId }, count: 1 };
     }
@@ -965,6 +986,27 @@ export class AgenticToolExecutor {
   }
 
   // ==========================================================================
+  // ==========================================================================
+  // 🔔 AI SYNC BRIDGE — Emit signal when a mapped collection is written
+  // ==========================================================================
+
+  /**
+   * Emit a sync signal if the collection has a corresponding SyncEntityType.
+   * Fire-and-forget — non-blocking (defense-in-depth).
+   */
+  private static emitSyncSignalIfMapped(
+    collection: string,
+    action: import('@/services/realtime/types').EntitySyncAction,
+    entityId: string,
+    companyId: string
+  ): void {
+    const entityType = COLLECTION_TO_SYNC_ENTITY[collection];
+    if (!entityType) return;
+    import('@/services/ai-pipeline/shared/contact-lookup').then(
+      ({ emitEntitySyncSignal }) => emitEntitySyncSignal(entityType, action, entityId, companyId)
+    ).catch(() => { /* non-blocking */ });
+  }
+
   // SPEC-257E: APPEND-ONLY CONTACT UPDATES
   // ==========================================================================
 
