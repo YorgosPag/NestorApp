@@ -3,6 +3,7 @@
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useFileUploadState';
 import type { UsageContext } from '@/config/photo-compression-config';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import { LEGACY_STORAGE_PATHS } from '@/config/domain-constants';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -69,36 +70,36 @@ export type UploadPreset =
  */
 const UPLOAD_PRESETS: Record<UploadPreset, Partial<UploadHandlerConfig>> = {
   'contact-photo': {
-    folderPath: 'contacts/photos',
+    folderPath: LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS,
     enableCompression: true,
     compressionUsage: 'profile-modal',
     purpose: 'photo',
   },
   'contact-representative': {
-    folderPath: 'contacts/photos',
+    folderPath: LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS,
     enableCompression: true,
     compressionUsage: 'profile-modal',
     purpose: 'representative',
   },
   'company-logo': {
-    folderPath: 'companies/logos',
+    folderPath: LEGACY_STORAGE_PATHS.COMPANIES_LOGOS,
     enableCompression: true,
     compressionUsage: 'company-logo',
     purpose: 'logo',
   },
   'document': {
-    folderPath: 'documents',
+    folderPath: LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS,
     enableCompression: false,
     purpose: 'document',
   },
   'floor-plan': {
-    folderPath: 'floor-plans',
+    folderPath: LEGACY_STORAGE_PATHS.FLOOR_PLANS,
     enableCompression: true,
     compressionUsage: 'document-scan',
     purpose: 'floor-plan',
   },
   'dxf-file': {
-    folderPath: 'dxf-files',
+    folderPath: LEGACY_STORAGE_PATHS.DXF_SCENES,
     enableCompression: false,
     purpose: 'dxf',
   },
@@ -177,7 +178,7 @@ export function createUploadHandlerFromPreset(
 ): UploadHandler {
   const presetConfig = UPLOAD_PRESETS[preset];
   const mergedConfig: UploadHandlerConfig = {
-    folderPath: presetConfig.folderPath || 'uploads',
+    folderPath: presetConfig.folderPath || LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS,
     ...presetConfig,
     ...overrides,
   };

@@ -21,6 +21,7 @@ import {
 import { FileNamingService } from '@/services/FileNamingService';
 import { PhotoUploadService } from '@/services/photo-upload.service';
 import type { UsageContext } from '@/config/photo-compression-config';
+import { LEGACY_STORAGE_PATHS } from '@/config/domain-constants';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -302,8 +303,9 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
         }
 
         // Upload with PhotoUploadService
+        // 🏢 ENTERPRISE: Use centralized legacy path constants (SSoT: domain-constants.ts)
         result = await PhotoUploadService.uploadPhoto(fileToUpload, {
-          folderPath: config.fileType === 'image' ? 'contacts/photos' : 'uploads',
+          folderPath: config.fileType === 'image' ? LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS : LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS,
           onProgress,
           enableCompression: config.fileType === 'image', // Only compress images
           compressionUsage,

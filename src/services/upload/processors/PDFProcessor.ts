@@ -35,6 +35,7 @@ import { FileRecordService } from '@/services/file-record.service';
 import {
   FILE_DOMAINS,
   FILE_CATEGORIES,
+  LEGACY_STORAGE_PATHS,
   type EntityType,
 } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
@@ -163,7 +164,7 @@ export class PDFProcessor implements FileProcessor {
       throw new Error('buildingId and floorId are required for PDF storage path');
     }
 
-    return `floor-plans/${buildingId}/${floorId}/${FIXED_FLOORPLAN_FILENAME}`;
+    return `${LEGACY_STORAGE_PATHS.FLOOR_PLANS}/${buildingId}/${floorId}/${FIXED_FLOORPLAN_FILENAME}`;
   }
 
   /**
@@ -214,7 +215,7 @@ export class PDFProcessor implements FileProcessor {
 
     // Step 3: Upload to Firebase Storage
     const storagePath = this.getStoragePath({
-      folderPath: `floor-plans/${options.buildingId}/${options.floorId}`,
+      folderPath: `${LEGACY_STORAGE_PATHS.FLOOR_PLANS}/${options.buildingId}/${options.floorId}`,
       buildingId: options.buildingId,
       floorId: options.floorId,
     });
@@ -263,7 +264,7 @@ export class PDFProcessor implements FileProcessor {
    */
   private async cleanupExistingFiles(buildingId: string, floorId: string): Promise<void> {
     console.warn('[DEPRECATION] PDFProcessor.cleanupExistingFiles() uses legacy floor-plans/ paths. Canonical flow handles cleanup via FileRecordService.');
-    const folderPath = `floor-plans/${buildingId}/${floorId}`;
+    const folderPath = `${LEGACY_STORAGE_PATHS.FLOOR_PLANS}/${buildingId}/${floorId}`;
 
     pdfLogger.info('🗑️ PDF_PROCESSOR: Cleaning up existing files in:', folderPath);
 
@@ -673,7 +674,8 @@ export class PDFProcessor implements FileProcessor {
    * 🏢 ENTERPRISE: Check if path is legacy floorplan path
    */
   isLegacyFloorplanPath(path: string): boolean {
-    return path.startsWith('floor-plans/') || path.includes('/floor-plans/');
+    const legacyPrefix = LEGACY_STORAGE_PATHS.FLOOR_PLANS;
+    return path.startsWith(`${legacyPrefix}/`) || path.includes(`/${legacyPrefix}/`);
   }
 }
 

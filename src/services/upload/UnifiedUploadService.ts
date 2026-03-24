@@ -132,7 +132,7 @@ class FileTypeRouter {
  *
  * // Explicit image upload
  * const imageResult = await UnifiedUploadService.uploadImage(file, {
- *   folderPath: 'contacts/photos',
+ *   folderPath: LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS,
  *   enableCompression: true,
  * });
  *

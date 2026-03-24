@@ -6,7 +6,7 @@ import { COLLECTIONS } from '../../../config/firestore-collections';
 import { generateFileId as enterpriseGenerateFileId } from '@/services/enterprise-id.service';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { buildFileDisplayName } from '@/services/upload/utils/file-display-name';
-import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
+import { LEGACY_STORAGE_PATHS, type EntityType, type FileDomain, type FileCategory } from '@/config/domain-constants';
 import type { SceneModel } from '../types/scene';
 import {
   DxfSecurityValidator,
@@ -110,7 +110,7 @@ export interface DxfFileRecord {
 
 export class DxfFirestoreService {
   private static readonly COLLECTION_NAME = COLLECTIONS.CAD_FILES;
-  private static readonly STORAGE_FOLDER = 'dxf-scenes';
+  private static readonly STORAGE_FOLDER = LEGACY_STORAGE_PATHS.DXF_SCENES;
   
   /**
    * Auto-save scene to Firestore
@@ -463,7 +463,7 @@ export class DxfFirestoreService {
     context?: DxfSaveContext
   ): Promise<void> {
     // 🏢 ENTERPRISE: Use canonical scene path if available
-    const scenePath = context?.canonicalScenePath ?? `dxf-scenes/${fileId}/scene.json`;
+    const scenePath = context?.canonicalScenePath ?? `${this.STORAGE_FOLDER}/${fileId}/scene.json`;
     if (!context?.canonicalScenePath) {
       dxfLogger.warn('Using legacy dxf-scenes/ path in files collection — provide canonicalScenePath in DxfSaveContext', { fileId });
     }

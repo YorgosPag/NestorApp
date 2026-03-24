@@ -6,7 +6,7 @@ import { getAdminStorage } from '@/lib/firebaseAdmin';
 import { FileNamingService } from '@/services/FileNamingService';
 import { generateTempId, generateFileId } from '@/services/enterprise-id.service';
 import { buildStoragePath } from '@/services/upload/utils/storage-path';
-import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
+import { LEGACY_STORAGE_PATHS, type EntityType, type FileDomain, type FileCategory } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { sanitizeStoragePath } from '@/lib/security/path-sanitizer';
@@ -76,7 +76,7 @@ async function handleUploadPhoto(request: NextRequest, ctx: AuthContext) {
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
-    const rawFolderPath = formData.get('folderPath') as string || 'contacts/photos';
+    const rawFolderPath = formData.get('folderPath') as string || LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS;
 
     // 🔒 SECURITY (ADR-252 SV-C1): Sanitize folder path to prevent path traversal
     const pathCheck = sanitizeStoragePath(rawFolderPath);

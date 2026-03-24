@@ -17,6 +17,7 @@ import {
   DEPRECATION_MESSAGES,
   FILE_STORAGE_FLAGS,
   FILE_STORAGE_ERROR_MESSAGES,
+  LEGACY_STORAGE_PATHS,
   type PhotoPurpose,
   API_ROUTES,
 } from '@/config/domain-constants';
@@ -695,7 +696,7 @@ export class PhotoUploadService {
     const prefix = contactId ? `contact_${contactId}` : 'contact';
 
     return this.uploadPhoto(file, {
-      folderPath: 'contacts/photos',
+      folderPath: LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS,
       fileName: file.name, // 🔥 Use the exact filename from the file object
       onProgress,
       enableCompression: true,
@@ -732,7 +733,7 @@ export class PhotoUploadService {
     const prefix = companyId ? `company_${companyId}` : process.env.NEXT_PUBLIC_DEFAULT_COMPANY_PREFIX || 'company';
 
     return this.uploadPhoto(file, {
-      folderPath: 'companies/logos',
+      folderPath: LEGACY_STORAGE_PATHS.COMPANIES_LOGOS,
       fileName: `${prefix}_${file.name}`,
       onProgress,
       enableCompression: true,
@@ -1076,6 +1077,7 @@ export class PhotoUploadService {
    * Returns true for old paths like 'contacts/photos/filename.jpg'
    */
   static isLegacyContactPhotoPath(path: string): boolean {
-    return path.startsWith('contacts/photos/') || path.includes('/contacts/photos/');
+    const legacyPrefix = LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS;
+    return path.startsWith(`${legacyPrefix}/`) || path.includes(`/${legacyPrefix}/`);
   }
 }

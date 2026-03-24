@@ -9,7 +9,7 @@
  * import { UnifiedUploadService, type ImageUploadOptions } from '@/services/upload';
  *
  * const result = await UnifiedUploadService.uploadImage(file, {
- *   folderPath: 'contacts/photos',
+ *   folderPath: LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS,
  *   enableCompression: true,
  * });
  * ```

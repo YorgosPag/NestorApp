@@ -4,7 +4,7 @@
 |----------|-------|
 | **Status** | APPROVED |
 | **Date** | 2026-01-01 |
-| **Last Updated** | 2026-02-13 |
+| **Last Updated** | 2026-03-24 |
 | **Category** | Entity Systems |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
 
@@ -51,6 +51,34 @@ handleMultiplePhotosChange (functional updater) → setEditedData
 ---
 
 ## Changelog
+
+### 2026-03-24 — Zero Hardcoded Paths: LEGACY_STORAGE_PATHS as SSoT for ALL Legacy References
+
+**Πρόβλημα**: 12+ αρχεία χρησιμοποιούσαν hardcoded string literals (`'contacts/photos'`, `'floor-plans'`, `'dxf-scenes'`, `'companies/logos'`, `'attendance'`) αντί για centralized constants. Αυτό δημιουργούσε:
+- Ασυνέπεια: αλλαγή path σε 1 σημείο δεν propagated
+- Αδυναμία global refactoring
+- Παραβίαση Single Source of Truth
+
+**Λύση**: Αντικατάσταση ΟΛΩΝ hardcoded path strings με `LEGACY_STORAGE_PATHS.*` constants:
+
+| Αρχείο | Πριν | Μετά |
+|--------|------|------|
+| `useEnterpriseFileUpload.ts` | `'contacts/photos'` | `LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS` |
+| `communications/page.tsx` | `'contacts/photos'` (x2) | `LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS` |
+| `UnifiedInbox.tsx` | `'contacts/photos'` (x2) | `LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS` |
+| `photo-upload.service.ts` | `'contacts/photos'`, `'companies/logos'` | `LEGACY_STORAGE_PATHS.*` |
+| `api/upload/photo/route.ts` | `'contacts/photos'` | `LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS` |
+| `defaultUploadHandler.ts` | 6 hardcoded paths | `LEGACY_STORAGE_PATHS.*` |
+| `PDFProcessor.ts` | `'floor-plans/'` (x3) | `LEGACY_STORAGE_PATHS.FLOOR_PLANS` |
+| `dxf-firestore.service.ts` | `'dxf-scenes'` | `LEGACY_STORAGE_PATHS.DXF_SCENES` |
+| `attendance-server-service.ts` | `'attendance/'` | `LEGACY_STORAGE_PATHS.ATTENDANCE` |
+| `pdf-utils.ts` | `'floor-plans/'` (x3) | `LEGACY_STORAGE_PATHS.FLOOR_PLANS` |
+
+**Νέο constant**: `COMPANIES_LOGOS: 'companies/logos'` προστέθηκε στο `LEGACY_STORAGE_PATHS`
+
+**Αποτέλεσμα**: Μηδενικά hardcoded storage paths στο codebase. Κάθε legacy path reference δείχνει στο `domain-constants.ts` ως SSoT.
+
+---
 
 ### 2026-03-24 — Storage Path SSoT Enforcement (Legacy Path Elimination)
 

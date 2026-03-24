@@ -72,6 +72,7 @@ import { COMMUNICATION_CHANNELS } from '@/types/communications';
 import { PageLoadingState } from '@/core/states';
 // 🏢 ADR-055: Attachment upload support
 import { PhotoUploadService } from '@/services/photo-upload.service';
+import { LEGACY_STORAGE_PATHS } from '@/config/domain-constants';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 
 // ============================================================================
@@ -273,10 +274,8 @@ export default function CrmCommunicationsPage() {
     try {
       logger.info('Uploading attachment', { name: file.name, type: file.type });
 
-      // Use legacy path that's allowed by Storage Rules
-      const folderPath = file.type.startsWith('image/')
-        ? 'contacts/photos'  // Allowed for authenticated + images
-        : 'contacts/photos'; // Same path works for all authenticated uploads
+      // 🏢 ENTERPRISE: Use centralized legacy path constant (SSoT: domain-constants.ts)
+      const folderPath = LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS;
 
       const result = await PhotoUploadService.uploadPhoto(file, {
         folderPath,

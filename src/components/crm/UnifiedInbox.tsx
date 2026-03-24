@@ -63,6 +63,7 @@ import { useMessagePin } from '@/hooks/inbox/useMessagePin';
 import type { MessageListItem } from '@/hooks/inbox/useInboxApi';
 // 🏢 ADR-055: Attachment upload support
 import { PhotoUploadService } from '@/services/photo-upload.service';
+import { LEGACY_STORAGE_PATHS } from '@/config/domain-constants';
 import type { MessageAttachment } from '@/types/conversations';
 
 // ============================================================================
@@ -294,10 +295,8 @@ export function UnifiedInbox({
     try {
       logger.info('Uploading attachment', { fileName: file.name, fileType: file.type });
 
-      // Use legacy path that's allowed by Storage Rules
-      const folderPath = file.type.startsWith('image/')
-        ? 'contacts/photos'  // Allowed for authenticated + images
-        : 'contacts/photos'; // Same path for now
+      // 🏢 ENTERPRISE: Use centralized legacy path constant (SSoT: domain-constants.ts)
+      const folderPath = LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS;
 
       const result = await PhotoUploadService.uploadPhoto(file, {
         folderPath,

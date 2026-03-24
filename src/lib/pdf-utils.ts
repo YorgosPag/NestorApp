@@ -37,6 +37,7 @@ import { storage, db } from '@/lib/firebase';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject, listAll } from 'firebase/storage';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { LEGACY_STORAGE_PATHS } from '@/config/domain-constants';
 // 🏢 ENTERPRISE: i18n support for PDF validation/upload messages
 import i18n from '@/i18n/config';
 
@@ -124,7 +125,7 @@ export function validatePDFFile(file: File): PDFValidationResult {
 export function generatePDFPath(buildingId: string, floorId: string, originalName: string): string {
   const timestamp = Date.now();
   const sanitizedName = originalName.replace(/[^a-zA-Z0-9._-]/g, '_');
-  return `floor-plans/${buildingId}/${floorId}/${timestamp}_${sanitizedName}`;
+  return `${LEGACY_STORAGE_PATHS.FLOOR_PLANS}/${buildingId}/${floorId}/${timestamp}_${sanitizedName}`;
 }
 
 /**
@@ -279,7 +280,7 @@ export async function deleteOldPDFFromStorage(floorId: string): Promise<boolean>
  */
 export async function listBuildingPDFs(buildingId: string): Promise<string[]> {
   try {
-    const buildingStorageRef = ref(storage, `floor-plans/${buildingId}`);
+    const buildingStorageRef = ref(storage, `${LEGACY_STORAGE_PATHS.FLOOR_PLANS}/${buildingId}`);
     const result = await listAll(buildingStorageRef);
     
     const pdfUrls: string[] = [];
@@ -300,7 +301,7 @@ export async function listBuildingPDFs(buildingId: string): Promise<string[]> {
  */
 export async function deleteBuildingPDFs(buildingId: string): Promise<number> {
   try {
-    const buildingStorageRef = ref(storage, `floor-plans/${buildingId}`);
+    const buildingStorageRef = ref(storage, `${LEGACY_STORAGE_PATHS.FLOOR_PLANS}/${buildingId}`);
     const result = await listAll(buildingStorageRef);
     
     let deletedCount = 0;

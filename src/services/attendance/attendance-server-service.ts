@@ -19,7 +19,7 @@ import 'server-only';
 import { getAdminFirestore, getAdminStorage, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
-import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
+import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES, LEGACY_STORAGE_PATHS } from '@/config/domain-constants';
 import { buildStoragePath } from '@/services/upload/utils/storage-path';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -197,7 +197,7 @@ export async function uploadAttendancePhoto(
     } else {
       // Legacy fallback — will be removed when all callers provide companyId
       console.warn('[DEPRECATION] uploadAttendancePhoto() without companyId uses legacy path. Provide companyId for canonical storage.');
-      storagePath = `attendance/${projectId}/${date}/${eventId}.jpg`;
+      storagePath = `${LEGACY_STORAGE_PATHS.ATTENDANCE}/${projectId}/${date}/${eventId}.jpg`;
     }
     const file = bucket.file(storagePath);
 
