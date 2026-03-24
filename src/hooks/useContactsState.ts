@@ -86,6 +86,7 @@ export function useContactsState() {
 
     setIsLoading(true);
     let unsubContacts: (() => void) | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
     const setup = async () => {
       try {
@@ -99,7 +100,15 @@ export function useContactsState() {
             setAllContacts(contacts);
             setIsLoading(false);
           },
-          { limitCount: 1000 }
+          {
+            limitCount: 1000,
+            // Auto-retry: if subscription breaks (e.g., missing index, network drop),
+            // re-subscribe after 3s. Uses forceDataRefresh to tear down + re-create.
+            onError: (err) => {
+              logger.warn('Subscription error — scheduling retry in 3s', { error: err.message });
+              retryTimer = window.setTimeout(() => forceDataRefresh(), 3000);
+            },
+          }
         );
       } catch (error) {
         logger.error('Failed to setup contacts subscription', { error });
@@ -111,8 +120,9 @@ export function useContactsState() {
 
     return () => {
       if (unsubContacts) unsubContacts();
+      if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [user, authLoading, refreshKey]);
+  }, [user, authLoading, refreshKey, forceDataRefresh]);
 
   // 🏢 ENTERPRISE: Centralized Real-time Service (ZERO DUPLICATES)
   // Subscribe to contact updates for cross-page sync

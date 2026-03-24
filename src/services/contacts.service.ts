@@ -1,12 +1,12 @@
 import {
-  collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc, query, where,
+  collection, doc, getDocs, setDoc, updateDoc, query, where,
   orderBy, limit, startAfter, DocumentSnapshot, QueryConstraint,
   writeBatch, serverTimestamp, deleteField, FieldValue,
   QuerySnapshot,
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import {
-  Contact, ContactType, ContactStatus, isIndividualContact, isCompanyContact, isServiceContact,
+  Contact, ContactType, ContactStatus, isIndividualContact, isCompanyContact,
   AddressInfo,
 } from '@/types/contacts';
 import { EnterpriseContactSaver } from '@/utils/contacts/EnterpriseContactSaver';
@@ -17,7 +17,6 @@ import { sanitizeContactData, validateContactData, type ContactDataRecord } from
 import { getCol, mapDocs, chunk, asDate, startAfterDocId } from '@/lib/firestore/utils';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import type { Unit } from '@/types/unit';
 import type { DocumentData } from 'firebase/firestore';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
@@ -742,7 +741,13 @@ export class ContactsService {
   // Realtime — ADR-227 Phase 2: Canonical pattern via firestoreQueryService.subscribe
   static subscribeToContacts(
     callback: (contacts: Contact[]) => void,
-    options?: { type?: ContactType; onlyFavorites?: boolean; limitCount?: number }
+    options?: {
+      type?: ContactType;
+      onlyFavorites?: boolean;
+      limitCount?: number;
+      /** Called on subscription error — use for retry logic */
+      onError?: (error: Error) => void;
+    }
   ): () => void {
     const constraints: QueryConstraint[] = [];
     if (options?.type) constraints.push(where('type', '==', options.type));
@@ -758,6 +763,7 @@ export class ContactsService {
       },
       (err) => {
         logger.error('Contact subscription error', { error: err.message });
+        options?.onError?.(err);
       },
       {
         constraints,
