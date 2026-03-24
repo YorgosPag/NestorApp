@@ -226,7 +226,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
           attachmentPaths: {
             type: ['array', 'null'],
             items: { type: 'string' },
-            description: 'Firebase Storage paths to attach (e.g. ["contacts/photos/file.jpg", "documents/report.pdf"]). Use null if no attachments.',
+            description: 'Firebase Storage paths to attach. Use null if no attachments.',
           },
         },
         required: ['contactName', 'subject', 'body', 'attachmentPaths'],
@@ -484,10 +484,11 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
       name: 'create_contact',
       description: [
         'Create a new contact (individual person or company). Admin only.',
+        'CRITICAL: When the user asks to create a contact, ALWAYS call this tool directly. Do NOT pre-check with firestore_query first — this tool handles duplicate detection automatically.',
         'Validates fields, generates enterprise ID (cont_ for individuals, comp_ for companies).',
         'DUPLICATE DETECTION: Automatically checks for duplicates by email (exact), phone (exact), and name (fuzzy).',
         'If duplicates are found, returns duplicateDetected:true with match details instead of creating.',
-        'In that case, ASK the user what they want: (1) update existing, (2) create new anyway, (3) cancel.',
+        'In that case, describe the duplicates found to the user. Do NOT present numbered options — action buttons will be sent automatically via Telegram inline keyboard.',
         'If user confirms creation despite duplicates, call again with skipDuplicateCheck:true.',
         'Use this INSTEAD of firestore_write for contacts collection.',
       ].join(' '),
