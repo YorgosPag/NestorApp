@@ -15,6 +15,7 @@
 import { collection, doc, getDocs, setDoc, updateDoc, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { generateRouteConfigId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('EnterpriseRouteConfigService');
 
@@ -368,10 +369,11 @@ export class EnterpriseRouteConfigService {
    */
   async addRouteConfig(config: Omit<RouteConfig, 'id'>): Promise<string | null> {
     try {
-      const docRef = doc(collection(db, COLLECTIONS.CONFIG));
+      const configId = generateRouteConfigId();
+      const docRef = doc(collection(db, COLLECTIONS.CONFIG), configId);
       const newConfig = {
         ...config,
-        id: docRef.id,
+        id: configId,
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -381,8 +383,8 @@ export class EnterpriseRouteConfigService {
       // Invalidate cache
       this.invalidateCache();
 
-      logger.info(`✅ Added new route configuration: ${docRef.id}`);
-      return docRef.id;
+      logger.info(`✅ Added new route configuration: ${configId}`);
+      return configId;
     } catch (error) {
       logger.error('❌ Error adding new route configuration:', error);
       return null;

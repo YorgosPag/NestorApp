@@ -178,9 +178,10 @@ export const ENTERPRISE_ID_PREFIXES = {
   BANK_ACCOUNT: 'bacc',
 
   // ==========================================================================
-  // NAVIGATION
+  // NAVIGATION & ROUTING
   // ==========================================================================
   NAVIGATION: 'nav',
+  ROUTE_CONFIG: 'rcfg',
 
   // ==========================================================================
   // VOICE COMMANDS (ADR-164: In-App Voice AI Pipeline)
@@ -404,6 +405,14 @@ export class EnterpriseIdService {
    */
   generateNavigationId(): string {
     return this.generateId(ENTERPRISE_ID_PREFIXES.NAVIGATION).id;
+  }
+
+  /**
+   * 🛤️ Generate Route Config ID (ADR-260)
+   * Format: rcfg_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateRouteConfigId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.ROUTE_CONFIG).id;
   }
 
   /**
@@ -1312,6 +1321,7 @@ export const generateParkingId = () => enterpriseIdService.generateParkingId();
 export const generateContactId = () => enterpriseIdService.generateContactId();
 export const generateFloorId = () => enterpriseIdService.generateFloorId();
 export const generateNavigationId = () => enterpriseIdService.generateNavigationId();
+export const generateRouteConfigId = () => enterpriseIdService.generateRouteConfigId();
 export const generateDocumentId = () => enterpriseIdService.generateDocumentId();
 export const generateUserId = () => enterpriseIdService.generateUserId();
 export const generateAssetId = () => enterpriseIdService.generateAssetId();

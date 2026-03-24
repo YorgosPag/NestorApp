@@ -796,7 +796,7 @@ export class ContactsService {
       let batch = writeBatch(db);
 
       for (const contact of contacts) {
-        const ref = doc(collection(db, CONTACTS_COLLECTION));
+        const ref = doc(collection(db, CONTACTS_COLLECTION), generateContactId());
         const createData: ContactFirestoreData = {
           ...contact,
           createdAt: serverTimestamp(),

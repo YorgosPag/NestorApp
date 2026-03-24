@@ -533,7 +533,7 @@ await setDoc(doc(db, COLLECTIONS.ATTENDANCE_EVENTS, eventId), {
 ### 10.2 Συστάσεις
 
 1. **ΑΜΕΣΟ — obligation-sections fix**: Migration ή ενημέρωση `COLLECTIONS.OBLIGATION_SECTIONS` → `obligation-sections`
-2. ~~**ΑΜΕΣΟ — Enterprise ID violations fix (3 instances)**~~ ✅ **FIXED 2026-03-24**: Όλα τα enterprise ID violations διορθώθηκαν (9 call sites σε 7 αρχεία). Νέοι generators: `generateEmploymentRecordId()` (prefix `emprec`), `generateAppointmentId()` (prefix `appt`)
+2. ~~**ΑΜΕΣΟ — Enterprise ID violations fix**~~ ✅ **FIXED 2026-03-24**: Όλα τα enterprise ID violations διορθώθηκαν (11 call sites σε 9 αρχεία). Νέοι generators: `generateEmploymentRecordId()` (`emprec`), `generateAppointmentId()` (`appt`), `generateRouteConfigId()` (`rcfg`)
 3. **Deprecation Plan**: Ορισμός χρονοδιαγράμματος sunset για `CAD_FILES` → `FILES`
 4. **Legacy Cleanup**: Αξιολόγηση αν τα 4 layer collections χρησιμοποιούνται ακόμα
 5. **Cloud Functions Sync**: Import COLLECTIONS constant στα Cloud Functions
@@ -548,7 +548,7 @@ await setDoc(doc(db, COLLECTIONS.ATTENDANCE_EVENTS, eventId), {
 
 | Μετρική | Τιμή |
 |---------|------|
-| Συνολικοί generators στο `enterprise-id.service.ts` | **72+** |
+| Συνολικοί generators στο `enterprise-id.service.ts` | **73+** |
 | Collections με write operations | **~55** |
 | COMPLIANT (enterprise ID generator) | **~55** (100%) |
 | EXEMPT (Firebase UID / Singleton / Deterministic) | **~11** |
@@ -661,6 +661,8 @@ await setDoc(doc(db, COLLECTIONS.ATTENDANCE_EVENTS, eventId), {
 | 7 | `ai_pipeline_audit` | `uc-004-complaint/complaint-module.ts` | `generatePipelineAuditId()` (`paud`) | ✅ FIXED |
 | 8 | `ai_pipeline_audit` | `uc-005-general-inquiry/general-inquiry-module.ts` | `generatePipelineAuditId()` (`paud`) | ✅ FIXED |
 | 9 | `ai_pipeline_audit` | `uc-006-document-request/document-request-module.ts` | `generatePipelineAuditId()` (`paud`) | ✅ FIXED |
+| 10 | `contacts` (import) | `contacts.service.ts` | `generateContactId()` (`cont`) | ✅ FIXED |
+| 11 | `config` (route) | `EnterpriseRouteConfigService.ts` | `generateRouteConfigId()` (NEW: `rcfg`) | ✅ FIXED |
 
 ---
 
