@@ -78,14 +78,27 @@ export function PropertyDetailsPanel({
     );
   }
 
+  // 🏢 ADR-258D: Read-only mode uses flex layout (footer pinned to bottom) — no ScrollArea
+  // Edit mode keeps ScrollArea for long form content
+  if (isReadOnly) {
+    return (
+      <div className="h-full">
+        <PropertyDetailsContent
+          property={property as ExtendedPropertyDetails}
+          onSelectFloor={safeOnSelectFloor}
+          onUpdateProperty={safeOnUpdateProperty}
+          isReadOnly
+        />
+      </div>
+    );
+  }
+
   return (
-    // 🏢 ENTERPRISE: No internal padding - parent CardContent handles padding
     <ScrollArea className="h-full">
       <PropertyDetailsContent
         property={property as ExtendedPropertyDetails}
         onSelectFloor={safeOnSelectFloor}
         onUpdateProperty={safeOnUpdateProperty}
-        isReadOnly={isReadOnly} // NEW: Pass read-only state
       />
     </ScrollArea>
   );

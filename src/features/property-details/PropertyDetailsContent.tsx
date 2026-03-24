@@ -13,6 +13,7 @@ import { ReadOnlyBanner } from './components/ReadOnlyBanner';
 import { BuyerMismatchAlert } from './components/BuyerMismatchAlert';
 import { UnifiedCustomerCard } from '@/components/shared/customer-info';
 import { LimitedInfoNotice } from './components/LimitedInfoNotice';
+import { PropertyQuickView } from '@/features/property-hover/components/PropertyQuickView';
 import { AttachmentsBlock } from './components/AttachmentsBlock';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { ContactsBlock } from './components/ContactsBlock';
@@ -153,9 +154,23 @@ export function PropertyDetailsContent({
   );
 
   // === RENDER: ΑΠΑΡΑΛΛΑΚΤΟ DOM/Tailwind/labels ===
+  // 🏢 ADR-258D: Read-only mode uses PropertyQuickView (shared SSoT with Γρήγορη Προβολή)
+  if (isReadOnly) {
+    return (
+      <div className="flex flex-col p-2 h-full">
+        <div className="flex-1">
+          <PropertyQuickView property={resolvedProperty} />
+        </div>
+        <div className="shrink-0 pt-1">
+          <LimitedInfoNotice />
+        </div>
+      </div>
+    );
+  }
+
   // 🏢 ENTERPRISE: Internal padding (8px) - parent CardContent has p-0 for scrollbar alignment
   return (
-    <div className={`${spacing.spaceBetween.sm} ${spacing.padding.sm}`}>
+    <div className={`flex flex-col ${spacing.spaceBetween.sm} ${spacing.padding.sm} h-full`}>
       {isReadOnly && <ReadOnlyBanner />}
 
       {hasPropertyWithMismatch(resolvedProperty) && resolvedProperty.buyerMismatch && !isReadOnly && <BuyerMismatchAlert />}
@@ -189,7 +204,7 @@ export function PropertyDetailsContent({
                           floorId: payload.floorId,
                         });
                       } else {
-                        safeOnUpdateProperty(resolvedProperty.id, { floor: 0, floorId: null });
+                        safeOnUpdateProperty(resolvedProperty.id, { floor: 0, floorId: undefined });
                       }
                     }
                   }}
@@ -273,8 +288,13 @@ export function PropertyDetailsContent({
 
       <DatesBlock dates={resolvedProperty.dates} />
 
-      {/* Show limited info message in read-only mode */}
-      {isReadOnly && <LimitedInfoNotice />}
+      {/* Show limited info message in read-only mode — pushed to bottom via flex spacer */}
+      {isReadOnly && (
+        <>
+          <div className="flex-1" />
+          <LimitedInfoNotice />
+        </>
+      )}
     </div>
   );
 }

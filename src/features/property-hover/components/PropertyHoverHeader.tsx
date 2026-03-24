@@ -2,6 +2,7 @@
 import { PropertyBadge } from '@/core/badges';
 import type { PropertyStatus } from '@/core/types/BadgeTypes';
 import { cn } from '@/lib/utils';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Type-safe props with PropertyStatus
 interface PropertyHoverHeaderProps {
@@ -21,12 +22,17 @@ export function PropertyHoverHeader({
   statusColor,
   status = 'for-sale'
 }: PropertyHoverHeaderProps) {
+  const { t } = useTranslation('properties');
+
+  // 🏢 ENTERPRISE: Translate unit type (apartment → Διαμέρισμα) — SSoT: filters.types
+  const translatedType = t(`filters.types.${type}`, { defaultValue: type });
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col">
           <h4 className="font-semibold text-sm leading-tight">{name}</h4>
-          <span className="text-xs font-normal text-muted-foreground">{type} • {building}</span>
+          <span className="text-xs font-normal text-muted-foreground">{translatedType} • {building}</span>
         </div>
         <PropertyBadge
           status={status}

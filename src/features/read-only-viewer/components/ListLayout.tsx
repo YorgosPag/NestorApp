@@ -54,7 +54,11 @@ export function ListLayout({
   // Photos/Videos tabs don't have hoverable regions, so hide the info panel.
   const searchParams = useSearchParams();
   const activeMediaTab = parseMediaTabParam(searchParams.get(MEDIA_TAB_PARAM));
-  const showPropertyHoverInfo = activeMediaTab === 'floorplans';
+  // 🏢 ADR-258D: PropertyHoverInfo visible ONLY on floor floorplan tabs
+  // Unit floorplan (Κάτοψη Μονάδας) → δεν έχει overlay polygons, δεν χρειάζεται hover info
+  // Floor floorplan (Κάτοψη Ορόφου) → έχει overlay polygons, χρειάζεται hover info
+  const showPropertyHoverInfo = activeMediaTab === 'floorplan-floor'
+    || activeMediaTab.startsWith('floorplan-floor-');
   const properties = viewerProps.properties ?? [];
   const handleSelectFloor = React.useCallback(
     (floorId: string | null) => {
@@ -134,9 +138,8 @@ export function ListLayout({
 
       {/* Details Panel (Right Panel) - fixed width (360px for scrollbar clearance), aligned to right edge */}
       <div className={`w-[360px] shrink-0 flex flex-col ${layout.listGapResponsive}`}>
-        {/* 🏢 ENTERPRISE: Λεπτομέρειες Ακινήτου */}
+        {/* 🏢 ADR-258D: Επιλεγμένο Ακίνητο — equal height with Γρήγορη Προβολή */}
         <Card className="flex-1 flex flex-col min-h-0">
-          {/* 🏢 ENTERPRISE: 8px padding from centralized tokens */}
           <CardHeader className={`${spacing.padding.sm} shrink-0`}>
             <CardTitle className="text-sm">{t('viewer.propertyDetails')}</CardTitle>
           </CardHeader>
@@ -154,13 +157,12 @@ export function ListLayout({
         {/* 🏢 ENTERPRISE: Πληροφορίες Ακινήτου - Only visible on floorplan tab */}
         {/* Hidden on photos/videos tabs because there are no hoverable regions */}
         {showPropertyHoverInfo && (
-          <Card className="h-[280px] shrink-0">
-            {/* 🏢 ENTERPRISE: 8px padding from centralized tokens */}
-            <CardHeader className={spacing.padding.sm}>
+          <Card className="flex-1 flex flex-col min-h-0">
+            {/* 🏢 ADR-258D: Γρήγορη Προβολή — equal height with Επιλεγμένο Ακίνητο */}
+            <CardHeader className={`${spacing.padding.sm} shrink-0`}>
               <CardTitle className="text-sm">{t('viewer.propertyInfo')}</CardTitle>
             </CardHeader>
-            {/* 🏢 ENTERPRISE: No padding - content handles internal padding (same pattern) */}
-            <CardContent className={`${spacing.padding.none} h-full`}>
+            <CardContent className={`flex-1 ${spacing.padding.none} overflow-hidden`}>
               <PropertyHoverInfo
                 propertyId={hoveredPropertyId}
                 properties={filteredProperties}

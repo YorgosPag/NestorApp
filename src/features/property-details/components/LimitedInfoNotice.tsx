@@ -2,17 +2,15 @@
 'use client';
 import { Separator } from '@/components/ui/separator';
 import { useTranslation } from 'react-i18next';
-import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
 export function LimitedInfoNotice() {
   const { t } = useTranslation('properties');
-  const spacing = useSpacingTokens();
   return (
     <>
       <Separator />
-      <div className={`text-center ${spacing.padding.sm} text-muted-foreground`}>
+      <div className="text-center px-2 py-1 text-muted-foreground">
         <p className="text-xs">{t('details.limitedInfo')}</p>
-        <p className={`text-xs ${spacing.margin.top.sm}`}>{t('details.contactForMore')}</p>
+        <p className="text-xs mt-0.5">{t('details.contactForMore')}</p>
       </div>
     </>
   );

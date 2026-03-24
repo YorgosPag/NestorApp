@@ -368,11 +368,12 @@ function drawOverlayPolygons(
     const colors = getStatusColors(overlay.resolvedStatus) ?? OVERLAY_FALLBACK;
     const isHighlighted = !!(highlightedUnitId && overlay.linked?.unitId === highlightedUnitId);
 
+    // 🏢 ADR-258D: No fill on normal, fill on hover only (stroke-only base)
     ctx.fillStyle = isHighlighted
-      ? withOpacity(colors.stroke, OVERLAY_OPACITY.GALLERY_HOVER)
-      : colors.fill;
+      ? withOpacity(colors.stroke, OVERLAY_OPACITY.GALLERY_FILL)
+      : 'rgba(0, 0, 0, 0)';
     ctx.strokeStyle = colors.stroke;
-    ctx.lineWidth = isHighlighted ? 3 : 2;
+    ctx.lineWidth = isHighlighted ? 4 : 3;
 
     // Draw polygon
     ctx.beginPath();
@@ -386,25 +387,8 @@ function drawOverlayPolygons(
     ctx.fill();
     ctx.stroke();
 
-    // Draw label if present
-    if (overlay.label) {
-      const centroid = overlay.polygon.reduce(
-        (acc, v) => ({ x: acc.x + v.x, y: acc.y + v.y }),
-        { x: 0, y: 0 },
-      );
-      centroid.x /= overlay.polygon.length;
-      centroid.y /= overlay.polygon.length;
-
-      const cx = (centroid.x - bounds.min.x) * scale + offsetX;
-      const cy = (bounds.max.y - centroid.y) * scale + offsetY;
-
-      const fontSize = Math.max(10, 14 * scale / baseScale);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = `bold ${fontSize}px Arial`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(overlay.label, cx, cy);
-    }
+    // Label intentionally NOT rendered in FloorplanGallery (ADR-258D)
+    // Labels like "Overlay 1174..." are internal IDs — not useful for end users
   }
 
   ctx.restore();

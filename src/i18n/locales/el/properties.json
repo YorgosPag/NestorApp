@@ -7,6 +7,7 @@
   "status": {
     "forSale": "Προς Πώληση",
     "forRent": "Προς Ενοικίαση",
+    "forSaleAndRent": "Πώληση & Ενοικίαση",
     "reserved": "Κρατημένο",
     "sold": "Πωλήθηκε",
     "landowner": "Ιδιοκτήτης Γης",
@@ -375,8 +376,8 @@
       "readOnly": "Μόνο Ανάγνωση"
     },
     "availableProperties": "Διαθέσιμα Ακίνητα",
-    "propertyDetails": "Λεπτομέρειες Ακινήτου",
-    "propertyInfo": "Πληροφορίες Ακινήτου",
+    "propertyDetails": "Επιλεγμένο Ακίνητο",
+    "propertyInfo": "Γρήγορη Προβολή",
     "confirm": {
       "deleteProperty": "Είστε σίγουροι ότι θέλετε να διαγράψετε το επιλεγμένο ακίνητο;"
     },
@@ -589,6 +590,9 @@
     "analysisComplete": "Ανάλυση Ολοκληρώθηκε: Βρέθηκαν {count} προτάσεις τοποθέτησης",
     "clickAnalyze": "Πατήστε \"Ανάλυση\" για προτάσεις.",
     "clearSuggestions": "Καθαρισμός Προτάσεων"
+  },
+  "hover": {
+    "clickForMore": "Κλικ για περισσότερες πληροφορίες"
   },
   "hoverInfo": {
     "hoverMouse": "Περάστε το ποντίκι",

@@ -199,7 +199,7 @@ if (!isFirebaseAvailable()) {
 2. Start dev server: `npx next dev --port 3000`
 3. Start ngrok: `C:\Nestor_Pagonis\ngrok-bin\ngrok.exe http 3000`
 4. Set Telegram webhook: `https://api.telegram.org/bot{TOKEN}/setWebhook?url={NGROK_URL}/api/communications/webhooks/telegram`
-5. Dev bot token: `8291786276:AAHDwgcf5VmY5MODnr7oym90B5sJE7ZEWLY`
+5. Dev bot token: stored in `.env.local` as `TELEGRAM_BOT_TOKEN` (NEVER hardcode tokens)
 
 ### Test Data Setup
 

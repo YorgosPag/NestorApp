@@ -162,7 +162,7 @@ const UI_COLORS_BASE = {
   UPLOAD_AREA_BORDER: 'rgb(75, 91, 115)',
   
   // Status colors
-  SUCCESS: '#10b981',
+  SUCCESS: '#2ce202',
   WARNING: '#f59e0b',
   ERROR: '#ef4444',
   INFO: '#3b82f6',

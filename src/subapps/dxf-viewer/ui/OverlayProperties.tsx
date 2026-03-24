@@ -123,16 +123,6 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
   const linkedEntityId = overlay ? getLinkedEntityId(overlay) : undefined;
   const hasLinkedEntity = !!linkedEntityId;
 
-  // 🔍 DEBUG (REMOVE): Entity linking diagnostics
-  console.log('[OverlayProperties] Entity linking debug:', {
-    currentLevelId,
-    currentFloorId,
-    buildingId: selectedBuilding?.id,
-    overlayKind: overlay?.kind,
-    isLinkableKind,
-    levelsCount: levels.length,
-    levelsWithFloorId: levels.filter(l => l.floorId).map(l => ({ id: l.id, floorId: l.floorId })),
-  });
 
   // 🏢 ADR-258B: Floor-filtered entities for linking dropdown
   // Units: API supports floorId-only (company-scoped). Parking/Storage: needs buildingId.

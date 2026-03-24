@@ -7,6 +7,7 @@
   "status": {
     "forSale": "For Sale",
     "forRent": "For Rent",
+    "forSaleAndRent": "Sale & Rent",
     "reserved": "Reserved",
     "sold": "Sold",
     "landowner": "Landowner",
@@ -375,8 +376,8 @@
       "readOnly": "Read-Only"
     },
     "availableProperties": "Available Properties",
-    "propertyDetails": "Property Details",
-    "propertyInfo": "Property Information",
+    "propertyDetails": "Selected Property",
+    "propertyInfo": "Quick View",
     "confirm": {
       "deleteProperty": "Are you sure you want to delete the selected property?"
     },
@@ -595,6 +596,9 @@
     "analysisComplete": "Analysis Complete: Found {count} placement suggestions",
     "clickAnalyze": "Click \"Analyze\" for suggestions.",
     "clearSuggestions": "Clear Suggestions"
+  },
+  "hover": {
+    "clickForMore": "Click for more details"
   },
   "hoverInfo": {
     "hoverMouse": "Hover your mouse",

@@ -36,6 +36,12 @@ const STATUS_COLORS = {
     text: 'text-muted-foreground',
     border: 'border-border',
   },
+  // 🏢 ADR-258: Teal for dual listing (for-sale-and-rent)
+  teal: {
+    bg: 'bg-teal-500/10',
+    text: 'text-teal-700 dark:text-teal-400',
+    border: 'border-teal-500/30',
+  },
 } as const;
 
 /**
@@ -53,7 +59,7 @@ export function getPropertyStatusConfig() {
     },
     'for-rent': {
       label: PROPERTY_STATUS_LABELS['for-rent'],
-      color: `${STATUS_COLORS.pending.bg} ${STATUS_COLORS.pending.text} ${STATUS_COLORS.pending.border}`,
+      color: `${STATUS_COLORS.completed.bg} ${STATUS_COLORS.completed.text} ${STATUS_COLORS.completed.border}`,
       priceLabel: 'properties.priceLabels.monthlyRent',
     },
     'sold': {
@@ -63,12 +69,30 @@ export function getPropertyStatusConfig() {
     },
     'rented': {
       label: PROPERTY_STATUS_LABELS['rented'],
-      color: `${STATUS_COLORS.completed.bg} ${STATUS_COLORS.completed.text} ${STATUS_COLORS.completed.border}`,
+      color: `${STATUS_COLORS.cancelled.bg} ${STATUS_COLORS.cancelled.text} ${STATUS_COLORS.cancelled.border}`,
       priceLabel: 'properties.priceLabels.monthlyRent',
     },
     'reserved': {
       label: PROPERTY_STATUS_LABELS['reserved'],
       color: `${STATUS_COLORS.pending.bg} ${STATUS_COLORS.pending.text} ${STATUS_COLORS.pending.border}`,
+      priceLabel: 'properties.priceLabels.salePrice',
+    },
+    // 🏢 ADR-258: Dual listing (for-sale-and-rent) — Teal styling
+    'for-sale-and-rent': {
+      label: PROPERTY_STATUS_LABELS['for-sale-and-rent'],
+      color: `${STATUS_COLORS.teal.bg} ${STATUS_COLORS.teal.text} ${STATUS_COLORS.teal.border}`,
+      priceLabel: 'properties.priceLabels.salePrice',
+    },
+    // 🏢 ENTERPRISE: Unavailable / off-market
+    'unavailable': {
+      label: PROPERTY_STATUS_LABELS['unavailable'],
+      color: `${STATUS_COLORS.inactive.bg} ${STATUS_COLORS.inactive.text} ${STATUS_COLORS.inactive.border}`,
+      priceLabel: 'properties.priceLabels.price',
+    },
+    // Legacy status — mapped to for-sale semantics
+    'available': {
+      label: PROPERTY_STATUS_LABELS['for-sale'],
+      color: `${STATUS_COLORS.active.bg} ${STATUS_COLORS.active.text} ${STATUS_COLORS.active.border}`,
       priceLabel: 'properties.priceLabels.salePrice',
     },
     'unknown': {
