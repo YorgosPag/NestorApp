@@ -58,6 +58,11 @@ export default defineConfig([
       // Additional strict rules for component architecture
       "@typescript-eslint/no-unused-vars": "error",
       "@typescript-eslint/no-explicit-any": "error",
+      // 🚨 ENTERPRISE (CLAUDE.md N.2): Ban 'as any' type assertions — use proper types
+      "no-restricted-syntax": ["error", {
+        selector: "TSAsExpression > TSAnyKeyword",
+        message: "❌ 'as any' is BANNED (CLAUDE.md N.2). Use proper TypeScript types, generics, or discriminated unions.",
+      }],
       "prefer-const": "error",
       "@typescript-eslint/no-var-requires": "error",
       "react/prop-types": "off", // We use TypeScript for prop validation
@@ -115,9 +120,9 @@ export default defineConfig([
       "design-system/no-hardcoded-spacing": "off",
       "design-system/prefer-design-system-imports": "off",
       "design-system/enforce-semantic-colors": "off",
-      // 🏢 ENTERPRISE: Disable strict rules for non-user-facing code
+      // 🏢 ENTERPRISE: Relaxed rules for non-user-facing code (but any is BANNED everywhere)
       "@typescript-eslint/no-unused-vars": "off",
-      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-explicit-any": "error",  // 🚨 UPGRADED: any is banned EVERYWHERE (CLAUDE.md N.2)
       "@typescript-eslint/no-var-requires": "off",
       "@typescript-eslint/no-require-imports": "off",  // Allow require() in server code
       "@typescript-eslint/no-unsafe-function-type": "off", // Allow Function type in internal code

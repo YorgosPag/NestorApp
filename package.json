@@ -30,6 +30,8 @@
     "typecheck": "tsc --noEmit",
     "orchestrator": "tsx scripts/orchestrator/index.ts",
     "typecheck:strict": "tsc --noEmit --strict",
+    "validate:project": "bash scripts/validate-project-rules.sh",
+    "validate:all": "npm run lint:strict && bash scripts/validate-project-rules.sh",
     "strict-mode": "node scripts/simple-strict-check.js",
     "clear-cache": "node scripts/clear-cache.js",
     "postinstall": "patch-package",
