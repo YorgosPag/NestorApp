@@ -10,12 +10,32 @@
  */
 
 import type { UploadEntryPoint } from './types';
+import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 
 /**
  * Building upload entry points (non-study).
  * Study entries merged at assembly time from entries-studies.ts.
  */
 export const BUILDING_ENTRY_POINTS: UploadEntryPoint[] = [
+    // ------------------------------------------------------------------------
+    // ΚΑΤΟΨΕΙΣ ΚΤΗΡΙΟΥ (Floorplans)
+    // ------------------------------------------------------------------------
+    {
+      id: 'building-floorplan',
+      purpose: FLOORPLAN_PURPOSES.BUILDING,
+      domain: 'construction',
+      category: 'floorplans',
+      label: {
+        el: 'Κάτοψη Κτηρίου',
+        en: 'Building Floor Plan',
+      },
+      description: {
+        el: 'Γενική κάτοψη κτηρίου (DXF/PDF)',
+        en: 'General building floor plan (DXF/PDF)',
+      },
+      icon: 'LayoutGrid',
+      order: 1,
+    },
     {
       id: 'exterior-photo',
       purpose: 'exterior',

@@ -111,6 +111,7 @@ const EntityContextMenuInner = forwardRef<EntityContextMenuHandle, EntityContext
         side="bottom"
         align="start"
         sideOffset={0}
+        avoidCollisions={false}
       >
         {/* Join */}
         <DropdownMenuItem

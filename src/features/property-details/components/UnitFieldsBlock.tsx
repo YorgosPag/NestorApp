@@ -142,9 +142,11 @@ const UNIT_TYPE_OPTIONS: UnitType[] = [
   'detached_house', 'villa', 'shop', 'office', 'hall', 'storage'
 ];
 
+// Transaction statuses (reserved, sold, rented) require buyer/tenant selection
+// and can ONLY be set through SalesActionDialogs (ReserveDialog/SellDialog).
+// See: Sentry fix 2026-03-24 — ApiClientError "Buyer contact is required"
 const COMMERCIAL_STATUS_OPTIONS: CommercialStatus[] = [
   'unavailable', 'for-sale', 'for-rent', 'for-sale-and-rent',
-  'reserved', 'sold', 'rented'
 ];
 
 const OPERATIONAL_STATUS_OPTIONS: OperationalStatus[] = [
@@ -638,7 +640,7 @@ export function UnitFieldsBlock({
               <Label className="text-xs text-muted-foreground">
                 {t('fields.identity.commercialStatus', { defaultValue: 'Εμπορική Κατάσταση' })}
               </Label>
-              <Select value={formData.commercialStatus} disabled={!isEditing || isSoldOrRented}
+              <Select value={formData.commercialStatus} disabled={!isEditing || isReservedOrSold}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, commercialStatus: value as CommercialStatus }))}>
                 <SelectTrigger className="h-7 text-xs">
                   <SelectValue placeholder={t('fields.identity.commercialStatusPlaceholder', { defaultValue: 'Επιλέξτε κατάσταση...' })} />

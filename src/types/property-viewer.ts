@@ -74,6 +74,12 @@ export interface Property {
      */
     price?: number;
 
+    /** 🏢 ADR-197: Commercial data (askingPrice, finalPrice, etc.) */
+    commercial?: {
+      askingPrice?: number | null;
+      finalPrice?: number | null;
+    };
+
     area?: number;
     /** Χιλιοστά ιδιοκτησίας — read-only, from ownership table */
     millesimalShares?: number | null;

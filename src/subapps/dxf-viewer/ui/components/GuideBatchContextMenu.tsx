@@ -96,7 +96,7 @@ const GuideBatchContextMenuInner = forwardRef<GuideBatchContextMenuHandle, Guide
             tabIndex={-1}
           />
         </DropdownMenuTrigger>
-        <DropdownMenuContent className={cn(styles.menuContent, 'min-w-[200px]')} align="start">
+        <DropdownMenuContent className={cn(styles.menuContent, 'min-w-[200px]')} align="start" side="bottom" sideOffset={0} avoidCollisions={false}>
           {/* Header: selection count */}
           <DropdownMenuItem disabled className={styles.menuHeader}>
             {t('guideBatchMenu.selectedCount', { count: selectedCount })}

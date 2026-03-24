@@ -48,6 +48,8 @@ export interface WizardCompleteMeta {
   entityType: 'project' | 'building' | 'floor' | 'unit';
   entityId: string;
   purpose: string;
+  /** Human-readable entity label (e.g., "Κτήριο Α", "ΣΟΦΙΤΑ") for displayName generation */
+  entityLabel?: string;
 }
 
 interface FloorplanImportWizardProps {
@@ -114,6 +116,7 @@ export function FloorplanImportWizard({
         entityType: cfg.entityType as WizardCompleteMeta['entityType'],
         entityId: cfg.entityId,
         purpose: cfg.purpose ?? '',
+        entityLabel: cfg.entityLabel,
       };
       onComplete(file, meta);
     } else {

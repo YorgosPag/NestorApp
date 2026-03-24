@@ -78,8 +78,7 @@ export const COLLECTIONS = {
   SUBMISSIONS: process.env.NEXT_PUBLIC_SUBMISSIONS_COLLECTION || 'submissions',
   SURVEYS: process.env.NEXT_PUBLIC_SURVEYS_COLLECTION || 'surveys',
 
-  // 📄 DOCUMENTS & FILES
-  DOCUMENTS: process.env.NEXT_PUBLIC_DOCUMENTS_COLLECTION || 'documents',
+  // 📄 FILES (SSoT: all uploaded files — floorplans, DXF, photos, documents)
   FILES: process.env.NEXT_PUBLIC_FILES_COLLECTION || 'files',
   ATTACHMENTS: process.env.NEXT_PUBLIC_ATTACHMENTS_COLLECTION || 'attachments',
 

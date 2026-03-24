@@ -485,6 +485,7 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
             entityType: meta.entityType as DxfSaveContext['entityType'],
             filesCategory: 'floorplans',
             purpose: meta.purpose || undefined,
+            entityLabel: meta.entityLabel,
           };
           onSceneImported?.(file, undefined, saveContext);
         }}

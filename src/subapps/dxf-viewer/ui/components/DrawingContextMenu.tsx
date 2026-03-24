@@ -210,6 +210,7 @@ const DrawingContextMenuInner = forwardRef<DrawingContextMenuHandle, DrawingCont
         side="bottom"
         align="start"
         sideOffset={0}
+        avoidCollisions={false}
       >
         {/* Enter / Finish */}
         <DropdownMenuItem

@@ -172,6 +172,7 @@ const GuideContextMenuInner = forwardRef<GuideContextMenuHandle, GuideContextMen
         side="bottom"
         align="start"
         sideOffset={0}
+        avoidCollisions={false}
       >
         {/* Header: Guide axis + offset */}
         {targetGuide && (

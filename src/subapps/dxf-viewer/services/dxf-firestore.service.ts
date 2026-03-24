@@ -5,6 +5,8 @@ import { ref, uploadBytes, getDownloadURL, getBytes } from 'firebase/storage';
 import { COLLECTIONS } from '../../../config/firestore-collections';
 import { generateFileId as enterpriseGenerateFileId } from '@/services/enterprise-id.service';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
+import { buildFileDisplayName } from '@/services/upload/utils/file-display-name';
+import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import type { SceneModel } from '../types/scene';
 import {
   DxfSecurityValidator,
@@ -75,6 +77,8 @@ export interface DxfSaveContext {
    * Aligns with FLOORPLAN_PURPOSES (e.g. 'floor-floorplan').
    */
   purpose?: string;
+  /** Human-readable entity label for displayName generation (e.g., "Κτήριο Α", "ΣΟΦΙΤΑ") */
+  entityLabel?: string;
 }
 
 export interface DxfFileMetadata {
@@ -467,6 +471,22 @@ export class DxfFirestoreService {
     })();
     const resolvedCategory = context?.filesCategory ?? 'drawings';
 
+    // 🏢 ENTERPRISE: Generate proper displayName via centralized buildFileDisplayName
+    // instead of using the raw filename (fixes ΕΚΚΡ.2 — floorplan display names)
+    // When no entityLabel from wizard context, use cleaned filename as fallback
+    // to avoid generic-only names like "Σχέδια" for direct DXF saves
+    const cleanedFileName = fileName.replace(/\.dxf$/i, '').trim();
+    const { displayName: generatedDisplayName } = buildFileDisplayName({
+      entityType: resolvedEntityType as EntityType,
+      entityId: resolvedEntityId,
+      domain: 'construction' as FileDomain,
+      category: resolvedCategory as FileCategory,
+      entityLabel: context?.entityLabel || cleanedFileName,
+      purpose: context?.purpose,
+      ext: 'dxf',
+      originalFilename: fileName,
+    });
+
     const fileRecord = {
       id: fileId,
       companyId: context?.companyId ?? null,
@@ -477,7 +497,7 @@ export class DxfFirestoreService {
       category: resolvedCategory,
       ...(context?.purpose ? { purpose: context.purpose } : {}),
       storagePath: scenePath,
-      displayName: fileName,
+      displayName: generatedDisplayName,
       originalFilename: fileName,
       ext: 'dxf',
       contentType: 'application/dxf',
