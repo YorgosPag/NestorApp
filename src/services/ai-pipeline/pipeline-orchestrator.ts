@@ -512,8 +512,8 @@ export class PipelineOrchestrator {
                   contactType: String(rc.contactType ?? 'individual'),
                   companyName: rc.companyName ? String(rc.companyName) : null,
                 },
-                companyId: ctx.intake.companyId,
-                matches: parsed.data.matches as import('./shared/contact-lookup').DuplicateMatch[],
+                companyId: ctx.companyId,
+                matches: parsed.data.matches as unknown as import('./shared/contact-lookup').DuplicateMatch[],
                 chatId: String(telegramChatId),
               });
 
