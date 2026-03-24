@@ -697,6 +697,7 @@ export class AgenticToolExecutor {
     const companyName = args.companyName ? String(args.companyName).trim() : null;
     const email = args.email ? String(args.email).trim().toLowerCase() : null;
     const phone = args.phone ? String(args.phone).trim() : null;
+    const skipDuplicateCheck = args.skipDuplicateCheck === true;
 
     if (!CONTACT_TYPES.includes(contactType as ContactTypeEnum)) {
       return { success: false, error: `contactType must be one of: ${CONTACT_TYPES.join(', ')}` };
@@ -725,6 +726,7 @@ export class AgenticToolExecutor {
         companyId: ctx.companyId,
         companyName: companyName ?? undefined,
         createdBy: 'AI Agent (admin)',
+        skipDuplicateCheck,
       });
 
       // ── 4. Audit log ──
@@ -751,9 +753,38 @@ export class AgenticToolExecutor {
     } catch (err) {
       const errorMsg = getErrorMessage(err);
 
-      // Duplicate contact — return user-friendly message
+      // ── Duplicate contact — structured response for AI to handle ──
       if (errorMsg.includes('DUPLICATE_CONTACT')) {
-        return { success: false, error: errorMsg };
+        // Extract structured matches from error (format: "DUPLICATE_CONTACT: summary|||JSON")
+        const jsonSeparator = errorMsg.indexOf('|||');
+        let duplicateMatches: Array<Record<string, unknown>> = [];
+        if (jsonSeparator !== -1) {
+          try {
+            duplicateMatches = JSON.parse(errorMsg.slice(jsonSeparator + 3)) as Array<Record<string, unknown>>;
+          } catch {
+            // Fallback: no structured data
+          }
+        }
+
+        logger.info('Duplicate contact detected — returning to AI for user decision', {
+          firstName, lastName, phone, email, matchCount: duplicateMatches.length,
+        });
+
+        return {
+          success: false,
+          data: {
+            duplicateDetected: true,
+            matches: duplicateMatches,
+            requestedContact: { firstName, lastName, email, phone, contactType },
+            suggestedActions: [
+              'Ρώτα τον χρήστη αν θέλει: (1) Ενημέρωση υπάρχουσας, (2) Δημιουργία νέας ομώνυμης, (3) Ακύρωση',
+              'Αν ο χρήστης επιλέξει δημιουργία νέας, κάλεσε create_contact ξανά με skipDuplicateCheck: true',
+            ],
+          },
+          error: duplicateMatches.length > 0
+            ? `Βρέθηκαν ${duplicateMatches.length} πιθανές ταυτόσημες επαφές. Ζήτα οδηγίες από τον χρήστη πριν προχωρήσεις.`
+            : errorMsg,
+        };
       }
 
       logger.error('Failed to create contact', { error: errorMsg });

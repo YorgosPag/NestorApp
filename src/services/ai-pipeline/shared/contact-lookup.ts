@@ -45,6 +45,22 @@ export interface ContactNameSearchResult {
   type: string | null;
 }
 
+/** Single duplicate match with match type and confidence */
+export interface DuplicateMatch {
+  type: 'email' | 'phone' | 'name';
+  confidence: 'exact' | 'fuzzy';
+  contactId: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+}
+
+/** Result of multi-criteria duplicate check */
+export interface DuplicateCheckResult {
+  hasDuplicate: boolean;
+  matches: DuplicateMatch[];
+}
+
 // ============================================================================
 // CONTACT LOOKUP
 // ============================================================================
@@ -100,6 +116,176 @@ export async function findContactByEmail(
 
   logger.debug('Contact not found by email', { email: normalizedEmail, companyId });
   return null;
+}
+
+// ============================================================================
+// PHONE NORMALIZATION & CONTACT SEARCH BY PHONE
+// ============================================================================
+
+/**
+ * Normalize phone number for comparison.
+ * Strips whitespace, dashes, dots, parentheses, and Greek country code (+30 / 0030).
+ */
+function normalizePhone(phone: string): string {
+  let normalized = phone.replace(/[\s\-.\(\)]/g, '');
+  if (normalized.startsWith('+30')) normalized = normalized.slice(3);
+  if (normalized.startsWith('0030')) normalized = normalized.slice(4);
+  return normalized;
+}
+
+/**
+ * Server-side contact lookup by phone number using Admin SDK.
+ *
+ * Searches the contacts collection for a matching phone number.
+ * Checks both the `phones` array field and the flat `phone` field.
+ * Normalizes numbers before comparison (strips spaces, dashes, +30).
+ *
+ * @param phone - Phone number to search for
+ * @param companyId - Tenant isolation (company ID)
+ * @returns ContactNameSearchResult if found, null otherwise
+ */
+export async function findContactByPhone(
+  phone: string,
+  companyId: string
+): Promise<ContactNameSearchResult | null> {
+  const adminDb = getAdminFirestore();
+
+  const snapshot = await adminDb
+    .collection(COLLECTIONS.CONTACTS)
+    .where(FIELDS.COMPANY_ID, '==', companyId)
+    .limit(50)
+    .get();
+
+  const normalizedTarget = normalizePhone(phone);
+
+  for (const doc of snapshot.docs) {
+    const data = doc.data();
+
+    // Check phones array (pattern: [{ number: "...", type: "mobile" }])
+    const phones = data.phones as Array<{ phone?: string; number?: string }> | undefined;
+    const phoneMatch = phones?.some(p => {
+      const val = p.number ?? p.phone ?? '';
+      return normalizePhone(val) === normalizedTarget;
+    });
+
+    // Check flat phone field
+    const flatPhone = data.phone as string | undefined;
+    const flatMatch = flatPhone ? normalizePhone(flatPhone) === normalizedTarget : false;
+
+    if (phoneMatch || flatMatch) {
+      // Extract primary email for context
+      let email: string | null = null;
+      const emails = data.emails as Array<{ email?: string }> | undefined;
+      if (emails && emails.length > 0) {
+        email = (emails[0].email as string) ?? null;
+      } else if (data.email) {
+        email = data.email as string;
+      }
+
+      // Extract primary phone for display
+      let displayPhone: string | null = null;
+      if (phones && phones.length > 0) {
+        displayPhone = (phones[0].number ?? phones[0].phone ?? null) as string | null;
+      } else if (flatPhone) {
+        displayPhone = flatPhone;
+      }
+
+      const displayName = (data.displayName ?? data.firstName ?? data.companyName ?? 'Χωρίς όνομα') as string;
+      return {
+        contactId: doc.id,
+        name: displayName,
+        email,
+        phone: displayPhone,
+        company: (data.companyName as string) ?? null,
+        type: (data.type as string) ?? (data.contactType as string) ?? null,
+      };
+    }
+  }
+
+  logger.debug('Contact not found by phone', { phone: normalizedTarget, companyId });
+  return null;
+}
+
+// ============================================================================
+// MULTI-CRITERIA DUPLICATE CHECK (Google-level detection)
+// ============================================================================
+
+/**
+ * Check for duplicate contacts across 3 criteria: email, phone, name.
+ *
+ * Priority order:
+ * 1. Email exact match → 100% duplicate
+ * 2. Phone exact match → high confidence duplicate
+ * 3. Name fuzzy match → possible duplicate (asks user)
+ *
+ * @param params - Contact fields to check against existing contacts
+ * @param companyId - Tenant isolation
+ * @returns DuplicateCheckResult with all matches found
+ */
+export async function checkContactDuplicates(
+  params: { email: string | null; phone: string | null; firstName: string; lastName: string; companyName?: string },
+  companyId: string
+): Promise<DuplicateCheckResult> {
+  const matches: DuplicateMatch[] = [];
+
+  // ── Check 1: Email exact match ──
+  if (params.email) {
+    const emailMatch = await findContactByEmail(params.email, companyId);
+    if (emailMatch) {
+      matches.push({
+        type: 'email',
+        confidence: 'exact',
+        contactId: emailMatch.contactId,
+        name: emailMatch.name,
+        email: params.email,
+        phone: null,
+      });
+    }
+  }
+
+  // ── Check 2: Phone exact match ──
+  if (params.phone) {
+    const phoneMatch = await findContactByPhone(params.phone, companyId);
+    if (phoneMatch) {
+      // Avoid duplicate entry if same contact was already matched by email
+      const alreadyMatched = matches.some(m => m.contactId === phoneMatch.contactId);
+      if (!alreadyMatched) {
+        matches.push({
+          type: 'phone',
+          confidence: 'exact',
+          contactId: phoneMatch.contactId,
+          name: phoneMatch.name,
+          email: phoneMatch.email,
+          phone: phoneMatch.phone,
+        });
+      }
+    }
+  }
+
+  // ── Check 3: Name fuzzy match (only when no email/phone match found) ──
+  if (matches.length === 0) {
+    const displayName = params.companyName
+      ?? [params.firstName, params.lastName].filter(Boolean).join(' ');
+
+    if (displayName.trim()) {
+      const nameMatches = await findContactByName(displayName, companyId, 5);
+      for (const nm of nameMatches) {
+        matches.push({
+          type: 'name',
+          confidence: 'fuzzy',
+          contactId: nm.contactId,
+          name: nm.name,
+          email: nm.email,
+          phone: nm.phone,
+        });
+      }
+    }
+  }
+
+  return {
+    hasDuplicate: matches.length > 0,
+    matches,
+  };
 }
 
 // ============================================================================
@@ -521,6 +707,7 @@ export interface CreateContactParams {
   companyId: string;
   companyName?: string;
   createdBy: string; // admin display name
+  skipDuplicateCheck?: boolean; // bypass after explicit user confirmation
 }
 
 /** Result of a successful contact creation */
@@ -533,7 +720,7 @@ export interface CreateContactResult {
  * Server-side contact creation using Admin SDK.
  *
  * Steps:
- * 1. Duplicate check by email (if provided)
+ * 1. Multi-criteria duplicate check (email + phone + name)
  * 2. Build Firestore document following contact schema (contracts.ts)
  * 3. Write to Firestore contacts collection
  *
@@ -541,7 +728,7 @@ export interface CreateContactResult {
  *
  * @param params Contact creation parameters
  * @returns Created contact ID and display name
- * @throws Error if duplicate found or Firestore write fails
+ * @throws Error with DUPLICATE_CONTACT prefix if duplicates found (includes JSON matches)
  *
  * @see ADR-145 (Super Admin AI Assistant — UC-015)
  */
@@ -550,12 +737,25 @@ export async function createContactServerSide(
 ): Promise<CreateContactResult> {
   const adminDb = getAdminFirestore();
 
-  // ── Step 1: Duplicate check by email ──
-  if (params.email) {
-    const existing = await findContactByEmail(params.email, params.companyId);
-    if (existing) {
+  // ── Step 1: Multi-criteria duplicate check (email + phone + name) ──
+  if (!params.skipDuplicateCheck) {
+    const duplicateResult = await checkContactDuplicates(
+      {
+        email: params.email,
+        phone: params.phone,
+        firstName: params.firstName,
+        lastName: params.lastName,
+        companyName: params.companyName,
+      },
+      params.companyId
+    );
+
+    if (duplicateResult.hasDuplicate) {
+      const matchSummary = duplicateResult.matches
+        .map(m => `${m.type}:${m.confidence} → "${m.name}" (${m.contactId})`)
+        .join('; ');
       throw new Error(
-        `DUPLICATE_CONTACT: Υπάρχει ήδη επαφή "${existing.name}" με email ${params.email} (ID: ${existing.contactId})`
+        `DUPLICATE_CONTACT: ${matchSummary}|||${JSON.stringify(duplicateResult.matches)}`
       );
     }
   }

@@ -477,12 +477,20 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
     },
   },
 
-  // ── 13. create_contact: Dedicated contact creation with proper validation ──
+  // ── 13. create_contact: Dedicated contact creation with Google-level duplicate detection ──
   {
     type: 'function' as const,
     function: {
       name: 'create_contact',
-      description: 'Create a new contact (individual person or company). Admin only. Validates fields, checks for duplicates by email, generates enterprise ID (cont_ for individuals, comp_ for companies). Use this INSTEAD of firestore_write for contacts collection.',
+      description: [
+        'Create a new contact (individual person or company). Admin only.',
+        'Validates fields, generates enterprise ID (cont_ for individuals, comp_ for companies).',
+        'DUPLICATE DETECTION: Automatically checks for duplicates by email (exact), phone (exact), and name (fuzzy).',
+        'If duplicates are found, returns duplicateDetected:true with match details instead of creating.',
+        'In that case, ASK the user what they want: (1) update existing, (2) create new anyway, (3) cancel.',
+        'If user confirms creation despite duplicates, call again with skipDuplicateCheck:true.',
+        'Use this INSTEAD of firestore_write for contacts collection.',
+      ].join(' '),
       parameters: {
         type: 'object',
         properties: {
@@ -511,8 +519,12 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
             type: ['string', 'null'],
             description: 'Primary phone number (null if not provided)',
           },
+          skipDuplicateCheck: {
+            type: 'boolean',
+            description: 'Set to true ONLY after user explicitly confirmed they want to create despite duplicates. Default false.',
+          },
         },
-        required: ['contactType', 'firstName', 'lastName', 'companyName', 'email', 'phone'],
+        required: ['contactType', 'firstName', 'lastName', 'companyName', 'email', 'phone', 'skipDuplicateCheck'],
         additionalProperties: false,
       },
       strict: true,
