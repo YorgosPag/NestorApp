@@ -696,7 +696,7 @@ export class AgenticToolExecutor {
     const lastName = String(args.lastName ?? '').trim();
     const companyName = args.companyName ? String(args.companyName).trim() : null;
     const email = args.email ? String(args.email).trim().toLowerCase() : null;
-    const phone = args.phone ? String(args.phone).trim() : null;
+    let phone = args.phone ? String(args.phone).trim() : null;
     const skipDuplicateCheck = args.skipDuplicateCheck === true;
 
     if (!CONTACT_TYPES.includes(contactType as ContactTypeEnum)) {
@@ -709,6 +709,28 @@ export class AgenticToolExecutor {
 
     if (contactType === 'company' && !companyName) {
       return { success: false, error: 'companyName is required for company contacts' };
+    }
+
+    // ── 2b. Validate phone & email format (Google-level — SSoT validators) ──
+    if (phone) {
+      const { isValidPhone, cleanPhoneNumber } = await import('@/lib/validation/phone-validation');
+      if (!isValidPhone(phone)) {
+        return {
+          success: false,
+          error: `Μη έγκυρο τηλέφωνο: "${phone}". Αποδεκτά: ελληνικό κινητό (69XXXXXXXX — 10 ψηφία), σταθερό (2XXXXXXXXX — 10 ψηφία) ή διεθνές (+XXXXXXXXXXX). Ζήτα από τον χρήστη να δώσει ξανά τον αριθμό.`,
+        };
+      }
+      // Normalize: strip spaces/dashes for clean storage
+      phone = cleanPhoneNumber(phone);
+    }
+    if (email) {
+      const { isValidEmail } = await import('@/lib/validation/email-validation');
+      if (!isValidEmail(email)) {
+        return {
+          success: false,
+          error: `Μη έγκυρο email: "${email}". Ζήτα από τον χρήστη να δώσει ξανά τη σωστή διεύθυνση.`,
+        };
+      }
     }
 
     // ── 3. Delegate to createContactServerSide (SSoT) ──
