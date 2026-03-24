@@ -57,6 +57,25 @@ SOS. SOS. N.7 ΑΔΙΑΠΡΑΓΜΑΤΕΥΤΟ — GOOGLE-LEVEL QUALITY:
 - Optimistic updates, proper state management, zero race conditions
 - Αν η πρώτη λύση δεν είναι Google-level → μην την κάνεις commit, ξαναγράψε τη σωστά
 - Παραδείγματα: Google Docs auto-save, Gmail instant actions, Google Contacts patterns
+SOS. SOS. N.8 ΑΞΙΟΛΟΓΗΣΗ ORCHESTRATOR vs SINGLE AGENT (ADR-261):
+**Πριν ξεκινήσεις ΚΑΘΕ εργασία**, αξιολόγησε αν αξίζει ο Multi-Agent Orchestrator:
+
+| Κριτήριο | Μόνος μου (single agent) | Orchestrator |
+|----------|--------------------------|--------------|
+| Αρχεία | 1-4 αρχεία | 5+ αρχεία |
+| Τομείς | 1 τομέας (π.χ. μόνο frontend) | 2+ τομείς (frontend + backend + docs) |
+| Τύπος | Bugfix, μικρή αλλαγή, refactor ενός αρχείου | Νέο feature, cross-cutting refactoring |
+
+**Αν ο orchestrator αξίζει** → ΠΡΙΝ ξεκινήσεις, ενημέρωσε τον Γιώργο:
+```
+Αυτό το task αγγίζει ~X αρχεία σε Y τομείς.
+Πρόταση: Χρησιμοποίησε orchestrator (~ZK tokens, Nx).
+Θέλεις orchestrator ή να το κάνω μόνος μου;
+```
+- Αν πει "orchestrator" → `npx tsx scripts/orchestrator/index.ts "task"`
+- Αν πει "μόνος σου" ή δεν απαντήσει → προχώρα κανονικά
+- **ΜΗΝ τρέχεις orchestrator χωρίς έγκριση Γιώργου** (καταναλώνει ~2.5-3.5x tokens)
+
 SOS. SOS. Ν.2 ΑΠΑΓΟΡΕΥΕΤΑΙ Η ΧΡΗΣΗ any
 SOS. SOS. Ν.3 ΑΠΑΓΟΡΕΥΕΤΑΙ Η ΧΡΗΣΗ ΤΩΝ INLINE STYLES
 SOS. SOS. N.4 ΑΠΑΓΟΡΕΥΕΤΑΙ:
