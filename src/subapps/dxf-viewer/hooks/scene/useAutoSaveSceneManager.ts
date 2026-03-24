@@ -17,6 +17,10 @@ export interface AutoSaveSceneManagerState extends SceneManagerState {
   setFileRecordId: (id: string | null) => void;
   /** 🏢 ADR-240: Inject save context (entityType/floorId/purpose) from Wizard import */
   setSaveContext: (ctx: DxfSaveContext | null) => void;
+  /** 🏢 ENTERPRISE: Callback after successful scene save — used by LevelsSystem to link scene→level */
+  setOnSceneSaved: (cb: ((fileId: string, fileName: string) => void) | null) => void;
+  /** 🏢 ENTERPRISE: Set loading guard to prevent auto-save during scene load from Storage */
+  setIsLoadingFromFirestore: (loading: boolean) => void;
 }
 
 export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
@@ -39,7 +43,9 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
   const injectedFileRecordIdRef = useRef<string | null>(null);
   // 🏢 ADR-240: Injected save context from Wizard — carries entityType/floorId/purpose for dual-write
   const injectedSaveContextRef = useRef<DxfSaveContext | null>(null);
-  
+  // 🏢 ENTERPRISE: Callback after successful save — LevelsSystem uses this to persist level→DXF link
+  const onSceneSavedRef = useRef<((fileId: string, fileName: string) => void) | null>(null);
+
   /**
    * 🏢 ENTERPRISE: Inject FileRecord ID from external source (wizard upload)
    * When set, auto-save writes to cadFiles using THIS ID instead of generating a new one.
@@ -56,6 +62,16 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
   /** 🏢 ADR-240: Inject DxfSaveContext from Wizard so dual-write uses correct entityType/floorId */
   const setSaveContext = useCallback((ctx: DxfSaveContext | null) => {
     injectedSaveContextRef.current = ctx;
+  }, []);
+
+  /** 🏢 ENTERPRISE: Set callback for after successful save (used by LevelsSystem) */
+  const setOnSceneSaved = useCallback((cb: ((fileId: string, fileName: string) => void) | null) => {
+    onSceneSavedRef.current = cb;
+  }, []);
+
+  /** 🏢 ENTERPRISE: External control of loading guard (used by LevelsSystem during scene load) */
+  const setIsLoadingFromFirestore = useCallback((loading: boolean) => {
+    isLoadingFromFirestoreRef.current = loading;
   }, []);
 
   /**
@@ -77,6 +93,14 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
         // The wizard handles saving via useFloorplanUpload + /api/floorplans/process.
         // Running auto-save here would create a redundant scene file in Storage (cadFiles / dxf-scenes/).
         if (injectedSaveContextRef.current?.purpose) {
+          // 🏢 ENTERPRISE: Even though auto-save is skipped, still notify LevelsSystem
+          // about the file association so sceneFileId gets persisted on the level.
+          // Without this, wizard-imported DXFs would NOT auto-load after restart.
+          const wizardFileId = injectedFileRecordIdRef.current
+            ?? fileIdCacheRef.current.get(currentFileName);
+          if (wizardFileId) {
+            onSceneSavedRef.current?.(wizardFileId, currentFileName);
+          }
           setSaveStatus('idle');
           return;
         }
@@ -122,7 +146,8 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
           if (success) {
             setSaveStatus('success');
             setLastSaveTime(new Date());
-
+            // 🏢 ENTERPRISE: Notify LevelsSystem to persist level→DXF association
+            onSceneSavedRef.current?.(fileId, currentFileName);
           } else {
             setSaveStatus('error');
             console.error(`❌ [AutoSave] Failed to save changes to ${currentFileName}`);
@@ -182,5 +207,7 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
     saveStatus,
     setFileRecordId,
     setSaveContext,
+    setOnSceneSaved,
+    setIsLoadingFromFirestore,
   };
 }

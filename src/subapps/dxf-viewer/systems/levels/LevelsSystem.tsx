@@ -16,6 +16,7 @@ import { useAutoSaveSceneManager } from '../../hooks/scene/useAutoSaveSceneManag
 import type { SceneModel } from '../../types/scene';
 import { useImportWizard } from '../../hooks/common/useImportWizard';
 import { StorageErrorHandler, withStorageErrorHandling } from '../../utils/storage-utils';
+import { DxfFirestoreService } from '../../services/dxf-firestore.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { db } from '../../../../lib/firebase';
 import {
@@ -93,20 +94,131 @@ function useLevelsSystemState({
     ...initialSettings 
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [sceneLoading, setSceneLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const sceneManager = useAutoSaveSceneManager();
   const importWizardHook = useImportWizard();
 
-  // 🔧 FIX: Εξασφαλίζουμε σκηνή για το currentLevel ΜΕΤΑ το render (όχι μέσα σε useMemo αλλού)
+  // 🏢 ENTERPRISE: AbortController ref for cancelling pending scene loads on rapid level switch
+  const sceneLoadAbortRef = React.useRef<AbortController | null>(null);
+  // Track which levels have had their scenes loaded to prevent duplicate loads
+  const loadedSceneLevelsRef = React.useRef<Set<string>>(new Set());
+
+  // 🏢 ENTERPRISE: Auto-load DXF scene from Storage when level changes (CAD-industry standard)
+  // This replaces the old "create empty scene" approach with persistent scene loading
   useEffect(() => {
     if (!currentLevelId) return;
-    const hasScene = sceneManager.getLevelScene(currentLevelId);
-    if (!hasScene) {
-      // Δημιουργούμε την κενή σκηνή χωρίς να μπλέκουμε το render phase
-      sceneManager.setLevelScene(currentLevelId, createEmptyScene());
+
+    // Check if scene is already in memory (fast path — instant render)
+    const existingScene = sceneManager.getLevelScene(currentLevelId);
+    if (existingScene && existingScene.entities.length > 0) return;
+
+    // Find the level to check for sceneFileId
+    const level = levels.find(l => l.id === currentLevelId);
+    const sceneFileId = level?.sceneFileId;
+
+    if (!sceneFileId) {
+      // No DXF linked to this level yet — create empty scene
+      if (!existingScene) {
+        sceneManager.setLevelScene(currentLevelId, createEmptyScene());
+      }
+      return;
     }
-  }, [currentLevelId]); // Αφαιρέθηκε το sceneManager από dependencies για να αποφευχθεί το infinite loop
+
+    // Prevent duplicate loads for the same level
+    if (loadedSceneLevelsRef.current.has(currentLevelId)) {
+      if (!existingScene) {
+        sceneManager.setLevelScene(currentLevelId, createEmptyScene());
+      }
+      return;
+    }
+
+    // Cancel any pending load from previous level switch
+    sceneLoadAbortRef.current?.abort();
+    const abortController = new AbortController();
+    sceneLoadAbortRef.current = abortController;
+
+    const loadScene = async () => {
+      setSceneLoading(true);
+      // Set loading guard to prevent auto-save from firing during scene load
+      sceneManager.setIsLoadingFromFirestore(true);
+
+      try {
+        const fileRecord = await DxfFirestoreService.loadFileV2(sceneFileId);
+
+        // Check if this load was cancelled (user switched to another level)
+        if (abortController.signal.aborted) return;
+
+        if (fileRecord?.scene) {
+          sceneManager.setLevelScene(currentLevelId, fileRecord.scene);
+          // Set the filename for auto-save context
+          if (fileRecord.fileName && sceneManager.setCurrentFileName) {
+            sceneManager.setCurrentFileName(fileRecord.fileName);
+          }
+          loadedSceneLevelsRef.current.add(currentLevelId);
+        } else {
+          // File exists in Firestore but scene couldn't be loaded (corrupted/deleted)
+          console.warn(`[LevelsSystem] Scene not found for fileId: ${sceneFileId}`);
+          sceneManager.setLevelScene(currentLevelId, createEmptyScene());
+        }
+      } catch (err) {
+        if (!abortController.signal.aborted) {
+          console.error('[LevelsSystem] Failed to load scene:', err);
+          sceneManager.setLevelScene(currentLevelId, createEmptyScene());
+        }
+      } finally {
+        if (!abortController.signal.aborted) {
+          // Release loading guard after next frame to prevent auto-save race condition
+          requestAnimationFrame(() => {
+            sceneManager.setIsLoadingFromFirestore(false);
+          });
+          setSceneLoading(false);
+        }
+      }
+    };
+
+    loadScene();
+
+    return () => {
+      abortController.abort();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentLevelId, levels]); // levels dependency needed to detect sceneFileId changes from onSnapshot
+
+  // 🏢 ENTERPRISE: Persist level→DXF association in Firestore (CAD-industry standard)
+  // Called after successful auto-save to link the scene file to its level
+  const linkSceneToLevel = useCallback(async (levelId: string, fileId: string, fileName: string): Promise<void> => {
+    if (!enableFirestore) return;
+
+    // Check if already linked (idempotent — no redundant writes)
+    const level = levels.find(l => l.id === levelId);
+    if (level?.sceneFileId === fileId) return;
+
+    try {
+      await updateDoc(doc(db, firestoreCollection, levelId), {
+        sceneFileId: fileId,
+        sceneFileName: fileName,
+      });
+    } catch (err) {
+      console.error('[LevelsSystem] Failed to link scene to level:', err);
+    }
+  }, [enableFirestore, firestoreCollection, levels]);
+
+  // 🏢 ENTERPRISE: Wire onSceneSaved callback — auto-save notifies us when scene is persisted
+  // Dependency: setOnSceneSaved (stable ref from useCallback) — NOT the full sceneManager object
+  // which changes identity every render due to object spread in useAutoSaveSceneManager
+  const { setOnSceneSaved } = sceneManager;
+  useEffect(() => {
+    setOnSceneSaved((fileId: string, fileName: string) => {
+      if (currentLevelId) {
+        linkSceneToLevel(currentLevelId, fileId, fileName);
+      }
+    });
+    return () => {
+      setOnSceneSaved(null);
+    };
+  }, [currentLevelId, linkSceneToLevel, setOnSceneSaved]);
 
   const handleError = useCallback(async (err: string | Error) => {
     const errorMessage = typeof err === 'string' ? err : err.message;
@@ -519,6 +631,7 @@ function useLevelsSystemState({
     importWizard,
     settings,
     isLoading,
+    sceneLoading,
     error,
 
     // Level operations
@@ -555,6 +668,7 @@ function useLevelsSystemState({
     }),
     setFileRecordId: sceneManager.setFileRecordId,
     setSaveContext: sceneManager.setSaveContext,
+    linkSceneToLevel,
 
     // Import wizard
     startImportWizard,

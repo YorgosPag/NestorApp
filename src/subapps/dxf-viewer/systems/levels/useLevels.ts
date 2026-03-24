@@ -23,6 +23,8 @@ export interface LevelSystemState {
   importWizard: ImportWizardState;
   settings: LevelSystemSettings;
   isLoading: boolean;
+  /** 🏢 ENTERPRISE: True while loading DXF scene from Storage (level switch / startup) */
+  sceneLoading: boolean;
   error: string | null;
 }
 
@@ -60,6 +62,8 @@ export interface LevelSystemActions extends ImportWizardActions {
   setFileRecordId?: (id: string | null) => void;
   /** 🏢 ADR-240: Inject save context (entityType/floorId/purpose) from Wizard import */
   setSaveContext?: (ctx: DxfSaveContext | null) => void;
+  /** 🏢 ENTERPRISE: Persist level→DXF association in Firestore for auto-load on restart */
+  linkSceneToLevel: (levelId: string, fileId: string, fileName: string) => Promise<void>;
 
   // Import wizard - inherits from shared interface
   completeImport: () => FloorplanDoc | null;
