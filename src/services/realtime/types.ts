@@ -156,9 +156,25 @@ export interface RealtimeUnit {
 // ============================================================================
 
 /**
- * Actions written to the `config/ui_sync_signal` document by server-side AI tools.
- * Client subscribes via onSnapshot and triggers UI refresh.
+ * 🏢 ENTERPRISE: Generic entity sync actions for the server→client signal bridge.
+ * Written to `config/ui_sync_signal` by server-side AI tools.
+ * Client hooks subscribe via onSnapshot and trigger UI refresh.
  */
+export type EntitySyncAction = 'CREATED' | 'UPDATED' | 'DELETED';
+
+/**
+ * Entity types supported by the AI sync bridge.
+ * Add new entity types here as they gain AI agent support.
+ */
+export type SyncEntityType =
+  | 'contacts'
+  | 'tasks'
+  | 'buildings'
+  | 'projects'
+  | 'opportunities'
+  | 'communications';
+
+/** @deprecated Use EntitySyncAction — kept for backward compatibility */
 export type ContactSyncAction = 'CONTACT_CREATED' | 'CONTACT_UPDATED' | 'CONTACT_DELETED';
 
 /** Source identifier for server-side AI agent writes */

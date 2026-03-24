@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { Contact } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
@@ -11,19 +11,16 @@ import { normalizeToDate } from '@/lib/date-local';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import {
   RealtimeService,
-  SYNC_SOURCE_AI_AGENT,
   type ContactUpdatedPayload,
   type ContactCreatedPayload,
   type ContactDeletedPayload,
 } from '@/services/realtime';
-import { SYSTEM_DOCS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 // 🔐 ENTERPRISE: Defense-in-depth — auth guard (same pattern as useRealtimeBuildings)
 import { useAuth } from '@/hooks/useAuth';
-// 🔔 Server→Client bridge: detect AI agent writes via signal document
-import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
-import type { DocumentData } from 'firebase/firestore';
-import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
+// 🏢 ENTERPRISE: Centralized AI sync bridge + tab visibility hooks
+import { useAISyncBridge } from '@/hooks/useAISyncBridge';
+import { useTabVisibilityRefresh } from '@/hooks/useTabVisibilityRefresh';
 
 const logger = createModuleLogger('useContactsState');
 
@@ -202,56 +199,9 @@ export function useContactsState() {
     return unsubscribe;
   }, []);
 
-  // 🔔 Layer 1: Tab visibility — debounced refresh when user returns to the tab
-  // Covers: User sends Telegram command → switches back to browser
-  // Debounce 1s prevents rapid refreshes from repeated tab switches
-  const debouncedRefresh = useDebouncedCallback(() => {
-    logger.info('Debounced refresh triggered');
-    forceDataRefresh();
-  }, 1000);
-
-  useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        debouncedRefresh();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [debouncedRefresh]);
-
-  // 🔔 Layer 2: Firestore signal bridge — detect server-side AI agent writes
-  // Server writes to config/{SYSTEM_DOCS.UI_SYNC_SIGNAL} after contact mutations
-  // Client subscribes via onSnapshot → triggers forceDataRefresh
-  const signalInitialized = useRef(false);
-  useEffect(() => {
-    if (authLoading || !user) return;
-
-    const unsub = firestoreQueryService.subscribeDoc<DocumentData>(
-      'CONFIG',
-      SYSTEM_DOCS.UI_SYNC_SIGNAL,
-      (signalDoc) => {
-        // Skip the initial snapshot (first load — not a real signal)
-        if (!signalInitialized.current) {
-          signalInitialized.current = true;
-          return;
-        }
-        if (signalDoc?.source === SYNC_SOURCE_AI_AGENT) {
-          logger.info('AI agent sync signal received', {
-            action: signalDoc.action,
-            entityId: signalDoc.entityId,
-          });
-          debouncedRefresh();
-        }
-      },
-      (err) => logger.warn('Signal subscription error', { error: err.message })
-    );
-
-    return () => {
-      unsub();
-      signalInitialized.current = false;
-    };
-  }, [user, authLoading, debouncedRefresh]);
+  // 🏢 ENTERPRISE: Centralized AI sync bridge + tab visibility (generic hooks)
+  useTabVisibilityRefresh(forceDataRefresh);
+  useAISyncBridge('contacts', forceDataRefresh);
 
   // Effect to handle initial contact selection from URL or default
   useEffect(() => {

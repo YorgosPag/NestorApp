@@ -99,7 +99,10 @@ export {
   type EntityLinkedPayload,
   type EntityUnlinkedPayload,
   type RealtimeEventType,
-  // Server→Client sync bridge types
+  // Server→Client sync bridge types (generic)
+  type EntitySyncAction,
+  type SyncEntityType,
+  // @deprecated — use EntitySyncAction
   type ContactSyncAction,
   SYNC_SOURCE_AI_AGENT,
   REALTIME_EVENTS,

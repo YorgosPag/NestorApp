@@ -828,7 +828,7 @@ export async function createContactServerSide(
   });
 
   // 🔔 Signal UI to refresh contacts (server→client bridge)
-  emitContactSyncSignal('CONTACT_CREATED', contactId, params.companyId);
+  emitEntitySyncSignal('contacts', 'CREATED', contactId, params.companyId);
 
   return {
     contactId,
@@ -840,40 +840,58 @@ export async function createContactServerSide(
 // UI SYNC SIGNAL — SERVER→CLIENT BRIDGE (ADR-227 Extension)
 // ============================================================================
 
-// SSoT: type + constant imported from realtime system, doc ID from SYSTEM_DOCS
-import type { ContactSyncAction } from '@/services/realtime/types';
+// SSoT: types + constants imported from realtime system, doc ID from SYSTEM_DOCS
+import type { EntitySyncAction, SyncEntityType } from '@/services/realtime/types';
 import { SYNC_SOURCE_AI_AGENT } from '@/services/realtime/types';
 import { SYSTEM_DOCS } from '@/config/firestore-collections';
 
 /**
+ * 🏢 ENTERPRISE: Generic entity sync signal emitter.
+ *
  * Write a sync signal to `config/{SYSTEM_DOCS.UI_SYNC_SIGNAL}` so the
- * client's onSnapshot picks up server-side contact mutations and triggers
- * a UI refresh.
+ * client's `useAISyncBridge(entityType)` hook picks up server-side mutations
+ * and triggers a UI refresh.
  *
  * Uses Admin SDK (bypasses Firestore security rules).
- * Client subscribes via `firestoreQueryService.subscribeDoc('CONFIG', SYSTEM_DOCS.UI_SYNC_SIGNAL)`.
- *
- * Fire-and-forget — failure is non-blocking (the primary Firestore onSnapshot
- * on the contacts collection is the main mechanism; this is defense-in-depth).
+ * Fire-and-forget — failure is non-blocking (defense-in-depth).
  */
-export function emitContactSyncSignal(
-  action: ContactSyncAction,
+export function emitEntitySyncSignal(
+  entityType: SyncEntityType,
+  action: EntitySyncAction,
   entityId: string,
   companyId: string
 ): void {
   try {
     const db = getAdminFirestore();
-    // Fire-and-forget: don't await — UI sync is best-effort, not critical path
     void db.collection(COLLECTIONS.CONFIG).doc(SYSTEM_DOCS.UI_SYNC_SIGNAL).set({
+      entityType,
       action,
       entityId,
       companyId,
       timestamp: FieldValue.serverTimestamp(),
       source: SYNC_SOURCE_AI_AGENT,
     }).catch(err => {
-      logger.warn('Failed to emit contact sync signal', { error: getErrorMessage(err) });
+      logger.warn('Failed to emit entity sync signal', {
+        entityType,
+        action,
+        error: getErrorMessage(err),
+      });
     });
   } catch {
     // Non-blocking — if Admin SDK isn't available, skip silently
   }
+}
+
+/** @deprecated Use emitEntitySyncSignal — kept for backward compatibility */
+export function emitContactSyncSignal(
+  action: 'CONTACT_CREATED' | 'CONTACT_UPDATED' | 'CONTACT_DELETED',
+  entityId: string,
+  companyId: string
+): void {
+  const actionMap: Record<string, EntitySyncAction> = {
+    CONTACT_CREATED: 'CREATED',
+    CONTACT_UPDATED: 'UPDATED',
+    CONTACT_DELETED: 'DELETED',
+  };
+  emitEntitySyncSignal('contacts', actionMap[action], entityId, companyId);
 }
