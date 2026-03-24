@@ -581,7 +581,13 @@ export async function handlePOST(request: NextRequest): Promise<NextResponse> {
     }
 
     // 2. Parse webhook JSON first (no Firebase needed — pure HTTP parsing)
-    const webhookData = await request.json();
+    let webhookData: Record<string, unknown>;
+    try {
+      webhookData = await request.json();
+    } catch {
+      logger.warn('Empty or malformed webhook body — ignoring');
+      return NextResponse.json({ ok: true, status: 'empty_body' }, { status: 200 });
+    }
     const webhookChatId = webhookData.message?.chat?.id
       ?? webhookData.callback_query?.message?.chat?.id;
 
