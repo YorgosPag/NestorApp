@@ -158,7 +158,7 @@ const TECHNICAL_COLLECTIONS = [
   COLLECTIONS.FLOORS,
   COLLECTIONS.CONSTRUCTION_PHASES,
   COLLECTIONS.CONSTRUCTION_TASKS,
-  COLLECTIONS.DOCUMENTS,
+  COLLECTIONS.FILES,
   COLLECTIONS.APPOINTMENTS,
   COLLECTIONS.TASKS,
 ] as const;
@@ -173,11 +173,9 @@ const PUBLIC_COLLECTIONS = [
 const CUSTOMER_COLLECTIONS = [
   COLLECTIONS.UNITS,
   COLLECTIONS.BUILDINGS,
-  COLLECTIONS.DOCUMENTS,
+  COLLECTIONS.FILES,         // SSoT: αρχεία, κατόψεις, φωτογραφίες (αντικαθιστά legacy DOCUMENTS)
   COLLECTIONS.APPOINTMENTS,
   COLLECTIONS.TASKS,        // SPEC-257D: complaint task visibility (unit-scoped)
-  COLLECTIONS.FILES,        // SPEC-257F: file delivery (photos, documents)
-  COLLECTIONS.FLOORPLANS,   // SPEC-257F: floorplan delivery
 ] as const;
 
 // ============================================================================
@@ -267,13 +265,13 @@ CONFLICT DETECTION (overlap, ΟΧΙ μόνο exact match):
       COLLECTIONS.BUILDINGS,
       COLLECTIONS.CONSTRUCTION_PHASES,
       COLLECTIONS.CONSTRUCTION_TASKS,
-      COLLECTIONS.DOCUMENTS,
+      COLLECTIONS.FILES,
       COLLECTIONS.TASKS,
     ],
     blockedFields: [...COMMERCIAL_PRICING_FIELDS, ...BUYER_IDENTITY_FIELDS],
     promptDescription: `ΡΟΛΟΣ: ΕΡΓΟΛΑΒΟΣ (contractor)
 ΠΡΟΣΒΑΣΗ: Κατασκευαστικά δεδομένα των συνδεδεμένων έργων:
-- construction_phases, construction_tasks, documents, tasks
+- construction_phases, construction_tasks, files, tasks
 ΑΠΑΓΟΡΕΥΕΤΑΙ: ακίνητα (units), τιμές, πληρωμές, contacts πελατών, leads.`,
     scopeLevel: 'project',
   },
@@ -287,12 +285,12 @@ CONFLICT DETECTION (overlap, ΟΧΙ μόνο exact match):
       COLLECTIONS.UNITS,
       COLLECTIONS.FLOORS,
       COLLECTIONS.CONSTRUCTION_PHASES,
-      COLLECTIONS.DOCUMENTS,
+      COLLECTIONS.FILES,
     ],
     blockedFields: ALL_FINANCIAL_FIELDS,
     promptDescription: `ΡΟΛΟΣ: ΑΡΧΙΤΕΚΤΟΝΑΣ (architect)
 ΠΡΟΣΒΑΣΗ ΠΕΡΙΟΡΙΣΜΕΝΗ:
-- ΝΑΙ: projects (βασικά), buildings, units (εμβαδά, σχέδια), floors, documents (αρχιτεκτονικά)
+- ΝΑΙ: projects (βασικά), buildings, units (εμβαδά, σχέδια), floors, files (κατόψεις, σχέδια)
 - ΜΟΝΟ VIEW: construction_phases (τίτλος, κατάσταση)
 - ΟΧΙ: construction_tasks, contacts, κόστη, πληρωμές, μετρήσεις
 ΜΟΝΟ δεδομένα συνδεδεμένων έργων.`,

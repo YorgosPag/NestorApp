@@ -115,7 +115,7 @@ const ALLOWED_READ_COLLECTIONS = new Set([
   COLLECTIONS.ATTENDANCE_EVENTS,
   COLLECTIONS.CONVERSATIONS,
   COLLECTIONS.ACTIVITIES,
-  COLLECTIONS.DOCUMENTS,
+  COLLECTIONS.FILES,
   COLLECTIONS.PARKING_SPACES,
   COLLECTIONS.ACCOUNTING_INVOICES,
   COLLECTIONS.ACCOUNTING_BANK_TRANSACTIONS,
@@ -217,7 +217,7 @@ export class AgenticToolExecutor {
     const linkedUnitIds = ctx.contactMeta?.linkedUnitIds ?? [];
     if (accessConfig.scopeLevel === 'unit' && linkedUnitIds.length === 0) {
       // Safety guard: unit-scoped role without linked units → deny unit-sensitive collections
-      const unitSensitive = new Set([COLLECTIONS.UNITS, COLLECTIONS.DOCUMENTS, COLLECTIONS.PAYMENTS]);
+      const unitSensitive = new Set([COLLECTIONS.UNITS, COLLECTIONS.FILES, COLLECTIONS.PAYMENTS]);
       if (unitSensitive.has(collection)) {
         return { allowed: false, result: { success: false, error: AI_ERRORS.NO_LINKED_UNITS } };
       }
@@ -237,7 +237,7 @@ export class AgenticToolExecutor {
         }
       }
       // Documents, payments: filter by unitId
-      const unitIdScopedCollections = new Set([COLLECTIONS.DOCUMENTS, COLLECTIONS.PAYMENTS, COLLECTIONS.TASKS]);
+      const unitIdScopedCollections = new Set([COLLECTIONS.FILES, COLLECTIONS.PAYMENTS, COLLECTIONS.TASKS]);
       if (unitIdScopedCollections.has(collection)) {
         const hasUnitFilter = filters.some(f => f.field === 'unitId');
         if (!hasUnitFilter) {
