@@ -157,6 +157,12 @@ export const ENTERPRISE_ID_PREFIXES = {
   ATTENDANCE_EVENT: 'attev',
 
   // ==========================================================================
+  // HR & EMPLOYMENT
+  // ==========================================================================
+  EMPLOYMENT_RECORD: 'emprec',
+  APPOINTMENT: 'appt',
+
+  // ==========================================================================
   // INTEGRATIONS
   // ==========================================================================
   WEBHOOK: 'whk',
@@ -921,6 +927,22 @@ export class EnterpriseIdService {
   }
 
   /**
+   * 📋 Generate Employment Record ID (ADR-260)
+   * Format: emprec_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateEmploymentRecordId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.EMPLOYMENT_RECORD).id;
+  }
+
+  /**
+   * 📅 Generate Appointment ID (ADR-260)
+   * Format: appt_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateAppointmentId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.APPOINTMENT).id;
+  }
+
+  /**
    * 📁 Generate Folder ID
    * Format: fldr_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
    */
@@ -1419,6 +1441,8 @@ export const generateConstructionPhaseId = () => enterpriseIdService.generateCon
 export const generateConstructionTaskId = () => enterpriseIdService.generateConstructionTaskId();
 export const generateAttendanceQrTokenId = () => enterpriseIdService.generateAttendanceQrTokenId();
 export const generateAttendanceEventId = () => enterpriseIdService.generateAttendanceEventId();
+export const generateEmploymentRecordId = () => enterpriseIdService.generateEmploymentRecordId();
+export const generateAppointmentId = () => enterpriseIdService.generateAppointmentId();
 export const generateFolderId = () => enterpriseIdService.generateFolderId();
 export const generateCommentId = () => enterpriseIdService.generateCommentId();
 export const generateApprovalId = () => enterpriseIdService.generateApprovalId();

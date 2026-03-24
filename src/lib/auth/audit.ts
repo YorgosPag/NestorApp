@@ -17,6 +17,7 @@ import 'server-only';
 import { getAdminFirestore, isFirebaseAdminAvailable, FieldValue } from '@/lib/firebaseAdmin';
 import type { Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { generateAuditId } from '@/services/enterprise-id.service';
 import { validateCompanyExists, ensureCompanyDocument } from '@/services/company-document.service';
 
 import type {
@@ -191,12 +192,14 @@ export async function logAuditEvent(
       }
     }
 
-    // Write to tenant-scoped collection: /companies/{companyId}/audit_logs/{autoId}
+    // Write to tenant-scoped collection: /companies/{companyId}/audit_logs/{enterpriseId}
+    const auditId = generateAuditId();
     await db
       .collection(COLLECTIONS.COMPANIES)
       .doc(ctx.companyId)
       .collection(AUDIT_COLLECTION)
-      .add(entry);
+      .doc(auditId)
+      .set(entry);
   } catch (error) {
     // Never throw on audit failure - just log
     logger.error('[AUDIT] Failed to write audit log:', { error });
@@ -757,9 +760,11 @@ export async function logWebhookEvent(
 
   try {
     // Write to system-level audit logs collection
+    const systemAuditId = generateAuditId();
     await db
       .collection(COLLECTIONS.SYSTEM_AUDIT_LOGS)
-      .add(entry);
+      .doc(systemAuditId)
+      .set(entry);
   } catch (error) {
     // Never throw on audit failure - just log
     logger.error('[AUDIT] [WEBHOOK] Failed to write webhook audit log:', { error });

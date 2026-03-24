@@ -22,6 +22,7 @@ import 'server-only';
 import { getErrorMessage } from '@/lib/error-utils';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { generateAppointmentId } from '@/services/enterprise-id.service';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { findContactByEmail, type ContactMatch } from '../../shared/contact-lookup';
@@ -397,13 +398,15 @@ export class AppointmentModule implements IUCModule {
       };
 
       const adminDb = getAdminFirestore();
-      const docRef = await adminDb
+      const appointmentId = generateAppointmentId();
+      await adminDb
         .collection(COLLECTIONS.APPOINTMENTS)
-        .add(appointmentDoc);
+        .doc(appointmentId)
+        .set(appointmentDoc);
 
       logger.info('UC-001 EXECUTE: Appointment created', {
         requestId: ctx.requestId,
-        appointmentId: docRef.id,
+        appointmentId,
         requesterEmail: params.senderEmail,
       });
 
@@ -431,21 +434,21 @@ export class AppointmentModule implements IUCModule {
       if (replyResult.success) {
         logger.info('UC-001 EXECUTE: Confirmation reply sent', {
           requestId: ctx.requestId,
-          appointmentId: docRef.id,
+          appointmentId: appointmentId,
           channel: replyResult.channel,
           messageId: replyResult.messageId,
         });
       } else {
         logger.warn('UC-001 EXECUTE: Reply send failed (appointment still created)', {
           requestId: ctx.requestId,
-          appointmentId: docRef.id,
+          appointmentId: appointmentId,
           channel: replyResult.channel,
           error: replyResult.error,
         });
       }
 
       // Build side effects list
-      const sideEffects = [`appointment_created:${docRef.id}`];
+      const sideEffects = [`appointment_created:${appointmentId}`];
 
       if (replyResult.success) {
         sideEffects.push(`reply_sent:${replyResult.messageId ?? 'unknown'}`);

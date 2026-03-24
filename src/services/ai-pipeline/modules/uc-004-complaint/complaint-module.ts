@@ -26,6 +26,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { generatePipelineAuditId } from '@/services/enterprise-id.service';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -292,13 +293,15 @@ export class ComplaintModule implements IUCModule {
         createdAt: new Date().toISOString(),
       };
 
-      const docRef = await adminDb
+      const auditId = generatePipelineAuditId();
+      await adminDb
         .collection(COLLECTIONS.AI_PIPELINE_AUDIT)
-        .add(complaintRecord);
+        .doc(auditId)
+        .set(complaintRecord);
 
       logger.info('UC-004 EXECUTE: Complaint recorded', {
         requestId: ctx.requestId,
-        auditId: docRef.id,
+        auditId,
       });
 
       // ── 2. Send reply via channel dispatcher ──
@@ -318,7 +321,7 @@ export class ComplaintModule implements IUCModule {
       });
 
       // Build side effects list
-      const sideEffects = [`complaint_recorded:${docRef.id}`];
+      const sideEffects = [`complaint_recorded:${auditId}`];
 
       if (replyResult.success) {
         sideEffects.push(`reply_sent:${replyResult.messageId ?? 'unknown'}`);

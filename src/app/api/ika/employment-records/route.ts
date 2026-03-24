@@ -22,6 +22,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { generateEmploymentRecordId } from '@/services/enterprise-id.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 
@@ -123,7 +124,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
             updated++;
           } else {
             // Create new
-            const newRef = collRef.doc();
+            const newRef = collRef.doc(generateEmploymentRecordId());
             batch.set(newRef, {
               ...recordData,
               apdStatus: 'pending',

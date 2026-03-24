@@ -15,7 +15,7 @@ import type { Communication } from '@/types/crm';
 import { TRIAGE_STATUSES, TRIAGE_STATUS_VALUES, type TriageStatus } from '@/constants/triage-statuses';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
-import { generateMessageId } from '@/services/enterprise-id.service';
+import { generateMessageId, generateTaskId } from '@/services/enterprise-id.service';
 import { getAdminFirestore } from '@/server/admin/admin-guards';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getCompanyWidePolicyAdmin, getProjectPolicyAdmin } from '@/services/assignment/AssignmentPolicyRepository';
@@ -472,9 +472,9 @@ export async function approveCommunication(
       reminderSent: false,
     };
 
-    // 🏢 ENTERPRISE: Server-side task creation with Admin SDK
-    const taskDoc = await tasksRef.add(taskData);
-    const taskId = taskDoc.id;
+    // 🏢 ENTERPRISE: Server-side task creation with Admin SDK + Enterprise ID (ADR-260)
+    const taskId = generateTaskId();
+    await tasksRef.doc(taskId).set(taskData);
 
     // 4. Update communication with approval + linkedTaskId (Admin SDK)
     await adminDb.collection(COLLECTIONS.MESSAGES).doc(communicationId).update({

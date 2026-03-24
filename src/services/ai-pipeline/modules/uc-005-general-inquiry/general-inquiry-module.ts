@@ -27,6 +27,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { generatePipelineAuditId } from '@/services/enterprise-id.service';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -283,13 +284,15 @@ export class GeneralInquiryModule implements IUCModule {
         createdAt: new Date().toISOString(),
       };
 
-      const docRef = await adminDb
+      const auditId = generatePipelineAuditId();
+      await adminDb
         .collection(COLLECTIONS.AI_PIPELINE_AUDIT)
-        .add(inquiryRecord);
+        .doc(auditId)
+        .set(inquiryRecord);
 
       logger.info('UC-005 EXECUTE: Inquiry recorded', {
         requestId: ctx.requestId,
-        auditId: docRef.id,
+        auditId,
       });
 
       // ── 2. Send reply via channel dispatcher ──
@@ -308,7 +311,7 @@ export class GeneralInquiryModule implements IUCModule {
       });
 
       // Build side effects list
-      const sideEffects = [`inquiry_recorded:${docRef.id}`];
+      const sideEffects = [`inquiry_recorded:${auditId}`];
 
       if (replyResult.success) {
         sideEffects.push(`reply_sent:${replyResult.messageId ?? 'unknown'}`);
