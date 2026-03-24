@@ -25,6 +25,7 @@ import type {
   ProgressCallback,
 } from '../types/upload.types';
 import { UPLOAD_DEFAULTS } from '../types/upload.types';
+import { LEGACY_STORAGE_PATHS } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('CADProcessor');
@@ -130,7 +131,7 @@ export class CADProcessor implements FileProcessor {
       throw new Error('fileId is required for DXF storage path');
     }
 
-    return `dxf-scenes/${fileId}/scene.json`;
+    return `${LEGACY_STORAGE_PATHS.DXF_SCENES}/${fileId}/scene.json`;
   }
 
   /**
@@ -273,7 +274,7 @@ export class CADProcessor implements FileProcessor {
         fileName: file.name,
         fileSize: file.size,
         mimeType: file.type || 'application/dxf',
-        storagePath: `dxf-scenes/${fileId}/scene.json`,
+        storagePath: `${LEGACY_STORAGE_PATHS.DXF_SCENES}/${fileId}/scene.json`,
         dxfMetadata: {
           sceneId: fileId,
         },

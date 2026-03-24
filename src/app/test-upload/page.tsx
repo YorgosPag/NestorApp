@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 // 🏢 ADR-054: Centralized upload component
 import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
 import { generateFileId } from '@/services/enterprise-id.service';
+import { LEGACY_STORAGE_PATHS } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('TestUploadPage');
 
@@ -40,9 +41,9 @@ export default function TestUploadPage() {
     setResult('');
 
     try {
-      // 🔧 FIX: Try root level upload first
+      // 🔧 TEST: Upload to legacy contacts/photos for Storage Rules compatibility
       const fileName = `${generateFileId()}_${file.name}`;
-      const storagePath = fileName; // Root level upload
+      const storagePath = `${LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS}/${fileName}`;
       const storageRef = ref(storage, storagePath);
 
       logger.info('TEST: Starting direct upload...', {

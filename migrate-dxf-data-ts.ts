@@ -195,7 +195,9 @@ class DxfMigrationTool {
           const sceneJson = JSON.stringify(data.scene);
           const sceneBytes = new TextEncoder().encode(sceneJson);
 
-          const storagePath = `dxf-scenes/${fileInfo.id}/scene.json`;
+          // SSoT: Matches LEGACY_STORAGE_PATHS.DXF_SCENES in src/config/domain-constants.ts
+          const DXF_SCENES_FOLDER = 'dxf-scenes';
+          const storagePath = `${DXF_SCENES_FOLDER}/${fileInfo.id}/scene.json`;
           const storageRef = ref(storage, storagePath);
 
           console.log(`      📤 Uploading to: ${storagePath}`);
