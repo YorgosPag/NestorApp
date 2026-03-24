@@ -152,3 +152,10 @@ handleMultiplePhotosChange (functional updater) → setEditedData
 | `src/components/ui/MultiplePhotosCompact.tsx` | useRef pattern για async uploads |
 | `src/components/ui/EnterprisePhotoUpload.tsx` | Stable upload component |
 | `src/hooks/upload/useAutoUploadEffect.ts` | Stable auto-upload trigger |
+
+### 2026-03-24 — Dead Code Cleanup: pdf-utils.ts DELETED
+
+- **Αφαίρεση**: `src/lib/pdf-utils.ts` (414 γραμμές) — ολόκληρο deprecated module
+- **Λόγος**: Zero active imports. Όλη η λειτουργικότητα έχει μεταφερθεί στο `PDFProcessor.ts` + `UnifiedUploadService`
+- **Επίδραση**: Κανένα — κανένα αρχείο δεν εισήγαγε functions από αυτό το module
+- **Αρχιτεκτονική**: Εξάλειψη τελευταίου legacy PDF upload module — πλέον μόνο canonical pipeline

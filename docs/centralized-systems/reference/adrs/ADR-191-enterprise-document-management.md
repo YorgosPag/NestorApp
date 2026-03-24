@@ -339,3 +339,4 @@ Phase 5: ████████░░░░░░░░░░░ PARTIAL  — 
 | 2026-03-09 | Phase 5 PARTIAL — PDF generation + webhook notifications implemented |
 | 2026-03-09 | ADR updated with all implementation details, new collections, API routes, dependencies |
 | 2026-03-09 | Phase 2 MOSTLY COMPLETE — Thumbnail generation at upload, AI auto-classify, versioning all operational |
+| 2026-03-24 | **Storage Garbage Collection FIX** — Purge routes (`/api/files/purge`, `/api/cron/file-purge`, `/api/files/gdpr-delete`) now call `bucket.file(storagePath).delete()` to physically remove binary files from Firebase Storage before marking Firestore records as purged. Previously only soft-deleted metadata, leaving orphaned storage files. GDPR route also nullifies `storagePath` field. |

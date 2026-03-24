@@ -14,7 +14,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createModuleLogger } from '@/lib/telemetry';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { HOLD_TYPES } from '@/config/domain-constants';
@@ -67,6 +67,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       }
 
       try {
+        // 🏢 ENTERPRISE: Delete binary file from Firebase Storage BEFORE marking as purged
+        const storagePath = data.storagePath as string | undefined;
+        if (storagePath) {
+          try {
+            const bucket = getAdminStorage().bucket();
+            await bucket.file(storagePath).delete();
+          } catch (storageErr) {
+            // File may already be deleted or path invalid — log but don't block purge
+            logger.warn('Storage file deletion failed (non-blocking)', {
+              fileId: doc.id,
+              storagePath,
+              error: getErrorMessage(storageErr),
+            });
+          }
+        }
+
         await doc.ref.update({
           lifecycleState: 'purged',
           purgedAt: new Date().toISOString(),

@@ -20,18 +20,19 @@ import 'server-only';
  * Any folderPath that doesn't start with one of these is rejected.
  */
 const ALLOWED_STORAGE_PREFIXES = [
-  'contacts/',
-  'projects/',
-  'files/',
-  'photos/',
-  'avatars/',
-  'logos/',
-  'documents/',
-  'cadFiles/',
-  'floorplans/',
-  'attendance/',
-  'accounting/',
-  'dxf/',
+  'companies/',       // 🏢 Canonical enterprise root (buildStoragePath) + legacy companies/logos
+  'contacts/',        // Legacy: contacts/photos
+  'floor-plans/',     // Legacy: floor-plans/{buildingId}/{floorId}
+  'dxf-scenes/',      // Legacy: dxf-scenes/{fileId}
+  'attendance/',      // Legacy: attendance photos
+  'projects/',        // Generic projects folder
+  'files/',           // Generic files folder
+  'photos/',          // Generic photos folder
+  'avatars/',         // User avatars
+  'logos/',           // Company logos
+  'documents/',       // Generic documents folder
+  'floorplans/',      // Canonical floorplans (no hyphen variant)
+  'accounting/',      // Accounting documents
 ] as const;
 
 /**
