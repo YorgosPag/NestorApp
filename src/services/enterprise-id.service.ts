@@ -175,6 +175,14 @@ export const ENTERPRISE_ID_PREFIXES = {
   QUERY_STRATEGY: 'qstr',
 
   // ==========================================================================
+  // OMNICHANNEL CONVERSATIONS (ADR-031: Safe Document ID Generation)
+  // SHA-256 deterministic IDs — generators in server/lib/id-generation.ts
+  // ==========================================================================
+  CONVERSATION: 'conv',
+  MESSAGE_DOC: 'msg',
+  EXTERNAL_IDENTITY: 'eid',
+
+  // ==========================================================================
   // BANKING
   // ==========================================================================
   BANK_ACCOUNT: 'bacc',

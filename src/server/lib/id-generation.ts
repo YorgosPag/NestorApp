@@ -15,11 +15,13 @@
  * @module server/lib/id-generation
  * @enterprise ADR-031 - Safe Document ID Generation
  * @server-only Uses Node.js crypto - do NOT import in client bundles
+ * @ssot Prefixes from ENTERPRISE_ID_PREFIXES (enterprise-id.service.ts)
  */
 
 import { createHash } from 'crypto';
 import type { CommunicationChannel } from '@/types/communications';
 import type { IdentityProvider } from '@/types/conversations';
+import { ENTERPRISE_ID_PREFIXES } from '@/services/enterprise-id.service';
 
 // ============================================================================
 // HASH FUNCTION (SHA-256 - deterministic, sync, collision-resistant)
@@ -61,7 +63,7 @@ function generateSafeHash(input: string): string {
  * @enterprise
  * - Same user on same channel = same conversation ID
  * - External user ID is hashed (no PII in doc ID)
- * - Format: conv_{channel}_{hashedUserId}
+ * - Format: {CONVERSATION_PREFIX}_{channel}_{hashedUserId}
  *
  * @example
  * generateConversationId('telegram', '123456789') => 'conv_telegram_abc123xyz'
@@ -71,7 +73,7 @@ export function generateConversationId(
   externalUserId: string
 ): string {
   const hashedUserId = generateSafeHash(`${channel}_user_${externalUserId}`);
-  return `conv_${channel}_${hashedUserId}`;
+  return `${ENTERPRISE_ID_PREFIXES.CONVERSATION}_${channel}_${hashedUserId}`;
 }
 
 // ============================================================================
@@ -84,7 +86,7 @@ export function generateConversationId(
  * @enterprise
  * - CRITICAL: Telegram message_id is only unique per chat, NOT globally
  * - Must include chatId for proper deduplication
- * - Format: msg_{channel}_{hashedChatAndMessage}
+ * - Format: {MESSAGE_DOC_PREFIX}_{channel}_{hashedChatAndMessage}
  *
  * @example
  * generateMessageDocId('telegram', '123456', '999') => 'msg_telegram_xyz789abc'
@@ -97,7 +99,7 @@ export function generateMessageDocId(
   // Include chatId in hash to prevent collision across chats
   const combinedKey = `${channel}_chat_${chatId}_msg_${providerMessageId}`;
   const hashedKey = generateSafeHash(combinedKey);
-  return `msg_${channel}_${hashedKey}`;
+  return `${ENTERPRISE_ID_PREFIXES.MESSAGE_DOC}_${channel}_${hashedKey}`;
 }
 
 /**
@@ -111,7 +113,7 @@ export function generateGlobalMessageDocId(
   providerMessageId: string
 ): string {
   const hashedKey = generateSafeHash(`${channel}_msg_${providerMessageId}`);
-  return `msg_${channel}_${hashedKey}`;
+  return `${ENTERPRISE_ID_PREFIXES.MESSAGE_DOC}_${channel}_${hashedKey}`;
 }
 
 // ============================================================================
@@ -124,7 +126,7 @@ export function generateGlobalMessageDocId(
  * @enterprise
  * - Same provider + user = same identity ID
  * - External user ID is hashed (no PII in doc ID)
- * - Format: eid_{provider}_{hashedUserId}
+ * - Format: {EXTERNAL_IDENTITY_PREFIX}_{provider}_{hashedUserId}
  *
  * @example
  * generateExternalIdentityId('telegram', '123456789') => 'eid_telegram_abc123xyz'
@@ -134,7 +136,7 @@ export function generateExternalIdentityId(
   externalUserId: string
 ): string {
   const hashedUserId = generateSafeHash(`${provider}_identity_${externalUserId}`);
-  return `eid_${provider}_${hashedUserId}`;
+  return `${ENTERPRISE_ID_PREFIXES.EXTERNAL_IDENTITY}_${provider}_${hashedUserId}`;
 }
 
 // ============================================================================
