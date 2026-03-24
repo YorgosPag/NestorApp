@@ -840,17 +840,21 @@ export async function createContactServerSide(
 // UI SYNC SIGNAL — SERVER→CLIENT BRIDGE (ADR-227 Extension)
 // ============================================================================
 
-type ContactSyncAction = 'CONTACT_CREATED' | 'CONTACT_UPDATED' | 'CONTACT_DELETED';
+// SSoT: type + constant imported from realtime system, doc ID from SYSTEM_DOCS
+import type { ContactSyncAction } from '@/services/realtime/types';
+import { SYNC_SOURCE_AI_AGENT } from '@/services/realtime/types';
+import { SYSTEM_DOCS } from '@/config/firestore-collections';
 
 /**
- * Write a sync signal to `config/ui_sync_signal` so the client's onSnapshot
- * picks up server-side contact mutations and triggers a UI refresh.
+ * Write a sync signal to `config/{SYSTEM_DOCS.UI_SYNC_SIGNAL}` so the
+ * client's onSnapshot picks up server-side contact mutations and triggers
+ * a UI refresh.
  *
  * Uses Admin SDK (bypasses Firestore security rules).
- * Client subscribes via `firestoreQueryService.subscribeDoc('CONFIG', 'ui_sync_signal')`.
+ * Client subscribes via `firestoreQueryService.subscribeDoc('CONFIG', SYSTEM_DOCS.UI_SYNC_SIGNAL)`.
  *
  * Fire-and-forget — failure is non-blocking (the primary Firestore onSnapshot
- * is the main mechanism; this is defense-in-depth).
+ * on the contacts collection is the main mechanism; this is defense-in-depth).
  */
 export function emitContactSyncSignal(
   action: ContactSyncAction,
@@ -860,12 +864,12 @@ export function emitContactSyncSignal(
   try {
     const db = getAdminFirestore();
     // Fire-and-forget: don't await — UI sync is best-effort, not critical path
-    void db.collection(COLLECTIONS.CONFIG).doc('ui_sync_signal').set({
+    void db.collection(COLLECTIONS.CONFIG).doc(SYSTEM_DOCS.UI_SYNC_SIGNAL).set({
       action,
       entityId,
       companyId,
       timestamp: FieldValue.serverTimestamp(),
-      source: 'ai_agent',
+      source: SYNC_SOURCE_AI_AGENT,
     }).catch(err => {
       logger.warn('Failed to emit contact sync signal', { error: getErrorMessage(err) });
     });

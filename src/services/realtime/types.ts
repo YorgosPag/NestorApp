@@ -152,6 +152,19 @@ export interface RealtimeUnit {
 }
 
 // ============================================================================
+// SERVER→CLIENT SYNC BRIDGE (AI Agent → UI)
+// ============================================================================
+
+/**
+ * Actions written to the `config/ui_sync_signal` document by server-side AI tools.
+ * Client subscribes via onSnapshot and triggers UI refresh.
+ */
+export type ContactSyncAction = 'CONTACT_CREATED' | 'CONTACT_UPDATED' | 'CONTACT_DELETED';
+
+/** Source identifier for server-side AI agent writes */
+export const SYNC_SOURCE_AI_AGENT = 'ai_agent' as const;
+
+// ============================================================================
 // EVENT TYPES (for cross-component communication)
 // ============================================================================
 

@@ -375,6 +375,11 @@ export const SYSTEM_DOCS = {
   // 📊 ACCOUNTING EFKA CONFIG DOCUMENT (ADR-245B: Hardcoded Strings Audit)
   // Path: accounting_efka_config/user_config — EFKA user configuration
   ACCT_EFKA_USER_CONFIG: process.env.NEXT_PUBLIC_ACCT_EFKA_USER_CONFIG_DOC || 'user_config',
+
+  // 🔔 UI SYNC SIGNAL (Server→Client bridge for AI agent mutations)
+  // Path: config/ui_sync_signal — Written by Admin SDK, read by client onSnapshot
+  // Allows server-side AI operations to notify the client UI of Firestore changes
+  UI_SYNC_SIGNAL: 'ui_sync_signal',
 } as const;
 
 // ============================================================================
