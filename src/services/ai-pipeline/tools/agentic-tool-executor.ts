@@ -1502,7 +1502,7 @@ export class AgenticToolExecutor {
       query,
       matchCount: matches.length,
       topMatch: enrichedProcedures[0]?.id,
-      availableDocsCount: availableKeys.size,
+      availableDocsCount: availableDocNames.size,
       requestId: ctx.requestId,
     });
 
