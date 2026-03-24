@@ -144,6 +144,8 @@ export class InAppChannelAdapter {
       normalized: {
         sender: {
           name: params.userName,
+          firebaseUid: params.userId,
+          email: params.userEmail,
         },
         recipients: [],
         contentText: params.transcript,

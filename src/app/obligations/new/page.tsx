@@ -43,7 +43,6 @@ const logger = createModuleLogger('NewObligationPage');
 // 🏢 ENTERPRISE: Import existing κεντρικοποιημένων components & services
 import { CompaniesService } from "@/services/companies.service";
 import { getNavigationCompanyIds } from "@/services/navigation-companies.service";
-import { useCompanyRelationships } from "@/services/relationships/hooks/useEnterpriseRelationships";
 import type { CompanyContact } from "@/types/contacts";
 import type { Project } from "@/types/project";
 
@@ -158,8 +157,6 @@ export default function NewObligationPage() {
   // 🏢 ENTERPRISE: Navigation company mapping (για το projects API)
   const [navigationCompanyMap, setNavigationCompanyMap] = useState<Map<string, string>>(new Map());
 
-  // 🚀 ENTERPRISE RELATIONSHIP ENGINE: Hook για projects από συγκεκριμένη εταιρεία
-  const companyRelationships = useCompanyRelationships(formData.companyId || '');
 
   // 🏢 ENTERPRISE: Load companies and build navigation mapping
   useEffect(() => {
@@ -228,22 +225,8 @@ export default function NewObligationPage() {
           usingMapping: contactIdForProjects !== formData.companyId
         });
 
-        // 🚀 ENTERPRISE RELATIONSHIP ENGINE: Φόρτωση projects με explicit company ID
-        logger.info(`Loading projects for company ${contactIdForProjects} via Relationship Engine`);
-
-        const primaryProjects = await companyRelationships.getChildren('company', contactIdForProjects, 'project');
-        const fallbackProjects =
-          (!primaryProjects || primaryProjects.length === 0) && contactIdForProjects !== formData.companyId
-            ? await companyRelationships.getChildren('company', String(formData.companyId), 'project')
-            : [];
-
-        const mergedProjects = [...(primaryProjects || []), ...(fallbackProjects || [])] as Project[];
-        let uniqueProjects = Array.from(
-          new Map(mergedProjects.map((project) => [String(project.id), project])).values()
-        );
-
-        if (uniqueProjects.length === 0) {
-          interface ProjectListApiItem {
+        // Load projects via Projects API (SSoT)
+        interface ProjectListApiItem {
             id: string;
             name?: string;
             title?: string;
@@ -275,7 +258,7 @@ export default function NewObligationPage() {
             return byLinkedCompanyId || byCompanyId || byCompanyName;
           });
 
-          uniqueProjects = fallbackListProjects.map((project) => ({
+          const uniqueProjects = fallbackListProjects.map((project) => ({
             id: String(project.id),
             name: project.title || project.name || '',
             title: project.title || project.name || '',
@@ -291,11 +274,10 @@ export default function NewObligationPage() {
             lastUpdate: new Date().toISOString(),
             totalArea: 0,
           } as Project));
-        }
 
         setProjects(uniqueProjects);
 
-        logger.info(`Loaded ${uniqueProjects.length} projects for company ${contactIdForProjects} via Relationship Engine`);
+        logger.info(`Loaded ${uniqueProjects.length} projects for company ${contactIdForProjects}`);
       } catch (error) {
         logger.error('Error loading projects for company', { error });
         setProjects([]);

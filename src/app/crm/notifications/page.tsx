@@ -10,7 +10,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { collection, addDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
+import { collection, setDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
+import { generateNotificationId } from '@/services/enterprise-id.service';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PageLoadingState } from '@/core/states';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -42,7 +43,8 @@ export default function CrmNotificationsPage() {
 
     setIsCreatingTest(true);
     try {
-      const docRef = await addDoc(collection(db, COLLECTIONS.NOTIFICATIONS), {
+      const notifId = generateNotificationId();
+      await setDoc(doc(db, COLLECTIONS.NOTIFICATIONS, notifId), {
         userId: user.uid,
         tenantId: 'default',
         title: t('notifications.test.title'),
@@ -53,8 +55,8 @@ export default function CrmNotificationsPage() {
         source: { service: 'test', feature: 'lead', env: 'dev' },
         createdAt: Timestamp.now()
       });
-      setTestNotificationId(docRef.id);
-      logger.info('Test notification created', { id: docRef.id });
+      setTestNotificationId(notifId);
+      logger.info('Test notification created', { id: notifId });
     } catch (err) {
       logger.error('Failed to create test notification', { error: err instanceof Error ? err.message : 'Unknown error' });
     } finally {

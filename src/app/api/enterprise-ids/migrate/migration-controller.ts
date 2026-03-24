@@ -11,10 +11,11 @@ import {
   MigrationPhase,
   type MigrationStats
 } from '@/services/enterprise-id-migration.service';
-import {
-  EntityType,
-  isValidEntityType
-} from '@/services/relationships/enterprise-relationship-engine.contracts';
+import { ENTITY_TYPES, type EntityType } from '@/config/domain-constants';
+
+function isValidEntityType(type: string): type is EntityType {
+  return Object.values(ENTITY_TYPES).includes(type as EntityType);
+}
 import { getErrorMessage } from '@/lib/error-utils';
 
 // ============================================================================

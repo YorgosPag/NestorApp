@@ -109,3 +109,11 @@ This ensures admin detection works even before `firebaseUid` is populated in the
 - Super admins can use voice commands with admin privileges (same as Telegram)
 - Real-time feedback via Firestore onSnapshot (no polling)
 - Consistent with existing channel patterns (Email, Telegram)
+
+## Changelog
+
+| Date | Change |
+|------|--------|
+| 2026-02-09 | Initial implementation |
+| 2026-03-24 | Fix: `voice_commands` collection now uses Enterprise ID (`vcmd_` prefix via `generateVoiceCommandId()`) instead of `addDoc()` auto-generated IDs (ADR-017 compliance) |
+| 2026-03-24 | Fix: `InAppChannelAdapter.toIntakeMessage()` now passes `firebaseUid` + `email` in sender object — prevents `in_app_unknown` chat history keys |

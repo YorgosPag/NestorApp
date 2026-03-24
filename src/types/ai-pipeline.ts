@@ -189,6 +189,8 @@ export interface IntakeSender {
   email?: string;
   phone?: string;
   name?: string;
+  /** Firebase Auth UID — used by in-app channel (ADR-164) */
+  firebaseUid?: string;
   telegramId?: string;
   whatsappPhone?: string;
   messengerUserId?: string;

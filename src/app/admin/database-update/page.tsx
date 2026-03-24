@@ -26,7 +26,7 @@ const logger = createModuleLogger('DatabaseUpdatePage');
 // Services
 import {
   collection,
-  addDoc,
+  setDoc,
   doc,
   serverTimestamp,
   getDocs,
@@ -36,6 +36,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { generateContactId } from '@/services/enterprise-id.service';
 
 // ============================================================================
 // DATA DEFINITIONS
@@ -205,10 +206,11 @@ export default function DatabaseUpdatePage() {
           lastModifiedBy: 'database-update-script'
         };
 
-        const docRef = await addDoc(collection(db, COLLECTIONS.CONTACTS), contactData);
-        addedContactIds.push(docRef.id);
+        const contactId = generateContactId();
+        await setDoc(doc(db, COLLECTIONS.CONTACTS, contactId), contactData);
+        addedContactIds.push(contactId);
 
-        addLog(`  ✅ Προστέθηκε: ${contact.firstName || contact.companyName} (${docRef.id})`);
+        addLog(`  ✅ Προστέθηκε: ${contact.firstName || contact.companyName} (${contactId})`);
       }
 
       addLog(`✅ Προστέθηκαν ${addedContactIds.length} νέες επαφές`);

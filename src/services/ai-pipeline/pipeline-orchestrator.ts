@@ -692,13 +692,19 @@ export class PipelineOrchestrator {
    */
   private buildChannelSenderId(ctx: PipelineContext): string {
     const channel = ctx.intake.channel;
-    const senderId = ctx.intake.normalized.sender.telegramId
-      ?? ctx.intake.normalized.sender.whatsappPhone
-      ?? ctx.intake.normalized.sender.messengerUserId
-      ?? ctx.intake.normalized.sender.instagramUserId
-      ?? ctx.intake.normalized.sender.email
-      ?? ctx.intake.normalized.sender.phone
-      ?? 'unknown';
+    const sender = ctx.intake.normalized.sender;
+    const senderId = sender.firebaseUid
+      ?? sender.telegramId
+      ?? sender.whatsappPhone
+      ?? sender.messengerUserId
+      ?? sender.instagramUserId
+      ?? sender.email
+      ?? sender.phone;
+
+    if (!senderId) {
+      throw new Error(`No sender identifier for channel ${channel}`);
+    }
+
     return `${channel}_${senderId}`;
   }
 

@@ -9,7 +9,7 @@
 
 import { NextResponse } from 'next/server';
 import { MigrationPhase, type MigrationStats } from '@/services/enterprise-id-migration.service';
-import { EntityType, isValidEntityType } from '@/services/relationships/enterprise-relationship-engine.contracts';
+import { ENTITY_TYPES, type EntityType } from '@/config/domain-constants';
 import { MigrationController, type MigrationConfig } from './migration-controller';
 import { withAuth } from '@/lib/auth/middleware';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -92,6 +92,10 @@ export const POST = withAuth<MigrationExecutionResponse>(
   },
   { requiredGlobalRoles: 'super_admin' }
 );
+
+function isValidEntityType(type: string): type is EntityType {
+  return Object.values(ENTITY_TYPES).includes(type as EntityType);
+}
 
 function validateEntityTypes(types: readonly string[]): readonly EntityType[] {
   return types.filter((type): type is EntityType => isValidEntityType(type));

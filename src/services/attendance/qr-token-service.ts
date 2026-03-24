@@ -23,6 +23,7 @@ import { createHmac, randomBytes } from 'crypto';
 import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
+import { generateAttendanceQrTokenId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { AttendanceQrToken, QrTokenStatus } from '@/components/projects/ika/contracts';
 
@@ -137,14 +138,15 @@ export async function generateDailyQrToken(
     revokedBy: null,
   };
 
-  const docRef = await collection.add({
+  const tokenId = generateAttendanceQrTokenId();
+  await collection.doc(tokenId).set({
     ...tokenData,
     _createdAt: FieldValue.serverTimestamp(),
   });
 
-  logger.info('Generated new QR token', { projectId, date, tokenId: docRef.id });
+  logger.info('Generated new QR token', { projectId, date, tokenId });
 
-  return { id: docRef.id, ...tokenData };
+  return { id: tokenId, ...tokenData };
 }
 
 // =============================================================================

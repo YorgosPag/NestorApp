@@ -116,3 +116,4 @@ ai_chat_history (ADR-156)
 | 2026-02-10 | Fix: smart tool rules — collections without joins (contacts etc) skip unnecessary calls |
 | 2026-02-10 | Fix: maxIterations 5→7 to accommodate multi-step join queries |
 | 2026-02-10 | Fix: atomic dedup via Firestore Transaction (prevents duplicate processing race condition) |
+| 2026-03-24 | Fix: `buildChannelSenderId()` now includes `firebaseUid` in resolution chain (first priority) and throws instead of falling back to `'unknown'` — prevents orphan `in_app_unknown` documents in `ai_chat_history` |

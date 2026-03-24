@@ -16,6 +16,7 @@ import {
 import { getFeedbackService } from '@/services/ai-pipeline/feedback-service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 /** Phase 6F: Result type for suggestion callbacks that need pipeline re-feed */
 export interface SuggestionCallbackResult {
@@ -135,7 +136,7 @@ async function handlePropertyPhotosCallback(
   try {
     const { getAdminFirestore } = await import('@/lib/firebaseAdmin');
     const db = getAdminFirestore();
-    const doc = await db.collection('units').doc(unitId).get();
+    const doc = await db.collection(COLLECTIONS.UNITS).doc(unitId).get();
 
     if (!doc.exists) return null;
 
@@ -185,7 +186,7 @@ async function handlePropertyDetailCallback(
   try {
     const { getAdminFirestore } = await import('@/lib/firebaseAdmin');
     const db = getAdminFirestore();
-    const doc = await db.collection('units').doc(unitId).get();
+    const doc = await db.collection(COLLECTIONS.UNITS).doc(unitId).get();
 
     if (!doc.exists) {
       return {

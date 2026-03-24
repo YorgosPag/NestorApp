@@ -10,7 +10,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Project, ProjectStatus } from '@/types/project';
 import { PROJECT_STATUS_LABELS } from '@/types/project';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useCompanyRelationships } from '@/services/relationships/hooks/useEnterpriseRelationships';
+import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
@@ -29,26 +30,25 @@ function CompanyProjectsTable({ companyId }: { companyId: string }) {
     const projectStatusValues = Object.keys(PROJECT_STATUS_LABELS) as ProjectStatus[];
     const isProjectStatus = (value?: string): value is ProjectStatus => !!value && projectStatusValues.includes(value as ProjectStatus);
 
-    // 🚀 ENTERPRISE RELATIONSHIP ENGINE: Hook για centralized company-projects relationship
-    const companyRelationships = useCompanyRelationships(companyId);
-
     useEffect(() => {
         let isMounted = true;
         const fetchProjects = async () => {
             try {
-                // 🏗️ ENTERPRISE: Loading projects μέσω centralized Relationship Engine
                 logger.info('Loading projects for company', { companyId });
-                const companyProjects = await companyRelationships.getProjects();
+                const response = await apiClient.get<{ projects?: Project[] }>(API_ROUTES.PROJECTS.LIST);
+                const filtered = (response?.projects ?? []).filter(
+                    p => p.companyId === companyId
+                );
                 if (isMounted) {
-                    setProjects([...companyProjects] as Project[]);
-                    logger.info('Loaded projects for company', { count: companyProjects.length, companyId });
+                    setProjects(filtered);
+                    logger.info('Loaded projects for company', { count: filtered.length, companyId });
                 }
             } catch (error) {
                 logger.error('Failed to fetch projects for company', { error });
             }
         };
 
-        fetchProjects();
+        if (companyId) fetchProjects();
 
         return () => {
             isMounted = false;

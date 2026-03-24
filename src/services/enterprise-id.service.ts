@@ -151,6 +151,12 @@ export const ENTERPRISE_ID_PREFIXES = {
   MILESTONE: 'mile',
 
   // ==========================================================================
+  // ATTENDANCE (ADR-170: QR + GPS Geofencing)
+  // ==========================================================================
+  ATTENDANCE_QR_TOKEN: 'qrtok',
+  ATTENDANCE_EVENT: 'attev',
+
+  // ==========================================================================
   // INTEGRATIONS
   // ==========================================================================
   WEBHOOK: 'whk',
@@ -169,6 +175,11 @@ export const ENTERPRISE_ID_PREFIXES = {
   // NAVIGATION
   // ==========================================================================
   NAVIGATION: 'nav',
+
+  // ==========================================================================
+  // VOICE COMMANDS (ADR-164: In-App Voice AI Pipeline)
+  // ==========================================================================
+  VOICE_COMMAND: 'vcmd',
 
   // ==========================================================================
   // AI PIPELINE & AUDIT
@@ -894,6 +905,22 @@ export class EnterpriseIdService {
   }
 
   /**
+   * 🎫 Generate Attendance QR Token ID (ADR-170)
+   * Format: qrtok_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateAttendanceQrTokenId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.ATTENDANCE_QR_TOKEN).id;
+  }
+
+  /**
+   * 📋 Generate Attendance Event ID (ADR-170)
+   * Format: attev_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateAttendanceEventId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.ATTENDANCE_EVENT).id;
+  }
+
+  /**
    * 📁 Generate Folder ID
    * Format: fldr_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
    */
@@ -1069,6 +1096,14 @@ export class EnterpriseIdService {
    */
   generatePipelineQueueId(): string {
     return this.generateId(ENTERPRISE_ID_PREFIXES.PIPELINE_QUEUE).id;
+  }
+
+  /**
+   * 🎤 Generate Voice Command ID (ADR-164)
+   * Format: vcmd_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateVoiceCommandId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.VOICE_COMMAND).id;
   }
 
   /**
@@ -1355,6 +1390,7 @@ export const generatePipelineAuditId = () => enterpriseIdService.generatePipelin
 export const generateEntityAuditId = () => enterpriseIdService.generateEntityAuditId();
 export const generateContractId = () => enterpriseIdService.generateContractId();
 export const generatePipelineQueueId = () => enterpriseIdService.generatePipelineQueueId();
+export const generateVoiceCommandId = () => enterpriseIdService.generateVoiceCommandId();
 export const generateBrokerageId = () => enterpriseIdService.generateBrokerageId();
 export const generateCommissionId = () => enterpriseIdService.generateCommissionId();
 
@@ -1381,6 +1417,8 @@ export const generateWebhookId = () => enterpriseIdService.generateWebhookId();
 export const generateLearnedPatternId = () => enterpriseIdService.generateLearnedPatternId();
 export const generateConstructionPhaseId = () => enterpriseIdService.generateConstructionPhaseId();
 export const generateConstructionTaskId = () => enterpriseIdService.generateConstructionTaskId();
+export const generateAttendanceQrTokenId = () => enterpriseIdService.generateAttendanceQrTokenId();
+export const generateAttendanceEventId = () => enterpriseIdService.generateAttendanceEventId();
 export const generateFolderId = () => enterpriseIdService.generateFolderId();
 export const generateCommentId = () => enterpriseIdService.generateCommentId();
 export const generateApprovalId = () => enterpriseIdService.generateApprovalId();

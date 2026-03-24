@@ -35,6 +35,7 @@ import { InAppChannelAdapter } from '@/services/ai-pipeline/channel-adapters/ina
 import { createModuleLogger } from '@/lib/telemetry';
 import type { VoiceCommandDoc, SubmitCommandResult } from '@/types/voice-command';
 import { getErrorMessage } from '@/lib/error-utils';
+import { generateVoiceCommandId } from '@/services/enterprise-id.service';
 
 // =============================================================================
 // LOGGER
@@ -119,11 +120,11 @@ export const POST = withStandardRateLimit(
         completedAt: null,
       };
 
-      const docRef = await adminDb
+      const commandId = generateVoiceCommandId();
+      const docRef = adminDb
         .collection(COLLECTIONS.VOICE_COMMANDS)
-        .add(commandDoc);
-
-      const commandId = docRef.id;
+        .doc(commandId);
+      await docRef.set(commandDoc);
 
       logger.info('Voice command created', {
         commandId,
