@@ -483,8 +483,63 @@ export class PipelineOrchestrator {
         }
       }
 
+      // 5a-ter. Duplicate contact inline keyboard (ADR-171: Google-level UX)
+      // If create_contact returned duplicateDetected, send action buttons
+      if (ctx.intake.channel === 'telegram' && telegramChatId) {
+        try {
+          const duplicateToolCall = agenticResult.toolCalls.find(
+            tc => tc.name === 'create_contact' && tc.result.includes('"duplicateDetected":true')
+          );
+          if (duplicateToolCall) {
+            const { storePendingContactAction, createDuplicateContactKeyboard } = await import(
+              './duplicate-contact-keyboard'
+            );
+            const { sendTelegramMessage } = await import(
+              '@/app/api/communications/webhooks/telegram/telegram/client'
+            );
+            const parsed = JSON.parse(duplicateToolCall.result) as {
+              data?: { requestedContact?: Record<string, unknown>; matches?: Array<Record<string, unknown>> };
+            };
+            if (parsed.data?.requestedContact && parsed.data?.matches) {
+              const rc = parsed.data.requestedContact;
+              const pendingId = await storePendingContactAction({
+                type: 'duplicate_contact',
+                requestedContact: {
+                  firstName: String(rc.firstName ?? ''),
+                  lastName: String(rc.lastName ?? ''),
+                  email: rc.email ? String(rc.email) : null,
+                  phone: rc.phone ? String(rc.phone) : null,
+                  contactType: String(rc.contactType ?? 'individual'),
+                  companyName: rc.companyName ? String(rc.companyName) : null,
+                },
+                companyId: ctx.intake.companyId,
+                matches: parsed.data.matches as import('./shared/contact-lookup').DuplicateMatch[],
+                chatId: String(telegramChatId),
+              });
+
+              await sendTelegramMessage({
+                chat_id: Number(telegramChatId),
+                text: 'Επίλεξε ενέργεια:',
+                reply_markup: createDuplicateContactKeyboard(pendingId),
+              });
+
+              orchestratorLogger.info('Duplicate contact keyboard sent', {
+                requestId: ctx.requestId,
+                pendingId,
+                matchCount: parsed.data.matches.length,
+              });
+            }
+          }
+        } catch (kbError) {
+          // Non-fatal: keyboard failure must never break the pipeline
+          orchestratorLogger.warn('Failed to send duplicate contact keyboard', {
+            error: getErrorMessage(kbError),
+          });
+        }
+      }
+
       // 5b. ADR-173: Send suggestions + feedback keyboard (non-fatal)
-      // Message order: [1] AI Answer, [2] Suggested Actions, [3] Feedback (👍/👎)
+      // Message order: [1] AI Answer, [2] Duplicate keyboard (if any), [3] Suggested Actions, [4] Feedback (👍/👎)
       if (!isFailedResponse) {
         try {
           const feedbackDocId = await getFeedbackService().saveFeedbackSnapshot({

@@ -13,6 +13,12 @@ import {
   parseSuggestionCallback,
   createNegativeCategoryKeyboard,
 } from '@/services/ai-pipeline/feedback-keyboard';
+import {
+  isDuplicateContactCallback,
+  parseDuplicateContactCallback,
+  getPendingContactAction,
+  deletePendingContactAction,
+} from '@/services/ai-pipeline/duplicate-contact-keyboard';
 import { getFeedbackService } from '@/services/ai-pipeline/feedback-service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -78,6 +84,11 @@ export async function handleCallbackQuery(
       return createContactResponse(chatId);
 
     default:
+        // Duplicate contact resolution buttons (ADR-171)
+        if (data && isDuplicateContactCallback(data)) {
+          return handleDuplicateContactCallback(data, chatId);
+        }
+
         // Property detail callback (detail_{unitId})
         if (data && data.startsWith('detail_')) {
           return handlePropertyDetailCallback(data, chatId);
@@ -419,5 +430,113 @@ async function handleSuggestionCallback(
       error: getErrorMessage(error),
     });
     return null;
+  }
+}
+
+// ============================================================================
+// DUPLICATE CONTACT RESOLUTION (ADR-171)
+// ============================================================================
+
+/**
+ * Handle duplicate contact button presses.
+ * Actions: update existing, create new (skip duplicate check), cancel.
+ */
+async function handleDuplicateContactCallback(
+  data: string,
+  chatId: number | string,
+): Promise<TelegramSendPayload | null> {
+  const parsed = parseDuplicateContactCallback(data);
+  if (!parsed) {
+    logger.warn('Invalid duplicate contact callback', { data });
+    return null;
+  }
+
+  const { pendingId, action } = parsed;
+
+  try {
+    const pending = await getPendingContactAction(pendingId);
+
+    if (!pending) {
+      return {
+        method: 'sendMessage',
+        chat_id: chatId,
+        text: '⏰ Η ενέργεια έληξε ή έχει ήδη εκτελεστεί. Δοκίμασε ξανά.',
+      };
+    }
+
+    switch (action) {
+      case 'cancel': {
+        await deletePendingContactAction(pendingId);
+        return {
+          method: 'sendMessage',
+          chat_id: chatId,
+          text: '❌ Η δημιουργία επαφής ακυρώθηκε.',
+        };
+      }
+
+      case 'create_new': {
+        const { createContactServerSide } = await import(
+          '@/services/ai-pipeline/shared/contact-lookup'
+        );
+
+        const rc = pending.requestedContact;
+        const result = await createContactServerSide({
+          firstName: rc.firstName,
+          lastName: rc.lastName,
+          email: rc.email,
+          phone: rc.phone,
+          type: rc.contactType as 'individual' | 'company',
+          companyId: pending.companyId,
+          companyName: rc.companyName ?? undefined,
+          createdBy: 'AI Agent (admin — button)',
+          skipDuplicateCheck: true,
+        });
+
+        await deletePendingContactAction(pendingId);
+
+        logger.info('Contact created via duplicate resolution button', {
+          contactId: result.contactId,
+          displayName: result.displayName,
+          pendingId,
+        });
+
+        return {
+          method: 'sendMessage',
+          chat_id: chatId,
+          text: `✅ Δημιουργήθηκε νέα επαφή: ${result.displayName} (${result.contactId})`,
+        };
+      }
+
+      case 'update': {
+        // For update: show which contact was matched and prompt for more details
+        const match = pending.matches[0];
+        const matchInfo = match
+          ? `${match.name}${match.phone ? ` (${match.phone})` : ''}${match.email ? ` — ${match.email}` : ''}`
+          : 'Υπάρχουσα επαφή';
+
+        await deletePendingContactAction(pendingId);
+
+        return {
+          method: 'sendMessage',
+          chat_id: chatId,
+          text: `📝 Η υπάρχουσα επαφή: ${matchInfo}\nID: ${match?.contactId ?? 'N/A'}\n\nΓια ενημέρωση, στείλε μου τι θέλεις να αλλάξεις (π.χ. "ενημέρωσε email σε test@example.com").`,
+        };
+      }
+
+      default:
+        return null;
+    }
+  } catch (error) {
+    logger.error('Duplicate contact callback error', {
+      pendingId,
+      action,
+      error: getErrorMessage(error),
+    });
+
+    return {
+      method: 'sendMessage',
+      chat_id: chatId,
+      text: `❌ Σφάλμα: ${getErrorMessage(error)}`,
+    };
   }
 }

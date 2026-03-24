@@ -777,8 +777,7 @@ export class AgenticToolExecutor {
             matches: duplicateMatches,
             requestedContact: { firstName, lastName, email, phone, contactType },
             suggestedActions: [
-              'Ρώτα τον χρήστη αν θέλει: (1) Ενημέρωση υπάρχουσας, (2) Δημιουργία νέας ομώνυμης, (3) Ακύρωση',
-              'Αν ο χρήστης επιλέξει δημιουργία νέας, κάλεσε create_contact ξανά με skipDuplicateCheck: true',
+              'Περίγραψε τα ταυτόσημα αποτελέσματα στον χρήστη. ΜΗΝ δώσεις αριθμημένες επιλογές — τα κουμπιά θα σταλούν αυτόματα μέσω Telegram inline keyboard.',
             ],
           },
           error: duplicateMatches.length > 0

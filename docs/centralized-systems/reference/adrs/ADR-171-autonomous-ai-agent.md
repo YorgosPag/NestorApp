@@ -118,3 +118,4 @@ ai_chat_history (ADR-156)
 | 2026-02-10 | Fix: atomic dedup via Firestore Transaction (prevents duplicate processing race condition) |
 | 2026-03-24 | Fix: `buildChannelSenderId()` now includes `firebaseUid` in resolution chain (first priority) and throws instead of falling back to `'unknown'` — prevents orphan `in_app_unknown` documents in `ai_chat_history` |
 | 2026-03-24 | Feat: Google-level duplicate detection in `create_contact` tool — 3 criteria (email exact, phone exact, name fuzzy). Returns structured matches to AI for user decision. New `skipDuplicateCheck` param for confirmed creates. New `findContactByPhone()` + `checkContactDuplicates()` in contact-lookup.ts |
+| 2026-03-24 | Feat: Telegram Inline Keyboard buttons for duplicate contact resolution. 3 buttons (Ενημέρωσε/Δημιούργησε νέα/Ακύρωση) αντί plain text. Pending actions σε `ai_pending_actions` collection (24h TTL). New: `duplicate-contact-keyboard.ts`, callback handler in `callback-query.ts` |
