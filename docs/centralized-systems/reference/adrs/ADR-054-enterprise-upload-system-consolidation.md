@@ -52,6 +52,32 @@ handleMultiplePhotosChange (functional updater) → setEditedData
 
 ## Changelog
 
+### 2026-03-24 — Storage Path SSoT Enforcement (Legacy Path Elimination)
+
+**Πρόβλημα**: Πολλαπλά modules χρησιμοποιούσαν hardcoded storage paths εκτός canonical SSoT:
+- `PDFProcessor`: `floor-plans/{buildingId}/{floorId}/` (χωρίς companyId isolation)
+- `DxfFirestoreService`: `dxf-scenes/{fileId}/scene.json` (heuristic dual-path)
+- `attendance-server-service`: `attendance/{projectId}/{date}/` (custom pattern)
+- `/api/upload/photo`: User-provided `folderPath` (arbitrary paths)
+
+**Λύση**: Enforcement του `buildStoragePath()` ως μοναδικό SSoT:
+1. **domain-constants.ts**: Κεντρικοποίηση ΟΛΩΝ legacy paths στο `LEGACY_STORAGE_PATHS`
+2. **PDFProcessor**: `getCanonicalStoragePath()` method + deprecation σε legacy methods
+3. **DxfFirestoreService**: `storagePath` field στο DxfFileMetadata + deprecation warnings
+4. **attendance-server-service**: Canonical paths μέσω `buildStoragePath()` (backward compatible)
+5. **photo route**: Support canonical params (entityType/entityId) + legacy fallback
+6. **pdf-utils.ts**: Entire module marked deprecated
+7. **upload/index.ts**: Removed legacy `uploadFloorPDF` re-export
+
+**Αρχεία**:
+- `src/config/domain-constants.ts` — LEGACY_STORAGE_PATHS expanded
+- `src/services/upload/processors/PDFProcessor.ts` — canonical method + deprecations
+- `src/subapps/dxf-viewer/services/dxf-firestore.service.ts` — storagePath persistence
+- `src/services/attendance/attendance-server-service.ts` — canonical with fallback
+- `src/app/api/upload/photo/route.ts` — canonical params support
+- `src/services/upload/index.ts` — removed legacy re-export
+- `src/lib/pdf-utils.ts` — deprecation header
+
 ### 2026-02-13 — Critical Bug Fixes (VERIFIED WORKING)
 
 > **ΣΗΜΕΙΩΣΗ**: Το photo upload pipeline λειτουργεί σωστά. ΜΗΝ ΤΡΟΠΟΠΟΙΕΙΤΕ τα παρακάτω αρχεία χωρίς σοβαρό λόγο.

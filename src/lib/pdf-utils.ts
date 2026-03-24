@@ -24,6 +24,15 @@
  * @see src/services/upload/processors/PDFProcessor.ts
  */
 
+/**
+ * @deprecated ENTIRE MODULE DEPRECATED — Use UnifiedUploadService instead
+ * This file uses legacy floor-plans/ storage paths without companyId isolation.
+ * All functions re-routed to canonical pipeline in PDFProcessor.
+ * Kept only for read operations on legacy data.
+ * @see PDFProcessor.uploadFloorplanCanonical() for new uploads
+ * @see ADR-054 for migration guide
+ */
+
 import { storage, db } from '@/lib/firebase';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject, listAll } from 'firebase/storage';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';

@@ -134,10 +134,10 @@ export type {
 // ============================================================================
 
 /**
- * @deprecated Use UnifiedUploadService.uploadPDF() instead
- * Re-exported for backward compatibility with pdf-utils.ts consumers
+ * @deprecated uploadFloorPDF has been removed. Use UnifiedUploadService.uploadPDF()
+ * or pdfProcessor.uploadFloorplanCanonical() instead.
+ * See ADR-054 for migration guide.
  */
-export { uploadFloorPDF } from '@/lib/pdf-utils';
 
 /**
  * @deprecated Use UnifiedUploadService.uploadImage() instead

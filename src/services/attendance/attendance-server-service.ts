@@ -19,6 +19,8 @@ import 'server-only';
 import { getAdminFirestore, getAdminStorage, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
+import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
+import { buildStoragePath } from '@/services/upload/utils/storage-path';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { validateQrToken } from './qr-token-service';
@@ -153,13 +155,15 @@ export async function getProjectGeofence(
  * @param eventId - Event ID for unique naming
  * @param photoBase64 - Base64 data URL (e.g., "data:image/jpeg;base64,...")
  * @param date - Date string for path organization (YYYY-MM-DD)
+ * @param companyId - Company ID for canonical storage path (multi-tenant isolation)
  * @returns Photo metadata or null on failure
  */
 export async function uploadAttendancePhoto(
   projectId: string,
   eventId: string,
   photoBase64: string,
-  date: string
+  date: string,
+  companyId?: string
 ): Promise<AttendancePhotoMetadata | null> {
   try {
     const storage = getAdminStorage();
@@ -176,8 +180,25 @@ export async function uploadAttendancePhoto(
     const base64Data = matches[2];
     const buffer = Buffer.from(base64Data, 'base64');
 
-    // Storage path: attendance/{projectId}/{date}/{eventId}.jpg
-    const storagePath = `attendance/${projectId}/${date}/${eventId}.jpg`;
+    // 🏢 ENTERPRISE: Canonical storage path when companyId available, legacy fallback for backward compat
+    let storagePath: string;
+    if (companyId) {
+      const { path } = buildStoragePath({
+        companyId,
+        projectId,
+        entityType: ENTITY_TYPES.PROJECT,
+        entityId: projectId,
+        domain: FILE_DOMAINS.ADMIN,
+        category: FILE_CATEGORIES.PHOTOS,
+        fileId: eventId,
+        ext: 'jpg',
+      });
+      storagePath = path;
+    } else {
+      // Legacy fallback — will be removed when all callers provide companyId
+      console.warn('[DEPRECATION] uploadAttendancePhoto() without companyId uses legacy path. Provide companyId for canonical storage.');
+      storagePath = `attendance/${projectId}/${date}/${eventId}.jpg`;
+    }
     const file = bucket.file(storagePath);
 
     await file.save(buffer, {
@@ -337,7 +358,8 @@ export async function processQrCheckIn(payload: QrCheckInPayload): Promise<QrChe
       projectId,
       eventId,
       payload.photoBase64,
-      validDate
+      validDate,
+      projectCompanyId
     );
 
     if (photoMeta) {

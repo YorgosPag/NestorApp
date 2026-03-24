@@ -38,6 +38,7 @@ import {
   type EntityType,
 } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
+import { buildStoragePath } from '@/services/upload/utils/storage-path';
 import { Logger, LogLevel, ConsoleOutput } from '@/subapps/dxf-viewer/settings/telemetry';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -150,7 +151,9 @@ export class PDFProcessor implements FileProcessor {
   }
 
   /**
-   * Get storage path for floor plan PDF
+   * @deprecated Use `uploadFloorplanCanonical()` + `getCanonicalStoragePath()` instead.
+   * Legacy method that uses hardcoded `floor-plans/` paths.
+   *
    * 🏢 ENTERPRISE: Uses fixed filename to prevent duplicates
    */
   getStoragePath(options: StoragePathOptions): string {
@@ -164,6 +167,9 @@ export class PDFProcessor implements FileProcessor {
   }
 
   /**
+   * @deprecated Use `uploadFloorplanCanonical()` instead.
+   * Legacy method that uses hardcoded `floor-plans/` storage paths.
+   *
    * 🏢 ENTERPRISE: Upload floor plan PDF with full workflow
    */
   async uploadFloorPlan(
@@ -171,6 +177,8 @@ export class PDFProcessor implements FileProcessor {
     options: PDFUploadOptions,
     onProgress?: ProgressCallback
   ): Promise<PDFUploadResult> {
+    console.warn('[DEPRECATION] PDFProcessor.uploadFloorPlan() uses legacy floor-plans/ paths. Use uploadFloorplanCanonical() instead.');
+
     pdfLogger.info('📄 PDF_PROCESSOR: Starting floor plan upload', {
       fileName: file.name,
       fileSize: file.size,
@@ -248,10 +256,13 @@ export class PDFProcessor implements FileProcessor {
   }
 
   /**
+   * @deprecated Used only by legacy `uploadFloorPlan()`. Canonical flow handles cleanup via FileRecordService.
+   *
    * 🏢 ENTERPRISE: Cleanup existing files in folder before upload
    * Prevents duplicate accumulation (the original bug)
    */
   private async cleanupExistingFiles(buildingId: string, floorId: string): Promise<void> {
+    console.warn('[DEPRECATION] PDFProcessor.cleanupExistingFiles() uses legacy floor-plans/ paths. Canonical flow handles cleanup via FileRecordService.');
     const folderPath = `floor-plans/${buildingId}/${floorId}`;
 
     pdfLogger.info('🗑️ PDF_PROCESSOR: Cleaning up existing files in:', folderPath);
@@ -426,6 +437,30 @@ export class PDFProcessor implements FileProcessor {
   // ==========================================================================
   // 🏢 ENTERPRISE: CANONICAL FILE STORAGE SYSTEM
   // ==========================================================================
+
+  /**
+   * 🏢 ENTERPRISE: Get canonical storage path for floor plan PDF
+   * Uses buildStoragePath() SSoT - no hardcoded paths
+   */
+  getCanonicalStoragePath(params: {
+    companyId: string;
+    entityType: EntityType;
+    entityId: string;
+    fileId: string;
+    projectId?: string;
+  }): string {
+    const { path } = buildStoragePath({
+      companyId: params.companyId,
+      entityType: params.entityType,
+      entityId: params.entityId,
+      domain: FILE_DOMAINS.CONSTRUCTION,
+      category: FILE_CATEGORIES.FLOORPLANS,
+      fileId: params.fileId,
+      ext: 'pdf',
+      projectId: params.projectId,
+    });
+    return path;
+  }
 
   /**
    * 🏢 ENTERPRISE: Canonical floorplan upload

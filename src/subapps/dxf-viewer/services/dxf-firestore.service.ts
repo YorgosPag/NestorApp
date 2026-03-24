@@ -85,6 +85,8 @@ export interface DxfFileMetadata {
   id: string;
   fileName: string;
   storageUrl: string; // Firebase Storage download URL
+  /** 🏢 ENTERPRISE: Actual storage path (canonical or legacy) for reliable loading */
+  storagePath?: string;
   lastModified: Timestamp;
   version: number;
   checksum?: string;
@@ -241,6 +243,9 @@ export class DxfFirestoreService {
       // 2. Upload to Firebase Storage
       // 🏢 ENTERPRISE: Use canonical path (next to DXF) if available, fallback to legacy dxf-scenes/
       const storagePath = context?.canonicalScenePath ?? `${this.STORAGE_FOLDER}/${fileId}/scene.json`;
+      if (!context?.canonicalScenePath) {
+        dxfLogger.warn('Using legacy dxf-scenes/ path — provide canonicalScenePath in DxfSaveContext for canonical storage', { fileId });
+      }
       const storageRef = ref(storage, storagePath);
 
       const snapshot = await uploadBytes(storageRef, sceneBytes, {
@@ -266,6 +271,7 @@ export class DxfFirestoreService {
         id: fileId,
         fileName,
         storageUrl: downloadURL,
+        storagePath, // 🏢 ENTERPRISE: Persist actual storage path for reliable loading
         lastModified: serverTimestamp() as Timestamp,
         version: newVersion,
         checksum: this.generateSceneChecksum(scene),
@@ -358,11 +364,8 @@ export class DxfFirestoreService {
       }
 
       // 2. Download scene from Storage
-      // 🏢 ENTERPRISE: Try canonical path first (from storageUrl metadata), fallback to legacy
-      // The storageUrl may contain the canonical path if saved by the new enterprise flow
-      const storagePath = metadata.storageUrl?.startsWith('companies/')
-        ? this.deriveScenePath(metadata.storageUrl)
-        : `dxf-scenes/${fileId}/scene.json`;
+      // 🏢 ENTERPRISE: Use persisted storagePath (reliable), fallback to legacy for old records
+      const storagePath = metadata.storagePath ?? `${this.STORAGE_FOLDER}/${fileId}/scene.json`;
       const storageRef = ref(storage, storagePath);
       const sceneBytes = await getBytes(storageRef);
       const sceneJson = new TextDecoder().decode(sceneBytes);
@@ -461,6 +464,9 @@ export class DxfFirestoreService {
   ): Promise<void> {
     // 🏢 ENTERPRISE: Use canonical scene path if available
     const scenePath = context?.canonicalScenePath ?? `dxf-scenes/${fileId}/scene.json`;
+    if (!context?.canonicalScenePath) {
+      dxfLogger.warn('Using legacy dxf-scenes/ path in files collection — provide canonicalScenePath in DxfSaveContext', { fileId });
+    }
 
     // 🏢 ADR-240: Resolve entityType + entityId from context (fix hardcoded 'building')
     const resolvedEntityType = context?.entityType ?? 'building';

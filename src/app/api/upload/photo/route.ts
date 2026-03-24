@@ -4,7 +4,9 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminStorage } from '@/lib/firebaseAdmin';
 import { FileNamingService } from '@/services/FileNamingService';
-import { generateTempId } from '@/services/enterprise-id.service';
+import { generateTempId, generateFileId } from '@/services/enterprise-id.service';
+import { buildStoragePath } from '@/services/upload/utils/storage-path';
+import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { sanitizeStoragePath } from '@/lib/security/path-sanitizer';
@@ -96,6 +98,12 @@ async function handleUploadPhoto(request: NextRequest, ctx: AuthContext) {
     const purpose = formData.get('purpose') as string || 'photo';
     const photoIndex = formData.get('photoIndex') as string;
 
+    // 🏢 ENTERPRISE: Optional canonical storage params (preferred over legacy folderPath)
+    const canonicalEntityType = formData.get('entityType') as string | null;
+    const canonicalEntityId = formData.get('entityId') as string | null;
+    const canonicalDomain = formData.get('domain') as string | null;
+    const canonicalCategory = formData.get('category') as string | null;
+
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
@@ -169,8 +177,28 @@ async function handleUploadPhoto(request: NextRequest, ctx: AuthContext) {
       logger.warn('[Upload/Photo] No contact data provided, using fallback naming');
     }
 
-    const storagePath = `${folderPath}/${fileName}`;
-    logger.info('[Upload/Photo] Upload path', { storagePath });
+    // 🏢 ENTERPRISE: Prefer canonical path when full params provided
+    let storagePath: string;
+    if (ctx.companyId && canonicalEntityType && canonicalEntityId) {
+      const fileId = generateFileId();
+      const ext = fileName.split('.').pop()?.toLowerCase() || 'jpg';
+      const { path } = buildStoragePath({
+        companyId: ctx.companyId,
+        entityType: canonicalEntityType as EntityType,
+        entityId: canonicalEntityId,
+        domain: (canonicalDomain || 'admin') as FileDomain,
+        category: (canonicalCategory || 'photos') as FileCategory,
+        fileId,
+        ext,
+      });
+      storagePath = path;
+      // Update fileName to use fileId for consistency
+      fileName = `${fileId}.${ext}`;
+    } else {
+      // Legacy path — maintained for backward compatibility
+      storagePath = `${folderPath}/${fileName}`;
+    }
+    logger.info('[Upload/Photo] Upload path', { storagePath, canonical: !!(ctx.companyId && canonicalEntityType && canonicalEntityId) });
 
     // 🏢 ENTERPRISE: Upload using Firebase Admin Storage (ADR-077: Centralized)
     const adminStorage = getAdminStorage();

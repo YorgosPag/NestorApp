@@ -393,6 +393,12 @@ export const FILE_STORAGE_FLAGS = {
 export const LEGACY_STORAGE_PATHS = {
   /** Legacy contacts photos folder - DO NOT USE FOR NEW UPLOADS */
   CONTACTS_PHOTOS: 'contacts/photos',
+  /** Legacy floor plans folder - DO NOT USE FOR NEW UPLOADS */
+  FLOOR_PLANS: 'floor-plans',
+  /** Legacy DXF scenes folder - DO NOT USE FOR NEW UPLOADS */
+  DXF_SCENES: 'dxf-scenes',
+  /** Legacy attendance photos folder - DO NOT USE FOR NEW UPLOADS */
+  ATTENDANCE: 'attendance',
 } as const;
 
 /**
