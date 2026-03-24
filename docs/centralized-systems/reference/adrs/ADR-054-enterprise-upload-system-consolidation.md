@@ -52,6 +52,22 @@ handleMultiplePhotosChange (functional updater) → setEditedData
 
 ## Changelog
 
+### 2026-03-24 — Deprecated Legacy Upload Methods Removed from PDFProcessor
+
+**Πρόβλημα**: `PDFProcessor` περιείχε ~200 γραμμές deprecated code (`uploadFloorPlan()`, `cleanupExistingFiles()`, `uploadToStorage()`, `updateFirestoreFloor()`) που χρησιμοποιούσαν legacy `floor-plans/` paths χωρίς companyId isolation.
+
+**Λύση**:
+1. **PDFProcessor.ts**: Αφαίρεση 4 deprecated methods (~200 LOC). Διατήρηση `getStoragePath()` (interface contract) + `getCanonicalStoragePath()` + `uploadFloorplanCanonical()` (enterprise flow)
+2. **UnifiedUploadService.ts**: `uploadPDF()` + `handlePDFUpload()` πετάνε σαφές error → redirect σε `pdfProcessor.uploadFloorplanCanonical()`
+3. **test-upload/page.tsx**: Αντικατάσταση `LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS` → `buildStoragePath()` canonical
+
+**Αρχεία**:
+- `src/services/upload/processors/PDFProcessor.ts` — removed deprecated methods
+- `src/services/upload/UnifiedUploadService.ts` — deprecated uploadPDF() throws clear error
+- `src/app/test-upload/page.tsx` — canonical path via buildStoragePath()
+
+**DxfFirestoreService**: Legacy fallback (`dxf-scenes/{fileId}/scene.json`) ΔΙΑΤΗΡΗΘΗΚΕ — χρησιμοποιείται ακόμα από BuildingFloorplanService, CADProcessor, Migration004 που δεν παρέχουν canonicalScenePath.
+
 ### 2026-03-24 — Zero Hardcoded Paths: LEGACY_STORAGE_PATHS as SSoT for ALL Legacy References
 
 **Πρόβλημα**: 12+ αρχεία χρησιμοποιούσαν hardcoded string literals (`'contacts/photos'`, `'floor-plans'`, `'dxf-scenes'`, `'companies/logos'`, `'attendance'`) αντί για centralized constants. Αυτό δημιουργούσε:

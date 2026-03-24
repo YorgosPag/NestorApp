@@ -237,38 +237,19 @@ export class UnifiedUploadService {
   }
 
   /**
-   * Upload a PDF floor plan
+   * Upload a PDF floor plan.
+   *
+   * @deprecated Legacy flow removed. Use `pdfProcessor.uploadFloorplanCanonical()` directly
+   * for enterprise FileRecord-based uploads with proper companyId isolation.
    */
   static async uploadPDF(
-    file: File,
-    options: PDFUploadOptions
+    _file: File,
+    _options: PDFUploadOptions
   ): Promise<UnifiedUploadResult> {
-    const startTime = Date.now();
-
-    // Validate
-    const validation = pdfProcessor.validate(file);
-    if (!validation.isValid) {
-      throw new UploadError(
-        validation.error || 'PDF validation failed',
-        'VALIDATION_FAILED'
-      );
-    }
-
-    // Upload
-    const result = await pdfProcessor.uploadFloorPlan(file, options, options.onProgress);
-
-    return {
-      url: result.url,
-      fileName: result.fileName,
-      fileSize: result.fileSize,
-      mimeType: result.mimeType,
-      storagePath: result.storagePath,
-      processorUsed: 'pdf',
-      processingInfo: {
-        validationPassed: true,
-        processingTime: Date.now() - startTime,
-      },
-    };
+    throw new UploadError(
+      'Legacy uploadPDF() removed. Use pdfProcessor.uploadFloorplanCanonical() for canonical FileRecord-based uploads.',
+      'VALIDATION_FAILED'
+    );
   }
 
   /**
@@ -442,30 +423,19 @@ export class UnifiedUploadService {
     return this.uploadImage(file, imageOptions);
   }
 
+  /**
+   * @deprecated Legacy PDF upload flow removed.
+   * Use pdfProcessor.uploadFloorplanCanonical() directly for FileRecord-based uploads.
+   */
   private static async handlePDFUpload(
-    file: File,
-    options: UnifiedUploadOptions,
-    startTime: number
+    _file: File,
+    _options: UnifiedUploadOptions,
+    _startTime: number
   ): Promise<UnifiedUploadResult> {
-    if (!options.pdfOptions?.buildingId || !options.pdfOptions?.floorId) {
-      throw new UploadError(
-        'buildingId και floorId απαιτούνται για PDF upload',
-        'VALIDATION_FAILED'
-      );
-    }
-
-    const pdfOptions: PDFUploadOptions = {
-      folderPath: options.folderPath,
-      fileName: options.fileName,
-      onProgress: options.onProgress,
-      metadata: options.metadata,
-      buildingId: options.pdfOptions.buildingId,
-      floorId: options.pdfOptions.floorId,
-      cleanupExisting: options.pdfOptions.cleanupExisting,
-      updateFirestore: options.pdfOptions.updateFirestore,
-    };
-
-    return this.uploadPDF(file, pdfOptions);
+    throw new UploadError(
+      'Legacy PDF upload removed. Use pdfProcessor.uploadFloorplanCanonical() for canonical FileRecord-based uploads.',
+      'VALIDATION_FAILED'
+    );
   }
 
   private static async handleDXFUpload(

@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 // 🏢 ADR-054: Centralized upload component
 import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
 import { generateFileId } from '@/services/enterprise-id.service';
-import { LEGACY_STORAGE_PATHS } from '@/config/domain-constants';
+import { buildStoragePath } from '@/services/upload/utils/storage-path';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('TestUploadPage');
 
@@ -41,9 +41,18 @@ export default function TestUploadPage() {
     setResult('');
 
     try {
-      // 🔧 TEST: Upload to legacy contacts/photos for Storage Rules compatibility
-      const fileName = `${generateFileId()}_${file.name}`;
-      const storagePath = `${LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS}/${fileName}`;
+      // 🏢 ENTERPRISE: Upload to canonical path via buildStoragePath() SSoT
+      const fileId = generateFileId();
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const { path: storagePath } = buildStoragePath({
+        companyId: 'test_company',
+        entityType: 'contact',
+        entityId: 'test_contact',
+        domain: 'admin',
+        category: 'photos',
+        fileId,
+        ext,
+      });
       const storageRef = ref(storage, storagePath);
 
       logger.info('TEST: Starting direct upload...', {

@@ -241,10 +241,10 @@ export class DxfFirestoreService {
       const sceneBytes = new TextEncoder().encode(sceneJson);
 
       // 2. Upload to Firebase Storage
-      // 🏢 ENTERPRISE: Use canonical path (next to DXF) if available, fallback to legacy dxf-scenes/
+      // 🏢 ENTERPRISE: Canonical path required — legacy dxf-scenes/ fallback eliminated
       const storagePath = context?.canonicalScenePath ?? `${this.STORAGE_FOLDER}/${fileId}/scene.json`;
       if (!context?.canonicalScenePath) {
-        dxfLogger.warn('Using legacy dxf-scenes/ path — provide canonicalScenePath in DxfSaveContext for canonical storage', { fileId });
+        dxfLogger.warn('No canonicalScenePath provided — using legacy path as fallback. New saves should always provide canonicalScenePath via DxfSaveContext.', { fileId });
       }
       const storageRef = ref(storage, storagePath);
 

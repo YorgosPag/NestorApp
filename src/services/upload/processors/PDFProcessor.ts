@@ -15,8 +15,8 @@
  * @version 1.0.0
  */
 
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject, listAll } from 'firebase/storage';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import { doc, getDoc } from 'firebase/firestore';
 import { storage, db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type {
@@ -25,7 +25,6 @@ import type {
   ProcessedFile,
   ProcessorOptions,
   StoragePathOptions,
-  PDFUploadOptions,
   PDFUploadResult,
   ProgressCallback,
 } from '../types/upload.types';
@@ -152,10 +151,8 @@ export class PDFProcessor implements FileProcessor {
   }
 
   /**
-   * @deprecated Use `uploadFloorplanCanonical()` + `getCanonicalStoragePath()` instead.
-   * Legacy method that uses hardcoded `floor-plans/` paths.
-   *
-   * 🏢 ENTERPRISE: Uses fixed filename to prevent duplicates
+   * 🏢 ENTERPRISE: Get storage path for floor plan PDF (interface contract).
+   * For new uploads, prefer `getCanonicalStoragePath()` which uses buildStoragePath() SSoT.
    */
   getStoragePath(options: StoragePathOptions): string {
     const { buildingId, floorId } = options;
@@ -165,235 +162,6 @@ export class PDFProcessor implements FileProcessor {
     }
 
     return `${LEGACY_STORAGE_PATHS.FLOOR_PLANS}/${buildingId}/${floorId}/${FIXED_FLOORPLAN_FILENAME}`;
-  }
-
-  /**
-   * @deprecated Use `uploadFloorplanCanonical()` instead.
-   * Legacy method that uses hardcoded `floor-plans/` storage paths.
-   *
-   * 🏢 ENTERPRISE: Upload floor plan PDF with full workflow
-   */
-  async uploadFloorPlan(
-    file: File,
-    options: PDFUploadOptions,
-    onProgress?: ProgressCallback
-  ): Promise<PDFUploadResult> {
-    console.warn('[DEPRECATION] PDFProcessor.uploadFloorPlan() uses legacy floor-plans/ paths. Use uploadFloorplanCanonical() instead.');
-
-    pdfLogger.info('📄 PDF_PROCESSOR: Starting floor plan upload', {
-      fileName: file.name,
-      fileSize: file.size,
-      buildingId: options.buildingId,
-      floorId: options.floorId,
-    });
-
-    // Step 1: Validate
-    const validation = this.validate(file);
-    if (!validation.isValid) {
-      pdfLogger.error('❌ PDF_PROCESSOR: Validation failed:', validation.error);
-      throw new Error(validation.error || 'PDF validation failed');
-    }
-    pdfLogger.info('✅ PDF_PROCESSOR: Validation passed');
-
-    // Report progress
-    onProgress?.({
-      progress: 5,
-      phase: 'validating',
-      message: 'Επικύρωση αρχείου...',
-    });
-
-    // Step 2: Cleanup existing files (if enabled)
-    if (options.cleanupExisting !== false) {
-      await this.cleanupExistingFiles(options.buildingId, options.floorId);
-    }
-
-    onProgress?.({
-      progress: 10,
-      phase: 'processing',
-      message: 'Προετοιμασία αποστολής...',
-    });
-
-    // Step 3: Upload to Firebase Storage
-    const storagePath = this.getStoragePath({
-      folderPath: `${LEGACY_STORAGE_PATHS.FLOOR_PLANS}/${options.buildingId}/${options.floorId}`,
-      buildingId: options.buildingId,
-      floorId: options.floorId,
-    });
-
-    const uploadResult = await this.uploadToStorage(file, storagePath, onProgress);
-
-    // Step 4: Update Firestore (if enabled)
-    if (options.updateFirestore !== false) {
-      await this.updateFirestoreFloor(options.floorId, {
-        url: uploadResult.url,
-        path: storagePath,
-        originalName: file.name,
-        size: file.size,
-        buildingId: options.buildingId,
-      });
-    }
-
-    onProgress?.({
-      progress: 100,
-      phase: 'complete',
-      message: 'Η κάτοψη ανέβηκε επιτυχώς!',
-    });
-
-    pdfLogger.info('✅ PDF_PROCESSOR: Upload completed successfully');
-
-    return {
-      url: uploadResult.url,
-      fileName: FIXED_FLOORPLAN_FILENAME,
-      fileSize: file.size,
-      mimeType: file.type,
-      storagePath,
-      pdfMetadata: {
-        originalName: file.name,
-        uploadedAt: new Date().toISOString(),
-        floorId: options.floorId,
-        buildingId: options.buildingId,
-      },
-    };
-  }
-
-  /**
-   * @deprecated Used only by legacy `uploadFloorPlan()`. Canonical flow handles cleanup via FileRecordService.
-   *
-   * 🏢 ENTERPRISE: Cleanup existing files in folder before upload
-   * Prevents duplicate accumulation (the original bug)
-   */
-  private async cleanupExistingFiles(buildingId: string, floorId: string): Promise<void> {
-    console.warn('[DEPRECATION] PDFProcessor.cleanupExistingFiles() uses legacy floor-plans/ paths. Canonical flow handles cleanup via FileRecordService.');
-    const folderPath = `${LEGACY_STORAGE_PATHS.FLOOR_PLANS}/${buildingId}/${floorId}`;
-
-    pdfLogger.info('🗑️ PDF_PROCESSOR: Cleaning up existing files in:', folderPath);
-
-    try {
-      const folderRef = ref(storage, folderPath);
-      const existingFiles = await listAll(folderRef);
-
-      if (existingFiles.items.length > 0) {
-        pdfLogger.info(`🗑️ PDF_PROCESSOR: Found ${existingFiles.items.length} existing file(s) - deleting...`);
-
-        const deletePromises = existingFiles.items.map(async (fileRef) => {
-          try {
-            await deleteObject(fileRef);
-            pdfLogger.info(`✅ PDF_PROCESSOR: Deleted: ${fileRef.name}`);
-          } catch (deleteError) {
-            pdfLogger.warn(`⚠️ PDF_PROCESSOR: Could not delete ${fileRef.name}:`, deleteError);
-          }
-        });
-
-        await Promise.all(deletePromises);
-        pdfLogger.info('✅ PDF_PROCESSOR: Folder cleanup completed');
-      } else {
-        pdfLogger.info('✅ PDF_PROCESSOR: Folder is empty - no cleanup needed');
-      }
-    } catch (cleanupError) {
-      // Folder might not exist yet - that's OK
-      pdfLogger.info('ℹ️ PDF_PROCESSOR: Folder may not exist yet - proceeding with upload');
-    }
-  }
-
-  /**
-   * Upload file to Firebase Storage with progress tracking
-   */
-  private async uploadToStorage(
-    file: File,
-    storagePath: string,
-    onProgress?: ProgressCallback
-  ): Promise<{ url: string }> {
-    return new Promise((resolve, reject) => {
-      const storageRef = ref(storage, storagePath);
-      const uploadTask = uploadBytesResumable(storageRef, file);
-
-      uploadTask.on(
-        'state_changed',
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          // Map 0-100% upload to 10-90% overall
-          const overallProgress = 10 + (progress * 0.8);
-
-          onProgress?.({
-            progress: Math.round(overallProgress),
-            phase: 'upload',
-            bytesTransferred: snapshot.bytesTransferred,
-            totalBytes: snapshot.totalBytes,
-            message: `Ανέβασμα... ${Math.round(progress)}%`,
-          });
-        },
-        (error) => {
-          pdfLogger.error('❌ PDF_PROCESSOR: Upload error:', error);
-
-          let errorMessage = 'Σφάλμα κατά την αποστολή του αρχείου';
-
-          if (isFirebaseStorageError(error)) {
-            switch (error.code) {
-              case 'storage/unauthorized':
-                errorMessage = 'Δεν έχετε δικαίωμα να ανεβάσετε αρχεία';
-                break;
-              case 'storage/canceled':
-                errorMessage = 'Η αποστολή ακυρώθηκε';
-                break;
-              case 'storage/quota-exceeded':
-                errorMessage = 'Δεν υπάρχει αρκετός χώρος αποθήκευσης';
-                break;
-            }
-          }
-
-          reject(new Error(errorMessage));
-        },
-        async () => {
-          try {
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            pdfLogger.info('✅ PDF_PROCESSOR: Download URL obtained');
-            resolve({ url: downloadURL });
-          } catch (error) {
-            pdfLogger.error('❌ PDF_PROCESSOR: Failed to get download URL:', error);
-            reject(new Error('Σφάλμα κατά τη λήψη URL αρχείου'));
-          }
-        }
-      );
-    });
-  }
-
-  /**
-   * Update floor document in Firestore with PDF data
-   */
-  private async updateFirestoreFloor(
-    floorId: string,
-    pdfData: {
-      url: string;
-      path: string;
-      originalName: string;
-      size: number;
-      buildingId: string;
-    }
-  ): Promise<void> {
-    pdfLogger.info('📝 PDF_PROCESSOR: Updating Firestore floor document:', floorId);
-
-    try {
-      const floorDocRef = doc(db, COLLECTIONS.FLOORS, floorId);
-
-      await updateDoc(floorDocRef, {
-        pdfUrl: pdfData.url,
-        pdfPath: pdfData.path,
-        pdfMetadata: {
-          originalName: pdfData.originalName,
-          size: pdfData.size,
-          uploadedAt: new Date().toISOString(),
-          floorId,
-          buildingId: pdfData.buildingId,
-        },
-        pdfUpdatedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-
-      pdfLogger.info('✅ PDF_PROCESSOR: Firestore updated successfully');
-    } catch (error) {
-      pdfLogger.error('❌ PDF_PROCESSOR: Firestore update failed:', error);
-      throw new Error('Σφάλμα κατά την ενημέρωση βάσης δεδομένων');
-    }
   }
 
   /**
