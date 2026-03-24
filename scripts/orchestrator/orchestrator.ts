@@ -32,6 +32,7 @@ import { AgentRunner } from './agent-runner.js';
 import { QualityGate } from './quality-gate.js';
 import { OrchestratorLogger } from './logger.js';
 import { registerCleanupHandlers, createError } from './error-recovery.js';
+import { estimateTokens, printEstimate } from './token-estimator.js';
 
 // ─── Orchestrator ────────────────────────────────────────────
 
@@ -91,10 +92,13 @@ export class Orchestrator {
       // Phase 2: Create execution plan
       state = await this.plan(state);
 
+      // Show token estimate (always, before execution)
+      const estimate = estimateTokens(state.plan);
+      printEstimate(estimate, this.logger);
+
       // Dry run: stop here
       if (this.options.dryRun) {
         this.logger.phase('completed', 'Dry run complete — no execution.');
-        this.printPlan(state);
         return state;
       }
 
