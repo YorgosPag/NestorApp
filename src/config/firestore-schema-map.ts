@@ -123,30 +123,29 @@ export const FIRESTORE_SCHEMA_MAP: Record<string, CollectionSchema> = {
   },
 
   contacts: {
-    description: 'Επαφές (φυσικά πρόσωπα ή εταιρείες)',
+    description: 'Επαφές (φυσικά πρόσωπα ή εταιρείες). ΣΗΜΑΝΤΙΚΟ: Για δημιουργία επαφής χρησιμοποίησε ΠΑΝΤΑ το create_contact tool (ΟΧΙ firestore_write).',
     fields: {
-      firstName: 'string?',
-      lastName: 'string?',
-      displayName: 'string',
-      email: 'string?',
-      phone: 'string?',
-      mobile: 'string?',
-      contactType: 'individual|company',
-      companyId: 'string',
+      type: 'individual|company|service (ΥΠΟΧΡΕΩΤΙΚΟ — τύπος επαφής)',
+      status: 'active|inactive|archived (ΥΠΟΧΡΕΩΤΙΚΟ — default: active)',
+      isFavorite: 'boolean (default: false)',
+      firstName: 'string? (ΥΠΟΧΡΕΩΤΙΚΟ για individual)',
+      lastName: 'string? (ΥΠΟΧΡΕΩΤΙΚΟ για individual)',
+      companyName: 'string? (ΥΠΟΧΡΕΩΤΙΚΟ για company)',
+      displayName: 'string (computed: firstName+lastName ή companyName)',
+      companyId: 'string (ΥΠΟΧΡΕΩΤΙΚΟ — tenant isolation)',
       vatNumber: 'string? (ΑΦΜ)',
       idNumber: 'string? (ΑΔΤ)',
       profession: 'string?',
       fatherName: 'string? (πατρώνυμο)',
-      address: 'string?',
-      city: 'string?',
       notes: 'string?',
       tags: 'string[]?',
       createdAt: 'Timestamp',
+      createdBy: 'string?',
       // Personas: ρόλοι της επαφής (array of objects)
       'personas': 'array of { personaType: client|engineer|lawyer|notary|supplier|real_estate_agent, status: active|inactive, activatedAt: ISO string, deactivatedAt: string|null, notes: string|null, teeRegistryNumber?: string (μόνο engineer), engineerSpecialty?: architect|civil_engineer|mechanical_engineer|electrical_engineer|surveyor|chemical_engineer (μόνο engineer), licenseClass?: string (μόνο engineer) }',
-      // Emails & Phones (arrays)
-      'emails': 'array of { email: string, type: personal|work, isPrimary: boolean }?',
-      'phones': 'array of { number: string, type: mobile|home|work, isPrimary: boolean, countryCode?: string }?',
+      // Emails & Phones (arrays — ΟΧΙ flat strings)
+      'emails': 'array of { email: string, type: personal|work, isPrimary: boolean }? (ΟΧΙ flat email string)',
+      'phones': 'array of { number: string, type: mobile|home|work, isPrimary: boolean, countryCode?: string }? (ΟΧΙ flat phone string)',
     },
   },
 

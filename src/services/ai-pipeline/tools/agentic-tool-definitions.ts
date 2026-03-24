@@ -43,6 +43,10 @@ export type ContactFieldType = typeof CONTACT_FIELD_TYPES[number];
 export const FILE_SOURCE_TYPES = ['unit_photo', 'file', 'floorplan'] as const;
 export type FileSourceType = typeof FILE_SOURCE_TYPES[number];
 
+/** Contact types for create_contact tool (SSoT — used in tool def enum + executor validation) */
+export const CONTACT_TYPES = ['individual', 'company'] as const;
+export type ContactTypeEnum = typeof CONTACT_TYPES[number];
+
 // ============================================================================
 // AGENTIC TOOL DEFINITIONS (Chat Completions API format)
 // ============================================================================
@@ -169,7 +173,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
     type: 'function',
     function: {
       name: 'firestore_write',
-      description: 'Create or update a Firestore document. ONLY for admin use. Always include companyId. Use mode "create" for new documents, "update" for existing. Pass data as a JSON string.',
+      description: 'Create or update a Firestore document. ONLY for admin use. Always include companyId. Use mode "create" for new documents, "update" for existing. Pass data as a JSON string. IMPORTANT: For creating contacts, use the dedicated create_contact tool instead (correct ID prefix + field validation).',
       parameters: {
         type: 'object',
         properties: {
@@ -467,6 +471,48 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
           },
         },
         required: ['query'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  // ── 13. create_contact: Dedicated contact creation with proper validation ──
+  {
+    type: 'function' as const,
+    function: {
+      name: 'create_contact',
+      description: 'Create a new contact (individual person or company). Admin only. Validates fields, checks for duplicates by email, generates enterprise ID (cont_ for individuals, comp_ for companies). Use this INSTEAD of firestore_write for contacts collection.',
+      parameters: {
+        type: 'object',
+        properties: {
+          contactType: {
+            type: 'string',
+            description: 'Contact type: individual (physical person) or company',
+            enum: [...CONTACT_TYPES],
+          },
+          firstName: {
+            type: 'string',
+            description: 'First name (required for individuals, can be representative name for companies)',
+          },
+          lastName: {
+            type: 'string',
+            description: 'Last name (required for individuals, can be representative surname for companies)',
+          },
+          companyName: {
+            type: ['string', 'null'],
+            description: 'Company name (required for company type, null for individuals)',
+          },
+          email: {
+            type: ['string', 'null'],
+            description: 'Primary email address (null if not provided)',
+          },
+          phone: {
+            type: ['string', 'null'],
+            description: 'Primary phone number (null if not provided)',
+          },
+        },
+        required: ['contactType', 'firstName', 'lastName', 'companyName', 'email', 'phone'],
         additionalProperties: false,
       },
       strict: true,

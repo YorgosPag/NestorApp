@@ -34,8 +34,8 @@ import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { captureMessage as sentryCaptureMessage } from '@/lib/telemetry/sentry';
 import { getErrorMessage } from '@/lib/error-utils';
 // SPEC-257D/E/F: SSoT enums for tool validation (same source as tool definition schemas)
-import { COMPLAINT_SEVERITIES, CONTACT_FIELD_TYPES, FILE_SOURCE_TYPES } from './agentic-tool-definitions';
-import type { ComplaintSeverity, ContactFieldType, FileSourceType } from './agentic-tool-definitions';
+import { COMPLAINT_SEVERITIES, CONTACT_FIELD_TYPES, CONTACT_TYPES, FILE_SOURCE_TYPES } from './agentic-tool-definitions';
+import type { ComplaintSeverity, ContactFieldType, ContactTypeEnum, FileSourceType } from './agentic-tool-definitions';
 // SSoT types: CrmTask priority, contact array entry types
 import type { CrmTask } from '@/types/crm';
 import type { PhoneInfo, EmailInfo, SocialMediaInfo } from '@/types/contacts/contracts';
@@ -330,6 +330,9 @@ export class AgenticToolExecutor {
           break;
         case 'search_knowledge_base':
           result = await this.executeSearchKnowledgeBase(args, ctx);
+          break;
+        case 'create_contact':
+          result = await this.executeCreateContact(args, ctx);
           break;
         default:
           result = { success: false, error: `Unknown tool: ${toolName}` };
@@ -662,6 +665,100 @@ export class AgenticToolExecutor {
     }
 
     return { success: false, error: 'documentId required for update mode' };
+  }
+
+  // ==========================================================================
+  // DEDICATED CONTACT CREATION — Enterprise-grade with proper validation
+  // ==========================================================================
+
+  /**
+   * create_contact: Create a new contact with proper enterprise ID, field
+   * validation, and duplicate checking. Delegates to createContactServerSide()
+   * (SSoT for contact document structure).
+   *
+   * Security: Admin-only.
+   * ID Prefix: cont_ (individual) / comp_ (company)
+   *
+   * @see ADR-017 (Enterprise ID Generation)
+   */
+  private async executeCreateContact(
+    args: Record<string, unknown>,
+    ctx: AgenticContext
+  ): Promise<ToolResult> {
+    // ── 1. Admin-only check ──
+    if (!ctx.isAdmin) {
+      return { success: false, error: 'Contact creation is restricted to admin only' };
+    }
+
+    // ── 2. Validate inputs ──
+    const contactType = String(args.contactType ?? '').trim();
+    const firstName = String(args.firstName ?? '').trim();
+    const lastName = String(args.lastName ?? '').trim();
+    const companyName = args.companyName ? String(args.companyName).trim() : null;
+    const email = args.email ? String(args.email).trim().toLowerCase() : null;
+    const phone = args.phone ? String(args.phone).trim() : null;
+
+    if (!CONTACT_TYPES.includes(contactType as ContactTypeEnum)) {
+      return { success: false, error: `contactType must be one of: ${CONTACT_TYPES.join(', ')}` };
+    }
+
+    if (contactType === 'individual' && (!firstName || !lastName)) {
+      return { success: false, error: 'firstName and lastName are required for individual contacts' };
+    }
+
+    if (contactType === 'company' && !companyName) {
+      return { success: false, error: 'companyName is required for company contacts' };
+    }
+
+    // ── 3. Delegate to createContactServerSide (SSoT) ──
+    try {
+      const { createContactServerSide } = await import(
+        '@/services/ai-pipeline/shared/contact-lookup'
+      );
+
+      const result = await createContactServerSide({
+        firstName,
+        lastName,
+        email,
+        phone,
+        type: contactType as 'individual' | 'company',
+        companyId: ctx.companyId,
+        companyName: companyName ?? undefined,
+        createdBy: 'AI Agent (admin)',
+      });
+
+      // ── 4. Audit log ──
+      await this.auditWrite(ctx, COLLECTIONS.CONTACTS, result.contactId, 'create', {
+        displayName: result.displayName,
+        type: contactType,
+      });
+
+      logger.info('Contact created via dedicated tool', {
+        contactId: result.contactId,
+        displayName: result.displayName,
+        type: contactType,
+      });
+
+      return {
+        success: true,
+        data: {
+          contactId: result.contactId,
+          displayName: result.displayName,
+          type: contactType,
+        },
+        count: 1,
+      };
+    } catch (err) {
+      const errorMsg = getErrorMessage(err);
+
+      // Duplicate contact — return user-friendly message
+      if (errorMsg.includes('DUPLICATE_CONTACT')) {
+        return { success: false, error: errorMsg };
+      }
+
+      logger.error('Failed to create contact', { error: errorMsg });
+      return { success: false, error: `Αποτυχία δημιουργίας επαφής: ${errorMsg}` };
+    }
   }
 
   // ==========================================================================
