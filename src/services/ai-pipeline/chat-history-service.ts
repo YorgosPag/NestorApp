@@ -23,6 +23,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { generateChatHistoryDocId } from '@/services/enterprise-id.service';
 import { getCompanyId } from '@/config/tenant';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -68,6 +69,22 @@ const HISTORY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export class ChatHistoryService {
   /**
+   * Build enterprise-compliant document ID from channelSenderId.
+   * Input: "telegram_5618410820" → Output: "ach_telegram_5618410820"
+   * @ssot Uses ENTERPRISE_ID_PREFIXES.AI_CHAT_HISTORY via generateChatHistoryDocId
+   */
+  private buildDocId(channelSenderId: string): string {
+    const separatorIndex = channelSenderId.indexOf('_');
+    if (separatorIndex === -1) {
+      // Fallback: use as-is with prefix
+      return generateChatHistoryDocId(channelSenderId, 'unknown');
+    }
+    const channel = channelSenderId.substring(0, separatorIndex);
+    const senderId = channelSenderId.substring(separatorIndex + 1);
+    return generateChatHistoryDocId(channel, senderId);
+  }
+
+  /**
    * Add a message to the chat history for a channel+sender
    */
   async addMessage(
@@ -76,7 +93,7 @@ export class ChatHistoryService {
   ): Promise<void> {
     try {
       const db = getAdminFirestore();
-      const docRef = db.collection(COLLECTION_NAME).doc(sanitizeDocumentId(channelSenderId));
+      const docRef = db.collection(COLLECTION_NAME).doc(sanitizeDocumentId(this.buildDocId(channelSenderId)));
 
       // Truncate content if too long
       const truncatedMessage: ChatHistoryMessage = {
@@ -136,7 +153,7 @@ export class ChatHistoryService {
   ): Promise<ChatHistoryMessage[]> {
     try {
       const db = getAdminFirestore();
-      const doc = await db.collection(COLLECTION_NAME).doc(sanitizeDocumentId(channelSenderId)).get();
+      const doc = await db.collection(COLLECTION_NAME).doc(sanitizeDocumentId(this.buildDocId(channelSenderId))).get();
 
       if (!doc.exists) {
         return [];
@@ -170,7 +187,7 @@ export class ChatHistoryService {
   async clearHistory(channelSenderId: string): Promise<void> {
     try {
       const db = getAdminFirestore();
-      await db.collection(COLLECTION_NAME).doc(sanitizeDocumentId(channelSenderId)).delete();
+      await db.collection(COLLECTION_NAME).doc(sanitizeDocumentId(this.buildDocId(channelSenderId))).delete();
       logger.info('Cleared chat history', { channelSenderId });
     } catch (error) {
       logger.warn('Failed to clear chat history', {

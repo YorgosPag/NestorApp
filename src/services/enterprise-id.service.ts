@@ -173,6 +173,8 @@ export const ENTERPRISE_ID_PREFIXES = {
   LEARNED_PATTERN: 'lp',
   /** AI Query Strategy Memory — deterministic composite key per collection/filters */
   QUERY_STRATEGY: 'qstr',
+  /** AI Chat History — deterministic composite key per channel/sender */
+  AI_CHAT_HISTORY: 'ach',
 
   // ==========================================================================
   // OMNICHANNEL CONVERSATIONS (ADR-031: Safe Document ID Generation)
@@ -1168,6 +1170,16 @@ export class EnterpriseIdService {
   }
 
   /**
+   * 💬 Generate AI Chat History Document ID (deterministic composite key)
+   * Format: ach_{channel}_{senderId}
+   * One document per channel+sender — stores conversation memory for AI agent.
+   * @see ADR-171 (Autonomous AI Agent)
+   */
+  generateChatHistoryDocId(channel: string, senderId: string): string {
+    return `${ENTERPRISE_ID_PREFIXES.AI_CHAT_HISTORY}_${channel}_${senderId}`;
+  }
+
+  /**
    * 🤝 Generate Brokerage Agreement ID
    * Format: brk_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
    */
@@ -1485,10 +1497,12 @@ export const generateDebtMaturityId = () => enterpriseIdService.generateDebtMatu
 export const generateBudgetVarianceId = () => enterpriseIdService.generateBudgetVarianceId();
 
 // =============================================================================
-// AI QUERY STRATEGY (deterministic composite key)
+// AI DETERMINISTIC COMPOSITE KEYS
 // =============================================================================
 export const generateQueryStrategyDocId = (collection: string, failedFilters: string[]) =>
   enterpriseIdService.generateQueryStrategyDocId(collection, failedFilters);
+export const generateChatHistoryDocId = (channel: string, senderId: string) =>
+  enterpriseIdService.generateChatHistoryDocId(channel, senderId);
 
 // =============================================================================
 // OPTIMISTIC & TEMPORARY
