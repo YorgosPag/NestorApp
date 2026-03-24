@@ -529,7 +529,7 @@ export class PipelineOrchestrator {
               orchestratorLogger.info('Duplicate contact keyboard sent', {
                 requestId: ctx.requestId,
                 pendingId,
-                matchCount: parsed.data.matches.length,
+                matchCount: parsed.matches?.length ?? 0,
               });
             }
           }
