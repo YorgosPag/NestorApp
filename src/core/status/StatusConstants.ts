@@ -162,6 +162,7 @@ export const createPropertyStatuses = (colors: UseSemanticColorsReturn): Record<
   // 🏢 ENTERPRISE: Property statuses using centralized labels - ZERO HARDCODED VALUES
   'for-sale': { label: unitStatusLabels.for_sale, variant: 'success', backgroundColor: colors.bg.success, color: colors.text.success, icon: 'tag' },
   'for-rent': { label: unitStatusLabels.for_rent, variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'key' },
+  'for-sale-and-rent': { label: unitStatusLabels.for_sale_and_rent, variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'tag' },
   rented: { label: unitStatusLabels.rented, variant: 'purple', backgroundColor: colors.bg.secondary, color: colors.text.primary, icon: 'handshake' },
   'under-negotiation': { label: propertySpecialStatusLabels.under_negotiation, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'messageCircle' },
   'coming-soon': { label: propertySpecialStatusLabels.available_soon, variant: 'outline', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'calendar' },

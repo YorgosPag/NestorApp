@@ -37,6 +37,7 @@ export const MODAL_SELECT_UNIT_STATUS_LABELS = {
   maintenance: 'units.status.maintenance',
   for_sale: 'units.status.forSale',
   for_rent: 'units.status.forRent',
+  for_sale_and_rent: 'properties.status.forSaleAndRent',
   sold: 'units.status.sold',
   rented: 'units.status.rented',
   under_construction: 'units.status.underConstruction',
