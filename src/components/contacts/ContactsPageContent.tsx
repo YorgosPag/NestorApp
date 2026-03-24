@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -11,6 +12,9 @@ import type { Contact, IndividualContact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ContactUpdatedPayload } from '@/services/realtime';
+// 🏢 ENTERPRISE: Centralized AI sync bridge + tab visibility (SSoT hooks)
+import { useAISyncBridge } from '@/hooks/useAISyncBridge';
+import { useTabVisibilityRefresh } from '@/hooks/useTabVisibilityRefresh';
 
 // 🏢 ENTERPRISE: Type guard for contacts with photo URLs
 const hasMultiplePhotoURLs = (contact: Contact): contact is IndividualContact & { multiplePhotoURLs: string[] } => {
@@ -75,7 +79,7 @@ export function ContactsPageContent() {
   const { user, loading: authLoading } = useAuth();
   // 🏢 ENTERPRISE: Centralized icon sizes
   const iconSizes = useIconSizes();
-  const { getDirectionalBorder, getStatusBorder } = useBorderTokens();
+  const { getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
 
   // URL parameters
@@ -101,7 +105,8 @@ export function ContactsPageContent() {
   // Mobile-only filter toggle state
   const [showFilters, setShowFilters] = useState(false);
 
-  // Mobile-only compact toolbar toggle state
+  // Mobile-only compact toolbar toggle state — preserved for future mobile view
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [showCompactToolbar, setShowCompactToolbar] = useState(false);
 
   // 🏢 ENTERPRISE: Search term now unified in filters.searchTerm (AdvancedFiltersPanel)
@@ -127,36 +132,47 @@ export function ContactsPageContent() {
     }
   });
 
-  // Database operations
-  const loadContacts = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      // Debug logging removed
+  // 🏢 ENTERPRISE: Real-time subscription key — incrementing forces re-subscribe
+  const [refreshKey, setRefreshKey] = useState(0);
+  const forceDataRefresh = useCallback(() => {
+    setRefreshKey(prev => prev + 1);
+  }, []);
 
-      const contactsResult = await ContactsService.getAllContacts({
-        limitCount: 50,
-        orderByField: 'updatedAt',
-        orderDirection: 'desc',
-        includeArchived: filters.showArchived
-      });
+  // 🏢 ENTERPRISE: Firestore real-time subscription (SSoT — replaces one-time fetch)
+  // Contacts update automatically when ANY source writes to Firestore:
+  // - AI agent (Telegram), user edits, bulk imports, etc.
+  useEffect(() => {
+    if (authLoading || !user) return;
 
-      logger.info('Loaded fresh contacts from database', {
-        count: contactsResult.contacts.length,
-        contactsWithPhotos: contactsResult.contacts.filter(c => hasMultiplePhotoURLs(c) && c.multiplePhotoURLs.length > 0).length
-      });
-      setContacts(contactsResult.contacts);
+    setIsLoading(true);
+    setError(null);
 
-      // 🚫 SEED DATA ΠΛΗΡΩΣ ΑΦΑΙΡΕΜΕΝΑ - Καθαρή έναρξη χωρίς sample data
-      // Η βάση δεδομένων θα παραμείνει άδεια μέχρι να προσθέσει ο χρήστης επαφές
-    } catch (err) {
-      // Error logging removed
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      setError(`${t('page.error.title')} ${errorMessage}`);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [filters.showArchived]);
+    const unsubContacts = ContactsService.subscribeToContacts(
+      (freshContacts) => {
+        logger.info('Real-time contacts update received', {
+          count: freshContacts.length,
+        });
+        setContacts(freshContacts);
+        setIsLoading(false);
+      },
+      {
+        limitCount: 1000,
+        onError: (err) => {
+          logger.warn('Subscription error — retrying in 3s', { error: err.message });
+          setError(err.message);
+          setTimeout(() => forceDataRefresh(), 3000);
+        },
+      }
+    );
+
+    return () => { unsubContacts(); };
+  }, [user, authLoading, refreshKey, forceDataRefresh]);
+
+  // 🏢 ENTERPRISE: AI sync bridge + tab visibility (defense-in-depth)
+  // Signal bridge: catches server-side AI writes that onSnapshot might miss
+  // Tab visibility: refreshes when user returns to tab after Telegram interaction
+  useAISyncBridge('contacts', forceDataRefresh);
+  useTabVisibilityRefresh(forceDataRefresh);
 
   // 🚀 ENTERPRISE PERFORMANCE: Direct contact fetch για instant loading
   const loadSpecificContact = useCallback(async (contactId: string) => {
@@ -189,11 +205,10 @@ export function ContactsPageContent() {
     }
   }, []);
 
-  // 🚫 SEED LOGIC ΑΦΑΙΡΕΘΗΚΕ - Δεν υπάρχει πλέον seeding functionality
-
-  const refreshContacts = async () => {
-    await loadContacts();
-  };
+  // 🏢 ENTERPRISE: refreshContacts now just triggers the real-time subscription re-fetch
+  const refreshContacts = useCallback(async () => {
+    forceDataRefresh();
+  }, [forceDataRefresh]);
 
   // 🏢 ENTERPRISE: In-place single-contact update — prevents full re-fetch & tab reset
   // Instead of refreshContacts() which creates a new contacts array (causing remount),
@@ -226,34 +241,24 @@ export function ContactsPageContent() {
     }
   }, [selectedContact?.id, refreshContacts]);
 
-  // 🚀 ENTERPRISE LOADING STRATEGY: Smart loading based on URL parameters
-  // 🔐 Gated on auth state — prevents Firestore reads before authentication resolves
-  const hasLoadedContacts = React.useRef(false);
+  // 🚀 ENTERPRISE LOADING STRATEGY: URL-based instant contact selection
+  // The real-time subscription above handles loading the full list.
+  // This effect only handles instant display of a URL-specified contact.
+  const hasLoadedSpecific = React.useRef(false);
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!user) return;
-    if (hasLoadedContacts.current) return;
-    hasLoadedContacts.current = true;
+    if (authLoading || !user) return;
+    if (hasLoadedSpecific.current) return;
 
     const contactIdParam = searchParams.get('contactId');
-
     if (contactIdParam) {
-      // 🚀 INSTANT STRATEGY: Direct contact fetch για immediate display
+      hasLoadedSpecific.current = true;
       loadSpecificContact(contactIdParam).then(contact => {
         if (contact) {
           setFilters(prev => ({ ...prev, searchTerm: '' }));
           setActiveCardFilter(null);
         }
       });
-
-      // Second: Load full contacts list in BACKGROUND (for navigation)
-      setTimeout(() => {
-        loadContacts();
-      }, 100);
-    } else {
-      // Normal strategy: Load all contacts
-      loadContacts();
     }
   }, [authLoading, user]); // Re-run when auth state resolves
 
@@ -478,12 +483,13 @@ export function ContactsPageContent() {
         case servicesTitle:
           if (contact.type !== 'service') return false;
           break;
-        case recentAdditionsTitle:
+        case recentAdditionsTitle: {
           const oneMonthAgo = new Date();
           oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
           const createdDate = normalizeToDate(contact.createdAt);
           if (!createdDate || createdDate <= oneMonthAgo) return false;
           break;
+        }
         case favoritesTitle:
           if (!contact.isFavorite) return false;
           break;
@@ -593,6 +599,7 @@ export function ContactsPageContent() {
   ];
 
   // 🔥 NEW: Handle dashboard card clicks για filtering
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleCardClick = (stat: DashboardStat, index: number) => {
     const cardTitle = stat.title;
 
@@ -658,7 +665,7 @@ export function ContactsPageContent() {
             <div className="flex items-center space-x-2">
               <Filter className={`${iconSizes.sm} ${colors.text.info}`} />
               <span className={`text-sm ${colors.text.info}`}>
-                {t('page.filterIndicator.filteringFor')} <strong>"{filterValue}"</strong>
+                {t('page.filterIndicator.filteringFor')} <strong>&ldquo;{filterValue}&rdquo;</strong>
               </span>
               <span className={`text-xs ${colors.text.info} ${colors.bg.infoSubtle} px-2 py-1 rounded`}>
                 {filteredContacts.length === 1
