@@ -36,7 +36,7 @@ export const COMPLAINT_SEVERITIES = ['urgent', 'normal', 'low'] as const;
 export type ComplaintSeverity = typeof COMPLAINT_SEVERITIES[number];
 
 /** SPEC-257E: Contact field types (SSoT — used in tool def enum + executor validation) */
-export const CONTACT_FIELD_TYPES = ['phone', 'email', 'social'] as const;
+export const CONTACT_FIELD_TYPES = ['phone', 'email', 'social', 'address'] as const;
 export type ContactFieldType = typeof CONTACT_FIELD_TYPES[number];
 
 /** Updatable scalar fields on contact documents (SSoT — complete list from contracts.ts) */
@@ -50,7 +50,7 @@ export const CONTACT_UPDATABLE_FIELDS = [
   // Professional
   'profession', 'employer', 'position',
   // Other
-  'address', 'idNumber',
+  'idNumber',
 ] as const;
 export type ContactUpdatableField = typeof CONTACT_UPDATABLE_FIELDS[number];
 
@@ -451,11 +451,11 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
           },
           value: {
             type: 'string',
-            description: 'The value: phone number (e.g. 6974050025), email address (e.g. user@mail.com), or social media username/URL',
+            description: 'The value: phone number (e.g. 6974050025), email address (e.g. user@mail.com), social media username/URL, or full address string (e.g. "Τσιμισκή 42, Θεσσαλονίκη 54623")',
           },
           label: {
             type: 'string',
-            description: 'Label for the entry. Phone: εργασία/σπίτι/κινητό. Email: εργασία/προσωπικό. Social: platform name (facebook/instagram/linkedin/twitter)',
+            description: 'Label for the entry. Phone: εργασία/σπίτι/κινητό/σταθερό. Email: εργασία/προσωπικό. Social: platform name (facebook/instagram/linkedin/twitter). Address: σπίτι/εργασία/αποστολή',
           },
         },
         required: ['contactId', 'fieldType', 'value', 'label'],
@@ -577,8 +577,8 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
       name: 'update_contact_field',
       description: [
         'Update a single field on an existing contact. Admin only.',
-        'Use for ALL scalar fields: vatNumber, profession, address, birthDate, documentIssueDate, documentExpiryDate, documentType, documentNumber, documentIssuer, taxOffice, gender, amka, etc.',
-        'For phone/email/social use append_contact_info instead.',
+        'Use for ALL scalar fields: vatNumber, profession, birthDate, documentIssueDate, documentExpiryDate, documentType, documentNumber, documentIssuer, taxOffice, gender, amka, etc.',
+        'For phone/email/social/address use append_contact_info instead.',
         'IMPORTANT for taxOffice: ALWAYS call lookup_doy_code first to get the 4-digit code.',
         'IMPORTANT for profession: ALWAYS call search_esco_occupations first. Show matches to user. If no ESCO match, ask user before adding free text.',
         'IMPORTANT for dates (birthDate, documentIssueDate, documentExpiryDate): ALWAYS use DD/MM/YYYY format (e.g. "25/01/2027").',

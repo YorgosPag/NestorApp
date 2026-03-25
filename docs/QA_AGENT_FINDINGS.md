@@ -267,6 +267,95 @@
 | 🟢 P2 | FIND-A: Hallucinated contactId | Ενισχυμένος κανόνας fresh search | Low | ✅ FIXED |
 | 🟢 P3 | FIND-C: Unnecessary ESCO search for "Άνδρας" | Prompt rule: gender ≠ occupation | Low | ✅ FIXED |
 
+### Session 3 — E2E Dev Bot Testing via Simulated Webhook (2026-03-25)
+
+**Test Contact**: Νίκος Τεστόπουλος (`cont_095e89ef-2808-4165-8429-56d8ed160f09`)
+**Test Contact 2**: Μαρία Τεστοπούλου (`cont_f629e289-690e-4dbb-a2eb-8aa73a4277e4`)
+**Method**: Simulated webhook POST → localhost:3000 (dev bot)
+
+#### Σύνοψη Tests
+
+| Test | Input | Tool Used | Result |
+|------|-------|-----------|--------|
+| Δημιουργία επαφής | "Δημιούργησε νέα επαφή: Νίκος Τεστόπουλος" | `create_contact` | ✅ PASS |
+| Κινητό τηλέφωνο | "Πρόσθεσε κινητό 6974050026" | `append_contact_info` | ✅ PASS |
+| Email | "Πρόσθεσε email nikos.test@example.com" | `append_contact_info` | ✅ PASS |
+| Διεύθυνση | "Βάλε διεύθυνση Τσιμισκή 42, Θεσσαλονίκη 54623" | `update_contact_field` | ⚠️ FIND-G |
+| Σταθερό τηλέφωνο | "Πρόσθεσε σταθερό τηλέφωνο 2310123456" | `append_contact_info` | ⚠️ FIND-H |
+| Ιστοσελίδα | "Πρόσθεσε ιστοσελίδα www.testopoulos.gr" | `append_contact_info` | ⚠️ FIND-I |
+| LinkedIn | "Πρόσθεσε LinkedIn https://linkedin.com/in/..." | `append_contact_info` | ✅ PASS |
+| IBAN | "Πρόσθεσε IBAN GR16... Εθνική Τράπεζα" | `manage_bank_account` | ✅ PASS |
+| 2η Επαφή | "Δημιούργησε: Μαρία Τεστοπούλου" | `create_contact` | ✅ PASS |
+| Σχέση σύζυγος | "Η Μαρία είναι σύζυγος του Νίκου" | `manage_relationship` | ✅ PASS |
+| Φωτογραφία | Photo message + caption | ❌ Κανένα | ❌ FIND-J |
+| Έγγραφο PDF | Document message + caption | ❌ Κανένα | ❌ FIND-J |
+
+#### Findings Detail
+
+---
+
+### [MEDIUM] FIND-G: Διεύθυνση αποθηκεύεται ως flat string
+
+- **Test**: Διεύθυνση — "Βάλε διεύθυνση Τσιμισκή 42, Θεσσαλονίκη 54623"
+- **Expected**: `addresses: [{street: "Τσιμισκή", streetNumber: "42", city: "Θεσσαλονίκη", postalCode: "54623"}]`
+- **Actual**: `address: "Τσιμισκή 42, Θεσσαλονίκη 54623"` (flat string), `addresses: []` (κενό)
+- **Severity**: MEDIUM
+- **Category**: Data Model
+- **Tool Used**: `update_contact_field` αντί structured address tool
+- **Ανάλυση**: Ο AI χρησιμοποίησε `update_contact_field` με `field: "address"` αντί να κάνει parse τη διεύθυνση σε structured object. Στο Session 1 (production) η ίδια εντολή αποθήκευσε structured. Η διαφορά: Session 1 είχε πιο αναλυτικό prompt ή διαφορετικό tool routing.
+- **Fix**: (a) AI prompt rule: "address → χρησιμοποίησε `addresses[]` array", ή (b) `update_contact_field` handler να κάνει auto-parse addresses, ή (c) Νέο `update_address` tool
+
+---
+
+### [MEDIUM] FIND-H: Σταθερό τηλέφωνο αποθηκεύεται ως type: "mobile"
+
+- **Test**: "Πρόσθεσε σταθερό τηλέφωνο 2310123456"
+- **Expected**: `{number: "2310123456", type: "landline"}`
+- **Actual**: `{number: "2310123456", type: "mobile", label: "σταθερό"}`
+- **Severity**: MEDIUM
+- **Category**: Data
+- **Ανάλυση**: Ο `append_contact_info` handler αποθηκεύει πάντα `type: "mobile"`. Δεν υπάρχει phone type classification βάσει prefix (2xxx = landline) ή label ("σταθερό" = landline).
+- **Fix**: (a) Handler: αν label="σταθερό" ή number ξεκινάει με 2 → `type: "landline"`, ή (b) AI prompt: pass σωστό type στο tool call
+
+---
+
+### [LOW] FIND-I: Ιστοσελίδα + hallucinated contactId + error despite success
+
+- **Test**: "Πρόσθεσε ιστοσελίδα www.testopoulos.gr"
+- **Issue 1**: AI χρησιμοποίησε **hallucinated contactId** (`cont_c56a003d` — δεν υπάρχει) στο πρώτο attempt
+- **Issue 2**: Μετά το retry με σωστό ID, η απάντηση ήταν "Η εγγραφή δεν ολοκληρώθηκε" παρόλο που πέτυχε
+- **Issue 3**: Website αποθηκεύτηκε στο `socialMedia[]` ως `platform: "other", label: "website"` αντί dedicated field
+- **Severity**: LOW (self-corrected, data saved correctly)
+- **Category**: UX / Data Model
+- **Ανάλυση**: (1) contactId hallucination — FIND-A regression, (2) Error message παρά success — FIND-B regression, (3) Δεν υπάρχει `website` πεδίο στο contact schema
+- **Fix**: (1-2) Regressions — ελέγξτε prompt rules, (3) Optional: add `websites[]` field
+
+---
+
+### [CRITICAL] FIND-J: Photo/Document attachments ΔΕΝ περνούν στο pipeline
+
+- **Test**: Photo message (with photo array) + Document message (with document object)
+- **Expected**: `attachments: [{type: "photo", ...}]` στο normalized intake → AI calls `attach_file_to_contact`
+- **Actual**: `attachments: []` — **ΚΕΝΟ**. AI δεν γνωρίζει ότι υπάρχει attachment
+- **Severity**: CRITICAL
+- **Category**: Pipeline / Channel Adapter
+- **Ανάλυση**: Ο `TelegramChannelAdapter` δεν εξάγει `photo[]` ή `document` από το Telegram update payload στα `normalized.attachments`. Χωρίς αυτά, ο AI βλέπει μόνο το caption text και ψάχνει αντί να ανεβάζει.
+- **AI Response (photo)**: "❌ Δεν βρήκα φωτογραφία προφίλ" — ψάχνει στο `files` collection
+- **AI Response (document)**: "❌ Δεν βρήκα πιστοποιητικό γέννησης" — ψάχνει στο `files` collection
+- **Fix**: `telegram-channel-adapter.ts` → extract photo/document/audio/video/voice from Telegram payload into `attachments[]` array. Μετά, ο AI θα μπορεί να χρησιμοποιήσει `attach_file_to_contact`
+
+---
+
+#### Ιεράρχηση Fixes — Session 3
+
+| Priority | Finding | Impact | Effort | Status |
+|----------|---------|--------|--------|--------|
+| 🔴 **P0** | **FIND-J: Attachments δεν περνούν στο pipeline** | Photo/document upload completely broken | Medium | ❌ OPEN |
+| 🟡 P1 | FIND-G: Address ως flat string | Data model inconsistency | Low | ✅ FIXED |
+| 🟡 P1 | FIND-H: Landline → type: "mobile" | Wrong phone type classification | Low | ✅ FIXED |
+| 🟡 P1 | **FIND-K: Search δεν βρίσκει "Τεστοπούλου"** | search_text_tokens missing σε AI-created contacts | Medium | ❌ OPEN |
+| 🟢 P2 | FIND-I: Website + hallucinated ID + error msg | UX regression + data model | Low | ❌ OPEN |
+
 ---
 
 ## Θετικά Ευρήματα
@@ -276,8 +365,12 @@
 3. ✅ **ΑΜΚΑ validation**: Απέρριψε 10-ψήφιο (production)
 4. ✅ **ΔΟΥ lookup**: Σωστός 4-ψήφιος κωδικός
 5. ✅ **ESCO disambiguation**: Μπλοκάρει ambiguous, αφήνει unambiguous
-6. ✅ **Διεύθυνση**: Structured storage (street, number, city, postalCode)
-7. ✅ **Graceful decline**: Φωτογραφίες + Έγγραφα ζητούν αρχείο αντί να κάνουν crash
+6. ✅ **Διεύθυνση (Session 1)**: Structured storage (street, number, city, postalCode)
+7. ✅ **IBAN (Session 3)**: `manage_bank_account` tool → sub-collection `contacts/{id}/bankAccounts` — IBAN validated + formatted
+8. ✅ **Σχέσεις (Session 3)**: `manage_relationship` tool → `contact_relationships` collection — σωστό
+9. ✅ **Phone/Email append (Session 3)**: Κινητό + email αποθηκεύονται σωστά στα arrays
+10. ✅ **LinkedIn (Session 3)**: Αποθηκεύεται στο `socialMedia[]` με `platform: "linkedin"` + URL
+11. ✅ **Self-correction (Session 3)**: AI κάνει search + retry όταν contactId αποτυγχάνει
 
 ---
 

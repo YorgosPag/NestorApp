@@ -9,7 +9,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { getErrorMessage } from '@/lib/error-utils';
 import { CONTACT_FIELD_TYPES, CONTACT_TYPES, CONTACT_UPDATABLE_FIELDS } from '../agentic-tool-definitions';
 import type { ContactFieldType, ContactTypeEnum, ContactUpdatableField } from '../agentic-tool-definitions';
-import type { PhoneInfo, EmailInfo, SocialMediaInfo } from '@/types/contacts/contracts';
+import type { PhoneInfo, EmailInfo, SocialMediaInfo, AddressInfo } from '@/types/contacts/contracts';
 import {
   type AgenticContext,
   type ToolHandler,
@@ -28,7 +28,15 @@ const PHONE_LABEL_MAP: Record<string, PhoneInfo['type']> = {
   'εργασία': 'work', 'δουλειά': 'work', 'work': 'work', 'γραφείο': 'work',
   'σπίτι': 'home', 'home': 'home',
   'κινητό': 'mobile', 'mobile': 'mobile',
+  'σταθερό': 'home', 'landline': 'home',
   'fax': 'fax', 'φαξ': 'fax',
+};
+
+const ADDRESS_LABEL_MAP: Record<string, AddressInfo['type']> = {
+  'σπίτι': 'home', 'home': 'home', 'κατοικία': 'home',
+  'εργασία': 'work', 'work': 'work', 'γραφείο': 'work', 'δουλειά': 'work',
+  'αποστολή': 'shipping', 'shipping': 'shipping',
+  'χρέωση': 'billing', 'billing': 'billing',
 };
 
 const EMAIL_LABEL_MAP: Record<string, EmailInfo['type']> = {
@@ -269,7 +277,9 @@ export class ContactHandler implements ToolHandler {
       if (currentPhones.some(p => cleanPhoneNumber(p.number) === cleanedPhone)) {
         return { success: false, error: `Το τηλέφωνο ${value} υπάρχει ήδη.` };
       }
-      const phoneType = PHONE_LABEL_MAP[label] ?? 'mobile';
+      // Phone type: label → map, else detect by Greek prefix (2xx = landline, 69x = mobile)
+      const phoneType = PHONE_LABEL_MAP[label]
+        ?? (cleanedPhone.startsWith('2') ? 'home' : 'mobile');
       const newEntry = {
         number: cleanedPhone,
         type: phoneType,
@@ -277,6 +287,17 @@ export class ContactHandler implements ToolHandler {
         ...(label && !PHONE_LABEL_MAP[label] ? { label } : {}),
       };
       updatePayload.phones = [...currentPhones, newEntry];
+    } else if (fieldType === 'address') {
+      const parsed = parseGreekAddress(value);
+      const addressType = ADDRESS_LABEL_MAP[label] ?? 'home';
+      const currentAddresses = (contactData.addresses ?? []) as AddressInfo[];
+      const newAddress: AddressInfo = {
+        ...parsed,
+        type: addressType,
+        isPrimary: currentAddresses.length === 0,
+        country: parsed.country || 'GR',
+      };
+      updatePayload.addresses = [...currentAddresses, newAddress];
     } else if (fieldType === 'email') {
       const normalizedEmail = value.toLowerCase().trim();
       const currentEmails = (contactData.emails ?? []) as Array<{ email: string }>;
@@ -406,4 +427,54 @@ export class ContactHandler implements ToolHandler {
     const { executeSetContactEsco } = await import('./esco-write-handler');
     return executeSetContactEsco(args, ctx);
   }
+}
+
+// ============================================================================
+// GREEK ADDRESS PARSER
+// ============================================================================
+
+/**
+ * Parse a Greek address string into structured AddressInfo fields.
+ * Handles patterns like: "Τσιμισκή 42, Θεσσαλονίκη 54623"
+ * or "Λ. Κηφισίας 120, Αθήνα, 11526"
+ */
+function parseGreekAddress(raw: string): Pick<AddressInfo, 'street' | 'number' | 'city' | 'postalCode' | 'country'> {
+  const parts = raw.split(',').map(p => p.trim());
+
+  // Extract postal code (5-digit Greek TK) from any part
+  let postalCode = '';
+  const tkRegex = /\b(\d{5})\b/;
+  for (const part of parts) {
+    const match = tkRegex.exec(part);
+    if (match) {
+      postalCode = match[1];
+      break;
+    }
+  }
+
+  // First part: street + number (e.g. "Τσιμισκή 42")
+  let street = '';
+  let number = '';
+  if (parts.length > 0) {
+    const streetPart = parts[0];
+    const numMatch = /^(.+?)\s+(\d+[α-ωΑ-Ω]?)\s*$/.exec(streetPart);
+    if (numMatch) {
+      street = numMatch[1].trim();
+      number = numMatch[2];
+    } else {
+      street = streetPart.replace(tkRegex, '').trim();
+    }
+  }
+
+  // City: second part (cleaned of postal code)
+  let city = '';
+  if (parts.length > 1) {
+    city = parts[1].replace(tkRegex, '').trim();
+  }
+  // If city is empty, check third part
+  if (!city && parts.length > 2) {
+    city = parts[2].replace(tkRegex, '').trim();
+  }
+
+  return { street, number, city, postalCode, country: 'GR' };
 }
