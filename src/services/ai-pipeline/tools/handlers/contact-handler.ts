@@ -4,7 +4,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { getErrorMessage } from '@/lib/error-utils';
 import { CONTACT_FIELD_TYPES, CONTACT_TYPES, CONTACT_UPDATABLE_FIELDS } from '../agentic-tool-definitions';
 import type { ContactFieldType, ContactTypeEnum, ContactUpdatableField } from '../agentic-tool-definitions';
-import type { PhoneInfo, EmailInfo, SocialMediaInfo, AddressInfo } from '@/types/contacts/contracts';
+import type { PhoneInfo, EmailInfo, SocialMediaInfo, AddressInfo, WebsiteInfo } from '@/types/contacts/contracts';
 import { ADDRESS_LABEL_MAP, parseGreekAddress } from './address-parser';
 import {
   type AgenticContext,
@@ -36,6 +36,11 @@ const SOCIAL_PLATFORM_MAP: Record<string, SocialMediaInfo['platform']> = {
   'instagram': 'instagram', 'insta': 'instagram',
   'youtube': 'youtube',
   'github': 'github',
+};
+
+const WEBSITE_TYPE_MAP: Record<string, WebsiteInfo['type']> = {
+  'personal': 'personal', 'προσωπικό': 'personal', 'προσωπική': 'personal',
+  'company': 'company', 'εταιρικό': 'company', 'εταιρεία': 'company', 'portfolio': 'portfolio', 'blog': 'blog',
 };
 
 // HANDLER
@@ -92,24 +97,17 @@ export class ContactHandler implements ToolHandler {
       return { success: false, error: 'companyName is required for company contacts' };
     }
 
-    // Validate phone & email format (SSoT validators)
     if (phone) {
       const { isValidPhone, cleanPhoneNumber } = await import('@/lib/validation/phone-validation');
       if (!isValidPhone(phone)) {
-        return {
-          success: false,
-          error: `Μη έγκυρο τηλέφωνο: "${phone}". Αποδεκτά: ελληνικό κινητό (69XXXXXXXX — 10 ψηφία), σταθερό (2XXXXXXXXX — 10 ψηφία) ή διεθνές (+XXXXXXXXXXX). Ζήτα από τον χρήστη να δώσει ξανά τον αριθμό.`,
-        };
+        return { success: false, error: `Μη έγκυρο τηλέφωνο: "${phone}". Αποδεκτά: 69XXXXXXXX, 2XXXXXXXXX, +XXXXXXXXXXX.` };
       }
       phone = cleanPhoneNumber(phone);
     }
     if (email) {
       const { isValidEmail } = await import('@/lib/validation/email-validation');
       if (!isValidEmail(email)) {
-        return {
-          success: false,
-          error: `Μη έγκυρο email: "${email}". Ζήτα από τον χρήστη να δώσει ξανά τη σωστή διεύθυνση.`,
-        };
+        return { success: false, error: `Μη έγκυρο email: "${email}".` };
       }
     }
 
@@ -131,26 +129,15 @@ export class ContactHandler implements ToolHandler {
         skipDuplicateCheck,
       });
 
-      await auditWrite(ctx, COLLECTIONS.CONTACTS, result.contactId, 'create', {
-        displayName: result.displayName,
-        type: contactType,
-      });
+      await auditWrite(ctx, COLLECTIONS.CONTACTS, result.contactId, 'create', { displayName: result.displayName, type: contactType });
+      // FIND-K: Index for Global Search (non-fatal)
+      try {
+        const { indexContactForSearch } = await import('@/lib/search/search-indexer');
+        await indexContactForSearch(result.contactId, { displayName: result.displayName, firstName, lastName, email, companyName, status: 'active' }, ctx.companyId);
+      } catch { /* non-fatal */ }
+      logger.info('Contact created', { contactId: result.contactId, displayName: result.displayName, type: contactType });
 
-      logger.info('Contact created via dedicated tool', {
-        contactId: result.contactId,
-        displayName: result.displayName,
-        type: contactType,
-      });
-
-      return {
-        success: true,
-        data: {
-          contactId: result.contactId,
-          displayName: result.displayName,
-          type: contactType,
-        },
-        count: 1,
-      };
+      return { success: true, data: { contactId: result.contactId, displayName: result.displayName, type: contactType }, count: 1 };
     } catch (err) {
       const errorMsg = getErrorMessage(err);
 
@@ -287,6 +274,24 @@ export class ContactHandler implements ToolHandler {
         ...(label && !EMAIL_LABEL_MAP[label] ? { label } : {}),
       };
       updatePayload.emails = [...currentEmails, newEntry];
+    } else if (fieldType === 'website') {
+      // FIND-I: Write to dedicated websites[] array (WebsiteInfo shape)
+      const { isValidUrl } = await import('@/lib/validation/email-validation');
+      const normalizedUrl = value.startsWith('http') ? value : `https://${value}`;
+      if (!isValidUrl(normalizedUrl)) {
+        return { success: false, error: `Μη έγκυρο URL: ${value}` };
+      }
+      const currentWebsites = (contactData.websites ?? []) as Array<{ url: string }>;
+      if (currentWebsites.some(w => w.url === normalizedUrl)) {
+        return { success: false, error: `Το website ${value} υπάρχει ήδη.` };
+      }
+      const websiteType = WEBSITE_TYPE_MAP[label] ?? 'personal';
+      const newEntry = {
+        url: normalizedUrl,
+        type: websiteType,
+        ...(label && !WEBSITE_TYPE_MAP[label] ? { label } : {}),
+      };
+      updatePayload.websites = [...currentWebsites, newEntry];
     } else {
       // social
       const currentSocial = (contactData.socialMedia ?? []) as Array<{ username: string; url?: string }>;
@@ -361,17 +366,11 @@ export class ContactHandler implements ToolHandler {
       return { success: false, error: `Η επαφή ${contactId} δεν βρέθηκε.` };
     }
 
-    const { updateContactField } = await import(
+    const { updateContactField, emitEntitySyncSignal } = await import(
       '@/services/ai-pipeline/shared/contact-lookup'
     );
-
     await updateContactField(contactId, field, value, buildAttribution(ctx));
-
     await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, 'update', { [field]: value });
-
-    const { emitEntitySyncSignal } = await import(
-      '@/services/ai-pipeline/shared/contact-lookup'
-    );
     emitEntitySyncSignal('contacts', 'UPDATED', contactId, ctx.companyId);
 
     logger.info('Contact field updated via tool', {

@@ -30,6 +30,7 @@ import type { MessageAttachment } from '@/types/conversations';
 import { transcribeVoiceMessage } from './telegram/whisper-transcription';
 // ADR-055: Media download for Telegram attachments (photos, documents)
 import { hasMedia, processTelegramMedia } from './telegram/media-download';
+import { buildFallbackAttachments } from './telegram/media-fallback';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { feedTelegramToPipeline, feedSuggestionToPipeline } from './telegram-pipeline';
@@ -57,13 +58,20 @@ export async function processTelegramUpdate(
   if (webhookData.message) {
     // ADR-055: Download media attachments once, share between CRM + pipeline
     let mediaAttachments: MessageAttachment[] | undefined;
-    if (isFirebaseAvailable() && hasMedia(webhookData.message)) {
+    const messageHasMedia = hasMedia(webhookData.message);
+    if (isFirebaseAvailable() && messageHasMedia) {
       try {
         mediaAttachments = await processTelegramMedia(webhookData.message);
         logger.info('Media downloaded for pipeline', { count: mediaAttachments?.length ?? 0 });
       } catch (mediaError) {
         logger.error('Media download failed (non-fatal)', { error: getErrorMessage(mediaError) });
       }
+    }
+
+    // FIND-J: Fallback — if media detected but download failed/skipped,
+    // build lightweight attachment stubs so AI knows media was sent
+    if (messageHasMedia && (!mediaAttachments || mediaAttachments.length === 0)) {
+      mediaAttachments = buildFallbackAttachments(webhookData.message);
     }
 
     telegramResponse = await processMessagePayload(webhookData, mediaAttachments);
@@ -380,3 +388,4 @@ function extractEffectiveText(webhookData: TelegramMessage): string {
     ?? webhookData.message?.caption
     ?? '';
 }
+

@@ -182,6 +182,8 @@ export interface IntakeAttachment {
   storageUrl?: string;
   /** FileRecord ID — links to Firestore files collection (ADR-055) */
   fileRecordId?: string;
+  /** True when media was detected but download/upload failed (FIND-J) */
+  downloadFailed?: boolean;
 }
 
 /**

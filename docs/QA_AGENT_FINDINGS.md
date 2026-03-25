@@ -350,11 +350,11 @@
 
 | Priority | Finding | Impact | Effort | Status |
 |----------|---------|--------|--------|--------|
-| 🔴 **P0** | **FIND-J: Attachments δεν περνούν στο pipeline** | Photo/document upload completely broken | Medium | ❌ OPEN |
+| 🔴 **P0** | **FIND-J: Attachments δεν περνούν στο pipeline** | Photo/document upload completely broken | Medium | ✅ FIXED (fallback stubs + downloadFailed flag) |
 | 🟡 P1 | FIND-G: Address ως flat string | Data model inconsistency | Low | ✅ FIXED |
 | 🟡 P1 | FIND-H: Landline → type: "mobile" | Wrong phone type classification | Low | ✅ FIXED |
-| 🟡 P1 | **FIND-K: Search δεν βρίσκει "Τεστοπούλου"** | search_text_tokens missing σε AI-created contacts | Medium | ❌ OPEN |
-| 🟢 P2 | FIND-I: Website + hallucinated ID + error msg | UX regression + data model | Low | ❌ OPEN |
+| 🟡 P1 | **FIND-K: Search δεν βρίσκει "Τεστοπούλου"** | search_text_tokens missing σε AI-created contacts | Medium | ✅ FIXED (search-indexer.ts → searchDocuments) |
+| 🟢 P2 | FIND-I: Website + hallucinated ID + error msg | UX regression + data model | Low | ✅ FIXED (fieldType: 'website' + prompt hardening) |
 
 ---
 

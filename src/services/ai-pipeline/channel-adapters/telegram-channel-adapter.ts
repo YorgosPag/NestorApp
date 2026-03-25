@@ -166,18 +166,18 @@ export class TelegramChannelAdapter {
 
 /**
  * Map MessageAttachment[] from Telegram media to IntakeAttachment[].
- * Filters out attachments without fileRecordId or URL.
+ * Includes metadata-only entries when download failed (FIND-J)
+ * so AI can acknowledge the attachment exists.
  */
 function mapAttachments(attachments?: MessageAttachment[]): IntakeAttachment[] {
   if (!attachments || attachments.length === 0) return [];
 
-  return attachments
-    .filter(a => a.url && a.fileRecordId)
-    .map(a => ({
-      filename: a.filename ?? 'attachment',
-      contentType: a.mimeType ?? 'application/octet-stream',
-      sizeBytes: a.size ?? 0,
-      storageUrl: a.url,
-      fileRecordId: a.fileRecordId,
-    }));
+  return attachments.map(a => ({
+    filename: a.filename ?? 'attachment',
+    contentType: a.mimeType ?? 'application/octet-stream',
+    sizeBytes: a.size ?? 0,
+    ...(a.url ? { storageUrl: a.url } : {}),
+    ...(a.fileRecordId ? { fileRecordId: a.fileRecordId } : {}),
+    ...(!a.url && !a.fileRecordId ? { downloadFailed: true } : {}),
+  }));
 }

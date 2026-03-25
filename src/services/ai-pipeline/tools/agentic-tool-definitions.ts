@@ -36,7 +36,7 @@ export const COMPLAINT_SEVERITIES = ['urgent', 'normal', 'low'] as const;
 export type ComplaintSeverity = typeof COMPLAINT_SEVERITIES[number];
 
 /** SPEC-257E: Contact field types (SSoT — used in tool def enum + executor validation) */
-export const CONTACT_FIELD_TYPES = ['phone', 'email', 'social', 'address'] as const;
+export const CONTACT_FIELD_TYPES = ['phone', 'email', 'social', 'address', 'website'] as const;
 export type ContactFieldType = typeof CONTACT_FIELD_TYPES[number];
 
 /** Updatable scalar fields on contact documents (SSoT — complete list from contracts.ts) */
@@ -436,7 +436,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
     type: 'function' as const,
     function: {
       name: 'append_contact_info',
-      description: 'Add new phone, email, or social media to a contact record. APPEND ONLY — cannot delete or modify existing entries. Admin: provide contactId to append to any contact. Customer: appends to own contact automatically.',
+      description: 'Add new phone, email, website, or social media to a contact record. APPEND ONLY — cannot delete or modify existing entries. Admin: provide contactId to append to any contact. Customer: appends to own contact automatically. For websites use fieldType "website".',
       parameters: {
         type: 'object',
         properties: {
@@ -578,7 +578,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
       description: [
         'Update a single field on an existing contact. Admin only.',
         'Use for ALL scalar fields: vatNumber, profession, birthDate, documentIssueDate, documentExpiryDate, documentType, documentNumber, documentIssuer, taxOffice, gender, amka, etc.',
-        'For phone/email/social/address use append_contact_info instead.',
+        'For phone/email/social/address/website use append_contact_info instead.',
         'IMPORTANT for taxOffice: ALWAYS call lookup_doy_code first to get the 4-digit code.',
         'IMPORTANT for profession: ALWAYS call search_esco_occupations first. Show matches to user. If no ESCO match, ask user before adding free text.',
         'IMPORTANT for dates (birthDate, documentIssueDate, documentExpiryDate): ALWAYS use DD/MM/YYYY format (e.g. "25/01/2027").',
