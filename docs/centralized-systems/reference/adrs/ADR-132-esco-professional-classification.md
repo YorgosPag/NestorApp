@@ -371,6 +371,7 @@ npx tsx scripts/import-esco-skills.ts
 | 2026-03-25 | Server-side ESCO enforcement — `set_contact_esco` rejects free-text writes when ESCO matches exist, forces AI to ask user first | Claude Code |
 | 2026-03-25 | Extracted shared `esco-search-utils.ts` — eliminates duplication between contact-handler and utility-handler | Claude Code |
 | 2026-03-25 | Bug fix — empty skills array no longer deletes existing skills (empty = no change) | Claude Code |
+| 2026-03-25 | Fix: ESCO skill enforcement — skills without URI rejected when multiple ESCO matches exist. Skills now MERGE with existing (not replace) | Claude Code |
 
 ---
 
