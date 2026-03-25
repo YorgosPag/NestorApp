@@ -751,7 +751,57 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
       strict: true,
     },
   },
-  // ── 19. manage_bank_account: CRUD bank accounts for contacts ──
+  // ── 19. manage_relationship: CRUD contact-to-contact relationships ──
+  {
+    type: 'function',
+    function: {
+      name: 'manage_relationship',
+      description: [
+        'Manage relationships between two contacts. Admin only.',
+        'Operations: add (new relationship), list (show all for a contact), remove (soft-delete).',
+        'For "add": provide sourceContactId + targetContactId + relationshipType.',
+        'For "list": provide sourceContactId only.',
+        'For "remove": provide sourceContactId + relationshipId.',
+        'Supports Greek input: σύζυγος→family, συνάδελφος→colleague, εργαζόμενος→employee.',
+        'IMPORTANT: First search for both contacts by name using search_text to get their IDs.',
+      ].join(' '),
+      parameters: {
+        type: 'object',
+        properties: {
+          operation: {
+            type: 'string',
+            description: 'Operation to perform',
+            enum: ['add', 'list', 'remove'],
+          },
+          sourceContactId: {
+            type: 'string',
+            description: 'Source contact ID (e.g. cont_xxx). Required for ALL operations.',
+          },
+          targetContactId: {
+            type: ['string', 'null'],
+            description: 'Target contact ID. Required for add.',
+          },
+          relationshipType: {
+            type: ['string', 'null'],
+            description: 'Type: family, friend, colleague, employee, manager, director, contractor, consultant, advisor, mentor, partner, shareholder, client, vendor, property_buyer. Also accepts Greek (σύζυγος, συνάδελφος, etc.).',
+          },
+          relationshipId: {
+            type: ['string', 'null'],
+            description: 'Relationship document ID. Required for remove.',
+          },
+          note: {
+            type: ['string', 'null'],
+            description: 'Optional note (e.g. "σύζυγος", "αδελφός", "business partner").',
+          },
+        },
+        required: ['operation', 'sourceContactId', 'targetContactId', 'relationshipType', 'relationshipId', 'note'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  // ── 20. manage_bank_account: CRUD bank accounts for contacts ──
   {
     type: 'function',
     function: {

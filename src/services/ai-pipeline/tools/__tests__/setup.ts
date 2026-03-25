@@ -37,6 +37,8 @@ jest.mock('@/lib/telemetry/sentry', () => ({
 jest.mock('@/services/enterprise-id.service', () => ({
   generateEntityId: jest.fn(() => 'ent_test_001'),
   generatePipelineAuditId: jest.fn(() => 'audit_test_001'),
+  generateBankAccountId: jest.fn(() => 'bacc_test_001'),
+  generateRelationshipId: jest.fn(() => 'rel_test_001'),
 }));
 
 // ── Validation modules (dynamic-imported by handlers) ──
