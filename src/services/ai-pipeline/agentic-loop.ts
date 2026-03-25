@@ -1,25 +1,6 @@
 /**
- * =============================================================================
- * AGENTIC LOOP — Multi-Step Reasoning Engine (Chat Completions API)
- * =============================================================================
- *
- * Implements the agentic loop: AI calls tools iteratively until it produces
- * a final text answer. Each iteration:
- *   1. Send messages + tools to OpenAI Chat Completions API
- *   2. If AI requests tool calls → execute them, append results
- *   3. If AI returns text → done
- *
- * Uses Chat Completions API (not Responses API) because:
- * - Well-established multi-turn tool calling with tool_call_id tracking
- * - Proper assistant + tool message format for iterative reasoning
- * - Better error handling for complex multi-step flows
- *
- * Safety limits:
- * - maxIterations: 5 (prevent infinite loops)
- * - totalTimeoutMs: 50_000 (within Vercel 60s limit)
- * - perCallTimeoutMs: 15_000 (per OpenAI call)
- * - maxToolResultChars: 8000 (truncate large results)
- *
+ * AGENTIC LOOP — Multi-step AI reasoning with iterative tool calling.
+ * AI calls tools until it produces a final text answer.
  * @module services/ai-pipeline/agentic-loop
  * @see ADR-171 (Autonomous AI Agent)
  */
@@ -123,10 +104,7 @@ const DEFAULT_CONFIG: AgenticLoopConfig = {
   maxToolResultChars: 12_000,
 };
 
-// ============================================================================
-// OPENAI CHAT COMPLETIONS API CALL
-// ============================================================================
-// System prompt builder extracted to agentic-system-prompt.ts (Google file size standard)
+// ── OpenAI Chat Completions API call ──
 
 async function callChatCompletions(
   messages: ChatCompletionMessage[],
@@ -204,20 +182,8 @@ async function callChatCompletions(
   }
 }
 
-// ============================================================================
-// MAIN AGENTIC LOOP
-// ============================================================================
+// ── Main agentic loop ──
 
-/**
- * Execute the agentic loop — AI reasons with tools iteratively.
- *
- * @param userMessage - The user's message
- * @param chatHistory - Previous conversation messages
- * @param tools - Available tool definitions
- * @param context - Execution context (companyId, permissions, etc.)
- * @param config - Loop configuration overrides
- * @returns Agentic result with answer and tool call history
- */
 export async function executeAgenticLoop(
   userMessage: string,
   chatHistory: ChatMessage[],
@@ -361,7 +327,11 @@ export async function executeAgenticLoop(
 
         const result = await executor.executeTool(toolName, toolArgs, context);
 
-        const resultStr = JSON.stringify(result.data ?? result.error ?? 'no data');
+        // When tool FAILS, include error + data so AI sees the instruction
+        // (e.g. ESCO enforcement: "Δείξε τις επιλογές στον χρήστη" + matches)
+        const resultStr = result.success === false
+          ? JSON.stringify({ _blocked: true, error: result.error, ...(result.data ? { data: result.data } : {}) })
+          : JSON.stringify(result.data ?? 'no data');
         const truncatedResult = resultStr.length > cfg.maxToolResultChars
           ? resultStr.substring(0, cfg.maxToolResultChars) + '...[truncated]'
           : resultStr;
@@ -398,12 +368,12 @@ export async function executeAgenticLoop(
     // Phase 6B: Extract suggested follow-up actions from AI response
     const { cleanAnswer: rawFinalAnswer, suggestions } = extractSuggestions(cleanedAnswer);
 
-    // Phase 6C: Anti-hallucination guardrail — if AI claims a write but made 0 tool calls
-    const WRITE_CLAIM_PATTERNS = /ολοκληρώθηκε|ενημερώθηκε|διορθώθηκε|αποθηκεύτηκε|ενημέρωσα|διόρθωσα|αποθήκευσα|άλλαξα|τροποποίησα|προστέθηκε|αφαιρέθηκε/i;
+    // Phase 6C: Anti-hallucination guardrails
+    const WRITE_CLAIM_PATTERNS = /ολοκληρώθηκε|ενημερώθηκε|διορθώθηκε|αποθηκεύτηκε|ενημέρωσα|διόρθωσα|αποθήκευσα|άλλαξα|τροποποίησα|προστέθηκε|αφαιρέθηκε|δηλώθηκε/i;
     const isWriteClaim = WRITE_CLAIM_PATTERNS.test(rawFinalAnswer);
 
+    // Guardrail A: AI claims write but made 0 tool calls
     if (isWriteClaim && allToolCalls.length === 0 && !hasRetried) {
-      // Google pattern: RETRY with forced tool instruction (not give up)
       hasRetried = true;
       logger.warn('Anti-hallucination: AI claimed write without tool calls — RETRYING', {
         requestId: context.requestId,
@@ -420,12 +390,41 @@ export async function executeAgenticLoop(
           'ΞΕΚΙΝΑ ΤΩΡΑ: κάλεσε τα κατάλληλα εργαλεία.',
         ].join(' '),
       });
-      continue; // Retry — AI will see correction and call tools
+      continue;
+    }
+
+    // Guardrail B: AI claims write but last write tool was BLOCKED (ESCO enforcement)
+    const lastBlockedCall = allToolCalls.find(tc => {
+      const parsed = safeJsonParse<{ _blocked?: boolean }>(tc.result, {});
+      return parsed?._blocked === true;
+    });
+
+    if (isWriteClaim && lastBlockedCall && !hasRetried) {
+      hasRetried = true;
+      logger.warn('Anti-hallucination: AI claimed write but tool was blocked — RETRYING', {
+        requestId: context.requestId,
+        blockedTool: lastBlockedCall.name,
+        claimedAnswer: rawFinalAnswer.slice(0, 100),
+      });
+
+      messages.push({ role: 'assistant', content: rawFinalAnswer });
+      messages.push({
+        role: 'user',
+        content: [
+          `ΛΑΘΟΣ — το εργαλείο ${lastBlockedCall.name} ΑΠΕΡΡΙΦΘΗ από τον server.`,
+          'Η εγγραφή ΔΕΝ έγινε. Ο server σου επέστρεψε επιλογές (matches).',
+          'ΠΡΕΠΕΙ να δείξεις τις επιλογές στον χρήστη και να ρωτήσεις "Ποιο εννοείς;".',
+          'ΜΗΝ λες ότι ολοκληρώθηκε — δεν ολοκληρώθηκε.',
+        ].join(' '),
+      });
+      continue;
     }
 
     const finalAnswer = (isWriteClaim && allToolCalls.length === 0)
       ? 'Δεν μπόρεσα να εκτελέσω την αλλαγή — χρειάζεται αναζήτηση και ενημέρωση μέσω εργαλείων. Δοκίμασε ξανά ή δώσε περισσότερες λεπτομέρειες (π.χ. όνομα επαφής + τιμή πεδίου).'
-      : rawFinalAnswer;
+      : (isWriteClaim && lastBlockedCall)
+        ? 'Η εγγραφή δεν ολοκληρώθηκε — χρειάζεται αποσαφήνιση. Δοκίμασε ξανά.'
+        : rawFinalAnswer;
 
     logger.info('Agentic loop completed', {
       requestId: context.requestId,
