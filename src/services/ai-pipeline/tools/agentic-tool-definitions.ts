@@ -605,8 +605,9 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
       description: [
         'Set ESCO occupation and/or skills on a contact. Admin only.',
         'CRITICAL: ALWAYS call search_esco_occupations/search_esco_skills FIRST to get the correct URI, label, and ISCO code.',
+        'CRITICAL: If ESCO search returns MORE THAN 1 result, you MUST show the matches to the user and ASK which one they want. Do NOT auto-select.',
         'For occupation: pass profession (label), escoUri, escoLabel, iscoCode from search results.',
-        'For skills: pass skills array with uri+label from search results. Replaces ALL skills on the contact.',
+        'For skills: pass skills array with uri+label from search results. Pass null to skip skills update (do NOT pass empty array).',
         'Can set occupation only, skills only, or both in one call.',
         'For free-text (not in ESCO): pass empty string for uri/escoUri/iscoCode.',
       ].join(' '),
@@ -662,7 +663,8 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
       description: [
         'Search the ESCO occupations database (2,942 EU-standardized occupations).',
         'CRITICAL RULE: ALWAYS call this BEFORE writing profession/escoUri/iscoCode to a contact.',
-        'If results found → show top matches to user, ask which one to use.',
+        'If MULTIPLE results found → ALWAYS show ALL matches to user with their ISCO codes and ask "Ποιο εννοείς;". NEVER auto-select.',
+        'If EXACTLY 1 result → confirm with user: "Βρήκα: [label] (ISCO: [code]). Να το προσθέσω;"',
         'If NO results → tell user "Δεν βρέθηκε στα ESCO. Θέλεις να το προσθέσω ως ελεύθερο κείμενο;"',
         'NEVER write profession without searching ESCO first.',
       ].join(' '),
@@ -689,7 +691,8 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
       description: [
         'Search the ESCO skills database (13,485 EU-standardized skills).',
         'CRITICAL RULE: ALWAYS call this BEFORE writing skills/escoSkills to a contact.',
-        'If results found → show top matches to user, ask which ones to add.',
+        'If MULTIPLE results found → show ALL matches to user, ask which one(s) to add. NEVER auto-select.',
+        'If EXACTLY 1 result → confirm with user before adding.',
         'If NO results → tell user "Δεν βρέθηκε στα ESCO. Θέλεις να το προσθέσω ως ελεύθερο κείμενο;"',
         'NEVER write skills without searching ESCO first.',
       ].join(' '),

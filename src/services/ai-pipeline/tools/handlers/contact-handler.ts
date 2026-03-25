@@ -423,16 +423,18 @@ export class ContactHandler implements ToolHandler {
       changes.push(`profession: ${profession}`);
     }
 
-    // Skills array (replace entire array)
-    if (Array.isArray(args.skills)) {
+    // Skills array (replace entire array — ONLY if non-empty; empty array = no change)
+    if (Array.isArray(args.skills) && (args.skills as unknown[]).length > 0) {
       const skills = (args.skills as Array<Record<string, unknown>>)
         .filter(s => typeof s.label === 'string' && s.label.trim())
         .map(s => ({
           uri: typeof s.uri === 'string' ? s.uri : '',
           label: String(s.label).trim(),
         }));
-      updateData.escoSkills = skills;
-      changes.push(`skills: ${skills.map(s => s.label).join(', ')}`);
+      if (skills.length > 0) {
+        updateData.escoSkills = skills;
+        changes.push(`skills: ${skills.map(s => s.label).join(', ')}`);
+      }
     }
 
     if (changes.length === 0) {
