@@ -343,6 +343,15 @@ export class ContactHandler implements ToolHandler {
       return { success: false, error: `field must be one of: ${CONTACT_UPDATABLE_FIELDS.join(', ')}` };
     }
 
+    // ESCO-protected fields — MUST go through set_contact_esco (server-side enforcement)
+    const ESCO_PROTECTED = ['profession', 'escoUri', 'escoLabel', 'iscoCode', 'escoSkills'];
+    if (ESCO_PROTECTED.includes(field)) {
+      return {
+        success: false,
+        error: `Το πεδίο "${field}" προστατεύεται — χρησιμοποίησε set_contact_esco αντί update_contact_field.`,
+      };
+    }
+
     // Verify the contact exists
     const db = getAdminFirestore();
     const docSnap = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();

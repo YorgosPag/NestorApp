@@ -1,10 +1,5 @@
 /**
  * FIRESTORE HANDLER — Query, Get, Count, Write & Text Search
- *
- * Core data-access tools for the AI agent. Enforces collection whitelist,
- * companyId injection, RBAC filtering, sensitive field redaction, tab filtering,
- * and progressive fallback on FAILED_PRECONDITION (missing index).
- *
  * @module services/ai-pipeline/tools/handlers/firestore-handler
  * @see ADR-171 (Autonomous AI Agent)
  */
@@ -75,9 +70,7 @@ export class FirestoreHandler implements ToolHandler {
     }
   }
 
-  // --------------------------------------------------------------------------
   // firestore_query
-  // --------------------------------------------------------------------------
 
   private async executeFirestoreQuery(
     args: Record<string, unknown>,
@@ -147,9 +140,7 @@ export class FirestoreHandler implements ToolHandler {
     };
   }
 
-  // --------------------------------------------------------------------------
   // firestore_get_document
-  // --------------------------------------------------------------------------
 
   private async executeFirestoreGetDocument(
     args: Record<string, unknown>,
@@ -198,9 +189,7 @@ export class FirestoreHandler implements ToolHandler {
     };
   }
 
-  // --------------------------------------------------------------------------
   // firestore_count
-  // --------------------------------------------------------------------------
 
   private async executeFirestoreCount(
     args: Record<string, unknown>,
@@ -246,9 +235,7 @@ export class FirestoreHandler implements ToolHandler {
     }
   }
 
-  // --------------------------------------------------------------------------
   // firestore_write
-  // --------------------------------------------------------------------------
 
   private async executeFirestoreWrite(
     args: Record<string, unknown>,
@@ -277,6 +264,18 @@ export class FirestoreHandler implements ToolHandler {
 
     if (!isWriteAllowed(collection)) {
       return { success: false, error: `Write to "${collection}" is not allowed` };
+    }
+
+    // ESCO-protected fields — block direct writes to contacts ESCO fields
+    if (collection === COLLECTIONS.CONTACTS) {
+      const ESCO_PROTECTED = ['profession', 'escoUri', 'escoLabel', 'iscoCode', 'escoSkills'];
+      const blockedFields = Object.keys(data).filter(k => ESCO_PROTECTED.includes(k));
+      if (blockedFields.length > 0) {
+        return {
+          success: false,
+          error: `Τα πεδία [${blockedFields.join(', ')}] προστατεύονται — χρησιμοποίησε set_contact_esco αντί firestore_write.`,
+        };
+      }
     }
 
     const writeData: Record<string, unknown> = {
@@ -321,9 +320,7 @@ export class FirestoreHandler implements ToolHandler {
     return { success: false, error: 'documentId required for update mode' };
   }
 
-  // --------------------------------------------------------------------------
   // search_text
-  // --------------------------------------------------------------------------
 
   private async executeSearchText(
     args: Record<string, unknown>,
