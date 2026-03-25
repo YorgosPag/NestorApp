@@ -138,7 +138,7 @@ export class UtilityHandler implements ToolHandler {
     }
 
     const results = await searchEscoOccupations(query, 10);
-    return { success: true, data: results, count: results.length };
+    return { success: true, data: { query, matches: results }, count: results.length };
   }
 
   private async executeSearchEscoSkills(
@@ -150,6 +150,6 @@ export class UtilityHandler implements ToolHandler {
     }
 
     const results = await searchEscoSkills(query, 10);
-    return { success: true, data: results, count: results.length };
+    return { success: true, data: { query, matches: results }, count: results.length };
   }
 }
