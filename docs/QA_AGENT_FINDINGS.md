@@ -236,10 +236,10 @@
 
 | Capability | Status | Σημείωση |
 |------------|--------|----------|
-| Phones/Emails (admin) | ❌ **BLOCKED** | `append_contact_info` μόνο για customers |
+| Phones/Emails (admin) | ✅ **WORKS** | `append_contact_info` δουλεύει για admin (με contactId) |
 | Φωτογραφίες upload | ❌ Missing | Graceful response ("παρέχετε αρχείο") |
-| Σχέσεις επαφών | ⚠️ **Bypass** | Agent χρησιμοποιεί firestore_write αντί proper tool |
-| Τραπεζικά στοιχεία | ⚠️ **Bypass** | Agent γράφει flat field αντί structured banking |
+| Σχέσεις επαφών | ✅ **IMPLEMENTED** | `manage_relationship` tool (add/list/remove, Greek support) |
+| Τραπεζικά στοιχεία | ✅ **IMPLEMENTED** | `manage_bank_account` tool (IBAN ISO 13616, auto-detect bank) |
 | Έγγραφα upload | ❌ Missing | Graceful response ("παρέχετε αρχείο") |
 
 ---
