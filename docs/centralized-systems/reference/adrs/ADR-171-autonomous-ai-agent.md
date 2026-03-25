@@ -42,6 +42,7 @@ AI Agent (system prompt with schema map)
 | Schema Map | `src/config/firestore-schema-map.ts` | 25 collection schemas for AI awareness (~2000 tokens) |
 | Tool Definitions | `src/services/ai-pipeline/tools/agentic-tool-definitions.ts` | 16 tools (query, get, count, write, email, telegram, etc.) |
 | Tab Filter | `src/services/ai-pipeline/tools/contact-tab-filter.ts` | Server-side field filtering by tab (reads SSoT configs) |
+| Section Utils | `src/config/section-field-utils.ts` | SSoT: field extraction + array field sections |
 | Tool Executor | `src/services/ai-pipeline/tools/agentic-tool-executor.ts` | Strategy Pattern dispatcher (~160 lines) |
 | Shared Infrastructure | `src/services/ai-pipeline/tools/executor-shared.ts` | Types, constants, RBAC, security, utilities |
 | Firestore Handler | `src/services/ai-pipeline/tools/handlers/firestore-handler.ts` | query, get_document, count, write, search_text |
@@ -128,4 +129,4 @@ ai_chat_history (ADR-156)
 | 2026-03-24 | Feat: Telegram Inline Keyboard buttons for duplicate contact resolution. 3 buttons (Ενημέρωσε/Δημιούργησε νέα/Ακύρωση) αντί plain text. Pending actions σε `ai_pending_actions` collection (24h TTL). New: `duplicate-contact-keyboard.ts`, callback handler in `callback-query.ts` |
 | 2026-03-25 | Refactor: Strategy Pattern — Split monolithic `agentic-tool-executor.ts` (2397 lines) into 5 domain handlers + shared infrastructure. Executor is now thin dispatcher (~160 lines). Zero breaking changes to public API. |
 | 2026-03-25 | Feat: Dynamic tab-to-field mapping — AI agent now reads from SSoT section configs (`individual-config`, `company-gemi`, `service-config`) to know which fields belong to which tab. New `ai-tab-mapping.ts`. Covers all entity types (contacts, buildings, projects, units). Removed `'use client'` from `service-config.ts`. |
-| 2026-03-25 | Feat: Server-side tab filtering — `tabFilter` parameter on `firestore_query` + `firestore_get_document`. When AI passes `tabFilter: "basicInfo"`, handler strips all fields NOT in that tab BEFORE returning to AI. Replaces unreliable prompt-based filtering. New `contact-tab-filter.ts` reads SSoT section configs. |
+| 2026-03-25 | Feat: Server-side tab filtering — `tabFilter` parameter on `firestore_query`, `firestore_get_document`, AND `search_text`. When AI passes `tabFilter: "basicInfo"`, handler strips all fields NOT in that tab BEFORE returning to AI. Replaces unreliable prompt-based filtering. New `contact-tab-filter.ts` + `section-field-utils.ts` (SSoT for field extraction). |
