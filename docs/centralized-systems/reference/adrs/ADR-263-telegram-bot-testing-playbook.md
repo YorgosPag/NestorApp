@@ -374,12 +374,12 @@ User Message (Telegram)
 | F-005 | P2 | Search γενική πτώση ("Δημητρίου" not found) | ✅ FIXED | stripDiacritics + stemGreekWord |
 | F-006 | P0 | firestore_write bypass to contact_links | ✅ FIXED | Removed from whitelist |
 | F-007 | P0 | IBAN as flat field via firestore_write | ✅ FIXED | Block mode=update on contacts |
-| FIND-A | P2 | Hallucinated contactId on 2nd message | ⏳ OPEN | AI uses wrong ID from memory |
-| FIND-B | P2 | Error message shown despite success | ⏳ OPEN | UX inconsistency after retry |
-| FIND-C | P3 | Unnecessary ESCO search for "Άνδρας" | ⏳ OPEN | AI confuses gender with occupation |
-| FIND-D | P2 | Employer χάνεται μετά ESCO disambiguation | ⏳ OPEN | AI ξεχνάει 2ο μέρος εντολής (employer) όταν ESCO trigger |
-| FIND-E | P1 | Disambiguation loop — AI δεν αναγνωρίζει αριθμό | ⏳ OPEN | Χρήστης λέει "1" ή "το 1", AI ξαναψάχνει ESCO αντί να επιλέξει |
-| FIND-F | **P0** | **AI hallucination → data corruption** | ⏳ **OPEN** | AI πρόσθεσε ψεύτικο email+phone που ΠΟΤΕ δεν ζητήθηκαν (info@deddehe.gr, 2312345678) |
+| FIND-A | P2 | Hallucinated contactId on 2nd message | ✅ FIXED | Ενισχυμένος κανόνας: ΠΑΝΤΑ fresh search, ΠΟΤΕ ID από προηγούμενο μήνυμα |
+| FIND-B | P2 | Error message shown despite success | ✅ FIXED | Prompt rule: τελική κατάσταση μόνο, όχι ενδιάμεσα errors |
+| FIND-C | P3 | Unnecessary ESCO search for "Άνδρας" | ✅ FIXED | Prompt rule: άνδρας/γυναίκα = gender, ΟΧΙ ESCO search |
+| FIND-D | P2 | Employer χάνεται μετά ESCO disambiguation | ✅ FIXED | Prompt rule: πολυμερείς εντολές — σημείωσε + ολοκλήρωσε μετά disambiguation |
+| FIND-E | P1 | Disambiguation loop — AI δεν αναγνωρίζει αριθμό | ✅ FIXED | ESCO results injected στο chat context + prompt rule αναγνώρισης αριθμού |
+| FIND-F | **P0** | **AI hallucination → data corruption** | ✅ **FIXED** | Anti-fabrication guardrail: server blocks phone/email not in user message + prompt rule |
 
 ---
 
@@ -461,3 +461,4 @@ User Message (Telegram)
 |------|--------|
 | 2026-03-25 | Initial version — credentials, test plan, 5-phase workflow |
 | 2026-03-25 | Session 1 results: 7/10 tests PASS, 3 new findings (FIND-D/E/F) |
+| 2026-03-25 | All 12 findings FIXED — anti-fabrication guardrail, ESCO context injection, prompt rules |

@@ -6,26 +6,21 @@
  */
 
 import 'server-only';
-// RBAC v2 — force recompile
-import { AI_ANALYSIS_DEFAULTS, AI_COST_CONFIG } from '@/config/ai-analysis-config';
+import { AI_COST_CONFIG } from '@/config/ai-analysis-config';
+import { isFabricatedContactValue } from './agentic-guardrails';
+import { callChatCompletions } from './agentic-openai-client';
+import type { OpenAIUsage, ChatCompletionMessage } from './agentic-openai-client';
 import { getAgenticToolExecutor } from './tools/agentic-tool-executor';
 import type { AgenticContext } from './tools/agentic-tool-executor';
 import type { AgenticToolDefinition } from './tools/agentic-tool-definitions';
-// ADR-173: Prompt enhancement with learned patterns
 import { enhanceSystemPrompt } from './prompt-enhancer';
-// System prompt builder (extracted for Google file size standard)
 import { buildAgenticSystemPrompt } from './agentic-system-prompt';
-// Reply post-processing utilities (extracted for Google file size standard)
 import { extractSuggestions, cleanAITextReply } from './agentic-reply-utils';
 import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { captureMessage as sentryCaptureMessage } from '@/lib/telemetry/sentry';
 
 const logger = createModuleLogger('AGENTIC_LOOP');
-
-// ============================================================================
-// TYPES
-// ============================================================================
 
 export interface AgenticLoopConfig {
   maxIterations: number;
@@ -44,13 +39,7 @@ export interface ChatMessage {
     result: string;
   }>;
 }
-
-/** ADR-259A: Token usage from a single OpenAI API call */
-export interface OpenAIUsage {
-  prompt_tokens: number;
-  completion_tokens: number;
-  total_tokens: number;
-}
+export type { OpenAIUsage } from './agentic-openai-client';
 
 export interface AgenticResult {
   answer: string;
@@ -66,35 +55,6 @@ export interface AgenticResult {
   totalUsage: OpenAIUsage;
 }
 
-// ── Chat Completions API types ──
-
-interface ChatCompletionMessage {
-  role: 'system' | 'user' | 'assistant' | 'tool';
-  content: string | null;
-  /** Only for assistant messages with tool calls */
-  tool_calls?: ChatCompletionToolCall[];
-  /** Only for tool result messages */
-  tool_call_id?: string;
-}
-
-interface ChatCompletionToolCall {
-  id: string;
-  type: 'function';
-  function: {
-    name: string;
-    arguments: string;
-  };
-}
-
-interface ChatCompletionChoice {
-  message: {
-    role: 'assistant';
-    content: string | null;
-    tool_calls?: ChatCompletionToolCall[];
-  };
-  finish_reason: string;
-}
-
 const DEFAULT_CONFIG: AgenticLoopConfig = {
   // SSoT: AI_COST_CONFIG.LIMITS — overridden per role in executeAgenticLoop()
   maxIterations: AI_COST_CONFIG.LIMITS.ADMIN_MAX_ITERATIONS,
@@ -103,86 +63,6 @@ const DEFAULT_CONFIG: AgenticLoopConfig = {
   perCallTimeoutMs: 30_000,
   maxToolResultChars: 12_000,
 };
-
-// ── OpenAI Chat Completions API call ──
-
-async function callChatCompletions(
-  messages: ChatCompletionMessage[],
-  tools: AgenticToolDefinition[],
-  timeoutMs: number
-): Promise<{
-  message: ChatCompletionChoice['message'];
-  finishReason: string;
-  usage: OpenAIUsage;
-}> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error('OPENAI_API_KEY not configured');
-  }
-
-  const baseUrl = AI_ANALYSIS_DEFAULTS.OPENAI.BASE_URL;
-  const model = AI_ANALYSIS_DEFAULTS.OPENAI.TEXT_MODEL;
-
-  const requestBody = {
-    model,
-    messages,
-    tools,
-    tool_choice: 'auto' as const,
-  };
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      let errorMsg = `OpenAI error (${response.status})`;
-      const errorPayload = safeJsonParse<{ error?: { message?: string } }>(errorText, null as unknown as { error?: { message?: string } });
-      if (errorPayload?.error?.message) {
-        errorMsg = errorPayload.error.message;
-      } else if (errorText.length > 0 && errorText.length < 500) {
-        errorMsg += `: ${errorText}`;
-      }
-      throw new Error(errorMsg);
-    }
-
-    const payload = await response.json() as {
-      choices?: ChatCompletionChoice[];
-      usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
-    };
-
-    const choice = payload.choices?.[0];
-    if (!choice) {
-      throw new Error('OpenAI returned no choices');
-    }
-
-    const usage: OpenAIUsage = payload.usage
-      ? { prompt_tokens: payload.usage.prompt_tokens, completion_tokens: payload.usage.completion_tokens, total_tokens: payload.usage.total_tokens }
-      : { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
-
-    return {
-      message: choice.message,
-      finishReason: choice.finish_reason,
-      usage,
-    };
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-// ── Main agentic loop ──
 
 export async function executeAgenticLoop(
   userMessage: string,
@@ -223,7 +103,7 @@ export async function executeAgenticLoop(
       content: msg.content,
     });
 
-    // Collect document IDs from tool calls for internal context (system-level, not user-facing)
+    // Collect document IDs + ESCO results from tool calls for internal context (system-level, not user-facing)
     if (msg.role === 'assistant' && msg.toolCalls && msg.toolCalls.length > 0) {
       for (const tc of msg.toolCalls) {
         const resultStr = tc.result ?? '';
@@ -233,6 +113,10 @@ export async function executeAgenticLoop(
           : [];
         if (ids.length > 0) {
           toolContextParts.push(`${tc.name}: ${ids.join(', ')}`);
+        }
+        // FIND-E fix: Preserve ESCO match results so AI can map "1" → URI for disambiguation
+        if (tc.name === 'search_esco_occupations' || tc.name === 'search_esco_skills' || tc.name === 'set_contact_esco') {
+          toolContextParts.push(`ESCO(${tc.name}): ${resultStr.substring(0, 600)}`);
         }
       }
     }
@@ -324,6 +208,21 @@ export async function executeAgenticLoop(
           tool: toolName,
           callId: tc.id,
         });
+
+        // FIND-F fix: Anti-fabrication guardrail — block append_contact_info with values NOT in user message
+        if (toolName === 'append_contact_info' && isFabricatedContactValue(toolArgs, userMessage)) {
+          const fabricatedValue = String(toolArgs.value ?? '');
+          logger.warn('Anti-fabrication: blocked tool with value not in user message', {
+            requestId: context.requestId, tool: toolName, value: fabricatedValue,
+          });
+          const blockedResult = JSON.stringify({
+            _blocked: true,
+            error: `BLOCKED: Η τιμή "${fabricatedValue}" δεν αναφέρθηκε από τον χρήστη στο μήνυμά του. ΡΩΤΑ τον χρήστη να σου δώσει τη σωστή τιμή.`,
+          });
+          allToolCalls.push({ name: toolName, args: argsString, result: blockedResult });
+          messages.push({ role: 'tool', content: blockedResult, tool_call_id: tc.id });
+          continue;
+        }
 
         const result = await executor.executeTool(toolName, toolArgs, context);
 

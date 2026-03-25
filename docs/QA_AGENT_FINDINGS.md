@@ -136,6 +136,32 @@
 
 ---
 
+### [MEDIUM] FIND-B: Error message shown despite success
+
+- **Test**: Session 2 — retry scenario
+- **Input**: Εντολή που αρχικά αποτυγχάνει, μετά πετυχαίνει σε retry
+- **Expected**: Μήνυμα επιτυχίας μετά το retry
+- **Actual**: Εμφανίζεται error μήνυμα ενώ η ενέργεια πέτυχε
+- **Severity**: MEDIUM (P2)
+- **Category**: UX
+- **Ανάλυση**: Μετά από retry, ο AI στέλνει error response από το αρχικό αποτυχημένο attempt αντί για success από το retry
+- **Fix**: AI response πρέπει να βασίζεται στο τελικό αποτέλεσμα, όχι στο πρώτο
+
+---
+
+### [LOW] FIND-C: Unnecessary ESCO search for "Άνδρας"
+
+- **Test**: Session 2 — gender assignment
+- **Input**: "Ο Νίκος είναι άνδρας"
+- **Expected**: Απλό `update_contact_field` → gender=male
+- **Actual**: AI ψάχνει ESCO occupation database για "Άνδρας" πριν κάνει gender update
+- **Severity**: LOW (P3)
+- **Category**: Efficiency
+- **Ανάλυση**: Ο AI μπερδεύει "είναι άνδρας" (φύλο) με "είναι [επάγγελμα]" pattern. Κάνει περιττό ESCO search πριν τελικά θέσει σωστά το gender
+- **Fix**: System prompt clarification — "είναι άνδρας/γυναίκα" = gender, not occupation
+
+---
+
 ### [CRITICAL] FINDING-004: Phone/Email — BLOCKED για admin
 
 - **Test**: 5.1, 5.2, 5.3 — Κινητό, Email, Σταθερό
@@ -234,10 +260,12 @@
 
 | Priority | Finding | Impact | Effort | Status |
 |----------|---------|--------|--------|--------|
-| 🔴 **P0** | **FIND-F: AI hallucination → data corruption** | Ψεύτικο email+phone γράφτηκαν χωρίς να ζητηθούν | High | ⏳ OPEN |
-| 🟡 P1 | FIND-E: ESCO disambiguation loop | AI δεν αναγνωρίζει "1" ως επιλογή, ξαναψάχνει | Medium | ⏳ OPEN |
-| 🟢 P2 | FIND-D: Employer χάνεται μετά ESCO | Multi-part εντολή — 2ο μέρος ξεχνιέται | Low | ⏳ OPEN |
-| 🟢 P2 | FIND-A: Hallucinated contactId | AI χρησιμοποιεί λάθος ID στο 2ο μήνυμα | Low | ⏳ OPEN |
+| 🔴 **P0** | **FIND-F: AI hallucination → data corruption** | Anti-fabrication guardrail: server blocks + prompt | High | ✅ FIXED |
+| 🟡 P1 | FIND-E: ESCO disambiguation loop | ESCO context injection + prompt rule | Medium | ✅ FIXED |
+| 🟢 P2 | FIND-D: Employer χάνεται μετά ESCO | Prompt rule: πολυμερείς εντολές | Low | ✅ FIXED |
+| 🟢 P2 | FIND-B: Error message despite success | Prompt rule: τελική κατάσταση μόνο | Low | ✅ FIXED |
+| 🟢 P2 | FIND-A: Hallucinated contactId | Ενισχυμένος κανόνας fresh search | Low | ✅ FIXED |
+| 🟢 P3 | FIND-C: Unnecessary ESCO search for "Άνδρας" | Prompt rule: gender ≠ occupation | Low | ✅ FIXED |
 
 ---
 
@@ -250,3 +278,34 @@
 5. ✅ **ESCO disambiguation**: Μπλοκάρει ambiguous, αφήνει unambiguous
 6. ✅ **Διεύθυνση**: Structured storage (street, number, city, postalCode)
 7. ✅ **Graceful decline**: Φωτογραφίες + Έγγραφα ζητούν αρχείο αντί να κάνουν crash
+
+---
+
+## Κανόνες Automated Enforcement (Pre-commit)
+
+### ESLint (αυτόματο σε κάθε commit)
+
+1. `any` type → BLOCKED
+2. `as any` assertions → BLOCKED
+3. Unused imports → BLOCKED (auto-removed)
+4. Unused variables → BLOCKED (εκτός `_prefix`)
+5. `console.log` → WARNING (χρήση Logger)
+6. Hardcoded colors/spacing → BLOCKED (design system)
+7. Hardcoded Greek strings → WARNING (χρήση i18n `t()`)
+
+### Custom Project Rules (validate-project-rules.sh)
+
+8. Hardcoded storage paths (π.χ. `'floor-plans/'`) → BLOCKED — χρήση `LEGACY_STORAGE_PATHS` ή `buildStoragePath()`
+9. `crypto.randomUUID()` inline → BLOCKED — χρήση `enterprise-id.service`
+10. `addDoc()` → BLOCKED — χρήση `setDoc()` με enterprise ID
+11. `@ts-ignore` → BLOCKED — φτιάξε το TypeScript error σωστά
+12. Purge χωρίς Storage delete → BLOCKED — όταν κάνεις `lifecycleState: 'purged'`, πρέπει να διαγράφεις και το binary
+
+### File Size (Google Standard)
+
+13. Αρχεία >500 γραμμές → BLOCKED — σπάσε σε μικρότερα modules
+    - Εξαιρούνται: `config/`, `types/`, `data/`, `.d.ts`, `.test.`, `.spec.`, `tool-definitions`
+
+### Windows Protection
+
+14. Reserved filenames (CON, PRN, NUL, COM0-9, LPT0-9) → BLOCKED
