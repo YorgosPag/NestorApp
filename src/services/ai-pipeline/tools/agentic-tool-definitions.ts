@@ -39,6 +39,14 @@ export type ComplaintSeverity = typeof COMPLAINT_SEVERITIES[number];
 export const CONTACT_FIELD_TYPES = ['phone', 'email', 'social'] as const;
 export type ContactFieldType = typeof CONTACT_FIELD_TYPES[number];
 
+/** Updatable scalar fields on contact documents (SSoT — mirrors UC-016 FIELD_KEYWORDS) */
+export const CONTACT_UPDATABLE_FIELDS = [
+  'vatNumber', 'profession', 'birthDate', 'fatherName',
+  'taxOffice', 'address', 'registrationNumber', 'legalForm',
+  'employer', 'position', 'idNumber',
+] as const;
+export type ContactUpdatableField = typeof CONTACT_UPDATABLE_FIELDS[number];
+
 /** SPEC-257F: File source types (SSoT — used in tool def enum + executor validation) */
 export const FILE_SOURCE_TYPES = ['unit_photo', 'file', 'floorplan'] as const;
 export type FileSourceType = typeof FILE_SOURCE_TYPES[number];
@@ -531,6 +539,42 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
       strict: true,
     },
   },
+  // ── 15. update_contact_field: Update a scalar field on an existing contact (admin only) ──
+  {
+    type: 'function' as const,
+    function: {
+      name: 'update_contact_field',
+      description: [
+        'Update a single field on an existing contact. Admin only.',
+        'Use for scalar fields: vatNumber (ΑΦΜ), profession, address, taxOffice, idNumber, etc.',
+        'For phone/email/social use append_contact_info instead.',
+        'IMPORTANT for taxOffice: ALWAYS call lookup_doy_code first to get the 4-digit code.',
+        'Pass the contact document ID (e.g. cont_xxx) and the field+value to update.',
+      ].join(' '),
+      parameters: {
+        type: 'object',
+        properties: {
+          contactId: {
+            type: 'string',
+            description: 'Firestore document ID of the contact (e.g. cont_cacb3149-...)',
+          },
+          field: {
+            type: 'string',
+            description: 'Field name to update',
+            enum: [...CONTACT_UPDATABLE_FIELDS],
+          },
+          value: {
+            type: 'string',
+            description: 'New value for the field. Use empty string to clear.',
+          },
+        },
+        required: ['contactId', 'field', 'value'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
   // ── 16. lookup_doy_code: Find Greek Tax Office (ΔΟΥ) code by name ──
   {
     type: 'function',

@@ -15,8 +15,8 @@
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getErrorMessage } from '@/lib/error-utils';
-import { CONTACT_FIELD_TYPES, CONTACT_TYPES } from '../agentic-tool-definitions';
-import type { ContactFieldType, ContactTypeEnum } from '../agentic-tool-definitions';
+import { CONTACT_FIELD_TYPES, CONTACT_TYPES, CONTACT_UPDATABLE_FIELDS } from '../agentic-tool-definitions';
+import type { ContactFieldType, ContactTypeEnum, ContactUpdatableField } from '../agentic-tool-definitions';
 import type { PhoneInfo, EmailInfo, SocialMediaInfo } from '@/types/contacts/contracts';
 import {
   type AgenticContext,
@@ -58,7 +58,7 @@ const SOCIAL_PLATFORM_MAP: Record<string, SocialMediaInfo['platform']> = {
 // ============================================================================
 
 export class ContactHandler implements ToolHandler {
-  readonly toolNames = ['create_contact', 'append_contact_info'] as const;
+  readonly toolNames = ['create_contact', 'append_contact_info', 'update_contact_field'] as const;
 
   async execute(
     toolName: string,
@@ -70,6 +70,8 @@ export class ContactHandler implements ToolHandler {
         return this.executeCreateContact(args, ctx);
       case 'append_contact_info':
         return this.executeAppendContactInfo(args, ctx);
+      case 'update_contact_field':
+        return this.executeUpdateContactField(args, ctx);
       default:
         return { success: false, error: `Unknown contact tool: ${toolName}` };
     }
@@ -318,6 +320,62 @@ export class ContactHandler implements ToolHandler {
     return {
       success: true,
       data: { contactId: contact.contactId, fieldType, value, added: true },
+      count: 1,
+    };
+  }
+
+  // --------------------------------------------------------------------------
+  // update_contact_field (admin only — scalar fields: vatNumber, profession, etc.)
+  // --------------------------------------------------------------------------
+
+  private async executeUpdateContactField(
+    args: Record<string, unknown>,
+    ctx: AgenticContext
+  ): Promise<ToolResult> {
+    if (!ctx.isAdmin) {
+      return { success: false, error: 'update_contact_field is admin-only.' };
+    }
+
+    const contactId = String(args.contactId ?? '').trim();
+    const field = String(args.field ?? '');
+    const value = String(args.value ?? '');
+
+    if (!contactId) {
+      return { success: false, error: 'contactId is required.' };
+    }
+    if (!CONTACT_UPDATABLE_FIELDS.includes(field as ContactUpdatableField)) {
+      return { success: false, error: `field must be one of: ${CONTACT_UPDATABLE_FIELDS.join(', ')}` };
+    }
+
+    // Verify the contact exists
+    const db = getAdminFirestore();
+    const docSnap = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
+    if (!docSnap.exists) {
+      return { success: false, error: `Η επαφή ${contactId} δεν βρέθηκε.` };
+    }
+
+    const { updateContactField } = await import(
+      '@/services/ai-pipeline/shared/contact-lookup'
+    );
+
+    await updateContactField(contactId, field, value, buildAttribution(ctx));
+
+    await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, 'update', { [field]: value });
+
+    const { emitEntitySyncSignal } = await import(
+      '@/services/ai-pipeline/shared/contact-lookup'
+    );
+    emitEntitySyncSignal('contacts', 'UPDATED', contactId, ctx.companyId);
+
+    logger.info('Contact field updated via tool', {
+      contactId,
+      field,
+      requestId: ctx.requestId,
+    });
+
+    return {
+      success: true,
+      data: { contactId, field, value, updated: true },
       count: 1,
     };
   }
