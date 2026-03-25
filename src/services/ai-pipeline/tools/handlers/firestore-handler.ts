@@ -6,11 +6,10 @@
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FIELDS } from '@/config/firestore-field-constants';
 import { safeJsonParse } from '@/lib/json-utils';
 import { getErrorMessage } from '@/lib/error-utils';
 import { recordQueryStrategy } from '../../query-strategy-service';
-import { greekToLatin, stripDiacritics, stemGreekWord } from '../../shared/greek-nlp';
+import { executeSearchText } from './search-text-handler';
 import {
   type AgenticContext,
   type ToolHandler,
@@ -32,13 +31,8 @@ import {
   logger,
   MAX_QUERY_RESULTS,
   DEFAULT_QUERY_LIMIT,
-  ALLOWED_READ_COLLECTIONS,
 } from '../executor-shared';
 import { filterContactByTab, resolveContactType } from '../contact-tab-filter';
-
-// ============================================================================
-// HANDLER
-// ============================================================================
 
 export class FirestoreHandler implements ToolHandler {
   readonly toolNames = [
@@ -99,18 +93,8 @@ export class FirestoreHandler implements ToolHandler {
     const safeFilters = filters.filter(f => !isNonQueryable(f.field));
 
     if (nestedDropped.length > 0) {
-      logger.info('Stripped nested filters (would cause FAILED_PRECONDITION)', {
-        requestId: ctx.requestId,
-        collection,
-        dropped: nestedDropped.map(f => `${f.field} ${f.operator} ${f.value}`),
-        kept: safeFilters.map(f => f.field),
-      });
-      recordQueryStrategy({
-        collection,
-        failedFilters: nestedDropped.map(f => f.field),
-        failedReason: 'STRIPPED_NESTED_FILTER',
-        successfulFilters: safeFilters.map(f => f.field),
-      }).catch(() => { /* non-fatal */ });
+      logger.info('Stripped nested filters', { requestId: ctx.requestId, collection, dropped: nestedDropped.map(f => f.field) });
+      recordQueryStrategy({ collection, failedFilters: nestedDropped.map(f => f.field), failedReason: 'STRIPPED_NESTED_FILTER', successfulFilters: safeFilters.map(f => f.field) }).catch(() => {});
     }
 
     const db = getAdminFirestore();
@@ -322,86 +306,12 @@ export class FirestoreHandler implements ToolHandler {
     return { success: false, error: 'documentId required for update mode' };
   }
 
-  private async executeSearchText(
+  /** Delegated to search-text-handler.ts (SRP extraction) */
+  private executeSearchText(
     args: Record<string, unknown>,
     ctx: AgenticContext
   ): Promise<ToolResult> {
-    const searchTerm = stripDiacritics(String(args.searchTerm ?? '').toLowerCase());
-    const words = searchTerm.split(/\s+/).filter(w => w.length >= 2);
-    const latinWords = words.map(w => greekToLatin(w)).filter(Boolean);
-    const greekStems = words.map(w => stemGreekWord(w)).filter(w => w.length >= 2);
-    const prefixStems = [...words, ...latinWords]
-      .filter(w => w.length >= 3)
-      .map(w => w.substring(0, Math.min(w.length, 4)));
-    const allSearchTerms = [...new Set([
-      ...words, ...latinWords, ...greekStems, ...prefixStems,
-    ])];
-
-    const collections = Array.isArray(args.collections)
-      ? (args.collections as string[]).filter(c => ALLOWED_READ_COLLECTIONS.has(c))
-      : [];
-    const limit = Math.min(
-      typeof args.limit === 'number' ? args.limit : 10,
-      20
-    );
-
-    if (!searchTerm || collections.length === 0) {
-      return { success: false, error: 'searchTerm and collections are required' };
-    }
-
-    const db = getAdminFirestore();
-    const allResults: Record<string, Array<Record<string, unknown>>> = {};
-    let totalCount = 0;
-
-    const searchFields = ['name', 'displayName', 'title', 'description', 'firstName', 'lastName', 'tradeName'];
-
-    for (const collection of collections) {
-      const snap = await db
-        .collection(collection)
-        .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
-        .limit(100)
-        .get();
-
-      const tabFilter = typeof args.tabFilter === 'string' ? args.tabFilter : null;
-
-      const matches = snap.docs
-        .filter(doc => {
-          const data = doc.data();
-          return searchFields.some(field => {
-            const val = data[field];
-            if (typeof val !== 'string') return false;
-            const valNorm = stripDiacritics(val.toLowerCase());
-            const valLatin = greekToLatin(valNorm);
-            const valStemmed = stemGreekWord(valNorm);
-            const fullVal = [valNorm, valLatin, valStemmed].filter(Boolean).join(' ');
-            return allSearchTerms.some(term => fullVal.includes(term));
-          });
-        })
-        .slice(0, limit)
-        .map(doc => {
-          let result: Record<string, unknown> = {
-            id: doc.id,
-            ...redactRoleBlockedFields(redactSensitiveFields(doc.data()), ctx),
-          };
-          // Server-side tab filtering for contact search results
-          if (tabFilter && collection === COLLECTIONS.CONTACTS) {
-            const contactType = resolveContactType(result);
-            result = filterContactByTab(result, contactType, tabFilter);
-          }
-          return result;
-        });
-
-      if (matches.length > 0) {
-        allResults[collection] = matches;
-        totalCount += matches.length;
-      }
-    }
-
-    return {
-      success: true,
-      data: allResults,
-      count: totalCount,
-    };
+    return executeSearchText(args, ctx);
   }
 
   private async executeWithFallback(
@@ -468,20 +378,10 @@ export class FirestoreHandler implements ToolHandler {
       try {
         const snapshot = await attempt.build().get();
         if (attempt.label !== 'full query') {
-          logger.warn('Query fallback succeeded', {
-            requestId: ctx.requestId,
-            collection,
-            fallbackLevel: attempt.label,
-            droppedNested: nestedFilters.map(f => f.field),
-          });
-          const droppedFields = [...nestedFilters.map(f => f.field), ...(orderBy ? [orderBy] : [])];
-          if (droppedFields.length > 0) {
-            recordQueryStrategy({
-              collection,
-              failedFilters: droppedFields,
-              failedReason: 'FAILED_PRECONDITION',
-              successfulFilters: flatFilters.map(f => f.field),
-            }).catch(() => { /* non-fatal */ });
+          logger.warn('Query fallback succeeded', { requestId: ctx.requestId, collection, fallbackLevel: attempt.label });
+          const dropped = [...nestedFilters.map(f => f.field), ...(orderBy ? [orderBy] : [])];
+          if (dropped.length > 0) {
+            recordQueryStrategy({ collection, failedFilters: dropped, failedReason: 'FAILED_PRECONDITION', successfulFilters: flatFilters.map(f => f.field) }).catch(() => {});
           }
         }
         return snapshot;
