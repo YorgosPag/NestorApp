@@ -49,7 +49,7 @@ AI Agent (system prompt with schema map)
 | Contact Handler | `src/services/ai-pipeline/tools/handlers/contact-handler.ts` | create_contact, append_contact_info |
 | Messaging Handler | `src/services/ai-pipeline/tools/handlers/messaging-handler.ts` | send_email, send_telegram, send_social |
 | Customer Handler | `src/services/ai-pipeline/tools/handlers/customer-handler.ts` | complaint, deliver_file, knowledge_base |
-| Utility Handler | `src/services/ai-pipeline/tools/handlers/utility-handler.ts` | get_collection_schema, lookup_doy_code |
+| Utility Handler | `src/services/ai-pipeline/tools/handlers/utility-handler.ts` | get_collection_schema, lookup_doy_code, search_esco_occupations, search_esco_skills |
 | Agentic Loop | `src/services/ai-pipeline/agentic-loop.ts` | Multi-step reasoning (max 7 iterations, 50s timeout) |
 | Chat History | `src/services/ai-pipeline/chat-history-service.ts` | Conversation memory (Firestore, 20 messages, 24h TTL) |
 | Pipeline Integration | `src/services/ai-pipeline/pipeline-orchestrator.ts` | `executeAgenticPath()` replaces UC module routing for admin |
@@ -130,3 +130,4 @@ ai_chat_history (ADR-156)
 | 2026-03-25 | Refactor: Strategy Pattern — Split monolithic `agentic-tool-executor.ts` (2397 lines) into 5 domain handlers + shared infrastructure. Executor is now thin dispatcher (~160 lines). Zero breaking changes to public API. |
 | 2026-03-25 | Feat: Dynamic tab-to-field mapping — AI agent now reads from SSoT section configs (`individual-config`, `company-gemi`, `service-config`) to know which fields belong to which tab. New `ai-tab-mapping.ts`. Covers all entity types (contacts, buildings, projects, units). Removed `'use client'` from `service-config.ts`. |
 | 2026-03-25 | Feat: Server-side tab filtering — `tabFilter` parameter on `firestore_query`, `firestore_get_document`, AND `search_text`. When AI passes `tabFilter: "basicInfo"`, handler strips all fields NOT in that tab BEFORE returning to AI. Replaces unreliable prompt-based filtering. New `contact-tab-filter.ts` + `section-field-utils.ts` (SSoT for field extraction). |
+| 2026-03-25 | Feat: ESCO search tools — `search_esco_occupations` (2,942 occupations) + `search_esco_skills` (13,485 skills). Server-side Firestore search with accent normalization. AI MUST search ESCO before writing profession/skills. Updated `firestore_write` + `update_contact_field` descriptions to enforce ESCO-first workflow. |
