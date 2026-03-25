@@ -2,7 +2,9 @@
 
 import React from 'react';
 import { Label } from '@/components/ui/label';
+import { InfoLabel } from '@/components/sales/payments/financial-intelligence/InfoLabel';
 import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 // Design tokens για centralized styling
 export const FORM_STYLES = {
@@ -40,14 +42,23 @@ interface FormFieldProps {
   children: React.ReactNode;
   className?: string;
   helpText?: string;
+  /** Tooltip text — when provided, renders InfoLabel with HelpCircle hover icon (ADR-242) */
+  tooltip?: string;
 }
 
-export function FormField({ label, htmlFor, required = false, children, className, helpText }: FormFieldProps) {
+export function FormField({ label, htmlFor, required = false, children, className, helpText, tooltip }: FormFieldProps) {
   return (
     <div className={cn("w-full space-y-2", className)}>
-      <FormLabel htmlFor={htmlFor} required={required}>
-        {label}
-      </FormLabel>
+      {tooltip ? (
+        <span className="inline-flex items-center gap-1">
+          <InfoLabel htmlFor={htmlFor} label={label} tooltip={tooltip} className="text-left font-medium text-sm" />
+          {required && <span className="text-destructive">*</span>}
+        </span>
+      ) : (
+        <FormLabel htmlFor={htmlFor} required={required}>
+          {label}
+        </FormLabel>
+      )}
       <div className="w-full">
         {children}
         {helpText && (

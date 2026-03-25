@@ -43,6 +43,8 @@ export interface IndividualFieldConfig {
   defaultValue?: string;
   /** Help text or description */
   helpText?: string;
+  /** Tooltip text — i18n key for InfoLabel hover tooltip (ADR-242) */
+  tooltip?: string;
   /** CSS class names for styling */
   className?: string;
   /** Icon for display */
@@ -294,6 +296,7 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         type: 'input',
         placeholder: 'individual.placeholders.profession',
         helpText: 'individual.helpTexts.profession',
+        tooltip: 'individual.tooltips.profession',
         icon: 'wrench',
       },
       {
@@ -302,6 +305,7 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         type: 'input',
         placeholder: 'individual.placeholders.specialty',
         helpText: 'individual.helpTexts.specialty',
+        tooltip: 'individual.tooltips.specialty',
         icon: 'target',
       },
       {
@@ -310,6 +314,7 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         id: 'skills',
         label: PROFESSIONAL_INFO_FIELD_LABELS.SKILLS,
         type: 'input',
+        tooltip: 'individual.tooltips.skills',
       },
     ],
   },

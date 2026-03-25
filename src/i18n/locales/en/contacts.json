@@ -1017,6 +1017,11 @@
       "city": "Residential city",
       "postalCode": "Postal code (5 digits)"
     },
+    "tooltips": {
+      "profession": "Profession is the broad occupational category (e.g. 'Engineer', 'Doctor'). Based on the EU ESCO/ISCO-08 classification. Specialty and Skills depend on this field.",
+      "specialty": "Specialty is the specific area within a Profession (e.g. Profession 'Engineer' → Specialty 'Civil Engineer'). Always linked to the Profession — cannot exist without it.",
+      "skills": "Skills are specific competencies of the individual. They can relate to the Profession (e.g. 'AutoCAD' for an Engineer) or be independent (e.g. 'English B2', 'Driving license'). No mandatory link to Profession/Specialty."
+    },
     "placeholders": {
       "documentIssuer": "e.g. Athens Police",
       "taxOffice": "e.g. Athens Tax Office",

@@ -10,6 +10,7 @@ import type { IndividualFieldConfig, IndividualSectionConfig } from '@/config/in
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('IndividualFormRenderer');
 
@@ -250,6 +251,7 @@ export function IndividualFormRenderer({
                   htmlFor={field.id}
                   required={field.required}
                   helpText={field.helpText ? t(field.helpText) : undefined} // 🏢 ENTERPRISE: Translate helpText if exists
+                  tooltip={field.tooltip ? t(field.tooltip) : undefined} // 🏢 ENTERPRISE: InfoLabel tooltip (ADR-242)
                   className={section.id === 'communication' ? "w-full max-w-none block" : "w-full"}
                 >
                   <FormInput>
