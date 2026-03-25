@@ -230,6 +230,15 @@
 | 🟢 P2 | FINDING-005: Search γενική πτώση | UX issue | Medium | ✅ FIXED |
 | 🟢 P2 | FINDING-003: Skills free-text flow | UX improvement | Low | ✅ FIXED |
 
+### Session 2 — E2E Telegram Bot Testing (2026-03-25)
+
+| Priority | Finding | Impact | Effort | Status |
+|----------|---------|--------|--------|--------|
+| 🔴 **P0** | **FIND-F: AI hallucination → data corruption** | Ψεύτικο email+phone γράφτηκαν χωρίς να ζητηθούν | High | ⏳ OPEN |
+| 🟡 P1 | FIND-E: ESCO disambiguation loop | AI δεν αναγνωρίζει "1" ως επιλογή, ξαναψάχνει | Medium | ⏳ OPEN |
+| 🟢 P2 | FIND-D: Employer χάνεται μετά ESCO | Multi-part εντολή — 2ο μέρος ξεχνιέται | Low | ⏳ OPEN |
+| 🟢 P2 | FIND-A: Hallucinated contactId | AI χρησιμοποιεί λάθος ID στο 2ο μήνυμα | Low | ⏳ OPEN |
+
 ---
 
 ## Θετικά Ευρήματα

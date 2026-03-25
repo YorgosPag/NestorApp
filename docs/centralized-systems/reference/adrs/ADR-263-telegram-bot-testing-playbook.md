@@ -12,6 +12,18 @@
 Πλήρες playbook για testing του AI Agent pipeline.
 Δίνεται σε κάθε Claude agent ώστε να ξεκινά tests **αμέσως** χωρίς έρευνα.
 
+### ΚΑΘΟΛΙΚΟΣ ΚΑΝΟΝΑΣ
+**Ο AI Agent πρέπει να χειρίζεται ΤΑ ΠΑΝΤΑ** — contacts, projects, buildings,
+appointments, invoices, documents, communications — **από ΟΠΟΙΟΔΗΠΟΤΕ κανάλι**
+(Telegram, Email, Web UI). Τα tests γίνονται μέσω Telegram bot αλλά ο στόχος
+είναι η πλήρης αντικατάσταση γραμματειακής υποστήριξης:
+- 100% γραφειοκρατική διαδικασία
+- 100% επικοινωνία με πελάτες/προμηθευτές
+- 100% data entry και διαχείριση CRM
+
+**ΟΛΑ τα tests (automated + E2E) γίνονται με αυτή τη μέθοδο** σε κάθε τομέα
+της εφαρμογής, όχι μόνο contacts.
+
 ---
 
 ## 0. Testing Strategy — ΥΠΟΧΡΕΩΤΙΚΗ ΣΕΙΡΑ ΕΚΤΕΛΕΣΗΣ
@@ -43,16 +55,42 @@ cd C:/Nestor_Pagonis && npx jest --testPathPatterns="ai-pipeline/tools/__tests__
 **Αν ΟΠΟΙΟΔΗΠΟΤΕ test αποτύχει → ΣΤΑΜΑΤΑ. Μην πας στη Φάση 2.**
 Διόρθωσε τον κώδικα πρώτα, κάνε re-run, μετά συνέχισε.
 
-### ΦΑΣΗ 2: Telegram Bot E2E Tests (ΜΕΤΑ — ~2-5 λεπτά ανά test)
+### ΦΑΣΗ 2: Διόρθωση κώδικα (αν χρειάζεται)
+
+Αν κάποιο automated test αποτύχει:
+1. Διόρθωσε τον κώδικα
+2. Re-run automated tests μέχρι 63/63 PASS
+3. Commit τη διόρθωση
+4. Push (αν ζητηθεί) ώστε να χτιστεί στο Vercel
+
+### ΦΑΣΗ 3: Telegram Bot E2E Tests (~2-5 λεπτά ανά test)
 
 Αφού τα automated tests περνάνε, δοκίμασε τη **ζωντανή** pipeline μέσω Telegram webhook.
+
+**ΡΩΤΑ ΤΟΝ ΓΙΩΡΓΟ**: "Production ή Development bot;" πριν ξεκινήσεις.
+
 Αυτά τα tests ελέγχουν:
 - AI reasoning (OpenAI gpt-4o-mini)
 - Tool call ακρίβεια (σωστά args, σωστό tool)
 - UX (μήνυμα στον χρήστη)
 - End-to-end data flow (Telegram → Pipeline → Firestore → Telegram reply)
 
-Μπορείς να χρησιμοποιήσεις **είτε** το Production bot **είτε** το Development bot.
+### ΦΑΣΗ 4: Καταγραφή ευρημάτων
+
+Μετά τα Telegram tests, καταγράφεις τα ευρήματα στο αρχείο `docs/QA_AGENT_FINDINGS.md`:
+- Νέα findings (bugs, UX issues, hallucinations)
+- Severity classification (P0-P3)
+- Ακριβές reproduction scenario
+
+### ΦΑΣΗ 5: Επανάληψη κύκλου
+
+```
+Automated Tests → Fix Code → Re-test → Telegram E2E → Findings →
+→ Fix Code → Νέα Automated Tests (αν χρειάζεται) → Re-test → ...
+```
+
+**ΕΜΠΛΟΥΤΙΣΜΟΣ**: Αν βρεθεί νέο bug στο Telegram E2E, **ΠΡΟΣΘΕΣΕ** automated test
+που το καλύπτει (στα αντίστοιχα `*.test.ts` αρχεία), ώστε να μην ξαναεμφανιστεί.
 
 ---
 
@@ -323,11 +361,63 @@ User Message (Telegram)
 | FIND-A | P2 | Hallucinated contactId on 2nd message | ⏳ OPEN | AI uses wrong ID from memory |
 | FIND-B | P2 | Error message shown despite success | ⏳ OPEN | UX inconsistency after retry |
 | FIND-C | P3 | Unnecessary ESCO search for "Άνδρας" | ⏳ OPEN | AI confuses gender with occupation |
+| FIND-D | P2 | Employer χάνεται μετά ESCO disambiguation | ⏳ OPEN | AI ξεχνάει 2ο μέρος εντολής (employer) όταν ESCO trigger |
+| FIND-E | P1 | Disambiguation loop — AI δεν αναγνωρίζει αριθμό | ⏳ OPEN | Χρήστης λέει "1" ή "το 1", AI ξαναψάχνει ESCO αντί να επιλέξει |
+| FIND-F | **P0** | **AI hallucination → data corruption** | ⏳ **OPEN** | AI πρόσθεσε ψεύτικο email+phone που ΠΟΤΕ δεν ζητήθηκαν (info@deddehe.gr, 2312345678) |
 
 ---
 
-## 9. Changelog
+## 9. Test Execution Log — Session 2026-03-25
+
+### Αποτελέσματα E2E Tests (Production Bot)
+
+| Test | Περιγραφή | Input | Result | Findings |
+|------|-----------|-------|--------|----------|
+| T1.1 | Δημιουργία επαφής | "Δημιούργησε νέα επαφή: Νίκος Παπαδόπουλος" | ✅ PASS | — |
+| T1.2 | 4 basic fields (φύλο, γέννηση, πατρώνυμο, μητρώνυμο) | "Ο Νίκος είναι άνδρας, γεννήθηκε 15 Μαρτίου 1990..." | ✅ PASS | 1ο retry αρχικά hallucinated ID (FIND-A) |
+| T1.3 | Τηλέφωνο | "Πρόσθεσε κινητό 6971234567 στον Νίκο" | ✅ PASS | — |
+| T2.2 | Ταυτότητα (5 πεδία) | "Ταυτότητα ΑΚ 582946, εκδόθηκε 10/01/2020..." | ✅ PASS | **F-001 confirmed**: prefix "ΑΚ" διατηρήθηκε |
+| T2.3 | ΑΦΜ + ΔΟΥ | "ΑΦΜ 123456789, ΔΟΥ Α Θεσσαλονίκης" | ✅ PASS | lookup_doy_code → 1301 σωστό |
+| T3.6 | Γενική πτώση (F-005) | "Βάλε email nikos@example.com του Παπαδόπουλου" | ✅ PASS | **F-005 confirmed**: "Παπαδόπουλου" → found |
+| T3.1 | ESCO disambiguation trigger | "Ο Νίκος είναι ηλεκτρολόγος μηχανικός" | ✅ PASS | Σωστά ρωτάει "Ποιο εννοείς;" (6 options) |
+| T3.3 | Disambiguation answer | "Ηλεκτρολόγος μηχανικός (το 1)" + "1" | ❌ FAIL | FIND-E: AI ξαναψάχνει αντί να επιλέξει |
+| T3.8 | Employer | (μέσα στο T3.1) "δουλεύει στην ΔΕΔΔΗΕ ΑΕ" | ❌ FAIL | FIND-D: Ξεχάστηκε λόγω ESCO |
+| — | Hallucination check | (μετά disambiguation) | ❌ **P0 FAIL** | FIND-F: Ψεύτικο email+phone γράφτηκαν |
+
+### Τι λειτουργεί σωστά:
+- ✅ Create contact (T1.1)
+- ✅ Basic fields: gender, birthDate, fatherName, motherName (T1.2)
+- ✅ Phone append (T1.3)
+- ✅ Identity: documentType, documentNumber (with prefix), issuer, dates (T2.2)
+- ✅ Tax: vatNumber, taxOffice via lookup_doy_code (T2.3)
+- ✅ Email append (T3.6)
+- ✅ Greek genitive search — F-005 fix (T3.6)
+- ✅ ESCO disambiguation trigger — F-002 fix (T3.1)
+
+### Τι ΔΕΝ λειτουργεί (ΕΠΟΜΕΝΑ ΒΗΜΑΤΑ):
+1. **FIND-F (P0)**: AI hallucination → ψεύτικα data. ΚΡΙΣΙΜΟ — χρειάζεται guardrail
+2. **FIND-E (P1)**: ESCO disambiguation loop — AI δεν αναγνωρίζει αριθμό επιλογής
+3. **FIND-D (P2)**: Employer χάνεται σε multi-part εντολή με ESCO
+4. **FIND-A (P2)**: Hallucinated contactId (AI χρησιμοποιεί λάθος ID)
+
+### ΣΤΡΑΤΗΓΙΚΗ ΕΠΟΜΕΝΩΝ ΒΗΜΑΤΩΝ:
+1. **Πρώτα**: Διόρθωσε κώδικα (FIND-F → FIND-E → FIND-D → FIND-A)
+2. **Μετά**: Πρόσθεσε νέα automated tests που καλύπτουν τα findings
+3. **Μετά**: Τρέξε automated tests (63+νέα) — πρέπει ALL PASS
+4. **Μετά**: Κάνε push + build Vercel (ΜΙΑ ΦΟΡΑ, όχι πολλές)
+5. **Μετά**: Ξανα-τρέξε E2E Telegram tests για confirmation
+6. **Μετά**: Συνέχισε στα υπόλοιπα tests (Level 2-5)
+
+### ΜΗ ΞΕΧΑΝΕΣΕ:
+- **Push μόνο μετά από ολοκληρωμένο batch διορθώσεων** (μην σπαταλάς builds)
+- **Πρώτα automated tests, μετά Telegram** (Φάση 1 → Φάση 3 ροή)
+- Ρώτα τον Γιώργο: "Production ή Development bot;" πριν κάθε E2E session
+
+---
+
+## 10. Changelog
 
 | Date | Change |
 |------|--------|
-| 2026-03-25 | Initial version — credentials, test plan, findings |
+| 2026-03-25 | Initial version — credentials, test plan, 5-phase workflow |
+| 2026-03-25 | Session 1 results: 7/10 tests PASS, 3 new findings (FIND-D/E/F) |
