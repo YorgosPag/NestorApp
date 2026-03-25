@@ -373,6 +373,13 @@ CONCRETE ΠΑΡΑΔΕΙΓΜΑΤΑ:
 - Αν query αποτύχει λόγω "index" ή "permission" error, δοκίμασε χωρίς φίλτρα — ΜΗ λες στον χρήστη για "δείκτες βάσης δεδομένων".
 - Κράτα τις απαντήσεις ΣΥΝΤΟΜΕΣ (max 5-6 γραμμές). Μην γράφεις essays.
 
+⚠️⚠️⚠️ ΚΡΙΣΙΜΟ — ΠΟΤΕ ΜΗΝ ΜΑΝΤΕΥΕΙΣ DOCUMENT IDs:
+- ΠΟΤΕ μη χρησιμοποιείς document ID που ΔΕΝ πήρες ΑΜΕΣΑ από αποτέλεσμα tool call ΣΤΗΝ ΤΡΕΧΟΥΣΑ συνομιλία
+- Αν θέλεις να ενημερώσεις/διαβάσεις document, ΠΑΝΤΑ κάνε ΠΡΩΤΑ firestore_query ή search_text για να πάρεις το ΠΡΑΓΜΑΤΙΚΟ ID
+- ΜΗΝ κατασκευάζεις IDs (π.χ. "cont_12345", "proj_abc") — χρησιμοποίησε ΜΟΝΟ IDs από αποτελέσματα queries
+- Αν πρέπει να ενημερώσεις μια επαφή: ΒΗΜΑ 1: firestore_query → πάρε ID. ΒΗΜΑ 2: firestore_write με αυτό το ID
+- Ακόμα κι αν θυμάσαι ένα ID από το ιστορικό, ΞΑΝΑ-ΨΑΞΕ — τα IDs στο ιστορικό μπορεί να είναι ατελή
+
 ΔΙΑΧΕΙΡΙΣΗ PERSONAS ΕΠΑΦΩΝ:
 Κάθε επαφή μπορεί να έχει πεδίο "personas" (array). Ο admin μπορεί να ζητήσει "δήλωσε τον X ως μηχανικό/δικηγόρο/πελάτη/κλπ".
 Βήματα:
@@ -542,10 +549,30 @@ export async function executeAgenticLoop(
   ];
 
   // Add chat history as alternating user/assistant messages
+  // Include tool call summaries so the AI can see document IDs from previous turns
   for (const msg of chatHistory.slice(-6)) {
+    let content = msg.content;
+
+    // For assistant messages, append tool call context (document IDs found)
+    if (msg.role === 'assistant' && msg.toolCalls && msg.toolCalls.length > 0) {
+      const toolSummaries = msg.toolCalls
+        .map(tc => {
+          // Extract document IDs from results for context preservation
+          const resultStr = tc.result ?? '';
+          const idMatches = resultStr.match(/"id"\s*:\s*"([^"]+)"/g);
+          const ids = idMatches
+            ? idMatches.map(m => m.replace(/"id"\s*:\s*"/, '').replace(/"$/, '')).slice(0, 3)
+            : [];
+          const idInfo = ids.length > 0 ? ` → IDs: ${ids.join(', ')}` : '';
+          return `[${tc.name}${idInfo}]`;
+        })
+        .join(' ');
+      content = `${content}\n(Tools used: ${toolSummaries})`;
+    }
+
     messages.push({
       role: msg.role === 'user' ? 'user' : 'assistant',
-      content: msg.content,
+      content,
     });
   }
 
