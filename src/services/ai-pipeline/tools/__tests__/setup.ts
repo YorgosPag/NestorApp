@@ -39,6 +39,9 @@ jest.mock('@/services/enterprise-id.service', () => ({
   generatePipelineAuditId: jest.fn(() => 'audit_test_001'),
   generateBankAccountId: jest.fn(() => 'bacc_test_001'),
   generateRelationshipId: jest.fn(() => 'rel_test_001'),
+  generateTaskId: jest.fn(() => 'task_test_001'),
+  generateContactId: jest.fn(() => 'cont_test_001'),
+  generateCompanyId: jest.fn(() => 'comp_gen_001'),
 }));
 
 // ── Validation modules (dynamic-imported by handlers) ──
