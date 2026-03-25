@@ -1,12 +1,11 @@
 'use client';
 import React from 'react';
 import { Building2, Folder, Building as BuildingIcon, Layers, Info } from 'lucide-react';
-import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import type { Building, Unit, Floor } from '../contexts/ProjectHierarchyContext';
+import type { Building, Floor } from '../contexts/ProjectHierarchyContext';
 import { useTypography } from '@/hooks/useTypography';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { getModalIconColor } from '../config/modal-colors';
