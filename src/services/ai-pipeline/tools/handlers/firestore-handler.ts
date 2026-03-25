@@ -1,27 +1,16 @@
 /**
- * =============================================================================
  * FIRESTORE HANDLER — Query, Get, Count, Write & Text Search
- * =============================================================================
  *
- * Core data-access tools for the AI agent. All queries enforce:
- * - Collection whitelist
- * - CompanyId injection (tenant isolation)
- * - RBAC role-based filtering
- * - Sensitive field redaction
- * - Progressive fallback on FAILED_PRECONDITION (missing index)
- *
- * Tools:
- * - firestore_query: Query collection with filters, ordering, limit
- * - firestore_get_document: Fetch single document by ID
- * - firestore_count: Count documents matching criteria
- * - firestore_write: Create/update document (admin only)
- * - search_text: Full-text search across multiple collections
+ * Core data-access tools for the AI agent. Enforces collection whitelist,
+ * companyId injection, RBAC filtering, sensitive field redaction, tab filtering,
+ * and progressive fallback on FAILED_PRECONDITION (missing index).
  *
  * @module services/ai-pipeline/tools/handlers/firestore-handler
  * @see ADR-171 (Autonomous AI Agent)
  */
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { safeJsonParse } from '@/lib/json-utils';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -50,6 +39,7 @@ import {
   DEFAULT_QUERY_LIMIT,
   ALLOWED_READ_COLLECTIONS,
 } from '../executor-shared';
+import { filterContactByTab, resolveContactType } from '../contact-tab-filter';
 
 // ============================================================================
 // HANDLER
@@ -135,9 +125,19 @@ export class FirestoreHandler implements ToolHandler {
     const db = getAdminFirestore();
     const snapshot = await this.executeWithFallback(db, collection, safeFilters, orderBy, orderDirection, limit, ctx);
 
+    const tabFilter = typeof args.tabFilter === 'string' ? args.tabFilter : null;
+
     const results = snapshot.docs.map(doc => {
       const raw = redactRoleBlockedFields(redactSensitiveFields(doc.data()), ctx);
-      return { id: doc.id, ...flattenNestedFields(raw) };
+      let result: Record<string, unknown> = { id: doc.id, ...flattenNestedFields(raw) };
+
+      // Server-side tab filtering: strip fields not belonging to requested tab
+      if (tabFilter && collection === COLLECTIONS.CONTACTS) {
+        const contactType = resolveContactType(result);
+        result = filterContactByTab(result, contactType, tabFilter);
+      }
+
+      return result;
     });
 
     return {
@@ -179,9 +179,21 @@ export class FirestoreHandler implements ToolHandler {
       return { success: false, error: 'Document not found' };
     }
 
+    let result: Record<string, unknown> = {
+      id: doc.id,
+      ...redactRoleBlockedFields(redactSensitiveFields(data), ctx),
+    };
+
+    // Server-side tab filtering: strip fields not belonging to requested tab
+    const tabFilter = typeof args.tabFilter === 'string' ? args.tabFilter : null;
+    if (tabFilter && collection === COLLECTIONS.CONTACTS) {
+      const contactType = resolveContactType(result);
+      result = filterContactByTab(result, contactType, tabFilter);
+    }
+
     return {
       success: true,
-      data: { id: doc.id, ...redactRoleBlockedFields(redactSensitiveFields(data), ctx) },
+      data: result,
       count: 1,
     };
   }

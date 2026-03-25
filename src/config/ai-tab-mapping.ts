@@ -159,19 +159,19 @@ ${serviceMapping}
 ΜΟΝΑΔΕΣ/ΑΠΟΘΗΚΕΣ/ΠΑΡΚΙΝΓΚ: ${UNIT_TABS}
 CRM DASHBOARD: ${CRM_TABS}
 
-🚨🚨🚨 ΤΕΡΜΑΤΙΚΟΣ ΚΑΝΟΝΑΣ ΦΙΛΤΡΑΡΙΣΜΑΤΟΣ ΚΑΡΤΕΛΩΝ:
-Αν ο χρήστης ζητήσει "καρτέλα X" ή "στοιχεία X", ΑΠΑΓΟΡΕΥΕΤΑΙ να δείξεις πεδία ΑΛΛΩΝ καρτελών!
-ΒΗΜΑ 1: Βρες ποια καρτέλα ζητήθηκε (αντιστοίχισε με τα παραπάνω)
-ΒΗΜΑ 2: Φιλτράρε — δείξε ΑΠΟΚΛΕΙΣΤΙΚΑ τα πεδία εκείνης της καρτέλας
-ΒΗΜΑ 3: Αν ένα πεδίο ΔΕΝ ανήκει στην καρτέλα → ΜΗΝ ΤΟ ΔΕΙΞΕΙΣ
+🚨🚨🚨 ΥΠΟΧΡΕΩΤΙΚΟ — SERVER-SIDE TAB FILTERING (tabFilter parameter):
+Όταν ο χρήστης ζητάει "καρτέλα X" ή "στοιχεία X" για επαφή, ΠΡΕΠΕΙ να χρησιμοποιήσεις το tabFilter parameter στο firestore_query ή firestore_get_document.
+Αυτό φιλτράρει τα πεδία SERVER-SIDE — θα λάβεις ΜΟΝΟ τα πεδία της ζητούμενης καρτέλας.
 
-ΠΑΡΑΔΕΙΓΜΑ: "βασικά στοιχεία" = ΜΟΝΟ firstName, lastName, fatherName, motherName, birthDate, birthCountry, gender, amka
-ΟΧΙ vatNumber (ανήκει στην "Ταυτότητα & ΑΦΜ"), ΟΧΙ documentType/documentNumber (ανήκουν στην "Ταυτότητα"), ΟΧΙ phones/emails (ανήκουν στην "Επικοινωνία")
+ΑΝΤΙΣΤΟΙΧΙΣΗ ΕΛΛΗΝΙΚΩΝ → tabFilter ID:
+"βασικά στοιχεία" → tabFilter: "basicInfo"
+"ταυτότητα" / "ταυτότητα & ΑΦΜ" / "ΑΦΜ" → tabFilter: "identity"
+"ιδιότητες" → tabFilter: "personas"
+"επαγγελματικά" → tabFilter: "professional"
+"διεύθυνση" → tabFilter: "address" (ή "addresses" για εταιρεία)
+"επικοινωνία" / "τηλέφωνα" / "email" → tabFilter: "communication"
 
-ΠΑΡΑΔΕΙΓΜΑ: "ταυτότητα" ή "ταυτότητα & ΑΦΜ" = ΜΟΝΟ documentType, documentNumber, documentIssuer, documentIssueDate, documentExpiryDate, vatNumber, taxOffice
-ΟΧΙ firstName/lastName (ανήκουν στα "Βασικά"), ΟΧΙ phones (ανήκουν στην "Επικοινωνία")
-
-Αν ΔΕΝ ζητήθηκε συγκεκριμένη καρτέλα → σύνοψη (όνομα, τηλ, email, ΑΦΜ)`;
+Αν ΔΕΝ ζητήθηκε συγκεκριμένη καρτέλα → tabFilter: null (σύνοψη: όνομα, τηλ, email, ΑΦΜ)`;
 
   return cachedPrompt;
 }
