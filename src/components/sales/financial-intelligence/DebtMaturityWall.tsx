@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type {
   DebtMaturityEntry,
@@ -301,7 +302,7 @@ export function DebtMaturityWall({ entries, onAdd, onRemove, t }: DebtMaturityWa
     <Card>
       <CardContent className="pt-6">
         <header className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold" style={{ color: colors.textPrimary }}>
+          <h3 className={cn('text-lg font-semibold', colors.text.primary)}>
             {t('maturity.title')}
           </h3>
           <AddEntryForm onAdd={onAdd} t={t} />
@@ -326,14 +327,14 @@ export function DebtMaturityWall({ entries, onAdd, onRemove, t }: DebtMaturityWa
             </ResponsiveContainer>
           </figure>
         ) : (
-          <p className="text-center py-8 text-sm" style={{ color: colors.textMuted }}>
+          <p className={cn('text-center py-8 text-sm', colors.text.muted)}>
             {t('maturity.emptyState')}
           </p>
         )}
 
         {entries.length > 0 && (
           <section>
-            <h4 className="text-sm font-medium mb-2" style={{ color: colors.textMuted }}>
+            <h4 className={cn('text-sm font-medium mb-2', colors.text.muted)}>
               {t('maturity.entriesTitle')} ({entries.length})
             </h4>
             <ul className="space-y-2">
@@ -347,7 +348,7 @@ export function DebtMaturityWall({ entries, onAdd, onRemove, t }: DebtMaturityWa
                       {entry.loanType}
                     </Badge>
                     <span className="text-sm font-medium">{entry.projectName}</span>
-                    <span className="text-sm" style={{ color: colors.textMuted }}>
+                    <span className={cn('text-sm', colors.text.muted)}>
                       {euroFormatter(entry.outstandingBalance)} · {entry.currentRate}% · {entry.monthsToMaturity}mo
                     </span>
                   </span>

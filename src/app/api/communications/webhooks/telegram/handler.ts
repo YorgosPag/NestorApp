@@ -581,9 +581,9 @@ export async function handlePOST(request: NextRequest): Promise<NextResponse> {
     }
 
     // 2. Parse webhook JSON first (no Firebase needed — pure HTTP parsing)
-    let webhookData: Record<string, unknown>;
+    let webhookData: TelegramMessage;
     try {
-      webhookData = await request.json();
+      webhookData = await request.json() as TelegramMessage;
     } catch {
       logger.warn('Empty or malformed webhook body — ignoring');
       return NextResponse.json({ ok: true, status: 'empty_body' }, { status: 200 });
@@ -602,7 +602,7 @@ export async function handlePOST(request: NextRequest): Promise<NextResponse> {
     }
 
     // 3a. DEDUPLICATION: Telegram retries if response >15s — ignore duplicates
-    const updateId = webhookData.update_id as number | undefined;
+    const updateId = webhookData.update_id;
     if (updateId && isDuplicateUpdate(updateId)) {
       logger.info('Duplicate update_id ignored', { updateId });
       return NextResponse.json({ ok: true, status: 'duplicate_ignored' });

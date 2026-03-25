@@ -20,7 +20,10 @@ import { logFinancialTransition } from '@/lib/auth/audit';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 
 const ChequeTransitionSchema = z.object({
-  targetStatus: z.string().min(1).max(50),
+  targetStatus: z.enum([
+    'received', 'in_custody', 'deposited', 'clearing', 'cleared',
+    'bounced', 'endorsed', 'cancelled', 'expired', 'replaced',
+  ]),
   notes: z.string().max(2000).optional(),
 });
 

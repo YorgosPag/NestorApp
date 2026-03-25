@@ -105,7 +105,7 @@ interface FirestoreDocumentSnapshot {
 /**
  * Firestore database interface
  */
-interface FirestoreDatabase {
+export interface FirestoreDatabase {
   collection: (name: string) => {
     doc: (id: string) => FirestoreDocumentReference;
   };

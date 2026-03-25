@@ -94,8 +94,7 @@ export function ContactsList({
       // Refresh contacts list
       onContactUpdated?.();
 
-    } catch (error) {
-      // Error logging removed
+    } catch (_err) {
       error(t('list.favorites.error'));
     } finally {
       // Remove from loading set

@@ -284,7 +284,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
       } else {
         error(result.error || 'Σφάλμα ενημέρωσης διεύθυνσης');
       }
-    } catch (error) {
+    } catch (_err) {
       error('Σφάλμα ενημέρωσης διεύθυνσης');
     }
   };

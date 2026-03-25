@@ -15,10 +15,10 @@
 // ============================================================================
 
 /** Τύπος αποκλειστικότητας μεσιτικής σύμβασης */
-export type ExclusivityType = 'exclusive' | 'non_exclusive';
+export type ExclusivityType = 'exclusive' | 'non_exclusive' | 'semi_exclusive';
 
 /** Τύπος υπολογισμού προμήθειας */
-export type CommissionType = 'percentage' | 'fixed';
+export type CommissionType = 'percentage' | 'fixed' | 'tiered';
 
 /** Κατάσταση μεσιτικής σύμβασης */
 export type BrokerageStatus = 'active' | 'expired' | 'terminated';

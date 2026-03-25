@@ -329,7 +329,7 @@ export const PATCH = withStandardRateLimit(
       async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<FloorUpdateResponse>> => {
         try {
           const parsedFloor = safeParseBody(UpdateFloorSchema, await req.json());
-          if (parsedFloor.error) return parsedFloor.error;
+          if (parsedFloor.error) return parsedFloor.error as NextResponse<FloorUpdateResponse>;
           const { _v: expectedVersion, ...body } = parsedFloor.data;
 
           const db = getAdminFirestore();

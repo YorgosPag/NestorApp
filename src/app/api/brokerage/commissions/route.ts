@@ -20,12 +20,17 @@ import { BrokerageServerService } from '@/services/brokerage-server.service';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 
 const RecordCommissionSchema = z.object({
-  agreementId: z.string().min(1).max(128),
+  brokerageAgreementId: z.string().min(1).max(128),
+  agentContactId: z.string().min(1).max(128),
+  agentName: z.string().min(1).max(200),
   unitId: z.string().min(1).max(128),
+  projectId: z.string().min(1).max(128),
+  buyerContactId: z.string().min(1).max(128),
   salePrice: z.number().positive().max(999_999_999),
-  commissionAmount: z.number().min(0).max(999_999_999),
-  notes: z.string().max(5000).optional(),
-}).passthrough();
+  commissionType: z.enum(['percentage', 'fixed', 'tiered']),
+  commissionPercentage: z.number().min(0).max(100).nullable(),
+  commissionFixedAmount: z.number().min(0).max(999_999_999).nullable(),
+});
 
 async function handlePost(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(

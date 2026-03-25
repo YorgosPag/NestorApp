@@ -79,7 +79,7 @@ export function CreateAPYCertificateDialog({
   defaultFiscalYear,
 }: CreateAPYCertificateDialogProps) {
   const { user } = useAuth();
-  const { companyProfile } = useCompanySetup();
+  const { profile: companyProfile } = useCompanySetup();
   const { createCertificate } = useAPYCertificates({ autoFetch: false });
 
   const [fiscalYear, setFiscalYear] = useState<number>(defaultFiscalYear);
@@ -184,7 +184,7 @@ export function CreateAPYCertificateDialog({
     }));
 
     const provider: APYCertificate['provider'] = {
-      name: companyProfile.name,
+      name: companyProfile.businessName,
       vatNumber: companyProfile.vatNumber,
       taxOffice: companyProfile.taxOffice ?? '',
       address: companyProfile.address ?? '',

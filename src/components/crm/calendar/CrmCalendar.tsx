@@ -35,7 +35,7 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 
 import type { CalendarEvent } from '@/types/calendar-event';
-import type { DateCellWrapperProps } from 'react-big-calendar';
+import type { DateCellWrapperProps, EventProps } from 'react-big-calendar';
 import { CALENDAR_EVENT_COLORS } from './calendar-event-colors';
 import { CalendarEventDialog } from './CalendarEventDialog';
 import { CalendarCreateDialog } from './CalendarCreateDialog';
@@ -253,7 +253,8 @@ export function CrmCalendar({
   const culture = i18n.language === 'el' ? 'el' : 'en';
 
   // Week number formats for month view headers
-  const formats = useMemo(() => ({
+  // react-big-calendar supports weekGutterFormat at runtime but @types doesn't include it
+  const formats = useMemo((): Record<string, (date: Date) => string> => ({
     weekGutterFormat: (date: Date) => `W${getISOWeek(date)}`,
   }), []);
 
@@ -369,8 +370,8 @@ export function CrmCalendar({
             eventPropGetter={eventStyleGetter}
             dayPropGetter={dayPropGetter}
             components={{
-              dateCellWrapper: DateCellWrapper as ComponentType,
-              event: CalendarEventTooltip as ComponentType,
+              dateCellWrapper: DateCellWrapper as ComponentType<DateCellWrapperProps>,
+              event: CalendarEventTooltip as ComponentType<EventProps<CalendarEvent>>,
             }}
             messages={messages}
             culture={culture}

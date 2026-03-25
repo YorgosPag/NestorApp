@@ -14,7 +14,7 @@ function getI18n(): { language?: string } {
       _i18n = { language: 'el' };
     }
   }
-  return _i18n;
+  return _i18n ?? { language: undefined };
 }
 
 import { createModuleLogger } from '@/lib/telemetry';

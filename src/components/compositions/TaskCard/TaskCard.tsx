@@ -114,7 +114,7 @@ export function TaskCard({
     <BaseCard
       // Βασικές ιδιότητες
       title={task.title}
-      subtitle={task.description}
+      subtitle={task.description ?? undefined}
       
       // Header configuration
       headerConfig={{

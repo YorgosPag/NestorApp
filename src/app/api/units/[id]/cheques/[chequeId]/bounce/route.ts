@@ -20,7 +20,10 @@ import { logFinancialTransition } from '@/lib/auth/audit';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 
 const BounceSchema = z.object({
-  bouncedReason: z.string().min(1).max(500),
+  bouncedReason: z.enum([
+    'insufficient_funds', 'account_closed', 'signature_mismatch',
+    'stop_payment', 'post_dated_early', 'technical_issue', 'other',
+  ]),
   bouncedDate: z.string().min(10).max(30).optional(),
   legalAction: z.boolean().optional(),
   notes: z.string().max(2000).optional(),

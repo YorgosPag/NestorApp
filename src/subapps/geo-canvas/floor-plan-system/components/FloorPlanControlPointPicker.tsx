@@ -272,8 +272,8 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
         description: ''
       });
 
-    } catch (error) {
-      console.error('Error adding manual point:', error);
+    } catch (err) {
+      console.error('Error adding manual point:', err);
       error(t('toastMessages.errorAddingPoint'));
     }
   };

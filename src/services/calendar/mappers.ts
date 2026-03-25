@@ -94,8 +94,8 @@ export function taskToCalendarEvent(task: CrmTask): CalendarEvent | null {
     status: task.status,
     priority: task.priority,
     companyId: task.companyId ?? null,
-    contactId: task.contactId,
-    projectId: task.projectId,
+    contactId: task.contactId ?? undefined,
+    projectId: task.projectId ?? undefined,
   };
 }
 

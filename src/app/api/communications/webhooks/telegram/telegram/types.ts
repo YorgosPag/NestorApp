@@ -211,6 +211,8 @@ export interface TelegramReplyMarkup {
 
 /** Incoming Telegram webhook update */
 export interface TelegramMessage {
+  /** Telegram Update ID — used for deduplication */
+  update_id?: number;
   message?: TelegramMessageObject;
   callback_query?: TelegramCallbackQuery;
 }

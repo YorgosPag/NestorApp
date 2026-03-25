@@ -548,10 +548,17 @@ export const POST = withSensitiveRateLimit(
         await logSystemOperation(
           ctx,
           'company_id_migration',
+          {
+            oldCompanyId: report.oldCompanyId,
+            newCompanyId: report.newCompanyId,
+            totalDocumentsUpdated: report.totalDocumentsUpdated,
+            collectionsCount: report.steps.collections.length,
+            errorsCount: report.errors.length,
+            ...metadata,
+          },
           `Migrated company ID from ${report.oldCompanyId} to ${report.newCompanyId}. ` +
           `${report.totalDocumentsUpdated} documents updated across ${report.steps.collections.length} collections. ` +
-          `${report.errors.length} errors.`,
-          metadata
+          `${report.errors.length} errors.`
         );
       } catch {
         logger.warn('[MigrateCompanyId] Audit logging failed (non-blocking)');

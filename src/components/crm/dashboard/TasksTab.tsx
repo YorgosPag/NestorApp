@@ -63,6 +63,7 @@ const TASK_TYPE_ICONS: Record<CrmTaskType, React.ElementType> = {
   follow_up: AlertCircle,
   email: Mail,
   document: FileText,
+  complaint: AlertCircle,
   other: Clock,
 };
 

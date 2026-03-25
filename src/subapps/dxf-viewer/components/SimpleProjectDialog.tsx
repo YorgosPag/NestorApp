@@ -962,7 +962,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
               <ErrorModalContainer title="">
                 <p className={`${typography.body.sm} ${MODAL_SPACING.CONTAINER.paddingSmall}`}>{t('wizard.loading.error', { error })}</p>
                 <Button
-                  onClick={loadCompanies}
+                  onClick={() => loadCompanies()}
                   variant="destructive"
                   size="sm"
                 >

@@ -22,6 +22,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 
 const CreateOpportunitySchema = z.object({
+  name: z.string().min(1).max(200),
   contactId: z.string().max(128).optional(),
   contactName: z.string().max(200).optional(),
   projectId: z.string().max(128).optional(),

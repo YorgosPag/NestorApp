@@ -93,6 +93,7 @@ export type PropertyStatus =
   // Βασικά από το παλιό σύστημα για συμβατότητα
   | 'for-sale'                 // Προς πώληση
   | 'for-rent'                 // Προς ενοικίαση
+  | 'for-sale-and-rent'        // Πώληση και ενοικίαση
   | 'rented'                   // Ενοικιασμένο
   | 'under-negotiation'        // Υπό διαπραγμάτευση
   | 'coming-soon'              // Σύντομα διαθέσιμο

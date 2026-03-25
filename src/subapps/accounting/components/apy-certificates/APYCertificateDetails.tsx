@@ -187,9 +187,9 @@ export function APYCertificateDetails({
     }
   };
 
-  if (loading) return <PageLoadingState />;
-  if (fetchError) return <PageErrorState message={fetchError} onRetry={fetchCertificate} />;
-  if (!cert) return <PageErrorState message="Η βεβαίωση δεν βρέθηκε." onRetry={onBack} />;
+  if (loading) return <PageLoadingState message="Φόρτωση βεβαίωσης..." />;
+  if (fetchError) return <PageErrorState title="Σφάλμα" message={fetchError} onRetry={fetchCertificate} />;
+  if (!cert) return <PageErrorState title="Δεν βρέθηκε" message="Η βεβαίωση δεν βρέθηκε." onRetry={onBack} />;
 
   const emailHistory = cert.emailHistory ?? [];
   const totalNetFormatted = formatCurrency(cert.totalNetAmount);

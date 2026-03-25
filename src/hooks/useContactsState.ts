@@ -83,7 +83,7 @@ export function useContactsState() {
 
     setIsLoading(true);
     let unsubContacts: (() => void) | null = null;
-    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let retryTimer: number | null = null;
 
     const setup = async () => {
       try {

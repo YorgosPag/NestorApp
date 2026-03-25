@@ -26,7 +26,12 @@ import {
   withSensitiveRateLimit,
 } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import type { APYCertificate } from '@/subapps/accounting/types';
+import type {
+  APYCertificate,
+  APYCertificateProvider,
+  APYCertificateCustomer,
+  APYCertificateLineItem,
+} from '@/subapps/accounting/types';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
@@ -147,9 +152,9 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         const result = await repository.createAPYCertificate({
           fiscalYear,
           customerId: customerId ?? null,
-          provider,
-          customer,
-          lineItems,
+          provider: provider as unknown as APYCertificateProvider,
+          customer: customer as unknown as APYCertificateCustomer,
+          lineItems: lineItems as unknown as APYCertificateLineItem[],
           totalNetAmount,
           totalWithholdingAmount,
           isReceived: false,

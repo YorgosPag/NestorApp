@@ -466,7 +466,7 @@ export class OrganizationHierarchyService {
       },
       manager: undefined, // Will be set during hierarchy calculation
       directReportCount: 0,
-      tenureMonths: this.calculateTenure(employee.relationship.startDate)
+      tenureMonths: this.calculateTenure(employee.relationship.startDate ?? undefined)
     }));
   }
 
@@ -591,7 +591,7 @@ export class OrganizationHierarchyService {
       );
 
       // Calculate average tenure
-      const tenures = employees.map(emp => this.calculateTenure(emp.relationship.startDate));
+      const tenures = employees.map(emp => this.calculateTenure(emp.relationship.startDate ?? undefined));
       const averageTenure = tenures.length > 0
         ? tenures.reduce((sum, tenure) => sum + tenure, 0) / tenures.length
         : 0;

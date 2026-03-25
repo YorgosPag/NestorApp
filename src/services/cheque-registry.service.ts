@@ -28,6 +28,7 @@ import type {
   ChequeTransitionInput,
   EndorseInput,
   BounceInput,
+  EndorsementEntry,
 } from '@/types/cheque-registry';
 import {
   createDefaultChequeRecord,

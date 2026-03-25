@@ -51,11 +51,17 @@ export function useCommunicationsHistory(contactId?: string) {
     };
 
     const handleUpdated = (payload: CommunicationUpdatedPayload) => {
-      setCommunications(prev => prev.map(comm =>
-        comm.id === payload.communicationId
-          ? { ...comm, ...payload.updates }
-          : comm
-      ));
+      setCommunications(prev => prev.map(comm => {
+        if (comm.id !== payload.communicationId) return comm;
+        // Build type-safe partial update — realtime payload types are narrower than Communication
+        const patch: Partial<Communication> = {};
+        const u = payload.updates;
+        if (u.type !== undefined) patch.type = u.type as Communication['type'];
+        if (u.subject !== undefined) patch.subject = u.subject;
+        if (u.content !== undefined) patch.content = u.content;
+        if (u.contactId != null) patch.contactId = u.contactId;
+        return { ...comm, ...patch };
+      }));
     };
 
     const handleDeleted = (payload: CommunicationDeletedPayload) => {

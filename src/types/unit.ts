@@ -23,6 +23,25 @@ import type {
   GlazingType
 } from '@/constants/unit-features-enterprise';
 
+// Re-export feature types for consumers that import from '@/types/unit'
+export type {
+  OrientationType,
+  ViewTypeValue,
+  ViewQuality,
+  InteriorFeatureCodeType,
+  SecurityFeatureCodeType,
+  AmenityCodeType,
+  EnergyClassType,
+  ConditionType,
+  HeatingType,
+  FuelType,
+  CoolingType,
+  WaterHeatingType,
+  FlooringType,
+  FrameType,
+  GlazingType
+};
+
 // =============================================================================
 // 🏢 OPERATIONAL STATUS (Physical Truth - Construction/Readiness State)
 // =============================================================================

@@ -795,7 +795,7 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
         .collection(COLLECTIONS.ACCOUNTING_APY_CERTIFICATES)
         .doc(certificateId)
         .update({
-          emailHistory: FieldValue.arrayUnion(sanitizeForFirestore(record as Record<string, unknown>)),
+          emailHistory: FieldValue.arrayUnion(sanitizeForFirestore(record as unknown as Record<string, unknown>)),
           updatedAt: isoNow(),
         });
     }, undefined);

@@ -57,9 +57,9 @@ export function PropertyDetails({ property }: PropertyDetailsProps) {
         propertyType: 'apartment' // You might want to add this to the Property type
       };
 
-      const success = await shareProperty(propertyShareData, 'property_details');
+      const shared = await shareProperty(propertyShareData, 'property_details');
 
-      if (success) {
+      if (shared) {
         success(`🎉 ${t('details.shareSuccess')}`);
 
         // Track the share event

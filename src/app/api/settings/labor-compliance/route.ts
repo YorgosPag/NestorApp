@@ -20,7 +20,7 @@ const logger = createModuleLogger('LaborComplianceSettingsRoute');
 
 const baseGET = async (request: NextRequest) => {
   const handler = withAuth(
-    async (_req: NextRequest, _ctx: AuthContext, _cache: PermissionCache) => {
+    async (_req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       const adminDb = getAdminFirestore();
       if (!adminDb) {
         return NextResponse.json({ success: false, error: 'Database unavailable' }, { status: 503 });

@@ -166,5 +166,8 @@ export const RELATIONSHIP_TYPE_PRIORITY_SCORES: Record<RelationshipType, number>
   'customer': 20,
   'competitor': 5,
   'friend': 10,
-  'family': 10
+  'family': 10,
+  'property_buyer': 30,
+  'property_co_buyer': 25,
+  'property_landowner': 35
 };

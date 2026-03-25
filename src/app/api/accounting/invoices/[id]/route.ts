@@ -22,7 +22,7 @@ import { withAuth, logAuditEvent, logFinancialTransition, logEntityDeletion } fr
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import type { MyDataDocumentStatus } from '@/subapps/accounting/types';
+import type { MyDataDocumentStatus, UpdateInvoiceInput } from '@/subapps/accounting/types';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 
@@ -124,7 +124,7 @@ async function handlePatch(
           );
         }
 
-        await repository.updateInvoice(id, body);
+        await repository.updateInvoice(id, body as UpdateInvoiceInput);
 
         await logAuditEvent(ctx, 'data_updated', id, 'invoice', {
           metadata: { reason: 'Invoice fields updated' },

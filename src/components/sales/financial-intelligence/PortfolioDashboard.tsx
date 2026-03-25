@@ -31,6 +31,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import { KPIAlertCard } from './KPIAlertCard';
@@ -214,7 +215,7 @@ export function PortfolioDashboard() {
   if (error) {
     return (
       <section className="p-6 text-center">
-        <p className="text-sm" style={{ color: colors.textMuted }}>{error}</p>
+        <p className={cn('text-sm', colors.text.muted)}>{error}</p>
       </section>
     );
   }

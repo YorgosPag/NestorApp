@@ -21,7 +21,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import type { InvoiceFilters, InvoiceType } from '@/subapps/accounting/types';
+import type { InvoiceFilters, InvoiceType, CreateInvoiceInput } from '@/subapps/accounting/types';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 
@@ -120,7 +120,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         const body = parsed.data;
 
         // Create the invoice
-        const { id, number } = await repository.createInvoice(body);
+        const { id, number } = await repository.createInvoice(body as unknown as CreateInvoiceInput);
 
         // Auto-generate journal entry from the new invoice
         const journalEntry = await service.createJournalEntryFromInvoice(id);

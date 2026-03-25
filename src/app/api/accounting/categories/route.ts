@@ -29,6 +29,7 @@ import {
   withSensitiveRateLimit,
 } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
+import type { CreateCustomCategoryInput } from '@/subapps/accounting/types';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';

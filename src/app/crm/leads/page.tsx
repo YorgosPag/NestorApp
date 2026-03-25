@@ -33,7 +33,7 @@ export default function CrmLeadsPage() {
   // Dashboard stats — computed from opportunities
   const dashboardStats: DashboardStat[] = useMemo(() => {
     const total = opportunities.length;
-    const active = opportunities.filter(o => o.status === 'active' || o.status === 'open').length;
+    const active = opportunities.filter(o => o.status === 'active').length;
     const negotiation = opportunities.filter(o => o.stage === 'negotiation').length;
     const won = opportunities.filter(o => o.stage === 'closed_won').length;
 

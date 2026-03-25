@@ -517,8 +517,11 @@ export class SalesAccountingBridge {
       city: profile.city,
       postalCode: profile.postalCode,
       phone: profile.phone,
+      mobile: profile.mobile ?? null,
       email: profile.email,
+      website: profile.website ?? null,
       profession: profile.profession,
+      bankAccounts: [],
     };
   }
 

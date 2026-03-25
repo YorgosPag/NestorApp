@@ -435,11 +435,17 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     };
 
     const handleUpdated = (payload: FileUpdatedPayload) => {
-      setFiles(prev => prev.map(file =>
-        file.id === payload.fileId
-          ? { ...file, ...payload.updates }
-          : file
-      ));
+      setFiles(prev => prev.map(file => {
+        if (file.id !== payload.fileId) return file;
+        const { status, lifecycleState, ...safeUpdates } = payload.updates;
+        return {
+          ...file,
+          ...safeUpdates,
+          // Narrow string → typed enum — realtime payload uses string but FileRecord requires typed enums
+          ...(status != null && { status: status as FileRecord['status'] }),
+          ...(lifecycleState != null && { lifecycleState: lifecycleState as FileRecord['lifecycleState'] }),
+        };
+      }));
     };
 
     const handleTrashed = (payload: FileTrashedPayload) => {

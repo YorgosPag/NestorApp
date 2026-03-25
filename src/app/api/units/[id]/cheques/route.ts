@@ -20,7 +20,7 @@ import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 
 const CreateChequeSchema = z.object({
-  chequeType: z.enum(['received', 'issued']),
+  chequeType: z.enum(['bank_cheque', 'personal_cheque']),
   chequeNumber: z.string().min(1).max(50),
   amount: z.number().positive().max(999_999_999),
   bankName: z.string().min(1).max(200),

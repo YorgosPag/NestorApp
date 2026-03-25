@@ -22,6 +22,7 @@ import { safeParseBody } from '@/lib/validation/shared-schemas';
 const EndorseSchema = z.object({
   endorserName: z.string().min(1).max(200),
   endorseeName: z.string().min(1).max(200),
+  endorsementDate: z.string().min(10).max(30).optional(),
   endorserTaxId: z.string().max(20).optional(),
   endorseeTaxId: z.string().max(20).optional(),
   notes: z.string().max(2000).optional(),
@@ -43,7 +44,12 @@ async function handlePost(
         if (parsed.error) return parsed.error;
         const body = parsed.data;
 
-        const result = await ChequeRegistryService.endorseCheque(chequeId, body, ctx.uid);
+        const endorseInput = {
+          ...body,
+          endorsementDate: body.endorsementDate ?? new Date().toISOString().split('T')[0],
+        };
+
+        const result = await ChequeRegistryService.endorseCheque(chequeId, endorseInput, ctx.uid);
 
         if (!result.success) {
           return NextResponse.json({ success: false, error: result.error }, { status: 409 });

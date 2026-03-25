@@ -187,16 +187,16 @@ async function handleListConversations(request: NextRequest, ctx: AuthContext): 
     // Extract lastMessage
     const lastMessageData = data.lastMessage as Record<string, unknown> | undefined;
     const lastMessage = lastMessageData ? {
-      content: getString(lastMessageData, 'content'),
+      content: getString(lastMessageData, 'content') ?? '',
       direction: getString(lastMessageData, 'direction', 'inbound') as MessageDirection,
       timestamp: fieldToISO(lastMessageData, 'timestamp'),
     } : null;
 
     // Extract participants
-    const participantsData = getArray<Record<string, unknown>>(data, 'participants');
+    const participantsData = getArray<Record<string, unknown>>(data, 'participants') ?? [];
     const participants = participantsData.map(p => ({
-      displayName: getString(p, 'displayName'),
-      role: getString(p, 'role'),
+      displayName: getString(p, 'displayName') ?? '',
+      role: getString(p, 'role') ?? '',
       isInternal: p.isInternal === true,
     }));
 
@@ -204,11 +204,11 @@ async function handleListConversations(request: NextRequest, ctx: AuthContext): 
       id: doc.id,
       channel: getString(data, 'channel', 'telegram') as CommunicationChannel,
       status: getString(data, 'status', 'active') as ConversationStatus,
-      messageCount: getNumber(data, 'messageCount'),
-      unreadCount: getNumber(data, 'unreadCount'),
+      messageCount: getNumber(data, 'messageCount') ?? 0,
+      unreadCount: getNumber(data, 'unreadCount') ?? 0,
       lastMessage,
       participants,
-      tags: getArray<string>(data, 'tags'),
+      tags: getArray<string>(data, 'tags') ?? [],
       assignedTo: getString(data, 'assignedTo') || null,
       audit: {
         createdAt: getNestedTimestampISO(data, 'audit.createdAt'),

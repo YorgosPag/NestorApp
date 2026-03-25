@@ -496,7 +496,7 @@ export async function claimNextQueueItems(
         return {
           id: doc.id,
           ...data,
-          status: QUEUE_STATUS.PROCESSING as const,
+          status: QUEUE_STATUS.PROCESSING,
           processingStartedAt: now,
         } as EmailIngestionQueueItem;
       });
@@ -589,7 +589,7 @@ export async function claimRetryableItems(
         return {
           id: doc.id,
           ...freshData,
-          status: QUEUE_STATUS.PROCESSING as const,
+          status: QUEUE_STATUS.PROCESSING,
           processingStartedAt: now,
           retryCount: freshData.retryCount + 1,
         } as EmailIngestionQueueItem;

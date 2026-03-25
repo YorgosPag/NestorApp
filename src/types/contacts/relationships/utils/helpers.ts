@@ -70,6 +70,9 @@ export function getRelationshipDisplayLabel(relationship: ContactRelationship): 
     'competitor': 'Ανταγωνιστής',
     'friend': 'Φίλος',
     'family': 'Οικογένεια',
+    'property_buyer': 'Αγοραστής Ακινήτου',
+    'property_co_buyer': 'Συν-αγοραστής Ακινήτου',
+    'property_landowner': 'Οικοπεδούχος',
     'other': 'Άλλο'
   };
 

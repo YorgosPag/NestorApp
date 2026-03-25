@@ -62,7 +62,7 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
     createContract,
     transitionStatus,
     overrideProfessional,
-  } = useLegalContracts(unit.id, unit.projectId ?? unit.project);
+  } = useLegalContracts(unit.id, unit.project);
 
   // Self-contained: load associations directly (page.tsx does NOT pass them)
   const { links, addLink, removeLink } = useEntityContactLinks('unit', unit.id);
@@ -86,7 +86,7 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
       toast.error(t('sales.errors.noBuilding', { defaultValue: 'Η μονάδα δεν είναι συνδεδεμένη με κτίριο' }));
       return;
     }
-    const resolvedProjectId = unit.projectId ?? unit.project;
+    const resolvedProjectId = unit.project;
     if (!resolvedProjectId) {
       toast.error(t('sales.errors.noProject', { defaultValue: 'Η μονάδα δεν ανήκει σε έργο' }));
       return;

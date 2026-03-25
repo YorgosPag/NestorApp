@@ -46,7 +46,7 @@ AI Agent (system prompt with schema map)
 | Tool Executor | `src/services/ai-pipeline/tools/agentic-tool-executor.ts` | Strategy Pattern dispatcher (~160 lines) |
 | Shared Infrastructure | `src/services/ai-pipeline/tools/executor-shared.ts` | Types, constants, RBAC, security, utilities |
 | Firestore Handler | `src/services/ai-pipeline/tools/handlers/firestore-handler.ts` | query, get_document, count, write, search_text |
-| Contact Handler | `src/services/ai-pipeline/tools/handlers/contact-handler.ts` | create_contact, append_contact_info |
+| Contact Handler | `src/services/ai-pipeline/tools/handlers/contact-handler.ts` | create_contact, append_contact_info, update_contact_field, set_contact_esco |
 | Messaging Handler | `src/services/ai-pipeline/tools/handlers/messaging-handler.ts` | send_email, send_telegram, send_social |
 | Customer Handler | `src/services/ai-pipeline/tools/handlers/customer-handler.ts` | complaint, deliver_file, knowledge_base |
 | Utility Handler | `src/services/ai-pipeline/tools/handlers/utility-handler.ts` | get_collection_schema, lookup_doy_code, search_esco_occupations, search_esco_skills |
@@ -131,3 +131,4 @@ ai_chat_history (ADR-156)
 | 2026-03-25 | Feat: Dynamic tab-to-field mapping — AI agent now reads from SSoT section configs (`individual-config`, `company-gemi`, `service-config`) to know which fields belong to which tab. New `ai-tab-mapping.ts`. Covers all entity types (contacts, buildings, projects, units). Removed `'use client'` from `service-config.ts`. |
 | 2026-03-25 | Feat: Server-side tab filtering — `tabFilter` parameter on `firestore_query`, `firestore_get_document`, AND `search_text`. When AI passes `tabFilter: "basicInfo"`, handler strips all fields NOT in that tab BEFORE returning to AI. Replaces unreliable prompt-based filtering. New `contact-tab-filter.ts` + `section-field-utils.ts` (SSoT for field extraction). |
 | 2026-03-25 | Feat: ESCO search tools — `search_esco_occupations` (2,942 occupations) + `search_esco_skills` (13,485 skills). Server-side Firestore search with accent normalization. AI MUST search ESCO before writing profession/skills. Updated `firestore_write` + `update_contact_field` descriptions to enforce ESCO-first workflow. |
+| 2026-03-25 | Feat: `set_contact_esco` tool — Dedicated tool for writing ESCO occupation (profession+escoUri+iscoCode+escoLabel) and skills (escoSkills[] array) to contacts. Fixes: AI tried append_contact_info which only accepts phone/email/social. Full flow: search ESCO → show matches → set_contact_esco with URI+label from results. |

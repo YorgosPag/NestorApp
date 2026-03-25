@@ -57,9 +57,14 @@ async function handlePatch(
         if (parsed.error) return parsed.error;
         const body = parsed.data;
 
+        const updatePayload = {
+          ...body,
+          expectedCloseDate: body.expectedCloseDate ?? undefined,
+        };
+
         const result = await OpportunitiesServerService.update(
           id,
-          body,
+          updatePayload,
           ctx.companyId,
           ctx.uid
         );

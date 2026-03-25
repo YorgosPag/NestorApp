@@ -477,7 +477,10 @@ export function UnifiedContactTabbedSection({
           addresses: () => (
             <AddressesSectionWithFullscreen
               formData={formData}
-              setFormData={setFormData}
+              setFormData={setFormData ? (value) => {
+                const newData = typeof value === 'function' ? value(formData) : value;
+                setFormData(newData);
+              } : undefined}
               disabled={disabled}
             />
           ),
@@ -733,7 +736,7 @@ export function UnifiedContactTabbedSection({
 
           // 🛡️ ENTERPRISE: clientSince — read-only date + sales link (ADR-121 Client Tab Redesign)
           clientSince: () => {
-            const rawValue = (formData as Record<string, unknown>).clientSince as string | null;
+            const rawValue = (formData as unknown as Record<string, unknown>).clientSince as string | null;
             const displayDate = rawValue
               ? new Date(rawValue).toLocaleDateString('el-GR', { year: 'numeric', month: 'long', day: 'numeric' })
               : t('persona.fields.clientSinceEmpty', 'Δεν έχει οριστεί');

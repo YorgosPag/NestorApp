@@ -131,12 +131,18 @@ export interface UseTypographyReturn {
     readonly sm: string;
     /** "text-xs font-semibold" - Small headings */
     readonly xs: string;
+    /** "text-2xl font-semibold" - Semantic H3 alias (from SEMANTIC_TYPOGRAPHY_TOKENS) */
+    readonly h3: string;
+    /** "text-xl font-semibold" - Semantic H4 alias (from SEMANTIC_TYPOGRAPHY_TOKENS) */
+    readonly h4: string;
   };
 
   // 📖 BODY TEXT PATTERNS - Κύριο κείμενο
   readonly body: {
     /** "text-base" - Default body text */
     readonly base: string;
+    /** "text-base" - Medium body text (alias for base) */
+    readonly md: string;
     /** "text-sm" - Smaller body text (πιο συχνό) */
     readonly sm: string;
     /** "text-xs" - Small body text */
@@ -147,6 +153,8 @@ export interface UseTypographyReturn {
   readonly label: {
     /** "text-sm font-medium" - Form labels */
     readonly sm: string;
+    /** "text-base font-medium" - Medium labels */
+    readonly md: string;
     /** "text-xs font-medium" - Small labels */
     readonly xs: string;
     /** "text-xs" - Simple labels */
@@ -229,11 +237,14 @@ export function useTypography(): UseTypographyReturn {
       md: "text-lg font-semibold",          // Custom size (h4.5 - not in tokens yet)
       sm: "text-sm font-semibold",          // "text-sm font-semibold" (caption size + semibold)
       xs: "text-xs font-semibold",          // Extra small (not in tokens yet)
+      h3: SEMANTIC_TYPOGRAPHY_TOKENS.h3.tailwind, // "text-2xl font-semibold" (semantic alias)
+      h4: h4Token.tailwind,                 // "text-xl font-semibold" (semantic alias = lg)
     },
 
     // 📖 BODY TEXT PATTERNS - Using centralized semantic tokens
     body: {
       base: "text-base",                    // "text-base" (from semantic tokens)
+      md: "text-base",                      // Medium body (alias for base)
       sm: "text-sm",                        // "text-sm" (from semantic tokens)
       xs: "text-xs",                        // Extra small (not in tokens yet)
     },
@@ -241,6 +252,7 @@ export function useTypography(): UseTypographyReturn {
     // 🏷️ LABEL PATTERNS - Using centralized approach
     label: {
       sm: "text-sm font-medium",            // "text-sm font-medium" (caption + medium)
+      md: "text-base font-medium",          // Medium labels
       xs: "text-xs font-medium",            // Small labels (not in tokens yet)
       simple: "text-xs",                    // Simple labels χωρίς font-medium
     },

@@ -22,7 +22,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { isoToday, getQuarterFromDate } from '@/subapps/accounting/services/repository/firestore-helpers';
-import type { ExpenseCategory, CreateJournalEntryInput } from '@/subapps/accounting/types';
+import type { AccountCategory, ExpenseCategory, CreateJournalEntryInput } from '@/subapps/accounting/types';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 
@@ -129,7 +129,7 @@ async function handlePatch(
         const journalInput: CreateJournalEntryInput = {
           date: confirmedDate,
           type: 'expense',
-          category: confirmedCategory,
+          category: confirmedCategory as AccountCategory,
           description: `Παραστατικό: ${document.fileName}${confirmedIssuerName ? ` — ${confirmedIssuerName}` : ''}`,
           netAmount: confirmedNetAmount,
           vatRate,
@@ -152,7 +152,7 @@ async function handlePatch(
         // Update document with confirmed data
         await repository.updateExpenseDocument(id, {
           status: 'confirmed',
-          confirmedCategory,
+          confirmedCategory: confirmedCategory as ExpenseCategory,
           confirmedNetAmount,
           confirmedVatAmount,
           confirmedDate,

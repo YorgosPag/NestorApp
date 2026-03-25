@@ -141,7 +141,7 @@ export class FirestoreRelationshipAdapter {
         relationshipId,
         updates: {
           type: updates.relationshipType,
-          notes: updates.notes,
+          notes: updates.notes ?? undefined,
         },
         timestamp: Date.now(),
       });

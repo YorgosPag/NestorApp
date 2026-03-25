@@ -61,6 +61,7 @@ function createDefaultData(): CompanySetupInput {
     city: '',
     postalCode: '',
     phone: null,
+    mobile: null,
     email: null,
     website: null,
     mainKad: defaultKad,

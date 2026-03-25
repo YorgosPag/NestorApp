@@ -70,7 +70,7 @@ export interface ProjectHierarchy {
 }
 
 export interface ProjectHierarchyActions {
-  loadCompanies: () => Promise<void>;
+  loadCompanies: (forceRefresh?: boolean) => Promise<void>;
   selectCompany: (companyId: string) => void;
   loadProjects: () => Promise<void>;
   loadProjectsForCompany: (companyId: string) => Promise<void>;

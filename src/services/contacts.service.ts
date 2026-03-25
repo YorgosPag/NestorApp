@@ -447,7 +447,7 @@ export class ContactsService {
 
       // 🗑️ ENTERPRISE: Cleanup removed photos from Firebase Storage
       // Compare old vs new multiplePhotoURLs to find deleted URLs
-      const oldURLs = (existingContact as Record<string, unknown>).multiplePhotoURLs;
+      const oldURLs = (existingContact as unknown as Record<string, unknown>).multiplePhotoURLs;
       const newURLs = enterpriseData.multiplePhotoURLs;
       if (Array.isArray(oldURLs) && oldURLs.length > 0) {
         const newURLSet = new Set(Array.isArray(newURLs) ? newURLs : []);

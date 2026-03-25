@@ -27,6 +27,7 @@ import type {
   AccountCategory,
   FiscalQuarter,
   PaymentMethod,
+  CreateJournalEntryInput,
 } from '@/subapps/accounting/types';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
@@ -129,7 +130,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         if (parsed.error) return parsed.error;
         const body = parsed.data;
 
-        const { id } = await repository.createJournalEntry(body);
+        const { id } = await repository.createJournalEntry(body as unknown as CreateJournalEntryInput);
 
         return NextResponse.json(
           { success: true, data: { entryId: id } },

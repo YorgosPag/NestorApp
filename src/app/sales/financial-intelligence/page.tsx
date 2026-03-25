@@ -14,6 +14,7 @@ import { BarChart3 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { cn } from '@/lib/utils';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import { PortfolioDashboard } from '@/components/sales/financial-intelligence/PortfolioDashboard';
 
@@ -28,12 +29,10 @@ export default function FinancialIntelligencePage() {
 
       <header className="flex items-center gap-3">
         <BarChart3
-          className="h-7 w-7"
-          style={{ color: colors.textPrimary }}
+          className={cn('h-7 w-7', colors.text.primary)}
         />
         <h1
-          className="text-2xl font-bold"
-          style={{ color: colors.textPrimary, ...quick }}
+          className={cn('text-2xl font-bold', colors.text.primary, quick)}
         >
           {t('portfolio.pageTitle')}
         </h1>

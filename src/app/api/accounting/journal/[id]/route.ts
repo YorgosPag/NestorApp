@@ -22,6 +22,7 @@ import { withAuth, logAuditEvent, logEntityDeletion } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
+import type { UpdateJournalEntryInput } from '@/subapps/accounting/types';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 
@@ -115,7 +116,7 @@ async function handlePatch(
           );
         }
 
-        await repository.updateJournalEntry(id, body);
+        await repository.updateJournalEntry(id, body as UpdateJournalEntryInput);
 
         await logAuditEvent(ctx, 'data_updated', id, 'journal_entry', {
           metadata: { reason: 'Journal entry updated' },

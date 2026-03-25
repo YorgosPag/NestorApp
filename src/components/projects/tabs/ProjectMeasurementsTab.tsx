@@ -238,8 +238,8 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
         </p>
         <p className="text-xs text-muted-foreground mt-1">
           {buildings.length === 1
-            ? t('measurements.buildingsInProject', { count: String(buildings.length) })
-            : t('measurements.buildingsInProjectPlural', { count: String(buildings.length) })}
+            ? t('measurements.buildingsInProject', { count: buildings.length })
+            : t('measurements.buildingsInProjectPlural', { count: buildings.length })}
         </p>
       </section>
     );
@@ -354,8 +354,8 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
                     {building.name}
                     <Badge variant="secondary" className="ml-1">
                       {items.length === 1
-                        ? t('measurements.worksCount', { count: String(items.length) })
-                        : t('measurements.worksCountPlural', { count: String(items.length) })}
+                        ? t('measurements.worksCount', { count: items.length })
+                        : t('measurements.worksCountPlural', { count: items.length })}
                     </Badge>
                   </CardTitle>
 

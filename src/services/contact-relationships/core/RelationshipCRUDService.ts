@@ -453,6 +453,9 @@ export class RelationshipCRUDService {
       'competitor': null,     // Symmetric — visible from both sides
       'friend': null,         // Symmetric — visible from both sides
       'family': null,         // Symmetric — visible from both sides
+      'property_buyer': null,
+      'property_co_buyer': null,
+      'property_landowner': null,
       'other': null
     };
 

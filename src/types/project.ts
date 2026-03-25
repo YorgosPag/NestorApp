@@ -72,6 +72,10 @@ export interface Project {
   buildingBlock?: string;
   protocolNumber?: string;
   licenseNumber?: string;
+  /** Αρχή έκδοσης αδείας */
+  issuingAuthority?: string;
+  /** Ημερομηνία έκδοσης αδείας (ISO string) */
+  issueDate?: string;
 
   // 🏢 ENTERPRISE: Boolean feature flags for filtering
   /** Has all required permits */

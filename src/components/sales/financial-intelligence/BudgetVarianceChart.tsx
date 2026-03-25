@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type {
   BudgetVarianceAnalysis,
@@ -260,7 +261,7 @@ export function BudgetVarianceChart({
     <Card>
       <CardContent className="pt-6">
         <header className="flex items-center justify-between mb-4 flex-wrap gap-3">
-          <h3 className="text-lg font-semibold" style={{ color: colors.textPrimary }}>
+          <h3 className={cn('text-lg font-semibold', colors.text.primary)}>
             {t('variance.title')}
           </h3>
 
@@ -293,10 +294,10 @@ export function BudgetVarianceChart({
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                 <YAxis tickFormatter={euroFormatter} width={100} />
                 <RechartsTooltip
-                  formatter={(value: number, _name: string, props: { payload: WaterfallPoint }) => {
-                    const item = props.payload;
+                  formatter={(value, _name, item) => {
+                    const point = item.payload as WaterfallPoint;
                     return [
-                      `Variance: ${euroFormatter(value)} | Budget: ${euroFormatter(item.budget)} | Actual: ${euroFormatter(item.actual)}`,
+                      `Variance: ${euroFormatter(Number(value))} | Budget: ${euroFormatter(point.budget)} | Actual: ${euroFormatter(point.actual)}`,
                       '',
                     ];
                   }}
@@ -316,15 +317,15 @@ export function BudgetVarianceChart({
         {analysis && (
           <section className="flex gap-6 mb-6 text-sm flex-wrap">
             <dl className="flex gap-2">
-              <dt style={{ color: colors.textMuted }}>{t('variance.totalBudget')}:</dt>
+              <dt className={colors.text.muted}>{t('variance.totalBudget')}:</dt>
               <dd className="font-medium">{euroFormatter(analysis.totalBudget)}</dd>
             </dl>
             <dl className="flex gap-2">
-              <dt style={{ color: colors.textMuted }}>{t('variance.totalActual')}:</dt>
+              <dt className={colors.text.muted}>{t('variance.totalActual')}:</dt>
               <dd className="font-medium">{euroFormatter(analysis.totalActual)}</dd>
             </dl>
             <dl className="flex gap-2">
-              <dt style={{ color: colors.textMuted }}>{t('variance.totalVariance')}:</dt>
+              <dt className={colors.text.muted}>{t('variance.totalVariance')}:</dt>
               <dd className="font-medium" style={{ color: analysis.totalVariance > 0 ? '#ef4444' : '#10b981' }}>
                 {analysis.totalVariance > 0 ? '+' : ''}{euroFormatter(analysis.totalVariance)} ({analysis.totalVariancePercent}%)
               </dd>
@@ -349,7 +350,7 @@ export function BudgetVarianceChart({
         )}
 
         {!selectedProjectId && (
-          <p className="text-center py-4 text-sm" style={{ color: colors.textMuted }}>
+          <p className={cn('text-center py-4 text-sm', colors.text.muted)}>
             {t('variance.selectProjectPrompt')}
           </p>
         )}

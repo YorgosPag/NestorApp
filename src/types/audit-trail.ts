@@ -17,7 +17,9 @@ export type AuditEntityType =
   | 'contact'
   | 'building'
   | 'unit'
+  | 'floor'
   | 'project'
+  | 'company'
   | 'parking'
   | 'storage';
 

@@ -191,7 +191,7 @@ export function HierarchicalDestinationSelector({
       <section className={`${PANEL_LAYOUT.TEXT_ALIGN.CENTER} ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL}`}>
         <p className={`${colors.text.error} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>Σφάλμα: {error}</p>
         <button
-          onClick={loadCompanies}
+          onClick={() => loadCompanies()}
           className={`${PANEL_LAYOUT.SPACING.COMFORTABLE} ${colors.bg.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.LG}`}
         >
           Ξαναδοκιμή

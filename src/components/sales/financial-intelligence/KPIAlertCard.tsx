@@ -11,6 +11,7 @@ import type { LucideIcon } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { HealthStatus } from '@/types/interest-calculator';
 
@@ -77,8 +78,7 @@ export function KPIAlertCard({ title, value, format, status, icon: Icon, subtitl
         <article>
           <header className="flex items-center justify-between mb-3">
             <Icon
-              className="h-5 w-5"
-              style={{ color: colors.textMuted }}
+              className={cn('h-5 w-5', colors.text.muted)}
             />
             <Badge variant={STATUS_BADGE_VARIANT[status]}>
               {STATUS_LABEL[status]}
@@ -86,17 +86,16 @@ export function KPIAlertCard({ title, value, format, status, icon: Icon, subtitl
           </header>
           <dl>
             <dt
-              className="text-sm font-medium mb-1"
-              style={{ color: colors.textMuted }}
+              className={cn('text-sm font-medium mb-1', colors.text.muted)}
             >
               {title}
             </dt>
-            <dd className="text-2xl font-bold" style={{ color: colors.textPrimary }}>
+            <dd className={cn('text-2xl font-bold', colors.text.primary)}>
               {formatValue(value, format)}
             </dd>
           </dl>
           {subtitle && (
-            <p className="text-xs mt-2" style={{ color: colors.textMuted }}>
+            <p className={cn('text-xs mt-2', colors.text.muted)}>
               {subtitle}
             </p>
           )}

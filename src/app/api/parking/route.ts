@@ -55,7 +55,7 @@ const CreateParkingSchema = z.object({
   projectId: z.string().max(128).optional(),
   type: z.string().max(50).optional(),
   status: z.string().max(50).optional(),
-  locationZone: z.string().max(100).optional(),
+  locationZone: z.enum(['pilotis', 'underground', 'open_space', 'rooftop', 'covered_outdoor']).optional(),
   floor: z.string().max(50).optional(),
   location: z.string().max(200).optional(),
   area: z.number().min(0).max(999_999).optional(),

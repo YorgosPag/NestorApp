@@ -106,6 +106,7 @@ async function handlePut(request: NextRequest): Promise<NextResponse> {
           city: body.city!.trim(),
           postalCode: body.postalCode!.trim(),
           phone: body.phone?.trim() ?? null,
+          mobile: (body as Record<string, unknown>).mobile as string | null ?? null,
           email: body.email?.trim() ?? null,
           website: (body as Record<string, unknown>).website as string | null ?? null,
           mainKad: body.mainKad!,

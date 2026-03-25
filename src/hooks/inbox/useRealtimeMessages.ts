@@ -65,14 +65,14 @@ function docToMessage(data: DocumentData & { id: string }): MessageListItem {
 
   return {
     id: data.id,
-    conversationId: getString(record, 'conversationId'),
+    conversationId: getString(record, 'conversationId') ?? '',
     direction: getString(record, 'direction') as MessageDirection,
     channel: getString(record, 'channel', 'telegram') as CommunicationChannel,
-    senderId: getString(record, 'senderId'),
-    senderName: getString(record, 'senderName'),
+    senderId: getString(record, 'senderId') ?? '',
+    senderName: getString(record, 'senderName') ?? '',
     senderType: getString(record, 'senderType', 'customer') as SenderType,
     content: getObject(record, 'content', { text: '' }),
-    providerMessageId: getString(record, 'providerMessageId'),
+    providerMessageId: getString(record, 'providerMessageId') ?? '',
     deliveryStatus: getString(record, 'deliveryStatus', 'sent') as DeliveryStatus,
     providerMetadata: getObject(record, 'providerMetadata', {}),
     createdAt: fieldToISO(record, 'createdAt'),

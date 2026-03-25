@@ -212,17 +212,17 @@ async function handleListMessages(request: NextRequest, ctx: AuthContext, conver
 
     return {
       id: doc.id,
-      conversationId: getString(data, 'conversationId'),
+      conversationId: getString(data, 'conversationId') ?? conversationId,
       direction: getString(data, 'direction', 'inbound') as MessageDirection,
       channel: getString(data, 'channel', 'telegram') as CommunicationChannel,
-      senderId: getString(data, 'senderId'),
-      senderName: getString(data, 'senderName'),
+      senderId: getString(data, 'senderId') ?? '',
+      senderName: getString(data, 'senderName') ?? '',
       senderType: getString(data, 'senderType', 'customer') as SenderType,
       content: {
-        text: getString(content, 'text'),
+        text: getString(content, 'text') ?? '',
         attachments: content.attachments as MessageListItem['content']['attachments'],
       },
-      providerMessageId: getString(data, 'providerMessageId'),
+      providerMessageId: getString(data, 'providerMessageId') ?? '',
       deliveryStatus: getString(data, 'deliveryStatus', 'sent') as DeliveryStatus,
       providerMetadata: {
         platform: getString(providerMetadata, 'platform'),

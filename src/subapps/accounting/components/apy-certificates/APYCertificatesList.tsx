@@ -76,8 +76,8 @@ export function APYCertificatesList({ onSelectCertificate }: APYCertificatesList
     onSelectCertificate(certificateId);
   };
 
-  if (loading) return <PageLoadingState />;
-  if (error) return <PageErrorState message={error} onRetry={refetch} />;
+  if (loading) return <PageLoadingState message="Φόρτωση βεβαιώσεων..." />;
+  if (error) return <PageErrorState title="Σφάλμα" message={error} onRetry={refetch} />;
 
   return (
     <section>

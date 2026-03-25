@@ -18,6 +18,7 @@ import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
+import type { CreatePaymentInput } from '@/types/payment-plan';
 import { getErrorMessage } from '@/lib/error-utils';
 import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
@@ -26,7 +27,7 @@ const CreatePaymentSchema = z.object({
   paymentPlanId: z.string().min(1).max(128),
   installmentIndex: z.number().int().min(0),
   amount: z.number().positive().max(999_999_999),
-  method: z.enum(['cash', 'bank_transfer', 'cheque', 'card', 'offset']),
+  method: z.enum(['bank_transfer', 'bank_cheque', 'personal_cheque', 'bank_loan', 'cash', 'promissory_note', 'offset']),
   paymentDate: z.string().min(10).max(30),
   methodDetails: z.record(z.unknown()),
   notes: z.string().max(2000).optional(),
@@ -80,7 +81,12 @@ async function handlePost(
         if (parsed.error) return parsed.error;
         const body = parsed.data;
 
-        const result = await PaymentPlanService.recordPayment(unitId, body, ctx.uid);
+        const paymentInput: CreatePaymentInput = {
+          ...body,
+          methodDetails: body.methodDetails as unknown as CreatePaymentInput['methodDetails'],
+        };
+
+        const result = await PaymentPlanService.recordPayment(unitId, paymentInput, ctx.uid);
 
         if (!result.success) {
           return NextResponse.json({ success: false, error: result.error }, { status: 409 });

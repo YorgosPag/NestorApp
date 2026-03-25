@@ -37,7 +37,7 @@ import type { ProjectAddress } from '@/types/project/addresses';
 import type { LandownerEntry } from '@/types/ownership-table';
 import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
 import { generateProjectId, generateNavigationId } from '@/services/enterprise-id.service';
-import { projectCodeService } from '@/services/project-code.service';
+import { projectCodeService, type FirestoreDatabase } from '@/services/project-code.service';
 import { isRoleBypass } from '@/lib/auth/roles';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -311,7 +311,8 @@ export const POST = withHighRateLimit(
         // 🏗️ ADR-210: Enterprise ID + sequential projectCode (PRJ-001, PRJ-002, ...)
         const projectId = generateProjectId();
         const adminDb = getAdminFirestore();
-        const { code: projectCode } = await projectCodeService.generateNextCode(adminDb);
+        // Admin SDK Firestore is structurally compatible with FirestoreDatabase at runtime
+        const { code: projectCode } = await projectCodeService.generateNextCode(adminDb as unknown as FirestoreDatabase);
 
         await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).set({
           ...cleanData,

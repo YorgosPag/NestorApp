@@ -61,7 +61,7 @@ export function HierarchyDebugPanel() {
         <BaseButton
           variant="primary"
           size="sm"
-          onClick={loadCompanies}
+          onClick={() => loadCompanies()}
           className={PANEL_LAYOUT.MARGIN.TOP_SM}
         >
           {t('panels.hierarchy.retry')}

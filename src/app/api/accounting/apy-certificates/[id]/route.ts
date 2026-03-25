@@ -111,7 +111,7 @@ async function handlePatch(
           metadata: { reason: 'APY certificate updated' },
         }).catch(() => {/* non-blocking */});
 
-        logger.info('APY certificate updated', { id, updates: Object.keys(allowedUpdates) });
+        logger.info('APY certificate updated', { id, updates: Object.keys(body) });
 
         return NextResponse.json({ success: true });
       } catch (error) {
