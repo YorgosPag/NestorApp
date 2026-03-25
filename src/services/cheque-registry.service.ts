@@ -22,7 +22,6 @@ import { generateChequeId, generatePaymentRecordId } from '@/services/enterprise
 import type { PaymentRecord } from '@/types/payment-plan';
 import type {
   ChequeRecord,
-  ChequeStatus,
   CreateChequeInput,
   UpdateChequeInput,
   ChequeTransitionInput,

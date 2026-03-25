@@ -26,8 +26,7 @@ import { UnifiedDashboard } from '@/components/property-management/dashboard/Uni
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { AccountingPageHeader } from '../shared/AccountingPageHeader';
 import { useCompanySetup } from '../../hooks/useCompanySetup';
-import type { CompanySetupInput, KadEntry, EntityType, Partner, Member, Shareholder } from '../../types';
-import { isSoleProprietor, isPartnership, isLlc, isCorporation } from '../../utils/entity-guards';
+import type { CompanySetupInput, KadEntry, EntityType, Member, Shareholder } from '../../types';
 import { BasicInfoSection } from './BasicInfoSection';
 import { FiscalInfoSection } from './FiscalInfoSection';
 import { KadSection } from './KadSection';
@@ -135,7 +134,7 @@ export function SetupPageContent() {
 
   const handleEntityTypeChange = useCallback((newType: EntityType) => {
     setFormData((prev) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+       
       const { entityType: _e, efkaCategory: _ef, gemiNumber: _g, partners: _p, members: _m, shareholders: _sh, shareCapital: _sc, ...common } =
         prev as Record<string, unknown>;
 

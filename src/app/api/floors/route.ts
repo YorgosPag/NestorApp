@@ -15,7 +15,7 @@
 
 import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
