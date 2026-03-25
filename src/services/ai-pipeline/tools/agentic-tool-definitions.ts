@@ -58,6 +58,10 @@ export type ContactUpdatableField = typeof CONTACT_UPDATABLE_FIELDS[number];
 export const FILE_SOURCE_TYPES = ['unit_photo', 'file', 'floorplan'] as const;
 export type FileSourceType = typeof FILE_SOURCE_TYPES[number];
 
+/** Bank account operations (SSoT — used in tool def enum + handler validation) */
+export const BANK_ACCOUNT_OPERATIONS = ['add', 'list', 'delete', 'set_primary'] as const;
+export type BankAccountOperation = typeof BANK_ACCOUNT_OPERATIONS[number];
+
 /** Contact types for create_contact tool (SSoT — used in tool def enum + executor validation) */
 export const CONTACT_TYPES = ['individual', 'company'] as const;
 export type ContactTypeEnum = typeof CONTACT_TYPES[number];
@@ -742,6 +746,76 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
           },
         },
         required: ['query'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+  // ── 19. manage_bank_account: CRUD bank accounts for contacts ──
+  {
+    type: 'function',
+    function: {
+      name: 'manage_bank_account',
+      description: [
+        'Manage bank accounts for a contact (subcollection). Admin only.',
+        'Operations: add (new IBAN), list (show all active), delete (soft-delete), set_primary (mark as primary).',
+        'For "add": provide contactId + iban. bankName is auto-detected for Greek IBANs.',
+        'For "list": provide contactId only.',
+        'For "delete" / "set_primary": provide contactId + accountId.',
+        'IBAN is validated server-side (ISO 13616 MOD 97). Greek bank auto-detected from IBAN prefix.',
+        'IMPORTANT: First search for the contact by name using search_text to get the contactId.',
+      ].join(' '),
+      parameters: {
+        type: 'object',
+        properties: {
+          operation: {
+            type: 'string',
+            description: 'Operation to perform',
+            enum: [...BANK_ACCOUNT_OPERATIONS],
+          },
+          contactId: {
+            type: 'string',
+            description: 'Contact document ID (e.g. cont_xxx). Required for ALL operations.',
+          },
+          accountId: {
+            type: ['string', 'null'],
+            description: 'Bank account ID (e.g. bacc_xxx). Required for delete and set_primary.',
+          },
+          iban: {
+            type: ['string', 'null'],
+            description: 'IBAN (e.g. GR1601101250000000012300695). Required for add.',
+          },
+          bankName: {
+            type: ['string', 'null'],
+            description: 'Bank name override. Auto-detected for Greek IBANs. Provide for non-Greek.',
+          },
+          accountType: {
+            type: ['string', 'null'],
+            description: 'Account type. Default: checking.',
+            enum: ['checking', 'savings', 'business', 'other', null],
+          },
+          currency: {
+            type: ['string', 'null'],
+            description: 'Currency code. Default: EUR.',
+            enum: ['EUR', 'USD', 'GBP', 'CHF', null],
+          },
+          holderName: {
+            type: ['string', 'null'],
+            description: 'Account holder name (if different from contact).',
+          },
+          notes: {
+            type: ['string', 'null'],
+            description: 'Optional notes.',
+          },
+          isPrimary: {
+            type: ['boolean', 'null'],
+            description: 'Set as primary account. Default false.',
+          },
+        },
+        required: [
+          'operation', 'contactId', 'accountId', 'iban', 'bankName',
+          'accountType', 'currency', 'holderName', 'notes', 'isPrimary',
+        ],
         additionalProperties: false,
       },
       strict: true,

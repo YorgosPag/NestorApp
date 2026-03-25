@@ -46,6 +46,7 @@ import { MessagingHandler } from './handlers/messaging-handler';
 import { CustomerHandler } from './handlers/customer-handler';
 import { KnowledgeBaseHandler } from './handlers/knowledge-base-handler';
 import { UtilityHandler } from './handlers/utility-handler';
+import { BankingHandler } from './handlers/banking-handler';
 
 // ============================================================================
 // EXECUTOR CLASS — Strategy Pattern Dispatcher
@@ -62,6 +63,7 @@ export class AgenticToolExecutor {
       new CustomerHandler(),
       new KnowledgeBaseHandler(),
       new UtilityHandler(),
+      new BankingHandler(),
     ];
 
     for (const handler of handlers) {
