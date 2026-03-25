@@ -262,33 +262,21 @@ describe('PipelineOrchestrator', () => {
         adminCommandMeta: { isAdminCommand: false } as PipelineContext['adminCommandMeta'],
       });
 
-      // Setup for non-admin path (understanding step)
       const understanding = createUnderstanding();
       (mapAIResultToUnderstanding as jest.Mock).mockReturnValue(understanding);
 
-      const routedResult = {
-        primaryRoute: { routed: true, moduleId: 'UC-001', autoApprove: true, needsManualReview: false, confidence: 90 },
-        secondaryRoutes: [],
-        allModules: [mockModule],
-        needsManualReview: false,
-        allAutoApprovable: true,
-        allRoutes: [{ routed: true, moduleId: 'UC-001', module: mockModule }],
-      };
-      jest.spyOn(orchestrator as never, 'router' as never);
-      // We need to mock the IntentRouter.routeMultiple since it's created internally
-      // Instead, let's check that executeAgenticPath is NOT called
-      (stepApproveMulti as jest.Mock).mockImplementation((ctx: PipelineContext) => {
-        ctx.state = PipelineState.APPROVED;
-        return ctx;
+      (stepApproveMulti as jest.Mock).mockImplementation((c: PipelineContext) => {
+        c.state = PipelineState.APPROVED;
+        return c;
       });
-      (stepMultiExecute as jest.Mock).mockImplementation((ctx: PipelineContext) => {
-        ctx.executionResult = { success: true, sideEffects: [] };
-        return ctx;
+      (stepMultiExecute as jest.Mock).mockImplementation((c: PipelineContext) => {
+        c.state = PipelineState.EXECUTED;
+        c.executionResult = { success: true, sideEffects: [] };
+        return c;
       });
 
       await orchestrator.execute(ctx);
 
-      // Admin agentic path should not be triggered by isAdminCommand: false
       expect(executeAgenticPath).not.toHaveBeenCalled();
       expect(aiProvider.analyze).toHaveBeenCalled();
     });
@@ -341,9 +329,10 @@ describe('PipelineOrchestrator', () => {
         ctx.state = PipelineState.APPROVED;
         return ctx;
       });
-      (stepMultiExecute as jest.Mock).mockImplementation((ctx: PipelineContext) => {
-        ctx.executionResult = { success: true, sideEffects: [] };
-        return ctx;
+      (stepMultiExecute as jest.Mock).mockImplementation((c: PipelineContext) => {
+        c.state = PipelineState.EXECUTED;
+        c.executionResult = { success: true, sideEffects: [] };
+        return c;
       });
 
       await orchestrator.execute(ctx);
@@ -363,9 +352,10 @@ describe('PipelineOrchestrator', () => {
         ctx.state = PipelineState.APPROVED;
         return ctx;
       });
-      (stepMultiExecute as jest.Mock).mockImplementation((ctx: PipelineContext) => {
-        ctx.executionResult = { success: true, sideEffects: [] };
-        return ctx;
+      (stepMultiExecute as jest.Mock).mockImplementation((c: PipelineContext) => {
+        c.state = PipelineState.EXECUTED;
+        c.executionResult = { success: true, sideEffects: [] };
+        return c;
       });
 
       await orchestrator.execute(ctx);
@@ -387,9 +377,10 @@ describe('PipelineOrchestrator', () => {
         ctx.state = PipelineState.APPROVED;
         return ctx;
       });
-      (stepMultiExecute as jest.Mock).mockImplementation((ctx: PipelineContext) => {
-        ctx.executionResult = { success: true, sideEffects: [] };
-        return ctx;
+      (stepMultiExecute as jest.Mock).mockImplementation((c: PipelineContext) => {
+        c.state = PipelineState.EXECUTED;
+        c.executionResult = { success: true, sideEffects: [] };
+        return c;
       });
 
       const result = await orchestrator.execute(ctx);
@@ -429,9 +420,10 @@ describe('PipelineOrchestrator', () => {
         ctx.state = PipelineState.APPROVED;
         return ctx;
       });
-      (stepMultiExecute as jest.Mock).mockImplementation((ctx: PipelineContext) => {
-        ctx.executionResult = { success: true, sideEffects: [] };
-        return ctx;
+      (stepMultiExecute as jest.Mock).mockImplementation((c: PipelineContext) => {
+        c.state = PipelineState.EXECUTED;
+        c.executionResult = { success: true, sideEffects: [] };
+        return c;
       });
 
       const result = await orchestrator.execute(ctx);
@@ -546,9 +538,10 @@ describe('PipelineOrchestrator', () => {
         ctx.state = PipelineState.APPROVED;
         return ctx;
       });
-      (stepMultiExecute as jest.Mock).mockImplementation((ctx: PipelineContext) => {
-        ctx.executionResult = { success: true, sideEffects: [] };
-        return ctx;
+      (stepMultiExecute as jest.Mock).mockImplementation((c: PipelineContext) => {
+        c.state = PipelineState.EXECUTED;
+        c.executionResult = { success: true, sideEffects: [] };
+        return c;
       });
 
       const result = await orchestrator.execute(ctx);
@@ -641,9 +634,10 @@ describe('PipelineOrchestrator', () => {
         ctx.state = PipelineState.APPROVED;
         return ctx;
       });
-      (stepMultiExecute as jest.Mock).mockImplementation((ctx: PipelineContext) => {
-        ctx.executionResult = { success: true, sideEffects: [] };
-        return ctx;
+      (stepMultiExecute as jest.Mock).mockImplementation((c: PipelineContext) => {
+        c.state = PipelineState.EXECUTED;
+        c.executionResult = { success: true, sideEffects: [] };
+        return c;
       });
 
       // Module acknowledge throws
@@ -755,9 +749,10 @@ describe('PipelineOrchestrator', () => {
         },
       });
 
-      (stepMultiExecute as jest.Mock).mockImplementation((ctx: PipelineContext) => {
-        ctx.executionResult = { success: true, sideEffects: [] };
-        return ctx;
+      (stepMultiExecute as jest.Mock).mockImplementation((c: PipelineContext) => {
+        c.state = PipelineState.EXECUTED;
+        c.executionResult = { success: true, sideEffects: [] };
+        return c;
       });
 
       const result = await orchestrator.resumeFromApproval(ctx);
