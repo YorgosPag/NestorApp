@@ -57,6 +57,15 @@ SOS. SOS. N.7 ΑΔΙΑΠΡΑΓΜΑΤΕΥΤΟ — GOOGLE-LEVEL QUALITY:
 - Optimistic updates, proper state management, zero race conditions
 - Αν η πρώτη λύση δεν είναι Google-level → μην την κάνεις commit, ξαναγράψε τη σωστά
 - Παραδείγματα: Google Docs auto-save, Gmail instant actions, Google Contacts patterns
+
+SOS. SOS. N.7.1 ΑΔΙΑΠΡΑΓΜΑΤΕΥΤΟ — GOOGLE FILE SIZE STANDARDS:
+- **Αρχεία κώδικα** (handler, service, utility, component): **ΜΕΓΙΣΤΟ 500 γραμμές**
+- **Functions**: **ΜΕΓΙΣΤΟ 40 γραμμές** — αν ξεπερνάει, extract helper
+- **Config / Types / Data files**: Χωρίς όριο (δεν περιέχουν λογική)
+- Αν ένα αρχείο ξεπεράσει τις 500 γραμμές → **ΥΠΟΧΡΕΩΤΙΚΟ split** πριν commit
+- Ο pre-commit hook **ΜΠΛΟΚΑΡΕΙ** commit αν staged αρχείο κώδικα >500 γραμμές
+- **ΕΞΑΙΡΕΣΕΙΣ** (δεν ελέγχονται): `*.config.*`, `types/`, `config/`, `data/`, `*.d.ts`, `*.test.*`, `*.spec.*`
+- **ΓΙΑΤΙ**: Google SRP — κάθε αρχείο = 1 ευθύνη. >500 γραμμές = code smell, >1000 = bug
 ## 🚨🚨🚨 SOS. SOS. N.8 — ΑΔΙΑΠΡΑΓΜΑΤΕΥΤΟ: ΑΞΙΟΛΟΓΗΣΗ ΤΡΟΠΟΥ ΕΚΤΕΛΕΣΗΣ (ADR-261)
 
 **ΠΡΩΤΟ ΒΗΜΑ ΚΑΘΕ ΕΡΓΑΣΙΑΣ — ΠΡΙΝ ΓΡΑΨΕΙΣ ΜΙΑ ΓΡΑΜΜΗ ΚΩΔΙΚΑ:**
