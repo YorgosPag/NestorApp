@@ -607,7 +607,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
         'CRITICAL: ALWAYS call search_esco_occupations/search_esco_skills FIRST to get the correct URI, label, and ISCO code.',
         'CRITICAL: If ESCO search returns MORE THAN 1 result, you MUST show the matches to the user and ASK which one they want. Do NOT auto-select.',
         'For occupation: pass profession (label), escoUri, escoLabel, iscoCode from search results.',
-        'For skills: pass skills array with uri+label from search results. Pass null to skip skills update (do NOT pass empty array).',
+        'For skills: pass skills array with uri+label from search results. New skills are MERGED with existing (not replaced). Pass null to skip skills update (do NOT pass empty array).',
         'Can set occupation only, skills only, or both in one call.',
         'For free-text (not in ESCO): pass empty string for uri/escoUri/iscoCode.',
       ].join(' '),
@@ -636,7 +636,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
           },
           skills: {
             type: ['array', 'null'],
-            description: 'Array of skills to SET (replaces all existing). Each item: {uri: string, label: string}. Null to skip skills update.',
+            description: 'Array of skills to ADD (merged with existing, deduplicated by URI). Each item: {uri: string, label: string}. Null to skip skills update.',
             items: {
               type: 'object',
               properties: {

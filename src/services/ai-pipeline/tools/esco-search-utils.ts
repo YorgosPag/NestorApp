@@ -149,3 +149,55 @@ export async function searchEscoSkills(
     .sort((a, b) => b.score - a.score || a.labelEl.localeCompare(b.labelEl))
     .slice(0, limit);
 }
+
+// ============================================================================
+// ENFORCEMENT HELPERS
+// ============================================================================
+
+export interface EscoEnforcementResult {
+  allowed: boolean;
+  matches?: Array<{ labelEl: string; labelEn: string; iscoCode?: string; uri: string }>;
+}
+
+/**
+ * Server-side ESCO occupation enforcement.
+ * If profession text matches ESCO entries → REJECT (force user to choose).
+ * If no matches → ALLOW (free-text OK).
+ */
+export async function enforceEscoOccupation(
+  profession: string
+): Promise<EscoEnforcementResult> {
+  const matches = await searchEscoOccupations(profession, 10);
+  if (matches.length === 0) return { allowed: true };
+
+  return {
+    allowed: false,
+    matches: matches.map(m => ({
+      labelEl: m.labelEl,
+      labelEn: m.labelEn,
+      iscoCode: m.iscoCode,
+      uri: m.uri,
+    })),
+  };
+}
+
+/**
+ * Server-side ESCO skill enforcement.
+ * If skill label matches multiple ESCO entries → REJECT (force user to choose).
+ * If 0-1 matches → ALLOW.
+ */
+export async function enforceEscoSkill(
+  skillLabel: string
+): Promise<EscoEnforcementResult> {
+  const matches = await searchEscoSkills(skillLabel, 10);
+  if (matches.length <= 1) return { allowed: true };
+
+  return {
+    allowed: false,
+    matches: matches.map(m => ({
+      labelEl: m.labelEl,
+      labelEn: m.labelEn,
+      uri: m.uri,
+    })),
+  };
+}

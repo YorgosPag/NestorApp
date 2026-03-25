@@ -1,15 +1,7 @@
 /**
- * =============================================================================
- * CONTACT HANDLER — Create & Append Contact Info
- * =============================================================================
- *
- * Tools:
- * - create_contact: Enterprise-grade contact creation with duplicate detection
- * - append_contact_info: Append phone/email/social to own contact (APPEND-ONLY)
- *
+ * CONTACT HANDLER — Create, append & update contact info + ESCO data
  * @module services/ai-pipeline/tools/handlers/contact-handler
- * @see ADR-171 (Autonomous AI Agent)
- * @see SPEC-257E (Append-Only Contact Updates)
+ * @see ADR-171 (Autonomous AI Agent), ADR-132 (ESCO Integration)
  */
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
@@ -418,44 +410,25 @@ export class ContactHandler implements ToolHandler {
     const escoUri = typeof args.escoUri === 'string' ? args.escoUri : '';
 
     if (profession) {
-      // ── SERVER-SIDE ESCO ENFORCEMENT ──
-      // If AI provides profession WITHOUT escoUri, we search ESCO ourselves.
-      // If matches exist → REJECT and return them (force user confirmation).
+      // ── SERVER-SIDE ESCO ENFORCEMENT (occupation) ──
       if (!escoUri) {
-        const { searchEscoOccupations } = await import('../esco-search-utils');
-        const matches = await searchEscoOccupations(profession, 10);
-        const hasMatches = matches.length > 0;
-        if (hasMatches) {
-          const matchSummary = matches.map(m => ({
-            labelEl: m.labelEl,
-            labelEn: m.labelEn,
-            iscoCode: m.iscoCode,
-            uri: m.uri,
-          }));
-
-          logger.info('ESCO enforcement: blocked free-text write, matches found', {
-            profession,
-            matchCount: matches.length,
-            requestId: ctx.requestId,
+        const { enforceEscoOccupation } = await import('../esco-search-utils');
+        const result = await enforceEscoOccupation(profession);
+        if (!result.allowed) {
+          logger.info('ESCO enforcement: blocked occupation write', {
+            profession, matchCount: result.matches?.length, requestId: ctx.requestId,
           });
-
           return {
             success: false,
-            data: {
-              escoMatchesFound: true,
-              matches: matchSummary,
-              requestedProfession: profession,
-            },
+            data: { escoMatchesFound: true, matches: result.matches, requestedProfession: profession },
             error: [
-              `Βρέθηκαν ${matches.length} επαγγέλματα στα ESCO που ταιριάζουν με "${profession}".`,
-              'ΠΡΕΠΕΙ να δείξεις στον χρήστη τις επιλογές και να ρωτήσεις "Ποιο εννοείς;" ΠΡΙΝ γράψεις.',
-              'Χρησιμοποίησε search_esco_occupations για αναλυτικά αποτελέσματα,',
-              'μετά κάλεσε ξανά set_contact_esco με το σωστό escoUri/iscoCode.',
+              `Βρέθηκαν ${result.matches?.length} επαγγέλματα στα ESCO για "${profession}".`,
+              'Δείξε τις επιλογές στον χρήστη και ρώτησε "Ποιο εννοείς;".',
+              'Μετά κάλεσε set_contact_esco με το σωστό escoUri/iscoCode.',
             ].join(' '),
           };
         }
       }
-
       updateData.profession = profession;
       updateData.escoUri = escoUri;
       updateData.escoLabel = typeof args.escoLabel === 'string' ? args.escoLabel : '';
@@ -463,17 +436,44 @@ export class ContactHandler implements ToolHandler {
       changes.push(`profession: ${profession}`);
     }
 
-    // Skills array (replace entire array — ONLY if non-empty; empty array = no change)
+    // Skills — MERGE with existing (empty array = no change)
     if (Array.isArray(args.skills) && (args.skills as unknown[]).length > 0) {
-      const skills = (args.skills as Array<Record<string, unknown>>)
+      const newSkills = (args.skills as Array<Record<string, unknown>>)
         .filter(s => typeof s.label === 'string' && s.label.trim())
-        .map(s => ({
-          uri: typeof s.uri === 'string' ? s.uri : '',
-          label: String(s.label).trim(),
-        }));
-      if (skills.length > 0) {
-        updateData.escoSkills = skills;
-        changes.push(`skills: ${skills.map(s => s.label).join(', ')}`);
+        .map(s => ({ uri: typeof s.uri === 'string' ? s.uri : '', label: String(s.label).trim() }));
+
+      if (newSkills.length > 0) {
+        // ── SERVER-SIDE ESCO ENFORCEMENT (skills) ──
+        const { enforceEscoSkill } = await import('../esco-search-utils');
+        for (const skill of newSkills.filter(s => !s.uri)) {
+          const result = await enforceEscoSkill(skill.label);
+          if (!result.allowed) {
+            logger.info('ESCO enforcement: blocked skill write', {
+              skillLabel: skill.label, matchCount: result.matches?.length, requestId: ctx.requestId,
+            });
+            return {
+              success: false,
+              data: { escoSkillMatchesFound: true, matches: result.matches, requestedSkill: skill.label },
+              error: [
+                `Βρέθηκαν ${result.matches?.length} δεξιότητες στα ESCO για "${skill.label}".`,
+                'Δείξε τις επιλογές στον χρήστη και ρώτησε ποια εννοεί.',
+                'Μετά κάλεσε set_contact_esco με σωστό uri+label.',
+              ].join(' '),
+            };
+          }
+        }
+
+        // ── MERGE with existing skills (deduplicate by URI or label) ──
+        const contactData = docSnap.data() as Record<string, unknown>;
+        const existing = Array.isArray(contactData.escoSkills)
+          ? (contactData.escoSkills as Array<{ uri: string; label: string }>)
+          : [];
+        const merged = new Map<string, { uri: string; label: string }>();
+        for (const s of existing) merged.set(s.uri || `label:${s.label}`, s);
+        for (const s of newSkills) merged.set(s.uri || `label:${s.label}`, s);
+
+        updateData.escoSkills = [...merged.values()];
+        changes.push(`skills: ${newSkills.map(s => s.label).join(', ')}`);
       }
     }
 
