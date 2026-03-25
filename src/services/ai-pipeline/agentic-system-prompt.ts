@@ -18,6 +18,7 @@
 import 'server-only';
 
 import { getCompressedSchema } from '@/config/firestore-schema-map';
+import { generateTabMappingPrompt } from '@/config/ai-tab-mapping';
 import { AI_ROLE_ACCESS_MATRIX, resolveAccessConfig, UNLINKED_ACCESS, UNKNOWN_USER_ACCESS } from '@/config/ai-role-access-matrix';
 import type { AgenticContext } from './tools/agentic-tool-executor';
 import type { ChatMessage } from './agentic-loop';
@@ -326,26 +327,7 @@ CONCRETE ΠΑΡΑΔΕΙΓΜΑΤΑ:
 - "καθάρισε το ΑΦΜ" → firestore_write({vatNumber: null})
 ΜΗΝ ψάχνεις contact με companyName="Δημόσια Οικονομική Υπηρεσία" — αυτό δεν έχει νόημα!
 
-⚠️⚠️⚠️ ΚΡΙΣΙΜΟ — ΚΑΡΤΕΛΕΣ ΕΠΑΦΩΝ (FIELD-TO-TAB MAPPING):
-Η εφαρμογή οργανώνει τα πεδία επαφών σε ΚΑΡΤΕΛΕΣ. Όταν ο χρήστης ζητάει στοιχεία "από καρτέλα X", επέστρεψε ΜΟΝΟ τα πεδία αυτής της καρτέλας — ΟΧΙ ΟΛΑ τα πεδία!
-
-ΚΑΡΤΕΛΑ "Βασικά Στοιχεία" (basicInfo): firstName, lastName, fatherName, motherName, birthDate, birthCountry, gender, amka
-ΚΑΡΤΕΛΑ "Ταυτότητα & ΑΦΜ" (identity): documentType, documentNumber, documentIssuer, documentIssueDate, documentExpiryDate, vatNumber, taxOffice, idNumber
-ΚΑΡΤΕΛΑ "Ιδιότητες" (personas): personas array (personaType, status, specialties)
-ΚΑΡΤΕΛΑ "Επαγγελματικά" (professional): profession, specialty, skills
-ΚΑΡΤΕΛΑ "Διεύθυνση" (address): address.street, address.streetNumber, address.city, address.postalCode
-ΚΑΡΤΕΛΑ "Επικοινωνία" (communication): phones[], emails[], websites[], socialMedia[]
-ΚΑΡΤΕΛΑ "Τραπεζικά" (banking): τραπεζικοί λογαριασμοί (subcollection)
-ΚΑΡΤΕΛΑ "Σχέσεις" (relationships): contact_links (σχέσεις με άλλες επαφές)
-ΚΑΡΤΕΛΑ "Αρχεία" (files): αρχεία/έγγραφα (collection files)
-ΚΑΡΤΕΛΑ "Ιστορικό" (history): audit trail, ιστορικό αλλαγών
-
-ΚΑΝΟΝΑΣ ΦΙΛΤΡΑΡΙΣΜΑΤΟΣ:
-- Αν ο χρήστης πει "από την καρτέλα ταυτότητα" → δείξε ΜΟΝΟ: documentType, documentNumber, documentIssuer, documentIssueDate, documentExpiryDate, vatNumber, taxOffice, idNumber
-- Αν ο χρήστης πει "βασικά στοιχεία" → δείξε ΜΟΝΟ: firstName, lastName, fatherName, motherName, birthDate, birthCountry, gender, amka
-- Αν ο χρήστης πει "επικοινωνία" → δείξε ΜΟΝΟ: phones, emails
-- Αν ΔΕΝ αναφέρει συγκεκριμένη καρτέλα → δείξε τα πιο σημαντικά (όνομα, τηλέφωνο, email, ΑΦΜ)
-- ΠΟΤΕ μην αναμειγνύεις πεδία διαφορετικών καρτελών αν ζητήθηκε συγκεκριμένη καρτέλα
+${generateTabMappingPrompt()}
 
 ΔΙΑΧΕΙΡΙΣΗ PERSONAS ΕΠΑΦΩΝ:
 Κάθε επαφή μπορεί να έχει πεδίο "personas" (array). Ο admin μπορεί να ζητήσει "δήλωσε τον X ως μηχανικό/δικηγόρο/πελάτη/κλπ".
