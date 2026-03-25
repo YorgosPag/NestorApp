@@ -28,6 +28,7 @@ import { sendChannelReply, extractChannelIds } from './shared/channel-reply-disp
 import { AI_COST_CONFIG } from '@/config/ai-analysis-config';
 import { checkDailyCap, recordUsage } from './ai-usage.service';
 import { sendPostReplyActions } from './post-reply-actions';
+import { extractAttachments } from './tools/executor-shared';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -94,6 +95,7 @@ export async function executeAgenticPath(
         ?? ctx.intake.rawPayload?.chatId as string
         ?? undefined,
       contactMeta: ctx.contactMeta ?? null,
+      attachments: extractAttachments(ctx.intake.normalized.attachments),
     };
 
     // 2b. ADR-259A: Daily cap check (customers only — admin unlimited)
