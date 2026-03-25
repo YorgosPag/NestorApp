@@ -293,6 +293,9 @@ export async function executeAgenticLoop(
     maxIterations: cfg.maxIterations,
   });
 
+  // Anti-hallucination retry flag — at most ONE retry per loop execution
+  let hasRetried = false;
+
   for (let iteration = 0; iteration < cfg.maxIterations; iteration++) {
     // Check total timeout
     const elapsed = Date.now() - startTime;
@@ -395,19 +398,34 @@ export async function executeAgenticLoop(
     // Phase 6B: Extract suggested follow-up actions from AI response
     const { cleanAnswer: rawFinalAnswer, suggestions } = extractSuggestions(cleanedAnswer);
 
-    // Phase 6C: Anti-hallucination guardrail — if AI claims a write action but made 0 tool calls, block it
+    // Phase 6C: Anti-hallucination guardrail — if AI claims a write but made 0 tool calls
     const WRITE_CLAIM_PATTERNS = /ολοκληρώθηκε|ενημερώθηκε|διορθώθηκε|αποθηκεύτηκε|ενημέρωσα|διόρθωσα|αποθήκευσα|άλλαξα|τροποποίησα|προστέθηκε|αφαιρέθηκε/i;
     const isWriteClaim = WRITE_CLAIM_PATTERNS.test(rawFinalAnswer);
-    const finalAnswer = (isWriteClaim && allToolCalls.length === 0)
-      ? 'Δεν μπόρεσα να εκτελέσω την αλλαγή — χρειάζεται αναζήτηση και ενημέρωση μέσω εργαλείων. Δοκίμασε ξανά ή δώσε περισσότερες λεπτομέρειες (π.χ. όνομα επαφής + τιμή πεδίου).'
-      : rawFinalAnswer;
 
-    if (isWriteClaim && allToolCalls.length === 0) {
-      logger.warn('Anti-hallucination: AI claimed write without tool calls — blocked', {
+    if (isWriteClaim && allToolCalls.length === 0 && !hasRetried) {
+      // Google pattern: RETRY with forced tool instruction (not give up)
+      hasRetried = true;
+      logger.warn('Anti-hallucination: AI claimed write without tool calls — RETRYING', {
         requestId: context.requestId,
         claimedAnswer: rawFinalAnswer.slice(0, 100),
       });
+
+      messages.push({ role: 'assistant', content: rawFinalAnswer });
+      messages.push({
+        role: 'user',
+        content: [
+          'ΛΑΘΟΣ — δεν εκτέλεσες κανένα εργαλείο.',
+          'Για να κάνεις αλλαγές ΠΡΕΠΕΙ να καλέσεις tools (search_esco_occupations, search_esco_skills, set_contact_esco, κλπ).',
+          'Δεν αρκεί να πεις ότι έγινε — πρέπει να χρησιμοποιήσεις τα εργαλεία.',
+          'ΞΕΚΙΝΑ ΤΩΡΑ: κάλεσε τα κατάλληλα εργαλεία.',
+        ].join(' '),
+      });
+      continue; // Retry — AI will see correction and call tools
     }
+
+    const finalAnswer = (isWriteClaim && allToolCalls.length === 0)
+      ? 'Δεν μπόρεσα να εκτελέσω την αλλαγή — χρειάζεται αναζήτηση και ενημέρωση μέσω εργαλείων. Δοκίμασε ξανά ή δώσε περισσότερες λεπτομέρειες (π.χ. όνομα επαφής + τιμή πεδίου).'
+      : rawFinalAnswer;
 
     logger.info('Agentic loop completed', {
       requestId: context.requestId,
@@ -478,6 +496,3 @@ export async function executeAgenticLoop(
     totalUsage,
   };
 }
-
-// ============================================================================
-
