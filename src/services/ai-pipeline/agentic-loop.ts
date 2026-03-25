@@ -248,30 +248,35 @@ export async function executeAgenticLoop(
   ];
 
   // Add chat history as alternating user/assistant messages
-  // Include tool call summaries so the AI can see document IDs from previous turns
+  // Tool call context injected as system note (not inside assistant content — prevents AI from copying technical IDs into replies)
+  const toolContextParts: string[] = [];
+
   for (const msg of chatHistory.slice(-6)) {
-    let content = msg.content;
-
-    // For assistant messages, append tool call context (document IDs found)
-    if (msg.role === 'assistant' && msg.toolCalls && msg.toolCalls.length > 0) {
-      const toolSummaries = msg.toolCalls
-        .map(tc => {
-          // Extract document IDs from results for context preservation
-          const resultStr = tc.result ?? '';
-          const idMatches = resultStr.match(/"id"\s*:\s*"([^"]+)"/g);
-          const ids = idMatches
-            ? idMatches.map(m => m.replace(/"id"\s*:\s*"/, '').replace(/"$/, '')).slice(0, 3)
-            : [];
-          const idInfo = ids.length > 0 ? ` → IDs: ${ids.join(', ')}` : '';
-          return `[${tc.name}${idInfo}]`;
-        })
-        .join(' ');
-      content = `${content}\n(Tools used: ${toolSummaries})`;
-    }
-
     messages.push({
       role: msg.role === 'user' ? 'user' : 'assistant',
-      content,
+      content: msg.content,
+    });
+
+    // Collect document IDs from tool calls for internal context (system-level, not user-facing)
+    if (msg.role === 'assistant' && msg.toolCalls && msg.toolCalls.length > 0) {
+      for (const tc of msg.toolCalls) {
+        const resultStr = tc.result ?? '';
+        const idMatches = resultStr.match(/"id"\s*:\s*"([^"]+)"/g);
+        const ids = idMatches
+          ? idMatches.map(m => m.replace(/"id"\s*:\s*"/, '').replace(/"$/, '')).slice(0, 3)
+          : [];
+        if (ids.length > 0) {
+          toolContextParts.push(`${tc.name}: ${ids.join(', ')}`);
+        }
+      }
+    }
+  }
+
+  // Inject tool context as system note (AI sees it for lookups, but won't echo it in replies)
+  if (toolContextParts.length > 0) {
+    messages.push({
+      role: 'system',
+      content: `[Εσωτερικό context — ΜΗΝ το αναφέρεις στον χρήστη] Document IDs από προηγούμενα tool calls: ${toolContextParts.join('; ')}`,
     });
   }
 

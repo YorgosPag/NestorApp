@@ -47,6 +47,19 @@ export function extractSuggestions(rawAnswer: string): { cleanAnswer: string; su
 
 /** Remove filler phrases like "Αν χρειάζεσαι...", "Μη διστάσεις...", "Ενημέρωσέ με" */
 export function stripGenericClosingPhrases(text: string): string {
+  // Strip technical tool/ID footers that should never reach the user
+  const technicalPatterns = [
+    /\n*\(Tools used:.*\)/gi,
+    /\n*\[Tools used:.*\]/gi,
+    /\n*Tools used:.*$/gim,
+    /\n*Document IDs?:.*$/gim,
+    /\n*\(IDs?:.*\)/gi,
+  ];
+  let cleaned = text;
+  for (const pattern of technicalPatterns) {
+    cleaned = cleaned.replace(pattern, '');
+  }
+
   const fillerPatterns = [
     /\n*Αν χρειάζεσαι[^\n]*/gi,
     /\n*Εάν χρειάζεσαι[^\n]*/gi,
@@ -60,7 +73,6 @@ export function stripGenericClosingPhrases(text: string): string {
     /\n*Θα μπορούσες να ελέγξεις[^\n]*/gi,
   ];
 
-  let cleaned = text;
   for (const pattern of fillerPatterns) {
     cleaned = cleaned.replace(pattern, '');
   }
