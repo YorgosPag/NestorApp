@@ -605,7 +605,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
       description: [
         'Set ESCO occupation and/or skills on a contact. Admin only.',
         'CRITICAL: ALWAYS call search_esco_occupations/search_esco_skills FIRST to get the correct URI, label, and ISCO code.',
-        'CRITICAL: If ESCO search returns MORE THAN 1 result, you MUST show the matches to the user and ASK which one they want. Do NOT auto-select.',
+        'CRITICAL: If ESCO search returns MORE THAN 1 result, you MUST show the matches to the user and ASK which one they want. Do NOT auto-select. This applies to ALL message types including natural language (e.g. "Ο Γιάννης είναι μηχανικός"). NEVER call set_contact_esco with data from an ambiguous search.',
         'For occupation: pass profession (label), escoUri, escoLabel, iscoCode from search results.',
         'For skills: pass skills array with uri+label from search results. New skills are MERGED with existing (not replaced). Pass null to skip skills update (do NOT pass empty array).',
         'Can set occupation only, skills only, or both in one call.',
