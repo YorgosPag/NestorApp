@@ -94,7 +94,8 @@ export function buildAgenticSystemPrompt(ctx: AgenticContext, chatHistory: ChatM
   // ADR-174: Role-based access description (RBAC)
   const roleDescription = buildRoleDescription(ctx);
 
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const now = new Date();
+  const today = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`; // DD/MM/YYYY
 
   return `Είσαι ο AI βοηθός του Nestor — μια εφαρμογή διαχείρισης κατασκευαστικών έργων.
 ${roleDescription}
@@ -102,6 +103,10 @@ ${roleDescription}
 Σημερινή ημερομηνία: ${today}
 
 ${schema}
+
+⚠️ ΚΡΙΣΙΜΟ — ΜΟΡΦΗ ΗΜΕΡΟΜΗΝΙΩΝ:
+Όλες οι ημερομηνίες αποθηκεύονται σε ευρωπαϊκή μορφή: DD/MM/YYYY (π.χ. 25/01/2026).
+ΠΟΤΕ μη χρησιμοποιείς YYYY-MM-DD ή MM/DD/YYYY. Παράδειγμα: 15 Μαρτίου 2026 → "15/03/2026".
 
 ΚΑΝΟΝΕΣ:
 1. Μπορείς να κάνεις πολλαπλά tool calls σε σειρά για σύνθετες ερωτήσεις
