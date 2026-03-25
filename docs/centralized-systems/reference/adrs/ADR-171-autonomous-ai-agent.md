@@ -40,9 +40,15 @@ AI Agent (system prompt with schema map)
 | Component | File | Purpose |
 |-----------|------|---------|
 | Schema Map | `src/config/firestore-schema-map.ts` | 25 collection schemas for AI awareness (~2000 tokens) |
-| Tool Definitions | `src/services/ai-pipeline/tools/agentic-tool-definitions.ts` | 8 generic tools (query, get, count, write, email, telegram, schema, search) |
-| Tool Executor | `src/services/ai-pipeline/tools/agentic-tool-executor.ts` | Secure execution engine with whitelist, companyId injection, audit |
-| Agentic Loop | `src/services/ai-pipeline/agentic-loop.ts` | Multi-step reasoning (max 5 iterations, 50s timeout) |
+| Tool Definitions | `src/services/ai-pipeline/tools/agentic-tool-definitions.ts` | 16 tools (query, get, count, write, email, telegram, etc.) |
+| Tool Executor | `src/services/ai-pipeline/tools/agentic-tool-executor.ts` | Strategy Pattern dispatcher (~160 lines) |
+| Shared Infrastructure | `src/services/ai-pipeline/tools/executor-shared.ts` | Types, constants, RBAC, security, utilities |
+| Firestore Handler | `src/services/ai-pipeline/tools/handlers/firestore-handler.ts` | query, get_document, count, write, search_text |
+| Contact Handler | `src/services/ai-pipeline/tools/handlers/contact-handler.ts` | create_contact, append_contact_info |
+| Messaging Handler | `src/services/ai-pipeline/tools/handlers/messaging-handler.ts` | send_email, send_telegram, send_social |
+| Customer Handler | `src/services/ai-pipeline/tools/handlers/customer-handler.ts` | complaint, deliver_file, knowledge_base |
+| Utility Handler | `src/services/ai-pipeline/tools/handlers/utility-handler.ts` | get_collection_schema, lookup_doy_code |
+| Agentic Loop | `src/services/ai-pipeline/agentic-loop.ts` | Multi-step reasoning (max 7 iterations, 50s timeout) |
 | Chat History | `src/services/ai-pipeline/chat-history-service.ts` | Conversation memory (Firestore, 20 messages, 24h TTL) |
 | Pipeline Integration | `src/services/ai-pipeline/pipeline-orchestrator.ts` | `executeAgenticPath()` replaces UC module routing for admin |
 
@@ -119,3 +125,4 @@ ai_chat_history (ADR-156)
 | 2026-03-24 | Fix: `buildChannelSenderId()` now includes `firebaseUid` in resolution chain (first priority) and throws instead of falling back to `'unknown'` — prevents orphan `in_app_unknown` documents in `ai_chat_history` |
 | 2026-03-24 | Feat: Google-level duplicate detection in `create_contact` tool — 3 criteria (email exact, phone exact, name fuzzy). Returns structured matches to AI for user decision. New `skipDuplicateCheck` param for confirmed creates. New `findContactByPhone()` + `checkContactDuplicates()` in contact-lookup.ts |
 | 2026-03-24 | Feat: Telegram Inline Keyboard buttons for duplicate contact resolution. 3 buttons (Ενημέρωσε/Δημιούργησε νέα/Ακύρωση) αντί plain text. Pending actions σε `ai_pending_actions` collection (24h TTL). New: `duplicate-contact-keyboard.ts`, callback handler in `callback-query.ts` |
+| 2026-03-25 | Refactor: Strategy Pattern — Split monolithic `agentic-tool-executor.ts` (2397 lines) into 5 domain handlers + shared infrastructure. Executor is now thin dispatcher (~160 lines). Zero breaking changes to public API. |
