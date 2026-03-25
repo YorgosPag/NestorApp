@@ -12,6 +12,7 @@
  */
 
 import type { TelegramMessage } from './telegram/types';
+import type { MessageAttachment } from '@/types/conversations';
 import { sendTelegramMessage } from './telegram/client';
 import { getCompanyId } from '@/config/tenant';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -30,7 +31,8 @@ const logger = createModuleLogger('TelegramPipeline');
  */
 export async function feedTelegramToPipeline(
   message: TelegramMessage['message'],
-  overrideText?: string
+  overrideText?: string,
+  attachments?: MessageAttachment[]
 ): Promise<void> {
   if (!message) return;
 
@@ -77,6 +79,7 @@ export async function feedTelegramToPipeline(
       messageId,
       companyId,
       contactMeta,
+      attachments,
     });
   };
 

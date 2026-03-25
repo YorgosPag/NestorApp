@@ -18,7 +18,8 @@
  */
 
 import { getErrorMessage } from '@/lib/error-utils';
-import type { IntakeMessage, AdminCommandMeta, ContactMeta } from '@/types/ai-pipeline';
+import type { IntakeMessage, AdminCommandMeta, ContactMeta, IntakeAttachment } from '@/types/ai-pipeline';
+import type { MessageAttachment } from '@/types/conversations';
 import { PipelineChannel } from '@/types/ai-pipeline';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { enqueuePipelineItem } from '../pipeline-queue-service';
@@ -44,6 +45,8 @@ export interface TelegramFeedParams {
   companyId: string;
   /** Resolved contact with project roles (RBAC) */
   contactMeta?: ContactMeta | null;
+  /** Media attachments from Telegram message (photos, documents) */
+  attachments?: MessageAttachment[];
 }
 
 /** Result of feeding a Telegram message to the pipeline */
@@ -145,7 +148,7 @@ export class TelegramChannelAdapter {
         },
         recipients: [],
         contentText: params.messageText,
-        attachments: [],
+        attachments: mapAttachments(params.attachments),
         timestampIso: new Date().toISOString(),
       },
       metadata: {
@@ -155,4 +158,26 @@ export class TelegramChannelAdapter {
       schemaVersion: PIPELINE_PROTOCOL_CONFIG.SCHEMA_VERSION,
     };
   }
+}
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+/**
+ * Map MessageAttachment[] from Telegram media to IntakeAttachment[].
+ * Filters out attachments without fileRecordId or URL.
+ */
+function mapAttachments(attachments?: MessageAttachment[]): IntakeAttachment[] {
+  if (!attachments || attachments.length === 0) return [];
+
+  return attachments
+    .filter(a => a.url && a.fileRecordId)
+    .map(a => ({
+      filename: a.filename ?? 'attachment',
+      contentType: a.mimeType ?? 'application/octet-stream',
+      sizeBytes: a.size ?? 0,
+      storageUrl: a.url,
+      fileRecordId: a.fileRecordId,
+    }));
 }

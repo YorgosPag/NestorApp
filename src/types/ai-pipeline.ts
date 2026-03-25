@@ -180,6 +180,8 @@ export interface IntakeAttachment {
   contentType: string;
   sizeBytes: number;
   storageUrl?: string;
+  /** FileRecord ID — links to Firestore files collection (ADR-055) */
+  fileRecordId?: string;
 }
 
 /**

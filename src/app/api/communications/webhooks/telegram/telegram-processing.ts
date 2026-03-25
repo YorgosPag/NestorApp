@@ -19,13 +19,17 @@
 
 import { isFirebaseAvailable } from './firebase/availability';
 import { processMessage } from './message/process-message';
+import { handleBookingFlow } from './message/booking-interceptor';
 import { handleCallbackQuery } from './message/callback-query';
 import type { SuggestionCallbackResult } from './message/callback-query';
 import { sendTelegramMessage } from './telegram/client';
 import { storeMessageInCRM } from './crm/store';
 import { BOT_IDENTITY } from '@/config/domain-constants';
 import type { TelegramMessage, TelegramSendPayload } from './telegram/types';
+import type { MessageAttachment } from '@/types/conversations';
 import { transcribeVoiceMessage } from './telegram/whisper-transcription';
+// ADR-055: Media download for Telegram attachments (photos, documents)
+import { hasMedia, processTelegramMedia } from './telegram/media-download';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { feedTelegramToPipeline, feedSuggestionToPipeline } from './telegram-pipeline';
@@ -51,15 +55,27 @@ export async function processTelegramUpdate(
   let telegramResponse: TelegramSendPayload | null = null;
 
   if (webhookData.message) {
-    telegramResponse = await processMessagePayload(webhookData);
+    // ADR-055: Download media attachments once, share between CRM + pipeline
+    let mediaAttachments: MessageAttachment[] | undefined;
+    if (isFirebaseAvailable() && hasMedia(webhookData.message)) {
+      try {
+        mediaAttachments = await processTelegramMedia(webhookData.message);
+        logger.info('Media downloaded for pipeline', { count: mediaAttachments?.length ?? 0 });
+      } catch (mediaError) {
+        logger.error('Media download failed (non-fatal)', { error: getErrorMessage(mediaError) });
+      }
+    }
+
+    telegramResponse = await processMessagePayload(webhookData, mediaAttachments);
 
     // ── ADR-132: Feed to AI Pipeline ──
     // Await enqueue to ensure item is in queue before after() batch runs.
     // Non-fatal: pipeline failure should never break the Telegram bot.
     const effectiveText = extractEffectiveText(webhookData);
     const isBotCommand = effectiveText.startsWith('/');
-    if (!isBotCommand && effectiveText.trim().length > 0 && isFirebaseAvailable()) {
-      await feedTelegramToPipeline(webhookData.message, effectiveText);
+    const hasMediaContent = hasMedia(webhookData.message);
+    if (!isBotCommand && (effectiveText.trim().length > 0 || hasMediaContent) && isFirebaseAvailable()) {
+      await feedTelegramToPipeline(webhookData.message, effectiveText, mediaAttachments);
     }
   }
 
@@ -116,7 +132,8 @@ export async function processTelegramUpdate(
  * Handles voice transcription, booking flow, admin detection, contact recognition.
  */
 async function processMessagePayload(
-  webhookData: TelegramMessage
+  webhookData: TelegramMessage,
+  mediaAttachments?: MessageAttachment[]
 ): Promise<TelegramSendPayload | null> {
   const message = webhookData.message;
   if (!message) return null;
@@ -161,7 +178,7 @@ async function processMessagePayload(
   const isAdminSender = await detectSuperAdmin(webhookData, effectiveMessageText, isBotCommand);
 
   if (isAdminSender) {
-    await handleAdminMessage(webhookData, effectiveMessageText);
+    await handleAdminMessage(webhookData, effectiveMessageText, mediaAttachments);
   } else {
     telegramResponse = await handleContactRecognition(
       webhookData, effectiveMessageText, isBotCommand
@@ -171,62 +188,6 @@ async function processMessagePayload(
   return telegramResponse;
 }
 
-/**
- * Handle booking flow interception (shared contact + text input).
- * Returns a TelegramSendPayload if booking consumed the message, null otherwise.
- */
-async function handleBookingFlow(
-  webhookData: TelegramMessage,
-  effectiveMessageText: string
-): Promise<TelegramSendPayload | null> {
-  const message = webhookData.message;
-  if (!message) return null;
-
-  const userId = String(message.from?.id ?? '');
-
-  // Handle shared contact (request_contact button)
-  if (message.contact && userId) {
-    const { hasActiveBookingSession, handleBookingSharedContact } = await import('./booking/booking-flow');
-    if (await hasActiveBookingSession(userId)) {
-      const contact = message.contact;
-      const response = await handleBookingSharedContact(
-        userId,
-        message.chat.id,
-        contact.phone_number,
-        contact.first_name,
-        contact.last_name,
-      );
-      if (response) return response;
-    }
-  }
-
-  // Handle text input during booking (name + phone)
-  if (effectiveMessageText.trim().length > 0 && userId) {
-    const { hasActiveBookingSession, handleBookingContactInput } = await import('./booking/booking-flow');
-    if (await hasActiveBookingSession(userId)) {
-      // Cancel booking if user types "Ακύρωση"
-      if (effectiveMessageText.includes('Ακύρωση')) {
-        return {
-          method: 'sendMessage',
-          chat_id: message.chat.id,
-          text: '❌ Η κράτηση ακυρώθηκε.',
-          reply_markup: { remove_keyboard: true },
-        };
-      }
-
-      const response = await handleBookingContactInput(
-        userId,
-        message.chat.id,
-        effectiveMessageText,
-        message.from?.first_name,
-        message.from?.last_name,
-      );
-      if (response) return response;
-    }
-  }
-
-  return null;
-}
 
 /**
  * Detect if the sender is a super admin.
@@ -260,7 +221,8 @@ async function detectSuperAdmin(
  */
 async function handleAdminMessage(
   webhookData: TelegramMessage,
-  effectiveMessageText: string
+  effectiveMessageText: string,
+  mediaAttachments?: MessageAttachment[]
 ): Promise<void> {
   const message = webhookData.message;
   if (!message) return;
@@ -296,6 +258,9 @@ async function handleAdminMessage(
         chat: { id: message.chat.id },
         text: effectiveMessageText,
         message_id: message.message_id,
+        // ADR-055: Include media attachments in CRM store
+        attachments: mediaAttachments,
+        caption: message.caption,
       }, 'inbound');
       logger.info('[CRM-DIAG] Admin inbound CRM store result', {
         success: result !== null,

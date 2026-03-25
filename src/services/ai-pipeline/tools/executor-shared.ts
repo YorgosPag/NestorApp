@@ -35,6 +35,13 @@ export interface AgenticContext {
   contactMeta?: import('@/types/ai-pipeline').ContactMeta | null;
   /** RBAC cache: resolved once per request by resolveRoleAccess(), reused by redactRoleBlockedFields() */
   _resolvedAccess?: import('@/config/ai-role-access-matrix').RoleAccessConfig;
+  /** File attachments from the current message (Telegram photos/documents) */
+  attachments?: Array<{
+    fileRecordId: string;
+    filename: string;
+    contentType: string;
+    storageUrl: string;
+  }>;
 }
 
 export interface ToolResult {
@@ -519,6 +526,19 @@ export function emitSyncSignalIfMapped(
   import('@/services/ai-pipeline/shared/contact-lookup').then(
     ({ emitEntitySyncSignal }) => emitEntitySyncSignal(entityType, action, entityId, companyId)
   ).catch(() => { /* non-blocking */ });
+}
+
+/**
+ * Extract file attachments from IntakeAttachment[] to AgenticContext format.
+ */
+export function extractAttachments(
+  intakeAttachments?: ReadonlyArray<{ fileRecordId?: string; filename: string; contentType: string; storageUrl?: string }>
+): AgenticContext['attachments'] {
+  if (!intakeAttachments || intakeAttachments.length === 0) return undefined;
+  const mapped = intakeAttachments
+    .filter((a): a is typeof a & { fileRecordId: string } => !!a.fileRecordId)
+    .map(a => ({ fileRecordId: a.fileRecordId, filename: a.filename, contentType: a.contentType, storageUrl: a.storageUrl ?? '' }));
+  return mapped.length > 0 ? mapped : undefined;
 }
 
 /**

@@ -101,8 +101,11 @@ export async function handlePOST(request: NextRequest): Promise<NextResponse> {
     // Phase 6F: Also trigger for suggestion callback re-feeds
     const rawText = webhookData.message?.text ?? webhookData.message?.caption ?? '';
     const hasVoice = !!webhookData.message?.voice;
+    // ADR-055: Media-only messages (photo/document without caption) must also trigger pipeline
+    const hasMediaContent = !!(webhookData.message?.photo || webhookData.message?.document
+      || webhookData.message?.video || webhookData.message?.audio || webhookData.message?.voice);
     const isBotCmd = rawText.startsWith('/');
-    const needsBatch = (!isBotCmd && (rawText.trim().length > 0 || hasVoice))
+    const needsBatch = (!isBotCmd && (rawText.trim().length > 0 || hasVoice || hasMediaContent))
       || updateResult.needsPipelineBatch;
     if (needsBatch && isFirebaseAvailable()) {
       after(async () => {

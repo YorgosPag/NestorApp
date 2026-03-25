@@ -101,3 +101,21 @@ export function cleanAITextReply(rawText: string): string {
 
   return trimmed;
 }
+
+/**
+ * Prepend attachment metadata to user message so the AI knows
+ * which files were sent and their fileRecordIds.
+ */
+export function enrichWithAttachments(
+  message: string,
+  attachments?: ReadonlyArray<{ fileRecordId: string; filename: string; contentType: string }>
+): string {
+  if (!attachments || attachments.length === 0) return message;
+
+  const desc = attachments.map(a => {
+    const type = a.contentType.startsWith('image/') ? 'Φωτογραφία' : 'Έγγραφο';
+    return `[Συνημμένο ${type}: ${a.filename}, fileRecordId: ${a.fileRecordId}]`;
+  }).join('\n');
+
+  return `${desc}\n\n${message.trim() || '(χωρίς κείμενο)'}`;
+}

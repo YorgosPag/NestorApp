@@ -66,6 +66,10 @@ export type BankAccountOperation = typeof BANK_ACCOUNT_OPERATIONS[number];
 export const CONTACT_TYPES = ['individual', 'company'] as const;
 export type ContactTypeEnum = typeof CONTACT_TYPES[number];
 
+/** Attachment purposes for attach_file_to_contact (SSoT — tool def enum + handler validation) */
+export const ATTACHMENT_PURPOSES = ['profile_photo', 'gallery_photo', 'document'] as const;
+export type AttachmentPurpose = typeof ATTACHMENT_PURPOSES[number];
+
 // ============================================================================
 // AGENTIC TOOL DEFINITIONS (Chat Completions API format)
 // ============================================================================
@@ -866,6 +870,38 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
           'operation', 'contactId', 'accountId', 'iban', 'bankName',
           'accountType', 'currency', 'holderName', 'notes', 'isPrimary',
         ],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  // ── ADR-055: Attach file (photo/document) to contact ──
+  {
+    type: 'function',
+    function: {
+      name: 'attach_file_to_contact',
+      description: 'Σύνδεση αρχείου (φωτογραφία/έγγραφο) από το τρέχον μήνυμα με μια επαφή. '
+        + 'Χρησιμοποίησε fileRecordId από τα [Συνημμένο] στο μήνυμα του χρήστη. Admin only. '
+        + 'profile_photo = φωτογραφία προφίλ, gallery_photo = επιπλέον φωτογραφία, document = έγγραφο.',
+      parameters: {
+        type: 'object',
+        properties: {
+          contactId: {
+            type: 'string',
+            description: 'Contact document ID (from search_text or firestore_query)',
+          },
+          fileRecordId: {
+            type: 'string',
+            description: 'FileRecord ID from [Συνημμένο] in the user message',
+          },
+          purpose: {
+            type: 'string',
+            enum: [...ATTACHMENT_PURPOSES],
+            description: 'profile_photo | gallery_photo | document',
+          },
+        },
+        required: ['contactId', 'fileRecordId', 'purpose'],
         additionalProperties: false,
       },
       strict: true,

@@ -15,7 +15,7 @@ import type { AgenticContext } from './tools/agentic-tool-executor';
 import type { AgenticToolDefinition } from './tools/agentic-tool-definitions';
 import { enhanceSystemPrompt } from './prompt-enhancer';
 import { buildAgenticSystemPrompt } from './agentic-system-prompt';
-import { extractSuggestions, cleanAITextReply } from './agentic-reply-utils';
+import { extractSuggestions, cleanAITextReply, enrichWithAttachments } from './agentic-reply-utils';
 import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { captureMessage as sentryCaptureMessage } from '@/lib/telemetry/sentry';
@@ -130,10 +130,10 @@ export async function executeAgenticLoop(
     });
   }
 
-  // Add current user message
+  // Add current user message (enriched with attachment metadata if present)
   messages.push({
     role: 'user',
-    content: userMessage,
+    content: enrichWithAttachments(userMessage, context.attachments),
   });
 
   logger.info('Starting agentic loop', {
@@ -394,3 +394,4 @@ export async function executeAgenticLoop(
     totalUsage,
   };
 }
+

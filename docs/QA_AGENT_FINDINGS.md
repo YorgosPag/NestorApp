@@ -237,10 +237,10 @@
 | Capability | Status | Σημείωση |
 |------------|--------|----------|
 | Phones/Emails (admin) | ✅ **WORKS** | `append_contact_info` δουλεύει για admin (με contactId) |
-| Φωτογραφίες upload | ❌ Missing | Graceful response ("παρέχετε αρχείο") |
+| Φωτογραφίες upload | ✅ **IMPLEMENTED** | `attach_file_to_contact` tool (profile_photo, gallery_photo) |
 | Σχέσεις επαφών | ✅ **IMPLEMENTED** | `manage_relationship` tool (add/list/remove, Greek support) |
 | Τραπεζικά στοιχεία | ✅ **IMPLEMENTED** | `manage_bank_account` tool (IBAN ISO 13616, auto-detect bank) |
-| Έγγραφα upload | ❌ Missing | Graceful response ("παρέχετε αρχείο") |
+| Έγγραφα upload | ✅ **IMPLEMENTED** | `attach_file_to_contact` tool (document purpose) |
 
 ---
 
