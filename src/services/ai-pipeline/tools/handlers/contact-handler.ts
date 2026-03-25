@@ -415,9 +415,49 @@ export class ContactHandler implements ToolHandler {
 
     // Occupation fields
     const profession = typeof args.profession === 'string' ? args.profession.trim() : null;
+    const escoUri = typeof args.escoUri === 'string' ? args.escoUri : '';
+
     if (profession) {
+      // ── SERVER-SIDE ESCO ENFORCEMENT ──
+      // If AI provides profession WITHOUT escoUri, we search ESCO ourselves.
+      // If matches exist → REJECT and return them (force user confirmation).
+      if (!escoUri) {
+        const { searchEscoOccupations } = await import('../esco-search-utils');
+        const matches = await searchEscoOccupations(profession, 10);
+        const hasMatches = matches.length > 0;
+        if (hasMatches) {
+          const matchSummary = matches.map(m => ({
+            labelEl: m.labelEl,
+            labelEn: m.labelEn,
+            iscoCode: m.iscoCode,
+            uri: m.uri,
+          }));
+
+          logger.info('ESCO enforcement: blocked free-text write, matches found', {
+            profession,
+            matchCount: matches.length,
+            requestId: ctx.requestId,
+          });
+
+          return {
+            success: false,
+            data: {
+              escoMatchesFound: true,
+              matches: matchSummary,
+              requestedProfession: profession,
+            },
+            error: [
+              `Βρέθηκαν ${matches.length} επαγγέλματα στα ESCO που ταιριάζουν με "${profession}".`,
+              'ΠΡΕΠΕΙ να δείξεις στον χρήστη τις επιλογές και να ρωτήσεις "Ποιο εννοείς;" ΠΡΙΝ γράψεις.',
+              'Χρησιμοποίησε search_esco_occupations για αναλυτικά αποτελέσματα,',
+              'μετά κάλεσε ξανά set_contact_esco με το σωστό escoUri/iscoCode.',
+            ].join(' '),
+          };
+        }
+      }
+
       updateData.profession = profession;
-      updateData.escoUri = typeof args.escoUri === 'string' ? args.escoUri : '';
+      updateData.escoUri = escoUri;
       updateData.escoLabel = typeof args.escoLabel === 'string' ? args.escoLabel : '';
       updateData.iscoCode = typeof args.iscoCode === 'string' ? args.iscoCode : '';
       changes.push(`profession: ${profession}`);
