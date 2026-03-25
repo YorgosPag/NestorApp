@@ -87,6 +87,7 @@ const WRITE_ALLOWED_COLLECTIONS = new Set([
   'file_approvals',
   'entity_audit_trail',
   'notifications',
+  'ai_chat_history',
 ]);
 
 // ============================================================================
