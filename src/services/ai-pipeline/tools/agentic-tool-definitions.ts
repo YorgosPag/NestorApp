@@ -39,11 +39,18 @@ export type ComplaintSeverity = typeof COMPLAINT_SEVERITIES[number];
 export const CONTACT_FIELD_TYPES = ['phone', 'email', 'social'] as const;
 export type ContactFieldType = typeof CONTACT_FIELD_TYPES[number];
 
-/** Updatable scalar fields on contact documents (SSoT — mirrors UC-016 FIELD_KEYWORDS) */
+/** Updatable scalar fields on contact documents (SSoT — complete list from contracts.ts) */
 export const CONTACT_UPDATABLE_FIELDS = [
-  'vatNumber', 'profession', 'birthDate', 'fatherName',
-  'taxOffice', 'address', 'registrationNumber', 'legalForm',
-  'employer', 'position', 'idNumber',
+  // Personal
+  'birthDate', 'birthCountry', 'gender', 'fatherName', 'motherName', 'amka',
+  // Identity document
+  'documentType', 'documentNumber', 'documentIssuer', 'documentIssueDate', 'documentExpiryDate',
+  // Tax & legal
+  'vatNumber', 'taxOffice', 'registrationNumber', 'legalForm',
+  // Professional
+  'profession', 'employer', 'position',
+  // Other
+  'address', 'idNumber',
 ] as const;
 export type ContactUpdatableField = typeof CONTACT_UPDATABLE_FIELDS[number];
 
@@ -546,9 +553,11 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
       name: 'update_contact_field',
       description: [
         'Update a single field on an existing contact. Admin only.',
-        'Use for scalar fields: vatNumber (ΑΦΜ), profession, address, taxOffice, idNumber, etc.',
+        'Use for ALL scalar fields: vatNumber, profession, address, birthDate, documentIssueDate, documentExpiryDate, documentType, documentNumber, documentIssuer, taxOffice, gender, amka, etc.',
         'For phone/email/social use append_contact_info instead.',
         'IMPORTANT for taxOffice: ALWAYS call lookup_doy_code first to get the 4-digit code.',
+        'IMPORTANT for dates (birthDate, documentIssueDate, documentExpiryDate): ALWAYS use DD/MM/YYYY format (e.g. "25/01/2027").',
+        'IMPORTANT for documentType: ONLY values "identity_card", "passport", "drivers_license", "other".',
         'Pass the contact document ID (e.g. cont_xxx) and the field+value to update.',
       ].join(' '),
       parameters: {
