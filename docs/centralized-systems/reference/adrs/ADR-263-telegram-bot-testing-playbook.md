@@ -67,7 +67,15 @@ cd C:/Nestor_Pagonis && npx jest --testPathPatterns="ai-pipeline/tools/__tests__
 
 Αφού τα automated tests περνάνε, δοκίμασε τη **ζωντανή** pipeline μέσω Telegram webhook.
 
-**ΡΩΤΑ ΤΟΝ ΓΙΩΡΓΟ**: "Production ή Development bot;" πριν ξεκινήσεις.
+**ΚΑΝΟΝΑΣ**: Τα E2E tests γίνονται **κυρίως μέσω dev bot + ngrok** (δωρεάν, άμεσο).
+Production bot **μόνο για τελική επιβεβαίωση** μετά από batch fixes.
+
+**Setup dev bot + ngrok:**
+1. Ξεκίνα localhost: `cd C:/Nestor_Pagonis && npm run dev`
+2. Ξεκίνα ngrok: `C:/Nestor_Pagonis/ngrok-bin/ngrok.exe http 3000`
+3. Πάρε το ngrok URL (π.χ. `https://xxxx.ngrok-free.app`)
+4. Set webhook: `curl "https://api.telegram.org/bot8291786276:AAEkduYv24BzyW-6oBnL_LOG97s0e5Rwz8U/setWebhook?url=https://xxxx.ngrok-free.app/api/communications/webhooks/telegram&secret_token=nestor_webhook_secret_2025_secure_key"`
+5. Στέλνε messages με dev bot token + dev secret στο Node.js script
 
 Αυτά τα tests ελέγχουν:
 - AI reasoning (OpenAI gpt-4o-mini)
@@ -125,6 +133,10 @@ Automated Tests → Fix Code → Re-test → Telegram E2E → Findings →
 ---
 
 ## 2. Πώς Στέλνουμε Test Messages
+
+### Telegram Notifications
+Ο Γιώργος **δεν ενοχλείται** από τα test notifications στο Telegram.
+Δεν χρειάζεται silent mode — τα replies στέλνονται κανονικά.
 
 ### ΚΡΙΣΙΜΟ: Χρησιμοποίησε Node.js, ΟΧΙ curl
 Windows curl κάνει garble τα ελληνικά. Πάντα Node.js:
@@ -202,6 +214,10 @@ mcp__firestore__firestore_query:
 ---
 
 ## 4. Cleanup (Πριν / Μετά τα Tests)
+
+### Test Data Policy
+Τα test data μπαίνουν κανονικά στη βάση χωρίς prefix — δεν χρειάζεται διαχωρισμός.
+Cleanup γίνεται πριν/μετά κάθε test session μέσω Firebase Admin SDK.
 
 ### Διαγραφή μέσω Firebase Admin SDK
 Το MCP δεν υποστηρίζει delete (`MCP_ALLOW_DELETE=false`). Χρησιμοποίησε:
@@ -409,13 +425,37 @@ User Message (Telegram)
 6. **Μετά**: Συνέχισε στα υπόλοιπα tests (Level 2-5)
 
 ### ΜΗ ΞΕΧΑΝΕΣΕ:
-- **Push μόνο μετά από ολοκληρωμένο batch διορθώσεων** (μην σπαταλάς builds)
+- **Push μόνο μετά από ολοκληρωμένο batch διορθώσεων** (max 5-6 builds/ημέρα)
 - **Πρώτα automated tests, μετά Telegram** (Φάση 1 → Φάση 3 ροή)
 - Ρώτα τον Γιώργο: "Production ή Development bot;" πριν κάθε E2E session
 
 ---
 
-## 10. Changelog
+## 10. Roadmap — Υποδομή Testing
+
+### ΦΑΣΗ A: Τώρα (πρώτο session)
+| # | Τι | Effort | Status |
+|---|----|--------|--------|
+| A1 | **Automated E2E Runner** — script που τρέχει ΟΛΑ τα tests αυτόματα με snapshot assertions + response time tracking | 1-2 ώρες | ⏳ TODO |
+| A2 | **Guardrail Tests** — negative cases, anti-hallucination, injection, cross-company isolation | 30 λεπτά | ⏳ TODO |
+| A3 | **CI/CD GitHub Actions** — automated tests τρέχουν σε κάθε push (63 tests, ~6s, free tier OK) | 15 λεπτά | ⏳ TODO |
+| A4 | **Fixes FIND-F/E/D/A** — code fixes για τα 4 open findings | 1-2 ώρες | ⏳ TODO |
+
+### ΦΑΣΗ B: Πριν τους πραγματικούς πελάτες
+| # | Τι | Effort | Status |
+|---|----|--------|--------|
+| B1 | **Separate Test Firebase Project** — ξεχωριστό project + service account ώστε tests να μην μολύνουν production data | 1-2 ώρες | ⏳ TODO |
+
+### Γιατί αυτή η σειρά:
+- **A1**: Μετατρέπει 30 λεπτά χειροκίνητα σε 5 λεπτά αυτόματα
+- **A2**: Πιάνει hallucinations πριν γράψουν ψεύτικα data (FIND-F prevention)
+- **A3**: Κάθε push ελέγχεται αυτόματα — zero cost (GitHub free tier 2000 min/month, tests ~6s)
+- **A4**: Fixes βασισμένα σε πραγματικά test results
+- **B1**: Αναβάλλεται γιατί η βάση είναι άδεια τώρα — γίνεται ΠΡΙΝ μπουν πελάτες
+
+---
+
+## 11. Changelog
 
 | Date | Change |
 |------|--------|
