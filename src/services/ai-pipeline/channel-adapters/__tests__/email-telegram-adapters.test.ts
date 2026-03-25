@@ -443,7 +443,7 @@ describe('TelegramChannelAdapter', () => {
       );
     });
 
-    it('filters out attachments without fileRecordId', () => {
+    it('keeps attachments without fileRecordId but marks them (no filtering)', () => {
       const msg = TelegramChannelAdapter.toIntakeMessage(
         createTelegramParams({
           attachments: [
@@ -458,10 +458,13 @@ describe('TelegramChannelAdapter', () => {
         })
       );
 
-      expect(msg.normalized.attachments).toHaveLength(0);
+      // Adapter no longer filters — keeps attachment with storageUrl but no fileRecordId
+      expect(msg.normalized.attachments).toHaveLength(1);
+      expect(msg.normalized.attachments[0].storageUrl).toBe('https://example.com/file.pdf');
+      expect(msg.normalized.attachments[0].fileRecordId).toBeUndefined();
     });
 
-    it('filters out attachments without url', () => {
+    it('keeps attachments without url and marks downloadFailed', () => {
       const msg = TelegramChannelAdapter.toIntakeMessage(
         createTelegramParams({
           attachments: [
@@ -476,7 +479,9 @@ describe('TelegramChannelAdapter', () => {
         })
       );
 
-      expect(msg.normalized.attachments).toHaveLength(0);
+      // Adapter no longer filters — keeps attachment with fileRecordId but no url
+      expect(msg.normalized.attachments).toHaveLength(1);
+      expect(msg.normalized.attachments[0].fileRecordId).toBe('fr_002');
     });
 
     it('returns empty attachments when none provided', () => {

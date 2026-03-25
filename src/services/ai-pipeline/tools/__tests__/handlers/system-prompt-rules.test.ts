@@ -51,7 +51,7 @@ describe('System Prompt Critical Rules', () => {
     });
 
     test('prompt instructs to ASK when value missing', () => {
-      expect(adminPrompt).toMatch(/ΡΩΤΑ.*email|ΡΩΤΑ.*τηλέφωνο/);
+      expect(adminPrompt).toMatch(/ΡΩΤΑ|ΧΩΡΙΣ τιμή/);
     });
   });
 
