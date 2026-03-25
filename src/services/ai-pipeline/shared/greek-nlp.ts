@@ -182,6 +182,17 @@ const GREEKLISH_CHARS: ReadonlyMap<string, string> = new Map([
 ]);
 
 /**
+ * Strip diacritics (accents) from Greek text.
+ * Converts ά→α, έ→ε, ή→η, ί→ι, ό→ο, ύ→υ, ώ→ω etc.
+ * Essential for Greek morphological matching (γενική πτώση).
+ *
+ * Example: "Δημητρίου" → "δημητριου", "Δημήτριος" → "δημητριος"
+ */
+export function stripDiacritics(text: string): string {
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+/**
  * Check if text contains any Greek characters.
  */
 export function containsGreek(text: string): boolean {
@@ -259,7 +270,7 @@ export function extractKeywords(text: string, minLength: number = 2): string[] {
   // Normalize: lowercase, remove punctuation, split
   let normalized = text
     .toLowerCase()
-    .replace(/[;.,!?:()"\[\]{}<>\u00AB\u00BB\u2014\u2013\-_/\\@#$%^&*+=~`|]/g, ' ')
+    .replace(/[;.,!?:()"[\]{}<>\u00AB\u00BB\u2014\u2013\-_/\\@#$%^&*+=~`|]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 

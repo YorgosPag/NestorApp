@@ -157,7 +157,9 @@
 - **Actual**: "Δεν βρέθηκε" — search failed
 - **Severity**: MEDIUM
 - **Category**: Search
-- **Fix**: Fuzzy matching ή Greek morphology normalization
+- **Fix**: ✅ `stripDiacritics()` + `stemGreekWord()` στο search_text handler.
+  Τώρα "Δημητρίου" → strip accents → "δημητριου" → stem (-ου) → "δημητρι",
+  "Δημήτριος" → strip accents → "δημητριος" → stem (-ος) → "δημητρι" → MATCH
 
 ---
 
@@ -225,7 +227,7 @@
 | 🔴 P0 | FINDING-007: firestore_write bypass (IBAN) | Data model corruption, no validation | Medium | ✅ FIXED |
 | 🟡 P1 | FINDING-002: ESCO disambiguation leak | Auto-selects χωρίς consent | Medium | ✅ FIXED |
 | 🟡 P1 | FINDING-001: documentNumber prefix stripped | Data loss | Low | ✅ FIXED |
-| 🟢 P2 | FINDING-005: Search γενική πτώση | UX issue | Medium | ⏳ OPEN |
+| 🟢 P2 | FINDING-005: Search γενική πτώση | UX issue | Medium | ✅ FIXED |
 | 🟢 P2 | FINDING-003: Skills free-text flow | UX improvement | Low | ✅ FIXED |
 
 ---

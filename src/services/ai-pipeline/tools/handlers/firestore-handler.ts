@@ -10,7 +10,7 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { safeJsonParse } from '@/lib/json-utils';
 import { getErrorMessage } from '@/lib/error-utils';
 import { recordQueryStrategy } from '../../query-strategy-service';
-import { greekToLatin } from '../../shared/greek-nlp';
+import { greekToLatin, stripDiacritics, stemGreekWord } from '../../shared/greek-nlp';
 import {
   type AgenticContext,
   type ToolHandler,
@@ -326,13 +326,16 @@ export class FirestoreHandler implements ToolHandler {
     args: Record<string, unknown>,
     ctx: AgenticContext
   ): Promise<ToolResult> {
-    const searchTerm = String(args.searchTerm ?? '').toLowerCase();
+    const searchTerm = stripDiacritics(String(args.searchTerm ?? '').toLowerCase());
     const words = searchTerm.split(/\s+/).filter(w => w.length >= 2);
     const latinWords = words.map(w => greekToLatin(w)).filter(Boolean);
-    const stems = [...words, ...latinWords]
+    const greekStems = words.map(w => stemGreekWord(w)).filter(w => w.length >= 2);
+    const prefixStems = [...words, ...latinWords]
       .filter(w => w.length >= 3)
       .map(w => w.substring(0, Math.min(w.length, 4)));
-    const allSearchTerms = [...new Set([...words, ...latinWords, ...stems])];
+    const allSearchTerms = [...new Set([
+      ...words, ...latinWords, ...greekStems, ...prefixStems,
+    ])];
 
     const collections = Array.isArray(args.collections)
       ? (args.collections as string[]).filter(c => ALLOWED_READ_COLLECTIONS.has(c))
@@ -367,9 +370,10 @@ export class FirestoreHandler implements ToolHandler {
           return searchFields.some(field => {
             const val = data[field];
             if (typeof val !== 'string') return false;
-            const valLower = val.toLowerCase();
-            const valLatin = greekToLatin(valLower);
-            const fullVal = valLatin ? `${valLower} ${valLatin}` : valLower;
+            const valNorm = stripDiacritics(val.toLowerCase());
+            const valLatin = greekToLatin(valNorm);
+            const valStemmed = stemGreekWord(valNorm);
+            const fullVal = [valNorm, valLatin, valStemmed].filter(Boolean).join(' ');
             return allSearchTerms.some(term => fullVal.includes(term));
           });
         })

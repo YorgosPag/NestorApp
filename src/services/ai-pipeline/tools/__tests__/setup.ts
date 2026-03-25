@@ -98,6 +98,8 @@ jest.mock('@/services/ai-pipeline/tools/contact-tab-filter', () => ({
 // ── Greek NLP ──
 jest.mock('@/services/ai-pipeline/shared/greek-nlp', () => ({
   greekToLatin: jest.fn((s: string) => s),
+  stripDiacritics: jest.fn((s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '')),
+  stemGreekWord: jest.fn((s: string) => s),
 }));
 
 // ── Super admin resolver ──
