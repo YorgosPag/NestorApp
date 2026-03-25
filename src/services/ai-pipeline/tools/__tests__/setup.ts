@@ -109,6 +109,14 @@ jest.mock('@/services/ai-pipeline/shared/super-admin-resolver', () => ({
 
 // ── RBAC matrix ──
 jest.mock('@/config/ai-role-access-matrix', () => ({
+  AI_ROLE_ACCESS_MATRIX: {
+    super_admin: {
+      label: 'Super Admin',
+      allowedCollections: ['contacts', 'projects', 'buildings', 'units'],
+      blockedFields: [],
+      promptDescription: 'Ο χρήστης είναι ο SUPER ADMIN. Έχεις ΠΛΗΡΗ πρόσβαση σε ΟΛΑ τα δεδομένα.',
+    },
+  },
   resolveAccessConfig: jest.fn(() => ({
     allowedCollections: ['contacts', 'projects', 'buildings', 'units'],
     scopeLevel: 'project',
@@ -118,6 +126,13 @@ jest.mock('@/config/ai-role-access-matrix', () => ({
     allowedCollections: ['contacts'],
     scopeLevel: 'none',
     blockedFields: new Set<string>(),
+    promptDescription: 'Πρόσβαση μόνο στα δικά σου δεδομένα.',
+  },
+  UNKNOWN_USER_ACCESS: {
+    allowedCollections: [],
+    scopeLevel: 'none',
+    blockedFields: new Set<string>(),
+    promptDescription: 'Δεν αναγνωρίστηκες.',
   },
   deriveBlockedFieldSet: jest.fn(() => new Set<string>()),
 }));
