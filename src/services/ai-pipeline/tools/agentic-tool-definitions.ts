@@ -597,7 +597,64 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
     },
   },
 
-  // ── 16. search_esco_occupations: Search ESCO occupations database ──
+  // ── 16. set_contact_esco: Write ESCO occupation and/or skills to contact ──
+  {
+    type: 'function' as const,
+    function: {
+      name: 'set_contact_esco',
+      description: [
+        'Set ESCO occupation and/or skills on a contact. Admin only.',
+        'CRITICAL: ALWAYS call search_esco_occupations/search_esco_skills FIRST to get the correct URI, label, and ISCO code.',
+        'For occupation: pass profession (label), escoUri, escoLabel, iscoCode from search results.',
+        'For skills: pass skills array with uri+label from search results. Replaces ALL skills on the contact.',
+        'Can set occupation only, skills only, or both in one call.',
+        'For free-text (not in ESCO): pass empty string for uri/escoUri/iscoCode.',
+      ].join(' '),
+      parameters: {
+        type: 'object',
+        properties: {
+          contactId: {
+            type: 'string',
+            description: 'Contact document ID (e.g. cont_xxx)',
+          },
+          profession: {
+            type: ['string', 'null'],
+            description: 'Occupation label in Greek (e.g. "Αρχιτέκτονας"). Null to skip occupation update.',
+          },
+          escoUri: {
+            type: ['string', 'null'],
+            description: 'ESCO occupation URI from search results. Empty string for free-text.',
+          },
+          escoLabel: {
+            type: ['string', 'null'],
+            description: 'ESCO preferred label from search results. Empty string for free-text.',
+          },
+          iscoCode: {
+            type: ['string', 'null'],
+            description: 'ISCO-08 4-digit code from search results (e.g. "2161"). Empty string for free-text.',
+          },
+          skills: {
+            type: ['array', 'null'],
+            description: 'Array of skills to SET (replaces all existing). Each item: {uri: string, label: string}. Null to skip skills update.',
+            items: {
+              type: 'object',
+              properties: {
+                uri: { type: 'string', description: 'ESCO skill URI (empty string for free-text skill)' },
+                label: { type: 'string', description: 'Skill label in Greek' },
+              },
+              required: ['uri', 'label'],
+              additionalProperties: false,
+            },
+          },
+        },
+        required: ['contactId', 'profession', 'escoUri', 'escoLabel', 'iscoCode', 'skills'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  // ── 17. search_esco_occupations: Search ESCO occupations database ──
   {
     type: 'function' as const,
     function: {

@@ -58,7 +58,9 @@ const SOCIAL_PLATFORM_MAP: Record<string, SocialMediaInfo['platform']> = {
 // ============================================================================
 
 export class ContactHandler implements ToolHandler {
-  readonly toolNames = ['create_contact', 'append_contact_info', 'update_contact_field'] as const;
+  readonly toolNames = [
+    'create_contact', 'append_contact_info', 'update_contact_field', 'set_contact_esco',
+  ] as const;
 
   async execute(
     toolName: string,
@@ -72,6 +74,8 @@ export class ContactHandler implements ToolHandler {
         return this.executeAppendContactInfo(args, ctx);
       case 'update_contact_field':
         return this.executeUpdateContactField(args, ctx);
+      case 'set_contact_esco':
+        return this.executeSetContactEsco(args, ctx);
       default:
         return { success: false, error: `Unknown contact tool: ${toolName}` };
     }
@@ -376,6 +380,78 @@ export class ContactHandler implements ToolHandler {
     return {
       success: true,
       data: { contactId, field, value, updated: true },
+      count: 1,
+    };
+  }
+
+  // --------------------------------------------------------------------------
+  // set_contact_esco — Set ESCO occupation and/or skills (ADR-132)
+  // --------------------------------------------------------------------------
+
+  private async executeSetContactEsco(
+    args: Record<string, unknown>,
+    ctx: AgenticContext
+  ): Promise<ToolResult> {
+    if (!ctx.isAdmin) {
+      return { success: false, error: 'set_contact_esco is admin-only.' };
+    }
+
+    const contactId = String(args.contactId ?? '').trim();
+    if (!contactId) {
+      return { success: false, error: 'contactId is required.' };
+    }
+
+    const db = getAdminFirestore();
+    const docSnap = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
+    if (!docSnap.exists) {
+      return { success: false, error: `Η επαφή ${contactId} δεν βρέθηκε.` };
+    }
+
+    const updateData: Record<string, unknown> = {
+      updatedAt: new Date().toISOString(),
+      lastModifiedBy: buildAttribution(ctx),
+    };
+    const changes: string[] = [];
+
+    // Occupation fields
+    const profession = typeof args.profession === 'string' ? args.profession.trim() : null;
+    if (profession) {
+      updateData.profession = profession;
+      updateData.escoUri = typeof args.escoUri === 'string' ? args.escoUri : '';
+      updateData.escoLabel = typeof args.escoLabel === 'string' ? args.escoLabel : '';
+      updateData.iscoCode = typeof args.iscoCode === 'string' ? args.iscoCode : '';
+      changes.push(`profession: ${profession}`);
+    }
+
+    // Skills array (replace entire array)
+    if (Array.isArray(args.skills)) {
+      const skills = (args.skills as Array<Record<string, unknown>>)
+        .filter(s => typeof s.label === 'string' && s.label.trim())
+        .map(s => ({
+          uri: typeof s.uri === 'string' ? s.uri : '',
+          label: String(s.label).trim(),
+        }));
+      updateData.escoSkills = skills;
+      changes.push(`skills: ${skills.map(s => s.label).join(', ')}`);
+    }
+
+    if (changes.length === 0) {
+      return { success: false, error: 'Provide profession and/or skills to update.' };
+    }
+
+    await db.collection(COLLECTIONS.CONTACTS).doc(contactId).update(updateData);
+    await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, 'update', updateData);
+
+    const { emitEntitySyncSignal } = await import(
+      '@/services/ai-pipeline/shared/contact-lookup'
+    );
+    emitEntitySyncSignal('contacts', 'UPDATED', contactId, ctx.companyId);
+
+    logger.info('Contact ESCO data updated', { contactId, changes, requestId: ctx.requestId });
+
+    return {
+      success: true,
+      data: { contactId, changes, updated: true },
       count: 1,
     };
   }
