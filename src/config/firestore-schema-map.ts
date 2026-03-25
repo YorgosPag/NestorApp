@@ -148,7 +148,7 @@ export const FIRESTORE_SCHEMA_MAP: Record<string, CollectionSchema> = {
       documentIssuer: "string? (αρχή έκδοσης, π.χ. 'Α.Τ. Αθηνών')",
       documentIssueDate: "string? (ημερομηνία έκδοσης, DD/MM/YYYY)",
       documentExpiryDate: "string? (ημερομηνία λήξης, DD/MM/YYYY)",
-      taxOffice: "string? (ΔΟΥ — Δημόσια Οικονομική Υπηρεσία, π.χ. 'Δ ΔΟΥ Αθηνών')",
+      taxOffice: "string? (ΔΟΥ — 4-ψήφιος ΚΩΔΙΚΟΣ, ΟΧΙ όνομα! Παραδείγματα: '1101'=Α' Αθηνών, '1104'=Δ' Αθηνών, '1301'=Α' Θεσσαλονίκης, '1317'=Ιωνίας Θεσσαλονίκης, '1137'=Καλλιθέας, '1201'=Α' Πειραιά, '2501'=Ηρακλείου, '2502'=Χανίων. Πλήρης λίστα στο DOY_CODE_MAP.)",
       notes: 'string?',
       tags: 'string[]?',
       createdAt: 'Timestamp',
