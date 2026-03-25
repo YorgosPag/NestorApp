@@ -20,6 +20,7 @@ import {
   emitSyncSignalIfMapped,
   logger,
 } from '../executor-shared';
+import { classifyContactDocument } from './contact-document-classifier';
 
 // ============================================================================
 // HANDLER
@@ -154,19 +155,43 @@ export class AttachmentHandler implements ToolHandler {
     const db = getAdminFirestore();
     const attribution = buildAttribution(ctx);
 
-    await promoteFileRecord(db, fileRecordId, contactId, 'documents', attribution);
+    // AI Vision auto-classification: detect document type → correct card
+    const classification = await classifyContactDocument({
+      downloadUrl: fileRecord.downloadUrl,
+      filename: fileRecord.filename,
+      contentType: fileRecord.contentType,
+    });
+
+    await promoteFileRecord(db, fileRecordId, contactId, 'documents', attribution, {
+      purpose: classification.purpose,
+      classificationAnalysis: {
+        classifier: 'contact-document-classifier',
+        contactPurpose: classification.purpose,
+        confidence: classification.confidence,
+        reasoning: classification.reasoning,
+        classifiedAt: new Date().toISOString(),
+      },
+    });
 
     await auditWrite(ctx, COLLECTIONS.FILES, fileRecordId, 'attach_document', {
       contactId, filename: fileRecord.filename,
+      autoClassifiedPurpose: classification.purpose,
+      classificationConfidence: classification.confidence,
     });
 
-    logger.info('Document attached to contact', {
-      contactId, fileRecordId, requestId: ctx.requestId,
+    logger.info('Document attached to contact with auto-classification', {
+      contactId, fileRecordId, purpose: classification.purpose,
+      confidence: classification.confidence, requestId: ctx.requestId,
     });
 
     return {
       success: true,
-      data: { contactId, contactDisplayName, fileRecordId, filename: fileRecord.filename, purpose: 'document' },
+      data: {
+        contactId, contactDisplayName, fileRecordId,
+        filename: fileRecord.filename, purpose: 'document',
+        autoClassifiedAs: classification.purpose,
+        classificationConfidence: classification.confidence,
+      },
     };
   }
 }
@@ -178,6 +203,7 @@ export class AttachmentHandler implements ToolHandler {
 interface FileRecordData {
   downloadUrl: string;
   filename: string;
+  contentType: string;
 }
 
 function validateArgs(args: Record<string, unknown>): {
@@ -202,6 +228,7 @@ async function getFileRecord(fileRecordId: string): Promise<FileRecordData | nul
   return {
     downloadUrl: String(data?.downloadUrl ?? ''),
     filename: String(data?.originalFilename ?? data?.filename ?? 'file'),
+    contentType: String(data?.contentType ?? 'application/octet-stream'),
   };
 }
 
@@ -218,18 +245,26 @@ async function getContact(contactId: string, companyId: string): Promise<Contact
   return { displayName: String(data?.displayName ?? 'Unknown') };
 }
 
+interface PromoteOptions {
+  /** Contact document purpose (e.g., 'id', 'cv-resume') — sets FileRecord.purpose for UI card matching */
+  purpose?: string;
+  /** AI classification analysis to store in ingestion.analysis */
+  classificationAnalysis?: Record<string, unknown>;
+}
+
 /**
  * Promote a FileRecord from ingestion/pending to contact-linked/ready.
- * Updates entityType, entityId, domain, category, and status.
+ * Updates entityType, entityId, domain, category, status, and optionally purpose.
  */
 async function promoteFileRecord(
   db: FirebaseFirestore.Firestore,
   fileRecordId: string,
   contactId: string,
   category: 'photos' | 'documents',
-  attribution: string
+  attribution: string,
+  options?: PromoteOptions
 ): Promise<void> {
-  await db.collection(COLLECTIONS.FILES).doc(fileRecordId).update({
+  const updateData: Record<string, unknown> = {
     entityType: 'contact',
     entityId: contactId,
     domain: 'admin',
@@ -239,5 +274,14 @@ async function promoteFileRecord(
     lastModifiedBy: attribution,
     'ingestion.state': 'classified',
     'ingestion.stateChangedAt': new Date().toISOString(),
-  });
+  };
+
+  if (options?.purpose) {
+    updateData.purpose = options.purpose;
+  }
+  if (options?.classificationAnalysis) {
+    updateData['ingestion.analysis'] = options.classificationAnalysis;
+  }
+
+  await db.collection(COLLECTIONS.FILES).doc(fileRecordId).update(updateData);
 }
