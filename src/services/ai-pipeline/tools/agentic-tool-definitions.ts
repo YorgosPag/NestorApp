@@ -196,7 +196,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
     type: 'function',
     function: {
       name: 'firestore_write',
-      description: 'Create or update a Firestore document. ONLY for admin use. Always include companyId. Use mode "create" for new documents, "update" for existing. Pass data as a JSON string. IMPORTANT: For creating contacts, use the dedicated create_contact tool instead (correct ID prefix + field validation).',
+      description: 'Create or update a Firestore document. ONLY for admin use. Always include companyId. Use mode "create" for new documents, "update" for existing. Pass data as a JSON string. IMPORTANT: For contacts, use update_contact_field (scalar fields) or append_contact_info (phone/email). For creating contacts, use create_contact. IMPORTANT: For profession/skills, ALWAYS call search_esco_occupations/search_esco_skills FIRST — never write profession or escoSkills without searching ESCO.',
       parameters: {
         type: 'object',
         properties: {
@@ -568,6 +568,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
         'Use for ALL scalar fields: vatNumber, profession, address, birthDate, documentIssueDate, documentExpiryDate, documentType, documentNumber, documentIssuer, taxOffice, gender, amka, etc.',
         'For phone/email/social use append_contact_info instead.',
         'IMPORTANT for taxOffice: ALWAYS call lookup_doy_code first to get the 4-digit code.',
+        'IMPORTANT for profession: ALWAYS call search_esco_occupations first. Show matches to user. If no ESCO match, ask user before adding free text.',
         'IMPORTANT for dates (birthDate, documentIssueDate, documentExpiryDate): ALWAYS use DD/MM/YYYY format (e.g. "25/01/2027").',
         'IMPORTANT for documentType: ONLY values "identity_card", "passport", "drivers_license", "other".',
         'Pass the contact document ID (e.g. cont_xxx) and the field+value to update.',
@@ -596,7 +597,61 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
     },
   },
 
-  // ── 16. lookup_doy_code: Find Greek Tax Office (ΔΟΥ) code by name ──
+  // ── 16. search_esco_occupations: Search ESCO occupations database ──
+  {
+    type: 'function' as const,
+    function: {
+      name: 'search_esco_occupations',
+      description: [
+        'Search the ESCO occupations database (2,942 EU-standardized occupations).',
+        'CRITICAL RULE: ALWAYS call this BEFORE writing profession/escoUri/iscoCode to a contact.',
+        'If results found → show top matches to user, ask which one to use.',
+        'If NO results → tell user "Δεν βρέθηκε στα ESCO. Θέλεις να το προσθέσω ως ελεύθερο κείμενο;"',
+        'NEVER write profession without searching ESCO first.',
+      ].join(' '),
+      parameters: {
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description: 'Occupation name to search for in Greek (e.g. "αρχιτέκτονας", "μηχανικός", "δικηγόρος")',
+          },
+        },
+        required: ['query'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  // ── 17. search_esco_skills: Search ESCO skills database ──
+  {
+    type: 'function' as const,
+    function: {
+      name: 'search_esco_skills',
+      description: [
+        'Search the ESCO skills database (13,485 EU-standardized skills).',
+        'CRITICAL RULE: ALWAYS call this BEFORE writing skills/escoSkills to a contact.',
+        'If results found → show top matches to user, ask which ones to add.',
+        'If NO results → tell user "Δεν βρέθηκε στα ESCO. Θέλεις να το προσθέσω ως ελεύθερο κείμενο;"',
+        'NEVER write skills without searching ESCO first.',
+      ].join(' '),
+      parameters: {
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description: 'Skill name to search for in Greek (e.g. "διοίκηση επιχειρήσεων", "αυτοκάδ", "μαθηματικά")',
+          },
+        },
+        required: ['query'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  // ── 18. lookup_doy_code: Find Greek Tax Office (ΔΟΥ) code by name ──
   {
     type: 'function',
     function: {

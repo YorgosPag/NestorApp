@@ -14,6 +14,8 @@
  */
 
 import { getCollectionSchemaInfo } from '@/config/firestore-schema-map';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import {
   ALLOWED_READ_COLLECTIONS,
   type AgenticContext,
@@ -26,7 +28,12 @@ import {
 // ============================================================================
 
 export class UtilityHandler implements ToolHandler {
-  readonly toolNames = ['get_collection_schema', 'lookup_doy_code'] as const;
+  readonly toolNames = [
+    'get_collection_schema',
+    'lookup_doy_code',
+    'search_esco_occupations',
+    'search_esco_skills',
+  ] as const;
 
   async execute(
     toolName: string,
@@ -38,6 +45,10 @@ export class UtilityHandler implements ToolHandler {
         return this.executeGetCollectionSchema(args);
       case 'lookup_doy_code':
         return this.executeLookupDoyCode(args);
+      case 'search_esco_occupations':
+        return this.executeSearchEscoOccupations(args);
+      case 'search_esco_skills':
+        return this.executeSearchEscoSkills(args);
       default:
         return { success: false, error: `Unknown utility tool: ${toolName}` };
     }
@@ -112,5 +123,127 @@ export class UtilityHandler implements ToolHandler {
       })),
       count: matches.length,
     };
+  }
+
+  // --------------------------------------------------------------------------
+  // ESCO Search — Occupations & Skills (ADR-132)
+  // --------------------------------------------------------------------------
+
+  /**
+   * Normalize Greek text: lowercase + remove diacritics.
+   * Same algorithm as client-side esco.service.ts.
+   */
+  private normalizeEsco(text: string): string {
+    return text
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  /**
+   * Extract search tokens from query (min 2 chars per word).
+   */
+  private queryToTokens(query: string): string[] {
+    return this.normalizeEsco(query)
+      .split(/[\s,.\-/()]+/)
+      .filter(t => t.length >= 2);
+  }
+
+  private async executeSearchEscoOccupations(
+    args: Record<string, unknown>
+  ): Promise<ToolResult> {
+    const query = String(args.query ?? '').trim();
+    if (query.length < 2) {
+      return { success: false, error: 'query must be at least 2 characters' };
+    }
+
+    const tokens = this.queryToTokens(query);
+    if (tokens.length === 0) {
+      return { success: true, data: [], count: 0 };
+    }
+
+    const db = getAdminFirestore();
+    const snap = await db
+      .collection(COLLECTIONS.ESCO_CACHE)
+      .where('searchTokensEl', 'array-contains', tokens[0])
+      .limit(40)
+      .get();
+
+    const normalizedQuery = this.normalizeEsco(query);
+    const results = snap.docs
+      .map(d => d.data())
+      .filter(occ => {
+        // All tokens must be present in the search tokens
+        const allTokens = (occ.searchTokensEl as string[]) ?? [];
+        return tokens.every(t => allTokens.some(st => st.startsWith(t)));
+      })
+      .map(occ => {
+        const label = occ.preferredLabel as Record<string, string>;
+        const normalizedLabel = this.normalizeEsco(label.el ?? '');
+        // Score: exact > starts-with > contains
+        const score = normalizedLabel === normalizedQuery ? 1.0
+          : normalizedLabel.startsWith(normalizedQuery) ? 0.9
+          : normalizedLabel.includes(normalizedQuery) ? 0.7
+          : 0.5;
+        return {
+          labelEl: label.el ?? '',
+          labelEn: label.en ?? '',
+          iscoCode: occ.iscoCode ?? '',
+          uri: occ.uri ?? '',
+          score,
+        };
+      })
+      .sort((a, b) => b.score - a.score || a.labelEl.localeCompare(b.labelEl))
+      .slice(0, 10);
+
+    return { success: true, data: results, count: results.length };
+  }
+
+  private async executeSearchEscoSkills(
+    args: Record<string, unknown>
+  ): Promise<ToolResult> {
+    const query = String(args.query ?? '').trim();
+    if (query.length < 2) {
+      return { success: false, error: 'query must be at least 2 characters' };
+    }
+
+    const tokens = this.queryToTokens(query);
+    if (tokens.length === 0) {
+      return { success: true, data: [], count: 0 };
+    }
+
+    const db = getAdminFirestore();
+    const snap = await db
+      .collection(COLLECTIONS.ESCO_SKILLS_CACHE)
+      .where('searchTokensEl', 'array-contains', tokens[0])
+      .limit(40)
+      .get();
+
+    const normalizedQuery = this.normalizeEsco(query);
+    const results = snap.docs
+      .map(d => d.data())
+      .filter(skill => {
+        const allTokens = (skill.searchTokensEl as string[]) ?? [];
+        return tokens.every(t => allTokens.some(st => st.startsWith(t)));
+      })
+      .map(skill => {
+        const label = skill.preferredLabel as Record<string, string>;
+        const normalizedLabel = this.normalizeEsco(label.el ?? '');
+        const score = normalizedLabel === normalizedQuery ? 1.0
+          : normalizedLabel.startsWith(normalizedQuery) ? 0.9
+          : normalizedLabel.includes(normalizedQuery) ? 0.7
+          : 0.5;
+        return {
+          labelEl: label.el ?? '',
+          labelEn: label.en ?? '',
+          uri: skill.uri ?? '',
+          score,
+        };
+      })
+      .sort((a, b) => b.score - a.score || a.labelEl.localeCompare(b.labelEl))
+      .slice(0, 10);
+
+    return { success: true, data: results, count: results.length };
   }
 }
