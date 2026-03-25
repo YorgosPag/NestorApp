@@ -348,6 +348,9 @@ export class AgenticToolExecutor {
         case 'create_contact':
           result = await this.executeCreateContact(args, ctx);
           break;
+        case 'lookup_doy_code':
+          result = await this.executeLookupDoyCode(args);
+          break;
         default:
           result = { success: false, error: `Unknown tool: ${toolName}` };
       }
@@ -1944,6 +1947,65 @@ export class AgenticToolExecutor {
       success: true,
       data: allResults,
       count: totalCount,
+    };
+  }
+
+  // ==========================================================================
+  // LOOKUP: Greek Tax Office (ΔΟΥ) code by name
+  // ==========================================================================
+
+  /**
+   * lookup_doy_code: Search GREEK_TAX_OFFICES by name/keyword, return matching codes.
+   * No Firestore access — pure in-memory lookup from static data.
+   */
+  private async executeLookupDoyCode(
+    args: Record<string, unknown>,
+  ): Promise<ToolResult> {
+    const query = String(args.query ?? '').toLowerCase().trim();
+    if (!query) {
+      return { success: false, error: 'query is required' };
+    }
+
+    // Lazy import to avoid bundling in non-agentic paths
+    const { GREEK_TAX_OFFICES } = await import(
+      '@/subapps/accounting/data/greek-tax-offices'
+    );
+
+    // Normalize query: remove accents, common abbreviations
+    const normalizeGreek = (s: string): string =>
+      s.toLowerCase()
+        .replace(/ά/g, 'α').replace(/έ/g, 'ε').replace(/ή/g, 'η')
+        .replace(/ί/g, 'ι').replace(/ό/g, 'ο').replace(/ύ/g, 'υ').replace(/ώ/g, 'ω')
+        .replace(/ϊ/g, 'ι').replace(/ΐ/g, 'ι').replace(/ϋ/g, 'υ').replace(/ΰ/g, 'υ')
+        .replace(/'/g, '').replace(/'/g, '').replace(/\\/g, '');
+
+    const normalizedQuery = normalizeGreek(query);
+    const queryWords = normalizedQuery.split(/\s+/).filter(w => w.length >= 2);
+
+    const matches = GREEK_TAX_OFFICES.filter(office => {
+      const normalizedName = normalizeGreek(office.name);
+      const normalizedRegion = normalizeGreek(office.region);
+      const fullText = `${normalizedName} ${normalizedRegion} ${office.code}`;
+      // All query words must match somewhere
+      return queryWords.every(w => fullText.includes(w));
+    }).slice(0, 10); // Max 10 results
+
+    if (matches.length === 0) {
+      return {
+        success: false,
+        error: `Δεν βρέθηκε ΔΟΥ για "${query}". Δοκίμασε με μέρος του ονόματος (π.χ. "Ιωνία", "Καλλιθέα").`,
+      };
+    }
+
+    return {
+      success: true,
+      data: matches.map(m => ({
+        code: m.code,
+        name: m.name,
+        region: m.region,
+      })),
+      count: matches.length,
+      hint: 'Χρησιμοποίησε τον ΚΩΔΙΚΟ (code) στο πεδίο taxOffice, ΟΧΙ το όνομα.',
     };
   }
 

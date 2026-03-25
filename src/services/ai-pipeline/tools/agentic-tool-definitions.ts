@@ -531,6 +531,32 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
       strict: true,
     },
   },
+  // ── 16. lookup_doy_code: Find Greek Tax Office (ΔΟΥ) code by name ──
+  {
+    type: 'function',
+    function: {
+      name: 'lookup_doy_code',
+      description: [
+        'Look up Greek Tax Office (ΔΟΥ/DOY) code by name or keyword.',
+        'CRITICAL: ALWAYS use this tool before writing taxOffice to a contact.',
+        'taxOffice field stores the 4-digit CODE (e.g. "1317"), NOT the name.',
+        'Pass the user\'s description (e.g. "Ιωνία Θεσσαλονίκης", "Καλλιθέα", "Α Αθηνών") and get back the correct code.',
+        'Returns matching tax offices with code, name, and region.',
+      ].join(' '),
+      parameters: {
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description: 'Search query — name or part of name of the tax office (e.g. "Ιωνία", "Καλλιθέα", "Θεσσαλονίκη", "Α Αθηνών")',
+          },
+        },
+        required: ['query'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
 ];
 
 /**
