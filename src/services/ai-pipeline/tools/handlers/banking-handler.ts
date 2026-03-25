@@ -97,15 +97,15 @@ export class BankingHandler implements ToolHandler {
 
     const input: BankAccountInput = {
       bankName,
-      bankCode: detectedBank?.code ?? null,
+      bankCode: detectedBank?.code ?? undefined,
       iban,
-      accountNumber: null,
-      branch: null,
+      accountNumber: undefined,
+      branch: undefined,
       accountType,
       currency,
       isPrimary: Boolean(args.isPrimary ?? false),
-      holderName: nullableString(args.holderName),
-      notes: nullableString(args.notes),
+      holderName: nullableString(args.holderName) ?? undefined,
+      notes: nullableString(args.notes) ?? undefined,
       isActive: true,
     };
 
