@@ -27,6 +27,7 @@ export interface SectionLike {
  */
 export const ARRAY_FIELD_SECTIONS: Readonly<Record<string, readonly string[]>> = {
   communication: ['phones', 'emails', 'websites', 'socialMedia'],
+  professional: ['profession', 'specialty', 'escoSkills', 'escoUri', 'escoLabel', 'iscoCode'],
 } as const;
 
 // ============================================================================
