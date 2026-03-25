@@ -172,12 +172,17 @@ export class TelegramChannelAdapter {
 function mapAttachments(attachments?: MessageAttachment[]): IntakeAttachment[] {
   if (!attachments || attachments.length === 0) return [];
 
-  return attachments.map(a => ({
-    filename: a.filename ?? 'attachment',
-    contentType: a.mimeType ?? 'application/octet-stream',
-    sizeBytes: a.size ?? 0,
-    ...(a.url ? { storageUrl: a.url } : {}),
-    ...(a.fileRecordId ? { fileRecordId: a.fileRecordId } : {}),
-    ...(!a.url && !a.fileRecordId ? { downloadFailed: true } : {}),
-  }));
+  return attachments.map(a => {
+    // fileRecordId may be top-level OR inside metadata (processTelegramMedia stores it in metadata)
+    const fileId = a.fileRecordId ?? (a.metadata?.fileRecordId as string | undefined);
+    const hasFile = !!(a.url || fileId);
+    return {
+      filename: a.filename ?? 'attachment',
+      contentType: a.mimeType ?? 'application/octet-stream',
+      sizeBytes: a.size ?? 0,
+      ...(a.url ? { storageUrl: a.url } : {}),
+      ...(fileId ? { fileRecordId: fileId } : {}),
+      ...(!hasFile ? { downloadFailed: true } : {}),
+    };
+  });
 }
