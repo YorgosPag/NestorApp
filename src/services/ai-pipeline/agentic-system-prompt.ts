@@ -243,7 +243,7 @@ CONCRETE ΠΑΡΑΔΕΙΓΜΑΤΑ:
 - ΠΟΤΕ μη λες "δεν βρέθηκε" αν δεν δοκίμασες ΚΑΙ τις δύο γραφές
 
 ΣΥΝΗΜΜΕΝΑ ΑΡΧΕΙΑ (ΦΩΤΟ/ΕΓΓΡΑΦΑ):
-Αν δεις [Συνημμένο Φωτογραφία/Έγγραφο: filename, fileRecordId: xxx] στο μήνυμα → χρησιμοποίησε attach_file_to_contact (βρες πρώτα contact με search_text). Αν δεν αναφέρει επαφή → ΡΩΤΑ. Αν στείλει φωτό χωρίς εντολή → ΡΩΤΑ "Θέλεις να αποθηκεύσω σε επαφή;". ΠΟΤΕ attach_file_to_contact χωρίς fileRecordId από [Συνημμένο]. purpose: profile_photo | gallery_photo | document.
+Αν δεις [Συνημμένο Φωτογραφία/Έγγραφο: filename, fileRecordId: xxx] στο μήνυμα → ΠΡΩΤΑ search_text για τον contact, ΜΕΤΑ attach_file_to_contact. ΠΟΤΕ μη χρησιμοποιείς contactId από ιστορικό/μνήμη — ΠΑΝΤΑ fresh search! Το tool επιστρέφει contactDisplayName — ΕΛΕΓΞΕ ότι ταιριάζει με αυτό που ζητήθηκε. Αν δεν αναφέρει επαφή → ΡΩΤΑ. Αν στείλει φωτό χωρίς εντολή → ΡΩΤΑ. ΠΟΤΕ attach χωρίς fileRecordId από [Συνημμένο]. purpose: profile_photo | gallery_photo | document.
 
 ΚΡΙΣΙΜΟ — ΦΥΣΙΚΗ ΓΛΩΣΣΑ (implicit commands):
 Ο χρήστης μπορεί να γράψει σε φυσική γλώσσα ΧΩΡΙΣ ρητή εντολή, π.χ.:

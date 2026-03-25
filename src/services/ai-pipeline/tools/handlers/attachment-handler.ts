@@ -59,7 +59,7 @@ export class AttachmentHandler implements ToolHandler {
       return { success: false, error: 'FileRecord has no downloadUrl.' };
     }
 
-    // Verify contact exists and belongs to same company
+    // Verify contact exists and belongs to same company — return displayName for AI verification
     const contact = await getContact(contactId, ctx.companyId);
     if (!contact) {
       return { success: false, error: 'Contact not found or access denied.' };
@@ -67,11 +67,11 @@ export class AttachmentHandler implements ToolHandler {
 
     switch (purpose) {
       case 'profile_photo':
-        return this.handleProfilePhoto(contactId, fileRecordId, fileRecord, ctx);
+        return this.handleProfilePhoto(contactId, fileRecordId, fileRecord, contact.displayName, ctx);
       case 'gallery_photo':
-        return this.handleGalleryPhoto(contactId, fileRecordId, fileRecord, ctx);
+        return this.handleGalleryPhoto(contactId, fileRecordId, fileRecord, contact.displayName, ctx);
       case 'document':
-        return this.handleDocument(contactId, fileRecordId, fileRecord, ctx);
+        return this.handleDocument(contactId, fileRecordId, fileRecord, contact.displayName, ctx);
     }
   }
 
@@ -81,6 +81,7 @@ export class AttachmentHandler implements ToolHandler {
     contactId: string,
     fileRecordId: string,
     fileRecord: FileRecordData,
+    contactDisplayName: string,
     ctx: AgenticContext
   ): Promise<ToolResult> {
     const db = getAdminFirestore();
@@ -106,7 +107,7 @@ export class AttachmentHandler implements ToolHandler {
 
     return {
       success: true,
-      data: { contactId, fileRecordId, photoURL: fileRecord.downloadUrl, purpose: 'profile_photo' },
+      data: { contactId, contactDisplayName, fileRecordId, photoURL: fileRecord.downloadUrl, purpose: 'profile_photo' },
     };
   }
 
@@ -116,6 +117,7 @@ export class AttachmentHandler implements ToolHandler {
     contactId: string,
     fileRecordId: string,
     fileRecord: FileRecordData,
+    contactDisplayName: string,
     ctx: AgenticContext
   ): Promise<ToolResult> {
     const db = getAdminFirestore();
@@ -136,7 +138,7 @@ export class AttachmentHandler implements ToolHandler {
 
     return {
       success: true,
-      data: { contactId, fileRecordId, purpose: 'gallery_photo' },
+      data: { contactId, contactDisplayName, fileRecordId, purpose: 'gallery_photo' },
     };
   }
 
@@ -146,6 +148,7 @@ export class AttachmentHandler implements ToolHandler {
     contactId: string,
     fileRecordId: string,
     fileRecord: FileRecordData,
+    contactDisplayName: string,
     ctx: AgenticContext
   ): Promise<ToolResult> {
     const db = getAdminFirestore();
@@ -163,7 +166,7 @@ export class AttachmentHandler implements ToolHandler {
 
     return {
       success: true,
-      data: { contactId, fileRecordId, filename: fileRecord.filename, purpose: 'document' },
+      data: { contactId, contactDisplayName, fileRecordId, filename: fileRecord.filename, purpose: 'document' },
     };
   }
 }
@@ -202,12 +205,17 @@ async function getFileRecord(fileRecordId: string): Promise<FileRecordData | nul
   };
 }
 
-async function getContact(contactId: string, companyId: string): Promise<boolean> {
+interface ContactData {
+  displayName: string;
+}
+
+async function getContact(contactId: string, companyId: string): Promise<ContactData | null> {
   const db = getAdminFirestore();
   const snap = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
-  if (!snap.exists) return false;
+  if (!snap.exists) return null;
   const data = snap.data();
-  return !data?.companyId || data.companyId === companyId;
+  if (data?.companyId && data.companyId !== companyId) return null;
+  return { displayName: String(data?.displayName ?? 'Unknown') };
 }
 
 /**
