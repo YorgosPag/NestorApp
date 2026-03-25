@@ -63,6 +63,24 @@ export interface ToolHandler {
 }
 
 // ============================================================================
+// ATTRIBUTION — Human-readable "who did this" for document createdBy/lastModifiedBy
+// ============================================================================
+
+/**
+ * Builds a human-readable attribution string for document audit fields.
+ *
+ * Examples:
+ *   "AI Agent (Γιώργος via telegram)"
+ *   "AI Agent (buyer: Δημήτρης via whatsapp)"
+ *   "AI Agent (unknown via email)"
+ */
+export function buildAttribution(ctx: AgenticContext): string {
+  const name = ctx.contactMeta?.displayName ?? ctx.channelSenderId;
+  const role = ctx.isAdmin ? '' : 'buyer: ';
+  return `AI Agent (${role}${name} via ${ctx.channel})`;
+}
+
+// ============================================================================
 // AI-FACING ERROR MESSAGES (SSoT — returned to AI inside ToolResult.error)
 // ============================================================================
 

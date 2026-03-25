@@ -24,6 +24,7 @@ import {
   type ToolResult,
   AI_ERRORS,
   auditWrite,
+  buildAttribution,
   logger,
 } from '../executor-shared';
 
@@ -141,7 +142,7 @@ export class ContactHandler implements ToolHandler {
         type: contactType as 'individual' | 'company',
         companyId: ctx.companyId,
         companyName: companyName ?? undefined,
-        createdBy: 'AI Agent (admin)',
+        createdBy: buildAttribution(ctx),
         skipDuplicateCheck,
       });
 
@@ -250,6 +251,7 @@ export class ContactHandler implements ToolHandler {
 
     const updatePayload: Record<string, unknown> = {
       updatedAt: new Date().toISOString(),
+      lastModifiedBy: buildAttribution(ctx),
     };
 
     if (fieldType === 'phone') {

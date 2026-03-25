@@ -43,6 +43,7 @@ import {
   redactRoleBlockedFields,
   truncateResult,
   auditWrite,
+  buildAttribution,
   emitSyncSignalIfMapped,
   logger,
   MAX_QUERY_RESULTS,
@@ -270,10 +271,12 @@ export class FirestoreHandler implements ToolHandler {
       ...data,
       companyId: ctx.companyId,
       updatedAt: new Date().toISOString(),
+      lastModifiedBy: buildAttribution(ctx),
     };
 
     if (mode === 'create') {
       writeData.createdAt = new Date().toISOString();
+      writeData.createdBy = buildAttribution(ctx);
     }
 
     const db = getAdminFirestore();
