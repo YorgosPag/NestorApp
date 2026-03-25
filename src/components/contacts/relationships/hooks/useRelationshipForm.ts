@@ -249,8 +249,8 @@ export const useRelationshipForm = (
         ...formData.contactInfo,
         businessPhone: primaryPhone
           ? `${primaryPhone.countryCode || '+30'} ${primaryPhone.number}`.trim()
-          : formData.contactInfo?.businessPhone || null,
-        businessEmail: primaryEmail?.email || formData.contactInfo?.businessEmail || null
+          : formData.contactInfo?.businessPhone ?? undefined,
+        businessEmail: primaryEmail?.email || (formData.contactInfo?.businessEmail ?? undefined)
       };
 
       const hasContactInfo = builtContactInfo.businessPhone || builtContactInfo.businessEmail;
