@@ -286,6 +286,7 @@
 | **ADR-259** | Production Readiness Audit — 6 Critical Findings | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-259-production-readiness-audit.md) |
 | **ADR-260** | Καθολικός Κατάλογος Firestore Collections | ✅ ACTIVE | 2026-03-24 | Data & State | [📄](./adrs/ADR-260-firestore-collections-catalog.md) |
 | **ADR-261** | Multi-Agent Orchestrator (Claude Agent SDK) | ✅ IMPLEMENTED | 2026-03-24 | Infrastructure | [📄](./adrs/ADR-261-multi-agent-orchestrator.md) |
+| **ADR-262** | AI Agent Testing & Production Standards | ✅ ACTIVE | 2026-03-25 | AI Architecture / Quality Standards / Operations | [📄](./adrs/ADR-262-ai-agent-testing-production-standards.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
