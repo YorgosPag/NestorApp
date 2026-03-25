@@ -368,6 +368,9 @@ npx tsx scripts/import-esco-skills.ts
 | 2026-02-09 | Extended — ESCO Skills Integration: 13.485 skills, multi-select picker, EscoSkillPicker component | Georgios Pagonis + Claude Code |
 | 2026-02-09 | Skills Import Complete — 13.485 skills imported to Firestore + composite indexes deployed | Claude Code |
 | 2026-02-09 | Turbopack Bug — `searchSkills is not a function` resolved by running `next dev` without `--turbopack` | Claude Code |
+| 2026-03-25 | Server-side ESCO enforcement — `set_contact_esco` rejects free-text writes when ESCO matches exist, forces AI to ask user first | Claude Code |
+| 2026-03-25 | Extracted shared `esco-search-utils.ts` — eliminates duplication between contact-handler and utility-handler | Claude Code |
+| 2026-03-25 | Bug fix — empty skills array no longer deletes existing skills (empty = no change) | Claude Code |
 
 ---
 
