@@ -393,7 +393,21 @@ export async function executeAgenticLoop(
     const cleanedAnswer = cleanAITextReply(answer);
 
     // Phase 6B: Extract suggested follow-up actions from AI response
-    const { cleanAnswer: finalAnswer, suggestions } = extractSuggestions(cleanedAnswer);
+    const { cleanAnswer: rawFinalAnswer, suggestions } = extractSuggestions(cleanedAnswer);
+
+    // Phase 6C: Anti-hallucination guardrail — if AI claims a write action but made 0 tool calls, block it
+    const WRITE_CLAIM_PATTERNS = /ολοκληρώθηκε|ενημερώθηκε|διορθώθηκε|αποθηκεύτηκε|ενημέρωσα|διόρθωσα|αποθήκευσα|άλλαξα|τροποποίησα|προστέθηκε|αφαιρέθηκε/i;
+    const isWriteClaim = WRITE_CLAIM_PATTERNS.test(rawFinalAnswer);
+    const finalAnswer = (isWriteClaim && allToolCalls.length === 0)
+      ? 'Δεν μπόρεσα να εκτελέσω την αλλαγή — χρειάζεται αναζήτηση και ενημέρωση μέσω εργαλείων. Δοκίμασε ξανά ή δώσε περισσότερες λεπτομέρειες (π.χ. όνομα επαφής + τιμή πεδίου).'
+      : rawFinalAnswer;
+
+    if (isWriteClaim && allToolCalls.length === 0) {
+      logger.warn('Anti-hallucination: AI claimed write without tool calls — blocked', {
+        requestId: context.requestId,
+        claimedAnswer: rawFinalAnswer.slice(0, 100),
+      });
+    }
 
     logger.info('Agentic loop completed', {
       requestId: context.requestId,
