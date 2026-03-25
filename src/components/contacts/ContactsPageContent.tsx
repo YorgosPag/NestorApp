@@ -12,9 +12,6 @@ import type { Contact, IndividualContact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ContactUpdatedPayload } from '@/services/realtime';
-// 🏢 ENTERPRISE: Centralized AI sync bridge + tab visibility (SSoT hooks)
-import { useAISyncBridge } from '@/hooks/useAISyncBridge';
-import { useTabVisibilityRefresh } from '@/hooks/useTabVisibilityRefresh';
 
 // 🏢 ENTERPRISE: Type guard for contacts with photo URLs
 const hasMultiplePhotoURLs = (contact: Contact): contact is IndividualContact & { multiplePhotoURLs: string[] } => {
@@ -132,15 +129,12 @@ export function ContactsPageContent() {
     }
   });
 
-  // 🏢 ENTERPRISE: Real-time subscription key — incrementing forces re-subscribe
-  const [refreshKey, setRefreshKey] = useState(0);
-  const forceDataRefresh = useCallback(() => {
-    setRefreshKey(prev => prev + 1);
-  }, []);
-
-  // 🏢 ENTERPRISE: Firestore real-time subscription (SSoT — replaces one-time fetch)
-  // Contacts update automatically when ANY source writes to Firestore:
+  // 🏢 ENTERPRISE: Firestore real-time subscription (SSoT)
+  // onSnapshot delivers updates automatically when ANY source writes to Firestore:
   // - AI agent (Telegram), user edits, bulk imports, etc.
+  // No signal bridge or tab visibility needed — onSnapshot handles everything.
+  const [subscriptionRetry, setSubscriptionRetry] = useState(0);
+
   useEffect(() => {
     if (authLoading || !user) return;
 
@@ -149,9 +143,6 @@ export function ContactsPageContent() {
 
     const unsubContacts = ContactsService.subscribeToContacts(
       (freshContacts) => {
-        logger.info('Real-time contacts update received', {
-          count: freshContacts.length,
-        });
         setContacts(freshContacts);
         setIsLoading(false);
       },
@@ -160,19 +151,13 @@ export function ContactsPageContent() {
         onError: (err) => {
           logger.warn('Subscription error — retrying in 3s', { error: err.message });
           setError(err.message);
-          setTimeout(() => forceDataRefresh(), 3000);
+          setTimeout(() => setSubscriptionRetry(prev => prev + 1), 3000);
         },
       }
     );
 
     return () => { unsubContacts(); };
-  }, [user, authLoading, refreshKey, forceDataRefresh]);
-
-  // 🏢 ENTERPRISE: AI sync bridge + tab visibility (defense-in-depth)
-  // Signal bridge: catches server-side AI writes that onSnapshot might miss
-  // Tab visibility: refreshes when user returns to tab after Telegram interaction
-  useAISyncBridge('contacts', forceDataRefresh);
-  useTabVisibilityRefresh(forceDataRefresh);
+  }, [user, authLoading, subscriptionRetry]);
 
   // 🚀 ENTERPRISE PERFORMANCE: Direct contact fetch για instant loading
   const loadSpecificContact = useCallback(async (contactId: string) => {
@@ -205,10 +190,10 @@ export function ContactsPageContent() {
     }
   }, []);
 
-  // 🏢 ENTERPRISE: refreshContacts now just triggers the real-time subscription re-fetch
+  // 🏢 ENTERPRISE: refreshContacts triggers subscription re-fetch (error recovery only)
   const refreshContacts = useCallback(async () => {
-    forceDataRefresh();
-  }, [forceDataRefresh]);
+    setSubscriptionRetry(prev => prev + 1);
+  }, []);
 
   // 🏢 ENTERPRISE: In-place single-contact update — prevents full re-fetch & tab reset
   // Instead of refreshContacts() which creates a new contacts array (causing remount),
