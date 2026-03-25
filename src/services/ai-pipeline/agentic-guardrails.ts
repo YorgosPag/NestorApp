@@ -22,15 +22,15 @@ export function isFabricatedContactValue(
   const value = String(toolArgs.value ?? '').trim();
   if (!value) return false;
 
-  // Normalize: remove whitespace, dashes, parentheses for fuzzy matching
-  const normalizedMsg = userMessage.toLowerCase().replace(/[\s\-().]/g, '');
-
   if (fieldType === 'email') {
-    // Email: exact case-insensitive match (no structural normalization needed)
-    return !normalizedMsg.includes(value.toLowerCase().replace(/[\s]/g, ''));
+    // Email: case-insensitive match — only strip spaces (preserve dots, @)
+    const normalizedEmail = value.toLowerCase().trim();
+    const msgLower = userMessage.toLowerCase();
+    return !msgLower.includes(normalizedEmail);
   }
 
   // Phone: normalize both — remove +30 prefix, spaces, dashes, parentheses
+  const normalizedMsg = userMessage.replace(/[\s\-().]/g, '');
   const normalizedPhone = value.replace(/^\+30/, '').replace(/[\s\-().]/g, '');
   return !normalizedMsg.includes(normalizedPhone);
 }
