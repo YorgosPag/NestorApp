@@ -223,10 +223,10 @@
 | 🔴 P0 | FINDING-004: Phone/Email blocked for admin | Βασική λειτουργία admin broken | Medium | ✅ FIXED |
 | 🔴 P0 | FINDING-006: firestore_write bypass (relationships) | Unvalidated data σε arbitrary collections | Medium | ✅ FIXED |
 | 🔴 P0 | FINDING-007: firestore_write bypass (IBAN) | Data model corruption, no validation | Medium | ✅ FIXED |
-| 🟡 P1 | FINDING-002: ESCO disambiguation leak | Auto-selects χωρίς consent | Medium | ⏳ OPEN |
-| 🟡 P1 | FINDING-001: documentNumber prefix stripped | Data loss | Low | ⏳ OPEN |
+| 🟡 P1 | FINDING-002: ESCO disambiguation leak | Auto-selects χωρίς consent | Medium | ✅ FIXED |
+| 🟡 P1 | FINDING-001: documentNumber prefix stripped | Data loss | Low | ✅ FIXED |
 | 🟢 P2 | FINDING-005: Search γενική πτώση | UX issue | Medium | ⏳ OPEN |
-| 🟢 P2 | FINDING-003: Skills free-text flow | UX improvement | Low | ⏳ OPEN |
+| 🟢 P2 | FINDING-003: Skills free-text flow | UX improvement | Low | ✅ FIXED |
 
 ---
 

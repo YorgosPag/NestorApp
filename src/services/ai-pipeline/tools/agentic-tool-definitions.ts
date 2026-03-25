@@ -575,6 +575,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
         'IMPORTANT for profession: ALWAYS call search_esco_occupations first. Show matches to user. If no ESCO match, ask user before adding free text.',
         'IMPORTANT for dates (birthDate, documentIssueDate, documentExpiryDate): ALWAYS use DD/MM/YYYY format (e.g. "25/01/2027").',
         'IMPORTANT for documentType: ONLY values "identity_card", "passport", "drivers_license", "other".',
+        'IMPORTANT for documentNumber: Pass the EXACT string the user gave, including prefix letters (e.g. "ΑΚ 582946" NOT "582946"). Greek IDs have letter prefixes — NEVER strip them.',
         'Pass the contact document ID (e.g. cont_xxx) and the field+value to update.',
       ].join(' '),
       parameters: {
@@ -614,6 +615,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
         'For skills: pass skills array with uri+label from search results. New skills are MERGED with existing (not replaced). Pass null to skip skills update (do NOT pass empty array).',
         'Can set occupation only, skills only, or both in one call.',
         'For free-text (not in ESCO): pass empty string for uri/escoUri/iscoCode.',
+        'SKILL AUTO-SAVE: If search_esco_skills returns 0 results for a skill, SAVE IT IMMEDIATELY as free-text (uri="", label=user text). Do NOT ask the user for confirmation — just save and confirm.',
       ].join(' '),
       parameters: {
         type: 'object',
