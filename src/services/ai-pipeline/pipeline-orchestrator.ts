@@ -1,87 +1,31 @@
 /**
- * =============================================================================
  * AI PIPELINE ORCHESTRATOR
- * =============================================================================
  *
- * 🏢 ENTERPRISE: The heart of the Universal AI Pipeline.
- * Chains the 7 steps, manages state transitions, and delegates to UC modules.
+ * Core engine: chains 7 pipeline steps, manages state, delegates to UC modules.
+ * Heavy logic extracted to: intent-mapping, multi-intent-steps,
+ * agentic-path-executor, post-reply-actions (N.7.1 compliance).
  *
- * @module services/ai-pipeline/pipeline-orchestrator
- * @see ADR-080 (Pipeline Implementation)
- * @see ADR-169 (Modular AI Architecture)
- * @see docs/centralized-systems/ai/pipeline.md (Universal Pipeline)
- *
- * PIPELINE STEPS:
- *   1. INTAKE      — Already done by channel adapter (IntakeMessage created)
- *   2. UNDERSTAND   — AI analyzes intent, entities, urgency, threat
- *   3. LOOKUP       — UC module fetches relevant Firestore data
- *   4. PROPOSE      — UC module generates action proposal
- *   5. APPROVE      — Auto-approve (high confidence) or queue for human review
- *   6. EXECUTE      — UC module executes approved actions
- *   7. ACKNOWLEDGE  — UC module sends confirmation to sender
+ * @see ADR-080 (Pipeline), ADR-169 (Modular AI), ADR-131 (Multi-Intent)
  */
 
-import type {
-  PipelineContext,
-  PipelineStateValue,
-  UnderstandingResult,
-  AuditDecision,
-  IUCModule,
-  Proposal,
-  DetectedIntent,
-} from '@/types/ai-pipeline';
-import {
-  PipelineState,
-  PipelineChannel,
-  PipelineIntentType,
-  SenderType,
-  ThreatLevel,
-  Urgency,
-  isValidTransition,
-} from '@/types/ai-pipeline';
+import type { PipelineContext, PipelineStateValue, IUCModule } from '@/types/ai-pipeline';
+import { PipelineState, PipelineChannel, ThreatLevel, isValidTransition } from '@/types/ai-pipeline';
 import type { ModuleRegistry } from './module-registry';
 import { IntentRouter } from './intent-router';
-import type { MultiRoutingResult } from './intent-router';
 import type { PipelineAuditService } from './audit-service';
 import type { IAIAnalysisProvider } from '@/services/ai-analysis/providers/IAIAnalysisProvider';
-import { isMessageIntentAnalysis, isMultiIntentAnalysis } from '@/schemas/ai-analysis';
-import {
-  PIPELINE_TIMEOUT_CONFIG,
-  PIPELINE_PROTOCOL_CONFIG,
-} from '@/config/ai-pipeline-config';
-// ADR-171: Agentic Loop imports
-import { executeAgenticLoop } from './agentic-loop';
-import type { ChatMessage } from './agentic-loop';
-import { getChatHistoryService } from './chat-history-service';
-import { AGENTIC_TOOL_DEFINITIONS } from './tools/agentic-tool-definitions';
-import type { AgenticContext } from './tools/agentic-tool-executor';
-import { sendChannelReply, extractChannelIds } from './shared/channel-reply-dispatcher';
-// ADR-173: AI Self-Improvement imports
-import { getFeedbackService } from './feedback-service';
-import { createFeedbackKeyboard, createSuggestedActionsKeyboard } from './feedback-keyboard';
-// ADR-259A: AI Usage Tracking + Cost Protection
-import { AI_COST_CONFIG } from '@/config/ai-analysis-config';
-import { checkDailyCap, recordUsage } from './ai-usage.service';
+import { PIPELINE_TIMEOUT_CONFIG } from '@/config/ai-pipeline-config';
+import { mapAIResultToUnderstanding } from './intent-mapping';
+import { stepMultiLookup, stepMultiPropose, stepApproveMulti, stepMultiExecute } from './multi-intent-steps';
+import { executeAgenticPath } from './agentic-path-executor';
+import { resumeFromApproval } from './approval-resume';
+import type { PipelineExecutionResult } from './pipeline-types';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 
+export type { PipelineExecutionResult } from './pipeline-types';
+
 const orchestratorLogger = createModuleLogger('PIPELINE_ORCHESTRATOR');
-
-// ============================================================================
-// ORCHESTRATOR
-// ============================================================================
-
-/**
- * Pipeline execution result
- */
-export interface PipelineExecutionResult {
-  success: boolean;
-  requestId: string;
-  finalState: PipelineStateValue;
-  context: PipelineContext;
-  auditId?: string;
-  error?: string;
-}
 
 /**
  * Orchestrates the 7-step Universal AI Pipeline
@@ -100,15 +44,9 @@ export class PipelineOrchestrator {
 
   /**
    * Execute the full pipeline for a given context
-   *
-   * @param ctx - Pipeline context with IntakeMessage (from channel adapter)
-   * @returns Pipeline execution result
    */
   async execute(ctx: PipelineContext): Promise<PipelineExecutionResult> {
-    const startTime = Date.now();
-
     try {
-      // Enforce total timeout
       const result = await Promise.race([
         this.executeSteps(ctx),
         this.createTimeout(PIPELINE_TIMEOUT_CONFIG.TOTAL_PIPELINE_MS),
@@ -150,27 +88,27 @@ export class PipelineOrchestrator {
   private async executeSteps(ctx: PipelineContext): Promise<PipelineExecutionResult> {
     // ── Step 1: INTAKE (already done — IntakeMessage is in ctx) ──
     ctx = this.transitionState(ctx, PipelineState.ACKED);
-    ctx.stepDurations['intake'] = 0; // Already processed
+    ctx.stepDurations['intake'] = 0;
 
     // ── ADR-171: Agentic path for admin commands ──
-    // Skip UNDERSTAND step entirely for admin — the agentic loop does its
-    // own AI analysis with tool calling. Saves ~3-5s per admin message.
     if (ctx.adminCommandMeta?.isAdminCommand === true) {
-      return this.executeAgenticPath(ctx);
+      return executeAgenticPath(ctx, {
+        auditService: this.auditService,
+        transitionState: this.transitionState.bind(this),
+      });
     }
 
     // ── ADR-174: All messaging channels → agentic path ──
-    // Customer messages from Telegram/WhatsApp/Messenger/Instagram use the agentic loop
-    // for immediate auto-reply with RBAC (role-based access control).
-    // The legacy modular path (UC modules) requires manual approval for most
-    // intents, leaving the user without any response.
     if (
       ctx.intake.channel === PipelineChannel.TELEGRAM
       || ctx.intake.channel === PipelineChannel.WHATSAPP
       || ctx.intake.channel === PipelineChannel.MESSENGER
       || ctx.intake.channel === PipelineChannel.INSTAGRAM
     ) {
-      return this.executeAgenticPath(ctx);
+      return executeAgenticPath(ctx, {
+        auditService: this.auditService,
+        transitionState: this.transitionState.bind(this),
+      });
     }
 
     // ── Step 2: UNDERSTAND (non-admin messages only) ──
@@ -206,8 +144,10 @@ export class PipelineOrchestrator {
       };
     }
 
-    // No modules found → manual triage
-    if (multiRoute.allModules.length === 0) {
+    // Resolve modules from routing
+    const allModules = multiRoute.allModules;
+
+    if (allModules.length === 0) {
       ctx = this.transitionState(ctx, PipelineState.PROPOSED);
       const auditId = await this.auditService.record(ctx, 'manual_triage');
       return {
@@ -219,30 +159,30 @@ export class PipelineOrchestrator {
       };
     }
 
-    const allModules = multiRoute.allModules;
     const moduleIds = allModules.map(m => m.moduleId).join(',');
 
     // ── Step 3: MULTI-LOOKUP ──
     const lookupStart = Date.now();
-    ctx = await this.stepMultiLookup(ctx, allModules);
+    ctx = await stepMultiLookup(ctx, allModules);
     ctx.stepDurations['lookup'] = Date.now() - lookupStart;
 
-    // ── Step 4: MULTI-PROPOSE + COMPOSE ──
+    // ── Step 4: MULTI-PROPOSE ──
     const proposeStart = Date.now();
-    ctx = await this.stepMultiPropose(ctx, allModules);
+    ctx = await stepMultiPropose(ctx, allModules);
     ctx.stepDurations['propose'] = Date.now() - proposeStart;
+
     ctx = this.transitionState(ctx, PipelineState.PROPOSED);
 
-    // ── Step 5: APPROVE (multi-intent aware) ──
-    const approveStart = Date.now();
-    ctx = this.stepApproveMulti(ctx, multiRoute);
-    ctx.stepDurations['approve'] = Date.now() - approveStart;
+    // ── Step 5: APPROVE ──
+    ctx = stepApproveMulti(
+      ctx,
+      multiRoute,
+      this.transitionState.bind(this)
+    );
 
-    // If not auto-approved, stop here — awaiting human review
+    // If not approved → waiting for human review
     if (ctx.state !== PipelineState.APPROVED) {
-      const decision: AuditDecision = ctx.state === PipelineState.REJECTED
-        ? 'rejected' : 'manual_triage';
-      const auditId = await this.auditService.record(ctx, decision, moduleIds);
+      const auditId = await this.auditService.record(ctx, 'manual_triage', moduleIds);
       return {
         success: true,
         requestId: ctx.requestId,
@@ -254,7 +194,11 @@ export class PipelineOrchestrator {
 
     // ── Step 6: MULTI-EXECUTE ──
     const executeStart = Date.now();
-    ctx = await this.stepMultiExecute(ctx, allModules);
+    ctx = await stepMultiExecute(
+      ctx,
+      allModules,
+      this.transitionState.bind(this)
+    );
     ctx.stepDurations['execute'] = Date.now() - executeStart;
 
     if (!ctx.executionResult?.success) {
@@ -270,7 +214,7 @@ export class PipelineOrchestrator {
       };
     }
 
-    // ── Step 7: ACKNOWLEDGE (primary module handles acknowledgment) ──
+    // ── Step 7: ACKNOWLEDGE (primary module) ──
     const ackStart = Date.now();
     ctx = await this.stepAcknowledge(ctx, allModules[0]);
     ctx.stepDurations['acknowledge'] = Date.now() - ackStart;
@@ -286,561 +230,6 @@ export class PipelineOrchestrator {
       context: ctx,
       auditId,
     };
-  }
-
-  // ==========================================================================
-  // ADR-156: AGENTIC PATH — AUTONOMOUS AI AGENT
-  // ==========================================================================
-
-  /**
-   * Execute the agentic path for admin commands.
-   * Uses multi-step tool calling instead of hardcoded UC modules.
-   *
-   * Flow:
-   * 1. Fetch chat history for context
-   * 2. Build agentic context (companyId, permissions)
-   * 3. Execute agentic loop (AI + tools iteratively)
-   * 4. Save messages to chat history
-   * 5. Send reply via channel dispatcher
-   * 6. Audit the execution
-   *
-   * @see ADR-156 (Autonomous AI Agent)
-   */
-  private async executeAgenticPath(ctx: PipelineContext): Promise<PipelineExecutionResult> {
-    const chatHistoryService = getChatHistoryService();
-
-    try {
-      const channelSenderId = this.buildChannelSenderId(ctx);
-      const userMessage = ctx.intake.normalized.contentText || ctx.intake.normalized.subject || '';
-
-      // 1. Fetch chat history (filter out failed responses to prevent AI from giving up)
-      const rawHistory: ChatMessage[] = await chatHistoryService.getRecentHistory(channelSenderId);
-      const history = rawHistory.filter(msg => {
-        if (msg.role !== 'assistant') return true;
-        // Exclude known failure patterns from history
-        const failurePatterns = [
-          'τεχνικά προβλήματα',
-          'Ξεπέρασα το μέγιστο',
-          'αντιμετώπισα ένα πρόβλημα',
-          'πολύ χρόνο',
-        ];
-        return !failurePatterns.some(p => msg.content.includes(p));
-      });
-
-      // 2. Build agentic context (RBAC: proper isAdmin from adminCommandMeta)
-      const agenticCtx: AgenticContext = {
-        companyId: ctx.companyId,
-        isAdmin: ctx.adminCommandMeta?.isAdminCommand === true,
-        channel: ctx.intake.channel,
-        channelSenderId,
-        requestId: ctx.requestId,
-        telegramChatId: ctx.intake.normalized.sender.telegramId
-          ?? ctx.intake.rawPayload?.chatId as string
-          ?? undefined,
-        contactMeta: ctx.contactMeta ?? null,
-      };
-
-      // 2b. ADR-259A: Daily cap check (customers only — admin unlimited)
-      if (!agenticCtx.isAdmin) {
-        const capCheck = await checkDailyCap(channelSenderId, ctx.intake.channel);
-        if (!capCheck.allowed) {
-          orchestratorLogger.info('Daily cap exceeded', {
-            requestId: ctx.requestId,
-            channelSenderId,
-            used: capCheck.used,
-            limit: capCheck.limit,
-          });
-          await sendChannelReply({
-            ...extractChannelIds(ctx),
-            channel: ctx.intake.channel,
-            textBody: `Ξεπεράσατε το ημερήσιο όριο μηνυμάτων (${capCheck.limit}). Δοκιμάστε ξανά αύριο.`,
-            requestId: ctx.requestId,
-          });
-          ctx = this.transitionState(ctx, PipelineState.UNDERSTOOD);
-          ctx = this.transitionState(ctx, PipelineState.AUDITED);
-          await this.auditService.record(ctx, 'auto_processed', 'ADR-259A-daily-cap');
-          return {
-            success: true,
-            requestId: ctx.requestId,
-            finalState: ctx.state,
-            context: ctx,
-          };
-        }
-      }
-
-      // 2c. ADR-259C: Empty linkedUnitIds early-exit (customers only)
-      // Prevents wasting OpenAI tokens when buyer has no linked properties.
-      // The agentic loop would eventually fail via enforceRoleAccess, but silently.
-      if (!agenticCtx.isAdmin && agenticCtx.contactMeta?.linkedUnitIds?.length === 0) {
-        orchestratorLogger.info('No linked units — early exit', {
-          requestId: ctx.requestId,
-          channelSenderId,
-          contactId: agenticCtx.contactMeta?.contactId ?? 'unknown',
-        });
-
-        // SSoT: Use i18n response builder via Telegram (only channel with buyer agentic path)
-        const channelIds = extractChannelIds(ctx);
-        if (channelIds.telegramChatId) {
-          const { sendTelegramMessage } = await import(
-            '@/app/api/communications/webhooks/telegram/telegram/client'
-          );
-          const { createNoLinkedUnitsResponse } = await import(
-            '@/app/api/communications/webhooks/telegram/message/responses'
-          );
-          await sendTelegramMessage(createNoLinkedUnitsResponse(Number(channelIds.telegramChatId)));
-        }
-
-        ctx = this.transitionState(ctx, PipelineState.UNDERSTOOD);
-        ctx = this.transitionState(ctx, PipelineState.AUDITED);
-        await this.auditService.record(ctx, 'auto_processed', 'ADR-259C-no-linked-units');
-        return {
-          success: true,
-          requestId: ctx.requestId,
-          finalState: ctx.state,
-          context: ctx,
-        };
-      }
-
-      // 3. Execute agentic loop
-      orchestratorLogger.info('Starting agentic path', {
-        requestId: ctx.requestId,
-        channelSenderId,
-        messageLength: userMessage.length,
-        historyCount: history.length,
-      });
-
-      const agenticResult = await executeAgenticLoop(
-        userMessage,
-        history,
-        AGENTIC_TOOL_DEFINITIONS,
-        agenticCtx
-      );
-
-      // 3b. ADR-259A: Record token usage (fire-and-forget, non-fatal)
-      if (agenticResult.totalUsage.total_tokens > 0) {
-        recordUsage(
-          channelSenderId,
-          ctx.intake.channel,
-          agenticResult.totalUsage,
-        ).catch(() => { /* non-fatal */ });
-      }
-
-      // 4. Save to chat history — ONLY if the agentic loop succeeded
-      //    (don't poison history with "max iterations" or error responses)
-      const now = new Date().toISOString();
-      // ADR-259A: Use role-aware max iterations from SSoT for failure threshold
-      const maxIter = agenticCtx.isAdmin
-        ? AI_COST_CONFIG.LIMITS.ADMIN_MAX_ITERATIONS
-        : AI_COST_CONFIG.LIMITS.CUSTOMER_MAX_ITERATIONS;
-      const isFailedResponse = agenticResult.answer.includes('Ξεπέρασα το μέγιστο')
-        || agenticResult.answer.includes('πολύ χρόνο')
-        || agenticResult.answer.includes('Δεν μπόρεσα')
-        || agenticResult.iterations >= maxIter;
-
-      if (!isFailedResponse) {
-        await chatHistoryService.addMessage(channelSenderId, {
-          role: 'user',
-          content: userMessage,
-          timestamp: now,
-        });
-        await chatHistoryService.addMessage(channelSenderId, {
-          role: 'assistant',
-          content: agenticResult.answer,
-          timestamp: now,
-          toolCalls: agenticResult.toolCalls,
-        });
-      }
-
-      // 5. Send reply via channel dispatcher (SSoT: extractChannelIds)
-      const channelIds = extractChannelIds(ctx);
-      const { telegramChatId, whatsappPhone, messengerPsid, instagramIgsid } = channelIds;
-
-      await sendChannelReply({
-        ...channelIds,
-        channel: ctx.intake.channel,
-        textBody: agenticResult.answer,
-        requestId: ctx.requestId,
-      });
-
-      // 5a. Store outbound AI reply in CRM (conversations + messages collections)
-      // The agentic path bypasses processMessage() which normally handles CRM storage.
-      // Without this, admin conversations won't appear in the Unified Inbox.
-      if (ctx.intake.channel === 'telegram' && telegramChatId) {
-        try {
-          const { storeMessageInCRM } = await import(
-            '@/app/api/communications/webhooks/telegram/crm/store'
-          );
-          const { BOT_IDENTITY } = await import('@/config/domain-constants');
-          await storeMessageInCRM({
-            from: { id: BOT_IDENTITY.ID, first_name: BOT_IDENTITY.DISPLAY_NAME },
-            chat: { id: Number(telegramChatId) },
-            text: agenticResult.answer,
-            // Use requestId-derived ID for idempotency (real Telegram message_id unavailable from dispatcher)
-            message_id: `agentic_${ctx.requestId}`,
-          }, 'outbound');
-        } catch {
-          // Non-fatal: CRM store failure must never break the pipeline
-        }
-      }
-
-      // 5a-ter. Duplicate contact inline keyboard (ADR-171: Google-level UX)
-      // If create_contact returned duplicateDetected, send action buttons
-      if (ctx.intake.channel === 'telegram' && telegramChatId) {
-        try {
-          const duplicateToolCall = agenticResult.toolCalls.find(
-            tc => tc.name === 'create_contact' && tc.result.includes('"duplicateDetected":true')
-          );
-          if (duplicateToolCall) {
-            const { storePendingContactAction, createDuplicateContactKeyboard } = await import(
-              './duplicate-contact-keyboard'
-            );
-            const { sendTelegramMessage } = await import(
-              '@/app/api/communications/webhooks/telegram/telegram/client'
-            );
-            // tc.result = JSON.stringify(result.data) — flat structure, NOT wrapped in { data: ... }
-            const parsed = JSON.parse(duplicateToolCall.result) as {
-              duplicateDetected?: boolean;
-              requestedContact?: Record<string, unknown>;
-              matches?: Array<Record<string, unknown>>;
-            };
-            if (parsed.requestedContact && parsed.matches) {
-              const rc = parsed.requestedContact;
-              const pendingId = await storePendingContactAction({
-                type: 'duplicate_contact',
-                requestedContact: {
-                  firstName: String(rc.firstName ?? ''),
-                  lastName: String(rc.lastName ?? ''),
-                  email: rc.email ? String(rc.email) : null,
-                  phone: rc.phone ? String(rc.phone) : null,
-                  contactType: String(rc.contactType ?? 'individual'),
-                  companyName: rc.companyName ? String(rc.companyName) : null,
-                },
-                companyId: ctx.companyId,
-                matches: parsed.matches as unknown as import('./shared/contact-lookup').DuplicateMatch[],
-                chatId: String(telegramChatId),
-              });
-
-              await sendTelegramMessage({
-                chat_id: Number(telegramChatId),
-                text: 'Επίλεξε ενέργεια:',
-                reply_markup: createDuplicateContactKeyboard(pendingId),
-              });
-
-              orchestratorLogger.info('Duplicate contact keyboard sent', {
-                requestId: ctx.requestId,
-                pendingId,
-                matchCount: parsed.matches?.length ?? 0,
-              });
-            }
-          }
-        } catch (kbError) {
-          // Non-fatal: keyboard failure must never break the pipeline
-          orchestratorLogger.warn('Failed to send duplicate contact keyboard', {
-            error: getErrorMessage(kbError),
-          });
-        }
-      }
-
-      // 5b. ADR-173: Send suggestions + feedback keyboard (non-fatal)
-      // Message order: [1] AI Answer, [2] Duplicate keyboard (if any), [3] Suggested Actions, [4] Feedback (👍/👎)
-      if (!isFailedResponse) {
-        try {
-          const feedbackDocId = await getFeedbackService().saveFeedbackSnapshot({
-            requestId: ctx.requestId,
-            channelSenderId,
-            userQuery: userMessage,
-            aiAnswer: agenticResult.answer,
-            toolCalls: agenticResult.toolCalls,
-            iterations: agenticResult.iterations,
-            durationMs: agenticResult.totalDurationMs,
-            suggestedActions: agenticResult.suggestions,
-          });
-
-          // ── Telegram: Inline keyboards ──
-          if (ctx.intake.channel === 'telegram' && telegramChatId && feedbackDocId) {
-            const { sendTelegramMessage } = await import(
-              '@/app/api/communications/webhooks/telegram/telegram/client'
-            );
-
-            if (agenticResult.suggestions.length > 0) {
-              await sendTelegramMessage({
-                chat_id: Number(telegramChatId),
-                text: '\u{1F4A1} \u039C\u03C0\u03BF\u03C1\u03B5\u03AF\u03C2 \u03B5\u03C0\u03AF\u03C3\u03B7\u03C2 \u03BD\u03B1 \u03C1\u03C9\u03C4\u03AE\u03C3\u03B5\u03B9\u03C2:',
-                reply_markup: createSuggestedActionsKeyboard(feedbackDocId, agenticResult.suggestions),
-              });
-            }
-
-            await sendTelegramMessage({
-              chat_id: Number(telegramChatId),
-              text: '\u{1F4AC} \u0397\u03C4\u03B1\u03BD \u03C7\u03C1\u03AE\u03C3\u03B9\u03BC\u03B7 \u03B7 \u03B1\u03C0\u03AC\u03BD\u03C4\u03B7\u03C3\u03B7;',
-              reply_markup: createFeedbackKeyboard(feedbackDocId),
-            });
-          }
-
-          // ── ADR-174: WhatsApp: Interactive Reply Buttons ──
-          if (ctx.intake.channel === 'whatsapp' && whatsappPhone && feedbackDocId) {
-            const { sendWhatsAppButtons } = await import(
-              '@/app/api/communications/webhooks/whatsapp/whatsapp-client'
-            );
-
-            // [2] Send up to 3 suggestions as reply buttons (max 3, max 20 chars each)
-            if (agenticResult.suggestions.length > 0) {
-              const suggestionBtns = agenticResult.suggestions.slice(0, 3).map((s, i) => ({
-                id: `sug_${feedbackDocId}_${i}`,
-                title: s.substring(0, 20),
-              }));
-              await sendWhatsAppButtons(
-                whatsappPhone,
-                '\u{1F4A1} \u039C\u03C0\u03BF\u03C1\u03B5\u03AF\u03C2 \u03B5\u03C0\u03AF\u03C3\u03B7\u03C2 \u03BD\u03B1 \u03C1\u03C9\u03C4\u03AE\u03C3\u03B5\u03B9\u03C2:',
-                suggestionBtns,
-              );
-            }
-
-            // [3] Send feedback buttons (👍/👎)
-            await sendWhatsAppButtons(
-              whatsappPhone,
-              '\u{1F4AC} \u0397\u03C4\u03B1\u03BD \u03C7\u03C1\u03AE\u03C3\u03B9\u03BC\u03B7 \u03B7 \u03B1\u03C0\u03AC\u03BD\u03C4\u03B7\u03C3\u03B7;',
-              [
-                { id: `fb_${feedbackDocId}_up`, title: '\u{1F44D}' },
-                { id: `fb_${feedbackDocId}_down`, title: '\u{1F44E}' },
-              ],
-            );
-          }
-
-          // ── ADR-174: Messenger: Quick Reply Buttons ──
-          if (ctx.intake.channel === 'messenger' && messengerPsid && feedbackDocId) {
-            const { sendMessengerQuickReplies } = await import(
-              '@/app/api/communications/webhooks/messenger/messenger-client'
-            );
-
-            // [2] Send suggestions as quick replies (max 13, max 20 chars each)
-            if (agenticResult.suggestions.length > 0) {
-              const suggestionQRs = agenticResult.suggestions.slice(0, 3).map((s, i) => ({
-                content_type: 'text' as const,
-                title: s.substring(0, 20),
-                payload: `sug_${feedbackDocId}_${i}`,
-              }));
-              await sendMessengerQuickReplies(
-                messengerPsid,
-                '\u{1F4A1} \u039C\u03C0\u03BF\u03C1\u03B5\u03AF\u03C2 \u03B5\u03C0\u03AF\u03C3\u03B7\u03C2 \u03BD\u03B1 \u03C1\u03C9\u03C4\u03AE\u03C3\u03B5\u03B9\u03C2:',
-                suggestionQRs,
-              );
-            }
-
-            // [3] Send feedback quick replies (👍/👎)
-            await sendMessengerQuickReplies(
-              messengerPsid,
-              '\u{1F4AC} \u0397\u03C4\u03B1\u03BD \u03C7\u03C1\u03AE\u03C3\u03B9\u03BC\u03B7 \u03B7 \u03B1\u03C0\u03AC\u03BD\u03C4\u03B7\u03C3\u03B7;',
-              [
-                { content_type: 'text', title: '\u{1F44D}', payload: `fb_${feedbackDocId}_up` },
-                { content_type: 'text', title: '\u{1F44E}', payload: `fb_${feedbackDocId}_down` },
-              ],
-            );
-          }
-
-          // ── ADR-174: Instagram: Text-based prompts (Quick Replies NOT supported) ──
-          // Instagram DM API silently ignores quick_replies — buttons never render.
-          // Fallback: send text prompts with emoji/number instructions.
-          // Handler detects 👍/👎 and 1-4 as feedback via getLatestFeedbackForChannel().
-          if (ctx.intake.channel === 'instagram' && instagramIgsid && feedbackDocId) {
-            const { sendInstagramMessage } = await import(
-              '@/app/api/communications/webhooks/instagram/instagram-client'
-            );
-
-            // [2] Send suggestions as numbered text list
-            if (agenticResult.suggestions.length > 0) {
-              const numberEmojis = ['1\uFE0F\u20E3', '2\uFE0F\u20E3', '3\uFE0F\u20E3'];
-              const suggestionLines = agenticResult.suggestions
-                .slice(0, 3)
-                .map((s, i) => `${numberEmojis[i]} ${s}`)
-                .join('\n');
-              await sendInstagramMessage(
-                instagramIgsid,
-                `\u{1F4A1} \u039C\u03C0\u03BF\u03C1\u03B5\u03AF\u03C2 \u03B5\u03C0\u03AF\u03C3\u03B7\u03C2 \u03BD\u03B1 \u03C1\u03C9\u03C4\u03AE\u03C3\u03B5\u03B9\u03C2:\n${suggestionLines}`,
-              );
-            }
-
-            // [3] Send feedback prompt as plain text
-            await sendInstagramMessage(
-              instagramIgsid,
-              '\u{1F4AC} \u0397\u03C4\u03B1\u03BD \u03C7\u03C1\u03AE\u03C3\u03B9\u03BC\u03B7 \u03B7 \u03B1\u03C0\u03AC\u03BD\u03C4\u03B7\u03C3\u03B7; \u0391\u03C0\u03AC\u03BD\u03C4\u03B7\u03C3\u03B5 \u{1F44D} \u03AE \u{1F44E}',
-            );
-          }
-        } catch {
-          // Non-fatal: feedback failure must never break the pipeline
-        }
-      }
-
-      // 6. Update pipeline context
-      ctx.executionResult = { success: true, sideEffects: ['agentic_loop_completed'] };
-      ctx = this.transitionState(ctx, PipelineState.UNDERSTOOD);
-      ctx = this.transitionState(ctx, PipelineState.PROPOSED);
-      const approverLabel = ctx.adminCommandMeta?.isAdminCommand
-        ? `super_admin:${ctx.adminCommandMeta.adminIdentity.displayName}`
-        : `AI-auto:${ctx.intake.channel}`;
-      ctx.approval = {
-        decision: 'approved',
-        approvedBy: approverLabel,
-        decidedAt: now,
-      };
-      ctx = this.transitionState(ctx, PipelineState.APPROVED);
-      ctx = this.transitionState(ctx, PipelineState.EXECUTED);
-      ctx = this.transitionState(ctx, PipelineState.AUDITED);
-
-      // 7. Audit
-      const auditId = await this.auditService.record(ctx, 'auto_processed', 'ADR-171-agentic');
-
-      orchestratorLogger.info('Agentic path completed', {
-        requestId: ctx.requestId,
-        iterations: agenticResult.iterations,
-        toolCalls: agenticResult.toolCalls.length,
-        durationMs: agenticResult.totalDurationMs,
-        auditId,
-      });
-
-      return {
-        success: true,
-        requestId: ctx.requestId,
-        finalState: ctx.state,
-        context: ctx,
-        auditId,
-      };
-    } catch (error) {
-      const errorMessage = getErrorMessage(error);
-
-      orchestratorLogger.error('Agentic path failed', {
-        requestId: ctx.requestId,
-        error: errorMessage,
-      });
-
-      ctx.errors.push({
-        step: 'agentic_path',
-        error: errorMessage,
-        timestamp: new Date().toISOString(),
-        retryable: false,
-      });
-      ctx = this.transitionState(ctx, PipelineState.FAILED);
-      const auditId = await this.auditService.record(ctx, 'failed', 'ADR-171-agentic');
-
-      // Send error reply to user (SSoT: extractChannelIds)
-      try {
-        await sendChannelReply({
-          ...extractChannelIds(ctx),
-          channel: ctx.intake.channel,
-          textBody: 'Συγγνώμη, αντιμετώπισα ένα πρόβλημα κατά την επεξεργασία. Δοκίμασε ξανά.',
-          requestId: ctx.requestId,
-        });
-      } catch {
-        // Non-fatal — don't let error reply failure mask the original error
-      }
-
-      return {
-        success: false,
-        requestId: ctx.requestId,
-        finalState: ctx.state,
-        context: ctx,
-        auditId,
-        error: errorMessage,
-      };
-    }
-  }
-
-  /**
-   * Build channel+sender ID for chat history keying
-   */
-  private buildChannelSenderId(ctx: PipelineContext): string {
-    const channel = ctx.intake.channel;
-    const sender = ctx.intake.normalized.sender;
-    const senderId = sender.firebaseUid
-      ?? sender.telegramId
-      ?? sender.whatsappPhone
-      ?? sender.messengerUserId
-      ?? sender.instagramUserId
-      ?? sender.email
-      ?? sender.phone;
-
-    if (!senderId) {
-      throw new Error(`No sender identifier for channel ${channel}`);
-    }
-
-    return `${channel}_${senderId}`;
-  }
-
-  // ==========================================================================
-  // ADR-145: ADMIN FALLBACK EXECUTION (LEGACY — kept for fallback)
-  // ==========================================================================
-
-  /**
-   * Execute admin fallback flow for unrecognized admin commands.
-   * Dynamically imports AdminFallbackModule to avoid coupling.
-   *
-   * @see ADR-145 (Super Admin AI Assistant)
-   * @deprecated ADR-156 replaces this with agentic path — kept as safety net
-   */
-  private async executeAdminFallback(ctx: PipelineContext): Promise<PipelineExecutionResult> {
-    try {
-      const { AdminFallbackModule } = await import(
-        './modules/uc-014-admin-fallback'
-      );
-      const fallbackModule = new AdminFallbackModule();
-
-      // LOOKUP (no-op for fallback)
-      ctx.lookupData = await fallbackModule.lookup(ctx);
-
-      // PROPOSE
-      ctx.proposal = await fallbackModule.propose(ctx);
-      ctx = this.transitionState(ctx, PipelineState.PROPOSED);
-
-      // AUTO-APPROVE (admin is the operator)
-      ctx.approval = {
-        decision: 'approved',
-        approvedBy: `super_admin:${ctx.adminCommandMeta?.adminIdentity.displayName ?? 'admin'}`,
-        decidedAt: new Date().toISOString(),
-      };
-      ctx = this.transitionState(ctx, PipelineState.APPROVED);
-
-      // EXECUTE
-      ctx.executionResult = await fallbackModule.execute(ctx);
-      if (ctx.executionResult.success) {
-        ctx = this.transitionState(ctx, PipelineState.EXECUTED);
-      } else {
-        ctx = this.transitionState(ctx, PipelineState.FAILED);
-      }
-
-      // ACKNOWLEDGE
-      ctx.acknowledgment = await fallbackModule.acknowledge(ctx);
-
-      // AUDIT
-      ctx = this.transitionState(ctx, PipelineState.AUDITED);
-      const auditId = await this.auditService.record(ctx, 'auto_processed', 'UC-014');
-
-      return {
-        success: true,
-        requestId: ctx.requestId,
-        finalState: ctx.state,
-        context: ctx,
-        auditId,
-      };
-    } catch (error) {
-      const errorMessage = getErrorMessage(error);
-      ctx.errors.push({
-        step: 'admin_fallback',
-        error: errorMessage,
-        timestamp: new Date().toISOString(),
-        retryable: false,
-      });
-      ctx = this.transitionState(ctx, PipelineState.FAILED);
-      const auditId = await this.auditService.record(ctx, 'failed', 'UC-014');
-
-      return {
-        success: false,
-        requestId: ctx.requestId,
-        finalState: ctx.state,
-        context: ctx,
-        auditId,
-        error: errorMessage,
-      };
-    }
   }
 
   // ==========================================================================
@@ -861,16 +250,13 @@ export class PipelineOrchestrator {
         context: {
           senderName: ctx.intake.normalized.sender.name,
           channel: ctx.intake.channel,
-          // ADR-145: Signal admin mode to AI provider
           ...(isAdminCommand ? { isAdminCommand: true } : {}),
         },
       });
 
-      // Map AI result to UnderstandingResult
-      const understanding = this.mapAIResultToUnderstanding(ctx, aiResult);
+      const understanding = mapAIResultToUnderstanding(ctx, aiResult, this.aiProvider.name);
       ctx.understanding = understanding;
 
-      // Check threat level for quarantine
       if (understanding.threatLevel === ThreatLevel.HIGH) {
         ctx = this.transitionState(ctx, PipelineState.DLQ);
         return ctx;
@@ -898,7 +284,6 @@ export class PipelineOrchestrator {
       ctx.acknowledgment = await module.acknowledge(ctx);
       return ctx;
     } catch (error) {
-      // Acknowledgment failure is non-fatal — pipeline still succeeds
       const errorMessage = getErrorMessage(error);
       ctx.errors.push({
         step: 'acknowledge',
@@ -914,230 +299,15 @@ export class PipelineOrchestrator {
     }
   }
 
-  // ==========================================================================
-  // MULTI-MODULE PIPELINE STEPS (ADR-131)
-  // ==========================================================================
-
-  /**
-   * Step 3 (Multi): Run lookup() on all modules, collect results per module
-   * Primary module failure is fatal; secondary module failures are logged and skipped.
-   */
-  private async stepMultiLookup(
-    ctx: PipelineContext,
-    modules: IUCModule[]
-  ): Promise<PipelineContext> {
-    const multiLookupData: Record<string, Record<string, unknown>> = {};
-
-    for (const module of modules) {
-      try {
-        const lookupData = await module.lookup(ctx);
-        multiLookupData[module.moduleId] = lookupData;
-      } catch (error) {
-        // Primary module (first) failure is fatal
-        if (module === modules[0]) {
-          const errorMessage = getErrorMessage(error);
-          ctx.errors.push({
-            step: `lookup_${module.moduleId}`,
-            error: errorMessage,
-            timestamp: new Date().toISOString(),
-            retryable: true,
-          });
-          throw error;
-        }
-        // Secondary module failure is non-fatal — log and continue
-        const errorMessage = getErrorMessage(error);
-        ctx.errors.push({
-          step: `lookup_${module.moduleId}`,
-          error: `Secondary module lookup failed: ${errorMessage}`,
-          timestamp: new Date().toISOString(),
-          retryable: false,
-        });
-      }
-    }
-
-    ctx.multiLookupData = multiLookupData;
-    // Backward compat: set lookupData to primary module's data
-    ctx.lookupData = multiLookupData[modules[0].moduleId] ?? {};
-
-    return ctx;
+  /** Resume pipeline after human approval — delegates to approval-resume.ts */
+  async resumeFromApproval(ctx: PipelineContext): Promise<PipelineExecutionResult> {
+    return resumeFromApproval(ctx, {
+      registry: this.registry,
+      auditService: this.auditService,
+      transitionState: this.transitionState.bind(this),
+      stepAcknowledge: this.stepAcknowledge.bind(this),
+    });
   }
-
-  /**
-   * Step 4 (Multi): Run propose() on all modules, then compose into single Proposal
-   * Each module gets its own lookupData from multiLookupData.
-   */
-  private async stepMultiPropose(
-    ctx: PipelineContext,
-    modules: IUCModule[]
-  ): Promise<PipelineContext> {
-    const proposals: Proposal[] = [];
-    const contributingModules: string[] = [];
-
-    for (const module of modules) {
-      // Set lookupData for this specific module
-      ctx.lookupData = ctx.multiLookupData?.[module.moduleId] ?? {};
-
-      try {
-        const proposal = await module.propose(ctx);
-        proposals.push(proposal);
-        contributingModules.push(module.moduleId);
-      } catch (error) {
-        // Primary module (first) failure is fatal
-        if (module === modules[0]) {
-          const errorMessage = getErrorMessage(error);
-          ctx.errors.push({
-            step: `propose_${module.moduleId}`,
-            error: errorMessage,
-            timestamp: new Date().toISOString(),
-            retryable: true,
-          });
-          throw error;
-        }
-        // Secondary module failure — log and skip
-        const errorMessage = getErrorMessage(error);
-        ctx.errors.push({
-          step: `propose_${module.moduleId}`,
-          error: `Secondary module propose failed: ${errorMessage}`,
-          timestamp: new Date().toISOString(),
-          retryable: false,
-        });
-      }
-    }
-
-    // Compose all proposals into one
-    ctx.proposal = this.composeProposal(proposals, ctx);
-    ctx.contributingModules = contributingModules;
-
-    // Restore primary lookupData for backward compat
-    ctx.lookupData = ctx.multiLookupData?.[modules[0].moduleId] ?? {};
-
-    return ctx;
-  }
-
-  /**
-   * Compose multiple module proposals into a single unified Proposal
-   * Single-module case: returns the proposal as-is (zero overhead).
-   * @see ADR-131 (Multi-Intent Pipeline)
-   */
-  private composeProposal(proposals: Proposal[], ctx: PipelineContext): Proposal {
-    if (proposals.length === 1) {
-      return proposals[0]; // Single module — no composition overhead
-    }
-
-    return {
-      messageId: ctx.intake.id,
-      suggestedActions: proposals.flatMap(p => p.suggestedActions),
-      summary: proposals.map(p => p.summary).join(' | '),
-      autoApprovable: proposals.every(p => p.autoApprovable),
-      requiredApprovals: [...new Set(proposals.flatMap(p => p.requiredApprovals))],
-      schemaVersion: PIPELINE_PROTOCOL_CONFIG.SCHEMA_VERSION,
-    };
-  }
-
-  /**
-   * Step 5 (Multi): Auto-approve using multi-routing aggregate decisions
-   * ADR-145: Super admin commands are always auto-approved
-   */
-  private stepApproveMulti(
-    ctx: PipelineContext,
-    multiRoute: MultiRoutingResult
-  ): PipelineContext {
-    if (!ctx.proposal) return ctx;
-
-    // ── ADR-145: Super admin auto-approve ──
-    // Admin IS the operator — force auto-approve
-    if (ctx.adminCommandMeta?.isAdminCommand) {
-      ctx.approval = {
-        decision: 'approved',
-        approvedBy: `super_admin:${ctx.adminCommandMeta.adminIdentity.displayName}`,
-        decidedAt: new Date().toISOString(),
-      };
-      ctx = this.transitionState(ctx, PipelineState.APPROVED);
-      return ctx;
-    }
-
-    if (
-      ctx.proposal.autoApprovable &&
-      multiRoute.allAutoApprovable &&
-      !multiRoute.needsManualReview
-    ) {
-      ctx.approval = {
-        decision: 'approved',
-        approvedBy: 'AI-auto',
-        decidedAt: new Date().toISOString(),
-      };
-      ctx = this.transitionState(ctx, PipelineState.APPROVED);
-    }
-    // If not auto-approved, state remains PROPOSED (awaiting human review)
-
-    return ctx;
-  }
-
-  /**
-   * Step 6 (Multi): Execute actions through all contributing modules
-   * Each module gets its own lookupData restored before execution.
-   * First module failure stops execution for remaining modules.
-   */
-  private async stepMultiExecute(
-    ctx: PipelineContext,
-    modules: IUCModule[]
-  ): Promise<PipelineContext> {
-    // Build execution plan with ALL actions
-    ctx.executionPlan = {
-      messageId: ctx.intake.id,
-      idempotencyKey: `${ctx.requestId}_execute`,
-      actions: ctx.approval?.modifiedActions ?? ctx.proposal?.suggestedActions ?? [],
-      sideEffects: [],
-      schemaVersion: PIPELINE_PROTOCOL_CONFIG.SCHEMA_VERSION,
-    };
-
-    const allSideEffects: string[] = [];
-
-    for (const module of modules) {
-      // Set correct lookupData for this module
-      ctx.lookupData = ctx.multiLookupData?.[module.moduleId] ?? {};
-
-      try {
-        const result = await module.execute(ctx);
-        allSideEffects.push(...result.sideEffects);
-
-        if (!result.success) {
-          ctx.executionResult = {
-            success: false,
-            sideEffects: allSideEffects,
-            error: result.error,
-          };
-          return ctx;
-        }
-      } catch (error) {
-        const errorMessage = getErrorMessage(error);
-        ctx.errors.push({
-          step: `execute_${module.moduleId}`,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-          retryable: false,
-        });
-        ctx.executionResult = {
-          success: false,
-          sideEffects: allSideEffects,
-          error: errorMessage,
-        };
-        return ctx;
-      }
-    }
-
-    ctx.executionResult = { success: true, sideEffects: allSideEffects };
-    ctx = this.transitionState(ctx, PipelineState.EXECUTED);
-
-    // Restore primary lookupData
-    ctx.lookupData = ctx.multiLookupData?.[modules[0].moduleId] ?? {};
-
-    return ctx;
-  }
-
-  // ==========================================================================
-  // HELPERS
-  // ==========================================================================
 
   /**
    * Transition pipeline state with validation
@@ -1149,7 +319,7 @@ export class PipelineOrchestrator {
     if (!isValidTransition(ctx.state, to)) {
       ctx.errors.push({
         step: 'state_transition',
-        error: `Invalid transition: ${ctx.state} → ${to}`,
+        error: `Invalid transition: ${ctx.state} \u2192 ${to}`,
         timestamp: new Date().toISOString(),
         retryable: false,
       });
@@ -1161,238 +331,6 @@ export class PipelineOrchestrator {
   }
 
   /**
-   * Map existing AI analysis result to pipeline UnderstandingResult
-   * Handles both multi_intent (new) and message_intent (legacy) responses
-   * @see ADR-131 (Multi-Intent Pipeline)
-   */
-  private mapAIResultToUnderstanding(
-    ctx: PipelineContext,
-    aiResult: unknown
-  ): UnderstandingResult {
-    const typedResult = aiResult as Record<string, unknown>;
-    const entities = (typedResult.extractedEntities ?? {}) as Record<string, string | undefined>;
-
-    // ── Multi-Intent Response (new schema) ──
-    if (isMultiIntentAnalysis(typedResult as Parameters<typeof isMultiIntentAnalysis>[0])) {
-      const multiResult = typedResult as {
-        primaryIntent: { intentType: string; confidence: number; rationale: string };
-        secondaryIntents: Array<{ intentType: string; confidence: number; rationale: string }>;
-        confidence: number;
-      };
-
-      const primaryIntent = mapLegacyIntentToPipeline(multiResult.primaryIntent.intentType);
-      const primaryConfidence = multiResult.primaryIntent.confidence * 100;
-      const primaryRationale = multiResult.primaryIntent.rationale;
-
-      // Build detectedIntents array: primary first, then secondaries
-      const detectedIntents: DetectedIntent[] = [
-        {
-          intent: primaryIntent,
-          confidence: primaryConfidence,
-          rationale: primaryRationale,
-        },
-        ...multiResult.secondaryIntents.map(si => ({
-          intent: mapLegacyIntentToPipeline(si.intentType),
-          confidence: si.confidence * 100,
-          rationale: si.rationale,
-        })),
-      ];
-
-      return {
-        messageId: ctx.intake.id,
-        intent: primaryIntent,
-        entities,
-        confidence: primaryConfidence,
-        rationale: primaryRationale,
-        language: 'el',
-        urgency: Urgency.NORMAL,
-        policyFlags: [],
-        companyDetection: {
-          companyId: ctx.companyId,
-          signal: 'recipient_email',
-          confidence: 100,
-        },
-        senderType: SenderType.UNKNOWN_LEGITIMATE,
-        threatLevel: ThreatLevel.CLEAN,
-        detectedIntents,
-        schemaVersion: PIPELINE_PROTOCOL_CONFIG.SCHEMA_VERSION,
-      };
-    }
-
-    // ── Legacy Single-Intent Response (backward compatible) ──
-    let intent: import('@/types/ai-pipeline').PipelineIntentTypeValue = PipelineIntentType.UNKNOWN;
-    if (isMessageIntentAnalysis(typedResult as Parameters<typeof isMessageIntentAnalysis>[0])) {
-      const analysisResult = typedResult as { intentType?: string };
-      intent = mapLegacyIntentToPipeline(analysisResult.intentType ?? 'triage_needed');
-    }
-
-    const confidence = typeof typedResult.confidence === 'number'
-      ? typedResult.confidence * 100
-      : 0;
-
-    const rationale = `AI analysis via ${this.aiProvider.name}`;
-
-    return {
-      messageId: ctx.intake.id,
-      intent,
-      entities,
-      confidence,
-      rationale,
-      language: 'el',
-      urgency: Urgency.NORMAL,
-      policyFlags: [],
-      companyDetection: {
-        companyId: ctx.companyId,
-        signal: 'recipient_email',
-        confidence: 100,
-      },
-      senderType: SenderType.UNKNOWN_LEGITIMATE,
-      threatLevel: ThreatLevel.CLEAN,
-      detectedIntents: [{ intent, confidence, rationale }],
-      schemaVersion: PIPELINE_PROTOCOL_CONFIG.SCHEMA_VERSION,
-    };
-  }
-
-  // ==========================================================================
-  // OPERATOR INBOX: RESUME FROM HUMAN APPROVAL
-  // ==========================================================================
-
-  /**
-   * Resume pipeline execution after human approval (UC-009 Operator Inbox)
-   *
-   * Called when an operator approves/modifies a PROPOSED pipeline item.
-   * Runs the remaining steps: EXECUTE (Step 6) + ACKNOWLEDGE (Step 7).
-   *
-   * @param ctx - Pipeline context with state APPROVED and approval decision set
-   * @returns Pipeline execution result
-   */
-  async resumeFromApproval(ctx: PipelineContext): Promise<PipelineExecutionResult> {
-    // Validate: must be in APPROVED state
-    if (ctx.state !== PipelineState.APPROVED) {
-      return {
-        success: false,
-        requestId: ctx.requestId,
-        finalState: ctx.state,
-        context: ctx,
-        error: `Cannot resume from state '${ctx.state}'. Expected: 'approved'`,
-      };
-    }
-
-    try {
-      // If operator provided modified actions, transition APPROVED → MODIFIED
-      if (ctx.approval?.modifiedActions && ctx.approval.modifiedActions.length > 0) {
-        ctx = this.transitionState(ctx, PipelineState.MODIFIED);
-      }
-
-      // Resolve UC modules — multi-intent aware
-      const allModules = this.resolveModulesForExecution(ctx);
-
-      if (allModules.length === 0) {
-        // No module available — record audit as approved (manual execution needed)
-        const auditId = await this.auditService.record(ctx, 'approved');
-        return {
-          success: true,
-          requestId: ctx.requestId,
-          finalState: ctx.state,
-          context: ctx,
-          auditId,
-        };
-      }
-
-      const moduleIds = allModules.map(m => m.moduleId).join(',');
-
-      // ── Step 6: MULTI-EXECUTE ──
-      const executeStart = Date.now();
-      ctx = await this.stepMultiExecute(ctx, allModules);
-      ctx.stepDurations['execute'] = Date.now() - executeStart;
-
-      if (!ctx.executionResult?.success) {
-        ctx = this.transitionState(ctx, PipelineState.FAILED);
-        const auditId = await this.auditService.record(ctx, 'failed', moduleIds);
-        return {
-          success: false,
-          requestId: ctx.requestId,
-          finalState: ctx.state,
-          context: ctx,
-          auditId,
-          error: ctx.executionResult?.error,
-        };
-      }
-
-      // ── Step 7: ACKNOWLEDGE (primary module) ──
-      const ackStart = Date.now();
-      ctx = await this.stepAcknowledge(ctx, allModules[0]);
-      ctx.stepDurations['acknowledge'] = Date.now() - ackStart;
-
-      // ── Audit ──
-      ctx = this.transitionState(ctx, PipelineState.AUDITED);
-      const decision: AuditDecision = ctx.approval?.decision === 'modified'
-        ? 'modified'
-        : 'approved';
-      const auditId = await this.auditService.record(ctx, decision, moduleIds);
-
-      return {
-        success: true,
-        requestId: ctx.requestId,
-        finalState: ctx.state,
-        context: ctx,
-        auditId,
-      };
-    } catch (error) {
-      const errorMessage = getErrorMessage(error);
-
-      ctx.errors.push({
-        step: 'resume_from_approval',
-        error: errorMessage,
-        timestamp: new Date().toISOString(),
-        retryable: false,
-      });
-
-      ctx = this.transitionState(ctx, PipelineState.FAILED);
-      const auditId = await this.auditService.record(ctx, 'failed');
-
-      return {
-        success: false,
-        requestId: ctx.requestId,
-        finalState: ctx.state,
-        context: ctx,
-        auditId,
-        error: errorMessage,
-      };
-    }
-  }
-
-  /**
-   * Resolve all UC modules needed for execution
-   * Uses contributingModules (if available) or falls back to primary intent module
-   */
-  private resolveModulesForExecution(ctx: PipelineContext): IUCModule[] {
-    // Multi-intent: use contributingModules from proposal phase
-    if (ctx.contributingModules && ctx.contributingModules.length > 0) {
-      const modules: IUCModule[] = [];
-      for (const moduleId of ctx.contributingModules) {
-        const module = this.registry.getModule(moduleId);
-        if (module) {
-          modules.push(module);
-        }
-      }
-      if (modules.length > 0) return modules;
-    }
-
-    // Fallback: single-intent — resolve from primary intent
-    if (ctx.understanding) {
-      const module = this.registry.getModuleForIntent(ctx.understanding.intent);
-      if (module) return [module];
-    }
-
-    return [];
-  }
-
-  // ==========================================================================
-  // HELPERS
-  // ==========================================================================
-
-  /**
    * Create a timeout promise for pipeline execution limits
    */
   private createTimeout(ms: number): Promise<never> {
@@ -1402,47 +340,4 @@ export class PipelineOrchestrator {
       }, ms);
     });
   }
-}
-
-// ============================================================================
-// LEGACY INTENT MAPPING
-// ============================================================================
-
-/**
- * Map legacy intent types (from existing AI provider) to pipeline intent types
- * @see src/schemas/ai-analysis.ts IntentType enum
- */
-function mapLegacyIntentToPipeline(legacyIntent: string): import('@/types/ai-pipeline').PipelineIntentTypeValue {
-  const mapping: Record<string, import('@/types/ai-pipeline').PipelineIntentTypeValue> = {
-    'appointment': PipelineIntentType.APPOINTMENT_REQUEST,
-    'appointment_request': PipelineIntentType.APPOINTMENT_REQUEST,
-    'delivery': PipelineIntentType.PROCUREMENT_REQUEST,
-    'invoice': PipelineIntentType.INVOICE,
-    'payment': PipelineIntentType.PAYMENT_NOTIFICATION,
-    'issue': PipelineIntentType.COMPLAINT,
-    'defect_report': PipelineIntentType.DEFECT_REPORT,
-    'complaint': PipelineIntentType.COMPLAINT,
-    'general_inquiry': PipelineIntentType.GENERAL_INQUIRY,
-    'info_update': PipelineIntentType.UNKNOWN,
-    'triage_needed': PipelineIntentType.UNKNOWN,
-    'document_request': PipelineIntentType.DOCUMENT_REQUEST,
-    'property_search': PipelineIntentType.PROPERTY_SEARCH,
-    'outbound_send': PipelineIntentType.OUTBOUND_SEND,
-    'report_request': PipelineIntentType.REPORT_REQUEST,
-    'dashboard_query': PipelineIntentType.DASHBOARD_QUERY,
-    'status_inquiry': PipelineIntentType.STATUS_INQUIRY,
-    'procurement_request': PipelineIntentType.PROCUREMENT_REQUEST,
-    'payment_notification': PipelineIntentType.PAYMENT_NOTIFICATION,
-    'unknown': PipelineIntentType.UNKNOWN,
-    // ── ADR-145: Super Admin Command Intents ──
-    'admin_contact_search': PipelineIntentType.ADMIN_CONTACT_SEARCH,
-    'admin_project_status': PipelineIntentType.ADMIN_PROJECT_STATUS,
-    'admin_send_email': PipelineIntentType.ADMIN_SEND_EMAIL,
-    'admin_unit_stats': PipelineIntentType.ADMIN_UNIT_STATS,
-    'admin_create_contact': PipelineIntentType.ADMIN_CREATE_CONTACT,
-    'admin_update_contact': PipelineIntentType.ADMIN_UPDATE_CONTACT,
-    'admin_general_question': PipelineIntentType.ADMIN_GENERAL_QUESTION,
-  };
-
-  return mapping[legacyIntent] ?? PipelineIntentType.UNKNOWN;
 }
