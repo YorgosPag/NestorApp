@@ -70,8 +70,6 @@ export class FirestoreHandler implements ToolHandler {
     }
   }
 
-  // firestore_query
-
   private async executeFirestoreQuery(
     args: Record<string, unknown>,
     ctx: AgenticContext
@@ -140,8 +138,6 @@ export class FirestoreHandler implements ToolHandler {
     };
   }
 
-  // firestore_get_document
-
   private async executeFirestoreGetDocument(
     args: Record<string, unknown>,
     ctx: AgenticContext
@@ -189,8 +185,6 @@ export class FirestoreHandler implements ToolHandler {
     };
   }
 
-  // firestore_count
-
   private async executeFirestoreCount(
     args: Record<string, unknown>,
     ctx: AgenticContext
@@ -235,8 +229,6 @@ export class FirestoreHandler implements ToolHandler {
     }
   }
 
-  // firestore_write
-
   private async executeFirestoreWrite(
     args: Record<string, unknown>,
     ctx: AgenticContext
@@ -266,7 +258,17 @@ export class FirestoreHandler implements ToolHandler {
       return { success: false, error: `Write to "${collection}" is not allowed` };
     }
 
-    // ESCO-protected fields — block direct writes to contacts ESCO fields
+    // FINDING-007: Block ALL updates to contacts via firestore_write.
+    // Contacts have dedicated tools: update_contact_field (scalar), append_contact_info (arrays), set_contact_esco (ESCO).
+    // Only mode=create is allowed (for edge cases not covered by create_contact).
+    if (collection === COLLECTIONS.CONTACTS && mode === 'update') {
+      return {
+        success: false,
+        error: 'Η ενημέρωση contacts μέσω firestore_write δεν επιτρέπεται. Χρησιμοποίησε update_contact_field, append_contact_info ή set_contact_esco.',
+      };
+    }
+
+    // ESCO-protected fields — block direct writes to contacts ESCO fields (even in create mode)
     if (collection === COLLECTIONS.CONTACTS) {
       const ESCO_PROTECTED = ['profession', 'escoUri', 'escoLabel', 'iscoCode', 'escoSkills'];
       const blockedFields = Object.keys(data).filter(k => ESCO_PROTECTED.includes(k));
@@ -319,8 +321,6 @@ export class FirestoreHandler implements ToolHandler {
 
     return { success: false, error: 'documentId required for update mode' };
   }
-
-  // search_text
 
   private async executeSearchText(
     args: Record<string, unknown>,

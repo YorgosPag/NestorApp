@@ -145,11 +145,33 @@ describe('ContactHandler', () => {
 
   describe('append_contact_info', () => {
     /**
-     * FINDING-004 REGRESSION: Admin cannot append phone/email.
-     * append_contact_info checks ctx.contactMeta?.contactId — admin has null contactMeta.
-     * This is the ROOT CAUSE of "❌ Απαιτείται αναγνώριση χρήστη".
+     * FINDING-004 FIX VERIFICATION: Admin CAN now append phone/email
+     * by providing contactId in args.
      */
-    test('should reject append when contactMeta is null (admin) — FINDING-004', async () => {
+    test('should allow admin to append phone with contactId — FINDING-004 fixed', async () => {
+      const ctx = createAdminContext({ contactMeta: null });
+      mockDb.seedCollection('contacts', {
+        'cont_target': {
+          companyId: 'test-company-001',
+          phones: [],
+        },
+      });
+
+      const result = await handler.execute('append_contact_info', {
+        contactId: 'cont_target',
+        fieldType: 'phone',
+        value: '6974050026',
+        label: 'κινητό',
+      }, ctx);
+
+      expect(result.success).toBe(true);
+      const doc = mockDb.getData('contacts', 'cont_target');
+      expect(doc?.phones).toEqual([
+        expect.objectContaining({ number: '6974050026', type: 'mobile' }),
+      ]);
+    });
+
+    test('should reject admin append when contactId missing — FINDING-004', async () => {
       const ctx = createAdminContext({ contactMeta: null });
 
       const result = await handler.execute('append_contact_info', {
@@ -159,11 +181,10 @@ describe('ContactHandler', () => {
       }, ctx);
 
       expect(result.success).toBe(false);
-      // This is the exact error message from AI_ERRORS.UNRECOGNIZED_USER
-      expect(result.error).toContain('αναγνωρισμένος');
+      expect(result.error).toContain('contactId');
     });
 
-    test('should reject append when contactId is missing — FINDING-004', async () => {
+    test('should reject customer append when contactMeta missing', async () => {
       const ctx = createCustomerContext({
         contactMeta: { contactId: '', displayName: '', linkedUnitIds: [], projectRoles: [] },
       });

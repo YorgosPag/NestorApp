@@ -428,10 +428,14 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
     type: 'function' as const,
     function: {
       name: 'append_contact_info',
-      description: 'Add new phone, email, or social media to your own contact record. APPEND ONLY — cannot delete or modify existing entries. Use when a customer wants to add contact info.',
+      description: 'Add new phone, email, or social media to a contact record. APPEND ONLY — cannot delete or modify existing entries. Admin: provide contactId to append to any contact. Customer: appends to own contact automatically.',
       parameters: {
         type: 'object',
         properties: {
+          contactId: {
+            type: ['string', 'null'],
+            description: 'Contact document ID (required for admin, ignored for customers who auto-use their own contact)',
+          },
           fieldType: {
             type: 'string',
             description: 'Type of contact info to add',
@@ -446,7 +450,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
             description: 'Label for the entry. Phone: εργασία/σπίτι/κινητό. Email: εργασία/προσωπικό. Social: platform name (facebook/instagram/linkedin/twitter)',
           },
         },
-        required: ['fieldType', 'value', 'label'],
+        required: ['contactId', 'fieldType', 'value', 'label'],
         additionalProperties: false,
       },
       strict: true,

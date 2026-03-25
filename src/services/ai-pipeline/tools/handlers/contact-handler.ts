@@ -211,9 +211,19 @@ export class ContactHandler implements ToolHandler {
     args: Record<string, unknown>,
     ctx: AgenticContext
   ): Promise<ToolResult> {
-    const contact = ctx.contactMeta;
-    if (!contact?.contactId) {
-      return { success: false, error: AI_ERRORS.UNRECOGNIZED_USER };
+    // Admin path: accept contactId from args (admin can append to ANY contact)
+    // Customer path: use contactMeta (customer can only append to their OWN contact)
+    const contactId = ctx.isAdmin
+      ? String(args.contactId ?? '').trim()
+      : ctx.contactMeta?.contactId ?? '';
+
+    if (!contactId) {
+      return {
+        success: false,
+        error: ctx.isAdmin
+          ? 'contactId is required for admin append.'
+          : AI_ERRORS.UNRECOGNIZED_USER,
+      };
     }
 
     const fieldType = String(args.fieldType ?? '');
@@ -241,7 +251,7 @@ export class ContactHandler implements ToolHandler {
     }
 
     const db = getAdminFirestore();
-    const contactDoc = await db.collection(COLLECTIONS.CONTACTS).doc(contact.contactId).get();
+    const contactDoc = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
     if (!contactDoc.exists) {
       return { success: false, error: 'Η επαφή δεν βρέθηκε.' };
     }
@@ -298,24 +308,24 @@ export class ContactHandler implements ToolHandler {
       updatePayload.socialMedia = [...currentSocial, newEntry];
     }
 
-    await db.collection(COLLECTIONS.CONTACTS).doc(contact.contactId).update(updatePayload);
+    await db.collection(COLLECTIONS.CONTACTS).doc(contactId).update(updatePayload);
 
-    await auditWrite(ctx, COLLECTIONS.CONTACTS, contact.contactId, 'append', updatePayload);
+    await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, 'append', updatePayload);
 
     const { emitEntitySyncSignal } = await import(
       '@/services/ai-pipeline/shared/contact-lookup'
     );
-    emitEntitySyncSignal('contacts', 'UPDATED', contact.contactId, ctx.companyId);
+    emitEntitySyncSignal('contacts', 'UPDATED', contactId, ctx.companyId);
 
     logger.info('Contact info appended', {
-      contactId: contact.contactId,
+      contactId,
       fieldType,
       requestId: ctx.requestId,
     });
 
     return {
       success: true,
-      data: { contactId: contact.contactId, fieldType, value, added: true },
+      data: { contactId, fieldType, value, added: true },
       count: 1,
     };
   }

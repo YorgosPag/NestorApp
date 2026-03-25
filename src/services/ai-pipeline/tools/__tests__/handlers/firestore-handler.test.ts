@@ -239,15 +239,11 @@ describe('FirestoreHandler', () => {
     });
 
     /**
-     * FINDING-006 CANARY TEST: firestore_write allows writing to contact_links.
-     *
-     * The QA finding showed the AI agent used firestore_write to create
-     * relationship documents in contact_links without a dedicated tool.
-     * This test documents that contact_links IS in ALLOWED_WRITE_COLLECTIONS.
-     *
-     * If we restrict this in the future, this test will break → alerting us.
+     * FINDING-006 REGRESSION: firestore_write must BLOCK writes to contact_links.
+     * contact_links was removed from ALLOWED_WRITE_COLLECTIONS.
+     * Relationships require a dedicated tool with validation.
      */
-    test('should allow write to contact_links — FINDING-006 canary', async () => {
+    test('should block write to contact_links — FINDING-006 fixed', async () => {
       const ctx = createAdminContext();
 
       const result = await handler.execute('firestore_write', {
@@ -260,20 +256,16 @@ describe('FirestoreHandler', () => {
         },
       }, ctx);
 
-      expect(result.success).toBe(true);
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('not allowed');
     });
 
     /**
-     * FINDING-007 CANARY TEST: firestore_write accepts arbitrary fields (e.g., iban)
-     * without any validation.
-     *
-     * The QA finding showed the AI wrote iban as a flat field on a contact
-     * without IBAN format validation (ISO 13616). This test documents
-     * that the handler does NOT validate field values.
-     *
-     * When we add IBAN validation, this test should be updated.
+     * FINDING-007 REGRESSION: firestore_write must BLOCK updates to contacts.
+     * Contacts have dedicated tools: update_contact_field, append_contact_info, set_contact_esco.
+     * This prevents arbitrary fields (iban, etc.) from being written without validation.
      */
-    test('should write arbitrary fields without validation — FINDING-007 canary', async () => {
+    test('should block update to contacts via firestore_write — FINDING-007 fixed', async () => {
       const ctx = createAdminContext();
       mockDb.seedCollection('contacts', {
         'cont_001': { companyId: 'test-company-001', firstName: 'Test' },
@@ -283,12 +275,11 @@ describe('FirestoreHandler', () => {
         collection: 'contacts',
         documentId: 'cont_001',
         mode: 'update',
-        data: { iban: 'INVALID_IBAN_12345' }, // Not a valid IBAN — handler accepts it
+        data: { iban: 'INVALID_IBAN_12345' },
       }, ctx);
 
-      expect(result.success).toBe(true);
-      const doc = mockDb.getData('contacts', 'cont_001');
-      expect(doc?.iban).toBe('INVALID_IBAN_12345');
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('update_contact_field');
     });
   });
 
