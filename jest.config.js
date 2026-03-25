@@ -30,6 +30,10 @@ const config = {
     // Legacy alias (deprecated)
     '^@subapps/(.*)$': '<rootDir>/src/subapps/$1',
     // =================================================================
+    // Server-only mock (Next.js server-only module — throws in non-server context)
+    // =================================================================
+    '^server-only$': '<rootDir>/src/services/ai-pipeline/tools/__tests__/test-utils/server-only-mock.ts',
+    // =================================================================
     // Asset mocks
     // =================================================================
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',

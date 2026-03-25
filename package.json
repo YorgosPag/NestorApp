@@ -54,6 +54,7 @@
     "analyze:bundle": "node scripts/bundle-analyzer.js",
     "analyze:bundle-report": "pnpm run analyze:bundle && echo 'Report saved to bundle-analysis-report.json'",
     "test": "jest --passWithNoTests",
+    "test:ai-pipeline": "jest --testPathPatterns=ai-pipeline/tools/__tests__ --verbose",
     "test:deterministic": "jest --runInBand --passWithNoTests",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
