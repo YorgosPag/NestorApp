@@ -362,6 +362,8 @@ export class FirestoreHandler implements ToolHandler {
         .limit(100)
         .get();
 
+      const tabFilter = typeof args.tabFilter === 'string' ? args.tabFilter : null;
+
       const matches = snap.docs
         .filter(doc => {
           const data = doc.data();
@@ -375,10 +377,18 @@ export class FirestoreHandler implements ToolHandler {
           });
         })
         .slice(0, limit)
-        .map(doc => ({
-          id: doc.id,
-          ...redactRoleBlockedFields(redactSensitiveFields(doc.data()), ctx),
-        }));
+        .map(doc => {
+          let result: Record<string, unknown> = {
+            id: doc.id,
+            ...redactRoleBlockedFields(redactSensitiveFields(doc.data()), ctx),
+          };
+          // Server-side tab filtering for contact search results
+          if (tabFilter && collection === COLLECTIONS.CONTACTS) {
+            const contactType = resolveContactType(result);
+            result = filterContactByTab(result, contactType, tabFilter);
+          }
+          return result;
+        });
 
       if (matches.length > 0) {
         allResults[collection] = matches;
@@ -392,10 +402,6 @@ export class FirestoreHandler implements ToolHandler {
       count: totalCount,
     };
   }
-
-  // --------------------------------------------------------------------------
-  // Progressive fallback query engine
-  // --------------------------------------------------------------------------
 
   private async executeWithFallback(
     db: FirebaseFirestore.Firestore,

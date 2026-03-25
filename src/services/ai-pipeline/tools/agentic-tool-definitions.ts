@@ -377,8 +377,12 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
             type: ['number', 'null'],
             description: 'Max results per collection (default 10)',
           },
+          tabFilter: {
+            type: ['string', 'null'],
+            description: 'For contacts: filter results to ONLY fields from this tab (e.g. "basicInfo", "identity", "communication"). Pass null when no specific tab is requested.',
+          },
         },
-        required: ['searchTerm', 'collections', 'limit'],
+        required: ['searchTerm', 'collections', 'limit', 'tabFilter'],
         additionalProperties: false,
       },
       strict: true,

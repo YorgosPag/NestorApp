@@ -75,24 +75,10 @@ const CONTENT_TAB_DESCRIPTIONS: Record<string, string> = {
 };
 
 // ============================================================================
-// SECTION FIELD EXTRACTION
+// SECTION FIELD EXTRACTION (SSoT: section-field-utils.ts)
 // ============================================================================
 
-interface SectionLike {
-  id: string;
-  fields: ReadonlyArray<{ id: string }>;
-}
-
-/**
- * Extracts real (non-dummy) field IDs from a section.
- * Convention: dummy fields have field.id === section.id
- */
-function extractRealFieldIds(section: SectionLike): string[] {
-  if (!section.fields || section.fields.length === 0) return [];
-  return section.fields
-    .filter(f => f.id !== section.id) // skip dummy trigger fields
-    .map(f => f.id);
-}
+import { type SectionLike, extractRealFieldIds } from '@/config/section-field-utils';
 
 /**
  * Generates tab mapping lines for a contact type

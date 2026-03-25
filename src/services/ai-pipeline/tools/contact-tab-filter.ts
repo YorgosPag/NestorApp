@@ -18,17 +18,17 @@ import 'server-only';
 import { INDIVIDUAL_SECTIONS } from '@/config/individual-config';
 import { COMPANY_GEMI_SECTIONS } from '@/config/company-gemi';
 import { SERVICE_SECTIONS } from '@/config/service-config';
+import {
+  type SectionLike,
+  extractRealFieldIds,
+  ARRAY_FIELD_SECTIONS,
+} from '@/config/section-field-utils';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
 type ContactType = 'individual' | 'company' | 'service';
-
-interface SectionLike {
-  id: string;
-  fields: ReadonlyArray<{ id: string }>;
-}
 
 // ============================================================================
 // TAB → FIELDS MAP (built once, cached at module level)
@@ -40,26 +40,21 @@ const ALWAYS_INCLUDED_FIELDS = new Set([
 ]);
 
 /**
- * Extract real (non-dummy) field IDs from a section config.
- * Convention: dummy fields have field.id === section.id (trigger for custom renderer)
- */
-function extractFieldIds(section: SectionLike): string[] {
-  return section.fields
-    .filter(f => f.id !== section.id)
-    .map(f => f.id);
-}
-
-/**
  * Build tab→fields lookup for a contact type.
+ * Uses SSoT: section-field-utils for field extraction + array field sections.
  */
 function buildTabMap(sections: ReadonlyArray<SectionLike>): Map<string, Set<string>> {
   const map = new Map<string, Set<string>>();
   for (const section of sections) {
-    const fieldIds = extractFieldIds(section);
-    // Communication tab: has dummy field, but we know the real array fields
-    if (section.id === 'communication') {
-      map.set(section.id, new Set(['phones', 'emails', 'websites', 'socialMedia']));
-    } else if (fieldIds.length > 0) {
+    // Check if section has hardcoded array fields (e.g. communication → phones, emails...)
+    const arrayFields = ARRAY_FIELD_SECTIONS[section.id];
+    if (arrayFields) {
+      map.set(section.id, new Set(arrayFields));
+      continue;
+    }
+
+    const fieldIds = extractRealFieldIds(section);
+    if (fieldIds.length > 0) {
       map.set(section.id, new Set(fieldIds));
     }
   }
