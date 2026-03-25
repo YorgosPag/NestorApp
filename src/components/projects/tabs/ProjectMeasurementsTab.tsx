@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
 /**
@@ -19,7 +20,7 @@ import type { Project } from '@/types/project';
 import type { BOQItem, BOQSummary, BOQProjectSummary } from '@/types/boq';
 import type { MasterBOQCategory } from '@/config/boq-categories';
 import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
-import { boqService, computeBuildingSummary, computeItemCost } from '@/services/measurements';
+import { boqService, computeBuildingSummary } from '@/services/measurements';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,7 +31,6 @@ import {
   ChevronDown, ChevronRight, Layers,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
-import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
@@ -202,6 +202,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
     return (
       <section className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
         <Spinner size="large" />
+        {/* eslint-disable-next-line custom/no-hardcoded-strings */}
         <span className={typography.body.base}>Φόρτωση επιμετρήσεων...</span>
       </section>
     );

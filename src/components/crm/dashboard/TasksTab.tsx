@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';

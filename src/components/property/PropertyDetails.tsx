@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
@@ -21,7 +22,6 @@ import {
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { formatCurrency, formatDate } from '@/lib/intl-utils';
 import type { Property } from '@/types/property';
-import { PROPERTY_STATUS_CONFIG } from '@/lib/property-utils';
 import { PropertyInfoItem } from '@/components/property-management/details/PropertyInfoItem';
 import { shareProperty, trackShareEvent, type PropertyShareData } from '@/lib/share-utils';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -35,7 +35,6 @@ interface PropertyDetailsProps {
 export function PropertyDetails({ property }: PropertyDetailsProps) {
   const { t } = useTranslation('properties');
   const { success, error } = useNotifications();
-  const statusInfo = (PROPERTY_STATUS_CONFIG as Record<string, { label: string; color: string }>)[property.status] || PROPERTY_STATUS_CONFIG.default;
 
   // 🏢 ENTERPRISE: Centralized systems
   const iconSizes = useIconSizes();

@@ -28,7 +28,7 @@ export function useCommunicationsHistory(contactId?: string) {
         setCommunications(commsData);
         setError(null);
       }
-    } catch (err) {
+    } catch {
       // 🌐 i18n: Error message converted to i18n key - 2026-01-18
       if (isMounted) setError(t('history.loadError', { defaultValue: 'Failed to load communications history' }));
       // Error logging removed

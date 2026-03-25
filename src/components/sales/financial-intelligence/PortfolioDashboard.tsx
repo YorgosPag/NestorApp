@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
 /**

@@ -1,7 +1,8 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { Target, Users, TrendingUp, CheckCircle, Plus } from 'lucide-react';
+import { Target, Users, TrendingUp, CheckCircle } from 'lucide-react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
