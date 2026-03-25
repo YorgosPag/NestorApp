@@ -372,6 +372,7 @@ npx tsx scripts/import-esco-skills.ts
 | 2026-03-25 | Extracted shared `esco-search-utils.ts` — eliminates duplication between contact-handler and utility-handler | Claude Code |
 | 2026-03-25 | Bug fix — empty skills array no longer deletes existing skills (empty = no change) | Claude Code |
 | 2026-03-25 | Fix: ESCO skill enforcement — skills without URI rejected when multiple ESCO matches exist. Skills now MERGE with existing (not replace) | Claude Code |
+| 2026-03-25 | **Google-level enforcement**: Always-on server-side ESCO disambiguation. Added `disambiguated` flag — server BLOCKS writes with >1 matches unless user confirmed. AI can no longer bypass via auto-select with URI. URI validation after disambiguation. | Claude Code |
 
 ---
 

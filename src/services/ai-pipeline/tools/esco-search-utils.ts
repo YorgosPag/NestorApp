@@ -197,8 +197,10 @@ export async function enforceEscoOccupation(
   profession: string
 ): Promise<EscoEnforcementResult> {
   const matches = await searchEscoOccupations(profession, 10);
-  if (matches.length === 0) return { allowed: true };
+  // 0-1 matches = unambiguous (free-text or single match)
+  if (matches.length <= 1) return { allowed: true };
 
+  // >1 matches = ambiguous → requires user disambiguation
   return {
     allowed: false,
     matches: matches.map(m => ({
