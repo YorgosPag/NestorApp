@@ -273,10 +273,14 @@ async function promoteFileRecord(
   attribution: string,
   options?: PromoteOptions & { alreadyPromoted?: boolean }
 ): Promise<void> {
+  // linkedTo tag for many-to-many discovery (UI queries via array-contains)
+  const linkTag = `contact:${contactId}`;
+
   const updateData: Record<string, unknown> = {
     domain: 'admin',
     category,
     status: FILE_STATUS.READY,
+    linkedTo: FieldValue.arrayUnion(linkTag),
     updatedAt: FieldValue.serverTimestamp(),
     lastModifiedBy: attribution,
     'ingestion.state': 'classified',
