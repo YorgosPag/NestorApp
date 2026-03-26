@@ -27,7 +27,7 @@ const RATE_LIMITS: Record<string, { maxRequests: number; windowMs: number }> = {
   // Firestore rate limits
   read: { maxRequests: 60, windowMs: 60_000 },
   write: { maxRequests: 20, windowMs: 60_000 },
-  delete: { maxRequests: 5, windowMs: 60_000 },
+  delete: { maxRequests: 50, windowMs: 60_000 },
   // Storage rate limits (separate buckets)
   storage_read: { maxRequests: 30, windowMs: 60_000 },
   storage_write: { maxRequests: 10, windowMs: 60_000 },

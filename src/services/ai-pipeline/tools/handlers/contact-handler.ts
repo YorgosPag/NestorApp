@@ -2,6 +2,7 @@
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getErrorMessage } from '@/lib/error-utils';
+import { toGreekTitleCase } from '@/utils/greek-text';
 import { CONTACT_FIELD_TYPES, CONTACT_TYPES, CONTACT_UPDATABLE_FIELDS } from '../agentic-tool-definitions';
 import type { ContactFieldType, ContactTypeEnum, ContactUpdatableField } from '../agentic-tool-definitions';
 import type { PhoneInfo, EmailInfo, SocialMediaInfo, AddressInfo, WebsiteInfo } from '@/types/contacts/contracts';
@@ -78,8 +79,9 @@ export class ContactHandler implements ToolHandler {
     }
 
     const contactType = String(args.contactType ?? '').trim();
-    const firstName = String(args.firstName ?? '').trim();
-    const lastName = String(args.lastName ?? '').trim();
+    const tc = contactType !== 'company'; // Title Case for individuals
+    const firstName = tc ? toGreekTitleCase(String(args.firstName ?? '').trim()) : String(args.firstName ?? '').trim();
+    const lastName = tc ? toGreekTitleCase(String(args.lastName ?? '').trim()) : String(args.lastName ?? '').trim();
     const companyName = args.companyName ? String(args.companyName).trim() : null;
     const email = args.email ? String(args.email).trim().toLowerCase() : null;
     let phone = args.phone ? String(args.phone).trim() : null;

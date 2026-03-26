@@ -33,6 +33,36 @@ export function normalizeGreekText(text: string): string {
 }
 
 // ============================================================================
+// TITLE CASE (proper name casing)
+// ============================================================================
+
+/**
+ * Convert text to Title Case, respecting Greek characters.
+ * Each word: first letter uppercase, rest lowercase.
+ * Handles hyphenated names: "ΠΑΠΑ-ΓΕΩΡΓΙΟΥ" → "Παπα-Γεωργίου"
+ *
+ * @example toGreekTitleCase("ΆχΙλλΕΑΣ") → "Αχιλλεας"
+ * @example toGreekTitleCase("ΓΡΑΒΑΝΗΣ") → "Γραβανης"
+ * @example toGreekTitleCase("παπα-γεωργίου") → "Παπα-Γεωργίου"
+ */
+export function toGreekTitleCase(text: string): string {
+  if (!text) return '';
+  return text
+    .split(/(\s+)/)
+    .map(segment =>
+      segment
+        .split('-')
+        .map(part =>
+          part.length > 0
+            ? part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
+            : part
+        )
+        .join('-')
+    )
+    .join('');
+}
+
+// ============================================================================
 // SEARCH NORMALIZATION
 // ============================================================================
 

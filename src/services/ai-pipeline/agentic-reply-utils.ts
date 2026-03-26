@@ -184,7 +184,7 @@ export function enrichWithDocumentPreview(
       : '';
 
     return [
-      `[Ανάλυση Εγγράφου: ${p.filename}]`,
+      `[Ανάλυση Εγγράφου: ${p.filename}, fileRecordId: ${p.fileRecordId}]`,
       `Τύπος: ${p.documentType}`,
       `Περίληψη: ${p.summary}`,
       actions,

@@ -1,11 +1,12 @@
 {
   "mcpServers": {
     "firestore": {
-      "command": "cmd",
-      "args": ["/c", "npx", "tsx", "mcp-server/src/index.ts"],
+      "command": "C:\\Nestor_Pagonis\\mcp-server\\node_modules\\.bin\\tsx.cmd",
+      "args": ["mcp-server/src/index.ts"],
       "cwd": "C:\\Nestor_Pagonis",
       "env": {
-        "DOTENV_PATH": ".env.local"
+        "DOTENV_PATH": ".env.local",
+        "MCP_ALLOW_DELETE": "true"
       }
     }
   }

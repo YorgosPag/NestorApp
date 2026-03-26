@@ -88,6 +88,11 @@ const WRITE_ALLOWED_COLLECTIONS = new Set([
   'entity_audit_trail',
   'notifications',
   'ai_chat_history',
+  'ai_agent_feedback',
+  'ai_pipeline_audit',
+  'ai_pipeline_queue',
+  'ai_usage',
+  'external_identities',
 ]);
 
 // ============================================================================

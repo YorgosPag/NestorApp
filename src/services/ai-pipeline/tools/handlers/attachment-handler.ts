@@ -89,6 +89,7 @@ export class AttachmentHandler implements ToolHandler {
     const attribution = buildAttribution(ctx);
 
     await promoteFileRecord(db, fileRecordId, contactId, 'photos', attribution);
+    await createFileLink(db, fileRecordId, contactId, ctx.companyId, attribution, 'profile_photo');
 
     await db.collection(COLLECTIONS.CONTACTS).doc(contactId).update({
       photoURL: fileRecord.downloadUrl,
@@ -125,6 +126,7 @@ export class AttachmentHandler implements ToolHandler {
     const attribution = buildAttribution(ctx);
 
     await promoteFileRecord(db, fileRecordId, contactId, 'photos', attribution);
+    await createFileLink(db, fileRecordId, contactId, ctx.companyId, attribution, 'gallery_photo');
 
     await db.collection(COLLECTIONS.CONTACTS).doc(contactId).update({
       multiplePhotoURLs: FieldValue.arrayUnion(fileRecord.downloadUrl),
@@ -162,6 +164,7 @@ export class AttachmentHandler implements ToolHandler {
       contentType: fileRecord.contentType,
     });
 
+    await createFileLink(db, fileRecordId, contactId, ctx.companyId, attribution, classification.purpose);
     await promoteFileRecord(db, fileRecordId, contactId, 'documents', attribution, {
       purpose: classification.purpose,
       classificationAnalysis: {
@@ -284,4 +287,31 @@ async function promoteFileRecord(
   }
 
   await db.collection(COLLECTIONS.FILES).doc(fileRecordId).update(updateData);
+}
+
+/**
+ * Create a file_link record so the same file can be linked to multiple contacts.
+ * Idempotent: uses deterministic ID (set with merge) so retries are safe.
+ * @see ADR-032 (Linking Model)
+ */
+async function createFileLink(
+  db: FirebaseFirestore.Firestore,
+  fileRecordId: string,
+  contactId: string,
+  companyId: string,
+  attribution: string,
+  reason?: string
+): Promise<void> {
+  const linkId = `fl_${fileRecordId}_contact_${contactId}`;
+  await db.collection(COLLECTIONS.FILE_LINKS).doc(linkId).set({
+    id: linkId,
+    sourceFileId: fileRecordId,
+    sourceWorkspaceId: companyId,
+    targetEntityType: 'contact',
+    targetEntityId: contactId,
+    reason: reason ?? null,
+    status: 'active',
+    createdAt: FieldValue.serverTimestamp(),
+    createdBy: attribution,
+  }, { merge: true });
 }
