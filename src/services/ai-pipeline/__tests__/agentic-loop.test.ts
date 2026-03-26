@@ -575,12 +575,17 @@ describe('executeAgenticLoop', () => {
 
   describe('Tool execution failure', () => {
     it('should pass failed tool result to AI with _blocked flag', async () => {
-      executor.executeTool.mockResolvedValueOnce({
-        success: false,
-        error: 'Contact not found',
-      });
+      // First call: search (to satisfy FIND-T guardrail), then update with invalid ID
+      executor.executeTool
+        .mockResolvedValueOnce({ success: true, data: { contacts: [] }, count: 0 })  // search_text
+        .mockResolvedValueOnce({ success: false, error: 'Contact not found' });       // update_contact_field
 
       (callChatCompletions as jest.Mock)
+        .mockResolvedValueOnce(
+          makeToolCallResponse([
+            { name: 'search_text', args: { searchTerm: 'test', collections: ['contacts'] } },
+          ]),
+        )
         .mockResolvedValueOnce(
           makeToolCallResponse([
             { name: 'update_contact_field', args: { contactId: 'cont_invalid' } },
@@ -596,8 +601,11 @@ describe('executeAgenticLoop', () => {
         FAST_CONFIG,
       );
 
-      expect(result.toolCalls[0].result).toContain('_blocked');
-      expect(result.toolCalls[0].result).toContain('Contact not found');
+      // The update_contact_field result should contain the error from the handler
+      const updateCall = result.toolCalls.find(tc => tc.name === 'update_contact_field');
+      expect(updateCall).toBeDefined();
+      expect(updateCall!.result).toContain('_blocked');
+      expect(updateCall!.result).toContain('Contact not found');
     });
   });
 

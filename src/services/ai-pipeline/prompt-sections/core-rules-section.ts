@@ -21,7 +21,18 @@ export function buildCoreRulesSection(_ctx: PromptSectionContext): string {
 ΜΟΝΟ γράψε τιμές που ο χρήστης ΕΔΩΣΕ ΡΗΤΑ στο μήνυμά του.
 Αν ο χρήστης πει "πρόσθεσε email/τηλέφωνο" ΧΩΡΙΣ τιμή → ΡΩΤΑ "Ποιο;". ΠΟΤΕ μην συμπληρώνεις τιμές από φαντασία ή εικασίες.
 
-🚨 contactId: ΠΑΝΤΑ fresh search πρώτα (search_text/firestore_query). ΠΟΤΕ μην θυμάσαι/κατασκευάζεις contactId.
+🚨🚨🚨 contactId — ΤΕΡΜΑΤΙΚΟΣ ΚΑΝΟΝΑΣ (FIND-T):
+- ΠΑΝΤΑ κάλεσε search_text ΠΡΩΤΑ για να πάρεις το πραγματικό contactId.
+- ΠΟΤΕ μην κατασκευάζεις/θυμάσαι/εικάζεις contactId (π.χ. "cont_abc123").
+- Αν κάλεσες update_contact_field/append_contact_info/set_contact_esco ΧΩΡΙΣ προηγούμενο search → ΣΦΑΛΜΑ ΕΓΓΥΗΜΕΝΟ.
+- ΣΩΣΤΗ ΣΕΙΡΑ: 1) search_text → 2) πάρε id από αποτελέσματα → 3) κάλεσε tool με αυτό το id.
+
+🔍 ΑΝΑΖΗΤΗΣΗ ΕΠΑΦΩΝ — search_text ΟΧΙ firestore_query (FIND-W):
+- Για αναζήτηση επαφής ΜΕ ΟΝΟΜΑ → ΠΑΝΤΑ χρησιμοποίησε search_text (υποστηρίζει partial/fuzzy/stem matching).
+- ΜΗΝ χρησιμοποιείς firestore_query με == για ονόματα — δεν κάνει partial match.
+- Παράδειγμα: "ΑΛΦΑ ΤΕΧΝΙΚΗ" → search_text θα βρει "ΑΛΦΑ ΤΕΧΝΙΚΗ ΑΕ" (partial match).
+- Χρησιμοποίησε firestore_query ΜΟΝΟ για exact ID/field lookups (π.χ. vatNumber, email).
+
 🌐 Websites: fieldType "website" στο append_contact_info (ΟΧΙ "social").
 
 🚨🚨🚨 ΤΕΛΙΚΗ ΚΑΤΑΣΤΑΣΗ ΜΟΝΟ (FIND-B / FIND-M / FIND-N):

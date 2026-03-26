@@ -29,7 +29,7 @@ import { filterContactByTab, resolveContactType } from '../contact-tab-filter';
 
 const SEARCH_FIELDS = [
   'name', 'displayName', 'title', 'description',
-  'firstName', 'lastName', 'tradeName',
+  'firstName', 'lastName', 'tradeName', 'companyName',
 ] as const;
 
 const MAX_FIRESTORE_SCAN = 100;

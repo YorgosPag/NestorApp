@@ -440,7 +440,15 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
     type: 'function' as const,
     function: {
       name: 'append_contact_info',
-      description: 'Add new phone, email, website, or social media to a contact record. APPEND ONLY — cannot delete or modify existing entries. Admin: provide contactId to append to any contact. Customer: appends to own contact automatically. For websites use fieldType "website".',
+      description: [
+        'Add new phone, email, website, or social media to a contact record. APPEND ONLY — cannot delete or modify existing entries.',
+        'Admin: provide contactId to append to any contact. Customer: appends to own contact automatically.',
+        'For websites use fieldType "website".',
+        'ENTITY-AWARE LABELS: The server auto-resolves the correct type based on entity type (individual/company/service).',
+        'For COMPANIES use: Phone: εργασία/κύριο/τμήμα/γραμματεία/πωλήσεις/υποστήριξη. Email: γενικό/τμήμα/πωλήσεις/πληροφορίες. Website: εταιρική/eshop/blog.',
+        'For INDIVIDUALS use: Phone: κινητό/σπίτι/εργασία. Email: προσωπικό/εργασία. Website: προσωπικό/εταιρικό/portfolio.',
+        'For SERVICES use: Phone: κύριο/τμήμα/γραμματεία/helpdesk. Email: γενικό/τμήμα/γραμματεία/πληροφορίες. Website: επίσημη/eservices/portal.',
+      ].join(' '),
       parameters: {
         type: 'object',
         properties: {
@@ -459,7 +467,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
           },
           label: {
             type: 'string',
-            description: 'Label for the entry. Phone: εργασία/σπίτι/κινητό/σταθερό. Email: εργασία/προσωπικό. Social: platform name (facebook/instagram/linkedin/twitter). Address: σπίτι/εργασία/αποστολή',
+            description: 'Label for the entry — determines the type. IMPORTANT: Use entity-appropriate labels. Individual phone: κινητό/σπίτι/εργασία. Company phone: κύριο/τμήμα/πωλήσεις. Individual email: προσωπικό/εργασία. Company email: γενικό/πληροφορίες/πωλήσεις. Social: platform name (facebook/instagram/linkedin/twitter). Address: σπίτι/εργασία/αποστολή.',
           },
         },
         required: ['contactId', 'fieldType', 'value', 'label'],
@@ -586,7 +594,9 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
         'CRITICAL: To fix a name, use field "firstName" or "lastName" — NOT "fatherName" (πατρώνυμο). fatherName is for the father\'s name.',
         'For phone/email/social/address/website use append_contact_info instead.',
         'IMPORTANT for taxOffice: ALWAYS call lookup_doy_code first to get the 4-digit code.',
+        'IMPORTANT for vatNumber (ΑΦΜ): Store DIRECTLY as-is. NO lookup_doy_code needed — vatNumber is a 9-digit tax number, NOT a tax office. Just call update_contact_field with field="vatNumber" and the value the user gave.',
         'IMPORTANT for profession: ALWAYS call search_esco_occupations first. Show matches to user. If no ESCO match, ask user before adding free text.',
+        'IMPORTANT for industry (κλάδος) and sector (τομέας): These are FREE-TEXT company fields. NO ESCO search needed — just store the value directly with update_contact_field. Example: sector="Ιδιωτικός", industry="Κατασκευές".',
         'IMPORTANT for dates (birthDate, documentIssueDate, documentExpiryDate): ALWAYS use DD/MM/YYYY format (e.g. "25/01/2027").',
         'IMPORTANT for documentType: ONLY values "identity_card", "passport", "drivers_license", "other".',
         'IMPORTANT for documentNumber: Pass the EXACT string the user gave, including prefix letters (e.g. "ΑΚ 582946" NOT "582946"). Greek IDs have letter prefixes — NEVER strip them.',

@@ -68,6 +68,14 @@ export async function executeToolCalls(
       continue;
     }
 
+    // Guardrail 3: FIND-T — block tools with contactId if no prior search was done
+    const contactIdBlock = checkContactIdGuardrail(toolName, toolArgs, records, messages, context);
+    if (contactIdBlock) {
+      records.push({ name: toolName, args: argsString, result: contactIdBlock });
+      toolMessages.push({ role: 'tool', content: contactIdBlock, tool_call_id: tc.id });
+      continue;
+    }
+
     // Execute tool
     const result = await executor.executeTool(toolName, toolArgs, context);
 
@@ -111,6 +119,56 @@ function checkFabricationGuardrail(
   return JSON.stringify({
     _blocked: true,
     error: `BLOCKED: Η τιμή "${fabricatedValue}" δεν αναφέρθηκε από τον χρήστη στο μήνυμά του. ΡΩΤΑ τον χρήστη να σου δώσει τη σωστή τιμή.`,
+  });
+}
+
+/** Tools that require a contactId obtained from a prior search */
+const TOOLS_REQUIRING_CONTACT_ID = new Set([
+  'update_contact_field', 'append_contact_info', 'set_contact_esco',
+  'manage_bank_account', 'manage_relationship', 'attach_file_to_contact',
+]);
+
+/** Tools that return contactIds in their results (search tools) */
+const SEARCH_TOOL_NAMES = new Set([
+  'search_text', 'firestore_query', 'create_contact',
+]);
+
+/**
+ * FIND-T: Block tools requiring contactId if no search tool was called first in this iteration batch.
+ * Prevents the AI from fabricating contactIds without doing a search.
+ */
+function checkContactIdGuardrail(
+  toolName: string,
+  toolArgs: Record<string, unknown>,
+  currentBatchRecords: ToolCallRecord[],
+  allMessages: ChatCompletionMessage[],
+  context: AgenticContext
+): string | null {
+  if (!TOOLS_REQUIRING_CONTACT_ID.has(toolName)) return null;
+  if (!context.isAdmin) return null; // customer path auto-resolves contactId
+
+  const contactId = String(toolArgs.contactId ?? '').trim();
+  if (!contactId) return null; // empty → handler will catch it
+
+  // Check current batch (same iteration) for a search call
+  const hadBatchSearch = currentBatchRecords.some(r => SEARCH_TOOL_NAMES.has(r.name));
+  if (hadBatchSearch) return null;
+
+  // Check all prior messages for search tool results (prior iterations)
+  const hadPriorSearch = allMessages.some(m => {
+    if (m.role !== 'assistant' || !m.tool_calls) return false;
+    return (m.tool_calls as Array<{ function: { name: string } }>)
+      .some(tc => SEARCH_TOOL_NAMES.has(tc.function.name));
+  });
+  if (hadPriorSearch) return null;
+
+  logger.warn('FIND-T: blocked tool call — no prior search for contactId', {
+    requestId: context.requestId, tool: toolName, contactId,
+  });
+
+  return JSON.stringify({
+    _blocked: true,
+    error: `BLOCKED: Δεν έχεις κάνει αναζήτηση πρώτα. ΠΡΕΠΕΙ να καλέσεις search_text ή firestore_query ΠΡΙΝ χρησιμοποιήσεις το ${toolName}. Πάρε το πραγματικό contactId από τα αποτελέσματα αναζήτησης.`,
   });
 }
 

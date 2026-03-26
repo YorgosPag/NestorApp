@@ -5,7 +5,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { toGreekTitleCase } from '@/utils/greek-text';
 import { CONTACT_FIELD_TYPES, CONTACT_TYPES } from '../agentic-tool-definitions';
 import type { ContactFieldType, ContactTypeEnum } from '../agentic-tool-definitions';
-import type { PhoneInfo, EmailInfo, SocialMediaInfo, AddressInfo, WebsiteInfo } from '@/types/contacts/contracts';
+import type { SocialMediaInfo, AddressInfo } from '@/types/contacts/contracts';
 import { ADDRESS_LABEL_MAP, parseGreekAddress } from './address-parser';
 import {
   type AgenticContext,
@@ -17,19 +17,75 @@ import {
   logger,
 } from '../executor-shared';
 
-// LABEL MAPS (SSoT for Greek↔English label resolution)
-const PHONE_LABEL_MAP: Record<string, PhoneInfo['type']> = {
+// ============================================================================
+// ENTITY-AWARE TYPE MAPS — Different types per contact entity (individual/company/service)
+// SSoT: CommunicationConfigs.ts defines UI types; these maps resolve AI label→type
+// ============================================================================
+
+type ContactEntity = 'individual' | 'company' | 'service';
+
+// ── PHONE TYPE MAPS ──
+const PHONE_INDIVIDUAL_MAP: Record<string, string> = {
   'εργασία': 'work', 'δουλειά': 'work', 'work': 'work', 'γραφείο': 'work',
   'σπίτι': 'home', 'home': 'home',
   'κινητό': 'mobile', 'mobile': 'mobile',
   'σταθερό': 'home', 'landline': 'home',
   'fax': 'fax', 'φαξ': 'fax',
 };
-const EMAIL_LABEL_MAP: Record<string, EmailInfo['type']> = {
+const PHONE_COMPANY_MAP: Record<string, string> = {
+  'κύριο': 'main', 'main': 'main', 'κεντρικό': 'main', 'εργασία': 'main', 'work': 'main',
+  'τμήμα': 'department', 'department': 'department',
+  'γραμματεία': 'secretariat', 'secretariat': 'secretariat',
+  'πωλήσεις': 'sales', 'sales': 'sales',
+  'υποστήριξη': 'support', 'support': 'support',
+  'fax': 'fax', 'φαξ': 'fax',
+};
+const PHONE_SERVICE_MAP: Record<string, string> = {
+  'κύριο': 'main', 'main': 'main', 'κεντρικό': 'main', 'εργασία': 'main', 'work': 'main',
+  'τμήμα': 'department', 'department': 'department',
+  'γραμματεία': 'secretariat', 'secretariat': 'secretariat',
+  'helpdesk': 'helpdesk', 'κέντρο': 'helpdesk',
+  'fax': 'fax', 'φαξ': 'fax',
+};
+
+// ── EMAIL TYPE MAPS ──
+const EMAIL_INDIVIDUAL_MAP: Record<string, string> = {
   'προσωπικό': 'personal', 'personal': 'personal', 'προσωπικά': 'personal',
   'εργασία': 'work', 'δουλειά': 'work', 'work': 'work', 'γραφείο': 'work',
 };
+const EMAIL_COMPANY_MAP: Record<string, string> = {
+  'γενικό': 'general', 'general': 'general', 'εργασία': 'general', 'work': 'general',
+  'τμήμα': 'department', 'department': 'department',
+  'πωλήσεις': 'sales', 'sales': 'sales',
+  'υποστήριξη': 'support', 'support': 'support',
+  'πληροφορίες': 'info', 'info': 'info',
+};
+const EMAIL_SERVICE_MAP: Record<string, string> = {
+  'γενικό': 'general', 'general': 'general', 'εργασία': 'general', 'work': 'general',
+  'τμήμα': 'department', 'department': 'department',
+  'γραμματεία': 'secretariat', 'secretariat': 'secretariat',
+  'πληροφορίες': 'info', 'info': 'info',
+};
 
+// ── WEBSITE TYPE MAPS ──
+const WEBSITE_INDIVIDUAL_MAP: Record<string, string> = {
+  'personal': 'personal', 'προσωπικό': 'personal', 'προσωπική': 'personal',
+  'company': 'company', 'εταιρικό': 'company', 'εταιρεία': 'company',
+  'portfolio': 'portfolio', 'blog': 'blog',
+};
+const WEBSITE_COMPANY_MAP: Record<string, string> = {
+  'εταιρική': 'corporate', 'corporate': 'corporate', 'εταιρικό': 'corporate',
+  'company': 'corporate', 'personal': 'corporate',
+  'eshop': 'eshop', 'e-shop': 'eshop', 'κατάστημα': 'eshop',
+  'blog': 'blog', 'ιστολόγιο': 'blog',
+};
+const WEBSITE_SERVICE_MAP: Record<string, string> = {
+  'επίσημη': 'official', 'official': 'official', 'personal': 'official', 'company': 'official',
+  'eservices': 'eServices', 'ηλεκτρονικές': 'eServices',
+  'portal': 'portal', 'πύλη': 'portal',
+};
+
+// ── SOCIAL MEDIA PLATFORM MAP (same for all entity types) ──
 const SOCIAL_PLATFORM_MAP: Record<string, SocialMediaInfo['platform']> = {
   'facebook': 'facebook', 'fb': 'facebook',
   'twitter': 'twitter', 'x': 'twitter',
@@ -37,12 +93,67 @@ const SOCIAL_PLATFORM_MAP: Record<string, SocialMediaInfo['platform']> = {
   'instagram': 'instagram', 'insta': 'instagram',
   'youtube': 'youtube',
   'github': 'github',
+  'tiktok': 'other',
+  'whatsapp': 'other',
+  'telegram': 'other',
 };
 
-const WEBSITE_TYPE_MAP: Record<string, WebsiteInfo['type']> = {
-  'personal': 'personal', 'προσωπικό': 'personal', 'προσωπική': 'personal',
-  'company': 'company', 'εταιρικό': 'company', 'εταιρεία': 'company', 'portfolio': 'portfolio', 'blog': 'blog',
+// ── ENTITY-AWARE DEFAULTS ──
+const PHONE_DEFAULTS: Record<ContactEntity, string> = {
+  individual: 'mobile', company: 'main', service: 'main',
 };
+const EMAIL_DEFAULTS: Record<ContactEntity, string> = {
+  individual: 'personal', company: 'general', service: 'general',
+};
+const WEBSITE_DEFAULTS: Record<ContactEntity, string> = {
+  individual: 'personal', company: 'corporate', service: 'official',
+};
+
+// ── RESOLVER FUNCTIONS ──
+
+function resolvePhoneType(label: string, entity: ContactEntity, phoneNumber: string): string {
+  const map = entity === 'company' ? PHONE_COMPANY_MAP
+    : entity === 'service' ? PHONE_SERVICE_MAP
+    : PHONE_INDIVIDUAL_MAP;
+  if (map[label]) return map[label];
+  // Individual: auto-detect by Greek prefix (2xx = home/landline, 69x = mobile)
+  if (entity === 'individual') {
+    return phoneNumber.startsWith('2') ? 'home' : 'mobile';
+  }
+  return PHONE_DEFAULTS[entity];
+}
+
+function resolveEmailType(label: string, entity: ContactEntity): string {
+  const map = entity === 'company' ? EMAIL_COMPANY_MAP
+    : entity === 'service' ? EMAIL_SERVICE_MAP
+    : EMAIL_INDIVIDUAL_MAP;
+  return map[label] ?? EMAIL_DEFAULTS[entity];
+}
+
+function resolveWebsiteType(label: string, entity: ContactEntity): string {
+  const map = entity === 'company' ? WEBSITE_COMPANY_MAP
+    : entity === 'service' ? WEBSITE_SERVICE_MAP
+    : WEBSITE_INDIVIDUAL_MAP;
+  return map[label] ?? WEBSITE_DEFAULTS[entity];
+}
+
+/** Determine entity type from Firestore contact data */
+function getContactEntity(contactData: Record<string, unknown>): ContactEntity {
+  const t = String(contactData.type ?? 'individual');
+  if (t === 'company') return 'company';
+  if (t === 'service') return 'service';
+  return 'individual';
+}
+
+/** Check if a label was resolved via an entity-aware map (to decide if label should be stored) */
+function resolvedInMap(label: string, entity: ContactEntity, commType: 'phone' | 'email' | 'website'): boolean {
+  const maps: Record<string, Record<ContactEntity, Record<string, string>>> = {
+    phone: { individual: PHONE_INDIVIDUAL_MAP, company: PHONE_COMPANY_MAP, service: PHONE_SERVICE_MAP },
+    email: { individual: EMAIL_INDIVIDUAL_MAP, company: EMAIL_COMPANY_MAP, service: EMAIL_SERVICE_MAP },
+    website: { individual: WEBSITE_INDIVIDUAL_MAP, company: WEBSITE_COMPANY_MAP, service: WEBSITE_SERVICE_MAP },
+  };
+  return !!maps[commType][entity][label];
+}
 
 // HANDLER
 
@@ -228,6 +339,7 @@ export class ContactHandler implements ToolHandler {
       return { success: false, error: 'Η επαφή δεν βρέθηκε.' };
     }
     const contactData = contactDoc.data() as Record<string, unknown>;
+    const entity = getContactEntity(contactData);
 
     const updatePayload: Record<string, unknown> = {
       updatedAt: new Date().toISOString(),
@@ -241,19 +353,17 @@ export class ContactHandler implements ToolHandler {
       if (currentPhones.some(p => cleanPhoneNumber(p.number) === cleanedPhone)) {
         return { success: false, error: `Το τηλέφωνο ${value} υπάρχει ήδη.` };
       }
-      // Phone type: label → map, else detect by Greek prefix (2xx = landline, 69x = mobile)
-      const phoneType = PHONE_LABEL_MAP[label]
-        ?? (cleanedPhone.startsWith('2') ? 'home' : 'mobile');
+      const phoneType = resolvePhoneType(label, entity, cleanedPhone);
       const newEntry = {
         number: cleanedPhone,
         type: phoneType,
         isPrimary: false,
-        ...(label && !PHONE_LABEL_MAP[label] ? { label } : {}),
+        ...(label && !resolvedInMap(label, entity, 'phone') ? { label } : {}),
       };
       updatePayload.phones = [...currentPhones, newEntry];
     } else if (fieldType === 'address') {
       const parsed = parseGreekAddress(value);
-      const addressType = ADDRESS_LABEL_MAP[label] ?? 'home';
+      const addressType = ADDRESS_LABEL_MAP[label] ?? (entity === 'individual' ? 'home' : 'work');
       const currentAddresses = (contactData.addresses ?? []) as AddressInfo[];
       const newAddress: AddressInfo = {
         ...parsed,
@@ -268,16 +378,15 @@ export class ContactHandler implements ToolHandler {
       if (currentEmails.some(e => e.email.toLowerCase() === normalizedEmail)) {
         return { success: false, error: `Το email ${value} υπάρχει ήδη.` };
       }
-      const emailType = EMAIL_LABEL_MAP[label] ?? 'personal';
+      const emailType = resolveEmailType(label, entity);
       const newEntry = {
         email: normalizedEmail,
         type: emailType,
         isPrimary: false,
-        ...(label && !EMAIL_LABEL_MAP[label] ? { label } : {}),
+        ...(label && !resolvedInMap(label, entity, 'email') ? { label } : {}),
       };
       updatePayload.emails = [...currentEmails, newEntry];
     } else if (fieldType === 'website') {
-      // FIND-I: Write to dedicated websites[] array (WebsiteInfo shape)
       const { isValidUrl } = await import('@/lib/validation/email-validation');
       const normalizedUrl = value.startsWith('http') ? value : `https://${value}`;
       if (!isValidUrl(normalizedUrl)) {
@@ -287,11 +396,11 @@ export class ContactHandler implements ToolHandler {
       if (currentWebsites.some(w => w.url === normalizedUrl)) {
         return { success: false, error: `Το website ${value} υπάρχει ήδη.` };
       }
-      const websiteType = WEBSITE_TYPE_MAP[label] ?? 'personal';
+      const websiteType = resolveWebsiteType(label, entity);
       const newEntry = {
         url: normalizedUrl,
         type: websiteType,
-        ...(label && !WEBSITE_TYPE_MAP[label] ? { label } : {}),
+        ...(label && !resolvedInMap(label, entity, 'website') ? { label } : {}),
       };
       updatePayload.websites = [...currentWebsites, newEntry];
     } else {
