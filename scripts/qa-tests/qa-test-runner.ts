@@ -281,18 +281,63 @@ export function assertArrayLength(
   };
 }
 
-// ── Suite Runner ─────────────────────────────────────────────────────
-export async function runSuite(
-  suiteName: string,
-  tests: QATestCase[]
-): Promise<void> {
-  console.log(`\n${'═'.repeat(60)}`);
-  console.log(`${C.bold}${C.cyan}  🧪 QA Suite: ${suiteName}${C.reset}`);
-  console.log(`${'═'.repeat(60)}\n`);
+export function assertArrayLengthExact(
+  label: string,
+  arr: unknown[] | undefined,
+  exactLength: number
+): AssertionResult {
+  const len = arr?.length ?? 0;
+  return {
+    label,
+    passed: len === exactLength,
+    expected: `length === ${exactLength}`,
+    actual: `length = ${len}`,
+  };
+}
+
+export function assertEmpty(label: string, value: unknown): AssertionResult {
+  const passed = value === undefined || value === null || value === '';
+  return {
+    label,
+    passed,
+    expected: 'empty (undefined/null/"")',
+    actual: String(value),
+  };
+}
+
+export function assertNotEqual(
+  label: string,
+  actual: unknown,
+  notExpected: unknown
+): AssertionResult {
+  const passed = actual !== notExpected;
+  return {
+    label,
+    passed,
+    expected: `NOT ${String(notExpected)}`,
+    actual: String(actual),
+  };
+}
+
+// ── Phase Runner (runs one phase, returns results) ───────────────────
+export interface PhaseResult {
+  phaseName: string;
+  passed: number;
+  failed: number;
+  skipped: number;
+  total: number;
+  results: TestResult[];
+}
+
+export async function runPhase(
+  phaseName: string,
+  tests: QATestCase[],
+  state: Record<string, unknown>
+): Promise<PhaseResult> {
+  console.log(`\n${C.bold}${C.cyan}  ── ${phaseName} ──${C.reset}\n`);
 
   const results: TestResult[] = [];
-  const state: Record<string, unknown> = {};
-  let contactId: string | null = null;
+  let contactId = (state.contactId as string) ?? null;
 
   for (const test of tests) {
     if (test.skip) {
@@ -307,32 +352,70 @@ export async function runSuite(
     const result = await runSingleTest(test, contactId, state);
     results.push(result);
 
-    // Update contactId from state if set by test
     if (state.contactId) {
       contactId = state.contactId as string;
     }
   }
 
-  // ── Summary ──────────────────────────────────────────────────────
   const passed = results.filter((r) => r.passed).length;
   const failed = results.filter((r) => !r.passed).length;
   const skipped = tests.filter((t) => t.skip).length;
 
+  return { phaseName, passed, failed, skipped, total: tests.length, results };
+}
+
+// ── Multi-Phase Suite Runner ─────────────────────────────────────────
+export interface QAPhase {
+  name: string;
+  tests: QATestCase[];
+}
+
+export async function runMultiPhaseSuite(
+  suiteName: string,
+  phases: QAPhase[]
+): Promise<void> {
   console.log(`\n${'═'.repeat(60)}`);
-  console.log(`${C.bold}  📊 Summary: ${suiteName}${C.reset}`);
+  console.log(`${C.bold}${C.cyan}  🧪 QA Suite: ${suiteName}${C.reset}`);
+  console.log(`${'═'.repeat(60)}`);
+
+  const state: Record<string, unknown> = {};
+  const allPhaseResults: PhaseResult[] = [];
+
+  for (const phase of phases) {
+    const phaseResult = await runPhase(phase.name, phase.tests, state);
+    allPhaseResults.push(phaseResult);
+  }
+
+  // ── Grand Summary ──────────────────────────────────────────────────
+  const totalPassed = allPhaseResults.reduce((s, p) => s + p.passed, 0);
+  const totalFailed = allPhaseResults.reduce((s, p) => s + p.failed, 0);
+  const totalSkipped = allPhaseResults.reduce((s, p) => s + p.skipped, 0);
+  const totalTests = allPhaseResults.reduce((s, p) => s + p.total, 0);
+
+  console.log(`\n${'═'.repeat(60)}`);
+  console.log(`${C.bold}  📊 GRAND SUMMARY: ${suiteName}${C.reset}`);
   console.log(`${'─'.repeat(60)}`);
-  console.log(`  ${C.green}✅ Passed: ${passed}${C.reset}`);
-  if (failed > 0) console.log(`  ${C.red}❌ Failed: ${failed}${C.reset}`);
-  if (skipped > 0) console.log(`  ${C.yellow}⏭️  Skipped: ${skipped}${C.reset}`);
-  console.log(`  📋 Total:  ${passed + failed} / ${tests.length}`);
+
+  for (const pr of allPhaseResults) {
+    const icon = pr.failed === 0 ? `${C.green}✅` : `${C.red}❌`;
+    console.log(`  ${icon} ${pr.phaseName}: ${pr.passed}/${pr.total} passed${C.reset}`);
+  }
+
+  console.log(`${'─'.repeat(60)}`);
+  console.log(`  ${C.green}✅ Passed: ${totalPassed}${C.reset}`);
+  if (totalFailed > 0) console.log(`  ${C.red}❌ Failed: ${totalFailed}${C.reset}`);
+  if (totalSkipped > 0) console.log(`  ${C.yellow}⏭️  Skipped: ${totalSkipped}${C.reset}`);
+  console.log(`  📋 Total:  ${totalPassed + totalFailed} / ${totalTests}`);
   console.log(`${'═'.repeat(60)}\n`);
 
-  // Print failed test details
-  const failedTests = results.filter((r) => !r.passed);
-  if (failedTests.length > 0) {
+  // Print all failed tests grouped by phase
+  const allFailed = allPhaseResults.flatMap((pr) =>
+    pr.results.filter((r) => !r.passed).map((r) => ({ ...r, phase: pr.phaseName }))
+  );
+  if (allFailed.length > 0) {
     console.log(`${C.red}${C.bold}  ❌ Failed Tests:${C.reset}\n`);
-    for (const ft of failedTests) {
-      console.log(`  ${C.red}${ft.id}: ${ft.name}${C.reset}`);
+    for (const ft of allFailed) {
+      console.log(`  ${C.red}[${ft.phase}] ${ft.id}: ${ft.name}${C.reset}`);
       for (const a of ft.assertions.filter((x) => !x.passed)) {
         console.log(`    ${C.red}• ${a.label}: expected ${a.expected}, got ${a.actual}${C.reset}`);
       }
@@ -341,7 +424,15 @@ export async function runSuite(
     }
   }
 
-  process.exit(failed > 0 ? 1 : 0);
+  process.exit(totalFailed > 0 ? 1 : 0);
+}
+
+// ── Legacy: Single suite runner (backward compat) ────────────────────
+export async function runSuite(
+  suiteName: string,
+  tests: QATestCase[]
+): Promise<void> {
+  await runMultiPhaseSuite(suiteName, [{ name: suiteName, tests }]);
 }
 
 // ── Single Test Runner ───────────────────────────────────────────────
