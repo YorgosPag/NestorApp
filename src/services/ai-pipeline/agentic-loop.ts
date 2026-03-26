@@ -72,7 +72,6 @@ export async function executeAgenticLoop(
     : AI_COST_CONFIG.LIMITS.CUSTOMER_MAX_ITERATIONS;
   const cfg = { ...DEFAULT_CONFIG, maxIterations: roleMaxIterations, ...config };
   const startTime = Date.now();
-  const executor = getAgenticToolExecutor();
   const allToolCalls: AgenticResult['toolCalls'] = [];
   // ADR-259A: Aggregate token usage across all iterations
   const totalUsage: OpenAIUsage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
