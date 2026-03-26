@@ -12,6 +12,20 @@ function norm(text: string): string {
 }
 
 /**
+ * Stem-based substring match for Greek names.
+ * Greek declensions change the last 1-2 characters (e.g. Γραβάνης→Γραβάνη,
+ * Αχιλλέας→Αχιλλέα). By trimming the last 2 chars we match across cases.
+ *
+ * Short names (≤4 chars) use exact match to avoid false positives.
+ */
+function stemMatch(name: string, context: string): boolean {
+  if (!name || name.length <= 2) return true; // too short to check
+  if (name.length <= 4) return context.includes(name);
+  const stem = name.slice(0, Math.max(4, name.length - 2));
+  return context.includes(stem);
+}
+
+/**
  * FIND-F fix: Detect phone/email values NOT present in the user's original message.
  * Prevents AI from fabricating contact info (hallucinated emails/phones).
  *
@@ -66,14 +80,15 @@ export function isHallucinatedContactName(
   // Build normalized context from all conversation messages
   const fullContext = norm(conversationTexts.join(' '));
 
-  // Company contacts: check companyName
+  // Company contacts: check companyName (stem-based for Greek declensions)
   if (contactType === 'company') {
-    return companyName.length > 2 && !fullContext.includes(companyName);
+    return companyName.length > 2 && !stemMatch(companyName, fullContext);
   }
 
   // Individual contacts: BOTH firstName AND lastName must appear in context
-  const firstNameOk = firstName.length <= 2 || fullContext.includes(firstName);
-  const lastNameOk = lastName.length <= 2 || fullContext.includes(lastName);
+  // Uses stem matching to handle Greek declensions (e.g. Γραβάνης↔Γραβάνη)
+  const firstNameOk = stemMatch(firstName, fullContext);
+  const lastNameOk = stemMatch(lastName, fullContext);
 
   return !firstNameOk || !lastNameOk;
 }

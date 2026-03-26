@@ -353,6 +353,7 @@ async function handleDocumentPreviewIfNeeded(
           documentType: preview.documentType,
           suggestedActions: preview.suggestedActions,
           confidence: preview.confidence,
+          extractedNames: preview.extractedNames,
         });
       }
     } catch {

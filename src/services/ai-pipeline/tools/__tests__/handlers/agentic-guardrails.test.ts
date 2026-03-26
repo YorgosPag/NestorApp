@@ -12,7 +12,9 @@
  * @see ADR-263 Section 8
  */
 
-import { isFabricatedContactValue } from '../../../agentic-guardrails';
+jest.mock('server-only', () => ({}));
+
+import { isFabricatedContactValue, isHallucinatedContactName } from '../../../agentic-guardrails';
 
 describe('isFabricatedContactValue (FIND-F)', () => {
   // ========================================================================
@@ -220,6 +222,138 @@ describe('isFabricatedContactValue (FIND-F)', () => {
         'Πρόσθεσε email dimitris@test.gr στον Δημήτρη'
       );
       expect(result).toBe(false);
+    });
+  });
+});
+
+// ==========================================================================
+// isHallucinatedContactName — Anti-hallucination with Greek stem matching
+// ==========================================================================
+
+describe('isHallucinatedContactName', () => {
+  const contextWithGreekInvoice = [
+    '[Ανάλυση Εγγράφου: invoice.pdf] Τύπος: receipt',
+    'Περίληψη: Απόδειξη παροχής υπηρεσιών από τον Γραβάνη Αχιλλέα Γεώργιο.',
+    'Πρόσωπα/Εταιρείες: Γραβάνη Αχιλλέα Γεώργιο, Παπαδόπουλος Αβραάμ',
+  ];
+
+  // ========================================================================
+  // Greek declension matching (stem-based)
+  // ========================================================================
+
+  describe('Greek declension stem matching', () => {
+    test('should ALLOW nominative when context has genitive (Γραβάνης↔Γραβάνη)', () => {
+      const result = isHallucinatedContactName(
+        { contactType: 'individual', firstName: 'Αχιλλέας', lastName: 'Γραβάνης' },
+        contextWithGreekInvoice
+      );
+      expect(result).toBe(false); // stems αχιλλε + γραβαν match
+    });
+
+    test('should ALLOW ancient Greek form (Αχίλλευς↔Αχιλλέα)', () => {
+      const result = isHallucinatedContactName(
+        { contactType: 'individual', firstName: 'Αχίλλευς', lastName: 'Γραβάνης' },
+        contextWithGreekInvoice
+      );
+      expect(result).toBe(false); // stem αχιλλε matches αχιλλεα
+    });
+
+    test('should ALLOW exact name from context (Παπαδόπουλος Αβραάμ)', () => {
+      const result = isHallucinatedContactName(
+        { contactType: 'individual', firstName: 'Αβραάμ', lastName: 'Παπαδόπουλος' },
+        contextWithGreekInvoice
+      );
+      expect(result).toBe(false);
+    });
+
+    test('should ALLOW genitive lastName (Παπαδοπούλου)', () => {
+      const result = isHallucinatedContactName(
+        { contactType: 'individual', firstName: 'Αβραάμ', lastName: 'Παπαδοπούλου' },
+        contextWithGreekInvoice
+      );
+      expect(result).toBe(false); // stem παπαδοπουλ matches
+    });
+  });
+
+  // ========================================================================
+  // Hallucination blocking
+  // ========================================================================
+
+  describe('hallucination blocking', () => {
+    test('should BLOCK completely fabricated name', () => {
+      const result = isHallucinatedContactName(
+        { contactType: 'individual', firstName: 'Μελχισεδέκ', lastName: 'Παυάρος' },
+        contextWithGreekInvoice
+      );
+      expect(result).toBe(true);
+    });
+
+    test('should BLOCK "Συναλλασσόμενος" as surname (not a real name)', () => {
+      const result = isHallucinatedContactName(
+        { contactType: 'individual', firstName: 'Γεώργιος', lastName: 'Συναλλασσόμενος' },
+        contextWithGreekInvoice
+      );
+      expect(result).toBe(true); // Συναλλασσομεν not in context
+    });
+
+    test('should BLOCK when firstName matches but lastName is fabricated', () => {
+      const result = isHallucinatedContactName(
+        { contactType: 'individual', firstName: 'Αχιλλέας', lastName: 'Ξενοφώντος' },
+        contextWithGreekInvoice
+      );
+      expect(result).toBe(true); // lastName ξενοφωντ not in context
+    });
+  });
+
+  // ========================================================================
+  // Company contacts
+  // ========================================================================
+
+  describe('company contacts', () => {
+    test('should ALLOW company name in context', () => {
+      const result = isHallucinatedContactName(
+        { contactType: 'company', companyName: 'Γραβάνης' },
+        contextWithGreekInvoice
+      );
+      expect(result).toBe(false);
+    });
+
+    test('should BLOCK fabricated company name', () => {
+      const result = isHallucinatedContactName(
+        { contactType: 'company', companyName: 'Κοσμοτέλεια ΑΕ' },
+        contextWithGreekInvoice
+      );
+      expect(result).toBe(true);
+    });
+  });
+
+  // ========================================================================
+  // Edge cases
+  // ========================================================================
+
+  describe('edge cases', () => {
+    test('should ALLOW when both names are very short (≤2 chars)', () => {
+      const result = isHallucinatedContactName(
+        { contactType: 'individual', firstName: 'Αβ', lastName: 'Γδ' },
+        contextWithGreekInvoice
+      );
+      expect(result).toBe(false); // too short to check
+    });
+
+    test('should ALLOW when no name parts provided', () => {
+      const result = isHallucinatedContactName(
+        { contactType: 'individual' },
+        contextWithGreekInvoice
+      );
+      expect(result).toBe(false); // nothing to check
+    });
+
+    test('should handle empty conversation context', () => {
+      const result = isHallucinatedContactName(
+        { contactType: 'individual', firstName: 'Νίκος', lastName: 'Παπαδόπουλος' },
+        []
+      );
+      expect(result).toBe(true); // no context = hallucination
     });
   });
 });

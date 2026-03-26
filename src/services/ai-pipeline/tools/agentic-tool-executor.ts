@@ -44,6 +44,7 @@ import { FirestoreHandler } from './handlers/firestore-handler';
 import { ContactHandler } from './handlers/contact-handler';
 import { MessagingHandler } from './handlers/messaging-handler';
 import { CustomerHandler } from './handlers/customer-handler';
+import { FileDeliveryHandler } from './handlers/file-delivery-handler';
 import { KnowledgeBaseHandler } from './handlers/knowledge-base-handler';
 import { UtilityHandler } from './handlers/utility-handler';
 import { BankingHandler } from './handlers/banking-handler';
@@ -64,6 +65,7 @@ export class AgenticToolExecutor {
       new ContactHandler(),
       new MessagingHandler(),
       new CustomerHandler(),
+      new FileDeliveryHandler(),
       new KnowledgeBaseHandler(),
       new UtilityHandler(),
       new BankingHandler(),

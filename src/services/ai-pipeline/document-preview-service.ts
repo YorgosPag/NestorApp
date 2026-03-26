@@ -38,6 +38,8 @@ export interface DocumentPreviewResult {
   language: string;
   suggestedActions: string[];
   confidence: number;
+  /** All person/company names extracted EXACTLY as written in the document */
+  extractedNames: string[];
 }
 
 export interface DocumentPreviewParams {
@@ -83,7 +85,7 @@ const PREVIEW_SCHEMA = {
   strict: true,
   schema: {
     type: 'object',
-    required: ['summary', 'documentType', 'language', 'suggestedActions', 'confidence'],
+    required: ['summary', 'documentType', 'language', 'suggestedActions', 'confidence', 'extractedNames'],
     additionalProperties: false,
     properties: {
       summary: {
@@ -113,6 +115,11 @@ const PREVIEW_SCHEMA = {
         type: 'number',
         description: 'Βαθμός εμπιστοσύνης αναγνώρισης (0-1).',
       },
+      extractedNames: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Όλα τα ονόματα ανθρώπων/εταιρειών ΑΚΡΙΒΩΣ όπως εμφανίζονται στο έγγραφο (εκδότης, αντισυμβαλλόμενος, κλπ).',
+      },
     },
   },
 } as const;
@@ -121,6 +128,9 @@ const SYSTEM_PROMPT =
   'Είσαι AI βοηθός ελληνικής κατασκευαστικής/μεσιτικής εταιρείας. ' +
   'Ο χρήστης έστειλε αρχείο χωρίς εντολή. Ανάλυσε το περιεχόμενό του. ' +
   'Περίγραψε ΤΙ ΑΚΡΙΒΩΣ περιέχει (ποσά, ημερομηνίες, ονόματα, κλπ). ' +
+  'ΚΡΙΣΙΜΟ: Στο extractedNames, αναφέρεσε ΟΛΟΥΣ τους ανθρώπους/εταιρείες ' +
+  'που εμφανίζονται στο έγγραφο (εκδότης, αντισυμβαλλόμενος, παραλήπτης, κλπ) ' +
+  'με ΑΚΡΙΒΗ ονοματεπώνυμα ΟΠΩΣ γράφονται στο έγγραφο. ' +
   'Πρότεινε 2-4 λογικές ενέργειες. Απάντησε ΜΟΝΟ JSON σύμφωνα με το schema.';
 
 // ============================================================================
@@ -272,6 +282,9 @@ function parsePreviewResponse(
         ? (record.suggestedActions as unknown[]).map(String).slice(0, 4)
         : [],
       confidence: Number(record.confidence ?? 0),
+      extractedNames: Array.isArray(record.extractedNames)
+        ? (record.extractedNames as unknown[]).map(String)
+        : [],
     };
   } catch {
     logger.warn('Failed to parse preview JSON', { fileRecordId });

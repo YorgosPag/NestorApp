@@ -163,6 +163,8 @@ export interface DocumentPreviewData {
   documentType: string;
   suggestedActions: string[];
   confidence: number;
+  /** All person/company names extracted from the document */
+  extractedNames?: string[];
 }
 
 /**
@@ -183,10 +185,15 @@ export function enrichWithDocumentPreview(
       ? '(Χαμηλή εμπιστοσύνη αναγνώρισης)'
       : '';
 
+    const namesLine = p.extractedNames && p.extractedNames.length > 0
+      ? `Πρόσωπα/Εταιρείες: ${p.extractedNames.join(', ')}`
+      : '';
+
     return [
       `[Ανάλυση Εγγράφου: ${p.filename}, fileRecordId: ${p.fileRecordId}]`,
       `Τύπος: ${p.documentType}`,
       `Περίληψη: ${p.summary}`,
+      namesLine,
       actions,
       confidenceNote,
     ].filter(Boolean).join('\n');

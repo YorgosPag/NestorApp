@@ -74,8 +74,16 @@ jest.mock('../handlers/messaging-handler', () => ({
 const mockCustomerExecute = jest.fn();
 jest.mock('../handlers/customer-handler', () => ({
   CustomerHandler: jest.fn().mockImplementation(() => ({
-    toolNames: ['register_complaint', 'deliver_file'],
+    toolNames: ['create_complaint_task'],
     execute: mockCustomerExecute,
+  })),
+}));
+
+const mockFileDeliveryExecute = jest.fn();
+jest.mock('../handlers/file-delivery-handler', () => ({
+  FileDeliveryHandler: jest.fn().mockImplementation(() => ({
+    toolNames: ['deliver_file_to_chat'],
+    execute: mockFileDeliveryExecute,
   })),
 }));
 
@@ -281,7 +289,7 @@ describe('AgenticToolExecutor', () => {
       });
 
       const result = await executor.executeTool(
-        'register_complaint',
+        'create_complaint_task',
         {},
         createCtx()
       );
