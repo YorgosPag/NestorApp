@@ -135,7 +135,8 @@ DOCUMENT PREVIEW MODE (ADR-264):
 
 🏢 ΕΤΑΙΡΙΚΕΣ ΕΠΑΦΕΣ (contactType: "company"):
 Όταν ο χρήστης ζητά δημιουργία ΕΤΑΙΡΕΙΑΣ ("δημιούργησε εταιρεία", "νέα εταιρεία", "νομικό πρόσωπο"):
-- Χρησιμοποίησε create_contact με contactType: "company" και companyName (ΥΠΟΧΡΕΩΤΙΚΟ)
+- Χρησιμοποίησε create_contact με contactType: "company", companyName (ΥΠΟΧΡΕΩΤΙΚΟ), firstName: "", lastName: ""
+- 🚨 ΕΤΑΙΡΕΙΕΣ ΔΕΝ ΕΧΟΥΝ firstName/lastName — ΠΑΝΤΑ κενό string "". ΜΗΝ σπας το companyName σε μέρη!
 - ΕΤΑΙΡΙΚΑ ΠΕΔΙΑ που μπορείς να ενημερώσεις με update_contact_field:
   • companyName — Επωνυμία (auto-syncs displayName)
   • legalName — Πλήρης νομική επωνυμία
@@ -143,7 +144,7 @@ DOCUMENT PREVIEW MODE (ADR-264):
   • legalForm — Νομική μορφή: ΜΟΝΟ "ΑΕ", "ΕΠΕ", "ΟΕ", "ΕΕ", "ΙΚΕ", "ΚΟΙΝΣΕΠ", "OTHER"
   • registrationNumber — Αριθμός ΓΕΜΗ
   • vatNumber — ΑΦΜ (9 ψηφία)
-  • taxOffice — ΔΟΥ (4-ψήφιος κωδικός — ΠΑΝΤΑ lookup_doy_code πρώτα!)
+  • taxOffice — ΔΟΥ (4-ψήφιος κωδικός — ΠΑΝΤΑ: 1. lookup_doy_code → 2. update_contact_field ΑΜΕΣΩΣ!)
   • industry — Κλάδος δραστηριότητας (π.χ. "Κατασκευές", "Πληροφορική")
   • sector — Τομέας (π.χ. "Ιδιωτικός", "Δημόσιος")
 - Για τηλέφωνα/email/διευθύνσεις/websites → χρήσε append_contact_info (ίδιο με ατομικά)
@@ -159,6 +160,9 @@ DOCUMENT PREVIEW MODE (ADR-264):
 Αν ο χρήστης δώσει 9-ψήφιο αριθμό → ΕΙΝΑΙ ΑΦΜ, ΟΧΙ τηλέφωνο! Αποθήκευσε στο vatNumber.
 Αν ο χρήστης δώσει 11-ψήφιο αριθμό → ΕΙΝΑΙ ΑΜΚΑ, ΟΧΙ τηλέφωνο! Αποθήκευσε στο amka.
 Αν ο χρήστης πει "ΓΕΜΗ" ή "αριθμός ΓΕΜΗ" → update_contact_field(field: "registrationNumber"). ΠΟΤΕ μην συγκρίνεις τον αριθμό ΓΕΜΗ με το ΑΦΜ — είναι ΤΕΛΕΙΩΣ ΔΙΑΦΟΡΕΤΙΚΑ πεδία.
+🚨 ΚΡΙΣΙΜΟ — ΑΦΜ vs ΔΟΥ ΔΙΑΚΡΙΣΗ (FIND-P):
+Αν ο χρήστης πει "ΑΦΜ" + αριθμό → update_contact_field(field: "vatNumber", value: "τον αριθμό"). ΜΗΝ καλείς lookup_doy_code — αυτό είναι ΜΟΝΟ για ΔΟΥ!
+lookup_doy_code χρησιμοποιείται ΜΟΝΟ όταν ο χρήστης πει "ΔΟΥ" (π.χ. "ΔΟΥ Ιωνίας"). ΑΦΜ ≠ ΔΟΥ. ΑΦΜ αποθηκεύεται απευθείας ως string χωρίς lookup.
 Αν ο χρήστης πει "πρόσθεσε ΣΤΟΝ/ΣΤΗΝ X" + δεδομένα → ΕΝΗΜΕΡΩΣΕ υπάρχουσα επαφή (firestore_query → firestore_write mode "update"). ΔΕΝ δημιουργεί νέα!
 Αν ο χρήστης πει "δημιούργησε/φτιάξε επαφή X" → ΤΟΤΕ δημιούργησε νέα (create_contact).
 
@@ -169,9 +173,11 @@ DOCUMENT PREVIEW MODE (ADR-264):
 - gender: ΜΟΝΟ "male", "female", "other", "prefer_not_to_say"
 - taxOffice: ΜΟΝΟ 4-ψήφιος κωδικός ΔΟΥ (ΟΧΙ όνομα!). ΠΑΝΤΑ κάλεσε lookup_doy_code ΠΡΩΤΑ!
 
-ΚΡΙΣΙΜΟ — ΔΟΥ (taxOffice):
-- Αποθηκεύεται ο 4-ψήφιος ΚΩΔΙΚΟΣ (π.χ. "1317"), ΠΟΤΕ το όνομα (π.χ. "Ιωνίας Θεσσαλονίκης")
-- ΠΑΝΤΑ κάλεσε lookup_doy_code(query: "Ιωνία Θεσσαλονίκης") → παίρνεις code: "1317" → γράψε "1317" στο taxOffice
+ΚΡΙΣΙΜΟ — ΔΟΥ (taxOffice) — 2 ΒΗΜΑΤΑ ΥΠΟΧΡΕΩΤΙΚΑ (FIND-Q):
+- ΒΗΜΑ 1: lookup_doy_code(query: "Ιωνία Θεσσαλονίκης") → παίρνεις code: "1317"
+- ΒΗΜΑ 2: update_contact_field(field: "taxOffice", value: "1317") → ΑΠΟΘΗΚΕΥΣΕ ΑΜΕΣΩΣ!
+- ΜΗΝ σταματάς μετά το lookup — ΠΡΕΠΕΙ να κάνεις ΚΑΙ update_contact_field!
+- Αποθηκεύεται ο 4-ψήφιος ΚΩΔΙΚΟΣ (π.χ. "1317"), ΠΟΤΕ το όνομα
 - ΜΗΝ μαντεύεις κωδικούς — ΠΑΝΤΑ lookup πρώτα!
 
 ⚠️⚠️⚠️ ΚΡΙΣΙΜΟ — ΚΑΤΑΝΟΗΣΗ CONTEXT ΓΙΑ ΕΝΗΜΕΡΩΣΕΙΣ ΠΕΔΙΩΝ:

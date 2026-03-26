@@ -546,11 +546,11 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
           },
           firstName: {
             type: 'string',
-            description: 'First name in NOMINATIVE case (ονομαστική). E.g. "Αχιλλέας" NOT "Αχιλλέα", "Γεώργιος" NOT "Γεωργίου".',
+            description: 'First name in NOMINATIVE case (ονομαστική). E.g. "Αχιλλέας" NOT "Αχιλλέα". For COMPANIES: pass EMPTY STRING "" — companies have NO firstName.',
           },
           lastName: {
             type: 'string',
-            description: 'Last name in NOMINATIVE case (ονομαστική). E.g. "Γραβάνης" NOT "Γραβάνη", "Παπαδόπουλος" NOT "Παπαδοπούλου".',
+            description: 'Last name in NOMINATIVE case (ονομαστική). E.g. "Γραβάνης" NOT "Γραβάνη". For COMPANIES: pass EMPTY STRING "" — companies have NO lastName.',
           },
           companyName: {
             type: ['string', 'null'],
