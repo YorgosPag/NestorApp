@@ -43,13 +43,15 @@ export type ContactFieldType = typeof CONTACT_FIELD_TYPES[number];
 export const CONTACT_UPDATABLE_FIELDS = [
   // Core name fields (for corrections — e.g. genitive→nominative)
   'firstName', 'lastName', 'displayName',
-  // Personal
+  // Personal (individual)
   'birthDate', 'birthCountry', 'gender', 'fatherName', 'motherName', 'amka',
-  // Identity document
+  // Identity document (individual)
   'documentType', 'documentNumber', 'documentIssuer', 'documentIssueDate', 'documentExpiryDate',
-  // Tax & legal
+  // Tax & legal (both individual & company)
   'vatNumber', 'taxOffice', 'registrationNumber', 'legalForm',
-  // Professional
+  // Company-specific
+  'companyName', 'legalName', 'tradeName', 'industry', 'sector', 'foundedDate',
+  // Professional (individual)
   'profession', 'employer', 'position',
   // Other
   'idNumber',
@@ -585,9 +587,11 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
         'For phone/email/social/address/website use append_contact_info instead.',
         'IMPORTANT for taxOffice: ALWAYS call lookup_doy_code first to get the 4-digit code.',
         'IMPORTANT for profession: ALWAYS call search_esco_occupations first. Show matches to user. If no ESCO match, ask user before adding free text.',
-        'IMPORTANT for dates (birthDate, documentIssueDate, documentExpiryDate): ALWAYS use DD/MM/YYYY format (e.g. "25/01/2027").',
+        'IMPORTANT for dates (birthDate, documentIssueDate, documentExpiryDate, foundedDate): ALWAYS use DD/MM/YYYY format (e.g. "25/01/2027").',
         'IMPORTANT for documentType: ONLY values "identity_card", "passport", "drivers_license", "other".',
         'IMPORTANT for documentNumber: Pass the EXACT string the user gave, including prefix letters (e.g. "ΑΚ 582946" NOT "582946"). Greek IDs have letter prefixes — NEVER strip them.',
+        'COMPANY FIELDS: companyName (επωνυμία), legalName (πλήρης νομική επωνυμία), tradeName (διακριτικός τίτλος), legalForm (ΑΕ/ΕΠΕ/ΟΕ/ΕΕ/ΙΚΕ/ΚΟΙΝΣΕΠ/OTHER), registrationNumber (αριθμός ΓΕΜΗ), industry (κλάδος), sector (τομέας), foundedDate (ημ/νία ίδρυσης DD/MM/YYYY).',
+        'When updating companyName on a company contact, displayName is auto-synced.',
         'Pass the contact document ID (e.g. cont_xxx) and the field+value to update.',
       ].join(' '),
       parameters: {

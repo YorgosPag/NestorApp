@@ -59,13 +59,15 @@ export async function executeUpdateContactField(
   );
   await updateContactField(contactId, field, value, buildAttribution(ctx));
 
-  // Auto-sync displayName when firstName or lastName changes
+  // Auto-sync displayName when name fields change
+  const existingData = docSnap.data() as Record<string, unknown>;
   if (field === 'firstName' || field === 'lastName') {
-    const existingData = docSnap.data() as Record<string, unknown>;
     const newFirst = field === 'firstName' ? value : String(existingData.firstName ?? '');
     const newLast = field === 'lastName' ? value : String(existingData.lastName ?? '');
     const newDisplayName = `${newFirst} ${newLast}`.trim();
     await updateContactField(contactId, 'displayName', newDisplayName, buildAttribution(ctx));
+  } else if (field === 'companyName' && existingData.type === 'company') {
+    await updateContactField(contactId, 'displayName', value, buildAttribution(ctx));
   }
 
   await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, 'update', { [field]: value });

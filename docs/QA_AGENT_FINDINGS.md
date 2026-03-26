@@ -427,3 +427,80 @@
 | 10 | `messages` | Μηνύματα (email, telegram, κλπ) |
 
 **ΠΡΟΣΟΧΗ**: ΔΕΝ αγγίζουμε καμία άλλη συλλογή (settings, projects, buildings, κλπ).
+
+---
+
+## Session 4 — Νομικά Πρόσωπα (Company Contacts) QA Testing (2026-03-26)
+
+**Method**: Simulated webhook POST → localhost:3000 (dev bot)
+**Scope**: Δημιουργία & διαχείριση εταιρικών επαφών (`contactType: "company"`)
+
+### Pre-Test Ανάλυση Κώδικα — Τι Υποστηρίζεται
+
+#### ✅ ΛΕΙΤΟΥΡΓΕΙ για Εταιρείες
+
+| Λειτουργία | Tool | Σημείωση |
+|-----------|------|----------|
+| Δημιουργία εταιρείας | `create_contact` | `contactType: 'company'` + `companyName` (υποχρεωτικό) |
+| Email / Phone / Address / Website / Social | `append_contact_info` | Ίδιο με ατομικά, generic handler |
+| ΑΦΜ, ΔΟΥ | `update_contact_field` | Στο `CONTACT_UPDATABLE_FIELDS` |
+| Τραπεζικοί λογαριασμοί | `manage_bank_account` | IBAN + auto-detect τράπεζα, generic |
+| Σχέσεις | `manage_relationship` | Εταιρικοί τύποι: `shareholder`, `director`, `representative`, `client`, `vendor` |
+| Συνημμένα αρχεία | `attach_file_to_contact` | Documents, photos — generic handler |
+| Missing fields check | `getContactMissingFields()` | Ελέγχει `registrationNumber`, `legalForm`, `taxOffice` για companies |
+
+#### ❌ ΔΕΝ ΛΕΙΤΟΥΡΓΕΙ — Κενά στον Κώδικα
+
+| Πεδίο/Feature | Πρόβλημα | Αρχείο |
+|--------------|----------|--------|
+| `legalForm` (ΑΕ/ΕΠΕ/ΙΚΕ/ΟΕ/ΕΕ) | Δεν είναι στο `CONTACT_UPDATABLE_FIELDS` | `contact-field-update-handler.ts` |
+| `registrationNumber` (ΓΕΜΗ) | Δεν είναι στο `CONTACT_UPDATABLE_FIELDS` | `contact-field-update-handler.ts` |
+| `companyName` (αλλαγή) | Δεν είναι στο `CONTACT_UPDATABLE_FIELDS` | `contact-field-update-handler.ts` |
+| `legalName` / `tradeName` | Δεν είναι στο `CONTACT_UPDATABLE_FIELDS` | `contact-field-update-handler.ts` |
+| `industry` / `sector` | Δεν είναι στο `CONTACT_UPDATABLE_FIELDS` | `contact-field-update-handler.ts` |
+| `foundedDate` | Δεν είναι στο `CONTACT_UPDATABLE_FIELDS` | `contact-field-update-handler.ts` |
+| `contactPersons[]` | Κανένα tool για append/manage | Δεν υπάρχει handler |
+| Λογότυπο εταιρείας | Δεν υπάρχει `purpose: 'company_logo'` | `attachment-handler.ts` |
+| Upload entries (ΓΕΜΗ κλπ) | ΜΗΔΕΝ entries με `contactTypes: ['company']` | `entries-contact.ts` |
+
+#### ⚠️ Validation Gaps
+
+- Εταιρεία δημιουργείται μόνο με `companyName` — χωρίς ΑΦΜ validation
+- `legalForm` δεν ελέγχεται πουθενά
+- Ο AI δεν γνωρίζει ποια πεδία χρειάζεται μια εταιρεία (δεν υπάρχει prompt guidance)
+
+#### Κύρια Αρχεία Αναφοράς
+
+| Αρχείο | Γραμμές | Ρόλος |
+|--------|---------|-------|
+| `types/contacts/contracts.ts` | 159-195 | `CompanyContact` interface |
+| `tools/handlers/contact-handler.ts` | 73-180 | Create contact handler |
+| `tools/handlers/contact-field-update-handler.ts` | 1-86 | Update field handler + `CONTACT_UPDATABLE_FIELDS` |
+| `shared/contact-lookup.ts` | 655-694 | `getContactMissingFields()` |
+| `config/upload-entry-points/entries-contact.ts` | — | Upload entry points (0 company entries) |
+
+---
+
+### Test Plan — Νομικά Πρόσωπα
+
+| # | Test | Input | Expected | Result |
+|---|------|-------|----------|--------|
+| 4.1 | Δημιουργία εταιρείας | "Δημιούργησε νέα εταιρεία: ΠΑΓΩΝΗΣ ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ ΑΕ" | `contactType: company`, `companyName` set | |
+| 4.2 | ΑΦΜ εταιρείας | "Βάλε ΑΦΜ 094519370" | `vatNumber` set | |
+| 4.3 | ΔΟΥ εταιρείας | "ΔΟΥ Α' Θεσσαλονίκης" | `taxOffice` set via lookup | |
+| 4.4 | Νομική μορφή | "Η νομική μορφή είναι ΑΕ" | `legalForm: 'ΑΕ'` ή reject (δεν είναι στα updatable fields) | |
+| 4.5 | Αριθμός ΓΕΜΗ | "Αριθμός ΓΕΜΗ 0133652920" | `registrationNumber` ή reject | |
+| 4.6 | Τηλέφωνο εταιρείας | "Πρόσθεσε τηλέφωνο 2310567890" | `phones[]` append, `type: landline` | |
+| 4.7 | Email εταιρείας | "Πρόσθεσε email info@pagonis-construction.gr" | `emails[]` append | |
+| 4.8 | Διεύθυνση έδρας | "Διεύθυνση Εγνατίας 154, Θεσσαλονίκη 54636" | `addresses[]` structured | |
+| 4.9 | Ιστοσελίδα | "Πρόσθεσε ιστοσελίδα www.pagonis-construction.gr" | `websites[]` append | |
+| 4.10 | IBAN εταιρείας | "IBAN GR1601101250000000012300695, Εθνική" | `bankAccounts` sub-collection | |
+| 4.11 | 2η εταιρεία | "Δημιούργησε εταιρεία: DELTA ENGINEERING ΙΚΕ" | 2nd company created | |
+| 4.12 | Σχέση client | "Η DELTA ENGINEERING είναι πελάτης της ΠΑΓΩΝΗΣ" | `manage_relationship` type: client | |
+| 4.13 | Υπεύθυνος επικοινωνίας | "Υπεύθυνος επικοινωνίας: Νίκος Παπαδόπουλος, 6974050026" | `contactPersons[]` ή graceful decline | |
+| 4.14 | Αλλαγή ονόματος εταιρείας | "Άλλαξε το όνομα σε ΠΑΓΩΝΗΣ ΤΕΧΝΙΚΗ ΑΕ" | `companyName` update ή reject | |
+| 4.15 | Ίδρυση | "Ιδρύθηκε το 2005" | `foundedDate` ή reject | |
+
+---
+
+### Test Results — Session 4

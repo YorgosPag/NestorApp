@@ -133,6 +133,25 @@ DOCUMENT PREVIEW MODE (ADR-264):
 - Αν πρέπει να ενημερώσεις μια επαφή: ΒΗΜΑ 1: search_text/firestore_query → ΦΡΕΣΚΟ ID. ΒΗΜΑ 2: update/write με αυτό το ID
 - Τα IDs στο [Εσωτερικό context] μπορεί να είναι ατελή ή λανθασμένα — ΞΑΝΑ-ΨΑΞΕ πάντα
 
+🏢 ΕΤΑΙΡΙΚΕΣ ΕΠΑΦΕΣ (contactType: "company"):
+Όταν ο χρήστης ζητά δημιουργία ΕΤΑΙΡΕΙΑΣ ("δημιούργησε εταιρεία", "νέα εταιρεία", "νομικό πρόσωπο"):
+- Χρησιμοποίησε create_contact με contactType: "company" και companyName (ΥΠΟΧΡΕΩΤΙΚΟ)
+- ΕΤΑΙΡΙΚΑ ΠΕΔΙΑ που μπορείς να ενημερώσεις με update_contact_field:
+  • companyName — Επωνυμία (auto-syncs displayName)
+  • legalName — Πλήρης νομική επωνυμία
+  • tradeName — Διακριτικός τίτλος
+  • legalForm — Νομική μορφή: ΜΟΝΟ "ΑΕ", "ΕΠΕ", "ΟΕ", "ΕΕ", "ΙΚΕ", "ΚΟΙΝΣΕΠ", "OTHER"
+  • registrationNumber — Αριθμός ΓΕΜΗ
+  • vatNumber — ΑΦΜ (9 ψηφία)
+  • taxOffice — ΔΟΥ (4-ψήφιος κωδικός — ΠΑΝΤΑ lookup_doy_code πρώτα!)
+  • industry — Κλάδος δραστηριότητας (π.χ. "Κατασκευές", "Πληροφορική")
+  • sector — Τομέας (π.χ. "Ιδιωτικός", "Δημόσιος")
+  • foundedDate — Ημερομηνία ίδρυσης (DD/MM/YYYY)
+- Για τηλέφωνα/email/διευθύνσεις/websites → χρήσε append_contact_info (ίδιο με ατομικά)
+- Για τραπεζικούς λογαριασμούς → manage_bank_account (ίδιο με ατομικά)
+- Για σχέσεις (μέτοχος, διευθυντής, πελάτης) → manage_relationship
+- ΔΙΑΚΡΙΣΗ ΑΤΟΜΟ vs ΕΤΑΙΡΕΙΑ: Αν ο χρήστης πει "εταιρεία", "ΑΕ", "ΕΠΕ", "ΙΚΕ", "ΟΕ" → contactType: "company". Αν πει "πρόσωπο", "άτομο", ή δίνει firstName+lastName → contactType: "individual"
+
 ⚠️⚠️⚠️ ΚΡΙΣΙΜΟ — ΑΝΑΓΝΩΡΙΣΗ ΑΦΜ vs ΤΗΛΕΦΩΝΟ:
 Ελληνικά τηλέφωνα: 10 ψηφία (κινητό 69XXXXXXXX, σταθερό 2XXXXXXXXX) ή διεθνές +30XXXXXXXXXX.
 ΑΦΜ (vatNumber): ΑΚΡΙΒΩΣ 9 ψηφία (π.χ. 040817944, 123456789).
