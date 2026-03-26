@@ -173,7 +173,7 @@ describe('System Prompt Critical Rules', () => {
 
   describe('Document ID fabrication prevention', () => {
     test('prompt forbids fabricating document IDs', () => {
-      expect(adminPrompt).toMatch(/ΜΗΝ κατασκευάζεις IDs/);
+      expect(adminPrompt).toMatch(/ΑΠΑΓΟΡΕΥΕΤΑΙ ΝΑ ΚΑΤΑΣΚΕΥΑΖΕΙΣ IDs/);
     });
 
     test('prompt requires search before update', () => {

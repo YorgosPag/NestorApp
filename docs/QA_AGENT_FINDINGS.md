@@ -411,7 +411,7 @@
 
 ## Firestore Collections Reset — QA Clean Slate
 
-> **Σκοπός**: Όταν ο Γιώργος δώσει εντολή **"καθάρισε collections"** / **"reset QA"** / **"άδειασε τις συλλογές"**, αδειάζουμε **ΜΟΝΟ** αυτές τις 10 συλλογές για καθαρό testing context.
+> **Σκοπός**: Όταν ο Γιώργος δώσει εντολή **"καθάρισε collections"** / **"reset QA"** / **"άδειασε τις συλλογές"**, αδειάζουμε **ΜΟΝΟ** αυτές τις 12 συλλογές για καθαρό testing context.
 
 | # | Collection | Περιγραφή |
 |---|-----------|-----------|
@@ -425,6 +425,8 @@
 | 8 | `external_identities` | External identity mappings |
 | 9 | `files` | Αρχεία / documents |
 | 10 | `messages` | Μηνύματα (email, telegram, κλπ) |
+| 11 | `file_links` | Συνδέσεις αρχείων με entities (project→building κλπ) |
+| 12 | `searchDocuments` | Search index documents για full-text αναζήτηση |
 
 **ΠΡΟΣΟΧΗ**: ΔΕΝ αγγίζουμε καμία άλλη συλλογή (settings, projects, buildings, κλπ).
 
@@ -618,3 +620,81 @@
 7. ✅ **foundedDate**: Νέο πεδίο λειτουργεί σωστά ("2005" → "01/01/2005")
 8. ✅ **Σχέσεις μεταξύ εταιρειών**: `manage_relationship` type: "client" λειτουργεί
 9. ✅ **2η εταιρεία**: Δημιουργία χωρίς conflict, ξεχωριστά IDs
+
+---
+
+## Session 5 — Company Contacts Extended QA (2026-03-26)
+
+**Method**: Simulated webhook POST → localhost:3000 (dev bot)
+**Scope**: Ενημέρωση εταιρικών πεδίων (legalName, tradeName, industry, sector, ΓΕΜΗ) + regression tests
+
+### Test Results — Session 5
+
+| # | Test | Input | Result |
+|---|------|-------|--------|
+| 5.1 | Δημιουργία εταιρείας | "Δημιούργησε εταιρεία: ΑΛΦΑ ΤΕΧΝΙΚΗ ΑΕ" | ✅ PASS — FIND-O FIXED (firstName: "") |
+| 5.2 | ΑΦΜ | "ΑΦΜ 040817944" | ✅ PASS — FIND-P FIXED (vatNumber, no DOY lookup) |
+| 5.3 | ΔΟΥ | "ΔΟΥ Ιωνίας Θεσσαλονίκης" | ✅ PASS — FIND-Q FIXED (2-step: lookup→update) |
+| 5.4 | Νομική μορφή | "Η νομική μορφή είναι ΑΕ" | ⚠️ FIND-R — legalForm ✅ αλλά gender: "male" fabricated |
+| 5.5 | ΓΕΜΗ | "Αριθμός ΓΕΜΗ 0133652920" | ✅ PASS — FIND-L FIXED |
+| 5.6 | Πλήρης επωνυμία | "Πλήρης επωνυμία ΑΛΦΑ ΤΕΧΝΙΚΗ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ" | ⚠️ FIND-S — legalName ✅ αλλά companyName αντικαταστάθηκε |
+| 5.7 | Διακριτικός τίτλος | "Βάλε διακριτικό τίτλο ΑΛΦΑ ΤΕΧΝΙΚΗ" | ❌ FAIL — cascade: ψάχνει "ΑΛΦΑ ΤΕΧΝΙΚΗ ΑΕ" που δεν υπάρχει πια |
+| 5.8 | Κλάδος | "Κλάδος: Κατασκευές" | ❌ FAIL — cascade: ίδιο πρόβλημα search |
+| 5.9 | Τομέας | "Τομέας: Ιδιωτικός" | ❌ FAIL — cascade: δεν κάλεσε tool |
+
+#### Σύνοψη Session 5
+
+| Κατηγορία | Tests | Pass | Fail | Concern |
+|-----------|-------|------|------|---------|
+| Regression (FIND-O/P/Q/L) | 4 | 4 | 0 | 0 |
+| Νέα εταιρικά πεδία | 5 | 0 | 3 | 2 |
+| **ΣΥΝΟΛΟ** | **9** | **4** | **3** | **2** |
+
+---
+
+### [MEDIUM] FIND-R: AI πρόσθεσε gender σε εταιρεία
+
+- **Test**: 5.4 — "Η νομική μορφή είναι ΑΕ"
+- **Expected**: `legalForm: "ΑΕ"` ΜΟΝΟ
+- **Actual**: `legalForm: "ΑΕ"` ✅ + `gender: "male"` ❌ fabricated
+- **Severity**: MEDIUM
+- **Category**: AI Hallucination / Data Integrity
+- **Ανάλυση**: Ο AI πρόσθεσε gender σε εταιρεία χωρίς να ζητηθεί. Δεν υπήρχε server-side guard.
+- **Fix**: (a) Server guard: INDIVIDUAL_ONLY_FIELDS blocked on company contacts, (b) Prompt rule: εταιρείες δεν έχουν ατομικά πεδία
+- **Status**: ✅ FIXED
+
+---
+
+### [MEDIUM] FIND-S: legalName αντικατέστησε ΚΑΙ companyName
+
+- **Test**: 5.6 — "Πλήρης επωνυμία ΑΛΦΑ ΤΕΧΝΙΚΗ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ"
+- **Expected**: `legalName: "ΑΛΦΑ ΤΕΧΝΙΚΗ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ"`, `companyName: "ΑΛΦΑ ΤΕΧΝΙΚΗ ΑΕ"` (unchanged)
+- **Actual**: `legalName` ✅ αλλά `companyName` αντικαταστάθηκε σε "ΑΛΦΑ ΤΕΧΝΙΚΗ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ"
+- **Severity**: MEDIUM
+- **Category**: AI Prompt / Data Integrity
+- **Ανάλυση**: AI ερμήνευσε "πλήρης επωνυμία" ως αλλαγή ΚΑΙ του companyName. Cascade failure: 5.7/5.8/5.9 ψάχνουν "ΑΛΦΑ ΤΕΧΝΙΚΗ ΑΕ" που δεν υπάρχει πια.
+- **Fix**: Prompt rule: legalName ≠ companyName, ΠΟΤΕ ταυτόχρονη ενημέρωση χωρίς ρητή εντολή
+- **Status**: ✅ FIXED
+
+---
+
+### [LOW] FIND-T: AI fabricates contactId (comp_xxx) — FIND-A regression
+
+- **Test**: 5.7, 5.8 — Ψάχνει εταιρεία
+- **Expected**: Fresh search → σωστό UUID contactId
+- **Actual**: AI χρησιμοποίησε fabricated IDs (comp_xxx, comp_1) → blocked by server
+- **Severity**: LOW (self-corrects μετά retry, αλλά σπαταλά iterations)
+- **Category**: AI Prompt / Efficiency
+- **Ανάλυση**: Regression του FIND-A. Ο κανόνας δεν αναφέρει ρητά comp_ prefix patterns.
+- **Fix**: Ενίσχυση anti-fabrication prompt με comp_xxx examples + UUID format reference
+- **Status**: ✅ FIXED
+
+---
+
+#### Ιεράρχηση Fixes — Session 5
+
+| Priority | Finding | Impact | Effort | Status |
+|----------|---------|--------|--------|--------|
+| 🟡 P1 | FIND-R: gender σε εταιρεία | Data integrity — ατομικά πεδία σε εταιρεία | Low (server guard + prompt) | ✅ FIXED |
+| 🟡 P1 | FIND-S: legalName→companyName overwrite | Cascade failure 5.7/5.8/5.9 | Low (prompt rule) | ✅ FIXED |
+| 🟢 P2 | FIND-T: comp_xxx fabricated IDs | Efficiency — retry σπατάλη | Low (prompt hardening) | ✅ FIXED |

@@ -22,6 +22,13 @@ import {
 
 const ESCO_PROTECTED = ['profession', 'escoUri', 'escoLabel', 'iscoCode', 'escoSkills'];
 
+/** Fields that only apply to individual contacts — NEVER to companies (FIND-R) */
+const INDIVIDUAL_ONLY_FIELDS = [
+  'gender', 'fatherName', 'motherName', 'amka',
+  'birthDate', 'birthCountry',
+  'documentType', 'documentNumber', 'documentIssuer', 'documentIssueDate', 'documentExpiryDate',
+];
+
 export async function executeUpdateContactField(
   args: Record<string, unknown>,
   ctx: AgenticContext
@@ -54,13 +61,22 @@ export async function executeUpdateContactField(
     return { success: false, error: `Η επαφή ${contactId} δεν βρέθηκε.` };
   }
 
+  const existingData = docSnap.data() as Record<string, unknown>;
+
+  // FIND-R: Block individual-only fields on company contacts
+  if (existingData.type === 'company' && INDIVIDUAL_ONLY_FIELDS.includes(field)) {
+    return {
+      success: false,
+      error: `Το πεδίο "${field}" αφορά μόνο φυσικά πρόσωπα, όχι εταιρείες.`,
+    };
+  }
+
   const { updateContactField, emitEntitySyncSignal } = await import(
     '@/services/ai-pipeline/shared/contact-lookup'
   );
   await updateContactField(contactId, field, value, buildAttribution(ctx));
 
   // Auto-sync displayName when name fields change
-  const existingData = docSnap.data() as Record<string, unknown>;
   if (field === 'firstName' || field === 'lastName') {
     const newFirst = field === 'firstName' ? value : String(existingData.firstName ?? '');
     const newLast = field === 'lastName' ? value : String(existingData.lastName ?? '');
