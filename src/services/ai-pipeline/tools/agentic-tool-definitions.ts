@@ -876,6 +876,33 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
     },
   },
 
+  // ── ADR-191: Discard pending/quarantined file (orphan cleanup) ──
+  {
+    type: 'function',
+    function: {
+      name: 'discard_pending_file',
+      description: 'Μόνιμη διαγραφή pending αρχείου που ο χρήστης δεν θέλει να κρατήσει. '
+        + 'Χρήση όταν ο χρήστης πει "μην το καταχωρείς", "σβήσ\' το", "δεν το θέλω", "delete it". '
+        + 'Χρησιμοποίησε fileRecordId από τα [Συνημμένο] στο μήνυμα. Admin only.',
+      parameters: {
+        type: 'object',
+        properties: {
+          fileRecordId: {
+            type: 'string',
+            description: 'FileRecord ID from [Συνημμένο] in the user message',
+          },
+          reason: {
+            type: ['string', 'null'],
+            description: 'Optional reason for discarding (e.g. "User does not want this file")',
+          },
+        },
+        required: ['fileRecordId', 'reason'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
   // ── ADR-055: Attach file (photo/document) to contact ──
   {
     type: 'function',

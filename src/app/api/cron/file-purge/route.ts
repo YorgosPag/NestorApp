@@ -1,12 +1,13 @@
 /**
  * =============================================================================
- * Cron: File Purge — Daily cleanup of expired trash
+ * Cron: File Purge — Daily cleanup of expired trash + orphan PENDING files
  * =============================================================================
  *
  * GET /api/cron/file-purge
  * Triggered daily at 02:00 UTC by Vercel Cron
  *
- * Permanently marks expired trashed files as purged.
+ * Phase A: Permanently purge expired trashed files (isDeleted + purgeAt <= now)
+ * Phase B: Clean up orphan PENDING/FAILED files older than TTL (default 48h)
  *
  * @module api/cron/file-purge
  * @enterprise ADR-191 - Enterprise Document Management System (Phase 3.2)
@@ -14,18 +15,106 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createModuleLogger } from '@/lib/telemetry';
-import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
-import { HOLD_TYPES } from '@/config/domain-constants';
+import { FILE_STATUS } from '@/config/domain-constants';
 import { getErrorMessage } from '@/lib/error-utils';
+import {
+  purgeFileRecord,
+  isFileHeld,
+  PENDING_FILE_TTL_MS,
+} from '@/services/file-record/file-purge-helpers';
 
 const logger = createModuleLogger('CronFilePurge');
 
 export const maxDuration = 60;
 
+/** Phase A: Purge trashed files past their purge date */
+async function purgeExpiredTrash(
+  db: FirebaseFirestore.Firestore,
+  now: string
+): Promise<{ purged: number; skipped: number; checked: number }> {
+  const snapshot = await db
+    .collection(COLLECTIONS.FILES)
+    .where(FIELDS.IS_DELETED, '==', true)
+    .where('purgeAt', '<=', now)
+    .limit(100)
+    .get();
+
+  let purged = 0;
+  let skipped = 0;
+
+  for (const doc of snapshot.docs) {
+    const data = doc.data();
+
+    if (isFileHeld(data)) {
+      skipped++;
+      continue;
+    }
+
+    const result = await purgeFileRecord({
+      fileId: doc.id,
+      storagePath: data.storagePath as string | undefined,
+      performedBy: 'system:cron-purge',
+      purgeReason: 'cron_trash',
+      metadata: {
+        originalPurgeAt: data.purgeAt ?? null,
+        category: data.category ?? null,
+      },
+    });
+
+    if (result.success) purged++;
+    else skipped++;
+  }
+
+  return { purged, skipped, checked: snapshot.size };
+}
+
+/** Phase B: Clean up orphan PENDING/FAILED files older than TTL */
+async function purgeOrphanPendingFiles(
+  db: FirebaseFirestore.Firestore
+): Promise<{ purged: number; skipped: number; checked: number }> {
+  const cutoff = new Date(Date.now() - PENDING_FILE_TTL_MS).toISOString();
+
+  const snapshot = await db
+    .collection(COLLECTIONS.FILES)
+    .where('status', 'in', [FILE_STATUS.PENDING, FILE_STATUS.FAILED])
+    .where('createdAt', '<', cutoff)
+    .limit(50)
+    .get();
+
+  let purged = 0;
+  let skipped = 0;
+
+  for (const doc of snapshot.docs) {
+    const data = doc.data();
+
+    if (isFileHeld(data)) {
+      skipped++;
+      continue;
+    }
+
+    const result = await purgeFileRecord({
+      fileId: doc.id,
+      storagePath: data.storagePath as string | undefined,
+      performedBy: 'system:cron-orphan-cleanup',
+      purgeReason: 'ttl_expired',
+      metadata: {
+        originalStatus: data.status ?? null,
+        domain: data.domain ?? null,
+        ageHours: Math.round((Date.now() - new Date(data.createdAt).getTime()) / 3_600_000),
+      },
+    });
+
+    if (result.success) purged++;
+    else skipped++;
+  }
+
+  return { purged, skipped, checked: snapshot.size };
+}
+
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  // Verify Vercel Cron authorization
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 
@@ -37,88 +126,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const db = getAdminFirestore();
     const now = new Date().toISOString();
 
-    // Find trashed files past their purge date
-    const snapshot = await db
-      .collection(COLLECTIONS.FILES)
-      .where(FIELDS.IS_DELETED, '==', true)
-      .where('purgeAt', '<=', now)
-      .limit(100)
-      .get();
+    const [trash, orphans] = await Promise.all([
+      purgeExpiredTrash(db, now),
+      purgeOrphanPendingFiles(db),
+    ]);
 
-    let purgedCount = 0;
-    let skippedCount = 0;
-
-    for (const doc of snapshot.docs) {
-      const data = doc.data();
-
-      // Skip files with active holds
-      if (data.hold && data.hold !== HOLD_TYPES.NONE) {
-        skippedCount++;
-        continue;
-      }
-
-      // Skip files with active retention
-      if (data.retentionUntil) {
-        const retentionDate = new Date(data.retentionUntil);
-        if (retentionDate > new Date()) {
-          skippedCount++;
-          continue;
-        }
-      }
-
-      try {
-        // 🏢 ENTERPRISE: Delete binary file from Firebase Storage BEFORE marking as purged
-        const storagePath = data.storagePath as string | undefined;
-        if (storagePath) {
-          try {
-            const bucket = getAdminStorage().bucket();
-            await bucket.file(storagePath).delete();
-          } catch (storageErr) {
-            // File may already be deleted or path invalid — log but don't block purge
-            logger.warn('Storage file deletion failed (non-blocking)', {
-              fileId: doc.id,
-              storagePath,
-              error: getErrorMessage(storageErr),
-            });
-          }
-        }
-
-        await doc.ref.update({
-          lifecycleState: 'purged',
-          purgedAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
-
-        // Audit log
-        const { generateAuditId } = await import('@/services/enterprise-id.service');
-        await db.collection(COLLECTIONS.FILE_AUDIT_LOG).doc(generateAuditId()).set({
-          fileId: doc.id,
-          action: 'delete',
-          performedBy: 'system:cron-purge',
-          timestamp: new Date().toISOString(),
-          metadata: {
-            purgeType: 'cron',
-            originalPurgeAt: data.purgeAt ?? null,
-            category: data.category ?? null,
-          },
-        });
-
-        purgedCount++;
-      } catch (err) {
-        logger.error('Failed to purge file', {
-          fileId: doc.id,
-          error: getErrorMessage(err),
-        });
-      }
-    }
-
-    logger.info('Daily file purge complete', { purgedCount, skippedCount, total: snapshot.size });
+    logger.info('Daily file purge complete', {
+      trashPurged: trash.purged,
+      trashSkipped: trash.skipped,
+      orphansPurged: orphans.purged,
+      orphansSkipped: orphans.skipped,
+    });
 
     return NextResponse.json({
       success: true,
-      purgedCount,
-      skippedCount,
-      totalChecked: snapshot.size,
+      trash: { purged: trash.purged, skipped: trash.skipped, checked: trash.checked },
+      orphans: { purged: orphans.purged, skipped: orphans.skipped, checked: orphans.checked },
     });
   } catch (err) {
     const message = getErrorMessage(err, 'Purge cron failed');
