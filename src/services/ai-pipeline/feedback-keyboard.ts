@@ -190,8 +190,9 @@ export function createSuggestedActionsKeyboard(
     callback_data: `${SUGGESTION_PREFIX}:${index}:${feedbackDocId}`,
   }));
 
+  // One button per row = full width, readable text (not squeezed)
   return {
-    inline_keyboard: [buttons],
+    inline_keyboard: buttons.map(btn => [btn]),
   };
 }
 
