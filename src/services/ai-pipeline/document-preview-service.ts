@@ -230,7 +230,12 @@ async function callVisionAPI(
     clearTimeout(timeout);
 
     if (!response.ok) {
-      logger.warn('Vision API non-OK', { status: response.status, fileRecordId });
+      const errorBody = await response.text().catch(() => 'no body');
+      logger.warn('Vision API non-OK', {
+        status: response.status,
+        fileRecordId,
+        error: errorBody.substring(0, 500),
+      });
       return null;
     }
 
