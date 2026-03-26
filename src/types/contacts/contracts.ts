@@ -174,8 +174,6 @@ export interface CompanyContact extends BaseContact {
   sector?: string;
   numberOfEmployees?: number;
   annualRevenue?: number;
-  foundedDate?: Date;
-  
   // Στοιχεία επικοινωνίας
   emails?: EmailInfo[];
   phones?: PhoneInfo[];
