@@ -118,6 +118,21 @@ reports/metrics/**
 *.local.yaml
 *.local.yml
 
+# PDFs in project root (personal documents, not app code)
+/*.pdf
+
+# Temp JSON files in project root
+/tmp_*.json
+
+# ngrok binary
+ngrok-bin/
+
+# Visual regression reports (generated locally)
+reports/visual/
+
+# pnpm state (local cache)
+.pnpm-state/
+
 # Claude CLI temporary files
 tmpclaude-*
 
