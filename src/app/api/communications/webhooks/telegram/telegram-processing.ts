@@ -74,12 +74,13 @@ export async function processTelegramUpdate(
       mediaAttachments = buildFallbackAttachments(webhookData.message);
     }
 
-    telegramResponse = await processMessagePayload(webhookData, mediaAttachments);
+    const payloadResult = await processMessagePayload(webhookData, mediaAttachments);
+    telegramResponse = payloadResult.telegramResponse;
 
     // ── ADR-132: Feed to AI Pipeline ──
-    // Await enqueue to ensure item is in queue before after() batch runs.
-    // Non-fatal: pipeline failure should never break the Telegram bot.
-    const effectiveText = extractEffectiveText(webhookData);
+    // ADR-264: Use effectiveText from processMessagePayload (includes voice transcription + caption)
+    // instead of extractEffectiveText which only sees message.text/caption.
+    const effectiveText = payloadResult.effectiveText;
     const isBotCommand = effectiveText.startsWith('/');
     const hasMediaContent = hasMedia(webhookData.message);
     if (!isBotCommand && (effectiveText.trim().length > 0 || hasMediaContent) && isFirebaseAvailable()) {
@@ -135,16 +136,22 @@ export async function processTelegramUpdate(
 // INTERNAL HELPERS
 // ============================================================================
 
+interface MessagePayloadResult {
+  telegramResponse: TelegramSendPayload | null;
+  effectiveText: string;
+}
+
 /**
  * Process the message portion of a Telegram update.
  * Handles voice transcription, booking flow, admin detection, contact recognition.
+ * Returns both the Telegram response AND the effective text (incl. voice transcription).
  */
 async function processMessagePayload(
   webhookData: TelegramMessage,
   mediaAttachments?: MessageAttachment[]
-): Promise<TelegramSendPayload | null> {
+): Promise<MessagePayloadResult> {
   const message = webhookData.message;
-  if (!message) return null;
+  if (!message) return { telegramResponse: null, effectiveText: '' };
 
   let telegramResponse: TelegramSendPayload | null = null;
   const messageText = message.text ?? '';
@@ -179,7 +186,7 @@ async function processMessagePayload(
   // ── Booking Session: Contact info collection ──
   if (!isBotCommand) {
     const bookingResponse = await handleBookingFlow(webhookData, effectiveMessageText);
-    if (bookingResponse) return bookingResponse;
+    if (bookingResponse) return { telegramResponse: bookingResponse, effectiveText: effectiveMessageText };
   }
 
   // ── ADR-145: Super Admin Detection ──
@@ -193,19 +200,20 @@ async function processMessagePayload(
     );
   }
 
-  return telegramResponse;
+  return { telegramResponse, effectiveText: effectiveMessageText };
 }
 
 
 /**
  * Detect if the sender is a super admin.
+ * ADR-264: Allow file-only messages (empty text) — admin sends files without commands.
  */
 async function detectSuperAdmin(
   webhookData: TelegramMessage,
-  effectiveMessageText: string,
+  _effectiveMessageText: string,
   isBotCommand: boolean
 ): Promise<boolean> {
-  if (isBotCommand || effectiveMessageText.trim().length === 0 || !isFirebaseAvailable()) {
+  if (isBotCommand || !isFirebaseAvailable()) {
     return false;
   }
 
