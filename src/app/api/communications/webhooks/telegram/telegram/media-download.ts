@@ -491,19 +491,10 @@ export function extractMediaFromMessage(message: TelegramMessageObject): Telegra
     });
   }
 
-  // Voice message
-  if (message.voice) {
-    mediaList.push({
-      fileId: message.voice.file_id,
-      fileUniqueId: message.voice.file_unique_id, // 🏢 For deduplication
-      type: ATTACHMENT_TYPES.AUDIO,
-      filename: `voice_${message.message_id}.ogg`,
-      mimeType: message.voice.mime_type || 'audio/ogg',
-      fileSize: message.voice.file_size,
-      duration: message.voice.duration,
-      metadata: { isVoiceMessage: true },
-    });
-  }
+  // Voice message — SKIP storage. Voice is transcribed via Whisper
+  // and treated as text. Storing the .ogg file wastes storage and
+  // confuses the AI agent (sees audio attachment instead of the PDF).
+  // See: telegram-processing.ts → processMessagePayload() for transcription.
 
   // Video note (circular video)
   if (message.video_note) {
@@ -578,7 +569,7 @@ export function hasMedia(message: TelegramMessageObject): boolean {
     message.document ||
     message.audio ||
     message.video ||
-    message.voice ||
+    // voice excluded — transcribed to text, not stored as file
     message.video_note ||
     message.animation ||
     message.location ||

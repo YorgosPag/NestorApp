@@ -47,14 +47,7 @@ export function buildFallbackAttachments(
       size: message.video.file_size,
     });
   }
-  if (message.voice) {
-    result.push({
-      type: 'audio',
-      filename: 'voice.ogg',
-      mimeType: message.voice.mime_type ?? 'audio/ogg',
-      size: message.voice.file_size,
-    });
-  }
+  // Voice excluded — transcribed to text via Whisper, not stored as file
 
   return result;
 }
