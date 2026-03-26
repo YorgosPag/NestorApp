@@ -31,7 +31,14 @@ import { sendPostReplyActions } from './post-reply-actions';
 import { extractAttachments } from './tools/executor-shared';
 import { enrichWithDocumentPreview } from './agentic-reply-utils';
 import type { DocumentPreviewData } from './agentic-reply-utils';
-import { previewDocument, isVisionSupportedMime, MAX_PREVIEWS_PER_MESSAGE } from './document-preview-service';
+import {
+  downloadAndValidateFile,
+  previewDocumentFromBuffer,
+  isVisionSupportedMime,
+  MAX_PREVIEWS_PER_MESSAGE,
+} from './document-preview-service';
+import { extractInvoiceEntities } from './invoice-entity-extractor';
+import type { InvoiceEntityResult } from './invoice-entity-extractor';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -338,24 +345,43 @@ async function handleDocumentPreviewIfNeeded(
 
   for (const att of candidates) {
     try {
-      const preview = await previewDocument({
+      // Phase 1: Download + general preview
+      const fileBuffer = await downloadAndValidateFile({
         fileRecordId: att.fileRecordId,
         downloadUrl: att.storageUrl,
         filename: att.filename,
         contentType: att.contentType,
       });
+      if (!fileBuffer) continue;
 
-      if (preview) {
-        results.push({
-          fileRecordId: att.fileRecordId,
+      const preview = await previewDocumentFromBuffer(fileBuffer, {
+        fileRecordId: att.fileRecordId,
+        filename: att.filename,
+        contentType: att.contentType,
+      });
+      if (!preview) continue;
+
+      // Phase 2: Invoice entity extraction (only for invoices with good confidence)
+      let invoiceEntities: InvoiceEntityResult | null = null;
+      if (preview.documentType === 'invoice' && preview.confidence >= 0.6) {
+        invoiceEntities = await extractInvoiceEntities({
+          fileBuffer,
           filename: att.filename,
-          summary: preview.summary,
-          documentType: preview.documentType,
-          suggestedActions: preview.suggestedActions,
-          confidence: preview.confidence,
-          extractedNames: preview.extractedNames,
+          contentType: att.contentType,
+          fileRecordId: att.fileRecordId,
         });
       }
+
+      results.push({
+        fileRecordId: att.fileRecordId,
+        filename: att.filename,
+        summary: preview.summary,
+        documentType: preview.documentType,
+        suggestedActions: preview.suggestedActions,
+        confidence: preview.confidence,
+        extractedNames: preview.extractedNames,
+        invoiceEntities,
+      });
     } catch {
       agenticLogger.warn('Document preview failed', {
         fileRecordId: att.fileRecordId,

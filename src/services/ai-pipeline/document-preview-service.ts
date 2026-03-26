@@ -138,22 +138,16 @@ const SYSTEM_PROMPT =
 // ============================================================================
 
 /**
- * Analyze a document using OpenAI Vision and return a structured preview.
- * Returns `null` on failure (unsupported type, large file, API error).
+ * Download and validate a file for Vision analysis.
+ * Returns the file buffer or null if download fails / file too large / unsupported MIME.
  */
-export async function previewDocument(
-  params: DocumentPreviewParams
-): Promise<DocumentPreviewResult | null> {
+export async function downloadAndValidateFile(
+  params: Pick<DocumentPreviewParams, 'downloadUrl' | 'filename' | 'contentType' | 'fileRecordId'>
+): Promise<Buffer | null> {
   const { downloadUrl, filename, contentType, fileRecordId } = params;
 
   if (!isVisionSupportedMime(contentType)) {
     logger.info('Unsupported MIME for preview', { contentType, filename });
-    return null;
-  }
-
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    logger.warn('No OPENAI_API_KEY — skipping document preview');
     return null;
   }
 
@@ -168,8 +162,38 @@ export async function previewDocument(
     return null;
   }
 
-  const content = buildVisionContent(fileBuffer, filename, contentType);
-  return callVisionAPI(content, apiKey, fileRecordId);
+  return fileBuffer;
+}
+
+/**
+ * Analyze a document buffer using OpenAI Vision and return a structured preview.
+ * Use this when you already have the buffer (e.g., for Phase 2 invoice extraction reuse).
+ */
+export async function previewDocumentFromBuffer(
+  fileBuffer: Buffer,
+  params: Pick<DocumentPreviewParams, 'filename' | 'contentType' | 'fileRecordId'>
+): Promise<DocumentPreviewResult | null> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    logger.warn('No OPENAI_API_KEY — skipping document preview');
+    return null;
+  }
+
+  const content = buildVisionContent(fileBuffer, params.filename, params.contentType);
+  return callVisionAPI(content, apiKey, params.fileRecordId);
+}
+
+/**
+ * Analyze a document using OpenAI Vision and return a structured preview.
+ * Returns `null` on failure (unsupported type, large file, API error).
+ */
+export async function previewDocument(
+  params: DocumentPreviewParams
+): Promise<DocumentPreviewResult | null> {
+  const fileBuffer = await downloadAndValidateFile(params);
+  if (!fileBuffer) return null;
+
+  return previewDocumentFromBuffer(fileBuffer, params);
 }
 
 // ============================================================================
