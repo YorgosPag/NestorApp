@@ -50,12 +50,14 @@ describe('extractSuggestions', () => {
     expect(suggestions).toEqual(['Ναι', 'Όχι']);
   });
 
-  it('returns empty suggestions when no tag present', () => {
+  it('returns fallback suggestions when no tag present', () => {
     const raw = 'Απλή απάντηση χωρίς suggestions.';
     const { cleanAnswer, suggestions } = extractSuggestions(raw);
 
     expect(cleanAnswer).toBe('Απλή απάντηση χωρίς suggestions.');
-    expect(suggestions).toEqual([]);
+    // Fallback: always provides context-aware suggestions (generic fallback)
+    expect(suggestions.length).toBeGreaterThan(0);
+    expect(suggestions.length).toBeLessThanOrEqual(3);
   });
 
   it('filters suggestions longer than 40 characters', () => {

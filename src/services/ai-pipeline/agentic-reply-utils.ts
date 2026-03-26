@@ -42,7 +42,53 @@ export function extractSuggestions(rawAnswer: string): { cleanAnswer: string; su
 
   cleanAnswer = stripGenericClosingPhrases(cleanAnswer);
 
+  // Fallback: if AI forgot [SUGGESTIONS], generate context-aware defaults
+  if (suggestions.length === 0) {
+    suggestions = inferFallbackSuggestions(cleanAnswer);
+  }
+
   return { cleanAnswer, suggestions };
+}
+
+/**
+ * Infer context-aware fallback suggestions when the AI omits [SUGGESTIONS].
+ * Analyzes the AI response content to generate relevant follow-up actions.
+ */
+function inferFallbackSuggestions(answer: string): string[] {
+  const lower = answer.toLowerCase();
+
+  // Document/file analysis response
+  if (lower.includes('έγγραφο') || lower.includes('αρχείο') || lower.includes('pdf') || lower.includes('ανάλυση')) {
+    return ['Σύνδεση με επαφή', 'Αποθήκευση στα έγγραφα', 'Κάτι άλλο'];
+  }
+
+  // Contact-related response
+  if (lower.includes('επαφή') || lower.includes('επαφές') || lower.includes('τηλέφωνο') || lower.includes('email')) {
+    return ['Λεπτομέρειες επαφής', 'Στείλε email', 'Δημιουργία ραντεβού'];
+  }
+
+  // Property/unit-related response
+  if (lower.includes('ακίνητο') || lower.includes('μονάδ') || lower.includes('τ.μ.') || lower.includes('unit')) {
+    return ['Τιμή ακινήτου', 'Πρόοδος πληρωμών', 'Στοιχεία αγοραστή'];
+  }
+
+  // Project-related response
+  if (lower.includes('έργο') || lower.includes('κτήριο') || lower.includes('project')) {
+    return ['Κτήρια του έργου', 'Φάσεις κατασκευής', 'Επαφές έργου'];
+  }
+
+  // Task/appointment response
+  if (lower.includes('ραντεβού') || lower.includes('εργασία') || lower.includes('task')) {
+    return ['Προσθήκη ραντεβού', 'Λίστα εργασιών', 'Υπενθύμιση'];
+  }
+
+  // Success confirmation
+  if (lower.includes('✅') || lower.includes('ολοκληρώθηκε')) {
+    return ['Δες λεπτομέρειες', 'Νέα ενέργεια'];
+  }
+
+  // Generic fallback
+  return ['Λίστα επαφών', 'Λίστα έργων', 'Βοήθεια'];
 }
 
 /** Remove filler phrases like "Αν χρειάζεσαι...", "Μη διστάσεις...", "Ενημέρωσέ με" */
