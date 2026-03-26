@@ -43,30 +43,41 @@ async function detectAndConnectEmulator(): Promise<boolean> {
 }
 
 // ── Firebase Admin Init ───────────────────────────────────────────────
-const emulatorDetected = await detectAndConnectEmulator();
+let emulatorDetected = false;
 
-if (!admin.apps.length) {
-  if (emulatorDetected) {
-    // Emulator mode: no credentials needed, just project ID
-    admin.initializeApp({ projectId: 'pagonis-87766' });
-  } else {
-    const keyB64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_B64;
-    const keyJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+let _firebaseInitialized = false;
 
-    if (keyB64) {
-      const decoded = Buffer.from(keyB64, 'base64').toString('utf-8');
-      admin.initializeApp({ credential: admin.credential.cert(JSON.parse(decoded)) });
-    } else if (keyJson) {
-      admin.initializeApp({ credential: admin.credential.cert(JSON.parse(keyJson)) });
+async function ensureFirebaseInit(): Promise<void> {
+  if (_firebaseInitialized) return;
+
+  emulatorDetected = await detectAndConnectEmulator();
+
+  if (!admin.apps.length) {
+    if (emulatorDetected) {
+      admin.initializeApp({ projectId: 'pagonis-87766' });
     } else {
-      admin.initializeApp({
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? 'pagonis-87766',
-      });
+      const keyB64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_B64;
+      const keyJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+
+      if (keyB64) {
+        const decoded = Buffer.from(keyB64, 'base64').toString('utf-8');
+        admin.initializeApp({ credential: admin.credential.cert(JSON.parse(decoded)) });
+      } else if (keyJson) {
+        admin.initializeApp({ credential: admin.credential.cert(JSON.parse(keyJson)) });
+      } else {
+        admin.initializeApp({
+          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? 'pagonis-87766',
+        });
+      }
     }
   }
+
+  db = admin.firestore();
+  _firebaseInitialized = true;
 }
 
-export const db = admin.firestore();
+// Initialized lazily via ensureFirebaseInit()
+export let db: admin.firestore.Firestore;
 
 // ── Constants ────────────────────────────────────────────────────────
 const WEBHOOK_URL = 'http://localhost:3000/api/communications/webhooks/telegram';
@@ -74,7 +85,7 @@ const SUPER_ADMIN_CHAT_ID = 5618410820;
 const SUPER_ADMIN_NAME = 'QA_Test_Agent';
 const CHAT_HISTORY_DOC_ID = 'ach_telegram_5618410820';
 const POLL_INTERVAL_MS = 2_000;
-const POLL_TIMEOUT_MS = 45_000;
+const POLL_TIMEOUT_MS = 90_000;
 
 // ── Colors (ANSI) ────────────────────────────────────────────────────
 const C = {
@@ -271,6 +282,8 @@ const QA_COLLECTIONS = [
 ] as const;
 
 export async function resetCollections(): Promise<void> {
+  // Ensure Firebase is initialized before any Firestore operations
+  await ensureFirebaseInit();
   // 🛑 SAFETY: Block on production BEFORE deleting anything
   await assertNotProduction();
 
@@ -289,7 +302,38 @@ export async function resetCollections(): Promise<void> {
     }
     if (deleted > 0) console.log(`  ${C.dim}🗑️ ${col}: ${deleted} docs${C.reset}`);
   }
-  console.log(`${C.green}  ✅ Clean slate${C.reset}\n`);
+  console.log(`${C.green}  ✅ Clean slate${C.reset}`);
+
+  // Seed required settings for QA (super admin registry)
+  await seedQASettings();
+  console.log('');
+}
+
+// ── Seed QA Settings ──────────────────────────────────────────────────
+async function seedQASettings(): Promise<void> {
+  const now = new Date().toISOString();
+
+  // Super admin registry — required for admin commands to work
+  await db.collection('settings').doc('super_admin_registry').set({
+    admins: [
+      {
+        firebaseUid: null,
+        displayName: 'QA Test Admin',
+        channels: {
+          telegram: {
+            userId: String(SUPER_ADMIN_CHAT_ID),
+            chatId: String(SUPER_ADMIN_CHAT_ID),
+          },
+        },
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ],
+    schemaVersion: 1,
+    updatedAt: now,
+  });
+  console.log(`  ${C.green}📋 Seeded: settings/super_admin_registry${C.reset}`);
 }
 
 // ── Find Contact ID ──────────────────────────────────────────────────
@@ -426,14 +470,22 @@ export async function runPhase(
   const results: TestResult[] = [];
   let contactId = (state.contactId as string) ?? null;
 
-  for (const test of tests) {
+  // Rate limit protection: OpenAI gpt-4o-mini = 200K TPM, each test ~17K tokens
+  // Pipeline retries failed items concurrently (MAX_CONCURRENCY=3, MAX_RETRIES=3)
+  // 20s gap ensures pipeline completes + retries finish before next test
+  const INTER_TEST_DELAY_MS = 20_000;
+
+  for (let i = 0; i < tests.length; i++) {
+    const test = tests[i];
     if (test.skip) {
       console.log(`${C.yellow}  ⏭️  ${test.id}: ${test.name} — SKIPPED${C.reset}\n`);
       continue;
     }
 
-    if (test.delayBefore) {
-      await sleep(test.delayBefore);
+    // Delay between tests (skip before first test)
+    const delay = test.delayBefore ?? (i > 0 ? INTER_TEST_DELAY_MS : 0);
+    if (delay > 0) {
+      await sleep(delay);
     }
 
     const result = await runSingleTest(test, contactId, state);
@@ -461,6 +513,9 @@ export async function runMultiPhaseSuite(
   suiteName: string,
   phases: QAPhase[]
 ): Promise<void> {
+  // Ensure Firebase is initialized (idempotent)
+  await ensureFirebaseInit();
+
   console.log(`\n${'═'.repeat(60)}`);
   console.log(`${C.bold}${C.cyan}  🧪 QA Suite: ${suiteName}${C.reset}`);
   console.log(`${'═'.repeat(60)}`);

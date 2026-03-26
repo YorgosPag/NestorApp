@@ -249,7 +249,7 @@ async function upsertExternalIdentity(
         provider: IDENTITY_PROVIDER.TELEGRAM,
         externalUserId: telegramUserId,
         displayName,
-        username,
+        username: username ?? null,
         verified: false,
         consent: {
           marketing: false,

@@ -48,7 +48,8 @@ interface ChatCompletionChoice {
 export async function callChatCompletions(
   messages: ChatCompletionMessage[],
   tools: AgenticToolDefinition[],
-  timeoutMs: number
+  timeoutMs: number,
+  retryCount = 0
 ): Promise<{
   message: ChatCompletionChoice['message'];
   finishReason: string;
@@ -94,6 +95,16 @@ export async function callChatCompletions(
       } else if (errorText.length > 0 && errorText.length < 500) {
         errorMsg += `: ${errorText}`;
       }
+
+      // Rate limit (429): retry with exponential backoff (max 3 attempts)
+      if (response.status === 429 && retryCount < 3) {
+        const attempt = retryCount + 1;
+        const waitMs = attempt * 5_000; // 5s, 10s, 15s
+        console.warn(`[OPENAI_RATE_LIMIT] 429 — retry ${attempt}/3 in ${waitMs}ms`);
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+        return callChatCompletions(messages, tools, timeoutMs, attempt);
+      }
+
       throw new Error(errorMsg);
     }
 

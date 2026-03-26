@@ -1,0 +1,1294 @@
+{
+  "suite": "Contact Individual — Φυσικό Πρόσωπο",
+  "timestamp": "2026-03-26T21:24:16.303Z",
+  "durationMs": 1264418,
+  "summary": {
+    "total": 102,
+    "passed": 1,
+    "failed": 101,
+    "skipped": 0,
+    "passRate": "1.0%"
+  },
+  "phases": [
+    {
+      "name": "Phase 1: CREATE (27 tests)",
+      "total": 27,
+      "passed": 1,
+      "failed": 26,
+      "skipped": 0,
+      "tests": [
+        {
+          "id": "C-01",
+          "name": "Δημιουργία επαφής",
+          "passed": true,
+          "durationMs": 22496,
+          "assertions": [
+            {
+              "label": "contactId",
+              "passed": true
+            },
+            {
+              "label": "type",
+              "passed": true
+            },
+            {
+              "label": "firstName",
+              "passed": true
+            },
+            {
+              "label": "lastName",
+              "passed": true
+            },
+            {
+              "label": "companyId",
+              "passed": true
+            }
+          ]
+        },
+        {
+          "id": "C-02",
+          "name": "Πατρώνυμο + Μητρώνυμο",
+          "passed": false,
+          "durationMs": 11438,
+          "assertions": [
+            {
+              "label": "fatherName",
+              "passed": false,
+              "expected": "Αθανάσιος",
+              "actual": "undefined"
+            },
+            {
+              "label": "motherName",
+              "passed": false,
+              "expected": "Νικολέτα",
+              "actual": "undefined"
+            }
+          ],
+          "aiResponse": "✅ Ολοκληρώθηκε: Το ΑΦΜ του Δημήτριου Τεστίδη έχει ενημερωθεί σε 987654321.",
+          "toolCalls": [
+            "search_text",
+            "update_contact_field"
+          ]
+        },
+        {
+          "id": "C-03",
+          "name": "Φύλο + Ημερομηνία γέννησης",
+          "passed": false,
+          "durationMs": 48862,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "C-04",
+          "name": "Χώρα γέννησης",
+          "passed": false,
+          "durationMs": 47949,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "C-05",
+          "name": "ΑΜΚΑ (11 ψηφία)",
+          "passed": false,
+          "durationMs": 48340,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "C-06",
+          "name": "Ταυτότητα (5 πεδία)",
+          "passed": false,
+          "durationMs": 48184,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "C-07",
+          "name": "ΑΦΜ",
+          "passed": false,
+          "durationMs": 48098,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "C-08",
+          "name": "ΔΟΥ (lookup)",
+          "passed": false,
+          "durationMs": 48140,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "C-09",
+          "name": "Εργοδότης + Θέση",
+          "passed": false,
+          "durationMs": 48294,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "C-10",
+          "name": "Επάγγελμα ESCO (unambiguous)",
+          "passed": false,
+          "durationMs": 48450,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "C-11",
+          "name": "Δεξιότητα ESCO",
+          "passed": false,
+          "durationMs": 48238,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "C-12",
+          "name": "Κινητό τηλέφωνο",
+          "passed": false,
+          "durationMs": 48054,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "C-13",
+          "name": "Σταθερό τηλέφωνο",
+          "passed": false,
+          "durationMs": 48590,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "C-14",
+          "name": "Email",
+          "passed": false,
+          "durationMs": 48240,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "C-15",
+          "name": "Διεύθυνση (structured)",
+          "passed": false,
+          "durationMs": 9460,
+          "assertions": [
+            {
+              "label": "Contact",
+              "passed": false,
+              "expected": "exists",
+              "actual": "null"
+            }
+          ],
+          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "toolCalls": [
+            "search_text"
+          ]
+        },
+        {
+          "id": "C-16",
+          "name": "Ιστοσελίδα",
+          "passed": false,
+          "durationMs": 47757,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "C-17",
+          "name": "LinkedIn",
+          "passed": false,
+          "durationMs": 48561,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "C-18",
+          "name": "Facebook",
+          "passed": false,
+          "durationMs": 5366,
+          "assertions": [
+            {
+              "label": "Contact",
+              "passed": false,
+              "expected": "exists",
+              "actual": "null"
+            }
+          ],
+          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "toolCalls": []
+        },
+        {
+          "id": "C-23",
+          "name": "Instagram",
+          "passed": false,
+          "durationMs": 3221,
+          "assertions": [
+            {
+              "label": "Contact",
+              "passed": false,
+              "expected": "exists",
+              "actual": "null"
+            }
+          ],
+          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "toolCalls": [
+            "search_text"
+          ]
+        },
+        {
+          "id": "C-24",
+          "name": "Twitter/X",
+          "passed": false,
+          "durationMs": 5211,
+          "assertions": [
+            {
+              "label": "Contact",
+              "passed": false,
+              "expected": "exists",
+              "actual": "null"
+            }
+          ],
+          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "toolCalls": [
+            "search_text"
+          ]
+        },
+        {
+          "id": "C-25",
+          "name": "YouTube",
+          "passed": false,
+          "durationMs": 47689,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "C-26",
+          "name": "GitHub",
+          "passed": false,
+          "durationMs": 5694,
+          "assertions": [
+            {
+              "label": "Contact",
+              "passed": false,
+              "expected": "exists",
+              "actual": "null"
+            }
+          ],
+          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "toolCalls": []
+        },
+        {
+          "id": "C-27",
+          "name": "TikTok (→ other)",
+          "passed": false,
+          "durationMs": 3326,
+          "assertions": [
+            {
+              "label": "Contact",
+              "passed": false,
+              "expected": "exists",
+              "actual": "null"
+            }
+          ],
+          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "toolCalls": []
+        },
+        {
+          "id": "C-19",
+          "name": "IBAN",
+          "passed": false,
+          "durationMs": 7546,
+          "assertions": [
+            {
+              "label": "bankAccounts exists",
+              "passed": false,
+              "expected": ">= 1",
+              "actual": "0"
+            },
+            {
+              "label": "IBAN GR16",
+              "passed": false,
+              "expected": "GR16...",
+              "actual": "empty"
+            }
+          ],
+          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "toolCalls": []
+        },
+        {
+          "id": "C-20",
+          "name": "ΚΑΔ δραστηριότητα",
+          "passed": false,
+          "durationMs": 47773,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "C-21",
+          "name": "Δημιουργία 2ης επαφής",
+          "passed": false,
+          "durationMs": 49100,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "C-22",
+          "name": "Σχέση σύζυγος",
+          "passed": false,
+          "durationMs": 3303,
+          "assertions": [
+            {
+              "label": "spouse relationship",
+              "passed": false,
+              "expected": "exists",
+              "actual": "0 rels"
+            }
+          ],
+          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "toolCalls": [
+            "search_text",
+            "lookup_doy_code",
+            "firestore_query"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Phase 2: UPDATE (13 tests)",
+      "total": 13,
+      "passed": 0,
+      "failed": 13,
+      "skipped": 0,
+      "tests": [
+        {
+          "id": "U-01",
+          "name": "Update πατρώνυμο",
+          "passed": false,
+          "durationMs": 29550,
+          "assertions": [
+            {
+              "label": "Contact",
+              "passed": false,
+              "expected": "exists",
+              "actual": "null"
+            }
+          ],
+          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "toolCalls": [
+            "search_text"
+          ]
+        },
+        {
+          "id": "U-02",
+          "name": "Update ΑΦΜ",
+          "passed": false,
+          "durationMs": 7352,
+          "assertions": [
+            {
+              "label": "Contact",
+              "passed": false,
+              "expected": "exists",
+              "actual": "null"
+            }
+          ],
+          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "toolCalls": [
+            "search_text"
+          ]
+        },
+        {
+          "id": "U-03",
+          "name": "Update φύλο",
+          "passed": false,
+          "durationMs": 7219,
+          "assertions": [
+            {
+              "label": "Contact",
+              "passed": false,
+              "expected": "exists",
+              "actual": "null"
+            }
+          ],
+          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "toolCalls": []
+        },
+        {
+          "id": "U-04",
+          "name": "Update ΑΜΚΑ",
+          "passed": false,
+          "durationMs": 21178,
+          "assertions": [
+            {
+              "label": "Contact",
+              "passed": false,
+              "expected": "exists",
+              "actual": "null"
+            }
+          ],
+          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "toolCalls": []
+        },
+        {
+          "id": "U-05",
+          "name": "Update τύπος εγγράφου → διαβατήριο",
+          "passed": false,
+          "durationMs": 3746,
+          "assertions": [
+            {
+              "label": "Contact",
+              "passed": false,
+              "expected": "exists",
+              "actual": "null"
+            }
+          ],
+          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "toolCalls": []
+        },
+        {
+          "id": "U-06",
+          "name": "Update εργοδότης",
+          "passed": false,
+          "durationMs": 20315,
+          "assertions": [
+            {
+              "label": "Contact",
+              "passed": false,
+              "expected": "exists",
+              "actual": "null"
+            }
+          ],
+          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "toolCalls": []
+        },
+        {
+          "id": "U-07",
+          "name": "Update θέση",
+          "passed": false,
+          "durationMs": 6621,
+          "assertions": [
+            {
+              "label": "Contact",
+              "passed": false,
+              "expected": "exists",
+              "actual": "null"
+            }
+          ],
+          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "toolCalls": []
+        },
+        {
+          "id": "U-08",
+          "name": "Update ΔΟΥ",
+          "passed": false,
+          "durationMs": 50969,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "U-09",
+          "name": "Update χώρα γέννησης",
+          "passed": false,
+          "durationMs": 16101,
+          "assertions": [
+            {
+              "label": "Contact",
+              "passed": false,
+              "expected": "exists",
+              "actual": "null"
+            }
+          ],
+          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "toolCalls": [
+            "search_text"
+          ]
+        },
+        {
+          "id": "U-10",
+          "name": "Update επάγγελμα (νέο ESCO)",
+          "passed": false,
+          "durationMs": 27403,
+          "assertions": [
+            {
+              "label": "Contact",
+              "passed": false,
+              "expected": "exists",
+              "actual": "null"
+            }
+          ],
+          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "toolCalls": [
+            "search_text"
+          ]
+        },
+        {
+          "id": "U-11",
+          "name": "Append 2ο email",
+          "passed": false,
+          "durationMs": 15044,
+          "assertions": [
+            {
+              "label": "Contact",
+              "passed": false,
+              "expected": "exists",
+              "actual": "null"
+            }
+          ],
+          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "toolCalls": [
+            "search_text"
+          ]
+        },
+        {
+          "id": "U-12",
+          "name": "Append 2ο IBAN",
+          "passed": false,
+          "durationMs": 7332,
+          "assertions": [
+            {
+              "label": "bankAccounts 2+",
+              "passed": false,
+              "expected": ">= 2",
+              "actual": "0"
+            }
+          ],
+          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "toolCalls": []
+        },
+        {
+          "id": "U-13",
+          "name": "Append 2ος ΚΑΔ",
+          "passed": false,
+          "durationMs": 9403,
+          "assertions": [
+            {
+              "label": "Contact",
+              "passed": false,
+              "expected": "exists",
+              "actual": "null"
+            }
+          ],
+          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "toolCalls": []
+        }
+      ]
+    },
+    {
+      "name": "Phase 3: DELETE (9 tests)",
+      "total": 9,
+      "passed": 0,
+      "failed": 9,
+      "skipped": 0,
+      "tests": [
+        {
+          "id": "D-01",
+          "name": "Σβήσε μητρώνυμο",
+          "passed": false,
+          "durationMs": 47810,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "D-02",
+          "name": "Σβήσε ΑΜΚΑ",
+          "passed": false,
+          "durationMs": 47947,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "D-03",
+          "name": "Σβήσε θέση",
+          "passed": false,
+          "durationMs": 48114,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "D-04",
+          "name": "Σβήσε εργοδότη",
+          "passed": false,
+          "durationMs": 18,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "D-05",
+          "name": "Σβήσε ΑΦΜ",
+          "passed": false,
+          "durationMs": 16,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "D-06",
+          "name": "Διαγραφή IBAN",
+          "passed": false,
+          "durationMs": 15,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "D-07",
+          "name": "Αφαίρεση ΚΑΔ",
+          "passed": false,
+          "durationMs": 36,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "D-08",
+          "name": "Αφαίρεση σχέσης σύζυγος",
+          "passed": false,
+          "durationMs": 14,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "D-09",
+          "name": "Phones → append-only (graceful decline)",
+          "passed": false,
+          "durationMs": 15,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        }
+      ]
+    },
+    {
+      "name": "Phase 4: BATCH (6 tests)",
+      "total": 6,
+      "passed": 0,
+      "failed": 6,
+      "skipped": 0,
+      "tests": [
+        {
+          "id": "B-01",
+          "name": "Batch: ΑΦΜ + ΔΟΥ + ΑΜΚΑ (3 πεδία)",
+          "passed": false,
+          "durationMs": 14,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "B-02",
+          "name": "Batch: κινητό + email (2 arrays)",
+          "passed": false,
+          "durationMs": 6,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "B-03",
+          "name": "Batch: ταυτότητα 5 πεδία μαζί",
+          "passed": false,
+          "durationMs": 8,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "B-04",
+          "name": "Batch: εργοδότης + θέση",
+          "passed": false,
+          "durationMs": 16,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "B-05",
+          "name": "Batch: 4 προσωπικά στοιχεία",
+          "passed": false,
+          "durationMs": 67,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "B-06",
+          "name": "Batch: πλήρης διεύθυνση",
+          "passed": false,
+          "durationMs": 13,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        }
+      ]
+    },
+    {
+      "name": "Phase 5: VALIDATION (10 tests)",
+      "total": 10,
+      "passed": 0,
+      "failed": 10,
+      "skipped": 0,
+      "tests": [
+        {
+          "id": "V-01",
+          "name": "ΑΜΚΑ λάθος (10 ψηφία) → reject",
+          "passed": false,
+          "durationMs": 19,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "V-02",
+          "name": "ΑΜΚΑ γράμματα → reject",
+          "passed": false,
+          "durationMs": 13,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "V-03",
+          "name": "Duplicate email → reject",
+          "passed": false,
+          "durationMs": 14,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "V-04",
+          "name": "Duplicate phone → reject",
+          "passed": false,
+          "durationMs": 22,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "V-05",
+          "name": "Invalid email (no @) → reject",
+          "passed": false,
+          "durationMs": 11,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "V-06",
+          "name": "Invalid phone (3 ψηφία) → reject",
+          "passed": false,
+          "durationMs": 14,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "V-07",
+          "name": "ESCO ambiguous → disambiguation",
+          "passed": false,
+          "durationMs": 24,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "V-08",
+          "name": "Search γενική πτώση \"Τεστίδη\"",
+          "passed": false,
+          "durationMs": 7,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "V-09",
+          "name": "\"Είναι άνδρας\" → gender, NOT ESCO search",
+          "passed": false,
+          "durationMs": 14,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "V-10",
+          "name": "Fresh search — no hallucinated ID",
+          "passed": false,
+          "durationMs": 17,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        }
+      ]
+    },
+    {
+      "name": "Phase 6: GUARDS (12 tests)",
+      "total": 12,
+      "passed": 0,
+      "failed": 12,
+      "skipped": 0,
+      "tests": [
+        {
+          "id": "G-01",
+          "name": "ESCO Protection — profession via set_contact_esco",
+          "passed": false,
+          "durationMs": 17,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "G-02",
+          "name": "FIND-U: ΑΦΜ+ΔΟΥ same request → ΔΟΥ guard",
+          "passed": false,
+          "durationMs": 13,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "G-03",
+          "name": "Append-only: σβήσε email → αρνείται",
+          "passed": false,
+          "durationMs": 6,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "G-04",
+          "name": "Append-only: σβήσε διεύθυνση → αρνείται",
+          "passed": false,
+          "durationMs": 10,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "G-05",
+          "name": "Append-only: σβήσε LinkedIn → αρνείται",
+          "passed": false,
+          "durationMs": 19,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "G-06",
+          "name": "displayName auto-sync on lastName update",
+          "passed": false,
+          "durationMs": 13,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "G-07",
+          "name": "Επαναφορά επιθέτου σε Τεστίδης",
+          "passed": false,
+          "durationMs": 16,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "G-08",
+          "name": "IBAN invalid MOD 97 → reject",
+          "passed": false,
+          "durationMs": 7,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "G-09",
+          "name": "Update ανύπαρκτη επαφή → αναζήτηση",
+          "passed": false,
+          "durationMs": 8,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "G-10",
+          "name": "Empty value \"Βάλε ΑΦΜ\" χωρίς αριθμό",
+          "passed": false,
+          "durationMs": 15,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "G-11",
+          "name": "ΑΦΜ 5 ψηφία → validation",
+          "passed": false,
+          "durationMs": 17,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "G-12",
+          "name": "Conflicting values: 2 ΑΜΚΑ → AI picks one or asks",
+          "passed": false,
+          "durationMs": 15,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        }
+      ]
+    },
+    {
+      "name": "Phase 7: EDGE CASES (12 tests)",
+      "total": 12,
+      "passed": 0,
+      "failed": 12,
+      "skipped": 0,
+      "tests": [
+        {
+          "id": "E-01",
+          "name": "ESCO 0 results → free-text or ask",
+          "passed": false,
+          "durationMs": 15,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "E-02",
+          "name": "Duplicate contact → detection",
+          "passed": false,
+          "durationMs": 15,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "E-03",
+          "name": "Search with typo \"Τεστιδησ\"",
+          "passed": false,
+          "durationMs": 17,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "E-04",
+          "name": "All-caps \"ΒΑΛΕ ΑΦΜ 333444555\"",
+          "passed": false,
+          "durationMs": 12,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "E-05",
+          "name": "Mixed language \"Set email for Δημήτριος\"",
+          "passed": false,
+          "durationMs": 17,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "E-06",
+          "name": "Phone with +30 country code",
+          "passed": false,
+          "durationMs": 16,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "E-07",
+          "name": "IBAN with spaces",
+          "passed": false,
+          "durationMs": 14,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "E-08",
+          "name": "Date format \"1990-03-15\" (ISO)",
+          "passed": false,
+          "durationMs": 16,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "E-09",
+          "name": "Whitespace \"Βάλε εργοδότη   \" → reject",
+          "passed": false,
+          "durationMs": 16,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "E-10",
+          "name": "Same field twice → last value wins",
+          "passed": false,
+          "durationMs": 15,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "E-11",
+          "name": "Read-only query — no data change",
+          "passed": false,
+          "durationMs": 17,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "E-12",
+          "name": "Large batch: 6 fields at once",
+          "passed": false,
+          "durationMs": 13,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        }
+      ]
+    },
+    {
+      "name": "Phase 8: CONTEXT (8 tests)",
+      "total": 8,
+      "passed": 0,
+      "failed": 8,
+      "skipped": 0,
+      "tests": [
+        {
+          "id": "X-01",
+          "name": "Implicit ref: \"βάλε του\" χωρίς όνομα",
+          "passed": false,
+          "durationMs": 14,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "X-02",
+          "name": "Implicit query: \"πόσα τηλέφωνα έχει;\"",
+          "passed": false,
+          "durationMs": 16,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "X-03",
+          "name": "\"κι ένα email\" → append via context",
+          "passed": false,
+          "durationMs": 16,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "X-04",
+          "name": "\"Σωστά;\" → confirm without re-executing",
+          "passed": false,
+          "durationMs": 15,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "X-05",
+          "name": "Correction: \"Όχι, βάλε θέση CTO\"",
+          "passed": false,
+          "durationMs": 15,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "X-06",
+          "name": "\"Τι του λείπει;\" → completeness check",
+          "passed": false,
+          "durationMs": 17,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "X-07",
+          "name": "Context switch: \"πάμε στη Μαρία Τεστίδου\"",
+          "passed": false,
+          "durationMs": 15,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "X-08",
+          "name": "Context switch back: \"πίσω στον Δημήτριο\"",
+          "passed": false,
+          "durationMs": 15,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        }
+      ]
+    },
+    {
+      "name": "Phase 9: ATTACHMENTS (5 tests)",
+      "total": 5,
+      "passed": 0,
+      "failed": 5,
+      "skipped": 0,
+      "tests": [
+        {
+          "id": "A-00",
+          "name": "Pre-seed FileRecords",
+          "passed": false,
+          "durationMs": 16,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "A-01",
+          "name": "Profile Photo",
+          "passed": false,
+          "durationMs": 31,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "A-02",
+          "name": "Gallery Photo",
+          "passed": false,
+          "durationMs": 6,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "A-03",
+          "name": "Document (auto-classify)",
+          "passed": false,
+          "durationMs": 10,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        },
+        {
+          "id": "A-04",
+          "name": "No fileRecordId → graceful rejection",
+          "passed": false,
+          "durationMs": 16,
+          "error": "fetch failed",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
+        }
+      ]
+    }
+  ]
+}

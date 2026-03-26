@@ -61,7 +61,7 @@ async function main(): Promise<void> {
 
   // Pre-check: is localhost:3000 running?
   try {
-    await fetch('http://localhost:3000/', { signal: AbortSignal.timeout(5000) });
+    await fetch('http://127.0.0.1:3000/', { signal: AbortSignal.timeout(5000) });
   } catch {
     console.error('\n❌ localhost:3000 δεν απαντάει. Τρέξε πρώτα: npm run dev\n');
     process.exit(1);
