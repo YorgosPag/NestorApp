@@ -34,6 +34,20 @@ const ALLOWED_RELATIONSHIP_TYPES = [
   'property_buyer', 'property_co_buyer', 'property_landowner',
 ] as const;
 
+/** Inverse relationship type mapping for bidirectional relationships */
+const INVERSE_RELATIONSHIP_MAP: Record<string, string> = {
+  client: 'vendor', vendor: 'client',
+  employee: 'manager', manager: 'employee',
+  property_buyer: 'property_landowner', property_landowner: 'property_buyer',
+  // Symmetric — same type both ways
+  family: 'family', friend: 'friend', colleague: 'colleague',
+  partner: 'partner', contractor: 'contractor',
+  consultant: 'consultant', advisor: 'advisor', mentor: 'mentor',
+  director: 'director', shareholder: 'shareholder',
+  board_member: 'board_member', representative: 'representative',
+  property_co_buyer: 'property_co_buyer',
+};
+
 type AllowedRelationshipType = typeof ALLOWED_RELATIONSHIP_TYPES[number];
 
 /** Greek → English relationship type mapping */
@@ -153,6 +167,7 @@ export class RelationshipHandler implements ToolHandler {
 
     const relationshipId = generateRelationshipId();
     const note = nullableString(args.note);
+    const attribution = buildAttribution(ctx);
 
     await db.collection(COLLECTIONS.CONTACT_RELATIONSHIPS).doc(relationshipId).set({
       sourceContactId,
@@ -161,22 +176,60 @@ export class RelationshipHandler implements ToolHandler {
       status: 'active',
       notes: note,
       createdAt: FieldValue.serverTimestamp(),
-      createdBy: buildAttribution(ctx),
+      createdBy: attribution,
       updatedAt: FieldValue.serverTimestamp(),
     });
 
+    // Bidirectional: create inverse relationship so both sides can see the link
+    const inverseType = INVERSE_RELATIONSHIP_MAP[relationshipType] ?? relationshipType;
+    let inverseRelationshipId: string | null = null;
+
+    // Only create inverse if it doesn't already exist
+    const existingInverse = await db.collection(COLLECTIONS.CONTACT_RELATIONSHIPS)
+      .where('sourceContactId', '==', targetContactId)
+      .where('targetContactId', '==', sourceContactId)
+      .where('relationshipType', '==', inverseType)
+      .where('status', '==', 'active')
+      .limit(1)
+      .get();
+
+    if (existingInverse.empty) {
+      inverseRelationshipId = generateRelationshipId();
+      await db.collection(COLLECTIONS.CONTACT_RELATIONSHIPS).doc(inverseRelationshipId).set({
+        sourceContactId: targetContactId,
+        targetContactId: sourceContactId,
+        relationshipType: inverseType,
+        status: 'active',
+        notes: note,
+        bidirectionalRef: relationshipId,
+        createdAt: FieldValue.serverTimestamp(),
+        createdBy: attribution,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      // Link forward doc to inverse
+      await db.collection(COLLECTIONS.CONTACT_RELATIONSHIPS).doc(relationshipId).update({
+        bidirectionalRef: inverseRelationshipId,
+      });
+    } else {
+      // Link forward doc to existing inverse
+      await db.collection(COLLECTIONS.CONTACT_RELATIONSHIPS).doc(relationshipId).update({
+        bidirectionalRef: existingInverse.docs[0].id,
+      });
+    }
+
     await auditWrite(ctx, 'contact_relationships', relationshipId, 'create', {
-      sourceContactId, targetContactId, relationshipType,
+      sourceContactId, targetContactId, relationshipType, inverseRelationshipId,
     });
 
-    logger.info('Relationship created via AI agent', {
-      relationshipId, sourceContactId, targetContactId, relationshipType,
+    logger.info('Bidirectional relationship created via AI agent', {
+      relationshipId, inverseRelationshipId, sourceContactId, targetContactId, relationshipType, inverseType,
       requestId: ctx.requestId,
     });
 
     return {
       success: true,
-      data: { relationshipId, sourceContactId, targetContactId, relationshipType },
+      data: { relationshipId, inverseRelationshipId, sourceContactId, targetContactId, relationshipType },
     };
   }
 
@@ -188,20 +241,51 @@ export class RelationshipHandler implements ToolHandler {
   ): Promise<ToolResult> {
     const db = getAdminFirestore();
 
-    const snapshot = await db.collection(COLLECTIONS.CONTACT_RELATIONSHIPS)
-      .where('sourceContactId', '==', sourceContactId)
-      .where('status', '==', 'active')
-      .get();
+    // Query both directions: as source AND as target (bidirectional)
+    const [asSource, asTarget] = await Promise.all([
+      db.collection(COLLECTIONS.CONTACT_RELATIONSHIPS)
+        .where('sourceContactId', '==', sourceContactId)
+        .where('status', '==', 'active')
+        .get(),
+      db.collection(COLLECTIONS.CONTACT_RELATIONSHIPS)
+        .where('targetContactId', '==', sourceContactId)
+        .where('status', '==', 'active')
+        .get(),
+    ]);
 
-    const relationships = snapshot.docs.map(doc => {
+    // Deduplicate by collecting unique relationship pairs
+    const seen = new Set<string>();
+    const relationships: Array<{
+      id: string; targetContactId: string; relationshipType: string; notes: string | null;
+    }> = [];
+
+    for (const doc of asSource.docs) {
       const d = doc.data();
-      return {
-        id: doc.id,
-        targetContactId: String(d.targetContactId ?? ''),
-        relationshipType: String(d.relationshipType ?? ''),
-        notes: d.notes ?? null,
-      };
-    });
+      const pairKey = `${d.targetContactId}_${d.relationshipType}`;
+      if (!seen.has(pairKey)) {
+        seen.add(pairKey);
+        relationships.push({
+          id: doc.id,
+          targetContactId: String(d.targetContactId ?? ''),
+          relationshipType: String(d.relationshipType ?? ''),
+          notes: d.notes ?? null,
+        });
+      }
+    }
+
+    for (const doc of asTarget.docs) {
+      const d = doc.data();
+      const pairKey = `${d.sourceContactId}_${d.relationshipType}`;
+      if (!seen.has(pairKey)) {
+        seen.add(pairKey);
+        relationships.push({
+          id: doc.id,
+          targetContactId: String(d.sourceContactId ?? ''),
+          relationshipType: String(d.relationshipType ?? ''),
+          notes: d.notes ?? null,
+        });
+      }
+    }
 
     return { success: true, data: relationships, count: relationships.length };
   }
@@ -231,14 +315,25 @@ export class RelationshipHandler implements ToolHandler {
       return { success: false, error: 'sourceContactId mismatch.' };
     }
 
-    await docRef.update({
+    const deactivateUpdate = {
       status: 'inactive',
       updatedAt: FieldValue.serverTimestamp(),
       updatedBy: buildAttribution(ctx),
-    });
+    };
+
+    await docRef.update(deactivateUpdate);
+
+    // Also deactivate the inverse relationship (bidirectional cleanup)
+    if (data?.bidirectionalRef) {
+      const inverseRef = db.collection(COLLECTIONS.CONTACT_RELATIONSHIPS).doc(String(data.bidirectionalRef));
+      const inverseSnap = await inverseRef.get();
+      if (inverseSnap.exists && inverseSnap.data()?.status === 'active') {
+        await inverseRef.update(deactivateUpdate);
+      }
+    }
 
     await auditWrite(ctx, 'contact_relationships', relationshipId, 'deactivate', {
-      sourceContactId,
+      sourceContactId, bidirectionalRef: data?.bidirectionalRef ?? null,
     });
 
     return { success: true, data: { relationshipId, status: 'inactive' } };

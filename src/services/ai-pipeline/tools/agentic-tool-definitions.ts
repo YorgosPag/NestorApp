@@ -74,6 +74,10 @@ export type ContactTypeEnum = typeof CONTACT_TYPES[number];
 export const ATTACHMENT_PURPOSES = ['profile_photo', 'gallery_photo', 'document'] as const;
 export type AttachmentPurpose = typeof ATTACHMENT_PURPOSES[number];
 
+/** Activity operations for manage_activities (SSoT — tool def enum + handler validation) */
+export const ACTIVITY_OPERATIONS = ['add', 'list', 'remove', 'set_primary'] as const;
+export type ActivityOperation = typeof ACTIVITY_OPERATIONS[number];
+
 // ============================================================================
 // AGENTIC TOOL DEFINITIONS (Chat Completions API format)
 // ============================================================================
@@ -952,6 +956,44 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
       strict: true,
     },
   },
+  // ── KAD Activities: Manage business activity codes (NACE Rev.2) ──
+  {
+    type: 'function',
+    function: {
+      name: 'manage_activities',
+      description: 'Διαχείριση κωδικών δραστηριότητας ΚΑΔ (NACE Rev.2) σε εταιρεία. '
+        + 'Operations: add (προσθήκη ΚΑΔ), list (λίστα δραστηριοτήτων), remove (αφαίρεση ΚΑΔ), '
+        + 'set_primary (ορισμός κύριας δραστηριότητας). '
+        + 'Αν ο χρήστης πει "δραστηριότητα 41.20.20" ή "ΚΑΔ 41.20.20" → add. '
+        + 'Αν πει "τι δραστηριότητες έχει" → list. Admin only.',
+      parameters: {
+        type: 'object',
+        properties: {
+          operation: {
+            type: 'string',
+            enum: [...ACTIVITY_OPERATIONS],
+            description: 'add | list | remove | set_primary',
+          },
+          contactId: {
+            type: 'string',
+            description: 'Company contact ID (from search_text or firestore_query)',
+          },
+          kadCode: {
+            type: ['string', 'null'],
+            description: 'KAD code (e.g. "41.20.20"). Required for add/remove/set_primary. Null for list.',
+          },
+          activityType: {
+            type: ['string', 'null'],
+            enum: ['primary', 'secondary', null],
+            description: 'primary (κύρια) or secondary (δευτερεύουσα). Default: secondary.',
+          },
+        },
+        required: ['operation', 'contactId', 'kadCode', 'activityType'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
 ];
 
 /**
@@ -960,3 +1002,4 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
 export function getAgenticToolDefinitions(): ReadonlyArray<AgenticToolDefinition> {
   return AGENTIC_TOOL_DEFINITIONS;
 }
+

@@ -233,17 +233,24 @@ export async function executeAgenticLoop(
       continue;
     }
 
-    // Guardrail B: AI claims write but last write tool was BLOCKED (ESCO enforcement)
-    const lastBlockedCall = allToolCalls.find(tc => {
-      const parsed = safeJsonParse<{ _blocked?: boolean }>(tc.result, {});
-      return parsed?._blocked === true;
-    });
+    // Guardrail B (FIND-N fix): Check only the LAST write tool call, not entire history.
+    // Previously .find() matched ANY blocked call — even if a later retry succeeded,
+    // the final answer was still overridden to "δεν ολοκληρώθηκε".
+    const WRITE_TOOL_NAMES = new Set([
+      'update_contact_field', 'append_contact_info', 'set_contact_esco',
+      'firestore_write', 'manage_bank_account', 'manage_relationship',
+      'create_contact', 'manage_activities', 'attach_file_to_contact',
+    ]);
+    const lastWriteCall = [...allToolCalls].reverse().find(tc => WRITE_TOOL_NAMES.has(tc.name));
+    const lastWriteWasBlocked = lastWriteCall
+      ? safeJsonParse<{ _blocked?: boolean }>(lastWriteCall.result, {})?._blocked === true
+      : false;
 
-    if (isWriteClaim && lastBlockedCall && !hasRetried) {
+    if (isWriteClaim && lastWriteWasBlocked && !hasRetried) {
       hasRetried = true;
-      logger.warn('Anti-hallucination: AI claimed write but tool was blocked — RETRYING', {
+      logger.warn('Anti-hallucination: AI claimed write but last write tool was blocked — RETRYING', {
         requestId: context.requestId,
-        blockedTool: lastBlockedCall.name,
+        blockedTool: lastWriteCall?.name,
         claimedAnswer: rawFinalAnswer.slice(0, 100),
       });
 
@@ -251,7 +258,7 @@ export async function executeAgenticLoop(
       messages.push({
         role: 'user',
         content: [
-          `ΛΑΘΟΣ — το εργαλείο ${lastBlockedCall.name} ΑΠΕΡΡΙΦΘΗ από τον server.`,
+          `ΛΑΘΟΣ — το εργαλείο ${lastWriteCall?.name} ΑΠΕΡΡΙΦΘΗ από τον server.`,
           'Η εγγραφή ΔΕΝ έγινε. Ο server σου επέστρεψε επιλογές (matches).',
           'ΠΡΕΠΕΙ να δείξεις τις επιλογές στον χρήστη και να ρωτήσεις "Ποιο εννοείς;".',
           'ΜΗΝ λες ότι ολοκληρώθηκε — δεν ολοκληρώθηκε.',
@@ -262,7 +269,7 @@ export async function executeAgenticLoop(
 
     const finalAnswer = (isWriteClaim && allToolCalls.length === 0)
       ? 'Δεν μπόρεσα να εκτελέσω την αλλαγή — χρειάζεται αναζήτηση και ενημέρωση μέσω εργαλείων. Δοκίμασε ξανά ή δώσε περισσότερες λεπτομέρειες (π.χ. όνομα επαφής + τιμή πεδίου).'
-      : (isWriteClaim && lastBlockedCall)
+      : (isWriteClaim && lastWriteWasBlocked)
         ? 'Η εγγραφή δεν ολοκληρώθηκε — χρειάζεται αποσαφήνιση. Δοκίμασε ξανά.'
         : rawFinalAnswer;
 

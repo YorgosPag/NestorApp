@@ -430,6 +430,19 @@
 
 **ΠΡΟΣΟΧΗ**: ΔΕΝ αγγίζουμε καμία άλλη συλλογή (settings, projects, buildings, κλπ).
 
+### Script Αυτοματοποίησης
+
+Αντί να διαγράφουμε documents ένα-ένα μέσω MCP, **τρέχουμε το script**:
+
+```bash
+npx tsx scripts/qa-reset-collections.ts
+```
+
+- Χρησιμοποιεί Firebase Admin SDK batch deletes (500 docs/batch)
+- Αδειάζει και τις 12 collections σε δευτερόλεπτα
+- Δεν αγγίζει καμία άλλη collection
+- Output: πόσα documents διαγράφηκαν ανά collection
+
 ---
 
 ## Session 4 — Νομικά Πρόσωπα (Company Contacts) QA Testing (2026-03-26)
@@ -505,42 +518,51 @@
 
 ---
 
-### Test Results — Session 4
+### Test Results — Session 4 (Re-run 2026-03-26 μετά FIND-T/U/V/W fixes)
 
-**Test Contact 1**: ΠΑΓΩΝΗΣ ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ ΑΕ → ΠΑΓΩΝΗΣ ΤΕΧΝΙΚΗ ΑΕ (`comp_9d4154fb-7d1d-4a76-8ddd-66a9405984a9`)
-**Test Contact 2**: DELTA ENGINEERING ΙΚΕ (`comp_742045a0-5152-4bbc-8157-e756ba5953fe`)
-**Method**: Simulated webhook POST → localhost:3000/api/communications/webhooks/telegram (dev bot, Python UTF-8)
+**Test Contact 1**: ΠΑΓΩΝΗΣ ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ ΑΕ → ΠΑΓΩΝΗΣ ΤΕΧΝΙΚΗ ΑΕ (`comp_da65a098-71bb-4cbe-a310-51fdb1a30ea8`)
+**Test Contact 2**: DELTA ENGINEERING ΙΚΕ (`comp_249df479-993d-4e0b-8f39-4700c7a86261`)
+**Method**: Simulated webhook POST → localhost:3000 (dev bot, `scripts/qa-webhook.py`)
+**Reset**: `npx tsx scripts/qa-reset-collections.ts` (12 collections cleared)
 
-| # | Test | Input | Tool Used | Result |
-|---|------|-------|-----------|--------|
-| 4.1 | Δημιουργία εταιρείας | "Δημιούργησε νέα εταιρεία: ΠΑΓΩΝΗΣ ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ ΑΕ" | `create_contact` | ✅ PASS — type: company, comp_ prefix |
-| 4.2 | ΑΦΜ εταιρείας | "Βάλε ΑΦΜ 094519370" | `update_contact_field` | ✅ PASS — vatNumber: "094519370" |
-| 4.3 | ΔΟΥ εταιρείας | "ΔΟΥ Α΄ Θεσσαλονίκης" | `lookup_doy_code` → `update_contact_field` | ✅ PASS — taxOffice: "1301" |
-| 4.4 | Νομική μορφή | "Η νομική μορφή είναι ΑΕ" | `update_contact_field` | ✅ PASS — legalForm: "ΑΕ" |
-| 4.5 | Αριθμός ΓΕΜΗ | "Αριθμός ΓΕΜΗ 0133652920" | — | ❌ FIND-L — AI μπέρδεψε ΓΕΜΗ (10ψ) με ΑΦΜ (9ψ) |
-| 4.6 | Τηλέφωνο εταιρείας | "Πρόσθεσε τηλέφωνο 2310567890" | `append_contact_info` | ✅ PASS — type: "work" (auto-detect 2310) |
-| 4.7 | Email εταιρείας | "Πρόσθεσε email info@pagonis-construction.gr" | `append_contact_info` | ✅ PASS |
-| 4.8 | Διεύθυνση έδρας | "Διεύθυνση Εγνατίας 154, Θεσσαλονίκη 54636" | `append_contact_info` | ✅ PASS — structured address, type: "work" |
-| 4.9 | Ιστοσελίδα | "Πρόσθεσε ιστοσελίδα www.pagonis-construction.gr" | `append_contact_info` | ⚠️ FIND-M — Αποθηκεύτηκε αλλά AI εμφάνισε error message |
-| 4.10 | IBAN εταιρείας | "IBAN GR16...695, Εθνική Τράπεζα" | `manage_bank_account` | ✅ PASS |
-| 4.11 | 2η εταιρεία | "Δημιούργησε εταιρεία: DELTA ENGINEERING ΙΚΕ" | `create_contact` | ✅ PASS — comp_ prefix |
-| 4.12 | Σχέση client | "Η DELTA ENGINEERING είναι πελάτης της ΠΑΓΩΝΗΣ" | `manage_relationship` | ⚠️ FIND-N — Σχέση αποθηκεύτηκε αλλά AI εμφάνισε error |
-| 4.13 | Υπεύθυνος επικοινωνίας | "Υπεύθυνος: Νίκος Παπαδόπουλος, 6974050026" | — | ⚠️ EXPECTED — Δεν υπάρχει contactPersons[] tool |
-| 4.14 | Αλλαγή ονόματος | "Άλλαξε σε ΠΑΓΩΝΗΣ ΤΕΧΝΙΚΗ ΑΕ" | `update_contact_field` | ✅ PASS — companyName + displayName auto-sync |
-| 4.15 | Ίδρυση | "Ιδρύθηκε το 2005" | `update_contact_field` | ✅ PASS — foundedDate: "01/01/2005" |
+| # | Test | Input | Data Result | AI Response | Finding |
+|---|------|-------|-------------|-------------|---------|
+| 4.1 | Δημιουργία εταιρείας | "Δημιούργησε νέα εταιρεία: ΠΑΓΩΝΗΣ ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ ΑΕ" | ✅ `comp_` prefix, type: company | ✅ "Δημιουργήθηκε" | — |
+| 4.2 | ΑΦΜ | "Βάλε ΑΦΜ 094519370" | ✅ vatNumber: "094519370" | ❓ No feedback written | ⚠️ taxOffice: "2401" auto-set (FIND-U) |
+| 4.3 | ΔΟΥ | "ΔΟΥ Α' Θεσσαλονίκης" | ✅ taxOffice: "1301" | ❓ No feedback | Overrode bad 2401 from 4.2 |
+| 4.4 | Νομική μορφή | "Η νομική μορφή είναι ΑΕ" | ✅ legalForm: "ΑΕ" | ❌ "Αποτυχία" + ESCO results | **FIND-N** — data OK, AI reports failure |
+| 4.5 | ΓΕΜΗ | "Αριθμός ΓΕΜΗ 0133652920" | ✅ registrationNumber: "0133652920" | ❌ "Αποτυχία" | **FIND-N** — data OK, AI reports failure |
+| 4.6 | Τηλέφωνο | "Πρόσθεσε τηλέφωνο 2310567890" | ✅ phones[]: type "main" | ❌ "Αποτυχία" | **FIND-N** — data OK, AI reports failure |
+| 4.7 | Email | "Πρόσθεσε email info@pagonis-construction.gr" | ✅ emails[]: set | ❌ "Αποτυχία, ήδη υπάρχει" | **FIND-N** |
+| 4.8 | Διεύθυνση | "Εγνατίας 154, Θεσσαλονίκη 54636" | ✅ addresses[]: structured | ❌ "Αποτυχία" | **FIND-N** |
+| 4.9 | Ιστοσελίδα | "www.pagonis-construction.gr" | ✅ websites[]: url set | ❌ "Αποτυχία" | **FIND-N** |
+| 4.10 | IBAN | "IBAN GR16...695, Εθνική" | ❓ Not verified | ❌ "Αποτυχία" | **FIND-N** |
+| 4.11 | 2η εταιρεία | "Δημιούργησε: DELTA ENGINEERING ΙΚΕ" | ✅ comp_ prefix | ✅ "Δημιουργήθηκε" | — |
+| 4.12 | Σχέση client | "DELTA πελάτης ΠΑΓΩΝΗΣ" | ✅ relationship created | ✅ "Δηλώθηκε ως πελάτης" | — |
+| 4.13 | Υπεύθυνος | "Νίκος Παπαδόπουλος, 6974050026" | ⚠️ Phone added to DELTA | ⚠️ "Προστέθηκε τηλέφωνο" | **FIND-Y** — No contactPersons tool, added phone to wrong entity |
+| 4.14 | Αλλαγή ονόματος | "Άλλαξε σε ΠΑΓΩΝΗΣ ΤΕΧΝΙΚΗ ΑΕ" | ✅ companyName + displayName sync | ✅ "Άλλαξε" | — |
+| 4.15 | Ίδρυση | "Ιδρύθηκε το 2005" | ❌ registrationNumber: "2005" | ❓ No feedback | **FIND-Z** — AI overwrote ΓΕΜΗ with foundedDate! |
+#### Σύνοψη Session 4 (Re-run)
 
-#### Σύνοψη Session 4
+**ΚΥΡΙΟ ΕΥΡΗΜΑ**: Τα data γράφονται ΣΩΣΤΑ στο Firestore, αλλά ο AI αναφέρει "❌ Αποτυχία" σε 7/15 tests (FIND-N μαζικό pattern).
 
-| Κατηγορία | Tests | Pass | Fail | Concern |
-|-----------|-------|------|------|---------|
-| Δημιουργία εταιρείας | 2 | 2 | 0 | 0 |
-| Βασικά στοιχεία (ΑΦΜ/ΔΟΥ/Μορφή/ΓΕΜΗ) | 4 | 3 | 1 | 0 |
-| Επικοινωνία (phone/email/address/web) | 4 | 3 | 0 | 1 |
-| Τραπεζικά | 1 | 1 | 0 | 0 |
-| Σχέσεις | 1 | 0 | 0 | 1 |
-| Υπεύθυνος επικοινωνίας | 1 | 0 | 0 | 1 |
-| Αλλαγή στοιχείων | 2 | 2 | 0 | 0 |
-| **ΣΥΝΟΛΟ** | **15** | **11** | **1** | **3** |
+| Κατηγορία | Tests | Data OK | AI OK | FIND-N |
+|-----------|-------|---------|-------|--------|
+| Δημιουργία εταιρείας | 2 | 2 | 2 | 0 |
+| Βασικά στοιχεία (ΑΦΜ/ΔΟΥ/Μορφή/ΓΕΜΗ) | 4 | 4 | 0 | 2 |
+| Επικοινωνία (phone/email/address/web) | 4 | 4 | 0 | 4 |
+| Τραπεζικά (IBAN) | 1 | ❓ | 0 | 1 |
+| Σχέσεις | 1 | 1 | 1 | 0 |
+| Υπεύθυνος επικοινωνίας | 1 | ⚠️ | ⚠️ | 0 |
+| Αλλαγή ονόματος | 1 | 1 | 1 | 0 |
+| Ίδρυση (foundedDate) | 1 | ❌ | ❓ | 0 |
+| **ΣΥΝΟΛΟ** | **15** | **12✅ 1⚠️ 1❌ 1❓** | **4✅** | **7** |
+
+**Νέα Findings (Session 4 Re-run)**:
+- **FIND-N (ΜΑΖΙΚΟ)**: 7 tests — data αποθηκεύεται αλλά AI response = "❌ Αποτυχία" → **✅ FIXED Session 7**
+- **FIND-U (ΑΦΜ→ΔΟΥ)**: AI auto-set taxOffice: "2401" (Ρόδου) κατά ΑΦΜ update → **✅ FIXED Session 7**
+- **FIND-Y**: contactPerson phone πήγε σε λάθος entity (DELTA αντί ΠΑΓΩΝΗΣ) → **✅ FIXED Session 7**
+- **FIND-Z**: "Ιδρύθηκε 2005" αντικατέστησε registrationNumber (ΓΕΜΗ) με "2005" → **✅ FIXED Session 7**
 
 ---
 
@@ -557,7 +579,7 @@
 - **Category**: AI Prompt / Classification
 - **Ανάλυση**: Ο AI δεν αναγνωρίζει τη λέξη "ΓΕΜΗ" ως σημαντικό keyword για `registrationNumber`. Αντ' αυτού, σύγκρινε τον αριθμό με το υπάρχον ΑΦΜ.
 - **Fix**: Prompt rule: "Αριθμός ΓΕΜΗ" / "ΓΕΜΗ" → `update_contact_field(field: "registrationNumber")`. Δεν σχετίζεται με ΑΦΜ.
-- **Status**: OPEN
+- **Status**: ✅ FIXED (Session 6: FIND-L prompt rule, Session 7: FIND-Z server guardrail blocks year values)
 
 ---
 
@@ -569,8 +591,8 @@
 - **Severity**: LOW
 - **Category**: UX (FIND-B regression)
 - **Ανάλυση**: Ο AI χρησιμοποίησε hallucinated contactId στο πρώτο attempt, μετά retry πέτυχε, αλλά η τελική απάντηση βασίστηκε στο αρχικό αποτυχημένο attempt
-- **Fix**: Prompt hardening — τελική απάντηση βασισμένη στο ΤΕΛΕΥΤΑΙΟ tool result
-- **Status**: OPEN
+- **Fix**: Guardrail B fix — check LAST write tool, not ALL history. `_status: "OK"` in success results.
+- **Status**: ✅ FIXED (Session 7: FIND-N — Guardrail B + success status flag)
 
 ---
 
@@ -582,7 +604,7 @@
 - **Severity**: LOW
 - **Category**: UX (FIND-B regression)
 - **Ανάλυση**: Ίδιο pattern — retry πετυχαίνει αλλά ο AI εμφανίζει error
-- **Status**: OPEN
+- **Status**: ✅ FIXED (Session 7: FIND-N — Guardrail B fix)
 
 ---
 

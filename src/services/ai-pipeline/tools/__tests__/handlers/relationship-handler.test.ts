@@ -17,7 +17,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { RelationshipHandler } from '../../handlers/relationship-handler';
 import { createAdminContext, createCustomerContext } from '../test-utils/context-factory';
 
-// Helper: mock Firestore for add operation
+// Helper: mock Firestore for add operation (supports bidirectional inverse creation)
 function mockFirestoreForAdd(opts: {
   sourceExists?: boolean;
   targetExists?: boolean;
@@ -26,12 +26,14 @@ function mockFirestoreForAdd(opts: {
   const { sourceExists = true, targetExists = true, duplicateExists = false } = opts;
 
   const mockSet = jest.fn().mockResolvedValue(undefined);
+  const mockUpdate = jest.fn().mockResolvedValue(undefined);
   const mockDoc = jest.fn().mockImplementation((id: string) => ({
     get: jest.fn().mockResolvedValue({
       exists: id.startsWith('cont_source') ? sourceExists : targetExists,
       data: () => ({ companyId: 'test-company-001' }),
     }),
     set: mockSet,
+    update: mockUpdate,
   }));
 
   const mockWhere = jest.fn().mockReturnThis();
@@ -49,18 +51,24 @@ function mockFirestoreForAdd(opts: {
   });
 
   (getAdminFirestore as jest.Mock).mockReturnValue({ collection: mockCollection });
-  return { mockSet };
+  return { mockSet, mockUpdate };
 }
 
-// Helper: mock Firestore for list operation
+// Helper: mock Firestore for list operation (bidirectional — 2 parallel queries)
 function mockFirestoreForList(relationships: Array<Record<string, unknown>>) {
   const docs = relationships.map((data, i) => ({
     id: `rel_${i + 1}`,
     data: () => data,
   }));
 
+  // Both queries (asSource + asTarget) return same mock to keep tests simple.
+  // The second query returns empty to avoid double-counting.
+  let callCount = 0;
+  const mockGet = jest.fn().mockImplementation(() => {
+    callCount++;
+    return Promise.resolve({ docs: callCount === 1 ? docs : [] });
+  });
   const mockWhere = jest.fn().mockReturnThis();
-  const mockGet = jest.fn().mockResolvedValue({ docs });
 
   const mockCollection = jest.fn().mockReturnValue({
     where: mockWhere,

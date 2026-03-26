@@ -55,6 +55,14 @@ export async function executeUpdateContactField(
     };
   }
 
+  // FIND-Z: Block 4-digit year values in registrationNumber (ΓΕΜΗ ≠ founded year)
+  if (field === 'registrationNumber' && /^(19|20)\d{2}$/.test(value.trim())) {
+    return {
+      success: false,
+      error: 'Ο αριθμός ΓΕΜΗ δεν μπορεί να είναι 4-ψήφιο έτος. Μήπως εννοείς "έτος ίδρυσης"; Αυτό το πεδίο δεν υποστηρίζεται — μπορείς να το βάλεις στις σημειώσεις.',
+    };
+  }
+
   const db = getAdminFirestore();
   const docSnap = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
   if (!docSnap.exists) {

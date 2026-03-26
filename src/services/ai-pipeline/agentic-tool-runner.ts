@@ -80,9 +80,15 @@ export async function executeToolCalls(
     const result = await executor.executeTool(toolName, toolArgs, context);
 
     // Format result — include error + data for blocked tools (e.g. ESCO enforcement)
+    // FIND-N: Explicit _status flag so AI can clearly distinguish success vs failure
     const resultStr = result.success === false
       ? JSON.stringify({ _blocked: true, error: result.error, ...(result.data ? { data: result.data } : {}) })
-      : JSON.stringify(result.data ?? 'no data');
+      : JSON.stringify({
+        _status: 'OK',
+        ...(typeof result.data === 'object' && result.data !== null
+          ? result.data as Record<string, unknown>
+          : { data: result.data ?? 'done' }),
+      });
     const truncatedResult = resultStr.length > maxToolResultChars
       ? resultStr.substring(0, maxToolResultChars) + '...[truncated]'
       : resultStr;
