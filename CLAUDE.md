@@ -91,6 +91,16 @@ SOS. SOS. N.7.1 ΑΔΙΑΠΡΑΓΜΑΤΕΥΤΟ — GOOGLE FILE SIZE STANDARDS:
 - **ΜΗΝ τρέχεις orchestrator χωρίς έγκριση Γιώργου** (καταναλώνει ~2.5-3.5x tokens)
 - **ΜΗΝ αγνοείς αυτόν τον κανόνα** — αν βλέπεις 5+ αρχεία και 2+ τομείς, ΡΩΤΑ
 
+SOS. SOS. N.10 ΑΔΙΑΠΡΑΓΜΑΤΕΥΤΟ — AI PIPELINE: MANDATORY TESTING (Google Presubmit Pattern):
+- **ΟΤΑΝ αγγίζεις αρχεία στο `src/services/ai-pipeline/`**, ΥΠΟΧΡΕΩΤΙΚΑ:
+  1. **ΤΡΕΞΕ** τα tests: `npm run test:ai-pipeline:all` (62 suites, ~11 δευτερόλεπτα)
+  2. **ΓΡΑΨΕ νέα tests** αν προσθέτεις νέα λειτουργικότητα (tool, handler, service)
+  3. **ΕΝΗΜΕΡΩΣΕ υπάρχοντα tests** αν αλλάζεις συμπεριφορά
+- **ΤΟ PRE-COMMIT HOOK** τρέχει αυτόματα τα tests αν staged files περιέχουν ai-pipeline αλλαγές
+- **ΑΝ ΑΠΟΤΥΧΟΥΝ tests** → ΜΗΝ κάνεις commit, ΔΙΟΡΘΩΣΕ πρώτα
+- **Test patterns**: Ακολούθησε τα υπάρχοντα test files στο `src/services/ai-pipeline/__tests__/` και `tools/__tests__/handlers/`
+- **ΓΙΑΤΙ**: Κάθε μήνα γίνονται δεκάδες αλλαγές στο pipeline — χωρίς tests = production bugs
+
 SOS. SOS. N.9 CONTEXT HEALTH INDICATOR — ΥΠΟΧΡΕΩΤΙΚΟ ΣΤΟ ΤΕΛΟΣ ΚΑΘΕ ΕΡΓΑΣΙΑΣ:
 **Μετά από ΚΑΘΕ ολοκληρωμένη εργασία**, εμφάνισε context indicator:
 
