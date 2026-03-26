@@ -186,8 +186,9 @@ export async function classifyContactDocument(params: {
     { type: 'input_text', text: userPrompt },
   ];
 
+  const base64 = fileBuffer.toString('base64');
+
   if (isImageMime(contentType)) {
-    const base64 = fileBuffer.toString('base64');
     content.push({
       type: 'input_image',
       image_url: `data:${contentType};base64,${base64}`,
@@ -196,7 +197,7 @@ export async function classifyContactDocument(params: {
     content.push({
       type: 'input_file',
       filename,
-      file_data: fileBuffer.toString('base64'),
+      file_data: `data:${contentType};base64,${base64}`,
     });
   }
 

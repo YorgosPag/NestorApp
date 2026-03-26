@@ -181,8 +181,9 @@ function buildVisionContent(
     { type: 'input_text', text: userPrompt },
   ];
 
+  const base64 = buffer.toString('base64');
+
   if (isImageMime(contentType)) {
-    const base64 = buffer.toString('base64');
     content.push({
       type: 'input_image',
       image_url: `data:${contentType};base64,${base64}`,
@@ -191,7 +192,7 @@ function buildVisionContent(
     content.push({
       type: 'input_file',
       filename,
-      file_data: buffer.toString('base64'),
+      file_data: `data:${contentType};base64,${base64}`,
     });
   }
 
