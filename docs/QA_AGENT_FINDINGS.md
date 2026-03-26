@@ -287,8 +287,8 @@
 | IBAN | "Πρόσθεσε IBAN GR16... Εθνική Τράπεζα" | `manage_bank_account` | ✅ PASS |
 | 2η Επαφή | "Δημιούργησε: Μαρία Τεστοπούλου" | `create_contact` | ✅ PASS |
 | Σχέση σύζυγος | "Η Μαρία είναι σύζυγος του Νίκου" | `manage_relationship` | ✅ PASS |
-| Φωτογραφία | Photo message + caption | ❌ Κανένα | ❌ FIND-J |
-| Έγγραφο PDF | Document message + caption | ❌ Κανένα | ❌ FIND-J |
+| Φωτογραφία | Photo message + caption | `attach_file_to_contact` | ✅ PASS (download → vision preview → classify → link) |
+| Έγγραφο PDF | Document message + caption | `attach_file_to_contact` | ✅ PASS (download → vision preview → classify → link) |
 
 #### Findings Detail
 
@@ -332,17 +332,21 @@
 
 ---
 
-### [CRITICAL] FIND-J: Photo/Document attachments ΔΕΝ περνούν στο pipeline
+### [CRITICAL → ✅ RESOLVED] FIND-J: Photo/Document attachments pipeline
 
 - **Test**: Photo message (with photo array) + Document message (with document object)
-- **Expected**: `attachments: [{type: "photo", ...}]` στο normalized intake → AI calls `attach_file_to_contact`
-- **Actual**: `attachments: []` — **ΚΕΝΟ**. AI δεν γνωρίζει ότι υπάρχει attachment
-- **Severity**: CRITICAL
+- **Αρχικό πρόβλημα**: Ο `TelegramChannelAdapter` δεν εξήγαγε `photo[]`/`document` στα `normalized.attachments`
+- **Severity**: ~~CRITICAL~~ → **RESOLVED**
 - **Category**: Pipeline / Channel Adapter
-- **Ανάλυση**: Ο `TelegramChannelAdapter` δεν εξάγει `photo[]` ή `document` από το Telegram update payload στα `normalized.attachments`. Χωρίς αυτά, ο AI βλέπει μόνο το caption text και ψάχνει αντί να ανεβάζει.
-- **AI Response (photo)**: "❌ Δεν βρήκα φωτογραφία προφίλ" — ψάχνει στο `files` collection
-- **AI Response (document)**: "❌ Δεν βρήκα πιστοποιητικό γέννησης" — ψάχνει στο `files` collection
-- **Fix**: `telegram-channel-adapter.ts` → extract photo/document/audio/video/voice from Telegram payload into `attachments[]` array. Μετά, ο AI θα μπορεί να χρησιμοποιήσει `attach_file_to_contact`
+- **Υλοποιημένη λύση — Πλήρης 5-σταδίου pipeline**:
+  1. **Download**: Telegram webhook → `getTelegramFile()` → download binary → upload σε Firebase Storage → FileRecord (PENDING)
+  2. **Extraction**: `telegram-channel-adapter.ts` → `mapAttachments()` → `IntakeAttachment[]` με fileRecordId
+  3. **Document Preview** (ADR-264): `document-preview-service.ts` → OpenAI Vision (base64) → σύνοψη, τύπος, γλώσσα, προτεινόμενες ενέργειες → enrich AI context
+  4. **Document Classification**: `contact-document-classifier.ts` → OpenAI Vision → 117+ κατηγορίες (ταυτότητα, τιμολόγιο, CV, συμβόλαιο κλπ) με confidence score
+  5. **AI Agent Processing**: Enriched μήνυμα φτάνει στο agentic loop → AI καλεί `attach_file_to_contact` → auto-classify → link σε επαφή
+- **Υποστηριζόμενοι τύποι**: Images (JPEG, PNG, GIF, WebP), PDF, DOCX, XLSX
+- **Όρια**: Max 4MB για Vision analysis, 2 previews ανά μήνυμα, 15s timeout
+- **Status**: ✅ **FULLY IMPLEMENTED** — Production-grade document ingestion με vision AI, quarantine, idempotency, audit trail
 
 ---
 
@@ -350,7 +354,7 @@
 
 | Priority | Finding | Impact | Effort | Status |
 |----------|---------|--------|--------|--------|
-| 🔴 **P0** | **FIND-J: Attachments δεν περνούν στο pipeline** | Photo/document upload completely broken | Medium | ✅ FIXED (fallback stubs + downloadFailed flag) |
+| 🔴 **P0** | **FIND-J: Attachments pipeline** | Photo/document upload | Medium | ✅ FULLY IMPLEMENTED (5-stage pipeline: download → preview → classify → enrich → tool call) |
 | 🟡 P1 | FIND-G: Address ως flat string | Data model inconsistency | Low | ✅ FIXED |
 | 🟡 P1 | FIND-H: Landline → type: "mobile" | Wrong phone type classification | Low | ✅ FIXED |
 | 🟡 P1 | **FIND-K: Search δεν βρίσκει "Τεστοπούλου"** | search_text_tokens missing σε AI-created contacts | Medium | ✅ FIXED (search-indexer.ts → searchDocuments) |
@@ -402,3 +406,24 @@
 ### Windows Protection
 
 14. Reserved filenames (CON, PRN, NUL, COM0-9, LPT0-9) → BLOCKED
+
+---
+
+## Firestore Collections Reset — QA Clean Slate
+
+> **Σκοπός**: Όταν ο Γιώργος δώσει εντολή **"καθάρισε collections"** / **"reset QA"** / **"άδειασε τις συλλογές"**, αδειάζουμε **ΜΟΝΟ** αυτές τις 10 συλλογές για καθαρό testing context.
+
+| # | Collection | Περιγραφή |
+|---|-----------|-----------|
+| 1 | `ai_agent_feedback` | Feedback από AI agent interactions |
+| 2 | `ai_chat_history` | Chat history context (20 msgs / user) |
+| 3 | `ai_pipeline_audit` | Audit logs του AI pipeline |
+| 4 | `ai_pipeline_queue` | Queue items για processing |
+| 5 | `ai_usage` | Token usage tracking |
+| 6 | `contacts` | Επαφές |
+| 7 | `conversations` | Συνομιλίες |
+| 8 | `external_identities` | External identity mappings |
+| 9 | `files` | Αρχεία / documents |
+| 10 | `messages` | Μηνύματα (email, telegram, κλπ) |
+
+**ΠΡΟΣΟΧΗ**: ΔΕΝ αγγίζουμε καμία άλλη συλλογή (settings, projects, buildings, κλπ).
