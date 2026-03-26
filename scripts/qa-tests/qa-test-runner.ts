@@ -17,6 +17,8 @@
  */
 
 import * as admin from 'firebase-admin';
+import { writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 // ── Firebase Admin Init (reuse pattern from qa-reset-collections.ts) ──
 if (!admin.apps.length) {
@@ -424,6 +426,49 @@ export async function runMultiPhaseSuite(
     }
   }
 
+  // ── Write results to JSON file ────────────────────────────────────
+  const reportPath = resolve(__dirname, 'qa-results.json');
+  const report = {
+    suite: suiteName,
+    timestamp: new Date().toISOString(),
+    durationMs: allPhaseResults.reduce(
+      (sum, p) => sum + p.results.reduce((s, r) => s + r.durationMs, 0), 0
+    ),
+    summary: {
+      total: totalTests,
+      passed: totalPassed,
+      failed: totalFailed,
+      skipped: totalSkipped,
+      passRate: `${((totalPassed / (totalPassed + totalFailed)) * 100).toFixed(1)}%`,
+    },
+    phases: allPhaseResults.map((pr) => ({
+      name: pr.phaseName,
+      total: pr.total,
+      passed: pr.passed,
+      failed: pr.failed,
+      skipped: pr.skipped,
+      tests: pr.results.map((r) => ({
+        id: r.id,
+        name: r.name,
+        passed: r.passed,
+        durationMs: r.durationMs,
+        ...(r.error ? { error: r.error } : {}),
+        assertions: r.assertions.map((a) => ({
+          label: a.label,
+          passed: a.passed,
+          ...(a.passed ? {} : { expected: a.expected, actual: a.actual }),
+        })),
+        ...(r.passed ? {} : {
+          aiResponse: r.aiResponse.substring(0, 300),
+          toolCalls: r.toolCalls.map((tc) => tc.name),
+        }),
+      })),
+    })),
+  };
+
+  writeFileSync(reportPath, JSON.stringify(report, null, 2), 'utf-8');
+  console.log(`\n${C.green}  📄 Results saved: ${reportPath}${C.reset}\n`);
+
   process.exit(totalFailed > 0 ? 1 : 0);
 }
 
@@ -519,6 +564,34 @@ async function runSingleTest(
       error: errorMsg,
     };
   }
+}
+
+// ── File Record Seeding (for attachment QA tests) ───────────────────
+/**
+ * Pre-creates a FileRecord in Firestore to simulate an uploaded file.
+ * Used by attachment tests — the AI agent sees [Συνημμένο] in the message
+ * and calls attach_file_to_contact with the seeded fileRecordId.
+ */
+export async function seedFileRecord(params: {
+  fileId: string;
+  filename: string;
+  contentType: string;
+  companyId: string;
+}): Promise<void> {
+  await db.collection('files').doc(params.fileId).set({
+    id: params.fileId,
+    downloadUrl: `https://storage.example.com/qa-test/${params.filename}`,
+    filename: params.filename,
+    contentType: params.contentType,
+    status: 'ready',
+    companyId: params.companyId,
+    entityType: null,
+    entityId: null,
+    purpose: null,
+    category: 'uncategorized',
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
 }
 
 // ── Utilities ────────────────────────────────────────────────────────

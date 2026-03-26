@@ -240,6 +240,63 @@ export const createTests: QATestCase[] = [
     },
   },
 
+  // ── Κοινωνικά Δίκτυα (append_contact_info: social) ───────────────
+  {
+    id: 'C-23', name: 'Instagram',
+    userMessage: `Πρόσθεσε Instagram https://instagram.com/testidis στον ${FIRST}`,
+    assertions: async (ctx) => {
+      const d = await getContact(ctx);
+      if (!d) return [{ label: 'Contact', passed: false, expected: 'exists', actual: 'null' }];
+      const sm = d.socialMedia as Array<Record<string, unknown>> | undefined;
+      return [{ label: 'Instagram', passed: !!sm?.some((s) => String(s.platform ?? '').toLowerCase() === 'instagram'), expected: 'instagram', actual: JSON.stringify(sm) }];
+    },
+  },
+  {
+    id: 'C-24', name: 'Twitter/X',
+    userMessage: `Πρόσθεσε Twitter @testidis στον ${FIRST}`,
+    assertions: async (ctx) => {
+      const d = await getContact(ctx);
+      if (!d) return [{ label: 'Contact', passed: false, expected: 'exists', actual: 'null' }];
+      const sm = d.socialMedia as Array<Record<string, unknown>> | undefined;
+      return [{ label: 'Twitter', passed: !!sm?.some((s) => String(s.platform ?? '').toLowerCase() === 'twitter'), expected: 'twitter', actual: JSON.stringify(sm) }];
+    },
+  },
+  {
+    id: 'C-25', name: 'YouTube',
+    userMessage: `Πρόσθεσε YouTube https://youtube.com/@testidis στον ${FIRST}`,
+    assertions: async (ctx) => {
+      const d = await getContact(ctx);
+      if (!d) return [{ label: 'Contact', passed: false, expected: 'exists', actual: 'null' }];
+      const sm = d.socialMedia as Array<Record<string, unknown>> | undefined;
+      return [{ label: 'YouTube', passed: !!sm?.some((s) => String(s.platform ?? '').toLowerCase() === 'youtube'), expected: 'youtube', actual: JSON.stringify(sm) }];
+    },
+  },
+  {
+    id: 'C-26', name: 'GitHub',
+    userMessage: `Πρόσθεσε GitHub https://github.com/testidis στον ${FIRST}`,
+    assertions: async (ctx) => {
+      const d = await getContact(ctx);
+      if (!d) return [{ label: 'Contact', passed: false, expected: 'exists', actual: 'null' }];
+      const sm = d.socialMedia as Array<Record<string, unknown>> | undefined;
+      return [{ label: 'GitHub', passed: !!sm?.some((s) => String(s.platform ?? '').toLowerCase() === 'github'), expected: 'github', actual: JSON.stringify(sm) }];
+    },
+  },
+  {
+    id: 'C-27', name: 'TikTok (→ other)',
+    userMessage: `Πρόσθεσε TikTok @testidis_tiktok στον ${FIRST}`,
+    assertions: async (ctx) => {
+      const d = await getContact(ctx);
+      if (!d) return [{ label: 'Contact', passed: false, expected: 'exists', actual: 'null' }];
+      const sm = d.socialMedia as Array<Record<string, unknown>> | undefined;
+      // TikTok maps to 'other' in SOCIAL_PLATFORM_MAP
+      const found = sm?.some((s) => {
+        const username = String(s.username ?? '').toLowerCase();
+        return username.includes('testidis_tiktok') || username.includes('tiktok');
+      });
+      return [{ label: 'TikTok entry', passed: !!found, expected: 'tiktok entry in socialMedia', actual: JSON.stringify(sm) }];
+    },
+  },
+
   // ── Τραπεζικά (manage_bank_account) ───────────────────────────────
   {
     id: 'C-19', name: 'IBAN',
