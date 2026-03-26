@@ -93,6 +93,8 @@ const WRITE_ALLOWED_COLLECTIONS = new Set([
   'ai_pipeline_queue',
   'ai_usage',
   'external_identities',
+  'contact_relationships',
+  'searchDocuments',
 ]);
 
 // ============================================================================

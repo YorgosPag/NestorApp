@@ -20,20 +20,49 @@ import * as admin from 'firebase-admin';
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-// ── Firebase Admin Init (reuse pattern from qa-reset-collections.ts) ──
-if (!admin.apps.length) {
-  const keyB64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_B64;
-  const keyJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+// ── Emulator Detection ────────────────────────────────────────────────
+// If FIRESTORE_EMULATOR_HOST is set, the Admin SDK auto-connects to emulator.
+// We also auto-detect: if the emulator is running on port 8080, we set the env var.
+const EMULATOR_HOST = 'localhost:8080';
 
-  if (keyB64) {
-    const decoded = Buffer.from(keyB64, 'base64').toString('utf-8');
-    admin.initializeApp({ credential: admin.credential.cert(JSON.parse(decoded)) });
-  } else if (keyJson) {
-    admin.initializeApp({ credential: admin.credential.cert(JSON.parse(keyJson)) });
+async function detectAndConnectEmulator(): Promise<boolean> {
+  // Already set by user/script → emulator mode
+  if (process.env.FIRESTORE_EMULATOR_HOST) {
+    return true;
+  }
+
+  // Auto-detect: try to reach emulator
+  try {
+    await fetch(`http://${EMULATOR_HOST}/`, { signal: AbortSignal.timeout(2000) });
+    // Emulator is running — set env var BEFORE admin.initializeApp()
+    process.env.FIRESTORE_EMULATOR_HOST = EMULATOR_HOST;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ── Firebase Admin Init ───────────────────────────────────────────────
+const emulatorDetected = await detectAndConnectEmulator();
+
+if (!admin.apps.length) {
+  if (emulatorDetected) {
+    // Emulator mode: no credentials needed, just project ID
+    admin.initializeApp({ projectId: 'pagonis-87766' });
   } else {
-    admin.initializeApp({
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? 'pagonis-87766',
-    });
+    const keyB64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_B64;
+    const keyJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+
+    if (keyB64) {
+      const decoded = Buffer.from(keyB64, 'base64').toString('utf-8');
+      admin.initializeApp({ credential: admin.credential.cert(JSON.parse(decoded)) });
+    } else if (keyJson) {
+      admin.initializeApp({ credential: admin.credential.cert(JSON.parse(keyJson)) });
+    } else {
+      admin.initializeApp({
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? 'pagonis-87766',
+      });
+    }
   }
 }
 
@@ -181,6 +210,59 @@ async function getMessageCount(): Promise<number> {
   return data?.messages?.length ?? 0;
 }
 
+// ── Production Safety Guard (Google pattern: environment-aware tests) ─
+
+/**
+ * Detects if we're running against a production environment.
+ *
+ * Strategy:
+ * - If Firestore Emulator is detected → ALWAYS SAFE (no production data)
+ * - Otherwise, 4-layer check blocks non-local environments
+ *
+ * Override: QA_ALLOW_PRODUCTION=true (for intentional staging wipes).
+ */
+async function assertNotProduction(): Promise<void> {
+  // ✅ Emulator mode = always safe — no production data at risk
+  if (emulatorDetected) {
+    console.log(`${C.green}  ✅ Safety: Firestore Emulator detected (${EMULATOR_HOST}) — production data SAFE${C.reset}`);
+    return;
+  }
+
+  // 🛑 NOT using emulator — running against REAL Firestore
+  console.warn(`\n${C.yellow}${C.bold}  ⚠️  Emulator NOT detected — checking production safety...${C.reset}`);
+
+  const forceAllow = process.env.QA_ALLOW_PRODUCTION === 'true';
+  if (forceAllow) {
+    console.warn(`${C.yellow}${C.bold}  ⚠️  QA_ALLOW_PRODUCTION=true — safety guard bypassed. ΠΡΟΣΟΧΗ!${C.reset}\n`);
+    return;
+  }
+
+  // Block: tests should ONLY run against emulator or with explicit override
+  const projectId = db.app.options.projectId ?? process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? 'unknown';
+  console.error('');
+  console.error(`${C.red}${C.bold}  ╔══════════════════════════════════════════════════════════════╗${C.reset}`);
+  console.error(`${C.red}${C.bold}  ║  🛑 PRODUCTION SAFETY GUARD — TESTS BLOCKED                ║${C.reset}`);
+  console.error(`${C.red}${C.bold}  ╠══════════════════════════════════════════════════════════════╣${C.reset}`);
+  console.error(`${C.red}${C.bold}  ║                                                              ║${C.reset}`);
+  console.error(`${C.red}${C.bold}  ║  Firebase Project: ${projectId.padEnd(38)}  ║${C.reset}`);
+  console.error(`${C.red}${C.bold}  ║                                                              ║${C.reset}`);
+  console.error(`${C.red}${C.bold}  ║  ❌ Firestore Emulator NOT running on ${EMULATOR_HOST.padEnd(17)}  ║${C.reset}`);
+  console.error(`${C.red}${C.bold}  ║                                                              ║${C.reset}`);
+  console.error(`${C.red}${C.bold}  ║  Τα QA tests ΣΒΗΝΟΥΝ ΟΛΑ τα δεδομένα σε 13 collections.    ║${C.reset}`);
+  console.error(`${C.red}${C.bold}  ║  Τρέχουν ΜΟΝΟ με Firebase Emulator.                         ║${C.reset}`);
+  console.error(`${C.red}${C.bold}  ║                                                              ║${C.reset}`);
+  console.error(`${C.red}${C.bold}  ║  ▶ Ξεκίνα emulator:  npm run emulator                       ║${C.reset}`);
+  console.error(`${C.red}${C.bold}  ║  ▶ Ξεκίνα dev+emu:   npm run dev:emulator                   ║${C.reset}`);
+  console.error(`${C.red}${C.bold}  ║  ▶ Τρέξε tests:      npm run test:qa                        ║${C.reset}`);
+  console.error(`${C.red}${C.bold}  ║                                                              ║${C.reset}`);
+  console.error(`${C.red}${C.bold}  ║  Override (ΕΠΙΚΙΝΔΥΝΟ — σβήνει production data):             ║${C.reset}`);
+  console.error(`${C.red}${C.bold}  ║  QA_ALLOW_PRODUCTION=true npm run test:qa                    ║${C.reset}`);
+  console.error(`${C.red}${C.bold}  ║                                                              ║${C.reset}`);
+  console.error(`${C.red}${C.bold}  ╚══════════════════════════════════════════════════════════════╝${C.reset}`);
+  console.error('');
+  process.exit(2);
+}
+
 // ── Collection Reset ─────────────────────────────────────────────────
 const QA_COLLECTIONS = [
   'ai_agent_feedback', 'ai_chat_history', 'ai_pipeline_audit',
@@ -189,6 +271,9 @@ const QA_COLLECTIONS = [
 ] as const;
 
 export async function resetCollections(): Promise<void> {
+  // 🛑 SAFETY: Block on production BEFORE deleting anything
+  await assertNotProduction();
+
   console.log(`\n${C.yellow}🧹 Resetting QA collections...${C.reset}`);
   for (const col of QA_COLLECTIONS) {
     const ref = db.collection(col);

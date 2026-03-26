@@ -1,8 +1,8 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getFunctions } from 'firebase/functions';
-import { getStorage } from 'firebase/storage';
+import { getStorage, connectStorageEmulator } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: process.env.FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -19,4 +19,20 @@ export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const functions = getFunctions(app);
 export const storage = getStorage(app);
+
+// ── Firebase Emulator Connection (QA/Dev mode) ───────────────────────
+// When NEXT_PUBLIC_USE_FIREBASE_EMULATOR=true, client SDK connects to local emulators.
+// This keeps production Firestore safe during QA test runs.
+// The Admin SDK auto-detects FIRESTORE_EMULATOR_HOST — no code needed there.
+if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true') {
+  try {
+    connectFirestoreEmulator(db, 'localhost', 8080);
+    connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
+    connectStorageEmulator(storage, 'localhost', 9199);
+    console.log('🔧 Firebase Emulators connected (Firestore:8080, Auth:9099, Storage:9199)');
+  } catch {
+    // Already connected — ignore (happens on HMR re-renders)
+  }
+}
+
 export default app;

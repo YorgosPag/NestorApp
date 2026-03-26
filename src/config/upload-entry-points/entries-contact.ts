@@ -109,6 +109,32 @@ export const CONTACT_ENTRY_POINTS: UploadEntryPoint[] = [
       order: 7,
     },
     {
+      id: 'receipt',
+      purpose: 'receipt',
+      domain: 'admin',
+      category: 'documents',
+      label: { el: 'Απόδειξη', en: 'Receipt' },
+      description: {
+        el: 'Απόδειξη παροχής υπηρεσιών, πληρωμής ή παραλαβής',
+        en: 'Service receipt, payment receipt or delivery receipt',
+      },
+      icon: 'Receipt',
+      order: 8,
+    },
+    {
+      id: 'invoice',
+      purpose: 'invoice',
+      domain: 'admin',
+      category: 'documents',
+      label: { el: 'Τιμολόγιο', en: 'Invoice' },
+      description: {
+        el: 'Τιμολόγιο παροχής υπηρεσιών ή πώλησης αγαθών',
+        en: 'Service invoice or sales invoice',
+      },
+      icon: 'FileText',
+      order: 9,
+    },
+    {
       id: 'generic-document',
       purpose: 'generic',
       domain: 'admin',

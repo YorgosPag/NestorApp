@@ -208,8 +208,15 @@
     "fileActions": "File actions",
     "link": "Link",
     "unlink": "Unlink",
-    "linkFile": "Link file to building",
-    "unlinkFile": "Unlink file from building",
+    "linkFile": "Link file to {{entity}}",
+    "unlinkFile": "Unlink file from {{entity}}",
+    "entityName": {
+      "contact": "contact",
+      "building": "building",
+      "project": "project",
+      "unit": "unit",
+      "floor": "floor"
+    },
     "linkedFromProject": "Linked",
     "unlinkConfirm": "Do you want to unlink this file? It will no longer appear here.",
     "unlinkSuccess": "File unlinked successfully",
