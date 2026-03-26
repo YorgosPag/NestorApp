@@ -362,6 +362,123 @@ const tests: QATestCase[] = [
       ];
     },
   },
+
+  // ──────────────────────────────────────────────────────────────────
+  // ΦΑΣΗ 9: Εργοδότης + Θέση
+  // ──────────────────────────────────────────────────────────────────
+  {
+    id: 'IND-18',
+    name: 'Εργοδότης + Θέση',
+    userMessage: `Ο ${FIRST_NAME} δουλεύει ως Senior Engineer στην ΑΕΔΑΚ ΑΕ`,
+    assertions: async (ctx) => {
+      const data = await getContact(ctx);
+      if (!data) return [{ label: 'Contact found', passed: false, expected: 'exists', actual: 'null' }];
+
+      return [
+        assertExists('employer set', data.employer),
+        assertExists('position set', data.position),
+      ];
+    },
+  },
+
+  // ──────────────────────────────────────────────────────────────────
+  // ΦΑΣΗ 10: Σχέσεις (χρειάζεται 2η επαφή)
+  // ──────────────────────────────────────────────────────────────────
+  {
+    id: 'IND-19',
+    name: 'Δημιουργία 2ης επαφής',
+    userMessage: 'Δημιούργησε νέα επαφή: Μαρία Τεστίδου',
+    assertions: async (ctx) => {
+      await sleep(1000);
+      const contactId = await findContactByName('Μαρία', 'Τεστίδου');
+      ctx.state.secondContactId = contactId;
+
+      return [
+        assertExists('2nd contact created', contactId),
+      ];
+    },
+  },
+  {
+    id: 'IND-20',
+    name: 'Σχέση σύζυγος',
+    userMessage: `Η Μαρία Τεστίδου είναι σύζυγος του ${FULL_NAME}`,
+    assertions: async (ctx) => {
+      // Check contact_relationships collection
+      const snap = await db.collection('contact_relationships')
+        .where('type', '==', 'spouse')
+        .limit(5)
+        .get();
+
+      const hasRelationship = snap.docs.some((doc) => {
+        const d = doc.data();
+        const ids = [String(d.sourceContactId ?? ''), String(d.targetContactId ?? '')];
+        return ids.includes(ctx.state.contactId as string)
+          || ids.includes(ctx.state.secondContactId as string);
+      });
+
+      return [
+        { label: 'spouse relationship created', passed: hasRelationship, expected: 'relationship exists', actual: `${snap.size} relationships found` },
+      ];
+    },
+  },
+
+  // ──────────────────────────────────────────────────────────────────
+  // ΦΑΣΗ 11: Αλλαγή ταυτότητας σε διαβατήριο
+  // ──────────────────────────────────────────────────────────────────
+  {
+    id: 'IND-21',
+    name: 'Αλλαγή τύπου εγγράφου σε διαβατήριο',
+    userMessage: `Άλλαξε τον τύπο εγγράφου του ${FIRST_NAME} σε διαβατήριο`,
+    assertions: async (ctx) => {
+      const data = await getContact(ctx);
+      if (!data) return [{ label: 'Contact found', passed: false, expected: 'exists', actual: 'null' }];
+
+      const docType = String(data.documentType ?? '');
+      const isPassport = docType === 'passport' || docType.includes('διαβατ');
+
+      return [
+        { label: 'documentType = passport', passed: isPassport, expected: 'passport', actual: docType },
+      ];
+    },
+  },
+
+  // ──────────────────────────────────────────────────────────────────
+  // ΦΑΣΗ 12: Δεξιότητες ESCO
+  // ──────────────────────────────────────────────────────────────────
+  {
+    id: 'IND-22',
+    name: 'Δεξιότητα (ESCO search)',
+    userMessage: `Πρόσθεσε δεξιότητα "project management" στον ${FIRST_NAME}`,
+    assertions: async (ctx) => {
+      const data = await getContact(ctx);
+      if (!data) return [{ label: 'Contact found', passed: false, expected: 'exists', actual: 'null' }];
+
+      const skills = data.escoSkills as Array<{ uri: string; label: string }> | undefined;
+
+      return [
+        assertArrayLength('escoSkills has entries', skills, 1),
+      ];
+    },
+  },
+
+  // ──────────────────────────────────────────────────────────────────
+  // ΦΑΣΗ 13: Οικογενειακή κατάσταση
+  // ──────────────────────────────────────────────────────────────────
+  {
+    id: 'IND-23',
+    name: 'Οικογενειακή κατάσταση (search text)',
+    userMessage: `Βρες τον ${FULL_NAME}`,
+    assertions: async (ctx) => {
+      // This tests that search works (search_text tool)
+      const toolUsed = ctx.toolCalls.some((tc) => tc.name === 'search_text');
+      const mentionsName = ctx.aiResponse.includes(FIRST_NAME) || ctx.aiResponse.includes(LAST_NAME);
+
+      return [
+        { label: 'search_text tool used', passed: toolUsed, expected: 'search_text called', actual: ctx.toolCalls.map((t) => t.name).join(', ') },
+        { label: 'AI response mentions contact', passed: mentionsName, expected: `mentions ${FIRST_NAME}`, actual: ctx.aiResponse.substring(0, 100) },
+      ];
+    },
+  },
 ];
 
 // ── Utilities ────────────────────────────────────────────────────────
