@@ -28,7 +28,7 @@ const mockEnqueue = jest.fn<
   [unknown]
 >();
 jest.mock('../../pipeline-queue-service', () => ({
-  enqueuePipelineItem: (...args: unknown[]) => mockEnqueue(...args),
+  enqueuePipelineItem: (...args: unknown[]) => Reflect.apply(mockEnqueue, null, args),
 }));
 
 const mockIsSuperAdminWhatsApp = jest.fn<
@@ -53,11 +53,11 @@ const mockIsSuperAdminEmail = jest.fn<
 >();
 
 jest.mock('../../shared/super-admin-resolver', () => ({
-  isSuperAdminWhatsApp: (...args: [string]) => mockIsSuperAdminWhatsApp(...args),
-  isSuperAdminMessenger: (...args: [string]) => mockIsSuperAdminMessenger(...args),
-  isSuperAdminInstagram: (...args: [string]) => mockIsSuperAdminInstagram(...args),
-  isSuperAdminFirebaseUid: (...args: [string]) => mockIsSuperAdminFirebaseUid(...args),
-  isSuperAdminEmail: (...args: [string]) => mockIsSuperAdminEmail(...args),
+  isSuperAdminWhatsApp: (...args: [string]) => Reflect.apply(mockIsSuperAdminWhatsApp, null, args),
+  isSuperAdminMessenger: (...args: [string]) => Reflect.apply(mockIsSuperAdminMessenger, null, args),
+  isSuperAdminInstagram: (...args: [string]) => Reflect.apply(mockIsSuperAdminInstagram, null, args),
+  isSuperAdminFirebaseUid: (...args: [string]) => Reflect.apply(mockIsSuperAdminFirebaseUid, null, args),
+  isSuperAdminEmail: (...args: [string]) => Reflect.apply(mockIsSuperAdminEmail, null, args),
 }));
 
 // ── Imports ──

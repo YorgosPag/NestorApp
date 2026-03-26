@@ -67,6 +67,8 @@ const ADMIN_GIORGOS: SuperAdminIdentity = {
     instagram: { igsid: 'igsid_giorgos' },
   },
   isActive: true,
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-03-25T10:00:00Z',
 };
 
 const ADMIN_INACTIVE: SuperAdminIdentity = {
@@ -77,6 +79,8 @@ const ADMIN_INACTIVE: SuperAdminIdentity = {
     email: { addresses: ['inactive@pagonis.gr'] },
   },
   isActive: false,
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-03-25T10:00:00Z',
 };
 
 const REGISTRY_DOC = {

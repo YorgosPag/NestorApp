@@ -19,17 +19,17 @@ const mockFindContactByName = jest.fn().mockResolvedValue([
 const mockListContacts = jest.fn().mockResolvedValue([]);
 const mockGetContactMissingFields = jest.fn().mockResolvedValue(['phone', 'email', 'vatNumber']);
 jest.mock('../../../shared/contact-lookup', () => ({
-  findContactByName: (...args: unknown[]) => mockFindContactByName(...args),
-  listContacts: (...args: unknown[]) => mockListContacts(...args),
-  getContactMissingFields: (...args: unknown[]) => mockGetContactMissingFields(...args),
+  findContactByName: (...args: unknown[]) => Reflect.apply(mockFindContactByName, null, args),
+  listContacts: (...args: unknown[]) => Reflect.apply(mockListContacts, null, args),
+  getContactMissingFields: (...args: unknown[]) => Reflect.apply(mockGetContactMissingFields, null, args),
 }));
 
 // Channel reply mock
 const mockSendChannelReply = jest.fn().mockResolvedValue({ success: true, messageId: 'msg_reply_010', channel: 'telegram' });
 const mockExtractChannelIds = jest.fn(() => ({ telegramChatId: '12345' }));
 jest.mock('../../../shared/channel-reply-dispatcher', () => ({
-  sendChannelReply: (...args: unknown[]) => mockSendChannelReply(...args),
-  extractChannelIds: (...args: unknown[]) => mockExtractChannelIds(...args),
+  sendChannelReply: (...args: unknown[]) => Reflect.apply(mockSendChannelReply, null, args),
+  extractChannelIds: (...args: unknown[]) => Reflect.apply(mockExtractChannelIds, null, args),
 }));
 
 import { AdminContactSearchModule } from '../admin-contact-search-module';

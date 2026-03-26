@@ -55,8 +55,8 @@ import {
 } from '../intent-mapping';
 import { isMultiIntentAnalysis, isMessageIntentAnalysis } from '@/schemas/ai-analysis';
 
-const mockIsMultiIntent = isMultiIntentAnalysis as jest.Mock;
-const mockIsMessageIntent = isMessageIntentAnalysis as jest.Mock;
+const mockIsMultiIntent = isMultiIntentAnalysis as unknown as jest.Mock;
+const mockIsMessageIntent = isMessageIntentAnalysis as unknown as jest.Mock;
 
 // ---------------------------------------------------------------------------
 // Helpers

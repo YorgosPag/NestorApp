@@ -144,7 +144,8 @@ describe('CustomerHandler', () => {
       );
 
       expect(result.success).toBe(true);
-      expect(result.data).toMatchObject({
+      const resultData = result.data as Record<string, unknown>;
+      expect(resultData).toMatchObject({
         priority: 'high',
         severity: 'normal',
       });
@@ -172,14 +173,14 @@ describe('CustomerHandler', () => {
         { title: 'Urgent', description: 'Fire!', severity: 'urgent', unitId: 'unit_001' },
         customerCtx(),
       );
-      expect(urgentResult.data?.priority).toBe('urgent');
+      expect((urgentResult.data as Record<string, unknown>)?.priority).toBe('urgent');
 
       const lowResult = await handler.execute(
         'create_complaint_task',
         { title: 'Low', description: 'Minor', severity: 'low', unitId: 'unit_001' },
         customerCtx(),
       );
-      expect(lowResult.data?.priority).toBe('low');
+      expect((lowResult.data as Record<string, unknown>)?.priority).toBe('low');
     });
   });
 

@@ -27,20 +27,20 @@ const mockGetContactById = jest.fn().mockResolvedValue({
 const mockGetContactMissingFields = jest.fn().mockResolvedValue(['\u0391\u03a6\u039c', '\u0395\u03c0\u03ac\u03b3\u03b3\u03b5\u03bb\u03bc\u03b1']);
 const mockEmitEntitySyncSignal = jest.fn().mockResolvedValue(undefined);
 jest.mock('../../../shared/contact-lookup', () => ({
-  findContactByName: (...args: unknown[]) => mockFindContactByName(...args),
-  updateContactField: (...args: unknown[]) => mockUpdateContactField(...args),
-  removeContactField: (...args: unknown[]) => mockRemoveContactField(...args),
-  getContactById: (...args: unknown[]) => mockGetContactById(...args),
-  getContactMissingFields: (...args: unknown[]) => mockGetContactMissingFields(...args),
-  emitEntitySyncSignal: (...args: unknown[]) => mockEmitEntitySyncSignal(...args),
+  findContactByName: (...args: unknown[]) => Reflect.apply(mockFindContactByName, null, args),
+  updateContactField: (...args: unknown[]) => Reflect.apply(mockUpdateContactField, null, args),
+  removeContactField: (...args: unknown[]) => Reflect.apply(mockRemoveContactField, null, args),
+  getContactById: (...args: unknown[]) => Reflect.apply(mockGetContactById, null, args),
+  getContactMissingFields: (...args: unknown[]) => Reflect.apply(mockGetContactMissingFields, null, args),
+  emitEntitySyncSignal: (...args: unknown[]) => Reflect.apply(mockEmitEntitySyncSignal, null, args),
 }));
 
 // Channel reply mock
 const mockSendChannelReply = jest.fn().mockResolvedValue({ success: true, messageId: 'msg_reply_001' });
 const mockExtractChannelIds = jest.fn(() => ({ telegramChatId: '12345' }));
 jest.mock('../../../shared/channel-reply-dispatcher', () => ({
-  sendChannelReply: (...args: unknown[]) => mockSendChannelReply(...args),
-  extractChannelIds: (...args: unknown[]) => mockExtractChannelIds(...args),
+  sendChannelReply: (...args: unknown[]) => Reflect.apply(mockSendChannelReply, null, args),
+  extractChannelIds: (...args: unknown[]) => Reflect.apply(mockExtractChannelIds, null, args),
 }));
 
 // Admin session mock
@@ -48,9 +48,9 @@ const mockGetAdminSession = jest.fn().mockResolvedValue(null);
 const mockSetAdminSession = jest.fn().mockResolvedValue(undefined);
 const mockBuildAdminIdentifier = jest.fn(() => 'admin_12345');
 jest.mock('../../../shared/admin-session', () => ({
-  getAdminSession: (...args: unknown[]) => mockGetAdminSession(...args),
-  setAdminSession: (...args: unknown[]) => mockSetAdminSession(...args),
-  buildAdminIdentifier: (...args: unknown[]) => mockBuildAdminIdentifier(...args),
+  getAdminSession: (...args: unknown[]) => Reflect.apply(mockGetAdminSession, null, args),
+  setAdminSession: (...args: unknown[]) => Reflect.apply(mockSetAdminSession, null, args),
+  buildAdminIdentifier: (...args: unknown[]) => Reflect.apply(mockBuildAdminIdentifier, null, args),
 }));
 
 // Phone validation mock

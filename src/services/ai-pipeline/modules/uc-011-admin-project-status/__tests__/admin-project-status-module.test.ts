@@ -63,10 +63,10 @@ jest.mock('@/lib/firebaseAdmin', () => ({
 
 // Channel reply mock
 const mockSendChannelReply = jest.fn().mockResolvedValue({ success: true, messageId: 'msg_reply_011', channel: 'telegram' });
-const mockExtractChannelIds = jest.fn(() => ({ telegramChatId: '12345' }));
+const mockExtractChannelIds = jest.fn((_intake: unknown) => ({ telegramChatId: '12345' }));
 jest.mock('../../../shared/channel-reply-dispatcher', () => ({
-  sendChannelReply: (...args: unknown[]) => mockSendChannelReply(...args),
-  extractChannelIds: (...args: unknown[]) => mockExtractChannelIds(...args),
+  sendChannelReply: (payload: unknown) => mockSendChannelReply(payload),
+  extractChannelIds: (intake: unknown) => mockExtractChannelIds(intake),
 }));
 
 import { AdminProjectStatusModule } from '../admin-project-status-module';
@@ -139,10 +139,10 @@ describe('UC-011: AdminProjectStatusModule', () => {
 
   it('lookup handles empty project list gracefully', async () => {
     // Override to return empty collections
-    mockCollection.mockImplementation(() => ({
+    mockCollection.mockImplementation((_collectionName: string) => ({
       where: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
-      doc: jest.fn(() => ({ get: jest.fn().mockResolvedValue({ exists: false }) })),
+      doc: jest.fn((_docId: string) => ({ set: jest.fn().mockResolvedValue(undefined), get: jest.fn().mockResolvedValue({ exists: false }) })),
       get: jest.fn().mockResolvedValue({ empty: true, docs: [], size: 0 }),
     }));
 

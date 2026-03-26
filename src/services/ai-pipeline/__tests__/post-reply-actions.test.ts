@@ -36,7 +36,7 @@ jest.mock('@/lib/error-utils', () => ({
 // ── Channel reply dispatcher mock ──
 const mockExtractChannelIds = jest.fn();
 jest.mock('../shared/channel-reply-dispatcher', () => ({
-  extractChannelIds: (...args: unknown[]) => mockExtractChannelIds(...args),
+  extractChannelIds: (...args: unknown[]) => Reflect.apply(mockExtractChannelIds, null, args),
 }));
 
 // ── Feedback service mock ──
@@ -74,8 +74,8 @@ jest.mock('@/app/api/communications/webhooks/telegram/telegram/client', () => ({
 const mockStorePendingContactAction = jest.fn().mockResolvedValue('pending_001');
 const mockCreateDuplicateContactKeyboard = jest.fn(() => ({ inline_keyboard: [] }));
 jest.mock('../duplicate-contact-keyboard', () => ({
-  storePendingContactAction: (...args: unknown[]) => mockStorePendingContactAction(...args),
-  createDuplicateContactKeyboard: (...args: unknown[]) => mockCreateDuplicateContactKeyboard(...args),
+  storePendingContactAction: (...args: unknown[]) => Reflect.apply(mockStorePendingContactAction, null, args),
+  createDuplicateContactKeyboard: (...args: unknown[]) => Reflect.apply(mockCreateDuplicateContactKeyboard, null, args),
 }));
 
 // ── WhatsApp client mock ──

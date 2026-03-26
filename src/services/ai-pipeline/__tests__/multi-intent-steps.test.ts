@@ -285,7 +285,7 @@ describe('stepApproveMulti', () => {
   it('returns ctx unchanged if no proposal', () => {
     const ctx = createMockContext({ proposal: undefined as unknown as null });
     // delete proposal to simulate missing
-    delete (ctx as Record<string, unknown>).proposal;
+    delete (ctx as unknown as Record<string, unknown>).proposal;
 
     const multiRoute = { primaryRoute: {}, secondaryRoutes: [], allModules: [], needsManualReview: false, allAutoApprovable: true };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

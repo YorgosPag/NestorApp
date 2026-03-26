@@ -188,7 +188,7 @@ describe('LearningService', () => {
     mockGetFeedbackService.mockReturnValue({
       getUnprocessedFeedback: mockGetUnprocessedFeedback,
       markAsProcessed: mockMarkAsProcessed,
-    } as ReturnType<typeof getFeedbackService>);
+    } as unknown as ReturnType<typeof getFeedbackService>);
   });
 
   // ========================================================================

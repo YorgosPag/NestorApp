@@ -16,8 +16,8 @@ jest.mock('@/config/ai-pipeline-config', () => ({ PIPELINE_PROTOCOL_CONFIG: { SC
 const mockSendChannelReply = jest.fn().mockResolvedValue({ success: true, messageId: 'msg_reply_001' });
 const mockExtractChannelIds = jest.fn(() => ({ telegramChatId: '12345' }));
 jest.mock('../../../shared/channel-reply-dispatcher', () => ({
-  sendChannelReply: (...args: unknown[]) => mockSendChannelReply(...args),
-  extractChannelIds: (...args: unknown[]) => mockExtractChannelIds(...args),
+  sendChannelReply: (...args: unknown[]) => Reflect.apply(mockSendChannelReply, null, args),
+  extractChannelIds: (...args: unknown[]) => Reflect.apply(mockExtractChannelIds, null, args),
 }));
 
 // AI reply generator mock
@@ -27,7 +27,7 @@ const mockGenerateAdminConversationalReply = jest.fn().mockResolvedValue({
   durationMs: 200,
 });
 jest.mock('../../../shared/ai-reply-generator', () => ({
-  generateAdminConversationalReply: (...args: unknown[]) => mockGenerateAdminConversationalReply(...args),
+  generateAdminConversationalReply: (...args: unknown[]) => Reflect.apply(mockGenerateAdminConversationalReply, null, args),
 }));
 
 import { AdminFallbackModule } from '../admin-fallback-module';

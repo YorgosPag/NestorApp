@@ -110,7 +110,7 @@ function createIntakeMessage(id = 'msg_001'): IntakeMessage {
       attachments: [],
       timestampIso: new Date().toISOString(),
     },
-    metadata: { signatureVerified: true },
+    metadata: { providerMessageId: `pm_${id}`, signatureVerified: true },
     schemaVersion: 1,
   };
 }
@@ -203,7 +203,7 @@ describe('Pipeline Queue Service', () => {
       const finalContext = {
         requestId: 'req_001',
         companyId: 'comp_test',
-        state: PipelineState.ACKNOWLEDGED,
+        state: PipelineState.ACKED,
         intake: createIntakeMessage(),
         startedAt: '2026-03-25T10:00:00Z',
         stepDurations: {},
@@ -215,7 +215,7 @@ describe('Pipeline Queue Service', () => {
       expect(mockUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 'completed',
-          pipelineState: PipelineState.ACKNOWLEDGED,
+          pipelineState: PipelineState.ACKED,
         })
       );
     });
@@ -240,7 +240,7 @@ describe('Pipeline Queue Service', () => {
       const ctx = {
         requestId: 'req_001',
         companyId: 'comp_test',
-        state: PipelineState.UNDERSTANDING,
+        state: PipelineState.UNDERSTOOD,
         intake: createIntakeMessage(),
         startedAt: '2026-03-25T10:00:00Z',
         stepDurations: {},
@@ -251,7 +251,7 @@ describe('Pipeline Queue Service', () => {
 
       expect(mockUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
-          pipelineState: PipelineState.UNDERSTANDING,
+          pipelineState: PipelineState.UNDERSTOOD,
           context: ctx,
         })
       );

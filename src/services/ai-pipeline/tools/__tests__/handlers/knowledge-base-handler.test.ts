@@ -155,8 +155,11 @@ describe('KnowledgeBaseHandler', () => {
     const ctx = createCustomerContext({
       contactMeta: {
         contactId: 'cont_001',
+        displayName: 'Test User',
+        firstName: 'Test',
+        primaryPersona: 'tenant',
         linkedUnitIds: ['unit_001'],
-        projectRoles: [{ projectId: 'proj_001', role: 'tenant' }],
+        projectRoles: [{ projectId: 'proj_001', role: 'tenant', entityType: 'unit', entityId: 'unit_001' }],
       },
     });
 
@@ -194,6 +197,9 @@ describe('KnowledgeBaseHandler', () => {
     const ctx = createCustomerContext({
       contactMeta: {
         contactId: 'cont_001',
+        displayName: 'Test User',
+        firstName: 'Test',
+        primaryPersona: 'tenant',
         linkedUnitIds: ['unit_001'],
         projectRoles: [],
       },

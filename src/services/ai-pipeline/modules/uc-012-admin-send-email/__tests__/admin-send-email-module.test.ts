@@ -17,21 +17,21 @@ const mockFindContactByName = jest.fn().mockResolvedValue([
   { contactId: 'ct_001', name: 'Kostas Nikolaou', email: 'kostas@test.com', phone: '6900000002', company: null, type: 'individual' },
 ]);
 jest.mock('../../../shared/contact-lookup', () => ({
-  findContactByName: (...args: unknown[]) => mockFindContactByName(...args),
+  findContactByName: (...args: unknown[]) => Reflect.apply(mockFindContactByName, null, args),
 }));
 
 // Channel reply mock
 const mockSendChannelReply = jest.fn().mockResolvedValue({ success: true, messageId: 'msg_confirm_012', channel: 'telegram' });
 const mockExtractChannelIds = jest.fn(() => ({ telegramChatId: '12345' }));
 jest.mock('../../../shared/channel-reply-dispatcher', () => ({
-  sendChannelReply: (...args: unknown[]) => mockSendChannelReply(...args),
-  extractChannelIds: (...args: unknown[]) => mockExtractChannelIds(...args),
+  sendChannelReply: (...args: unknown[]) => Reflect.apply(mockSendChannelReply, null, args),
+  extractChannelIds: (...args: unknown[]) => Reflect.apply(mockExtractChannelIds, null, args),
 }));
 
 // Mailgun sender mock
 const mockSendReplyViaMailgun = jest.fn().mockResolvedValue({ success: true, messageId: 'mailgun_msg_001' });
 jest.mock('../../../shared/mailgun-sender', () => ({
-  sendReplyViaMailgun: (...args: unknown[]) => mockSendReplyViaMailgun(...args),
+  sendReplyViaMailgun: (...args: unknown[]) => Reflect.apply(mockSendReplyViaMailgun, null, args),
 }));
 
 import { AdminSendEmailModule } from '../admin-send-email-module';

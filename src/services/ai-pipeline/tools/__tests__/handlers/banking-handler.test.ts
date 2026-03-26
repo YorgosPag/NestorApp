@@ -34,8 +34,8 @@ const mockDeleteAccount = jest.fn();
 
 jest.mock('@/services/banking/bank-accounts-server.service', () => ({
   BankAccountsServerService: {
-    addAccount: (...args: unknown[]) => mockAddAccount(...args),
-    deleteAccount: (...args: unknown[]) => mockDeleteAccount(...args),
+    addAccount: (...args: unknown[]) => Reflect.apply(mockAddAccount, null, args),
+    deleteAccount: (...args: unknown[]) => Reflect.apply(mockDeleteAccount, null, args),
   },
 }));
 

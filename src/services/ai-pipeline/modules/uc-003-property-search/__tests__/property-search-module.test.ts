@@ -80,7 +80,7 @@ const mockExtractSearchCriteria = jest.fn().mockReturnValue({
   floor: null,
 });
 jest.mock('@/services/property-search.service', () => ({
-  extractSearchCriteria: (...args: unknown[]) => mockExtractSearchCriteria(...args),
+  extractSearchCriteria: (...args: unknown[]) => Reflect.apply(mockExtractSearchCriteria, null, args),
 }));
 
 const mockFindContactByEmail = jest.fn().mockResolvedValue({
@@ -89,7 +89,7 @@ const mockFindContactByEmail = jest.fn().mockResolvedValue({
   email: 'maria@test.com',
 });
 jest.mock('../../../shared/contact-lookup', () => ({
-  findContactByEmail: (...args: unknown[]) => mockFindContactByEmail(...args),
+  findContactByEmail: (...args: unknown[]) => Reflect.apply(mockFindContactByEmail, null, args),
 }));
 
 const mockSendChannelReply = jest.fn().mockResolvedValue({
@@ -104,8 +104,8 @@ const mockExtractChannelIds = jest.fn(() => ({
   instagramIgsid: null,
 }));
 jest.mock('../../../shared/channel-reply-dispatcher', () => ({
-  sendChannelReply: (...args: unknown[]) => mockSendChannelReply(...args),
-  extractChannelIds: (...args: unknown[]) => mockExtractChannelIds(...args),
+  sendChannelReply: (...args: unknown[]) => Reflect.apply(mockSendChannelReply, null, args),
+  extractChannelIds: (...args: unknown[]) => Reflect.apply(mockExtractChannelIds, null, args),
 }));
 
 // ── Import module under test ────────────────────────────────────────────────

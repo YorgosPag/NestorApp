@@ -39,24 +39,24 @@ describe('createDuplicateContactKeyboard', () => {
   it('returns markup with 3 rows of 1 button each', () => {
     const result = createDuplicateContactKeyboard('pnd_abc123');
     expect(result.inline_keyboard).toHaveLength(3);
-    result.inline_keyboard.forEach((row) => {
+    result.inline_keyboard!.forEach((row) => {
       expect(row).toHaveLength(1);
     });
   });
 
   it('sets update callback_data as dc:u:{id}', () => {
     const result = createDuplicateContactKeyboard('pnd_abc123');
-    expect(result.inline_keyboard[0][0].callback_data).toBe('dc:u:pnd_abc123');
+    expect(result.inline_keyboard![0][0].callback_data).toBe('dc:u:pnd_abc123');
   });
 
   it('sets create_new callback_data as dc:n:{id}', () => {
     const result = createDuplicateContactKeyboard('pnd_abc123');
-    expect(result.inline_keyboard[1][0].callback_data).toBe('dc:n:pnd_abc123');
+    expect(result.inline_keyboard![1][0].callback_data).toBe('dc:n:pnd_abc123');
   });
 
   it('sets cancel callback_data as dc:x:{id}', () => {
     const result = createDuplicateContactKeyboard('pnd_abc123');
-    expect(result.inline_keyboard[2][0].callback_data).toBe('dc:x:pnd_abc123');
+    expect(result.inline_keyboard![2][0].callback_data).toBe('dc:x:pnd_abc123');
   });
 });
 

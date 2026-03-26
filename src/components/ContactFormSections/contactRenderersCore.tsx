@@ -47,7 +47,7 @@ export interface RendererContext {
   userId?: string;
   resolvedCompanyId?: string;
   companyDisplayName?: string;
-  t: (key: string, fallback?: string) => string;
+  t: (key: string, optionsOrFallback?: string | Record<string, unknown>) => string;
   relationshipsMode: 'summary' | 'full';
   onPersonaToggle?: (personaType: PersonaType) => void;
   canonicalUploadContext?: CanonicalUploadContext;

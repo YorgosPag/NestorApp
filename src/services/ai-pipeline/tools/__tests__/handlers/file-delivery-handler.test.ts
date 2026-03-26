@@ -130,8 +130,8 @@ describe('FileDeliveryHandler', () => {
       );
 
       expect(result.success).toBe(true);
-      expect(result.data?.sentCount).toBe(2);
-      expect(result.data?.totalFiles).toBe(2);
+      expect((result.data as Record<string, unknown>)?.sentCount).toBe(2);
+      expect((result.data as Record<string, unknown>)?.totalFiles).toBe(2);
     });
 
     it('should fail when unit has no photos', async () => {
@@ -170,7 +170,7 @@ describe('FileDeliveryHandler', () => {
       );
 
       expect(result.success).toBe(true);
-      expect(result.data?.sentCount).toBe(1);
+      expect((result.data as Record<string, unknown>)?.sentCount).toBe(1);
     });
 
     it('should deliver file without ownership check', async () => {
@@ -195,7 +195,7 @@ describe('FileDeliveryHandler', () => {
       );
 
       expect(result.success).toBe(true);
-      expect(result.data?.sentCount).toBe(1);
+      expect((result.data as Record<string, unknown>)?.sentCount).toBe(1);
     });
 
     it('should deliver floorplan without project role check', async () => {
@@ -216,7 +216,7 @@ describe('FileDeliveryHandler', () => {
       );
 
       expect(result.success).toBe(true);
-      expect(result.data?.sentCount).toBe(1);
+      expect((result.data as Record<string, unknown>)?.sentCount).toBe(1);
     });
   });
 });

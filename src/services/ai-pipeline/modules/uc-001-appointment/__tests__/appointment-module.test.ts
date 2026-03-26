@@ -76,7 +76,7 @@ const mockFindContactByEmail = jest.fn().mockResolvedValue({
   email: 'test@example.com',
 });
 jest.mock('../../../shared/contact-lookup', () => ({
-  findContactByEmail: (...args: unknown[]) => mockFindContactByEmail(...args),
+  findContactByEmail: (...args: unknown[]) => Reflect.apply(mockFindContactByEmail, null, args),
 }));
 
 const mockSendChannelReply = jest.fn().mockResolvedValue({ success: true, channel: 'email', messageId: 'msg_reply_001' });
@@ -87,8 +87,8 @@ const mockExtractChannelIds = jest.fn(() => ({
   instagramIgsid: null,
 }));
 jest.mock('../../../shared/channel-reply-dispatcher', () => ({
-  sendChannelReply: (...args: unknown[]) => mockSendChannelReply(...args),
-  extractChannelIds: (...args: unknown[]) => mockExtractChannelIds(...args),
+  sendChannelReply: (...args: unknown[]) => Reflect.apply(mockSendChannelReply, null, args),
+  extractChannelIds: (...args: unknown[]) => Reflect.apply(mockExtractChannelIds, null, args),
 }));
 
 const mockCheckAvailability = jest.fn().mockResolvedValue({
@@ -98,7 +98,7 @@ const mockCheckAvailability = jest.fn().mockResolvedValue({
   operatorBriefing: null,
 });
 jest.mock('../../../shared/availability-check', () => ({
-  checkAvailability: (...args: unknown[]) => mockCheckAvailability(...args),
+  checkAvailability: (...args: unknown[]) => Reflect.apply(mockCheckAvailability, null, args),
 }));
 
 const mockGenerateAIReply = jest.fn().mockResolvedValue({
@@ -108,7 +108,7 @@ const mockGenerateAIReply = jest.fn().mockResolvedValue({
   durationMs: 500,
 });
 jest.mock('../../../shared/ai-reply-generator', () => ({
-  generateAIReply: (...args: unknown[]) => mockGenerateAIReply(...args),
+  generateAIReply: (...args: unknown[]) => Reflect.apply(mockGenerateAIReply, null, args),
 }));
 
 const mockGetSenderHistory = jest.fn().mockResolvedValue({
@@ -117,7 +117,7 @@ const mockGetSenderHistory = jest.fn().mockResolvedValue({
   totalPreviousEmails: 0,
 });
 jest.mock('../../../shared/sender-history', () => ({
-  getSenderHistory: (...args: unknown[]) => mockGetSenderHistory(...args),
+  getSenderHistory: (...args: unknown[]) => Reflect.apply(mockGetSenderHistory, null, args),
 }));
 
 // ── Import module under test ────────────────────────────────────────────────

@@ -23,7 +23,7 @@ jest.mock('@/config/ai-pipeline-config', () => ({
 
 import { IntentRouter } from '../intent-router';
 import { ModuleRegistry } from '../module-registry';
-import type { UnderstandingResult, IUCModule, PipelineIntentTypeValue } from '@/types/ai-pipeline';
+import type { UnderstandingResult, IUCModule, PipelineIntentTypeValue, SenderTypeValue } from '@/types/ai-pipeline';
 import { PipelineIntentType, ThreatLevel, SenderType, Urgency } from '@/types/ai-pipeline';
 
 // ============================================================================
@@ -50,11 +50,11 @@ function createUnderstanding(overrides?: Partial<UnderstandingResult>): Understa
   return {
     intent: PipelineIntentType.APPOINTMENT_REQUEST,
     confidence: 85,
-    senderType: SenderType.CUSTOMER,
+    senderType: SenderType.KNOWN_CONTACT,
     urgency: Urgency.NORMAL,
-    threatLevel: ThreatLevel.NONE,
+    threatLevel: ThreatLevel.CLEAN,
     detectedIntents: [
-      { intent: PipelineIntentType.APPOINTMENT_REQUEST, confidence: 85 },
+      { intent: PipelineIntentType.APPOINTMENT_REQUEST, confidence: 85, rationale: 'test' },
     ],
     summary: 'Test message',
     ...overrides,
@@ -135,7 +135,7 @@ describe('IntentRouter', () => {
     it('quarantines spam sender type', () => {
       const router = setupRouter(appointmentModule);
       const result = router.route(
-        createUnderstanding({ confidence: 95, senderType: 'spam' as SenderType })
+        createUnderstanding({ confidence: 95, senderType: 'spam' as SenderTypeValue })
       );
 
       expect(result.routed).toBe(false);
@@ -147,7 +147,7 @@ describe('IntentRouter', () => {
     it('quarantines phishing sender type', () => {
       const router = setupRouter(appointmentModule);
       const result = router.route(
-        createUnderstanding({ confidence: 95, senderType: 'phishing' as SenderType })
+        createUnderstanding({ confidence: 95, senderType: 'phishing' as SenderTypeValue })
       );
 
       expect(result.routed).toBe(false);
@@ -196,8 +196,8 @@ describe('IntentRouter', () => {
           intent: PipelineIntentType.APPOINTMENT_REQUEST,
           confidence: 85,
           detectedIntents: [
-            { intent: PipelineIntentType.APPOINTMENT_REQUEST, confidence: 85 },
-            { intent: PipelineIntentType.COMPLAINT, confidence: 70 },
+            { intent: PipelineIntentType.APPOINTMENT_REQUEST, confidence: 85, rationale: 'test' },
+            { intent: PipelineIntentType.COMPLAINT, confidence: 70, rationale: 'test' },
           ],
         })
       );
@@ -214,8 +214,8 @@ describe('IntentRouter', () => {
       const result = router.routeMultiple(
         createUnderstanding({
           detectedIntents: [
-            { intent: PipelineIntentType.APPOINTMENT_REQUEST, confidence: 85 },
-            { intent: PipelineIntentType.COMPLAINT, confidence: 40 }, // below 50
+            { intent: PipelineIntentType.APPOINTMENT_REQUEST, confidence: 85, rationale: 'test' },
+            { intent: PipelineIntentType.COMPLAINT, confidence: 40, rationale: 'test' }, // below 50
           ],
         })
       );
@@ -240,8 +240,8 @@ describe('IntentRouter', () => {
         createUnderstanding({
           confidence: 95,
           detectedIntents: [
-            { intent: PipelineIntentType.APPOINTMENT_REQUEST, confidence: 95 },
-            { intent: PipelineIntentType.COMPLAINT, confidence: 92 },
+            { intent: PipelineIntentType.APPOINTMENT_REQUEST, confidence: 95, rationale: 'test' },
+            { intent: PipelineIntentType.COMPLAINT, confidence: 92, rationale: 'test' },
           ],
         })
       );
@@ -256,8 +256,8 @@ describe('IntentRouter', () => {
         createUnderstanding({
           confidence: 95,
           detectedIntents: [
-            { intent: PipelineIntentType.APPOINTMENT_REQUEST, confidence: 95 },
-            { intent: PipelineIntentType.COMPLAINT, confidence: 75 },
+            { intent: PipelineIntentType.APPOINTMENT_REQUEST, confidence: 95, rationale: 'test' },
+            { intent: PipelineIntentType.COMPLAINT, confidence: 75, rationale: 'test' },
           ],
         })
       );
@@ -275,8 +275,8 @@ describe('IntentRouter', () => {
       const result = router.routeMultiple(
         createUnderstanding({
           detectedIntents: [
-            { intent: PipelineIntentType.APPOINTMENT_REQUEST, confidence: 85 },
-            { intent: PipelineIntentType.COMPLAINT, confidence: 80 },
+            { intent: PipelineIntentType.APPOINTMENT_REQUEST, confidence: 85, rationale: 'test' },
+            { intent: PipelineIntentType.COMPLAINT, confidence: 80, rationale: 'test' },
           ],
         })
       );

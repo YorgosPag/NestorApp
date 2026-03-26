@@ -18,8 +18,10 @@ import '../tools/__tests__/setup';
 
 // ── Mock agentic-specific dependencies ──
 
-const mockGetRecentHistory = jest.fn(async () => []);
-const mockAddMessage = jest.fn(async () => {});
+import type { ChatMessage } from '../agentic-loop';
+
+const mockGetRecentHistory = jest.fn<Promise<ChatMessage[]>, []>(async () => []);
+const mockAddMessage = jest.fn<Promise<void>, [string, ChatMessage]>(async () => {});
 
 jest.mock('../chat-history-service', () => ({
   getChatHistoryService: jest.fn(() => ({
@@ -271,6 +273,10 @@ describe('executeAgenticPath', () => {
         adminCommandMeta: null,
         contactMeta: {
           contactId: 'cont_001',
+          displayName: 'Test User',
+          firstName: 'Test',
+          primaryPersona: null,
+          projectRoles: [],
           linkedUnitIds: [],
         },
       } as Partial<PipelineContext>);
@@ -285,6 +291,10 @@ describe('executeAgenticPath', () => {
       const ctx = createPipelineContext({
         contactMeta: {
           contactId: 'cont_001',
+          displayName: 'Test User',
+          firstName: 'Test',
+          primaryPersona: null,
+          projectRoles: [],
           linkedUnitIds: [],
         },
       } as Partial<PipelineContext>);
@@ -496,13 +506,19 @@ describe('buildChannelSenderId', () => {
   it('uses email for email channel', () => {
     const ctx = createPipelineContext({
       intake: {
+        id: 'intake_email_001',
         channel: 'email',
         normalized: {
           contentText: 'Hello',
           subject: 'Test',
           sender: { email: 'test@test.gr' },
+          recipients: [],
+          attachments: [],
+          timestampIso: new Date().toISOString(),
         },
         rawPayload: {},
+        metadata: { providerMessageId: 'msg_001', signatureVerified: true },
+        schemaVersion: 1,
         receivedAt: new Date().toISOString(),
       },
     } as Partial<PipelineContext>);
@@ -512,13 +528,19 @@ describe('buildChannelSenderId', () => {
   it('uses whatsappPhone for whatsapp channel', () => {
     const ctx = createPipelineContext({
       intake: {
+        id: 'intake_wa_001',
         channel: 'whatsapp',
         normalized: {
           contentText: 'Hello',
           subject: '',
           sender: { whatsappPhone: '+306974050025' },
+          recipients: [],
+          attachments: [],
+          timestampIso: new Date().toISOString(),
         },
         rawPayload: {},
+        metadata: { providerMessageId: 'msg_002', signatureVerified: true },
+        schemaVersion: 1,
         receivedAt: new Date().toISOString(),
       },
     } as Partial<PipelineContext>);
@@ -528,13 +550,19 @@ describe('buildChannelSenderId', () => {
   it('throws when no sender identifier found', () => {
     const ctx = createPipelineContext({
       intake: {
+        id: 'intake_sms_001',
         channel: 'sms',
         normalized: {
           contentText: 'Hello',
           subject: '',
           sender: {},
+          recipients: [],
+          attachments: [],
+          timestampIso: new Date().toISOString(),
         },
         rawPayload: {},
+        metadata: { providerMessageId: 'msg_003', signatureVerified: true },
+        schemaVersion: 1,
         receivedAt: new Date().toISOString(),
       },
     } as Partial<PipelineContext>);

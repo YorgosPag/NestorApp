@@ -1,10 +1,10 @@
 /**
  * =============================================================================
- * 🏢 ENTERPRISE: FilesList Component
+ * FilesList — Enterprise-grade file list display component
  * =============================================================================
  *
- * Enterprise-grade file list display component.
- * Displays FileRecords με professional UI patterns (Salesforce/Microsoft style).
+ * Displays FileRecords with professional UI patterns (Salesforce/Microsoft style).
+ * Inline rename, description editing, delete/unlink confirmations.
  *
  * @module components/shared/files/FilesList
  * @enterprise ADR-031 - Canonical File Storage System
@@ -12,8 +12,8 @@
 
 'use client';
 
-import React, { useCallback, useState } from 'react';
-import { createModuleLogger } from '@/lib/telemetry';
+import React from 'react';
+import { getStatusColor } from '@/lib/design-system';
 import { FileText, Download, Eye, Trash2, Calendar, HardDrive, Link2, Unlink, Pencil, Check, X } from 'lucide-react';
 import type { FileRecord } from '@/types/file-record';
 import type { FileRecordWithLinkStatus } from './hooks/useEntityFiles';
@@ -26,73 +26,37 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS, FORM_BUTTON_EFFECTS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useFileDisplayName } from '@/hooks/useFileDisplayName'; // 🏢 ENTERPRISE: Runtime i18n translation
-import { formatFileSize } from '@/utils/file-validation'; // 🏢 ENTERPRISE: Centralized file size formatting
-import { formatDate } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized date formatting
-import { useNotifications } from '@/providers/NotificationProvider'; // 🏢 ENTERPRISE: Toast notifications
-import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog'; // 🏢 ENTERPRISE: Centralized modal confirmation
-
-// ============================================================================
-// MODULE LOGGER
-// ============================================================================
-
-const logger = createModuleLogger('FilesList');
+import { useFileDisplayName } from '@/hooks/useFileDisplayName';
+import { formatFileSize } from '@/utils/file-validation';
+import { formatDate } from '@/lib/intl-utils';
+import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useFileListActions } from './hooks/useFileListActions';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
 export interface FilesListProps {
-  /** Array of FileRecords to display (may include linked files) */
   files: FileRecordWithLinkStatus[];
-  /** Loading state */
   loading?: boolean;
-  /** Delete handler */
   onDelete?: (fileId: string) => Promise<void>;
-  /** View/Preview handler */
   onView?: (file: FileRecord) => void;
-  /** Download handler */
   onDownload?: (file: FileRecord) => void;
-  /** Rename handler */
   onRename?: (fileId: string, newDisplayName: string) => void;
-  /** Description update handler */
   onDescriptionUpdate?: (fileId: string, description: string) => void;
-  /** Current user ID (για delete authorization) */
   currentUserId?: string;
-  /** 🔗 Link to building handler (shown for project files) */
   onLink?: (file: FileRecord) => void;
-  /** 🔗 Unlink handler (shown for linked files) */
   onUnlink?: (fileId: string) => Promise<void>;
-  /** Show link action button */
   showLinkAction?: boolean;
-  /** Multi-select: set of selected file IDs */
+  entityType?: string;
   selectedIds?: Set<string>;
-  /** Multi-select: toggle selection handler */
   onToggleSelect?: (fileId: string) => void;
 }
-
-// ============================================================================
-// UTILITIES
-// ============================================================================
-
-// formatFileSize() → direct import from @/utils/file-validation (ADR-212)
-
-
 
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
-/**
- * 🏢 ENTERPRISE: Files List Component
- *
- * Professional file list display με:
- * - Semantic HTML (article elements)
- * - Centralized design tokens
- * - i18n support
- * - Accessibility (ARIA labels)
- * - Zero inline styles
- */
 export function FilesList({
   files,
   loading = false,
@@ -105,6 +69,7 @@ export function FilesList({
   onLink,
   onUnlink,
   showLinkAction = false,
+  entityType,
   selectedIds,
   onToggleSelect,
 }: FilesListProps) {
@@ -112,194 +77,18 @@ export function FilesList({
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   const { t } = useTranslation('files');
-  const translateDisplayName = useFileDisplayName(); // 🏢 ENTERPRISE: Runtime i18n translation
-  const { success, error } = useNotifications(); // 🏢 ENTERPRISE: Toast notifications
+  const translateDisplayName = useFileDisplayName();
 
-  // =========================================================================
-  // RENAME STATE
-  // =========================================================================
-  const [editingFileId, setEditingFileId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState('');
-  const [renameLoading, setRenameLoading] = useState(false);
+  // Dynamic entity name for link/unlink tooltips
+  const entityName = t(`list.entityName.${entityType ?? 'building'}`);
+  const linkFileLabel = t('list.linkFile', { entity: entityName });
+  const unlinkFileLabel = t('list.unlinkFile', { entity: entityName });
 
-  // =========================================================================
-  // DESCRIPTION EDIT STATE
-  // =========================================================================
-  const [editingDescFileId, setEditingDescFileId] = useState<string | null>(null);
-  const [editingDesc, setEditingDesc] = useState('');
-
-  // =========================================================================
-  // DELETE CONFIRMATION STATE
-  // =========================================================================
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [fileToDelete, setFileToDelete] = useState<string | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-
-  // =========================================================================
-  // 🔗 UNLINK CONFIRMATION STATE
-  // =========================================================================
-  const [unlinkConfirmOpen, setUnlinkConfirmOpen] = useState(false);
-  const [fileToUnlink, setFileToUnlink] = useState<string | null>(null);
-  const [unlinkLoading, setUnlinkLoading] = useState(false);
-
-  // =========================================================================
-  // HANDLERS
-  // =========================================================================
-
-  // =========================================================================
-  // RENAME HANDLERS
-  // =========================================================================
-
-  const handleRenameStart = useCallback((file: FileRecord) => {
-    setEditingFileId(file.id);
-    setEditingName(file.displayName);
-  }, []);
-
-  const handleRenameCancel = useCallback(() => {
-    setEditingFileId(null);
-    setEditingName('');
-  }, []);
-
-  const handleRenameConfirm = useCallback(async () => {
-    if (!editingFileId || !onRename || !editingName.trim()) return;
-
-    setRenameLoading(true);
-    try {
-      onRename(editingFileId, editingName.trim());
-      success(t('list.renameSuccess'));
-      setEditingFileId(null);
-      setEditingName('');
-    } catch (err) {
-      error(t('list.renameError'));
-      logger.error('Rename failed', { error: err });
-    } finally {
-      setRenameLoading(false);
-    }
-  }, [editingFileId, editingName, onRename, t, success, error]);
-
-  const handleRenameKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleRenameConfirm();
-    } else if (e.key === 'Escape') {
-      handleRenameCancel();
-    }
-  }, [handleRenameConfirm, handleRenameCancel]);
-
-  // =========================================================================
-  // DESCRIPTION HANDLERS
-  // =========================================================================
-
-  const handleDescriptionStart = useCallback((file: FileRecord) => {
-    setEditingDescFileId(file.id);
-    setEditingDesc(file.description || '');
-  }, []);
-
-  const handleDescriptionSave = useCallback(() => {
-    if (!editingDescFileId || !onDescriptionUpdate) return;
-    onDescriptionUpdate(editingDescFileId, editingDesc);
-    setEditingDescFileId(null);
-    setEditingDesc('');
-  }, [editingDescFileId, editingDesc, onDescriptionUpdate]);
-
-  const handleDescriptionKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      setEditingDescFileId(null);
-    }
-  }, []);
-
-  /**
-   * Opens delete confirmation modal (center screen)
-   */
-  const handleDeleteClick = useCallback((fileId: string, event: React.MouseEvent) => {
-    event.stopPropagation();
-    if (!onDelete || !currentUserId) return;
-
-    setFileToDelete(fileId);
-    setDeleteConfirmOpen(true);
-  }, [onDelete, currentUserId]);
-
-  /**
-   * 🏢 ENTERPRISE: Executes delete after user confirms in modal
-   */
-  const handleDeleteConfirm = useCallback(async () => {
-    if (!fileToDelete || !onDelete) return;
-
-    setDeleteLoading(true);
-    try {
-      await onDelete(fileToDelete);
-      success(t('list.deleteSuccess'));
-      setDeleteConfirmOpen(false);
-      setFileToDelete(null);
-    } catch (err) {
-      error(t('list.deleteError'));
-      logger.error('Delete failed', { error: err });
-    } finally {
-      setDeleteLoading(false);
-    }
-  }, [fileToDelete, onDelete, t, success, error]);
-
-  /**
-   * 🔗 Opens unlink confirmation modal
-   */
-  const handleUnlinkClick = useCallback((fileId: string, event: React.MouseEvent) => {
-    event.stopPropagation();
-    if (!onUnlink) return;
-
-    setFileToUnlink(fileId);
-    setUnlinkConfirmOpen(true);
-  }, [onUnlink]);
-
-  /**
-   * 🔗 Executes unlink after user confirms
-   */
-  const handleUnlinkConfirm = useCallback(async () => {
-    if (!fileToUnlink || !onUnlink) return;
-
-    setUnlinkLoading(true);
-    try {
-      await onUnlink(fileToUnlink);
-      success(t('list.unlinkSuccess'));
-      setUnlinkConfirmOpen(false);
-      setFileToUnlink(null);
-    } catch (err) {
-      error(t('list.unlinkError'));
-      logger.error('Unlink failed', { error: err });
-    } finally {
-      setUnlinkLoading(false);
-    }
-  }, [fileToUnlink, onUnlink, t, success, error]);
-
-  /**
-   * 🔗 Link button handler
-   */
-  const handleLinkClick = useCallback((file: FileRecord, event: React.MouseEvent) => {
-    event.stopPropagation();
-    onLink?.(file);
-  }, [onLink]);
-
-  const handleView = useCallback((file: FileRecord, event: React.MouseEvent) => {
-    event.stopPropagation();
-    if (onView) {
-      onView(file);
-    }
-  }, [onView]);
-
-  const handleDownload = useCallback((file: FileRecord, event: React.MouseEvent) => {
-    event.stopPropagation();
-    if (onDownload) {
-      onDownload(file);
-    } else if (file.downloadUrl) {
-      // Fallback: direct download with OWASP security
-      // 🔒 OWASP: Use noopener,noreferrer to prevent reverse tabnabbing
-      const newWindow = window.open(file.downloadUrl, '_blank', 'noopener,noreferrer');
-      if (newWindow) newWindow.opener = null; // Extra security for older browsers
-    }
-  }, [onDownload]);
-
-  // =========================================================================
-  // RENDER
-  // =========================================================================
+  // All interactive state + handlers from extracted hook
+  const actions = useFileListActions({
+    onDelete, onView, onDownload, onRename, onDescriptionUpdate,
+    onLink, onUnlink, currentUserId,
+  });
 
   // Loading state
   if (loading) {
@@ -345,314 +134,264 @@ export function FilesList({
         {t('list.filesList')}
       </h3>
 
-      {files.map((file) => {
-        return (
-          <article
-            key={file.id}
-            className={`flex items-center justify-between p-2 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} cursor-pointer`}
-            aria-label={`${t('list.file')}: ${translateDisplayName(file)}`}
-            onClick={() => onView?.(file)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onView?.(file); } }}
-            draggable
-            onDragStart={(e) => {
-              const ids = selectedIds?.has(file.id)
-                ? Array.from(selectedIds)
-                : [file.id];
-              e.dataTransfer.setData('application/x-file-ids', JSON.stringify(ids));
-              e.dataTransfer.effectAllowed = 'move';
-            }}
-          >
-            {/* Checkbox for multi-select */}
-            {onToggleSelect && (
-              <label className="flex-shrink-0 flex items-center justify-center w-6 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectedIds?.has(file.id) ?? false}
-                  onChange={() => onToggleSelect(file.id)}
-                  className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
-                  aria-label={`Select ${translateDisplayName(file)}`}
-                />
-              </label>
-            )}
-
-            {/* File info */}
-            <div className="flex items-center space-x-3 flex-1 min-w-0">
-              {/* Thumbnail preview (image/PDF) or semantic file icon */}
-              <FileThumbnail
-                ext={file.ext}
-                contentType={file.contentType}
-                thumbnailUrl={file.thumbnailUrl}
-                downloadUrl={file.downloadUrl}
-                displayName={translateDisplayName(file)}
-                size="sm"
-                borderRadius={quick.card}
+      {files.map((file) => (
+        <article
+          key={file.id}
+          className={`flex items-center justify-between p-2 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} cursor-pointer`}
+          aria-label={`${t('list.file')}: ${translateDisplayName(file)}`}
+          onClick={() => onView?.(file)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onView?.(file); } }}
+          draggable
+          onDragStart={(e) => {
+            const ids = selectedIds?.has(file.id) ? Array.from(selectedIds) : [file.id];
+            e.dataTransfer.setData('application/x-file-ids', JSON.stringify(ids));
+            e.dataTransfer.effectAllowed = 'move';
+          }}
+        >
+          {/* Checkbox for multi-select */}
+          {onToggleSelect && (
+            <label className="flex-shrink-0 flex items-center justify-center w-6 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedIds?.has(file.id) ?? false}
+                onChange={() => onToggleSelect(file.id)}
+                className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
+                aria-label={`Select ${translateDisplayName(file)}`}
               />
+            </label>
+          )}
 
-              {/* Details */}
-              <div className="flex-1 min-w-0">
-                {/* Display name — inline editable */}
-                {editingFileId === file.id ? (
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="text"
-                      value={editingName}
-                      onChange={(e) => setEditingName(e.target.value)}
-                      onKeyDown={handleRenameKeyDown}
-                      className="flex-1 text-sm font-medium border rounded px-1.5 py-0.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                      disabled={renameLoading}
-                      autoFocus
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleRenameConfirm}
-                      disabled={renameLoading || !editingName.trim()}
-                      className="h-6 w-6 text-green-600"
-                      aria-label={t('list.confirmRename')}
-                    >
-                      <Check className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleRenameCancel}
-                      disabled={renameLoading}
-                      className="h-6 w-6 text-red-500"
-                      aria-label={t('common.cancel')}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                ) : (
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {translateDisplayName(file)}
-                  </p>
+          {/* File info */}
+          <div className="flex items-center space-x-3 flex-1 min-w-0">
+            <FileThumbnail
+              ext={file.ext}
+              contentType={file.contentType}
+              thumbnailUrl={file.thumbnailUrl}
+              downloadUrl={file.downloadUrl}
+              displayName={translateDisplayName(file)}
+              size="sm"
+              borderRadius={quick.card}
+            />
+
+            <div className="flex-1 min-w-0">
+              {/* Display name — inline editable */}
+              {actions.editingFileId === file.id ? (
+                <div className="flex items-center gap-1">
+                  <input
+                    type="text"
+                    value={actions.editingName}
+                    onChange={(e) => actions.setEditingName(e.target.value)}
+                    onKeyDown={actions.handleRenameKeyDown}
+                    className="flex-1 text-sm font-medium border rounded px-1.5 py-0.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                    disabled={actions.renameLoading}
+                    autoFocus
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={actions.handleRenameConfirm}
+                    disabled={actions.renameLoading || !actions.editingName.trim()}
+                    className={`h-6 w-6 ${getStatusColor('active', 'text')}`}
+                    aria-label={t('list.confirmRename')}
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={actions.handleRenameCancel}
+                    disabled={actions.renameLoading}
+                    className={`h-6 w-6 ${getStatusColor('error', 'text')}`}
+                    aria-label={t('common.cancel')}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm font-medium text-foreground truncate">
+                  {translateDisplayName(file)}
+                </p>
+              )}
+
+              {/* Metadata */}
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                <span className="flex items-center gap-1">
+                  <HardDrive className={iconSizes.xs} aria-hidden="true" />
+                  {formatFileSize(file.sizeBytes ?? 0)}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Calendar className={iconSizes.xs} aria-hidden="true" />
+                  {formatDate(file.createdAt)}
+                </span>
+                <span className="uppercase">.{file.ext}</span>
+
+                {/* Classification badge */}
+                {file.classification && file.classification !== 'internal' && (
+                  <span className={cn(
+                    'px-1.5 py-0.5 rounded text-[10px] font-medium leading-none',
+                    file.classification === 'confidential' && 'bg-destructive/15 text-destructive',
+                    file.classification === 'public' && `${getStatusColor('available', 'bg')}/15 ${getStatusColor('available', 'text')}`,
+                  )}>
+                    {t(`batch.classification.${file.classification}`)}
+                  </span>
                 )}
 
-                {/* Metadata */}
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                  {/* File size */}
-                  <span className="flex items-center gap-1">
-                    <HardDrive className={iconSizes.xs} aria-hidden="true" />
-                    {formatFileSize(file.sizeBytes ?? 0)}
+                {/* AI document type badge */}
+                {file.ingestion?.analysis?.documentType && (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium leading-none bg-violet-500/15 text-violet-700 dark:text-violet-400">
+                    {t(`documentType.${file.ingestion.analysis.documentType}`, file.ingestion.analysis.documentType)}
                   </span>
+                )}
 
-                  {/* Upload date */}
-                  <span className="flex items-center gap-1">
-                    <Calendar className={iconSizes.xs} aria-hidden="true" />
-                    {formatDate(file.createdAt)}
-                  </span>
-
-                  {/* Extension */}
-                  <span className="uppercase">.{file.ext}</span>
-
-                  {/* Classification badge */}
-                  {file.classification && file.classification !== 'internal' && (
-                    <span className={cn(
-                      'px-1.5 py-0.5 rounded text-[10px] font-medium leading-none',
-                      file.classification === 'confidential' && 'bg-destructive/15 text-destructive',
-                      file.classification === 'public' && 'bg-green-500/15 text-green-700 dark:text-green-400',
-                    )}>
-                      {t(`batch.classification.${file.classification}`)}
-                    </span>
-                  )}
-
-                  {/* AI document type badge (ADR-191 Phase 2.2) */}
-                  {file.ingestion?.analysis?.documentType && (
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-medium leading-none bg-violet-500/15 text-violet-700 dark:text-violet-400">
-                      {t(`documentType.${file.ingestion.analysis.documentType}`, file.ingestion.analysis.documentType)}
-                    </span>
-                  )}
-
-                  {/* 🔗 Linked file indicator */}
-                  {file.isLinkedFile && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="flex items-center gap-1 text-blue-500">
-                          <Link2 className={iconSizes.xs} aria-hidden="true" />
-                          {t('list.linkedFromProject')}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>{t('list.linkedFromProject')}</TooltipContent>
-                    </Tooltip>
-                  )}
-                </div>
-
-                {/* Description — inline editable */}
-                {editingDescFileId === file.id ? (
-                  <div className="flex items-center gap-1 mt-1">
-                    <input
-                      type="text"
-                      value={editingDesc}
-                      onChange={(e) => setEditingDesc(e.target.value)}
-                      onKeyDown={handleDescriptionKeyDown}
-                      onBlur={handleDescriptionSave}
-                      placeholder={t('list.descriptionPlaceholder')}
-                      className="flex-1 text-xs border rounded px-1.5 py-0.5 bg-background text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                      autoFocus
-                    />
-                  </div>
-                ) : file.description ? (
+                {/* Linked file indicator */}
+                {file.isLinkedFile && (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <p
-                        className="text-xs text-muted-foreground mt-0.5 truncate cursor-pointer hover:text-foreground transition-colors"
-                        onClick={(e) => { e.stopPropagation(); if (onDescriptionUpdate) handleDescriptionStart(file); }}
-                      >
-                        {file.description}
-                      </p>
+                      <span className={`flex items-center gap-1 ${getStatusColor('pending', 'text')}`}>
+                        <Link2 className={iconSizes.xs} aria-hidden="true" />
+                        {t('list.linkedFromProject')}
+                      </span>
                     </TooltipTrigger>
-                    <TooltipContent>{file.description}</TooltipContent>
+                    <TooltipContent>{t('list.linkedFromProject')}</TooltipContent>
                   </Tooltip>
-                ) : onDescriptionUpdate ? (
-                  <button
-                    type="button"
-                    className="text-xs text-muted-foreground/50 mt-0.5 hover:text-muted-foreground transition-colors"
-                    onClick={(e) => { e.stopPropagation(); handleDescriptionStart(file); }}
-                  >
-                    {t('list.addDescription')}
-                  </button>
-                ) : null}
+                )}
               </div>
+
+              {/* Description — inline editable */}
+              {actions.editingDescFileId === file.id ? (
+                <div className="flex items-center gap-1 mt-1">
+                  <input
+                    type="text"
+                    value={actions.editingDesc}
+                    onChange={(e) => actions.setEditingDesc(e.target.value)}
+                    onKeyDown={actions.handleDescriptionKeyDown}
+                    onBlur={actions.handleDescriptionSave}
+                    placeholder={t('list.descriptionPlaceholder')}
+                    className="flex-1 text-xs border rounded px-1.5 py-0.5 bg-background text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    autoFocus
+                  />
+                </div>
+              ) : file.description ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <p
+                      className="text-xs text-muted-foreground mt-0.5 truncate cursor-pointer hover:text-foreground transition-colors"
+                      onClick={(e) => { e.stopPropagation(); if (onDescriptionUpdate) actions.handleDescriptionStart(file); }}
+                    >
+                      {file.description}
+                    </p>
+                  </TooltipTrigger>
+                  <TooltipContent>{file.description}</TooltipContent>
+                </Tooltip>
+              ) : onDescriptionUpdate ? (
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground/50 mt-0.5 hover:text-muted-foreground transition-colors"
+                  onClick={(e) => { e.stopPropagation(); actions.handleDescriptionStart(file); }}
+                >
+                  {t('list.addDescription')}
+                </button>
+              ) : null}
             </div>
+          </div>
 
-            {/* Actions */}
-            <nav className="flex items-center space-x-1" role="toolbar" aria-label={t('list.fileActions')}>
-              {/* View */}
-              {onView && file.downloadUrl && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => handleView(file, e)}
-                      aria-label={t('list.viewFile')}
-                    >
-                      <Eye className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
-                      {t('list.view')}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('list.viewFile')}</TooltipContent>
-                </Tooltip>
-              )}
+          {/* Actions */}
+          <nav className="flex items-center space-x-1" role="toolbar" aria-label={t('list.fileActions')}>
+            {onView && file.downloadUrl && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" onClick={(e) => actions.handleView(file, e)} aria-label={t('list.viewFile')}>
+                    <Eye className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
+                    {t('list.view')}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t('list.viewFile')}</TooltipContent>
+              </Tooltip>
+            )}
 
-              {/* Download */}
-              {file.downloadUrl && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => handleDownload(file, e)}
-                      aria-label={t('list.downloadFile')}
-                    >
-                      <Download className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
-                      {t('list.download')}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('list.downloadFile')}</TooltipContent>
-                </Tooltip>
-              )}
+            {file.downloadUrl && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" onClick={(e) => actions.handleDownload(file, e)} aria-label={t('list.downloadFile')}>
+                    <Download className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
+                    {t('list.download')}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t('list.downloadFile')}</TooltipContent>
+              </Tooltip>
+            )}
 
-              {/* Rename (only for owned files, not linked) */}
-              {onRename && !file.isLinkedFile && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => { e.stopPropagation(); handleRenameStart(file); }}
-                      aria-label={t('list.renameFile')}
-                    >
-                      <Pencil className={iconSizes.sm} aria-hidden="true" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('list.renameFile')}</TooltipContent>
-                </Tooltip>
-              )}
+            {onRename && !file.isLinkedFile && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); actions.handleRenameStart(file); }} aria-label={t('list.renameFile')}>
+                    <Pencil className={iconSizes.sm} aria-hidden="true" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t('list.renameFile')}</TooltipContent>
+              </Tooltip>
+            )}
 
-              {/* Link to building (only for owned, non-linked files) */}
-              {showLinkAction && onLink && !file.isLinkedFile && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => handleLinkClick(file, e)}
-                      className="text-blue-500"
-                      aria-label={t('list.linkFile')}
-                    >
-                      <Link2 className={iconSizes.sm} aria-hidden="true" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('list.linkFile')}</TooltipContent>
-                </Tooltip>
-              )}
+            {showLinkAction && onLink && !file.isLinkedFile && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={(e) => actions.handleLinkClick(file, e)} className={getStatusColor('pending', 'text')} aria-label={linkFileLabel}>
+                    <Link2 className={iconSizes.sm} aria-hidden="true" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{linkFileLabel}</TooltipContent>
+              </Tooltip>
+            )}
 
-              {/* 🔗 Unlink (only for linked files) */}
-              {file.isLinkedFile && onUnlink && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => handleUnlinkClick(file.id, e)}
-                      className="text-orange-500"
-                      aria-label={t('list.unlinkFile')}
-                    >
-                      <Unlink className={iconSizes.sm} aria-hidden="true" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('list.unlinkFile')}</TooltipContent>
-                </Tooltip>
-              )}
+            {file.isLinkedFile && onUnlink && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={(e) => actions.handleUnlinkClick(file.id, e)} className="text-orange-500" aria-label={unlinkFileLabel}>
+                    <Unlink className={iconSizes.sm} aria-hidden="true" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{unlinkFileLabel}</TooltipContent>
+              </Tooltip>
+            )}
 
-              {/* Delete (only for owned files, not linked) */}
-              {onDelete && currentUserId && !file.isLinkedFile && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => handleDeleteClick(file.id, e)}
-                      className={`text-red-500 ${FORM_BUTTON_EFFECTS.DESTRUCTIVE}`}
-                      aria-label={t('list.deleteFile')}
-                    >
-                      <Trash2 className={iconSizes.sm} aria-hidden="true" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('list.deleteFile')}</TooltipContent>
-                </Tooltip>
-              )}
-            </nav>
-          </article>
-        );
-      })}
+            {onDelete && currentUserId && !file.isLinkedFile && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={(e) => actions.handleDeleteClick(file.id, e)} className={`text-red-500 ${FORM_BUTTON_EFFECTS.DESTRUCTIVE}`} aria-label={t('list.deleteFile')}>
+                    <Trash2 className={iconSizes.sm} aria-hidden="true" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t('list.deleteFile')}</TooltipContent>
+              </Tooltip>
+            )}
+          </nav>
+        </article>
+      ))}
 
-      {/* 🏢 ENTERPRISE: Centralized Delete Confirmation Modal (center screen) */}
+      {/* Delete Confirmation Modal */}
       <DeleteConfirmDialog
-        open={deleteConfirmOpen}
-        onOpenChange={setDeleteConfirmOpen}
+        open={actions.deleteConfirmOpen}
+        onOpenChange={actions.setDeleteConfirmOpen}
         title={t('list.deleteFile')}
         description={t('list.deleteConfirm')}
-        onConfirm={handleDeleteConfirm}
+        onConfirm={actions.handleDeleteConfirm}
         confirmText={t('list.delete')}
         cancelText={t('list.cancel')}
-        loading={deleteLoading}
+        loading={actions.deleteLoading}
       />
 
-      {/* 🔗 Unlink Confirmation Modal */}
+      {/* Unlink Confirmation Modal */}
       <DeleteConfirmDialog
-        open={unlinkConfirmOpen}
-        onOpenChange={setUnlinkConfirmOpen}
-        title={t('list.unlinkFile')}
+        open={actions.unlinkConfirmOpen}
+        onOpenChange={actions.setUnlinkConfirmOpen}
+        title={unlinkFileLabel}
         description={t('list.unlinkConfirm')}
-        onConfirm={handleUnlinkConfirm}
+        onConfirm={actions.handleUnlinkConfirm}
         confirmText={t('list.unlink')}
         cancelText={t('list.cancel')}
-        loading={unlinkLoading}
+        loading={actions.unlinkLoading}
       />
     </section>
   );

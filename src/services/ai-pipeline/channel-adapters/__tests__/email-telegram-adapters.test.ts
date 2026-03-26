@@ -28,7 +28,7 @@ const mockEnqueue = jest.fn<
   [unknown]
 >();
 jest.mock('../../pipeline-queue-service', () => ({
-  enqueuePipelineItem: (...args: unknown[]) => mockEnqueue(...args),
+  enqueuePipelineItem: (item: unknown) => mockEnqueue(item),
 }));
 
 const mockIsSuperAdminEmail = jest.fn<
@@ -68,7 +68,7 @@ function createEmailParams(overrides?: Partial<FeedToPipelineParams>): FeedToPip
       providerMessageId: 'mailgun_abc123',
       rawMetadata: { 'Message-Id': '<abc@mail>' },
       createdAt: new Date('2026-03-25T10:00:00Z'),
-    } as FeedToPipelineParams['queueItem'],
+    } as unknown as FeedToPipelineParams['queueItem'],
     communicationId: 'msg_email_00001',
     companyId: 'comp_pagonis',
     ...overrides,
@@ -342,7 +342,10 @@ describe('TelegramChannelAdapter', () => {
       const contactMeta = {
         contactId: 'cnt_001',
         displayName: 'Nikos',
-        projectRoles: [{ projectId: 'prj_001', role: 'owner' as const }],
+        firstName: 'Nikos',
+        primaryPersona: null,
+        linkedUnitIds: [],
+        projectRoles: [{ projectId: 'prj_001', role: 'owner', entityType: 'project', entityId: 'prj_001' }],
       };
 
       await TelegramChannelAdapter.feedToPipeline(
@@ -425,7 +428,7 @@ describe('TelegramChannelAdapter', () => {
               filename: 'photo.jpg',
               mimeType: 'image/jpeg',
               size: 204800,
-              type: 'photo',
+              type: 'image',
             },
           ],
         })

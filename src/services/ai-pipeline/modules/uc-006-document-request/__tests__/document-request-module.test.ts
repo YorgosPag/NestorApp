@@ -27,24 +27,24 @@ jest.mock('@/lib/firebaseAdmin', () => ({
 // Shared service mocks
 const mockFindContactByEmail = jest.fn().mockResolvedValue({ contactId: 'ct_001', displayName: 'Giorgos' });
 jest.mock('../../../shared/contact-lookup', () => ({
-  findContactByEmail: (...args: unknown[]) => mockFindContactByEmail(...args),
+  findContactByEmail: (...args: unknown[]) => Reflect.apply(mockFindContactByEmail, null, args),
 }));
 
 const mockSendChannelReply = jest.fn().mockResolvedValue({ success: true, messageId: 'msg_reply_001', channel: 'email' });
 const mockExtractChannelIds = jest.fn(() => ({ telegramChatId: null }));
 jest.mock('../../../shared/channel-reply-dispatcher', () => ({
-  sendChannelReply: (...args: unknown[]) => mockSendChannelReply(...args),
-  extractChannelIds: (...args: unknown[]) => mockExtractChannelIds(...args),
+  sendChannelReply: (...args: unknown[]) => Reflect.apply(mockSendChannelReply, null, args),
+  extractChannelIds: (...args: unknown[]) => Reflect.apply(mockExtractChannelIds, null, args),
 }));
 
 const mockGenerateAIReply = jest.fn().mockResolvedValue({ replyText: 'Test reply\n\nMe ektimisi,', aiGenerated: true, model: 'gpt-4o-mini', durationMs: 500 });
 jest.mock('../../../shared/ai-reply-generator', () => ({
-  generateAIReply: (...args: unknown[]) => mockGenerateAIReply(...args),
+  generateAIReply: (...args: unknown[]) => Reflect.apply(mockGenerateAIReply, null, args),
 }));
 
 const mockGetSenderHistory = jest.fn().mockResolvedValue({ recentEmails: [], isReturningContact: false, totalPreviousEmails: 0 });
 jest.mock('../../../shared/sender-history', () => ({
-  getSenderHistory: (...args: unknown[]) => mockGetSenderHistory(...args),
+  getSenderHistory: (...args: unknown[]) => Reflect.apply(mockGetSenderHistory, null, args),
 }));
 
 jest.mock('@/services/enterprise-id.service', () => ({

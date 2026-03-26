@@ -88,16 +88,17 @@ export class FileDeliveryHandler implements ToolHandler {
     let mediaUrls: Array<{ url: string; mediaType: 'photo' | 'document'; filename: string; contentType: string }> = [];
 
     if (sourceType === 'unit_photo') {
-      mediaUrls = await this.resolveUnitPhotos(db, sourceId, ctx.isAdmin, contact);
-      if ('error' in mediaUrls) return mediaUrls as unknown as ToolResult;
+      const resolved = await this.resolveUnitPhotos(db, sourceId, ctx.isAdmin, contact);
+      if ('error' in resolved) return resolved as ToolResult;
+      mediaUrls = resolved;
     } else if (sourceType === 'file') {
-      const result = await this.resolveFile(db, sourceId, ctx.isAdmin, contact);
-      if ('error' in result) return result as unknown as ToolResult;
-      mediaUrls = result;
+      const resolved = await this.resolveFile(db, sourceId, ctx.isAdmin, contact);
+      if ('error' in resolved) return resolved as ToolResult;
+      mediaUrls = resolved;
     } else if (sourceType === 'floorplan') {
-      const result = await this.resolveFloorplan(db, sourceId, ctx.isAdmin, contact);
-      if ('error' in result) return result as unknown as ToolResult;
-      mediaUrls = result;
+      const resolved = await this.resolveFloorplan(db, sourceId, ctx.isAdmin, contact);
+      if ('error' in resolved) return resolved as ToolResult;
+      mediaUrls = resolved;
     }
 
     return this.sendAndAudit(mediaUrls, sourceType, sourceId, caption, ctx);

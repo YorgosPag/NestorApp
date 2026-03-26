@@ -34,17 +34,17 @@ describe('createFeedbackKeyboard', () => {
   it('returns markup with exactly 1 row and 2 buttons', () => {
     const result = createFeedbackKeyboard('fbk_abc123');
     expect(result.inline_keyboard).toHaveLength(1);
-    expect(result.inline_keyboard[0]).toHaveLength(2);
+    expect(result.inline_keyboard![0]).toHaveLength(2);
   });
 
   it('sets positive callback_data as fb:p:{id}', () => {
     const result = createFeedbackKeyboard('fbk_abc123');
-    expect(result.inline_keyboard[0][0].callback_data).toBe('fb:p:fbk_abc123');
+    expect(result.inline_keyboard![0][0].callback_data).toBe('fb:p:fbk_abc123');
   });
 
   it('sets negative callback_data as fb:n:{id}', () => {
     const result = createFeedbackKeyboard('fbk_abc123');
-    expect(result.inline_keyboard[0][1].callback_data).toBe('fb:n:fbk_abc123');
+    expect(result.inline_keyboard![0][1].callback_data).toBe('fb:n:fbk_abc123');
   });
 });
 
@@ -56,13 +56,13 @@ describe('createNegativeCategoryKeyboard', () => {
   it('returns markup with 2 rows of 2 buttons each', () => {
     const result = createNegativeCategoryKeyboard('fbk_xyz');
     expect(result.inline_keyboard).toHaveLength(2);
-    expect(result.inline_keyboard[0]).toHaveLength(2);
-    expect(result.inline_keyboard[1]).toHaveLength(2);
+    expect(result.inline_keyboard![0]).toHaveLength(2);
+    expect(result.inline_keyboard![1]).toHaveLength(2);
   });
 
   it('encodes all 4 category codes (w, d, u, s)', () => {
     const result = createNegativeCategoryKeyboard('fbk_xyz');
-    const allData = result.inline_keyboard.flat().map(b => b.callback_data);
+    const allData = result.inline_keyboard!.flat().map(b => b.callback_data);
     expect(allData).toEqual([
       'fb:c:fbk_xyz:w',
       'fb:c:fbk_xyz:d',
@@ -185,9 +185,9 @@ describe('createSuggestedActionsKeyboard', () => {
     const result = createSuggestedActionsKeyboard('fbk_1', ['A', 'B', 'C']);
     // One button per row = full width for readability
     expect(result.inline_keyboard).toHaveLength(3);
-    expect(result.inline_keyboard[0]).toHaveLength(1);
-    expect(result.inline_keyboard[1]).toHaveLength(1);
-    expect(result.inline_keyboard[2]).toHaveLength(1);
+    expect(result.inline_keyboard![0]).toHaveLength(1);
+    expect(result.inline_keyboard![1]).toHaveLength(1);
+    expect(result.inline_keyboard![2]).toHaveLength(1);
   });
 
   it('truncates suggestions beyond 3', () => {
@@ -197,12 +197,12 @@ describe('createSuggestedActionsKeyboard', () => {
 
   it('formats callback_data as sa:{index}:{id}', () => {
     const result = createSuggestedActionsKeyboard('fbk_1', ['Alpha']);
-    expect(result.inline_keyboard[0][0].callback_data).toBe('sa:0:fbk_1');
+    expect(result.inline_keyboard![0][0].callback_data).toBe('sa:0:fbk_1');
   });
 
   it('prefixes button text with lightbulb emoji', () => {
     const result = createSuggestedActionsKeyboard('fbk_1', ['Check status']);
-    expect(result.inline_keyboard[0][0].text).toBe('💡 Check status');
+    expect(result.inline_keyboard![0][0].text).toBe('💡 Check status');
   });
 });
 

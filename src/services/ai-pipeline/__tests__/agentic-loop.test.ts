@@ -55,7 +55,7 @@ import { callChatCompletions } from '../agentic-openai-client';
 import { getAgenticToolExecutor } from '../tools/agentic-tool-executor';
 import { isFabricatedContactValue } from '../agentic-guardrails';
 import { extractSuggestions } from '../agentic-reply-utils';
-import type { AgenticContext } from '../tools/agentic-tool-executor';
+import type { AgenticContext, ToolResult } from '../tools/agentic-tool-executor';
 
 // ============================================================================
 // HELPERS
@@ -111,10 +111,9 @@ function makeToolCallResponse(
 
 function createMockExecutor() {
   const executor = {
-    executeTool: jest.fn(async () => ({
-      success: true,
-      data: { result: 'ok' },
-    })),
+    executeTool: jest.fn<Promise<ToolResult>, [string, Record<string, unknown>, AgenticContext]>(
+      async () => ({ success: true, data: { result: 'ok' } }),
+    ),
   };
   (getAgenticToolExecutor as jest.Mock).mockReturnValue(executor);
   return executor;

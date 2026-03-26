@@ -17,25 +17,25 @@ const mockFindContactByEmail = jest.fn().mockResolvedValue(null);
 const mockCreateContactServerSide = jest.fn().mockResolvedValue({ contactId: 'ct_new_001', displayName: '\u039d\u03ad\u03c3\u03c4\u03bf\u03c1\u03b1\u03c2 \u03a0\u03b1\u03b3\u03ce\u03bd\u03b7\u03c2' });
 const mockGetContactMissingFields = jest.fn().mockResolvedValue(['\u03a4\u03b7\u03bb\u03ad\u03c6\u03c9\u03bd\u03bf', '\u0391\u03a6\u0394']);
 jest.mock('../../../shared/contact-lookup', () => ({
-  findContactByEmail: (...args: unknown[]) => mockFindContactByEmail(...args),
-  createContactServerSide: (...args: unknown[]) => mockCreateContactServerSide(...args),
-  getContactMissingFields: (...args: unknown[]) => mockGetContactMissingFields(...args),
+  findContactByEmail: (...args: unknown[]) => Reflect.apply(mockFindContactByEmail, null, args),
+  createContactServerSide: (...args: unknown[]) => Reflect.apply(mockCreateContactServerSide, null, args),
+  getContactMissingFields: (...args: unknown[]) => Reflect.apply(mockGetContactMissingFields, null, args),
 }));
 
 // Channel reply mock
 const mockSendChannelReply = jest.fn().mockResolvedValue({ success: true, messageId: 'msg_reply_001' });
 const mockExtractChannelIds = jest.fn(() => ({ telegramChatId: '12345' }));
 jest.mock('../../../shared/channel-reply-dispatcher', () => ({
-  sendChannelReply: (...args: unknown[]) => mockSendChannelReply(...args),
-  extractChannelIds: (...args: unknown[]) => mockExtractChannelIds(...args),
+  sendChannelReply: (...args: unknown[]) => Reflect.apply(mockSendChannelReply, null, args),
+  extractChannelIds: (...args: unknown[]) => Reflect.apply(mockExtractChannelIds, null, args),
 }));
 
 // Admin session mock
 const mockSetAdminSession = jest.fn().mockResolvedValue(undefined);
 const mockBuildAdminIdentifier = jest.fn(() => 'admin_12345');
 jest.mock('../../../shared/admin-session', () => ({
-  setAdminSession: (...args: unknown[]) => mockSetAdminSession(...args),
-  buildAdminIdentifier: (...args: unknown[]) => mockBuildAdminIdentifier(...args),
+  setAdminSession: (...args: unknown[]) => Reflect.apply(mockSetAdminSession, null, args),
+  buildAdminIdentifier: (...args: unknown[]) => Reflect.apply(mockBuildAdminIdentifier, null, args),
 }));
 
 // Phone validation mock
