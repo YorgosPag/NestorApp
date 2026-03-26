@@ -168,11 +168,14 @@ export class AttachmentHandler implements ToolHandler {
     await promoteFileRecord(db, fileRecordId, contactId, 'documents', attribution, {
       alreadyPromoted: fileRecord.alreadyPromoted,
       purpose: classification.purpose,
+      // AI-suggested label → displayName (critical for 'generic' where original filename is meaningless)
+      suggestedLabel: classification.suggestedLabel,
       classificationAnalysis: {
         classifier: 'contact-document-classifier',
         contactPurpose: classification.purpose,
         confidence: classification.confidence,
         reasoning: classification.reasoning,
+        suggestedLabel: classification.suggestedLabel,
         classifiedAt: new Date().toISOString(),
       },
     });
@@ -255,6 +258,8 @@ async function getContact(contactId: string, companyId: string): Promise<Contact
 interface PromoteOptions {
   /** Contact document purpose (e.g., 'id', 'cv-resume') — sets FileRecord.purpose for UI card matching */
   purpose?: string;
+  /** AI-suggested Greek label (e.g., "Απόδειξη Παροχής Υπηρεσιών") — updates displayName */
+  suggestedLabel?: string;
   /** AI classification analysis to store in ingestion.analysis */
   classificationAnalysis?: Record<string, unknown>;
 }
@@ -295,6 +300,11 @@ async function promoteFileRecord(
 
   if (options?.purpose) {
     updateData.purpose = options.purpose;
+  }
+  // AI-suggested label → update displayName so UI shows descriptive name
+  // instead of raw filename (e.g., "Απόδειξη Παροχής Υπηρεσιών" instead of "ENTERSOFTONE_GO_ΓΡΑΒΑΝΗΣ.pdf")
+  if (options?.suggestedLabel) {
+    updateData.displayName = options.suggestedLabel;
   }
   if (options?.classificationAnalysis) {
     updateData['ingestion.analysis'] = options.classificationAnalysis;

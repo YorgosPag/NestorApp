@@ -29,6 +29,12 @@ export interface ContactClassifyResult {
   confidence: number;
   /** AI reasoning (1 sentence, Greek) */
   reasoning: string;
+  /**
+   * AI-suggested Greek display label for the document.
+   * Critical for 'generic' purpose: becomes the FileRecord.displayName
+   * (e.g., "Απόδειξη Παροχής Υπηρεσιών", "Βεβαίωση Κατοικίας").
+   */
+  suggestedLabel: string;
 }
 
 interface PurposeEntry {
@@ -71,7 +77,12 @@ export function isValidContactPurpose(purpose: string): boolean {
 const SYSTEM_PROMPT =
   'Είσαι enterprise document classifier για ελληνική κατασκευαστική / μεσιτική εταιρεία. ' +
   'Κοίτα το αρχείο και επέλεξε τη σωστή κατηγορία εγγράφου από τη λίστα. ' +
-  'Αν δεν αναγνωρίζεις τον τύπο, χρησιμοποίησε "generic". ' +
+  'ΚΡΙΣΙΜΟ: Διάλεξε κατηγορία ΜΟΝΟ αν ταιριάζει ακριβώς. ' +
+  'Αν το έγγραφο δεν αντιστοιχεί σε καμία συγκεκριμένη κατηγορία ' +
+  '(π.χ. απόδειξη παροχής υπηρεσιών, τιμολόγιο τρίτου, βεβαίωση μη οφειλών, κλπ), ' +
+  'χρησιμοποίησε "generic". ΜΗΝ βάζεις ένα έγγραφο σε λάθος κατηγορία μόνο ' +
+  'επειδή περιέχει ΑΦΜ ή ΦΠΑ — αυτά υπάρχουν σε πολλά έγγραφα. ' +
+  'Πάντα δίνε ένα suggestedLabel: σύντομη ελληνική περιγραφή του τύπου εγγράφου. ' +
   'Απάντησε ΜΟΝΟ με JSON σύμφωνα με το schema.';
 
 function buildPurposeList(): string {
@@ -89,13 +100,13 @@ function buildClassificationSchema(): Record<string, unknown> {
     strict: true,
     schema: {
       type: 'object',
-      required: ['contactPurpose', 'confidence', 'reasoning'],
+      required: ['contactPurpose', 'confidence', 'reasoning', 'suggestedLabel'],
       additionalProperties: false,
       properties: {
         contactPurpose: {
           type: 'string',
           enum: purposes,
-          description: 'The matched purpose from the catalog.',
+          description: 'The matched purpose from the catalog. Use "generic" if no specific category matches.',
         },
         confidence: {
           type: 'number',
@@ -104,6 +115,10 @@ function buildClassificationSchema(): Record<string, unknown> {
         reasoning: {
           type: 'string',
           description: 'Brief reasoning in Greek (1 sentence).',
+        },
+        suggestedLabel: {
+          type: 'string',
+          description: 'Short Greek document type label (e.g., "Απόδειξη Παροχής Υπηρεσιών", "Ταυτότητα", "Βιογραφικό"). Used as display name.',
         },
       },
     },
@@ -121,6 +136,7 @@ const FALLBACK_RESULT: ContactClassifyResult = {
   purpose: 'generic',
   confidence: 0,
   reasoning: 'Αυτόματη ταξινόμηση δεν ήταν δυνατή.',
+  suggestedLabel: 'Άλλο Έγγραφο',
 };
 
 export async function downloadFile(url: string): Promise<Buffer | null> {
@@ -253,18 +269,19 @@ export async function classifyContactDocument(params: {
     const purpose = String(parsed.contactPurpose ?? 'generic');
     const confidence = Number(parsed.confidence ?? 0);
     const reasoning = String(parsed.reasoning ?? '');
+    const suggestedLabel = String(parsed.suggestedLabel ?? 'Άλλο Έγγραφο').trim();
 
     // Validate purpose exists in catalog
     if (!isValidContactPurpose(purpose)) {
-      return { ...FALLBACK_RESULT, reasoning: `Unknown purpose: ${purpose}` };
+      return { ...FALLBACK_RESULT, suggestedLabel, reasoning: `Unknown purpose: ${purpose}` };
     }
 
     // Apply confidence threshold
     if (confidence < CONFIDENCE_THRESHOLD) {
-      return { purpose: 'generic', confidence, reasoning };
+      return { purpose: 'generic', confidence, reasoning, suggestedLabel };
     }
 
-    return { purpose, confidence, reasoning };
+    return { purpose, confidence, reasoning, suggestedLabel };
   } catch {
     return FALLBACK_RESULT;
   }
