@@ -179,14 +179,14 @@ describe('ChatHistoryService', () => {
       expect(updateCall.messages[0].content).toBe('Message 1');
     });
 
-    it('truncates content longer than 2000 chars', async () => {
+    it('truncates content longer than 3000 chars', async () => {
       mockTransactionGet.mockResolvedValue({ exists: false });
 
-      const longContent = 'A'.repeat(3000);
+      const longContent = 'A'.repeat(5000);
       await service.addMessage('telegram_123', createMessage('user', longContent));
 
       const setCall = mockTransactionSet.mock.calls[0][1] as { messages: ChatHistoryMessage[] };
-      expect(setCall.messages[0].content.length).toBeLessThanOrEqual(2003); // 2000 + '...'
+      expect(setCall.messages[0].content.length).toBeLessThanOrEqual(3003); // 3000 + '...'
       expect(setCall.messages[0].content.endsWith('...')).toBe(true);
     });
 
