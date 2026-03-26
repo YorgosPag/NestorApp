@@ -837,6 +837,20 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "processingStartedAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "email_ingestion_queue",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
           "fieldPath": "providerMessageId",
           "order": "ASCENDING"
         },
