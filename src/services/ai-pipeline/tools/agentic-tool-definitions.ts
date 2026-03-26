@@ -41,6 +41,8 @@ export type ContactFieldType = typeof CONTACT_FIELD_TYPES[number];
 
 /** Updatable scalar fields on contact documents (SSoT — complete list from contracts.ts) */
 export const CONTACT_UPDATABLE_FIELDS = [
+  // Core name fields (for corrections — e.g. genitive→nominative)
+  'firstName', 'lastName', 'displayName',
   // Personal
   'birthDate', 'birthCountry', 'gender', 'fatherName', 'motherName', 'amka',
   // Identity document
@@ -524,6 +526,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
       description: [
         'Create a new contact (individual person or company). Admin only.',
         'CRITICAL: When the user asks to create a contact, ALWAYS call this tool directly. Do NOT pre-check with firestore_query first — this tool handles duplicate detection automatically.',
+        'CRITICAL: Ονόματα ΠΑΝΤΑ σε ΟΝΟΜΑΣΤΙΚΗ ΠΤΩΣΗ (nominative case). Αν το έγγραφο λέει "Γραβάνη Αχιλλέα" (γενική), γράψε "Γραβάνης Αχιλλέας". Αν λέει "Παπαδοπούλου" γράψε "Παπαδόπουλος". ΠΟΤΕ μην αντιγράφεις σε γενική/αιτιατική πτώση.',
         'Validates fields, generates enterprise ID (cont_ for individuals, comp_ for companies).',
         'DUPLICATE DETECTION: Automatically checks for duplicates by email (exact), phone (exact), and name (fuzzy).',
         'If duplicates are found, returns duplicateDetected:true with match details instead of creating.',
@@ -541,11 +544,11 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
           },
           firstName: {
             type: 'string',
-            description: 'First name (required for individuals, can be representative name for companies)',
+            description: 'First name in NOMINATIVE case (ονομαστική). E.g. "Αχιλλέας" NOT "Αχιλλέα", "Γεώργιος" NOT "Γεωργίου".',
           },
           lastName: {
             type: 'string',
-            description: 'Last name (required for individuals, can be representative surname for companies)',
+            description: 'Last name in NOMINATIVE case (ονομαστική). E.g. "Γραβάνης" NOT "Γραβάνη", "Παπαδόπουλος" NOT "Παπαδοπούλου".',
           },
           companyName: {
             type: ['string', 'null'],
@@ -577,7 +580,8 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
       name: 'update_contact_field',
       description: [
         'Update a single field on an existing contact. Admin only.',
-        'Use for ALL scalar fields: vatNumber, profession, birthDate, documentIssueDate, documentExpiryDate, documentType, documentNumber, documentIssuer, taxOffice, gender, amka, etc.',
+        'Use for ALL scalar fields: firstName, lastName, displayName, vatNumber, profession, birthDate, documentIssueDate, documentExpiryDate, documentType, documentNumber, documentIssuer, taxOffice, gender, amka, etc.',
+        'CRITICAL: To fix a name, use field "firstName" or "lastName" — NOT "fatherName" (πατρώνυμο). fatherName is for the father\'s name.',
         'For phone/email/social/address/website use append_contact_info instead.',
         'IMPORTANT for taxOffice: ALWAYS call lookup_doy_code first to get the 4-digit code.',
         'IMPORTANT for profession: ALWAYS call search_esco_occupations first. Show matches to user. If no ESCO match, ask user before adding free text.',

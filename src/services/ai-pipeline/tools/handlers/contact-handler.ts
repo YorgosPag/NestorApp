@@ -3,8 +3,8 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getErrorMessage } from '@/lib/error-utils';
 import { toGreekTitleCase } from '@/utils/greek-text';
-import { CONTACT_FIELD_TYPES, CONTACT_TYPES, CONTACT_UPDATABLE_FIELDS } from '../agentic-tool-definitions';
-import type { ContactFieldType, ContactTypeEnum, ContactUpdatableField } from '../agentic-tool-definitions';
+import { CONTACT_FIELD_TYPES, CONTACT_TYPES } from '../agentic-tool-definitions';
+import type { ContactFieldType, ContactTypeEnum } from '../agentic-tool-definitions';
 import type { PhoneInfo, EmailInfo, SocialMediaInfo, AddressInfo, WebsiteInfo } from '@/types/contacts/contracts';
 import { ADDRESS_LABEL_MAP, parseGreekAddress } from './address-parser';
 import {
@@ -337,55 +337,8 @@ export class ContactHandler implements ToolHandler {
     args: Record<string, unknown>,
     ctx: AgenticContext
   ): Promise<ToolResult> {
-    if (!ctx.isAdmin) {
-      return { success: false, error: 'update_contact_field is admin-only.' };
-    }
-
-    const contactId = String(args.contactId ?? '').trim();
-    const field = String(args.field ?? '');
-    const value = String(args.value ?? '');
-
-    if (!contactId) {
-      return { success: false, error: 'contactId is required.' };
-    }
-    if (!CONTACT_UPDATABLE_FIELDS.includes(field as ContactUpdatableField)) {
-      return { success: false, error: `field must be one of: ${CONTACT_UPDATABLE_FIELDS.join(', ')}` };
-    }
-
-    // ESCO-protected fields — MUST go through set_contact_esco (server-side enforcement)
-    const ESCO_PROTECTED = ['profession', 'escoUri', 'escoLabel', 'iscoCode', 'escoSkills'];
-    if (ESCO_PROTECTED.includes(field)) {
-      return {
-        success: false,
-        error: `Το πεδίο "${field}" προστατεύεται — χρησιμοποίησε set_contact_esco αντί update_contact_field.`,
-      };
-    }
-
-    // Verify the contact exists
-    const db = getAdminFirestore();
-    const docSnap = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
-    if (!docSnap.exists) {
-      return { success: false, error: `Η επαφή ${contactId} δεν βρέθηκε.` };
-    }
-
-    const { updateContactField, emitEntitySyncSignal } = await import(
-      '@/services/ai-pipeline/shared/contact-lookup'
-    );
-    await updateContactField(contactId, field, value, buildAttribution(ctx));
-    await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, 'update', { [field]: value });
-    emitEntitySyncSignal('contacts', 'UPDATED', contactId, ctx.companyId);
-
-    logger.info('Contact field updated via tool', {
-      contactId,
-      field,
-      requestId: ctx.requestId,
-    });
-
-    return {
-      success: true,
-      data: { contactId, field, value, updated: true },
-      count: 1,
-    };
+    const { executeUpdateContactField } = await import('./contact-field-update-handler');
+    return executeUpdateContactField(args, ctx);
   }
 
   private async executeSetContactEsco(
