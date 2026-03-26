@@ -206,7 +206,7 @@ export async function executeAgenticPath(
     if (!isFailedResponse) {
       await chatHistoryService.addMessage(channelSenderId, {
         role: 'user',
-        content: userMessage,
+        content: enrichedMessage,
         timestamp: now,
       });
       await chatHistoryService.addMessage(channelSenderId, {

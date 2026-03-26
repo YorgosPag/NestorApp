@@ -35,7 +35,11 @@ enrichWithDocumentPreview() → inject στο user message
   ↓
 executeAgenticLoop() → AI βλέπει ανάλυση + prompt instruction
   ↓
+chatHistoryService.addMessage() → αποθηκεύει enrichedMessage (με ανάλυση)
+  ↓
 AI: "Αναγνώρισα τιμολόγιο ΔΕΗ... Τι θέλεις να κάνω;"
+  ↓
+Follow-up μηνύματα → chat history περιέχει ανάλυση PDF → AI θυμάται context
 ```
 
 ## Files
@@ -83,3 +87,4 @@ interface DocumentPreviewData {
 | Date | Change |
 |------|--------|
 | 2026-03-26 | Initial implementation — 1 new file, 4 modified |
+| 2026-03-26 | **BUGFIX**: Chat history αποθήκευε `userMessage` (κενό) αντί `enrichedMessage` (με ανάλυση PDF). Follow-up μηνύματα έχαναν context εγγράφου. Fix: save enriched + bump MAX_MESSAGE_CONTENT_LENGTH 2000→3000 |

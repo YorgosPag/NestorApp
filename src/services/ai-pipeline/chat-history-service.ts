@@ -60,7 +60,7 @@ interface ChatHistoryDocument {
 
 const COLLECTION_NAME = COLLECTIONS.AI_CHAT_HISTORY;
 const MAX_MESSAGES_PER_USER = 20;
-const MAX_MESSAGE_CONTENT_LENGTH = 2000;
+const MAX_MESSAGE_CONTENT_LENGTH = 3000;
 const HISTORY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 // ============================================================================
