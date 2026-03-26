@@ -6,6 +6,11 @@
 
 import 'server-only';
 
+/** Lightweight accent strip for comparison (NFD + remove combining marks) */
+function norm(text: string): string {
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
 /**
  * FIND-F fix: Detect phone/email values NOT present in the user's original message.
  * Prevents AI from fabricating contact info (hallucinated emails/phones).
@@ -33,4 +38,42 @@ export function isFabricatedContactValue(
   const normalizedMsg = userMessage.replace(/[\s\-().]/g, '');
   const normalizedPhone = value.replace(/^\+30/, '').replace(/[\s\-().]/g, '');
   return !normalizedMsg.includes(normalizedPhone);
+}
+
+/**
+ * Anti-hallucination guardrail for create_contact: verify that firstName/lastName
+ * actually appear somewhere in the conversation context (user messages, document
+ * analysis, or AI responses). Prevents the AI from inventing names like "Παυαρος Μελχισεδεκος".
+ *
+ * Comparison is accent-insensitive and case-insensitive so "ΓΡΑΒΑΝΗΣ" matches "Γραβάνης".
+ *
+ * @param toolArgs - The create_contact arguments (firstName, lastName, companyName)
+ * @param conversationTexts - All message contents from the agentic loop messages array
+ * @returns true if the name appears fabricated (NOT found in context)
+ */
+export function isHallucinatedContactName(
+  toolArgs: Record<string, unknown>,
+  conversationTexts: string[]
+): boolean {
+  const contactType = String(toolArgs.contactType ?? '');
+  const firstName = norm(String(toolArgs.firstName ?? ''));
+  const lastName = norm(String(toolArgs.lastName ?? ''));
+  const companyName = norm(String(toolArgs.companyName ?? ''));
+
+  // Skip check if no meaningful name parts
+  if (!firstName && !lastName && !companyName) return false;
+
+  // Build normalized context from all conversation messages
+  const fullContext = norm(conversationTexts.join(' '));
+
+  // Company contacts: check companyName
+  if (contactType === 'company') {
+    return companyName.length > 2 && !fullContext.includes(companyName);
+  }
+
+  // Individual contacts: BOTH firstName AND lastName must appear in context
+  const firstNameOk = firstName.length <= 2 || fullContext.includes(firstName);
+  const lastNameOk = lastName.length <= 2 || fullContext.includes(lastName);
+
+  return !firstNameOk || !lastNameOk;
 }

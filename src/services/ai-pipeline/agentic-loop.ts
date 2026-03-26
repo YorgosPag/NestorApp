@@ -7,12 +7,11 @@
 
 import 'server-only';
 import { AI_COST_CONFIG } from '@/config/ai-analysis-config';
-import { isFabricatedContactValue } from './agentic-guardrails';
 import { callChatCompletions } from './agentic-openai-client';
 import type { OpenAIUsage, ChatCompletionMessage } from './agentic-openai-client';
-import { getAgenticToolExecutor } from './tools/agentic-tool-executor';
 import type { AgenticContext } from './tools/agentic-tool-executor';
 import type { AgenticToolDefinition } from './tools/agentic-tool-definitions';
+import { executeToolCalls, type ToolCallRecord } from './agentic-tool-runner';
 import { enhanceSystemPrompt } from './prompt-enhancer';
 import { buildAgenticSystemPrompt } from './agentic-system-prompt';
 import { extractSuggestions, cleanAITextReply, enrichWithAttachments } from './agentic-reply-utils';
@@ -44,11 +43,7 @@ export type { OpenAIUsage } from './agentic-openai-client';
 export interface AgenticResult {
   answer: string;
   suggestions: string[];
-  toolCalls: Array<{
-    name: string;
-    args: string;
-    result: string;
-  }>;
+  toolCalls: ToolCallRecord[];
   iterations: number;
   totalDurationMs: number;
   /** ADR-259A: Aggregated token usage across all iterations */
@@ -194,65 +189,12 @@ export async function executeAgenticLoop(
         tool_calls: toolCalls,
       });
 
-      // Execute each tool call and add results
-      for (const tc of toolCalls) {
-        const toolName = tc.function.name;
-        const argsString = tc.function.arguments;
-        let toolArgs: Record<string, unknown> = {};
-
-        toolArgs = safeJsonParse<Record<string, unknown>>(argsString, {});
-
-        logger.info('Executing tool call', {
-          requestId: context.requestId,
-          iteration,
-          tool: toolName,
-          callId: tc.id,
-        });
-
-        // FIND-F fix: Anti-fabrication guardrail — block append_contact_info with values NOT in user message
-        if (toolName === 'append_contact_info' && isFabricatedContactValue(toolArgs, userMessage)) {
-          const fabricatedValue = String(toolArgs.value ?? '');
-          logger.warn('Anti-fabrication: blocked tool with value not in user message', {
-            requestId: context.requestId, tool: toolName, value: fabricatedValue,
-          });
-          const blockedResult = JSON.stringify({
-            _blocked: true,
-            error: `BLOCKED: Η τιμή "${fabricatedValue}" δεν αναφέρθηκε από τον χρήστη στο μήνυμά του. ΡΩΤΑ τον χρήστη να σου δώσει τη σωστή τιμή.`,
-          });
-          allToolCalls.push({ name: toolName, args: argsString, result: blockedResult });
-          messages.push({ role: 'tool', content: blockedResult, tool_call_id: tc.id });
-          continue;
-        }
-
-        const result = await executor.executeTool(toolName, toolArgs, context);
-
-        // When tool FAILS, include error + data so AI sees the instruction
-        // (e.g. ESCO enforcement: "Δείξε τις επιλογές στον χρήστη" + matches)
-        const resultStr = result.success === false
-          ? JSON.stringify({ _blocked: true, error: result.error, ...(result.data ? { data: result.data } : {}) })
-          : JSON.stringify(result.data ?? 'no data');
-        const truncatedResult = resultStr.length > cfg.maxToolResultChars
-          ? resultStr.substring(0, cfg.maxToolResultChars) + '...[truncated]'
-          : resultStr;
-
-        // ADR-259C: Append warning to tool result so AI knows data may be degraded
-        const toolResultContent = result.warning
-          ? `${truncatedResult}\n⚠️ WARNING: ${result.warning}`
-          : truncatedResult;
-
-        allToolCalls.push({
-          name: toolName,
-          args: argsString,
-          result: truncatedResult,
-        });
-
-        // Add tool result message with matching tool_call_id
-        messages.push({
-          role: 'tool',
-          content: toolResultContent,
-          tool_call_id: tc.id,
-        });
-      }
+      // Execute tool calls with guardrails (anti-fabrication + anti-hallucination)
+      const { records, toolMessages } = await executeToolCalls(
+        toolCalls, messages, userMessage, context, iteration, cfg.maxToolResultChars
+      );
+      allToolCalls.push(...records);
+      messages.push(...toolMessages);
 
       continue; // Next iteration — AI processes tool results
     }
