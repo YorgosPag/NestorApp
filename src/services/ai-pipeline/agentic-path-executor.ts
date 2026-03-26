@@ -29,6 +29,9 @@ import { AI_COST_CONFIG } from '@/config/ai-analysis-config';
 import { checkDailyCap, recordUsage } from './ai-usage.service';
 import { sendPostReplyActions } from './post-reply-actions';
 import { extractAttachments } from './tools/executor-shared';
+import { enrichWithDocumentPreview } from './agentic-reply-utils';
+import type { DocumentPreviewData } from './agentic-reply-utils';
+import { previewDocument, isVisionSupportedMime, MAX_PREVIEWS_PER_MESSAGE } from './document-preview-service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -156,16 +159,26 @@ export async function executeAgenticPath(
       };
     }
 
+    // 2d. ADR-264: Document Preview — file without command → analyze content
+    const previews = await handleDocumentPreviewIfNeeded(
+      userMessage,
+      agenticCtx.attachments
+    );
+    const enrichedMessage = previews.length > 0
+      ? enrichWithDocumentPreview(userMessage, previews)
+      : userMessage;
+
     // 3. Execute agentic loop
     agenticLogger.info('Starting agentic path', {
       requestId: ctx.requestId,
       channelSenderId,
-      messageLength: userMessage.length,
+      messageLength: enrichedMessage.length,
       historyCount: history.length,
+      documentPreviews: previews.length,
     });
 
     const agenticResult = await executeAgenticLoop(
-      userMessage,
+      enrichedMessage,
       history,
       AGENTIC_TOOL_DEFINITIONS,
       agenticCtx
@@ -300,6 +313,58 @@ export async function executeAgenticPath(
 // ============================================================================
 // HELPERS
 // ============================================================================
+
+/**
+ * ADR-264: Detect "file without command" and run document preview.
+ * Returns preview data to inject into the enriched user message.
+ */
+async function handleDocumentPreviewIfNeeded(
+  userMessage: string,
+  attachments?: AgenticContext['attachments']
+): Promise<DocumentPreviewData[]> {
+  if (!attachments || attachments.length === 0) return [];
+
+  const trimmed = userMessage.trim();
+  const isEmptyOrTrivial = !trimmed
+    || trimmed === '(χωρίς κείμενο)'
+    || trimmed.length < 5;
+
+  if (!isEmptyOrTrivial) return [];
+
+  const results: DocumentPreviewData[] = [];
+  const candidates = attachments
+    .filter(a => isVisionSupportedMime(a.contentType) && a.storageUrl)
+    .slice(0, MAX_PREVIEWS_PER_MESSAGE);
+
+  for (const att of candidates) {
+    try {
+      const preview = await previewDocument({
+        fileRecordId: att.fileRecordId,
+        downloadUrl: att.storageUrl,
+        filename: att.filename,
+        contentType: att.contentType,
+      });
+
+      if (preview) {
+        results.push({
+          fileRecordId: att.fileRecordId,
+          filename: att.filename,
+          summary: preview.summary,
+          documentType: preview.documentType,
+          suggestedActions: preview.suggestedActions,
+          confidence: preview.confidence,
+        });
+      }
+    } catch {
+      agenticLogger.warn('Document preview failed', {
+        fileRecordId: att.fileRecordId,
+        filename: att.filename,
+      });
+    }
+  }
+
+  return results;
+}
 
 /**
  * Build channel+sender ID for chat history keying

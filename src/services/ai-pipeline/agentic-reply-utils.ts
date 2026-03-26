@@ -106,6 +106,53 @@ export function cleanAITextReply(rawText: string): string {
  * Prepend attachment metadata to user message so the AI knows
  * which files were sent and their fileRecordIds.
  */
+// ============================================================================
+// DOCUMENT PREVIEW ENRICHMENT (ADR-264)
+// ============================================================================
+
+export interface DocumentPreviewData {
+  fileRecordId: string;
+  filename: string;
+  summary: string;
+  documentType: string;
+  suggestedActions: string[];
+  confidence: number;
+}
+
+/**
+ * Prepend document analysis results to the user message so the AI
+ * can describe the document and offer actions without calling tools.
+ */
+export function enrichWithDocumentPreview(
+  message: string,
+  previews: ReadonlyArray<DocumentPreviewData>
+): string {
+  if (previews.length === 0) return message;
+
+  const blocks = previews.map(p => {
+    const actions = p.suggestedActions.length > 0
+      ? `Προτεινόμενες ενέργειες: ${p.suggestedActions.join(', ')}`
+      : '';
+    const confidenceNote = p.confidence < 0.5
+      ? '(Χαμηλή εμπιστοσύνη αναγνώρισης)'
+      : '';
+
+    return [
+      `[Ανάλυση Εγγράφου: ${p.filename}]`,
+      `Τύπος: ${p.documentType}`,
+      `Περίληψη: ${p.summary}`,
+      actions,
+      confidenceNote,
+    ].filter(Boolean).join('\n');
+  });
+
+  return `${blocks.join('\n\n')}\n\n${message}`;
+}
+
+// ============================================================================
+// ATTACHMENT METADATA ENRICHMENT
+// ============================================================================
+
 export function enrichWithAttachments(
   message: string,
   attachments?: ReadonlyArray<{ fileRecordId: string; filename: string; contentType: string }>

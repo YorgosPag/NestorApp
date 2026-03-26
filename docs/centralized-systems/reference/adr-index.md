@@ -288,6 +288,7 @@
 | **ADR-261** | Multi-Agent Orchestrator (Claude Agent SDK) | ✅ IMPLEMENTED | 2026-03-24 | Infrastructure | [📄](./adrs/ADR-261-multi-agent-orchestrator.md) |
 | **ADR-262** | AI Agent Testing & Production Standards | ✅ ACTIVE | 2026-03-25 | AI Architecture / Quality Standards / Operations | [📄](./adrs/ADR-262-ai-agent-testing-production-standards.md) |
 | **ADR-263** | Telegram Bot Testing Playbook | ✅ ACTIVE | 2026-03-25 | Testing & QA / AI Architecture / Operations | [📄](./adrs/ADR-263-telegram-bot-testing-playbook.md) |
+| **ADR-264** | Document Preview Mode — AI Auto-Analysis for File-Only Messages | ✅ IMPLEMENTED | 2026-03-26 | AI Architecture | [📄](./adrs/ADR-264-document-preview-mode.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

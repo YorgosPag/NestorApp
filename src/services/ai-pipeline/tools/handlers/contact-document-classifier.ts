@@ -123,7 +123,7 @@ const FALLBACK_RESULT: ContactClassifyResult = {
   reasoning: 'Αυτόματη ταξινόμηση δεν ήταν δυνατή.',
 };
 
-async function downloadFile(url: string): Promise<Buffer | null> {
+export async function downloadFile(url: string): Promise<Buffer | null> {
   try {
     const response = await fetch(url);
     if (!response.ok) return null;
@@ -140,11 +140,11 @@ async function downloadFile(url: string): Promise<Buffer | null> {
   }
 }
 
-function isImageMime(contentType: string): boolean {
+export function isImageMime(contentType: string): boolean {
   return contentType.startsWith('image/');
 }
 
-type VisionContent =
+export type VisionContent =
   | { type: 'input_text'; text: string }
   | { type: 'input_image'; image_url: string }
   | { type: 'input_file'; filename: string; file_data: string };
@@ -273,7 +273,7 @@ export async function classifyContactDocument(params: {
 // RESPONSE PARSING (mirrors OpenAIAnalysisProvider pattern)
 // ============================================================================
 
-function extractOutputText(payload: unknown): string | null {
+export function extractOutputText(payload: unknown): string | null {
   if (!isRecord(payload)) return null;
 
   const outputText = (payload as Record<string, unknown>).output_text;

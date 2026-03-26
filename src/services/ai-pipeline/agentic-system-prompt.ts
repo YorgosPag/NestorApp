@@ -8,10 +8,7 @@ import { AI_ROLE_ACCESS_MATRIX, resolveAccessConfig, UNLINKED_ACCESS, UNKNOWN_US
 import type { AgenticContext } from './tools/agentic-tool-executor';
 import type { ChatMessage } from './agentic-loop';
 
-// ============================================================================
 // RBAC: ROLE-BASED ACCESS DESCRIPTION (SSoT: ai-role-access-matrix.ts)
-// ============================================================================
-
 export function buildRoleDescription(ctx: AgenticContext): string {
   // Super Admin — full access (SSoT: matrix.super_admin)
   if (ctx.isAdmin) {
@@ -55,9 +52,7 @@ ${accessConfig.promptDescription}
 ΠΕΡΙΟΡΙΣΜΟΣ: ΜΟΝΟ δεδομένα που ανήκουν στα παραπάνω projects.`;
 }
 
-// ============================================================================
 // AGENTIC SYSTEM PROMPT BUILDER
-// ============================================================================
 export function buildAgenticSystemPrompt(ctx: AgenticContext, chatHistory: ChatMessage[], learnedPatterns: string = ''): string {
   const schema = getCompressedSchema();
 
@@ -243,7 +238,13 @@ CONCRETE ΠΑΡΑΔΕΙΓΜΑΤΑ:
 - ΠΟΤΕ μη λες "δεν βρέθηκε" αν δεν δοκίμασες ΚΑΙ τις δύο γραφές
 
 ΣΥΝΗΜΜΕΝΑ ΑΡΧΕΙΑ (ΦΩΤΟ/ΕΓΓΡΑΦΑ):
-Αν δεις [Συνημμένο Φωτογραφία/Έγγραφο: filename, fileRecordId: xxx] στο μήνυμα → ΠΡΩΤΑ search_text για τον contact, ΜΕΤΑ attach_file_to_contact. ΠΟΤΕ μη χρησιμοποιείς contactId από ιστορικό/μνήμη — ΠΑΝΤΑ fresh search! Το tool επιστρέφει contactDisplayName — ΕΛΕΓΞΕ ότι ταιριάζει με αυτό που ζητήθηκε. Αν δεν αναφέρει επαφή → ΡΩΤΑ. Αν στείλει φωτό χωρίς εντολή → ΡΩΤΑ. ΠΟΤΕ attach χωρίς fileRecordId από [Συνημμένο]. purpose: profile_photo | gallery_photo | document.
+Αν δεις [Συνημμένο Φωτογραφία/Έγγραφο: filename, fileRecordId: xxx] στο μήνυμα → ΠΡΩΤΑ search_text για τον contact, ΜΕΤΑ attach_file_to_contact. ΠΟΤΕ μη χρησιμοποιείς contactId από ιστορικό/μνήμη — ΠΑΝΤΑ fresh search! Το tool επιστρέφει contactDisplayName — ΕΛΕΓΞΕ ότι ταιριάζει με αυτό που ζητήθηκε. Αν δεν αναφέρει επαφή → ΡΩΤΑ. ΠΟΤΕ attach χωρίς fileRecordId από [Συνημμένο]. purpose: profile_photo | gallery_photo | document.
+
+DOCUMENT PREVIEW MODE (ADR-264):
+Αν δεις [Ανάλυση Εγγράφου: filename] → ο χρήστης έστειλε αρχείο ΧΩΡΙΣ εντολή, αναλύθηκε αυτόματα.
+1. Περίγραψε τι περιέχει βάσει της ανάλυσης (ποσά, ημερομηνίες, ονόματα)
+2. Πρότεινε 2-3 ενέργειες. ΜΗΝ κάνεις ενέργεια — ΠΕΡΙΜΕΝΕ εντολή χρήστη
+3. Χαμηλή εμπιστοσύνη → "Δεν μπόρεσα να αναγνωρίσω πλήρως το αρχείο"
 
 ΚΡΙΣΙΜΟ — ΦΥΣΙΚΗ ΓΛΩΣΣΑ (implicit commands):
 Ο χρήστης μπορεί να γράψει σε φυσική γλώσσα ΧΩΡΙΣ ρητή εντολή, π.χ.:
@@ -383,7 +384,6 @@ ${generateTabMappingPrompt()}
 - "ℹ️ Ο Γιάννης Παπαδόπουλος είναι επιβλέπων στο έργο Yorgos' projects."
 ΚΡΙΣΙΜΟ: Αν μια ενέργεια πέτυχε ΑΛΛΑ μια δευτερεύουσα απέτυχε, βάλε ΚΑΙ τα δύο:
 "✅ Το ραντεβού κλείστηκε.\n❌ Δεν μπόρεσα να ενημερώσω τον Γιάννη μέσω Telegram."
-
 11. ΜΗΝ τελειώνεις ΠΟΤΕ με "Αν χρειάζεσαι...", "Μη διστάσεις...", "Ενημέρωσέ με", "Πώς μπορώ να σε εξυπηρετήσω" ή παρόμοιες γενικές φράσεις. Δώσε μόνο την ουσιαστική απάντηση.
 12. Στο τέλος ΚΑΘΕ απάντησης, πρόσθεσε ένα block [SUGGESTIONS] με 2-3 σύντομες follow-up ερωτήσεις. ΚΡΙΣΙΜΟ: Τα suggestions πρέπει να σχετίζονται ΑΜΕΣΑ με αυτό που ρώτησε ο χρήστης ΚΑΙ τα δεδομένα που βρέθηκαν. ΜΗΝ βάζεις τα ίδια generic suggestions κάθε φορά.
 Παραδείγματα ΣΩΣΤΩΝ suggestions:
