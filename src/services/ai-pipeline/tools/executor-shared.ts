@@ -42,6 +42,12 @@ export interface AgenticContext {
     contentType: string;
     storageUrl: string;
   }>;
+  /**
+   * FIND-U guardrail: Tracks which fields were updated per contact within
+   * the current agentic loop execution. Key = contactId, Value = Set of field names.
+   * Prevents AI from auto-setting taxOffice when vatNumber was just written.
+   */
+  _updatedContactFields?: Map<string, Set<string>>;
 }
 
 export interface ToolResult {

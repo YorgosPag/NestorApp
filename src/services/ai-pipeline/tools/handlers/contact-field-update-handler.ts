@@ -63,6 +63,18 @@ export async function executeUpdateContactField(
     };
   }
 
+  // FIND-U: Block auto-setting taxOffice when vatNumber was updated in the same request.
+  // AI tends to "guess" a DOY when given an AFM — this is wrong. DOY must be explicit user request.
+  if (field === 'taxOffice') {
+    const updatedFields = ctx._updatedContactFields?.get(contactId);
+    if (updatedFields?.has('vatNumber')) {
+      return {
+        success: false,
+        error: 'Δεν μπορείς να αλλάξεις τη ΔΟΥ αυτόματα μαζί με τον ΑΦΜ. Η ΔΟΥ ενημερώνεται ΜΟΝΟ αν ο χρήστης τη ζητήσει ρητά.',
+      };
+    }
+  }
+
   const db = getAdminFirestore();
   const docSnap = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
   if (!docSnap.exists) {
@@ -96,6 +108,15 @@ export async function executeUpdateContactField(
 
   await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, 'update', { [field]: value });
   emitEntitySyncSignal('contacts', 'UPDATED', contactId, ctx.companyId);
+
+  // FIND-U: Track updated fields per contact for cross-field guardrails
+  if (!ctx._updatedContactFields) {
+    ctx._updatedContactFields = new Map();
+  }
+  if (!ctx._updatedContactFields.has(contactId)) {
+    ctx._updatedContactFields.set(contactId, new Set());
+  }
+  ctx._updatedContactFields.get(contactId)!.add(field);
 
   logger.info('Contact field updated via tool', {
     contactId,

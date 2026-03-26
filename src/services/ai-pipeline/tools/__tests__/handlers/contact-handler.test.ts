@@ -439,5 +439,47 @@ describe('ContactHandler', () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain('field must be one of');
     });
+
+    test('FIND-U: should block taxOffice when vatNumber was updated in same request', async () => {
+      const ctx = createAdminContext();
+      mockDb.seedCollection('contacts', {
+        'cont_001': { companyId: 'test-company-001', type: 'company' },
+      });
+      mockUpdateContactField.mockResolvedValue(undefined);
+
+      // Step 1: Update vatNumber — should succeed
+      const vatResult = await handler.execute('update_contact_field', {
+        contactId: 'cont_001',
+        field: 'vatNumber',
+        value: '094519370',
+      }, ctx);
+      expect(vatResult.success).toBe(true);
+
+      // Step 2: AI tries to auto-set taxOffice — should be BLOCKED
+      const doyResult = await handler.execute('update_contact_field', {
+        contactId: 'cont_001',
+        field: 'taxOffice',
+        value: '1317',
+      }, ctx);
+      expect(doyResult.success).toBe(false);
+      expect(doyResult.error).toContain('ΔΟΥ');
+      expect(doyResult.error).toContain('ΑΦΜ');
+    });
+
+    test('FIND-U: should allow taxOffice when vatNumber was NOT updated', async () => {
+      const ctx = createAdminContext();
+      mockDb.seedCollection('contacts', {
+        'cont_001': { companyId: 'test-company-001', type: 'company' },
+      });
+      mockUpdateContactField.mockResolvedValue(undefined);
+
+      // Directly update taxOffice without prior vatNumber — should work
+      const result = await handler.execute('update_contact_field', {
+        contactId: 'cont_001',
+        field: 'taxOffice',
+        value: '1301',
+      }, ctx);
+      expect(result.success).toBe(true);
+    });
   });
 });
