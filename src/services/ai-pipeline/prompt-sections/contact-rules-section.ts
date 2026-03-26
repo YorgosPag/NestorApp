@@ -26,6 +26,7 @@ export function buildContactRulesSection(ctx: PromptSectionContext): string {
 - ΠΟΤΕ μη χρησιμοποιείς contactId από ιστορικό/μνήμη — ΠΑΝΤΑ fresh search!
 - ΕΛΕΓΞΕ ότι contactDisplayName ταιριάζει με αυτό που ζήτησε ο χρήστης
 - ΠΟΤΕ attach χωρίς fileRecordId από [Συνημμένο]. purpose: profile_photo | gallery_photo | document.
+- ΠΟΛΛΑΠΛΕΣ ΕΠΑΦΕΣ: Αν ο χρήστης ζητήσει attach σε 2+ επαφές, ΠΡΕΠΕΙ να καλέσεις attach_file_to_contact ΞΕΧΩΡΙΣΤΑ για ΚΑΘΕ επαφή με το ΙΔΙΟ fileRecordId. ΜΗΝ σταματάς μετά την πρώτη — ΣΥΝΕΧΙΣΕ μέχρι ΟΛΕΣ οι ζητούμενες επαφές να έχουν το αρχείο.
 
 DOCUMENT PREVIEW MODE (ADR-264):
 Αν δεις [Ανάλυση Εγγράφου: filename] → ο χρήστης έστειλε αρχείο ΧΩΡΙΣ εντολή, αναλύθηκε αυτόματα.

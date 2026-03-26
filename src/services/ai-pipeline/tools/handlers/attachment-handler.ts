@@ -88,7 +88,7 @@ export class AttachmentHandler implements ToolHandler {
     const db = getAdminFirestore();
     const attribution = buildAttribution(ctx);
 
-    await promoteFileRecord(db, fileRecordId, contactId, 'photos', attribution);
+    await promoteFileRecord(db, fileRecordId, contactId, 'photos', attribution, { alreadyPromoted: fileRecord.alreadyPromoted });
     await createFileLink(db, fileRecordId, contactId, ctx.companyId, attribution, 'profile_photo');
 
     await db.collection(COLLECTIONS.CONTACTS).doc(contactId).update({
@@ -125,7 +125,7 @@ export class AttachmentHandler implements ToolHandler {
     const db = getAdminFirestore();
     const attribution = buildAttribution(ctx);
 
-    await promoteFileRecord(db, fileRecordId, contactId, 'photos', attribution);
+    await promoteFileRecord(db, fileRecordId, contactId, 'photos', attribution, { alreadyPromoted: fileRecord.alreadyPromoted });
     await createFileLink(db, fileRecordId, contactId, ctx.companyId, attribution, 'gallery_photo');
 
     await db.collection(COLLECTIONS.CONTACTS).doc(contactId).update({
@@ -166,6 +166,7 @@ export class AttachmentHandler implements ToolHandler {
 
     await createFileLink(db, fileRecordId, contactId, ctx.companyId, attribution, classification.purpose);
     await promoteFileRecord(db, fileRecordId, contactId, 'documents', attribution, {
+      alreadyPromoted: fileRecord.alreadyPromoted,
       purpose: classification.purpose,
       classificationAnalysis: {
         classifier: 'contact-document-classifier',
@@ -207,6 +208,8 @@ interface FileRecordData {
   downloadUrl: string;
   filename: string;
   contentType: string;
+  /** Already linked to a contact? (multi-contact: skip entityId overwrite) */
+  alreadyPromoted: boolean;
 }
 
 function validateArgs(args: Record<string, unknown>): {
@@ -232,6 +235,7 @@ async function getFileRecord(fileRecordId: string): Promise<FileRecordData | nul
     downloadUrl: String(data?.downloadUrl ?? ''),
     filename: String(data?.originalFilename ?? data?.filename ?? 'file'),
     contentType: String(data?.contentType ?? 'application/octet-stream'),
+    alreadyPromoted: data?.entityType === 'contact' && !!data?.entityId,
   };
 }
 
@@ -257,7 +261,9 @@ interface PromoteOptions {
 
 /**
  * Promote a FileRecord from ingestion/pending to contact-linked/ready.
- * Updates entityType, entityId, domain, category, status, and optionally purpose.
+ * Multi-contact safe: if already promoted (entityId set), skips entityId overwrite
+ * so the first contact remains the "primary owner". The file_links collection
+ * handles the many-to-many relationship.
  */
 async function promoteFileRecord(
   db: FirebaseFirestore.Firestore,
@@ -265,11 +271,9 @@ async function promoteFileRecord(
   contactId: string,
   category: 'photos' | 'documents',
   attribution: string,
-  options?: PromoteOptions
+  options?: PromoteOptions & { alreadyPromoted?: boolean }
 ): Promise<void> {
   const updateData: Record<string, unknown> = {
-    entityType: 'contact',
-    entityId: contactId,
     domain: 'admin',
     category,
     status: FILE_STATUS.READY,
@@ -278,6 +282,12 @@ async function promoteFileRecord(
     'ingestion.state': 'classified',
     'ingestion.stateChangedAt': new Date().toISOString(),
   };
+
+  // Multi-contact: only set entityId on FIRST promotion — subsequent contacts use file_links only
+  if (!options?.alreadyPromoted) {
+    updateData.entityType = 'contact';
+    updateData.entityId = contactId;
+  }
 
   if (options?.purpose) {
     updateData.purpose = options.purpose;
