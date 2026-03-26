@@ -121,6 +121,13 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
         queryType: 'equals',
         skipCompanyFilter: true,
       },
+      {
+        collection: COLLECTIONS.SEARCH_DOCUMENTS,
+        foreignKey: 'entityId',
+        label: 'Search index',
+        queryType: 'equals',
+        skipCompanyFilter: true,
+      },
     ],
     // Blocking dependencies — user must delete manually
     dependencies: [
@@ -199,6 +206,15 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
       condition: 'not-null',
       message: 'Η μονάδα έχει αγοραστή (κράτηση ή πώληση) και δεν μπορεί να διαγραφεί. Ακυρώστε πρώτα την κράτηση/πώληση.',
     },
+    cascadeDependencies: [
+      {
+        collection: COLLECTIONS.SEARCH_DOCUMENTS,
+        foreignKey: 'entityId',
+        label: 'Search index',
+        queryType: 'equals',
+        skipCompanyFilter: true,
+      },
+    ],
     dependencies: [
       {
         collection: COLLECTIONS.ACCOUNTING_INVOICES,
@@ -256,6 +272,15 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
   // ─── PROJECT ────────────────────────────────────────────────────────
   project: {
     strategy: 'BLOCK',
+    cascadeDependencies: [
+      {
+        collection: COLLECTIONS.SEARCH_DOCUMENTS,
+        foreignKey: 'entityId',
+        label: 'Search index',
+        queryType: 'equals',
+        skipCompanyFilter: true,
+      },
+    ],
     dependencies: [
       {
         collection: COLLECTIONS.BUILDINGS,
@@ -299,6 +324,15 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
   // ─── BUILDING ───────────────────────────────────────────────────────
   building: {
     strategy: 'BLOCK',
+    cascadeDependencies: [
+      {
+        collection: COLLECTIONS.SEARCH_DOCUMENTS,
+        foreignKey: 'entityId',
+        label: 'Search index',
+        queryType: 'equals',
+        skipCompanyFilter: true,
+      },
+    ],
     dependencies: [
       {
         collection: COLLECTIONS.UNITS,
@@ -372,6 +406,15 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
       condition: 'not-null',
       message: 'Η θέση στάθμευσης έχει πωληθεί και δεν μπορεί να διαγραφεί.',
     },
+    cascadeDependencies: [
+      {
+        collection: COLLECTIONS.SEARCH_DOCUMENTS,
+        foreignKey: 'entityId',
+        label: 'Search index',
+        queryType: 'equals',
+        skipCompanyFilter: true,
+      },
+    ],
     // TODO: ADR-AUDIT — Add check for unit.linkedSpaces[] referencing this parking spot.
     // Firestore cannot query array-of-objects by nested field (spaceId).
     // Options: (1) denormalize linkedUnitId on parking doc, (2) Cloud Function trigger.
@@ -394,6 +437,15 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
       condition: 'not-null',
       message: 'Η αποθήκη έχει πωληθεί και δεν μπορεί να διαγραφεί.',
     },
+    cascadeDependencies: [
+      {
+        collection: COLLECTIONS.SEARCH_DOCUMENTS,
+        foreignKey: 'entityId',
+        label: 'Search index',
+        queryType: 'equals',
+        skipCompanyFilter: true,
+      },
+    ],
     // TODO: ADR-AUDIT — Same as parking: add check for unit.linkedSpaces[] referencing this storage.
     dependencies: [
       {
