@@ -59,16 +59,36 @@ async function main(): Promise<void> {
   console.log(`║  ${totalTests} tests across ${phases.length} phases                              ║`);
   console.log('╚══════════════════════════════════════════════════════════╝');
 
-  // Pre-check: is localhost:3000 running?
-  try {
-    await fetch('http://127.0.0.1:3000/', { signal: AbortSignal.timeout(5000) });
-  } catch {
-    console.error('\n❌ localhost:3000 δεν απαντάει. Τρέξε πρώτα: npm run dev\n');
+  // Pre-check: wait for localhost:3000 (dev server may be compiling ~70s)
+  const MAX_WAIT_ATTEMPTS = 12; // 12 × 10s = 2 min max
+  let serverReady = false;
+  for (let attempt = 1; attempt <= MAX_WAIT_ATTEMPTS; attempt++) {
+    try {
+      await fetch('http://127.0.0.1:3000/', { signal: AbortSignal.timeout(10_000) });
+      serverReady = true;
+      break;
+    } catch {
+      if (attempt === 1) {
+        console.log('\n⏳ Περιμένω localhost:3000 (dev server compile ~70s)...');
+      }
+      console.log(`  attempt ${attempt}/${MAX_WAIT_ATTEMPTS}...`);
+      await new Promise(r => setTimeout(r, 10_000));
+    }
+  }
+  if (!serverReady) {
+    console.error('\n❌ localhost:3000 δεν απαντάει μετά από 2 λεπτά. Τρέξε πρώτα: npm run dev\n');
     process.exit(1);
   }
+  console.log('✅ Dev server ready\n');
 
   // Reset all QA collections for clean slate
   await resetCollections();
+
+  // Wait for pipeline worker to drain any in-flight items before starting tests
+  // Without this, retried items from previous runs consume OpenAI tokens
+  console.log('⏳ Draining pipeline worker (30s)...');
+  await new Promise(r => setTimeout(r, 30_000));
+  console.log('✅ Pipeline drained — starting tests\n');
 
   // Run all phases sequentially (shared state across phases)
   await runMultiPhaseSuite('Contact Individual — Φυσικό Πρόσωπο', phases);

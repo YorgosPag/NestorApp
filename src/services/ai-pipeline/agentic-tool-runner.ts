@@ -168,6 +168,13 @@ function checkContactIdGuardrail(
   });
   if (hadPriorSearch) return null;
 
+  // Check if contactId appears in chat history context (tool results or assistant messages).
+  // If the AI got the contactId from prior conversation context, it's not fabricated.
+  const contactIdInContext = allMessages.some(m =>
+    m.content !== null && typeof m.content === 'string' && m.content.includes(contactId)
+  );
+  if (contactIdInContext) return null;
+
   logger.warn('FIND-T: blocked tool call — no prior search for contactId', {
     requestId: context.requestId, tool: toolName, contactId,
   });
