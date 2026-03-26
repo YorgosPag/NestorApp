@@ -285,10 +285,13 @@ const tests: QATestCase[] = [
       if (!data) return [{ label: 'Contact found', passed: false, expected: 'exists', actual: 'null' }];
 
       const addresses = data.addresses as Array<Record<string, unknown>> | undefined;
+      const addr = addresses?.[0];
 
       return [
         assertArrayLength('addresses has entries', addresses, 1),
-        assertExists('address[0] exists', addresses?.[0]),
+        assertExists('street set', addr?.street),
+        assertExists('city set', addr?.city),
+        assertExists('postalCode set', addr?.postalCode),
       ];
     },
   },
@@ -462,20 +465,104 @@ const tests: QATestCase[] = [
   },
 
   // ──────────────────────────────────────────────────────────────────
-  // ΦΑΣΗ 13: Οικογενειακή κατάσταση
+  // ΦΑΣΗ 13: ΚΑΔ — Κωδικοί Αριθμοί Δραστηριότητας
   // ──────────────────────────────────────────────────────────────────
   {
     id: 'IND-23',
-    name: 'Οικογενειακή κατάσταση (search text)',
+    name: 'ΚΑΔ — Προσθήκη δραστηριότητας',
+    userMessage: `Πρόσθεσε ΚΑΔ 41.20 στον ${FIRST_NAME}`,
+    assertions: async (ctx) => {
+      const data = await getContact(ctx);
+      if (!data) return [{ label: 'Contact found', passed: false, expected: 'exists', actual: 'null' }];
+
+      const activities = data.activities as Array<{ code: string }> | undefined;
+      const hasKAD = activities?.some((a) => a.code?.includes('41.20'));
+
+      return [
+        assertArrayLength('activities has entries', activities, 1),
+        { label: 'ΚΑΔ 41.20 exists', passed: !!hasKAD, expected: '41.20', actual: JSON.stringify(activities) },
+      ];
+    },
+  },
+
+  // ──────────────────────────────────────────────────────────────────
+  // ΦΑΣΗ 14: Πρόσθετα Social Media
+  // ──────────────────────────────────────────────────────────────────
+  {
+    id: 'IND-24',
+    name: 'Facebook',
+    userMessage: `Πρόσθεσε Facebook https://facebook.com/testidis στον ${FIRST_NAME}`,
+    assertions: async (ctx) => {
+      const data = await getContact(ctx);
+      if (!data) return [{ label: 'Contact found', passed: false, expected: 'exists', actual: 'null' }];
+
+      const socialMedia = data.socialMedia as Array<Record<string, unknown>> | undefined;
+      const hasFB = socialMedia?.some(
+        (s) => String(s.platform ?? '').toLowerCase() === 'facebook'
+      );
+
+      return [
+        { label: 'Facebook entry', passed: !!hasFB, expected: 'platform: facebook', actual: JSON.stringify(socialMedia) },
+      ];
+    },
+  },
+
+  // ──────────────────────────────────────────────────────────────────
+  // ΦΑΣΗ 15: 2ο Email (duplicate detection)
+  // ──────────────────────────────────────────────────────────────────
+  {
+    id: 'IND-25',
+    name: '2ο Email',
+    userMessage: `Πρόσθεσε email work@testidis.gr στον ${FIRST_NAME}`,
+    assertions: async (ctx) => {
+      const data = await getContact(ctx);
+      if (!data) return [{ label: 'Contact found', passed: false, expected: 'exists', actual: 'null' }];
+
+      const emails = data.emails as Array<{ email: string }> | undefined;
+      const hasWork = emails?.some((e) => e.email === 'work@testidis.gr');
+
+      return [
+        assertArrayLength('emails has 2+ entries', emails, 2),
+        { label: 'work email exists', passed: !!hasWork, expected: 'work@testidis.gr', actual: JSON.stringify(emails) },
+      ];
+    },
+  },
+
+  // ──────────────────────────────────────────────────────────────────
+  // ΦΑΣΗ 16: Search verification
+  // ──────────────────────────────────────────────────────────────────
+  {
+    id: 'IND-26',
+    name: 'Search — βρίσκει τον contact',
     userMessage: `Βρες τον ${FULL_NAME}`,
     assertions: async (ctx) => {
-      // This tests that search works (search_text tool)
       const toolUsed = ctx.toolCalls.some((tc) => tc.name === 'search_text');
       const mentionsName = ctx.aiResponse.includes(FIRST_NAME) || ctx.aiResponse.includes(LAST_NAME);
 
       return [
         { label: 'search_text tool used', passed: toolUsed, expected: 'search_text called', actual: ctx.toolCalls.map((t) => t.name).join(', ') },
         { label: 'AI response mentions contact', passed: mentionsName, expected: `mentions ${FIRST_NAME}`, actual: ctx.aiResponse.substring(0, 100) },
+      ];
+    },
+  },
+
+  // ──────────────────────────────────────────────────────────────────
+  // ΦΑΣΗ 17: Duplicate email detection (ίδιο email → reject)
+  // ──────────────────────────────────────────────────────────────────
+  {
+    id: 'IND-27',
+    name: 'Duplicate email → reject',
+    userMessage: `Πρόσθεσε email dimitrios.test@example.com στον ${FIRST_NAME}`,
+    assertions: async (ctx) => {
+      const data = await getContact(ctx);
+      if (!data) return [{ label: 'Contact found', passed: false, expected: 'exists', actual: 'null' }];
+
+      const emails = data.emails as Array<{ email: string }> | undefined;
+      // Should still have exactly 2 (not 3 — duplicate should be rejected)
+      const count = emails?.length ?? 0;
+
+      return [
+        { label: 'emails count unchanged (duplicate rejected)', passed: count === 2, expected: '2 (duplicate rejected)', actual: `${count}` },
       ];
     },
   },
