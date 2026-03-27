@@ -333,7 +333,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <CircleDot className={iconSizes.md} />
@@ -359,7 +359,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-2">
         {/* Error */}
         {error && (
           <div className="flex items-center gap-2 text-sm text-red-600">
@@ -416,7 +416,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
         </div>
 
         {/* Coordinate Inputs */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2">
           <div>
             <label htmlFor="geofence-lat" className="block text-xs font-medium text-slate-600 mb-1">
               {t('ika.attendance.geofence.latitude')}
@@ -429,7 +429,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
               max="90"
               value={latitude}
               onChange={(e) => handleLatChange(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-2 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div>
@@ -444,7 +444,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
               max="180"
               value={longitude}
               onChange={(e) => handleLngChange(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-2 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>

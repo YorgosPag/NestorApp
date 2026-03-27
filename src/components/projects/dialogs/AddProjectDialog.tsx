@@ -342,15 +342,15 @@ export function AddProjectDialog({
                 TAB 4: ΔΙΕΥΘΥΝΣΕΙΣ (ADR-167)
             ================================================================ */}
             <TabsContent value="addresses" className={spacing.margin.top.md}>
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {/* Existing Addresses List */}
                 {formData.addresses.length > 0 && (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     <h3 className="text-sm font-semibold text-muted-foreground">
                       Υπάρχουσες Διευθύνσεις ({formData.addresses.length})
                     </h3>
                     {formData.addresses.map((address, index) => (
-                      <div key={address.id} className="relative border rounded-lg p-4">
+                      <div key={address.id} className="relative border rounded-lg p-2">
                         <AddressCard address={address} />
                         <div className="absolute top-2 right-2 flex gap-2">
                           {!address.isPrimary && (
@@ -383,8 +383,8 @@ export function AddProjectDialog({
                 )}
 
                 {/* Add New Address Form */}
-                <div className="border-t pt-4">
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-3">
+                <div className="border-t pt-2">
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-2">
                     Προσθήκη Νέας Διεύθυνσης
                   </h3>
                   <AddressFormSection onChange={setTempAddress} />
@@ -398,7 +398,7 @@ export function AddProjectDialog({
                       }
                     }}
                     disabled={loading || !tempAddress?.street || !tempAddress?.city}
-                    className="mt-3"
+                    className="mt-2"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Προσθήκη Διεύθυνσης
@@ -408,7 +408,7 @@ export function AddProjectDialog({
             </TabsContent>
           </Tabs>
 
-          <DialogFooter className="mt-6">
+          <DialogFooter className="mt-2">
             <CancelButton onClick={() => onOpenChange(false)} disabled={loading} />
             <SaveButton loading={loading} />
           </DialogFooter>

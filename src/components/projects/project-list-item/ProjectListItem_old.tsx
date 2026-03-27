@@ -36,7 +36,7 @@ export function ProjectListItem({
     return (
             <Card
                 className={cn(
-                    `relative p-4 rounded-lg border cursor-pointer ${TRANSITION_PRESETS.STANDARD_ALL} group ${HOVER_SHADOWS.ENHANCED}`,
+                    `relative p-2 rounded-lg border cursor-pointer ${TRANSITION_PRESETS.STANDARD_ALL} group ${HOVER_SHADOWS.ENHANCED}`,
                     isSelected
                     ? `${quick.selected} ${colors.bg.info} shadow-sm`
                     : `border-border ${HOVER_BORDER_EFFECTS.BLUE} bg-card ${HOVER_BACKGROUND_EFFECTS.ACCENT}`
@@ -53,7 +53,7 @@ export function ProjectListItem({
                     title={project.name}
                     subtitle={companyName}
                     variant="compact"
-                    className="mb-3"
+                    className="mb-2"
                 >
                     <div className="flex gap-2 mt-2 mb-2">
                         <ProjectBadge status={project.status} size="sm" />

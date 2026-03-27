@@ -44,12 +44,12 @@ export function EfkaDocumentTracker({ documents }: EfkaDocumentTrackerProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ul className="space-y-4" role="list">
+        <ul className="space-y-2" role="list">
           {documents.map((docItem) => {
             const StatusIcon = STATUS_ICON_MAP[docItem.status];
             return (
               <li key={docItem.type} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <StatusIcon className={cn(
                     iconSizes.sm,
                     docItem.status === 'approved' ? colors.text.success :

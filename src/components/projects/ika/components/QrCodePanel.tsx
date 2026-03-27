@@ -147,7 +147,7 @@ export function QrCodePanel({ projectId }: QrCodePanelProps) {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <QrCode className={iconSizes.md} />
@@ -179,7 +179,7 @@ export function QrCodePanel({ projectId }: QrCodePanelProps) {
       <CardContent>
         {/* Error */}
         {error && (
-          <div className="flex items-center gap-2 text-sm text-red-600 mb-4">
+          <div className="flex items-center gap-2 text-sm text-red-600 mb-2">
             <AlertCircle className={iconSizes.sm} />
             {error}
           </div>
@@ -187,9 +187,9 @@ export function QrCodePanel({ projectId }: QrCodePanelProps) {
 
         {/* QR Code Display */}
         {qrData?.qrDataUrl && (
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col items-center gap-2">
             {/* QR Image */}
-            <div className="bg-white border border-slate-200 rounded-lg p-4">
+            <div className="bg-white border border-slate-200 rounded-lg p-2">
               <img
                 src={qrData.qrDataUrl}
                 alt="QR Code for attendance check-in"
@@ -238,8 +238,8 @@ export function QrCodePanel({ projectId }: QrCodePanelProps) {
 
         {/* Empty state */}
         {!qrData && !isGenerating && !error && (
-          <div className="flex flex-col items-center py-8 text-center">
-            <QrCode className="h-12 w-12 text-slate-300 mb-3" />
+          <div className="flex flex-col items-center py-2 text-center">
+            <QrCode className="h-12 w-12 text-slate-300 mb-2" />
             <p className="text-sm text-slate-500">
               {t('ika.attendance.qr.emptyState')}
             </p>

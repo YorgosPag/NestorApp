@@ -35,7 +35,7 @@ export const UnitNode = ({ unit }: { unit: UnitModel }) => {
     <div className={cn("border-l-2", quick.table, spacing.padding.left.md)}>
       <div className={cn(spacing.padding.md, colors.bg.primary, quick.card, HOVER_SHADOWS.MEDIUM, "transition-all")}>
         <div className={cn("flex items-start justify-between", spacing.margin.bottom.sm)}>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <UnitIcon size={18} className={`${unitColor} mt-1`} />
             <div>
               <div className="flex items-center gap-2 mb-1">
@@ -44,7 +44,7 @@ export const UnitNode = ({ unit }: { unit: UnitModel }) => {
                   {t(getStatusLabel(unit.status))}
                 </span>
               </div>
-              <div className={cn("flex items-center gap-4", typography.body.sm, colors.text.muted)}>
+              <div className={cn("flex items-center gap-2", typography.body.sm, colors.text.muted)}>
                 <span className="flex items-center gap-1">
                   <UnitIcon size={14} className={unitColor} />
                   {unit.area} m²
@@ -63,12 +63,12 @@ export const UnitNode = ({ unit }: { unit: UnitModel }) => {
         {showCustomerInfo && (
           <div className={cn(spacing.margin.top.sm, spacing.padding.top.sm, "border-t", quick.table)}>
             {unit.customerName ? (
-              <div className={cn(colors.bg.success, "p-3", quick.card)}>
+              <div className={cn(colors.bg.success, "p-2", quick.card)}>
                 <div className={cn("flex items-center", spacing.gap.sm, spacing.margin.bottom.sm)}>
                   <User size={16} className={`${colors.text.success}`} />
                   <span className={`font-medium ${colors.text.success}`}>{t('structure.customer')}</span>
                 </div>
-                <div className="ml-6">
+                <div className="ml-2">
                   <div className={`font-medium ${colors.text.foreground}`}>
                     {unit.customerName}
                   </div>
@@ -80,7 +80,7 @@ export const UnitNode = ({ unit }: { unit: UnitModel }) => {
                 </div>
               </div>
             ) : (
-              <div className={cn(colors.bg.warning, "p-3", quick.card)}>
+              <div className={cn(colors.bg.warning, "p-2", quick.card)}>
                 <div className={cn("flex items-center", spacing.gap.sm)}>
                   <User size={16} className={`${colors.text.warning}`} />
                   <span className={`${colors.text.warning}`}>

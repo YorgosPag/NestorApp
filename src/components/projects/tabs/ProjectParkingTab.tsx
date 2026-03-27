@@ -122,7 +122,7 @@ interface ParkingSpotsListProps {
 function ParkingSpotsList({ parkingSpots, loading, error, t, colors, quick, iconSizes, spacing }: ParkingSpotsListProps) {
   if (loading) {
     return (
-      <section className="flex items-center justify-center p-12">
+      <section className="flex items-center justify-center p-2">
         <Spinner size="large" />
       </section>
     );
@@ -130,7 +130,7 @@ function ParkingSpotsList({ parkingSpots, loading, error, t, colors, quick, icon
 
   if (error) {
     return (
-      <section className={cn('flex items-center gap-3 p-6', colors.text.error)}>
+      <section className={cn('flex items-center gap-2 p-2', colors.text.error)}>
         <AlertCircle className={iconSizes.md} />
         <p>{error}</p>
       </section>
@@ -139,7 +139,7 @@ function ParkingSpotsList({ parkingSpots, loading, error, t, colors, quick, icon
 
   if (parkingSpots.length === 0) {
     return (
-      <section className="flex flex-col items-center justify-center gap-3 p-12 text-center">
+      <section className="flex flex-col items-center justify-center gap-2 p-2 text-center">
         <Car className={cn(iconSizes.xl2, colors.text.muted)} />
         <p className={colors.text.muted}>
           {t('projectTab.empty', 'Δεν υπάρχουν θέσεις στάθμευσης σε αυτό το έργο')}
@@ -152,23 +152,23 @@ function ParkingSpotsList({ parkingSpots, loading, error, t, colors, quick, icon
     <section className={spacing.spaceBetween.sm}>
       {/* Summary */}
       <header className={cn('grid grid-cols-2 md:grid-cols-4', spacing.gap.sm)}>
-        <article className={cn('bg-card p-4 text-center', quick.card)}>
+        <article className={cn('bg-card p-2 text-center', quick.card)}>
           <p className={cn('text-2xl font-bold', colors.text.accent)}>{parkingSpots.length}</p>
           <p className="text-sm text-muted-foreground">{t('projectTab.stats.total', 'Σύνολο')}</p>
         </article>
-        <article className={cn('bg-card p-4 text-center', quick.card)}>
+        <article className={cn('bg-card p-2 text-center', quick.card)}>
           <p className={cn('text-2xl font-bold', colors.text.success)}>
             {parkingSpots.filter(s => s.status === 'available').length}
           </p>
           <p className="text-sm text-muted-foreground">{t('projectTab.stats.available', 'Διαθέσιμες')}</p>
         </article>
-        <article className={cn('bg-card p-4 text-center', quick.card)}>
+        <article className={cn('bg-card p-2 text-center', quick.card)}>
           <p className={cn('text-2xl font-bold', colors.text.warning)}>
             {parkingSpots.filter(s => s.status === 'reserved').length}
           </p>
           <p className="text-sm text-muted-foreground">{t('projectTab.stats.reserved', 'Δεσμευμένες')}</p>
         </article>
-        <article className={cn('bg-card p-4 text-center', quick.card)}>
+        <article className={cn('bg-card p-2 text-center', quick.card)}>
           <p className={cn('text-2xl font-bold', colors.text.info)}>
             {parkingSpots.filter(s => s.status === 'sold').length}
           </p>
@@ -181,33 +181,33 @@ function ParkingSpotsList({ parkingSpots, loading, error, t, colors, quick, icon
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b text-left text-muted-foreground">
-              <th className="p-3 font-medium">{t('fields.number', 'Αριθμός')}</th>
-              <th className="p-3 font-medium">{t('fields.type', 'Τύπος')}</th>
-              <th className="p-3 font-medium">{t('fields.status', 'Κατάσταση')}</th>
-              <th className="p-3 font-medium">{t('fields.floor', 'Όροφος')}</th>
-              <th className="p-3 font-medium">{t('fields.locationZone', 'Ζώνη')}</th>
-              <th className="p-3 font-medium">{t('fields.area', 'Εμβαδόν')}</th>
-              <th className="p-3 font-medium text-right">{t('fields.price', 'Τιμή')}</th>
+              <th className="p-2 font-medium">{t('fields.number', 'Αριθμός')}</th>
+              <th className="p-2 font-medium">{t('fields.type', 'Τύπος')}</th>
+              <th className="p-2 font-medium">{t('fields.status', 'Κατάσταση')}</th>
+              <th className="p-2 font-medium">{t('fields.floor', 'Όροφος')}</th>
+              <th className="p-2 font-medium">{t('fields.locationZone', 'Ζώνη')}</th>
+              <th className="p-2 font-medium">{t('fields.area', 'Εμβαδόν')}</th>
+              <th className="p-2 font-medium text-right">{t('fields.price', 'Τιμή')}</th>
             </tr>
           </thead>
           <tbody>
             {parkingSpots.map(spot => (
               <tr key={spot.id} className="border-b last:border-0 hover:bg-muted/50">
-                <td className="p-3 font-medium">{spot.number}</td>
-                <td className="p-3">
+                <td className="p-2 font-medium">{spot.number}</td>
+                <td className="p-2">
                   <span className={cn('rounded px-2 py-1 text-xs', colors.bg.accentSubtle)}>
                     {spot.type ? PARKING_TYPE_LABELS[spot.type] : '—'}
                   </span>
                 </td>
-                <td className="p-3">
+                <td className="p-2">
                   <ParkingStatusBadge status={spot.status || 'available'} colors={colors} />
                 </td>
-                <td className="p-3">{spot.floor || '—'}</td>
-                <td className="p-3">
+                <td className="p-2">{spot.floor || '—'}</td>
+                <td className="p-2">
                   {spot.locationZone ? PARKING_LOCATION_ZONE_LABELS[spot.locationZone] : '—'}
                 </td>
-                <td className="p-3">{spot.area ? `${spot.area} m²` : '—'}</td>
-                <td className="p-3 text-right">{spot.price ? formatCurrency(spot.price) : '—'}</td>
+                <td className="p-2">{spot.area ? `${spot.area} m²` : '—'}</td>
+                <td className="p-2 text-right">{spot.price ? formatCurrency(spot.price) : '—'}</td>
               </tr>
             ))}
           </tbody>

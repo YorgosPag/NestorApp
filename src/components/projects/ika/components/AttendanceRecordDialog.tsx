@@ -135,7 +135,7 @@ export function AttendanceRecordDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className={cn('space-y-4', spacing.padding.y.sm)}>
+        <div className={cn('space-y-2', spacing.padding.y.sm)}>
           {/* Worker selector */}
           <div className="space-y-2">
             <Label>{t('ika.timesheetTab.dialog.selectWorker')}</Label>

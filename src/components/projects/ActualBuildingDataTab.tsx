@@ -55,7 +55,7 @@ export function ActualBuildingDataTab({ actualData, calculatedData, onActualData
             <CardHeader>
                 <CardTitle className={`${typography.card.titleCompact} text-center`}>{t('projects.actualBuildingData.title')}</CardTitle>
             </CardHeader>
-            <CardContent className="pt-4 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+            <CardContent className="pt-2 grid grid-cols-1 md:grid-cols-2 gap-x-2 gap-y-2">
                 <FormField label={t('projects.actualBuildingData.fields.construction')} id="construction" value={actualData.construction} unit={units.sqm} onChange={handleChange} useGrouping readOnly={!isEditing} />
                 <FormField label={t('projects.actualBuildingData.fields.plotCoverage')} id="plotCoverage" value={actualData.plotCoverage} unit={units.sqm} onChange={handleChange} useGrouping readOnly={!isEditing} />
                 <FormField label={t('projects.actualBuildingData.fields.coveragePercentage')} id="coveragePercentage" value={calculatedData.coveragePercentage * 100} unit={units.percent} readOnly isPercentage />

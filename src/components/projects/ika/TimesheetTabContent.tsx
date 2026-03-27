@@ -139,7 +139,7 @@ export function TimesheetTabContent({ projectId }: TimesheetTabContentProps) {
   if (error) {
     return (
       <Card>
-        <CardContent className="flex items-center justify-center gap-3 py-12">
+        <CardContent className="flex items-center justify-center gap-2 py-12">
           <AlertCircle className={cn(iconSizes.md, colors.text.error)} />
           <p className="text-sm text-muted-foreground">{error}</p>
         </CardContent>
@@ -152,7 +152,7 @@ export function TimesheetTabContent({ projectId }: TimesheetTabContentProps) {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <ClipboardList className={cn(iconSizes.xl, 'text-muted-foreground mb-4')} />
+          <ClipboardList className={cn(iconSizes.xl, 'text-muted-foreground mb-2')} />
           <p className="text-sm font-medium text-muted-foreground">
             {t('ika.timesheetTab.noWorkers')}
           </p>
@@ -165,11 +165,11 @@ export function TimesheetTabContent({ projectId }: TimesheetTabContentProps) {
   }
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-2">
       {/* Header */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
               <CardTitle className={typography.card.titleCompact}>
                 <ClipboardList className={cn(iconSizes.md, spacing.margin.right.sm, 'inline-block')} />
@@ -225,7 +225,7 @@ export function TimesheetTabContent({ projectId }: TimesheetTabContentProps) {
       </Card>
 
       {/* QR Code + Geofence — ADR-170 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
         <QrCodePanel projectId={projectId} />
         <GeofenceConfigMap projectId={projectId} />
       </div>

@@ -69,7 +69,7 @@ export function ProjectStats({ projectId }: ProjectStatsProps) {
     <UnifiedDashboard
       stats={dashboardStats}
       columns={3}
-      className="mb-6"
+      className="mb-2"
     />
   );
 }

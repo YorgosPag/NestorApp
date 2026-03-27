@@ -57,11 +57,11 @@ export function EfkaChecklist({ declaration, completedFields, totalFields }: Efk
         </p>
       </CardHeader>
       <CardContent>
-        <ul className="space-y-3" role="list">
+        <ul className="space-y-2" role="list">
           {CHECKLIST_FIELDS.map((fieldKey) => {
             const completed = isFieldCompleted(fieldKey);
             return (
-              <li key={fieldKey} className="flex items-center gap-3">
+              <li key={fieldKey} className="flex items-center gap-2">
                 {completed ? (
                   <CheckCircle className={cn(iconSizes.sm, colors.text.success)} />
                 ) : (

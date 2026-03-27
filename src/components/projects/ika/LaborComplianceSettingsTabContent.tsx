@@ -194,7 +194,7 @@ export function LaborComplianceSettingsTabContent({ projectId }: LaborCompliance
   }
 
   return (
-    <section className={cn('space-y-6', spacing.padding.top.md)}>
+    <section className={cn('space-y-2', spacing.padding.top.md)}>
       {/* Header */}
       <header className="flex items-center justify-between">
         <hgroup>
@@ -242,7 +242,7 @@ export function LaborComplianceSettingsTabContent({ projectId }: LaborCompliance
       {/* Defaults banner */}
       {!isFromFirestore && (
         <aside className={cn(
-          'flex items-center gap-2 rounded-md border px-4 py-3',
+          'flex items-center gap-2 rounded-md border px-2 py-2',
           'bg-amber-50 border-amber-200 text-amber-800',
           'dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-200'
         )}>
@@ -259,7 +259,7 @@ export function LaborComplianceSettingsTabContent({ projectId }: LaborCompliance
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <dt className={cn(typography.label.sm, 'text-muted-foreground mb-1')}>
                 {t('ika.efkaSettingsTab.activeYear')}

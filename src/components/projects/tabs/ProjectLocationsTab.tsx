@@ -140,7 +140,7 @@ function ProjectAddressFields({
   t,
 }: ProjectAddressFieldsProps) {
   return (
-    <fieldset className="grid grid-cols-2 gap-4">
+    <fieldset className="grid grid-cols-2 gap-2">
       <div className="space-y-1.5">
         <Label>{t('form.type')}</Label>
         <Select value={type} onValueChange={(v) => onTypeChange(v as ProjectAddressType)}>
@@ -550,8 +550,8 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+            <div className="space-y-2">
               <AddressWithHierarchy
                 value={addHierarchy}
                 onChange={(val) => setAddHierarchy(val)}
@@ -567,7 +567,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
                 onIsPrimaryChange={setAddIsPrimary}
                 t={t}
               />
-              <div className={cn("flex gap-3 justify-end border-t", spacing.padding.top.md)}>
+              <div className={cn("flex gap-2 justify-end border-t", spacing.padding.top.md)}>
                 <Button variant="outline" onClick={handleCancelAdd} disabled={isSaving}>Ακύρωση</Button>
                 <Button onClick={handleSaveNewAddress} disabled={isSaving}>
                   {isSaving ? 'Αποθήκευση...' : 'Αποθήκευση'}
@@ -623,8 +623,8 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+            <div className="space-y-2">
               <AddressWithHierarchy
                 value={editHierarchy}
                 onChange={(val) => setEditHierarchy(val)}
@@ -640,7 +640,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
                 onIsPrimaryChange={setEditIsPrimary}
                 t={t}
               />
-              <div className={cn("flex gap-3 justify-end border-t", spacing.padding.top.md)}>
+              <div className={cn("flex gap-2 justify-end border-t", spacing.padding.top.md)}>
                 <Button variant="outline" onClick={handleCancelEdit} disabled={isSaving}>Ακύρωση</Button>
                 <Button onClick={handleSaveEdit} disabled={isSaving}>
                   {isSaving ? 'Αποθήκευση...' : 'Αποθήκευση'}
@@ -696,7 +696,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
               {/* LEFT COLUMN: Address Cards */}
               <aside className={spacing.spaceBetween.md}>
                 <div className="flex items-center justify-between">

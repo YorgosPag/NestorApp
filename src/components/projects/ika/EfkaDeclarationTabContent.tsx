@@ -120,7 +120,7 @@ export function EfkaDeclarationTabContent({ projectId }: EfkaDeclarationTabConte
   if (error) {
     return (
       <Card>
-        <CardContent className="flex items-center justify-center gap-3 py-12">
+        <CardContent className="flex items-center justify-center gap-2 py-12">
           <AlertCircle className={cn(iconSizes.md, colors.text.error)} />
           <p className="text-sm text-muted-foreground">{error}</p>
         </CardContent>
@@ -133,8 +133,8 @@ export function EfkaDeclarationTabContent({ projectId }: EfkaDeclarationTabConte
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <Landmark className={cn(iconSizes.xl, 'text-muted-foreground mb-4')} />
-          <p className="text-sm font-medium text-muted-foreground mb-4">
+          <Landmark className={cn(iconSizes.xl, 'text-muted-foreground mb-2')} />
+          <p className="text-sm font-medium text-muted-foreground mb-2">
             {t('ika.efka.description')}
           </p>
           <Button onClick={handleInitialize}>
@@ -147,7 +147,7 @@ export function EfkaDeclarationTabContent({ projectId }: EfkaDeclarationTabConte
   }
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-2">
       {/* Status header */}
       <Card>
         <CardHeader>
@@ -159,7 +159,7 @@ export function EfkaDeclarationTabContent({ projectId }: EfkaDeclarationTabConte
               </CardTitle>
               <CardDescription>{t('ika.efka.description')}</CardDescription>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <EfkaStatusBadge status={declaration.status} />
               <Button onClick={handleSave} disabled={isSaving}>
                 {isSaving ? (
@@ -176,7 +176,7 @@ export function EfkaDeclarationTabContent({ projectId }: EfkaDeclarationTabConte
         {/* ΑΜΟΕ display */}
         {declaration.amoe && (
           <CardContent>
-            <div className={cn('p-3 rounded-lg', colors.bg.success)}>
+            <div className={cn('p-2 rounded-lg', colors.bg.success)}>
               <p className="text-sm font-medium">
                 {t('ika.efka.amoe.fullLabel')}
               </p>
@@ -187,7 +187,7 @@ export function EfkaDeclarationTabContent({ projectId }: EfkaDeclarationTabConte
       </Card>
 
       {/* Checklist + Form in 2-column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
         {/* Checklist (sidebar) */}
         <div className="lg:col-span-1">
           <EfkaChecklist
@@ -205,7 +205,7 @@ export function EfkaDeclarationTabContent({ projectId }: EfkaDeclarationTabConte
                 {t('ika.efka.checklist.title')}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-2">
               {/* 1. ΑΦΜ Εργοδότη */}
               <div className="space-y-2">
                 <Label htmlFor="employerVat">
@@ -246,7 +246,7 @@ export function EfkaDeclarationTabContent({ projectId }: EfkaDeclarationTabConte
               </div>
 
               {/* 4 & 5: Dates side by side */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div className="space-y-2">
                   <Label htmlFor="startDate">
                     {t('ika.efka.checklist.startDate')}
@@ -272,7 +272,7 @@ export function EfkaDeclarationTabContent({ projectId }: EfkaDeclarationTabConte
               </div>
 
               {/* 6 & 7: Worker count & Category side by side */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div className="space-y-2">
                   <Label htmlFor="workerCount">
                     {t('ika.efka.checklist.estimatedWorkerCount')}

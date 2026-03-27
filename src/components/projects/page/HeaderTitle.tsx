@@ -11,7 +11,7 @@ export function HeaderTitle() {
   const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2">
       <div className={`flex ${iconSizes.xl2} items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg`}>
         <NAVIGATION_ENTITIES.project.icon className={`${iconSizes.md} text-white`} />
       </div>

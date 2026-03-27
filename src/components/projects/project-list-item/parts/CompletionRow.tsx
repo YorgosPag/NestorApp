@@ -15,7 +15,7 @@ export function CompletionRow({ completionDate }: CompletionRowProps) {
     if (!completionDate) return null;
 
     return (
-        <div className="mt-3 pt-3 border-t border-border/50">
+        <div className="mt-2 pt-2 border-t border-border/50">
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Calendar className={iconSizes.xs} />
                 <span>Παράδοση: {formatDate(completionDate)}</span>

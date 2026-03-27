@@ -30,7 +30,7 @@ export function PlotZoningSelectors({ plotData, onPlotDataChange, isEditing, onE
     };
 
     return (
-        <div className="space-y-3">
+        <div className="space-y-2">
             <div className="grid grid-cols-[auto_1fr] items-center">
                  <Select value={plotData.insideLimits} onValueChange={(v) => handleSelectChange('insideLimits', v as 'yes' | 'no')} disabled={!isEditing}>
                     <SelectTrigger className="h-8 w-28">

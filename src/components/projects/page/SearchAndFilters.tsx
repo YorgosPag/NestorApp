@@ -54,9 +54,9 @@ export function SearchAndFilters({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {/* Search and basic filters row */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         <div className="flex-1 min-w-[250px] max-w-[400px]">
           <SearchInput
             value={searchTerm}

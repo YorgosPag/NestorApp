@@ -125,7 +125,7 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
   if (error) {
     return (
       <Card>
-        <CardContent className="flex items-center justify-center gap-3 py-12">
+        <CardContent className="flex items-center justify-center gap-2 py-12">
           <AlertCircle className={cn(iconSizes.md, colors.text.error)} />
           <p className="text-sm text-muted-foreground">{error}</p>
         </CardContent>
@@ -134,7 +134,7 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
   }
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-2">
       {/* Header card */}
       <Card>
         <CardHeader>
@@ -148,7 +148,7 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
                 {t('ika.workersTab.description')}
               </CardDescription>
             </hgroup>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
                 {t('ika.workersTab.totalWorkers')}: {workers.length}
               </span>
@@ -162,11 +162,11 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-2">
           {/* Inline search section */}
           {showSearch && (
             <aside className={cn(
-              'rounded-lg border p-4 space-y-3',
+              'rounded-lg border p-2 space-y-2',
               'bg-muted/30'
             )}>
               <div className="flex items-center justify-between">
@@ -213,7 +213,7 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
           {/* Workers list or empty state */}
           {workers.length === 0 && !showSearch ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Users className={cn(iconSizes.xl, 'text-muted-foreground mb-4')} />
+              <Users className={cn(iconSizes.xl, 'text-muted-foreground mb-2')} />
               <p className="text-sm font-medium text-muted-foreground">
                 {t('ika.workersTab.noWorkers')}
               </p>

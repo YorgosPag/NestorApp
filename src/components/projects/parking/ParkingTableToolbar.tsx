@@ -54,9 +54,9 @@ export function ParkingTableToolbar({
   const { quick } = useBorderTokens();
 
   return (
-      <div className="space-y-4">
+      <div className="space-y-2">
         {/* Action Toolbar */}
-        <div className="flex items-center justify-between p-3 bg-muted/30 ${quick.card}">
+        <div className="flex items-center justify-between p-2 bg-muted/30 ${quick.card}">
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1">
               <ToolbarButton

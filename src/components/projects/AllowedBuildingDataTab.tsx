@@ -80,10 +80,10 @@ export function AllowedBuildingDataTab({ allowedDataInput, calculatedData, onInp
           <CardHeader>
             <CardTitle className={`${typography.card.titleCompact} text-center`}>{t('projects.buildingData.title')}</CardTitle>
           </CardHeader>
-          <CardContent className="pt-4 flex justify-center">
-            <div className="flex gap-x-8" ref={formRef}>
+          <CardContent className="pt-2 flex justify-center">
+            <div className="flex gap-x-2" ref={formRef}>
                 {/* Left Column - Fields */}
-                <div className="space-y-3">
+                <div className="space-y-2">
                     <FormField label={t('projects.buildingData.fields.maxAllowedConstruction')} id="maxAllowedConstruction" value={calculatedData.maxAllowedConstruction} unit={t('units.sqm')} readOnly labelPosition='left' inputClassName="w-40" unitPosition="left" useGrouping />
                     <FormField label={t('projects.buildingData.fields.maxCoveragePercentage')} id="maxCoveragePercentage" value={allowedDataInput.maxCoveragePercentage} unit="%" labelClassName="text-green-600 dark:text-green-500" onChange={handleChange} onEnterPress={handleEnterNavigation} isPercentage labelPosition='left' inputClassName="w-40" unitPosition="left" readOnly={!isEditing} />
                     <FormField label={t('projects.buildingData.fields.maxPlotCoverage')} id="maxPlotCoverage" value={calculatedData.maxPlotCoverage} unit={t('units.sqm')} labelClassName="text-blue-600 dark:text-blue-500" readOnly labelPosition='left' inputClassName="w-40" unitPosition="left" useGrouping />
@@ -98,7 +98,7 @@ export function AllowedBuildingDataTab({ allowedDataInput, calculatedData, onInp
                     <FormField label={t('projects.buildingData.fields.maxAllowedHeight')} id="maxAllowedHeight" value={allowedDataInput.maxAllowedHeight} unit="m" labelClassName="text-indigo-500" onChange={handleChange} onEnterPress={handleEnterNavigation} labelPosition='left' inputClassName="w-40" unitPosition="left" readOnly={!isEditing} />
                 </div>
                 {/* Right Column - Formulas */}
-                <div className={cn("space-y-3 border-l", spacing.padding.left.md)}>
+                <div className={cn("space-y-2 border-l", spacing.padding.left.md)}>
                      <CalculationFormula text={t('projects.buildingData.formulas.construction')} />
                      <CalculationFormula text="" />
                      <CalculationFormula text={t('projects.buildingData.formulas.plotCoverage')} className="text-blue-600 dark:text-blue-500" />

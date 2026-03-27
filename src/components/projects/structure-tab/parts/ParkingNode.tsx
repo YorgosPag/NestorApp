@@ -60,7 +60,7 @@ export const ParkingNode = ({ parking }: ParkingNodeProps) => {
   return (
     <div
       className={cn(
-        'flex items-center gap-3 p-2 rounded-md',
+        'flex items-center gap-2 p-2 rounded-md',
         quick.card,
         colors.bg.primary,
         HOVER_BACKGROUND_EFFECTS.LIGHT,

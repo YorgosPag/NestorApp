@@ -25,7 +25,7 @@ export function ProjectCardMetrics({ project }: ProjectCardMetricsProps) {
   const colors = useSemanticColors();
 
   return (
-    <div className="grid grid-cols-2 gap-4 pt-2">
+    <div className="grid grid-cols-2 gap-2 pt-2">
       <div className="space-y-1">
         <p className={typography.special.tertiary}>{t('metrics.area')}</p>
         <p className={typography.heading.sm}>{project.totalArea.toLocaleString('el-GR')} m²</p>

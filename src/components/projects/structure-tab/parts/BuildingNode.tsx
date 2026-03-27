@@ -111,7 +111,7 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
     <article>
       {/* 🏢 ENTERPRISE: Building header */}
       <div
-        className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer ${quick.card} ${colors.bg.primary} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+        className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer ${quick.card} ${colors.bg.primary} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
         onClick={() => setIsExpanded(!isExpanded)}
       >
         {isExpanded ?
@@ -153,7 +153,7 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
                     setActiveTab(tab.id);
                   }}
                   className={cn(
-                    'flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors', typography.label.sm,
+                    'flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors', typography.label.sm,
                     isActive
                       ? `${colors.bg.accent} ${colors.text.foreground}`
                       : `${colors.text.muted} hover:${colors.bg.muted}`

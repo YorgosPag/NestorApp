@@ -56,7 +56,7 @@ export function MiscellaneousTabContent({ project, data }: MiscellaneousTabConte
   // If no project, companyId, or userId, show placeholder
   if (!resolvedProject?.id || !companyId || !currentUserId) {
     return (
-      <div className="p-6 text-center text-muted-foreground">
+      <div className="p-2 text-center text-muted-foreground">
         <p>Επιλέξτε ένα έργο για να δείτε τα έγγραφα.</p>
       </div>
     );

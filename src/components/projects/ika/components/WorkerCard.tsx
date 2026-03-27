@@ -27,10 +27,10 @@ export function WorkerCard({ worker, onRemove }: WorkerCardProps) {
 
   return (
     <div className={cn(
-      'flex items-center justify-between p-3 rounded-lg border',
+      'flex items-center justify-between p-2 rounded-lg border',
       'hover:bg-accent/30 transition-colors'
     )}>
-      <div className="flex items-center gap-4 min-w-0 flex-1">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
         {/* Avatar */}
         <div className={cn(
           'flex h-10 w-10 shrink-0 items-center justify-center rounded-full',

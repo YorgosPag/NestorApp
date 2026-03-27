@@ -23,7 +23,7 @@ export function GeneralPlotFormFields({ plotData, onPlotDataChange, isEditing, o
     };
 
     return (
-        <div className="space-y-3">
+        <div className="space-y-2">
             <FormField id="sdNoSocial" label={t('plot.labels.sdNoSocial')} value={plotData.sdNoSocial} onChange={handleChange} onEnterPress={onEnterPress} labelPosition='left' inputClassName="w-32" labelClassName="text-muted-foreground" readOnly={!isEditing} />
             <FormField id="socialFactor" label={t('plot.labels.socialFactor')} value={plotData.socialFactor} onChange={handleChange} onEnterPress={onEnterPress} labelPosition='left' inputClassName="w-32" labelClassName="text-muted-foreground" readOnly={!isEditing} />
             <FormField id="sdFinal" label={t('plot.labels.sdFinal')} value={plotData.sdFinal!} readOnly labelPosition='left' inputClassName="w-32" labelClassName="text-muted-foreground" />

@@ -16,7 +16,7 @@ export function StatsGrid({ project }: StatsGridProps) {
     const { t } = useTranslation('projects');
 
     return (
-        <div className="grid grid-cols-2 gap-3 text-xs">
+        <div className="grid grid-cols-2 gap-2 text-xs">
             <div>
                 <p className="text-muted-foreground">{t('statsGrid.area')}</p>
                 <p className="font-medium">{project.totalArea?.toLocaleString('el-GR') || 'N/A'} m²</p>

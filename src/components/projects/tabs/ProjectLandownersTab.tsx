@@ -188,7 +188,7 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
   // ── Loading guard ──────────────────────────────────────────────────────
   if (!projectData) {
     return (
-      <section className="flex items-center justify-center p-8">
+      <section className="flex items-center justify-center p-2">
         <p className={cn('text-sm', COLOR_BRIDGE.text.muted)}>Loading...</p>
       </section>
     );
@@ -196,7 +196,7 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
 
   // ── Render ─────────────────────────────────────────────────────────────
   return (
-    <section className="space-y-6 p-4">
+    <section className="space-y-2 p-2">
       {/* Header */}
       <header className="flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-lg font-semibold">
@@ -258,7 +258,7 @@ function BartexPercentageField({
   t: (key: string) => string;
 }) {
   return (
-    <fieldset className="flex items-center gap-3">
+    <fieldset className="flex items-center gap-2">
       <Label className="shrink-0 text-sm font-medium">
         {t('ownership.bartex.percentage')}
       </Label>

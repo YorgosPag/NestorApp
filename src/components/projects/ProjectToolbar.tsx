@@ -166,7 +166,7 @@ export function ProjectToolbar({
     : undefined;
 
   return (
-    <div className="space-y-3 border-b p-3">
+    <div className="space-y-2 border-b p-2">
       {/* Tabbed Toolbar */}
       <ToolbarTabs
         tabs={tabs}

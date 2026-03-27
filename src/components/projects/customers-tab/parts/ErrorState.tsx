@@ -79,10 +79,10 @@ export function ErrorState({ error, errorType, canRetry = true, onRetry }: Error
         <CardTitle className={typography.card.titleCompact}>{t('customers.title')}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="text-center py-8">
+        <div className="text-center py-2">
           {getErrorIcon()}
 
-          <div className="space-y-2 mb-4">
+          <div className="space-y-2 mb-2">
             <h3 className="text-lg font-semibold text-foreground">
               {errorContext.title}
             </h3>
@@ -95,7 +95,7 @@ export function ErrorState({ error, errorType, canRetry = true, onRetry }: Error
           </div>
 
           {canRetry && onRetry && (
-            <div className="flex flex-col items-center space-y-3">
+            <div className="flex flex-col items-center space-y-2">
               <Button
                 onClick={onRetry}
                 variant="outline"

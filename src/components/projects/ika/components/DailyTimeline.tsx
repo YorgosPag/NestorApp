@@ -100,7 +100,7 @@ export function DailyTimeline({ workerSummaries, onRecordEvent }: DailyTimelineP
   if (workerSummaries.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
-        <Clock className={cn(iconSizes.xl, 'text-muted-foreground mb-4')} />
+        <Clock className={cn(iconSizes.xl, 'text-muted-foreground mb-2')} />
         <p className="text-sm font-medium text-muted-foreground">
           {t('ika.timesheetTab.noEvents')}
         </p>

@@ -473,7 +473,7 @@ export function LiveWorkerMap({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <MapPin className={iconSizes.md} />
@@ -496,7 +496,7 @@ export function LiveWorkerMap({
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-2">
         {/* Summary Badges */}
         {workerMarkers.length > 0 && (
           <div className="flex flex-wrap gap-2">

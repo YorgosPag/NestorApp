@@ -220,7 +220,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
   if (buildings.length === 0) {
     return (
       <section className="text-center py-12 border-2 border-dashed rounded-lg">
-        <Building2 className={cn(iconSizes.xl, 'mx-auto mb-3 text-muted-foreground')} />
+        <Building2 className={cn(iconSizes.xl, 'mx-auto mb-2 text-muted-foreground')} />
         <h3 className={cn(typography.heading.md, 'mb-2')}>{t('measurements.noBuildings')}</h3>
         <p className="text-sm text-muted-foreground">
           {t('measurements.noBuildingsHint')}
@@ -232,7 +232,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
   if (totalItems === 0) {
     return (
       <section className="text-center py-12 border-2 border-dashed rounded-lg">
-        <Ruler className={cn(iconSizes.xl, 'mx-auto mb-3 text-muted-foreground')} />
+        <Ruler className={cn(iconSizes.xl, 'mx-auto mb-2 text-muted-foreground')} />
         <h3 className={cn(typography.heading.md, 'mb-2')}>{t('measurements.noMeasurements')}</h3>
         <p className="text-sm text-muted-foreground">
           {t('measurements.noMeasurementsHint')}
@@ -247,7 +247,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
   }
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-2">
       {/* ================================================================ */}
       {/* HEADER                                                           */}
       {/* ================================================================ */}
@@ -264,9 +264,9 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
       {/* ================================================================ */}
       {/* SUMMARY CARDS                                                    */}
       {/* ================================================================ */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         <Card>
-          <CardContent className="p-3">
+          <CardContent className="p-2">
             <div className="flex items-center gap-2 text-muted-foreground mb-1">
               <Package className="h-4 w-4" />
               <span className="text-xs font-medium">{t('measurements.works')}</span>
@@ -279,7 +279,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
         </Card>
 
         <Card>
-          <CardContent className="p-3">
+          <CardContent className="p-2">
             <div className="flex items-center gap-2 text-muted-foreground mb-1">
               <TrendingUp className="h-4 w-4" />
               <span className="text-xs font-medium">{t('measurements.estimate')}</span>
@@ -291,7 +291,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
         </Card>
 
         <Card>
-          <CardContent className="p-3">
+          <CardContent className="p-2">
             <div className="flex items-center gap-2 text-muted-foreground mb-1">
               <Ruler className="h-4 w-4" />
               <span className="text-xs font-medium">{t('measurements.actual')}</span>
@@ -306,7 +306,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
         </Card>
 
         <Card>
-          <CardContent className="p-3">
+          <CardContent className="p-2">
             <div className="flex items-center gap-2 text-muted-foreground mb-1">
               <Building2 className="h-4 w-4" />
               <span className="text-xs font-medium">{t('measurements.buildings')}</span>
@@ -339,7 +339,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
 
           return (
             <Card key={building.id} className={cn(!hasData && 'opacity-60')}>
-              <CardHeader className="p-3 pb-0">
+              <CardHeader className="p-2 pb-0">
                 <button
                   type="button"
                   className="flex items-center justify-between w-full text-left"
@@ -368,10 +368,10 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
                 </button>
               </CardHeader>
 
-              <CardContent className="p-3 pt-2">
+              <CardContent className="p-2 pt-2">
                 {/* Progress bar — cost share */}
                 {summary && (
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <Progress value={percent} className="h-2 flex-1" />
                     <span className="text-xs text-muted-foreground tabular-nums w-12 text-right">
                       {percent.toFixed(1)}%
@@ -387,7 +387,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
 
                 {/* Expanded: Category breakdown */}
                 {isExpanded && summary && (
-                  <div className="mt-3 space-y-1">
+                  <div className="mt-2 space-y-1">
                     <div className="grid grid-cols-[1fr_auto_auto] gap-2 text-xs font-medium text-muted-foreground border-b pb-1">
                       <span>{t('measurements.category')}</span>
                       <span className="text-right">{t('measurements.worksHeader')}</span>

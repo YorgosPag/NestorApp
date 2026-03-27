@@ -462,7 +462,7 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
   }
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-2">
       {/* Header */}
       <header className="flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-lg font-semibold">
@@ -481,7 +481,7 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
       {/* INLINE FORM — Add / Edit */}
       {/* ================================================================ */}
       {isFormVisible && (
-        <article className="rounded-lg border bg-muted/30 p-4 space-y-4">
+        <article className="rounded-lg border bg-muted/30 p-2 space-y-2">
           <header className="flex items-center justify-between">
             <h4 className="text-sm font-semibold">
               {isEditMode ? t('sales.legal.editAgreement') : t('sales.legal.addAgreement')}
@@ -595,7 +595,7 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
           </fieldset>
 
           {/* Commission type + amount */}
-          <fieldset className="grid grid-cols-2 gap-3">
+          <fieldset className="grid grid-cols-2 gap-2">
             <nav className="space-y-1">
               <Label className="text-sm font-medium">{t('sales.legal.commissionType')}</Label>
               <Select
@@ -639,7 +639,7 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
           </fieldset>
 
           {/* Dates */}
-          <fieldset className="grid grid-cols-2 gap-3">
+          <fieldset className="grid grid-cols-2 gap-2">
             <nav className="space-y-1">
               <Label className="text-sm font-medium">{t('sales.legal.startDate')}</Label>
               <Input
@@ -844,7 +844,7 @@ function AgreementCard({
     (!agreement.endDate || new Date(agreement.endDate) >= new Date());
 
   return (
-    <li className="rounded-lg border p-3 space-y-2">
+    <li className="rounded-lg border p-2 space-y-2">
       <header className="flex items-center justify-between">
         <nav className="flex items-center gap-2">
           <span className="font-medium">{agreement.agentName}</span>
@@ -930,7 +930,7 @@ function AgreementCard({
 
       {/* Expandable file upload section */}
       {isExpanded && companyId && (
-        <section className="relative rounded border bg-muted/20 p-3">
+        <section className="relative rounded border bg-muted/20 p-2">
           <Button
             variant="ghost"
             size="sm"

@@ -154,7 +154,7 @@ export function WorkerAssignmentDialog({
         </DialogHeader>
 
         {/* Search field */}
-        <div className="space-y-4">
+        <div className="space-y-2">
           <div className="flex gap-2">
             <div className="flex-1">
               <Label htmlFor="worker-search" className="sr-only">
@@ -216,13 +216,13 @@ export function WorkerAssignmentDialog({
           )}
 
           {searchError && (
-            <p className="text-sm text-destructive text-center py-4">
+            <p className="text-sm text-destructive text-center py-2">
               {searchError}
             </p>
           )}
 
           {results.length === 0 && searchTerm.trim().length >= 2 && !isSearching && !searchError && (
-            <p className="text-sm text-muted-foreground text-center py-4">
+            <p className="text-sm text-muted-foreground text-center py-2">
               Δεν βρέθηκαν αποτελέσματα
             </p>
           )}

@@ -13,7 +13,7 @@ interface ProjectCardContentProps {
 
 export function ProjectCardContent({ project }: ProjectCardContentProps) {
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-2 space-y-2">
       <ProjectCardTitle name={project.name} description={project.title} />
       <ProjectCardLocation project={project} />
       <ProjectCardProgress progress={project.progress} />

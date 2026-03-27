@@ -122,7 +122,7 @@ export function ProjectFloorplanTab({
   // If no project, companyId, or userId, show placeholder
   if (!resolvedProject?.id || !companyId || !currentUserId) {
     return (
-      <section className="p-6 text-center text-muted-foreground">
+      <section className="p-2 text-center text-muted-foreground">
         <p>{t('tabs.floorplan.noProject', 'Επιλέξτε ένα έργο για να δείτε τις κατόψεις.')}</p>
       </section>
     );

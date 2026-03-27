@@ -274,7 +274,7 @@ export function FloorplanViewerTab({
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <AnimatedSpinner size="large" />
-            <span className="ml-3">{t('tabs.floorplan.loading')}</span>
+            <span className="ml-2">{t('tabs.floorplan.loading')}</span>
           </div>
         ) : floorplanData ? (
           <div className={`w-full h-full ${colors.bg.secondary} ${getStatusBorder('info')} overflow-hidden relative min-h-[450px]`}>
