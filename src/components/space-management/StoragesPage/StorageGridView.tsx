@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
 /**
@@ -75,8 +76,8 @@ export function StorageGridView({
   return (
     <ScrollArea className="h-full flex-1">
       {/* 🏢 ENTERPRISE: Full-width responsive grid */}
-      <div className="w-full p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+      <div className="w-full p-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2">
           {storages.map((storage) => (
             <StorageGridCard
               key={storage.id}

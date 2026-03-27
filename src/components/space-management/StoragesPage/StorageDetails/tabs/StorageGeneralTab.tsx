@@ -317,7 +317,7 @@ export function StorageGeneralTab({
   }, [onSaveRef]);
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-2 space-y-2">
       {/* 🏢 SPEC-256A: Version conflict dialog */}
       <ConflictDialog
         open={isConflicted}
@@ -327,7 +327,7 @@ export function StorageGeneralTab({
         onClose={() => { setIsConflicted(false); setConflictData(null); }}
       />
       {/* Building Link + Floor — side by side at the top */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         <EntityLinkCard key={buildingLink.linkCardKey} {...buildingLink.linkCardProps} />
         <Card>
           <CardHeader className="p-2">
@@ -354,14 +354,14 @@ export function StorageGeneralTab({
 
       {/* Basic Information Card */}
       <Card>
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-2">
           <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
             <NAVIGATION_ENTITIES.storage.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.storage.color)} />
             {t('general.identity')}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {/* ADR-233: Entity Code field with auto-suggest */}
             <EntityCodeField
               value={form.code}
@@ -465,13 +465,13 @@ export function StorageGeneralTab({
 
       {/* Description & Notes Card */}
       <Card>
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-2">
           <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
             <StickyNote className={cn(iconSizes.md, 'text-violet-500')} />
             {t('general.descriptionNotes')}
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-2">
           <fieldset className="space-y-1.5">
             <Label className="text-muted-foreground text-xs">{t('general.fields.description')}</Label>
             <Textarea

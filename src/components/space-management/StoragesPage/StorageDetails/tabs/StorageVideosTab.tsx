@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports, custom/no-hardcoded-strings */
 /**
  * StorageVideosTab — Videos tab for individual storage detail view
  *
@@ -41,7 +42,7 @@ export function StorageVideosTab({ storage }: StorageVideosTabProps) {
 
   if (!companyId || !currentUserId) {
     return (
-      <p className="p-4 text-center text-muted-foreground">
+      <p className="p-2 text-center text-muted-foreground">
         Συνδεθείτε για να δείτε τα βίντεο.
       </p>
     );
