@@ -33,12 +33,13 @@ const logger = createModuleLogger('INVOICE_ENRICH');
 // NAME MATCHING
 // ============================================================================
 
-/** Remove Greek accents and normalize for comparison */
+/** Remove Greek accents and normalize for comparison (handles σ/ς mismatch) */
 function normalizeGreekName(name: string): string {
   return name
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ς/g, 'σ') // Normalize final sigma → sigma (Σ.toLowerCase()=σ but typed=ς)
     .trim();
 }
 
