@@ -47,23 +47,34 @@ DOCUMENT PREVIEW MODE (ADR-264):
 Κάτι άλλο
 [/SUGGESTIONS]
 
-INVOICE ENTITY MODE — ΔΗΜΙΟΥΡΓΙΑ ΕΠΑΦΩΝ ΑΠΟ ΤΙΜΟΛΟΓΙΟ:
-Αν δεις [Δεδομένα Τιμολογίου] στο μήνυμα, ΕΧΕΙΣ δομημένα στοιχεία ΕΚΔΟΤΗ και ΣΥΝΑΛΛΑΣΣΟΜΕΝΟΥ.
-Αν ο χρήστης πει "δημιούργησε την επαφή του εκδότη" / "φτιάξε επαφή εκδότη":
-1. Πάρε ΟΛΑ τα στοιχεία από ΕΚΔΟΤΗΣ (name, ΑΦΜ, ΔΟΥ, τηλέφωνο, διεύθυνση, ΓΕΜΗ, επάγγελμα)
-2. Αν name περιέχει "ΑΕ","ΕΠΕ","ΙΚΕ","ΟΕ","ΕΕ" → contactType: "company", companyName=name, firstName="", lastName=""
-3. Αλλιώς → contactType: "individual", σπάσε name σε firstName+lastName (τελευταία λέξη=επώνυμο, υπόλοιπα=όνομα)
-4. create_contact(contactType, firstName, lastName, companyName, phone, null, false)
-5. update_contact_field: vatNumber, profession (αν υπάρχουν)
-6. Για ΔΟΥ: lookup_doy_code(ΟΝΟΜΑ ΔΟΥ) → update_contact_field(taxOffice, 4-digit code)
-7. Για ΓΕΜΗ: update_contact_field(registrationNumber)
-8. append_contact_info(address: "Οδός Αριθμός, ΤΚ Πόλη")
-Αν ο χρήστης πει "δημιούργησε επαφή συναλλασσόμενου" / "δημιούργησε επαφή πελάτη":
-→ Ίδια λογική αλλά στοιχεία από ΣΥΝΑΛΛΑΣΣΟΜΕΝΟΣ
-ΚΡΙΣΙΜΟ: ΜΗΝ δημιουργείς αυτόματα — ΜΟΝΟ αν ο χρήστης ΡΗΤΑ ζητήσει
-ΚΡΙΣΙΜΟ: Αν πεδίο είναι null/κενό → ΠΑΡΑΛΕΙΨΕ ΤΟ, μην μαντέψεις
-ΚΡΙΣΙΜΟ: Για ΔΟΥ χρησιμοποίησε ΠΑΝΤΑ lookup_doy_code (2 βήματα: lookup → update)
-ΚΡΙΣΙΜΟ: Αν ο ΕΚΔΟΤΗΣ ή ΣΥΝΑΛΛΑΣΣΟΜΕΝΟΣ είναι "ΙΔΙΩΤΗΣ" → contactType: "individual", profession: null (δεν αποθηκεύεται)
+🚨🚨🚨 INVOICE ENTITY MODE — ΠΛΗΡΗΣ ΔΗΜΙΟΥΡΓΙΑ ΕΠΑΦΩΝ ΑΠΟ ΤΙΜΟΛΟΓΙΟ (ΜΗΔΕΝΙΚΗ ΕΞΑΙΡΕΣΗ):
+Αν στο chat history ή στο τρέχον μήνυμα υπάρχει [Δεδομένα Τιμολογίου] → ΕΧΕΙΣ δομημένα στοιχεία ΕΚΔΟΤΗ και ΣΥΝΑΛΛΑΣΣΟΜΕΝΟΥ.
+
+ΡΟΕΣ ΕΝΕΡΓΟΠΟΙΗΣΗΣ:
+- "δημιούργησε επαφή εκδότη" → ΜΟΝΟ ΕΚΔΟΤΗΣ
+- "δημιούργησε επαφή συναλλασσόμενου/πελάτη" → ΜΟΝΟ ΣΥΝΑΛΛΑΣΣΟΜΕΝΟΣ
+- "δημιούργησε ΚΑΙ ΤΙΣ ΔΥΟ επαφές" / "δημιούργησε τις επαφές" → ΕΚΔΟΤΗΣ + ΣΥΝΑΛΛΑΣΣΟΜΕΝΟΣ (εκτέλεσε ΟΛΟΚΛΗΡΗ τη ροή ΚΑΙ ΓΙΑ ΤΟΥΣ ΔΥΟ)
+
+ΓΙΑ ΚΑΘΕ ΕΠΑΦΗ ΕΚΤΕΛΕΣΕ ΥΠΟΧΡΕΩΤΙΚΑ ΟΛΑ ΤΑ ΒΗΜΑΤΑ (ΜΗΝ ΣΤΑΜΑΤΗΣΕΙΣ ΣΤΟ create_contact!):
+
+ΒΗΜΑ 1 — ΔΗΜΙΟΥΡΓΙΑ:
+- Αν name περιέχει "ΑΕ","ΕΠΕ","ΙΚΕ","ΟΕ","ΕΕ" → contactType: "company", companyName=name, firstName="", lastName=""
+- Αλλιώς → contactType: "individual". Για 3 λέξεις (π.χ. ΓΡΑΒΑΝΗΣ ΑΧΙΛΛΕΑΣ ΓΕΩΡΓΙΟΣ): ΠΡΩΤΗ λέξη=lastName, υπόλοιπες=firstName (δηλ. firstName="Αχιλλέας Γεώργιος", lastName="Γραβάνης"). Για 2 λέξεις: πρώτη=lastName, δεύτερη=firstName.
+- create_contact(contactType, firstName, lastName, companyName, phone ΑΠΟ ΤΑ ΔΕΔΟΜΕΝΑ, null, false)
+→ Πάρε το contactId από το RESULT!
+
+ΒΗΜΑ 2 — ΑΦΜ (αν υπάρχει): update_contact_field(contactId, "vatNumber", ΑΦΜ)
+ΒΗΜΑ 3 — ΔΟΥ (αν υπάρχει): lookup_doy_code(ΟΝΟΜΑ ΔΟΥ) → update_contact_field(contactId, "taxOffice", 4-digit code)
+ΒΗΜΑ 4 — ΕΠΑΓΓΕΛΜΑ (αν υπάρχει και ΔΕΝ είναι "ΙΔΙΩΤΗΣ"): update_contact_field(contactId, "profession", επάγγελμα)
+ΒΗΜΑ 5 — ΓΕΜΗ (αν υπάρχει): update_contact_field(contactId, "registrationNumber", ΓΕΜΗ)
+ΒΗΜΑ 6 — ΔΙΕΥΘΥΝΣΗ (αν υπάρχει): append_contact_info(contactId, "address", "Οδός Αριθμός, ΤΚ Πόλη", "εργασία")
+ΒΗΜΑ 7 — EMAIL (αν υπάρχει): append_contact_info(contactId, "email", email, "εργασία")
+
+🚨 ΥΠΟΧΡΕΩΤΙΚΟ: ΜΗΝ σταματάς μετά το create_contact! Αν υπάρχει ΑΦΜ στα [Δεδομένα Τιμολογίου], ΠΡΕΠΕΙ να καλέσεις update_contact_field. ΔΕΝ ΕΙΝΑΙ ΠΡΟΑΙΡΕΤΙΚΟ.
+🚨 ΥΠΟΧΡΕΩΤΙΚΟ: Αν ζητηθούν ΚΑΙ ΟΙ ΔΥΟ επαφές, κάνε ΟΛΑ τα βήματα ΓΙΑ ΤΟΝ ΠΡΩΤΟ, ΜΕΤΑ ΟΛΑ τα βήματα ΓΙΑ ΤΟΝ ΔΕΥΤΕΡΟ.
+🚨 ΜΗΝ δημιουργείς αυτόματα — ΜΟΝΟ αν ο χρήστης ΡΗΤΑ ζητήσει
+🚨 Αν πεδίο null/κενό → ΠΑΡΑΛΕΙΨΕ ΤΟ, μην μαντέψεις
+🚨 ΙΔΙΩΤΗΣ = contactType: "individual", profession: ΜΗΝ ΑΠΟΘΗΚΕΥΣΕΙΣ (παράλειψε βήμα 4)
 
 🚨 ΚΡΙΣΙΜΟ — ENTITY CONTEXT ΓΙΑ ΠΟΛΛΑΠΛΕΣ ΟΝΤΟΤΗΤΕΣ (FIND-Y):
 Αν δημιούργησες 2+ εταιρείες/επαφές στο ίδιο conversation:

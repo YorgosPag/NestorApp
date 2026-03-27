@@ -58,6 +58,11 @@ export function extractSuggestions(rawAnswer: string): { cleanAnswer: string; su
 function inferFallbackSuggestions(answer: string): string[] {
   const lower = answer.toLowerCase();
 
+  // Invoice/receipt with entity data — offer targeted contact creation
+  if ((lower.includes('εκδότη') || lower.includes('εκδοτη')) && lower.includes('συναλλασσόμεν')) {
+    return ['Δημιούργησε και τις δύο επαφές', 'Επαφή εκδότη', 'Επαφή συναλλασσόμενου'];
+  }
+
   // Document/file analysis response
   if (lower.includes('έγγραφο') || lower.includes('αρχείο') || lower.includes('pdf') || lower.includes('ανάλυση')) {
     return ['Σύνδεση με επαφή', 'Αποθήκευση στα έγγραφα', 'Κάτι άλλο'];
