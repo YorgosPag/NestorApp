@@ -54,7 +54,7 @@ export interface DocumentPreviewParams {
 // ============================================================================
 
 const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
-const PREVIEW_TIMEOUT_MS = 15_000;
+const PREVIEW_TIMEOUT_MS = 30_000;
 const MAX_PREVIEWS_PER_MESSAGE = 2;
 
 const VISION_SUPPORTED_PREFIXES = [
