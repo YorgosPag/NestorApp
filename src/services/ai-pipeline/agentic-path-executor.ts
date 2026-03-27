@@ -378,16 +378,18 @@ async function handleDocumentPreviewIfNeeded(
       if (!preview) continue;
 
       // ADR-265: Store base64 for vision-in-the-loop (AI sees actual document)
-      const base64 = fileBuffer.toString('base64');
+      // NOTE: Chat Completions API only supports image/* MIME types in image_url.
+      // PDFs are NOT supported — they get Phase 1 text enrichment only.
       const isImage = att.contentType.startsWith('image/');
-      documentImages.push({
-        base64DataUri: isImage
-          ? `data:${att.contentType};base64,${base64}`
-          : `data:application/pdf;base64,${base64}`,
-        filename: att.filename,
-        contentType: att.contentType,
-        fileRecordId: att.fileRecordId,
-      });
+      if (isImage) {
+        const base64 = fileBuffer.toString('base64');
+        documentImages.push({
+          base64DataUri: `data:${att.contentType};base64,${base64}`,
+          filename: att.filename,
+          contentType: att.contentType,
+          fileRecordId: att.fileRecordId,
+        });
+      }
 
       previews.push({
         fileRecordId: att.fileRecordId,
