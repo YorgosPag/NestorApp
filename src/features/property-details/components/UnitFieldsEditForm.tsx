@@ -1,0 +1,401 @@
+/* eslint-disable design-system/prefer-design-system-imports, design-system/enforce-semantic-colors, custom/no-hardcoded-strings */
+/**
+ * =============================================================================
+ * 🏢 ENTERPRISE: Unit Fields Edit Form
+ * =============================================================================
+ *
+ * Form renderer for unit fields (edit mode). Extracted from UnitFieldsBlock.tsx
+ * for SRP compliance (ADR N.7.1). The orchestrator (UnitFieldsBlock) manages
+ * state, effects, and handlers; this component renders the form cards.
+ *
+ * @module features/property-details/components/UnitFieldsEditForm
+ * @since 2026-03-27
+ */
+
+'use client';
+
+import React from 'react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Ruler, FileText, Info, Lock, Layers
+} from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+
+import type { CommercialStatus, OperationalStatus } from '@/types/unit';
+import { isValidEntityCodeFormat } from '@/services/entity-code.service';
+import { LevelTabStrip } from './UnitFieldsReadOnly';
+import {
+  UNIT_TYPE_OPTIONS, COMMERCIAL_STATUS_OPTIONS, OPERATIONAL_STATUS_OPTIONS,
+} from './unit-fields-constants';
+import type { UnitFieldsEditFormProps } from './unit-fields-form-types';
+import { UnitFieldsDetailCards } from './UnitFieldsDetailCards';
+
+export function UnitFieldsEditForm({
+  formData,
+  setFormData,
+  property,
+  isEditing,
+  isReservedOrSold,
+  isSoldOrRented,
+  isMultiLevel,
+  activeLevelId,
+  setActiveLevelId,
+  currentLevelData,
+  aggregatedTotals,
+  toggleArrayItem,
+  updateLevelField,
+  handleSave,
+  suggestedCode,
+  codeOverridden,
+  setCodeOverridden,
+  codeLoading,
+  t,
+  typography,
+  iconSizes,
+  quick,
+}: UnitFieldsEditFormProps) {
+  return (
+    <form
+      id={isEditing ? 'unit-fields-form' : undefined}
+      className="space-y-4 p-1"
+      onSubmit={(e) => { e.preventDefault(); if (isEditing) handleSave(); }}
+    >
+      {/* ─── Field Locking Banner ─── */}
+      {isEditing && isReservedOrSold && (
+        <Alert
+          variant={isSoldOrRented ? 'destructive' : 'default'}
+          className={cn(
+            'py-2 px-3',
+            !isSoldOrRented && 'border-amber-500 bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-700'
+          )}
+        >
+          <Lock className="h-4 w-4" />
+          <AlertDescription className="text-xs">
+            {isSoldOrRented
+              ? t('fieldLocking.soldBanner', { defaultValue: 'Η μονάδα έχει πωληθεί/ενοικιαστεί — κρίσιμα πεδία κλειδωμένα (συμβόλαια, κτηματολόγιο)' })
+              : t('fieldLocking.reservedBanner', { defaultValue: 'Η μονάδα είναι κρατημένη — βασικά πεδία ταυτότητας κλειδωμένα' })
+            }
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* ─── Level Tab Strip (ADR-236 Phase 2) ─── */}
+      {isMultiLevel && property.levels && property.levels.length >= 2 && (
+        <>
+          <LevelTabStrip
+            levels={property.levels}
+            activeLevelId={activeLevelId}
+            onSelectLevel={setActiveLevelId}
+            t={t}
+          />
+          <aside className="flex items-center gap-3 text-[10px] text-muted-foreground px-1">
+            <span className="flex items-center gap-1">
+              <Layers className="h-3 w-3" />
+              <span className="font-medium">{t('multiLevel.perLevel.perFloorHint')}</span>:
+              {' '}{t('fields.areas.sectionTitle')}, {t('fields.layout.sectionTitle', { defaultValue: 'Διάταξη' })}, {t('orientation.sectionTitle')}, {t('finishes.sectionTitle')}
+            </span>
+            <span className="text-muted-foreground/60">|</span>
+            <span>
+              <span className="font-medium">{t('multiLevel.perLevel.sharedHint')}</span>:
+              {' '}{t('condition.sectionTitle')}, {t('energy.class')}, {t('systems.sectionTitle')}, {t('features.interior.label')}, {t('features.security.label')}
+            </span>
+          </aside>
+        </>
+      )}
+
+      {/* ─── Identity + Location Row ─── */}
+      <section className="grid grid-cols-2 gap-3">
+        {/* ─── Identity Card ─── */}
+        <Card>
+          <CardHeader className="p-2 pb-1">
+            <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
+              <FileText className={cn(iconSizes.sm, 'text-blue-500')} />
+              {t('fields.identity.sectionTitle', { defaultValue: 'Ταυτότητα Μονάδας' })}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-2 pt-0 space-y-2">
+            <fieldset className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                {t('fields.identity.name', { defaultValue: 'Όνομα Μονάδας' })}
+              </Label>
+              <Input
+                id="unit-name"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                className={cn('h-7 text-xs', quick.input)}
+                placeholder={t('fields.identity.namePlaceholder', { defaultValue: 'π.χ. Διαμέρισμα Α1' })}
+                disabled={!isEditing || isReservedOrSold}
+              />
+            </fieldset>
+            <fieldset className="space-y-1">
+              <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                {t('fields.identity.code', { defaultValue: 'Κωδικός Μονάδας' })}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button type="button" className="text-muted-foreground hover:text-foreground transition-colors" aria-label="Info">
+                      <Info className="h-3 w-3" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 text-xs" side="right" align="start">
+                    <h4 className="font-semibold mb-2">{t('entityCode.infoTitle', { defaultValue: 'Σύστημα Κωδικοποίησης' })}</h4>
+                    <p className="text-muted-foreground mb-2">{t('entityCode.infoFormat', { defaultValue: 'Μορφή: {Κτίριο}-{Τύπος}-{Όροφος}.{ΑΑ}' })}</p>
+                    <p className="text-muted-foreground mb-3">{t('entityCode.infoExample', { defaultValue: 'π.χ. A-DI-1.01' })}</p>
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-1 font-medium">{t('entityCode.infoResidential', { defaultValue: 'Κατοικίες' })}</th>
+                          <th className="text-left py-1 font-medium">{t('entityCode.infoCommercial', { defaultValue: 'Εμπορικά' })}</th>
+                          <th className="text-left py-1 font-medium">{t('entityCode.infoAuxiliary', { defaultValue: 'Βοηθητικά' })}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-muted-foreground">
+                        <tr><td>DI = {t('types.apartment')}</td><td>KA = {t('types.shop')}</td><td>AP = {t('types.storage')}</td></tr>
+                        <tr><td>GK = {t('types.apartment_1br')}</td><td>GR = {t('types.office')}</td><td>PK = Parking</td></tr>
+                        <tr><td>ST = {t('types.studio')}</td><td>AI = {t('types.hall')}</td><td>PY = Υπαίθριο</td></tr>
+                        <tr><td>ME = {t('types.maisonette')}</td><td colSpan={2} rowSpan={5} /></tr>
+                        <tr><td>RE = {t('types.penthouse')}</td></tr>
+                        <tr><td>LO = Loft</td></tr>
+                        <tr><td>MO = {t('types.detached_house')}</td></tr>
+                        <tr><td>BI = {t('types.villa')}</td></tr>
+                      </tbody>
+                    </table>
+                    <p className="text-muted-foreground mt-2 text-[10px]">{t('entityCode.infoFloors', { defaultValue: 'Υπόγεια: Y1, Y2... | Ισόγειο: 0 | Όροφοι: 1, 2...' })}</p>
+                  </PopoverContent>
+                </Popover>
+              </Label>
+              <Input
+                id="unit-code"
+                value={formData.code}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, code: e.target.value }));
+                  if (!codeOverridden && e.target.value !== suggestedCode) {
+                    setCodeOverridden(true);
+                  }
+                  if (!e.target.value) setCodeOverridden(false);
+                }}
+                className={cn('h-7 text-xs', quick.input)}
+                placeholder={suggestedCode || t('fields.identity.codePlaceholder', { defaultValue: 'π.χ. A-DI-1.01' })}
+                disabled={!isEditing || isReservedOrSold}
+              />
+              {formData.code && isValidEntityCodeFormat(formData.code) && (
+                <p className="text-[10px] text-emerald-600">{t('entityCode.autoGenerated', { defaultValue: 'Αυτόματη κωδικοποίηση ADR-233' })}</p>
+              )}
+              {codeLoading && isEditing && (
+                <p className="text-[10px] text-muted-foreground">{t('entityCode.loading', { defaultValue: 'Υπολογισμός κωδικού...' })}</p>
+              )}
+              {suggestedCode && codeOverridden && formData.code !== suggestedCode && isEditing && (
+                <p className="text-[10px] text-muted-foreground">{t('entityCode.suggested', { code: suggestedCode, defaultValue: `Προτεινόμενος: ${suggestedCode}` })}</p>
+              )}
+              {formData.code && !isValidEntityCodeFormat(formData.code) && isEditing && (
+                <p className="text-[10px] text-amber-600">{t('entityCode.formatWarning', { defaultValue: 'Ο κωδικός δεν ακολουθεί το πρότυπο format' })}</p>
+              )}
+            </fieldset>
+            <fieldset className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                {t('fields.identity.type', { defaultValue: 'Τύπος Μονάδας' })}
+              </Label>
+              <Select value={formData.type} disabled={!isEditing || isReservedOrSold}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}>
+                <SelectTrigger className="h-7 text-xs">
+                  <SelectValue placeholder={t('fields.identity.typePlaceholder', { defaultValue: 'Επιλέξτε τύπο...' })} />
+                </SelectTrigger>
+                <SelectContent>
+                  {UNIT_TYPE_OPTIONS.map((unitType) => (
+                    <SelectItem key={unitType} value={unitType} className="text-xs">
+                      {t(`types.${unitType}`, { defaultValue: unitType })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </fieldset>
+            <fieldset className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                {t('fields.identity.commercialStatus', { defaultValue: 'Εμπορική Κατάσταση' })}
+              </Label>
+              <Select value={formData.commercialStatus} disabled={!isEditing || isReservedOrSold}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, commercialStatus: value as CommercialStatus }))}>
+                <SelectTrigger className="h-7 text-xs">
+                  <SelectValue placeholder={t('fields.identity.commercialStatusPlaceholder', { defaultValue: 'Επιλέξτε κατάσταση...' })} />
+                </SelectTrigger>
+                <SelectContent>
+                  {COMMERCIAL_STATUS_OPTIONS.map((status) => (
+                    <SelectItem key={status} value={status} className="text-xs">
+                      {t(`commercialStatus.${status}`, { defaultValue: status })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </fieldset>
+            <fieldset className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                {t('fields.commercial.askingPrice', { defaultValue: 'Ζητούμενη Τιμή (€)' })}
+              </Label>
+              <Input
+                id="unit-asking-price"
+                type="number"
+                min={0}
+                step={1000}
+                value={formData.askingPrice}
+                onChange={(e) => setFormData(prev => ({ ...prev, askingPrice: e.target.value }))}
+                className={cn('h-7 text-xs text-right', quick.input)}
+                placeholder="π.χ. 150000"
+                disabled={!isEditing || isSoldOrRented}
+              />
+            </fieldset>
+            <fieldset className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                {t('dialog.addUnit.fields.status', { defaultValue: 'Λειτουργική Κατάσταση' })}
+              </Label>
+              <Select value={formData.operationalStatus} disabled={!isEditing}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, operationalStatus: value as OperationalStatus }))}>
+                <SelectTrigger className="h-7 text-xs">
+                  <SelectValue placeholder={t('dialog.addUnit.placeholders.status', { defaultValue: 'Επιλέξτε...' })} />
+                </SelectTrigger>
+                <SelectContent>
+                  {OPERATIONAL_STATUS_OPTIONS.map((status) => (
+                    <SelectItem key={status} value={status} className="text-xs">
+                      {t(`dialog.addUnit.statusOptions.${status}`, { defaultValue: status })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </fieldset>
+            <fieldset className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                {t('fields.identity.description', { defaultValue: 'Περιγραφή' })}
+              </Label>
+              <Textarea
+                id="unit-description"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                className="h-16 text-xs resize-none"
+                placeholder={t('fields.identity.descriptionPlaceholder', { defaultValue: 'Προσθέστε περιγραφή για τη μονάδα...' })}
+                disabled={!isEditing}
+              />
+            </fieldset>
+          </CardContent>
+        </Card>
+
+        {/* ─── Areas Card (level-aware) ─── */}
+        <Card>
+          <CardHeader className="p-2 pb-1">
+            <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
+              <Ruler className={cn(iconSizes.sm, NAVIGATION_ENTITIES.area.color)} />
+              {t('fields.areas.sectionTitle')}
+              {isMultiLevel && (
+                <span className="ml-auto text-[9px] font-normal text-emerald-600 dark:text-emerald-400">
+                  {t('multiLevel.perLevel.perFloorHint')}
+                </span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-2 pt-0">
+            {isMultiLevel && activeLevelId === null && aggregatedTotals ? (
+              /* Read-only aggregated totals */
+              <div className="space-y-1.5">
+                <p className="text-[10px] text-muted-foreground italic">{t('multiLevel.perLevel.autoComputed')}</p>
+                {([
+                  ['gross', 'fields.areas.gross'],
+                  ['net', 'fields.areas.net'],
+                  ['balcony', 'fields.areas.balcony'],
+                  ['terrace', 'fields.areas.terrace'],
+                  ['garden', 'fields.areas.garden'],
+                ] as const).map(([key, labelKey]) => (
+                  aggregatedTotals.areas[key] > 0 ? (
+                    <dl key={key} className="flex items-baseline gap-1.5">
+                      <dt className="text-xs text-muted-foreground">{t(labelKey)}:</dt>
+                      <dd className="text-xs font-semibold">{aggregatedTotals.areas[key]} m²</dd>
+                    </dl>
+                  ) : null
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {([
+                  ['gross', 'fields.areas.gross'],
+                  ['net', 'fields.areas.net'],
+                  ['balcony', 'fields.areas.balcony'],
+                  ['terrace', 'fields.areas.terrace'],
+                  ['garden', 'fields.areas.garden'],
+                ] as const).map(([areaKey, labelKey]) => {
+                  const value = isMultiLevel && activeLevelId
+                    ? (currentLevelData?.areas?.[areaKey] ?? 0)
+                    : formData[`area${areaKey.charAt(0).toUpperCase()}${areaKey.slice(1)}` as keyof typeof formData] as number;
+                  return (
+                    <fieldset key={areaKey} className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">{t(labelKey)}</Label>
+                      <Input
+                        type="number" min={0} step={0.1}
+                        value={value}
+                        onChange={(e) => {
+                          const num = parseFloat(e.target.value) || 0;
+                          if (isMultiLevel && activeLevelId) {
+                            updateLevelField('areas', {
+                              ...(currentLevelData?.areas ?? { gross: 0 }),
+                              [areaKey]: num,
+                            });
+                          } else {
+                            const flatKey = `area${areaKey.charAt(0).toUpperCase()}${areaKey.slice(1)}`;
+                            setFormData(prev => ({ ...prev, [flatKey]: num }));
+                          }
+                        }}
+                        className={cn('h-7 text-xs', quick.input)}
+                        disabled={!isEditing || isSoldOrRented}
+                      />
+                    </fieldset>
+                  );
+                })}
+              </div>
+            )}
+            {/* Millesimal shares — read-only, from ownership table */}
+            {property.millesimalShares != null && property.millesimalShares > 0 && (
+              <dl className="flex items-baseline gap-1.5 mt-2 pt-2 border-t border-border">
+                <dt className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Lock className="h-3 w-3" />
+                  {t('fields.millesimalShares', { defaultValue: 'Χιλιοστά (‰)' })}:
+                </dt>
+                <dd className="text-xs font-semibold">{property.millesimalShares}‰</dd>
+              </dl>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+
+      <UnitFieldsDetailCards
+        formData={formData}
+        setFormData={setFormData}
+        isEditing={isEditing}
+        isSoldOrRented={isSoldOrRented}
+        isMultiLevel={isMultiLevel}
+        activeLevelId={activeLevelId}
+        currentLevelData={currentLevelData}
+        aggregatedTotals={aggregatedTotals}
+        toggleArrayItem={toggleArrayItem}
+        updateLevelField={updateLevelField}
+        t={t}
+        typography={typography}
+        iconSizes={iconSizes}
+        quick={quick}
+      />
+    </form>
+  );
+}
