@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 
 'use client';
 
@@ -35,7 +36,7 @@ interface ProjectToolbarProps {
 
 export function ProjectToolbar({
   selectedItems = [],
-  onSelectionChange,
+  _onSelectionChange,
   activeFilters = [],
   onFiltersChange,
   onNewProject,

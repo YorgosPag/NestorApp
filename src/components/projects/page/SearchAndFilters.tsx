@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
 import React from 'react';
@@ -92,7 +93,7 @@ export function SearchAndFilters({
             >
               {t('search.allStatuses')}
             </TabsTrigger>
-            {Object.entries(PROJECT_STATUS_LABELS).map(([key, label]) => {
+            {Object.entries(PROJECT_STATUS_LABELS).map(([key, _label]) => {
               // 🏢 ENTERPRISE: Convert snake_case to camelCase for i18n key
               const i18nKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
               return (

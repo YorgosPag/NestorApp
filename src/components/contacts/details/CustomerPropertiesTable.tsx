@@ -15,6 +15,7 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { ENTITY_ROUTES } from '@/lib/routes';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Centralized Unit Icon & Color
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
@@ -78,7 +79,7 @@ export function CustomerPropertiesTable({ contactId, onAddUnit }: CustomerProper
                 </Button>
             </div>
             {properties.length === 0 ? (
-                <div className={`text-center text-sm text-muted-foreground py-4 ${quick.card}`}>
+                <div className={`text-center text-sm text-muted-foreground py-2 ${quick.card}`}>
                     {t('properties.empty')}
                 </div>
             ) : (

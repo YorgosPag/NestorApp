@@ -1,9 +1,11 @@
 'use client';
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { getContactFormConfig } from '@/components/ContactFormSections/utils/ContactFormConfigProvider';
+import '@/lib/design-system';
 
 interface ContactBasicInfoTabProps {
   data: Contact;
@@ -25,6 +27,7 @@ export function ContactBasicInfoTab({
   data,
   additionalData,
 }: ContactBasicInfoTabProps) {
+  const { t } = useTranslation('contacts');
   const config = getContactFormConfig(data.type);
   const sections = config.getSections();
 
@@ -44,9 +47,9 @@ export function ContactBasicInfoTab({
 
   if (!basicInfoSection) {
     return (
-      <div className="p-4">
+      <div className="p-2">
         <p className="text-muted-foreground">
-          Δεν βρέθηκαν βασικές πληροφορίες για αυτόν τον τύπο επαφής.
+          {t('basicInfo.noInfoFound')}
         </p>
       </div>
     );
@@ -55,7 +58,7 @@ export function ContactBasicInfoTab({
   const RendererComponent = config.renderer;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       <RendererComponent
         sections={[basicInfoSection]}
         formData={formData || data}

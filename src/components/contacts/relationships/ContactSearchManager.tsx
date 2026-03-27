@@ -249,13 +249,16 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
         onCreateNew={onCreateNew}
       />
 
+      {/* Debug panel — dev-only, not user-facing */}
       {finalSearchConfig.debug && (
         <div className="text-xs text-muted-foreground space-y-1 p-2 bg-muted/50 rounded">
+          {/* eslint-disable custom/no-hardcoded-strings */}
           <div>🔍 DEBUG INFO:</div>
           <div>Results: {searchResults.length}</div>
           <div>Excluded IDs: {excludeContactIds.length}</div>
           <div>Allowed Types: {allowedContactTypes.join(', ')}</div>
           {searchError && <div className="text-destructive">Error: {searchError}</div>}
+          {/* eslint-enable custom/no-hardcoded-strings */}
         </div>
       )}
     </div>

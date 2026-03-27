@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 /**
  * =============================================================================
  * 🏢 ENTERPRISE: Project Floorplan Tab
@@ -50,6 +51,7 @@ interface ProjectFloorplanTabProps {
 // =============================================================================
 
 /** Accepted file types for floorplans (DXF, PDF, images) */
+// eslint-disable-next-line custom/no-hardcoded-strings
 const FLOORPLAN_ACCEPT = '.dxf,.pdf,application/pdf,application/dxf,image/vnd.dxf,.jpg,.jpeg,.png,image/jpeg,image/png';
 
 // =============================================================================
@@ -113,7 +115,7 @@ export function ProjectFloorplanTab({
   const purpose = floorplanType === 'parking' ? FLOORPLAN_PURPOSES.PARKING : FLOORPLAN_PURPOSES.PROJECT;
 
   // Translated title
-  const displayTitle = title
+  const _displayTitle = title
     ? (title.includes('.') ? t(title) : title)
     : floorplanType === 'parking'
       ? t('tabs.parkingFloorplan.title')

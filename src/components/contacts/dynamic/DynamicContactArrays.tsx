@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import '@/lib/design-system';
 import { UniversalCommunicationManager } from '@/components/contacts/dynamic/UniversalCommunicationManager';
 import type { CommunicationItem, ContactEntityType } from '@/components/contacts/dynamic/communication';
-import { COMMUNICATION_CONFIGS, getEntityAwareCommunicationConfig } from '@/components/contacts/dynamic/communication';
+import { getEntityAwareCommunicationConfig } from '@/components/contacts/dynamic/communication';
 import type { PhoneInfo, EmailInfo, WebsiteInfo, SocialMediaInfo } from '@/types/contacts';
 
 // ============================================================================
@@ -128,7 +129,7 @@ export function DynamicContactArrays({
   onWebsitesChange,
   onSocialMediaChange
 }: DynamicContactArraysProps) {
-  const [isDesktop, setIsDesktop] = useState(false);
+  const [_isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
     const checkIsDesktop = () => setIsDesktop(window.innerWidth >= 768);
@@ -149,7 +150,7 @@ export function DynamicContactArrays({
   const socialConfig = getEntityAwareCommunicationConfig('social', contactType);
 
   return (
-    <div className="w-full space-y-8">
+    <div className="w-full space-y-2">
       {/* 📱 PHONES - UniversalCommunicationManager */}
       <UniversalCommunicationManager
         config={phoneConfig}

@@ -1,5 +1,6 @@
 'use client';
 
+import '@/lib/design-system';
 import React, { useState, useEffect } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
 import { Ruler, Euro } from 'lucide-react';

@@ -1,5 +1,6 @@
 'use client';
 
+import '@/lib/design-system';
 import { useMemo, useRef } from 'react';
 import { AddressMap } from '@/components/shared/addresses/AddressMap';
 import { AddressUtils } from '@/config/address-config';

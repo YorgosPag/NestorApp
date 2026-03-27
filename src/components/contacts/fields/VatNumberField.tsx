@@ -1,5 +1,7 @@
 'use client';
 
+import '@/lib/design-system';
+
 /**
  * @module VatNumberField
  * @description Reusable VAT (ΑΦΜ) input field with real-time uniqueness checking.

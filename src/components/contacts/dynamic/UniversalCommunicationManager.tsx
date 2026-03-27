@@ -4,6 +4,7 @@ import React from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
+import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: New modular hooks
 import { useResponsiveLayout, useCommunicationOperations } from './hooks';
@@ -120,7 +121,7 @@ export function UniversalCommunicationManager({
   const IconComponent = config.icon;
 
   return (
-    <section className="w-full max-w-none min-w-full space-y-4" aria-labelledby="comm-manager-title">
+    <section className="w-full max-w-none min-w-full space-y-2" aria-labelledby="comm-manager-title">
       {/* Header */}
       <header className="flex items-center gap-2 text-sm font-medium text-gray-700">
         <IconComponent className={iconSizes.sm} />

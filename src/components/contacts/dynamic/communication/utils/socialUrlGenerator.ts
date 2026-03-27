@@ -9,6 +9,7 @@
 // ============================================================================
 
 import { createModuleLogger } from '@/lib/telemetry';
+import { validateSocialUrl as enterpriseValidator } from '@/lib/social-platform-system/profile-service';
 const logger = createModuleLogger('socialUrlGenerator');
 
 // ============================================================================
@@ -131,30 +132,7 @@ export function generateSocialUrl(platform: string, username: string): string {
 export function validateSocialUrl(url: string, platform?: SocialPlatform): boolean {
   // ✅ ENTERPRISE MIGRATION: Delegating to centralized social platform system
   // BACKWARDS COMPATIBLE: Same interface, enterprise implementation
-  try {
-    const { validateSocialUrl: enterpriseValidator } = require('@/lib/social-platform-system');
-    // 🏢 ENTERPRISE: Type mapping between legacy SocialPlatform and enterprise SocialPlatformType
-    // Both types have the same string values, so casting is safe
-    return enterpriseValidator(url, platform as string | undefined);
-  } catch (error) {
-    logger.warn('Enterprise social validator not available, using fallback');
-    if (!url?.trim()) return false;
-
-    try {
-      const urlObj = new URL(url);
-      if (platform) {
-        const expectedTemplate = SOCIAL_URL_TEMPLATES[platform];
-        const expectedDomain = new URL(expectedTemplate.replace('{username}', 'test')).hostname;
-        return urlObj.hostname === expectedDomain;
-      }
-
-      const knownDomains = Object.values(SOCIAL_URL_TEMPLATES)
-        .map(template => new URL(template.replace('{username}', 'test')).hostname);
-      return knownDomains.includes(urlObj.hostname);
-    } catch {
-      return false;
-    }
-  }
+  return enterpriseValidator(url, platform as string | undefined);
 }
 
 /**
@@ -173,7 +151,7 @@ export function extractUsernameFromSocialUrl(url: string): string {
 
     // LinkedIn special case: /in/username
     if (urlObj.hostname.includes('linkedin.com')) {
-      const match = urlObj.pathname.match(/\/in\/([^\/]+)/);
+      const match = urlObj.pathname.match(/\/in\/([^/]+)/);
       return match?.[1] || '';
     }
 

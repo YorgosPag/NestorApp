@@ -43,7 +43,7 @@ export function AddUnitToContactDialog(props: AddUnitToContactDialogProps) {
     operationType: 'create',
     props: {
       ...props,
-      onSubmit: async (data?: Record<string, unknown>) => {
+      onSubmit: async (_data?: Record<string, unknown>) => {
         // Smart Factory handles unit creation με contact linking
         if (props.onUnitAdded) {
           props.onUnitAdded();

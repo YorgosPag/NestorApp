@@ -13,6 +13,8 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import '@/lib/design-system';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts/helpers';
 import type { BankAccount, BankAccountInput } from '@/types/contacts/banking';
@@ -79,6 +81,7 @@ export function ContactBankingTab({
   data,
   additionalData
 }: ContactBankingTabProps) {
+  const { t } = useTranslation('contacts');
   const iconSizes = useIconSizes();
   const { success, error: notifyError } = useNotifications();
   const disabled = additionalData?.disabled ?? false;
@@ -237,8 +240,8 @@ export function ContactBankingTab({
     return (
       <div className="text-center py-12">
         <p className="text-destructive">{error}</p>
-        <Button variant="outline" onClick={loadAccounts} className="mt-4">
-          Επανάληψη
+        <Button variant="outline" onClick={loadAccounts} className="mt-2">
+          {t('bankingTab.retry')}
         </Button>
       </div>
     );
@@ -247,24 +250,23 @@ export function ContactBankingTab({
   // Render empty state
   if (accounts.length === 0) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-2">
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <CreditCard
               size={iconSizes.numeric.xl}
-              className="text-muted-foreground mb-4"
+              className="text-muted-foreground mb-2"
             />
             <h3 className="text-lg font-medium mb-2">
-              Δεν υπάρχουν τραπεζικοί λογαριασμοί
+              {t('bankingTab.empty.title')}
             </h3>
-            <p className="text-muted-foreground text-center mb-6 max-w-md">
-              Προσθέστε τραπεζικούς λογαριασμούς για να διευκολύνετε τις συναλλαγές
-              με αυτή την επαφή.
+            <p className="text-muted-foreground text-center mb-2 max-w-md">
+              {t('bankingTab.empty.description')}
             </p>
             {!disabled && (
               <Button onClick={handleAdd}>
                 <Plus size={iconSizes.numeric.sm} className="mr-2" />
-                Προσθήκη Λογαριασμού
+                {t('bankingTab.addAccount')}
               </Button>
             )}
           </CardContent>
@@ -273,11 +275,11 @@ export function ContactBankingTab({
         {/* Inline Form */}
         {isFormOpen && (
           <Card>
-            <CardContent className="pt-6">
-              <header className="mb-4">
-                <h3 className="text-lg font-medium">Νέος Λογαριασμός</h3>
+            <CardContent className="pt-2">
+              <header className="mb-2">
+                <h3 className="text-lg font-medium">{t('bankingTab.newAccount.title')}</h3>
                 <p className="text-sm text-muted-foreground">
-                  Προσθέστε τα στοιχεία του τραπεζικού λογαριασμού.
+                  {t('bankingTab.newAccount.description')}
                 </p>
               </header>
               <BankAccountForm
@@ -295,34 +297,34 @@ export function ContactBankingTab({
 
   // Render accounts
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       {/* Header with Add button */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Building2 size={iconSizes.numeric.md} className="text-primary" />
           <h3 className="text-lg font-medium">
-            Τραπεζικοί Λογαριασμοί ({accounts.length})
+            {t('bankingTab.accountsTitle')} ({accounts.length})
           </h3>
         </div>
         {!disabled && (
           <Button onClick={handleAdd}>
             <Plus size={iconSizes.numeric.sm} className="mr-2" />
-            Προσθήκη
+            {t('bankingTab.add')}
           </Button>
         )}
       </div>
 
       {/* Accounts grouped by bank */}
-      <div className="space-y-6">
+      <div className="space-y-2">
         {Object.entries(accountsByBank).map(([bankName, bankAccounts]) => (
-          <div key={bankName} className="space-y-3">
+          <div key={bankName} className="space-y-2">
             {Object.keys(accountsByBank).length > 1 && (
               <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <Building2 size={iconSizes.numeric.sm} />
                 {bankName}
               </h4>
             )}
-            <div className="space-y-3">
+            <div className="space-y-2">
               {bankAccounts.map((account) => (
                 <BankAccountCard
                   key={account.id}
@@ -341,8 +343,8 @@ export function ContactBankingTab({
       {/* Inline Form */}
       {isFormOpen && (
         <Card className="border-primary/30">
-          <CardContent className="pt-6">
-            <header className="mb-4">
+          <CardContent className="pt-2">
+            <header className="mb-2">
               <h3 className="text-lg font-medium">
                 {editingAccount ? 'Επεξεργασία Λογαριασμού' : 'Νέος Λογαριασμός'}
               </h3>
@@ -370,18 +372,18 @@ export function ContactBankingTab({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Διαγραφή Λογαριασμού</AlertDialogTitle>
+            <AlertDialogTitle>{t('bankingTab.deleteAccount.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Είστε σίγουροι ότι θέλετε να διαγράψετε τον λογαριασμό{' '}
-              <strong>{deletingAccount?.bankName}</strong> με IBAN{' '}
+              {t('bankingTab.deleteAccount.confirmation')}{' '}
+              <strong>{deletingAccount?.bankName}</strong> {t('bankingTab.deleteAccount.withIban')}{' '}
               <code className="text-xs">{deletingAccount?.iban}</code>;
               <br />
               <br />
-              Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.
+              {t('bankingTab.deleteAccount.irreversible')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={actionLoading}>Ακύρωση</AlertDialogCancel>
+            <AlertDialogCancel disabled={actionLoading}>{t('bankingTab.deleteAccount.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
               disabled={actionLoading}
@@ -390,7 +392,7 @@ export function ContactBankingTab({
               {actionLoading ? (
                 <Spinner size="small" color="inherit" className="mr-2" />
               ) : null}
-              Διαγραφή
+              {t('bankingTab.deleteAccount.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

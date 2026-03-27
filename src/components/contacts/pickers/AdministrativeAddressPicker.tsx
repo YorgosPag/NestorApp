@@ -14,6 +14,8 @@
  */
 
 import React, { useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import '@/lib/design-system';
 import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox';
 import {
@@ -100,22 +102,33 @@ const PATH_TO_ADDRESS: Array<{
   { pathKey: 'majorGeo', idField: 'majorGeoId', nameField: 'majorGeoName', level: 1 },
 ];
 
+/** Placeholder i18n key mapping per level */
+const LEVEL_PLACEHOLDER_KEYS: Record<AdminLevel, string> = {
+  8: 'addressesSection.administrative.placeholders.city',
+  7: 'addressesSection.administrative.placeholders.community',
+  6: 'addressesSection.administrative.placeholders.unit',
+  5: 'addressesSection.administrative.placeholders.municipality',
+  4: 'addressesSection.administrative.placeholders.regionalUnit',
+  3: 'addressesSection.administrative.placeholders.region',
+  2: 'addressesSection.administrative.placeholders.decentralized',
+  1: 'addressesSection.administrative.placeholders.geographic',
+};
+
 /** Ordered fields for display: bottom (settlement) to top (majorGeo) */
 const LEVEL_FIELDS: Array<{
   level: AdminLevel;
   idField: keyof AdministrativeAddress;
   nameField: keyof AdministrativeAddress;
   label: string;
-  placeholder: string;
 }> = [
-  { level: 8, idField: 'settlementId', nameField: 'settlementName', label: ADMIN_LEVEL_LABELS[8], placeholder: 'π.χ. Κομοτηνή, Μαρούσι...' },
-  { level: 7, idField: 'communityId', nameField: 'communityName', label: ADMIN_LEVEL_LABELS[7], placeholder: 'π.χ. Δημοτική Κοινότητα...' },
-  { level: 6, idField: 'municipalUnitId', nameField: 'municipalUnitName', label: ADMIN_LEVEL_LABELS[6], placeholder: 'π.χ. Δημοτική Ενότητα...' },
-  { level: 5, idField: 'municipalityId', nameField: 'municipalityName', label: ADMIN_LEVEL_LABELS[5], placeholder: 'π.χ. Δήμος Αθηναίων...' },
-  { level: 4, idField: 'regionalUnitId', nameField: 'regionalUnitName', label: ADMIN_LEVEL_LABELS[4], placeholder: 'π.χ. Π.Ε. Αττικής...' },
-  { level: 3, idField: 'regionId', nameField: 'regionName', label: ADMIN_LEVEL_LABELS[3], placeholder: 'π.χ. Περιφέρεια Αττικής...' },
-  { level: 2, idField: 'decentAdminId', nameField: 'decentAdminName', label: ADMIN_LEVEL_LABELS[2], placeholder: 'π.χ. Αποκ. Διοίκηση Αττικής...' },
-  { level: 1, idField: 'majorGeoId', nameField: 'majorGeoName', label: ADMIN_LEVEL_LABELS[1], placeholder: 'π.χ. Αττική, Βόρεια Ελλάδα...' },
+  { level: 8, idField: 'settlementId', nameField: 'settlementName', label: ADMIN_LEVEL_LABELS[8] },
+  { level: 7, idField: 'communityId', nameField: 'communityName', label: ADMIN_LEVEL_LABELS[7] },
+  { level: 6, idField: 'municipalUnitId', nameField: 'municipalUnitName', label: ADMIN_LEVEL_LABELS[6] },
+  { level: 5, idField: 'municipalityId', nameField: 'municipalityName', label: ADMIN_LEVEL_LABELS[5] },
+  { level: 4, idField: 'regionalUnitId', nameField: 'regionalUnitName', label: ADMIN_LEVEL_LABELS[4] },
+  { level: 3, idField: 'regionId', nameField: 'regionName', label: ADMIN_LEVEL_LABELS[3] },
+  { level: 2, idField: 'decentAdminId', nameField: 'decentAdminName', label: ADMIN_LEVEL_LABELS[2] },
+  { level: 1, idField: 'majorGeoId', nameField: 'majorGeoName', label: ADMIN_LEVEL_LABELS[1] },
 ];
 
 // ============================================================================
@@ -129,6 +142,7 @@ export function AdministrativeAddressPicker({
   visibleLevels,
   showPostalCode = true,
 }: AdministrativeAddressPickerProps) {
+  const { t } = useTranslation('contacts');
   const { isLoading, resolvePath, levelOptions } =
     useAdministrativeHierarchy();
 
@@ -209,13 +223,13 @@ export function AdministrativeAddressPicker({
   }, [isLoading, levelOptions]);
 
   return (
-    <section className="space-y-3" aria-label="Διοικητική Διαίρεση">
+    <section className="space-y-3" aria-label={t('addressesSection.administrative.title')}>
       <header className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
         <MapPin className="h-4 w-4" />
-        <span>Διοικητική Διαίρεση</span>
+        <span>{t('addressesSection.administrative.title')}</span>
       </header>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {fieldsToShow.map((field) => {
           const currentName = currentAddress[field.nameField] as string;
           const currentId = currentAddress[field.idField] as string | null;
@@ -239,7 +253,7 @@ export function AdministrativeAddressPicker({
                   );
                 }}
                 options={optionsByLevel.get(field.level) ?? []}
-                placeholder={field.placeholder}
+                placeholder={t(LEVEL_PLACEHOLDER_KEYS[field.level])}
                 emptyMessage="Πληκτρολογήστε για αναζήτηση..."
                 isLoading={isLoading}
                 allowFreeText
@@ -254,7 +268,7 @@ export function AdministrativeAddressPicker({
         {showPostalCode && (
           <fieldset className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">
-              Ταχυδρομικός Κώδικας
+              {t('addressesSection.administrative.postalCode')}
             </label>
             <input
               type="text"

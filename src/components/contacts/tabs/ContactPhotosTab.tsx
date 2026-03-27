@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import '@/lib/design-system';
 import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { UnifiedPhotoManager } from '@/components/ui/UnifiedPhotoManager';
@@ -72,7 +73,7 @@ export function ContactPhotosTab({
   }, [effectiveFormData]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       <UnifiedPhotoManager
         {...({
           photos,

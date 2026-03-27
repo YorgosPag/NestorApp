@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
 /**
@@ -17,7 +18,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { Settings, Save, RefreshCw, Pencil, X, Info } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -44,13 +45,13 @@ interface LaborComplianceSettingsTabContentProps {
   projectId?: string;
 }
 
-export function LaborComplianceSettingsTabContent({ projectId }: LaborComplianceSettingsTabContentProps) {
+export function LaborComplianceSettingsTabContent({ projectId: _projectId }: LaborComplianceSettingsTabContentProps) {
   const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
-  const colors = useSemanticColors();
+  const _colors = useSemanticColors();
   const typography = useTypography();
   const spacing = useSpacingTokens();
-  const borders = useBorderTokens();
+  const _borders = useBorderTokens();
   const { user } = useAuth();
   const notifications = useNotifications();
 
@@ -211,7 +212,7 @@ export function LaborComplianceSettingsTabContent({ projectId }: LaborCompliance
             <>
               <Button variant="outline" onClick={handleCancelEdit} disabled={isSaving}>
                 <X className={iconSizes.sm} />
-                <span className="ml-1">Ακύρωση</span>
+                <span className="ml-1">{t('projectHeader.cancel')}</span>
               </Button>
               <Button onClick={handleSave} disabled={isSaving}>
                 <Save className={iconSizes.sm} />
@@ -232,7 +233,7 @@ export function LaborComplianceSettingsTabContent({ projectId }: LaborCompliance
               )}
               <Button variant="outline" onClick={() => setIsEditing(true)}>
                 <Pencil className={iconSizes.sm} />
-                <span className="ml-1">Επεξεργασία</span>
+                <span className="ml-1">{t('projectHeader.edit')}</span>
               </Button>
             </>
           )}

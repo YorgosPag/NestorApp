@@ -11,7 +11,11 @@ import type { ContactRelationship } from '@/types/contacts/relationships';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 import { createModuleLogger } from '@/lib/telemetry';
+import i18next from 'i18next';
 const logger = createModuleLogger('contact-navigation');
+
+// 🌐 i18n helper — resolves translated stat titles to canonical keys
+const t = (key: string) => i18next.t(key, { ns: 'contacts' });
 
 // ============================================================================
 // TYPES
@@ -21,17 +25,7 @@ export interface ContactNamesMap {
   [contactId: string]: string;
 }
 
-export interface NavigationFilters {
-  'Σύνολο Σχέσεων': string;
-  'Εργαζόμενοι': string;
-  'Μέτοχοι/Εταίροι': string;
-  'Συνεργάτες': string;
-  'Διευθυντικά Στελέχη': string;
-  'Πρόσφατες Σχέσεις': string;
-  'Κύριες Σχέσεις': string;
-  'Τμήματα': string;
-  [key: string]: string;
-}
+export type NavigationFilters = Record<string, string>;
 
 // ============================================================================
 // NAVIGATION FUNCTIONS
@@ -84,34 +78,41 @@ export function getContactNamesForFilter(
   const getContactName = (rel: ContactRelationship) =>
     contactNames[getTargetContactId(rel)];
 
-  switch (cardTitle) {
-    case 'Εργαζόμενοι':
-      return relationships
-        .filter(rel => rel.relationshipType === 'employee')
-        .map(getContactName)
-        .filter(Boolean);
+  // 🌐 i18n: Compare against translated stat titles
+  const employeesTitle = t('relationships.stats.employees');
+  const shareholdersTitle = t('relationships.stats.shareholders');
+  const consultantsTitle = t('relationships.stats.consultants');
+  const managementTitle = t('relationships.stats.management');
 
-    case 'Μέτοχοι/Εταίροι':
-      return relationships
-        .filter(rel => rel.relationshipType === 'shareholder')
-        .map(getContactName)
-        .filter(Boolean);
-
-    case 'Σύμβουλοι':
-      return relationships
-        .filter(rel => rel.relationshipType === 'consultant')
-        .map(getContactName)
-        .filter(Boolean);
-
-    case 'Διευθυντικά Στελέχη':
-      return getManagementContactNames(relationships, contactNames, contactId);
-
-    default:
-      // For other cards, return all contact names
-      return relationships
-        .map(getContactName)
-        .filter(Boolean);
+  if (cardTitle === employeesTitle) {
+    return relationships
+      .filter(rel => rel.relationshipType === 'employee')
+      .map(getContactName)
+      .filter(Boolean);
   }
+
+  if (cardTitle === shareholdersTitle) {
+    return relationships
+      .filter(rel => rel.relationshipType === 'shareholder')
+      .map(getContactName)
+      .filter(Boolean);
+  }
+
+  if (cardTitle === consultantsTitle) {
+    return relationships
+      .filter(rel => rel.relationshipType === 'consultant')
+      .map(getContactName)
+      .filter(Boolean);
+  }
+
+  if (cardTitle === managementTitle) {
+    return getManagementContactNames(relationships, contactNames, contactId);
+  }
+
+  // For other cards, return all contact names
+  return relationships
+    .map(getContactName)
+    .filter(Boolean);
 }
 
 /**
@@ -124,16 +125,21 @@ function getManagementContactNames(
 ): string[] {
   const managementTypes = ['director', 'manager', 'executive', 'ceo', 'chairman'];
 
+  // 🌐 i18n: Position keywords resolved from locale
+  const directorKeyword = t('navigation.positionKeywords.director');
+  const generalDirectorKeyword = t('navigation.positionKeywords.generalDirector');
+  const seniorExecutiveKeyword = t('navigation.positionKeywords.seniorExecutive');
+
   return relationships
     .filter(rel =>
       managementTypes.includes(rel.relationshipType) ||
       (rel.position && (
-        rel.position.toLowerCase().includes('διευθυντής') ||
+        rel.position.toLowerCase().includes(directorKeyword) ||
         rel.position.toLowerCase().includes('manager') ||
         rel.position.toLowerCase().includes('ceo') ||
         rel.position.toLowerCase().includes('cto') ||
-        rel.position.toLowerCase().includes('γενικός διευθυντής') ||
-        rel.position.toLowerCase().includes('ανώτερο στέλεχος')
+        rel.position.toLowerCase().includes(generalDirectorKeyword) ||
+        rel.position.toLowerCase().includes(seniorExecutiveKeyword)
       ))
     )
     .map(rel => {
@@ -147,15 +153,16 @@ function getManagementContactNames(
  * 🔄 Get fallback search term for navigation
  */
 function getFallbackSearchTerm(cardTitle: string): string {
+  // 🌐 i18n: Map translated stat titles → translated fallback search terms
   const relationshipFilters: NavigationFilters = {
-    'Σύνολο Σχέσεων': 'σχέση',
-    'Εργαζόμενοι': 'εργαζόμενος',
-    'Μέτοχοι/Εταίροι': 'μέτοχος',
-    'Συνεργάτες': 'συνεργάτης',
-    'Διευθυντικά Στελέχη': 'διευθυντής',
-    'Πρόσφατες Σχέσεις': 'πρόσφατη σχέση',
-    'Κύριες Σχέσεις': 'κύρια σχέση',
-    'Τμήματα': 'τμήμα'
+    [t('relationships.stats.totalRelationships')]: t('navigation.fallbackSearch.totalRelationships'),
+    [t('relationships.stats.employees')]: t('navigation.fallbackSearch.employees'),
+    [t('relationships.stats.shareholders')]: t('navigation.fallbackSearch.shareholders'),
+    [t('relationships.stats.consultants')]: t('navigation.fallbackSearch.consultants'),
+    [t('relationships.stats.management')]: t('navigation.fallbackSearch.management'),
+    [t('relationships.stats.recent')]: t('navigation.fallbackSearch.recent'),
+    [t('relationships.stats.key')]: t('navigation.fallbackSearch.key'),
+    [t('relationships.stats.departments')]: t('navigation.fallbackSearch.departments'),
   };
 
   return relationshipFilters[cardTitle] || cardTitle;

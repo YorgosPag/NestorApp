@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTranslation } from 'react-i18next';
+import '@/lib/design-system';
 
 // ============================================================================
 // 🏢 ENTERPRISE IMPORTS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ SYSTEMS
@@ -60,7 +61,7 @@ export const EmailRenderer: React.FC<EmailRendererProps> = ({
   // 🎯 ΜΟΝΟ ΓΙΑ DESKTOP: Οριζόντιο layout σε γραμμή για emails
   if (isDesktop) {
     return (
-      <div key={index} className={`grid grid-cols-4 gap-3 items-center py-2 ${quick.separatorH} last:border-b-0`}>
+      <div key={index} className={`grid grid-cols-4 gap-2 items-center py-2 ${quick.separatorH} last:border-b-0`}>
         {/* 1. Τύπος (Προσωπικό, Εργασία, κτλ.) */}
         <div>
           <Select

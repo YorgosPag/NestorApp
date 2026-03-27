@@ -242,7 +242,7 @@ export interface LocalizedFieldLabels {
  * Placeholder function για μελλοντική localization support
  * Προς το παρόν returns τα ελληνικά labels
  */
-export function getLocalizedFieldLabels(locale: string = 'el'): LocalizedFieldLabels {
+export function getLocalizedFieldLabels(_locale: string = 'el'): LocalizedFieldLabels {
   // TODO: Implement proper localization when needed
   // For now, return Greek labels as default
   return {

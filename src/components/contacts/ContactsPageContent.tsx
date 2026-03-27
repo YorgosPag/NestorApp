@@ -1,685 +1,85 @@
 /* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { createModuleLogger } from '@/lib/telemetry';
+import React from 'react';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
-import type { Contact, IndividualContact } from '@/types/contacts';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
-// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
-import { RealtimeService, type ContactUpdatedPayload } from '@/services/realtime';
-
-// 🏢 ENTERPRISE: Type guard for contacts with photo URLs
-const hasMultiplePhotoURLs = (contact: Contact): contact is IndividualContact & { multiplePhotoURLs: string[] } => {
-  return 'multiplePhotoURLs' in contact && Array.isArray((contact as IndividualContact).multiplePhotoURLs);
-};
-
-import { normalizeToDate } from '@/lib/date-local';
 import { toggleSelect } from '@/lib/toggle-select';
-import { ContactsService } from '@/services/contacts.service';
-import { CONTACT_TYPES } from '@/constants/contacts';
+import { Users, Trash2 } from 'lucide-react';
 import { ContactsHeader } from './page/ContactsHeader';
-import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
-// ⚡ ENTERPRISE: Only import used icons - removed UserPlus, BrainCircuit, Crown (unused)
-import {
-  Users,
-  Building2,
-  Landmark,
-  Activity,
-  X,
-  Filter,
-  TrendingUp,
-  Calendar,
-  Star,
-  Briefcase,
-  Trash2,
-} from 'lucide-react';
+import { ContactFilterIndicator } from './page/ContactFilterIndicator';
+import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { ContactsList } from './list/ContactsList';
-// 🏢 ENTERPRISE: Grid view imports - Using proper GridCard (PR: Enterprise Grid System)
 import { ContactGridCard } from '@/domain';
 import { ContactDetails } from './details/ContactDetails';
 import { MobileDetailsSlideIn } from '@/core/layouts';
-// 🏢 ENTERPRISE: Inline contact creation (replaces modal dialogs)
 import { ContactTypeSelector, InlineContactCreation } from './creation';
-import type { ContactType } from '@/constants/contacts';
-// ⚡ ENTERPRISE PERFORMANCE: Dynamic imports for dialogs - loaded on demand
-// Pattern: Vercel, Salesforce - dialogs are loaded only when user opens them
 import dynamic from 'next/dynamic';
-const DeleteContactDialog = dynamic(
-  () => import('./dialogs/DeleteContactDialog').then(mod => ({ default: mod.DeleteContactDialog })),
-  { ssr: false }
-);
-const ArchiveContactDialog = dynamic(
-  () => import('./dialogs/ArchiveContactDialog').then(mod => ({ default: mod.ArchiveContactDialog })),
-  { ssr: false }
-);
-import { AdvancedFiltersPanel, type ContactFilterState, contactFiltersConfig } from '@/components/core/AdvancedFilters';
+import { contactFiltersConfig, AdvancedFiltersPanel } from '@/components/core/AdvancedFilters';
 import { ListContainer, PageContainer } from '@/core/containers';
 import { PageLoadingState, PageErrorState } from '@/core/states';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-// 🏢 ENTERPRISE: i18n - Full internationalization support
-import { useTranslation } from '@/i18n/hooks/useTranslation';
-// 🔐 ENTERPRISE: Defense-in-depth auth guard
-import { useAuth } from '@/auth/hooks/useAuth';
+import { ContactsService } from '@/services/contacts.service';
+import { useContactsPageState } from './page/useContactsPageState';
 
-const logger = createModuleLogger('ContactsPageContent');
+const DeleteContactDialog = dynamic(
+  () => import('./dialogs/DeleteContactDialog').then(mod => ({ default: mod.DeleteContactDialog })),
+  { ssr: false },
+);
+const ArchiveContactDialog = dynamic(
+  () => import('./dialogs/ArchiveContactDialog').then(mod => ({ default: mod.ArchiveContactDialog })),
+  { ssr: false },
+);
 
 export function ContactsPageContent() {
-  // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('contacts');
-  // 🔐 ENTERPRISE: Defense-in-depth — gate data fetching on auth state
-  const { user, loading: authLoading } = useAuth();
-  // 🏢 ENTERPRISE: Centralized icon sizes
+  const state = useContactsPageState();
   const iconSizes = useIconSizes();
-  const { getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
 
-  // URL parameters
-  const searchParams = useSearchParams();
-  const router = useRouter();
-
-  // Database state
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // UI state
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-  const [showDashboard, setShowDashboard] = useState(false);
-  // 🏢 ENTERPRISE: Inline creation mode (replaces modal dialogs)
-  // null = no creation | 'selecting' = type picker | ContactType = inline form
-  const [creationMode, setCreationMode] = useState<null | 'selecting' | ContactType>(null);
-  const [showDeleteContactDialog, setShowDeleteContactDialog] = useState(false);
-  const [showArchiveContactDialog, setShowArchiveContactDialog] = useState(false);
-  const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
-
-  // Mobile-only filter toggle state
-  const [showFilters, setShowFilters] = useState(false);
-
-  // Mobile-only compact toolbar toggle state — preserved for future mobile view
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [showCompactToolbar, setShowCompactToolbar] = useState(false);
-
-  // 🏢 ENTERPRISE: Search term now unified in filters.searchTerm (AdvancedFiltersPanel)
-
-  // 🔥 NEW: Dashboard card filtering state
-  const [activeCardFilter, setActiveCardFilter] = useState<string | null>(null);
-
-  // Advanced Filters state (unified - contains all filters)
-  const [filters, setFilters] = useState<ContactFilterState>({
-    searchTerm: '',
-    company: [],
-    status: [],
-    contactType: 'all',
-    unitsCount: 'all',
-    totalArea: 'all',
-    hasProperties: false,
-    isFavorite: false,
-    showArchived: false,
-    tags: [],
-    dateRange: {
-      from: undefined,
-      to: undefined
-    }
-  });
-
-  // 🏢 ENTERPRISE: Firestore real-time subscription (SSoT)
-  // onSnapshot delivers updates automatically when ANY source writes to Firestore:
-  // - AI agent (Telegram), user edits, bulk imports, etc.
-  // No signal bridge or tab visibility needed — onSnapshot handles everything.
-  const [subscriptionRetry, setSubscriptionRetry] = useState(0);
-
-  useEffect(() => {
-    if (authLoading || !user) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    const unsubContacts = ContactsService.subscribeToContacts(
-      (freshContacts) => {
-        setContacts(freshContacts);
-        setIsLoading(false);
-      },
-      {
-        limitCount: 1000,
-        onError: (err) => {
-          logger.warn('Subscription error — retrying in 3s', { error: err.message });
-          setError(err.message);
-          setTimeout(() => setSubscriptionRetry(prev => prev + 1), 3000);
-        },
-      }
-    );
-
-    return () => { unsubContacts(); };
-  }, [user, authLoading, subscriptionRetry]);
-
-  // 🚀 ENTERPRISE PERFORMANCE: Direct contact fetch για instant loading
-  const loadSpecificContact = useCallback(async (contactId: string) => {
-    try {
-      logger.info('Direct fetching specific contact', { contactId });
-
-      const contact = await ContactsService.getContact(contactId);
-
-      if (contact) {
-        logger.info('Contact loaded directly', { name: getContactDisplayName(contact) });
-
-        // Set the specific contact immediately
-        setSelectedContact(contact);
-
-        // Add to contacts list if not already there
-        setContacts(prev => {
-          const exists = prev.find(c => c.id === contactId);
-          if (exists) return prev;
-          return [contact, ...prev];
-        });
-
-        return contact;
-      } else {
-        logger.warn('Contact not found', { contactId });
-        return null;
-      }
-    } catch (err) {
-      logger.error('Error loading specific contact', { error: err });
-      return null;
-    }
-  }, []);
-
-  // 🏢 ENTERPRISE: refreshContacts triggers subscription re-fetch (error recovery only)
-  const refreshContacts = useCallback(async () => {
-    setSubscriptionRetry(prev => prev + 1);
-  }, []);
-
-  // 🏢 ENTERPRISE: In-place single-contact update — prevents full re-fetch & tab reset
-  // Instead of refreshContacts() which creates a new contacts array (causing remount),
-  // this fetches ONLY the updated contact and patches it in-place.
-  const handleContactUpdatedInPlace = useCallback(async () => {
-    const contactId = selectedContact?.id;
-    if (!contactId) {
-      // No selected contact — fall back to full refresh
-      await refreshContacts();
-      return;
-    }
-
-    try {
-      const updatedContact = await ContactsService.getContact(contactId);
-      if (!updatedContact) {
-        await refreshContacts();
-        return;
-      }
-
-      // Patch contacts array in-place — same array reference for non-updated items
-      setContacts(prev => prev.map(c =>
-        c.id === contactId ? updatedContact : c
-      ));
-
-      // Update selectedContact directly — no remount, no tab reset
-      setSelectedContact(updatedContact);
-    } catch (err) {
-      logger.error('In-place contact update failed, falling back to full refresh', { contactId, error: err });
-      await refreshContacts();
-    }
-  }, [selectedContact?.id, refreshContacts]);
-
-  // 🚀 ENTERPRISE LOADING STRATEGY: URL-based instant contact selection
-  // The real-time subscription above handles loading the full list.
-  // This effect only handles instant display of a URL-specified contact.
-  const hasLoadedSpecific = React.useRef(false);
-
-  useEffect(() => {
-    if (authLoading || !user) return;
-    if (hasLoadedSpecific.current) return;
-
-    const contactIdParam = searchParams.get('contactId');
-    if (contactIdParam) {
-      hasLoadedSpecific.current = true;
-      loadSpecificContact(contactIdParam).then(contact => {
-        if (contact) {
-          setFilters(prev => ({ ...prev, searchTerm: '' }));
-          setActiveCardFilter(null);
-        }
-      });
-    }
-  }, [authLoading, user]); // Re-run when auth state resolves
-
-  // 🎯 URL FILTERING: Handle filter parameter (not contactId)
-  useEffect(() => {
-    const filterParam = searchParams.get('filter');
-    const contactIdParam = searchParams.get('contactId');
-
-    // Only handle filter param if no contactId (contactId has priority)
-    if (filterParam && !contactIdParam) {
-      logger.info('Applying URL filter', { filterParam });
-      setFilters(prev => ({ ...prev, searchTerm: decodeURIComponent(filterParam) }));
-      setActiveCardFilter(null);
-    }
-  }, [searchParams, setFilters]);
-
-  // 🧹 CLEAR FILTER: Function για καθάρισμα του URL filter και contactId
-  const handleClearURLFilter = () => {
-    logger.info('Clearing URL filter and contactId');
-    setFilters(prev => ({ ...prev, searchTerm: '' }));
-    setSelectedContact(null);
-    // Navigate back to contacts without any parameters
-    router.push('/contacts');
-  };
-
-  // 🔥 ENTERPRISE CACHE INVALIDATION: Global event listener
-  useEffect(() => {
-    const handleContactsUpdate = (event: CustomEvent) => {
-      logger.info('Received cache invalidation event', { detail: event.detail });
-      // Force immediate refresh of all contact data
-      refreshContacts();
-
-      // 🔥 CRITICAL: Update selectedContact if it was the one modified
-      const { contactId } = event.detail;
-      if (selectedContact?.id === contactId) {
-        logger.info('Selected contact was modified, will update after refresh');
-        // The selectedContact will be updated by the useEffect below after contacts reload
-      }
-    };
-
-    // Listen για global cache invalidation events
-    window.addEventListener('contactsUpdated', handleContactsUpdate as EventListener);
-
-    return () => {
-      window.removeEventListener('contactsUpdated', handleContactsUpdate as EventListener);
-    };
-  }, [selectedContact]);
-
-  // 🏢 ENTERPRISE: Centralized Real-time Service (ZERO DUPLICATES)
-  // Subscribe to contact updates for cross-page sync (optimized - no full refresh)
-  useEffect(() => {
-    const handleContactUpdate = (payload: ContactUpdatedPayload) => {
-      logger.info('Applying real-time update for contact', { contactId: payload.contactId });
-
-      // 🏢 ENTERPRISE: Type-safe partial update helper
-      const applyContactUpdates = <T extends Contact>(contact: T): T => {
-        const updates: Partial<T> = {} as Partial<T>;
-        if (payload.updates.firstName !== undefined) (updates as Record<string, unknown>).firstName = payload.updates.firstName;
-        if (payload.updates.lastName !== undefined) (updates as Record<string, unknown>).lastName = payload.updates.lastName;
-        if (payload.updates.companyName !== undefined) (updates as Record<string, unknown>).companyName = payload.updates.companyName;
-        if (payload.updates.serviceName !== undefined) (updates as Record<string, unknown>).serviceName = payload.updates.serviceName;
-        if (payload.updates.isFavorite !== undefined) (updates as Record<string, unknown>).isFavorite = payload.updates.isFavorite;
-        // Status requires type assertion due to union type
-        if (payload.updates.status !== undefined) {
-          (updates as Record<string, unknown>).status = payload.updates.status;
-        }
-        return { ...contact, ...updates };
-      };
-
-      // Update in contacts list (optimized - no full refresh)
-      setContacts(prev => prev.map(contact =>
-        contact.id === payload.contactId
-          ? applyContactUpdates(contact)
-          : contact
-      ));
-
-      // Also update selectedContact if it's the one being updated
-      if (selectedContact?.id === payload.contactId) {
-        setSelectedContact(prev =>
-          prev ? applyContactUpdates(prev) : prev
-        );
-      }
-    };
-
-    // Subscribe to contact updates (same-page + cross-page)
-    const unsubscribe = RealtimeService.subscribe('CONTACT_UPDATED', handleContactUpdate, {
-      checkPendingOnMount: false
-    });
-
-    return unsubscribe;
-  }, [selectedContact?.id]);
-
-  // Update selected contact when contacts list changes
-  useEffect(() => {
-    if (selectedContact?.id) {
-      const updatedContact = contacts.find(c => c.id === selectedContact.id);
-      if (updatedContact && JSON.stringify(updatedContact) !== JSON.stringify(selectedContact)) {
-        const oldPhotoCount = hasMultiplePhotoURLs(selectedContact) ? selectedContact.multiplePhotoURLs.length : 0;
-        const newPhotoCount = hasMultiplePhotoURLs(updatedContact) ? updatedContact.multiplePhotoURLs.length : 0;
-        logger.info('Updating selectedContact with fresh data', {
-          contactId: selectedContact.id,
-          oldPhotos: oldPhotoCount,
-          newPhotos: newPhotoCount
-        });
-        setSelectedContact(updatedContact);
-
-        // 🔥 FORCE RE-RENDER: Avatar components need key-based invalidation
-        const photoCount = newPhotoCount;
-        window.dispatchEvent(new CustomEvent('forceAvatarRerender', {
-          detail: {
-            contactId: selectedContact.id,
-            photoCount,
-            timestamp: Date.now()
-          }
-        }));
-        logger.info('Dispatched force avatar re-render event');
-      }
-    }
-  }, [contacts, selectedContact?.id]);
-
-  // 🏢 ENTERPRISE: Inline creation handlers (no modals)
-  const handleNewContact = () => {
-    setCreationMode('selecting');
-    setSelectedContact(null);
-  };
-
-  const handleContactAdded = async () => {
-    setCreationMode(null);
-    await refreshContacts();
-  };
-
-  const handleCancelCreation = () => setCreationMode(null);
-  const handleSelectContactType = (type: ContactType) => setCreationMode(type);
-  const handleBackToTypeSelection = () => setCreationMode('selecting');
-
-  const handleDeleteContacts = (ids?: string[]) => {
-    if (ids && ids.length > 0) {
-      setSelectedContactIds(ids);
-    } else {
-      // Χρησιμοποίησε την τρέχουσα επιλεγμένη επαφή
-      if (selectedContact?.id) {
-        setSelectedContactIds([selectedContact.id]);
-      } else {
-        setSelectedContactIds([]);
-      }
-    }
-    setShowDeleteContactDialog(true);
-  };
-
-  const handleContactsDeleted = async () => {
-    setShowDeleteContactDialog(false);
-
-    // Αν διαγράφηκε η τρέχουσα επιλεγμένη επαφή, καθάρισε την επιλογή
-    if (selectedContact && selectedContactIds.includes(selectedContact.id!)) {
-      setSelectedContact(null);
-    }
-
-    setSelectedContactIds([]);
-    await refreshContacts();
-  };
-
-  const handleArchiveContacts = (ids?: string[]) => {
-    if (ids && ids.length > 0) {
-      setSelectedContactIds(ids);
-    } else {
-      // Χρησιμοποίησε την τρέχουσα επιλεγμένη επαφή
-      if (selectedContact?.id) {
-        setSelectedContactIds([selectedContact.id]);
-      } else {
-        setSelectedContactIds([]);
-      }
-    }
-    setShowArchiveContactDialog(true);
-  };
-
-  const handleContactsArchived = async () => {
-    setShowArchiveContactDialog(false);
-
-    // Αν αρχειοθετήθηκε η τρέχουσα επιλεγμένη επαφή, καθάρισε την επιλογή
-    if (selectedContact && selectedContactIds.includes(selectedContact.id!)) {
-      setSelectedContact(null);
-    }
-
-    setSelectedContactIds([]);
-    await refreshContacts();
-  };
-
-
-  // Filter contacts based on unified filters
-  const filteredContacts = contacts.filter(contact => {
-    // 🎯 PRIORITY: If contactId is provided, don't filter - show all contacts
-    const contactIdParam = searchParams.get('contactId');
-    if (contactIdParam) {
-      return true; // Show all contacts when viewing specific contact
-    }
-
-    // 🔥 NEW: Dashboard card filtering (highest priority)
-    // 🏢 ENTERPRISE: Use translated strings for card filter comparison
-    const totalContactsTitle = t('page.dashboard.totalContacts');
-    const totalPersonnelTitle = t('page.dashboard.totalPersonnel');
-    const legalEntitiesTitle = t('page.dashboard.legalEntities');
-    const activeContactsTitle = t('page.dashboard.activeContacts');
-    const servicesTitle = t('page.dashboard.services');
-    const recentAdditionsTitle = t('page.dashboard.recentAdditions');
-    const favoritesTitle = t('page.dashboard.favorites');
-    const contactsWithRelationsTitle = t('page.dashboard.contactsWithRelations');
-
-    if (activeCardFilter) {
-      switch (activeCardFilter) {
-        case totalContactsTitle:
-          // Show all contacts - no additional filtering needed
-          break;
-        case totalPersonnelTitle:
-          if (contact.type !== 'individual') return false;
-          break;
-        case legalEntitiesTitle:
-          if (contact.type !== 'company') return false;
-          break;
-        case activeContactsTitle:
-          if ((contact as Contact & { status?: string }).status === 'inactive') return false;
-          break;
-        case servicesTitle:
-          if (contact.type !== 'service') return false;
-          break;
-        case recentAdditionsTitle: {
-          const oneMonthAgo = new Date();
-          oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-          const createdDate = normalizeToDate(contact.createdAt);
-          if (!createdDate || createdDate <= oneMonthAgo) return false;
-          break;
-        }
-        case favoritesTitle:
-          if (!contact.isFavorite) return false;
-          break;
-        case contactsWithRelationsTitle:
-          if (contact.type === CONTACT_TYPES.SERVICE) return false;
-          break;
-      }
-    }
-
-    // 🏢 ENTERPRISE: Unified search filter (from filters.searchTerm in AdvancedFiltersPanel)
-    if (filters.searchTerm) {
-      const searchLower = filters.searchTerm.toLowerCase();
-      const displayName = getContactDisplayName(contact).toLowerCase();
-      if (!displayName.includes(searchLower)) {
-        return false;
-      }
-    }
-
-    // Contact type filter (unless overridden by card filter)
-    if (!activeCardFilter && filters.contactType !== 'all' && contact.type !== filters.contactType) {
-      return false;
-    }
-
-    // Favorites filter
-    if (filters.isFavorite && !contact.isFavorite) {
-      return false;
-    }
-
-    // Property ownership filter
-    if (filters.hasProperties) {
-      // TODO: Implement property ownership check when contact-property relationship is available
-      // For now, skip this filter
-    }
-
-    // Units count and area filters would require contact-property relationship data
-    // TODO: Implement when contact property data is available
-
-    return true;
-  });
-
-  // 📊 Enhanced Dashboard Stats (8 κάρτες σε 4+4 layout)
-  const dashboardStats: DashboardStat[] = [
-    // 🔝 Πάνω σειρά (4 κάρτες) - Βασικά Στοιχεία
-    {
-      title: t('page.dashboard.totalContacts'),
-      value: contacts.length,
-      icon: Users,
-      color: "blue"
-    },
-    {
-      title: t('page.dashboard.totalPersonnel'),
-      value: contacts.filter((c: Contact) =>
-        // Count all relationships where someone is an employee
-        // This is a placeholder - will be enhanced with relationship data
-        c.type === 'individual'
-      ).length,
-      icon: Briefcase,
-      color: "green"
-    },
-    {
-      title: t('page.dashboard.legalEntities'),
-      value: contacts.filter(c => c.type === 'company').length,
-      icon: Building2,
-      color: "purple"
-    },
-    {
-      title: t('page.dashboard.activeContacts'),
-      value: contacts.filter((c: Contact & { status?: string }) => c.status === 'active' || !c.status).length,
-      icon: Activity,
-      color: "cyan"
-    },
-
-    // 🔽 Κάτω σειρά (4 κάρτες) - Λεπτομέρειες
-    {
-      title: t('page.dashboard.services'),
-      value: contacts.filter(c => c.type === 'service').length,
-      icon: Landmark,
-      color: "orange"
-    },
-    {
-      title: t('page.dashboard.recentAdditions'),
-      value: contacts.filter(c => {
-        const oneMonthAgo = new Date();
-        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-        const createdDate = normalizeToDate(c.createdAt);
-        return createdDate && createdDate > oneMonthAgo;
-      }).length,
-      icon: Calendar,
-      color: "pink"
-    },
-    {
-      title: t('page.dashboard.favorites'),
-      value: contacts.filter(c => c.isFavorite).length,
-      icon: Star,
-      color: "yellow"
-    },
-    {
-      title: t('page.dashboard.contactsWithRelations'),
-      value: contacts.filter(c => {
-        // This is a placeholder - will be enhanced with relationship data
-        // For now, count non-service contacts (individuals + companies that might have relationships)
-        return c.type === 'individual' || c.type === 'company';
-      }).length,
-      icon: TrendingUp,
-      color: "indigo"
-    }
-  ];
-
-  // 🔥 NEW: Handle dashboard card clicks για filtering
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleCardClick = (stat: DashboardStat, index: number) => {
-    const cardTitle = stat.title;
-
-    // Toggle filter: αν κλικάρουμε την ίδια κάρτα, αφαιρούμε το φίλτρο
-    if (activeCardFilter === cardTitle) {
-      setActiveCardFilter(null);
-      logger.info('Removing card filter');
-    } else {
-      setActiveCardFilter(cardTitle);
-      logger.info('Applying card filter', { cardTitle });
-
-      // Clear selected contact when filtering changes
-      setSelectedContact(null);
-    }
-  };
-
-  // 🏷️ RENDER: Filter indicator component
-  const renderFilterIndicator = () => {
-    const filterParam = searchParams.get('filter');
-    const contactIdParam = searchParams.get('contactId');
-
-    // Show indicator if we have either filter or contactId
-    if (!filterParam && !contactIdParam) return null;
-
-    // Priority: If we have contactId and selected contact, show contact name
-    if (contactIdParam && selectedContact) {
-      const contactName = getContactDisplayName(selectedContact);
-      return (
-        <div className={`px-4 py-2 ${colors.bg.success} ${getDirectionalBorder('success', 'bottom')}`}>
-          <div className="flex items-center justify-between max-w-full">
-            <div className="flex items-center space-x-2">
-              <Filter className={`${iconSizes.sm} ${colors.text.success}`} />
-              <span className={`text-sm ${colors.text.success}`}>
-                {t('page.filterIndicator.viewingCustomer')} <strong>{contactName}</strong>
-              </span>
-              <span className={`text-xs ${colors.text.success} ${colors.bg.successSubtle} px-2 py-1 rounded`}>
-                {t('page.filterIndicator.selectedContact')}
-              </span>
-            </div>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={handleClearURLFilter}
-                  className={`flex items-center space-x-1 px-2 py-1 text-sm ${colors.text.success} rounded ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_GHOST}`}
-                >
-                  <X className={iconSizes.sm} />
-                  <span>{t('page.filterIndicator.back')}</span>
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>{t('page.filterIndicator.backToList')}</TooltipContent>
-            </Tooltip>
-          </div>
-        </div>
-      );
-    }
-
-    // Fallback: Show general filter if no contactId
-    if (filterParam) {
-      const filterValue = decodeURIComponent(filterParam);
-      return (
-        <div className={`px-4 py-2 ${colors.bg.info} ${getDirectionalBorder('info', 'bottom')}`}>
-          <div className="flex items-center justify-between max-w-full">
-            <div className="flex items-center space-x-2">
-              <Filter className={`${iconSizes.sm} ${colors.text.info}`} />
-              <span className={`text-sm ${colors.text.info}`}>
-                {t('page.filterIndicator.filteringFor')} <strong>&ldquo;{filterValue}&rdquo;</strong>
-              </span>
-              <span className={`text-xs ${colors.text.info} ${colors.bg.infoSubtle} px-2 py-1 rounded`}>
-                {filteredContacts.length === 1
-                  ? t('page.filterIndicator.contactsCount', { count: filteredContacts.length })
-                  : t('page.filterIndicator.contactsCountPlural', { count: filteredContacts.length })}
-              </span>
-            </div>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={handleClearURLFilter}
-                  className={`flex items-center space-x-1 px-2 py-1 text-sm ${colors.text.info} rounded ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_GHOST}`}
-                >
-                  <X className={iconSizes.sm} />
-                  <span>{t('page.filterIndicator.clear')}</span>
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>{t('page.filterIndicator.showAll')}</TooltipContent>
-            </Tooltip>
-          </div>
-        </div>
-      );
-    }
-
-    return null;
-  };
+  const {
+    authLoading,
+    filteredContacts,
+    isLoading,
+    error,
+    selectedContact,
+    setSelectedContact,
+    viewMode,
+    setViewMode,
+    showDashboard,
+    setShowDashboard,
+    showFilters,
+    setShowFilters,
+    creationMode,
+    handleNewContact,
+    handleContactAdded,
+    handleCancelCreation,
+    handleSelectContactType,
+    handleBackToTypeSelection,
+    showDeleteContactDialog,
+    setShowDeleteContactDialog,
+    showArchiveContactDialog,
+    setShowArchiveContactDialog,
+    selectedContactIds,
+    handleDeleteContacts,
+    handleContactsDeleted,
+    handleArchiveContacts,
+    handleContactsArchived,
+    filters,
+    setFilters,
+    searchParams,
+    handleClearURLFilter,
+    dashboardStats,
+    handleCardClick,
+    refreshContacts,
+    handleContactUpdatedInPlace,
+    t,
+  } = state;
 
   // Page-level loading state (ADR-229)
-  if (isLoading) {
+  if (authLoading || isLoading) {
     return (
       <PageContainer ariaLabel={t('page.pageLabel')}>
         <PageLoadingState icon={Users} message={t('page.loadingMessage', { defaultValue: 'Φόρτωση επαφών...' })} layout="contained" />
@@ -687,193 +87,131 @@ export function ContactsPageContent() {
     );
   }
 
+  const filterParam = searchParams.get('filter');
+  const contactIdParam = searchParams.get('contactId');
+
   return (
-      <PageContainer ariaLabel={t('page.pageLabel')}>
-        {/* Main Header - Works for both desktop and mobile */}
-        {/* 🏢 ENTERPRISE: Search removed from header - using unified search in AdvancedFiltersPanel */}
-        <ContactsHeader
-          viewMode={viewMode}
-          setViewMode={setViewMode}
-          showDashboard={showDashboard}
-          setShowDashboard={setShowDashboard}
-          showFilters={showFilters}
-          setShowFilters={setShowFilters}
-          breadcrumb={<ModuleBreadcrumb />}
+    <PageContainer ariaLabel={t('page.pageLabel')}>
+      <ContactsHeader
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+        showDashboard={showDashboard}
+        setShowDashboard={setShowDashboard}
+        showFilters={showFilters}
+        setShowFilters={setShowFilters}
+        breadcrumb={<ModuleBreadcrumb />}
+      />
+
+      <ContactFilterIndicator
+        filterParam={filterParam}
+        contactIdParam={contactIdParam}
+        contactName={selectedContact ? getContactDisplayName(selectedContact) : null}
+        filteredCount={filteredContacts.length}
+        onClear={handleClearURLFilter}
+      />
+
+      {showDashboard && (
+        <section className="w-full overflow-hidden" role="region" aria-label={t('page.dashboard.label')}>
+          <UnifiedDashboard
+            stats={dashboardStats}
+            columns={4}
+            onCardClick={handleCardClick}
+            className="px-1 py-4 sm:px-4 sm:py-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 overflow-hidden"
+          />
+        </section>
+      )}
+
+      {/* Advanced Filters Panel — Desktop */}
+      <aside className="hidden md:block" role="complementary" aria-label={t('page.filters.desktop')}>
+        <AdvancedFiltersPanel
+          config={contactFiltersConfig}
+          filters={filters}
+          onFiltersChange={setFilters}
         />
+      </aside>
 
-
-        {/* 🏷️ Filter Indicator - εμφανίζεται όταν υπάρχει URL filter */}
-        {renderFilterIndicator()}
-
-        {showDashboard && (
-          <section className="w-full overflow-hidden" role="region" aria-label={t('page.dashboard.label')}>
-            <UnifiedDashboard
-              stats={dashboardStats}
-              columns={4}
-              onCardClick={handleCardClick}
-              className="px-1 py-4 sm:px-4 sm:py-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 overflow-hidden"
-            />
-          </section>
-        )}
-
-        {/* Advanced Filters Panel */}
-        <aside className="hidden md:block" role="complementary" aria-label={t('page.filters.desktop')}>
-          {/* Desktop: Always visible */}
+      {/* Advanced Filters Panel — Mobile */}
+      {showFilters && (
+        <aside className="md:hidden" role="complementary" aria-label={t('page.filters.mobile')}>
           <AdvancedFiltersPanel
             config={contactFiltersConfig}
             filters={filters}
             onFiltersChange={setFilters}
+            defaultOpen
           />
         </aside>
+      )}
 
-        {/* Mobile: Show only when showFilters is true */}
-        {showFilters && (
-          <aside className="md:hidden" role="complementary" aria-label={t('page.filters.mobile')}>
-            <AdvancedFiltersPanel
-              config={contactFiltersConfig}
-              filters={filters}
-              onFiltersChange={setFilters}
-              defaultOpen
-            />
-          </aside>
-        )}
-
-        <ListContainer>
-          {error ? (
-            <PageErrorState
-              title={error}
-              onRetry={refreshContacts}
-              retryLabel={t('page.error.retry')}
-              layout="contained"
-            />
-          ) : viewMode === 'list' ? (
-            <>
-              {/* 🖥️ DESKTOP: Standard split layout - Same as Units/Projects/Buildings */}
-              <section className="hidden md:flex flex-1 gap-2 min-h-0 min-w-0 overflow-hidden" role="region" aria-label={t('page.views.desktopView')}>
-                <ContactsList
-                  contacts={filteredContacts}
-                  selectedContact={selectedContact}
-                  onSelectContact={(c) => setSelectedContact(toggleSelect(selectedContact, c))}
-                  isLoading={isLoading}
-                  onNewContact={handleNewContact}
-                  onDeleteContact={handleDeleteContacts}
-                  onArchiveContact={handleArchiveContacts}
-                  onContactUpdated={handleContactUpdatedInPlace}
-                />
-                {/* 🏢 ENTERPRISE: Right panel — inline creation OR contact details */}
-                {creationMode === 'selecting' ? (
-                  <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-card border rounded-lg shadow-sm">
-                    <ContactTypeSelector
-                      onSelect={handleSelectContactType}
-                      onCancel={handleCancelCreation}
-                    />
-                  </div>
-                ) : creationMode ? (
-                  <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-card border rounded-lg shadow-sm">
-                    <InlineContactCreation
-                      contactType={creationMode}
-                      onContactAdded={handleContactAdded}
-                      onCancel={handleCancelCreation}
-                      onBack={handleBackToTypeSelection}
-                    />
-                  </div>
-                ) : (
-                  <ContactDetails
-                    contact={selectedContact}
-                    onDeleteContact={() => handleDeleteContacts()}
-                    onContactUpdated={handleContactUpdatedInPlace}
-                    onNewContact={handleNewContact}
-                  />
-                )}
-              </section>
-
-              {/* 📱 MOBILE: Show only ContactsList when no contact is selected */}
-              <section className={`md:hidden w-full ${selectedContact ? 'hidden' : 'block'}`} role="region" aria-label={t('page.views.mobileList')}>
-                <ContactsList
-                  contacts={filteredContacts}
-                  selectedContact={selectedContact}
-                  onSelectContact={(c) => setSelectedContact(toggleSelect(selectedContact, c))}
-                  isLoading={isLoading}
-                  onNewContact={handleNewContact}
-                  onDeleteContact={handleDeleteContacts}
-                  onArchiveContact={handleArchiveContacts}
-                  onContactUpdated={handleContactUpdatedInPlace}
-                />
-              </section>
-
-              {/* 📱 MOBILE: Slide-in for contact details OR inline creation */}
-              <MobileDetailsSlideIn
-                isOpen={!!selectedContact || creationMode !== null}
-                onClose={() => { setSelectedContact(null); setCreationMode(null); }}
-                title={
-                  creationMode
-                    ? t('form.addTitle')
-                    : selectedContact ? getContactDisplayName(selectedContact) : t('page.details.title')
-                }
-                actionButtons={
-                  creationMode ? undefined : (
-                    <button
-                      onClick={() => handleDeleteContacts()}
-                      className={`p-2 rounded-md border ${colors.bg.primary} border-border text-destructive ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-                      aria-label={t('page.details.deleteContact')}
-                    >
-                      <Trash2 className={iconSizes.sm} />
-                    </button>
-                  )
-                }
-              >
-                {creationMode === 'selecting' ? (
-                  <ContactTypeSelector
-                    onSelect={handleSelectContactType}
-                    onCancel={handleCancelCreation}
-                  />
-                ) : creationMode ? (
+      <ListContainer>
+        {error ? (
+          <PageErrorState
+            title={error}
+            onRetry={refreshContacts}
+            retryLabel={t('page.error.retry')}
+            layout="contained"
+          />
+        ) : viewMode === 'list' ? (
+          <>
+            {/* Desktop split layout */}
+            <section className="hidden md:flex flex-1 gap-2 min-h-0 min-w-0 overflow-hidden" role="region" aria-label={t('page.views.desktopView')}>
+              <ContactsList
+                contacts={filteredContacts}
+                selectedContact={selectedContact}
+                onSelectContact={c => setSelectedContact(toggleSelect(selectedContact, c))}
+                isLoading={isLoading}
+                onNewContact={handleNewContact}
+                onDeleteContact={handleDeleteContacts}
+                onArchiveContact={handleArchiveContacts}
+                onContactUpdated={handleContactUpdatedInPlace}
+              />
+              {creationMode === 'selecting' ? (
+                <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-card border rounded-lg shadow-sm">
+                  <ContactTypeSelector onSelect={handleSelectContactType} onCancel={handleCancelCreation} />
+                </div>
+              ) : creationMode ? (
+                <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-card border rounded-lg shadow-sm">
                   <InlineContactCreation
                     contactType={creationMode}
                     onContactAdded={handleContactAdded}
                     onCancel={handleCancelCreation}
                     onBack={handleBackToTypeSelection}
                   />
-                ) : selectedContact ? (
-                  <ContactDetails
-                    contact={selectedContact}
-                    onDeleteContact={() => handleDeleteContacts()}
-                    onContactUpdated={handleContactUpdatedInPlace}
-                    onNewContact={handleNewContact}
-                  />
-                ) : null}
-              </MobileDetailsSlideIn>
-            </>
-          ) : (
-            /* 🏢 ENTERPRISE: Grid View with ContactListCard (PR: Contacts Grid View) */
-            <>
-              <section
-                className="w-full p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 overflow-y-auto"
-                role="region"
-                aria-label={t('page.views.gridView')}
-              >
-                {filteredContacts.map((contact: Contact) => (
-                  <ContactGridCard
-                    key={contact.id}
-                    contact={contact}
-                    isSelected={selectedContact?.id === contact.id}
-                    isFavorite={contact.isFavorite}
-                    onSelect={() => setSelectedContact(toggleSelect(selectedContact, contact))}
-                    onToggleFavorite={async () => {
-                      // 🏢 ENTERPRISE: Toggle favorite via service
-                      await ContactsService.updateContact(contact.id!, { isFavorite: !contact.isFavorite });
-                      await refreshContacts();
-                    }}
-                  />
-                ))}
-              </section>
+                </div>
+              ) : (
+                <ContactDetails
+                  contact={selectedContact}
+                  onDeleteContact={() => handleDeleteContacts()}
+                  onContactUpdated={handleContactUpdatedInPlace}
+                  onNewContact={handleNewContact}
+                />
+              )}
+            </section>
 
-              {/* 📱 MOBILE: Slide-in ContactDetails when contact is selected in grid mode */}
-              <MobileDetailsSlideIn
-                isOpen={!!selectedContact}
-                onClose={() => setSelectedContact(null)}
-                title={selectedContact ? getContactDisplayName(selectedContact) : t('page.details.title')}
-                actionButtons={
+            {/* Mobile list */}
+            <section className={`md:hidden w-full ${selectedContact ? 'hidden' : 'block'}`} role="region" aria-label={t('page.views.mobileList')}>
+              <ContactsList
+                contacts={filteredContacts}
+                selectedContact={selectedContact}
+                onSelectContact={c => setSelectedContact(toggleSelect(selectedContact, c))}
+                isLoading={isLoading}
+                onNewContact={handleNewContact}
+                onDeleteContact={handleDeleteContacts}
+                onArchiveContact={handleArchiveContacts}
+                onContactUpdated={handleContactUpdatedInPlace}
+              />
+            </section>
+
+            {/* Mobile slide-in */}
+            <MobileDetailsSlideIn
+              isOpen={!!selectedContact || creationMode !== null}
+              onClose={() => { setSelectedContact(null); handleCancelCreation(); }}
+              title={
+                creationMode
+                  ? t('form.addTitle')
+                  : selectedContact ? getContactDisplayName(selectedContact) : t('page.details.title')
+              }
+              actionButtons={
+                creationMode ? undefined : (
                   <button
                     onClick={() => handleDeleteContacts()}
                     className={`p-2 rounded-md border ${colors.bg.primary} border-border text-destructive ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
@@ -881,41 +219,96 @@ export function ContactsPageContent() {
                   >
                     <Trash2 className={iconSizes.sm} />
                   </button>
-                }
-              >
-                {selectedContact && (
-                  <ContactDetails
-                    contact={selectedContact}
-                    onDeleteContact={() => handleDeleteContacts()}
-                    onContactUpdated={handleContactUpdatedInPlace}
-                    onNewContact={handleNewContact}
-                  />
-                )}
-              </MobileDetailsSlideIn>
-            </>
-          )}
-        </ListContainer>
+                )
+              }
+            >
+              {creationMode === 'selecting' ? (
+                <ContactTypeSelector onSelect={handleSelectContactType} onCancel={handleCancelCreation} />
+              ) : creationMode ? (
+                <InlineContactCreation
+                  contactType={creationMode}
+                  onContactAdded={handleContactAdded}
+                  onCancel={handleCancelCreation}
+                  onBack={handleBackToTypeSelection}
+                />
+              ) : selectedContact ? (
+                <ContactDetails
+                  contact={selectedContact}
+                  onDeleteContact={() => handleDeleteContacts()}
+                  onContactUpdated={handleContactUpdatedInPlace}
+                  onNewContact={handleNewContact}
+                />
+              ) : null}
+            </MobileDetailsSlideIn>
+          </>
+        ) : (
+          <>
+            {/* Grid view */}
+            <section
+              className="w-full p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 overflow-y-auto"
+              role="region"
+              aria-label={t('page.views.gridView')}
+            >
+              {filteredContacts.map((contact: Contact) => (
+                <ContactGridCard
+                  key={contact.id}
+                  contact={contact}
+                  isSelected={selectedContact?.id === contact.id}
+                  isFavorite={contact.isFavorite}
+                  onSelect={() => setSelectedContact(toggleSelect(selectedContact, contact))}
+                  onToggleFavorite={async () => {
+                    await ContactsService.updateContact(contact.id!, { isFavorite: !contact.isFavorite });
+                    refreshContacts();
+                  }}
+                />
+              ))}
+            </section>
 
-        {/* Dialog για διαγραφή επαφής */}
-        <DeleteContactDialog
-          open={showDeleteContactDialog}
-          onOpenChange={setShowDeleteContactDialog}
-          contact={selectedContact}
-          selectedContactIds={selectedContactIds}
-          onContactsDeleted={handleContactsDeleted}
-        />
+            {/* Mobile slide-in for grid view */}
+            <MobileDetailsSlideIn
+              isOpen={!!selectedContact}
+              onClose={() => setSelectedContact(null)}
+              title={selectedContact ? getContactDisplayName(selectedContact) : t('page.details.title')}
+              actionButtons={
+                <button
+                  onClick={() => handleDeleteContacts()}
+                  className={`p-2 rounded-md border ${colors.bg.primary} border-border text-destructive ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                  aria-label={t('page.details.deleteContact')}
+                >
+                  <Trash2 className={iconSizes.sm} />
+                </button>
+              }
+            >
+              {selectedContact && (
+                <ContactDetails
+                  contact={selectedContact}
+                  onDeleteContact={() => handleDeleteContacts()}
+                  onContactUpdated={handleContactUpdatedInPlace}
+                  onNewContact={handleNewContact}
+                />
+              )}
+            </MobileDetailsSlideIn>
+          </>
+        )}
+      </ListContainer>
 
-        {/* Dialog για αρχειοθέτηση επαφής */}
-        <ArchiveContactDialog
-          open={showArchiveContactDialog}
-          onOpenChange={setShowArchiveContactDialog}
-          contact={selectedContact}
-          selectedContactIds={selectedContactIds}
-          onContactsArchived={handleContactsArchived}
-        />
-      </PageContainer>
+      <DeleteContactDialog
+        open={showDeleteContactDialog}
+        onOpenChange={setShowDeleteContactDialog}
+        contact={selectedContact}
+        selectedContactIds={selectedContactIds}
+        onContactsDeleted={handleContactsDeleted}
+      />
+
+      <ArchiveContactDialog
+        open={showArchiveContactDialog}
+        onOpenChange={setShowArchiveContactDialog}
+        contact={selectedContact}
+        selectedContactIds={selectedContactIds}
+        onContactsArchived={handleContactsArchived}
+      />
+    </PageContainer>
   );
 }
 
-// Default export για compatibility
 export default ContactsPageContent;

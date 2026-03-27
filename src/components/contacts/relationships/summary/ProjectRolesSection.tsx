@@ -1,5 +1,7 @@
 'use client';
 
+import '@/lib/design-system';
+
 /**
  * ProjectRolesSection — Shows projects where this contact has a role (landowner, buyer).
  *

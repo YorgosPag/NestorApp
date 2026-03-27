@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import '@/lib/design-system';
 import type { Contact, PhoneInfo, EmailInfo, WebsiteInfo, SocialMediaInfo } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { ContactEntityType } from '@/components/contacts/dynamic/communication';
@@ -60,7 +61,7 @@ export function ContactCommunicationTab({
   }, [setFormData, formData]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       <DynamicContactArrays
         phones={effectiveFormData.phones || []}
         emails={effectiveFormData.emails || []}

@@ -28,6 +28,8 @@ export default defineConfig([
         varsIgnorePattern: "^_",
         args: "after-used",
         argsIgnorePattern: "^_",
+        caughtErrors: "all",
+        caughtErrorsIgnorePattern: "^_",
       }],
 
       // Enable custom hardcoded strings detection
@@ -56,7 +58,14 @@ export default defineConfig([
       "design-system/no-direct-loader-import": "warn",  // Warn for now, migrate on touch
       
       // Additional strict rules for component architecture
-      "@typescript-eslint/no-unused-vars": "error",
+      "@typescript-eslint/no-unused-vars": ["error", {
+        vars: "all",
+        varsIgnorePattern: "^_",
+        args: "after-used",
+        argsIgnorePattern: "^_",
+        caughtErrors: "all",
+        caughtErrorsIgnorePattern: "^_",
+      }],
       "@typescript-eslint/no-explicit-any": "error",
       // 🚨 ENTERPRISE (CLAUDE.md N.2): Ban 'as any' type assertions — use proper types
       "no-restricted-syntax": ["error", {

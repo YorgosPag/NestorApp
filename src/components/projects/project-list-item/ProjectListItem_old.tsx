@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 
 'use client';
 
@@ -12,6 +13,7 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { HOVER_SHADOWS, TRANSITION_PRESETS, HOVER_BORDER_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // Removed duplicate imports - now using EntityDetailsHeader
 import { LocationRow } from './parts/LocationRow';
@@ -32,6 +34,7 @@ export function ProjectListItem({
 }: ProjectListItemProps) {
     const { quick } = useBorderTokens();
     const colors = useSemanticColors();
+    const { t } = useTranslation('projects');
 
     return (
             <Card
@@ -58,7 +61,7 @@ export function ProjectListItem({
                     <div className="flex gap-2 mt-2 mb-2">
                         <ProjectBadge status={project.status} size="sm" />
                         <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-secondary text-secondary-foreground rounded-full">
-                            {project.progress}% ολοκληρωμένο
+                            {project.progress}{t('listCard.completionPercent')}
                         </span>
                     </div>
                     <LocationRow address={project.address} city={project.city} />

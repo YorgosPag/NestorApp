@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 // 🏢 ENTERPRISE: Centralized entity icons (ZERO hardcoded values)
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { Contact } from '@/types/contacts';
@@ -21,7 +21,7 @@ interface ContactInfoProps {
   onRefresh: () => void;
 }
 
-export function ContactInfo({ contact, onAddUnit, onRefresh }: ContactInfoProps) {
+export function ContactInfo({ contact, onAddUnit, onRefresh: _onRefresh }: ContactInfoProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
     const { t } = useTranslation('contacts');
@@ -29,8 +29,8 @@ export function ContactInfo({ contact, onAddUnit, onRefresh }: ContactInfoProps)
     const phone = getPrimaryPhone(contact);
 
     return (
-      <div className="space-y-4">
-        <div className={`p-4 ${quick.card} space-y-3`}>
+      <div className="space-y-2">
+        <div className={`p-2 ${quick.card} space-y-2`}>
             <h3 className="font-semibold text-sm">{t('details.contactInfo.title')}</h3>
             {email && (
                 <div className="flex items-center gap-2 text-sm">
@@ -63,7 +63,7 @@ export function ContactInfo({ contact, onAddUnit, onRefresh }: ContactInfoProps)
             {!(email || phone) && <p className="text-sm text-muted-foreground">{t('details.contactInfo.noContactInfo')}</p>}
         </div>
          {(contact.type === CONTACT_TYPES.COMPANY || contact.type === CONTACT_TYPES.INDIVIDUAL) && (
-            <div className={`p-4 ${quick.card}`}>
+            <div className={`p-2 ${quick.card}`}>
                 <h3 className="font-semibold mb-2 text-sm">{t('details.taxInfo.title')}</h3>
                 <div className="text-sm">
                     <strong>{t('details.taxInfo.vatNumber')}</strong> {(() => {

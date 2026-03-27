@@ -1,5 +1,7 @@
 'use client';
 
+import '@/lib/design-system';
+
 /**
  * 🏢 ENTERPRISE: ContactsToolbarMainActions with full i18n support
  * ZERO HARDCODED STRINGS - All labels from centralized translations

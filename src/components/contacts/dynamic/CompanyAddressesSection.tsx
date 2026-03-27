@@ -13,6 +13,8 @@
  */
 
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import '@/lib/design-system';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Plus, Trash2 } from 'lucide-react';
@@ -96,6 +98,7 @@ export function CompanyAddressesSection({
   disabled = false,
   onChange,
 }: CompanyAddressesSectionProps) {
+  const { t } = useTranslation('contacts');
   // Headquarters = first entry with type 'headquarters', or first entry
   const hqIndex = addresses.findIndex((a) => a.type === 'headquarters');
   const effectiveHqIndex = hqIndex >= 0 ? hqIndex : 0;
@@ -144,10 +147,10 @@ export function CompanyAddressesSection({
       <Separator />
 
       {/* Branches / Additional Addresses */}
-      <section aria-label="Υποκαταστήματα / Επιπλέον Διευθύνσεις">
+      <section aria-label={t('addressesSection.branchesTitle')}>
         <header className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-foreground">
-            Υποκαταστήματα / Επιπλέον Διευθύνσεις
+            {t('addressesSection.branchesTitle')}
           </h3>
           <Button
             type="button"
@@ -157,13 +160,13 @@ export function CompanyAddressesSection({
             disabled={disabled}
           >
             <Plus className="mr-1 h-4 w-4" />
-            Προσθήκη Διεύθυνσης
+            {t('addressesSection.addAddress')}
           </Button>
         </header>
 
         {branches.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-4 text-center">
-            Δεν υπάρχουν επιπλέον διευθύνσεις
+          <p className="text-sm text-muted-foreground py-2 text-center">
+            {t('addressesSection.noBranches')}
           </p>
         ) : (
           <ul className="space-y-4">
@@ -171,7 +174,7 @@ export function CompanyAddressesSection({
               <li key={i} className="space-y-3">
                 <header className="flex items-center justify-between">
                   <h4 className="text-sm font-semibold text-foreground">
-                    Υποκατάστημα {branches.length > 1 ? `#${i + 1}` : ''}
+                    {t('addressesSection.branch')} {branches.length > 1 ? `#${i + 1}` : ''}
                   </h4>
                   <Button
                     type="button"

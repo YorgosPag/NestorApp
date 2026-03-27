@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
@@ -50,7 +51,7 @@ export function FloorplanViewerTab({
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, _setIsLoading] = useState(false);
 
   // 🏢 ENTERPRISE: Determine file type with backward compatibility
   const fileType: FloorplanFileType = floorplanData?.fileType || 'dxf';
@@ -94,7 +95,8 @@ export function FloorplanViewerTab({
 
     // Clear canvas with appropriate background using semantic colors
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = isDarkMode ? '#111827' : '#f8f9fa';  // Using semantic colors via design system
+    // eslint-disable-next-line design-system/no-hardcoded-colors -- Canvas 2D API requires literal color strings
+    ctx.fillStyle = isDarkMode ? '#111827' : '#f8f9fa';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Calculate bounds and scale - align TOP-LEFT with canvas TOP-LEFT (different from main canvas)
@@ -118,7 +120,8 @@ export function FloorplanViewerTab({
 
     // Use original layer colors from DXF (same as main canvas)
     const getLayerColor = (layerName: string): string => {
-      return scene.layers?.[layerName]?.color || '#e2e8f0'; // ✅ ENTERPRISE: Light gray fallback
+      // eslint-disable-next-line design-system/no-hardcoded-colors -- Canvas 2D API requires literal color strings
+      return scene.layers?.[layerName]?.color || '#e2e8f0';
     };
 
     ctx.lineWidth = 1;

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import '@/lib/design-system';
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import { openContactAvatarModal, openGalleryPhotoModal } from '@/core/modals';
@@ -37,7 +38,7 @@ interface ContactDetailsHeaderProps {
 
 export function ContactDetailsHeader({
   contact,
-  onEditContact,
+  _onEditContact,
   onDeleteContact,
   onContactUpdate,
   onNewContact,
@@ -73,14 +74,14 @@ export function ContactDetailsHeader({
   const Icon = getContactIcon(type);
 
   // ✅ ENTERPRISE: Type-safe property access using type guards
-  const status: ContactStatus | undefined = contact.status;
+  const _status: ContactStatus | undefined = contact.status;
 
   // 🏢 ENTERPRISE: Safe property accessors based on contact type using type guards
   const photoURL = isIndividualContact(contact) ? contact.photoURL : undefined;
   const logoURL = (isCompanyContact(contact) || isServiceContact(contact)) ? contact.logoURL : undefined;
   const multiplePhotoURLs = isIndividualContact(contact) ? contact.multiplePhotoURLs : undefined;
   const displayName = getContactDisplayName(contact);
-  const initials = getContactInitials(contact);
+  const _initials = getContactInitials(contact);
 
   // 🎯 SMART AVATAR LOGIC: Different URL based on contact type
   const getAvatarImageUrl = () => {
@@ -127,8 +128,8 @@ export function ContactDetailsHeader({
 
     } else if (type === 'company') {
       // 🎯 NEW: Gallery navigation για Company [logoURL, photoURL]
-      const companyLogoURL = logoURL;
-      const companyPhotoURL = photoURL; // Representative photo
+      const _companyLogoURL = logoURL;
+      const _companyPhotoURL = photoURL; // Representative photo
       const galleryPhotos = [logoURL, photoURL].filter(Boolean); // Remove null/undefined
 
       // 🏢 ENTERPRISE: Type-safe photo filtering
@@ -149,8 +150,8 @@ export function ContactDetailsHeader({
 
     } else if (type === 'service') {
       // 🎯 NEW: Gallery navigation για Service [logoURL, photoURL]
-      const serviceLogoURL = logoURL;
-      const servicePhotoURL = photoURL; // Representative photo
+      const _serviceLogoURL = logoURL;
+      const _servicePhotoURL = photoURL; // Representative photo
       const galleryPhotos = [logoURL, photoURL].filter(Boolean); // Remove null/undefined
 
       // 🏢 ENTERPRISE: Type-safe photo filtering
@@ -176,7 +177,7 @@ export function ContactDetailsHeader({
   };
 
   // 🎯 INLINE EDITING: Handle name updates
-  const handleNameUpdate = async (newName: string) => {
+  const _handleNameUpdate = async (newName: string) => {
     if (!newName.trim() || !contact.id) return; // Don't save empty names or without ID
 
     try {

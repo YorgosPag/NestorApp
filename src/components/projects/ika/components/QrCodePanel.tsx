@@ -36,6 +36,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { cn } from '@/lib/utils';
+import { getStatusColor } from '@/lib/design-system';
 
 // =============================================================================
 // TYPES
@@ -116,6 +117,7 @@ export function QrCodePanel({ projectId }: QrCodePanelProps) {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
+    // eslint-disable-next-line design-system/no-hardcoded-colors -- Print window HTML requires inline CSS color strings
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
@@ -179,7 +181,7 @@ export function QrCodePanel({ projectId }: QrCodePanelProps) {
       <CardContent>
         {/* Error */}
         {error && (
-          <div className="flex items-center gap-2 text-sm text-red-600 mb-2">
+          <div className={cn("flex items-center gap-2 text-sm mb-2", getStatusColor('error', 'text'))}>
             <AlertCircle className={iconSizes.sm} />
             {error}
           </div>
@@ -199,7 +201,7 @@ export function QrCodePanel({ projectId }: QrCodePanelProps) {
 
             {/* Date badge */}
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              <span className={cn("inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium", getStatusColor('active', 'bg'), 'bg-opacity-10', getStatusColor('active', 'text'))}>
                 {t('ika.attendance.qr.active')}
               </span>
               <span className="text-sm text-slate-500">
@@ -215,7 +217,7 @@ export function QrCodePanel({ projectId }: QrCodePanelProps) {
                 onClick={handleCopyUrl}
               >
                 {copied ? (
-                  <Check className={cn(iconSizes.sm, 'mr-2 text-green-500')} />
+                  <Check className={cn(iconSizes.sm, 'mr-2', getStatusColor('active', 'text'))} />
                 ) : (
                   <Copy className={cn(iconSizes.sm, 'mr-2')} />
                 )}

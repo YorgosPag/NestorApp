@@ -36,7 +36,7 @@ interface DeleteContactDialogProps {
  * If allowed → renders the SmartDialog for confirmation.
  */
 export function DeleteContactDialog(props: DeleteContactDialogProps) {
-  const { checkBeforeDelete, BlockedDialog, blocked, resetCheck } = useDeletionGuard('contact');
+  const { checkBeforeDelete, BlockedDialog, blocked, resetCheck: _resetCheck } = useDeletionGuard('contact');
   const checkedRef = useRef(false);
 
   // Run pre-check when dialog opens

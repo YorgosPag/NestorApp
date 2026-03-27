@@ -10,6 +10,8 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
+import '@/lib/design-system';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 import { AddressWithHierarchy } from '@/components/shared/addresses/AddressWithHierarchy';
@@ -38,6 +40,7 @@ export function AddressesSectionWithFullscreen({
   setFormData,
   disabled,
 }: AddressesSectionWithFullscreenProps) {
+  const { t } = useTranslation('contacts');
   const fullscreen = useFullscreen();
 
   const currentAddresses: CompanyAddress[] = formData.companyAddresses ?? [];
@@ -52,14 +55,14 @@ export function AddressesSectionWithFullscreen({
       isFullscreen={fullscreen.isFullscreen}
       onToggle={fullscreen.toggle}
       ariaLabel="Διευθύνσεις & Υποκαταστήματα"
-      className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-      fullscreenClassName="grid grid-cols-1 lg:grid-cols-2 gap-6 p-4 overflow-auto"
+      className="grid grid-cols-1 lg:grid-cols-2 gap-2"
+      fullscreenClassName="grid grid-cols-1 lg:grid-cols-2 gap-2 p-2 overflow-auto"
     >
       {/* LEFT: AddressWithHierarchy for HQ + Branches */}
-      <div className="space-y-6">
+      <div className="space-y-2">
         {/* HQ address with hierarchy + fullscreen toggle */}
         <header className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-foreground">Έδρα</h3>
+          <h3 className="text-sm font-semibold text-foreground">{t('addressesSection.headquarters')}</h3>
           <FullscreenToggleButton isFullscreen={fullscreen.isFullscreen} onToggle={fullscreen.toggle} />
         </header>
 

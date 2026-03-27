@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import '@/lib/design-system';
 import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { ContactRelationshipManager } from '@/components/contacts/relationships/ContactRelationshipManager';
@@ -32,7 +33,7 @@ export function ContactRelationshipsTab({
     relationshipsMode = 'full',
   } = additionalData || {};
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       <RelationshipProvider contactId={data.id!} contactType={data.type}>
         {relationshipsMode === 'summary' ? (
           <RelationshipsSummary

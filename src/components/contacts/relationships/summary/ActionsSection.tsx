@@ -10,9 +10,11 @@
 'use client';
 
 import React from 'react';
+import '@/lib/design-system';
 import { Button } from '@/components/ui/button';
 import { Eye, Settings } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // TYPES
@@ -48,6 +50,7 @@ export const ActionsSection: React.FC<ActionsSectionProps> = ({
   className
 }) => {
   const iconSizes = useIconSizes();
+  const { t } = useTranslation('contacts');
   // ============================================================================
   // EARLY RETURN
   // ============================================================================
@@ -61,14 +64,14 @@ export const ActionsSection: React.FC<ActionsSectionProps> = ({
   // ============================================================================
 
   return (
-    <div className={`flex justify-center space-x-3 ${className || ''}`}>
+    <div className={`flex justify-center space-x-2 ${className || ''}`}>
       <Button
         onClick={onManageRelationships}
         variant="outline"
         className="flex-1 max-w-xs"
       >
         <Eye className={`${iconSizes.sm} mr-2`} />
-        Προβολή & Διαχείριση
+        {t('relationships.summary.viewManage')}
       </Button>
 
       {!readonly && (
@@ -77,7 +80,7 @@ export const ActionsSection: React.FC<ActionsSectionProps> = ({
           className="flex-1 max-w-xs"
         >
           <Settings className={`${iconSizes.sm} mr-2`} />
-          Επεξεργασία Σχέσεων
+          {t('relationships.summary.editRelationships')}
         </Button>
       )}
     </div>

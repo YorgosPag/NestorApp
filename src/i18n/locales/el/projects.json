@@ -211,7 +211,8 @@
     "progress": "Πρόοδος",
     "totalArea": "Συν. Εμβαδόν",
     "value": "Αξία",
-    "ariaLabel": "Έργο {name}"
+    "ariaLabel": "Έργο {name}",
+    "completionPercent": "% ολοκληρωμένο"
   },
   "filters": {
     "toggleFilters": "Εναλλαγή φίλτρων"
@@ -442,7 +443,10 @@
         "temporary": "Προσωρινός",
         "contract": "Σύμβαση Έργου",
         "intern": "Ασκούμενος"
-      }
+      },
+      "selected": "Επιλέχθηκε:",
+      "amka": "ΑΜΚΑ:",
+      "noResults": "Δεν βρέθηκαν αποτελέσματα"
     },
     "efka": {
       "title": "Αναγγελία Έργου — ΕΦΚΑ",
@@ -623,6 +627,13 @@
         "takePhoto": "Λήψη Φωτογραφίας",
         "removePhoto": "Αφαίρεση",
         "privacyNotice": "Η τοποθεσία καταγράφεται μόνο κατά την προσέλευση/αποχώρηση."
+      },
+      "eventTypes": {
+        "arrival": "Προσέλευση",
+        "departure": "Αποχώρηση",
+        "break": "Διάλειμμα",
+        "return": "Επιστροφή",
+        "live": "LIVE"
       },
       "liveMap": {
         "title": "Χάρτης Εργαζομένων",
@@ -1123,7 +1134,11 @@
     "noAddressesHint": "Χρησιμοποιήστε το κουμπί «Νέα Διεύθυνση» για να προσθέσετε διεύθυνση",
     "projectAddresses": "Διευθύνσεις Έργου",
     "tabLabel": "Διευθύνσεις",
-    "tabDescription": "Διαχείριση διευθύνσεων του έργου"
+    "tabDescription": "Διαχείριση διευθύνσεων του έργου",
+    "addresses": "Διευθύνσεις",
+    "existingAddresses": "Υπάρχουσες Διευθύνσεις",
+    "addAddress": "Προσθήκη Διεύθυνσης",
+    "editAddress": "Επεξεργασία Διεύθυνσης"
   },
   "measurements": {
     "title": "Συγκεντρωτικές Επιμετρήσεις",
@@ -1147,5 +1162,19 @@
     "category": "Κατηγορία",
     "worksHeader": "Εργασίες",
     "estimateHeader": "Εκτίμηση"
+  },
+  "common": {
+    "cancel": "Ακύρωση",
+    "edit": "Επεξεργασία",
+    "loading": "Φόρτωση...",
+    "primary": "Κύρια"
+  },
+  "documents": {
+    "selectForContracts": "Επιλέξτε ένα έργο για να δείτε τα συμβόλαια.",
+    "selectForDocuments": "Επιλέξτε ένα έργο για να δείτε τα έγγραφα."
+  },
+  "cards": {
+    "area": "Επιφάνεια",
+    "totalProjectValue": "Συνολική αξία έργου"
   }
 }

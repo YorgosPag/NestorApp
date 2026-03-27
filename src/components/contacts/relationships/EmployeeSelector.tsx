@@ -1,5 +1,16 @@
 'use client';
 
+// ============================================================================
+// 🏢 ENTERPRISE: EMPLOYEE SELECTOR COMPONENT
+// ============================================================================
+//
+// 🎯 PURPOSE: Searchable contact selector with portal dropdown
+// 🔗 SERVICE: employee-selector.service.ts (search logic)
+// 🏢 STANDARDS: Enterprise UI patterns, centralized design tokens
+//
+// SRP-compliant: UI only, service handles data fetching (ADR N.7.1)
+// ============================================================================
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { formatDateShort } from '@/lib/intl-utils';
@@ -10,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
+import { cn, getStatusColor } from '@/lib/design-system';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { layoutUtilities } from '@/styles/design-tokens';
@@ -23,183 +34,37 @@ import {
   User,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
-// 🏢 ENTERPRISE: Centralized entity icons (ZERO hardcoded values)
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-
-// 🏢 ENTERPRISE: Import centralized contact types and type guards
-import type {
-  ContactType
-} from '@/types/contacts';
-import {
-  isIndividualContact,
-  isCompanyContact,
-  isServiceContact
-} from '@/types/contacts';
+import type { ContactType } from '@/types/contacts';
 import { getEmployeeSelectorCardStyle } from '@/constants/contacts';
+import {
+  type ContactSummary,
+  searchContacts,
+  getContactById,
+} from './employee-selector.service';
+
+// Re-export for backward compatibility
+export type { ContactSummary };
 
 // ============================================================================
-// 🏢 ENTERPRISE: TYPES & INTERFACES
+// 🏢 ENTERPRISE: PROPS INTERFACE
 // ============================================================================
-
-export interface ContactSummary {
-  id: string;
-  name: string;
-  type: ContactType;
-  email?: string;
-  phone?: string;
-  address?: string;
-  company?: string; // For individual contacts
-  department?: string; // For individual contacts
-  avatar?: string;
-  lastActivity?: string;
-}
 
 interface EmployeeSelectorProps {
-  /** Current selected contact ID */
   value?: string;
-  /** Callback when contact is selected */
   onContactSelect: (contact: ContactSummary | null) => void;
-  /** Placeholder text for search input */
   placeholder?: string;
-  /** Filter by contact types (default: all types) */
   allowedContactTypes?: ContactType[];
-  /** Exclude specific contact IDs from results */
   excludeContactIds?: string[];
-  /** Read-only mode (displays selected contact but no searching) */
   readonly?: boolean;
-  /** Custom label for the selector */
   label?: string;
-  /** Required field indicator */
   required?: boolean;
-  /** Error state */
   error?: string;
-  /** Custom CSS classes */
   className?: string;
-  /** Maximum number of search results to show */
   maxResults?: number;
 }
 
-// ============================================================================
-// 🏢 ENTERPRISE: REAL CONTACTS SERVICE INTEGRATION
-// ============================================================================
-
-import { ContactsService } from '@/services/contacts.service';
-
 const logger = createModuleLogger('EmployeeSelector');
-
-const realContactSearch = async (query: string, filters: {
-  allowedTypes?: ContactType[];
-  excludeIds?: string[];
-  maxResults?: number;
-}): Promise<ContactSummary[]> => {
-  try {
-    logger.info('Searching contacts', { query, filters });
-
-    // Get all contacts from database
-    const result = await ContactsService.getAllContacts();
-    const allContacts = result?.contacts || [];
-    logger.info('Found contacts in database', { count: allContacts.length });
-
-    if (!Array.isArray(allContacts)) {
-      logger.error('ContactsService.getAllContacts() returned invalid contacts array', { result });
-      return [];
-    }
-
-    // Convert to ContactSummary format with proper type checking
-    let filtered = allContacts.map(contact => {
-      let name = '';
-      let company: string | undefined;
-      let department: string | undefined;
-
-      // 🏢 ENTERPRISE: Type-safe name extraction using type guards
-      if (isIndividualContact(contact)) {
-        name = `${contact.firstName || ''} ${contact.lastName || ''}`.trim();
-        company = contact.employer || '';
-        department = contact.position || '';
-      } else if (isCompanyContact(contact)) {
-        name = contact.companyName || '';
-      } else if (isServiceContact(contact)) {
-        name = contact.serviceName || '';
-      }
-
-      // 🏢 ENTERPRISE: Safe date conversion with type guards
-      let lastActivityDate: string | undefined;
-      if (contact.updatedAt) {
-        try {
-          const dateValue = contact.updatedAt instanceof Date
-            ? contact.updatedAt
-            : typeof contact.updatedAt === 'string' || typeof contact.updatedAt === 'number'
-            ? new Date(contact.updatedAt)
-            : undefined;
-
-          if (dateValue && !isNaN(dateValue.getTime())) {
-            lastActivityDate = dateValue.toISOString().split('T')[0];
-          }
-        } catch {
-          lastActivityDate = undefined;
-        }
-      }
-
-      const summary: ContactSummary = {
-        id: contact.id ?? '',
-        name,
-        type: contact.type,
-        email: contact.emails?.[0]?.email || '',
-        phone: contact.phones?.[0]?.number || '',
-        company,
-        department,
-        lastActivity: lastActivityDate
-      };
-      return summary;
-    }).filter(contact => contact.name.length > 0); // Only contacts with names
-
-    logger.info('After mapping, valid contacts', { count: filtered.length });
-
-    // Filter by query (name, email, company)
-    if (query.trim()) {
-      const searchTerm = query.toLowerCase();
-      filtered = filtered.filter(contact =>
-        contact.name.toLowerCase().includes(searchTerm) ||
-        contact.email?.toLowerCase().includes(searchTerm) ||
-        contact.company?.toLowerCase().includes(searchTerm) ||
-        contact.department?.toLowerCase().includes(searchTerm)
-      );
-      logger.info('After text filter', { count: filtered.length });
-    }
-
-    // Filter by contact type
-    if (filters.allowedTypes?.length) {
-      filtered = filtered.filter(contact =>
-        filters.allowedTypes!.includes(contact.type)
-      );
-      logger.info('After type filter', { count: filtered.length });
-    }
-
-    // Exclude specific IDs
-    if (filters.excludeIds?.length) {
-      filtered = filtered.filter(contact =>
-        !filters.excludeIds!.includes(contact.id)
-      );
-      logger.info('After excluding IDs', { count: filtered.length });
-    }
-
-    // Limit results
-    if (filters.maxResults) {
-      filtered = filtered.slice(0, filters.maxResults);
-      logger.info('After limit, returning contacts', { count: filtered.length });
-    }
-
-    return filtered;
-  } catch (error) {
-    logger.error('Failed to search contacts', { error });
-    return [];
-  }
-};
-
-const getContactById = async (id: string): Promise<ContactSummary | null> => {
-  const results = await realContactSearch('', { excludeIds: [], maxResults: 100 });
-  return results.find(contact => contact.id === id) || null;
-};
 
 // ============================================================================
 // 🏢 ENTERPRISE: MAIN COMPONENT
@@ -223,10 +88,6 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
 
-  // ============================================================================
-  // 🏢 ENTERPRISE: STATE MANAGEMENT
-  // ============================================================================
-
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<ContactSummary[]>([]);
   const [selectedContact, setSelectedContact] = useState<ContactSummary | null>(null);
@@ -237,10 +98,6 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // ============================================================================
-  // 🏢 ENTERPRISE: EFFECTS
-  // ============================================================================
 
   // Load selected contact on value change
   useEffect(() => {
@@ -254,11 +111,9 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   // Search debouncing
   useEffect(() => {
     if (!showDropdown || readonly) return;
-
     const debounceTimer = setTimeout(() => {
       performSearch(searchQuery);
     }, 300);
-
     return () => clearTimeout(debounceTimer);
   }, [searchQuery, showDropdown]);
 
@@ -266,19 +121,14 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!showDropdown || searchResults.length === 0) return;
-
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
-          setHighlightedIndex(prev =>
-            prev < searchResults.length - 1 ? prev + 1 : 0
-          );
+          setHighlightedIndex(prev => prev < searchResults.length - 1 ? prev + 1 : 0);
           break;
         case 'ArrowUp':
           e.preventDefault();
-          setHighlightedIndex(prev =>
-            prev > 0 ? prev - 1 : searchResults.length - 1
-          );
+          setHighlightedIndex(prev => prev > 0 ? prev - 1 : searchResults.length - 1);
           break;
         case 'Enter':
           e.preventDefault();
@@ -292,36 +142,26 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
           break;
       }
     };
-
     if (showDropdown) {
       document.addEventListener('keydown', handleKeyDown);
     }
-
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [showDropdown, searchResults, highlightedIndex]);
 
-  // Click outside to close
   useClickOutside([dropdownRef, searchInputRef], () => setShowDropdown(false));
 
   // Update dropdown position on scroll/resize
   useEffect(() => {
     const handleResize = () => {
-      if (showDropdown) {
-        updateDropdownPosition();
-      }
+      if (showDropdown) updateDropdownPosition();
     };
-
     window.addEventListener('resize', handleResize);
     window.addEventListener('scroll', handleResize);
-
     return () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('scroll', handleResize);
     };
   }, [showDropdown]);
-
-
-  // ✅ CLEAN SOLUTION: Background colors handled directly in renderContactItem with inline styles
 
   // ============================================================================
   // 🏢 ENTERPRISE: HANDLERS
@@ -331,33 +171,23 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
     try {
       const contact = await getContactById(contactId);
       setSelectedContact(contact);
-    } catch (error) {
-      logger.error('Error loading selected contact', { error });
+    } catch (err) {
+      logger.error('Error loading selected contact', { error: err });
     }
   };
 
   const performSearch = async (query: string) => {
     try {
-      logger.info('performSearch called', {
-        query,
-        allowedTypes: allowedContactTypes,
-        excludeIds: excludeContactIds,
-        maxResults
-      });
-
       setIsSearching(true);
-      const results = await realContactSearch(query, {
+      const results = await searchContacts(query, {
         allowedTypes: allowedContactTypes,
         excludeIds: excludeContactIds,
         maxResults
       });
-
-      logger.info('Search completed', { resultCount: results.length });
-
       setSearchResults(results);
       setHighlightedIndex(-1);
-    } catch (error) {
-      logger.error('Search failed', { error });
+    } catch (err) {
+      logger.error('Search failed', { error: err });
       setSearchResults([]);
     } finally {
       setIsSearching(false);
@@ -387,8 +217,6 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
         left: rect.left + window.scrollX,
         width: rect.width
       };
-
-      // ✅ ENTERPRISE: Use centralized dropdown positioning (NO inline styles)
       layoutUtilities.dropdown.setCSSPositioning(position, 75);
       setDropdownPosition(position);
     }
@@ -399,49 +227,39 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
       updateDropdownPosition();
       setShowDropdown(true);
       if (searchResults.length === 0) {
-        performSearch(''); // Load initial results
+        performSearch('');
       }
     }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
-    if (!showDropdown) {
-      setShowDropdown(true);
-    }
+    if (!showDropdown) setShowDropdown(true);
   };
 
   // ============================================================================
   // 🏢 ENTERPRISE: RENDER HELPERS
   // ============================================================================
 
-  // 🏢 ENTERPRISE: Using centralized entity icons
   const getContactIcon = (type: ContactType) => {
     switch (type) {
-      case 'company':
-        return NAVIGATION_ENTITIES.company.icon;
-      case 'service':
-        return NAVIGATION_ENTITIES.building.icon;
-      default:
-        return User;
+      case 'company': return NAVIGATION_ENTITIES.company.icon;
+      case 'service': return NAVIGATION_ENTITIES.building.icon;
+      default: return User;
     }
   };
 
   const getContactTypeLabel = (type: ContactType) => {
     switch (type) {
-      case 'company':
-        return t('contactTypes.company');
-      case 'service':
-        return t('contactTypes.service');
-      default:
-        return t('contactTypes.individual');
+      case 'company': return t('contactTypes.company');
+      case 'service': return t('contactTypes.service');
+      default: return t('contactTypes.individual');
     }
   };
 
   const renderContactItem = (contact: ContactSummary, index: number) => {
     const Icon = getContactIcon(contact.type);
     const isHighlighted = index === highlightedIndex;
-
     return (
       <div
         key={contact.id}
@@ -454,19 +272,15 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
         onClick={() => selectContact(contact)}
         onMouseEnter={() => setHighlightedIndex(index)}
       >
-        <div className="flex items-start space-x-3">
+        <div className="flex items-start space-x-2">
           <Icon className={`${iconSizes.md} text-muted-foreground mt-0.5 flex-shrink-0`} />
-
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium text-foreground truncate">
-                {contact.name}
-              </h4>
+              <h4 className="text-sm font-medium text-foreground truncate">{contact.name}</h4>
               <Badge variant="outline" className="ml-2 text-xs">
                 {getContactTypeLabel(contact.type)}
               </Badge>
             </div>
-
             {(contact.company || contact.department) && (
               <div className="flex items-center space-x-2 mt-1 text-xs text-muted-foreground">
                 {contact.company && (
@@ -483,9 +297,8 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
                 )}
               </div>
             )}
-
             <div className="flex items-center justify-between mt-2">
-              <div className="flex items-center space-x-3 text-xs text-muted-foreground">
+              <div className="flex items-center space-x-2 text-xs text-muted-foreground">
                 {contact.email && (
                   <div className="flex items-center space-x-1">
                     <NAVIGATION_ENTITIES.email.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.email.color)} />
@@ -499,7 +312,6 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
                   </div>
                 )}
               </div>
-
               {contact.lastActivity && (
                 <span className="text-xs text-muted-foreground">
                   {formatDateShort(new Date(contact.lastActivity))}
@@ -514,24 +326,18 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
 
   const renderSelectedContact = () => {
     if (!selectedContact) return null;
-
     const Icon = getContactIcon(selectedContact.type);
-
     return (
-      <div className={`flex items-center justify-between p-3 ${colors.bg.info} ${quick.selected}`}>
-        <div className="flex items-center space-x-3 flex-1 min-w-0">
+      <div className={`flex items-center justify-between p-2 ${colors.bg.info} ${quick.selected}`}>
+        <div className="flex items-center space-x-2 flex-1 min-w-0">
           <Icon className={`${iconSizes.md} ${colors.text.info} flex-shrink-0`} />
-
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-2">
-              <h4 className="text-sm font-medium text-foreground truncate">
-                {selectedContact.name}
-              </h4>
+              <h4 className="text-sm font-medium text-foreground truncate">{selectedContact.name}</h4>
               <Badge className={`bg-accent text-accent-foreground ${quick.info} text-xs`}>
                 {getContactTypeLabel(selectedContact.type)}
               </Badge>
             </div>
-
             {(selectedContact.company || selectedContact.department) && (
               <div className="text-xs text-muted-foreground mt-1 truncate">
                 {selectedContact.company}
@@ -541,7 +347,6 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
             )}
           </div>
         </div>
-
         {!readonly && (
           <Button
             variant="ghost"
@@ -566,15 +371,12 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
 
   return (
     <div className={`relative space-y-2 ${className}`}>
-      {/* Label */}
       {label && (
         <Label className="text-sm font-medium">
           {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
+          {required && <span className={`${getStatusColor('error', 'text')} ml-1`}>*</span>}
         </Label>
       )}
-
-      {/* Selected Contact Display or Search Input */}
       {selectedContact && readonly ? (
         renderSelectedContact()
       ) : selectedContact ? (
@@ -597,7 +399,6 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
         </div>
       ) : (
         <>
-          {/* Search Input */}
           <div className="relative">
             <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${colors.text.muted} ${iconSizes.sm}`} />
             <Input
@@ -623,14 +424,11 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
               </Button>
             )}
           </div>
-
-          {/* Dropdown Results - Using Portal for proper z-index */}
           {showDropdown && dropdownPosition && typeof document !== 'undefined' && createPortal(
             <Card
               ref={dropdownRef}
               className={cn(
                 `shadow-xl ${colors.bg.primary} ${quick.card}`,
-                // ✅ ENTERPRISE: Use centralized dropdown classes (NO inline styles)
                 layoutUtilities.dropdown.getDropdownClasses('default')
               )}
             >
@@ -658,13 +456,9 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
           )}
         </>
       )}
-
-      {/* Error Message */}
       {error && (
-        <p className="text-sm text-red-600">{error}</p>
+        <p className={`text-sm ${getStatusColor('error', 'text')}`}>{error}</p>
       )}
-
-      {/* Help Text */}
       {!readonly && !error && (
         <p className={`text-xs ${colors.text.muted}`}>
           {t('placeholders.keyboardNav')}
@@ -675,4 +469,3 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
 };
 
 export default EmployeeSelector;
-

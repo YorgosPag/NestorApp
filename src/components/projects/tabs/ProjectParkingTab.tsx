@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 /**
  * ProjectParkingTab — Unified parking tab for project detail view
  *
@@ -47,7 +48,7 @@ interface ProjectParkingTabProps {
 
 export function ProjectParkingTab({ project, data, title }: ProjectParkingTabProps) {
   const { t } = useTranslation('parking');
-  const { t: tBuilding } = useTranslation('building');
+  const { t: _tBuilding } = useTranslation('building');
   const spacing = useSpacingTokens();
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();

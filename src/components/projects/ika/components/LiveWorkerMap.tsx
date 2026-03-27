@@ -40,6 +40,7 @@ import { Badge } from '@/components/ui/badge';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
+import { getStatusColor } from '@/lib/design-system';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { useNotifications } from '@/providers/NotificationProvider';
 import type {
@@ -105,6 +106,7 @@ const MAP_STYLE = {
       type: 'raster' as const,
       tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
       tileSize: 256,
+      // eslint-disable-next-line custom/no-hardcoded-strings
       attribution: '&copy; OpenStreetMap contributors',
     },
   },
@@ -118,6 +120,7 @@ const MAP_STYLE = {
 };
 
 /** GeoJSON circle fill style (read-only geofence) */
+/* eslint-disable design-system/no-hardcoded-colors -- MapLibre GL API requires literal color strings */
 const GEOFENCE_FILL_STYLE: FillLayerSpecification = {
   id: 'live-geofence-fill',
   type: 'fill',
@@ -139,6 +142,7 @@ const GEOFENCE_LINE_STYLE: LineLayerSpecification = {
     'line-dasharray': [4, 3],
   },
 };
+/* eslint-enable design-system/no-hardcoded-colors */
 
 /** Earth's mean radius in meters (WGS-84) */
 const EARTH_RADIUS_METERS = 6_371_008.8;
@@ -201,29 +205,33 @@ function generateCircleGeoJSON(
 /** Format ISO timestamp to HH:mm */
 function formatTime(iso: string): string {
   const d = new Date(iso);
+  // eslint-disable-next-line custom/no-hardcoded-strings
   return d.toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' });
 }
 
-/** Translate event type to Greek display label */
-function eventTypeLabel(eventType: string): string {
-  const labels: Record<string, string> = {
-    check_in: 'Προσέλευση',
-    check_out: 'Αποχώρηση',
-    break_start: 'Διάλειμμα',
-    break_end: 'Επιστροφή',
-    left_site: 'Αποχώρηση',
-    returned: 'Επιστροφή',
+/** Translate event type to localized display label */
+function eventTypeLabel(eventType: string, t: (key: string) => string): string {
+  const labelKeys: Record<string, string> = {
+    check_in: 'ika.attendance.eventTypes.arrival',
+    check_out: 'ika.attendance.eventTypes.departure',
+    break_start: 'ika.attendance.eventTypes.break',
+    break_end: 'ika.attendance.eventTypes.return',
+    left_site: 'ika.attendance.eventTypes.departure',
+    returned: 'ika.attendance.eventTypes.return',
   };
-  return labels[eventType] ?? eventType;
+  const key = labelKeys[eventType];
+  return key ? t(key) : eventType;
 }
 
 // =============================================================================
 // MARKER PIN SVG COMPONENTS
 // =============================================================================
 
+/* eslint-disable design-system/no-hardcoded-colors -- SVG markers and status colors require literal hex strings for Leaflet/SVG APIs */
 function WorkerPin({ color }: { color: string }) {
   return (
     <svg width="24" height="32" viewBox="0 0 24 32" xmlns="http://www.w3.org/2000/svg">
+      {/* eslint-disable-next-line custom/no-hardcoded-strings */}
       <ellipse cx="12" cy="30" rx="5" ry="2" fill="rgba(0,0,0,0.15)" />
       <path
         d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20C24 5.4 18.6 0 12 0z"
@@ -246,6 +254,7 @@ const STATUS_COLORS = {
   outside: '#ea580c',  // orange-600
   checked_out: '#dc2626', // red-600
 } as const;
+/* eslint-enable design-system/no-hardcoded-colors */
 
 // =============================================================================
 // COMPONENT
@@ -406,7 +415,7 @@ export function LiveWorkerMap({
     if (distance > geofence.radiusMeters) {
       const name = workerNameMap.get(latestEvent.contactId) ?? latestEvent.contactId;
       error(
-        `${name}: ${eventTypeLabel(latestEvent.eventType)} ${t('ika.attendance.liveMap.outsideAlert')} (${Math.round(distance)}m)`
+        `${name}: ${eventTypeLabel(latestEvent.eventType, t)} ${t('ika.attendance.liveMap.outsideAlert')} (${Math.round(distance)}m)`
       );
     }
   }, [latestEvent, geofence, workerNameMap, t]);
@@ -487,9 +496,9 @@ export function LiveWorkerMap({
           {/* Live indicator */}
           <div className="flex items-center gap-2">
             {isLive && (
-              <Badge variant="outline" className="text-green-600 border-green-300">
+              <Badge variant="outline" className={cn(getStatusColor('active', 'text'), getStatusColor('active', 'border'))}>
                 <Radio className="h-3 w-3 mr-1 animate-pulse" />
-                LIVE
+                {t('ika.attendance.eventTypes.live')}
               </Badge>
             )}
           </div>
@@ -500,18 +509,18 @@ export function LiveWorkerMap({
         {/* Summary Badges */}
         {workerMarkers.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary" className="text-green-700 bg-green-50">
+            <Badge variant="secondary" className={cn(getStatusColor('active', 'text'), getStatusColor('active', 'bg'), 'bg-opacity-10')}>
               <Users className="h-3 w-3 mr-1" />
               {insideCount} {t('ika.attendance.liveMap.inside')}
             </Badge>
             {outsideCount > 0 && (
-              <Badge variant="secondary" className="text-orange-700 bg-orange-50">
+              <Badge variant="secondary" className={cn(getStatusColor('construction', 'text'), getStatusColor('construction', 'bg'), 'bg-opacity-10')}>
                 <AlertTriangle className="h-3 w-3 mr-1" />
                 {outsideCount} {t('ika.attendance.liveMap.outside')}
               </Badge>
             )}
             {checkedOutCount > 0 && (
-              <Badge variant="secondary" className="text-red-700 bg-red-50">
+              <Badge variant="secondary" className={cn(getStatusColor('error', 'text'), getStatusColor('error', 'bg'), 'bg-opacity-10')}>
                 <Clock className="h-3 w-3 mr-1" />
                 {checkedOutCount} {t('ika.attendance.liveMap.checkedOut')}
               </Badge>
@@ -577,7 +586,7 @@ export function LiveWorkerMap({
                     <div className="flex justify-between">
                       <dt>{t('ika.attendance.liveMap.popupEvent')}:</dt>
                       <dd className="font-medium">
-                        {eventTypeLabel(selectedMarkerData.lastEventType)}
+                        {eventTypeLabel(selectedMarkerData.lastEventType, t)}
                       </dd>
                     </div>
                     <div className="flex justify-between">
@@ -591,7 +600,7 @@ export function LiveWorkerMap({
                         <dt>{t('ika.attendance.liveMap.popupDistance')}:</dt>
                         <dd className={cn(
                           'font-medium',
-                          selectedMarkerData.status === 'inside' ? 'text-green-600' : 'text-orange-600'
+                          selectedMarkerData.status === 'inside' ? getStatusColor('active', 'text') : getStatusColor('construction', 'text')
                         )}>
                           {selectedMarkerData.distanceMeters}m
                         </dd>
@@ -603,9 +612,9 @@ export function LiveWorkerMap({
                       variant="secondary"
                       className={cn(
                         'text-xs',
-                        selectedMarkerData.status === 'inside' && 'text-green-700 bg-green-50',
-                        selectedMarkerData.status === 'outside' && 'text-orange-700 bg-orange-50',
-                        selectedMarkerData.status === 'checked_out' && 'text-red-700 bg-red-50',
+                        selectedMarkerData.status === 'inside' && cn(getStatusColor('active', 'text'), getStatusColor('active', 'bg'), 'bg-opacity-10'),
+                        selectedMarkerData.status === 'outside' && cn(getStatusColor('construction', 'text'), getStatusColor('construction', 'bg'), 'bg-opacity-10'),
+                        selectedMarkerData.status === 'checked_out' && cn(getStatusColor('error', 'text'), getStatusColor('error', 'bg'), 'bg-opacity-10'),
                       )}
                     >
                       {selectedMarkerData.status === 'inside' && t('ika.attendance.liveMap.statusInside')}

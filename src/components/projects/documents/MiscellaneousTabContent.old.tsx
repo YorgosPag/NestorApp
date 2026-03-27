@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 /**
  * =============================================================================
  * 🏢 ENTERPRISE: Project Miscellaneous Documents Tab Content
@@ -18,6 +19,7 @@
 import React from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { useAuth } from '@/auth/contexts/AuthContext';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Project } from '@/types/project';
 
 // =============================================================================
@@ -45,6 +47,7 @@ interface MiscellaneousTabContentProps {
  */
 export function MiscellaneousTabContent({ project, data }: MiscellaneousTabContentProps) {
   const { user } = useAuth();
+  const { t } = useTranslation('projects');
 
   // Resolve project from props
   const resolvedProject = project || data;
@@ -57,7 +60,7 @@ export function MiscellaneousTabContent({ project, data }: MiscellaneousTabConte
   if (!resolvedProject?.id || !companyId || !currentUserId) {
     return (
       <div className="p-2 text-center text-muted-foreground">
-        <p>Επιλέξτε ένα έργο για να δείτε τα έγγραφα.</p>
+        <p>{t('documents.selectForDocuments')}</p>
       </div>
     );
   }

@@ -1,5 +1,6 @@
 'use client';
 
+import '@/lib/design-system';
 import React, { useState, useCallback, useEffect } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
 import { Users, Edit, Check, X } from 'lucide-react';
@@ -22,6 +23,7 @@ const getMultiplePhotoURLs = (contact: Contact): string[] => {
   }
   return [];
 };
+import { useContactPhotoHandlers } from './useContactPhotoHandlers';
 import { ContactDetailsHeader } from './ContactDetailsHeader';
 import { AddUnitToContactDialog } from './AddUnitToContactDialog';
 import { openGalleryPhotoModal } from '@/core/modals';
@@ -47,7 +49,7 @@ interface ContactDetailsProps {
 // These tabs have their own save mechanisms — showing the contact save button causes confusion
 const SUBCOLLECTION_TABS: string[] = ['relationships'];
 
-export function ContactDetails({ contact, onEditContact, onDeleteContact, onContactUpdated, onNewContact }: ContactDetailsProps) {
+export function ContactDetails({ contact, onEditContact: _onEditContact, onDeleteContact, onContactUpdated, onNewContact }: ContactDetailsProps) {
   const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState<Partial<ContactFormData>>({});
@@ -284,57 +286,14 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
     setEditedData((prev) => ({ ...prev, [name]: value }));
   }, []);
 
-  // 🖼️ PHOTO HANDLERS: Persist uploaded URLs into editedData so they survive tab switches
-  const handleUploadedLogoURL = useCallback((logoURL: string) => {
-    setEditedData(prev => ({
-      ...prev,
-      logoURL,
-      logoPreview: logoURL,
-      logoFile: null
-    }));
-  }, []);
-
-  const handleUploadedPhotoURL = useCallback((photoURL: string) => {
-    setEditedData(prev => ({
-      ...prev,
-      photoURL,
-      photoPreview: photoURL,
-      photoFile: null
-    }));
-  }, []);
-
-  const handleFileChange = useCallback((file: File | null) => {
-    if (file) {
-      const preview = URL.createObjectURL(file);
-      setEditedData(prev => ({ ...prev, photoFile: file, photoPreview: preview }));
-    }
-  }, []);
-
-  // 🔧 FIX: Explicit multiplePhotos handler with functional updater to avoid stale closures.
-  // The fallback handler in createUnifiedPhotosChangeHandler closes over `formData`,
-  // which can be stale when async uploads complete. This handler uses `prev =>` pattern
-  // so it always operates on the latest state.
-  const handleMultiplePhotosChange = useCallback((photos: PhotoSlot[]) => {
-    console.log('🔴 PHOTO DEBUG [ContactDetails] handleMultiplePhotosChange', {
-      photosCount: photos.length,
-      filled: photos.filter(p => p.file || p.uploadUrl || p.preview).length,
-      slots: photos.map((p, i) => ({
-        i, f: !!p.file, u: !!p.uploadUrl, p: !!p.preview,
-        pUrl: p.preview?.substring(0, 40)
-      }))
-    });
-    setEditedData(prev => ({
-      ...prev,
-      multiplePhotos: photos
-    }));
-  }, []);
-
-  const handleLogoChange = useCallback((file: File | null) => {
-    if (file) {
-      const preview = URL.createObjectURL(file);
-      setEditedData(prev => ({ ...prev, logoFile: file, logoPreview: preview }));
-    }
-  }, []);
+  // 🖼️ PHOTO HANDLERS: Extracted to useContactPhotoHandlers (SRP — ADR-233)
+  const {
+    handleUploadedLogoURL,
+    handleUploadedPhotoURL,
+    handleFileChange,
+    handleMultiplePhotosChange,
+    handleLogoChange,
+  } = useContactPhotoHandlers(setEditedData);
 
   // 🎭 ENTERPRISE: Persona toggle — works in BOTH view and edit mode (ADR-121)
   // View mode: saves directly to Firestore (same pattern as banking subcollection)

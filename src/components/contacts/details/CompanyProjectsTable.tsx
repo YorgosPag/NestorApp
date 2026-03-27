@@ -17,6 +17,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
 import { applyUpdates } from '@/lib/utils';
+import '@/lib/design-system';
 
 
 const logger = createModuleLogger('CompanyProjectsTable');
@@ -82,7 +83,7 @@ function CompanyProjectsTable({ companyId }: { companyId: string }) {
 
     if (projects.length === 0) {
         return (
-            <div className="text-center text-sm text-muted-foreground py-4">
+            <div className="text-center text-sm text-muted-foreground py-2">
                 {t('projects.empty')}
             </div>
         )

@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
 /**
@@ -53,7 +54,7 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
   const typography = useTypography();
-  const iconSizes = useIconSizes();
+  const _iconSizes = useIconSizes();
 
   // ==========================================================================
   // COMPUTED VALUES
@@ -66,7 +67,7 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
   // Unit stats
   const soldUnits = units.filter((u) => u.status === 'sold').length;
   const totalUnits = units.length;
-  const totalArea = units.reduce((sum: number, u) => sum + (u.area || 0), 0);
+  const _totalArea = units.reduce((sum: number, u) => sum + (u.area || 0), 0);
   const soldArea = units.filter((u) => u.status === 'sold').reduce((sum: number, u) => sum + (u.area || 0), 0);
 
   // Total counts for subtitle

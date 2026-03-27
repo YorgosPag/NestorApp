@@ -7,6 +7,7 @@ import { CONTACT_ICONS, ALL_CONTACT_TYPES, CONTACT_COLORS, type ContactType } fr
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface ContactTypeSelectorProps {
   onSelect: (type: ContactType) => void;
@@ -34,7 +35,7 @@ export function ContactTypeSelector({ onSelect, onCancel }: ContactTypeSelectorP
   );
 
   return (
-    <section className="flex flex-col items-center justify-center h-full px-6 py-10 gap-8">
+    <section className="flex flex-col items-center justify-center h-full px-2 py-2 gap-2">
       <header className="text-center space-y-2">
         <h2 className="text-xl font-semibold text-foreground">
           {t('creation.selectType.title')}
@@ -44,7 +45,7 @@ export function ContactTypeSelector({ onSelect, onCancel }: ContactTypeSelectorP
         </p>
       </header>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-xl">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full max-w-xl">
         {ALL_CONTACT_TYPES.map((type) => {
           const Icon = CONTACT_ICONS[type];
           const colors = CONTACT_COLORS[type];
@@ -58,8 +59,8 @@ export function ContactTypeSelector({ onSelect, onCancel }: ContactTypeSelectorP
               onKeyDown={handleKeyDown(type)}
               className={`cursor-pointer border-2 border-transparent ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS} hover:${colors.border} hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40`}
             >
-              <CardContent className="flex flex-col items-center gap-3 p-6 text-center">
-                <span className={`${colors.primary} ${colors.bg} p-3 rounded-full`}>
+              <CardContent className="flex flex-col items-center gap-2 p-2 text-center">
+                <span className={`${colors.primary} ${colors.bg} p-2 rounded-full`}>
                   <Icon className={iconSizes.lg} />
                 </span>
                 <h3 className="font-medium text-foreground">

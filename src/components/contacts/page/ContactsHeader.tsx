@@ -1,5 +1,7 @@
 'use client';
 
+import '@/lib/design-system';
+
 /**
  * 🏢 ENTERPRISE ContactsHeader with i18n support
  * ZERO HARDCODED STRINGS - All labels from centralized translations
@@ -74,8 +76,7 @@ export function ContactsHeader({
                 : `${colors.bg.primary} ${quick.card} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
             }`,
             'aria-label': 'Toggle filters',
-            children: React.createElement(Filter, { className: iconSizes.sm })
-          })
+          }, React.createElement(Filter, { className: iconSizes.sm }))
         ] : undefined
       }}
     />

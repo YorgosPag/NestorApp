@@ -16,7 +16,7 @@
 
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/design-system';
 import { X } from 'lucide-react';
 import type { PersonaType } from '@/types/contacts/personas';
 import { PERSONA_METADATA } from '@/config/persona-config';

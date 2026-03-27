@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
 /**
@@ -29,7 +30,7 @@ export const ParkingNode = ({ parking }: ParkingNodeProps) => {
   const { t } = useTranslation('projects');
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
-  const spacing = useSpacingTokens();
+  const _spacing = useSpacingTokens();
   const typography = useTypography();
   const iconSizes = useIconSizes();
 

@@ -24,7 +24,8 @@
     "allInvalid": "No valid records found in the file.",
     "cancel": "Cancel",
     "confirm": "Import {count} contacts",
-    "success": "Imported {count} contacts successfully!"
+    "success": "Imported {count} contacts successfully!",
+    "row": "Row"
   },
   "header": {
     "title": "Contact Management",
@@ -336,7 +337,8 @@
       "notes": "Notes:",
       "createdAt": "Created:",
       "updatedAt": "Updated:",
-      "recently": "Recently"
+      "recently": "Recently",
+      "phoneExtension": "ext."
     },
     "recent": {
       "title": "Recent Relationships",
@@ -396,7 +398,9 @@
       "empty": {
         "title": "No relationships",
         "description": "Add professional relationships, employees and collaborators."
-      }
+      },
+      "viewManage": "View & Manage",
+      "editRelationships": "Edit Relationships"
     },
     "organizationTree": {
       "loading": "Loading...",
@@ -1244,5 +1248,76 @@
     "inline": {
       "back": "Back to type selection"
     }
+  },
+  "bankingTab": {
+    "retry": "Retry",
+    "empty": {
+      "title": "No bank accounts",
+      "description": "Add bank accounts to facilitate transactions with this contact."
+    },
+    "addAccount": "Add Account",
+    "add": "Add",
+    "newAccount": {
+      "title": "New Account",
+      "description": "Add bank account details."
+    },
+    "accountsTitle": "Bank Accounts",
+    "deleteAccount": {
+      "title": "Delete Account",
+      "confirmation": "Are you sure you want to delete the account",
+      "withIban": "with IBAN",
+      "irreversible": "This action cannot be undone.",
+      "cancel": "Cancel",
+      "delete": "Delete"
+    }
+  },
+  "addressesSection": {
+    "headquarters": "Headquarters",
+    "branchesTitle": "Branches / Additional Addresses",
+    "addAddress": "Add Address",
+    "noBranches": "No additional addresses",
+    "branch": "Branch",
+    "administrative": {
+      "title": "Administrative Division",
+      "postalCode": "Postal Code",
+      "placeholders": {
+        "city": "e.g. Athens, Thessaloniki...",
+        "community": "e.g. Municipal Community...",
+        "unit": "e.g. Municipal Unit...",
+        "municipality": "e.g. Municipality of Athens...",
+        "regionalUnit": "e.g. Regional Unit of Attica...",
+        "region": "e.g. Region of Attica...",
+        "decentralized": "e.g. Decentralized Admin of Attica...",
+        "geographic": "e.g. Attica, Northern Greece..."
+      }
+    }
+  },
+  "basicInfo": {
+    "noInfoFound": "No basic information found for this contact type."
+  },
+  "placeholderTab": {
+    "comingSoon": "- Coming Soon",
+    "contactIdLabel": "Contact ID:",
+    "typeLabel": "| Type:"
+  },
+  "navigation": {
+    "positionKeywords": {
+      "director": "director",
+      "generalDirector": "general director",
+      "seniorExecutive": "senior executive"
+    },
+    "fallbackSearch": {
+      "totalRelationships": "relationship",
+      "employees": "employee",
+      "shareholders": "shareholder",
+      "consultants": "consultant",
+      "management": "director",
+      "recent": "recent relationship",
+      "key": "key relationship",
+      "departments": "department"
+    }
+  },
+  "filterBar": {
+    "showOnlyWithProperties": "Show only customers with properties"
   }
 }

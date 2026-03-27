@@ -10,6 +10,7 @@
 'use client';
 
 import React from 'react';
+import '@/lib/design-system';
 import { formatDateShort } from '@/lib/intl-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { Badge } from '@/components/ui/badge';
@@ -102,7 +103,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
   tree,
   loading,
   error,
-  readonly = false
+  readonly: _readonly = false
 }) => {
   // ============================================================================
   // HOOKS
@@ -201,8 +202,8 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
     // If no meaningful stats, show user-friendly message
     if (stats.length === 0) {
       return (
-        <div className={`text-center p-6 ${colors.bg.secondary} ${quick.card} border border-dashed ${quick.table}`}>
-          <Building2 className={`${iconSizes.xl} mx-auto mb-3 ${colors.text.muted}`} />
+        <div className={`text-center p-2 ${colors.bg.secondary} ${quick.card} border border-dashed ${quick.table}`}>
+          <Building2 className={`${iconSizes.xl} mx-auto mb-2 ${colors.text.muted}`} />
           <h3 className={`font-medium ${colors.text.primary} mb-1`}>{t('relationships.organizationTree.simpleStructure')}</h3>
           <p className={`text-sm ${colors.text.muted}`}>
             {t('relationships.organizationTree.simpleStructureDescription')}
@@ -213,7 +214,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
 
     // Render only meaningful statistics
     return (
-      <div className={`grid grid-cols-1 ${stats.length > 1 ? 'md:grid-cols-' + Math.min(stats.length, 3) : ''} gap-4 mb-6`}>
+      <div className={`grid grid-cols-1 ${stats.length > 1 ? 'md:grid-cols-' + Math.min(stats.length, 3) : ''} gap-2 mb-2`}>
         {stats.map(({ value, label, icon: Icon, color }, index) => {
           // 🏢 ENTERPRISE: Safe centralized color mapping
           const getStatBackground = (colorName: string) => {
@@ -226,7 +227,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
           };
 
           return (
-            <div key={index} className={`text-center p-4 ${getStatBackground(color)} ${quick.card}`}>
+            <div key={index} className={`text-center p-2 ${getStatBackground(color)} ${quick.card}`}>
               <Icon className={`${iconSizes.lg} mx-auto mb-2 text-${color}-600`} />
               <p className={`text-2xl font-bold text-${color}-800`}>{value}</p>
               <p className={`text-sm text-${color}-600`}>{label}</p>
@@ -246,13 +247,13 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
     }
 
     return (
-      <div className="mb-6">
-        <h4 className={`text-sm font-medium ${colors.text.primary} mb-3`}>{t('relationships.organizationTree.departmentsAndEmployees')}</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="mb-2">
+        <h4 className={`text-sm font-medium ${colors.text.primary} mb-2`}>{t('relationships.organizationTree.departmentsAndEmployees')}</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {Object.entries(tree.departments).map(([department, employees]) => (
             <div
               key={department}
-              className={`p-3 ${quick.card} ${colors.bg.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+              className={`p-2 ${quick.card} ${colors.bg.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
             >
               <div className="flex items-center justify-between mb-2">
                 <p className={`font-medium ${colors.text.primary}`}>

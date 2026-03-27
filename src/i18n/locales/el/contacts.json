@@ -24,7 +24,8 @@
     "allInvalid": "Δεν βρέθηκαν έγκυρες εγγραφές στο αρχείο.",
     "cancel": "Ακύρωση",
     "confirm": "Εισαγωγή {count} επαφών",
-    "success": "Εισήχθησαν {count} επαφές επιτυχώς!"
+    "success": "Εισήχθησαν {count} επαφές επιτυχώς!",
+    "row": "Γραμμή"
   },
   "header": {
     "title": "Διαχείριση Επαφών",
@@ -336,7 +337,8 @@
       "notes": "Σημειώσεις:",
       "createdAt": "Δημιουργήθηκε:",
       "updatedAt": "Ενημερώθηκε:",
-      "recently": "Πρόσφατα"
+      "recently": "Πρόσφατα",
+      "phoneExtension": "ext."
     },
     "recent": {
       "title": "Πρόσφατες Σχέσεις",
@@ -396,7 +398,9 @@
       "empty": {
         "title": "Δεν υπάρχουν σχέσεις",
         "description": "Προσθέστε επαγγελματικές σχέσεις, εργαζόμενους και συνεργάτες."
-      }
+      },
+      "viewManage": "Προβολή & Διαχείριση",
+      "editRelationships": "Επεξεργασία Σχέσεων"
     },
     "organizationTree": {
       "loading": "Φόρτωση...",
@@ -1244,5 +1248,76 @@
     "inline": {
       "back": "Πίσω στην επιλογή τύπου"
     }
+  },
+  "bankingTab": {
+    "retry": "Επανάληψη",
+    "empty": {
+      "title": "Δεν υπάρχουν τραπεζικοί λογαριασμοί",
+      "description": "Προσθέστε τραπεζικούς λογαριασμούς για να διευκολύνετε τις συναλλαγές με αυτή την επαφή."
+    },
+    "addAccount": "Προσθήκη Λογαριασμού",
+    "add": "Προσθήκη",
+    "newAccount": {
+      "title": "Νέος Λογαριασμός",
+      "description": "Προσθέστε τα στοιχεία του τραπεζικού λογαριασμού."
+    },
+    "accountsTitle": "Τραπεζικοί Λογαριασμοί",
+    "deleteAccount": {
+      "title": "Διαγραφή Λογαριασμού",
+      "confirmation": "Είστε σίγουροι ότι θέλετε να διαγράψετε τον λογαριασμό",
+      "withIban": "με IBAN",
+      "irreversible": "Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.",
+      "cancel": "Ακύρωση",
+      "delete": "Διαγραφή"
+    }
+  },
+  "addressesSection": {
+    "headquarters": "Έδρα",
+    "branchesTitle": "Υποκαταστήματα / Επιπλέον Διευθύνσεις",
+    "addAddress": "Προσθήκη Διεύθυνσης",
+    "noBranches": "Δεν υπάρχουν επιπλέον διευθύνσεις",
+    "branch": "Υποκατάστημα",
+    "administrative": {
+      "title": "Διοικητική Διαίρεση",
+      "postalCode": "Ταχυδρομικός Κώδικας",
+      "placeholders": {
+        "city": "π.χ. Κομοτηνή, Μαρούσι...",
+        "community": "π.χ. Δημοτική Κοινότητα...",
+        "unit": "π.χ. Δημοτική Ενότητα...",
+        "municipality": "π.χ. Δήμος Αθηναίων...",
+        "regionalUnit": "π.χ. Π.Ε. Αττικής...",
+        "region": "π.χ. Περιφέρεια Αττικής...",
+        "decentralized": "π.χ. Αποκ. Διοίκηση Αττικής...",
+        "geographic": "π.χ. Αττική, Βόρεια Ελλάδα..."
+      }
+    }
+  },
+  "basicInfo": {
+    "noInfoFound": "Δεν βρέθηκαν βασικές πληροφορίες για αυτόν τον τύπο επαφής."
+  },
+  "placeholderTab": {
+    "comingSoon": "- Coming Soon",
+    "contactIdLabel": "Contact ID:",
+    "typeLabel": "| Type:"
+  },
+  "navigation": {
+    "positionKeywords": {
+      "director": "διευθυντής",
+      "generalDirector": "γενικός διευθυντής",
+      "seniorExecutive": "ανώτερο στέλεχος"
+    },
+    "fallbackSearch": {
+      "totalRelationships": "σχέση",
+      "employees": "εργαζόμενος",
+      "shareholders": "μέτοχος",
+      "consultants": "συνεργάτης",
+      "management": "διευθυντής",
+      "recent": "πρόσφατη σχέση",
+      "key": "κύρια σχέση",
+      "departments": "τμήμα"
+    }
+  },
+  "filterBar": {
+    "showOnlyWithProperties": "Εμφάνιση μόνο πελατών με ιδιοκτησίες"
   }
 }

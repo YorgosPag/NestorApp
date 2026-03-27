@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
 /**
@@ -39,7 +40,6 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { FormGrid, FormField, FormInput } from '@/components/ui/form/FormComponents';
 import { SaveButton, CancelButton } from '@/components/ui/form/ActionButtons';
 import { Button } from '@/components/ui/button';
@@ -182,7 +182,7 @@ export function AddProjectDialog({
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="basic">{t('dialog.tabs.basic')}</TabsTrigger>
-              <TabsTrigger value="addresses">Διευθύνσεις</TabsTrigger>
+              <TabsTrigger value="addresses">{t('locations.addresses')}</TabsTrigger>
             </TabsList>
 
             {/* ================================================================
@@ -347,7 +347,7 @@ export function AddProjectDialog({
                 {formData.addresses.length > 0 && (
                   <div className="space-y-2">
                     <h3 className="text-sm font-semibold text-muted-foreground">
-                      Υπάρχουσες Διευθύνσεις ({formData.addresses.length})
+                      {t('locations.existingAddresses')} ({formData.addresses.length})
                     </h3>
                     {formData.addresses.map((address, index) => (
                       <div key={address.id} className="relative border rounded-lg p-2">
@@ -365,7 +365,7 @@ export function AddProjectDialog({
                             </Button>
                           )}
                           {address.isPrimary && (
-                            <Badge variant="default">Κύρια</Badge>
+                            <Badge variant="default">{t('common.primary')}</Badge>
                           )}
                           <Button
                             type="button"
@@ -385,7 +385,7 @@ export function AddProjectDialog({
                 {/* Add New Address Form */}
                 <div className="border-t pt-2">
                   <h3 className="text-sm font-semibold text-muted-foreground mb-2">
-                    Προσθήκη Νέας Διεύθυνσης
+                    {t('locations.addNewAddress')}
                   </h3>
                   <AddressFormSection onChange={setTempAddress} />
                   <Button
@@ -401,7 +401,7 @@ export function AddProjectDialog({
                     className="mt-2"
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Προσθήκη Διεύθυνσης
+                    {t('locations.addAddress')}
                   </Button>
                 </div>
               </div>

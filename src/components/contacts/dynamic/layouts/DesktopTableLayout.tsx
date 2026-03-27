@@ -23,6 +23,7 @@ import React from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
+import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Centralized types και renderers
 import type {
@@ -125,7 +126,7 @@ function DesktopTableHeader({ type, title, t }: DesktopTableHeaderProps): JSX.El
 
   return (
     <header
-      className={`grid ${headerConfig.columns} gap-3 p-4 bg-muted border-b font-medium text-sm text-muted-foreground`}
+      className={`grid ${headerConfig.columns} gap-2 p-2 bg-muted border-b font-medium text-sm text-muted-foreground`}
       role="columnheader"
       aria-label={`${title} table headers`}
     >

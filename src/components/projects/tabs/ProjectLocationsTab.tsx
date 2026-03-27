@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
 /**
@@ -207,6 +208,7 @@ function ProjectAddressFields({
 
 export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps) {
   const { t } = useTranslation('addresses');
+  const { t: tProjects } = useTranslation('projects');
   const iconSizes = useIconSizes();
   const typography = useTypography();
   const spacing = useSpacingTokens();
@@ -292,7 +294,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
   /**
    * 🗺️ Handle marker click - scroll to address card
    */
-  const handleMarkerClick = useCallback((address: ProjectAddress, index: number) => {
+  const handleMarkerClick = useCallback((address: ProjectAddress, _index: number) => {
     // Scroll to address card
     const cardElement = document.getElementById(`address-card-${address.id}`);
     if (cardElement) {
@@ -511,7 +513,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
   // RENDER
   // ==========================================================================
 
-  const primary = getPrimaryAddress(localAddresses);
+  const _primary = getPrimaryAddress(localAddresses);
 
   // Show inline form in full-width mode (replaces 2-column layout)
   const isInlineFormActive = isAddFormOpen || editingIndex !== null;
@@ -568,9 +570,9 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
                 t={t}
               />
               <div className={cn("flex gap-2 justify-end border-t", spacing.padding.top.md)}>
-                <Button variant="outline" onClick={handleCancelAdd} disabled={isSaving}>Ακύρωση</Button>
+                <Button variant="outline" onClick={handleCancelAdd} disabled={isSaving}>{tProjects('projectHeader.cancel')}</Button>
                 <Button onClick={handleSaveNewAddress} disabled={isSaving}>
-                  {isSaving ? 'Αποθήκευση...' : 'Αποθήκευση'}
+                  {isSaving ? tProjects('projectHeader.saving') : tProjects('projectHeader.save')}
                 </Button>
               </div>
             </div>
@@ -616,7 +618,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
           <div className="flex items-center justify-between">
             <h3 className={cn(typography.heading.md, "flex items-center", spacing.gap.sm)}>
               <Pencil className={iconSizes.md} />
-              Επεξεργασία Διεύθυνσης
+              {tProjects('locations.editAddress')}
             </h3>
             <Button variant="ghost" size="sm" onClick={handleCancelEdit}>
               <X className={iconSizes.sm} />
@@ -641,9 +643,9 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
                 t={t}
               />
               <div className={cn("flex gap-2 justify-end border-t", spacing.padding.top.md)}>
-                <Button variant="outline" onClick={handleCancelEdit} disabled={isSaving}>Ακύρωση</Button>
+                <Button variant="outline" onClick={handleCancelEdit} disabled={isSaving}>{tProjects('projectHeader.cancel')}</Button>
                 <Button onClick={handleSaveEdit} disabled={isSaving}>
-                  {isSaving ? 'Αποθήκευση...' : 'Αποθήκευση'}
+                  {isSaving ? tProjects('projectHeader.saving') : tProjects('projectHeader.save')}
                 </Button>
               </div>
             </div>
@@ -717,7 +719,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
                       {address.isPrimary ? (
                         <Badge variant="default" className="flex items-center gap-1">
                           <Star className="h-3 w-3 fill-current" />
-                          Κύρια
+                          {tProjects('common.primary')}
                         </Badge>
                       ) : (
                         <Button

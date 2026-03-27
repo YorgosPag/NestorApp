@@ -39,6 +39,7 @@ import { Slider } from '@/components/ui/slider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
+import { getStatusColor } from '@/lib/design-system';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import type { GeofenceConfig } from '../contracts';
 
@@ -74,6 +75,7 @@ const MAP_STYLE = {
       type: 'raster' as const,
       tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
       tileSize: 256,
+      // eslint-disable-next-line custom/no-hardcoded-strings
       attribution: '&copy; OpenStreetMap contributors',
     },
   },
@@ -87,6 +89,7 @@ const MAP_STYLE = {
 };
 
 /** GeoJSON circle fill style */
+/* eslint-disable design-system/no-hardcoded-colors -- MapLibre GL API requires literal color strings */
 const CIRCLE_FILL_STYLE: FillLayerSpecification = {
   id: 'geofence-fill',
   type: 'fill',
@@ -108,6 +111,7 @@ const CIRCLE_LINE_STYLE: LineLayerSpecification = {
     'line-dasharray': [3, 2],
   },
 };
+/* eslint-enable design-system/no-hardcoded-colors */
 
 // =============================================================================
 // HELPERS
@@ -161,9 +165,11 @@ function generateCircleGeoJSON(
 // MARKER PIN
 // =============================================================================
 
+/* eslint-disable design-system/no-hardcoded-colors -- SVG marker requires literal color strings */
 function GeofenceMarkerPin() {
   return (
     <svg width="32" height="42" viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg">
+      {/* eslint-disable-next-line custom/no-hardcoded-strings */}
       <ellipse cx="16" cy="40" rx="6" ry="2" fill="rgba(0,0,0,0.2)" />
       <path
         d="M16 0C7.2 0 0 7.2 0 16c0 12 16 26 16 26s16-14 16-26C32 7.2 24.8 0 16 0z"
@@ -176,6 +182,7 @@ function GeofenceMarkerPin() {
     </svg>
   );
 }
+/* eslint-enable design-system/no-hardcoded-colors */
 
 // =============================================================================
 // COMPONENT
@@ -362,7 +369,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
       <CardContent className="space-y-2">
         {/* Error */}
         {error && (
-          <div className="flex items-center gap-2 text-sm text-red-600">
+          <div className={cn("flex items-center gap-2 text-sm", getStatusColor('error', 'text'))}>
             <AlertCircle className={iconSizes.sm} />
             {error}
           </div>
@@ -370,7 +377,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
 
         {/* Save Success */}
         {saveSuccess && (
-          <div className="flex items-center gap-2 text-sm text-green-600">
+          <div className={cn("flex items-center gap-2 text-sm", getStatusColor('active', 'text'))}>
             <Save className={iconSizes.sm} />
             {t('ika.attendance.geofence.saved')}
           </div>

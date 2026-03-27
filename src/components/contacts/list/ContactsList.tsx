@@ -27,6 +27,7 @@ import { ImportContactsDialog } from '@/components/contacts/dialogs/ImportContac
 import type { ContactImportRecord } from '@/utils/contacts/contact-data-exchange';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 
 interface ContactsListProps {
@@ -49,7 +50,7 @@ export function ContactsList({
   onNewContact,
   onEditContact,
   onDeleteContact,
-  onArchiveContact,
+  onArchiveContact: _onArchiveContact,
   onContactUpdated
 }: ContactsListProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
@@ -308,8 +309,8 @@ export function ContactsList({
             }}
           hasSelectedContact={selectedContact !== null}
           onNewItem={onNewContact}
-          onEditItem={(id) => selectedContact && onEditContact?.()}
-          onDeleteItems={(ids) => selectedContact && onDeleteContact?.([selectedContact.id!])}
+          onEditItem={(_id) => selectedContact && onEditContact?.()}
+          onDeleteItems={(_ids) => selectedContact && onDeleteContact?.([selectedContact.id!])}
           onExport={handleExportContact}
           onImport={handleImportContacts}
           onShare={handleShareContact}
@@ -336,8 +337,8 @@ export function ContactsList({
             }}
           hasSelectedContact={selectedContact !== null}
           onNewItem={onNewContact}
-          onEditItem={(id) => selectedContact && onEditContact?.()}
-          onDeleteItems={(ids) => selectedContact && onDeleteContact?.([selectedContact.id!])}
+          onEditItem={(_id) => selectedContact && onEditContact?.()}
+          onDeleteItems={(_ids) => selectedContact && onDeleteContact?.([selectedContact.id!])}
           onExport={handleExportContact}
           onImport={handleImportContacts}
           onShare={handleShareContact}
@@ -364,7 +365,7 @@ export function ContactsList({
               </div>
             ))
           ) : contacts.length === 0 ? (
-            <div className="text-center p-8 text-muted-foreground">
+            <div className="text-center p-2 text-muted-foreground">
               <p>{t('list.empty.title')}</p>
               <p className="text-sm mt-1">{t('list.empty.subtitle')}</p>
             </div>

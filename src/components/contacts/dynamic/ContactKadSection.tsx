@@ -17,6 +17,7 @@
 
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import '@/lib/design-system';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -153,13 +154,13 @@ export function ContactKadSection({
         </header>
 
         {secondaries.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-4 text-center">
+          <p className="text-sm text-muted-foreground py-2 text-center">
             {t('kad.noSecondaryActivities')}
           </p>
         ) : (
-          <ul className="space-y-3">
+          <ul className="space-y-2">
             {secondaries.map((kad, index) => (
-              <li key={index} className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-start">
+              <li key={index} className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2 items-start">
                 <div className="space-y-1">
                   <KadCodePicker
                     value={kad.code}

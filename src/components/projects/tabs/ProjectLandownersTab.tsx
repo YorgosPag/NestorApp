@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
 /**
@@ -100,6 +101,7 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
   const projectId = projectData?.id;
 
   const { t } = useTranslation('common');
+  const { t: tProjects } = useTranslation('projects');
   const { success: showSuccess, error: showError } = useNotifications();
   const iconSizes = useIconSizes();
 
@@ -189,7 +191,7 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
   if (!projectData) {
     return (
       <section className="flex items-center justify-center p-2">
-        <p className={cn('text-sm', COLOR_BRIDGE.text.muted)}>Loading...</p>
+        <p className={cn('text-sm', COLOR_BRIDGE.text.muted)}>{tProjects('common.loading')}</p>
       </section>
     );
   }

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import '@/lib/design-system';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { createPortal } from 'react-dom';
@@ -186,7 +187,7 @@ export const CustomRelationshipSelect: React.FC<CustomRelationshipSelectProps> =
                     key={type}
                     onClick={() => handleSelect(type as RelationshipType)}
                     className={`
-                      flex items-center space-x-3 px-4 py-3 cursor-pointer ${quick.borderB} last:border-b-0
+                      flex items-center space-x-2 px-2 py-2 cursor-pointer ${quick.borderB} last:border-b-0
                       ${TRANSITION_PRESETS.STANDARD_COLORS} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}
                       ${isSelected ? 'bg-accent text-accent-foreground' : 'text-foreground'}
                     `}

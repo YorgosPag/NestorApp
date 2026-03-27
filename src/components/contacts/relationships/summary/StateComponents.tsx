@@ -10,6 +10,7 @@
 'use client';
 
 import React from 'react';
+import '@/lib/design-system';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 // 🏢 ENTERPRISE: Import from canonical location
@@ -61,10 +62,10 @@ export const NewContactState: React.FC<StateComponentProps> = ({ className }) =>
       <div className={`text-center ${colors.text.muted}`}>
         <Users className={"h-12 w-12 mx-auto mb-4 " + colors.text.muted} />
         <h3 className="font-medium text-lg mb-2">{t('relationships.summary.title')}</h3>
-        <p className="text-sm mb-4">
+        <p className="text-sm mb-2">
           {t('relationships.summary.newContact.availableAfterSave')}
         </p>
-        <div className={`${colors.bg.info} ${quick.card} p-3`}>
+        <div className={`${colors.bg.info} ${quick.card} p-2`}>
           <p className={`text-xs ${colors.text.info}`}>
             💡 <strong>{t('relationships.summary.newContact.tip')}</strong> {t('relationships.summary.newContact.tipText')}
           </p>
@@ -86,7 +87,7 @@ export const NewContactState: React.FC<StateComponentProps> = ({ className }) =>
  */
 export const LoadingState: React.FC<StateComponentProps> = ({ className }) => {
   const iconSizes = useIconSizes();
-  const { quick, radius } = useBorderTokens();
+  const { quick: _quick, radius: _radius } = useBorderTokens();
   const colors = useSemanticColors();
   const { t } = useTranslation('contacts');
 

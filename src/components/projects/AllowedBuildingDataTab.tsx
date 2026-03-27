@@ -8,6 +8,7 @@ import { useTypography } from '@/hooks/useTypography';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTranslation } from '@/i18n';
+import { getStatusColor } from '@/lib/design-system';
 
 export interface AllowedDataInput {
     maxCoveragePercentage: number;
@@ -85,31 +86,31 @@ export function AllowedBuildingDataTab({ allowedDataInput, calculatedData, onInp
                 {/* Left Column - Fields */}
                 <div className="space-y-2">
                     <FormField label={t('projects.buildingData.fields.maxAllowedConstruction')} id="maxAllowedConstruction" value={calculatedData.maxAllowedConstruction} unit={t('units.sqm')} readOnly labelPosition='left' inputClassName="w-40" unitPosition="left" useGrouping />
-                    <FormField label={t('projects.buildingData.fields.maxCoveragePercentage')} id="maxCoveragePercentage" value={allowedDataInput.maxCoveragePercentage} unit="%" labelClassName="text-green-600 dark:text-green-500" onChange={handleChange} onEnterPress={handleEnterNavigation} isPercentage labelPosition='left' inputClassName="w-40" unitPosition="left" readOnly={!isEditing} />
-                    <FormField label={t('projects.buildingData.fields.maxPlotCoverage')} id="maxPlotCoverage" value={calculatedData.maxPlotCoverage} unit={t('units.sqm')} labelClassName="text-blue-600 dark:text-blue-500" readOnly labelPosition='left' inputClassName="w-40" unitPosition="left" useGrouping />
+                    <FormField label={t('projects.buildingData.fields.maxCoveragePercentage')} id="maxCoveragePercentage" value={allowedDataInput.maxCoveragePercentage} unit="%" labelClassName={getStatusColor('active', 'text')} onChange={handleChange} onEnterPress={handleEnterNavigation} isPercentage labelPosition='left' inputClassName="w-40" unitPosition="left" readOnly={!isEditing} />
+                    <FormField label={t('projects.buildingData.fields.maxPlotCoverage')} id="maxPlotCoverage" value={calculatedData.maxPlotCoverage} unit={t('units.sqm')} labelClassName={getStatusColor('pending', 'text')} readOnly labelPosition='left' inputClassName="w-40" unitPosition="left" useGrouping />
                     <FormField label={t('projects.buildingData.fields.maxSemiOutdoorPercentage')} id="maxSemiOutdoorPercentage" value={allowedDataInput.maxSemiOutdoorPercentage} unit="%" labelClassName="text-orange-600 dark:text-orange-500" onChange={handleChange} onEnterPress={handleEnterNavigation} isPercentage labelPosition='left' inputClassName="w-40" unitPosition="left" readOnly={!isEditing} />
-                    <FormField label={t('projects.buildingData.fields.maxAllowedSemiOutdoorArea')} id="maxAllowedSemiOutdoorArea" value={calculatedData.maxAllowedSemiOutdoorArea} unit={t('units.sqm')} labelClassName="text-red-500" readOnly labelPosition='left' inputClassName="w-40" unitPosition="left" useGrouping />
+                    <FormField label={t('projects.buildingData.fields.maxAllowedSemiOutdoorArea')} id="maxAllowedSemiOutdoorArea" value={calculatedData.maxAllowedSemiOutdoorArea} unit={t('units.sqm')} labelClassName={getStatusColor('error', 'text')} readOnly labelPosition='left' inputClassName="w-40" unitPosition="left" useGrouping />
                     <FormField label={t('projects.buildingData.fields.maxBalconyPercentage')} id="maxBalconyPercentage" value={allowedDataInput.maxBalconyPercentage} unit="%" labelClassName="text-cyan-600 dark:text-cyan-500" onChange={handleChange} onEnterPress={handleEnterNavigation} isPercentage labelPosition='left' inputClassName="w-40" unitPosition="left" readOnly={!isEditing} />
                     <FormField label={t('projects.buildingData.fields.maxBalconyArea')} id="maxBalconyArea" value={calculatedData.maxBalconyArea} unit={t('units.sqm')} labelClassName="text-fuchsia-600 dark:text-fuchsia-500" readOnly labelPosition='left' inputClassName="w-40" unitPosition="left" useGrouping />
                     <FormField label={t('projects.buildingData.fields.maxCombinedPercentage')} id="maxCombinedPercentage" value={allowedDataInput.maxCombinedPercentage} unit="%" labelClassName="text-teal-600 dark:text-teal-500" onChange={handleChange} onEnterPress={handleEnterNavigation} isPercentage labelPosition='left' inputClassName="w-40" unitPosition="left" readOnly={!isEditing} />
                     <FormField label={t('projects.buildingData.fields.maxCombinedArea')} id="maxCombinedArea" value={calculatedData.maxCombinedArea} unit={t('units.sqm')} labelClassName="text-sky-600 dark:text-sky-500" readOnly labelPosition='left' inputClassName="w-40" unitPosition="left" useGrouping />
                     <FormField label={t('projects.buildingData.fields.maxVolumeCoefficient')} id="maxVolumeCoefficient" value={allowedDataInput.maxVolumeCoefficient} unit="" labelClassName="text-lime-600 dark:text-lime-500" onChange={handleChange} onEnterPress={handleEnterNavigation} labelPosition='left' inputClassName="w-40" readOnly={!isEditing} />
-                    <FormField label={t('projects.buildingData.fields.maxVolumeExploitation')} id="maxVolumeExploitation" value={calculatedData.maxVolumeExploitation} unit={t('units.cbm')} labelClassName="text-red-600 dark:text-red-500" readOnly labelPosition='left' inputClassName="w-40" unitPosition="left" useGrouping />
+                    <FormField label={t('projects.buildingData.fields.maxVolumeExploitation')} id="maxVolumeExploitation" value={calculatedData.maxVolumeExploitation} unit={t('units.cbm')} labelClassName={getStatusColor('error', 'text')} readOnly labelPosition='left' inputClassName="w-40" unitPosition="left" useGrouping />
                     <FormField label={t('projects.buildingData.fields.maxAllowedHeight')} id="maxAllowedHeight" value={allowedDataInput.maxAllowedHeight} unit="m" labelClassName="text-indigo-500" onChange={handleChange} onEnterPress={handleEnterNavigation} labelPosition='left' inputClassName="w-40" unitPosition="left" readOnly={!isEditing} />
                 </div>
                 {/* Right Column - Formulas */}
                 <div className={cn("space-y-2 border-l", spacing.padding.left.md)}>
                      <CalculationFormula text={t('projects.buildingData.formulas.construction')} />
                      <CalculationFormula text="" />
-                     <CalculationFormula text={t('projects.buildingData.formulas.plotCoverage')} className="text-blue-600 dark:text-blue-500" />
+                     <CalculationFormula text={t('projects.buildingData.formulas.plotCoverage')} className={getStatusColor('pending', 'text')} />
                      <CalculationFormula text="" />
-                     <CalculationFormula text={t('projects.buildingData.formulas.semiOutdoor')} className="text-red-500" />
+                     <CalculationFormula text={t('projects.buildingData.formulas.semiOutdoor')} className={getStatusColor('error', 'text')} />
                      <CalculationFormula text="" />
                      <CalculationFormula text={t('projects.buildingData.formulas.balcony')} className="text-fuchsia-600 dark:text-fuchsia-500" />
                      <CalculationFormula text="" />
                      <CalculationFormula text={t('projects.buildingData.formulas.combined')} className="text-sky-600 dark:text-sky-500" />
                      <CalculationFormula text="" />
-                     <CalculationFormula text={t('projects.buildingData.formulas.volume')} className="text-red-600 dark:text-red-500" />
+                     <CalculationFormula text={t('projects.buildingData.formulas.volume')} className={getStatusColor('error', 'text')} />
                      <CalculationFormula text="" />
                 </div>
             </div>

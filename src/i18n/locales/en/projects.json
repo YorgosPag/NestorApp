@@ -211,7 +211,8 @@
     "progress": "Progress",
     "totalArea": "Total Area",
     "value": "Value",
-    "ariaLabel": "Project {name}"
+    "ariaLabel": "Project {name}",
+    "completionPercent": "% completed"
   },
   "filters": {
     "toggleFilters": "Toggle filters"
@@ -442,7 +443,10 @@
         "temporary": "Temporary",
         "contract": "Contract",
         "intern": "Intern"
-      }
+      },
+      "selected": "Selected:",
+      "amka": "AMKA:",
+      "noResults": "No results found"
     },
     "efka": {
       "title": "Project Declaration — EFKA",
@@ -623,6 +627,13 @@
         "takePhoto": "Take Photo",
         "removePhoto": "Remove",
         "privacyNotice": "Location is recorded only during check-in/check-out."
+      },
+      "eventTypes": {
+        "arrival": "Arrival",
+        "departure": "Departure",
+        "break": "Break",
+        "return": "Return",
+        "live": "LIVE"
       },
       "liveMap": {
         "title": "Worker Map",
@@ -1062,7 +1073,11 @@
     "noAddressesHint": "Use the \"New Address\" button to add an address",
     "projectAddresses": "Project Addresses",
     "tabLabel": "Addresses",
-    "tabDescription": "Manage project addresses"
+    "tabDescription": "Manage project addresses",
+    "addresses": "Addresses",
+    "existingAddresses": "Existing Addresses",
+    "addAddress": "Add Address",
+    "editAddress": "Edit Address"
   },
   "measurements": {
     "title": "Measurements Overview",
@@ -1086,5 +1101,19 @@
     "category": "Category",
     "worksHeader": "Works",
     "estimateHeader": "Estimate"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "primary": "Primary"
+  },
+  "documents": {
+    "selectForContracts": "Select a project to view contracts.",
+    "selectForDocuments": "Select a project to view documents."
+  },
+  "cards": {
+    "area": "Area",
+    "totalProjectValue": "Total project value"
   }
 }

@@ -7,7 +7,8 @@ import { SaveButton, CancelButton } from '@/components/ui/form/ActionButtons';
 import type { ContactType } from '@/types/contacts';
 import { useContactForm } from '@/hooks/useContactForm';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { getTypeIcon, getTypeLabel } from '@/utils/contactFormUtils';
+import { getTypeLabel } from '@/utils/contactFormUtils';
+import '@/lib/design-system';
 import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/UnifiedContactTabbedSection';
 import { RelationshipProvider } from '@/components/contacts/relationships/context/RelationshipProvider';
 import { CONTACT_TYPES, CONTACT_ICONS, CONTACT_COLORS } from '@/constants/contacts';
@@ -92,7 +93,7 @@ export function InlineContactCreation({ contactType, onContactAdded, onCancel, o
     <section className="flex flex-col h-full min-h-0">
       {/* Sticky header with actions */}
       <form id="inline-contact-form" onSubmit={handleSubmit} className="contents">
-        <header className="flex items-center gap-3 px-4 py-3 border-b bg-card shrink-0">
+        <header className="flex items-center gap-2 px-2 py-2 border-b bg-card shrink-0">
           <Button
             type="button"
             variant="ghost"
@@ -118,7 +119,7 @@ export function InlineContactCreation({ contactType, onContactAdded, onCancel, o
         </header>
 
         {/* Scrollable form body */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 min-h-0">
+        <div className="flex-1 overflow-y-auto px-2 py-2 min-h-0">
           <RelationshipProvider
             contactId={formData.id || preGeneratedContactId}
             contactType={contactType}

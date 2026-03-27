@@ -74,18 +74,24 @@ module.exports = {
     }
 
     /**
-     * 🏢 ENTERPRISE: Check if node is inside console.* call
-     * Console logs are for developers, not user-facing
+     * 🏢 ENTERPRISE: Check if node is inside console.* or logger.* call
+     * Console/logger calls are for developers, not user-facing
      */
     function isInConsoleCall(node) {
       let current = node.parent;
       while (current) {
-        if (current.type === 'CallExpression' &&
-            current.callee &&
-            current.callee.type === 'MemberExpression' &&
-            current.callee.object &&
-            current.callee.object.name === 'console') {
-          return true;
+        if (current.type === 'CallExpression' && current.callee) {
+          // Allow console.* and logger.* calls (developer-facing, not user-facing)
+          if (current.callee.type === 'MemberExpression' && current.callee.object) {
+            const objectName = current.callee.object.name;
+            if (objectName === 'console' || objectName === 'logger') {
+              return true;
+            }
+          }
+          // Allow t() and i18n translation function calls (keys, not user text)
+          if (current.callee.type === 'Identifier' && current.callee.name === 't') {
+            return true;
+          }
         }
         current = current.parent;
       }

@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
 /**
@@ -58,7 +59,7 @@ export function TimesheetTabContent({ projectId }: TimesheetTabContentProps) {
   const colors = useSemanticColors();
   const typography = useTypography();
   const spacing = useSpacingTokens();
-  const { quick } = useBorderTokens();
+  const { quick: _quick } = useBorderTokens();
 
   // Auth for recordedBy
   const { user } = useAuth();

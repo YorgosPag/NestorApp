@@ -10,6 +10,7 @@
 'use client';
 
 import React from 'react';
+import '@/lib/design-system';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -90,10 +91,10 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
   // ============================================================================
 
   return (
-    <Card className={`mb-4 ${getDirectionalBorder('info', 'left')}`}>
-      <CardHeader className="pb-3">
+    <Card className={`mb-2 ${getDirectionalBorder('info', 'left')}`}>
+      <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
             {/* Expand/Collapse Button */}
             <Button
               type="button"
@@ -195,7 +196,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
       {/* Expanded Details */}
       {isExpanded && (
         <CardContent className="pt-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
 
             {/* Department - 🏢 ENTERPRISE: Using centralized building icon */}
             {relationship.department && (
@@ -222,7 +223,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
                 <span className="text-sm">{relationship.contactInfo.businessPhone}</span>
                 {relationship.contactInfo.extensionNumber && (
                   <span className={`text-xs ${colors.text.muted}`}>
-                    ext. {relationship.contactInfo.extensionNumber}
+                    {t('relationships.card.phoneExtension')} {relationship.contactInfo.extensionNumber}
                   </span>
                 )}
               </div>
@@ -263,7 +264,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
             {/* Notes */}
             {relationship.relationshipNotes && (
               <div className="md:col-span-2">
-                <p className={`text-sm ${colors.text.muted} ${colors.bg.secondary} p-3 ${quick.table}`}>
+                <p className={`text-sm ${colors.text.muted} ${colors.bg.secondary} p-2 ${quick.table}`}>
                   <strong>{t('relationships.card.notes')}</strong> {relationship.relationshipNotes}
                 </p>
               </div>

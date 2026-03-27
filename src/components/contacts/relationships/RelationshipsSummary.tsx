@@ -10,6 +10,7 @@
 'use client';
 
 import React from 'react';
+import '@/lib/design-system';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -93,7 +94,7 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
   const {
     relationships,
     loading: relationshipsLoading,
-    error: relationshipsError,
+    error: _relationshipsError,
     refreshRelationships
   } = useRelationshipContext();
 
@@ -121,7 +122,7 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
   /**
    * 🎯 Handle dashboard card click navigation
    */
-  const handleDashboardCardClick = (stat: DashboardStat, index: number) => {
+  const handleDashboardCardClick = (stat: DashboardStat, _index: number) => {
     navigateToDashboardFilter(
       stat.title,
       relationships,
@@ -146,7 +147,7 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
   /**
    * 🔄 Handle refresh button click με enhanced feedback
    */
-  const handleRefresh = async () => {
+  const _handleRefresh = async () => {
     try {
       logger.info('Manual refresh triggered by user');
       await refreshRelationships();
@@ -210,7 +211,7 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
                 <NAVIGATION_ENTITIES.building.icon className={`${iconSizes.md} ${NAVIGATION_ENTITIES.building.color}`} />
                 <h4 className="text-sm font-medium text-gray-900">{t('relationships.summary.organizationChart')}</h4>
               </div>
-              <div className={`${colors.bg.secondary} rounded-lg p-4 border`}>
+              <div className={`${colors.bg.secondary} rounded-lg p-2 border`}>
                 <OrganizationTree
                   tree={organizationTree}
                   loading={treeLoading}

@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
 /**
@@ -26,7 +27,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 import { useProjectWorkers } from './hooks/useProjectWorkers';
 import { WorkerCard } from './components/WorkerCard';
-import { ContactSearchManager, type ContactSearchManagerProps } from '@/components/contacts/relationships/ContactSearchManager';
+import { ContactSearchManager } from '@/components/contacts/relationships/ContactSearchManager';
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
 import { AssociationService } from '@/services/association.service';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -191,7 +192,7 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
               {selectedContact && (
                 <div className="flex items-center justify-between pt-2">
                   <p className="text-sm">
-                    Επιλέχθηκε: <strong>{selectedContact.name}</strong>
+                    {t('ika.workersTab.selected')} <strong>{selectedContact.name}</strong>
                   </p>
                   <Button
                     onClick={handleAssign}

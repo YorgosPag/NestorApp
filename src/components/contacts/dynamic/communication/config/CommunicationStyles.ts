@@ -12,6 +12,7 @@ import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS, INTERACTIVE_PATTERNS } fr
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { UseSemanticColorsReturn } from '@/ui-adapters/react/useSemanticColors';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import { getStatusColor } from '@/lib/design-system';
 
 // ============================================================================
 // STYLE CONFIGURATION OBJECTS
@@ -36,9 +37,9 @@ export function getCommunicationStyles(colors?: UseSemanticColorsReturn) {
   return {
     groupedTable: {
       header: `bg-muted ${quick.borderB} font-medium text-sm text-muted-foreground`,
-      container: `${quick.card} bg-card p-4 w-full max-w-none`,
-      row: `grid gap-3 p-4 ${quick.borderB} last:border-b-0 bg-card transition-colors ${HOVER_BACKGROUND_EFFECTS.ACCENT}`,
-      emptyState: `text-center text-muted-foreground py-8 ${quick.card} bg-muted/30`,
+      container: `${quick.card} bg-card p-2 w-full max-w-none`,
+      row: `grid gap-2 p-2 ${quick.borderB} last:border-b-0 bg-card transition-colors ${HOVER_BACKGROUND_EFFECTS.ACCENT}`,
+      emptyState: `text-center text-muted-foreground py-2 ${quick.card} bg-muted/30`,
       input: `${colors?.bg.primary || 'bg-background'} ${quick.input} focus:${colors?.bg.primary || 'bg-background'} focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20`
     }
   } as const;
@@ -52,9 +53,9 @@ export function getCommunicationStyles(colors?: UseSemanticColorsReturn) {
 export const COMMUNICATION_STYLES = {
   groupedTable: {
     header: 'bg-muted border-b font-medium text-sm text-muted-foreground',
-    container: 'border rounded-lg bg-card p-4 w-full max-w-none',
-    row: `grid gap-3 p-4 border-b last:border-b-0 bg-card transition-colors ${HOVER_BACKGROUND_EFFECTS.ACCENT}`,
-    emptyState: 'text-center text-muted-foreground py-8 border rounded-lg bg-muted/30',
+    container: 'border rounded-lg bg-card p-2 w-full max-w-none',
+    row: `grid gap-2 p-2 border-b last:border-b-0 bg-card transition-colors ${HOVER_BACKGROUND_EFFECTS.ACCENT}`,
+    emptyState: 'text-center text-muted-foreground py-2 border rounded-lg bg-muted/30',
     input: `${COLOR_BRIDGE.bg.primary} border-input focus:${COLOR_BRIDGE.bg.primary} focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20` // Legacy - use getCommunicationStyles() instead
   }
 } as const;
@@ -90,13 +91,13 @@ export const RESPONSIVE_GRID_CLASSES = {
 
   // Mobile layouts (<768px)
   mobile: {
-    phoneRow: 'grid-cols-1 gap-4',
-    emailRow: 'grid-cols-1 gap-4',
-    websiteRow: 'grid-cols-1 gap-4',
-    socialRow: 'grid-cols-1 gap-4',
-    identityRow: 'grid-cols-1 gap-4',
-    professionalRow: 'grid-cols-1 gap-4',
-    addressRow: 'grid-cols-1 gap-4'
+    phoneRow: 'grid-cols-1 gap-2',
+    emailRow: 'grid-cols-1 gap-2',
+    websiteRow: 'grid-cols-1 gap-2',
+    socialRow: 'grid-cols-1 gap-2',
+    identityRow: 'grid-cols-1 gap-2',
+    professionalRow: 'grid-cols-1 gap-2',
+    addressRow: 'grid-cols-1 gap-2'
   }
 } as const;
 
@@ -117,7 +118,7 @@ export const COMMUNICATION_BUTTON_STYLES = {
  * Styling για badges, labels και indicators
  */
 export const COMMUNICATION_BADGE_STYLES = {
-  primary: 'bg-blue-100 text-blue-800 text-xs',
+  primary: `${getStatusColor('planned', 'bg')} text-xs`,
   type: 'text-xs opacity-70',
   label: 'text-sm font-medium'
 } as const;

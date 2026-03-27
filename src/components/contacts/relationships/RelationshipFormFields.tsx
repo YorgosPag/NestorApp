@@ -270,8 +270,8 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
   // ============================================================================
 
   return (
-    <div className={designSystem.cn("space-y-6", className)}>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className={designSystem.cn("space-y-2", className)}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
 
         {/* ── Relationship Type ── */}
         <div className="md:col-span-1 space-y-2">
@@ -358,7 +358,7 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
 
         {/* ── Centralized Communication Section ── */}
         {finalFieldConfig.showContactInfo && (
-          <section className="md:col-span-2 space-y-4" aria-label={t('relationships.form.labels.professionalInfo')}>
+          <section className="md:col-span-2 space-y-2" aria-label={t('relationships.form.labels.professionalInfo')}>
             <Label className={designSystem.cn(
               designSystem.getTypographyClass('sm', 'medium'),
               "block"

@@ -43,6 +43,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { collection, getDocs, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { getStatusColor } from '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -508,7 +509,7 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
                   className={`flex items-start gap-2 rounded border p-2 text-sm ${
                     issue.severity === 'error'
                       ? 'border-destructive text-destructive'
-                      : 'border-yellow-500 text-yellow-800 dark:text-yellow-300'
+                      : `${getStatusColor('construction', 'border')} ${getStatusColor('construction', 'text')}`
                   }`}
                 >
                   {issue.severity === 'error'
@@ -898,6 +899,7 @@ function AgreementCard({
       {isTerminating && (
         <footer className="flex items-center gap-2 rounded bg-destructive/10 p-2">
           <p className="text-sm flex-1">
+            {/* eslint-disable-next-line custom/no-hardcoded-strings */}
             {t('sales.legal.terminateConfirm').replace('{{name}}', agreement.agentName)}
           </p>
           <Button size="sm" variant="destructive" onClick={onConfirmTerminate}>

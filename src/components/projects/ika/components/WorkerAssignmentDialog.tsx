@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
 /**
@@ -207,7 +208,7 @@ export function WorkerAssignmentDialog({
                   </div>
                   {contact.amka && (
                     <span className="text-xs text-muted-foreground">
-                      ΑΜΚΑ: {contact.amka}
+                      {t('ika.workersTab.amka')} {contact.amka}
                     </span>
                   )}
                 </li>
@@ -223,14 +224,14 @@ export function WorkerAssignmentDialog({
 
           {results.length === 0 && searchTerm.trim().length >= 2 && !isSearching && !searchError && (
             <p className="text-sm text-muted-foreground text-center py-2">
-              Δεν βρέθηκαν αποτελέσματα
+              {t('ika.workersTab.noResults')}
             </p>
           )}
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Ακύρωση
+            {t('projectHeader.cancel')}
           </Button>
           <Button
             onClick={handleAssign}

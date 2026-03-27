@@ -16,6 +16,7 @@
 'use client';
 
 import React from 'react';
+import '@/lib/design-system';
 import { createModuleLogger } from '@/lib/telemetry';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -221,8 +222,8 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
    * 📊 Render header with statistics and actions
    */
   const renderHeader = () => (
-    <div className="flex items-center justify-between mb-6">
-      <div className="flex items-center space-x-3">
+    <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center space-x-2">
         <Users className={`${iconSizes.lg} ${colors.text.muted}`} />
         <div>
           <h3 className="text-lg font-medium">{t('relationships.summary.title')}</h3>

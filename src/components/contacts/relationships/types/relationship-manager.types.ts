@@ -9,7 +9,6 @@
 
 import type {
   ContactRelationship,
-  RelationshipType,
   ProfessionalContactInfo
 } from '@/types/contacts/relationships';
 import type { ContactType, PhoneInfo, EmailInfo } from '@/types/contacts';

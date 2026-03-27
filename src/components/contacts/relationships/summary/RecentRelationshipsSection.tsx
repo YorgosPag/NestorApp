@@ -10,7 +10,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,7 +31,6 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 // TYPES
 // ============================================================================
 
-const logger = createModuleLogger('RecentRelationshipsSection');
 
 interface RecentRelationshipsSectionProps {
   /** Array of contact relationships */
@@ -125,7 +124,7 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
   const renderRelationshipCard = (relationship: ContactRelationship) => {
     const displayProps = getRelationshipDisplayProps(relationship.relationshipType);
     const Icon = displayProps.icon;
-    const { targetContactId, contactName } = getTargetContactInfo(relationship);
+    const { targetContactId: _targetContactId, contactName } = getTargetContactInfo(relationship);
     // 🏢 ENTERPRISE: Translate i18n label key
     const translatedTypeLabel = t(displayProps.label);
 
@@ -133,9 +132,9 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
       <div
         key={relationship.id}
         onClick={() => onRelationshipClick?.(relationship)}
-        className={`flex items-center justify-between p-3 ${quick.card} cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+        className={`flex items-center justify-between p-2 ${quick.card} cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
       >
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2">
           <Icon className={`${iconSizes.md} ${colors.text.muted}`} />
           <div>
             <div className="flex items-center gap-2">

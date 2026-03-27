@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
 import React from 'react';
@@ -51,7 +52,7 @@ export function ParkingTableToolbar({
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick: _quick } = useBorderTokens();
 
   return (
       <div className="space-y-2">

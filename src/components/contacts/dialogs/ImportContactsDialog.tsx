@@ -8,6 +8,7 @@
 
 'use client';
 
+import '@/lib/design-system';
 import React, { useState, useRef } from 'react';
 import {
   Dialog,
@@ -25,6 +26,7 @@ import { parseContactImportFile } from '@/utils/contacts/contact-data-exchange';
 import type { ContactImportRecord } from '@/utils/contacts/contact-data-exchange';
 import type { ImportResult } from '@/services/data-exchange/DataImportService';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getStatusColor } from '@/lib/design-system';
 
 const logger = createModuleLogger('ImportContactsDialog');
 
@@ -109,9 +111,9 @@ export function ImportContactsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <section className="space-y-4 py-4">
+        <section className="space-y-2 py-2">
           {/* File picker */}
-          <div className="flex flex-col items-center gap-3">
+          <div className="flex flex-col items-center gap-2">
             <input
               ref={fileInputRef}
               type="file"
@@ -140,8 +142,8 @@ export function ImportContactsDialog({
 
           {/* Preview results */}
           {state === 'preview' && result && (
-            <div className="space-y-2 rounded-lg border p-4 bg-muted/30">
-              <div className="flex items-center gap-2 text-sm font-medium text-green-700">
+            <div className="space-y-2 rounded-lg border p-2 bg-muted/30">
+              <div className={`flex items-center gap-2 text-sm font-medium ${getStatusColor('active', 'text')}`}>
                 <CheckCircle2 className={iconSizes.sm} />
                 {t('import.previewReady')}
               </div>
@@ -167,7 +169,7 @@ export function ImportContactsDialog({
                   <ul className="mt-1 text-xs space-y-0.5 max-h-32 overflow-y-auto">
                     {result.errors.slice(0, 20).map((err, i) => (
                       <li key={i} className="text-destructive">
-                        Row {err.row}: {err.message} {err.field ? `(${err.field})` : ''}
+                        {t('import.row')} {err.row}: {err.message} {err.field ? `(${err.field})` : ''}
                       </li>
                     ))}
                   </ul>
@@ -178,7 +180,7 @@ export function ImportContactsDialog({
 
           {/* Error state */}
           {state === 'error' && (
-            <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+            <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-2">
               <AlertCircle className={`${iconSizes.sm} text-destructive mt-0.5`} />
               <p className="text-sm text-destructive">
                 {parseError || t('import.allInvalid')}

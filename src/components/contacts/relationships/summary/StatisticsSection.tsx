@@ -9,6 +9,7 @@
 
 'use client';
 
+import '@/lib/design-system';
 import React from 'react';
 import type { ContactRelationship } from '@/types/contacts/relationships';
 import type { ContactType } from '@/types/contacts';
@@ -61,7 +62,7 @@ export const StatisticsSection: React.FC<StatisticsSectionProps> = ({
   // ============================================================================
 
   const { quick } = useBorderTokens();
-  const { stats, dashboardStats } = useRelationshipStatistics(relationships, contactId, contactType);
+  const { stats: _stats, dashboardStats } = useRelationshipStatistics(relationships, contactId, contactType);
 
   // ============================================================================
   // RENDER

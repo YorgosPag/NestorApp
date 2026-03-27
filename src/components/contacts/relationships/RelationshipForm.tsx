@@ -15,7 +15,7 @@ import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown
 import type { RelationshipFormProps } from './types/relationship-manager.types';
 import { ContactSearchManager } from './ContactSearchManager';
 import { RelationshipFormFields, validateRelationshipFormData } from './RelationshipFormFields';
-import { designSystem } from '@/lib/design-system';
+import { designSystem, getStatusColor } from '@/lib/design-system';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export const RelationshipForm: React.FC<RelationshipFormProps> = ({
@@ -39,7 +39,7 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
   useEffect(() => {
     if (formData.targetContactId && validationErrors.targetContactId) {
       setValidationErrors(prev => {
-        const { targetContactId, ...rest } = prev;
+        const { targetContactId: _targetContactId, ...rest } = prev;
         return rest;
       });
     }
@@ -48,7 +48,7 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
   useEffect(() => {
     if (formData.relationshipType && validationErrors.relationshipType) {
       setValidationErrors(prev => {
-        const { relationshipType, ...rest } = prev;
+        const { relationshipType: _relationshipType, ...rest } = prev;
         return rest;
       });
     }
@@ -137,10 +137,10 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
 
   return (
     <Card className={designSystem.cn(
-      "mb-6",
+      "mb-2",
       "rounded-lg border bg-card text-card-foreground shadow-sm"
     )}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className={designSystem.cn(
           "flex items-center space-x-2",
           designSystem.presets.text.subtitle
@@ -179,9 +179,9 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
         <form onSubmit={preventFormSubmit} className={designSystem.getSpacingClass('p', 'md')}>
           {/* Hint: select contact first — positioned at top for visibility */}
           {!hasContact && (
-            <Alert className="mb-4 border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-950/30">
-              <Info className={designSystem.cn(iconSizes.sm, "text-blue-600 dark:text-blue-400")} />
-              <AlertDescription className="text-blue-700 dark:text-blue-300 text-sm">
+            <Alert className={`mb-4 ${getStatusColor('info', 'border')}`}>
+              <Info className={designSystem.cn(iconSizes.sm, getStatusColor('info', 'text'))} />
+              <AlertDescription className={`${getStatusColor('info', 'text')} text-sm`}>
                 {t('relationships.form.selectContactFirst')}
               </AlertDescription>
             </Alert>
@@ -250,7 +250,7 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
 
           {/* Form Actions */}
           <div className={designSystem.cn(
-            "flex justify-end space-x-2 mt-6 pt-4 border-t",
+            "flex justify-end space-x-2 mt-2 pt-2 border-t",
             designSystem.colorScheme.responsive.muted.split(' ')[0]
           )}>
             <Button

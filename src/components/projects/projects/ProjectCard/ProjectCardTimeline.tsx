@@ -9,6 +9,7 @@ import { getDaysUntilCompletion } from '@/lib/project-utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { getStatusColor } from '@/lib/design-system';
 
 interface ProjectCardTimelineProps {
   project: Project;
@@ -34,8 +35,8 @@ export function ProjectCardTimeline({ project }: ProjectCardTimelineProps) {
           {daysUntilCompletion !== null && (
             <p className={cn(
               "text-xs",
-              daysUntilCompletion < 0 ? "text-red-500" :
-              daysUntilCompletion < 30 ? "text-yellow-600" : "text-green-600"
+              daysUntilCompletion < 0 ? getStatusColor('error', 'text') :
+              daysUntilCompletion < 30 ? getStatusColor('construction', 'text') : getStatusColor('active', 'text')
             )}>
               {daysUntilCompletion < 0
                 ? t('timeline.daysDelayed', { days: Math.abs(daysUntilCompletion) })

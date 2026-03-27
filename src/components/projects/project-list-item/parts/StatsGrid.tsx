@@ -6,6 +6,7 @@ import type { Project } from '../types';
 import { formatCurrency } from '@/lib/intl-utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { getStatusColor } from '@/lib/design-system';
 
 interface StatsGridProps {
     project: Project;
@@ -23,7 +24,7 @@ export function StatsGrid({ project }: StatsGridProps) {
             </div>
             <div>
                 <p className="text-muted-foreground">{t('statsGrid.value')}</p>
-                <p className="font-medium text-green-600">{formatCurrency(project.totalValue || 0)}</p>
+                <p className={`font-medium ${getStatusColor('active', 'text')}`}>{formatCurrency(project.totalValue || 0)}</p>
             </div>
         </div>
     );
