@@ -214,8 +214,10 @@ export async function executeAgenticLoop(
     const WRITE_CLAIM_PATTERNS = /ολοκληρώθηκε|ενημερώθηκε|διορθώθηκε|αποθηκεύτηκε|ενημέρωσα|διόρθωσα|αποθήκευσα|άλλαξα|τροποποίησα|προστέθηκε|αφαιρέθηκε|δηλώθηκε/i;
     const isWriteClaim = WRITE_CLAIM_PATTERNS.test(rawFinalAnswer);
 
-    // Guardrail A: AI claims write but made 0 tool calls
-    if (isWriteClaim && allToolCalls.length === 0 && !hasRetried) {
+    // Guardrail A: AI claims write but made 0 tool calls.
+    // SKIP for file-only messages: describing a document analysis IS correct (no tools needed).
+    const skipGuardrailA = context.isDocumentPreviewOnly === true;
+    if (isWriteClaim && allToolCalls.length === 0 && !hasRetried && !skipGuardrailA) {
       hasRetried = true;
       logger.warn('Anti-hallucination: AI claimed write without tool calls — RETRYING', {
         requestId: context.requestId,

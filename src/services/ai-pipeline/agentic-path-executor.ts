@@ -179,6 +179,13 @@ export async function executeAgenticPath(
       agenticCtx.documentImages = previewResult.documentImages;
     }
 
+    // 2e2. File-only detection: user sent document without text command.
+    // Guardrail A (write-claim without tools) should NOT fire — describing a document IS correct behavior.
+    const isFileOnly = previewResult.previews.length > 0 && !userMessage.trim();
+    if (isFileOnly) {
+      agenticCtx.isDocumentPreviewOnly = true;
+    }
+
     // 2f. Auto-enrichment fallback from chat history (Phase 2 no longer runs)
     const historyEntities = extractInvoiceEntitiesFromHistory(history);
     agenticCtx.invoiceEntities = historyEntities ?? null;

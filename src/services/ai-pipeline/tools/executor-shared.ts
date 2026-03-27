@@ -59,6 +59,9 @@ export interface AgenticContext {
     contentType: string;
     fileRecordId: string;
   }>;
+  /** True when the user sent ONLY a file without text command.
+   *  Guardrail A (write-claim without tools) is skipped — describing a document IS the correct response. */
+  isDocumentPreviewOnly?: boolean;
 }
 
 export interface ToolResult {
