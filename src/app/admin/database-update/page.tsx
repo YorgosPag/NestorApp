@@ -37,6 +37,9 @@ import {
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateContactId } from '@/services/enterprise-id.service';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // DATA DEFINITIONS
@@ -158,7 +161,9 @@ const STATUS_ASSIGNMENTS = {
 // ============================================================================
 
 export default function DatabaseUpdatePage() {
+  const { t } = useTranslation('admin');
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { quick } = useBorderTokens();
   const [isLoading, setIsLoading] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
@@ -173,7 +178,7 @@ export default function DatabaseUpdatePage() {
   if (process.env.NODE_ENV === 'production') {
     return (
       <main className="flex items-center justify-center min-h-screen">
-        <p className="text-muted-foreground">Database update tools are disabled in production.</p>
+        <p className={colors.text.muted}>{t('databaseUpdate.productionDisabled')}</p>
       </main>
     );
   }
@@ -192,7 +197,7 @@ export default function DatabaseUpdatePage() {
   // ========================================================================
 
   const addNewContacts = async (): Promise<string[]> => {
-    addLog('🔄 Προσθέτοντας νέες επαφές...');
+    addLog(`🔄 ${t('databaseUpdate.logs.addingContacts')}`);
 
     const addedContactIds: string[] = [];
 
@@ -210,20 +215,21 @@ export default function DatabaseUpdatePage() {
         await setDoc(doc(db, COLLECTIONS.CONTACTS, contactId), contactData);
         addedContactIds.push(contactId);
 
-        addLog(`  ✅ Προστέθηκε: ${contact.firstName || contact.companyName} (${contactId})`);
+        const name = contact.firstName || contact.companyName;
+        addLog(`  ✅ ${t('databaseUpdate.logs.contactAdded', { name, id: contactId })}`);
       }
 
-      addLog(`✅ Προστέθηκαν ${addedContactIds.length} νέες επαφές`);
+      addLog(`✅ ${t('databaseUpdate.logs.contactsAdded', { count: addedContactIds.length })}`);
       return addedContactIds;
 
     } catch (error) {
-      addLog(`❌ Σφάλμα προσθήκης επαφών: ${error}`);
+      addLog(`❌ ${t('databaseUpdate.logs.contactAddError', { error: String(error) })}`);
       throw error;
     }
   };
 
   const updateExistingContacts = async (): Promise<number> => {
-    addLog('🔄 Ενημερώνοντας υφιστάμενες επαφές...');
+    addLog(`🔄 ${t('databaseUpdate.logs.updatingContacts')}`);
 
     let updatedCount = 0;
 
@@ -237,31 +243,30 @@ export default function DatabaseUpdatePage() {
           tags: assignment.tags,
           updatedAt: serverTimestamp(),
           lastModifiedBy: 'database-update-script',
-          notes: `Ρόλος: ${assignment.role}`
+          notes: t('databaseUpdate.logs.role', { role: assignment.role })
         });
 
         updatedCount++;
-        addLog(`  ✅ Ενημερώθηκε contact ${contactId}: ${assignment.role}`);
+        addLog(`  ✅ ${t('databaseUpdate.logs.contactUpdated', { id: contactId, role: assignment.role })}`);
       }
 
       await batch.commit();
-      addLog(`✅ Ενημερώθηκαν ${updatedCount} υφιστάμενες επαφές`);
+      addLog(`✅ ${t('databaseUpdate.logs.contactsUpdated', { count: updatedCount })}`);
 
       return updatedCount;
 
     } catch (error) {
-      addLog(`❌ Σφάλμα ενημέρωσης επαφών: ${error}`);
+      addLog(`❌ ${t('databaseUpdate.logs.contactUpdateError', { error: String(error) })}`);
       throw error;
     }
   };
 
   const updateUnitsWithNewStatuses = async (): Promise<number> => {
-    addLog('🔄 Ενημερώνοντας μονάδες με νέα statuses...');
+    addLog(`🔄 ${t('databaseUpdate.logs.updatingUnits')}`);
 
     let updatedCount = 0;
 
     try {
-      // Παίρνουμε μονάδες
       const unitsQuery = query(collection(db, COLLECTIONS.UNITS), limit(20));
       const unitsSnapshot = await getDocs(unitsQuery);
 
@@ -282,7 +287,6 @@ export default function DatabaseUpdatePage() {
             updatedAt: serverTimestamp()
           };
 
-          // Προσθέτουμε σχέσεις βάση του ρόλου
           if (assignment.role === 'buyer') {
             updateData.soldTo = contactId;
             updateData.saleDate = new Date().toISOString();
@@ -296,18 +300,18 @@ export default function DatabaseUpdatePage() {
 
           batch.update(doc(db, 'units', unitDoc.id), updateData);
 
-          addLog(`  ✅ Μονάδα ${unitDoc.id}: ${newStatus} ← Contact ${contactId}`);
+          addLog(`  ✅ ${t('databaseUpdate.logs.unitUpdated', { id: unitDoc.id, status: newStatus, contactId })}`);
           updatedCount++;
         }
       });
 
       await batch.commit();
-      addLog(`✅ Ενημερώθηκαν ${updatedCount} μονάδες με σχέσεις`);
+      addLog(`✅ ${t('databaseUpdate.logs.unitsUpdated', { count: updatedCount })}`);
 
       return updatedCount;
 
     } catch (error) {
-      addLog(`❌ Σφάλμα ενημέρωσης μονάδων: ${error}`);
+      addLog(`❌ ${t('databaseUpdate.logs.unitUpdateError', { error: String(error) })}`);
       throw error;
     }
   };
@@ -322,7 +326,7 @@ export default function DatabaseUpdatePage() {
     setCompleted({ contacts: false, updates: false, units: false, relationships: false });
 
     try {
-      addLog('🚀 Ξεκινάει η ενημέρωση της βάσης δεδομένων...');
+      addLog(`🚀 ${t('databaseUpdate.logs.starting')}`);
 
       // Step 1: Add new contacts
       const newContactIds = await addNewContacts();
@@ -336,10 +340,10 @@ export default function DatabaseUpdatePage() {
       await updateUnitsWithNewStatuses();
       setCompleted(prev => ({ ...prev, units: true, relationships: true }));
 
-      addLog('🎉 Η ενημέρωση της βάσης δεδομένων ολοκληρώθηκε επιτυχώς!');
+      addLog(`🎉 ${t('databaseUpdate.logs.completed')}`);
 
     } catch (error) {
-      addLog(`💥 Σφάλμα: ${error}`);
+      addLog(`💥 ${t('databaseUpdate.logs.error', { error: String(error) })}`);
     } finally {
       setIsLoading(false);
     }
@@ -355,10 +359,10 @@ export default function DatabaseUpdatePage() {
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold flex items-center justify-center gap-2">
           <Database className={`${iconSizes.xl} text-blue-600`} />
-          Database Update - Πραγματικές Αλλαγές
+          {t('databaseUpdate.title')}
         </h1>
-        <p className="text-muted-foreground">
-          Προσθήκη νέων επαφών και δημιουργία σχέσεων με μονάδες
+        <p className={colors.text.muted}>
+          {t('databaseUpdate.subtitle')}
         </p>
       </div>
 
@@ -369,44 +373,44 @@ export default function DatabaseUpdatePage() {
         <Card>
           <CardHeader className="text-center">
             <Plus className={`${iconSizes.xl} mx-auto ${completed.contacts ? 'text-green-500' : 'text-blue-500'}`} />
-            <CardTitle className="text-sm">Νέες Επαφές</CardTitle>
+            <CardTitle className="text-sm">{t('databaseUpdate.cards.newContacts')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
             <p className="text-2xl font-bold">{NEW_CONTACTS.length}</p>
-            <p className="text-xs text-muted-foreground">Προσθήκη</p>
+            <p className={cn("text-xs", colors.text.muted)}>{t('databaseUpdate.cards.add')}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="text-center">
             <Edit className={`${iconSizes.xl} mx-auto ${completed.updates ? 'text-green-500' : 'text-orange-500'}`} />
-            <CardTitle className="text-sm">Ενημερώσεις</CardTitle>
+            <CardTitle className="text-sm">{t('databaseUpdate.cards.updates')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
             <p className="text-2xl font-bold">{EXISTING_CONTACT_IDS.length}</p>
-            <p className="text-xs text-muted-foreground">Επαφές</p>
+            <p className={cn("text-xs", colors.text.muted)}>{t('databaseUpdate.cards.contacts')}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="text-center">
             <Building className={`${iconSizes.xl} mx-auto ${completed.units ? 'text-green-500' : 'text-purple-500'}`} />
-            <CardTitle className="text-sm">Μονάδες</CardTitle>
+            <CardTitle className="text-sm">{t('databaseUpdate.cards.units')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
             <p className="text-2xl font-bold">~20</p>
-            <p className="text-xs text-muted-foreground">Νέα Statuses</p>
+            <p className={cn("text-xs", colors.text.muted)}>{t('databaseUpdate.cards.newStatuses')}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="text-center">
             <Users className={`${iconSizes.xl} mx-auto ${completed.relationships ? 'text-green-500' : 'text-red-500'}`} />
-            <CardTitle className="text-sm">Σχέσεις</CardTitle>
+            <CardTitle className="text-sm">{t('databaseUpdate.cards.relationships')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
             <p className="text-2xl font-bold">~20</p>
-            <p className="text-xs text-muted-foreground">Contact-Unit</p>
+            <p className={cn("text-xs", colors.text.muted)}>Contact-Unit</p>
           </CardContent>
         </Card>
       </div>
@@ -416,14 +420,14 @@ export default function DatabaseUpdatePage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className={iconSizes.md} />
-            Role Assignments Preview
+            {t('databaseUpdate.roleAssignmentsPreview')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Object.entries(CONTACT_ASSIGNMENTS).slice(0, 9).map(([id, assignment]) => (
               <div key={id} className={`p-3 ${quick.card}`}>
-                <div className="font-mono text-xs text-muted-foreground">{id.slice(0, 8)}...</div>
+                <div className={cn("font-mono text-xs", colors.text.muted)}>{id.slice(0, 8)}...</div>
                 <div className="flex flex-wrap gap-1 mt-1">
                   <Badge variant="outline" className="text-xs">
                     {assignment.role}
@@ -435,8 +439,8 @@ export default function DatabaseUpdatePage() {
               </div>
             ))}
             <div className={`p-3 ${quick.card} bg-muted/50 flex items-center justify-center`}>
-              <span className="text-sm text-muted-foreground">
-                +{Object.keys(CONTACT_ASSIGNMENTS).length - 9} περισσότερα
+              <span className={cn("text-sm", colors.text.muted)}>
+                {t('databaseUpdate.more', { count: Object.keys(CONTACT_ASSIGNMENTS).length - 9 })}
               </span>
             </div>
           </div>
@@ -454,20 +458,20 @@ export default function DatabaseUpdatePage() {
           {isLoading ? (
             <>
               <Spinner size="small" color="inherit" className="mr-2" />
-              Εκτελείται...
+              {t('databaseUpdate.button.executing')}
             </>
           ) : (
             <>
               <Database className={`mr-2 ${iconSizes.sm}`} />
-              Εκτέλεση Ενημέρωσης Βάσης
+              {t('databaseUpdate.button.execute')}
             </>
           )}
         </Button>
 
         {isLoading && (
-          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+          <div className={cn("flex items-center justify-center gap-2 text-sm", colors.text.muted)}>
             <AlertTriangle className={iconSizes.sm} />
-            Μην κλείσεις τον browser κατά τη διάρκεια της ενημέρωσης
+            {t('databaseUpdate.browserWarning')}
           </div>
         )}
       </div>
@@ -478,7 +482,7 @@ export default function DatabaseUpdatePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CheckCircle className={iconSizes.md} />
-              Logs Εκτέλεσης
+              {t('databaseUpdate.executionLogs')}
             </CardTitle>
           </CardHeader>
           <CardContent>

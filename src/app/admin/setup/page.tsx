@@ -23,6 +23,9 @@ import { CheckCircle2, XCircle, Shield, Bell, Mail } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { createModuleLogger } from '@/lib/telemetry';
 import { API_ROUTES } from '@/config/domain-constants';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 const logger = createModuleLogger('AdminSetupPage');
 
 // =============================================================================
@@ -48,7 +51,9 @@ interface SetupResponse {
 // =============================================================================
 
 export default function AdminSetupPage() {
+  const { t } = useTranslation('admin');
   const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const colors = useSemanticColors();
   const router = useRouter();
 
   const [currentConfig, setCurrentConfig] = useState<AdminConfig | null>(null);
@@ -89,7 +94,7 @@ export default function AdminSetupPage() {
       }
     } catch (err) {
       logger.error('Failed to check config', { error: err });
-      setError('Αποτυχία ελέγχου ρυθμίσεων');
+      setError(t('setup.errors.checkFailed'));
     } finally {
       setCheckingConfig(false);
     }
@@ -111,7 +116,7 @@ export default function AdminSetupPage() {
     const { auth } = await import('@/lib/firebase');
     const firebaseUser = auth.currentUser;
     if (!firebaseUser) {
-      setError('Δεν είσαι συνδεδεμένος');
+      setError(t('setup.errors.notLoggedIn'));
       return;
     }
 
@@ -138,11 +143,11 @@ export default function AdminSetupPage() {
         setCurrentConfig(data.config);
         setSuccess(true);
       } else {
-        setError(data.error || data.message || 'Αποτυχία αποθήκευσης');
+        setError(data.error || data.message || t('setup.errors.saveFailed'));
       }
     } catch (err) {
       logger.error('Failed to setup admin', { error: err });
-      setError('Αποτυχία σύνδεσης με τον server');
+      setError(t('setup.errors.connectionFailed'));
     } finally {
       setSaving(false);
     }
@@ -169,15 +174,15 @@ export default function AdminSetupPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5" />
-              Απαιτείται Σύνδεση
+              {t('setup.loginRequired')}
             </CardTitle>
             <CardDescription>
-              Πρέπει να συνδεθείς για να αποκτήσεις πρόσβαση στις ρυθμίσεις admin.
+              {t('setup.loginRequiredDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={() => router.push('/login')}>
-              Σύνδεση
+              {t('setup.loginButton')}
             </Button>
           </CardContent>
         </Card>
@@ -194,27 +199,27 @@ export default function AdminSetupPage() {
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Header */}
         <header>
-          <h1 className="text-3xl font-bold">Ρύθμιση Admin</h1>
-          <p className="text-muted-foreground mt-2">
-            Διαμόρφωση των ρυθμίσεων διαχειριστή για ειδοποιήσεις σφαλμάτων
+          <h1 className="text-3xl font-bold">{t('setup.title')}</h1>
+          <p className={cn("mt-2", colors.text.muted)}>
+            {t('setup.subtitle')}
           </p>
         </header>
 
         {/* Current User Info */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Τρέχων Χρήστης</CardTitle>
+            <CardTitle className="text-lg">{t('setup.currentUser')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-muted-foreground" />
+              <Mail className={cn("h-4 w-4", colors.text.muted)} />
               <span className="font-medium">Email:</span>
               <code className="bg-muted px-2 py-1 rounded text-sm">
                 {user.email}
               </code>
             </div>
             <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4 text-muted-foreground" />
+              <Shield className={cn("h-4 w-4", colors.text.muted)} />
               <span className="font-medium">UID:</span>
               <code className="bg-muted px-2 py-1 rounded text-sm font-mono text-xs">
                 {user.uid}
@@ -228,39 +233,39 @@ export default function AdminSetupPage() {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Bell className="h-5 w-5" />
-              Κατάσταση Ρυθμίσεων
+              {t('setup.configStatus')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {checkingConfig ? (
-              <div className="flex items-center gap-2 text-muted-foreground">
+              <div className={cn("flex items-center gap-2", colors.text.muted)}>
                 <Spinner size="small" />
-                Έλεγχος ρυθμίσεων...
+                {t('setup.checkingConfig')}
               </div>
             ) : currentConfig ? (
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-green-500" />
-                  <span className="font-medium text-green-700">Ρυθμίσεις Ενεργές</span>
+                  <span className="font-medium text-green-700">{t('setup.configActive')}</span>
                 </div>
                 <div className="grid gap-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Primary Admin:</span>
+                    <span className={colors.text.muted}>{t('setup.primaryAdmin')}</span>
                     <code className="font-mono text-xs">{currentConfig.primaryAdminUid}</code>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Email:</span>
+                    <span className={colors.text.muted}>Email:</span>
                     <span>{currentConfig.adminEmail}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Error Reporting:</span>
+                    <span className={colors.text.muted}>{t('setup.errorReporting')}</span>
                     <Badge variant={currentConfig.enableErrorReporting ? 'default' : 'secondary'}>
-                      {currentConfig.enableErrorReporting ? 'Ενεργό' : 'Ανενεργό'}
+                      {currentConfig.enableErrorReporting ? t('setup.enabled') : t('setup.disabled')}
                     </Badge>
                   </div>
                   {currentConfig.additionalAdminUids.length > 0 && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Επιπλέον Admins:</span>
+                      <span className={colors.text.muted}>{t('setup.additionalAdmins')}</span>
                       <span>{currentConfig.additionalAdminUids.length}</span>
                     </div>
                   )}
@@ -271,7 +276,7 @@ export default function AdminSetupPage() {
                     <div className="p-3 bg-green-50 border border-green-200 rounded-md">
                       <p className="text-sm text-green-800">
                         <CheckCircle2 className="h-4 w-4 inline mr-1" />
-                        Είσαι ο κύριος διαχειριστής. Θα λαμβάνεις τα error notifications!
+                        {t('setup.youArePrimaryAdmin')}
                       </p>
                     </div>
                     <Button
@@ -283,17 +288,17 @@ export default function AdminSetupPage() {
                       {saving ? (
                         <>
                           <Spinner size="small" color="inherit" className="mr-2" />
-                          Ενημέρωση...
+                          {t('setup.updating')}
                         </>
                       ) : (
-                        'Ενημέρωση Ρυθμίσεων'
+                        t('setup.updateSettings')
                       )}
                     </Button>
                   </div>
                 ) : (
                   <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
                     <p className="text-sm text-yellow-800">
-                      Ο κύριος διαχειριστής είναι διαφορετικός χρήστης.
+                      {t('setup.differentAdmin')}
                     </p>
                     <Button
                       variant="outline"
@@ -305,10 +310,10 @@ export default function AdminSetupPage() {
                       {saving ? (
                         <>
                           <Spinner size="small" color="inherit" className="mr-2" />
-                          Αποθήκευση...
+                          {t('setup.saving')}
                         </>
                       ) : (
-                        'Ορισμός ως κύριος διαχειριστής'
+                        t('setup.setAsPrimary')
                       )}
                     </Button>
                   </div>
@@ -318,11 +323,10 @@ export default function AdminSetupPage() {
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <XCircle className="h-5 w-5 text-yellow-500" />
-                  <span className="font-medium text-yellow-700">Δεν έχουν ρυθμιστεί</span>
+                  <span className="font-medium text-yellow-700">{t('setup.notConfigured')}</span>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Οι ρυθμίσεις admin δεν έχουν διαμορφωθεί ακόμα.
-                  Κάνε click στο κουμπί παρακάτω για να οριστείς ως ο κύριος διαχειριστής.
+                <p className={cn("text-sm", colors.text.muted)}>
+                  {t('setup.notConfiguredDescription')}
                 </p>
               </div>
             )}
@@ -333,9 +337,9 @@ export default function AdminSetupPage() {
         {!currentConfig && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Αρχική Ρύθμιση</CardTitle>
+              <CardTitle className="text-lg">{t('setup.initialSetup')}</CardTitle>
               <CardDescription>
-                Ορίσου ως ο κύριος διαχειριστής για να λαμβάνεις ειδοποιήσεις σφαλμάτων
+                {t('setup.initialSetupDescription')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -348,19 +352,18 @@ export default function AdminSetupPage() {
                 {saving ? (
                   <>
                     <Spinner size="small" color="inherit" className="mr-2" />
-                    Αποθήκευση ρυθμίσεων...
+                    {t('setup.savingSettings')}
                   </>
                 ) : (
                   <>
                     <Shield className="h-4 w-4 mr-2" />
-                    Ορισμός ως Κύριος Διαχειριστής
+                    {t('setup.setAsPrimaryAdmin')}
                   </>
                 )}
               </Button>
 
-              <p className="text-xs text-muted-foreground text-center">
-                Αυτή η ενέργεια θα αποθηκεύσει το UID σου ({user.uid.substring(0, 8)}...)
-                ως τον κύριο διαχειριστή για error notifications.
+              <p className={cn("text-xs text-center", colors.text.muted)}>
+                {t('setup.uidSaveNote', { uid: user.uid.substring(0, 8) + '...' })}
               </p>
             </CardContent>
           </Card>
@@ -381,7 +384,7 @@ export default function AdminSetupPage() {
           <div className="p-4 bg-green-50 border border-green-200 rounded-md">
             <p className="text-sm text-green-800 flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4" />
-              Οι ρυθμίσεις αποθηκεύτηκαν επιτυχώς! Θα λαμβάνεις τα error notifications στο bell icon.
+              {t('setup.successMessage')}
             </p>
           </div>
         )}
@@ -389,13 +392,13 @@ export default function AdminSetupPage() {
         {/* Info */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Πώς Λειτουργεί</CardTitle>
+            <CardTitle className="text-lg">{t('setup.howItWorks')}</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <p>1. Όταν χρήστης βλέπει error → Πατάει &quot;Αναφορά Σφάλματος&quot;</p>
-            <p>2. Το email πηγαίνει στο errors@nestor-app.com</p>
-            <p>3. Το Mailgun webhook δημιουργεί in-app notification</p>
-            <p>4. Βλέπεις το notification στο bell icon 🔔</p>
+          <CardContent className={cn("space-y-2 text-sm", colors.text.muted)}>
+            <p>{t('setup.step1')}</p>
+            <p>{t('setup.step2')}</p>
+            <p>{t('setup.step3')}</p>
+            <p>{t('setup.step4')}</p>
           </CardContent>
         </Card>
       </div>
