@@ -53,8 +53,8 @@ export async function executeToolCalls(
       requestId: context.requestId, iteration, tool: toolName, callId: tc.id,
     });
 
-    // Guardrail 1: Anti-fabrication — block append_contact_info with values NOT in user message
-    const fabricationBlock = checkFabricationGuardrail(toolName, toolArgs, userMessage, context);
+    // Guardrail 1: Anti-fabrication — block append_contact_info with values NOT in user message or tool results
+    const fabricationBlock = checkFabricationGuardrail(toolName, toolArgs, userMessage, messages, records, context);
     if (fabricationBlock) {
       records.push({ name: toolName, args: argsString, result: fabricationBlock });
       toolMessages.push({ role: 'tool', content: fabricationBlock, tool_call_id: tc.id });
@@ -110,22 +110,53 @@ export async function executeToolCalls(
 // GUARDRAIL CHECKS — return blocked JSON string or null (pass)
 // ============================================================================
 
+/**
+ * Collect trusted text sources from tool results (prior iterations + current batch).
+ * Values extracted by tools like read_document are legitimate data, not fabrication.
+ */
+function collectTrustedToolSources(
+  allMessages: ChatCompletionMessage[],
+  currentBatchRecords: ToolCallRecord[]
+): string[] {
+  const sources: string[] = [];
+
+  // Prior iterations: tool result messages
+  for (const msg of allMessages) {
+    if (msg.role === 'tool' && typeof msg.content === 'string') {
+      sources.push(msg.content);
+    }
+  }
+
+  // Current batch: results from tools already executed in this iteration
+  for (const rec of currentBatchRecords) {
+    sources.push(rec.result);
+  }
+
+  return sources;
+}
+
 function checkFabricationGuardrail(
   toolName: string,
   toolArgs: Record<string, unknown>,
   userMessage: string,
+  allMessages: ChatCompletionMessage[],
+  currentBatchRecords: ToolCallRecord[],
   context: AgenticContext
 ): string | null {
   if (toolName !== 'append_contact_info') return null;
-  if (!isFabricatedContactValue(toolArgs, userMessage)) return null;
+
+  // Collect trusted sources: user message + all tool results (read_document, previews, etc.)
+  const trustedSources = collectTrustedToolSources(allMessages, currentBatchRecords);
+
+  if (!isFabricatedContactValue(toolArgs, userMessage, trustedSources)) return null;
 
   const fabricatedValue = String(toolArgs.value ?? '');
-  logger.warn('Anti-fabrication: blocked tool with value not in user message', {
+  logger.warn('Anti-fabrication: blocked tool with value not in user message or tool results', {
     requestId: context.requestId, tool: toolName, value: fabricatedValue,
   });
   return JSON.stringify({
     _blocked: true,
-    error: `BLOCKED: Η τιμή "${fabricatedValue}" δεν αναφέρθηκε από τον χρήστη στο μήνυμά του. ΡΩΤΑ τον χρήστη να σου δώσει τη σωστή τιμή.`,
+    error: `BLOCKED: Η τιμή "${fabricatedValue}" δεν αναφέρθηκε από τον χρήστη ούτε βρέθηκε σε έγγραφο. ΡΩΤΑ τον χρήστη να σου δώσει τη σωστή τιμή.`,
   });
 }
 

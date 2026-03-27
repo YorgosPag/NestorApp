@@ -26,14 +26,20 @@ function stemMatch(name: string, context: string): boolean {
 }
 
 /**
- * FIND-F fix: Detect phone/email values NOT present in the user's original message.
- * Prevents AI from fabricating contact info (hallucinated emails/phones).
+ * FIND-F fix: Detect phone/email values NOT present in the user's message
+ * OR in tool results from prior iterations (e.g. read_document, document preview).
  *
- * @returns true if the value appears to be fabricated (NOT in user message)
+ * Google-level: if the user asked the agent to read a document and the value
+ * was extracted from that document, it is NOT fabricated — it is legitimate
+ * data from a trusted source the user explicitly requested.
+ *
+ * @param trustedSources - Additional trusted text sources (tool results, document previews)
+ * @returns true if the value appears to be fabricated (NOT in any trusted source)
  */
 export function isFabricatedContactValue(
   toolArgs: Record<string, unknown>,
-  userMessage: string
+  userMessage: string,
+  trustedSources: string[] = []
 ): boolean {
   const fieldType = String(toolArgs.fieldType ?? '');
   if (fieldType !== 'phone' && fieldType !== 'email') return false;
@@ -41,17 +47,20 @@ export function isFabricatedContactValue(
   const value = String(toolArgs.value ?? '').trim();
   if (!value) return false;
 
+  // Combine user message + all trusted sources (tool results, document content)
+  const allSources = [userMessage, ...trustedSources];
+
   if (fieldType === 'email') {
-    // Email: case-insensitive match — only strip spaces (preserve dots, @)
     const normalizedEmail = value.toLowerCase().trim();
-    const msgLower = userMessage.toLowerCase();
-    return !msgLower.includes(normalizedEmail);
+    return !allSources.some(src => src.toLowerCase().includes(normalizedEmail));
   }
 
-  // Phone: normalize both — remove +30 prefix, spaces, dashes, parentheses
-  const normalizedMsg = userMessage.replace(/[\s\-().]/g, '');
+  // Phone: normalize — remove +30 prefix, spaces, dashes, parentheses
   const normalizedPhone = value.replace(/^\+30/, '').replace(/[\s\-().]/g, '');
-  return !normalizedMsg.includes(normalizedPhone);
+  return !allSources.some(src => {
+    const normalizedSrc = src.replace(/[\s\-().]/g, '');
+    return normalizedSrc.includes(normalizedPhone);
+  });
 }
 
 /**
