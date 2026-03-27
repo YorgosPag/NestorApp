@@ -311,3 +311,21 @@ Client (AddUnitDialog)           Server (API)
   │                                │  └─ Store in Firestore
   └──────────────────────────────┘
 ```
+
+---
+
+## 8. Changelog
+
+### 2026-03-27: Dedicated `code` field for Storage + Parking
+
+**Changes:**
+- Added `code?: string` field to `Storage` and `ParkingSpot` interfaces
+- Changed `codeField` from `'name'`→`'code'` (storage) and `'number'`→`'code'` (parking) in ENTITY_REGISTRY
+- Updated API suggest route to check `code` field with fallback to legacy `name`/`number`
+- Added `code` to create/update API schemas for both storage and parking
+- Added `EntityCodeField` shared component (`src/components/shared/EntityCodeField.tsx`)
+- Added entity code UI to StorageGeneralTab and ParkingGeneralTab detail forms
+- Updated AddStorageDialog and AddParkingDialog to use separate `code` field
+- Updated cascade propagation to prefer `code` over legacy fields
+
+**Affected files:** types/storage/contracts.ts, types/parking.ts, firestore-mappers.ts, entity-creation.types.ts, entity-code/suggest/route.ts, storages/route.ts, storages/[id]/route.ts, parking/route.ts, parking/[id]/route.ts, StorageGeneralTab.tsx, ParkingGeneralTab.tsx, AddStorageDialog.tsx, AddParkingDialog.tsx, EntityCodeField.tsx, i18n (el/en storage + parking)

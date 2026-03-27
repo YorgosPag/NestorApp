@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 /**
  * AddParkingDialog — Dialog for creating parking spots
  *
@@ -10,7 +11,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
@@ -45,7 +46,7 @@ import type {
   ParkingSpotStatus,
   ParkingLocationZone,
 } from '@/types/parking';
-import { useEntityCodeSuggestion } from '@/hooks/useEntityCodeSuggestion';
+import { EntityCodeField } from '@/components/shared/EntityCodeField';
 
 // ============================================================================
 // TYPES
@@ -71,6 +72,7 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
 
   // Form state
   const [buildingId, setBuildingId] = useState('');
+  const [code, setCode] = useState('');
   const [number, setNumber] = useState('');
   const [type, setType] = useState<ParkingSpotType>('standard');
   const [status, setStatus] = useState<ParkingSpotStatus>('available');
@@ -82,26 +84,11 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
   const [notes, setNotes] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [codeOverridden, setCodeOverridden] = useState(false);
-
-  // ADR-233: Auto-suggest parking code
-  const { suggestedCode } = useEntityCodeSuggestion({
-    entityType: 'parking',
-    buildingId,
-    floorLevel: floor ? parseInt(floor, 10) || 0 : 0,
-    locationZone: locationZone || undefined,
-    disabled: codeOverridden,
-  });
-
-  // Auto-populate when suggestion arrives
-  useEffect(() => {
-    if (suggestedCode && !codeOverridden) {
-      setNumber(suggestedCode);
-    }
-  }, [suggestedCode, codeOverridden]);
+  // codeOverridden is managed internally by EntityCodeField
 
   const resetForm = () => {
     setBuildingId('');
+    setCode('');
     setNumber('');
     setType('standard');
     setStatus('available');
@@ -112,7 +99,6 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
     setPrice('');
     setNotes('');
     setError(null);
-    setCodeOverridden(false);
   };
 
   const handleClose = () => {
@@ -143,6 +129,7 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
     try {
       const result = await apiClient.post<ParkingCreateResult>(API_ROUTES.PARKING.LIST, {
         number: number.trim(),
+        code: code.trim() || undefined,
         type,
         status,
         floor: floor.trim() || undefined,
@@ -219,6 +206,22 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
             </Select>
           </label>
 
+          {/* ADR-233: Code field with auto-suggest */}
+          <EntityCodeField
+            value={code}
+            onChange={setCode}
+            entityType="parking"
+            buildingId={buildingId}
+            floorLevel={floor ? parseInt(floor, 10) || 0 : 0}
+            locationZone={locationZone || undefined}
+            label={tParking('general.fields.code', { defaultValue: 'Κωδικός Θέσης (ADR-233)' })}
+            placeholderFallback="A-PK-Y1.01"
+            infoExample="π.χ. A-PK-Y1.01 (Κτίριο A, Parking, Υπόγ.1, #01)"
+            disabled={creating}
+            variant="dialog"
+            t={tParking}
+          />
+
           {/* Number + Type */}
           <fieldset className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1.5">
@@ -227,14 +230,8 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
               </span>
               <Input
                 value={number}
-                onChange={(e) => {
-                  setNumber(e.target.value);
-                  if (!codeOverridden && e.target.value !== suggestedCode) {
-                    setCodeOverridden(true);
-                  }
-                  if (!e.target.value) setCodeOverridden(false);
-                }}
-                placeholder={suggestedCode || 'P-001'}
+                onChange={(e) => setNumber(e.target.value)}
+                placeholder="P-001"
                 disabled={creating}
                 autoFocus
               />

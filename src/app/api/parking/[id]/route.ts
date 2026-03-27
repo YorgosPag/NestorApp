@@ -35,6 +35,8 @@ import { safeParseBody } from '@/lib/validation/shared-schemas';
 
 const UpdateParkingSchema = z.object({
   number: z.string().max(50).optional(),
+  /** ADR-233: Entity coding system identifier */
+  code: z.string().max(50).nullable().optional(),
   type: z.string().max(50).optional(),
   status: z.string().max(50).optional(),
   locationZone: z.string().max(100).nullable().optional(),
@@ -99,6 +101,7 @@ export const PATCH = withStandardRateLimit(
         const updateData: Record<string, unknown> = {};
 
         if (body.number?.trim()) updateData.number = body.number.trim();
+        if (body.code !== undefined) updateData.code = body.code?.trim() || null;
         if (body.type) updateData.type = body.type;
         if (body.status) updateData.status = body.status;
         if (body.floor !== undefined) updateData.floor = typeof body.floor === 'number' ? body.floor : (body.floor?.trim() || null);
@@ -122,8 +125,11 @@ export const PATCH = withStandardRateLimit(
         });
 
         // 🔗 ADR-247 F-4: Cascade allocationCode to linkedSpaces on units
-        if (body.number?.trim() && body.number.trim() !== (existing.number as string)) {
-          propagateSpaceAllocationCodeChange(id, body.number.trim(), (existing.buildingId as string) ?? null)
+        // ADR-233: Prefer code field; fall back to number for legacy
+        const newDisplayCode = body.code?.trim() || body.number?.trim();
+        const oldDisplayCode = (existing.code as string) || (existing.number as string);
+        if (newDisplayCode && newDisplayCode !== oldDisplayCode) {
+          propagateSpaceAllocationCodeChange(id, newDisplayCode, (existing.buildingId as string) ?? null)
             .catch((err) => logger.warn('allocationCode cascade failed (non-blocking)', {
               id, error: getErrorMessage(err),
             }));

@@ -55,6 +55,7 @@
     "notAssigned": "Not assigned",
     "fields": {
       "name": "Storage Name",
+      "code": "Storage Code",
       "type": "Type",
       "status": "Status",
       "area": "Area",

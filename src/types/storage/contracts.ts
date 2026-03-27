@@ -15,6 +15,8 @@ export interface Coordinates {
 export interface Storage {
   id: string;
   name: string;
+  /** ADR-233: Entity coding system identifier, e.g. "A-AP-Y1.01" */
+  code?: string;
   type: StorageType;
   status: StorageStatus;
   /** @deprecated Use buildingId instead. Kept for backward compatibility. */

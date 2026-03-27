@@ -1,18 +1,4 @@
-/**
- * 🅿️ ENTERPRISE PARKING API ENDPOINT
- *
- * Professional-grade API για θέσεις στάθμευσης
- * Ακολουθεί το exact pattern από /api/storages/route.ts
- *
- * ΑΡΧΙΤΕΚΤΟΝΙΚΗ (local_4.log):
- * - Parking είναι parallel category με Units/Storage μέσα στο Building context
- * - ΔΕΝ είναι children των Units
- * - Κάθε parking spot ανήκει σε Building (buildingId)
- *
- * @see local_4.log - Navigation architecture documentation
- * @see firestore-collections.ts - COLLECTIONS.PARKING_SPACES = 'parkingSpaces'
- * @rateLimit STANDARD (60 req/min) - Parking spots retrieval
- */
+/** 🅿️ Parking API — GET list, POST create. Admin SDK, standard rate limit. */
 
 import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
@@ -30,27 +16,14 @@ import { mapParkingDoc } from '@/lib/firestore-mappers';
 
 const logger = createModuleLogger('ParkingRoute');
 
-// ============================================================================
-// 🏢 ENTERPRISE: Admin SDK Parking Endpoint
-// ============================================================================
-//
-// ARCHITECTURE DECISION:
-// Χρησιμοποιεί Admin SDK (server-side) αντί για Client SDK
-//
-// ΑΙΤΙΟΛΟΓΗΣΗ:
-// 1. Τα Firestore Security Rules απαιτούν authentication (request.auth != null)
-// 2. Το Client SDK στον server ΔΕΝ έχει authentication context
-// 3. Μόνο το Admin SDK μπορεί να παρακάμψει τα security rules
-//
-// ============================================================================
-
-// ADR-191: Import canonical types — single source of truth
 import type { ParkingSpot as CanonicalParkingSpot } from '@/types/parking';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 
 const CreateParkingSchema = z.object({
   number: z.string().min(1).max(50),
+  /** ADR-233: Entity coding system identifier */
+  code: z.string().max(50).optional(),
   buildingId: z.string().max(128).optional(),
   projectId: z.string().max(128).optional(),
   type: z.string().max(50).optional(),
@@ -63,10 +36,6 @@ const CreateParkingSchema = z.object({
   notes: z.string().max(5000).optional(),
 });
 
-/**
- * 🅿️ API Response interface - CANONICAL FORMAT
- * Required by enterprise-api-client for proper response handling
- */
 interface ParkingData {
   parkingSpots: CanonicalParkingSpot[];
   count: number;
@@ -82,19 +51,6 @@ interface ParkingAPIResponse {
   details?: string;
 }
 
-/**
- * 🅿️ GET /api/parking
- *
- * Query parameters:
- * - buildingId: Filter parking spots by building (RECOMMENDED - follows local_4.log architecture)
- *
- * ENTERPRISE ARCHITECTURE (local_4.log):
- * Parking belongs to Building context, NOT to Units
- *
- * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
- * - Permission: units:units:view
- * - Tenant Isolation: Filters by user's companyId through buildings
- */
 const getHandler = async (request: NextRequest) => {
   const handler = withAuth<ParkingAPIResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<ParkingAPIResponse>> => {
@@ -175,6 +131,7 @@ export const POST = withStandardRateLimit(
         if (typeof body.area === 'number' && body.area > 0) entitySpecificFields.area = body.area;
         if (typeof body.price === 'number' && body.price >= 0) entitySpecificFields.price = body.price;
         if (body.notes?.trim()) entitySpecificFields.notes = body.notes.trim();
+        if (body.code?.trim()) entitySpecificFields.code = body.code.trim();
 
         logger.info('Creating parking spot', { number: body.number, buildingId, companyId: ctx.companyId });
 
@@ -185,7 +142,7 @@ export const POST = withStandardRateLimit(
           parentId: buildingId,
           entitySpecificFields,
           codeOptions: {
-            currentValue: body.number.trim(),
+            currentValue: body.code?.trim() || body.number.trim(),
             floorLevel: body.floor ? parseInt(body.floor, 10) || 0 : 0,
             locationZone: body.locationZone ?? undefined,
           },

@@ -24,7 +24,6 @@ import {
   resolveTypeCode,
   formatEntityCode,
   parseEntityCode,
-  buildCounterKey,
 } from '@/services/entity-code.service';
 import { extractBuildingLetter } from '@/config/entity-code-config';
 import type { UnitType } from '@/types/unit';
@@ -157,11 +156,11 @@ async function findNextSequence(
       break;
     case 'parking':
       collectionName = COLLECTIONS.PARKING_SPACES;
-      codeField = 'number';
+      codeField = 'code';
       break;
     case 'storage':
       collectionName = COLLECTIONS.STORAGE;
-      codeField = 'name';
+      codeField = 'code';
       break;
   }
 
@@ -181,7 +180,10 @@ async function findNextSequence(
   // Scan each entity's code to find max sequence for this type+floor
   for (const doc of snapshot.docs) {
     const data = doc.data();
-    const code = data[codeField] as string | undefined;
+    // ADR-233: Check dedicated code field first, fall back to legacy fields for backward compat
+    const code = (data[codeField] as string | undefined)
+      || (entityType === 'parking' ? data['number'] as string | undefined : undefined)
+      || (entityType === 'storage' ? data['name'] as string | undefined : undefined);
     if (!code) continue;
 
     const parsed = parseEntityCode(code);

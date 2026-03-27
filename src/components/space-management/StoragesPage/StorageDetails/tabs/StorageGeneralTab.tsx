@@ -1,13 +1,7 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
-/**
- * 📦 ENTERPRISE STORAGE GENERAL TAB COMPONENT
- *
- * Γενικές πληροφορίες αποθήκης.
- * ADR-193: Supports inline editing mode (toggled by parent header).
- * Fields always rendered as Input/Select (disabled when not editing) — Units prototype pattern.
- * Each section wrapped in Card for visual separation.
- */
+/** ADR-193: Storage general tab — inline editing, Cards layout, ADR-233 entity code */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
@@ -41,12 +35,9 @@ import { getBuildingsList } from '@/services/units.service';
 import { FloorSelectField } from '@/components/shared/FloorSelectField';
 import type { FloorChangePayload } from '@/components/shared/FloorSelectField';
 import { useEntityLink } from '@/hooks/useEntityLink';
+import { EntityCodeField } from '@/components/shared/EntityCodeField';
 
 const logger = createModuleLogger('StorageGeneralTab');
-
-// ============================================================================
-// TYPES
-// ============================================================================
 
 interface StorageGeneralTabProps {
   storage: Storage;
@@ -64,6 +55,8 @@ interface StorageGeneralTabProps {
 
 interface StorageFormState {
   name: string;
+  /** ADR-233: Entity coding system */
+  code: string;
   type: StorageType;
   status: StorageStatus;
   floor: string;
@@ -109,6 +102,7 @@ const STORAGE_STATUSES: { value: StorageStatus; labelKey: string }[] = [
 function buildFormState(storage: Storage): StorageFormState {
   return {
     name: storage.name || '',
+    code: storage.code || '',
     type: storage.type || 'storage',
     status: storage.status || 'available',
     floor: storage.floor || '',
@@ -197,6 +191,7 @@ export function StorageGeneralTab({
           type: form.type,
           status: form.status,
         };
+        if (form.code.trim()) payload.code = form.code.trim();
         if (buildingLink.linkedId) payload.buildingId = buildingLink.linkedId;
         if (form.floor.trim()) payload.floor = form.floor.trim();
         if (form.floorId) payload.floorId = form.floorId;
@@ -223,6 +218,7 @@ export function StorageGeneralTab({
       const payload: Record<string, unknown> = {};
 
       if (form.name.trim() !== (storage.name || '')) payload.name = form.name.trim();
+      if (form.code.trim() !== (storage.code || '')) payload.code = form.code.trim() || null;
       if (form.type !== (storage.type || 'storage')) payload.type = form.type;
       if (form.status !== (storage.status || 'available')) payload.status = form.status;
       if (form.floor.trim() !== (storage.floor || '')) payload.floor = form.floor.trim();
@@ -366,6 +362,20 @@ export function StorageGeneralTab({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* ADR-233: Entity Code field with auto-suggest */}
+            <EntityCodeField
+              value={form.code}
+              onChange={(v) => updateField('code', v)}
+              entityType="storage"
+              buildingId={buildingLink.linkedId || ''}
+              floorLevel={form.floor ? parseInt(form.floor, 10) || 0 : 0}
+              label={t('general.fields.code', { defaultValue: 'Κωδικός Αποθήκης' })}
+              placeholderFallback="A-AP-Y1.01"
+              infoExample="π.χ. A-AP-Y1.01 (Κτίριο A, Αποθήκη, Υπόγ.1, #01)"
+              disabled={!isEditing}
+              variant="form"
+              t={t}
+            />
             <fieldset className="space-y-1.5">
               <Label className="text-muted-foreground text-xs">{t('general.fields.name')}</Label>
               <Input

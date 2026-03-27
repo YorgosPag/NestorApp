@@ -51,6 +51,7 @@ export function mapStorageDoc(docId: string, data: Record<string, unknown>): Sto
   return {
     id: docId,
     name: (data.name as string) || `Storage ${docId.substring(0, 6)}`,
+    code: data.code as string | undefined,
     type: isValidStorageType(rawType) ? rawType : 'small',
     status: isValidStorageStatus(rawStatus) ? rawStatus : 'available',
     building: (data.building as string) || '',
@@ -102,7 +103,8 @@ export function mapParkingDoc(docId: string, data: Record<string, unknown>): Par
 
   return {
     id: docId,
-    number: (data.number as string) || (data.code as string) || `P-${docId.slice(0, 4)}`,
+    number: (data.number as string) || `P-${docId.slice(0, 4)}`,
+    code: data.code as string | undefined,
     buildingId: (data.buildingId as string) || null,
     projectId: data.projectId as string | undefined,
     locationZone: rawZone && VALID_LOCATION_ZONES.includes(rawZone)

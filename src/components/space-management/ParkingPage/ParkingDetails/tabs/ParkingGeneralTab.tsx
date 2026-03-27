@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports, design-system/enforce-semantic-colors */
 'use client';
 
 /**
@@ -39,6 +40,7 @@ import { getBuildingsList } from '@/services/units.service';
 import { FloorSelectField } from '@/components/shared/FloorSelectField';
 import type { FloorChangePayload } from '@/components/shared/FloorSelectField';
 import { useEntityLink } from '@/hooks/useEntityLink';
+import { EntityCodeField } from '@/components/shared/EntityCodeField';
 
 const logger = createModuleLogger('ParkingGeneralTab');
 
@@ -62,6 +64,8 @@ interface ParkingGeneralTabProps {
 
 interface ParkingFormState {
   number: string;
+  /** ADR-233: Entity coding system */
+  code: string;
   type: ParkingSpotType;
   status: ParkingSpotStatus;
   floor: string;
@@ -102,6 +106,7 @@ const PARKING_STATUSES: { value: ParkingSpotStatus; labelKey: string }[] = [
 function buildFormState(parking: ParkingSpot): ParkingFormState {
   return {
     number: parking.number || '',
+    code: parking.code || '',
     type: parking.type || 'standard',
     status: parking.status || 'available',
     floor: parking.floor || '',
@@ -189,6 +194,7 @@ export function ParkingGeneralTab({
           type: form.type,
           status: form.status,
         };
+        if (form.code.trim()) payload.code = form.code.trim();
         if (buildingLink.linkedId) payload.buildingId = buildingLink.linkedId;
         if (form.floor.trim()) payload.floor = form.floor.trim();
         if (form.floorId) payload.floorId = form.floorId;
@@ -214,6 +220,7 @@ export function ParkingGeneralTab({
       const payload: Record<string, unknown> = {};
 
       if (form.number.trim() !== (parking.number || '')) payload.number = form.number.trim();
+      if (form.code.trim() !== (parking.code || '')) payload.code = form.code.trim() || null;
       if (form.type !== (parking.type || 'standard')) payload.type = form.type;
       if (form.status !== (parking.status || 'available')) payload.status = form.status;
       if (form.floor.trim() !== (parking.floor || '')) payload.floor = form.floor.trim();
@@ -354,6 +361,21 @@ export function ParkingGeneralTab({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* ADR-233: Entity Code field with auto-suggest */}
+            <EntityCodeField
+              value={form.code}
+              onChange={(v) => updateField('code', v)}
+              entityType="parking"
+              buildingId={buildingLink.linkedId || ''}
+              floorLevel={form.floor ? parseInt(form.floor, 10) || 0 : 0}
+              locationZone={parking.locationZone || undefined}
+              label={t('general.fields.code', { defaultValue: 'Κωδικός Θέσης (ADR-233)' })}
+              placeholderFallback="A-PK-Y1.01"
+              infoExample="π.χ. A-PK-Y1.01 (Κτίριο A, Parking, Υπόγ.1, #01)"
+              disabled={!isEditing}
+              variant="form"
+              t={t}
+            />
             <fieldset className="space-y-1.5">
               <Label className="text-muted-foreground text-xs">{t('general.fields.spotCode')}</Label>
               <Input

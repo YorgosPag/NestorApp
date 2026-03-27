@@ -52,6 +52,8 @@ export interface ParkingSpot {
   id: string;
   /** Display code, e.g. "P-001" */
   number: string;
+  /** ADR-233: Entity coding system identifier, e.g. "A-PK-Y1.01" */
+  code?: string;
   /** Project this spot belongs to (required) */
   projectId?: string;
   /** Building this spot is linked to (null = open space) */

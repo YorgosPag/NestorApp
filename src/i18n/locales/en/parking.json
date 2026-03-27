@@ -49,6 +49,7 @@
     "notCalculated": "Not calculated",
     "fields": {
       "spotCode": "Spot Code",
+      "code": "Spot Code (ADR-233)",
       "type": "Type",
       "status": "Status",
       "area": "Area",

@@ -16,6 +16,8 @@ import { safeParseBody } from '@/lib/validation/shared-schemas';
 
 const CreateStorageSchema = z.object({
   name: z.string().min(1).max(200),
+  /** ADR-233: Entity coding system identifier */
+  code: z.string().max(50).optional(),
   buildingId: z.string().max(128).optional(),
   type: z.string().max(50).optional(),
   status: z.string().max(50).optional(),
@@ -254,6 +256,7 @@ export const POST = withStandardRateLimit(
         if (body.notes?.trim()) entitySpecificFields.notes = body.notes.trim();
         if (body.projectId?.trim()) entitySpecificFields.projectId = body.projectId.trim();
         if (body.building?.trim()) entitySpecificFields.building = body.building.trim();
+        if (body.code?.trim()) entitySpecificFields.code = body.code.trim();
 
         logger.info('Creating storage unit', { name: body.name, buildingId, companyId: ctx.companyId });
 
@@ -264,7 +267,7 @@ export const POST = withStandardRateLimit(
           parentId: buildingId,
           entitySpecificFields,
           codeOptions: {
-            currentValue: body.name.trim(),
+            currentValue: body.code?.trim() || body.name.trim(),
             floorLevel: isNaN(floorLevel) ? 0 : floorLevel,
           },
           apiPath: '/api/storages (POST)',

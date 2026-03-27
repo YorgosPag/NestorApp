@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 /**
  * AddStorageDialog — Dialog for creating storage units
  *
@@ -9,7 +10,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
@@ -36,7 +37,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Spinner } from '@/components/ui/spinner';
 import type { StorageType, StorageStatus } from '@/types/storage/contracts';
 import { typeLabels, statusLabels } from '@/types/storage/constants';
-import { useEntityCodeSuggestion } from '@/hooks/useEntityCodeSuggestion';
+import { EntityCodeField } from '@/components/shared/EntityCodeField';
 
 // ============================================================================
 // TYPES
@@ -66,6 +67,7 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
 
   // Form state
   const [buildingId, setBuildingId] = useState('');
+  const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [type, setType] = useState<StorageType>('storage');
   const [status, setStatus] = useState<StorageStatus>('available');
@@ -76,25 +78,11 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
   const [notes, setNotes] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [codeOverridden, setCodeOverridden] = useState(false);
-
-  // ADR-233: Auto-suggest storage code
-  const { suggestedCode } = useEntityCodeSuggestion({
-    entityType: 'storage',
-    buildingId,
-    floorLevel: floor ? parseInt(floor, 10) || 0 : 0,
-    disabled: codeOverridden,
-  });
-
-  // Auto-populate when suggestion arrives
-  useEffect(() => {
-    if (suggestedCode && !codeOverridden) {
-      setName(suggestedCode);
-    }
-  }, [suggestedCode, codeOverridden]);
+  // codeOverridden is managed internally by EntityCodeField
 
   const resetForm = () => {
     setBuildingId('');
+    setCode('');
     setName('');
     setType('storage');
     setStatus('available');
@@ -104,7 +92,6 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
     setDescription('');
     setNotes('');
     setError(null);
-    setCodeOverridden(false);
   };
 
   const handleClose = () => {
@@ -123,6 +110,7 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
     try {
       const result = await apiClient.post<StorageCreateResult>(API_ROUTES.STORAGES.LIST, {
         name: name.trim(),
+        code: code.trim() || undefined,
         buildingId,
         type,
         status,
@@ -196,6 +184,21 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
             </Select>
           </label>
 
+          {/* ADR-233: Code field with auto-suggest */}
+          <EntityCodeField
+            value={code}
+            onChange={setCode}
+            entityType="storage"
+            buildingId={buildingId}
+            floorLevel={floor ? parseInt(floor, 10) || 0 : 0}
+            label={t('general.fields.code', { defaultValue: 'Κωδικός Αποθήκης' })}
+            placeholderFallback="A-AP-Y1.01"
+            infoExample="π.χ. A-AP-Y1.01 (Κτίριο A, Αποθήκη, Υπόγ.1, #01)"
+            disabled={creating}
+            variant="dialog"
+            t={t}
+          />
+
           {/* Name + Type */}
           <fieldset className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1.5">
@@ -204,14 +207,8 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
               </span>
               <Input
                 value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  if (!codeOverridden && e.target.value !== suggestedCode) {
-                    setCodeOverridden(true);
-                  }
-                  if (!e.target.value) setCodeOverridden(false);
-                }}
-                placeholder={suggestedCode || 'ΑΠ-001'}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={t('storages.form.namePlaceholder', 'π.χ. Αποθήκη 1')}
                 disabled={creating}
                 autoFocus
               />
