@@ -203,27 +203,34 @@ export class FirestoreRelationshipAdapter {
       ]);
 
       const relationships: ContactRelationship[] = [];
-      const processedIds = new Set<string>(); // Avoid duplicates
+      const processedIds = new Set<string>(); // Avoid exact doc duplicates
+      const processedPairs = new Set<string>(); // Avoid bidirectional duplicates
+
+      // Canonical pair key: sorted IDs + type → catches forward/inverse duplicates
+      const pairKey = (d: ContactRelationship): string => {
+        const ids = [d.sourceContactId, d.targetContactId].sort();
+        return `${ids[0]}_${ids[1]}_${d.relationshipType}`;
+      };
 
       // Process source relationships
       sourceSnapshot.forEach((doc) => {
-        if (!processedIds.has(doc.id)) {
-          relationships.push({
-            id: doc.id,
-            ...doc.data()
-          } as ContactRelationship);
+        const rel = { id: doc.id, ...doc.data() } as ContactRelationship;
+        const key = pairKey(rel);
+        if (!processedIds.has(doc.id) && !processedPairs.has(key)) {
+          relationships.push(rel);
           processedIds.add(doc.id);
+          processedPairs.add(key);
         }
       });
 
       // Process target relationships
       targetSnapshot.forEach((doc) => {
-        if (!processedIds.has(doc.id)) {
-          relationships.push({
-            id: doc.id,
-            ...doc.data()
-          } as ContactRelationship);
+        const rel = { id: doc.id, ...doc.data() } as ContactRelationship;
+        const key = pairKey(rel);
+        if (!processedIds.has(doc.id) && !processedPairs.has(key)) {
+          relationships.push(rel);
           processedIds.add(doc.id);
+          processedPairs.add(key);
         }
       });
 
