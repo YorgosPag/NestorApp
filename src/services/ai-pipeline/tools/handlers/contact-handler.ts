@@ -248,6 +248,20 @@ export class ContactHandler implements ToolHandler {
         const { indexContactForSearch } = await import('@/lib/search/search-indexer');
         await indexContactForSearch(result.contactId, { displayName: result.displayName, firstName, lastName, email, companyName, status: 'active' }, ctx.companyId);
       } catch { /* non-fatal */ }
+
+      // ADR-264: Auto-enrich from invoice entities (code-level guarantee — not prompt-dependent)
+      try {
+        const { autoEnrichFromInvoice } = await import('@/services/ai-pipeline/invoice-auto-enrichment');
+        await autoEnrichFromInvoice(
+          result.contactId,
+          result.displayName,
+          contactType,
+          !!phone,
+          !!email,
+          ctx
+        );
+      } catch { /* non-fatal — contact is created, enrichment is best-effort */ }
+
       logger.info('Contact created', { contactId: result.contactId, displayName: result.displayName, type: contactType });
 
       return { success: true, data: { contactId: result.contactId, displayName: result.displayName, type: contactType }, count: 1 };

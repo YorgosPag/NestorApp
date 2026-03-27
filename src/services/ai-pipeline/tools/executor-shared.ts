@@ -48,6 +48,9 @@ export interface AgenticContext {
    * Prevents AI from auto-setting taxOffice when vatNumber was just written.
    */
   _updatedContactFields?: Map<string, Set<string>>;
+  /** Invoice entity data extracted from document preview (Phase 2).
+   *  Used by create_contact handler to auto-enrich contacts with ΑΦΜ/ΔΟΥ/τηλ/κλπ. */
+  invoiceEntities?: import('@/services/ai-pipeline/invoice-entity-extractor').InvoiceEntityResult | null;
 }
 
 export interface ToolResult {

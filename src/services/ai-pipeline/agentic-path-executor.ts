@@ -39,6 +39,7 @@ import {
 } from './document-preview-service';
 import { extractInvoiceEntities } from './invoice-entity-extractor';
 import type { InvoiceEntityResult } from './invoice-entity-extractor';
+import { extractInvoiceEntitiesFromHistory } from './invoice-auto-enrichment';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -174,6 +175,11 @@ export async function executeAgenticPath(
     const enrichedMessage = previews.length > 0
       ? enrichWithDocumentPreview(userMessage, previews)
       : userMessage;
+
+    // 2e. ADR-264: Inject invoice entities into context for auto-enrichment
+    const previewEntities = previews.find(p => p.invoiceEntities)?.invoiceEntities ?? null;
+    const historyEntities = !previewEntities ? extractInvoiceEntitiesFromHistory(history) : null;
+    agenticCtx.invoiceEntities = previewEntities ?? historyEntities ?? null;
 
     // 3. Execute agentic loop
     agenticLogger.info('Starting agentic path', {
