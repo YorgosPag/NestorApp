@@ -7,6 +7,7 @@
 
 import 'server-only';
 import { isFabricatedContactValue, isHallucinatedContactName } from './agentic-guardrails';
+import { extractTextContent } from './agentic-openai-client';
 import type { ChatCompletionMessage } from './agentic-openai-client';
 import type { AgenticContext } from './tools/agentic-tool-executor';
 import { getAgenticToolExecutor } from './tools/agentic-tool-executor';
@@ -171,7 +172,7 @@ function checkContactIdGuardrail(
   // Check if contactId appears in chat history context (tool results or assistant messages).
   // If the AI got the contactId from prior conversation context, it's not fabricated.
   const contactIdInContext = allMessages.some(m =>
-    m.content !== null && typeof m.content === 'string' && m.content.includes(contactId)
+    extractTextContent(m.content).includes(contactId)
   );
   if (contactIdInContext) return null;
 
@@ -194,7 +195,7 @@ function checkHallucinationGuardrail(
   if (toolName !== 'create_contact') return null;
 
   const contextTexts = messages
-    .map(m => (typeof m.content === 'string' ? m.content : '') ?? '')
+    .map(m => extractTextContent(m.content))
     .filter(Boolean);
 
   if (!isHallucinatedContactName(toolArgs, contextTexts)) return null;

@@ -12,7 +12,6 @@
 
 import { safeJsonParse } from '@/lib/json-utils';
 import { isNonEmptyString } from '@/lib/type-guards';
-import type { InvoiceEntityResult, InvoiceEntity, InvoiceIssuer } from './invoice-entity-extractor';
 
 /**
  * Extract [SUGGESTIONS] block from AI answer and strip filler phrases.
@@ -171,8 +170,6 @@ export interface DocumentPreviewData {
   confidence: number;
   /** All person/company names extracted from the document */
   extractedNames?: string[];
-  /** Structured invoice entity data — only for documentType === 'invoice' */
-  invoiceEntities?: InvoiceEntityResult | null;
 }
 
 /**
@@ -197,10 +194,6 @@ export function enrichWithDocumentPreview(
       ? `Πρόσωπα/Εταιρείες: ${p.extractedNames.join(', ')}`
       : '';
 
-    const invoiceLine = p.invoiceEntities
-      ? formatInvoiceEntities(p.invoiceEntities)
-      : '';
-
     return [
       `[Ανάλυση Εγγράφου: ${p.filename}, fileRecordId: ${p.fileRecordId}]`,
       `Τύπος: ${p.documentType}`,
@@ -208,74 +201,10 @@ export function enrichWithDocumentPreview(
       namesLine,
       actions,
       confidenceNote,
-      invoiceLine,
     ].filter(Boolean).join('\n');
   });
 
   return `${blocks.join('\n\n')}\n\n${message}`;
-}
-
-// ============================================================================
-// INVOICE ENTITY ENRICHMENT
-// ============================================================================
-
-function formatEntityBlock(label: string, entity: InvoiceEntity | InvoiceIssuer): string {
-  const lines: string[] = [`${label}:`];
-  if (entity.name) lines.push(`  Όνομα: ${entity.name}`);
-  if (entity.profession) lines.push(`  Επάγγελμα: ${entity.profession}`);
-
-  const vatDoy = [
-    entity.vatNumber ? `ΑΦΜ: ${entity.vatNumber}` : null,
-    entity.taxOffice ? `ΔΟΥ: ${entity.taxOffice}` : null,
-  ].filter(Boolean).join(' | ');
-  if (vatDoy) lines.push(`  ${vatDoy}`);
-
-  if ('registrationNumber' in entity && entity.registrationNumber) {
-    lines.push(`  ΓΕΜΗ: ${entity.registrationNumber}`);
-  }
-
-  const addressParts = [
-    entity.street,
-    entity.streetNumber,
-  ].filter(Boolean).join(' ');
-  const cityParts = [
-    entity.postalCode,
-    entity.city,
-  ].filter(Boolean).join(' ');
-  const fullAddress = [addressParts, cityParts].filter(Boolean).join(', ');
-  if (fullAddress) lines.push(`  Οδός: ${fullAddress}`);
-
-  if (entity.phone) lines.push(`  Τηλ: ${entity.phone}`);
-  if (entity.email) lines.push(`  Email: ${entity.email}`);
-
-  return lines.join('\n');
-}
-
-function formatInvoiceEntities(entities: InvoiceEntityResult): string {
-  const { invoiceDetails: inv, issuer, customer } = entities;
-
-  const headerParts = [
-    inv.invoiceNumber ? `Αρ. Παραστατικού: ${inv.invoiceNumber}` : null,
-    inv.invoiceDate ? `Ημερομηνία: ${inv.invoiceDate}` : null,
-  ].filter(Boolean).join(' | ');
-
-  const amountParts = [
-    inv.netAmount ? `Καθαρό: ${inv.netAmount}€` : null,
-    inv.vatAmount ? `ΦΠΑ: ${inv.vatAmount}€` : null,
-    inv.totalAmount ? `Σύνολο: ${inv.totalAmount}€` : null,
-  ].filter(Boolean).join(' | ');
-
-  const sections = ['[Δεδομένα Τιμολογίου]'];
-  if (headerParts) sections.push(headerParts);
-  if (amountParts) sections.push(amountParts);
-
-  const hasIssuerData = issuer.name || issuer.vatNumber;
-  const hasCustomerData = customer.name || customer.vatNumber;
-
-  if (hasIssuerData) sections.push('', formatEntityBlock('ΕΚΔΟΤΗΣ', issuer));
-  if (hasCustomerData) sections.push('', formatEntityBlock('ΣΥΝΑΛΛΑΣΣΟΜΕΝΟΣ', customer));
-
-  return sections.join('\n');
 }
 
 // ============================================================================

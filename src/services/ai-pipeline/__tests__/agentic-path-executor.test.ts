@@ -47,6 +47,17 @@ jest.mock('../post-reply-actions', () => ({
   sendPostReplyActions: jest.fn(async () => {}),
 }));
 
+jest.mock('../document-preview-service', () => ({
+  downloadAndValidateFile: jest.fn(async () => null),
+  previewDocumentFromBuffer: jest.fn(async () => null),
+  isVisionSupportedMime: jest.fn(() => false),
+  MAX_PREVIEWS_PER_MESSAGE: 2,
+}));
+
+jest.mock('../invoice-auto-enrichment', () => ({
+  extractInvoiceEntitiesFromHistory: jest.fn(() => null),
+}));
+
 jest.mock('@/config/ai-analysis-config', () => ({
   AI_COST_CONFIG: {
     LIMITS: {

@@ -51,6 +51,14 @@ export interface AgenticContext {
   /** Invoice entity data extracted from document preview (Phase 2).
    *  Used by create_contact handler to auto-enrich contacts with ΑΦΜ/ΔΟΥ/τηλ/κλπ. */
   invoiceEntities?: import('@/services/ai-pipeline/invoice-entity-extractor').InvoiceEntityResult | null;
+  /** ADR-265: Base64-encoded document images for vision-in-the-loop.
+   *  Passed as multipart content to Chat Completions so the AI sees the actual document. */
+  documentImages?: Array<{
+    base64DataUri: string;
+    filename: string;
+    contentType: string;
+    fileRecordId: string;
+  }>;
 }
 
 export interface ToolResult {

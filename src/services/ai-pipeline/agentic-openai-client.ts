@@ -18,11 +18,32 @@ export interface OpenAIUsage {
   total_tokens: number;
 }
 
+/** ADR-265: Multipart content for vision-in-the-loop */
+export type ChatCompletionContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string; detail?: 'low' | 'high' | 'auto' } };
+
 export interface ChatCompletionMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
-  content: string | null;
+  content: string | ChatCompletionContentPart[] | null;
   tool_calls?: ChatCompletionToolCall[];
   tool_call_id?: string;
+}
+
+/**
+ * Extract plain text from a ChatCompletionMessage content field.
+ * Handles both string content and multipart content arrays.
+ * Used by guardrails that need to inspect message text.
+ */
+export function extractTextContent(content: ChatCompletionMessage['content']): string {
+  if (typeof content === 'string') return content;
+  if (Array.isArray(content)) {
+    return content
+      .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+      .map(p => p.text)
+      .join(' ');
+  }
+  return '';
 }
 
 export interface ChatCompletionToolCall {

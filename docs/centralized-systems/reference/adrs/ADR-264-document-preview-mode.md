@@ -5,7 +5,7 @@
 | **Status** | ✅ IMPLEMENTED |
 | **Date** | 2026-03-26 |
 | **Category** | AI Architecture |
-| **Related** | ADR-171 (Agentic Loop), ADR-174 (Multi-Channel), ADR-191 (Document Management) |
+| **Related** | ADR-171 (Agentic Loop), ADR-174 (Multi-Channel), ADR-191 (Document Management), ADR-265 (Vision-in-the-Loop) |
 
 ## Context
 
@@ -27,20 +27,24 @@ User στέλνει αρχείο χωρίς κείμενο
   ↓
 agentic-path-executor.ts → handleDocumentPreviewIfNeeded()
   ↓ (αν file + no text)
-document-preview-service.ts → previewDocument()
+Phase 1: document-preview-service.ts → previewDocument() → classifier
   ↓
-OpenAI gpt-4o-mini Vision → structured JSON
+OpenAI gpt-4o-mini Vision → structured JSON (τύπος, περίληψη, ονόματα)
   ↓
-enrichWithDocumentPreview() → inject στο user message
+enrichWithDocumentPreview() → inject text metadata στο user message
   ↓
-executeAgenticLoop() → AI βλέπει ανάλυση + prompt instruction
+ADR-265: base64 image αποθηκεύεται στο AgenticContext.documentImages
   ↓
-chatHistoryService.addMessage() → αποθηκεύει enrichedMessage (με ανάλυση)
+executeAgenticLoop() → AI βλέπει ΕΙΚΟΝΑ εγγράφου + text metadata (multipart content)
+  ↓
+AI μπορεί να απαντήσει ΟΠΟΙΑΔΗΠΟΤΕ ερώτηση για το περιεχόμενο
   ↓
 AI: "Αναγνώρισα τιμολόγιο ΔΕΗ... Τι θέλεις να κάνω;"
-  ↓
-Follow-up μηνύματα → chat history περιέχει ανάλυση PDF → AI θυμάται context
 ```
+
+> **Σημαντική αλλαγή (ADR-265, 2026-03-27):** Η Phase 2 (invoice entity extraction) αφαιρέθηκε.
+> Αντί για hardcoded extraction schema, το έγγραφο περνάει ως εικόνα στο agentic loop.
+> Ο AI βλέπει ολόκληρο το έγγραφο και μπορεί να εξάγει ΟΠΟΙΑΔΗΠΟΤΕ πληροφορία on-demand.
 
 ## Files
 
@@ -88,3 +92,4 @@ interface DocumentPreviewData {
 |------|--------|
 | 2026-03-26 | Initial implementation — 1 new file, 4 modified |
 | 2026-03-26 | **BUGFIX**: Chat history αποθήκευε `userMessage` (κενό) αντί `enrichedMessage` (με ανάλυση PDF). Follow-up μηνύματα έχαναν context εγγράφου. Fix: save enriched + bump MAX_MESSAGE_CONTENT_LENGTH 2000→3000 |
+| 2026-03-27 | **ADR-265 Vision-in-the-Loop**: Phase 2 (invoice extraction) αφαιρέθηκε. Document images περνάνε ως multipart content στο agentic loop. AI βλέπει ολόκληρο το έγγραφο σε κάθε iteration. Αρχεία: agentic-openai-client.ts (multipart types), executor-shared.ts (documentImages), agentic-path-executor.ts (skip Phase 2), agentic-loop.ts (buildMultipartUserContent), agentic-tool-runner.ts (extractTextContent for guardrails), core-rules-section.ts (vision hint) |

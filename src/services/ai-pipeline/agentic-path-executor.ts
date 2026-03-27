@@ -37,8 +37,6 @@ import {
   isVisionSupportedMime,
   MAX_PREVIEWS_PER_MESSAGE,
 } from './document-preview-service';
-import { extractInvoiceEntities } from './invoice-entity-extractor';
-import type { InvoiceEntityResult } from './invoice-entity-extractor';
 import { extractInvoiceEntitiesFromHistory } from './invoice-auto-enrichment';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -167,19 +165,23 @@ export async function executeAgenticPath(
       };
     }
 
-    // 2d. ADR-264: Document Preview — file without command → analyze content
-    const previews = await handleDocumentPreviewIfNeeded(
+    // 2d. ADR-264 + ADR-265: Document Preview + Vision-in-the-Loop
+    const previewResult = await handleDocumentPreviewIfNeeded(
       userMessage,
       agenticCtx.attachments
     );
-    const enrichedMessage = previews.length > 0
-      ? enrichWithDocumentPreview(userMessage, previews)
+    const enrichedMessage = previewResult.previews.length > 0
+      ? enrichWithDocumentPreview(userMessage, previewResult.previews)
       : userMessage;
 
-    // 2e. ADR-264: Inject invoice entities into context for auto-enrichment
-    const previewEntities = previews.find(p => p.invoiceEntities)?.invoiceEntities ?? null;
-    const historyEntities = !previewEntities ? extractInvoiceEntitiesFromHistory(history) : null;
-    agenticCtx.invoiceEntities = previewEntities ?? historyEntities ?? null;
+    // 2e. ADR-265: Pass document images to agentic loop (AI sees actual document)
+    if (previewResult.documentImages.length > 0) {
+      agenticCtx.documentImages = previewResult.documentImages;
+    }
+
+    // 2f. Auto-enrichment fallback from chat history (Phase 2 no longer runs)
+    const historyEntities = extractInvoiceEntitiesFromHistory(history);
+    agenticCtx.invoiceEntities = historyEntities ?? null;
 
     // 3. Execute agentic loop
     agenticLogger.info('Starting agentic path', {
@@ -187,7 +189,7 @@ export async function executeAgenticPath(
       channelSenderId,
       messageLength: enrichedMessage.length,
       historyCount: history.length,
-      documentPreviews: previews.length,
+      documentPreviews: previewResult.previews.length,
     });
 
     const agenticResult = await executeAgenticLoop(
@@ -327,31 +329,39 @@ export async function executeAgenticPath(
 // HELPERS
 // ============================================================================
 
+/** ADR-265: Return type for document preview + vision images */
+interface DocumentPreviewWithImages {
+  previews: DocumentPreviewData[];
+  documentImages: NonNullable<AgenticContext['documentImages']>;
+}
+
 /**
- * ADR-264: Detect "file without command" and run document preview.
- * Returns preview data to inject into the enriched user message.
+ * ADR-264 + ADR-265: Detect "file without command" → Phase 1 preview + capture base64.
+ * Phase 2 (invoice extraction) REMOVED — the agentic loop sees the actual document via vision.
  */
 async function handleDocumentPreviewIfNeeded(
   userMessage: string,
   attachments?: AgenticContext['attachments']
-): Promise<DocumentPreviewData[]> {
-  if (!attachments || attachments.length === 0) return [];
+): Promise<DocumentPreviewWithImages> {
+  const empty: DocumentPreviewWithImages = { previews: [], documentImages: [] };
+  if (!attachments || attachments.length === 0) return empty;
 
   const trimmed = userMessage.trim();
   const isEmptyOrTrivial = !trimmed
     || trimmed === '(χωρίς κείμενο)'
     || trimmed.length < 5;
 
-  if (!isEmptyOrTrivial) return [];
+  if (!isEmptyOrTrivial) return empty;
 
-  const results: DocumentPreviewData[] = [];
+  const previews: DocumentPreviewData[] = [];
+  const documentImages: NonNullable<AgenticContext['documentImages']> = [];
   const candidates = attachments
     .filter(a => isVisionSupportedMime(a.contentType) && a.storageUrl)
     .slice(0, MAX_PREVIEWS_PER_MESSAGE);
 
   for (const att of candidates) {
     try {
-      // Phase 1: Download + general preview
+      // Phase 1: Download + general preview (classifier)
       const fileBuffer = await downloadAndValidateFile({
         fileRecordId: att.fileRecordId,
         downloadUrl: att.storageUrl,
@@ -367,31 +377,19 @@ async function handleDocumentPreviewIfNeeded(
       });
       if (!preview) continue;
 
-      // Phase 2: Invoice entity extraction (invoices, receipts, tax docs)
-      const INVOICE_LIKE_TYPES = new Set(['invoice', 'receipt', 'tax_document']);
-      let invoiceEntities: InvoiceEntityResult | null = null;
-      if (INVOICE_LIKE_TYPES.has(preview.documentType) && preview.confidence >= 0.6) {
-        agenticLogger.info('Phase 2: Invoice entity extraction triggered', {
-          fileRecordId: att.fileRecordId,
-          documentType: preview.documentType,
-          confidence: preview.confidence,
-        });
-        invoiceEntities = await extractInvoiceEntities({
-          fileBuffer,
-          filename: att.filename,
-          contentType: att.contentType,
-          fileRecordId: att.fileRecordId,
-        });
-        if (invoiceEntities) {
-          agenticLogger.info('Invoice entities extracted successfully', {
-            fileRecordId: att.fileRecordId,
-            hasIssuer: !!invoiceEntities.issuer.name,
-            hasCustomer: !!invoiceEntities.customer.name,
-          });
-        }
-      }
+      // ADR-265: Store base64 for vision-in-the-loop (AI sees actual document)
+      const base64 = fileBuffer.toString('base64');
+      const isImage = att.contentType.startsWith('image/');
+      documentImages.push({
+        base64DataUri: isImage
+          ? `data:${att.contentType};base64,${base64}`
+          : `data:application/pdf;base64,${base64}`,
+        filename: att.filename,
+        contentType: att.contentType,
+        fileRecordId: att.fileRecordId,
+      });
 
-      results.push({
+      previews.push({
         fileRecordId: att.fileRecordId,
         filename: att.filename,
         summary: preview.summary,
@@ -399,7 +397,6 @@ async function handleDocumentPreviewIfNeeded(
         suggestedActions: preview.suggestedActions,
         confidence: preview.confidence,
         extractedNames: preview.extractedNames,
-        invoiceEntities,
       });
     } catch {
       agenticLogger.warn('Document preview failed', {
@@ -409,7 +406,7 @@ async function handleDocumentPreviewIfNeeded(
     }
   }
 
-  return results;
+  return { previews, documentImages };
 }
 
 /**

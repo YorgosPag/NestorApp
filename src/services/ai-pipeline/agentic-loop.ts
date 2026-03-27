@@ -8,7 +8,7 @@
 import 'server-only';
 import { AI_COST_CONFIG } from '@/config/ai-analysis-config';
 import { callChatCompletions } from './agentic-openai-client';
-import type { OpenAIUsage, ChatCompletionMessage } from './agentic-openai-client';
+import type { OpenAIUsage, ChatCompletionMessage, ChatCompletionContentPart } from './agentic-openai-client';
 import type { AgenticContext } from './tools/agentic-tool-executor';
 import type { AgenticToolDefinition } from './tools/agentic-tool-definitions';
 import { executeToolCalls, type ToolCallRecord } from './agentic-tool-runner';
@@ -53,8 +53,8 @@ export interface AgenticResult {
 const DEFAULT_CONFIG: AgenticLoopConfig = {
   // SSoT: AI_COST_CONFIG.LIMITS — overridden per role in executeAgenticLoop()
   maxIterations: AI_COST_CONFIG.LIMITS.ADMIN_MAX_ITERATIONS,
-  // 55s for Vercel (60s limit), but localhost has no limit
-  totalTimeoutMs: process.env.NODE_ENV === 'production' ? 55_000 : 120_000,
+  // 55s for Vercel (60s limit), 80s dev (must finish before QA poll timeout of 90s)
+  totalTimeoutMs: process.env.NODE_ENV === 'production' ? 55_000 : 80_000,
   perCallTimeoutMs: 30_000,
   maxToolResultChars: 12_000,
 };
@@ -124,11 +124,13 @@ export async function executeAgenticLoop(
     });
   }
 
-  // Add current user message (enriched with attachment metadata if present)
-  messages.push({
-    role: 'user',
-    content: enrichWithAttachments(userMessage, context.attachments),
-  });
+  // Add current user message — with document images if available (ADR-265: vision-in-the-loop)
+  const enrichedText = enrichWithAttachments(userMessage, context.attachments);
+  const userContent: string | ChatCompletionContentPart[] =
+    context.documentImages && context.documentImages.length > 0
+      ? buildMultipartUserContent(enrichedText, context.documentImages)
+      : enrichedText;
+  messages.push({ role: 'user', content: userContent });
 
   logger.info('Starting agentic loop', {
     requestId: context.requestId,
@@ -341,5 +343,27 @@ export async function executeAgenticLoop(
     totalDurationMs: Date.now() - startTime,
     totalUsage,
   };
+}
+
+// ── ADR-265: Vision-in-the-Loop Helper ──
+
+/**
+ * Build multipart user content with text + document images.
+ * The AI sees the actual document alongside the enriched text message.
+ */
+function buildMultipartUserContent(
+  text: string,
+  images: NonNullable<AgenticContext['documentImages']>
+): ChatCompletionContentPart[] {
+  const parts: ChatCompletionContentPart[] = [
+    { type: 'text', text },
+  ];
+  for (const img of images) {
+    parts.push({
+      type: 'image_url',
+      image_url: { url: img.base64DataUri, detail: 'high' },
+    });
+  }
+  return parts;
 }
 
