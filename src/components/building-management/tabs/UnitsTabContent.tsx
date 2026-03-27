@@ -1,10 +1,12 @@
-/* eslint-disable design-system/prefer-design-system-imports, design-system/enforce-semantic-colors, custom/no-hardcoded-strings */
+/* eslint-disable design-system/prefer-design-system-imports, design-system/enforce-semantic-colors */
 /** UnitsTabContent — Building Units tab with inline create/edit. ADR-184 */
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
@@ -33,9 +35,8 @@ import type { SpaceColumn, SpaceCardField, LinkableItem } from '../shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import {
-  UNIT_TYPE_LABELS, UNIT_TYPES_FOR_FILTER,
-  UNIT_STATUS_LABELS, UNIT_STATUSES_FOR_FILTER,
-  UNIT_STATUS_COLOR_MAP, getUnitTypeLabel,
+  UNIT_TYPES_FOR_FILTER, UNIT_STATUSES_FOR_FILTER,
+  UNIT_STATUS_COLOR_MAP, getUnitTypeLabel, getUnitStatusLabel,
 } from './unit-tab-constants';
 import type { FloorRecord } from './unit-tab-constants';
 import { useUnitInlineEdit } from './useUnitInlineEdit';
@@ -59,6 +60,7 @@ interface UnitsTabContentProps {
 
 export function UnitsTabContent({ building }: UnitsTabContentProps) {
   const { t } = useTranslation('building');
+  const { t: tUnits } = useTranslation('units');
   const { success, error: notifyError } = useNotifications();
   const router = useRouter();
 
@@ -90,6 +92,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   const fetchFloors = useCallback(async () => {
     try {
@@ -141,12 +144,12 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
       const matchesSearch = !searchTerm ||
         unit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (unit.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        getUnitTypeLabel(unit.type).toLowerCase().includes(searchTerm.toLowerCase());
+        getUnitTypeLabel(unit.type, tUnits).toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = filterType === 'all' || unit.type === filterType;
       const matchesStatus = filterStatus === 'all' || unit.status === filterStatus;
       return matchesSearch && matchesType && matchesStatus;
     });
-  }, [units, searchTerm, filterType, filterStatus]);
+  }, [units, searchTerm, filterType, filterStatus, tUnits]);
 
   const dashboardStats: DashboardStat[] = useMemo(() => [
     { title: t('unitStats.total'), value: stats.total, icon: Home, color: 'blue' },
@@ -181,15 +184,15 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
       if (type === 'delete') {
         setDeletingId(item.id);
         await apiClient.delete(API_ROUTES.UNITS.BY_ID(item.id));
-        success('Η μονάδα διαγράφηκε');
+        success(t('unitStats.deleted'));
       } else {
         setUnlinkingId(item.id);
         await apiClient.patch(API_ROUTES.UNITS.BY_ID(item.id), { buildingId: null });
-        success('Η μονάδα αποσυνδέθηκε');
+        success(t('unitStats.unlinked'));
       }
       await fetchUnits();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Σφάλμα';
+      const msg = err instanceof Error ? err.message : t('unitStats.error');
       notifyError(msg);
     } finally {
       setConfirmLoading(false);
@@ -207,36 +210,36 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
       .map((u) => ({
         id: u.id,
         label: u.name,
-        sublabel: `${UNIT_TYPE_LABELS[u.type] || u.type} · ${u.floor || '—'}`,
+        sublabel: `${getUnitTypeLabel(u.type, tUnits)} · ${u.floor || '—'}`,
       }));
-  }, []);
+  }, [tUnits]);
 
   const handleLinkUnit = useCallback(async (itemId: string) => {
     await apiClient.patch(API_ROUTES.UNITS.BY_ID(itemId), { buildingId: building.id });
-    success('Η μονάδα συνδέθηκε');
+    success(t('unitStats.linked'));
     await fetchUnits();
   }, [building.id, fetchUnits]);
 
   const getStatusBadge = (status: string) => (
     <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${UNIT_STATUS_COLOR_MAP[status] || UNIT_STATUS_COLOR_MAP.unavailable}`}>
-      {UNIT_STATUS_LABELS[status] || status}
+      {getUnitStatusLabel(status, tUnits)}
     </span>
   );
 
   const unitColumns: SpaceColumn<Unit>[] = useMemo(() => [
     { key: 'name', label: t('tabs.floors.name'), sortValue: (u) => u.name, render: (u) => <span className="font-medium">{u.name}</span> },
-    { key: 'type', label: t('tabs.labels.properties'), width: 'w-28', sortValue: (u) => u.type, render: (u) => <span className="text-muted-foreground">{getUnitTypeLabel(u.type)}</span> },
-    { key: 'floor', label: t('tabs.floors.number'), width: 'w-20', sortValue: (u) => u.floor || '', render: (u) => <span className="font-mono text-sm text-muted-foreground">{u.floor}</span> },
+    { key: 'type', label: t('tabs.labels.properties'), width: 'w-28', sortValue: (u) => u.type, render: (u) => <span className={colors.text.muted}>{getUnitTypeLabel(u.type, tUnits)}</span> },
+    { key: 'floor', label: t('tabs.floors.number'), width: 'w-20', sortValue: (u) => u.floor || '', render: (u) => <span className={cn("font-mono text-sm", colors.text.muted)}>{u.floor}</span> },
     { key: 'area', label: 'm²', width: 'w-20', sortValue: (u) => u.area || 0, render: (u) => <span className="font-mono text-xs">{u.area ? `${u.area}` : '—'}</span> },
     { key: 'status', label: t('tabs.labels.details'), width: 'w-28', sortValue: (u) => u.status, render: (u) => getStatusBadge(u.status) },
-  ], [t]);
+  ], [t, tUnits]);
 
   const unitCardFields: SpaceCardField<Unit>[] = useMemo(() => [
-    { label: 'Τύπος', render: (u) => getUnitTypeLabel(u.type) },
-    { label: 'Όροφος', render: (u) => u.floor || '—' },
+    { label: tUnits('card.stats.type'), render: (u) => getUnitTypeLabel(u.type, tUnits) },
+    { label: tUnits('card.stats.floor'), render: (u) => u.floor || '—' },
     { label: 'm²', render: (u) => u.area || '—' },
-    { label: 'Τιμή', render: (u) => formatCurrencyWhole(u.price) },
-  ], []);
+    { label: tUnits('table.price'), render: (u) => formatCurrencyWhole(u.price) },
+  ], [tUnits]);
 
   if (loading) {
     return (
@@ -251,7 +254,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
       <section className="flex flex-col items-center gap-2 py-2">
         <p className="text-sm text-destructive">{error}</p>
         <Button variant="outline" size="sm" onClick={fetchUnits}>
-          Retry
+          {t('unitStats.retry')}
         </Button>
       </section>
     );
@@ -264,7 +267,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
         <h2 className="flex items-center gap-2 text-lg font-semibold">
           <Home className="h-5 w-5 text-primary" />
           {t('tabs.labels.units')}
-          <span className="text-sm font-normal text-muted-foreground">({units.length})</span>
+          <span className={cn("text-sm font-normal", colors.text.muted)}>({units.length})</span>
         </h2>
         <nav className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => setShowLinkDialog(true)}>
@@ -286,7 +289,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
         <CardContent className="p-2">
           <fieldset className="grid grid-cols-1 md:grid-cols-5 gap-2">
             <label className="relative md:col-span-2">
-              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground ${iconSizes.sm}`} />
+              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 ${colors.text.muted} ${iconSizes.sm}`} />
               <Input
                 placeholder={t('unitStats.searchPlaceholder')}
                 value={searchTerm}
@@ -302,7 +305,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
               <SelectContent>
                 <SelectItem value="all">{t('allTypes', { ns: 'filters' })}</SelectItem>
                 {UNIT_TYPES_FOR_FILTER.map(ut => (
-                  <SelectItem key={ut} value={ut}>{UNIT_TYPE_LABELS[ut] || ut}</SelectItem>
+                  <SelectItem key={ut} value={ut}>{getUnitTypeLabel(ut, tUnits)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -314,7 +317,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
               <SelectContent>
                 <SelectItem value="all">{t('allStatuses', { ns: 'filters' })}</SelectItem>
                 {UNIT_STATUSES_FOR_FILTER.map(us => (
-                  <SelectItem key={us} value={us}>{UNIT_STATUS_LABELS[us] || us}</SelectItem>
+                  <SelectItem key={us} value={us}>{getUnitStatusLabel(us, tUnits)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -327,7 +330,6 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
         </CardContent>
       </Card>
 
-      {/* Inline Create Form — extracted to UnitInlineCreateForm (Google SRP) */}
       {showCreateForm && (
         <UnitInlineCreateForm
           buildingId={building.id}
@@ -338,24 +340,23 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
         />
       )}
 
-      {/* View Toggle */}
       <nav className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">
-          {filteredUnits.length} αποτελέσματα
+        <span className={cn("text-sm", colors.text.muted)}>
+          {filteredUnits.length} {t('unitStats.results')}
         </span>
         <fieldset className="flex items-center gap-2">
           <Button variant={viewMode === 'cards' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('cards')}>
-            <Layers className="mr-1 h-4 w-4" /> Κάρτες
+            <Layers className="mr-1 h-4 w-4" /> {t('unitStats.cards')}
           </Button>
           <Button variant={viewMode === 'table' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('table')}>
-            <TableIcon className="mr-1 h-4 w-4" /> Πίνακας
+            <TableIcon className="mr-1 h-4 w-4" /> {t('unitStats.table')}
           </Button>
         </fieldset>
       </nav>
 
       {/* Content — Centralized shared components */}
       {filteredUnits.length === 0 ? (
-        <p className="py-2 text-center text-sm text-muted-foreground">
+        <p className={cn("py-2 text-center text-sm", colors.text.muted)}>
           {t('tabs.labels.units')} — 0
         </p>
       ) : viewMode === 'cards' ? (
@@ -374,7 +375,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
             }}
             actionState={{ unlinkingId, deletingId }}
           />
-          <footer className="text-xs text-muted-foreground">
+          <footer className={cn("text-xs", colors.text.muted)}>
             {filteredUnits.length} {t('tabs.labels.units')}
           </footer>
         </>
@@ -403,7 +404,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {UNIT_TYPES_FOR_FILTER.map(ut => (<SelectItem key={ut} value={ut}>{UNIT_TYPE_LABELS[ut] || ut}</SelectItem>))}
+                      {UNIT_TYPES_FOR_FILTER.map(ut => (<SelectItem key={ut} value={ut}>{getUnitTypeLabel(ut, tUnits)}</SelectItem>))}
                     </SelectContent>
                   </Select>
                 </TableCell>
@@ -419,7 +420,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {UNIT_STATUSES_FOR_FILTER.map(us => (<SelectItem key={us} value={us}>{UNIT_STATUS_LABELS[us] || us}</SelectItem>))}
+                      {UNIT_STATUSES_FOR_FILTER.map(us => (<SelectItem key={us} value={us}>{getUnitStatusLabel(us, tUnits)}</SelectItem>))}
                     </SelectContent>
                   </Select>
                 </TableCell>
@@ -436,10 +437,10 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
               </>
             )}
           />
-          <footer className="text-xs text-muted-foreground">
+          <footer className={cn("text-xs", colors.text.muted)}>
             {filteredUnits.length} {t('tabs.labels.units')}
             {filteredUnits.length !== units.length && (
-              <span className="ml-1">({units.length} σύνολο)</span>
+              <span className="ml-1">({units.length} {t('unitStats.totalSummary')})</span>
             )}
           </footer>
         </>
@@ -455,10 +456,8 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
         onLink={handleLinkUnit}
       />
 
-      {/* 🛡️ ADR-226: Deletion Guard blocked dialog */}
       {BlockedDialog}
 
-      {/* Centralized Confirm Dialog (delete / unlink) */}
       <BuildingSpaceConfirmDialog
         open={!!confirmAction}
         onOpenChange={(open) => { if (!open) setConfirmAction(null); }}

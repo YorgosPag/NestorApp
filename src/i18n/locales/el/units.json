@@ -41,9 +41,10 @@
   },
   "operationalStatus": {
     "ready": "Έτοιμο",
+    "under-construction": "Υπό Κατασκευή",
     "underConstruction": "Υπό ολοκλήρωση",
-    "inspection": "Σε επιθεώρηση",
-    "maintenance": "Υπό συντήρηση",
+    "inspection": "Επιθεώρηση",
+    "maintenance": "Συντήρηση",
     "draft": "Πρόχειρο"
   },
   "floorplan": {
@@ -358,7 +359,8 @@
     "for-sale-and-rent": "Πώληση & Ενοικίαση",
     "reserved": "Κρατημένη",
     "sold": "Πωλημένη",
-    "rented": "Ενοικιασμένη"
+    "rented": "Ενοικιασμένη",
+    "under-negotiation": "Υπό Διαπραγμάτευση"
   },
   "units": {
     "status": {
@@ -554,6 +556,27 @@
     "fullProfile": "Πλήρες Προφίλ",
     "schedule": "Προγραμματισμός",
     "report": "Αναφορά"
+  },
+  "inlineCreate": {
+    "askingPrice": "Ζητούμενη Τιμή",
+    "floor": "Όροφος",
+    "netArea": "Καθαρά m²",
+    "grossArea": "Μικτά m²",
+    "bedrooms": "Υ/Δ",
+    "bathrooms": "Μπάνια",
+    "wc": "WC",
+    "selectFloor": "Επιλέξτε...",
+    "cancel": "Ακύρωση",
+    "save": "Αποθήκευση",
+    "codeInfoExample": "π.χ. A-DI-1.01 (Κτίριο A, Διαμέρισμα, 1ος, #01)",
+    "nameRequired": "Το όνομα είναι υποχρεωτικό",
+    "created": "Η μονάδα δημιουργήθηκε",
+    "createError": "Σφάλμα δημιουργίας"
+  },
+  "inlineEdit": {
+    "updated": "Η μονάδα ενημερώθηκε",
+    "versionConflict": "Σύγκρουση εκδόσεων — ανανεώστε τη σελίδα.",
+    "updateError": "Σφάλμα ενημέρωσης"
   },
   "sqm": "τ.μ.",
   "cbm": "κ.μ.",

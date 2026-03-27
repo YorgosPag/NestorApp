@@ -864,6 +864,10 @@
       "editSuccess": "Ο όροφος ενημερώθηκε",
       "deleteSuccess": "Ο όροφος διαγράφηκε",
       "createSuccess": "Ο όροφος δημιουργήθηκε",
+      "createError": "Αποτυχία δημιουργίας ορόφου",
+      "editError": "Αποτυχία ενημέρωσης ορόφου",
+      "deleteError": "Αποτυχία διαγραφής ορόφου",
+      "versionConflict": "Σύγκρουση εκδόσεων — κάποιος άλλος ενημέρωσε αυτόν τον όροφο. Ανανεώστε.",
       "floorplan": "Κάτοψη",
       "hasFloorplan": "Υπάρχει κάτοψη",
       "noFloorplan": "Χωρίς κάτοψη",
@@ -994,6 +998,7 @@
       }
     },
     "general": {
+      "errorLabel": "Σφάλμα: ",
       "header": {
         "edit": "Επεξεργασία",
         "cancel": "Ακύρωση",
@@ -1116,6 +1121,7 @@
       "noBuilding": "Επιλέξτε ένα κτίριο για να δείτε τα έγγραφα."
     },
     "timeline": {
+      "fullscreen": "Πλήρης Οθόνη",
       "header": {
         "title": "Χρονοδιάγραμμα Κτιρίου",
         "subtitle": "Παρακολούθηση προόδου και milestones",
@@ -1806,6 +1812,25 @@
       "actions": "Ενέργειες"
     }
   },
+  "storageNotifications": {
+    "created": "Η αποθήκη δημιουργήθηκε",
+    "updated": "Η αποθήκη ενημερώθηκε",
+    "deleted": "Η αποθήκη διαγράφηκε",
+    "unlinked": "Η αποθήκη αποσυνδέθηκε",
+    "linked": "Η αποθήκη συνδέθηκε",
+    "failurePrefix": "Αποτυχία:",
+    "createError": "Σφάλμα δημιουργίας",
+    "updateError": "Σφάλμα ενημέρωσης",
+    "deleteError": "Σφάλμα διαγραφής",
+    "unlinkError": "Σφάλμα αποσύνδεσης"
+  },
+  "storageView": {
+    "results": "αποτελέσματα",
+    "total": "σύνολο",
+    "cards": "Κάρτες",
+    "table": "Πίνακας",
+    "autoNamePrefix": "Αποθήκη"
+  },
   "storageStats": {
     "storages": "Αποθήκες",
     "parkingSpaces": "Θέσεις Στάθμευσης",
@@ -1831,7 +1856,16 @@
     "totalValue": "Συνολική Αξία",
     "totalArea": "Συν. Εμβαδόν",
     "searchPlaceholder": "Αναζήτηση ονόματος ή τύπου...",
-    "exportReport": "Εξαγωγή Αναφοράς"
+    "exportReport": "Εξαγωγή Αναφοράς",
+    "results": "αποτελέσματα",
+    "cards": "Κάρτες",
+    "table": "Πίνακας",
+    "totalSummary": "σύνολο",
+    "deleted": "Η μονάδα διαγράφηκε",
+    "unlinked": "Η μονάδα αποσυνδέθηκε",
+    "linked": "Η μονάδα συνδέθηκε",
+    "error": "Σφάλμα",
+    "retry": "Δοκιμάστε ξανά"
   },
   "map": {
     "interactiveMap": "Διαδραστικός Χάρτης"
@@ -2120,6 +2154,27 @@
       "projects": "Έργα",
       "buildings": "Κτίρια",
       "units": "Μονάδες"
+    }
+  },
+  "entityLabel": "Κτίριο {id}",
+  "listItem": {
+    "actions": {
+      "addFavorite": "Προσθήκη στα αγαπημένα",
+      "removeFavorite": "Αφαίρεση από αγαπημένα",
+      "view": "Προβολή",
+      "edit": "Επεξεργασία"
+    },
+    "footer": {
+      "delivery": "Παράδοση: {date}"
+    },
+    "header": {
+      "completed": "% ολοκληρωμένο"
+    },
+    "stats": {
+      "area": "Επιφάνεια",
+      "floors": "Όροφοι",
+      "units": "Μονάδες",
+      "value": "Αξία"
     }
   },
   "error": {

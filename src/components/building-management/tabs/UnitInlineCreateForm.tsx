@@ -1,4 +1,4 @@
-/* eslint-disable design-system/prefer-design-system-imports, custom/no-hardcoded-strings */
+/* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
 /**
@@ -15,6 +15,8 @@
 
 import { useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { createUnit } from '@/services/units.service';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { Button } from '@/components/ui/button';
@@ -31,8 +33,8 @@ import { Spinner } from '@/components/ui/spinner';
 import { EntityCodeField } from '@/components/shared/EntityCodeField';
 import type { UnitType, CommercialStatus, OperationalStatus } from '@/types/unit';
 import {
-  UNIT_TYPE_LABELS, UNIT_TYPES_FOR_FILTER,
-  CREATION_COMMERCIAL_OPTIONS, OPERATIONAL_STATUS_OPTIONS,
+  UNIT_TYPE_LABEL_KEYS, UNIT_TYPES_FOR_FILTER,
+  CREATION_COMMERCIAL_OPTION_KEYS, OPERATIONAL_STATUS_OPTION_KEYS,
 } from './unit-tab-constants';
 import type { FloorRecord } from './unit-tab-constants';
 
@@ -60,6 +62,7 @@ export function UnitInlineCreateForm({
   onCancel,
 }: UnitInlineCreateFormProps) {
   const { t: tUnits } = useTranslation('units');
+  const colors = useSemanticColors();
   const { success, error: notifyError } = useNotifications();
 
   // Row 1 fields
@@ -82,7 +85,7 @@ export function UnitInlineCreateForm({
 
   const handleCreate = async () => {
     if (!name.trim()) {
-      notifyError('Το όνομα είναι υποχρεωτικό');
+      notifyError(tUnits('inlineCreate.nameRequired'));
       return;
     }
 
@@ -120,13 +123,13 @@ export function UnitInlineCreateForm({
       const result = await createUnit(unitData);
 
       if (result.success) {
-        success('Η μονάδα δημιουργήθηκε');
+        success(tUnits('inlineCreate.created'));
         onCreated();
       } else {
-        notifyError(result.error || 'Σφάλμα δημιουργίας');
+        notifyError(result.error || tUnits('inlineCreate.createError'));
       }
     } catch (err) {
-      notifyError(err instanceof Error ? err.message : 'Σφάλμα δημιουργίας');
+      notifyError(err instanceof Error ? err.message : tUnits('inlineCreate.createError'));
     } finally {
       setCreating(false);
     }
@@ -140,13 +143,13 @@ export function UnitInlineCreateForm({
       {/* Row 1: Όνομα, Κωδικός (ADR-233), Τύπος, Εμπορική, Ζητούμενη Τιμή, Λειτουργική */}
       <fieldset className="grid grid-cols-6 gap-2">
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground">
+          <span className={cn("text-xs font-medium", colors.text.muted)}>
             {tUnits('fields.identity.name', { defaultValue: 'Όνομα Μονάδας' })} *
           </span>
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Διαμέρισμα Α1"
+            placeholder={tUnits('fields.identity.namePlaceholder')}
             className="h-9"
             disabled={creating}
             autoFocus
@@ -161,13 +164,13 @@ export function UnitInlineCreateForm({
           unitType={type || undefined}
           label={tUnits('fields.identity.code', { defaultValue: 'Κωδικός Μονάδας' })}
           placeholderFallback="A-DI-1.01"
-          infoExample="π.χ. A-DI-1.01 (Κτίριο A, Διαμέρισμα, 1ος, #01)"
+          infoExample={tUnits('inlineCreate.codeInfoExample')}
           disabled={creating}
           variant="dialog"
           t={tUnits}
         />
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground">
+          <span className={cn("text-xs font-medium", colors.text.muted)}>
             {tUnits('fields.identity.type', { defaultValue: 'Τύπος Μονάδας' })}
           </span>
           <Select value={type} onValueChange={(v) => setType(v as UnitType)} disabled={creating}>
@@ -176,13 +179,13 @@ export function UnitInlineCreateForm({
             </SelectTrigger>
             <SelectContent>
               {UNIT_TYPES_FOR_FILTER.map(ut => (
-                <SelectItem key={ut} value={ut}>{UNIT_TYPE_LABELS[ut] || ut}</SelectItem>
+                <SelectItem key={ut} value={ut}>{UNIT_TYPE_LABEL_KEYS[ut] ? tUnits(UNIT_TYPE_LABEL_KEYS[ut]) : ut}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground">
+          <span className={cn("text-xs font-medium", colors.text.muted)}>
             {tUnits('fields.identity.commercialStatus', { defaultValue: 'Εμπορική Κατάσταση' })}
           </span>
           <Select value={commercialStatus} onValueChange={(v) => setCommercialStatus(v as CommercialStatus)} disabled={creating}>
@@ -190,15 +193,15 @@ export function UnitInlineCreateForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {CREATION_COMMERCIAL_OPTIONS.map(opt => (
-                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              {CREATION_COMMERCIAL_OPTION_KEYS.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{tUnits(opt.labelKey)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground">
-            Ζητούμενη Τιμή
+          <span className={cn("text-xs font-medium", colors.text.muted)}>
+            {tUnits('inlineCreate.askingPrice')}
           </span>
           <Input
             type="number"
@@ -211,7 +214,7 @@ export function UnitInlineCreateForm({
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground">
+          <span className={cn("text-xs font-medium", colors.text.muted)}>
             {tUnits('fields.identity.unitStatus', { defaultValue: 'Λειτουργική Κατάσταση' })}
           </span>
           <Select value={operationalStatus} onValueChange={(v) => setOperationalStatus(v as OperationalStatus)} disabled={creating}>
@@ -219,8 +222,8 @@ export function UnitInlineCreateForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {OPERATIONAL_STATUS_OPTIONS.map(opt => (
-                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              {OPERATIONAL_STATUS_OPTION_KEYS.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{tUnits(opt.labelKey)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -230,11 +233,11 @@ export function UnitInlineCreateForm({
       {/* Row 2: Όροφος, Καθαρά m², Μικτά m², Υ/Δ, Μπάνια, WC */}
       <fieldset className="grid grid-cols-6 gap-2">
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground">Όροφος</span>
+          <span className={cn("text-xs font-medium", colors.text.muted)}>{tUnits('inlineCreate.floor')}</span>
           {floors.length > 0 ? (
             <Select value={floor} onValueChange={setFloor} disabled={creating}>
               <SelectTrigger className="h-9">
-                <SelectValue placeholder="Επιλέξτε..." />
+                <SelectValue placeholder={tUnits('inlineCreate.selectFloor')} />
               </SelectTrigger>
               <SelectContent>
                 {floors.map(f => (
@@ -256,23 +259,23 @@ export function UnitInlineCreateForm({
           )}
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground">Καθαρά m²</span>
+          <span className={cn("text-xs font-medium", colors.text.muted)}>{tUnits('inlineCreate.netArea')}</span>
           <Input type="number" step="0.1" value={areaNet} onChange={(e) => setAreaNet(e.target.value)} placeholder="75" className="h-9" disabled={creating} />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground">Μικτά m²</span>
+          <span className={cn("text-xs font-medium", colors.text.muted)}>{tUnits('inlineCreate.grossArea')}</span>
           <Input type="number" step="0.1" value={areaGross} onChange={(e) => setAreaGross(e.target.value)} placeholder="90" className="h-9" disabled={creating} />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground">Υ/Δ</span>
+          <span className={cn("text-xs font-medium", colors.text.muted)}>{tUnits('inlineCreate.bedrooms')}</span>
           <Input type="number" value={bedrooms} onChange={(e) => setBedrooms(e.target.value)} placeholder="2" className="h-9" disabled={creating} />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground">Μπάνια</span>
+          <span className={cn("text-xs font-medium", colors.text.muted)}>{tUnits('inlineCreate.bathrooms')}</span>
           <Input type="number" value={bathrooms} onChange={(e) => setBathrooms(e.target.value)} placeholder="1" className="h-9" disabled={creating} />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground">WC</span>
+          <span className={cn("text-xs font-medium", colors.text.muted)}>{tUnits('inlineCreate.wc')}</span>
           <Input type="number" value={wc} onChange={(e) => setWC(e.target.value)} placeholder="1" className="h-9" disabled={creating} />
         </label>
       </fieldset>
@@ -281,11 +284,11 @@ export function UnitInlineCreateForm({
       <nav className="flex justify-end gap-2">
         <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={creating}>
           <X className="mr-1 h-4 w-4" />
-          Ακύρωση
+          {tUnits('inlineCreate.cancel')}
         </Button>
         <Button type="submit" size="sm" disabled={creating || !name.trim()}>
           {creating ? <Spinner className="mr-1 h-4 w-4" /> : <Check className="mr-1 h-4 w-4" />}
-          Αποθήκευση
+          {tUnits('inlineCreate.save')}
         </Button>
       </nav>
     </form>

@@ -2,26 +2,31 @@
 /**
  * Unit tab constants — SSOT for labels and option arrays.
  *
+ * Label values are i18n translation KEYS (not raw text).
+ * Consumers resolve them via t(key), e.g. t(UNIT_TYPE_LABEL_KEYS[type]).
+ *
  * Used by: UnitsTabContent, UnitInlineCreateForm
  * @module components/building-management/tabs/unit-tab-constants
  */
 
+import type { TFunction } from 'i18next';
 import type { UnitType, CommercialStatus, OperationalStatus } from '@/types/unit';
 
 // ============================================================================
-// TYPE LABELS & OPTIONS
+// TYPE LABELS & OPTIONS (i18n keys — resolve with t())
 // ============================================================================
 
-export const UNIT_TYPE_LABELS: Record<string, string> = {
-  apartment: 'Διαμέρισμα',
-  studio: 'Στούντιο',
-  apartment_1br: 'Γκαρσονιέρα',
-  apartment_2br: 'Διαμέρισμα 2Δ',
-  apartment_3br: 'Διαμέρισμα 3Δ',
-  maisonette: 'Μεζονέτα',
-  shop: 'Κατάστημα',
-  office: 'Γραφείο',
-  storage: 'Αποθήκη',
+/** Maps unit type value → i18n key in "units" namespace */
+export const UNIT_TYPE_LABEL_KEYS: Record<string, string> = {
+  apartment: 'types.apartment',
+  studio: 'types.studio',
+  apartment_1br: 'types.apartment_1br',
+  apartment_2br: 'types.apartment_2br',
+  apartment_3br: 'types.apartment_3br',
+  maisonette: 'types.maisonette',
+  shop: 'types.shop',
+  office: 'types.office',
+  storage: 'types.storage',
 };
 
 export const UNIT_TYPES_FOR_FILTER: UnitType[] = [
@@ -30,17 +35,18 @@ export const UNIT_TYPES_FOR_FILTER: UnitType[] = [
 ];
 
 // ============================================================================
-// STATUS LABELS & OPTIONS
+// STATUS LABELS & OPTIONS (i18n keys — resolve with t())
 // ============================================================================
 
-export const UNIT_STATUS_LABELS: Record<string, string> = {
-  'for-sale': 'Προς Πώληση',
-  'for-rent': 'Προς Ενοικίαση',
-  sold: 'Πωλημένη',
-  reserved: 'Δεσμευμένη',
-  rented: 'Ενοικιασμένη',
-  'under-negotiation': 'Υπό Διαπραγμάτευση',
-  unavailable: 'Μη Διαθέσιμη',
+/** Maps commercial status value → i18n key in "units" namespace */
+export const UNIT_STATUS_LABEL_KEYS: Record<string, string> = {
+  'for-sale': 'commercialStatus.for-sale',
+  'for-rent': 'commercialStatus.for-rent',
+  sold: 'commercialStatus.sold',
+  reserved: 'commercialStatus.reserved',
+  rented: 'commercialStatus.rented',
+  'under-negotiation': 'commercialStatus.under-negotiation',
+  unavailable: 'commercialStatus.unavailable',
 };
 
 export const UNIT_STATUSES_FOR_FILTER = [
@@ -48,30 +54,34 @@ export const UNIT_STATUSES_FOR_FILTER = [
 ] as const;
 
 /** ADR-197: Commercial statuses allowed at creation (reserved/sold via sales flow) */
-export const CREATION_COMMERCIAL_OPTIONS: { value: CommercialStatus; label: string }[] = [
-  { value: 'unavailable', label: 'Μη Διαθέσιμη' },
-  { value: 'for-sale', label: 'Προς Πώληση' },
-  { value: 'for-rent', label: 'Προς Ενοικίαση' },
+export const CREATION_COMMERCIAL_OPTION_KEYS: { value: CommercialStatus; labelKey: string }[] = [
+  { value: 'unavailable', labelKey: 'commercialStatus.unavailable' },
+  { value: 'for-sale', labelKey: 'commercialStatus.for-sale' },
+  { value: 'for-rent', labelKey: 'commercialStatus.for-rent' },
 ];
 
-export const OPERATIONAL_STATUS_OPTIONS: { value: OperationalStatus; label: string }[] = [
-  { value: 'draft', label: 'Πρόχειρο' },
-  { value: 'under-construction', label: 'Υπό Κατασκευή' },
-  { value: 'ready', label: 'Έτοιμο' },
-  { value: 'inspection', label: 'Επιθεώρηση' },
-  { value: 'maintenance', label: 'Συντήρηση' },
+export const OPERATIONAL_STATUS_OPTION_KEYS: { value: OperationalStatus; labelKey: string }[] = [
+  { value: 'draft', labelKey: 'operationalStatus.draft' },
+  { value: 'under-construction', labelKey: 'operationalStatus.under-construction' },
+  { value: 'ready', labelKey: 'operationalStatus.ready' },
+  { value: 'inspection', labelKey: 'operationalStatus.inspection' },
+  { value: 'maintenance', labelKey: 'operationalStatus.maintenance' },
 ];
-
-// ============================================================================
-// SHARED TYPES
-// ============================================================================
 
 // ============================================================================
 // HELPERS
 // ============================================================================
 
-export function getUnitTypeLabel(type: string): string {
-  return UNIT_TYPE_LABELS[type] || type;
+/** Resolve a unit type to its translated label */
+export function getUnitTypeLabel(type: string, t: TFunction): string {
+  const key = UNIT_TYPE_LABEL_KEYS[type];
+  return key ? t(key) : type;
+}
+
+/** Resolve a commercial status to its translated label */
+export function getUnitStatusLabel(status: string, t: TFunction): string {
+  const key = UNIT_STATUS_LABEL_KEYS[status];
+  return key ? t(key) : status;
 }
 
 export const UNIT_STATUS_COLOR_MAP: Record<string, string> = {

@@ -41,9 +41,10 @@
   },
   "operationalStatus": {
     "ready": "Ready",
+    "under-construction": "Under Construction",
     "underConstruction": "Under Construction",
-    "inspection": "Under Inspection",
-    "maintenance": "Under Maintenance",
+    "inspection": "Inspection",
+    "maintenance": "Maintenance",
     "draft": "Draft"
   },
   "floorplan": {
@@ -347,7 +348,8 @@
     "for-sale-and-rent": "Sale & Rent",
     "reserved": "Reserved",
     "sold": "Sold",
-    "rented": "Rented"
+    "rented": "Rented",
+    "under-negotiation": "Under Negotiation"
   },
   "units": {
     "status": {
@@ -543,6 +545,27 @@
     "fullProfile": "Full Profile",
     "schedule": "Schedule",
     "report": "Report"
+  },
+  "inlineCreate": {
+    "askingPrice": "Asking Price",
+    "floor": "Floor",
+    "netArea": "Net m²",
+    "grossArea": "Gross m²",
+    "bedrooms": "Beds",
+    "bathrooms": "Baths",
+    "wc": "WC",
+    "selectFloor": "Select...",
+    "cancel": "Cancel",
+    "save": "Save",
+    "codeInfoExample": "e.g. A-DI-1.01 (Building A, Apartment, 1st, #01)",
+    "nameRequired": "Name is required",
+    "created": "Unit created",
+    "createError": "Error creating unit"
+  },
+  "inlineEdit": {
+    "updated": "Unit updated",
+    "versionConflict": "Version conflict — please refresh the page.",
+    "updateError": "Error updating unit"
   },
   "sqm": "sq.m.",
   "cbm": "cu.m.",

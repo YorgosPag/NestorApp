@@ -11,6 +11,7 @@ import { useState, useCallback } from 'react';
 import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Unit, UnitType } from '@/types/unit';
 
 interface UseUnitInlineEditReturn {
@@ -32,6 +33,7 @@ interface UseUnitInlineEditReturn {
 }
 
 export function useUnitInlineEdit(onSaved: () => Promise<void>): UseUnitInlineEditReturn {
+  const { t } = useTranslation('units');
   const { success, error: notifyError } = useNotifications();
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -71,17 +73,17 @@ export function useUnitInlineEdit(onSaved: () => Promise<void>): UseUnitInlineEd
       if (editVersion !== undefined) payload._v = editVersion;
 
       await apiClient.patch(API_ROUTES.UNITS.BY_ID(editingId), payload);
-      success('Η μονάδα ενημερώθηκε');
+      success(t('inlineEdit.updated'));
       setEditingId(null);
       await onSaved();
     } catch (err) {
       if (ApiClientError.isApiClientError(err) && err.statusCode === 409) {
-        notifyError('Σύγκρουση εκδόσεων — ανανεώστε τη σελίδα.');
+        notifyError(t('inlineEdit.versionConflict'));
         setEditingId(null);
         await onSaved();
         return;
       }
-      notifyError(err instanceof Error ? err.message : 'Σφάλμα ενημέρωσης');
+      notifyError(err instanceof Error ? err.message : t('inlineEdit.updateError'));
     } finally {
       setSaving(false);
     }

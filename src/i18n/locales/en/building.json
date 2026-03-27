@@ -864,6 +864,10 @@
       "editSuccess": "Floor updated",
       "deleteSuccess": "Floor deleted",
       "createSuccess": "Floor created",
+      "createError": "Failed to create floor",
+      "editError": "Failed to update floor",
+      "deleteError": "Failed to delete floor",
+      "versionConflict": "Version conflict — someone else updated this floor. Please refresh.",
       "floorplan": "Floor Plan",
       "hasFloorplan": "Has floor plan",
       "noFloorplan": "No floor plan",
@@ -994,6 +998,7 @@
       }
     },
     "general": {
+      "errorLabel": "Error: ",
       "header": {
         "edit": "Edit",
         "cancel": "Cancel",
@@ -1116,6 +1121,7 @@
       "noBuilding": "Select a building to view its documents."
     },
     "timeline": {
+      "fullscreen": "Fullscreen",
       "header": {
         "title": "Building Timeline",
         "subtitle": "Progress tracking and milestones",
@@ -1806,6 +1812,25 @@
       "actions": "Actions"
     }
   },
+  "storageNotifications": {
+    "created": "Storage created",
+    "updated": "Storage updated",
+    "deleted": "Storage deleted",
+    "unlinked": "Storage unlinked",
+    "linked": "Storage linked",
+    "failurePrefix": "Failure:",
+    "createError": "Create error",
+    "updateError": "Update error",
+    "deleteError": "Delete error",
+    "unlinkError": "Unlink error"
+  },
+  "storageView": {
+    "results": "results",
+    "total": "total",
+    "cards": "Cards",
+    "table": "Table",
+    "autoNamePrefix": "Storage"
+  },
   "storageStats": {
     "storages": "Storages",
     "parkingSpaces": "Parking Spaces",
@@ -1831,7 +1856,16 @@
     "totalValue": "Total Value",
     "totalArea": "Total Area",
     "searchPlaceholder": "Search by name or type...",
-    "exportReport": "Export Report"
+    "exportReport": "Export Report",
+    "results": "results",
+    "cards": "Cards",
+    "table": "Table",
+    "totalSummary": "total",
+    "deleted": "Unit deleted",
+    "unlinked": "Unit unlinked",
+    "linked": "Unit linked",
+    "error": "Error",
+    "retry": "Retry"
   },
   "map": {
     "interactiveMap": "Interactive Map"
@@ -2120,6 +2154,27 @@
       "projects": "Projects",
       "buildings": "Buildings",
       "units": "Units"
+    }
+  },
+  "entityLabel": "Building {id}",
+  "listItem": {
+    "actions": {
+      "addFavorite": "Add to favorites",
+      "removeFavorite": "Remove from favorites",
+      "view": "View",
+      "edit": "Edit"
+    },
+    "footer": {
+      "delivery": "Delivery: {date}"
+    },
+    "header": {
+      "completed": "% completed"
+    },
+    "stats": {
+      "area": "Area",
+      "floors": "Floors",
+      "units": "Units",
+      "value": "Value"
     }
   },
   "error": {
