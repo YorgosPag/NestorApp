@@ -38,7 +38,6 @@ interface AppurtenancesSectionProps {
 // =============================================================================
 
 export function AppurtenancesSection({
-  const colors = useSemanticColors();
   spaces,
   unitPrice,
   totalAppurtenancesPrice,
@@ -46,6 +45,7 @@ export function AppurtenancesSection({
   onPriceChange,
   readOnly = false,
 }: AppurtenancesSectionProps) {
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const { t } = useTranslation('common');
 
@@ -63,8 +63,8 @@ export function AppurtenancesSection({
         {spaces.map((space) => {
           const SpaceIcon = space.spaceType === 'parking' ? Car : Package;
           const iconColor = space.spaceType === 'parking'
-            ? 'text-blue-600'
-            : 'text-amber-600';
+            ? colors.text.info
+            : colors.text.warning;
           const hasNoArea = space.area <= 0;
 
           return (

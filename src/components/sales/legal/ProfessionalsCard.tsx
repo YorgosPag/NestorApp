@@ -158,7 +158,6 @@ function getRoleLabel(role: LegalProfessionalRole): string {
 // ============================================================================
 
 export function ProfessionalsCard({
-  const colors = useSemanticColors();
   unitId,
   associations,
   contracts,
@@ -166,6 +165,7 @@ export function ProfessionalsCard({
   onRemove,
   onOverrideProfessional,
 }: ProfessionalsCardProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('common');
   const [editingRole, setEditingRole] = useState<LegalProfessionalRole | null>(null);
   const [saving, setSaving] = useState(false);
