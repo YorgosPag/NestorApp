@@ -5,7 +5,6 @@ import { Euro, User } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { UnitModel } from '../types';
 
-import { getStatusColor } from '../utils/status';
 import { getStatusLabel } from '@/constants/property-statuses-enterprise';
 import { formatCurrency } from '@/lib/intl-utils';
 import { HOVER_SHADOWS } from '@/components/ui/effects';
