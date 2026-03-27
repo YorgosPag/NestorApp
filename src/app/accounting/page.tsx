@@ -2,6 +2,7 @@
 
 import { LazyRoutes } from '@/utils/lazyRoutes';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
+import '@/lib/design-system';
 
 export default function AccountingPage() {
   const AccountingDashboard = LazyRoutes.AccountingDashboard;

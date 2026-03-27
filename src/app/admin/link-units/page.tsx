@@ -11,6 +11,7 @@ import { useEnterpriseConfig } from '@/core/configuration/useEnterpriseConfig';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 export default function LinkUnitsPage() {
   // Enterprise Configuration Hook - replaces hardcoded values
@@ -37,7 +38,7 @@ export default function LinkUnitsPage() {
           </Link>
           <div>
             <h1 className="text-3xl font-bold">Σύνδεση Sold Units με Customers</h1>
-            <p className="text-muted-foreground">
+            <p className={colors.text.muted}>
               {isLoading ? (
                 'Φόρτωση στοιχείων έργου...'
               ) : (
@@ -64,7 +65,7 @@ export default function LinkUnitsPage() {
 
           <div className={`p-6 bg-card ${quick.card}`}>
             <h3 className="font-semibold mb-3">🎯 Στόχος</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className={cn("text-sm", colors.text.muted)}>
               Να συνδέσουμε τα units που έχουν status "sold" με τους αντίστοιχους πελάτες
               ώστε να εμφανίζονται στο tab "Πελάτες Έργου".
             </p>
@@ -72,7 +73,7 @@ export default function LinkUnitsPage() {
 
           <div className={`p-6 bg-card ${quick.card}`}>
             <h3 className="font-semibold mb-3">⚙️ Τι θα γίνει</h3>
-            <ul className="text-sm text-muted-foreground space-y-1">
+            <ul className={cn("text-sm space-y-1", colors.text.muted)}>
               <li>• Εύρεση sold units χωρίς soldTo field</li>
               <li>• Αυτόματη σύνδεση με υπάρχοντα contacts</li>
               <li>• Ενημέρωση της βάσης δεδομένων</li>

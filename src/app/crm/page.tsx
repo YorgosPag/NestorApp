@@ -8,6 +8,7 @@ import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effec
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn, getSpacingClass } from '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 
 // 🌐 i18n: CRM sections use i18n keys
@@ -26,6 +27,7 @@ const crmSectionKeys = [
 
 export default function CrmPage() {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { t } = useTranslation('crm');
   const pagePadding = getSpacingClass('p', 'lg');
   const sectionMargin = getSpacingClass('m', 'lg', 'b');
@@ -40,7 +42,7 @@ export default function CrmPage() {
             </div>
             <div>
                 <h1 className="text-3xl font-bold text-foreground">{t('page.title')}</h1>
-                <p className="text-lg text-muted-foreground">
+                <p className={cn("text-lg", colors.text.muted)}>
                     {t('page.subtitle')}
                 </p>
             </div>

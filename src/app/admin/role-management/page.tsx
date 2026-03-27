@@ -21,6 +21,8 @@ import { RolesTab } from './components/RolesTab';
 import { AuditTab } from './components/AuditTab';
 import { ProjectMembersTab } from './components/ProjectMembersTab';
 import type { GlobalRole } from '@/lib/auth/types';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 // =============================================================================
 // CONSTANTS
@@ -35,6 +37,7 @@ const ALLOWED_ROLES: readonly string[] = ['super_admin', 'company_admin'] as con
 export default function RoleManagementPage() {
   const { user, loading } = useAuth();
   const { t } = useTranslation('admin');
+  const colors = useSemanticColors();
 
   // ---------------------------------------------------------------------------
   // Derive role from FirebaseAuthUser (has globalRole from custom claims)
@@ -49,7 +52,7 @@ export default function RoleManagementPage() {
   if (loading) {
     return (
       <main className="p-6 flex items-center justify-center min-h-[60vh]">
-        <p className="text-muted-foreground animate-pulse">
+        <p className={cn("animate-pulse", colors.text.muted)}>
           {t('roleManagement.loading', 'Loading access permissions...')}
         </p>
       </main>
@@ -86,7 +89,7 @@ export default function RoleManagementPage() {
         <h1 className="text-2xl font-bold tracking-tight">
           {t('roleManagement.title', 'Role Management')}
         </h1>
-        <p className="text-muted-foreground mt-1">
+        <p className={cn("mt-1", colors.text.muted)}>
           {t('roleManagement.subtitle', 'Manage users, roles, and permissions for your organization.')}
         </p>
       </header>

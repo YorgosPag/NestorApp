@@ -24,6 +24,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { AUTH_ROUTES } from '@/lib/routes';
+import '@/lib/design-system';
 
 /**
  * Enterprise 404 Not Found Page

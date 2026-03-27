@@ -13,6 +13,8 @@ import { Badge } from '@/components/ui/badge';
 
 import type { PermissionSetDefinition } from '@/lib/auth/permission-sets';
 import { requiresMfaEnrollment } from '@/lib/auth/permission-sets';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 // =============================================================================
 // TYPES
@@ -29,6 +31,7 @@ interface PermissionSetCardProps {
 
 export function PermissionSetCard({ setId, definition }: PermissionSetCardProps) {
   const { t } = useTranslation('admin');
+  const colors = useSemanticColors();
 
   const needsMfa = requiresMfaEnrollment(setId);
 
@@ -43,17 +46,17 @@ export function PermissionSetCard({ setId, definition }: PermissionSetCardProps)
         )}
       </header>
 
-      <p className="text-xs text-muted-foreground mb-3">
+      <p className={cn("text-xs mb-3", colors.text.muted)}>
         {definition.description}
       </p>
 
       <section>
-        <h5 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
+        <h5 className={cn("text-[10px] font-medium uppercase tracking-wider mb-1", colors.text.muted)}>
           {t('roleManagement.includedPermissions', 'Included Permissions')} ({definition.permissions.length})
         </h5>
         <ul className="space-y-0.5">
           {definition.permissions.map((perm) => (
-            <li key={perm} className="text-[10px] text-muted-foreground font-mono">
+            <li key={perm} className={cn("text-[10px] font-mono", colors.text.muted)}>
               {perm}
             </li>
           ))}

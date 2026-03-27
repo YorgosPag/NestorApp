@@ -1,6 +1,7 @@
 'use client';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface MainContentBridgeProps {
   children: React.ReactNode;

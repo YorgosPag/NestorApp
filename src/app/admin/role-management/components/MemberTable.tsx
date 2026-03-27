@@ -18,6 +18,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { ProjectMemberEntry } from '../types';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 // =============================================================================
 // PROPS
@@ -36,11 +38,12 @@ interface MemberTableProps {
 
 export function MemberTable({ members, canEdit, onUpdateMember, onRemoveMember }: MemberTableProps) {
   const { t } = useTranslation('admin');
+  const colors = useSemanticColors();
 
   if (members.length === 0) {
     return (
       <section className="py-8 text-center">
-        <p className="text-muted-foreground">
+        <p className={colors.text.muted}>
           {t('roleManagement.projectMembers.noMembers', 'No members in this project.')}
         </p>
       </section>
@@ -69,7 +72,7 @@ export function MemberTable({ members, canEdit, onUpdateMember, onRemoveMember }
             <TableCell className="font-medium">
               {member.displayName ?? member.uid.slice(0, 12)}
             </TableCell>
-            <TableCell className="text-muted-foreground">
+            <TableCell className={colors.text.muted}>
               {member.email}
             </TableCell>
             <TableCell>
@@ -85,10 +88,10 @@ export function MemberTable({ members, canEdit, onUpdateMember, onRemoveMember }
                   ))}
                 </span>
               ) : (
-                <span className="text-muted-foreground text-xs">—</span>
+                <span className={cn("text-xs", colors.text.muted)}>—</span>
               )}
             </TableCell>
-            <TableCell className="text-xs text-muted-foreground">
+            <TableCell className={cn("text-xs", colors.text.muted)}>
               {member.addedAt
                 ? new Date(member.addedAt).toLocaleDateString()
                 : '—'}
