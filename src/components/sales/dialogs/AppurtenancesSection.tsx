@@ -16,6 +16,9 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { ResolvedLinkedSpace } from '@/hooks/sales/useLinkedSpacesForSale';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
 // TYPES
@@ -35,6 +38,7 @@ interface AppurtenancesSectionProps {
 // =============================================================================
 
 export function AppurtenancesSection({
+  const colors = useSemanticColors();
   spaces,
   unitPrice,
   totalAppurtenancesPrice,
@@ -52,7 +56,7 @@ export function AppurtenancesSection({
   return (
     <section className="space-y-3">
       <Label className="text-sm font-semibold">
-        Παρακολουθήματα ({spaces.length})
+        {t('sales.appurtenances.title', { defaultValue: 'Παρακολουθήματα' })} ({spaces.length})
       </Label>
 
       <ul className="space-y-2">
@@ -94,7 +98,7 @@ export function AppurtenancesSection({
                 </label>
 
                 {readOnly ? (
-                  <span className="text-sm text-muted-foreground">
+                  <span className={cn("text-sm", colors.text.muted)}>
                     {space.salePrice > 0 ? formatCurrencyWhole(space.salePrice) : '—'}
                   </span>
                 ) : (
@@ -104,7 +108,7 @@ export function AppurtenancesSection({
                     step={500}
                     value={space.salePrice || ''}
                     onChange={(e) => onPriceChange(space.spaceId, Number(e.target.value) || 0)}
-                    placeholder="Τιμή €"
+                    placeholder={t('sales.appurtenances.pricePlaceholder', { defaultValue: 'Τιμή €' })}
                     className="w-28 text-right text-sm"
                     disabled={!space.checked || hasNoArea}
                   />
@@ -124,7 +128,7 @@ export function AppurtenancesSection({
       </ul>
 
       <footer className="flex justify-between border-t pt-2 text-sm font-medium">
-        <span>Σύνολο (μονάδα + παρακολουθήματα)</span>
+        <span>{t('sales.appurtenances.grandTotal', { defaultValue: 'Σύνολο (μονάδα + παρακολουθήματα)' })}</span>
         <span>{formatCurrencyWhole(grandTotal)}</span>
       </footer>
     </section>

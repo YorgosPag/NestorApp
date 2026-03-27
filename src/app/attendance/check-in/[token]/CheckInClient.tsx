@@ -32,10 +32,12 @@ import {
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
+import { getStatusColor } from '@/lib/design-system';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { usePhotoCapture } from '@/hooks/usePhotoCapture';
-import { formatDate } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized date formatting
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { QrCheckInResponse } from '@/components/projects/ika/contracts';
+import { STATUS_CLASSES, formatDateGreek } from './check-in-styles';
 
 // =============================================================================
 // TYPES
@@ -65,6 +67,8 @@ interface CheckInClientProps {
 // =============================================================================
 
 export function CheckInClient({ token }: CheckInClientProps) {
+  const { t } = useTranslation('attendance');
+
   // Token validation state
   const [pageStatus, setPageStatus] = useState<PageStatus>('validating');
   const [projectName, setProjectName] = useState<string>('');
@@ -94,34 +98,67 @@ export function CheckInClient({ token }: CheckInClientProps) {
   } = usePhotoCapture();
 
   // =========================================================================
+  // HELPERS (using t())
+  // =========================================================================
+
+  const getTokenErrorMessage = useCallback((reason?: string): string => {
+    switch (reason) {
+      case 'token_expired':
+        return t('tokenExpired');
+      case 'token_not_found_or_inactive':
+        return t('tokenNotFound');
+      case 'invalid_signature':
+        return t('tokenInvalidSignature');
+      case 'malformed_token':
+        return t('tokenMalformed');
+      default:
+        return t('tokenDefaultError');
+    }
+  }, [t]);
+
+  const getCheckInErrorMessage = useCallback((error?: string | null): string => {
+    if (!error) return t('unknownError');
+
+    if (error.includes('worker_not_found')) {
+      return t('workerNotFound');
+    }
+    if (error.includes('invalid_token')) {
+      return t('invalidTokenError');
+    }
+    return t('checkInGenericError');
+  }, [t]);
+
+  // =========================================================================
   // TOKEN VALIDATION (on mount)
   // =========================================================================
 
   useEffect(() => {
     async function validateToken() {
       try {
-        const res = await fetch(`${API_ROUTES.ATTENDANCE.QR_VALIDATE}?token=${encodeURIComponent(token)}`);
+        const res = await fetch(
+          `${API_ROUTES.ATTENDANCE.QR_VALIDATE}?token=${encodeURIComponent(token)}`
+        );
         const data = (await res.json()) as TokenValidationResult;
 
         if (data.valid) {
           setProjectName(data.projectName);
           setValidDate(data.validDate);
           setPageStatus('ready');
-          // Auto-request GPS
           requestPosition();
         } else {
           setTokenError(getTokenErrorMessage(data.reason));
           setPageStatus('token_invalid');
         }
       } catch {
-        setTokenError('Σφάλμα σύνδεσης. Ελέγξτε τη σύνδεσή σας στο internet.');
+        setTokenError(t('connectionError'));
         setPageStatus('token_invalid');
       }
     }
 
     validateToken();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  // Token is the only external dependency that should trigger re-validation
+  // getTokenErrorMessage/requestPosition/t are stable refs
+  }, [token]); // eslint-disable-line
 
   // =========================================================================
   // SUBMIT CHECK-IN
@@ -162,26 +199,26 @@ export function CheckInClient({ token }: CheckInClientProps) {
       }
     } catch {
       setPageStatus('error');
-      setSubmitError('Σφάλμα σύνδεσης. Δοκιμάστε ξανά.');
+      setSubmitError(t('connectionErrorRetry'));
     }
-  }, [amka, token, eventType, position, photoBase64]);
+  }, [amka, token, eventType, position, photoBase64, getCheckInErrorMessage, t]);
 
   // =========================================================================
   // RENDER
   // =========================================================================
 
   return (
-    <main className="min-h-screen bg-slate-50 flex flex-col items-center px-4 py-8">
+    <main className="min-h-screen bg-background flex flex-col items-center px-4 py-8">
       {/* Header */}
       <header className="w-full max-w-md text-center mb-6">
-        <h1 className="text-xl font-bold text-slate-900">
-          Παρουσιολόγιο Εργοταξίου
+        <h1 className="text-xl font-bold text-foreground">
+          {t('pageTitle')}
         </h1>
         {projectName && (
-          <p className="text-sm text-slate-500 mt-1">{projectName}</p>
+          <p className="text-sm text-muted-foreground mt-1">{projectName}</p>
         )}
         {validDate && (
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-muted-foreground/70 mt-0.5">
             {formatDateGreek(validDate)}
           </p>
         )}
@@ -191,19 +228,19 @@ export function CheckInClient({ token }: CheckInClientProps) {
         {/* VALIDATING */}
         {pageStatus === 'validating' && (
           <div className="flex flex-col items-center py-12">
-            <Spinner size="large" color="inherit" className="text-blue-500" />
-            <p className="mt-3 text-sm text-slate-500">Επαλήθευση QR code...</p>
+            <Spinner size="large" color="inherit" className={STATUS_CLASSES.info.spinnerText} />
+            <p className="mt-3 text-sm text-muted-foreground">{t('validatingQr')}</p>
           </div>
         )}
 
         {/* TOKEN INVALID */}
         {pageStatus === 'token_invalid' && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-            <XCircle className="h-10 w-10 text-red-500 mx-auto" />
-            <h2 className="mt-3 text-lg font-semibold text-red-800">
-              Μη έγκυρο QR Code
+          <div className={cn(STATUS_CLASSES.error.containerBg, STATUS_CLASSES.error.containerBorder, 'rounded-lg p-6 text-center')}>
+            <XCircle className={cn('h-10 w-10 mx-auto', STATUS_CLASSES.error.icon)} />
+            <h2 className={cn('mt-3 text-lg font-semibold', STATUS_CLASSES.error.title)}>
+              {t('invalidQrTitle')}
             </h2>
-            <p className="mt-2 text-sm text-red-600">{tokenError}</p>
+            <p className={cn('mt-2 text-sm', STATUS_CLASSES.error.body)}>{tokenError}</p>
           </div>
         )}
 
@@ -211,49 +248,49 @@ export function CheckInClient({ token }: CheckInClientProps) {
         {(pageStatus === 'ready' || pageStatus === 'submitting') && (
           <>
             {/* GPS Status */}
-            <div className="bg-white border border-slate-200 rounded-lg p-4">
+            <div className="bg-card border border-border rounded-lg p-4">
               <div className="flex items-center gap-3">
                 <div className={cn(
                   'flex items-center justify-center w-10 h-10 rounded-full',
-                  gpsStatus === 'granted' ? 'bg-green-100' : 'bg-slate-100'
+                  gpsStatus === 'granted' ? STATUS_CLASSES.gpsGranted.bg : 'bg-muted'
                 )}>
                   {gpsStatus === 'requesting' ? (
-                    <Spinner color="inherit" className="text-blue-500" />
+                    <Spinner color="inherit" className={STATUS_CLASSES.info.spinnerText} />
                   ) : gpsStatus === 'granted' ? (
-                    <MapPin className="h-5 w-5 text-green-600" />
+                    <MapPin className={cn('h-5 w-5', STATUS_CLASSES.gpsGranted.text)} />
                   ) : (
-                    <Navigation className="h-5 w-5 text-slate-400" />
+                    <Navigation className="h-5 w-5 text-muted-foreground" />
                   )}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-slate-700">Τοποθεσία GPS</p>
+                  <p className="text-sm font-medium text-foreground">{t('gpsLocation')}</p>
                   {gpsStatus === 'idle' && (
                     <button
                       onClick={requestPosition}
-                      className="text-xs text-blue-600 hover:underline"
+                      className={cn('text-xs hover:underline', STATUS_CLASSES.info.link)}
                     >
-                      Ενεργοποίηση GPS
+                      {t('enableGps')}
                     </button>
                   )}
                   {gpsStatus === 'requesting' && (
-                    <p className="text-xs text-slate-400">Αναζήτηση τοποθεσίας...</p>
+                    <p className="text-xs text-muted-foreground">{t('searchingLocation')}</p>
                   )}
                   {gpsStatus === 'granted' && position && (
-                    <p className="text-xs text-green-600">
-                      Ακρίβεια: ±{Math.round(position.accuracy)}m
+                    <p className={cn('text-xs', STATUS_CLASSES.gpsGranted.text)}>
+                      {t('accuracy', { meters: Math.round(position.accuracy) })}
                     </p>
                   )}
                   {(gpsStatus === 'denied' || gpsStatus === 'error') && (
-                    <p className="text-xs text-amber-600">{gpsError}</p>
+                    <p className={cn('text-xs', STATUS_CLASSES.warning.body)}>{gpsError}</p>
                   )}
                 </div>
               </div>
             </div>
 
             {/* AMKA Input */}
-            <div className="bg-white border border-slate-200 rounded-lg p-4">
-              <label htmlFor="amka-input" className="block text-sm font-medium text-slate-700 mb-2">
-                ΑΜΚΑ (Αριθμός Μητρώου Κοινωνικής Ασφάλισης)
+            <div className="bg-card border border-border rounded-lg p-4">
+              <label htmlFor="amka-input" className="block text-sm font-medium text-foreground mb-2">
+                {t('amkaLabel')}
               </label>
               <input
                 id="amka-input"
@@ -263,19 +300,19 @@ export function CheckInClient({ token }: CheckInClientProps) {
                 maxLength={11}
                 value={amka}
                 onChange={(e) => setAmka(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                placeholder="Εισάγετε 11ψήφιο ΑΜΚΑ"
-                className="w-full px-3 py-3 border border-slate-300 rounded-md text-lg font-mono tracking-wider text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder={t('amkaPlaceholder')}
+                className="w-full px-3 py-3 border border-border rounded-md text-lg font-mono tracking-wider text-center focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
               />
               {amka.length > 0 && amka.length < 11 && (
-                <p className="text-xs text-amber-500 mt-1">
-                  {11 - amka.length} ψηφία ακόμα
+                <p className={cn('text-xs mt-1', STATUS_CLASSES.warning.icon)}>
+                  {t('digitsRemaining', { count: 11 - amka.length })}
                 </p>
               )}
             </div>
 
             {/* Event Type Toggle */}
-            <div className="bg-white border border-slate-200 rounded-lg p-4">
-              <p className="text-sm font-medium text-slate-700 mb-2">Τύπος Ενέργειας</p>
+            <div className="bg-card border border-border rounded-lg p-4">
+              <p className="text-sm font-medium text-foreground mb-2">{t('eventTypeLabel')}</p>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -283,11 +320,11 @@ export function CheckInClient({ token }: CheckInClientProps) {
                   className={cn(
                     'py-3 rounded-md text-sm font-medium border transition-colors',
                     eventType === 'check_in'
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                      ? cn(STATUS_CLASSES.info.buttonBg, 'text-white', getStatusColor('pending', 'border'))
+                      : 'bg-card text-foreground border-border hover:bg-accent'
                   )}
                 >
-                  Προσέλευση
+                  {t('checkIn')}
                 </button>
                 <button
                   type="button"
@@ -295,27 +332,27 @@ export function CheckInClient({ token }: CheckInClientProps) {
                   className={cn(
                     'py-3 rounded-md text-sm font-medium border transition-colors',
                     eventType === 'check_out'
-                      ? 'bg-orange-600 text-white border-orange-600'
-                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                      ? cn(getStatusColor('reserved', 'bg'), 'text-white', getStatusColor('reserved', 'border'))
+                      : 'bg-card text-foreground border-border hover:bg-accent'
                   )}
                 >
-                  Αποχώρηση
+                  {t('checkOut')}
                 </button>
               </div>
             </div>
 
             {/* Photo Capture (Optional) */}
-            <div className="bg-white border border-slate-200 rounded-lg p-4">
+            <div className="bg-card border border-border rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-medium text-slate-700">
-                  Φωτογραφία <span className="text-slate-400">(προαιρετικά)</span>
+                <p className="text-sm font-medium text-foreground">
+                  {t('photoLabel')} <span className="text-muted-foreground">{t('photoOptional')}</span>
                 </p>
                 {photoPreviewUrl && (
                   <button
                     onClick={clearPhoto}
-                    className="text-xs text-red-500 hover:underline"
+                    className={cn('text-xs hover:underline', STATUS_CLASSES.error.icon)}
                   >
-                    Αφαίρεση
+                    {t('removePhoto')}
                   </button>
                 )}
               </div>
@@ -323,7 +360,7 @@ export function CheckInClient({ token }: CheckInClientProps) {
               {photoPreviewUrl ? (
                 <img
                   src={photoPreviewUrl}
-                  alt="Captured photo"
+                  alt={t('capturedPhotoAlt')}
                   className="w-full h-40 object-cover rounded-md"
                 />
               ) : (
@@ -331,10 +368,10 @@ export function CheckInClient({ token }: CheckInClientProps) {
                   type="button"
                   onClick={capturePhoto}
                   disabled={photoStatus === 'capturing'}
-                  className="w-full py-8 border-2 border-dashed border-slate-300 rounded-md flex flex-col items-center gap-2 text-slate-500 hover:bg-slate-50 transition-colors"
+                  className="w-full py-8 border-2 border-dashed border-border rounded-md flex flex-col items-center gap-2 text-muted-foreground hover:bg-accent transition-colors"
                 >
                   <Camera className="h-6 w-6" />
-                  <span className="text-sm">Λήψη Φωτογραφίας</span>
+                  <span className="text-sm">{t('capturePhoto')}</span>
                 </button>
               )}
 
@@ -351,11 +388,10 @@ export function CheckInClient({ token }: CheckInClientProps) {
             </div>
 
             {/* Privacy Notice */}
-            <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
-              <p className="text-xs text-blue-700 leading-relaxed">
+            <div className={cn(STATUS_CLASSES.info.containerBg, STATUS_CLASSES.info.containerBorder, 'rounded-lg p-3')}>
+              <p className={cn('text-xs leading-relaxed', STATUS_CLASSES.info.body)}>
                 <AlertTriangle className="h-3 w-3 inline mr-1" />
-                Η τοποθεσία σας καταγράφεται μόνο κατά την προσέλευση/αποχώρηση
-                για λόγους ασφάλειας εργοταξίου. Δεν γίνεται συνεχής παρακολούθηση.
+                {t('privacyNotice')}
               </p>
             </div>
 
@@ -367,23 +403,23 @@ export function CheckInClient({ token }: CheckInClientProps) {
               className={cn(
                 'w-full py-4 rounded-lg text-white font-semibold text-lg transition-colors',
                 amka.length !== 11
-                  ? 'bg-slate-300 cursor-not-allowed'
+                  ? 'bg-muted cursor-not-allowed'
                   : pageStatus === 'submitting'
-                  ? 'bg-blue-400 cursor-wait'
+                  ? cn(STATUS_CLASSES.info.buttonBgHover, 'cursor-wait')
                   : eventType === 'check_in'
-                  ? 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800'
-                  : 'bg-orange-600 hover:bg-orange-700 active:bg-orange-800'
+                  ? cn(STATUS_CLASSES.info.buttonBg, 'hover:opacity-90 active:opacity-80')
+                  : cn(getStatusColor('reserved', 'bg'), 'hover:opacity-90 active:opacity-80')
               )}
             >
               {pageStatus === 'submitting' ? (
                 <span className="flex items-center justify-center gap-2">
                   <Spinner color="inherit" />
-                  Καταχώρηση...
+                  {t('submitting')}
                 </span>
               ) : eventType === 'check_in' ? (
-                'Καταχώρηση Προσέλευσης'
+                t('submitCheckIn')
               ) : (
-                'Καταχώρηση Αποχώρησης'
+                t('submitCheckOut')
               )}
             </button>
           </>
@@ -391,30 +427,33 @@ export function CheckInClient({ token }: CheckInClientProps) {
 
         {/* SUCCESS */}
         {pageStatus === 'success' && result && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
-            <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto" />
-            <h2 className="mt-3 text-lg font-semibold text-green-800">
-              Καταχωρήθηκε!
+          <div className={cn(STATUS_CLASSES.success.containerBg, STATUS_CLASSES.success.containerBorder, 'rounded-lg p-6 text-center')}>
+            <CheckCircle2 className={cn('h-12 w-12 mx-auto', STATUS_CLASSES.success.icon)} />
+            <h2 className={cn('mt-3 text-lg font-semibold', STATUS_CLASSES.success.title)}>
+              {t('successTitle')}
             </h2>
             {result.workerName && (
-              <p className="mt-1 text-sm text-green-700">{result.workerName}</p>
+              <p className={cn('mt-1 text-sm', STATUS_CLASSES.success.body)}>{result.workerName}</p>
             )}
             {result.geofence && (
-              <p className="mt-2 text-sm text-green-600">
-                {result.geofence.distanceMeters}m από το κέντρο εργοταξίου
-                {result.geofence.inside ? ' (εντός ακτίνας)' : ' (εκτός ακτίνας)'}
+              <p className={cn('mt-2 text-sm', STATUS_CLASSES.success.body)}>
+                {t('distanceFromCenter', { distance: result.geofence.distanceMeters })}
+                {result.geofence.inside ? ` ${t('insideRadius')}` : ` ${t('outsideRadius')}`}
               </p>
             )}
             {result.timestamp && (
-              <p className="mt-1 text-xs text-green-500">
+              <p className={cn('mt-1 text-xs', STATUS_CLASSES.success.body)}>
                 {new Date(result.timestamp).toLocaleTimeString('el-GR')}
               </p>
             )}
             {result.geofence && !result.geofence.inside && (
-              <div className="mt-3 bg-amber-50 border border-amber-200 rounded-md p-3">
-                <AlertTriangle className="h-4 w-4 text-amber-500 inline mr-1" />
-                <span className="text-xs text-amber-700">
-                  Βρίσκεστε εκτός της ζώνης εργοταξίου ({result.geofence.distanceMeters}m / {result.geofence.radiusMeters}m)
+              <div className={cn(STATUS_CLASSES.warning.containerBg, STATUS_CLASSES.warning.containerBorder, 'mt-3 rounded-md p-3')}>
+                <AlertTriangle className={cn('h-4 w-4 inline mr-1', STATUS_CLASSES.warning.icon)} />
+                <span className={cn('text-xs', STATUS_CLASSES.warning.body)}>
+                  {t('outsideZoneWarning', {
+                    distance: result.geofence.distanceMeters,
+                    radius: result.geofence.radiusMeters,
+                  })}
                 </span>
               </div>
             )}
@@ -423,17 +462,17 @@ export function CheckInClient({ token }: CheckInClientProps) {
 
         {/* ERROR */}
         {pageStatus === 'error' && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-            <XCircle className="h-10 w-10 text-red-500 mx-auto" />
-            <h2 className="mt-3 text-lg font-semibold text-red-800">
-              Αποτυχία Καταχώρησης
+          <div className={cn(STATUS_CLASSES.error.containerBg, STATUS_CLASSES.error.containerBorder, 'rounded-lg p-6 text-center')}>
+            <XCircle className={cn('h-10 w-10 mx-auto', STATUS_CLASSES.error.icon)} />
+            <h2 className={cn('mt-3 text-lg font-semibold', STATUS_CLASSES.error.title)}>
+              {t('errorTitle')}
             </h2>
-            <p className="mt-2 text-sm text-red-600">{submitError || result?.error}</p>
+            <p className={cn('mt-2 text-sm', STATUS_CLASSES.error.body)}>{submitError || result?.error}</p>
             <button
               onClick={() => setPageStatus('ready')}
-              className="mt-4 px-6 py-2 bg-red-600 text-white rounded-md text-sm hover:bg-red-700"
+              className={cn('mt-4 px-6 py-2 text-white rounded-md text-sm hover:opacity-90', STATUS_CLASSES.error.buttonBg)}
             >
-              Δοκιμάστε ξανά
+              {t('tryAgain')}
             </button>
           </div>
         )}
@@ -442,47 +481,3 @@ export function CheckInClient({ token }: CheckInClientProps) {
   );
 }
 
-// =============================================================================
-// HELPERS
-// =============================================================================
-
-function formatDateGreek(dateStr: string): string {
-  try {
-    const date = new Date(dateStr + 'T00:00:00');
-    return formatDate(date, {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-  } catch {
-    return dateStr;
-  }
-}
-
-function getTokenErrorMessage(reason?: string): string {
-  switch (reason) {
-    case 'token_expired':
-      return 'Το QR code έχει λήξει. Ζητήστε νέο από τον υπεύθυνο.';
-    case 'token_not_found_or_inactive':
-      return 'Το QR code δεν βρέθηκε ή έχει ακυρωθεί.';
-    case 'invalid_signature':
-      return 'Μη έγκυρο QR code. Ελέγξτε ότι σκανάρετε το σωστό.';
-    case 'malformed_token':
-      return 'Το QR code είναι κατεστραμμένο.';
-    default:
-      return 'Μη έγκυρο QR code. Δοκιμάστε ξανά ή ζητήστε βοήθεια.';
-  }
-}
-
-function getCheckInErrorMessage(error?: string | null): string {
-  if (!error) return 'Άγνωστο σφάλμα';
-
-  if (error.includes('worker_not_found')) {
-    return 'Ο ΑΜΚΑ δεν βρέθηκε στους εργαζόμενους αυτού του εργοταξίου.';
-  }
-  if (error.includes('invalid_token')) {
-    return 'Το QR code δεν είναι πλέον έγκυρο.';
-  }
-  return 'Σφάλμα κατά την καταχώρηση. Δοκιμάστε ξανά.';
-}

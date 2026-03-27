@@ -50,7 +50,8 @@ export const SUPPORTED_NAMESPACES = [
   'accounting', // 🏢 Accounting subapp (invoices, journal, VAT, tax, assets, documents)
   'banking',    // 🏢 Banking module — bank accounts, IBAN, selectors (ADR-172)
   'addresses',  // 🏢 Shared address system — forms, cards, maps (ADR-172)
-  'payments'    // 🏢 Payment plans, installments, loans, cheques, reports (ADR-234)
+  'payments',   // 🏢 Payment plans, installments, loans, cheques, reports (ADR-234)
+  'attendance'  // 🏢 Worker attendance check-in/out (ADR-170)
 ] as const;
 export type Namespace = typeof SUPPORTED_NAMESPACES[number];
 
@@ -173,6 +174,9 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
         case 'payments':
           translations = await import('./locales/el/payments.json');
           break;
+        case 'attendance':
+          translations = await import('./locales/el/attendance.json');
+          break;
         default:
           logger.warn(`Namespace ${namespace} not found for language ${language}`);
           return {};
@@ -275,6 +279,9 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
           break;
         case 'payments':
           translations = await import('./locales/en/payments.json');
+          break;
+        case 'attendance':
+          translations = await import('./locales/en/attendance.json');
           break;
         default:
           logger.warn(`Namespace ${namespace} not found for language ${language}`);

@@ -446,7 +446,10 @@
       },
       "selected": "Selected:",
       "amka": "AMKA:",
-      "noResults": "No results found"
+      "noResults": "No results found",
+      "searchPlaceholder": "Search by name, specialty or AMKA...",
+      "searchError": "Error during search",
+      "noName": "No Name"
     },
     "efka": {
       "title": "Project Declaration — EFKA",

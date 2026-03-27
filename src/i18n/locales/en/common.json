@@ -1447,6 +1447,20 @@
       "conflictWarningMessage": "«{{name}}» is already assigned as {{existingRole}}. Are you sure you want them to also serve as {{targetRole}}?",
       "conflictWarningLaw": "Lawyers' Code of Ethics, Art.37: Providing assistance to both parties is prohibited. Simultaneously representing seller and buyer constitutes a conflict of interest.",
       "assignAnyway": "Assign anyway",
+      "assign": "Assign",
+      "emailSent": "Email sent",
+      "emailFailed": "Failed to send email",
+      "conflictBlockPre": "The person",
+      "conflictBlockAlready": "is already assigned as",
+      "conflictBlockCannot": "They cannot simultaneously serve as",
+      "conflictWarningSure": "Are you sure you want them to also serve as",
+      "emailNotifyAssignTitle": "Send notification email",
+      "emailNotifyRemoveTitle": "Send cancellation email",
+      "emailNotifyAssignBody": "Would you like to send a notification email to «{{contactName}}» about the assignment of the role {{roleLabel}}?",
+      "emailNotifyRemoveBody": "Would you like to send a cancellation email to «{{contactName}}» about their removal from the role {{roleLabel}}?",
+      "emailNotifyYes": "Yes, send",
+      "emailNotifyNo": "No",
+      "addBrokerHint": "Add a broker from the project's Brokers tab",
       "unassigned": "Unassigned",
       "brokerageTitle": "Brokerage Agreements",
       "noBrokerage": "No brokerage agreements.",
@@ -1514,8 +1528,59 @@
       "serviceNotBuyer": "Service contacts cannot be buyers"
     },
     "appurtenances": {
+      "title": "Appurtenances",
       "activeRental": "Active rental",
-      "noArea": "No area (sqm) — cannot be included"
+      "noArea": "No area (sqm) — cannot be included",
+      "pricePlaceholder": "Price €",
+      "grandTotal": "Total (unit + appurtenances)"
+    },
+    "commercialStatus": {
+      "sold": "Sold",
+      "reserved": "Reserved"
+    },
+    "dialogs": {
+      "changePrice": {
+        "title": "Change Price",
+        "description": "Set the asking price for the unit",
+        "askingPrice": "Asking price (€)",
+        "hint": "The unit will automatically be set to «For Sale» status",
+        "placeholder": "e.g. 150000"
+      },
+      "reserve": {
+        "title": "Reserve Unit",
+        "description": "Enter reservation details",
+        "deposit": "Deposit (€)",
+        "depositPlaceholder": "e.g. 5000",
+        "noEmailWarning": "The buyer has no email — no reservation confirmation will be sent. Please update their contact card.",
+        "newContact": "Create new contact",
+        "confirm": "Reserve",
+        "unknownError": "Error during reservation"
+      },
+      "sell": {
+        "title": "Sell Unit",
+        "description": "Confirm the final sale price",
+        "askingWas": "Asking price",
+        "finalPrice": "Final sale price (€)",
+        "finalPricePlaceholder": "e.g. 145000",
+        "discount": "Discount",
+        "broker": "Broker (optional)",
+        "noBroker": "No broker",
+        "commissionPreview": "Commission",
+        "warning": "The unit will be set to «Sold» status and will no longer appear in the available listings.",
+        "confirm": "Confirm Sale",
+        "unknownError": "Error during sale"
+      },
+      "revert": {
+        "title": "Revert Unit",
+        "description": "Cancel sale or reservation — the unit returns to «For Sale» status",
+        "currentStatus": "Current status",
+        "buyer": "Buyer",
+        "finalPrice": "Sale price",
+        "warning": "Buyer details, deposit and final price will be deleted. The asking price is preserved.",
+        "confirm": "Revert to For Sale",
+        "creditReasonSale": "Sale cancellation",
+        "creditReasonReservation": "Reservation cancellation"
+      }
     },
     "quickFilters": {
       "allStatuses": "All",
@@ -2215,5 +2280,15 @@
     "error": "Save failed",
     "retry": "Retry",
     "lastSaved": "Last saved"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving...",
+    "error": "Error",
+    "edit": "Edit",
+    "understood": "I understand",
+    "viewContact": "View contact",
+    "unknownError": "Unknown error"
   }
 }

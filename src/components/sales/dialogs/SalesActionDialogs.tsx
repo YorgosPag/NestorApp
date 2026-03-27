@@ -45,6 +45,9 @@ import type { BrokerageAgreement } from '@/types/brokerage';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('SalesActionDialogs');
 import type { Unit } from '@/types/unit';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 /** Resolve projectId — Unit.project is the canonical field */
 function resolveProjectId(unit: Unit): string {
@@ -105,6 +108,7 @@ interface BaseDialogProps {
 // =============================================================================
 
 export function ChangePriceDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const [askingPrice, setAskingPrice] = useState<string>(
@@ -174,13 +178,13 @@ export function ChangePriceDialog({ unit, open, onOpenChange, onSuccess }: BaseD
             step={1000}
             value={askingPrice}
             onChange={(e) => setAskingPrice(e.target.value)}
-            placeholder="π.χ. 150000"
+            placeholder={t('sales.dialogs.changePrice.placeholder', { defaultValue: 'π.χ. 150000' })}
             className="text-right"
             autoFocus
           />
-          <p className="text-xs text-muted-foreground">
+          <p className={cn("text-xs", colors.text.muted)}>
             {t('sales.dialogs.changePrice.hint', {
-              defaultValue: 'Η μονάδα θα μπει αυτόματα σε κατάσταση "Προς πώληση"',
+              defaultValue: 'Η μονάδα θα μπει αυτόματα σε κατάσταση «Προς πώληση»',
             })}
           </p>
         </fieldset>
@@ -208,6 +212,7 @@ export function ChangePriceDialog({ unit, open, onOpenChange, onSuccess }: BaseD
 // =============================================================================
 
 export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const [deposit, setDeposit] = useState<string>('');
@@ -361,7 +366,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
     } catch (err: unknown) {
       const errorObj = err as { message?: string; error?: string };
       const rawMsg = errorObj?.error ?? errorObj?.message ?? '';
-      const msg = rawMsg ? translateServerError(rawMsg, t) : t('common.unknownError', { defaultValue: 'Σφάλμα κατά την κράτηση' });
+      const msg = rawMsg ? translateServerError(rawMsg, t) : t('sales.dialogs.reserve.unknownError', { defaultValue: 'Σφάλμα κατά την κράτηση' });
       setSaveError(msg);
       logger.warn('Reserve failed', { error: rawMsg });
     } finally {
@@ -406,7 +411,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
               type="button"
               variant="ghost"
               size="sm"
-              className="gap-1 text-xs text-muted-foreground"
+              className={cn("gap-1 text-xs", colors.text.muted)}
               onClick={handleOpenNewContact}
             >
               <UserPlus className={iconSizes.xs} />
@@ -423,7 +428,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
                 step={500}
                 value={deposit}
                 onChange={(e) => setDeposit(e.target.value)}
-                placeholder="π.χ. 5000"
+                placeholder={t('sales.dialogs.reserve.depositPlaceholder', { defaultValue: 'π.χ. 5000' })}
                 className="text-right"
               />
             </fieldset>
@@ -505,6 +510,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
 // =============================================================================
 
 export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const [finalPrice, setFinalPrice] = useState<string>(
@@ -669,7 +675,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
     } catch (err: unknown) {
       const errorObj = err as { message?: string; error?: string };
       const rawMsg = errorObj?.error ?? errorObj?.message ?? '';
-      const msg = rawMsg ? translateServerError(rawMsg, t) : t('common.unknownError', { defaultValue: 'Σφάλμα κατά την πώληση' });
+      const msg = rawMsg ? translateServerError(rawMsg, t) : t('sales.dialogs.sell.unknownError', { defaultValue: 'Σφάλμα κατά την πώληση' });
       setSaveError(msg);
       logger.warn('Sell failed', { error: rawMsg });
     } finally {
@@ -716,7 +722,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
           )}
 
           {askingPrice && (
-            <p className="text-sm text-muted-foreground">
+            <p className={cn("text-sm", colors.text.muted)}>
               {t('sales.dialogs.sell.askingWas', { defaultValue: 'Ζητούμενη τιμή' })}:{' '}
               <span className="font-medium text-foreground">
                 {formatCurrency(askingPrice)}
@@ -733,7 +739,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
             step={1000}
             value={finalPrice}
             onChange={(e) => setFinalPrice(e.target.value)}
-            placeholder="π.χ. 145000"
+            placeholder={t('sales.dialogs.sell.finalPricePlaceholder', { defaultValue: 'π.χ. 145000' })}
             className="text-right"
             autoFocus
           />
@@ -781,13 +787,13 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
                   commissionFixedAmount: agr.commissionFixedAmount,
                 });
                 return (
-                  <p className="text-xs text-muted-foreground">
+                  <p className={cn("text-xs", colors.text.muted)}>
                     {t('sales.dialogs.sell.commissionPreview', { defaultValue: 'Προμήθεια' })}:{' '}
                     <span className="font-medium">{formatCurrency(comm)}</span>
                   </p>
                 );
               })()}
-              <p className="text-xs text-muted-foreground">
+              <p className={cn("text-xs", colors.text.muted)}>
                 {t('sales.legal.addBrokerHint', { defaultValue: 'Προσθέστε μεσίτη από το tab Μεσίτες του έργου' })}
               </p>
             </fieldset>
@@ -795,7 +801,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
 
           {/* Hint when no agreements exist */}
           {brokerAgreements.length === 0 && (
-            <p className="text-xs text-muted-foreground">
+            <p className={cn("text-xs", colors.text.muted)}>
               {t('sales.legal.addBrokerHint', { defaultValue: 'Προσθέστε μεσίτη από το tab Μεσίτες του έργου' })}
             </p>
           )}
@@ -811,7 +817,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
             />
           )}
 
-          <p className="text-xs text-muted-foreground">
+          <p className={cn("text-xs", colors.text.muted)}>
             {t('sales.dialogs.sell.warning', {
               defaultValue: 'Η μονάδα θα μεταβεί σε κατάσταση "Πωλήθηκε" και δεν θα εμφανίζεται πλέον στις διαθέσιμες.',
             })}
@@ -871,6 +877,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
 // =============================================================================
 
 export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const [saving, setSaving] = useState(false);
@@ -917,7 +924,9 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
       const creditAmount = wasSold
         ? (unit.commercial?.finalPrice ?? depositToRefund)
         : depositToRefund;
-      const creditReason = wasSold ? 'Ακύρωση πώλησης' : 'Ακύρωση κράτησης';
+      const creditReason = wasSold
+        ? t('sales.dialogs.revert.creditReasonSale', { defaultValue: 'Ακύρωση πώλησης' })
+        : t('sales.dialogs.revert.creditReasonReservation', { defaultValue: 'Ακύρωση κράτησης' });
 
       // ADR-199: Build multi-line credit items if appurtenances exist
       const unitName = unit.name ?? unit.unitName ?? '';
@@ -992,14 +1001,14 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
           </p>
 
           {unit.commercial?.buyerContactId && (
-            <p className="text-sm text-muted-foreground">
+            <p className={cn("text-sm", colors.text.muted)}>
               {t('sales.dialogs.revert.buyer', { defaultValue: 'Αγοραστής' })}:{' '}
               <span className="font-medium text-foreground">{unit.commercial.buyerContactId}</span>
             </p>
           )}
 
           {unit.commercial?.finalPrice && (
-            <p className="text-sm text-muted-foreground">
+            <p className={cn("text-sm", colors.text.muted)}>
               {t('sales.dialogs.revert.finalPrice', { defaultValue: 'Τιμή πώλησης' })}:{' '}
               <span className="font-medium text-foreground">
                 {formatCurrency(unit.commercial.finalPrice)}

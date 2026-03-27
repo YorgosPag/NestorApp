@@ -34,6 +34,9 @@ import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown
 import type { EntityAssociationLink } from '@/types/entity-associations';
 import { clientSafeFireAndForget } from '@/lib/safe-fire-and-forget';
 import type { LegalContract, LegalProfessionalRole } from '@/types/legal-contracts';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // TYPES
@@ -155,6 +158,7 @@ function getRoleLabel(role: LegalProfessionalRole): string {
 // ============================================================================
 
 export function ProfessionalsCard({
+  const colors = useSemanticColors();
   unitId,
   associations,
   contracts,
@@ -341,7 +345,7 @@ export function ProfessionalsCard({
     <>
       <section className="rounded-lg border bg-card p-3 space-y-2">
         <h3 className="text-sm font-semibold flex items-center gap-1.5">
-          <User className="h-4 w-4 text-muted-foreground" />
+          <User className={cn("h-4 w-4", colors.text.muted)} />
           {t('sales.legal.professionalsTitle', { defaultValue: 'Νομικοί Επαγγελματίες' })}
         </h3>
 
@@ -353,8 +357,8 @@ export function ProfessionalsCard({
             return (
               <li key={slot.role} className="space-y-1">
                 <article className="flex items-center gap-2 text-sm">
-                  <slot.icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  <span className="text-muted-foreground min-w-0 shrink-0">
+                  <slot.icon className={cn("h-3.5 w-3.5 shrink-0", colors.text.muted)} />
+                  <span className={cn("min-w-0 shrink-0", colors.text.muted)}>
                     {t(slot.labelKey, { defaultValue: slot.defaultLabel })}:
                   </span>
 
@@ -422,7 +426,7 @@ export function ProfessionalsCard({
         </ul>
 
         {saving && (
-          <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+          <p className={cn("text-[10px] flex items-center gap-1", colors.text.muted)}>
             <Loader2 className="h-3 w-3 animate-spin" />
             {t('common.saving', { defaultValue: 'Αποθήκευση...' })}
           </p>
@@ -452,7 +456,7 @@ export function ProfessionalsCard({
                   {t('sales.legal.conflictBlockCannot', { defaultValue: 'Δεν μπορεί να αναλάβει ταυτόχρονα και τον ρόλο' })}{' '}
                   <strong>{pendingAssignment?.targetRoleLabel}</strong>.
                 </p>
-                <p className="text-muted-foreground italic">
+                <p className={cn("italic", colors.text.muted)}>
                   {t('sales.legal.conflictBlockLaw', {
                     defaultValue: 'Ν.2830/2000, Άρ.22§2: Ο διορισμός ως συμβολαιογράφος συνεπάγεται αυτοδίκαια αποβολή της ιδιότητας του δικηγόρου. Άρ.37§1: Τα έργα του συμβολαιογράφου είναι ασυμβίβαστα με κάθε άλλη επαγγελματική δραστηριότητα.',
                   })}
@@ -491,7 +495,7 @@ export function ProfessionalsCard({
                   {t('sales.legal.conflictWarningSure', { defaultValue: 'Είστε σίγουροι ότι θέλετε να αναλάβει και τον ρόλο' })}{' '}
                   <strong>{pendingAssignment?.targetRoleLabel}</strong>;
                 </p>
-                <p className="text-muted-foreground italic">
+                <p className={cn("italic", colors.text.muted)}>
                   {t('sales.legal.conflictWarningLaw', {
                     defaultValue: 'Κώδικας Δεοντολογίας Δικηγόρων, Άρ.37: Απαγορεύεται η παροχή βοήθειας σε αμφότερα τα μέρη. Η ταυτόχρονη εκπροσώπηση πωλητή και αγοραστή αποτελεί σύγκρουση συμφερόντων.',
                   })}
@@ -522,32 +526,28 @@ export function ProfessionalsCard({
             <AlertDialogTitle className="flex items-center gap-2">
               <Mail className={`h-5 w-5 ${pendingEmail?.type === 'removal' ? 'text-destructive' : 'text-blue-600'}`} />
               {pendingEmail?.type === 'removal'
-                ? 'Αποστολή email ακύρωσης'
-                : 'Αποστολή email ειδοποίησης'}
+                ? t('sales.legal.emailNotifyRemoveTitle', { defaultValue: 'Αποστολή email ακύρωσης' })
+                : t('sales.legal.emailNotifyAssignTitle', { defaultValue: 'Αποστολή email ειδοποίησης' })}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <p className="text-sm">
-                {pendingEmail?.type === 'removal' ? (
-                  <>
-                    Θέλετε να σταλεί email ακύρωσης στον/στην{' '}
-                    <strong>«{pendingEmail?.contactName}»</strong>{' '}
-                    για την αφαίρεσή του/της από τον ρόλο{' '}
-                    <strong>{pendingEmail?.roleLabel}</strong>;
-                  </>
-                ) : (
-                  <>
-                    Θέλετε να σταλεί email ειδοποίησης στον/στην{' '}
-                    <strong>«{pendingEmail?.contactName}»</strong>{' '}
-                    για την ανάθεση του ρόλου{' '}
-                    <strong>{pendingEmail?.roleLabel}</strong>;
-                  </>
-                )}
+                {pendingEmail?.type === 'removal'
+                  ? t('sales.legal.emailNotifyRemoveBody', {
+                      defaultValue: 'Θέλετε να σταλεί email ακύρωσης στον/στην «{{contactName}}» για την αφαίρεσή του/της από τον ρόλο {{roleLabel}};',
+                      contactName: pendingEmail?.contactName ?? '',
+                      roleLabel: pendingEmail?.roleLabel ?? '',
+                    })
+                  : t('sales.legal.emailNotifyAssignBody', {
+                      defaultValue: 'Θέλετε να σταλεί email ειδοποίησης στον/στην «{{contactName}}» για την ανάθεση του ρόλου {{roleLabel}};',
+                      contactName: pendingEmail?.contactName ?? '',
+                      roleLabel: pendingEmail?.roleLabel ?? '',
+                    })}
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>
-              Όχι
+              {t('sales.legal.emailNotifyNo', { defaultValue: 'Όχι' })}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
@@ -555,7 +555,7 @@ export function ProfessionalsCard({
                 setPendingEmail(null);
               }}
             >
-              Ναι, αποστολή
+              {t('sales.legal.emailNotifyYes', { defaultValue: 'Ναι, αποστολή' })}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

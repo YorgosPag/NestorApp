@@ -23,8 +23,9 @@ import { Search, UserPlus } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { AssociationService } from '@/services/association.service';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
@@ -58,6 +59,7 @@ export function WorkerAssignmentDialog({
 }: WorkerAssignmentDialogProps) {
   const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
+  const typography = useTypography();
   const spacing = useSpacingTokens();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -98,7 +100,7 @@ export function WorkerAssignmentDialog({
 
       const mapped: SearchResult[] = (data?.contacts || []).map(c => ({
         id: c.id,
-        name: `${c.firstName} ${c.lastName}`.trim() || 'Χωρίς Όνομα',
+        name: `${c.firstName} ${c.lastName}`.trim() || t('ika.workersTab.noName', { defaultValue: 'Χωρίς Όνομα' }),
         specialty: c.specialty,
         amka: c.amka,
       }));
@@ -106,7 +108,7 @@ export function WorkerAssignmentDialog({
       setResults(mapped);
     } catch (err) {
       logger.error('Worker search failed', { error: err });
-      setSearchError('Σφάλμα κατά την αναζήτηση');
+      setSearchError(t('ika.workersTab.searchError', { defaultValue: 'Σφάλμα κατά την αναζήτηση' }));
     } finally {
       setIsSearching(false);
     }
@@ -163,7 +165,7 @@ export function WorkerAssignmentDialog({
               </Label>
               <Input
                 id="worker-search"
-                placeholder="Αναζήτηση με όνομα, ειδικότητα ή ΑΜΚΑ..."
+                placeholder={t('ika.workersTab.searchPlaceholder', { defaultValue: 'Αναζήτηση με όνομα, ειδικότητα ή ΑΜΚΑ...' })}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -201,13 +203,13 @@ export function WorkerAssignmentDialog({
                   tabIndex={0}
                 >
                   <div>
-                    <p className="text-sm font-medium">{contact.name}</p>
+                    <p className={typography.label.sm}>{contact.name}</p>
                     {contact.specialty && (
-                      <p className="text-xs text-muted-foreground">{contact.specialty}</p>
+                      <p className={typography.special.tertiary}>{contact.specialty}</p>
                     )}
                   </div>
                   {contact.amka && (
-                    <span className="text-xs text-muted-foreground">
+                    <span className={typography.special.tertiary}>
                       {t('ika.workersTab.amka')} {contact.amka}
                     </span>
                   )}
@@ -217,13 +219,13 @@ export function WorkerAssignmentDialog({
           )}
 
           {searchError && (
-            <p className="text-sm text-destructive text-center py-2">
+            <p className={cn(typography.body.sm, "text-destructive text-center py-2")}>
               {searchError}
             </p>
           )}
 
           {results.length === 0 && searchTerm.trim().length >= 2 && !isSearching && !searchError && (
-            <p className="text-sm text-muted-foreground text-center py-2">
+            <p className={cn(typography.special.secondary, "text-center py-2")}>
               {t('ika.workersTab.noResults')}
             </p>
           )}
