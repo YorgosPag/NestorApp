@@ -1,0 +1,92 @@
+{
+  "dataDeletion": {
+    "title": "Data Deletion Instructions",
+    "lastUpdated": "Last updated:",
+    "lastUpdatedDate": "February 11, 2026",
+    "howToRequest": {
+      "title": "How to Request Data Deletion",
+      "intro": "If you would like us to delete your personal data from Nestor App CRM, please follow these steps:",
+      "step1": "Send an email to <strong>georgios.pagonis@gmail.com</strong> with the subject line \"Data Deletion Request\"",
+      "step2": "Include the platform you used to contact us (Facebook Messenger, Instagram, WhatsApp, or Telegram) and your username or phone number",
+      "step3": "We will process your request within 30 days and confirm deletion via email"
+    },
+    "whatWeDelete": {
+      "title": "What We Delete",
+      "item1": "All messages and conversation history",
+      "item2": "Your contact information and platform identifiers",
+      "item3": "Any associated CRM records"
+    },
+    "contact": {
+      "title": "Contact",
+      "text": "For questions about data deletion, contact us at: <strong>georgios.pagonis@gmail.com</strong>"
+    }
+  },
+  "privacyPolicy": {
+    "title": "Privacy Policy",
+    "lastUpdated": "Last updated:",
+    "lastUpdatedDate": "February 11, 2026",
+    "introduction": {
+      "title": "1. Introduction",
+      "content": "Nestor App CRM (\"we\", \"our\", \"us\") respects your privacy. This Privacy Policy explains how we collect, use, and protect your personal data when you interact with our application and services, including integrations with Facebook Messenger, Instagram, WhatsApp, and Telegram."
+    },
+    "dataWeCollect": {
+      "title": "2. Data We Collect",
+      "item1": "Messages you send to us through social media platforms (text content only)",
+      "item2": "Your platform user ID (e.g., Facebook PSID, Instagram IGSID, phone number)",
+      "item3": "Your publicly available profile name"
+    },
+    "howWeUse": {
+      "title": "3. How We Use Your Data",
+      "item1": "To respond to your inquiries and provide customer support",
+      "item2": "To manage business communications via our CRM system",
+      "item3": "To improve our services and response quality"
+    },
+    "dataSharing": {
+      "title": "4. Data Sharing",
+      "content": "We do not sell or share your personal data with third parties, except as required by law or to provide the services you requested (e.g., AI-powered responses via OpenAI)."
+    },
+    "dataRetention": {
+      "title": "5. Data Retention",
+      "content": "We retain your messages and contact information for as long as necessary to provide our services. You may request deletion of your data at any time."
+    },
+    "yourRights": {
+      "title": "6. Your Rights",
+      "content": "Under GDPR, you have the right to access, correct, or delete your personal data. Contact us at <strong>georgios.pagonis@gmail.com</strong> to exercise your rights."
+    },
+    "contact": {
+      "title": "7. Contact",
+      "text": "For privacy-related inquiries, contact us at: <strong>georgios.pagonis@gmail.com</strong>"
+    }
+  },
+  "termsOfService": {
+    "title": "Terms of Service",
+    "lastUpdated": "Last updated:",
+    "lastUpdatedDate": "February 11, 2026",
+    "acceptance": {
+      "title": "1. Acceptance",
+      "content": "By using Nestor App CRM services, including messaging through Facebook Messenger, Instagram, WhatsApp, or Telegram, you agree to these Terms of Service."
+    },
+    "services": {
+      "title": "2. Services",
+      "content": "Nestor App CRM provides business communication management, customer relationship management, and AI-assisted messaging services."
+    },
+    "userResponsibilities": {
+      "title": "3. User Responsibilities",
+      "item1": "Provide accurate information when communicating with us",
+      "item2": "Do not use our services for unlawful purposes",
+      "item3": "Respect the terms of the platform through which you contact us"
+    },
+    "limitation": {
+      "title": "4. Limitation of Liability",
+      "content": "Our services are provided \"as is\". We are not liable for any indirect, incidental, or consequential damages arising from the use of our services."
+    },
+    "changes": {
+      "title": "5. Changes",
+      "content": "We may update these terms at any time. Continued use of our services constitutes acceptance of the updated terms."
+    },
+    "contact": {
+      "title": "6. Contact",
+      "text": "For questions about these terms, contact us at: <strong>georgios.pagonis@gmail.com</strong>"
+    }
+  }
+}
