@@ -89,15 +89,15 @@ export class FileDeliveryHandler implements ToolHandler {
 
     if (sourceType === 'unit_photo') {
       const resolved = await this.resolveUnitPhotos(db, sourceId, ctx.isAdmin, contact);
-      if ('error' in resolved) return resolved as ToolResult;
+      if (!Array.isArray(resolved)) return resolved;
       mediaUrls = resolved;
     } else if (sourceType === 'file') {
       const resolved = await this.resolveFile(db, sourceId, ctx.isAdmin, contact);
-      if ('error' in resolved) return resolved as ToolResult;
+      if (!Array.isArray(resolved)) return resolved;
       mediaUrls = resolved;
     } else if (sourceType === 'floorplan') {
       const resolved = await this.resolveFloorplan(db, sourceId, ctx.isAdmin, contact);
-      if ('error' in resolved) return resolved as ToolResult;
+      if (!Array.isArray(resolved)) return resolved;
       mediaUrls = resolved;
     }
 

@@ -163,7 +163,11 @@ export function UnifiedContactTabbedSection({
       formData, setFormData, disabled, contactType,
       handleChange, handleSelectChange,
       userId: user?.uid, resolvedCompanyId, companyDisplayName,
-      t: (key: string, optionsOrFallback?: string | Record<string, unknown>) => t(key, optionsOrFallback ?? ''),
+      t: (key: string, optionsOrFallback?: string | Record<string, unknown>) => {
+        if (typeof optionsOrFallback === 'string') return t(key, optionsOrFallback);
+        if (typeof optionsOrFallback === 'object') return t(key, { defaultValue: '', ...optionsOrFallback });
+        return t(key, '');
+      },
       relationshipsMode,
       onPersonaToggle, canonicalUploadContext,
       handleLogoChange, handleFileChange,
