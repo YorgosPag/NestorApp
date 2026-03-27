@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useEntityCodeSuggestion } from '@/hooks/useEntityCodeSuggestion';
 import { isValidEntityCodeFormat } from '@/services/entity-code.service';
 import type { ParkingLocationZone } from '@/types/parking';
+import type { UnitType } from '@/types/unit';
 
 /** Minimal translation function type compatible with i18next TFunction */
 type TranslationFn = {
@@ -35,11 +36,13 @@ interface EntityCodeFieldProps {
   /** Called when user changes value */
   onChange: (value: string) => void;
   /** Entity type for code suggestion */
-  entityType: 'storage' | 'parking';
+  entityType: 'unit' | 'storage' | 'parking';
   /** Building ID for code suggestion context */
   buildingId: string;
   /** Floor level for code suggestion context */
   floorLevel: number;
+  /** Unit type (required for entityType='unit') */
+  unitType?: UnitType;
   /** Location zone (parking only) */
   locationZone?: ParkingLocationZone;
   /** Label text */
@@ -73,6 +76,7 @@ export function EntityCodeField({
   entityType,
   buildingId,
   floorLevel,
+  unitType,
   locationZone,
   label,
   placeholderFallback,
@@ -87,6 +91,7 @@ export function EntityCodeField({
     entityType,
     buildingId,
     floorLevel,
+    unitType: unitType || undefined,
     locationZone: locationZone || undefined,
     disabled: codeOverridden || disabled,
   });
