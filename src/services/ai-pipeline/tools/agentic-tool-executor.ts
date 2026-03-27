@@ -52,6 +52,7 @@ import { RelationshipHandler } from './handlers/relationship-handler';
 import { AttachmentHandler } from './handlers/attachment-handler';
 import { FileLifecycleHandler } from './handlers/file-lifecycle-handler';
 import { ActivityHandler } from './handlers/activity-handler';
+import { DocumentReaderHandler } from './handlers/document-reader-handler';
 
 // ============================================================================
 // EXECUTOR CLASS — Strategy Pattern Dispatcher
@@ -74,6 +75,7 @@ export class AgenticToolExecutor {
       new AttachmentHandler(),
       new FileLifecycleHandler(),
       new ActivityHandler(),
+      new DocumentReaderHandler(),
     ];
 
     for (const handler of handlers) {

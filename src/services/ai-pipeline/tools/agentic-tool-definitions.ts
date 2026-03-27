@@ -994,6 +994,38 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
       strict: true,
     },
   },
+  // ── read_document: On-demand document reading via Vision API ──
+  {
+    type: 'function',
+    function: {
+      name: 'read_document',
+      description:
+        'Read and analyze a document (PDF, image, Office file) using AI vision. '
+        + 'Use when the user asks about the content of a specific document, '
+        + 'wants to re-read an already-attached file, or asks a question about a document. '
+        + 'Requires the fileRecordId from the files collection (find it via firestore_query on files). '
+        + 'If the user asks a specific question, pass it as the question parameter for a focused answer. '
+        + 'If no question is provided (null), returns full content extraction.',
+      parameters: {
+        type: 'object',
+        properties: {
+          fileRecordId: {
+            type: 'string',
+            description: 'The FileRecord document ID from the files collection.',
+          },
+          question: {
+            type: ['string', 'null'],
+            description:
+              'Specific question to answer about the document (e.g., "Ποιο είναι το ποσό;", '
+              + '"Ποια ημερομηνία αναγράφεται;"). Null for full content extraction.',
+          },
+        },
+        required: ['fileRecordId', 'question'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
 ];
 
 /**
