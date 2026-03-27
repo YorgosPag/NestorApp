@@ -411,7 +411,7 @@
 
 ## Firestore Collections Reset — QA Clean Slate
 
-> **Σκοπός**: Όταν ο Γιώργος δώσει εντολή **"καθάρισε collections"** / **"reset QA"** / **"άδειασε τις συλλογές"**, αδειάζουμε **ΜΟΝΟ** αυτές τις 12 συλλογές για καθαρό testing context.
+> **Σκοπός**: Όταν ο Γιώργος δώσει εντολή **"καθάρισε collections"** / **"reset QA"** / **"άδειασε τις συλλογές"**, αδειάζουμε **ΜΟΝΟ** αυτές τις 16 συλλογές για καθαρό testing context.
 
 | # | Collection | Περιγραφή |
 |---|-----------|-----------|
@@ -419,14 +419,18 @@
 | 2 | `ai_chat_history` | Chat history context (20 msgs / user) |
 | 3 | `ai_pipeline_audit` | Audit logs του AI pipeline |
 | 4 | `ai_pipeline_queue` | Queue items για processing |
-| 5 | `ai_usage` | Token usage tracking |
-| 6 | `contacts` | Επαφές |
-| 7 | `conversations` | Συνομιλίες |
-| 8 | `external_identities` | External identity mappings |
-| 9 | `files` | Αρχεία / documents |
-| 10 | `messages` | Μηνύματα (email, telegram, κλπ) |
-| 11 | `file_links` | Συνδέσεις αρχείων με entities (project→building κλπ) |
-| 12 | `searchDocuments` | Search index documents για full-text αναζήτηση |
+| 5 | `ai_query_strategies` | AI query strategy cache |
+| 6 | `ai_usage` | Token usage tracking |
+| 7 | `companies` | Εταιρείες |
+| 8 | `contacts` | Επαφές |
+| 9 | `conversations` | Συνομιλίες |
+| 10 | `external_identities` | External identity mappings |
+| 11 | `files` | Αρχεία / documents |
+| 12 | `messages` | Μηνύματα (email, telegram, κλπ) |
+| 13 | `file_links` | Συνδέσεις αρχείων με entities (project→building κλπ) |
+| 14 | `searchDocuments` | Search index documents για full-text αναζήτηση |
+| 15 | `units` | Μονάδες (διαμερίσματα, γραφεία κλπ) |
+| 16 | `voice_commands` | Φωνητικές εντολές |
 
 **ΠΡΟΣΟΧΗ**: ΔΕΝ αγγίζουμε καμία άλλη συλλογή (settings, projects, buildings, κλπ).
 
@@ -439,7 +443,7 @@ npx tsx scripts/qa-reset-collections.ts
 ```
 
 - Χρησιμοποιεί Firebase Admin SDK batch deletes (500 docs/batch)
-- Αδειάζει και τις 12 collections σε δευτερόλεπτα
+- Αδειάζει και τις 16 collections σε δευτερόλεπτα
 - Δεν αγγίζει καμία άλλη collection
 - Output: πόσα documents διαγράφηκαν ανά collection
 

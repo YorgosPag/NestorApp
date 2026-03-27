@@ -26,8 +26,8 @@ export const PIPELINE_QUEUE_CONFIG = {
   /** Maximum items to claim per batch */
   BATCH_SIZE: 5,
 
-  /** Maximum concurrent pipeline executions */
-  MAX_CONCURRENCY: 3,
+  /** Maximum concurrent pipeline executions (1 in emulator to avoid rate limits) */
+  MAX_CONCURRENCY: process.env.FIRESTORE_EMULATOR_HOST ? 1 : 3,
 
   /** Time after which a 'processing' item is considered stale (5 min) */
   STALE_PROCESSING_THRESHOLD_MS: 300_000,

@@ -1,91 +1,80 @@
 {
   "suite": "Contact Individual — Φυσικό Πρόσωπο",
-  "timestamp": "2026-03-26T21:24:16.303Z",
-  "durationMs": 1264418,
+  "timestamp": "2026-03-27T00:07:49.029Z",
+  "durationMs": 4800378,
   "summary": {
     "total": 102,
-    "passed": 1,
-    "failed": 101,
+    "passed": 0,
+    "failed": 102,
     "skipped": 0,
-    "passRate": "1.0%"
+    "passRate": "0.0%"
   },
   "phases": [
     {
       "name": "Phase 1: CREATE (27 tests)",
       "total": 27,
-      "passed": 1,
-      "failed": 26,
+      "passed": 0,
+      "failed": 27,
       "skipped": 0,
       "tests": [
         {
           "id": "C-01",
           "name": "Δημιουργία επαφής",
-          "passed": true,
-          "durationMs": 22496,
+          "passed": false,
+          "durationMs": 66834,
           "assertions": [
             {
-              "label": "contactId",
-              "passed": true
-            },
-            {
-              "label": "type",
-              "passed": true
-            },
-            {
-              "label": "firstName",
-              "passed": true
-            },
-            {
-              "label": "lastName",
-              "passed": true
-            },
-            {
-              "label": "companyId",
-              "passed": true
+              "label": "Contact created",
+              "passed": false,
+              "expected": "exists",
+              "actual": "not found"
             }
+          ],
+          "aiResponse": "❌ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Μπορεί να είναι σε άλλη μορφή ή να μην υπάρχει καταχωρημένος. Μπορείς να δοκιμάσεις με άλλη γραφή ή να δημιουργήσεις νέα επαφή;\n\n[Tι να κάνω;]\n1. Δοκίμασε άλλο όνομα\n2. Δημιουργία επαφής\n3. Τι άλλο χρειάζεσαι;",
+          "toolCalls": [
+            "search_text"
           ]
         },
         {
           "id": "C-02",
           "name": "Πατρώνυμο + Μητρώνυμο",
           "passed": false,
-          "durationMs": 11438,
+          "durationMs": 4776,
           "assertions": [
             {
-              "label": "fatherName",
+              "label": "Contact",
               "passed": false,
-              "expected": "Αθανάσιος",
-              "actual": "undefined"
-            },
-            {
-              "label": "motherName",
-              "passed": false,
-              "expected": "Νικολέτα",
-              "actual": "undefined"
+              "expected": "exists",
+              "actual": "null"
             }
           ],
-          "aiResponse": "✅ Ολοκληρώθηκε: Το ΑΦΜ του Δημήτριου Τεστίδη έχει ενημερωθεί σε 987654321.",
-          "toolCalls": [
-            "search_text",
-            "update_contact_field"
-          ]
+          "aiResponse": "❌ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Μπορεί να είναι σε άλλη μορφή ή να μην υπάρχει καταχωρημένος. Μπορείς να δοκιμάσεις με άλλη γραφή ή να δημιουργήσεις νέα επαφή;\n\n[Tι να κάνω;]\n1. Δοκίμασε άλλο όνομα\n2. Δημιουργία επαφής\n3. Τι άλλο χρειάζεσαι;",
+          "toolCalls": []
         },
         {
           "id": "C-03",
           "name": "Φύλο + Ημερομηνία γέννησης",
           "passed": false,
-          "durationMs": 48862,
-          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
-          "assertions": [],
-          "aiResponse": "",
-          "toolCalls": []
+          "durationMs": 14725,
+          "assertions": [
+            {
+              "label": "Contact",
+              "passed": false,
+              "expected": "exists",
+              "actual": "null"
+            }
+          ],
+          "aiResponse": "❌ Δεν μπορώ να απαντήσω για τηλέφωνα, καθώς δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Μπορείς να δοκιμάσεις με άλλη γραφή ή να δημιουργήσεις νέα επαφή;\n\n[Tι να κάνω;]\n1. Δοκίμασε άλλο όνομα\n2. Δημιουργία επαφής\n3. Τι άλλο χρειάζεσαι;",
+          "toolCalls": [
+            "firestore_query"
+          ]
         },
         {
           "id": "C-04",
           "name": "Χώρα γέννησης",
           "passed": false,
-          "durationMs": 47949,
-          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "durationMs": 91751,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 90s",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -94,8 +83,8 @@
           "id": "C-05",
           "name": "ΑΜΚΑ (11 ψηφία)",
           "passed": false,
-          "durationMs": 48340,
-          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "durationMs": 91948,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 90s",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -104,8 +93,8 @@
           "id": "C-06",
           "name": "Ταυτότητα (5 πεδία)",
           "passed": false,
-          "durationMs": 48184,
-          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "durationMs": 91855,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 90s",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -114,8 +103,8 @@
           "id": "C-07",
           "name": "ΑΦΜ",
           "passed": false,
-          "durationMs": 48098,
-          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "durationMs": 92634,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 90s",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -124,8 +113,8 @@
           "id": "C-08",
           "name": "ΔΟΥ (lookup)",
           "passed": false,
-          "durationMs": 48140,
-          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "durationMs": 136612,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 90s",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -134,8 +123,8 @@
           "id": "C-09",
           "name": "Εργοδότης + Θέση",
           "passed": false,
-          "durationMs": 48294,
-          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "durationMs": 92247,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 90s",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -144,8 +133,8 @@
           "id": "C-10",
           "name": "Επάγγελμα ESCO (unambiguous)",
           "passed": false,
-          "durationMs": 48450,
-          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "durationMs": 107858,
+          "error": "Timeout: Δεν ήρθε AI response μέσα σε 90s",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -154,8 +143,8 @@
           "id": "C-11",
           "name": "Δεξιότητα ESCO",
           "passed": false,
-          "durationMs": 48238,
-          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "durationMs": 45014,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -164,8 +153,8 @@
           "id": "C-12",
           "name": "Κινητό τηλέφωνο",
           "passed": false,
-          "durationMs": 48054,
-          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "durationMs": 40851,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -174,8 +163,8 @@
           "id": "C-13",
           "name": "Σταθερό τηλέφωνο",
           "passed": false,
-          "durationMs": 48590,
-          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "durationMs": 43345,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -184,8 +173,8 @@
           "id": "C-14",
           "name": "Email",
           "passed": false,
-          "durationMs": 48240,
-          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "durationMs": 41617,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -194,26 +183,18 @@
           "id": "C-15",
           "name": "Διεύθυνση (structured)",
           "passed": false,
-          "durationMs": 9460,
-          "assertions": [
-            {
-              "label": "Contact",
-              "passed": false,
-              "expected": "exists",
-              "actual": "null"
-            }
-          ],
-          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
-          "toolCalls": [
-            "search_text"
-          ]
+          "durationMs": 45668,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
         },
         {
           "id": "C-16",
           "name": "Ιστοσελίδα",
           "passed": false,
-          "durationMs": 47757,
-          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "durationMs": 43296,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -222,8 +203,8 @@
           "id": "C-17",
           "name": "LinkedIn",
           "passed": false,
-          "durationMs": 48561,
-          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "durationMs": 43177,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -232,60 +213,38 @@
           "id": "C-18",
           "name": "Facebook",
           "passed": false,
-          "durationMs": 5366,
-          "assertions": [
-            {
-              "label": "Contact",
-              "passed": false,
-              "expected": "exists",
-              "actual": "null"
-            }
-          ],
-          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "durationMs": 44899,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
+          "assertions": [],
+          "aiResponse": "",
           "toolCalls": []
         },
         {
           "id": "C-23",
           "name": "Instagram",
           "passed": false,
-          "durationMs": 3221,
-          "assertions": [
-            {
-              "label": "Contact",
-              "passed": false,
-              "expected": "exists",
-              "actual": "null"
-            }
-          ],
-          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
-          "toolCalls": [
-            "search_text"
-          ]
+          "durationMs": 43767,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
         },
         {
           "id": "C-24",
           "name": "Twitter/X",
           "passed": false,
-          "durationMs": 5211,
-          "assertions": [
-            {
-              "label": "Contact",
-              "passed": false,
-              "expected": "exists",
-              "actual": "null"
-            }
-          ],
-          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
-          "toolCalls": [
-            "search_text"
-          ]
+          "durationMs": 44367,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
         },
         {
           "id": "C-25",
           "name": "YouTube",
           "passed": false,
-          "durationMs": 47689,
-          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "durationMs": 43785,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -294,62 +253,38 @@
           "id": "C-26",
           "name": "GitHub",
           "passed": false,
-          "durationMs": 5694,
-          "assertions": [
-            {
-              "label": "Contact",
-              "passed": false,
-              "expected": "exists",
-              "actual": "null"
-            }
-          ],
-          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "durationMs": 42172,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
+          "assertions": [],
+          "aiResponse": "",
           "toolCalls": []
         },
         {
           "id": "C-27",
           "name": "TikTok (→ other)",
           "passed": false,
-          "durationMs": 3326,
-          "assertions": [
-            {
-              "label": "Contact",
-              "passed": false,
-              "expected": "exists",
-              "actual": "null"
-            }
-          ],
-          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "durationMs": 43824,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
+          "assertions": [],
+          "aiResponse": "",
           "toolCalls": []
         },
         {
           "id": "C-19",
           "name": "IBAN",
           "passed": false,
-          "durationMs": 7546,
-          "assertions": [
-            {
-              "label": "bankAccounts exists",
-              "passed": false,
-              "expected": ">= 1",
-              "actual": "0"
-            },
-            {
-              "label": "IBAN GR16",
-              "passed": false,
-              "expected": "GR16...",
-              "actual": "empty"
-            }
-          ],
-          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "durationMs": 42510,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
+          "assertions": [],
+          "aiResponse": "",
           "toolCalls": []
         },
         {
           "id": "C-20",
           "name": "ΚΑΔ δραστηριότητα",
           "passed": false,
-          "durationMs": 47773,
-          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "durationMs": 45493,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -358,8 +293,8 @@
           "id": "C-21",
           "name": "Δημιουργία 2ης επαφής",
           "passed": false,
-          "durationMs": 49100,
-          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "durationMs": 40227,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -368,21 +303,11 @@
           "id": "C-22",
           "name": "Σχέση σύζυγος",
           "passed": false,
-          "durationMs": 3303,
-          "assertions": [
-            {
-              "label": "spouse relationship",
-              "passed": false,
-              "expected": "exists",
-              "actual": "0 rels"
-            }
-          ],
-          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
-          "toolCalls": [
-            "search_text",
-            "lookup_doy_code",
-            "firestore_query"
-          ]
+          "durationMs": 44381,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
         }
       ]
     },
@@ -397,124 +322,78 @@
           "id": "U-01",
           "name": "Update πατρώνυμο",
           "passed": false,
-          "durationMs": 29550,
-          "assertions": [
-            {
-              "label": "Contact",
-              "passed": false,
-              "expected": "exists",
-              "actual": "null"
-            }
-          ],
-          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
-          "toolCalls": [
-            "search_text"
-          ]
+          "durationMs": 42983,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
         },
         {
           "id": "U-02",
           "name": "Update ΑΦΜ",
           "passed": false,
-          "durationMs": 7352,
-          "assertions": [
-            {
-              "label": "Contact",
-              "passed": false,
-              "expected": "exists",
-              "actual": "null"
-            }
-          ],
-          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
-          "toolCalls": [
-            "search_text"
-          ]
+          "durationMs": 45444,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
         },
         {
           "id": "U-03",
           "name": "Update φύλο",
           "passed": false,
-          "durationMs": 7219,
-          "assertions": [
-            {
-              "label": "Contact",
-              "passed": false,
-              "expected": "exists",
-              "actual": "null"
-            }
-          ],
-          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "durationMs": 45851,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
+          "assertions": [],
+          "aiResponse": "",
           "toolCalls": []
         },
         {
           "id": "U-04",
           "name": "Update ΑΜΚΑ",
           "passed": false,
-          "durationMs": 21178,
-          "assertions": [
-            {
-              "label": "Contact",
-              "passed": false,
-              "expected": "exists",
-              "actual": "null"
-            }
-          ],
-          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "durationMs": 41575,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
+          "assertions": [],
+          "aiResponse": "",
           "toolCalls": []
         },
         {
           "id": "U-05",
           "name": "Update τύπος εγγράφου → διαβατήριο",
           "passed": false,
-          "durationMs": 3746,
-          "assertions": [
-            {
-              "label": "Contact",
-              "passed": false,
-              "expected": "exists",
-              "actual": "null"
-            }
-          ],
-          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "durationMs": 42916,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
+          "assertions": [],
+          "aiResponse": "",
           "toolCalls": []
         },
         {
           "id": "U-06",
           "name": "Update εργοδότης",
           "passed": false,
-          "durationMs": 20315,
-          "assertions": [
-            {
-              "label": "Contact",
-              "passed": false,
-              "expected": "exists",
-              "actual": "null"
-            }
-          ],
-          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "durationMs": 44416,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
+          "assertions": [],
+          "aiResponse": "",
           "toolCalls": []
         },
         {
           "id": "U-07",
           "name": "Update θέση",
           "passed": false,
-          "durationMs": 6621,
-          "assertions": [
-            {
-              "label": "Contact",
-              "passed": false,
-              "expected": "exists",
-              "actual": "null"
-            }
-          ],
-          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "durationMs": 45899,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
+          "assertions": [],
+          "aiResponse": "",
           "toolCalls": []
         },
         {
           "id": "U-08",
           "name": "Update ΔΟΥ",
           "passed": false,
-          "durationMs": 50969,
-          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "durationMs": 43342,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -523,86 +402,50 @@
           "id": "U-09",
           "name": "Update χώρα γέννησης",
           "passed": false,
-          "durationMs": 16101,
-          "assertions": [
-            {
-              "label": "Contact",
-              "passed": false,
-              "expected": "exists",
-              "actual": "null"
-            }
-          ],
-          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
-          "toolCalls": [
-            "search_text"
-          ]
+          "durationMs": 42723,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
         },
         {
           "id": "U-10",
           "name": "Update επάγγελμα (νέο ESCO)",
           "passed": false,
-          "durationMs": 27403,
-          "assertions": [
-            {
-              "label": "Contact",
-              "passed": false,
-              "expected": "exists",
-              "actual": "null"
-            }
-          ],
-          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
-          "toolCalls": [
-            "search_text"
-          ]
+          "durationMs": 42594,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
         },
         {
           "id": "U-11",
           "name": "Append 2ο email",
           "passed": false,
-          "durationMs": 15044,
-          "assertions": [
-            {
-              "label": "Contact",
-              "passed": false,
-              "expected": "exists",
-              "actual": "null"
-            }
-          ],
-          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
-          "toolCalls": [
-            "search_text"
-          ]
+          "durationMs": 39550,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
+          "assertions": [],
+          "aiResponse": "",
+          "toolCalls": []
         },
         {
           "id": "U-12",
           "name": "Append 2ο IBAN",
           "passed": false,
-          "durationMs": 7332,
-          "assertions": [
-            {
-              "label": "bankAccounts 2+",
-              "passed": false,
-              "expected": ">= 2",
-              "actual": "0"
-            }
-          ],
-          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "durationMs": 40132,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
+          "assertions": [],
+          "aiResponse": "",
           "toolCalls": []
         },
         {
           "id": "U-13",
           "name": "Append 2ος ΚΑΔ",
           "passed": false,
-          "durationMs": 9403,
-          "assertions": [
-            {
-              "label": "Contact",
-              "passed": false,
-              "expected": "exists",
-              "actual": "null"
-            }
-          ],
-          "aiResponse": "⚠️ Δεν βρήκα επαφή με το όνομα \"Δημήτριος\". Θέλεις να δοκιμάσω με το επώνυμό του ή να ψάξω για άλλο όνομα;",
+          "durationMs": 44964,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
+          "assertions": [],
+          "aiResponse": "",
           "toolCalls": []
         }
       ]
@@ -618,8 +461,8 @@
           "id": "D-01",
           "name": "Σβήσε μητρώνυμο",
           "passed": false,
-          "durationMs": 47810,
-          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "durationMs": 41606,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -628,8 +471,8 @@
           "id": "D-02",
           "name": "Σβήσε ΑΜΚΑ",
           "passed": false,
-          "durationMs": 47947,
-          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "durationMs": 43543,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -638,8 +481,8 @@
           "id": "D-03",
           "name": "Σβήσε θέση",
           "passed": false,
-          "durationMs": 48114,
-          "error": "Timeout: Δεν ήρθε AI response μέσα σε 45s",
+          "durationMs": 42479,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -648,8 +491,8 @@
           "id": "D-04",
           "name": "Σβήσε εργοδότη",
           "passed": false,
-          "durationMs": 18,
-          "error": "fetch failed",
+          "durationMs": 44385,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -658,8 +501,8 @@
           "id": "D-05",
           "name": "Σβήσε ΑΦΜ",
           "passed": false,
-          "durationMs": 16,
-          "error": "fetch failed",
+          "durationMs": 44771,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -668,8 +511,8 @@
           "id": "D-06",
           "name": "Διαγραφή IBAN",
           "passed": false,
-          "durationMs": 15,
-          "error": "fetch failed",
+          "durationMs": 43812,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -678,8 +521,8 @@
           "id": "D-07",
           "name": "Αφαίρεση ΚΑΔ",
           "passed": false,
-          "durationMs": 36,
-          "error": "fetch failed",
+          "durationMs": 41966,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -688,8 +531,8 @@
           "id": "D-08",
           "name": "Αφαίρεση σχέσης σύζυγος",
           "passed": false,
-          "durationMs": 14,
-          "error": "fetch failed",
+          "durationMs": 41823,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -698,8 +541,8 @@
           "id": "D-09",
           "name": "Phones → append-only (graceful decline)",
           "passed": false,
-          "durationMs": 15,
-          "error": "fetch failed",
+          "durationMs": 44603,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -717,8 +560,8 @@
           "id": "B-01",
           "name": "Batch: ΑΦΜ + ΔΟΥ + ΑΜΚΑ (3 πεδία)",
           "passed": false,
-          "durationMs": 14,
-          "error": "fetch failed",
+          "durationMs": 42668,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -727,8 +570,8 @@
           "id": "B-02",
           "name": "Batch: κινητό + email (2 arrays)",
           "passed": false,
-          "durationMs": 6,
-          "error": "fetch failed",
+          "durationMs": 44306,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -737,8 +580,8 @@
           "id": "B-03",
           "name": "Batch: ταυτότητα 5 πεδία μαζί",
           "passed": false,
-          "durationMs": 8,
-          "error": "fetch failed",
+          "durationMs": 43057,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -747,8 +590,8 @@
           "id": "B-04",
           "name": "Batch: εργοδότης + θέση",
           "passed": false,
-          "durationMs": 16,
-          "error": "fetch failed",
+          "durationMs": 44124,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -757,8 +600,8 @@
           "id": "B-05",
           "name": "Batch: 4 προσωπικά στοιχεία",
           "passed": false,
-          "durationMs": 67,
-          "error": "fetch failed",
+          "durationMs": 45386,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -767,8 +610,8 @@
           "id": "B-06",
           "name": "Batch: πλήρης διεύθυνση",
           "passed": false,
-          "durationMs": 13,
-          "error": "fetch failed",
+          "durationMs": 43984,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -786,8 +629,8 @@
           "id": "V-01",
           "name": "ΑΜΚΑ λάθος (10 ψηφία) → reject",
           "passed": false,
-          "durationMs": 19,
-          "error": "fetch failed",
+          "durationMs": 44277,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -796,8 +639,8 @@
           "id": "V-02",
           "name": "ΑΜΚΑ γράμματα → reject",
           "passed": false,
-          "durationMs": 13,
-          "error": "fetch failed",
+          "durationMs": 43598,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -806,8 +649,8 @@
           "id": "V-03",
           "name": "Duplicate email → reject",
           "passed": false,
-          "durationMs": 14,
-          "error": "fetch failed",
+          "durationMs": 44767,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -816,8 +659,8 @@
           "id": "V-04",
           "name": "Duplicate phone → reject",
           "passed": false,
-          "durationMs": 22,
-          "error": "fetch failed",
+          "durationMs": 44157,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -826,8 +669,8 @@
           "id": "V-05",
           "name": "Invalid email (no @) → reject",
           "passed": false,
-          "durationMs": 11,
-          "error": "fetch failed",
+          "durationMs": 42244,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -836,8 +679,8 @@
           "id": "V-06",
           "name": "Invalid phone (3 ψηφία) → reject",
           "passed": false,
-          "durationMs": 14,
-          "error": "fetch failed",
+          "durationMs": 45902,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -846,8 +689,8 @@
           "id": "V-07",
           "name": "ESCO ambiguous → disambiguation",
           "passed": false,
-          "durationMs": 24,
-          "error": "fetch failed",
+          "durationMs": 42609,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -856,8 +699,8 @@
           "id": "V-08",
           "name": "Search γενική πτώση \"Τεστίδη\"",
           "passed": false,
-          "durationMs": 7,
-          "error": "fetch failed",
+          "durationMs": 41103,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -866,8 +709,8 @@
           "id": "V-09",
           "name": "\"Είναι άνδρας\" → gender, NOT ESCO search",
           "passed": false,
-          "durationMs": 14,
-          "error": "fetch failed",
+          "durationMs": 45844,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -876,8 +719,8 @@
           "id": "V-10",
           "name": "Fresh search — no hallucinated ID",
           "passed": false,
-          "durationMs": 17,
-          "error": "fetch failed",
+          "durationMs": 45200,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -895,8 +738,8 @@
           "id": "G-01",
           "name": "ESCO Protection — profession via set_contact_esco",
           "passed": false,
-          "durationMs": 17,
-          "error": "fetch failed",
+          "durationMs": 42572,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -905,8 +748,8 @@
           "id": "G-02",
           "name": "FIND-U: ΑΦΜ+ΔΟΥ same request → ΔΟΥ guard",
           "passed": false,
-          "durationMs": 13,
-          "error": "fetch failed",
+          "durationMs": 43051,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -915,8 +758,8 @@
           "id": "G-03",
           "name": "Append-only: σβήσε email → αρνείται",
           "passed": false,
-          "durationMs": 6,
-          "error": "fetch failed",
+          "durationMs": 41724,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -925,8 +768,8 @@
           "id": "G-04",
           "name": "Append-only: σβήσε διεύθυνση → αρνείται",
           "passed": false,
-          "durationMs": 10,
-          "error": "fetch failed",
+          "durationMs": 44390,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -935,8 +778,8 @@
           "id": "G-05",
           "name": "Append-only: σβήσε LinkedIn → αρνείται",
           "passed": false,
-          "durationMs": 19,
-          "error": "fetch failed",
+          "durationMs": 40796,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -945,8 +788,8 @@
           "id": "G-06",
           "name": "displayName auto-sync on lastName update",
           "passed": false,
-          "durationMs": 13,
-          "error": "fetch failed",
+          "durationMs": 41308,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -955,8 +798,8 @@
           "id": "G-07",
           "name": "Επαναφορά επιθέτου σε Τεστίδης",
           "passed": false,
-          "durationMs": 16,
-          "error": "fetch failed",
+          "durationMs": 42994,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -965,8 +808,8 @@
           "id": "G-08",
           "name": "IBAN invalid MOD 97 → reject",
           "passed": false,
-          "durationMs": 7,
-          "error": "fetch failed",
+          "durationMs": 45000,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -975,8 +818,8 @@
           "id": "G-09",
           "name": "Update ανύπαρκτη επαφή → αναζήτηση",
           "passed": false,
-          "durationMs": 8,
-          "error": "fetch failed",
+          "durationMs": 44518,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -985,8 +828,8 @@
           "id": "G-10",
           "name": "Empty value \"Βάλε ΑΦΜ\" χωρίς αριθμό",
           "passed": false,
-          "durationMs": 15,
-          "error": "fetch failed",
+          "durationMs": 41792,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -995,8 +838,8 @@
           "id": "G-11",
           "name": "ΑΦΜ 5 ψηφία → validation",
           "passed": false,
-          "durationMs": 17,
-          "error": "fetch failed",
+          "durationMs": 46744,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1005,8 +848,8 @@
           "id": "G-12",
           "name": "Conflicting values: 2 ΑΜΚΑ → AI picks one or asks",
           "passed": false,
-          "durationMs": 15,
-          "error": "fetch failed",
+          "durationMs": 43415,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1024,8 +867,8 @@
           "id": "E-01",
           "name": "ESCO 0 results → free-text or ask",
           "passed": false,
-          "durationMs": 15,
-          "error": "fetch failed",
+          "durationMs": 45910,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1034,8 +877,8 @@
           "id": "E-02",
           "name": "Duplicate contact → detection",
           "passed": false,
-          "durationMs": 15,
-          "error": "fetch failed",
+          "durationMs": 45497,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1044,8 +887,8 @@
           "id": "E-03",
           "name": "Search with typo \"Τεστιδησ\"",
           "passed": false,
-          "durationMs": 17,
-          "error": "fetch failed",
+          "durationMs": 42387,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1054,8 +897,8 @@
           "id": "E-04",
           "name": "All-caps \"ΒΑΛΕ ΑΦΜ 333444555\"",
           "passed": false,
-          "durationMs": 12,
-          "error": "fetch failed",
+          "durationMs": 45858,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1064,8 +907,8 @@
           "id": "E-05",
           "name": "Mixed language \"Set email for Δημήτριος\"",
           "passed": false,
-          "durationMs": 17,
-          "error": "fetch failed",
+          "durationMs": 44199,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1074,8 +917,8 @@
           "id": "E-06",
           "name": "Phone with +30 country code",
           "passed": false,
-          "durationMs": 16,
-          "error": "fetch failed",
+          "durationMs": 43959,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1084,8 +927,8 @@
           "id": "E-07",
           "name": "IBAN with spaces",
           "passed": false,
-          "durationMs": 14,
-          "error": "fetch failed",
+          "durationMs": 44768,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1094,8 +937,8 @@
           "id": "E-08",
           "name": "Date format \"1990-03-15\" (ISO)",
           "passed": false,
-          "durationMs": 16,
-          "error": "fetch failed",
+          "durationMs": 45113,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1104,8 +947,8 @@
           "id": "E-09",
           "name": "Whitespace \"Βάλε εργοδότη   \" → reject",
           "passed": false,
-          "durationMs": 16,
-          "error": "fetch failed",
+          "durationMs": 42423,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1114,8 +957,8 @@
           "id": "E-10",
           "name": "Same field twice → last value wins",
           "passed": false,
-          "durationMs": 15,
-          "error": "fetch failed",
+          "durationMs": 45117,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1124,8 +967,8 @@
           "id": "E-11",
           "name": "Read-only query — no data change",
           "passed": false,
-          "durationMs": 17,
-          "error": "fetch failed",
+          "durationMs": 40794,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1134,8 +977,8 @@
           "id": "E-12",
           "name": "Large batch: 6 fields at once",
           "passed": false,
-          "durationMs": 13,
-          "error": "fetch failed",
+          "durationMs": 45423,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1153,8 +996,8 @@
           "id": "X-01",
           "name": "Implicit ref: \"βάλε του\" χωρίς όνομα",
           "passed": false,
-          "durationMs": 14,
-          "error": "fetch failed",
+          "durationMs": 42591,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1163,8 +1006,8 @@
           "id": "X-02",
           "name": "Implicit query: \"πόσα τηλέφωνα έχει;\"",
           "passed": false,
-          "durationMs": 16,
-          "error": "fetch failed",
+          "durationMs": 44265,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1173,8 +1016,8 @@
           "id": "X-03",
           "name": "\"κι ένα email\" → append via context",
           "passed": false,
-          "durationMs": 16,
-          "error": "fetch failed",
+          "durationMs": 43398,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1183,8 +1026,8 @@
           "id": "X-04",
           "name": "\"Σωστά;\" → confirm without re-executing",
           "passed": false,
-          "durationMs": 15,
-          "error": "fetch failed",
+          "durationMs": 46711,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1193,8 +1036,8 @@
           "id": "X-05",
           "name": "Correction: \"Όχι, βάλε θέση CTO\"",
           "passed": false,
-          "durationMs": 15,
-          "error": "fetch failed",
+          "durationMs": 42984,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1203,8 +1046,8 @@
           "id": "X-06",
           "name": "\"Τι του λείπει;\" → completeness check",
           "passed": false,
-          "durationMs": 17,
-          "error": "fetch failed",
+          "durationMs": 44346,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1213,8 +1056,8 @@
           "id": "X-07",
           "name": "Context switch: \"πάμε στη Μαρία Τεστίδου\"",
           "passed": false,
-          "durationMs": 15,
-          "error": "fetch failed",
+          "durationMs": 43412,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1223,8 +1066,8 @@
           "id": "X-08",
           "name": "Context switch back: \"πίσω στον Δημήτριο\"",
           "passed": false,
-          "durationMs": 15,
-          "error": "fetch failed",
+          "durationMs": 43582,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1242,8 +1085,8 @@
           "id": "A-00",
           "name": "Pre-seed FileRecords",
           "passed": false,
-          "durationMs": 16,
-          "error": "fetch failed",
+          "durationMs": 45028,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1252,8 +1095,8 @@
           "id": "A-01",
           "name": "Profile Photo",
           "passed": false,
-          "durationMs": 31,
-          "error": "fetch failed",
+          "durationMs": 42134,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED 127.0.0.1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1262,8 +1105,8 @@
           "id": "A-02",
           "name": "Gallery Photo",
           "passed": false,
-          "durationMs": 6,
-          "error": "fetch failed",
+          "durationMs": 40649,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1272,8 +1115,8 @@
           "id": "A-03",
           "name": "Document (auto-classify)",
           "passed": false,
-          "durationMs": 10,
-          "error": "fetch failed",
+          "durationMs": 44890,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []
@@ -1282,8 +1125,8 @@
           "id": "A-04",
           "name": "No fileRecordId → graceful rejection",
           "passed": false,
-          "durationMs": 16,
-          "error": "fetch failed",
+          "durationMs": 42400,
+          "error": "14 UNAVAILABLE: No connection established. Last error: Error: connect ECONNREFUSED ::1:8080. Resolution note: ",
           "assertions": [],
           "aiResponse": "",
           "toolCalls": []

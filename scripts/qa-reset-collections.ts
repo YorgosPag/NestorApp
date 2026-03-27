@@ -1,7 +1,7 @@
 /**
  * QA Reset Collections Script
  *
- * Αδειάζει τις 12 QA collections για καθαρό testing context.
+ * Αδειάζει τις 16 QA collections για καθαρό testing context.
  * Ref: docs/QA_AGENT_FINDINGS.md → "Firestore Collections Reset — QA Clean Slate"
  *
  * Usage:
@@ -35,13 +35,15 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-// ── The 12 QA Collections ────────────────────────────────────────────
+// ── The 16 QA Collections ────────────────────────────────────────────
 const QA_COLLECTIONS = [
   'ai_agent_feedback',
   'ai_chat_history',
   'ai_pipeline_audit',
   'ai_pipeline_queue',
+  'ai_query_strategies',
   'ai_usage',
+  'companies',
   'contacts',
   'conversations',
   'external_identities',
@@ -49,6 +51,8 @@ const QA_COLLECTIONS = [
   'messages',
   'file_links',
   'searchDocuments',
+  'units',
+  'voice_commands',
 ] as const;
 
 // ── Batch Delete (Firestore limit: 500 per batch) ───────────────────
@@ -73,7 +77,7 @@ async function deleteCollection(collectionName: string): Promise<number> {
 // ── Main ─────────────────────────────────────────────────────────────
 async function main(): Promise<void> {
   console.log('');
-  console.log('🧹 QA Reset — Αδειάζω 12 collections...');
+  console.log('🧹 QA Reset — Αδειάζω 16 collections...');
   console.log('─'.repeat(50));
 
   let grandTotal = 0;

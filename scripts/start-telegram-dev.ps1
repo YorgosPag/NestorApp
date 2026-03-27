@@ -46,7 +46,7 @@ if (-not $WEBHOOK_SECRET) {
 }
 
 Write-Host "`n========================================" -ForegroundColor Cyan
-Write-Host "  TELEGRAM DEV — Auto Setup" -ForegroundColor Cyan
+Write-Host "  TELEGRAM DEV - Auto Setup" -ForegroundColor Cyan
 Write-Host "========================================`n" -ForegroundColor Cyan
 
 # ── Step 1: Kill any existing ngrok ──
@@ -135,7 +135,8 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "`n  Webhook: $webhookUrl" -ForegroundColor White
 Write-Host "  Bot: @NestorAppDevBot (dev)" -ForegroundColor White
 Write-Host "  Local: http://localhost:$LOCAL_PORT" -ForegroundColor White
-Write-Host "`n  Press Ctrl+C to stop ngrok" -ForegroundColor Gray
+Write-Host ""
+Write-Host "  Press Ctrl+C to stop ngrok" -ForegroundColor Gray
 Write-Host ""
 
 # Keep script alive while ngrok runs

@@ -80,7 +80,9 @@ async function ensureFirebaseInit(): Promise<void> {
 export let db: admin.firestore.Firestore;
 
 // ── Constants ────────────────────────────────────────────────────────
-const WEBHOOK_URL = 'http://localhost:3000/api/communications/webhooks/telegram';
+// Use 127.0.0.1 (not localhost) — Node.js 20 tries IPv6 [::1] first, may fail
+const WEBHOOK_URL = 'http://127.0.0.1:3000/api/communications/webhooks/telegram';
+const SERVER_HEALTH_URL = 'http://127.0.0.1:3000/';
 const SUPER_ADMIN_CHAT_ID = 5618410820;
 const SUPER_ADMIN_NAME = 'QA_Test_Agent';
 const CHAT_HISTORY_DOC_ID = 'ach_telegram_5618410820';
@@ -155,6 +157,27 @@ interface TestResult {
   error?: string;
 }
 
+// ── Server Health Check ──────────────────────────────────────────────
+/**
+ * Pings the dev server to ensure it's accepting connections.
+ * After a timeout storm, the server may be overloaded with orphaned
+ * agentic loops — this waits until it recovers before sending the next test.
+ */
+async function waitForServerReady(maxWaitSec = 60): Promise<boolean> {
+  for (let i = 0; i < maxWaitSec; i += 3) {
+    try {
+      const res = await fetch(SERVER_HEALTH_URL, {
+        signal: AbortSignal.timeout(3_000),
+      });
+      if (res.ok) return true;
+    } catch {
+      // Server not ready yet — wait and retry
+    }
+    await sleep(3_000);
+  }
+  return false;
+}
+
 // ── Webhook Sender ───────────────────────────────────────────────────
 let msgCounter = 300_000;
 
@@ -171,14 +194,26 @@ async function sendWebhook(text: string): Promise<{ ok: boolean }> {
     },
   };
 
-  const res = await fetch(WEBHOOK_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json; charset=utf-8' },
-    body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(90_000),
-  });
-
-  return res.json() as Promise<{ ok: boolean }>;
+  // Retry up to 3 times — server may be momentarily overloaded from prior agentic loops
+  const MAX_RETRIES = 3;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const res = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(30_000),
+      });
+      return res.json() as Promise<{ ok: boolean }>;
+    } catch (err) {
+      if (attempt === MAX_RETRIES) throw err;
+      console.log(`  ${C.yellow}⚠️ Webhook attempt ${attempt}/${MAX_RETRIES} failed, retrying in 10s...${C.reset}`);
+      await sleep(10_000);
+      // Health check before retry
+      await waitForServerReady(30);
+    }
+  }
+  throw new Error('sendWebhook: unreachable');
 }
 
 // ── Poll for AI Response ─────────────────────────────────────────────
@@ -470,10 +505,14 @@ export async function runPhase(
   const results: TestResult[] = [];
   let contactId = (state.contactId as string) ?? null;
 
-  // Rate limit protection: OpenAI gpt-4o-mini = 200K TPM, each test ~17K tokens
-  // Pipeline retries failed items concurrently (MAX_CONCURRENCY=3, MAX_RETRIES=3)
-  // 20s gap ensures pipeline completes + retries finish before next test
-  const INTER_TEST_DELAY_MS = 20_000;
+  // Rate limit protection: OpenAI gpt-4o-mini = 200K TPM
+  // Each agentic path = 2-3 iterations × ~17K tokens = ~50K tokens
+  // 15s gap ≈ 4 tests/min ≈ 200K TPM (tight but safe with retry backoff)
+  const INTER_TEST_DELAY_MS = 15_000;
+  // Extra cooldown after server overload (timeout/fetch-fail)
+  const COOLDOWN_AFTER_TIMEOUT_MS = 30_000;
+
+  let consecutiveFails = 0;
 
   for (let i = 0; i < tests.length; i++) {
     const test = tests[i];
@@ -488,8 +527,28 @@ export async function runPhase(
       await sleep(delay);
     }
 
+    // After server overload, wait for recovery before sending next test
+    if (consecutiveFails >= 2) {
+      console.log(`  ${C.yellow}⏳ Server cooldown (${consecutiveFails} consecutive failures)...${C.reset}`);
+      await sleep(COOLDOWN_AFTER_TIMEOUT_MS);
+      const ready = await waitForServerReady(60);
+      if (!ready) {
+        console.log(`  ${C.red}💥 Server not responding — skipping remaining tests in phase${C.reset}\n`);
+        break;
+      }
+      console.log(`  ${C.green}✅ Server ready — resuming${C.reset}`);
+      consecutiveFails = 0;
+    }
+
     const result = await runSingleTest(test, contactId, state);
     results.push(result);
+
+    // Track consecutive failures to detect server overload
+    if (!result.passed && (result.error?.includes('fetch') || result.durationMs > 85_000)) {
+      consecutiveFails++;
+    } else {
+      consecutiveFails = 0;
+    }
 
     if (state.contactId) {
       contactId = state.contactId as string;

@@ -66,6 +66,7 @@
     "test:qa": "cross-env FIRESTORE_EMULATOR_HOST=localhost:8080 npx tsx scripts/qa-tests/contact-individual.qa.ts",
     "test:qa:individual": "cross-env FIRESTORE_EMULATOR_HOST=localhost:8080 npx tsx scripts/qa-tests/contact-individual.qa.ts",
     "test:qa:production": "cross-env QA_ALLOW_PRODUCTION=true npx tsx scripts/qa-tests/contact-individual.qa.ts",
+    "test:qa:clean": "powershell -ExecutionPolicy Bypass -File scripts/qa-tests/run-qa-clean.ps1",
     "test:validate-line-drawing": "node src/subapps/dxf-viewer/__tests__/validate-line-drawing.js",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
