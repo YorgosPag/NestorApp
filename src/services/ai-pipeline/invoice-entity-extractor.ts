@@ -74,7 +74,7 @@ export interface InvoiceExtractionParams {
 // CONSTANTS
 // ============================================================================
 
-const EXTRACTION_TIMEOUT_MS = 15_000;
+const EXTRACTION_TIMEOUT_MS = 30_000;
 
 // ============================================================================
 // SCHEMA (OpenAI strict JSON — all fields required + nullable)
