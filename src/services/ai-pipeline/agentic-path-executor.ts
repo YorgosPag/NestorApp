@@ -361,15 +361,28 @@ async function handleDocumentPreviewIfNeeded(
       });
       if (!preview) continue;
 
-      // Phase 2: Invoice entity extraction (only for invoices with good confidence)
+      // Phase 2: Invoice entity extraction (invoices, receipts, tax docs)
+      const INVOICE_LIKE_TYPES = new Set(['invoice', 'receipt', 'tax_document']);
       let invoiceEntities: InvoiceEntityResult | null = null;
-      if (preview.documentType === 'invoice' && preview.confidence >= 0.6) {
+      if (INVOICE_LIKE_TYPES.has(preview.documentType) && preview.confidence >= 0.6) {
+        agenticLogger.info('Phase 2: Invoice entity extraction triggered', {
+          fileRecordId: att.fileRecordId,
+          documentType: preview.documentType,
+          confidence: preview.confidence,
+        });
         invoiceEntities = await extractInvoiceEntities({
           fileBuffer,
           filename: att.filename,
           contentType: att.contentType,
           fileRecordId: att.fileRecordId,
         });
+        if (invoiceEntities) {
+          agenticLogger.info('Invoice entities extracted successfully', {
+            fileRecordId: att.fileRecordId,
+            hasIssuer: !!invoiceEntities.issuer.name,
+            hasCustomer: !!invoiceEntities.customer.name,
+          });
+        }
       }
 
       results.push({
