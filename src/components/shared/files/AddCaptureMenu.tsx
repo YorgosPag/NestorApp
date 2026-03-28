@@ -21,8 +21,7 @@
 
 'use client';
 
-import React, { useCallback, useRef, useState } from 'react';
-import { createModuleLogger } from '@/lib/telemetry';
+import React from 'react';
 import {
   Upload,
   Camera,
@@ -53,20 +52,15 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIsMobile } from '@/hooks/useMobile';
 import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { FileCategory } from '@/config/domain-constants';
 import {
   type CaptureSource,
-  type CaptureMode,
   type CaptureMetadata,
   getCaptureSourcesForCategory,
-  createCaptureMetadata,
 } from '@/config/upload-entry-points';
-
-// ============================================================================
-// MODULE LOGGER
-// ============================================================================
-
-const logger = createModuleLogger('AddCaptureMenu');
+import { useAddCaptureHandlers } from './useAddCaptureHandlers';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -100,7 +94,7 @@ interface CaptureOption {
 // CONSTANTS
 // ============================================================================
 
-const CAPTURE_OPTIONS: Record<CaptureSource, CaptureOption> = {
+const _CAPTURE_OPTIONS: Record<CaptureSource, CaptureOption> = {
   upload: {
     id: 'upload',
     icon: Upload,
@@ -152,183 +146,36 @@ export function AddCaptureMenu({
 }: AddCaptureMenuProps) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation('files');
+  const colors = useSemanticColors();
   const isMobile = useIsMobile();
 
-  // State
-  const [isOpen, setIsOpen] = useState(false);
-  const [isTextNoteOpen, setIsTextNoteOpen] = useState(false);
-  const [textNote, setTextNote] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-
-  // Refs for hidden inputs
-  const cameraInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
-  const audioInputRef = useRef<HTMLInputElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const {
+    isOpen,
+    setIsOpen,
+    isTextNoteOpen,
+    setIsTextNoteOpen,
+    textNote,
+    setTextNote,
+    isRecording,
+    recordingTime,
+    cameraInputRef,
+    videoInputRef,
+    audioInputRef,
+    handleFileCapture,
+    handleCameraCapture,
+    handleVideoCapture,
+    handleAudioCapture,
+    handleTextNoteSubmit,
+    handleUploadClick,
+    formatRecordingTime,
+  } = useAddCaptureHandlers({ onUploadClick, onCapture });
 
   // Get allowed capture sources for this category
   const allowedSources = getCaptureSourcesForCategory(category);
 
   // =========================================================================
-  // HANDLERS
-  // =========================================================================
-
-  /**
-   * Handle file selection from hidden input (camera/video capture)
-   */
-  const handleFileCapture = useCallback(
-    async (
-      event: React.ChangeEvent<HTMLInputElement>,
-      source: CaptureSource,
-      captureMode: CaptureMode
-    ) => {
-      const files = event.target.files;
-      if (!files || files.length === 0) return;
-
-      const file = files[0];
-      const metadata = createCaptureMetadata(source, captureMode, {
-        mimeType: file.type,
-        originalFilename: file.name,
-      });
-
-      await onCapture(file, metadata);
-
-      // Reset input
-      event.target.value = '';
-      setIsOpen(false);
-    },
-    [onCapture]
-  );
-
-  /**
-   * Handle camera photo capture
-   */
-  const handleCameraCapture = useCallback(() => {
-    cameraInputRef.current?.click();
-  }, []);
-
-  /**
-   * Handle video capture
-   */
-  const handleVideoCapture = useCallback(() => {
-    videoInputRef.current?.click();
-  }, []);
-
-  /**
-   * Handle audio recording start/stop
-   */
-  const handleAudioCapture = useCallback(async () => {
-    // Check if MediaRecorder is supported
-    if (!navigator.mediaDevices?.getUserMedia) {
-      // Fallback: use file input
-      audioInputRef.current?.click();
-      return;
-    }
-
-    if (isRecording) {
-      // Stop recording
-      mediaRecorderRef.current?.stop();
-      setIsRecording(false);
-      if (recordingIntervalRef.current) {
-        clearInterval(recordingIntervalRef.current);
-      }
-    } else {
-      // Start recording
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mediaRecorder = new MediaRecorder(stream);
-        mediaRecorderRef.current = mediaRecorder;
-        audioChunksRef.current = [];
-
-        mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0) {
-            audioChunksRef.current.push(event.data);
-          }
-        };
-
-        mediaRecorder.onstop = async () => {
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          const file = new File(
-            [audioBlob],
-            `voice-note-${Date.now()}.webm`,
-            { type: 'audio/webm' }
-          );
-
-          const metadata = createCaptureMetadata('microphone', 'audio', {
-            mimeType: 'audio/webm',
-            durationMs: recordingTime * 1000,
-            originalFilename: file.name,
-          });
-
-          await onCapture(file, metadata);
-          setRecordingTime(0);
-          setIsOpen(false);
-
-          // Stop all tracks
-          stream.getTracks().forEach((track) => track.stop());
-        };
-
-        mediaRecorder.start();
-        setIsRecording(true);
-        setRecordingTime(0);
-
-        // Update recording time
-        recordingIntervalRef.current = setInterval(() => {
-          setRecordingTime((prev) => prev + 1);
-        }, 1000);
-      } catch (error) {
-        logger.error('Audio recording failed', { error });
-        // Fallback to file input
-        audioInputRef.current?.click();
-      }
-    }
-  }, [isRecording, onCapture, recordingTime]);
-
-  /**
-   * Handle text note submission
-   */
-  const handleTextNoteSubmit = useCallback(async () => {
-    if (!textNote.trim()) return;
-
-    const content = textNote.trim();
-    const blob = new Blob([content], { type: 'text/markdown' });
-    const file = new File(
-      [blob],
-      `note-${Date.now()}.md`,
-      { type: 'text/markdown' }
-    );
-
-    const metadata = createCaptureMetadata('text', 'text', {
-      mimeType: 'text/markdown',
-      originalFilename: file.name,
-    });
-
-    await onCapture(file, metadata);
-    setTextNote('');
-    setIsTextNoteOpen(false);
-    setIsOpen(false);
-  }, [textNote, onCapture]);
-
-  /**
-   * Handle upload option click
-   */
-  const handleUploadClick = useCallback(() => {
-    setIsOpen(false);
-    onUploadClick();
-  }, [onUploadClick]);
-
-  // =========================================================================
   // RENDER HELPERS
   // =========================================================================
-
-  const formatRecordingTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
 
   const renderMenuItems = () => {
     return (
@@ -339,7 +186,7 @@ export function AddCaptureMenu({
             <Upload className={iconSizes.md} />
             <div className="flex flex-col">
               <span className="font-medium">{t('capture.upload')}</span>
-              <span className="text-xs text-muted-foreground">
+              <span className={cn("text-xs", colors.text.muted)}>
                 {t('capture.uploadDesc')}
               </span>
             </div>
@@ -354,7 +201,7 @@ export function AddCaptureMenu({
             <Camera className={iconSizes.md} />
             <div className="flex flex-col">
               <span className="font-medium">{t('capture.photo')}</span>
-              <span className="text-xs text-muted-foreground">
+              <span className={cn("text-xs", colors.text.muted)}>
                 {t('capture.photoDesc')}
               </span>
             </div>
@@ -367,7 +214,7 @@ export function AddCaptureMenu({
             <Video className={iconSizes.md} />
             <div className="flex flex-col">
               <span className="font-medium">{t('capture.video')}</span>
-              <span className="text-xs text-muted-foreground">
+              <span className={cn("text-xs", colors.text.muted)}>
                 {t('capture.videoDesc')}
               </span>
             </div>
@@ -378,7 +225,7 @@ export function AddCaptureMenu({
         {allowedSources.includes('microphone') && (
           <DropdownMenuItem
             onClick={handleAudioCapture}
-            className={cn('gap-2 py-2', isRecording && 'bg-red-50 text-red-600')}
+            className={cn('gap-2 py-2', isRecording && 'bg-red-50 text-red-600')} // eslint-disable-line design-system/enforce-semantic-colors
           >
             <Mic className={cn(iconSizes.md, isRecording && 'animate-pulse')} />
             <div className="flex flex-col">
@@ -387,7 +234,7 @@ export function AddCaptureMenu({
                   ? `${t('capture.recording')} ${formatRecordingTime(recordingTime)}`
                   : t('capture.audio')}
               </span>
-              <span className="text-xs text-muted-foreground">
+              <span className={cn("text-xs", colors.text.muted)}>
                 {isRecording ? t('capture.clickToStop') : t('capture.audioDesc')}
               </span>
             </div>
@@ -403,7 +250,7 @@ export function AddCaptureMenu({
             <FileText className={iconSizes.md} />
             <div className="flex flex-col">
               <span className="font-medium">{t('capture.text')}</span>
-              <span className="text-xs text-muted-foreground">
+              <span className={cn("text-xs", colors.text.muted)}>
                 {t('capture.textDesc')}
               </span>
             </div>

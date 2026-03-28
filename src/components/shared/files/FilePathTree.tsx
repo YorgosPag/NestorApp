@@ -3,26 +3,10 @@
  * 🏢 ENTERPRISE: File Path Tree Component
  * =============================================================================
  *
- * "Windows Explorer style" hierarchical tree visualization για file paths.
- * Displays storage path structure using semantic DOM.
+ * "Windows Explorer style" hierarchical tree visualization for file paths.
  *
  * @module components/shared/files/FilePathTree
  * @enterprise ADR-031 - Canonical File Storage System
- *
- * Features:
- * - Semantic HTML (<nav>, <ul>, <li>, <button>)
- * - Centralized design tokens (no inline styles)
- * - i18n labels για path segments
- * - Keyboard accessible (Space/Enter to toggle)
- * - Collapsible folders με visual tree lines
- *
- * @example
- * ```tsx
- * <FilePathTree
- *   files={fileRecords}
- *   onFileSelect={(file) => console.log(file)}
- * />
- * ```
  */
 
 'use client';
@@ -31,202 +15,59 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
 import { ChevronRight, ChevronDown, Folder, FolderOpen, FileText, Copy, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useFileDisplayName } from '@/hooks/useFileDisplayName'; // 🏢 ENTERPRISE: Runtime i18n translation
+import { useFileDisplayName } from '@/hooks/useFileDisplayName';
 import type { FileRecord } from '@/types/file-record';
 import {
   buildFilePathTree,
   buildStudyGroupTree,
-  type TreeNode,
   type FolderNode,
   type FileNode,
 } from './utils/file-path-tree';
-import { formatFileSize } from '@/utils/file-validation'; // 🏢 ENTERPRISE: Centralized file size formatting
-import { copyToClipboard } from '@/lib/share-utils'; // 🏢 ENTERPRISE: Centralized clipboard utility
-import { useNotifications } from '@/providers/NotificationProvider'; // 🏢 ENTERPRISE: Centralized notification system
-import { FileInspector } from './FileInspector'; // 🏢 ENTERPRISE: On-demand metadata inspector (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ #2)
+import { formatFileSize } from '@/utils/file-validation';
+import { copyToClipboard } from '@/lib/share-utils';
+import { useNotifications } from '@/providers/NotificationProvider';
+import { FileInspector } from './FileInspector';
+import '@/lib/design-system';
 
-// ============================================================================
-// MODULE LOGGER
-// ============================================================================
+import type { FilePathTreeProps } from './file-path-tree-config';
+import {
+  getFolderIndentClass,
+  getFileIndentClass,
+  filterTreeToContextLevel,
+} from './file-path-tree-config';
+
+// Re-export props type
+export type { FilePathTreeProps } from './file-path-tree-config';
 
 const logger = createModuleLogger('FilePathTree');
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-/**
- * 🏢 ENTERPRISE: Centralized indentation classes for tree levels
- * Uses ONLY valid Tailwind classes (NOT arbitrary values) for guaranteed rendering
- * Maps depth → padding-left class
- */
-const TREE_FOLDER_INDENTATION = [
-  'pl-0',    // depth 0 - root level
-  'pl-4',    // depth 1 - 1rem = 16px
-  'pl-8',    // depth 2 - 2rem = 32px
-  'pl-12',   // depth 3 - 3rem = 48px
-  'pl-16',   // depth 4 - 4rem = 64px
-  'pl-20',   // depth 5 - 5rem = 80px
-  'pl-24',   // depth 6 - 6rem = 96px
-] as const;
-
-/**
- * 🏢 ENTERPRISE: File indentation (extra indent for visual hierarchy)
- * Files are indented more than folders for clear distinction
- */
-const TREE_FILE_INDENTATION = [
-  'pl-6',    // depth 0 + extra - 1.5rem = 24px
-  'pl-10',   // depth 1 + extra - 2.5rem = 40px
-  'pl-14',   // depth 2 + extra - 3.5rem = 56px
-  'pl-16',   // depth 3 + extra - 4rem = 64px
-  'pl-20',   // depth 4 + extra - 5rem = 80px
-  'pl-24',   // depth 5 + extra - 6rem = 96px
-  'pl-28',   // depth 6 + extra - 7rem = 112px
-] as const;
-
-/**
- * Get indentation class for folder node
- * @param depth - Tree depth level (0-based)
- * @returns Tailwind padding-left class
- */
-function getFolderIndentClass(depth: number): string {
-  return TREE_FOLDER_INDENTATION[Math.min(depth, TREE_FOLDER_INDENTATION.length - 1)];
-}
-
-/**
- * Get indentation class for file node (extra indent)
- * @param depth - Tree depth level (0-based)
- * @returns Tailwind padding-left class
- */
-function getFileIndentClass(depth: number): string {
-  return TREE_FILE_INDENTATION[Math.min(depth, TREE_FILE_INDENTATION.length - 1)];
-}
-
-// ============================================================================
-// TYPES
-// ============================================================================
-
-export interface FilePathTreeProps {
-  /** Array of FileRecords to display */
-  files: FileRecord[];
-  /** Callback when file is selected */
-  onFileSelect?: (file: FileRecord) => void;
-  /** Optional CSS class */
-  className?: string;
-  /**
-   * 🏢 ENTERPRISE: Contextual root level for Business View
-   * - 'full': Show full technical hierarchy (companies → entities → domains → categories → files)
-   * - 'domains': Start from domains level (hide companies, entities)
-   * - 'categories': Start from categories level (hide companies, entities, domains)
-   * @default 'full'
-   */
-  contextLevel?: 'full' | 'domains' | 'categories';
-  /**
-   * 🏢 ENTERPRISE: Company name for user-friendly display
-   * If not provided, will show companyId
-   */
-  companyName?: string;
-  /**
-   * 🏢 ENTERPRISE: View mode (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ - Business View)
-   * - 'business': Default - Business view με user-friendly ομαδοποίηση (Ταυτοποίηση, Νομικά, κτλ.)
-   * - 'technical': Admin/Debug - Full technical tree με IDs και segments
-   * @default 'business'
-   */
-  viewMode?: 'business' | 'technical';
-  /**
-   * 🏢 ENTERPRISE: Group files by study category (ADR-191)
-   * When enabled, tree shows study group folders (Διοικητικά/Νομικά, Αρχιτεκτονικά, etc.)
-   * instead of domain/category folders from storagePath.
-   * @default false
-   */
-  groupByStudyGroup?: boolean;
-}
 
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
-/**
- * 🏢 ENTERPRISE: Filter tree to contextual root level
- * Extracts a subtree starting from the specified segment level
- */
-function filterTreeToContextLevel(
-  root: TreeNode,
-  contextLevel: 'full' | 'domains' | 'categories'
-): TreeNode {
-  if (contextLevel === 'full') {
-    return root;
-  }
-
-  // Find the target segment to start from
-  const targetSegment = contextLevel === 'domains' ? 'domains' : 'categories';
-
-  // Recursively search for the first node with the target segment
-  function findFirstNodeWithSegment(node: TreeNode): TreeNode | null {
-    if (node.type === 'folder' && node.segment === targetSegment) {
-      return node;
-    }
-
-    if (node.type === 'folder' || node.type === 'root') {
-      for (const child of node.children) {
-        const found = findFirstNodeWithSegment(child);
-        if (found) return found;
-      }
-    }
-
-    return null;
-  }
-
-  const contextRoot = findFirstNodeWithSegment(root);
-
-  if (contextRoot) {
-    // Create a new root with the contextual subtree
-    return {
-      id: 'contextual-root',
-      type: 'root',
-      label: 'Root',
-      path: [],
-      children: [contextRoot],
-    } as TreeNode;
-  }
-
-  // Fallback: return original tree
-  return root;
-}
-
-/**
- * 🏢 ENTERPRISE: File Path Tree Component
- *
- * Displays file storage paths as a hierarchical tree structure.
- * Uses semantic DOM and centralized design tokens.
- */
 export function FilePathTree({
   files,
   onFileSelect,
   className,
   contextLevel = 'full',
   companyName,
-  viewMode = 'business', // 🏢 ENTERPRISE: Default is Business View (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
+  viewMode = 'business',
   groupByStudyGroup = false,
 }: FilePathTreeProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { t } = useTranslation('files');
-  const translateDisplayName = useFileDisplayName(); // 🏢 ENTERPRISE: Runtime i18n translation
-  const { success, error } = useNotifications(); // 🏢 ENTERPRISE: Centralized toast notifications (ADR-031)
+  const translateDisplayName = useFileDisplayName();
+  const { success, error } = useNotifications();
 
-  // 🏢 ENTERPRISE: Inspector state (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ #2 - On-demand metadata)
   const [inspectedFile, setInspectedFile] = useState<FileRecord | null>(null);
 
-  // Build tree structure from files
-  // 🏢 ENTERPRISE: Study group tree groups by purpose → StudyGroup (ADR-191)
-  // Business view ALWAYS uses study group tree for meaningful folder names
   const useStudyGroups = groupByStudyGroup || viewMode === 'business';
 
-  // 🏢 ENTERPRISE: Tree data computed via useMemo (same pattern as CompanyFileTree)
-  // Expansion state managed separately — no stale useState/useEffect issues
   const tree = useMemo(() => {
     if (useStudyGroups) {
       return buildStudyGroupTree(files);
@@ -235,10 +76,8 @@ export function FilePathTree({
     return filterTreeToContextLevel(fullTree, contextLevel);
   }, [files, contextLevel, useStudyGroups]);
 
-  // Expansion state: Set of expanded folder IDs (default: all expanded)
   const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set());
 
-  // Reset collapsed state when tree structure changes (viewMode switch, files change)
   React.useEffect(() => {
     setCollapsedNodes(new Set());
   }, [useStudyGroups, files]);
@@ -247,55 +86,29 @@ export function FilePathTree({
   // HANDLERS
   // =========================================================================
 
-  /**
-   * Toggle folder expansion (tracks collapsed nodes — default is expanded)
-   */
   const handleFolderToggle = useCallback((folderId: string) => {
     setCollapsedNodes((prev) => {
       const next = new Set(prev);
-      if (next.has(folderId)) {
-        next.delete(folderId);
-      } else {
-        next.add(folderId);
-      }
+      if (next.has(folderId)) { next.delete(folderId); } else { next.add(folderId); }
       return next;
     });
   }, []);
 
-  /**
-   * Handle file selection
-   */
   const handleFileSelect = useCallback(
-    (fileRecord: FileRecord) => {
-      if (onFileSelect) {
-        onFileSelect(fileRecord);
-      }
-    },
+    (fileRecord: FileRecord) => { onFileSelect?.(fileRecord); },
     [onFileSelect]
   );
 
-  /**
-   * 🏢 ENTERPRISE: Handle copy storage path to clipboard (Technical View only)
-   * ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ #2: Copy χωρίς inline display (on-demand)
-   */
   const handleCopyPath = useCallback(
     async (fileRecord: FileRecord, event: React.MouseEvent) => {
-      // Prevent file selection when clicking copy button
       event.stopPropagation();
-
       const storagePath = fileRecord.storagePath;
-      if (!storagePath) {
-        error(t('technical.pathUnavailable'));
-        return;
-      }
+      if (!storagePath) { error(t('technical.pathUnavailable')); return; }
 
       try {
         const copied = await copyToClipboard(storagePath);
-        if (copied) {
-          success(t('technical.pathCopied'));
-        } else {
-          error(t('copy.copyError', { ns: 'common', defaultValue: 'Copy failed' }));
-        }
+        if (copied) { success(t('technical.pathCopied')); }
+        else { error(t('copy.copyError', { ns: 'common', defaultValue: 'Copy failed' })); }
       } catch (err) {
         logger.error('Failed to copy path', { error: err });
         error(t('copy.copyError', { ns: 'common', defaultValue: 'Copy failed' }));
@@ -304,118 +117,60 @@ export function FilePathTree({
     [success, error, t]
   );
 
-  /**
-   * 🏢 ENTERPRISE: Handle open inspector (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ #2)
-   * Opens on-demand metadata inspector for file details
-   */
   const handleOpenInspector = useCallback(
     (fileRecord: FileRecord, event: React.MouseEvent) => {
-      // Prevent file selection when clicking details button
       event.stopPropagation();
       setInspectedFile(fileRecord);
     },
     []
   );
 
-  /**
-   * 🏢 ENTERPRISE: Handle close inspector
-   */
-  const handleCloseInspector = useCallback(() => {
-    setInspectedFile(null);
-  }, []);
+  const handleCloseInspector = useCallback(() => { setInspectedFile(null); }, []);
 
   // =========================================================================
   // RENDER HELPERS
   // =========================================================================
 
-  /**
-   * Get label for path segment using i18n
-   * 🏢 ENTERPRISE: Show VALUES (not generic labels) for better UX
-   * 🏢 ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ: Business View hides technical segments
-   */
   const getSegmentLabel = useCallback(
     (segment: string, value?: string): string => {
-      // 🏢 STUDY GROUP: Use label set by buildStudyGroupTree (ADR-191)
-      // Labels come from StudyGroupMeta.label.el, already set on the node
-      if (segment === 'study-group') {
-        return ''; // Signal to use node.label directly
-      }
+      if (segment === 'study-group') return '';
 
-      // 🏢 BUSINESS VIEW: Skip technical segments (they won't be rendered)
       if (viewMode === 'business') {
-        // Only show business-relevant segments: domains and categories VALUES
-        if (segment === 'domains' && value) {
-          return t(`domains.${value}`, value);
-        }
-        if (segment === 'categories' && value) {
-          return t(`categories.${value}`, value);
-        }
-
-        // Hide technical segments in business view
-        if (segment === 'companies' || segment === 'entities' || segment === 'files') {
-          return ''; // Will be filtered out
-        }
+        if (segment === 'domains' && value) return t(`domains.${value}`, value);
+        if (segment === 'categories' && value) return t(`categories.${value}`, value);
+        if (segment === 'companies' || segment === 'entities' || segment === 'files') return '';
       }
 
-      // 🏢 TECHNICAL VIEW: Show all segments με full detail
       if (viewMode === 'technical') {
-        // Company name (use prop if provided, otherwise companyId)
-        if (segment === 'companies' && value) {
-          return companyName || value;
-        }
-
-        // Entity type value (contact, building, unit, project)
-        if (segment === 'entities' && value) {
-          return t(`entityTypes.${value}`, value);
-        }
-
-        // Domain value (admin, construction, sales, etc.)
-        if (segment === 'domains' && value) {
-          return t(`domains.${value}`, value);
-        }
-
-        // Category value (documents, photos, contracts, etc.)
-        if (segment === 'categories' && value) {
-          return t(`categories.${value}`, value);
-        }
-
-        // Generic segment labels
-        if (segment === 'companies' || segment === 'projects' || segment === 'entities' || segment === 'domains' || segment === 'categories' || segment === 'files') {
+        if (segment === 'companies' && value) return companyName || value;
+        if (segment === 'entities' && value) return t(`entityTypes.${value}`, value);
+        if (segment === 'domains' && value) return t(`domains.${value}`, value);
+        if (segment === 'categories' && value) return t(`categories.${value}`, value);
+        if (['companies', 'projects', 'entities', 'domains', 'categories', 'files'].includes(segment)) {
           return t(`pathSegments.${segment}`);
         }
       }
 
-      // 🏢 FALLBACK: Return value or segment as-is
       return value || segment;
     },
     [t, companyName, viewMode]
   );
 
-  /**
-   * Render a folder node
-   * 🏢 ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ: Business View filters out technical nodes
-   */
   const renderFolderNode = useCallback(
     (node: FolderNode, depth: number): React.ReactNode => {
-      const isExpanded = !collapsedNodes.has(node.id); // Default: expanded
+      const isExpanded = !collapsedNodes.has(node.id);
       const hasChildren = node.children.length > 0;
-      // 🏢 ENTERPRISE: Study group segments use their built-in label from config
       const translatedLabel = getSegmentLabel(node.segment, node.value);
       const label = (node.segment === 'study-group') ? node.label : translatedLabel;
 
-      // 🏢 BUSINESS VIEW: Skip rendering technical segments
+      // Business view: skip technical segments
       if (viewMode === 'business' && (node.segment === 'companies' || node.segment === 'entities' || node.segment === 'files')) {
-        // Render children directly without showing this folder
         if (hasChildren) {
           return (
             <React.Fragment key={node.id}>
               {node.children.map((child) => {
-                if (child.type === 'folder') {
-                  return renderFolderNode(child, depth); // Same depth - flatten hierarchy
-                }
-                if (child.type === 'file') {
-                  return renderFileNode(child, depth);
-                }
+                if (child.type === 'folder') return renderFolderNode(child, depth);
+                if (child.type === 'file') return renderFileNode(child, depth);
                 return null;
               })}
             </React.Fragment>
@@ -429,7 +184,6 @@ export function FilePathTree({
 
       return (
         <li key={node.id} className="list-none">
-          {/* Folder button */}
           <button
             type="button"
             onClick={() => handleFolderToggle(node.id)}
@@ -437,41 +191,28 @@ export function FilePathTree({
               'flex items-center gap-2 w-full py-1 px-2 rounded transition-colors',
               'hover:bg-muted text-left',
               'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
-              getFolderIndentClass(depth) // 🏢 ENTERPRISE: Centralized indentation (no inline styles)
+              getFolderIndentClass(depth)
             )}
             aria-expanded={isExpanded}
             aria-label={isExpanded ? t('tree.collapse') : t('tree.expand')}
           >
-            {/* Chevron */}
-            {hasChildren && (
-              <ChevronIcon className={cn(iconSizes.xs, 'flex-shrink-0 text-muted-foreground')} />
+            {hasChildren ? (
+              <ChevronIcon className={cn(iconSizes.xs, `flex-shrink-0 ${colors.text.muted}`)} />
+            ) : (
+              <span className={cn(iconSizes.xs)} />
             )}
-            {!hasChildren && <span className={cn(iconSizes.xs)} />}
-
-            {/* Folder icon */}
-            <Icon className={cn(iconSizes.sm, 'flex-shrink-0 text-muted-foreground')} aria-hidden="true" />
-
-            {/* Label */}
+            <Icon className={cn(iconSizes.sm, `flex-shrink-0 ${colors.text.muted}`)} aria-hidden="true" />
             <span className="text-sm font-medium truncate">{label}</span>
-
-            {/* File count badge */}
             {hasChildren && (
-              <span className="ml-auto text-xs text-muted-foreground">
-                ({node.children.length})
-              </span>
+              <span className={cn("ml-auto text-xs", colors.text.muted)}>({node.children.length})</span>
             )}
           </button>
 
-          {/* Children (recursive) */}
           {isExpanded && hasChildren && (
             <ul className="m-0 p-0" role="group">
               {node.children.map((child) => {
-                if (child.type === 'folder') {
-                  return renderFolderNode(child, depth + 1);
-                }
-                if (child.type === 'file') {
-                  return renderFileNode(child, depth + 1);
-                }
+                if (child.type === 'folder') return renderFolderNode(child, depth + 1);
+                if (child.type === 'file') return renderFileNode(child, depth + 1);
                 return null;
               })}
             </ul>
@@ -482,28 +223,21 @@ export function FilePathTree({
     [iconSizes, t, getSegmentLabel, handleFolderToggle, viewMode, collapsedNodes]
   );
 
-  /**
-   * Render a file node (leaf)
-   * ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ #2: Clean list, on-demand inspector (NO inline paths)
-   */
   const renderFileNode = useCallback(
     (node: FileNode, depth: number): React.ReactNode => {
       const showTechnicalActions = viewMode === 'technical';
 
       return (
         <li key={node.id} className="list-none">
-          {/* 🏢 ENTERPRISE: Clean file row (1 row per file - NO inline paths) */}
           <div
             className={cn(
               'flex items-center gap-2 w-full py-1 px-2 rounded transition-colors group',
               'hover:bg-accent/50',
-              getFileIndentClass(depth) // 🏢 ENTERPRISE: Centralized indentation (no inline styles)
+              getFileIndentClass(depth)
             )}
           >
-            {/* File icon */}
             <FileText className={cn(iconSizes.sm, 'flex-shrink-0 text-primary')} aria-hidden="true" />
 
-            {/* File name (clickable) - 🏢 ENTERPRISE: Runtime i18n translation */}
             <button
               type="button"
               onClick={() => handleFileSelect(node.fileRecord)}
@@ -516,17 +250,14 @@ export function FilePathTree({
               {translateDisplayName(node.fileRecord)}
             </button>
 
-            {/* File size */}
             {node.fileRecord.sizeBytes && (
-              <span className="text-xs text-muted-foreground">
+              <span className={cn("text-xs", colors.text.muted)}>
                 {formatFileSize(node.fileRecord.sizeBytes)}
               </span>
             )}
 
-            {/* 🏢 TECHNICAL VIEW: On-demand actions (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ #2) */}
             {showTechnicalActions && (
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                {/* Copy Path button (NO inline display) */}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
@@ -534,7 +265,7 @@ export function FilePathTree({
                       onClick={(e) => handleCopyPath(node.fileRecord, e)}
                       className={cn(
                         'p-1.5 rounded transition-colors',
-                        'hover:bg-muted text-muted-foreground hover:text-foreground',
+                        `hover:bg-muted ${colors.text.muted} hover:text-foreground`,
                         'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1'
                       )}
                       aria-label={t('technical.copyPath')}
@@ -545,7 +276,6 @@ export function FilePathTree({
                   <TooltipContent>{t('technical.copyPath')}</TooltipContent>
                 </Tooltip>
 
-                {/* Details button (opens Inspector) */}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
@@ -553,7 +283,7 @@ export function FilePathTree({
                       onClick={(e) => handleOpenInspector(node.fileRecord, e)}
                       className={cn(
                         'p-1.5 rounded transition-colors',
-                        'hover:bg-muted text-muted-foreground hover:text-foreground',
+                        `hover:bg-muted ${colors.text.muted} hover:text-foreground`,
                         'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1'
                       )}
                       aria-label={t('technical.details')}
@@ -569,7 +299,7 @@ export function FilePathTree({
         </li>
       );
     },
-    [iconSizes, t, handleFileSelect, handleCopyPath, handleOpenInspector, viewMode, translateDisplayName] // 🏢 CRITICAL: Must include translateDisplayName!
+    [iconSizes, t, handleFileSelect, handleCopyPath, handleOpenInspector, viewMode, translateDisplayName]
   );
 
   // =========================================================================
@@ -578,7 +308,7 @@ export function FilePathTree({
 
   if (files.length === 0) {
     return (
-      <section className={cn('p-2 text-center text-muted-foreground', className)}>
+      <section className={cn('p-2 text-center', colors.text.muted, className)}>
         <p className="text-sm">{t('list.noFiles')}</p>
       </section>
     );
@@ -586,33 +316,23 @@ export function FilePathTree({
 
   return (
     <>
-      <nav
-        className={cn('rounded-lg border bg-card', className)}
-        aria-label={t('tree.title')}
-      >
+      <nav className={cn('rounded-lg border bg-card', className)} aria-label={t('tree.title')}>
         <header className="px-2 py-2 border-b bg-muted/50">
           <h3 className="text-sm font-semibold">{t('tree.title')}</h3>
         </header>
 
-        {/* Tree container */}
-        {/* 🏢 ENTERPRISE: Using standard Tailwind class instead of arbitrary value */}
         <div className="p-2 max-h-96 overflow-y-auto">
           <ul className="m-0 p-0" role="tree">
             {tree.type === 'root' &&
               tree.children.map((child) => {
-                if (child.type === 'folder') {
-                  return renderFolderNode(child, 0);
-                }
-                if (child.type === 'file') {
-                  return renderFileNode(child, 0);
-                }
+                if (child.type === 'folder') return renderFolderNode(child, 0);
+                if (child.type === 'file') return renderFileNode(child, 0);
                 return null;
               })}
           </ul>
         </div>
       </nav>
 
-      {/* 🏢 ENTERPRISE: On-demand File Inspector (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ #2) */}
       {inspectedFile && (
         <FileInspector
           file={inspectedFile}
@@ -624,9 +344,3 @@ export function FilePathTree({
     </>
   );
 }
-
-// ============================================================================
-// UTILITIES
-// ============================================================================
-// 🏢 ENTERPRISE: formatFileSize is now imported from centralized utility
-// @see src/utils/file-validation.ts

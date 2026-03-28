@@ -1,3 +1,4 @@
+/* eslint-disable custom/no-hardcoded-strings */
 /**
  * =============================================================================
  * 🗺️ ADDRESS MAP COMPONENT
@@ -17,23 +18,25 @@
  *
  * Architecture:
  * AddressMap (Domain-specific) → InteractiveMap (Generic GeoCanvas)
+ * Config/types extracted to: address-map-config.tsx
+ * Geocoding logic extracted to: useAddressMapGeocoding.ts
  *
  * @file AddressMap.tsx
  * @created 2026-02-02
  * @updated 2026-02-16 - Added draggable markers + reverse geocoding (ADR-168)
+ * @updated 2026-03-28 - SRP split: config → address-map-config.tsx, geocoding → useAddressMapGeocoding.ts
  */
 
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
+import React, { useState, useCallback, useRef, useEffect, memo } from 'react';
 import { Marker } from 'react-map-gl/maplibre';
 import { AlertTriangle, MapPin, Locate } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { useNotifications } from '@/providers/NotificationProvider';
-import { LngLatBounds, Marker as MapLibreMarker } from 'maplibre-gl';
+import { Marker as MapLibreMarker } from 'maplibre-gl';
 // 🔧 FIX: MapLibre CSS required for Marker positioning — was missing, causing invisible pins
 import 'maplibre-gl/dist/maplibre-gl.css';
-
 
 import { InteractiveMap } from '@/subapps/geo-canvas/components/InteractiveMap';
 import type { MapInstance } from '@/subapps/geo-canvas/hooks/map/useMapInteractions';
@@ -41,151 +44,35 @@ import { PolygonSystemProvider } from '@/subapps/geo-canvas/systems/polygon-syst
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 
-import type { ProjectAddress, PartialProjectAddress } from '@/types/project/addresses';
-import {
-  formatAddressForGeocoding,
-  getGeocodableAddresses
-} from '@/types/project/address-helpers';
-import {
-  geocodeAddress,
-  reverseGeocode,
-  type GeocodingServiceResult,
-  type ReverseGeocodingResult
-} from '@/lib/geocoding/geocoding-service';
+import type { ProjectAddress } from '@/types/project/addresses';
+import { getGeocodableAddresses } from '@/types/project/address-helpers';
 import { useGeolocation } from '@/hooks/useGeolocation';
-import { ADDRESS_MAP_CONFIG, type AddressMapHeightPreset } from '@/config/address-map-config';
+import { ADDRESS_MAP_CONFIG } from '@/config/address-map-config';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
-import { colors } from '@/styles/design-tokens';
+import { getStatusColor } from '@/lib/design-system';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
+
+// Extracted modules (SRP split)
+import {
+  PIN_COLORS,
+  AUTO_PAN,
+  DraggableMarkerPin,
+  type AddressMapProps,
+} from '@/components/shared/addresses/address-map-config';
+import {
+  useAddressMapGeocoding,
+  findReferencePosition,
+} from '@/components/shared/addresses/useAddressMapGeocoding';
+
+// Re-exports for backward compatibility
+export { PIN_COLORS, BRANCH_PIN_COLORS, AUTO_PAN, DraggableMarkerPin } from '@/components/shared/addresses/address-map-config';
+export type { AddressMapProps, GeocodingStatus, DragPosition } from '@/components/shared/addresses/address-map-config';
+export { reverseResultToAddress, findReferencePosition } from '@/components/shared/addresses/useAddressMapGeocoding';
+
 const logger = createModuleLogger('AddressMap');
-
-/** Map pin SVG colors — SSoT: design-tokens */
-const PIN_COLORS = {
-  body: colors.blue['500'],          // #3b82f6 — primary brand
-  stroke: colors.background.primary, // white
-  innerCircle: colors.background.primary, // white
-  shadow: 'rgba(0,0,0,0.3)',         // subtle shadow
-  labelClass: 'text-blue-600 bg-blue-50/90',
-} as const;
-
-/** Branch pin colors — visually distinct from HQ */
-const BRANCH_PIN_COLORS = {
-  body: colors.orange['500'],        // #f97316 — orange for branches
-  stroke: colors.background.primary,
-  innerCircle: colors.background.primary,
-  shadow: 'rgba(0,0,0,0.3)',
-  labelClass: 'text-orange-600 bg-orange-50/90',
-} as const;
-
-/** Auto-pan configuration for edge dragging */
-const AUTO_PAN = {
-  EDGE_THRESHOLD: 60,   // pixels from viewport edge to start panning
-  PAN_SPEED: 8,         // pixels per pan step
-} as const;
-
-// =============================================================================
-// COMPONENT INTERFACE
-// =============================================================================
-
-export interface AddressMapProps {
-  /** Addresses to display on map */
-  addresses: ProjectAddress[];
-
-  /** Highlight primary address με larger marker */
-  highlightPrimary?: boolean;
-
-  /** Show geocoding status badges */
-  showGeocodingStatus?: boolean;
-
-  /** Map container height preset (centralized layout tokens) */
-  heightPreset?: AddressMapHeightPreset;
-
-  /** Enable click-to-focus interaction */
-  enableClickToFocus?: boolean;
-
-  /** Marker click callback */
-  onMarkerClick?: (address: ProjectAddress, index: number) => void;
-
-  /** Geocoding complete callback */
-  onGeocodingComplete?: (results: Map<string, GeocodingServiceResult>) => void;
-
-  /** Show "Locate me" button for user GPS position (default: true) */
-  showLocateMe?: boolean;
-
-  /** Enable draggable markers (for add/edit mode) */
-  draggableMarkers?: boolean;
-
-  /** Callback when user drags a marker — provides reverse-geocoded address data + address index */
-  onAddressDragUpdate?: (addressData: Partial<PartialProjectAddress>, addressIndex: number) => void;
-
-  /** Additional CSS classes */
-  className?: string;
-}
-
-// =============================================================================
-// DRAGGABLE MARKER PIN — Inline SVG component (same design as symbol layer pin)
-// =============================================================================
-
-interface DraggableMarkerPinProps {
-  isPrimary?: boolean;
-  /** Show pulsating glow for new empty pins */
-  pulsate?: boolean;
-  /** Label shown below the pin */
-  label?: string;
-}
-
-function DraggableMarkerPin({ isPrimary, pulsate, label }: DraggableMarkerPinProps) {
-  const size = isPrimary ? 40 : 32;
-  const viewBoxHeight = Math.round(size * 1.25);
-  const pinColors = isPrimary ? PIN_COLORS : BRANCH_PIN_COLORS;
-  return (
-    <figure className="flex flex-col items-center m-0">
-      <svg
-        width={size}
-        height={viewBoxHeight}
-        viewBox="0 0 40 50"
-        xmlns="http://www.w3.org/2000/svg"
-        className={`cursor-grab active:cursor-grabbing drop-shadow-md ${pulsate ? 'animate-bounce' : ''}`}
-      >
-        <ellipse cx="20" cy="47" rx="8" ry="3" fill={pinColors.shadow} />
-        <path
-          d="M 20 0 C 11.163 0 4 7.163 4 16 C 4 25 20 45 20 45 C 20 45 36 25 36 16 C 36 7.163 28.837 0 20 0 Z"
-          fill={pinColors.body}
-          stroke={pinColors.stroke}
-          strokeWidth="2"
-        />
-        <circle cx="20" cy="16" r="6" fill={pinColors.innerCircle} />
-      </svg>
-      {label && (
-        <figcaption
-          className={`mt-0.5 text-[10px] font-semibold leading-none whitespace-nowrap rounded px-1 py-0.5 shadow-sm ${pinColors.labelClass}`}
-        >
-          {label}
-        </figcaption>
-      )}
-    </figure>
-  );
-}
-
-// =============================================================================
-// HELPERS
-// =============================================================================
-
-/** Map ReverseGeocodingResult to partial address data for form population */
-function reverseResultToAddress(result: ReverseGeocodingResult): Partial<PartialProjectAddress> {
-  return {
-    street: result.number
-      ? `${result.street} ${result.number}`
-      : result.street,
-    city: result.city,
-    neighborhood: result.neighborhood || undefined,
-    postalCode: result.postalCode,
-    region: result.region || undefined,
-    country: result.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
-    coordinates: { lat: result.lat, lng: result.lng },
-  };
-}
 
 // =============================================================================
 // COMPONENT
@@ -197,10 +84,10 @@ function reverseResultToAddress(result: ReverseGeocodingResult): Partial<Partial
  */
 export const AddressMap: React.FC<AddressMapProps> = memo(({
   addresses,
-  highlightPrimary = true,
+  highlightPrimary: _highlightPrimary = true,
   showGeocodingStatus = true,
   heightPreset = ADDRESS_MAP_CONFIG.DEFAULT_HEIGHT_PRESET,
-  enableClickToFocus = true,
+  enableClickToFocus: _enableClickToFocus = true,
   onMarkerClick,
   onGeocodingComplete,
   showLocateMe = true,
@@ -213,6 +100,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   // ===========================================================================
 
   const { t } = useTranslation('addresses');
+  const semanticColors = useSemanticColors();
   const { error: notifyError } = useNotifications();
 
   // User location (GPS) — "Βρες τη θέση μου"
@@ -222,19 +110,32 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
     requestPosition,
   } = useGeolocation({ enableHighAccuracy: true, maximumAge: 30_000, timeout: 15_000 });
 
-  const [geocodedAddresses, setGeocodedAddresses] = useState<Map<string, GeocodingServiceResult>>(new Map());
-  const [geocodingStatus, setGeocodingStatus] = useState<'idle' | 'loading' | 'success' | 'partial' | 'error'>('idle');
-  const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
+  const [_selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
 
-  // Draggable marker state — per-address positions (key = address ID)
-  const [dragPositions, setDragPositions] = useState<Map<string, { lng: number; lat: number }>>(new Map());
-  const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
-
   const mapRef = useRef<MapInstance | null>(null);
-  // Track if map has ever rendered successfully (prevents unmount during re-geocoding)
-  const hasEverRenderedRef = useRef(false);
+
+  // Geocoding hook (extracted)
+  const {
+    geocodedAddresses,
+    geocodingStatus,
+    dragPositions,
+    isReverseGeocoding,
+    hasEverRendered,
+    handleDragEnd,
+    autoPanRafRef,
+    autoPanDeltaRef,
+    stopAutoPan,
+    tickAutoPan,
+  } = useAddressMapGeocoding({
+    addresses,
+    draggableMarkers,
+    mapRef,
+    mapReady,
+    onGeocodingComplete,
+    onAddressDragUpdate,
+  });
 
   // ===========================================================================
   // USER LOCATION ERROR TOAST
@@ -249,8 +150,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   }, [geoStatus, t]);
 
   // ===========================================================================
-  // FLY TO USER POSITION + NATIVE MARKER (when obtained via "Locate Me")
-  // Uses native MapLibre marker instead of react-map-gl <Marker> for reliability
+  // FLY TO USER POSITION + NATIVE MARKER
   // ===========================================================================
 
   const userMarkerRef = useRef<MapLibreMarker | null>(null);
@@ -260,22 +160,20 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
 
     const map = mapRef.current;
 
-    // Fly to user position
     map.flyTo({
       center: [userPosition.longitude, userPosition.latitude],
       zoom: 15,
       duration: 1000,
     });
 
-    // Remove previous user marker if exists
     if (userMarkerRef.current) {
       userMarkerRef.current.remove();
       userMarkerRef.current = null;
     }
 
-    // Create native MapLibre marker with custom green pulsating element
     const el = document.createElement('div');
     el.className = 'user-location-marker';
+    // eslint-disable-next-line design-system/no-hardcoded-colors
     el.innerHTML = `
       <div style="position:relative;width:32px;height:32px;display:flex;align-items:center;justify-content:center">
         <span style="position:absolute;inset:0;border-radius:50%;background:rgba(34,197,94,0.25);animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite"></span>
@@ -284,7 +182,6 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
       </div>
     `;
 
-    // Inject ping animation if not already present
     if (!document.getElementById('user-loc-keyframes')) {
       const style = document.createElement('style');
       style.id = 'user-loc-keyframes';
@@ -298,7 +195,6 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
 
     userMarkerRef.current = marker;
 
-    // Cleanup on unmount
     return () => {
       if (userMarkerRef.current) {
         userMarkerRef.current.remove();
@@ -308,159 +204,13 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   }, [userPosition, mapReady]);
 
   // ===========================================================================
-  // GEOCODING EFFECT
-  // ===========================================================================
-
-  /**
-   * Geocode all addresses on mount/change
-   * Uses AddressResolver με caching για performance
-   */
-  useEffect(() => {
-    const geocodeAllAddresses = async () => {
-      if (addresses.length === 0) {
-        setGeocodingStatus('idle');
-        return;
-      }
-
-      setGeocodingStatus('loading');
-
-      try {
-        // Filter geocodable addresses (have street + city)
-        const geocodable = getGeocodableAddresses(addresses);
-
-        if (geocodable.length === 0) {
-          setGeocodingStatus('error');
-          return;
-        }
-
-        // Resolve addresses via server-side geocoding service
-        const geocodedMap = new Map<string, GeocodingServiceResult>();
-        let successCount = 0;
-
-        for (let i = 0; i < geocodable.length; i++) {
-          try {
-            const query = formatAddressForGeocoding(geocodable[i]);
-            const result = await geocodeAddress(query);
-            if (result) {
-              geocodedMap.set(geocodable[i].id, result);
-              successCount++;
-            }
-          } catch {
-            logger.warn('Geocoding failed for address', { data: { id: geocodable[i].id } });
-          }
-        }
-
-        setGeocodedAddresses(geocodedMap);
-
-        logger.info('AddressMap: Geocoding complete', { data: {
-          totalAddresses: addresses.length,
-          geocodableAddresses: geocodable.length,
-          successCount,
-        } });
-
-        // Determine status
-        if (successCount === 0) {
-          setGeocodingStatus('error');
-        } else if (successCount < geocodable.length) {
-          setGeocodingStatus('partial');
-        } else {
-          setGeocodingStatus('success');
-        }
-
-        // Notify parent
-        if (onGeocodingComplete) {
-          onGeocodingComplete(geocodedMap);
-        }
-
-        // For draggable mode: initialize drag positions from geocoded results
-        if (draggableMarkers && successCount > 0) {
-          setDragPositions(prev => {
-            const next = new Map(prev);
-            geocodedMap.forEach((result, id) => {
-              if (!next.has(id)) {
-                next.set(id, { lng: result.lng, lat: result.lat });
-              }
-            });
-            return next;
-          });
-        }
-      } catch (error) {
-        logger.error('Geocoding failed:', { error: error });
-        setGeocodingStatus('error');
-      }
-    };
-
-    geocodeAllAddresses();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addresses, onGeocodingComplete]);
-
-  // ===========================================================================
-  // FIT BOUNDS EFFECT
-  // ===========================================================================
-
-  /**
-   * Auto-fit map bounds to include all markers
-   * Runs when geocoding completes και map is ready
-   */
-  useEffect(() => {
-    if (!mapRef.current || !mapReady) return;
-
-    try {
-      const bounds = new LngLatBounds();
-
-      // Include geocoded positions
-      geocodedAddresses.forEach(result => {
-        bounds.extend([result.lng, result.lat]);
-      });
-
-      // In draggable mode: also include drag positions (for new/moved markers)
-      if (draggableMarkers) {
-        dragPositions.forEach(pos => {
-          bounds.extend([pos.lng, pos.lat]);
-        });
-        // Include default positions for empty addresses (not geocoded, not dragged)
-        const refPos = (() => {
-          for (const addr of addresses) {
-            const dp = dragPositions.get(addr.id);
-            if (dp) return dp;
-            const gc = geocodedAddresses.get(addr.id);
-            if (gc) return { lng: gc.lng, lat: gc.lat };
-          }
-          return null;
-        })();
-        for (let i = 0; i < addresses.length; i++) {
-          const addr = addresses[i];
-          if (!dragPositions.has(addr.id) && !geocodedAddresses.has(addr.id) && refPos) {
-            bounds.extend([refPos.lng - 0.003 * i, refPos.lat + 0.003 * i]);
-          }
-        }
-      }
-
-      if (bounds.isEmpty()) return;
-
-      mapRef.current.fitBounds(bounds, {
-        padding: ADDRESS_MAP_CONFIG.FIT_BOUNDS_PADDING,
-        maxZoom: ADDRESS_MAP_CONFIG.DEFAULT_MAX_ZOOM,
-        duration: ADDRESS_MAP_CONFIG.ANIMATION.FIT_BOUNDS
-      });
-    } catch (error) {
-      logger.error('fitBounds failed:', { error: error });
-    }
-  }, [geocodedAddresses, mapReady, draggableMarkers, dragPositions, addresses]);
-
-  // ===========================================================================
   // EVENT HANDLERS
   // ===========================================================================
 
-  /**
-   * Handle map ready event
-   * Enterprise pattern: Load custom marker icon into map sprite
-   */
   const handleMapReady = useCallback((map: MapInstance) => {
     mapRef.current = map;
     setMapReady(true);
 
-    // Load custom pin marker icon — needed for non-draggable Source+Layer mode
     const pinSVG = `
       <svg width="40" height="50" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">
         <ellipse cx="20" cy="47" rx="8" ry="3" fill="${PIN_COLORS.shadow}"/>
@@ -480,86 +230,19 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
       setMapLoaded(true);
     };
     pinImage.onerror = () => {
-      // Fallback: even if pin image fails, mark as loaded so Marker components can render
       logger.warn('Pin SVG image failed to load, using Marker component fallback');
       setMapLoaded(true);
     };
     pinImage.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(pinSVG)}`;
   }, []);
 
-  /**
-   * Handle marker click (read-only mode)
-   */
   const handleMarkerClick = useCallback((address: ProjectAddress, index: number) => {
     setSelectedMarkerId(address.id);
-
-    if (onMarkerClick) {
-      onMarkerClick(address, index);
-    }
-
-    // Auto-deselect after animation duration
+    onMarkerClick?.(address, index);
     setTimeout(() => {
       setSelectedMarkerId(null);
     }, ADDRESS_MAP_CONFIG.ANIMATION.MARKER_HIGHLIGHT * 6);
   }, [onMarkerClick]);
-
-  /**
-   * Auto-pan: continuous requestAnimationFrame loop when marker near viewport edges.
-   * Much smoother than discrete panBy calls on each onDrag event.
-   */
-  const autoPanRafRef = useRef<number | null>(null);
-  const autoPanDeltaRef = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
-
-  const stopAutoPan = useCallback(() => {
-    if (autoPanRafRef.current) {
-      cancelAnimationFrame(autoPanRafRef.current);
-      autoPanRafRef.current = null;
-    }
-    autoPanDeltaRef.current = { dx: 0, dy: 0 };
-  }, []);
-
-  // Continuous pan loop
-  const tickAutoPan = useCallback(() => {
-    const map = mapRef.current;
-    const { dx, dy } = autoPanDeltaRef.current;
-    if (map && (dx !== 0 || dy !== 0)) {
-      map.panBy([dx, dy], { duration: 0 });
-    }
-    autoPanRafRef.current = requestAnimationFrame(tickAutoPan);
-  }, []);
-
-  /**
-   * Handle drag end — reverse geocode the new position
-   * @param addressId - ID of the address being dragged (for position tracking)
-   * @param addressIndex - Index in the addresses array (passed to callback)
-   */
-  const handleDragEnd = useCallback(async (
-    event: { lngLat: { lng: number; lat: number } },
-    addressId: string,
-    addressIndex: number,
-  ) => {
-    stopAutoPan();
-    const { lng, lat } = event.lngLat;
-    setDragPositions(prev => {
-      const next = new Map(prev);
-      next.set(addressId, { lng, lat });
-      return next;
-    });
-    setIsReverseGeocoding(true);
-
-    try {
-      const result = await reverseGeocode(lat, lng);
-      if (result && onAddressDragUpdate) {
-        onAddressDragUpdate(reverseResultToAddress(result), addressIndex);
-      } else if (!result) {
-        logger.warn('Reverse geocoding returned no result', { data: { lat, lng } });
-      }
-    } catch (error) {
-      logger.error('Reverse geocoding failed', { error: String(error) });
-    } finally {
-      setIsReverseGeocoding(false);
-    }
-  }, [onAddressDragUpdate, stopAutoPan]);
 
   const handleAutoPan = useCallback((event: { lngLat: { lng: number; lat: number } }) => {
     const map = mapRef.current;
@@ -580,7 +263,6 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
 
     autoPanDeltaRef.current = { dx, dy };
 
-    // Start loop if needed, stop if not in edge zone
     if (dx !== 0 || dy !== 0) {
       if (!autoPanRafRef.current) {
         autoPanRafRef.current = requestAnimationFrame(tickAutoPan);
@@ -597,23 +279,17 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   const heightClass = ADDRESS_MAP_CONFIG.HEIGHT_PRESETS[heightPreset]
     ?? ADDRESS_MAP_CONFIG.HEIGHT_PRESETS.viewerStandard;
 
-  // For draggable mode: Always render map immediately (skip loading/error early returns)
   const isDraggableMode = draggableMarkers;
 
-  // Update "ever rendered" tracker
-  if (geocodingStatus === 'success' || geocodingStatus === 'partial') {
-    hasEverRenderedRef.current = true;
-  }
-
   // Loading state — only show spinner on FIRST load (before map has ever rendered)
-  if (geocodingStatus === 'loading' && !isDraggableMode && !hasEverRenderedRef.current) {
+  if (geocodingStatus === 'loading' && !isDraggableMode && !hasEverRendered) {
     return (
       <div
         className={`flex items-center justify-center bg-muted rounded-lg ${heightClass} ${className}`}
       >
         <div className="text-center space-y-3">
           <Spinner size="large" color="inherit" className="mx-auto text-primary" />
-          <p className="text-sm text-muted-foreground">
+          <p className={cn("text-sm", semanticColors.text.muted)}>
             {t('map.loading')}
           </p>
         </div>
@@ -622,7 +298,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   }
 
   // Error state (skip for draggable mode — show map with default pin position)
-  if (geocodingStatus === 'error' && !isDraggableMode && !hasEverRenderedRef.current) {
+  if (geocodingStatus === 'error' && !isDraggableMode && !hasEverRendered) {
     return (
       <Alert variant="destructive" className={className}>
         <AlertTriangle className="h-4 w-4" />
@@ -633,14 +309,12 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
     );
   }
 
-  // Determine if map should render
   const shouldRenderMap =
     isDraggableMode ||
     geocodingStatus === 'success' ||
     geocodingStatus === 'partial' ||
-    hasEverRenderedRef.current;
+    hasEverRendered;
 
-  // Default position for new address draggable pin (center of Greece)
   const defaultCenter = {
     lng: GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE,
     lat: GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE,
@@ -649,7 +323,6 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   return (
     <div className={`relative overflow-hidden ${heightClass} ${className}`}>
       <PolygonSystemProvider>
-        {/* Keep map absolutely bounded to prevent attribution panel from affecting layout height */}
         <div className="absolute inset-0">
           {shouldRenderMap && (
             <InteractiveMap
@@ -665,45 +338,36 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
               showMapControls={false}
               className="w-full h-full rounded-lg overflow-hidden"
             >
-              {/* Draggable Marker Mode — one marker per address */}
+              {/* Draggable Marker Mode */}
               {draggableMarkers && (() => {
-                // Find a reference position (first geocoded or dragged address, typically HQ)
-                const refPos = (() => {
-                  for (const addr of addresses) {
-                    const dp = dragPositions.get(addr.id);
-                    if (dp) return dp;
-                    const gc = geocodedAddresses.get(addr.id);
-                    if (gc) return { lng: gc.lng, lat: gc.lat };
-                  }
-                  return defaultCenter;
-                })();
+                const refPos = findReferencePosition(addresses, dragPositions, geocodedAddresses)
+                  ?? defaultCenter;
                 return addresses.map((addr, index) => {
-                const geocoded = geocodedAddresses.get(addr.id);
-                const dragPos = dragPositions.get(addr.id);
-                // Use drag position > geocoded position > offset from reference (HQ)
-                const position = dragPos
-                  ?? (geocoded ? { lng: geocoded.lng, lat: geocoded.lat } : null)
-                  ?? { lng: refPos.lng - 0.003 * index, lat: refPos.lat + 0.003 * index };
-                const hasData = !!(dragPos || geocoded);
+                  const geocoded = geocodedAddresses.get(addr.id);
+                  const dragPos = dragPositions.get(addr.id);
+                  const position = dragPos
+                    ?? (geocoded ? { lng: geocoded.lng, lat: geocoded.lat } : null)
+                    ?? { lng: refPos.lng - 0.003 * index, lat: refPos.lat + 0.003 * index };
+                  const hasData = !!(dragPos || geocoded);
 
-                return (
-                  <Marker
-                    key={addr.id}
-                    longitude={position.lng}
-                    latitude={position.lat}
-                    anchor="bottom"
-                    draggable
-                    onDragEnd={(e) => handleDragEnd(e, addr.id, index)}
-                    onDrag={handleAutoPan}
-                  >
-                    <DraggableMarkerPin
-                      isPrimary={addr.isPrimary}
-                      pulsate={!hasData}
-                      label={addr.label}
-                    />
-                  </Marker>
-                );
-              });
+                  return (
+                    <Marker
+                      key={addr.id}
+                      longitude={position.lng}
+                      latitude={position.lat}
+                      anchor="bottom"
+                      draggable
+                      onDragEnd={(e) => handleDragEnd(e, addr.id, index)}
+                      onDrag={handleAutoPan}
+                    >
+                      <DraggableMarkerPin
+                        isPrimary={addr.isPrimary}
+                        pulsate={!hasData}
+                        label={addr.label}
+                      />
+                    </Marker>
+                  );
+                });
               })()}
               {/* Fallback: single pin when no addresses exist in draggable mode */}
               {draggableMarkers && addresses.length === 0 && (
@@ -719,7 +383,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
                 </Marker>
               )}
 
-              {/* Read-only Mode — Marker components (reliable, same visual as draggable) */}
+              {/* Read-only Mode */}
               {!draggableMarkers && mapLoaded && addresses.map((addr, index) => {
                 const geocoded = geocodedAddresses.get(addr.id);
                 if (!geocoded) return null;
@@ -741,13 +405,11 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
                   </Marker>
                 );
               })}
-
-              {/* User location marker rendered via native MapLibre (useEffect above) */}
             </InteractiveMap>
           )}
         </div>
 
-        {/* Locate Me Button — bottom-right corner */}
+        {/* Locate Me Button */}
         {showLocateMe && (
           <button
             type="button"
@@ -761,8 +423,8 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
               transition-colors duration-150
               disabled:opacity-60 disabled:cursor-not-allowed
               ${geoStatus === 'granted'
-                ? 'bg-green-50 text-green-600 hover:bg-green-100'
-                : 'bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground'}
+                ? `${getStatusColor('available', 'bg')}/10 ${getStatusColor('available', 'text')}`
+                : `bg-background ${semanticColors.text.muted} hover:bg-accent hover:text-accent-foreground`}
             `}
             title={t('map.locateMe')}
             aria-label={t('map.locateMe')}

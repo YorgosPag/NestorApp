@@ -38,6 +38,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
 import { TRANSITION_PRESETS } from '@/components/ui/effects';
+import '@/lib/design-system';
 
 // =============================================================================
 // SUB-COMPONENTS
@@ -57,8 +58,8 @@ function UserBubble({ text, timestamp }: { text: string; timestamp: string }) {
         )}
       >
         <header className="flex items-center gap-1.5 mb-1">
-          <Mic className="h-3 w-3 text-muted-foreground" />
-          <time className="text-xs text-muted-foreground">
+          <Mic className={cn("h-3 w-3", colors.text.muted)} />
+          <time className={cn("text-xs", colors.text.muted)}>
             {new Date(timestamp).toLocaleTimeString([], {
               hour: '2-digit',
               minute: '2-digit',
@@ -79,6 +80,7 @@ function AIBubble({
   text: string;
   intent: string | null;
 }) {
+  const colors = useSemanticColors();
   return (
     <article className="flex justify-start mb-3">
       <div
@@ -92,7 +94,7 @@ function AIBubble({
           <Bot className="h-3 w-3 text-primary" />
           <span className="text-xs font-medium text-primary">AI</span>
           {intent && (
-            <span className="text-xs text-muted-foreground">
+            <span className={cn("text-xs", colors.text.muted)}>
               ({intent})
             </span>
           )}
@@ -105,6 +107,7 @@ function AIBubble({
 
 /** Processing indicator */
 function ProcessingIndicator({ t }: { t: (key: string, fallback: string) => string }) {
+  const colors = useSemanticColors();
   return (
     <article className="flex justify-start mb-3">
       <div
@@ -116,7 +119,7 @@ function ProcessingIndicator({ t }: { t: (key: string, fallback: string) => stri
       >
         <div className="flex items-center gap-2">
           <Spinner size="small" />
-          <span className="text-muted-foreground">
+          <span className={colors.text.muted}>
             {t('voiceAssistant.aiProcessing', 'Processing your command...')}
           </span>
         </div>
@@ -185,6 +188,7 @@ function ConversationEntry({ commandId }: { commandId: string }) {
 
 export function VoiceAIPanel() {
   const { t } = useTranslation('common');
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
@@ -234,8 +238,8 @@ export function VoiceAIPanel() {
         <aside className="flex-1 min-h-0 py-4">
           {commandHistory.length === 0 ? (
             <section className="flex flex-col items-center justify-center h-full text-center gap-3">
-              <MessageSquare className="h-10 w-10 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground" suppressHydrationWarning>
+              <MessageSquare className={cn("h-10 w-10 /40", colors.text.muted)} />
+              <p className={cn("text-sm", colors.text.muted)} suppressHydrationWarning>
                 {t(
                   'voiceAssistant.emptyHistory',
                   'No voice commands yet. Use the microphone button to start.'

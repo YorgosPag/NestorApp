@@ -27,95 +27,37 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { createModuleLogger } from '@/lib/telemetry';
-import { formatFileSize } from '@/utils/file-validation';
 
 // 🏢 ENTERPRISE: Centralized configs
+import { FILE_TYPE_CONFIG, UPLOAD_LIMITS } from '@/config/file-upload-config';
+import compressionConfig from '@/config/photo-compression-config';
+
+// 🏢 ENTERPRISE: Config, types & helpers (extracted for SRP / file-size limit)
 import {
-  FILE_TYPE_CONFIG,
-  UPLOAD_LIMITS,
-  type FileType,
-} from '@/config/file-upload-config';
-import compressionConfig, {
-  type UsageContext,
+  DEFAULT_MAX_SIZE,
+  DEFAULT_ACCEPT,
+  IMAGE_MIME_TYPES,
+  detectFileType,
+  formatBytes,
   COMPRESSION_USAGE,
-} from '@/config/photo-compression-config';
+  type FileUploadZoneProps,
+  type UsageContext,
+} from './file-upload-zone-config';
+
+// Re-export props interface for backward compatibility
+export type { FileUploadZoneProps };
 
 // 🏢 ENTERPRISE: Image compression
 import { smartCompressContactPhoto } from '@/subapps/geo-canvas/floor-plan-system/parsers/raster/ImageParser';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // ============================================================================
 // MODULE LOGGER
 // ============================================================================
 
 const logger = createModuleLogger('FILE_UPLOAD_ZONE');
-
-// ============================================================================
-// TYPES
-// ============================================================================
-
-export interface FileUploadZoneProps {
-  /** Upload handler - receives processed files (compressed if applicable) */
-  onUpload: (files: File[]) => Promise<void>;
-  /** Accept file types (e.g., "image/*,.pdf") */
-  accept?: string;
-  /** Maximum file size in bytes */
-  maxSize?: number;
-  /** Allow multiple file selection */
-  multiple?: boolean;
-  /** Disabled state */
-  disabled?: boolean;
-  /** Uploading state */
-  uploading?: boolean;
-  /** Enable image compression (default: true) */
-  enableCompression?: boolean;
-  /** Compression usage context for smart compression */
-  compressionUsage?: UsageContext;
-  /** Override the default file types hint text */
-  typesHint?: string;
-}
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-const DEFAULT_MAX_SIZE = UPLOAD_LIMITS.MAX_FILE_SIZE; // 50MB from centralized config
-const DEFAULT_ACCEPT = 'image/*,.pdf,.doc,.docx,.xls,.xlsx';
-
-// Image MIME types for compression detection
-const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-/**
- * Detect file type from MIME type
- */
-function detectFileType(mimeType: string): FileType {
-  if (IMAGE_MIME_TYPES.includes(mimeType)) {
-    return 'image';
-  }
-  if (mimeType === 'application/pdf') {
-    return 'pdf';
-  }
-  if (
-    mimeType === 'application/msword' ||
-    mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-  ) {
-    return 'document';
-  }
-  return 'any';
-}
-
-/**
- * Get max size for specific file type
- */
-function getMaxSizeForType(fileType: FileType): number {
-  return FILE_TYPE_CONFIG[fileType]?.maxSize || UPLOAD_LIMITS.MAX_FILE_SIZE;
-}
-
-/** Format bytes to human readable string — delegates to centralized formatFileSize */
-const formatBytes = formatFileSize;
 
 // ============================================================================
 // COMPONENT
@@ -146,6 +88,7 @@ export function FileUploadZone({
   const iconSizes = useIconSizes();
   const { createBorder, quick, getStatusBorder } = useBorderTokens();
   const { t } = useTranslation('files');
+  const colors = useSemanticColors();
   const { success, error: showError, warning } = useNotifications();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -187,14 +130,14 @@ export function FileUploadZone({
     if (file.size < UPLOAD_LIMITS.MIN_FILE_SIZE) {
       const errorMsg = t('validation.fileTooSmall', { fileName: file.name });
       logger.warn('File too small', { name: file.name, size: file.size });
-      return { valid: false, error: errorMsg || `Το αρχείο ${file.name} είναι πολύ μικρό` };
+      return { valid: false, error: errorMsg };
     }
 
     // ⚠️ Warning for large files (but still valid)
     if (file.size > 5 * 1024 * 1024) { // > 5MB
       return {
         valid: true,
-        warning: t('validation.fileLargeWarning') || 'Μεγάλο αρχείο - μπορεί να χρειαστεί περισσότερος χρόνος',
+        warning: t('validation.fileLargeWarning'),
       };
     }
 
@@ -306,7 +249,12 @@ export function FileUploadZone({
         // Show success notification for significant compression
         if (savings > 20) {
           success(
-            `${file.name}: Συμπιέστηκε κατά ${savings}% (${formatBytes(file.size)} → ${formatBytes(result.blob.size)})`
+            t('uploadZone.compressed', {
+              fileName: file.name,
+              savings,
+              originalSize: formatBytes(file.size),
+              compressedSize: formatBytes(result.blob.size),
+            })
           );
         }
 
@@ -367,7 +315,7 @@ export function FileUploadZone({
     } catch (uploadError) {
       const errorMsg = uploadError instanceof Error ? uploadError.message : 'Upload failed';
       logger.error('Upload failed', { error: errorMsg });
-      showError(t('upload.errors.generic') || 'Σφάλμα κατά την αποστολή αρχείων');
+      showError(t('upload.errors.generic'));
     } finally {
       setIsProcessing(false);
     }
@@ -469,7 +417,7 @@ export function FileUploadZone({
       />
 
       {/* Upload icon */}
-      <div className={`mx-auto ${iconSizes.xl3} text-muted-foreground flex items-center justify-center`}>
+      <div className={cn("mx-auto flex items-center justify-center", iconSizes.xl3, colors.text.muted)}>
         <FileUp className={iconSizes.xl} aria-hidden="true" />
       </div>
 
@@ -477,24 +425,24 @@ export function FileUploadZone({
       <div className="mt-2 space-y-2">
         {uploading || isProcessing ? (
           <p className="text-sm font-medium text-foreground">
-            {isProcessing ? (t('uploadZone.processing') || 'Επεξεργασία αρχείων...') : t('uploadZone.uploading')}
+            {isProcessing ? t('uploadZone.processing') : t('uploadZone.uploading')}
           </p>
         ) : (
           <>
-            <div className="text-sm text-muted-foreground">
+            <div className={cn("text-sm", colors.text.muted)}>
               <span className={`font-medium cursor-pointer ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}>
                 {t('uploadZone.clickToSelect')}
               </span>{' '}
               {t('uploadZone.orDragAndDrop')}
             </div>
-            <p className="text-xs text-muted-foreground/80">
+            <p className={cn("text-xs", `${colors.text.muted}/80`)}>
               {typesHint ?? t('uploadZone.fileTypesHint')} • {t('uploadZone.maxSize', { size: `${Math.round(maxSize / 1024 / 1024)}MB` })}
             </p>
             {/* 🏢 ENTERPRISE: Show type-specific limits */}
-            <p className="text-xs text-muted-foreground/60">
-              Εικόνες: {formatBytes(FILE_TYPE_CONFIG.image.maxSize)} •
-              PDF: {formatBytes(FILE_TYPE_CONFIG.pdf.maxSize)} •
-              Έγγραφα: {formatBytes(FILE_TYPE_CONFIG.document.maxSize)}
+            <p className={cn("text-xs", `${colors.text.muted}/60`)}>
+              {t('uploadZone.fileTypes.images')}: {formatBytes(FILE_TYPE_CONFIG.image.maxSize)} •
+              {t('uploadZone.fileTypes.pdf')}: {formatBytes(FILE_TYPE_CONFIG.pdf.maxSize)} •
+              {t('uploadZone.fileTypes.documents')}: {formatBytes(FILE_TYPE_CONFIG.document.maxSize)}
             </p>
           </>
         )}

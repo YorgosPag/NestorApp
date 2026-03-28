@@ -28,6 +28,8 @@ import { cn } from '@/lib/utils';
 import type { Workspace, WorkspaceType } from '@/types/workspace';
 import { WORKSPACE_TYPE_LABELS } from '@/types/workspace'; // 🏢 ENTERPRISE: i18n keys
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 const logger = createModuleLogger('WorkspaceSwitcher');
 
@@ -49,6 +51,7 @@ export interface WorkspaceSwitcherProps {
  */
 export function WorkspaceSwitcher({ className, showRefresh = true }: WorkspaceSwitcherProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { t } = useTranslation('common'); // 🏢 ENTERPRISE: i18n translation
   const { activeWorkspace, availableWorkspaces, loading, switchWorkspace, refreshWorkspaces } =
     useWorkspace();
@@ -72,7 +75,7 @@ export function WorkspaceSwitcher({ className, showRefresh = true }: WorkspaceSw
       setIsOpen(false);
     } catch (error) {
       logger.error('Failed to switch workspace', { error });
-      alert('Αποτυχία εναλλαγής workspace. Δοκιμάστε ξανά.');
+      alert(t('workspace.switchFailed'));
     } finally {
       setSwitching(false);
     }
@@ -117,7 +120,7 @@ export function WorkspaceSwitcher({ className, showRefresh = true }: WorkspaceSw
     return (
       <div className={cn('flex items-center gap-2 px-3 py-2', className)}>
         <RefreshCw className={cn(iconSizes.sm, 'animate-spin')} aria-hidden="true" />
-        <span className="text-sm text-muted-foreground">Φόρτωση workspaces...</span>
+        <span className={cn("text-sm", colors.text.muted)}>{t('workspace.loading')}</span>
       </div>
     );
   }
@@ -130,7 +133,7 @@ export function WorkspaceSwitcher({ className, showRefresh = true }: WorkspaceSw
     return (
       <div className={cn('flex items-center gap-2 px-3 py-2', className)}>
         <Building2 className={iconSizes.sm} aria-hidden="true" />
-        <span className="text-sm text-muted-foreground">Κανένα workspace</span>
+        <span className={cn("text-sm", colors.text.muted)}>{t('workspace.noWorkspaces')}</span>
       </div>
     );
   }
@@ -154,7 +157,7 @@ export function WorkspaceSwitcher({ className, showRefresh = true }: WorkspaceSw
           'transition-colors',
           switching && 'opacity-50 cursor-not-allowed'
         )}
-        aria-label="Επιλογή workspace"
+        aria-label={t('workspace.selectLabel')}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
       >
@@ -163,7 +166,7 @@ export function WorkspaceSwitcher({ className, showRefresh = true }: WorkspaceSw
 
         {/* Active Workspace Name */}
         <span className="text-sm font-medium truncate max-w-[200px]">
-          {activeWorkspace?.displayName || 'Επιλέξτε workspace'}
+          {activeWorkspace?.displayName || t('workspace.selectWorkspace')}
         </span>
 
         {/* Chevron */}
@@ -192,19 +195,19 @@ export function WorkspaceSwitcher({ className, showRefresh = true }: WorkspaceSw
               'py-2'
             )}
             role="listbox"
-            aria-label="Διαθέσιμα workspaces"
+            aria-label={t('workspace.availableLabel')}
           >
             {/* Header */}
             <div className="px-3 py-2 flex items-center justify-between border-b border-border">
-              <span className="text-xs font-semibold text-muted-foreground uppercase">
-                Workspaces
+              <span className={cn("text-xs font-semibold uppercase", colors.text.muted)}>
+                {t('workspace.title')}
               </span>
               {showRefresh && (
                 <button
                   type="button"
                   onClick={handleRefresh}
                   className="p-1 rounded hover:bg-accent"
-                  aria-label="Ανανέωση workspaces"
+                  aria-label={t('workspace.refreshLabel')}
                 >
                   <RefreshCw className={iconSizes.xs} aria-hidden="true" />
                 </button>
@@ -246,17 +249,17 @@ export function WorkspaceSwitcher({ className, showRefresh = true }: WorkspaceSw
                         )}
                       </div>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-muted-foreground">
+                        <span className={cn("text-xs", colors.text.muted)}>
                           {getWorkspaceTypeLabel(workspace.type)}
                         </span>
                         {workspace.status !== 'active' && (
-                          <span className="text-xs text-muted-foreground">
+                          <span className={cn("text-xs", colors.text.muted)}>
                             ({workspace.status})
                           </span>
                         )}
                       </div>
                       {workspace.description && (
-                        <p className="text-xs text-muted-foreground mt-1 truncate">
+                        <p className={cn("text-xs mt-1 truncate", colors.text.muted)}>
                           {workspace.description}
                         </p>
                       )}
