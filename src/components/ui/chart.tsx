@@ -10,6 +10,7 @@ import {
 } from "./chart/ChartContainer"
 import { ChartStyle } from "./chart/ChartStyle"
 import { ChartContext, useChart, type ChartConfig } from "./chart/ChartContext"
+import '@/lib/design-system';
 
 const Chart = React.forwardRef<
   HTMLDivElement,

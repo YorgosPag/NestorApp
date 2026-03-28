@@ -18,6 +18,7 @@ import {
 import { Star, MoreVertical, Edit, Eye, FileText, Archive } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TRANSITION_PRESETS, HOVER_TEXT_EFFECTS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
+import '@/lib/design-system';
 
 interface StorageListItemActionsProps {
   isFavorite: boolean;

@@ -10,6 +10,7 @@ import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import '@/lib/design-system';
 
 interface EditableTextProps {
   /** Current text value */

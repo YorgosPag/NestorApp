@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { cancelExtra } from "../constants";
 import { PrimitiveCancel } from "../primitives";
+import '@/lib/design-system';
 
 export const AlertDialogCancel = React.forwardRef<
   React.ComponentRef<typeof PrimitiveCancel>,

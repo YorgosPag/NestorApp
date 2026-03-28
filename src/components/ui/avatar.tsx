@@ -5,6 +5,7 @@ import * as AvatarPrimitive from "@radix-ui/react-avatar"
 
 import { cn } from "@/lib/utils"
 import { useBorderTokens } from '@/hooks/useBorderTokens'
+import '@/lib/design-system';
 
 const Avatar = React.forwardRef<
   React.ComponentRef<typeof AvatarPrimitive.Root>,

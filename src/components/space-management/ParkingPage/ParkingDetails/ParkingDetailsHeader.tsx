@@ -15,8 +15,9 @@ import type { EntityHeaderAction } from '@/core/entity-headers';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
-const logger = createModuleLogger('ParkingDetailsHeader');
+const _logger = createModuleLogger('ParkingDetailsHeader');
 
 interface ParkingDetailsHeaderProps {
   parking: ParkingSpot;

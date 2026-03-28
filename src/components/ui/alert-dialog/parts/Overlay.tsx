@@ -3,6 +3,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { overlayBase } from "../constants";
 import { PrimitiveOverlay } from "../primitives";
+import '@/lib/design-system';
 
 export const AlertDialogOverlay = React.forwardRef<
   React.ComponentRef<typeof PrimitiveOverlay>,

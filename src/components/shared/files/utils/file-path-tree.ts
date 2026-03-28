@@ -35,7 +35,7 @@
 import type { FileRecord } from '@/types/file-record';
 import { parseStoragePath } from '@/services/upload/utils/storage-path';
 import { STORAGE_PATH_SEGMENTS } from '@/config/domain-constants';
-import { getGroupForPurpose, getStudyGroupMeta, STUDY_GROUPS } from '@/config/study-groups-config';
+import { getGroupForPurpose, STUDY_GROUPS } from '@/config/study-groups-config';
 import type { StudyGroup } from '@/config/study-groups-config';
 
 // ============================================================================
@@ -395,7 +395,7 @@ export function buildStudyGroupTree(fileRecords: FileRecord[]): RootNode {
       type: 'folder',
       segment: 'study-group',
       value: '__general__',
-      label: 'Γενικά Έγγραφα',
+      label: 'General Documents',
       path: ['__general__'],
       children: generalFiles.map((f) => ({
         id: f.id,

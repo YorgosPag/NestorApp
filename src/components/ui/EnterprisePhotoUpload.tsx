@@ -32,6 +32,7 @@ import {
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('EnterprisePhotoUpload');
 

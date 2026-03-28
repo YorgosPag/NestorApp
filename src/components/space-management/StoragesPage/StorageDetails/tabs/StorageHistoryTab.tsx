@@ -19,6 +19,8 @@ import {
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
 
 interface StorageHistoryTabProps {
   storage: Storage;
@@ -192,23 +194,23 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className={`bg-card ${quick.card} p-4 text-center`}>
             <div className={`text-2xl font-bold ${colors.text.muted}`}>{eventsByType.total}</div>
-            <div className="text-sm text-muted-foreground">{t('history.metrics.totalEvents')}</div>
+            <div className={cn("text-sm", colors.text.muted)}>{t('history.metrics.totalEvents')}</div>
           </div>
           <div className={`bg-card ${quick.card} p-4 text-center`}>
             <div className={`text-2xl font-bold ${colors.text.info}`}>{eventsByType.lease}</div>
-            <div className="text-sm text-muted-foreground">{t('history.metrics.leases')}</div>
+            <div className={cn("text-sm", colors.text.muted)}>{t('history.metrics.leases')}</div>
           </div>
           <div className={`bg-card ${quick.card} p-4 text-center`}>
             <div className={`text-2xl font-bold ${colors.text.warning}`}>{eventsByType.maintenance}</div>
-            <div className="text-sm text-muted-foreground">{t('history.metrics.maintenances')}</div>
+            <div className={cn("text-sm", colors.text.muted)}>{t('history.metrics.maintenances')}</div>
           </div>
           <div className={`bg-card ${quick.card} p-4 text-center`}>
             <div className={`text-2xl font-bold ${colors.text.success}`}>{eventsByType.inspection}</div>
-            <div className="text-sm text-muted-foreground">{t('history.metrics.inspections')}</div>
+            <div className={cn("text-sm", colors.text.muted)}>{t('history.metrics.inspections')}</div>
           </div>
           <div className={`bg-card ${quick.card} p-4 text-center`}>
             <div className={`text-2xl font-bold ${colors.text.accent}`}>{eventsByType.changes}</div>
-            <div className="text-sm text-muted-foreground">{t('history.metrics.changes')}</div>
+            <div className={cn("text-sm", colors.text.muted)}>{t('history.metrics.changes')}</div>
           </div>
         </div>
       </section>
@@ -244,15 +246,15 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
                           <h4 className="font-medium text-sm">{event.title}</h4>
-                          <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
+                          <p className={cn("text-sm mt-1", colors.text.muted)}>{event.description}</p>
                         </div>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground ml-4">
+                        <div className={cn("flex items-center gap-1 text-xs ml-4", colors.text.muted)}>
                           <StatusIcon className={iconSizes.xs} />
                           {t(`history.eventStatus.${event.status}`)}
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <div className={cn("flex items-center justify-between text-xs", colors.text.muted)}>
                         <div className="flex items-center gap-4">
                           <span className="flex items-center gap-1">
                             <Calendar className={iconSizes.xs} />
@@ -300,33 +302,33 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
         <div className={`bg-card ${quick.card} p-4`}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div>
-              <label className="font-medium text-muted-foreground">{t('history.fields.storage')}</label>
+              <label className={cn("font-medium", colors.text.muted)}>{t('history.fields.storage')}</label>
               <span className="ml-2">{storage.name}</span>
             </div>
             <div>
-              <label className="font-medium text-muted-foreground">{t('history.fields.status')}</label>
+              <label className={cn("font-medium", colors.text.muted)}>{t('history.fields.status')}</label>
               <span className="ml-2">{getStatusLabel(storage.status || 'unknown')}</span>
             </div>
             <div>
-              <label className="font-medium text-muted-foreground">{t('history.fields.lastUpdated')}</label>
+              <label className={cn("font-medium", colors.text.muted)}>{t('history.fields.lastUpdated')}</label>
               <span className="ml-2">
                 {storage.lastUpdated ? formatDate(new Date(storage.lastUpdated).toISOString()) : t('history.notRecorded')}
               </span>
             </div>
             {storage.owner && (
               <div>
-                <label className="font-medium text-muted-foreground">{t('history.fields.responsible')}</label>
+                <label className={cn("font-medium", colors.text.muted)}>{t('history.fields.responsible')}</label>
                 <span className="ml-2">{storage.owner}</span>
               </div>
             )}
             {storage.price && (
               <div>
-                <label className="font-medium text-muted-foreground">{t('history.fields.currentValue')}</label>
+                <label className={cn("font-medium", colors.text.muted)}>{t('history.fields.currentValue')}</label>
                 <span className="ml-2">{formatCurrency(storage.price)}</span>
               </div>
             )}
             <div>
-              <label className="font-medium text-muted-foreground">{t('history.fields.area')}</label>
+              <label className={cn("font-medium", colors.text.muted)}>{t('history.fields.area')}</label>
               <span className="ml-2">{storage.area} m²</span>
             </div>
           </div>

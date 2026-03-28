@@ -3,6 +3,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { useTooltipLabel } from "../hooks/useTooltipLabel";
 import type { ChartTooltipLabelProps } from "../types";
+import '@/lib/design-system';
 
 export const ChartTooltipLabel: React.FC<ChartTooltipLabelProps> = (props) => {
   const data = useTooltipLabel(props);

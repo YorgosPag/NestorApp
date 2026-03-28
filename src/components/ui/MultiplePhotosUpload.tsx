@@ -11,6 +11,7 @@ import { MultiplePhotosFull } from './MultiplePhotosFull';
 import type { UploadPurpose } from '@/config/file-upload-config';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('MultiplePhotosUpload');
 

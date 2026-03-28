@@ -27,6 +27,9 @@ import { ParkingListCard } from '@/domain';
 import { CompactToolbar } from '@/components/core/CompactToolbar';
 import { parkingToolbarConfig } from '@/components/core/CompactToolbar/configs';
 import type { SortField } from '@/components/core/CompactToolbar/types';
+import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 interface ParkingsListProps {
   parkingSpots: ParkingSpot[];
@@ -43,6 +46,7 @@ export function ParkingsList({
 }: ParkingsListProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('building');
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const [favorites, setFavorites] = useState<string[]>([]);
   const { sortBy, sortOrder, onSortChange } = useSortState<SortField>('name');
@@ -196,7 +200,7 @@ export function ParkingsList({
           ))}
 
           {sortedParkingSpots.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className={cn("text-center py-8", colors.text.muted)}>
               <Car className={`${iconSizes.xl3} mx-auto mb-2 opacity-50`} />
               <p>{t('parkings.list.noResults')}</p>
               {searchTerm && (

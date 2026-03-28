@@ -7,6 +7,7 @@ import type { Storage } from '@/types/storage/contracts';
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface StorageListItemHeaderProps {
   storage: Storage;

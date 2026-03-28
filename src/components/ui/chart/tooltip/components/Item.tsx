@@ -6,6 +6,7 @@ import { resolveItemConfig } from "../utils/payloadConfig";
 import { ChartTooltipLabel } from "./Label";
 import { Indicator } from "./Indicator";
 import type { ChartTooltipItemProps } from "../types";
+import '@/lib/design-system';
 
 export const ChartTooltipItem = React.memo(function ChartTooltipItemBase({
   item, index, payload, formatter, hideIndicator, indicator, nameKey, color, nestLabel,

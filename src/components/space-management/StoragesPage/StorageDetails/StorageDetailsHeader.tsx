@@ -15,8 +15,9 @@ import type { EntityHeaderAction } from '@/core/entity-headers';
 import type { Storage } from '@/types/storage/contracts';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
-const logger = createModuleLogger('StorageDetailsHeader');
+const _logger = createModuleLogger('StorageDetailsHeader');
 
 interface StorageDetailsHeaderProps {
   storage: Storage;

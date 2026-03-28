@@ -6,6 +6,7 @@ import LogoPagonis from "@/components/property-viewer/Logo_Pagonis"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { TRANSITION_PRESETS } from '@/components/ui/effects'
+import '@/lib/design-system';
 
 export function SidebarLogo() {
   const { state } = useSidebar()

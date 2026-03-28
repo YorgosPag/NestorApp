@@ -12,6 +12,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 // 🏢 ENTERPRISE: Type for Storages view modes (avoids `as any`)
 type StoragesViewMode = 'list' | 'grid' | 'byType' | 'byStatus';
 

@@ -26,6 +26,8 @@ import { Plus, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
 import { isPercentageValid } from '@/lib/ownership/owner-utils';
 import type { PropertyOwnerEntry, PropertyOwnerRole } from '@/types/ownership-table';
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -97,13 +99,14 @@ export function OwnersList({
 }: OwnersListProps) {
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   // Context-aware labels — defaults are sales-oriented, overridable per domain
-  const labelSingular = labels?.singular ?? t('sales.dialogs.reserve.buyerName', { defaultValue: 'Αγοραστής' });
-  const labelPlural = labels?.plural ?? t('sales.dialogs.owners.label', { defaultValue: 'Ιδιοκτήτες' });
-  const labelAdd = labels?.addButton ?? t('sales.dialogs.owners.addCoOwner', { defaultValue: 'Προσθήκη Συνιδιοκτήτη' });
-  const labelRequired = labels?.required ?? t('sales.dialogs.reserve.buyerRequired', { defaultValue: 'Η επιλογή αγοραστή είναι υποχρεωτική' });
-  const labelPlaceholder = labels?.placeholder ?? t('sales.dialogs.reserve.buyerPlaceholder', { defaultValue: 'Αναζήτηση επαφής...' });
+  const labelSingular = labels?.singular ?? t('sales.dialogs.reserve.buyerName');
+  const labelPlural = labels?.plural ?? t('sales.dialogs.owners.label');
+  const labelAdd = labels?.addButton ?? t('sales.dialogs.owners.addCoOwner');
+  const labelRequired = labels?.required ?? t('sales.dialogs.reserve.buyerRequired');
+  const labelPlaceholder = labels?.placeholder ?? t('sales.dialogs.reserve.buyerPlaceholder');
 
   // ── Derived state (validation via SSoT: owner-utils) ─────────────────
   const totalPct = useMemo(
@@ -256,7 +259,7 @@ export function OwnersList({
                 className="shrink-0"
                 onClick={() => handleRemove(index)}
                 disabled={disabled}
-                aria-label={t('sales.dialogs.owners.remove', { defaultValue: 'Αφαίρεση' })}
+                aria-label={t('sales.dialogs.owners.remove')}
               >
                 <Trash2 className={cn(iconSizes.sm, 'text-destructive')} />
               </Button>
@@ -271,7 +274,7 @@ export function OwnersList({
             type="button"
             variant="ghost"
             size="sm"
-            className="gap-1 text-xs text-muted-foreground"
+            className={cn("gap-1 text-xs", colors.text.muted)}
             onClick={handleAdd}
             disabled={disabled}
           >
@@ -293,7 +296,7 @@ export function OwnersList({
             {totalPct.toFixed(0)}%
             {!isValidTotal && (
               <span className="ml-0.5">
-                — {t('sales.dialogs.owners.totalMustBe100', { defaultValue: 'πρέπει 100%' })}
+                — {t('sales.dialogs.owners.totalMustBe100')}
               </span>
             )}
           </span>

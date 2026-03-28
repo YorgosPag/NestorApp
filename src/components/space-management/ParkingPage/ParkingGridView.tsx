@@ -23,6 +23,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Using centralized domain card
 import { ParkingGridCard } from '@/domain';
+import '@/lib/design-system';
 
 // =============================================================================
 // 🏢 TYPES

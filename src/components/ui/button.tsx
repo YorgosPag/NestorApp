@@ -7,6 +7,7 @@ import { INTERACTIVE_PATTERNS } from "@/components/ui/effects"
 import { useBorderTokens } from '@/hooks/useBorderTokens'
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'
 import type { UseSemanticColorsReturn } from '@/ui-adapters/react/useSemanticColors'
+import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Dynamic button variants using centralized border tokens
 const createButtonVariants = (borderTokens: ReturnType<typeof useBorderTokens>, colors?: UseSemanticColorsReturn) => cva(

@@ -5,6 +5,7 @@ import { CommonBadge } from "@/core/badges"
 import { cn } from "@/lib/utils"
 import { getBadgeVariant } from "@/lib/sidebar-utils"
 import { TRANSITION_PRESETS } from '@/components/ui/effects'
+import '@/lib/design-system';
 
 interface SidebarBadgeProps {
   badge: string

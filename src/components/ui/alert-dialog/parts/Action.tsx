@@ -4,6 +4,7 @@ import { Slot } from "@radix-ui/react-slot";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { PrimitiveAction } from "../primitives";
+import '@/lib/design-system';
 
 export const AlertDialogAction = React.forwardRef<
   React.ComponentRef<typeof PrimitiveAction>,

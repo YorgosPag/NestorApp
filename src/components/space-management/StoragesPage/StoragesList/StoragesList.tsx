@@ -20,6 +20,9 @@ import { StorageListCard } from '@/domain';
 import { CompactToolbar } from '@/components/core/CompactToolbar';
 import { storagesToolbarConfig } from '@/components/core/CompactToolbar/configs';
 import type { SortField } from '@/components/core/CompactToolbar/types';
+import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 interface StoragesListProps {
   storages: Storage[];
@@ -36,6 +39,7 @@ export function StoragesList({
 }: StoragesListProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('storage');
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const [favorites, setFavorites] = useState<string[]>([]);
   const { sortBy, sortOrder, onSortChange } = useSortState<SortField>('name');
@@ -190,7 +194,7 @@ export function StoragesList({
           ))}
 
           {sortedStorages.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className={cn("text-center py-8", colors.text.muted)}>
               <Warehouse className={`${iconSizes.xl3} mx-auto mb-2 opacity-50`} />
               <p>{t('storages.list.noResults')}</p>
               {searchTerm && (

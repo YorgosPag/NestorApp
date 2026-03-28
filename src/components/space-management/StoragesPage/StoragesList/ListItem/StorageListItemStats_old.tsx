@@ -3,6 +3,7 @@
 import React from 'react';
 import { formatCurrency } from '@/lib/intl-utils';
 import type { Storage } from '@/types/storage/contracts';
+import '@/lib/design-system';
 
 interface StorageListItemStatsProps {
   storage: Storage;

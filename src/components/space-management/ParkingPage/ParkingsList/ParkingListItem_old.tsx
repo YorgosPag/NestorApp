@@ -18,6 +18,7 @@ import { Star, Edit2, Car, MapPin, Ruler, Euro, Accessibility, Bike, Zap, User }
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 import { PARKING_TYPE_LABELS, PARKING_STATUS_LABELS } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('ParkingListItem');
 

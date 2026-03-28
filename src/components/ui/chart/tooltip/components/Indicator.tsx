@@ -6,6 +6,7 @@ import {
   getTooltipIndicatorClassName,
   type TooltipIndicatorType
 } from "../../ChartComponents.styles";
+import '@/lib/design-system';
 
 export interface IndicatorProps {
   show: boolean;

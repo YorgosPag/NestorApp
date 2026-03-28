@@ -10,6 +10,7 @@ import {
 import { SidebarMenuItem } from "@/components/sidebar/sidebar-menu-item"
 import { cn } from "@/lib/utils"
 import type { MenuItem } from "@/types/sidebar"
+import '@/lib/design-system';
 
 interface SidebarMenuSectionProps {
   label?: string

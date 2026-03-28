@@ -15,6 +15,7 @@ import { StorageListItemHeader } from './ListItem/StorageListItemHeader_old';
 import { StorageListItemStats } from './ListItem/StorageListItemStats_old';
 import { StorageListItemFooter } from './ListItem/StorageListItemFooter_old';
 import { StorageListItemActions } from './ListItem/StorageListItemActions_old';
+import '@/lib/design-system';
 
 interface StorageListItemProps {
   storage: Storage;

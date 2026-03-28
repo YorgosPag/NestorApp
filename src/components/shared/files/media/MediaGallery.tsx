@@ -62,6 +62,7 @@ import {
   type MediaSortField,
   type MediaTypeFilter,
 } from './hooks/useMediaGallery';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -166,7 +167,7 @@ export function MediaGallery({
   // HANDLERS
   // =========================================================================
 
-  const handleCardClick = useCallback((file: FileRecord, index: number) => {
+  const handleCardClick = useCallback((file: FileRecord, _index: number) => {
     if (isVideoFile(file)) {
       setVideoPreviewFile(file);
     } else {
@@ -209,7 +210,7 @@ export function MediaGallery({
   // COMPUTED
   // =========================================================================
 
-  const currentFilterIcon = useMemo(() => {
+  const _currentFilterIcon = useMemo(() => {
     const option = FILTER_OPTIONS.find(o => o.value === gallery.state.typeFilter);
     return option?.icon ?? Grid3X3;
   }, [gallery.state.typeFilter]);
@@ -228,7 +229,7 @@ export function MediaGallery({
         )}
         aria-label={t('media.emptyGallery')}
       >
-        <ImageIcon className={cn(iconSizes.xl, 'text-muted-foreground/30 mb-4')} />
+        <ImageIcon className={cn(iconSizes.xl, `${colors.text.muted}/30`, 'mb-4')} />
         <p className={cn('text-sm', colors.text.muted)}>
           {emptyMessage ?? t('media.noMedia')}
         </p>

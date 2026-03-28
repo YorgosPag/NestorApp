@@ -4,6 +4,7 @@ import React from 'react';
 import { Calendar, User } from 'lucide-react';
 import { formatDate } from '@/lib/intl-utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import '@/lib/design-system';
 
 interface StorageListItemFooterProps {
   lastUpdated?: Date | string;

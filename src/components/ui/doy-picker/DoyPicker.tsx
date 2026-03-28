@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { FormField } from '@/components/ui/form/FormComponents';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -91,7 +92,7 @@ export function DoyPicker({
     const newOffice: TaxOffice = {
       code: newDoy.code.trim(),
       name: newDoy.name.trim(),
-      region: newDoy.region.trim() || t('doyPicker.customRegion', { defaultValue: 'Προσαρμοσμένη' }),
+      region: newDoy.region.trim() || t('doyPicker.customRegion'),
     };
 
     setCustomOffices((prev) => [...prev, newOffice]);
@@ -106,11 +107,11 @@ export function DoyPicker({
         value={value}
         onValueChange={(val) => onValueChange(val)}
         options={options}
-        placeholder={t('doyPicker.search', { defaultValue: 'Αναζήτηση Δ.Ο.Υ...' })}
+        placeholder={t('doyPicker.search')}
         emptyMessage={
           showAddNew
-            ? t('doyPicker.notFound', { defaultValue: 'Δεν βρέθηκε Δ.Ο.Υ. — προσθέστε νέα' })
-            : t('doyPicker.notFoundSimple', { defaultValue: 'Δεν βρέθηκε Δ.Ο.Υ.' })
+            ? t('doyPicker.notFound')
+            : t('doyPicker.notFoundSimple')
         }
         allowFreeText
         disabled={disabled}
@@ -126,7 +127,7 @@ export function DoyPicker({
           onClick={() => setAddDialogOpen(true)}
         >
           <Plus className="mr-1 h-3 w-3" />
-          {t('doyPicker.addNew', { defaultValue: 'Προσθήκη νέας Δ.Ο.Υ.' })}
+          {t('doyPicker.addNew')}
         </Button>
       )}
 
@@ -135,13 +136,13 @@ export function DoyPicker({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {t('doyPicker.addNewTitle', { defaultValue: 'Προσθήκη νέας Δ.Ο.Υ.' })}
+              {t('doyPicker.addNewTitle')}
             </DialogTitle>
           </DialogHeader>
 
           <fieldset className="space-y-4">
             <FormField
-              label={t('doyPicker.codeLabel', { defaultValue: 'Κωδικός (4ψήφιος)' })}
+              label={t('doyPicker.codeLabel')}
               htmlFor="new-doy-code"
               required
             >
@@ -149,13 +150,13 @@ export function DoyPicker({
                 id="new-doy-code"
                 value={newDoy.code}
                 onChange={(e) => setNewDoy((prev) => ({ ...prev, code: e.target.value }))}
-                placeholder="π.χ. 1101"
+                placeholder="1101"
                 maxLength={4}
               />
             </FormField>
 
             <FormField
-              label={t('doyPicker.nameLabel', { defaultValue: 'Ονομασία' })}
+              label={t('doyPicker.nameLabel')}
               htmlFor="new-doy-name"
               required
             >
@@ -163,19 +164,19 @@ export function DoyPicker({
                 id="new-doy-name"
                 value={newDoy.name}
                 onChange={(e) => setNewDoy((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder={t('doyPicker.namePlaceholder', { defaultValue: 'π.χ. Α\' Αθηνών' })}
+                placeholder={t('doyPicker.namePlaceholder')}
               />
             </FormField>
 
             <FormField
-              label={t('doyPicker.regionLabel', { defaultValue: 'Περιφέρεια' })}
+              label={t('doyPicker.regionLabel')}
               htmlFor="new-doy-region"
             >
               <Input
                 id="new-doy-region"
                 value={newDoy.region}
                 onChange={(e) => setNewDoy((prev) => ({ ...prev, region: e.target.value }))}
-                placeholder={t('doyPicker.regionPlaceholder', { defaultValue: 'π.χ. Αττική' })}
+                placeholder={t('doyPicker.regionPlaceholder')}
               />
             </FormField>
           </fieldset>
@@ -186,14 +187,14 @@ export function DoyPicker({
               variant="outline"
               onClick={() => setAddDialogOpen(false)}
             >
-              {t('actions.cancel', { defaultValue: 'Ακύρωση' })}
+              {t('buttons.cancel')}
             </Button>
             <Button
               type="button"
               onClick={handleAddNew}
               disabled={!newDoy.code.trim() || !newDoy.name.trim()}
             >
-              {t('actions.add', { defaultValue: 'Προσθήκη' })}
+              {t('buttons.add')}
             </Button>
           </DialogFooter>
         </DialogContent>

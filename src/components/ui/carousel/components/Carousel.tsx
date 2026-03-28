@@ -6,6 +6,7 @@ import { CarouselContext } from "../context";
 import { useEmblaSetup } from "../hooks/useEmblaSetup";
 import { useNavState } from "../hooks/useNavState";
 import { useA11yNav } from "../hooks/useA11yNav";
+import '@/lib/design-system';
 
 export const Carousel = React.forwardRef<
   HTMLDivElement,

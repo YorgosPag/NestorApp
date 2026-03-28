@@ -5,6 +5,7 @@ import { contentBase } from "../constants";
 import { AlertDialogPortal } from "../primitives";
 import { PrimitiveContent } from "../primitives";
 import { AlertDialogOverlay } from "./Overlay";
+import '@/lib/design-system';
 
 export const AlertDialogContent = React.forwardRef<
   React.ComponentRef<typeof PrimitiveContent>,

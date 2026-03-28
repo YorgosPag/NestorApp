@@ -41,6 +41,7 @@ import { FloorSelectField } from '@/components/shared/FloorSelectField';
 import type { FloorChangePayload } from '@/components/shared/FloorSelectField';
 import { useEntityLink } from '@/hooks/useEntityLink';
 import { EntityCodeField } from '@/components/shared/EntityCodeField';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 const logger = createModuleLogger('ParkingGeneralTab');
 
@@ -130,6 +131,7 @@ export function ParkingGeneralTab({
   onCreated,
 }: ParkingGeneralTabProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const typography = useTypography();
   const { t } = useTranslation('parking');
   const router = useRouter();
@@ -377,7 +379,7 @@ export function ParkingGeneralTab({
               t={t}
             />
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.spotCode')}</Label>
+              <Label className={cn("text-xs", colors.text.muted)}>{t('general.fields.spotCode')}</Label>
               <Input
                 value={form.number}
                 onChange={(e) => updateField('number', e.target.value)}
@@ -386,7 +388,7 @@ export function ParkingGeneralTab({
               />
             </fieldset>
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.type')}</Label>
+              <Label className={cn("text-xs", colors.text.muted)}>{t('general.fields.type')}</Label>
               <Select
                 value={form.type}
                 onValueChange={(v) => updateField('type', v as ParkingSpotType)}
@@ -405,7 +407,7 @@ export function ParkingGeneralTab({
               </Select>
             </fieldset>
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.status')}</Label>
+              <Label className={cn("text-xs", colors.text.muted)}>{t('general.fields.status')}</Label>
               <Select
                 value={form.status}
                 onValueChange={(v) => updateField('status', v as ParkingSpotStatus)}
@@ -424,7 +426,7 @@ export function ParkingGeneralTab({
               </Select>
             </fieldset>
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.area')}</Label>
+              <Label className={cn("text-xs", colors.text.muted)}>{t('general.fields.area')}</Label>
               <Input
                 type="number"
                 step="0.01"

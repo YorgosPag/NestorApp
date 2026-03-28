@@ -20,6 +20,8 @@ import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { DEFAULT_VIDEO_ACCEPT } from '@/config/file-upload-config';
 import type { Storage } from '@/types/storage/contracts';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // TYPES
@@ -36,13 +38,14 @@ interface StorageVideosTabProps {
 
 export function StorageVideosTab({ storage }: StorageVideosTabProps) {
   const { user } = useAuth();
+  const colors = useSemanticColors();
 
   const companyId = useCompanyId()?.companyId;
   const currentUserId = user?.uid;
 
   if (!companyId || !currentUserId) {
     return (
-      <p className="p-2 text-center text-muted-foreground">
+      <p className={cn("p-2 text-center", colors.text.muted)}>
         Συνδεθείτε για να δείτε τα βίντεο.
       </p>
     );

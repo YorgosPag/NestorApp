@@ -5,6 +5,7 @@ import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors";
 import { ChartTooltipLabel } from "./components/Label";
 import { ChartTooltipItem } from "./components/Item";
 import type { ChartTooltipContentProps } from "./types";
+import '@/lib/design-system';
 
 export const ChartTooltipContent = React.forwardRef<HTMLDivElement, ChartTooltipContentProps>(
   (

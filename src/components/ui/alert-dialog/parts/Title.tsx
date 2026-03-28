@@ -3,6 +3,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { titleBase } from "../constants";
 import { PrimitiveTitle } from "../primitives";
+import '@/lib/design-system';
 
 export const AlertDialogTitle = React.forwardRef<
   React.ComponentRef<typeof PrimitiveTitle>,

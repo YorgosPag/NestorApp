@@ -6,6 +6,7 @@ import { CommonBadge } from "@/core/badges";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import '@/lib/design-system';
 
 interface ToolbarButtonProps {
   tooltip: string;
