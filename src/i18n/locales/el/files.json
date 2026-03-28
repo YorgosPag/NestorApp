@@ -176,7 +176,8 @@
     "groupByCategory": "Ομαδοποίηση κατά Κατηγορία",
     "filesTab": "Αρχεία",
     "trashTab": "Κάδος",
-    "noSearchResults": "Δεν βρέθηκαν αρχεία με αυτά τα κριτήρια"
+    "noSearchResults": "Δεν βρέθηκαν αρχεία με αυτά τα κριτήρια",
+    "testError": "Δοκιμαστικό Σφάλμα (Μόνο Dev)"
   },
   "stats": {
     "totalFiles": "Σύνολο Αρχείων",
@@ -431,7 +432,9 @@
     "emailLabel": "Email",
     "errorTitle": "Σφάλμα",
     "reportSent": "Η αναφορά στάλθηκε",
-    "sendReport": "Αποστολή Αναφοράς"
+    "sendReport": "Αποστολή Αναφοράς",
+    "selectProvider": "Επιλέξτε τον πάροχο email σας:",
+    "redirectHint": "Θα ανοίξει νέα καρτέλα με το email έτοιμο προς αποστολή"
   },
   "capture": {
     "title": "Προσθήκη",

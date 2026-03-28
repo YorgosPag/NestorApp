@@ -176,7 +176,8 @@
     "groupByCategory": "Group by Category",
     "filesTab": "Files",
     "trashTab": "Trash",
-    "noSearchResults": "No files match your search"
+    "noSearchResults": "No files match your search",
+    "testError": "Test Error (Dev Only)"
   },
   "stats": {
     "totalFiles": "Total Files",
@@ -431,7 +432,9 @@
     "emailLabel": "Email",
     "errorTitle": "Error",
     "reportSent": "Report sent",
-    "sendReport": "Send Report"
+    "sendReport": "Send Report",
+    "selectProvider": "Select your email provider:",
+    "redirectHint": "A new tab will open with the email ready to send"
   },
   "capture": {
     "title": "Add",
