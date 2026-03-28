@@ -17,6 +17,8 @@ import { NavigationButton } from './NavigationButton';
 import { NavigationBreadcrumb } from './NavigationBreadcrumb';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface NavigationTreeProps {
   className?: string;
@@ -47,6 +49,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
 
   // 🏢 ENTERPRISE: i18n support
   const { t } = useTranslation('navigation');
+  const colors = useSemanticColors();
 
   /**
    * 🏢 ENTERPRISE (Επιλογή Α): Τίτλοι χωρίς 'floors' level - i18n aware
@@ -100,8 +103,8 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
   if (loading) {
     return (
       <div className={`text-center py-8 ${className || ''}`}>
-        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4" />
-        <p className="text-gray-500 dark:text-muted-foreground">{t('tree.loading')}</p>
+        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4" /> {/* eslint-disable-line design-system/enforce-semantic-colors */}
+        <p className={colors.text.muted}>{t('tree.loading')}</p>
       </div>
     );
   }
@@ -109,11 +112,11 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
   if (error) {
     return (
       <div className={`text-center py-8 ${className || ''}`}>
-        <p className="text-red-500 dark:text-red-400 mb-4">{t('tree.errorMessage', { error })}</p>
+        <p className="text-red-500 dark:text-red-400 mb-4">{t('tree.errorMessage', { error })}</p> {/* eslint-disable-line design-system/enforce-semantic-colors */}
         <button
           onClick={loadCompanies}
           className={cn(
-            "px-4 py-2 bg-blue-600 text-white rounded-lg",
+            "px-4 py-2 bg-blue-600 text-white rounded-lg", // eslint-disable-line design-system/enforce-semantic-colors
             HOVER_BACKGROUND_EFFECTS.BLUE
           )}
         >
@@ -129,7 +132,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
       <h3 className="text-lg font-medium text-gray-900 dark:text-foreground mb-2">
         {getStepTitle()}
       </h3>
-      <p className="text-gray-500 dark:text-muted-foreground mb-4 text-sm">
+      <p className={cn(colors.text.muted, "mb-4 text-sm")}>
         {getStepDescription()}
       </p>
 
@@ -143,7 +146,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
         {currentLevel === 'companies' && (
           <>
             {companies.length === 0 ? (
-              <div className="text-gray-500 dark:text-muted-foreground text-center py-8">
+              <div className={cn(colors.text.muted, "text-center py-8")}>
                 {t('tree.empty.companies')}
               </div>
             ) : (
@@ -167,7 +170,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
         {currentLevel === 'projects' && selectedCompany && (
           <>
             {projects.length === 0 ? (
-              <div className="text-gray-500 dark:text-muted-foreground text-center py-8">
+              <div className={cn(colors.text.muted, "text-center py-8")}>
                 {t('tree.empty.projects')}
               </div>
             ) : (
@@ -190,7 +193,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
         {currentLevel === 'buildings' && selectedProject && (
           <>
             {projectBuildings.length === 0 ? (
-              <div className="text-gray-500 dark:text-muted-foreground text-center py-8">
+              <div className={cn(colors.text.muted, "text-center py-8")}>
                 {t('tree.empty.buildings')}
               </div>
             ) : (

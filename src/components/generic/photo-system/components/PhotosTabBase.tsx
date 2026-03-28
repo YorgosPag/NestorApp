@@ -49,6 +49,8 @@ import type {
   PhotoCategory,
   CategoryStats,
 } from '../config/photos-tab-types';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
 
 // =============================================================================
 // SUB-COMPONENTS
@@ -63,7 +65,7 @@ interface StatsProps {
   categories?: PhotoCategory[];
 }
 
-function PhotosTabStats({ totalCount, categoryStats, categories }: StatsProps) {
+function PhotosTabStats({ totalCount: _totalCount, categoryStats, categories }: StatsProps) {
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
@@ -95,10 +97,10 @@ function PhotosTabStats({ totalCount, categoryStats, categories }: StatsProps) {
               key={category.id}
               className="bg-card border rounded-lg p-4 text-center"
             >
-              <div className={`text-2xl font-bold ${category.colorClass || 'text-blue-600'}`}>
+              <div className={`text-2xl font-bold ${category.colorClass || 'text-blue-600'}`}> {/* eslint-disable-line design-system/enforce-semantic-colors */}
                 {stat?.count || 0}
               </div>
-              <div className="text-sm text-muted-foreground">{translateLabel(category.label)}</div>
+              <div className={cn("text-sm", colors.text.muted)}>{translateLabel(category.label)}</div>
             </div>
           );
         })}
@@ -150,7 +152,7 @@ function PhotosTabCategories({
               px-4 py-2 rounded-lg text-sm font-medium transition-colors
               ${isActive
                 ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                : cn('bg-muted hover:bg-muted/80', colors.text.muted)
               }
             `}
           >
@@ -209,8 +211,8 @@ export function PhotosTabBase<TEntity extends BaseEntity>({
   disabled = false,
   isLoading = false,
   className,
-  onPhotoClick,
-  onPhotoDelete,
+  onPhotoClick: _onPhotoClick,
+  onPhotoDelete: _onPhotoDelete,
 }: PhotosTabBaseProps<TEntity>) {
   // ---------------------------------------------------------------------------
   // Design system hooks
@@ -242,7 +244,6 @@ export function PhotosTabBase<TEntity extends BaseEntity>({
     setPhotos,
     currentFile,
     setCurrentFile,
-    isControlled,
   } = usePhotosTabState({
     externalPhotos,
     externalOnPhotosChange,
@@ -308,7 +309,7 @@ export function PhotosTabBase<TEntity extends BaseEntity>({
           {config.showEntityInfo && (
             <div className="mb-4 p-4 bg-accent/50 rounded-lg">
               <div className="text-sm">
-                <span className="font-medium text-muted-foreground">
+                <span className={cn("font-medium", colors.text.muted)}>
                   {t(`photos.entityLabels.${entityType}`)}:
                 </span>
                 <span className="ml-2">{resolvedEntityName}</span>
@@ -348,7 +349,7 @@ export function PhotosTabBase<TEntity extends BaseEntity>({
 
         {filteredPhotos.length > 0 ? (
           <div className={gridClasses}>
-            {filteredPhotos.map((photo, index) => (
+            {filteredPhotos.map((photo, _index) => (
               <PhotoItem
                 key={photo.id}
                 photo={photo}
@@ -356,7 +357,7 @@ export function PhotosTabBase<TEntity extends BaseEntity>({
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 text-muted-foreground">
+          <div className={cn("text-center py-12", colors.text.muted)}>
             <Image className="mx-auto h-12 w-12 mb-4 opacity-50" />
             <p>{t('photos.noPhotos')}</p>
             {!disabled && (

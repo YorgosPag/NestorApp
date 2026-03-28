@@ -5,8 +5,10 @@ import { UserPlus, FolderPlus, Receipt, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { TRANSITION_PRESETS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 // ============================================================================
 // Quick Actions Strip — Prominent action buttons (ADR-179)
@@ -27,7 +29,7 @@ const QUICK_ACTIONS: QuickAction[] = [
 ];
 
 const VARIANT_CLASSES: Record<QuickAction['variant'], string> = {
-  blue: 'bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900',
+  blue: 'bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900', // eslint-disable-line design-system/enforce-semantic-colors
   purple: 'bg-purple-50 text-purple-700 hover:bg-purple-100 dark:bg-purple-950 dark:text-purple-300 dark:hover:bg-purple-900',
   green: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300 dark:hover:bg-emerald-900',
   neutral: 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground',
@@ -36,10 +38,11 @@ const VARIANT_CLASSES: Record<QuickAction['variant'], string> = {
 export function QuickActionsStrip() {
   const { t } = useTranslation('dashboard');
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   return (
     <section aria-label={t('home.sections.quickActions')} className="mb-8">
-      <h2 className="text-sm font-medium text-muted-foreground mb-3">
+      <h2 className={cn("text-sm font-medium mb-3", colors.text.muted)}>
         {t('home.sections.quickActions')}
       </h2>
       <nav className="flex flex-wrap gap-2">

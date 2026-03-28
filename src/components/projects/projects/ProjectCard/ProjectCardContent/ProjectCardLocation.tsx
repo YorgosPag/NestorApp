@@ -21,12 +21,15 @@ import React from 'react';
 import { MapPin } from "lucide-react";
 import { Badge } from '@/components/ui/badge';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTypography } from '@/hooks/useTypography';
+import { cn } from '@/lib/utils';
 import type { Project } from '@/types/project';
 import {
   getPrimaryAddress,
   formatAddressLine,
   migrateLegacyAddress,
 } from '@/types/project/address-helpers';
+import '@/lib/design-system';
 
 interface ProjectCardLocationProps {
   /** Full project object (for multi-address support) */
@@ -35,6 +38,7 @@ interface ProjectCardLocationProps {
 
 export function ProjectCardLocation({ project }: ProjectCardLocationProps) {
   const iconSizes = useIconSizes();
+  const typography = useTypography();
 
   // 🏢 ENTERPRISE: Lazy migration from legacy fields (ADR-167)
   const addresses = project.addresses ||
@@ -48,12 +52,12 @@ export function ProjectCardLocation({ project }: ProjectCardLocationProps) {
   const additionalCount = addresses.length - 1;
 
   return (
-    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+    <div className={cn("flex items-center gap-2", typography.special.secondary)}>
       <MapPin className={`${iconSizes.sm} shrink-0`} />
       <span className="truncate">{formatAddressLine(primary)}</span>
       {additionalCount > 0 && (
         <Badge variant="outline" className="ml-1 shrink-0">
-          +{additionalCount} ακόμα
+          +{additionalCount} ακόμα {/* eslint-disable-line custom/no-hardcoded-strings */}
         </Badge>
       )}
     </div>

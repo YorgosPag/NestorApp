@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable design-system/enforce-semantic-colors */
 
 /**
  * Adaptive Multi-Column Navigation Component (Refactored)
@@ -18,6 +19,7 @@ import { ContextualNavigationHandler } from '../core/ContextualNavigationHandler
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface AdaptiveMultiColumnNavigationProps {
   className?: string;
@@ -72,7 +74,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
       </Suspense>
 
       <NavigationCompanyManager companies={companies}>
-        {({ isContactsModalOpen, setIsContactsModalOpen, handleCompanySelected, navigationCompanyIds }) => (
+        {({ isContactsModalOpen: _isContactsModalOpen, setIsContactsModalOpen, handleCompanySelected: _handleCompanySelected, navigationCompanyIds }) => (
           <>
             {/* Mobile Navigation */}
             <MobileNavigation

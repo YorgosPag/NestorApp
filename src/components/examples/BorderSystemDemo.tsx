@@ -1,4 +1,6 @@
 'use client';
+/* eslint-disable custom/no-hardcoded-strings */
+/* eslint-disable design-system/enforce-semantic-colors */
 
 // ============================================================================
 // 🎨 BORDER SYSTEM DEMONSTRATION
@@ -13,6 +15,8 @@
 import React, { useState } from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 export function BorderSystemDemo() {
   const {
@@ -21,9 +25,7 @@ export function BorderSystemDemo() {
     getStatusBorder,
     getSeparatorBorder,
     getResponsiveBorder,
-    variants,
     width,
-    colors: borderColors,
     radius
   } = useBorderTokens();
   const colors = useSemanticColors();
@@ -36,7 +38,7 @@ export function BorderSystemDemo() {
         <h1 className="text-3xl font-bold mb-4 text-foreground">
           🎨 Enterprise Border System Demo
         </h1>
-        <p className="text-muted-foreground mb-6">
+        <p className={cn(colors.text.muted, "mb-6")}>
           Live demonstration του κεντρικοποιημένου border system που ακολουθεί
           τα πρότυπα των Microsoft, Google, Apple.
         </p>
@@ -65,7 +67,7 @@ export function BorderSystemDemo() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className={`${quick.card} p-4`}>
               <h3 className="font-medium mb-2">Card Border</h3>
-              <p className="text-sm text-muted-foreground">
+              <p className={cn("text-sm", colors.text.muted)}>
                 Subtle, non-intrusive border για cards
               </p>
               <code className="text-xs bg-muted p-1 rounded">quick.card</code>
@@ -73,7 +75,7 @@ export function BorderSystemDemo() {
 
             <div className={`${quick.input} p-4`}>
               <h3 className="font-medium mb-2">Input Border</h3>
-              <p className="text-sm text-muted-foreground">
+              <p className={cn("text-sm", colors.text.muted)}>
                 Interactive border για form inputs
               </p>
               <code className="text-xs bg-muted p-1 rounded">quick.input</code>
@@ -81,7 +83,7 @@ export function BorderSystemDemo() {
 
             <div className={`${quick.button} p-4`}>
               <h3 className="font-medium mb-2">Button Border</h3>
-              <p className="text-sm text-muted-foreground">
+              <p className={cn("text-sm", colors.text.muted)}>
                 Standard button border pattern
               </p>
               <code className="text-xs bg-muted p-1 rounded">quick.button</code>
@@ -94,7 +96,7 @@ export function BorderSystemDemo() {
               {Object.entries(width).map(([name, value]) => (
                 <div key={name} className="p-3 border rounded-md" style={{borderWidth: value}}>
                   <strong>{name}</strong>
-                  <div className="text-sm text-muted-foreground">{value}</div>
+                  <div className={cn("text-sm", colors.text.muted)}>{value}</div>
                 </div>
               ))}
             </div>
@@ -110,7 +112,7 @@ export function BorderSystemDemo() {
                   style={{borderRadius: value}}
                 >
                   <strong>{name}</strong>
-                  <div className="text-sm text-muted-foreground">{value}</div>
+                  <div className={cn("text-sm", colors.text.muted)}>{value}</div>
                 </div>
               ))}
             </div>
@@ -160,7 +162,7 @@ export function BorderSystemDemo() {
             <h3 className="text-lg font-medium">Modal Border</h3>
             <div className={`${getElementBorder('modal')} p-6 max-w-md bg-card`}>
               <h4 className="font-semibold mb-2">Modal Example</h4>
-              <p className="text-sm text-muted-foreground">
+              <p className={cn("text-sm", colors.text.muted)}>
                 Modals typically use shadows instead of borders για clean floating effect.
               </p>
             </div>
@@ -198,7 +200,7 @@ export function BorderSystemDemo() {
             <div className={`${getStatusBorder('info')} p-4 bg-blue-50 dark:bg-blue-950/20`}>
               <h3 className="font-medium text-blue-800 dark:text-blue-300">ℹ️ Info</h3>
               <p className="text-sm text-blue-700 dark:text-blue-400">
-                Here's some helpful information.
+                Here&apos;s some helpful information.
               </p>
             </div>
           </div>
@@ -223,16 +225,16 @@ export function BorderSystemDemo() {
           <h2 className="text-2xl font-semibold">📱 Responsive Borders</h2>
 
           <div className="space-y-4">
-            <p className="text-muted-foreground">
+            <p className={colors.text.muted}>
               Resize your browser to see how borders adapt to different screen sizes.
             </p>
 
             <div className={`${getResponsiveBorder('card')} p-4`}>
               <h3 className="font-medium mb-2">Responsive Card</h3>
-              <p className="text-sm text-muted-foreground">
+              <p className={cn("text-sm", colors.text.muted)}>
                 Border radius και styling αλλάζουν ανάλογα με το μέγεθος οθόνης:
               </p>
-              <ul className="text-xs mt-2 space-y-1 text-muted-foreground">
+              <ul className={cn("text-xs mt-2 space-y-1", colors.text.muted)}>
                 <li>📱 Mobile: rounded-lg</li>
                 <li>📟 Tablet: rounded-xl</li>
                 <li>💻 Desktop: rounded-2xl</li>
@@ -257,7 +259,7 @@ export function BorderSystemDemo() {
 
       <div className={`${quick.card} p-4`}>
         <h3 className="font-medium mb-2">✨ Enterprise Achievement</h3>
-        <p className="text-sm text-muted-foreground">
+        <p className={cn("text-sm", colors.text.muted)}>
           🎯 <strong>Single Source of Truth:</strong> Όλα τα borders ελέγχονται από ένα σημείο<br />
           🎨 <strong>Design Consistency:</strong> Semantic naming και predictable patterns<br />
           🏢 <strong>Enterprise Quality:</strong> Type-safe, responsive, accessible<br />

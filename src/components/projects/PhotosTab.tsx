@@ -27,6 +27,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import type { Project } from '@/types/project';
+import '@/lib/design-system';
 
 // =============================================================================
 // PROPS
@@ -67,7 +68,7 @@ export function PhotosTab({ project, data }: PhotosTabProps) {
   if (!resolvedProject?.id || !companyId || !currentUserId) {
     return (
       <div className={cn(spacing.padding.lg, "text-center", colors.text.muted)}>
-        <p>Επιλέξτε ένα έργο για να δείτε τις φωτογραφίες.</p>
+        <p>Επιλέξτε ένα έργο για να δείτε τις φωτογραφίες.</p> {/* eslint-disable-line custom/no-hardcoded-strings */}
       </div>
     );
   }

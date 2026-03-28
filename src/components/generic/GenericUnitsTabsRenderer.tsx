@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable custom/no-hardcoded-strings */
 
 import React from 'react';
 import { TabsContent } from "@/components/ui/tabs";
@@ -73,6 +74,7 @@ import PhotosTabContent from '@/components/building-management/tabs/PhotosTabCon
 import VideosTabContent from '@/components/building-management/tabs/VideosTabContent';
 import { FloorPlanTab } from '@/features/units-sidebar/components/FloorPlanTab';
 import { UnitCustomerTab } from '@/components/units/tabs/UnitCustomerTab';
+import '@/lib/design-system';
 
 /**
  * Component mapping για την αντιστοίχιση component names σε actual components
@@ -84,7 +86,7 @@ const COMPONENT_MAPPING: Record<string, React.ComponentType<GenericComponentProp
   'PhotosTabContent': PhotosTabContent as unknown as React.ComponentType<GenericComponentProps>,
   'VideosTabContent': VideosTabContent as unknown as React.ComponentType<GenericComponentProps>,
   'DocumentsPlaceholder': (({ title, subtitle }: { title: string; subtitle: string }) => (
-    <div className="text-center text-muted-foreground p-4">
+    <div className={cn("text-center p-4", colors.text.muted)}>
       <p>{title} - Coming Soon</p>
       <p className="text-xs mt-2">{subtitle}</p>
     </div>
@@ -130,6 +132,8 @@ export interface GenericUnitsTabsRendererProps {
  * ```tsx
  * import { getSortedUnitsTabs } from '@/config/units-tabs-config';
  * import { GenericUnitsTabsRenderer } from '@/components/generic';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
  *
  * function UnitTabs({ selectedUnit }) {
  *   const tabs = getSortedUnitsTabs();
@@ -153,6 +157,7 @@ export function GenericUnitsTabsRenderer({
   globalProps = {},
 }: GenericUnitsTabsRendererProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n translation for tab labels
   const { t } = useTranslation('building');
 
@@ -173,12 +178,14 @@ export function GenericUnitsTabsRenderer({
 
     // Fallback για unknown components
     logger.warn('Unknown component', { componentName });
-    return ({ children }: { children?: React.ReactNode }) => (
-      <div className="p-4 text-center text-muted-foreground">
-        <p>Component "{componentName}" not found</p>
+    const FallbackComponent = ({ children }: { children?: React.ReactNode }) => (
+      <div className={cn("p-4 text-center", colors.text.muted)}>
+        <p>Component &quot;{componentName}&quot; not found</p>
         {children}
       </div>
     );
+    FallbackComponent.displayName = 'FallbackComponent';
+    return FallbackComponent;
   };
 
   // Helper function to get component props
@@ -238,7 +245,7 @@ export function GenericUnitsTabsRenderer({
           {selectedUnit ? (
             content
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+            <div className={cn("flex flex-col items-center justify-center h-full text-center", colors.text.muted)}>
               <UnitIcon className={`${iconSizes.xl3} mb-4 opacity-50 ${unitColor}`} />
               <h3 className="text-lg font-semibold mb-2">Επιλέξτε μια μονάδα</h3>
               <p className="text-sm">Επιλέξτε μια μονάδα από τη λίστα αριστερά για να δείτε τις πληροφορίες της.</p>

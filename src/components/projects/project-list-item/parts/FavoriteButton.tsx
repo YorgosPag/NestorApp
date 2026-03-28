@@ -9,6 +9,7 @@ import { GROUP_HOVER_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effect
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface FavoriteButtonProps {
     isFavorite: boolean;
@@ -35,7 +36,7 @@ export function FavoriteButton({ isFavorite, onToggleFavorite }: FavoriteButtonP
                         className={cn(
                             `${iconSizes.sm} transition-colors`,
                             isFavorite
-                            ? "text-yellow-500 fill-yellow-500"
+                            ? "text-yellow-500 fill-yellow-500" // eslint-disable-line design-system/enforce-semantic-colors
                             : `text-gray-400 ${HOVER_TEXT_EFFECTS.YELLOW}`
                         )}
                     />

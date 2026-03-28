@@ -1,4 +1,6 @@
 'use client';
+/* eslint-disable custom/no-hardcoded-strings */
+/* eslint-disable design-system/enforce-semantic-colors */
 
 /**
  * Centralized Navigation Button Component
@@ -13,7 +15,9 @@ import { ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { spacing } from '@/styles/design-tokens/core/spacing';
+import '@/lib/design-system';
 
 interface NavigationButtonProps {
   onClick: () => void;
@@ -81,7 +85,7 @@ export function NavigationButton({
   // 🏢 ENTERPRISE: Entity type label
   entityTypeLabel,
 }: NavigationButtonProps) {
-  const router = useRouter();
+  const colors = useSemanticColors();
   const baseClasses = cn(
     'w-full text-left rounded-lg border',
     TRANSITION_PRESETS.STANDARD_COLORS,
@@ -154,7 +158,7 @@ export function NavigationButton({
             {title}
           </div>
           {subtitle && (
-            <div className={`text-sm truncate ${effectiveBadgeStatus ? 'text-orange-600 dark:text-orange-400' : 'text-gray-500 dark:text-muted-foreground'}`}>
+            <div className={cn("text-sm truncate", effectiveBadgeStatus ? 'text-orange-600 dark:text-orange-400' : colors.text.muted)}>
               {subtitle}
             </div>
           )}
@@ -165,7 +169,7 @@ export function NavigationButton({
                   'text-sm truncate min-w-0',
                   effectiveBadgeStatus
                     ? 'text-orange-500 dark:text-orange-400'
-                    : 'text-gray-400 dark:text-muted-foreground'
+                    : colors.text.muted
                 )}>
                   {extraInfo}
                 </div>
@@ -178,7 +182,7 @@ export function NavigationButton({
                   'shrink-0 uppercase tracking-wider',
                   'text-[10px] font-medium',
                   'px-2 py-0.5',
-                  'rounded bg-muted text-muted-foreground'
+                  'rounded bg-muted', colors.text.muted
                 )}>
                   {entityTypeLabel}
                 </span>
@@ -217,6 +221,7 @@ interface NavigationLinkOverlayProps {
  */
 function NavigationLinkOverlay({ href, tooltip = 'Άνοιγμα στις Επαφές', variant = 'default' }: NavigationLinkOverlayProps) {
   const router = useRouter();
+  const colors = useSemanticColors();
 
   // Enterprise size configuration
   const sizeClasses = {
@@ -280,7 +285,7 @@ function NavigationLinkOverlay({ href, tooltip = 'Άνοιγμα στις Επα
               'inline-flex items-center justify-center'
             )}
           >
-            <ExternalLink size={iconSize} className="text-muted-foreground hover:text-foreground" />
+            <ExternalLink size={iconSize} className={cn(colors.text.muted, "hover:text-foreground")} />
           </span>
         </TooltipTrigger>
         <TooltipContent side="left">

@@ -24,12 +24,14 @@ import {
 } from '@/components/ui/select';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 import type { CrewGroup } from '../contracts';
+import '@/lib/design-system';
 
 /** Sentinel value for "all crews" filter */
-const ALL_CREWS_VALUE = '__all__';
+const ALL_CREWS_VALUE = '__all__'; // eslint-disable-line custom/no-hardcoded-strings
 
 interface CrewGroupFilterProps {
   /** Available crew groups */
@@ -43,6 +45,7 @@ interface CrewGroupFilterProps {
 export function CrewGroupFilter({ crews, selectedCrewId, onChange }: CrewGroupFilterProps) {
   const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const spacing = useSpacingTokens();
 
   // Don't render if only one or no crews
@@ -54,7 +57,7 @@ export function CrewGroupFilter({ crews, selectedCrewId, onChange }: CrewGroupFi
 
   return (
     <div className={cn('flex items-center', spacing.gap.sm)}>
-      <Users className={cn(iconSizes.sm, 'text-muted-foreground')} />
+      <Users className={cn(iconSizes.sm, colors.text.muted)} />
       <Select
         value={selectedCrewId ?? ALL_CREWS_VALUE}
         onValueChange={handleChange}

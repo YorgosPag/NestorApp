@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { HOVER_TEXT_EFFECTS, HOVER_BORDER_EFFECTS, TRANSITION_PRESETS } from "@/components/ui/effects";
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Lead data can come from Opportunity which has optional fields
 interface SendEmailModalProps {
@@ -34,7 +35,7 @@ export default function SendEmailModal({ lead, isOpen, onClose, onEmailSent }: S
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className={`${colors.bg.primary} ${radius.lg} shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto`}>
-        <div className="flex items-center justify-between p-6 ${getStatusBorder('muted')} border-b">
+        <div className={`flex items-center justify-between p-6 ${getStatusBorder('muted')} border-b`}>
           <div className="flex items-center gap-3">
             <Mail className={`${iconSizes.lg} ${colors.text.info}`} />
             <div>
@@ -96,7 +97,7 @@ export default function SendEmailModal({ lead, isOpen, onClose, onEmailSent }: S
             />
           </div>
 
-          <div className="flex gap-3 pt-4 ${getStatusBorder('muted')} border-t">
+          <div className={`flex gap-3 pt-4 ${getStatusBorder('muted')} border-t`}>
             <Button
               type="submit"
               disabled={loading}

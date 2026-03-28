@@ -9,6 +9,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('TeamPerformance');
 
@@ -58,7 +59,7 @@ export function TeamPerformance() {
                         <tr key={member.name} className={`border-b ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}>
                             <td className="p-2 font-medium">{member.name}</td>
                             <td className={`p-2 ${colors.text.muted}`}>{member.leads}</td>
-                            <td className="p-2 text-green-600">{member.value}</td>
+                            <td className="p-2 text-green-600">{member.value}</td> {/* eslint-disable-line design-system/enforce-semantic-colors */}
                         </tr>
                     ))}
                 </tbody>

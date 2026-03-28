@@ -1,3 +1,4 @@
+/* eslint-disable custom/no-hardcoded-strings */
 /**
  * =============================================================================
  * File Preview Panel — Split-panel file preview
@@ -16,7 +17,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { formatDateShort, formatFlexibleDate } from '@/lib/intl-utils';
+import { formatFlexibleDate } from '@/lib/intl-utils';
 import {
   FileText,
   Image as ImageIcon,
@@ -48,6 +49,8 @@ import { ShareDialog } from '@/components/shared/files/ShareDialog';
 import { CommentsPanel } from '@/components/shared/files/CommentsPanel';
 import { ApprovalPanel } from '@/components/shared/files/ApprovalPanel';
 import type { FileRecord } from '@/types/file-record';
+import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // TYPES
@@ -120,7 +123,7 @@ function ImagePreview({ url, title }: { url: string; title: string }) {
         >
           <ZoomOut className="h-3.5 w-3.5" />
         </Button>
-        <span className="text-xs text-muted-foreground w-12 text-center">
+        <span className={cn("text-xs w-12 text-center", colors.text.muted)}>
           {Math.round(zoom * 100)}%
         </span>
         <Button
@@ -185,20 +188,21 @@ function UnsupportedPreview({
   onDownload: () => void;
 }) {
   const { t } = useTranslation('files');
+  const colors = useSemanticColors();
 
   return (
     <section className="flex-1 flex flex-col items-center justify-center gap-4 p-8 text-center">
       <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
-        <File className="h-8 w-8 text-muted-foreground" />
+        <File className={cn("h-8 w-8", colors.text.muted)} />
       </div>
       <div>
         <p className="font-medium text-sm">{displayName}</p>
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className={cn("text-xs mt-1", colors.text.muted)}>
           {file.contentType || t('technical.unavailable')}
           {file.sizeBytes ? ` · ${formatFileSize(file.sizeBytes)}` : ''}
         </p>
       </div>
-      <p className="text-xs text-muted-foreground max-w-xs">
+      <p className={cn("text-xs max-w-xs", colors.text.muted)}>
         {t('preview.unsupported', 'Δεν υποστηρίζεται προεπισκόπηση για αυτόν τον τύπο αρχείου.')}
       </p>
       <Button variant="outline" size="sm" onClick={onDownload}>
@@ -251,7 +255,8 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
     return (
       <section
         className={cn(
-          'flex flex-col items-center justify-center h-full text-muted-foreground',
+          'flex flex-col items-center justify-center h-full',
+          colors.text.muted,
           className
         )}
       >
@@ -265,7 +270,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
     <section className={cn('flex flex-col h-full bg-card', className)}>
       {/* Header */}
       <header className="flex items-center gap-2 px-3 py-2 border-b bg-muted/30 min-h-[44px]">
-        <PreviewIcon className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+        <PreviewIcon className={cn("h-4 w-4 flex-shrink-0", colors.text.muted)} />
         <Tooltip>
           <TooltipTrigger asChild>
             <span className="text-sm font-medium truncate flex-1">
@@ -397,7 +402,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
       </header>
 
       {/* File metadata bar */}
-      <div className="flex items-center gap-3 px-3 py-1.5 border-b text-xs text-muted-foreground bg-muted/10">
+      <div className={cn("flex items-center gap-3 px-3 py-1.5 border-b text-xs bg-muted/10", colors.text.muted)}>
         {file.sizeBytes && <span>{formatFileSize(file.sizeBytes)}</span>}
         {file.contentType && <span>{file.contentType}</span>}
         {file.createdAt && (

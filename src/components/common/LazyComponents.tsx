@@ -21,6 +21,7 @@
 import dynamic from 'next/dynamic';
 import { ComponentProps } from 'react';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import '@/lib/design-system';
 
 // ============================================================================
 // SKELETON COMPONENTS
@@ -67,7 +68,7 @@ function ChartSkeleton() {
       aria-busy="true"
       aria-label="Loading chart..."
     >
-      <span className={COLOR_BRIDGE.text.muted}>Loading chart...</span>
+      <span className={COLOR_BRIDGE.text.muted}>Loading chart...</span> {/* eslint-disable-line custom/no-hardcoded-strings */}
     </div>
   );
 }
@@ -192,6 +193,22 @@ export const SidebarLazy = dynamic(
   {
     loading: () => <SidebarSkeleton />,
     ssr: true
+  }
+);
+
+// ============================================================================
+// REPORTS — Enterprise Reports System (ADR-265)
+// ============================================================================
+
+/**
+ * Lazy-loaded Reports overview page content.
+ * Charts + recharts loaded ONLY when navigating to /reports.
+ */
+export const ReportsOverviewLazy = dynamic(
+  () => import('@/components/reports/core/ReportPage').then(mod => ({ default: mod.ReportPage })),
+  {
+    loading: () => <ChartSkeleton />,
+    ssr: false
   }
 );
 

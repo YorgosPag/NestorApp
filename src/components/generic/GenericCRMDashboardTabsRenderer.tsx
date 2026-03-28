@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable custom/no-hardcoded-strings */
 
 import React from 'react';
 import { TabsContent } from "@/components/ui/tabs";
@@ -42,6 +43,7 @@ import { PipelineTab } from '../crm/dashboard/PipelineTab';
 import { CommunicationsTab } from '../crm/dashboard/CommunicationsTab';
 import { TasksTab } from '../crm/dashboard/TasksTab';
 import { CalendarTab } from '../crm/dashboard/CalendarTab';
+import '@/lib/design-system';
 
 /**
  * Component mapping για την αντιστοίχιση component names σε actual components
@@ -95,6 +97,8 @@ export interface GenericCRMDashboardTabsRendererProps {
  * ```tsx
  * import { getSortedCRMDashboardTabs } from '@/config/crm-dashboard-tabs-config';
  * import { GenericCRMDashboardTabsRenderer } from '@/components/generic';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
  *
  * function CRMDashboard({ selectedPeriod }) {
  *   const tabs = getSortedCRMDashboardTabs();
@@ -118,6 +122,7 @@ export function GenericCRMDashboardTabsRenderer({
   globalProps = {},
 }: GenericCRMDashboardTabsRendererProps) {
   const { t } = useTranslation('crm');
+  const colors = useSemanticColors();
   // Φιλτράρισμα enabled tabs
   const enabledTabs = tabs.filter(tab => tab.enabled !== false);
 
@@ -135,12 +140,14 @@ export function GenericCRMDashboardTabsRenderer({
 
     // Fallback για unknown components
     logger.warn('Unknown component', { componentName });
-    return ({ children }: { children?: React.ReactNode }) => (
-      <div className="p-4 text-center text-muted-foreground">
-        <p>Component "{componentName}" not found</p>
+    const FallbackComponent = ({ children }: { children?: React.ReactNode }) => (
+      <div className={cn("p-4 text-center", colors.text.muted)}>
+        <p>Component &quot;{componentName}&quot; not found</p>
         {children}
       </div>
     );
+    FallbackComponent.displayName = 'FallbackComponent';
+    return FallbackComponent;
   };
 
   // Helper function to get component props

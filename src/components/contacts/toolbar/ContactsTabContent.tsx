@@ -26,6 +26,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // Props interface for all tab contents
 interface ContactsTabContentProps {
@@ -56,6 +57,7 @@ export function ActionsTabContent({
 }: ContactsTabContentProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('contacts');
+  const _colors = useSemanticColors();
 
   const handleDeleteAction = () => {
     if (selectedItems.length > 0) {
@@ -194,7 +196,7 @@ export function CommunicationTabContent({
         </Tooltip>
 
       {selectedItems.length === 0 && (
-        <div className={`text-center text-sm text-muted-foreground mt-2 p-2 ${quick.card} bg-muted/20 w-full`}>
+        <div className={`text-center text-sm ${colors.text.muted} mt-2 p-2 ${quick.card} bg-muted/20 w-full`}>
           {t('toolbar.tabs.communication.selectForCommunication')}
         </div>
       )}
@@ -345,7 +347,7 @@ export function FiltersTabContent({
           </TooltipContent>
         </Tooltip>
 
-      <div className={`text-center text-sm text-muted-foreground mt-2 p-2 ${quick.card} bg-blue-50/50 w-full`}>
+      <div className={`text-center text-sm ${colors.text.muted} mt-2 p-2 ${quick.card} bg-blue-50/50 w-full`}>
         💡 {t('toolbar.tabs.filters.filterHint')}
       </div>
     </>

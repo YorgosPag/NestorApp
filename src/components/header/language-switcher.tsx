@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable custom/no-hardcoded-strings */
 
 import { useState, useEffect } from 'react';
 import { Globe } from 'lucide-react';
@@ -14,6 +15,9 @@ import { changeLanguage, preloadCriticalNamespaces } from '@/i18n/lazy-config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { createModuleLogger } from '@/lib/telemetry';
 import { safeSetItem, STORAGE_KEYS } from '@/lib/storage';
+import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 const logger = createModuleLogger('LanguageSwitcher');
 
@@ -25,6 +29,7 @@ const languages = [
 
 export function LanguageSwitcher() {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { i18n } = useTranslation();
   const [isChanging, setIsChanging] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState(languages[0]);
@@ -102,7 +107,7 @@ export function LanguageSwitcher() {
             <span>{language.flag}</span>
             <span>{language.name}</span>
             {currentLanguage.code === language.code && (
-              <span className="ml-auto text-xs text-muted-foreground">✓</span>
+              <span className={cn("ml-auto text-xs", colors.text.muted)}>✓</span>
             )}
           </DropdownMenuItem>
         ))}

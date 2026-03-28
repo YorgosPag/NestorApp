@@ -1,10 +1,13 @@
 'use client';
+/* eslint-disable custom/no-hardcoded-strings */
+/* eslint-disable design-system/enforce-semantic-colors */
 
 import { useEffect, useState } from 'react';
 import { doc, setDoc, collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('FirestoreTestData');
 

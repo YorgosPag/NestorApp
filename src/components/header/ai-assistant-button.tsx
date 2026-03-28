@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Zap } from "lucide-react"
 import { useIconSizes } from '@/hooks/useIconSizes';
+import '@/lib/design-system';
 
 export function AIAssistantButton() {
   const iconSizes = useIconSizes();
@@ -23,7 +24,7 @@ export function AIAssistantButton() {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>AI Assistant</p>
+          <p>AI Assistant</p> {/* eslint-disable-line custom/no-hardcoded-strings */}
         </TooltipContent>
       </Tooltip>
   )

@@ -38,6 +38,7 @@ import {
   SocialRenderer
 } from '../communication';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 const logger = createModuleLogger('DesktopTableLayout');
 
 /**
@@ -126,7 +127,7 @@ function DesktopTableHeader({ type, title, t }: DesktopTableHeaderProps): JSX.El
 
   return (
     <header
-      className={`grid ${headerConfig.columns} gap-2 p-2 bg-muted border-b font-medium text-sm text-muted-foreground`}
+      className={`grid ${headerConfig.columns} gap-2 p-2 bg-muted border-b font-medium text-sm ${colors.text.muted}`}
       role="columnheader"
       aria-label={`${title} table headers`}
     >
@@ -262,6 +263,7 @@ export function DesktopTableLayout({
   setPrimary
 }: DesktopTableLayoutProps): JSX.Element | null {
   const { quick } = useBorderTokens();
+  const _colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('contacts');
 

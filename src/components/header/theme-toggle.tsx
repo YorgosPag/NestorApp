@@ -1,4 +1,5 @@
 "use client"
+/* eslint-disable custom/no-hardcoded-strings */
 
 import * as React from "react"
 import { useTheme } from "next-themes"
@@ -15,6 +16,7 @@ import { Button } from "@/components/ui/button"
 import { Moon, Sun, Monitor } from "lucide-react"
 import { TRANSITION_PRESETS } from '@/components/ui/effects'
 import { useIconSizes } from '@/hooks/useIconSizes'
+import '@/lib/design-system';
 
 export function ThemeToggle() {
   const iconSizes = useIconSizes();

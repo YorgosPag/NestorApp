@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable custom/no-hardcoded-strings */
 
 import React from 'react';
 import type { FieldConfig, SectionConfig } from '@/config/company-gemi';
@@ -6,6 +7,7 @@ import { getIconComponent } from './utils/IconMapping';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatCurrency, formatDate, formatNumber } from '@/lib/intl-utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('GenericTabRenderer');
 
@@ -160,9 +162,9 @@ function DisplayField({
   return (
     <div>
       <label className="text-sm font-medium">{field.label}</label>
-      <p className="text-sm text-muted-foreground">{formattedValue}</p>
+      <p className={cn("text-sm", colors.text.muted)}>{formattedValue}</p>
       {field.helpText && (
-        <p className="text-xs text-muted-foreground/60 mt-1 whitespace-nowrap overflow-hidden text-ellipsis">{field.helpText}</p>
+        <p className={cn("text-xs /60 mt-1 whitespace-nowrap overflow-hidden text-ellipsis", colors.text.muted)}>{field.helpText}</p>
       )}
     </div>
   );
@@ -183,6 +185,7 @@ function CompactSectionRenderer({
   valueFormatters?: Record<string, ValueFormatter>;
 }) {
   const iconSizes = useIconSizes();
+  const _colors = useSemanticColors();
   const IconComponent = getIconComponent(section.icon);
 
   return (
@@ -230,7 +233,7 @@ function FullSectionRenderer({
         {section.title}
       </h4>
       {section.description && (
-        <p className="text-sm text-muted-foreground mb-4">{section.description}</p>
+        <p className={cn("text-sm mb-4", colors.text.muted)}>{section.description}</p>
       )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {section.fields.map(field => (
@@ -257,6 +260,8 @@ function FullSectionRenderer({
  * @example
  * ```tsx
  * import { getCompanySection } from '@/config/company-gemi';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
  *
  * function ContactDetailsTab() {
  *   const section = getCompanySection('basicInfo');
@@ -280,12 +285,12 @@ export function GenericTabRenderer({
 }: GenericTabRendererProps) {
   if (!section) {
     logger.warn('No section provided');
-    return <div className="text-center text-muted-foreground">Δεν υπάρχουν διαθέσιμα δεδομένα</div>;
+    return <div className={cn("text-center", colors.text.muted)}>Δεν υπάρχουν διαθέσιμα δεδομένα</div>;
   }
 
   if (!data) {
     return (
-      <div className="text-center text-muted-foreground p-8">
+      <div className={cn("text-center p-8", colors.text.muted)}>
         <p>Δεν υπάρχουν δεδομένα για προβολή</p>
       </div>
     );

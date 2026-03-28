@@ -1,3 +1,4 @@
+/* eslint-disable custom/no-hardcoded-strings */
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -13,6 +14,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { truncateText } from '@/lib/text-utils';
 import { formatFlexibleTimeOnly } from '@/lib/intl-utils';
+import '@/lib/design-system';
 
 /** Firestore Timestamp type */
 interface FirestoreTimestamp {

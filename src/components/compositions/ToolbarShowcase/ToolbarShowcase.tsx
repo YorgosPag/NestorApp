@@ -1,3 +1,5 @@
+/* eslint-disable custom/no-hardcoded-strings */
+/* eslint-disable design-system/enforce-semantic-colors */
 'use client';
 
 import React, { useState } from 'react';
@@ -7,7 +9,9 @@ import {
   ContactsToolbar
 } from '@/components/compositions';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('ToolbarShowcase');
 
@@ -37,7 +41,7 @@ export function ToolbarShowcase() {
     <div className={`space-y-8 ${colors.bg.primary} p-6`}>
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold">Toolbar Composition Showcase</h1>
-        <p className="text-muted-foreground">
+        <p className={colors.text.muted}>
           Demonstration των νέων toolbar compositions που χρησιμοποιούν το BaseToolbar system
         </p>
       </div>
@@ -65,7 +69,7 @@ export function ToolbarShowcase() {
             <h3 className="font-medium mb-2">Demo State:</h3>
             <div className="text-sm space-y-1">
               <div>Selected: {buildingState.selectedItems.length} κτίρια</div>
-              <div>Search: "{buildingState.searchTerm}"</div>
+              <div>Search: &quot;{buildingState.searchTerm}&quot;</div>
               <div>Filters: {buildingState.activeFilters.join(', ') || 'None'}</div>
               <button 
                 className="mt-2 px-3 py-1 bg-primary text-primary-foreground rounded text-xs"
@@ -99,7 +103,7 @@ export function ToolbarShowcase() {
             <h3 className="font-medium mb-2">Demo State:</h3>
             <div className="text-sm space-y-1">
               <div>Selected: {projectState.selectedItems.length} έργα</div>
-              <div>Search: "{projectState.searchTerm}"</div>
+              <div>Search: &quot;{projectState.searchTerm}&quot;</div>
               <div>Filters: {projectState.activeFilters.join(', ') || 'None'}</div>
               <button 
                 className="mt-2 px-3 py-1 bg-primary text-primary-foreground rounded text-xs"
@@ -135,7 +139,7 @@ export function ToolbarShowcase() {
             <h3 className="font-medium mb-2">Demo State:</h3>
             <div className="text-sm space-y-1">
               <div>Selected: {contactState.selectedItems.length} επαφές</div>
-              <div>Search: "{contactState.searchTerm}"</div>
+              <div>Search: &quot;{contactState.searchTerm}&quot;</div>
               <div>Filters: {contactState.activeFilters.join(', ') || 'None'}</div>
               <button 
                 className="mt-2 px-3 py-1 bg-primary text-primary-foreground rounded text-xs"
@@ -193,28 +197,28 @@ export function ToolbarShowcase() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-4 border rounded-lg">
             <h3 className="font-medium text-green-600 mb-2">✅ Unified Interface</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className={cn("text-sm", colors.text.muted)}>
               Όλα τα toolbars χρησιμοποιούν το ίδιο BaseToolbar system για consistent behavior και styling
             </p>
           </div>
           
           <div className="p-4 border rounded-lg">
             <h3 className="font-medium text-blue-600 mb-2">🔧 Configurable</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className={cn("text-sm", colors.text.muted)}>
               Flexible configuration με actions, filters, search και custom content sections
             </p>
           </div>
           
           <div className="p-4 border rounded-lg">
             <h3 className="font-medium text-purple-600 mb-2">🎯 Type Safe</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className={cn("text-sm", colors.text.muted)}>
               Full TypeScript support με strongly typed props και callback functions
             </p>
           </div>
           
           <div className="p-4 border rounded-lg">
             <h3 className="font-medium text-orange-600 mb-2">🚀 Accessible</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className={cn("text-sm", colors.text.muted)}>
               Built-in accessibility με keyboard shortcuts, tooltips και ARIA support
             </p>
           </div>

@@ -53,6 +53,7 @@ import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { addTask } from '@/services/tasks.service';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import type { CrmTask } from '@/types/crm';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -131,7 +132,7 @@ export function CalendarCreateDialog({
         setDate(initialDate);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- resetForm is stable within render
+    // resetForm is stable within render -- intentionally omitted from deps
   }, [open, initialDate]);
 
   const handleSubmit = async () => {

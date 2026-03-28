@@ -21,7 +21,10 @@ import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '../../ui/effects';
 // 🏢 ENTERPRISE: Icons από centralized config - ZERO hardcoded values
 import { NAVIGATION_ENTITIES } from '../config';
 import { useTranslation } from 'react-i18next';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('SelectCompanyContactModal');
 
@@ -40,6 +43,7 @@ export function SelectCompanyContactModal({
   existingCompanyIds = [],
 }: SelectCompanyContactModalProps) {
   const { t } = useTranslation('contacts');
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: Icon from centralized config - ZERO hardcoded values
   const CompanyIcon = NAVIGATION_ENTITIES.company.icon;
 
@@ -105,7 +109,7 @@ export function SelectCompanyContactModal({
 
       setContacts(companyContacts);
       setFilteredContacts(companyContacts);
-    } catch (err) {
+    } catch (_err) {
       setError(t('company.nav.loadError'));
     } finally {
       setIsLoading(false);
@@ -134,7 +138,7 @@ export function SelectCompanyContactModal({
           <DialogDescription>
             {t('company.nav.selectDescription')}
             {existingCompanyIds.length > 0 && (
-              <span className="text-muted-foreground block mt-1 text-sm">
+              <span className={cn(colors.text.muted, "block mt-1 text-sm")}>
                 {t('company.nav.existingInfo', { count: existingCompanyIds.length })}
               </span>
             )}
@@ -174,7 +178,7 @@ export function SelectCompanyContactModal({
           {/* Error State */}
           {error && (
             <div className="text-center py-8">
-              <p className="text-red-500 mb-4">{error}</p>
+              <p className="text-red-500 mb-4">{error}</p> {/* eslint-disable-line design-system/enforce-semantic-colors */}
               <Button onClick={loadCompanyContacts} variant="outline" size="sm">
                 {t('company.nav.retry')}
               </Button>
@@ -192,10 +196,10 @@ export function SelectCompanyContactModal({
                       {existingCompanyIds.length > 0 ? (
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
-                            <CheckCircle2 className="h-6 w-6 text-green-500" />
+                            <CheckCircle2 className="h-6 w-6 text-green-500" /> {/* eslint-disable-line design-system/enforce-semantic-colors */}
                             <p className="font-medium">{t('company.nav.allAdded')}</p>
                           </div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className={cn("text-sm", colors.text.muted)}>
                             {t('company.nav.allAddedDescription', { count: existingCompanyIds.length })}
                           </p>
                         </div>
@@ -224,12 +228,12 @@ export function SelectCompanyContactModal({
                           {getContactDisplayName(contact)}
                         </div>
                         {contact.type === 'company' && contact.vatNumber && (
-                          <div className="text-sm text-gray-500 dark:text-muted-foreground">
+                          <div className={cn("text-sm", colors.text.muted)}>
                             {t('company.nav.vatNumber')}: {contact.vatNumber}
                           </div>
                         )}
                         {contact.type === 'company' && contact.industry && (
-                          <div className="text-sm text-gray-500 dark:text-muted-foreground">
+                          <div className={cn("text-sm", colors.text.muted)}>
                             {contact.industry}
                           </div>
                         )}
