@@ -3,11 +3,15 @@ import type { Config } from 'tailwindcss';
 export default {
   darkMode: ['class'],
   // 🏢 ENTERPRISE: Safelist for dynamically generated classes from hooks
-  // NOTE: Entity list patterns removed - classes are explicitly defined in design-tokens.ts
-  //       which is included in content[] array, so Tailwind finds them automatically
   safelist: [
     'pl-10', 'pl-11', 'pl-12', 'pr-10', 'pr-11', 'pr-12',  // Input icon padding
     '!pl-10', '!pl-11', '!pl-12', '!pr-10', '!pr-11', '!pr-12',  // Input icon padding with !important
+    // 🏢 ENTERPRISE: Entity List Column width constraints (CSS variables)
+    // CRITICAL: These classes are defined in design-tokens/modules/layout.ts
+    // which is NOT directly in the content[] scan paths — safelist is required
+    { pattern: /^min-w-\[var\(--entity-list-.*\)\]$/ },
+    { pattern: /^max-w-\[var\(--entity-list-.*\)\]$/ },
+    { pattern: /^w-\[calc\(100%-var\(--entity-list-.*\)\)\]$/ },
   ],
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
@@ -16,6 +20,7 @@ export default {
     // 🏢 ENTERPRISE: Additional paths for centralized systems
     './src/core/**/*.{ts,tsx}',
     './src/styles/design-tokens.ts',
+    './src/styles/design-tokens/**/*.ts',  // 🏢 CRITICAL: Scan all design-token modules (layout.ts has entity-list classes)
     './src/design-system/**/*.ts', // 🏢 ADR-128: Color bridge & switch tokens
     './src/features/**/*.{ts,tsx}',
     './src/domain/**/*.{ts,tsx}',
