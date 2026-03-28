@@ -28,6 +28,7 @@ import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { SearchInput } from '@/components/ui/search';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { FilePreviewPanel } from '@/components/file-manager/FilePreviewPanel';
@@ -136,6 +137,7 @@ export interface EntityFilesContentProps {
 
 export function EntityFilesContent(props: EntityFilesContentProps) {
   const { t } = useTranslation('files');
+  const _colors = useSemanticColors();
 
   return (
     <CardContent className={cn('space-y-2', props.isFullscreen && 'flex-1 min-h-0 overflow-auto')}>
@@ -180,6 +182,7 @@ function UploadZoneSection({
 }: EntityFilesContentProps) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation('files');
+  const colors = useSemanticColors();
   return (
     <div className="relative space-y-2 p-2 bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
       <Button
@@ -235,7 +238,7 @@ function UploadZoneSection({
               uploading={uploading}
             />
           ) : (
-            <div className="p-2 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+            <div className={cn("p-2 text-center text-sm flex items-center justify-center gap-2", colors.text.muted)}>
               <ArrowUp className={iconSizes.sm} aria-hidden="true" />
               {t('manager.enterTitleToContinue')}
             </div>
@@ -245,7 +248,7 @@ function UploadZoneSection({
 
       {/* Hint when no entry point selected */}
       {!selectedEntryPoint && (
-        <div className="p-2 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+        <div className={cn("p-2 text-center text-sm flex items-center justify-center gap-2", colors.text.muted)}>
           <ArrowUp className={iconSizes.sm} aria-hidden="true" />
           {t('manager.selectDocumentType')}
         </div>
@@ -261,6 +264,7 @@ function UploadZoneSection({
 function FilesTabContent(props: EntityFilesContentProps) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation('files');
+  const colors = useSemanticColors();
 
   return (
     <>
@@ -295,7 +299,7 @@ function FilesTabContent(props: EntityFilesContentProps) {
             />
           </div>
           {props.searchTerm && (
-            <span className="text-sm text-muted-foreground">
+            <span className={cn("text-sm", colors.text.muted)}>
               {t('search.results', { count: props.filteredFiles.length, total: props.files.length })}
             </span>
           )}
@@ -326,7 +330,7 @@ function FilesTabContent(props: EntityFilesContentProps) {
 
       {/* Storage info */}
       {props.totalStorageBytes > 0 && (
-        <footer className="pt-4 border-t text-xs text-muted-foreground">
+        <footer className={cn("pt-4 border-t text-xs", colors.text.muted)}>
           {t('manager.totalStorage')}: {(props.totalStorageBytes / 1024 / 1024).toFixed(2)} MB
         </footer>
       )}
@@ -404,6 +408,7 @@ function FileViewDispatch(props: EntityFilesContentProps & { iconSizes: ReturnTy
 
 function GalleryView(props: EntityFilesContentProps) {
   const { t } = useTranslation('files');
+  const colors = useSemanticColors();
   if (props.displayStyle === 'floorplan-gallery') {
     return (
       <FloorplanGallery
@@ -454,13 +459,13 @@ function GalleryView(props: EntityFilesContentProps) {
           <p className="text-sm font-medium truncate w-full">
             {file.displayName || file.originalFilename}
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className={cn("text-xs", colors.text.muted)}>
             {formatFileSize(file.sizeBytes || 0)}
           </p>
         </article>
       ))}
       {props.filteredFiles.length === 0 && (
-        <p className="col-span-full text-center text-muted-foreground py-8">
+        <p className={cn("col-span-full text-center py-8", colors.text.muted)}>
           {t('manager.noFiles')}
         </p>
       )}

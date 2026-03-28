@@ -19,6 +19,7 @@ import { useIconSizes } from '@/hooks/useIconSizes'
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy'
 // 🚀 ENTERPRISE: Route prefetching on hover (SAP/Salesforce/Google pattern)
 import { preloadOnHover, getPreloadableRouteFromHref } from '@/utils/preloadRoutes'
+import '@/lib/design-system';
 
 interface SidebarMenuItemProps {
   item: MenuItem
@@ -81,7 +82,7 @@ export function SidebarMenuItem({
             <item.icon
               className={cn(
                 TRANSITION_PRESETS.STANDARD_ALL,
-                isActive && "text-blue-600 dark:text-blue-400"
+                isActive && "text-blue-600 dark:text-blue-400" // eslint-disable-line design-system/enforce-semantic-colors
               )}
             />
             <span className="font-medium">{translateTitle(item.title)}</span>
@@ -137,7 +138,7 @@ export function SidebarMenuItem({
             <item.icon
               className={cn(
                 TRANSITION_PRESETS.STANDARD_ALL,
-                isActive && "text-blue-600 dark:text-blue-400"
+                isActive && "text-blue-600 dark:text-blue-400" // eslint-disable-line design-system/enforce-semantic-colors
               )}
             />
             <span className="font-medium">{translateTitle(item.title)}</span>

@@ -12,7 +12,7 @@
 
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   Share2,
   Copy,
@@ -43,6 +43,8 @@ import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { FileShareService } from '@/services/file-share.service';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -64,18 +66,6 @@ interface ShareDialogProps {
 }
 
 // ============================================================================
-// EXPIRATION OPTIONS
-// ============================================================================
-
-const EXPIRATION_OPTIONS = [
-  { value: '1', label: '1 ώρα' },
-  { value: '24', label: '24 ώρες' },
-  { value: '72', label: '3 ημέρες' },
-  { value: '168', label: '1 εβδομάδα' },
-  { value: '720', label: '30 ημέρες' },
-];
-
-// ============================================================================
 // COMPONENT
 // ============================================================================
 
@@ -88,6 +78,15 @@ export function ShareDialog({
   companyId,
 }: ShareDialogProps) {
   const { t } = useTranslation('files');
+  const colors = useSemanticColors();
+
+  const EXPIRATION_OPTIONS = useMemo(() => [
+    { value: '1', label: t('share.expirationOptions.1hour') },
+    { value: '24', label: t('share.expirationOptions.24hours') },
+    { value: '72', label: t('share.expirationOptions.3days') },
+    { value: '168', label: t('share.expirationOptions.1week') },
+    { value: '720', label: t('share.expirationOptions.30days') },
+  ], [t]);
 
   const [expiresInHours, setExpiresInHours] = useState('72');
   const [password, setPassword] = useState('');
@@ -113,8 +112,7 @@ export function ShareDialog({
       const url = `${window.location.origin}/shared/${token}`;
       setShareUrl(url);
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to create share link', err);
+      console.error('Failed to create share link', err); // eslint-disable-line no-console
     } finally {
       setCreating(false);
     }
@@ -142,7 +140,7 @@ export function ShareDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Share2 className="h-5 w-5" />
-            {t('share.title', 'Κοινοποίηση αρχείου')}
+            {t('share.title')}
           </DialogTitle>
           <DialogDescription className="truncate">
             {fileName}
@@ -158,8 +156,8 @@ export function ShareDialog({
             {/* Expiration */}
             <fieldset className="space-y-1.5">
               <label className="text-sm font-medium flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                {t('share.expiration', 'Λήξη')}
+                <Clock className={cn("h-3.5 w-3.5", colors.text.muted)} />
+                {t('share.expiration')}
               </label>
               <Select value={expiresInHours} onValueChange={setExpiresInHours}>
                 <SelectTrigger>
@@ -178,17 +176,17 @@ export function ShareDialog({
             {/* Password (optional) */}
             <fieldset className="space-y-1.5">
               <label className="text-sm font-medium flex items-center gap-1.5">
-                <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-                {t('share.password', 'Κωδικός')}
-                <span className="text-xs text-muted-foreground font-normal">
-                  ({t('share.optional', 'προαιρετικό')})
+                <Lock className={cn("h-3.5 w-3.5", colors.text.muted)} />
+                {t('share.password')}
+                <span className={cn("text-xs font-normal", colors.text.muted)}>
+                  ({t('share.optional')})
                 </span>
               </label>
               <input
                 type="text"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={t('share.passwordPlaceholder', 'Εισάγετε κωδικό...')}
+                placeholder={t('share.passwordPlaceholder')}
                 className="w-full px-3 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </fieldset>
@@ -196,15 +194,15 @@ export function ShareDialog({
             {/* Max downloads */}
             <fieldset className="space-y-1.5">
               <label className="text-sm font-medium flex items-center gap-1.5">
-                <Download className="h-3.5 w-3.5 text-muted-foreground" />
-                {t('share.maxDownloads', 'Μέγιστες λήψεις')}
+                <Download className={cn("h-3.5 w-3.5", colors.text.muted)} />
+                {t('share.maxDownloads')}
               </label>
               <Select value={maxDownloads} onValueChange={setMaxDownloads}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="0">{t('share.unlimited', 'Χωρίς όριο')}</SelectItem>
+                  <SelectItem value="0">{t('share.unlimited')}</SelectItem>
                   <SelectItem value="1">1</SelectItem>
                   <SelectItem value="5">5</SelectItem>
                   <SelectItem value="10">10</SelectItem>
@@ -217,24 +215,24 @@ export function ShareDialog({
             {/* Note */}
             <fieldset className="space-y-1.5">
               <label className="text-sm font-medium flex items-center gap-1.5">
-                <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
-                {t('share.note', 'Σημείωση')}
-                <span className="text-xs text-muted-foreground font-normal">
-                  ({t('share.optional', 'προαιρετικό')})
+                <MessageSquare className={cn("h-3.5 w-3.5", colors.text.muted)} />
+                {t('share.note')}
+                <span className={cn("text-xs font-normal", colors.text.muted)}>
+                  ({t('share.optional')})
                 </span>
               </label>
               <input
                 type="text"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder={t('share.notePlaceholder', 'Μήνυμα για τον παραλήπτη...')}
+                placeholder={t('share.notePlaceholder')}
                 className="w-full px-3 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </fieldset>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleClose}>
-                {t('common.cancel', 'Ακύρωση')}
+                {t('common.cancel')}
               </Button>
               <Button type="submit" disabled={creating}>
                 {creating ? (
@@ -242,15 +240,15 @@ export function ShareDialog({
                 ) : (
                   <Share2 className="h-4 w-4 mr-2" />
                 )}
-                {t('share.create', 'Δημιουργία συνδέσμου')}
+                {t('share.create')}
               </Button>
             </DialogFooter>
           </form>
         ) : (
           /* Share URL created */
           <section className="space-y-4 py-2">
-            <p className="text-sm text-green-600 font-medium text-center">
-              {t('share.created', 'Ο σύνδεσμος δημιουργήθηκε!')}
+            <p className="text-sm text-green-600 font-medium text-center"> {/* eslint-disable-line design-system/enforce-semantic-colors */}
+              {t('share.created')}
             </p>
 
             {/* URL display + copy */}
@@ -266,7 +264,7 @@ export function ShareDialog({
                 variant="outline"
                 size="sm"
                 onClick={handleCopy}
-                className={cn('flex-shrink-0', copied && 'text-green-600')}
+                className={cn('flex-shrink-0', copied && 'text-green-600')} // eslint-disable-line design-system/enforce-semantic-colors
               >
                 {copied ? (
                   <Check className="h-4 w-4" />
@@ -277,28 +275,28 @@ export function ShareDialog({
             </div>
 
             {/* Info */}
-            <footer className="text-xs text-muted-foreground space-y-1">
+            <footer className={cn("text-xs space-y-1", colors.text.muted)}>
               <p className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                Λήγει σε {EXPIRATION_OPTIONS.find(o => o.value === expiresInHours)?.label}
+                {t('share.expiresIn', { label: EXPIRATION_OPTIONS.find(o => o.value === expiresInHours)?.label })}
               </p>
               {password && (
                 <p className="flex items-center gap-1">
                   <Lock className="h-3 w-3" />
-                  Προστατεύεται με κωδικό
+                  {t('share.passwordProtected')}
                 </p>
               )}
               {parseInt(maxDownloads, 10) > 0 && (
                 <p className="flex items-center gap-1">
                   <Download className="h-3 w-3" />
-                  Μέγιστες λήψεις: {maxDownloads}
+                  {t('share.maxDownloadsLabel', { count: maxDownloads })}
                 </p>
               )}
             </footer>
 
             <DialogFooter>
               <Button onClick={handleClose}>
-                {t('common.close', 'Κλείσιμο')}
+                {t('common.close')}
               </Button>
             </DialogFooter>
           </section>

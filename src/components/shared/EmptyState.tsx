@@ -28,6 +28,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import '@/lib/design-system';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -45,7 +48,7 @@ export interface EmptyStateAction {
 export interface EmptyStateProps {
   /** Icon component (LucideIcon or custom React component) */
   icon?: LucideIcon | React.ComponentType<{ className?: string }>;
-  /** Icon color class (e.g., 'text-blue-500') — defaults to 'text-muted-foreground' */
+  /** Icon color class (e.g., 'text-blue-500') — defaults to COLOR_BRIDGE.text.muted */
   iconColor?: string;
   /** Primary message */
   title: string;
@@ -77,7 +80,7 @@ function useSizeConfig(size: 'sm' | 'md' | 'lg', iconSizes: ReturnType<typeof us
       return {
         iconSize: iconSizes.lg,
         titleClass: 'text-sm font-medium text-foreground',
-        descriptionClass: 'text-xs text-muted-foreground',
+        descriptionClass: `text-xs ${COLOR_BRIDGE.text.muted}`,
         padding: 'py-4 px-2',
         gap: 'mb-1',
       };
@@ -85,7 +88,7 @@ function useSizeConfig(size: 'sm' | 'md' | 'lg', iconSizes: ReturnType<typeof us
       return {
         iconSize: iconSizes.xl4,
         titleClass: 'text-xl font-semibold text-foreground',
-        descriptionClass: 'text-sm text-muted-foreground',
+        descriptionClass: `text-sm ${COLOR_BRIDGE.text.muted}`,
         padding: 'py-12 px-4',
         gap: 'mb-4',
       };
@@ -94,7 +97,7 @@ function useSizeConfig(size: 'sm' | 'md' | 'lg', iconSizes: ReturnType<typeof us
       return {
         iconSize: iconSizes.xl2,
         titleClass: 'text-base font-semibold text-foreground',
-        descriptionClass: 'text-sm text-muted-foreground',
+        descriptionClass: `text-sm ${COLOR_BRIDGE.text.muted}`,
         padding: 'py-8 px-4',
         gap: 'mb-2',
       };
@@ -105,7 +108,7 @@ function useSizeConfig(size: 'sm' | 'md' | 'lg', iconSizes: ReturnType<typeof us
 
 export function EmptyState({
   icon: IconComponent,
-  iconColor = 'text-muted-foreground',
+  iconColor = COLOR_BRIDGE.text.muted,
   title,
   description,
   action,
@@ -114,6 +117,7 @@ export function EmptyState({
   className,
 }: EmptyStateProps) {
   const iconSizes = useIconSizes();
+  const _colors = useSemanticColors();
   const sizeConfig = useSizeConfig(size, iconSizes);
 
   const content = (

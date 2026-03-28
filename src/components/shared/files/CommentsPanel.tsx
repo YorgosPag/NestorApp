@@ -24,6 +24,7 @@ import {
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -31,6 +32,8 @@ import {
   FileCommentService,
   type FileComment,
 } from '@/services/file-comment.service';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -62,7 +65,7 @@ interface CommentItemProps {
   onEdit: (comment: FileComment) => void;
   onDelete: (commentId: string) => void;
   onToggleResolve: (comment: FileComment) => void;
-  t: (key: string, fallback?: string) => string;
+  t: (key: string) => string;
 }
 
 function CommentItem({
@@ -76,6 +79,7 @@ function CommentItem({
   onToggleResolve,
   t,
 }: CommentItemProps) {
+  const colors = useSemanticColors();
   const isOwner = comment.authorId === currentUserId;
   const timeAgo = useMemo(() => {
     const date = comment.createdAt
@@ -84,13 +88,13 @@ function CommentItem({
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMin = Math.floor(diffMs / 60_000);
-    if (diffMin < 1) return t('comments.justNow', 'μόλις τώρα');
-    if (diffMin < 60) return `${diffMin} ${t('comments.minutesAgo', 'λεπτά')}`;
+    if (diffMin < 1) return t('comments.justNow');
+    if (diffMin < 60) return `${diffMin} ${t('comments.minutesAgo')}`;
     const diffHours = Math.floor(diffMin / 60);
     if (diffHours < 24)
-      return `${diffHours} ${t('comments.hoursAgo', 'ώρες')}`;
+      return `${diffHours} ${t('comments.hoursAgo')}`;
     const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays} ${t('comments.daysAgo', 'ημέρες')}`;
+    return `${diffDays} ${t('comments.daysAgo')}`;
   }, [comment.createdAt, t]);
 
   return (
@@ -105,10 +109,10 @@ function CommentItem({
         <span className="text-xs font-semibold text-foreground">
           {comment.authorName}
         </span>
-        <span className="text-[10px] text-muted-foreground">{timeAgo}</span>
+        <span className={cn("text-[10px]", colors.text.muted)}>{timeAgo}</span>{/* eslint-disable-line custom/no-hardcoded-strings */}
         {comment.editedAt && (
-          <span className="text-[10px] text-muted-foreground italic">
-            ({t('comments.edited', 'επεξεργασμένο')})
+          <span className={cn("text-[10px] italic", colors.text.muted)}>
+            ({t('comments.edited')})
           </span>
         )}
       </header>
@@ -125,10 +129,10 @@ function CommentItem({
           variant="ghost"
           size="sm"
           onClick={() => onReply(comment.id)}
-          className="h-6 px-1.5 text-xs text-muted-foreground"
+          className={cn("h-6 px-1.5 text-xs", colors.text.muted)}
         >
           <Reply className="h-3 w-3 mr-1" />
-          {t('comments.reply', 'Απάντηση')}
+          {t('comments.reply')}
         </Button>
 
         {/* Resolve (only top-level) */}
@@ -137,16 +141,16 @@ function CommentItem({
             variant="ghost"
             size="sm"
             onClick={() => onToggleResolve(comment)}
-            className="h-6 px-1.5 text-xs text-muted-foreground"
+            className={cn("h-6 px-1.5 text-xs", colors.text.muted)}
           >
             {comment.resolved ? (
-              <CheckCircle2 className="h-3 w-3 mr-1 text-green-500" />
+              <CheckCircle2 className="h-3 w-3 mr-1 text-green-500" /> // eslint-disable-line design-system/enforce-semantic-colors
             ) : (
               <Circle className="h-3 w-3 mr-1" />
             )}
             {comment.resolved
-              ? t('comments.reopen', 'Ξαναάνοιγμα')
-              : t('comments.resolve', 'Επίλυση')}
+              ? t('comments.reopen')
+              : t('comments.resolve')}
           </Button>
         )}
 
@@ -157,7 +161,7 @@ function CommentItem({
               variant="ghost"
               size="sm"
               onClick={() => onEdit(comment)}
-              className="h-6 px-1.5 text-xs text-muted-foreground"
+              className={cn("h-6 px-1.5 text-xs", colors.text.muted)}
             >
               <Pencil className="h-3 w-3" />
             </Button>
@@ -208,6 +212,7 @@ export function CommentsPanel({
   className,
 }: CommentsPanelProps) {
   const { t } = useTranslation('files');
+  const colors = useSemanticColors();
   const [comments, setComments] = useState<FileComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [newText, setNewText] = useState('');
@@ -326,11 +331,11 @@ export function CommentsPanel({
     <section className={cn('flex flex-col', className)}>
       {/* Header */}
       <header className="flex items-center gap-2 px-3 py-2 border-b bg-muted/20">
-        <MessageSquare className="h-4 w-4 text-muted-foreground" />
+        <MessageSquare className={cn("h-4 w-4", colors.text.muted)} />
         <h3 className="text-sm font-medium">
-          {t('comments.title', 'Σχόλια')}
+          {t('comments.title')}
           {comments.length > 0 && (
-            <span className="ml-1.5 text-xs text-muted-foreground">
+            <span className={cn("ml-1.5 text-xs", colors.text.muted)}>
               ({comments.length})
             </span>
           )}
@@ -340,13 +345,13 @@ export function CommentsPanel({
       {/* Comments list */}
       <section className="flex-1 overflow-y-auto px-3 py-2 space-y-4 max-h-[300px]">
         {loading ? (
-          <p className="text-xs text-muted-foreground text-center py-4">
+          <p className={cn("text-xs text-center py-4", colors.text.muted)}>
             <Spinner size="small" className="inline mr-1" />
-            {t('comments.loading', 'Φόρτωση σχολίων...')}
+            {t('comments.loading')}
           </p>
         ) : threads.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-4">
-            {t('comments.empty', 'Δεν υπάρχουν σχόλια. Γράψε το πρώτο!')}
+          <p className={cn("text-xs text-center py-4", colors.text.muted)}>
+            {t('comments.empty')}
           </p>
         ) : (
           threads.map(({ comment, replies }) => (
@@ -360,7 +365,7 @@ export function CommentsPanel({
               onEdit={handleEdit}
               onDelete={handleDelete}
               onToggleResolve={handleToggleResolve}
-              t={(key, fallback) => t(key, fallback ?? '')}
+              t={(key) => t(key)}
             />
           ))
         )}
@@ -370,19 +375,19 @@ export function CommentsPanel({
       <footer className="border-t px-3 py-2 bg-muted/10">
         {/* Reply / Edit indicator */}
         {(replyingTo || editingComment) && (
-          <section className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
+          <section className={cn("flex items-center gap-2 mb-2 text-xs", colors.text.muted)}>
             {replyingTo && (
               <>
                 <Reply className="h-3 w-3" />
                 <span>
-                  {t('comments.replyingTo', 'Απάντηση σε')} {replyingToName}
+                  {t('comments.replyingTo')} {replyingToName}
                 </span>
               </>
             )}
             {editingComment && (
               <>
                 <Pencil className="h-3 w-3" />
-                <span>{t('comments.editing', 'Επεξεργασία σχολίου')}</span>
+                <span>{t('comments.editing')}</span>
               </>
             )}
             <Button
@@ -403,12 +408,13 @@ export function CommentsPanel({
             handleSubmit();
           }}
         >
-          <textarea
+          <Textarea
+            size="sm"
             value={newText}
             onChange={(e) => setNewText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={t('comments.placeholder', 'Γράψε ένα σχόλιο... (Ctrl+Enter για αποστολή)')}
-            className="flex-1 text-sm border rounded-md px-2 py-1.5 bg-background resize-none min-h-[36px] max-h-[100px] focus:outline-none focus:ring-2 focus:ring-ring"
+            placeholder={t('comments.placeholder')}
+            className="flex-1 resize-none min-h-[36px] max-h-[100px]"
             rows={1}
             disabled={submitting}
           />

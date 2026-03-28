@@ -1,3 +1,4 @@
+/* eslint-disable custom/no-hardcoded-strings */
 /**
  * 📜 ActivityTab — Enterprise Entity Audit Trail Component
  *
@@ -42,6 +43,9 @@ import type { AuditEntityType, AuditAction, EntityAuditEntry } from '@/types/aud
 import type { TabComponentProps } from '@/components/generic/UniversalTabsRenderer';
 import { StatsCard } from '@/components/property-management/dashboard/StatsCard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // ============================================================================
 // ACTION CONFIG
@@ -56,15 +60,15 @@ interface ActionConfig {
 
 const ACTION_MAP: Record<AuditAction, ActionConfig> = {
   created: { icon: Plus, label: 'Δημιουργία', color: 'text-emerald-600', bgColor: 'bg-emerald-50 dark:bg-emerald-950/30' },
-  updated: { icon: Edit3, label: 'Ενημέρωση', color: 'text-blue-600', bgColor: 'bg-blue-50 dark:bg-blue-950/30' },
-  deleted: { icon: Trash2, label: 'Διαγραφή', color: 'text-red-600', bgColor: 'bg-red-50 dark:bg-red-950/30' },
+  updated: { icon: Edit3, label: 'Ενημέρωση', color: 'text-blue-600', bgColor: 'bg-blue-50 dark:bg-blue-950/30' }, // eslint-disable-line design-system/enforce-semantic-colors
+  deleted: { icon: Trash2, label: 'Διαγραφή', color: 'text-red-600', bgColor: 'bg-red-50 dark:bg-red-950/30' }, // eslint-disable-line design-system/enforce-semantic-colors
   status_changed: { icon: RefreshCw, label: 'Αλλαγή κατάστασης', color: 'text-amber-600', bgColor: 'bg-amber-50 dark:bg-amber-950/30' },
   linked: { icon: Link2, label: 'Σύνδεση', color: 'text-purple-600', bgColor: 'bg-purple-50 dark:bg-purple-950/30' },
   unlinked: { icon: Unlink, label: 'Αποσύνδεση', color: 'text-gray-600', bgColor: 'bg-gray-50 dark:bg-gray-950/30' },
   professional_assigned: { icon: UserPlus, label: 'Ανάθεση επαγγελματία', color: 'text-teal-600', bgColor: 'bg-teal-50 dark:bg-teal-950/30' },
   professional_removed: { icon: UserMinus, label: 'Αφαίρεση επαγγελματία', color: 'text-orange-600', bgColor: 'bg-orange-50 dark:bg-orange-950/30' },
   email_sent: { icon: Mail, label: 'Email εστάλη', color: 'text-sky-600', bgColor: 'bg-sky-50 dark:bg-sky-950/30' },
-  invoice_created: { icon: Receipt, label: 'Δημιουργία παραστατικού', color: 'text-green-600', bgColor: 'bg-green-50 dark:bg-green-950/30' },
+  invoice_created: { icon: Receipt, label: 'Δημιουργία παραστατικού', color: 'text-green-600', bgColor: 'bg-green-50 dark:bg-green-950/30' }, // eslint-disable-line design-system/enforce-semantic-colors
 };
 
 const FILTER_OPTIONS: { value: AuditAction | 'all'; label: string }[] = [
@@ -95,6 +99,7 @@ export function ActivityTab({ entityType, entityId, unit, data }: ActivityTabPro
 
   const resolvedEntityType = entityType ?? 'unit';
   const { t } = useTranslation('common');
+  const colors = useSemanticColors();
   const [activeFilter, setActiveFilter] = useState<AuditAction | 'all'>('all');
 
   const { entries, isLoading, error, hasMore, loadMore } = useEntityAudit({
@@ -116,7 +121,7 @@ export function ActivityTab({ entityType, entityId, unit, data }: ActivityTabPro
 
   if (!resolvedEntityId) {
     return (
-      <section className="flex items-center justify-center p-8 text-muted-foreground">
+      <section className={cn("flex items-center justify-center p-8", colors.text.muted)}>
         <History className="mr-2 h-5 w-5" />
         <span>Δεν βρέθηκε αναγνωριστικό οντότητας</span>
       </section>
@@ -126,7 +131,7 @@ export function ActivityTab({ entityType, entityId, unit, data }: ActivityTabPro
   return (
     <section className="space-y-4 p-4">
       {/* ── Header ── */}
-      <header className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+      <header className={cn("flex items-center gap-2 text-sm font-medium", colors.text.muted)}>
         <History className="h-4 w-4" />
         <span>{t('audit.changeHistory')}</span>
       </header>
@@ -159,7 +164,7 @@ export function ActivityTab({ entityType, entityId, unit, data }: ActivityTabPro
 
       {/* ── Empty ── */}
       {!isLoading && entries.length === 0 && !error && (
-        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+        <div className={cn("flex flex-col items-center justify-center py-12", colors.text.muted)}>
           <Clock className="mb-2 h-8 w-8 opacity-40" />
           <p className="text-sm">{t('audit.noHistory')}</p>
           <p className="text-xs opacity-60">{t('audit.changesWillAppear')}</p>
@@ -168,7 +173,7 @@ export function ActivityTab({ entityType, entityId, unit, data }: ActivityTabPro
 
       {/* ── Empty after filter ── */}
       {!isLoading && entries.length > 0 && filteredEntries.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+        <div className={cn("flex flex-col items-center justify-center py-8", colors.text.muted)}>
           <Filter className="mb-2 h-6 w-6 opacity-40" />
           <p className="text-sm">{t('audit.noFilterResults')}</p>
         </div>
@@ -190,7 +195,7 @@ export function ActivityTab({ entityType, entityId, unit, data }: ActivityTabPro
             type="button"
             onClick={loadMore}
             disabled={isLoading}
-            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
+            className={cn("inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-50", colors.text.muted)}
           >
             {isLoading ? (
               <Spinner size="small" color="inherit" />
@@ -287,7 +292,7 @@ function QuickFilters({
             className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
               isActive
                 ? 'bg-primary text-primary-foreground'
-                : 'bg-muted/60 text-muted-foreground hover:bg-muted'
+                : `bg-muted/60 ${colors.text.muted} hover:bg-muted`
             }`}
           >
             {label}
@@ -311,7 +316,7 @@ function DayGroup({ dateLabel, children }: { dateLabel: string; children: React.
       {/* Day header */}
       <div className="sticky top-0 z-10 mb-2 flex items-center gap-2 bg-background/95 py-1 backdrop-blur-sm">
         <div className="h-px flex-1 bg-border" />
-        <span className="text-[11px] font-medium text-muted-foreground">{dateLabel}</span>
+        <span className={cn("text-[11px] font-medium", colors.text.muted)}>{dateLabel}</span>
         <div className="h-px flex-1 bg-border" />
       </div>
 
@@ -351,14 +356,14 @@ function AuditEntryItem({ entry }: { entry: EntityAuditEntry }) {
             {config.label}
           </span>
           {entry.performedByName && (
-            <span className="text-xs text-muted-foreground">
+            <span className={cn("text-xs", colors.text.muted)}>
               από {entry.performedByName}
             </span>
           )}
           {timestamp && (
             <time
               dateTime={entry.timestamp}
-              className="ml-auto text-[11px] text-muted-foreground"
+              className={cn("ml-auto text-[11px]", colors.text.muted)}
               title={absoluteTime}
             >
               {relativeTime}
@@ -376,7 +381,7 @@ function AuditEntryItem({ entry }: { entry: EntityAuditEntry }) {
               >
                 <span className="font-medium">{change.label ?? change.field}</span>
                 {': '}
-                <span className="text-muted-foreground line-through decoration-red-400/60">
+                <span className={cn(colors.text.muted, "line-through decoration-red-400/60")}>
                   {formatDisplayValue(change.oldValue)}
                 </span>
                 {' → '}

@@ -12,7 +12,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   CheckCircle2,
   XCircle,
@@ -31,6 +31,9 @@ import {
   type FileApproval,
   type ApprovalStatus,
 } from '@/services/file-approval.service';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -47,14 +50,14 @@ export interface ApprovalPanelProps {
 // HELPERS
 // ============================================================================
 
-const STATUS_CONFIG: Record<
+const STATUS_ICON_CONFIG: Record<
   ApprovalStatus,
-  { icon: typeof CheckCircle2; colorClass: string; label: string }
+  { icon: typeof CheckCircle2; colorClass: string }
 > = {
-  pending: { icon: Clock, colorClass: 'text-yellow-500', label: 'Εκκρεμεί' },
-  approved: { icon: CheckCircle2, colorClass: 'text-green-500', label: 'Εγκρίθηκε' },
-  rejected: { icon: XCircle, colorClass: 'text-red-500', label: 'Απορρίφθηκε' },
-  cancelled: { icon: Ban, colorClass: 'text-muted-foreground', label: 'Ακυρώθηκε' },
+  pending: { icon: Clock, colorClass: 'text-yellow-500' }, // eslint-disable-line design-system/enforce-semantic-colors
+  approved: { icon: CheckCircle2, colorClass: 'text-green-500' }, // eslint-disable-line design-system/enforce-semantic-colors
+  rejected: { icon: XCircle, colorClass: 'text-red-500' }, // eslint-disable-line design-system/enforce-semantic-colors
+  cancelled: { icon: Ban, colorClass: COLOR_BRIDGE.text.muted },
 };
 
 // ============================================================================
@@ -68,6 +71,15 @@ export function ApprovalPanel({
   className,
 }: ApprovalPanelProps) {
   const { t } = useTranslation('files');
+  const colors = useSemanticColors();
+
+  const statusConfig = useMemo(() => ({
+    pending: { ...STATUS_ICON_CONFIG.pending, label: t('approvals.status.pending') },
+    approved: { ...STATUS_ICON_CONFIG.approved, label: t('approvals.status.approved') },
+    rejected: { ...STATUS_ICON_CONFIG.rejected, label: t('approvals.status.rejected') },
+    cancelled: { ...STATUS_ICON_CONFIG.cancelled, label: t('approvals.status.cancelled') },
+  }), [t]);
+
   const [approvals, setApprovals] = useState<FileApproval[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -153,10 +165,10 @@ export function ApprovalPanel({
       {/* Header */}
       <header className="flex items-center justify-between px-3 py-2 border-b bg-muted/20">
         <h3 className="text-sm font-medium flex items-center gap-1.5">
-          <UserCheck className="h-4 w-4 text-muted-foreground" />
-          {t('approvals.title', 'Εγκρίσεις')}
+          <UserCheck className={cn("h-4 w-4", colors.text.muted)} />
+          {t('approvals.title')}
           {approvals.length > 0 && (
-            <span className="text-xs text-muted-foreground">
+            <span className={cn("text-xs", colors.text.muted)}>
               ({approvals.length})
             </span>
           )}
@@ -169,7 +181,7 @@ export function ApprovalPanel({
             className="h-6 px-2 text-xs"
           >
             <Plus className="h-3 w-3 mr-1" />
-            {t('approvals.request', 'Αίτημα')}
+            {t('approvals.request')}
           </Button>
         )}
       </header>
@@ -178,7 +190,7 @@ export function ApprovalPanel({
       {creating && (
         <section className="px-3 py-2 border-b bg-muted/10 space-y-2">
           <p className="text-xs font-medium">
-            {t('approvals.newRequest', 'Νέο αίτημα έγκρισης')}
+            {t('approvals.newRequest')}
           </p>
 
           {/* Add approvers */}
@@ -193,7 +205,7 @@ export function ApprovalPanel({
               type="text"
               value={newApproverName}
               onChange={(e) => setNewApproverName(e.target.value)}
-              placeholder={t('approvals.approverName', 'Όνομα εγκρίνοντα')}
+              placeholder={t('approvals.approverName')}
               className="flex-1 text-xs border rounded px-2 py-1 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
             />
             <Button type="submit" variant="ghost" size="sm" className="h-7 px-2">
@@ -231,7 +243,7 @@ export function ApprovalPanel({
             type="text"
             value={newNote}
             onChange={(e) => setNewNote(e.target.value)}
-            placeholder={t('approvals.note', 'Σημείωση (προαιρετικό)')}
+            placeholder={t('approvals.note')}
             className="w-full text-xs border rounded px-2 py-1 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
           />
 
@@ -246,7 +258,7 @@ export function ApprovalPanel({
               }}
               className="h-7 text-xs"
             >
-              {t('common.cancel', 'Ακύρωση')}
+              {t('common.cancel')}
             </Button>
             <Button
               variant="default"
@@ -260,7 +272,7 @@ export function ApprovalPanel({
               ) : (
                 <Send className="h-3 w-3 mr-1" />
               )}
-              {t('approvals.send', 'Αποστολή')}
+              {t('approvals.send')}
             </Button>
           </nav>
         </section>
@@ -269,16 +281,16 @@ export function ApprovalPanel({
       {/* Approvals list */}
       <section className="flex-1 overflow-y-auto px-3 py-2 space-y-3 max-h-[300px]">
         {loading ? (
-          <p className="text-xs text-muted-foreground text-center py-4">
+          <p className={cn("text-xs text-center py-4", colors.text.muted)}>
             <Spinner size="small" className="inline mr-1" />
           </p>
         ) : approvals.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-4">
-            {t('approvals.empty', 'Δεν υπάρχουν αιτήματα έγκρισης.')}
+          <p className={cn("text-xs text-center py-4", colors.text.muted)}>
+            {t('approvals.empty')}
           </p>
         ) : (
           approvals.map((approval) => {
-            const config = STATUS_CONFIG[approval.status];
+            const config = statusConfig[approval.status];
             const StatusIcon = config.icon;
             const isMyTurn = approval.steps.some(
               (s) => s.approverId === currentUserId && s.status === 'pending'
@@ -292,14 +304,14 @@ export function ApprovalPanel({
                     <StatusIcon className={cn('h-3.5 w-3.5', config.colorClass)} />
                     <span className="font-medium">{config.label}</span>
                   </span>
-                  <span className="text-[10px] text-muted-foreground">
-                    {t('approvals.by', 'από')} {approval.requestedByName}
+                  <span className={cn("text-[10px]", colors.text.muted)}>
+                    {t('approvals.by')} {approval.requestedByName}
                   </span>
                 </header>
 
                 {/* Note */}
                 {approval.note && (
-                  <p className="text-xs text-muted-foreground italic">
+                  <p className={cn("text-xs italic", colors.text.muted)}>
                     {approval.note}
                   </p>
                 )}
@@ -307,7 +319,7 @@ export function ApprovalPanel({
                 {/* Steps */}
                 <ol className="space-y-1">
                   {approval.steps.map((step) => {
-                    const stepConfig = STATUS_CONFIG[step.status];
+                    const stepConfig = statusConfig[step.status];
                     const StepIcon = stepConfig.icon;
                     return (
                       <li
@@ -345,7 +357,7 @@ export function ApprovalPanel({
                               type="text"
                               value={rejectReason}
                               onChange={(e) => setRejectReason(e.target.value)}
-                              placeholder={t('approvals.rejectReason', 'Αιτιολογία...')}
+                              placeholder={t('approvals.rejectReason')}
                               className="flex-1 text-xs border rounded px-1.5 py-0.5 bg-background"
                               autoFocus
                             />
@@ -356,7 +368,7 @@ export function ApprovalPanel({
                               className="h-6 px-2 text-xs"
                               disabled={!rejectReason.trim()}
                             >
-                              {t('approvals.reject', 'Απόρριψη')}
+                              {t('approvals.reject')}
                             </Button>
                           </form>
                         ) : (
@@ -365,10 +377,10 @@ export function ApprovalPanel({
                               variant="default"
                               size="sm"
                               onClick={() => handleApprove(approval.id)}
-                              className="h-6 px-2 text-xs bg-green-600 hover:bg-green-700"
+                              className="h-6 px-2 text-xs bg-green-600 hover:bg-green-700" // eslint-disable-line design-system/enforce-semantic-colors
                             >
                               <CheckCircle2 className="h-3 w-3 mr-1" />
-                              {t('approvals.approve', 'Έγκριση')}
+                              {t('approvals.approve')}
                             </Button>
                             <Button
                               variant="destructive"
@@ -377,7 +389,7 @@ export function ApprovalPanel({
                               className="h-6 px-2 text-xs"
                             >
                               <XCircle className="h-3 w-3 mr-1" />
-                              {t('approvals.reject', 'Απόρριψη')}
+                              {t('approvals.reject')}
                             </Button>
                           </>
                         )}
@@ -388,9 +400,9 @@ export function ApprovalPanel({
                         variant="ghost"
                         size="sm"
                         onClick={() => handleCancel(approval.id)}
-                        className="h-6 px-2 text-xs text-muted-foreground"
+                        className={cn("h-6 px-2 text-xs", colors.text.muted)}
                       >
-                        {t('approvals.cancel', 'Ακύρωση')}
+                        {t('approvals.cancel')}
                       </Button>
                     )}
                   </nav>

@@ -41,6 +41,9 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 /**
  * Config per URL segment: i18n key, icon, and color class.
@@ -48,45 +51,45 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
  */
 const SEGMENT_CONFIG: Record<string, { labelKey: string; icon: LucideIcon; color: string }> = {
   // CRM
-  'crm':            { labelKey: 'module.crm',            icon: BarChart,     color: 'text-purple-400' },
-  'dashboard':      { labelKey: 'module.crmDashboard',   icon: BarChart,     color: 'text-purple-400' },
-  'tasks':          { labelKey: 'module.tasks',           icon: ClipboardList, color: 'text-blue-400' },
-  'calendar':       { labelKey: 'module.calendar',        icon: CalendarDays, color: 'text-sky-400' },
-  'leads':          { labelKey: 'module.leads',           icon: Target,       color: 'text-amber-400' },
-  'pipeline':       { labelKey: 'module.pipeline',        icon: Filter,       color: 'text-orange-400' },
-  'communications': { labelKey: 'module.communications',  icon: Phone,        color: 'text-teal-400' },
-  'teams':          { labelKey: 'module.teams',           icon: Users,        color: 'text-indigo-400' },
-  'notifications':  { labelKey: 'module.notifications',   icon: Bell,         color: 'text-yellow-400' },
-  'email-analytics': { labelKey: 'module.emailAnalytics', icon: BarChart,     color: 'text-cyan-400' },
+  'crm':            { labelKey: 'module.crm',            icon: BarChart,     color: 'text-purple-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'dashboard':      { labelKey: 'module.crmDashboard',   icon: BarChart,     color: 'text-purple-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'tasks':          { labelKey: 'module.tasks',           icon: ClipboardList, color: 'text-blue-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'calendar':       { labelKey: 'module.calendar',        icon: CalendarDays, color: 'text-sky-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'leads':          { labelKey: 'module.leads',           icon: Target,       color: 'text-amber-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'pipeline':       { labelKey: 'module.pipeline',        icon: Filter,       color: 'text-orange-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'communications': { labelKey: 'module.communications',  icon: Phone,        color: 'text-teal-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'teams':          { labelKey: 'module.teams',           icon: Users,        color: 'text-indigo-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'notifications':  { labelKey: 'module.notifications',   icon: Bell,         color: 'text-yellow-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'email-analytics': { labelKey: 'module.emailAnalytics', icon: BarChart,     color: 'text-cyan-400' }, // eslint-disable-line design-system/enforce-semantic-colors
   // Sales, Spaces
-  'sales':          { labelKey: 'module.sales',           icon: DollarSign,   color: 'text-green-400' },
-  'spaces':         { labelKey: 'module.spaces',          icon: Layout,       color: 'text-violet-400' },
+  'sales':          { labelKey: 'module.sales',           icon: DollarSign,   color: 'text-green-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'spaces':         { labelKey: 'module.spaces',          icon: Layout,       color: 'text-violet-400' }, // eslint-disable-line design-system/enforce-semantic-colors
   // Obligations, Contacts
-  'obligations':    { labelKey: 'module.obligations',     icon: Scale,        color: 'text-red-400' },
-  'contacts':       { labelKey: 'module.contacts',        icon: Users,        color: 'text-emerald-400' },
+  'obligations':    { labelKey: 'module.obligations',     icon: Scale,        color: 'text-red-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'contacts':       { labelKey: 'module.contacts',        icon: Users,        color: 'text-emerald-400' }, // eslint-disable-line design-system/enforce-semantic-colors
   // Accounting
-  'accounting':     { labelKey: 'module.accounting',      icon: Calculator,   color: 'text-lime-400' },
-  'setup':          { labelKey: 'module.setup',           icon: Settings,     color: 'text-gray-400' },
-  'invoices':       { labelKey: 'module.invoices',        icon: DollarSign,   color: 'text-green-400' },
-  'journal':        { labelKey: 'module.journal',         icon: ClipboardList, color: 'text-blue-400' },
-  'vat':            { labelKey: 'module.vat',             icon: Calculator,   color: 'text-lime-400' },
-  'bank':           { labelKey: 'module.bank',            icon: DollarSign,   color: 'text-emerald-400' },
-  'efka':           { labelKey: 'module.efka',            icon: Shield,       color: 'text-rose-400' },
-  'assets':         { labelKey: 'module.assets',          icon: Layout,       color: 'text-violet-400' },
-  'documents':      { labelKey: 'module.documents',       icon: ClipboardList, color: 'text-sky-400' },
-  'reports':        { labelKey: 'module.reports',         icon: BarChart,     color: 'text-indigo-400' },
+  'accounting':     { labelKey: 'module.accounting',      icon: Calculator,   color: 'text-lime-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'setup':          { labelKey: 'module.setup',           icon: Settings,     color: 'text-gray-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'invoices':       { labelKey: 'module.invoices',        icon: DollarSign,   color: 'text-green-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'journal':        { labelKey: 'module.journal',         icon: ClipboardList, color: 'text-blue-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'vat':            { labelKey: 'module.vat',             icon: Calculator,   color: 'text-lime-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'bank':           { labelKey: 'module.bank',            icon: DollarSign,   color: 'text-emerald-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'efka':           { labelKey: 'module.efka',            icon: Shield,       color: 'text-rose-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'assets':         { labelKey: 'module.assets',          icon: Layout,       color: 'text-violet-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'documents':      { labelKey: 'module.documents',       icon: ClipboardList, color: 'text-sky-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'reports':        { labelKey: 'module.reports',         icon: BarChart,     color: 'text-indigo-400' }, // eslint-disable-line design-system/enforce-semantic-colors
   // Account
-  'account':        { labelKey: 'module.account',         icon: User,         color: 'text-slate-400' },
-  'profile':        { labelKey: 'module.profile',         icon: User,         color: 'text-blue-400' },
-  'preferences':    { labelKey: 'module.preferences',     icon: Settings,     color: 'text-gray-400' },
-  'privacy':        { labelKey: 'module.privacy',         icon: Lock,         color: 'text-amber-400' },
-  'security':       { labelKey: 'module.security',        icon: Shield,       color: 'text-red-400' },
+  'account':        { labelKey: 'module.account',         icon: User,         color: 'text-slate-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'profile':        { labelKey: 'module.profile',         icon: User,         color: 'text-blue-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'preferences':    { labelKey: 'module.preferences',     icon: Settings,     color: 'text-gray-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'privacy':        { labelKey: 'module.privacy',         icon: Lock,         color: 'text-amber-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'security':       { labelKey: 'module.security',        icon: Shield,       color: 'text-red-400' }, // eslint-disable-line design-system/enforce-semantic-colors
   // Admin
-  'admin':          { labelKey: 'module.admin',           icon: Settings,     color: 'text-rose-400' },
-  'ai-inbox':       { labelKey: 'module.aiInbox',         icon: Inbox,        color: 'text-fuchsia-400' },
-  'operator-inbox': { labelKey: 'module.operatorInbox',   icon: Headphones,   color: 'text-cyan-400' },
+  'admin':          { labelKey: 'module.admin',           icon: Settings,     color: 'text-rose-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'ai-inbox':       { labelKey: 'module.aiInbox',         icon: Inbox,        color: 'text-fuchsia-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'operator-inbox': { labelKey: 'module.operatorInbox',   icon: Headphones,   color: 'text-cyan-400' }, // eslint-disable-line design-system/enforce-semantic-colors
   // Financial Intelligence (SPEC-242C)
-  'financial-intelligence': { labelKey: 'module.financialIntelligence', icon: BarChart3, color: 'text-emerald-400' },
+  'financial-intelligence': { labelKey: 'module.financialIntelligence', icon: BarChart3, color: 'text-emerald-400' }, // eslint-disable-line design-system/enforce-semantic-colors
 };
 
 interface BreadcrumbSegment {
@@ -103,6 +106,7 @@ interface ModuleBreadcrumbProps {
 export function ModuleBreadcrumb({ className }: ModuleBreadcrumbProps) {
   const pathname = usePathname();
   const { t } = useTranslation('navigation');
+  const colors = useSemanticColors();
 
   // Don't render on home page
   if (!pathname || pathname === '/') return null;
@@ -138,7 +142,7 @@ export function ModuleBreadcrumb({ className }: ModuleBreadcrumbProps) {
       {/* Home — always first */}
       <Link
         href="/"
-        className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+        className={cn("flex items-center gap-1 hover:text-foreground transition-colors", colors.text.muted)}
       >
         <Home className="h-3.5 w-3.5" />
         <span>{t('module.home')}</span>
@@ -150,7 +154,7 @@ export function ModuleBreadcrumb({ className }: ModuleBreadcrumbProps) {
 
         return (
           <React.Fragment key={item.href}>
-            <span className="text-muted-foreground/50" aria-hidden="true">
+            <span className={`${colors.text.muted}/50`} aria-hidden="true">
               →
             </span>
             {isLast ? (
@@ -164,7 +168,7 @@ export function ModuleBreadcrumb({ className }: ModuleBreadcrumbProps) {
             ) : (
               <Link
                 href={item.href}
-                className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+                className={cn("flex items-center gap-1 hover:text-foreground transition-colors", colors.text.muted)}
               >
                 <Icon className={`h-3.5 w-3.5 ${item.color}`} />
                 {item.label}

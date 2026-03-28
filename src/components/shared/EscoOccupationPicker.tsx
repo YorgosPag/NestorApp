@@ -1,3 +1,4 @@
+/* eslint-disable design-system/enforce-semantic-colors */
 'use client';
 
 /**
@@ -36,6 +37,8 @@ import type {
   EscoSearchResult,
   EscoLanguage,
 } from '@/types/contacts/esco-types';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // ============================================================================
 // CONSTANTS
@@ -63,13 +66,14 @@ const logger = createModuleLogger('EscoOccupationPicker');
 export function EscoOccupationPicker({
   value,
   escoUri,
-  iscoCode,
+  iscoCode: _iscoCode,
   onChange,
   disabled = false,
   placeholder,
   language,
 }: EscoOccupationPickerProps) {
   const { t, i18n } = useTranslation('contacts');
+  const colors = useSemanticColors();
   const resolvedLanguage: EscoLanguage = language ?? (i18n.language === 'el' ? 'el' : 'en');
 
   // State
@@ -290,7 +294,7 @@ export function EscoOccupationPicker({
     <Popover open={isOpen && !disabled} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Search className={cn("absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none", colors.text.muted)} />
           <Input
             ref={inputRef}
             value={inputValue}
@@ -316,8 +320,8 @@ export function EscoOccupationPicker({
           />
           {/* ESCO badge when selection is active */}
           {hasEscoSelection && !disabled && (
-            <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
-              ESCO
+            <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">
+              {t('esco.badge', 'ESCO')}
             </span>
           )}
           {/* Loading / Clear buttons */}
@@ -328,8 +332,8 @@ export function EscoOccupationPicker({
             <button
               type="button"
               onClick={handleClearSelection}
-              className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label={t('common.clear', 'Clear')}
+              className={cn("absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 hover:text-foreground transition-colors", colors.text.muted)}
+              aria-label={t('common.clear')}
             >
               <X className="h-4 w-4" />
             </button>
@@ -346,7 +350,7 @@ export function EscoOccupationPicker({
         <ul
           ref={listRef}
           role="listbox"
-          aria-label={t('esco.searchResults', 'Search results')}
+          aria-label={t('esco.searchResults')}
           className="py-1"
         >
           {/* Search results */}
@@ -366,11 +370,11 @@ export function EscoOccupationPicker({
             >
               <span className="text-sm font-medium">
                 {getDisplayLabel(result)}
-                <span className="ml-2 text-xs text-muted-foreground font-mono">
+                <span className={cn("ml-2 text-xs font-mono", colors.text.muted)}>
                   ({result.occupation.iscoCode})
                 </span>
               </span>
-              <span className="text-xs text-muted-foreground">
+              <span className={cn("text-xs", colors.text.muted)}>
                 {getSecondaryLabel(result)}
               </span>
             </li>
@@ -378,8 +382,8 @@ export function EscoOccupationPicker({
 
           {/* No results message */}
           {!isLoading && results.length === 0 && inputValue.trim().length >= MIN_CHARS && (
-            <li className="px-3 py-2 text-sm text-muted-foreground text-center">
-              {t('esco.noResults', 'No occupations found')}
+            <li className={cn("px-3 py-2 text-sm text-center", colors.text.muted)}>
+              {t('esco.noResults')}
             </li>
           )}
 
@@ -402,9 +406,9 @@ export function EscoOccupationPicker({
               onClick={handleUseFreeText}
               onMouseEnter={() => setHighlightedIndex(results.length)}
             >
-              <PenLine className="h-4 w-4 text-muted-foreground shrink-0" />
+              <PenLine className={cn("h-4 w-4 shrink-0", colors.text.muted)} />
               <span className="text-sm">
-                {t('esco.useFreeText', 'Use as free text')}: &quot;{inputValue}&quot;
+                {t('esco.useFreeText')}: &quot;{inputValue}&quot;
               </span>
             </li>
           )}

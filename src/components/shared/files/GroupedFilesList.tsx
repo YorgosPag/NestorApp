@@ -19,6 +19,7 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { ChevronDown, FileText } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import {
@@ -27,6 +28,7 @@ import {
 } from '@/config/study-groups-config';
 import type { FilesListProps } from './FilesList';
 import { FilesList } from './FilesList';
+import '@/lib/design-system';
 
 // ============================================================================
 // HELPERS
@@ -54,6 +56,7 @@ interface GroupHeaderProps {
 function GroupHeader({ meta, fileCount, expanded, onToggle, language }: GroupHeaderProps) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation('files');
+  const colors = useSemanticColors();
 
   if (meta) {
     const Icon = getIcon(meta.icon);
@@ -64,7 +67,7 @@ function GroupHeader({ meta, fileCount, expanded, onToggle, language }: GroupHea
         className={cn(
           'flex w-full items-center gap-3 rounded-md border-l-4 px-3 py-2.5',
           'transition-colors cursor-pointer select-none',
-          'hover:bg-accent/50',
+          'hover:bg-accent/50', // eslint-disable-line custom/no-hardcoded-strings
           meta.borderClass,
           meta.bgClass
         )}
@@ -96,7 +99,7 @@ function GroupHeader({ meta, fileCount, expanded, onToggle, language }: GroupHea
             className={cn(
               iconSizes.sm,
               'transition-transform',
-              expanded ? 'rotate-0' : '-rotate-90'
+              expanded ? 'rotate-0' : '-rotate-90' // eslint-disable-line custom/no-hardcoded-strings
             )}
             aria-hidden="true"
           />
@@ -113,7 +116,7 @@ function GroupHeader({ meta, fileCount, expanded, onToggle, language }: GroupHea
       className={cn(
         'flex w-full items-center gap-3 rounded-md border-l-4 px-3 py-2.5',
         'transition-colors cursor-pointer select-none',
-        'hover:bg-accent/50',
+        'hover:bg-accent/50', // eslint-disable-line custom/no-hardcoded-strings
         'border-l-muted-foreground/40 bg-muted/30'
       )}
       aria-expanded={expanded}
@@ -124,12 +127,12 @@ function GroupHeader({ meta, fileCount, expanded, onToggle, language }: GroupHea
       }
     >
       <span className="flex items-center justify-center rounded-md bg-muted p-1.5">
-        <FileText className={cn(iconSizes.sm, 'text-muted-foreground')} aria-hidden="true" />
+        <FileText className={cn(iconSizes.sm, colors.text.muted)} aria-hidden="true" />
       </span>
-      <span className="text-sm font-semibold text-muted-foreground">
+      <span className={cn("text-sm font-semibold", colors.text.muted)}>
         {t('studies.generalDocuments')}
       </span>
-      <span className="ml-auto flex items-center gap-2 text-xs font-medium text-muted-foreground">
+      <span className={cn("ml-auto flex items-center gap-2 text-xs font-medium", colors.text.muted)}>
         <span className="rounded-full bg-muted px-2 py-0.5 text-xs tabular-nums">
           {fileCount}
         </span>
@@ -137,7 +140,7 @@ function GroupHeader({ meta, fileCount, expanded, onToggle, language }: GroupHea
           className={cn(
             iconSizes.sm,
             'transition-transform',
-            expanded ? 'rotate-0' : '-rotate-90'
+            expanded ? 'rotate-0' : '-rotate-90' // eslint-disable-line custom/no-hardcoded-strings
           )}
           aria-hidden="true"
         />

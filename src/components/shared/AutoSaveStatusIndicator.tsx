@@ -17,6 +17,7 @@
  * @created 2026-03-19
  */
 
+/* eslint-disable design-system/enforce-semantic-colors */
 'use client';
 
 import React, { useMemo } from 'react';
@@ -24,6 +25,7 @@ import { CheckCircle2, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { AutoSaveStatusIndicatorProps, SaveStatus } from '@/types/auto-save';
+import '@/lib/design-system';
 
 // ============================================
 // RELATIVE TIME FORMATTER

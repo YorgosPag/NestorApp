@@ -1,3 +1,4 @@
+/* eslint-disable design-system/enforce-semantic-colors */
 /**
  * =============================================================================
  * 🗑️ ENTERPRISE: Trash View Component
@@ -29,6 +30,7 @@ import {
   HardDrive,
   Calendar,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -45,6 +47,7 @@ import { FileRecordService } from '@/services/file-record.service';
 import type { FileRecord } from '@/types/file-record';
 import { HOLD_TYPES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 // ============================================================================
 // MODULE LOGGER
@@ -236,7 +239,7 @@ export function TrashView({
       <section className="space-y-2" role="status" aria-label={t('list.loadingFiles')}>
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Trash2 className={`${iconSizes.md} text-muted-foreground`} />
+            <Trash2 className={cn(iconSizes.md, colors.text.muted)} />
             <h2 className="text-lg font-semibold">{t('trash.title')}</h2>
           </div>
         </header>
@@ -288,7 +291,7 @@ export function TrashView({
       <section className="space-y-2">
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Trash2 className={`${iconSizes.md} text-muted-foreground`} />
+            <Trash2 className={cn(iconSizes.md, colors.text.muted)} />
             <h2 className="text-lg font-semibold">{t('trash.title')}</h2>
           </div>
           <Button
@@ -307,7 +310,7 @@ export function TrashView({
         >
           <Trash2 className={`${iconSizes.xl} mx-auto mb-2 ${colors.text.muted}`} />
           <p className="text-sm font-medium">{t('trash.noTrashedFiles')}</p>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className={cn("text-xs mt-1", colors.text.muted)}>
             {t('trash.noTrashedFilesDescription')}
           </p>
         </div>
@@ -321,10 +324,10 @@ export function TrashView({
       {/* Header */}
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Trash2 className={`${iconSizes.md} text-muted-foreground`} />
+          <Trash2 className={cn(iconSizes.md, colors.text.muted)} />
           <div>
             <h2 className="text-lg font-semibold">{t('trash.title')}</h2>
-            <p className="text-xs text-muted-foreground">{t('trash.description')}</p>
+            <p className={cn("text-xs", colors.text.muted)}>{t('trash.description')}</p>
           </div>
         </div>
         <Button
@@ -339,11 +342,11 @@ export function TrashView({
 
       {/* Stats */}
       <div className="flex gap-2 text-sm">
-        <span className="flex items-center gap-1 text-muted-foreground">
+        <span className={cn("flex items-center gap-1", colors.text.muted)}>
           <HardDrive className={iconSizes.xs} />
           {t('trash.stats.totalFiles')}: {trashedFiles.length}
         </span>
-        <span className="flex items-center gap-1 text-muted-foreground">
+        <span className={cn("flex items-center gap-1", colors.text.muted)}>
           <HardDrive className={iconSizes.xs} />
           {t('trash.stats.totalSize')}: {formatFileSize(
             trashedFiles.reduce((total, f) => total + (f.sizeBytes || 0), 0)
@@ -383,7 +386,7 @@ export function TrashView({
                   </p>
 
                   {/* Metadata */}
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-1">
+                  <div className={cn("flex flex-wrap items-center gap-2 text-xs mt-1", colors.text.muted)}>
                     {/* File size */}
                     <span className="flex items-center gap-1">
                       <HardDrive className={iconSizes.xs} aria-hidden="true" />

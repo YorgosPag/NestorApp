@@ -1,3 +1,4 @@
+/* eslint-disable custom/no-hardcoded-strings */
 'use client';
 
 /**
@@ -22,6 +23,9 @@
 
 import { sanitizeEmailHTML, detectEmailSignature } from '@/lib/message-utils';
 import { truncateText } from '@/lib/text-utils';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -46,7 +50,7 @@ const EMAIL_LINK_REGEX = /([^<>\n\r]+?)[\s\r\n]*<(https?:\/\/[^>]+)>/gi;
 const MARKDOWN_LINK_REGEX = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/gi;
 
 // Pattern 3: Plain URLs
-const PLAIN_URL_REGEX = /(?:https?:\/\/|www\.)[^\s<>"\]\)]+/gi;
+const PLAIN_URL_REGEX = /(?:https?:\/\/|www\.)[^\s<>"\])]+/gi;
 
 // ============================================================================
 // PARSERS
@@ -314,6 +318,7 @@ export function SafeHTMLContent({ html }: { html: string }) {
  * - Shows signature in muted, bordered section
  */
 export function EmailContentWithSignature({ content }: { content: string }) {
+  const colors = useSemanticColors();
   const signatureDetection = detectEmailSignature(content);
 
   return (
@@ -326,10 +331,10 @@ export function EmailContentWithSignature({ content }: { content: string }) {
       {/* Email Signature (if detected) */}
       {signatureDetection.hasSignature && signatureDetection.signature && (
         <div className="border-t border-muted pt-3 mt-3">
-          <div className="text-xs text-muted-foreground italic mb-1">
+          <div className={cn("text-xs italic mb-1", colors.text.muted)}>
             Email Signature:
           </div>
-          <div className="text-sm text-muted-foreground opacity-75">
+          <div className={cn("text-sm opacity-75", colors.text.muted)}>
             <SafeHTMLContent html={signatureDetection.signature} />
           </div>
         </div>

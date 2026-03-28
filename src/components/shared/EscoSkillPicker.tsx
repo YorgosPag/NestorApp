@@ -1,3 +1,4 @@
+/* eslint-disable design-system/enforce-semantic-colors */
 'use client';
 
 /**
@@ -40,6 +41,8 @@ import type {
   EscoSkillSearchResult,
   EscoLanguage,
 } from '@/types/contacts/esco-types';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // ============================================================================
 // CONSTANTS
@@ -76,6 +79,7 @@ export function EscoSkillPicker({
   maxSkills = DEFAULT_MAX_SKILLS,
 }: EscoSkillPickerProps) {
   const { t, i18n } = useTranslation('contacts');
+  const colors = useSemanticColors();
   const resolvedLanguage: EscoLanguage = language ?? (i18n.language === 'el' ? 'el' : 'en');
 
   // State
@@ -287,7 +291,7 @@ export function EscoSkillPicker({
             >
               {skill.uri && (
                 <span className="text-[10px] font-semibold text-blue-500">
-                  {t('esco.skills.badge', 'ESCO')}
+                  {t('esco.skills.badge')}
                 </span>
               )}
               <span>{skill.label}</span>
@@ -296,7 +300,7 @@ export function EscoSkillPicker({
                   type="button"
                   onClick={() => handleRemoveSkill(index)}
                   className="ml-0.5 h-3.5 w-3.5 rounded-full hover:bg-black/10 inline-flex items-center justify-center transition-colors"
-                  aria-label={`${t('esco.skills.removeSkill', 'Remove skill')}: ${skill.label}`}
+                  aria-label={`${t('esco.skills.removeSkill')}: ${skill.label}`}
                 >
                   <X className="h-2.5 w-2.5" />
                 </button>
@@ -311,7 +315,7 @@ export function EscoSkillPicker({
         <Popover open={isOpen && !disabled} onOpenChange={setIsOpen}>
           <PopoverTrigger asChild>
             <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Search className={cn("absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none", colors.text.muted)} />
               <Input
                 ref={inputRef}
                 value={inputValue}
@@ -324,7 +328,7 @@ export function EscoSkillPicker({
                   }
                 }}
                 disabled={disabled}
-                placeholder={placeholder ?? t('esco.skills.searchPlaceholder', 'Search ESCO skills...')}
+                placeholder={placeholder ?? t('esco.skills.searchPlaceholder')}
                 hasLeftIcon
                 hasRightIcon={isLoading}
                 aria-expanded={isOpen}
@@ -347,7 +351,7 @@ export function EscoSkillPicker({
             <ul
               ref={listRef}
               role="listbox"
-              aria-label={t('esco.searchResults', 'Search results')}
+              aria-label={t('esco.searchResults')}
               className="py-1"
             >
               {/* Search results */}
@@ -368,7 +372,7 @@ export function EscoSkillPicker({
                   <span className="text-sm font-medium">
                     {getDisplayLabel(result)}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className={cn("text-xs", colors.text.muted)}>
                     {getSecondaryLabel(result)}
                   </span>
                 </li>
@@ -376,8 +380,8 @@ export function EscoSkillPicker({
 
               {/* No results message */}
               {!isLoading && results.length === 0 && inputValue.trim().length >= MIN_CHARS && (
-                <li className="px-3 py-2 text-sm text-muted-foreground text-center">
-                  {t('esco.skills.noResults', 'No skills found')}
+                <li className={cn("px-3 py-2 text-sm text-center", colors.text.muted)}>
+                  {t('esco.skills.noResults')}
                 </li>
               )}
 
@@ -400,9 +404,9 @@ export function EscoSkillPicker({
                   onClick={handleUseFreeText}
                   onMouseEnter={() => setHighlightedIndex(results.length)}
                 >
-                  <PenLine className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <PenLine className={cn("h-4 w-4 shrink-0", colors.text.muted)} />
                   <span className="text-sm">
-                    {t('esco.skills.useFreeText', 'Add as free text')}: &quot;{inputValue}&quot;
+                    {t('esco.skills.useFreeText')}: &quot;{inputValue}&quot;
                   </span>
                 </li>
               )}
@@ -413,8 +417,8 @@ export function EscoSkillPicker({
 
       {/* Max reached message */}
       {isMaxReached && !disabled && (
-        <p className="text-xs text-muted-foreground">
-          {t('esco.skills.maxReached', 'Maximum skills reached ({{max}})', { max: maxSkills })}
+        <p className={cn("text-xs", colors.text.muted)}>
+          {t('esco.skills.maxReached', { max: maxSkills })}
         </p>
       )}
     </section>

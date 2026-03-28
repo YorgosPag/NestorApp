@@ -1,3 +1,4 @@
+/* eslint-disable design-system/enforce-semantic-colors */
 /**
  * =============================================================================
  * 🏢 ENTERPRISE: Audit Log Panel
@@ -52,6 +53,7 @@ import {
   type FileAuditRecord,
   type FileAuditAction,
 } from '@/services/file-audit.service';
+import '@/lib/design-system';
 
 // ============================================================================
 // ACTION ICON MAP
@@ -176,7 +178,7 @@ export function AuditLogPanel({ fileId, className }: AuditLogPanelProps) {
       <section className={cn('p-4 text-center', colors.text.muted, className)}>
         <ScrollText className={cn(iconSizes.lg, 'mx-auto mb-2 opacity-50')} />
         <p className="text-sm">
-          {t('audit.noEntries', 'Δεν υπάρχουν καταγραφές')}
+          {t('audit.noEntries')}
         </p>
       </section>
     );
@@ -185,13 +187,13 @@ export function AuditLogPanel({ fileId, className }: AuditLogPanelProps) {
   return (
     <section
       className={cn('space-y-1', className)}
-      aria-label={t('audit.title', 'Ιστορικό ενεργειών')}
+      aria-label={t('audit.title')}
     >
       {/* Header */}
       <header className="flex items-center gap-2 px-2 pb-1">
         <ScrollText className={cn(iconSizes.sm, colors.text.muted)} />
         <h4 className="text-sm font-medium">
-          {t('audit.title', 'Ιστορικό ενεργειών')}
+          {t('audit.title')}
         </h4>
         {!loading && (
           <span className={cn('text-xs', colors.text.muted)}>

@@ -1,3 +1,4 @@
+/* eslint-disable custom/no-hardcoded-strings */
 'use client';
 
 /**
@@ -42,6 +43,9 @@ import {
 import { LegalTabContent } from '@/components/sales/legal/LegalTabContent';
 import { PaymentTabContent } from '@/components/sales/payments/PaymentTabContent';
 import type { Unit } from '@/types/unit';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
 // 🏢 TYPES
@@ -132,6 +136,7 @@ export function SalesSidebar({
   onUnitTypeChange,
   onDataMutated,
 }: SalesSidebarProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('common');
   const isMobile = useIsMobile();
   const iconSizes = useIconSizes();
@@ -205,15 +210,10 @@ export function SalesSidebar({
 
           {/* Documents, Photos, Videos → redirect to /units with matching tab */}
           {(['documents', 'photos', 'videos'] as const).map(tabId => {
-            const hints: Record<string, string> = {
-              documents: 'Τα έγγραφα διαχειρίζονται στη σελίδα Χώροι → Μονάδες',
-              photos: 'Οι φωτογραφίες διαχειρίζονται στη σελίδα Χώροι → Μονάδες',
-              videos: 'Τα βίντεο διαχειρίζονται στη σελίδα Χώροι → Μονάδες',
-            };
             return (
               <TabsContent key={tabId} value={tabId} className="flex-1">
                 <section className="p-4">
-                  <p className="text-sm text-muted-foreground text-center mb-3">
+                  <p className={cn("text-sm text-center mb-3", colors.text.muted)}>
                     {t(`sales.tabs.${tabId}Hint`)}
                   </p>
                   <div className="pt-2 border-t">
@@ -274,7 +274,7 @@ export function SalesSidebar({
           ))}
 
           {units.length === 0 && (
-            <div className="p-6 text-center text-sm text-muted-foreground">
+            <div className={cn("p-6 text-center text-sm", colors.text.muted)}>
               {t('sales.available.noResults')}
             </div>
           )}

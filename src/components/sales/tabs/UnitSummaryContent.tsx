@@ -23,6 +23,9 @@ import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Unit } from '@/types/unit';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
 // 🏢 TYPES
@@ -47,13 +50,14 @@ function SummaryField({
   label: string;
   value: string | number | undefined;
 }) {
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   if (value === undefined || value === null || value === '') return null;
 
   return (
     <div className="flex items-center gap-2 py-1">
       <Icon className={`${iconSizes.sm} ${iconColor} flex-shrink-0`} />
-      <span className="text-xs text-muted-foreground">{label}:</span>
+      <span className={cn("text-xs", colors.text.muted)}>{label}:</span>
       <span className="text-sm font-medium">{value}</span>
     </div>
   );
@@ -64,6 +68,7 @@ function SummaryField({
 // =============================================================================
 
 export function UnitSummaryContent({ data: unit }: UnitSummaryContentProps) {
+  const _colors = useSemanticColors();
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
 
@@ -103,7 +108,7 @@ export function UnitSummaryContent({ data: unit }: UnitSummaryContentProps) {
             />
             <SummaryField
               icon={Building2}
-              iconColor="text-blue-600"
+              iconColor="text-blue-600" // eslint-disable-line design-system/enforce-semantic-colors
               label={t('sales.unitSummary.building')}
               value={unit.building}
             />
@@ -127,7 +132,7 @@ export function UnitSummaryContent({ data: unit }: UnitSummaryContentProps) {
             />
             <SummaryField
               icon={Zap}
-              iconColor="text-yellow-600"
+              iconColor="text-yellow-600" // eslint-disable-line design-system/enforce-semantic-colors
               label={t('sales.unitSummary.energy')}
               value={unit.energy?.class}
             />

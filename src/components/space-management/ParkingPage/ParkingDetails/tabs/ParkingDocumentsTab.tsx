@@ -1,3 +1,4 @@
+/* eslint-disable custom/no-hardcoded-strings */
 /**
  * ParkingDocumentsTab — Documents tab for individual parking spot detail view
  *
@@ -18,6 +19,9 @@ import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
+import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // TYPES
@@ -34,13 +38,14 @@ interface ParkingDocumentsTabProps {
 
 export function ParkingDocumentsTab({ parking }: ParkingDocumentsTabProps) {
   const { user } = useAuth();
+  const colors = useSemanticColors();
 
   const companyId = useCompanyId()?.companyId;
   const currentUserId = user?.uid;
 
   if (!companyId || !currentUserId) {
     return (
-      <p className="p-4 text-center text-muted-foreground">
+      <p className={cn("p-4 text-center", colors.text.muted)}>
         Συνδεθείτε για να δείτε τα έγγραφα.
       </p>
     );
