@@ -3,6 +3,7 @@
 import React from 'react';
 import { StorageCard } from '../StorageCard';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
+import '@/lib/design-system';
 
 interface StorageCardsViewProps {
   units: StorageUnit[];

@@ -15,7 +15,9 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { formatPrice, formatArea } from '../StorageCard/StorageCardUtils';
 import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { StorageRowActions } from './StorageRowActions';
+import '@/lib/design-system';
 
 interface StorageTableRowProps {
   unit: StorageUnit;
@@ -41,6 +43,7 @@ export function StorageTableRow({
   getTypeLabel,
 }: StorageTableRowProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const TypeIcon = getTypeIcon(unit.type);
 
   return (
@@ -54,7 +57,7 @@ export function StorageTableRow({
       </TableCell>
       <TableCell>
         <div className="font-medium text-foreground">{unit.code}</div>
-        <div className="text-sm text-muted-foreground truncate max-w-[200px]">
+        <div className={cn("text-sm truncate max-w-[200px]", colors.text.muted)}>
           {unit.description}
         </div>
       </TableCell>
@@ -73,13 +76,13 @@ export function StorageTableRow({
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-1 text-sm">
-          <Ruler className={`${iconSizes.xs} text-muted-foreground`} />
+          <Ruler className={`${iconSizes.xs} ${colors.text.muted}`} />
           {formatArea(unit.area)}
         </div>
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-1 text-sm font-medium">
-          <Euro className={`${iconSizes.xs} text-muted-foreground`} />
+          <Euro className={`${iconSizes.xs} ${colors.text.muted}`} />
           {formatPrice(unit.price)}
         </div>
       </TableCell>
@@ -97,7 +100,7 @@ export function StorageTableRow({
             {unit.linkedProperty}
           </div>
         ) : (
-          <span className="text-sm text-muted-foreground">-</span>
+          <span className={cn("text-sm", colors.text.muted)}>-</span>
         )}
       </TableCell>
       <TableCell className="text-right">

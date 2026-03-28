@@ -6,6 +6,8 @@ import type { StorageUnit } from '@/types/storage';
 import { formatPrice, formatArea } from '../StorageCard/StorageCardUtils';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface StorageListSummaryProps {
   units: StorageUnit[];
@@ -14,6 +16,7 @@ interface StorageListSummaryProps {
 export function StorageListSummary({ units }: StorageListSummaryProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
+  const colors = useSemanticColors();
   const totalValue = units.reduce((sum, u) => sum + u.price, 0);
   const totalArea = units.reduce((sum, u) => sum + u.area, 0);
   const availableCount = units.filter(u => u.status === 'available').length;
@@ -27,25 +30,25 @@ export function StorageListSummary({ units }: StorageListSummaryProps) {
             <div className="font-semibold text-foreground">
               {availableCount}
             </div>
-            <div className="text-muted-foreground">{t('storageSummary.available')}</div>
+            <div className={colors.text.muted}>{t('storageSummary.available')}</div>
           </div>
           <div className="text-center">
             <div className="font-semibold text-foreground">
               {formatPrice(totalValue)}
             </div>
-            <div className="text-muted-foreground">{t('storageSummary.totalValue')}</div>
+            <div className={colors.text.muted}>{t('storageSummary.totalValue')}</div>
           </div>
           <div className="text-center">
             <div className="font-semibold text-foreground">
               {formatArea(totalArea)}
             </div>
-            <div className="text-muted-foreground">{t('storageSummary.totalArea')}</div>
+            <div className={colors.text.muted}>{t('storageSummary.totalArea')}</div>
           </div>
           <div className="text-center">
             <div className="font-semibold text-foreground">
               {formatPrice(averagePricePerSqm)}
             </div>
-            <div className="text-muted-foreground">{t('storageSummary.avgPricePerSqm')}</div>
+            <div className={colors.text.muted}>{t('storageSummary.avgPricePerSqm')}</div>
           </div>
         </div>
       </CardContent>

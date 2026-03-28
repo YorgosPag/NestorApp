@@ -4,6 +4,8 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Eye, Pencil, Unlink2, Trash2 } from 'lucide-react';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface Props {
   onEdit: () => void;
@@ -13,6 +15,8 @@ interface Props {
 }
 
 export function StorageCardActions({ onEdit, onDelete }: Props) {
+  const { t } = useTranslation('building');
+
   return (
     <nav className="absolute top-3 right-3 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
       <Tooltip>
@@ -21,7 +25,7 @@ export function StorageCardActions({ onEdit, onDelete }: Props) {
             <Eye className="h-3.5 w-3.5" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Προβολή</TooltipContent>
+        <TooltipContent>{t('spaceActions.view')}</TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -29,7 +33,7 @@ export function StorageCardActions({ onEdit, onDelete }: Props) {
             <Pencil className="h-3.5 w-3.5" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Επεξεργασία</TooltipContent>
+        <TooltipContent>{t('spaceActions.edit')}</TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -37,7 +41,7 @@ export function StorageCardActions({ onEdit, onDelete }: Props) {
             <Unlink2 className="h-3.5 w-3.5" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Αποσύνδεση</TooltipContent>
+        <TooltipContent>{t('spaceActions.unlink')}</TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -45,7 +49,7 @@ export function StorageCardActions({ onEdit, onDelete }: Props) {
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Διαγραφή</TooltipContent>
+        <TooltipContent>{t('spaceActions.delete')}</TooltipContent>
       </Tooltip>
     </nav>
   );

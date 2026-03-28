@@ -7,12 +7,15 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Building } from '../../BuildingsPageContent';
 import { getCategoryIcon, getCategoryLabel } from '../../BuildingCard/BuildingCardUtils';
 import { EntityDetailsHeader } from '@/core/entity-headers';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface BuildingListItemHeaderProps {
   building: Building;
 }
 
 export function BuildingListItemHeader({ building }: BuildingListItemHeaderProps) {
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const CategoryIcon = getCategoryIcon(building.category || 'mixed');
 
@@ -30,7 +33,7 @@ export function BuildingListItemHeader({ building }: BuildingListItemHeaderProps
           {getCategoryLabel(building.category || 'mixed')}
         </span>
         <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-secondary text-secondary-foreground rounded-full">
-          {building.progress}% ολοκληρωμένο
+          {building.progress}{t('listItem.header.completed')}
         </span>
       </div>
 

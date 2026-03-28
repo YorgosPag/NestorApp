@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/select';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 // ============================================================================
 // BUILDING MANAGEMENT: PURE RADIX UI FILTER SELECT

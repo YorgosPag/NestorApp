@@ -14,6 +14,7 @@ import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 import { StorageTableRow } from './StorageTableRow';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface StorageTableViewProps {
   units: StorageUnit[];

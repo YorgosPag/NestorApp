@@ -12,6 +12,7 @@ import { StorageFormBasicInfo } from './StorageFormBasicInfo';
 import { StorageFormSpecs } from './StorageFormSpecs';
 import { StorageFormFeatures } from './StorageFormFeatures';
 import { StorageFormFooter } from './StorageFormFooter';
+import '@/lib/design-system';
 
 interface StorageFormProps {
   unit: StorageUnit | null;

@@ -6,6 +6,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Eye, Pencil, Unlink2, Trash2 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import type { StorageUnit } from '@/types/storage';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface StorageRowActionsProps {
   unit: StorageUnit;
@@ -17,6 +19,8 @@ interface StorageRowActionsProps {
 }
 
 export function StorageRowActions({ unit, onEdit, onDelete, deletingId, unlinkingId, onUnlink }: StorageRowActionsProps) {
+  const { t } = useTranslation('building');
+
   return (
     <nav className="flex justify-end gap-1">
       <Tooltip>
@@ -25,7 +29,7 @@ export function StorageRowActions({ unit, onEdit, onDelete, deletingId, unlinkin
             <Eye className="h-3.5 w-3.5" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Προβολή</TooltipContent>
+        <TooltipContent>{t('spaceActions.view')}</TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -33,7 +37,7 @@ export function StorageRowActions({ unit, onEdit, onDelete, deletingId, unlinkin
             <Pencil className="h-3.5 w-3.5" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Επεξεργασία</TooltipContent>
+        <TooltipContent>{t('spaceActions.edit')}</TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -47,7 +51,7 @@ export function StorageRowActions({ unit, onEdit, onDelete, deletingId, unlinkin
             {unlinkingId === unit.id ? <Spinner size="small" color="inherit" /> : <Unlink2 className="h-3.5 w-3.5" />}
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Αποσύνδεση</TooltipContent>
+        <TooltipContent>{t('spaceActions.unlink')}</TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -61,7 +65,7 @@ export function StorageRowActions({ unit, onEdit, onDelete, deletingId, unlinkin
             {deletingId === unit.id ? <Spinner size="small" color="inherit" /> : <Trash2 className="h-3.5 w-3.5" />}
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Διαγραφή</TooltipContent>
+        <TooltipContent>{t('spaceActions.delete')}</TooltipContent>
       </Tooltip>
     </nav>
   );

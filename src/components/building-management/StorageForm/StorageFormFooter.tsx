@@ -7,6 +7,9 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import type { StorageUnit } from '@/types/storage';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface StorageFormFooterProps {
   onCancel: () => void;
@@ -16,12 +19,13 @@ interface StorageFormFooterProps {
 export function StorageFormFooter({ onCancel, unit }: StorageFormFooterProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
 
   return (
     <div className="p-2 border-t bg-muted/30 flex-shrink-0">
       <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
+        <div className={cn("text-sm", colors.text.muted)}>
           {t('storage.form.footer.requiredFields')}
         </div>
         <div className="flex gap-2">

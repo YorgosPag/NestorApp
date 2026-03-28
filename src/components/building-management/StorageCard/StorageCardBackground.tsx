@@ -6,6 +6,7 @@ import type { StorageType } from '@/types/storage';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import '@/lib/design-system';
 
 export function StorageCardBackground({ type }: { type: StorageType }) {
   const iconSizes = useIconSizes();

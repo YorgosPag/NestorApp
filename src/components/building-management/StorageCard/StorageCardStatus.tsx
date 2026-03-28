@@ -6,6 +6,7 @@ import type { UnitStatus } from '@/core/types/BadgeTypes';
 import { Star } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
+import '@/lib/design-system';
 
 interface Props {
   unit: StorageUnit;
@@ -15,7 +16,7 @@ interface Props {
   getTypeLabel: (type: StorageType) => string;
 }
 
-export function StorageCardStatus({ unit, isFavorite, getStatusColor, getStatusLabel, getTypeLabel }: Props) {
+export function StorageCardStatus({ unit, isFavorite, getStatusColor: _getStatusColor, getStatusLabel: _getStatusLabel, getTypeLabel }: Props) {
   const iconSizes = useIconSizes();
   return (
     <div className="absolute bottom-3 left-3 right-3 z-10 flex justify-between items-end">

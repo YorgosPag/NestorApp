@@ -12,6 +12,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { FilterSelect } from './FilterSelect';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface SearchAndFiltersProps {
   searchTerm: string;
@@ -40,6 +42,7 @@ export function SearchAndFilters({
 }: SearchAndFiltersProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const hasActiveFilters =
     filterCompany !== 'all' ||
@@ -65,7 +68,7 @@ export function SearchAndFilters({
         />
       </div>
       <div className="flex items-center gap-2">
-        <Filter className={`${iconSizes.sm} text-muted-foreground`} />
+        <Filter className={`${iconSizes.sm} ${colors.text.muted}`} />
         <FilterSelect
           value={filterCompany}
           onChange={setFilterCompany}

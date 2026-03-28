@@ -5,6 +5,9 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface Props {
   x: number;
@@ -15,6 +18,7 @@ interface Props {
 export function FormRowCoordinates({ x, y, onChange }: Props) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
+  const colors = useSemanticColors();
 
   return (
     <div className="space-y-2">
@@ -33,7 +37,7 @@ export function FormRowCoordinates({ x, y, onChange }: Props) {
           placeholder="Y"
         />
       </div>
-      <p className="text-xs text-muted-foreground">{t('storage.form.specs.helpers.coordinates')}</p>
+      <p className={cn("text-xs", colors.text.muted)}>{t('storage.form.specs.helpers.coordinates')}</p>
     </div>
   );
 }

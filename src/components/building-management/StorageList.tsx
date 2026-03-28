@@ -8,6 +8,7 @@ import { StorageCardsView } from './StorageList/StorageCardsView';
 import { StorageTableView } from './StorageList/StorageTableView';
 import { StorageListSummary } from './StorageList/StorageListSummary';
 import { EmptyList } from './StorageList/EmptyList';
+import '@/lib/design-system';
 
 interface StorageListProps {
   units: StorageUnit[];

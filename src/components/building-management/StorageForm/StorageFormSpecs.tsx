@@ -15,6 +15,7 @@ import { FormRowCoordinates } from './form/FormRowCoordinates';
 import type { StorageUnit } from '@/types/storage';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface Props {
   formData: Partial<StorageUnit>;

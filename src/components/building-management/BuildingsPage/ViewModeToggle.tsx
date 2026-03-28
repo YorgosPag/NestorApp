@@ -13,6 +13,7 @@ import {
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface ViewModeToggleProps {
   viewMode: 'list' | 'grid' | 'byType' | 'byStatus';

@@ -8,7 +8,6 @@ import { toggleSelect } from '@/lib/toggle-select';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // [ENTERPRISE] Import from canonical location
-import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { PageLoadingState, PageErrorState } from '@/core/states';
 import { BuildingsList } from './BuildingsList';
 import { BuildingDetails } from './BuildingDetails';
@@ -30,7 +29,7 @@ import { BuildingsGroupedView } from './BuildingsPage/BuildingsGroupedView';
 import { useBuildingsPageState } from '@/hooks/useBuildingsPageState';
 import { useBuildingStats } from '@/hooks/useBuildingStats';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
-import { createBuilding, deleteBuilding } from './building-services';
+import { deleteBuilding } from './building-services';
 import { AdvancedFiltersPanel, buildingFiltersConfig } from '@/components/core/AdvancedFilters';
 import { ListContainer, PageContainer } from '@/core/containers';
 // [ENTERPRISE] i18n - Full internationalization support
@@ -39,6 +38,7 @@ import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { Building as BuildingType } from '@/types/building/contracts';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('BuildingsPageContent');
 

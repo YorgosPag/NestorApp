@@ -9,6 +9,7 @@ import { StorageCardHeader } from './StorageCard/StorageCardHeader';
 import { StorageCardContent } from './StorageCard/StorageCardContent';
 import { StorageCardOverlay } from './StorageCard/StorageCardOverlay';
 import { CORE_HOVER_TRANSFORMS, HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import '@/lib/design-system';
 
 interface StorageCardProps {
   unit: StorageUnit;

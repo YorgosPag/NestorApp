@@ -6,6 +6,7 @@ import { X, Package, Car } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
 import type { StorageType } from '@/types/storage';
+import '@/lib/design-system';
 
 interface StorageFormHeaderProps {
   formType: StorageType;

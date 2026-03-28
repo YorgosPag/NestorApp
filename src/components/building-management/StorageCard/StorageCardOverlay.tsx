@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 interface StorageCardOverlayProps {
     isHovered: boolean;

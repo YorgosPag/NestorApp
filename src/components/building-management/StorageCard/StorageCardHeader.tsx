@@ -7,6 +7,7 @@ import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 import { StorageCardBackground } from './StorageCardBackground';
 import { StorageCardActions } from './StorageCardActions';
 import { StorageCardStatus } from './StorageCardStatus';
+import '@/lib/design-system';
 
 interface StorageCardHeaderProps {
     unit: StorageUnit;

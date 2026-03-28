@@ -11,6 +11,9 @@ import {
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface StorageListHeaderProps {
   totalCount: number;
@@ -29,11 +32,12 @@ export function StorageListHeader({
 }: StorageListHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   return (
     <header className="flex items-center justify-between">
       <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">
+        <span className={cn("text-sm", colors.text.muted)}>
           {t('storageListHeader.results', { count: totalCount })}
         </span>
         {selectedCount > 0 && (

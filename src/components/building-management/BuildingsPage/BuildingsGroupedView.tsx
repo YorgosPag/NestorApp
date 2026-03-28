@@ -7,6 +7,7 @@ import { BuildingCard } from '../BuildingCard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Building } from '../BuildingsPageContent';
 import { groupByKey } from '@/utils/collection-utils';
+import '@/lib/design-system';
 
 interface BuildingsGroupedViewProps {
   viewMode: 'grid' | 'byType' | 'byStatus';
