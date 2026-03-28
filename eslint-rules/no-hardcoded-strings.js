@@ -3,8 +3,10 @@
  * Detects string literals that should use i18n keys
  *
  * 🏢 ENTERPRISE: Follows SAP/Microsoft i18n enforcement patterns
- * Excludes: imports, requires, console.*, error messages, technical IDs
+ * Excludes: imports, requires, console.*, error messages, technical IDs,
+ *           CSS/Tailwind classes, throw/Error contexts, HTML attributes
  */
+/* eslint-env node */
 module.exports = {
   meta: {
     type: 'problem',
@@ -51,22 +53,32 @@ module.exports = {
     const greekPattern = /[Α-Ωα-ωάέήίόύώ]/;
     const userFacingPattern = /[Α-Ωα-ωάέήίόύώA-Za-z]{3,}/;
 
+    // 🏢 ENTERPRISE: HTML/JS well-known constants that are NOT user-facing
+    const WELL_KNOWN_CONSTANTS = new Set([
+      // HTML target attributes
+      '_blank', '_self', '_parent', '_top',
+      // Intl.DateTimeFormat / NumberFormat options
+      '2-digit', 'numeric', 'short', 'long', 'narrow', 'full',
+      // Common HTML/DOM values
+      'text', 'password', 'email', 'number', 'submit', 'button', 'reset',
+      'checkbox', 'radio', 'hidden', 'file', 'search', 'tel', 'url',
+      // CSS/layout
+      'auto', 'none', 'block', 'inline', 'flex', 'grid',
+      // Common technical terms
+      'utf-8', 'base64', 'hex', 'ascii',
+    ]);
+
     /**
      * 🏢 ENTERPRISE: Check if node is inside an import/require context
-     * This prevents false positives on module paths like 'next/server'
      */
     function isInImportOrRequireContext(node) {
       let current = node.parent;
       while (current) {
-        // Import declarations: import { x } from 'module'
         if (current.type === 'ImportDeclaration') return true;
-        // Export declarations: export { x } from 'module'
         if (current.type === 'ExportNamedDeclaration' || current.type === 'ExportAllDeclaration') return true;
-        // Require calls: require('module')
         if (current.type === 'CallExpression' &&
             current.callee &&
             current.callee.name === 'require') return true;
-        // Dynamic imports: import('module')
         if (current.type === 'ImportExpression') return true;
         current = current.parent;
       }
@@ -74,23 +86,33 @@ module.exports = {
     }
 
     /**
-     * 🏢 ENTERPRISE: Check if node is inside console.* or logger.* call
-     * Console/logger calls are for developers, not user-facing
+     * 🏢 ENTERPRISE: Check if node is inside a developer-only context
+     * Covers: console.*, logger.*, t(), throw, new Error(), warn(), assert()
      */
-    function isInConsoleCall(node) {
+    function isInDeveloperContext(node) {
       let current = node.parent;
       while (current) {
+        // throw statements: throw new Error("...")
+        if (current.type === 'ThrowStatement') return true;
+
+        // new Error("..."), new TypeError("..."), etc.
+        if (current.type === 'NewExpression' && current.callee) {
+          const calleeName = current.callee.name;
+          if (calleeName === 'Error' || calleeName === 'TypeError' ||
+              calleeName === 'RangeError' || calleeName === 'ReferenceError' ||
+              calleeName === 'SyntaxError') return true;
+        }
+
         if (current.type === 'CallExpression' && current.callee) {
-          // Allow console.* and logger.* calls (developer-facing, not user-facing)
+          // console.*, logger.* calls
           if (current.callee.type === 'MemberExpression' && current.callee.object) {
             const objectName = current.callee.object.name;
-            if (objectName === 'console' || objectName === 'logger') {
-              return true;
-            }
+            if (objectName === 'console' || objectName === 'logger') return true;
           }
-          // Allow t() and i18n translation function calls (keys, not user text)
-          if (current.callee.type === 'Identifier' && current.callee.name === 't') {
-            return true;
+          // t() and i18n translation function calls (the keys inside t() are not user text)
+          if (current.callee.type === 'Identifier') {
+            const fnName = current.callee.name;
+            if (fnName === 't' || fnName === 'warn' || fnName === 'assert') return true;
           }
         }
         current = current.parent;
@@ -100,21 +122,22 @@ module.exports = {
 
     /**
      * 🏢 ENTERPRISE: Check if string looks like a technical identifier
-     * IDs, paths, API routes, etc.
      */
     function isTechnicalString(value) {
-      // Safety check: ensure value is a string
       if (typeof value !== 'string') return false;
+
+      // Well-known HTML/JS constants
+      if (WELL_KNOWN_CONSTANTS.has(value)) return true;
 
       // Next.js directives: "use client", "use server"
       if (/^use (client|server)$/.test(value)) return true;
       // Module paths: @/services/..., next/server, firebase/auth
-      if (/^[@a-z][\w\-\/\.]+$/i.test(value)) return true;
+      if (/^[@a-z][\w\-/.]+$/i.test(value)) return true;
       // File paths: ./foo, ../bar, /suppress-console.js
-      if (/^\.{0,2}\/[\w\-\.\/]+$/.test(value)) return true;
+      if (/^\.{0,2}\/[\w\-./]+$/.test(value)) return true;
       // URLs and protocols
       if (/^(https?:\/\/|mailto:|tel:)/.test(value)) return true;
-      // MIME types
+      // MIME types: application/pdf, image/jpeg, etc.
       if (/^(application|text|image|audio|video)\//.test(value)) return true;
       // HTTP methods
       if (/^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)$/i.test(value)) return true;
@@ -122,8 +145,13 @@ module.exports = {
       if (/^[a-z]{2,4}_[a-zA-Z0-9]+$/i.test(value)) return true;
       // Environment variables
       if (/^[A-Z][A-Z0-9_]+$/.test(value)) return true;
-      // CSS class strings (Tailwind): contain only alphanumeric, hyphens, colons, slashes, brackets, spaces
-      if (/^[\w\-\s\[\]\/\.:]+$/.test(value) && value.indexOf(' ') >= 0 && !greekPattern.test(value)) return true;
+      // File accept patterns: ".dxf,.pdf,application/pdf,image/jpeg"
+      if (/^[.,\w\-/]+$/.test(value) && value.includes(',') && (value.includes('.') || value.includes('/'))) return true;
+      // Regex pattern strings: "/text-(\w+)-\d+/"
+      if (/^\/.*\/$/.test(value)) return true;
+      // CSS class strings (Tailwind): contain CSS-safe chars with indicators
+      // Matches: "hover:opacity-90", "bg-[hsl(var(--bg-error))]", "[&>svg]:rotate-180"
+      if (/^[\w\-\s[\]/.:()'=,>&*#~+@!%]+$/.test(value) && !greekPattern.test(value) && (/[:[(\]]/.test(value) || value.includes(' '))) return true;
       return false;
     }
 
@@ -140,8 +168,8 @@ module.exports = {
       // 🏢 ENTERPRISE: Skip import/require contexts
       if (isInImportOrRequireContext(node)) return;
 
-      // 🏢 ENTERPRISE: Skip console.* calls
-      if (isInConsoleCall(node)) return;
+      // 🏢 ENTERPRISE: Skip developer-only contexts (console, throw, Error, etc.)
+      if (isInDeveloperContext(node)) return;
 
       // 🏢 ENTERPRISE: Skip technical strings
       if (isTechnicalString(value)) return;
@@ -159,8 +187,8 @@ module.exports = {
     }
 
     function checkTemplateLiteral(node) {
-      // 🏢 ENTERPRISE: Skip template literals in console.* calls
-      if (isInConsoleCall(node)) return;
+      // 🏢 ENTERPRISE: Skip template literals in developer contexts
+      if (isInDeveloperContext(node)) return;
 
       // 🏢 ENTERPRISE: Skip template literals in import/require contexts
       if (isInImportOrRequireContext(node)) return;
@@ -169,6 +197,9 @@ module.exports = {
       node.quasis.forEach(quasi => {
         // Skip technical strings in templates
         if (isTechnicalString(quasi.value.raw)) return;
+
+        // Skip ID/slug segments like "-form-item", "-description", "/path"
+        if (/^[\w\-/.:]+$/.test(quasi.value.raw) && !greekPattern.test(quasi.value.raw)) return;
 
         if (quasi.value.raw.length >= 3 && userFacingPattern.test(quasi.value.raw)) {
           context.report({
@@ -191,11 +222,11 @@ module.exports = {
 
     function checkJSXAttribute(node) {
       if (!node.value || node.value.type !== 'Literal') return;
-      
+
       // Skip ignored attributes
       const attrName = node.name.name;
       if (ignoreAttributes.includes(attrName)) return;
-      
+
       checkStringLiteral(node.value);
     }
 

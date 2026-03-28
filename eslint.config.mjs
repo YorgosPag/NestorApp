@@ -45,7 +45,9 @@ export default defineConfig([
         ],
         ignoreAttributes: [
           "className", "id", "key", "testId", "data-testid", "aria-label",
-          "href", "src", "alt", "type", "name", "placeholder", "value"
+          "href", "src", "alt", "type", "name", "placeholder", "value",
+          "target", "accept", "role", "rel", "method", "encType", "autoComplete",
+          "inputMode", "pattern", "title", "htmlFor", "data-state", "data-side"
         ]
       }],
       
@@ -121,6 +123,11 @@ export default defineConfig([
       "src/api/**/*",             // 🏢 API clients - internal code
       "src/app/admin/**/*",       // 🏢 Admin pages - internal tools
       "src/app/**/layout.tsx",    // 🏢 Layout files - infrastructure
+      "src/contexts/**/*",        // 🏢 Contexts - infrastructure/debug (WebSocket, etc.)
+      "src/core/configuration/**/*", // 🏢 Admin configuration interface
+      "src/core/performance/**/*",   // 🏢 Performance monitoring - developer tools
+      "src/core/headers/examples.*", // 🏢 Header examples/demo pages
+      "src/design-system/**/*",      // 🏢 Design system primitives - token definitions
       "scripts/**/*",             // 🏢 Build/deploy scripts
     ],
     rules: {
@@ -135,6 +142,7 @@ export default defineConfig([
       "@typescript-eslint/no-var-requires": "off",
       "@typescript-eslint/no-require-imports": "off",  // Allow require() in server code
       "@typescript-eslint/no-unsafe-function-type": "off", // Allow Function type in internal code
+      "no-undef": "off",             // Allow CommonJS globals (module, require, etc.)
       "no-empty": "off",           // Allow empty catch blocks in internal code
       "no-case-declarations": "off", // Allow declarations in switch cases
       "prefer-const": "off",       // Allow let in internal code
