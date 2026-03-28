@@ -1,157 +1,34 @@
 /**
- * =============================================================================
- * 🏢 ENTERPRISE: PROJECT UPDATE/DELETE ENDPOINT
- * =============================================================================
+ * PROJECT CRUD API — /api/projects/[projectId]
  *
- * API endpoint for updating and deleting individual projects.
+ * Thin route handlers delegating to project-mutations.service.ts.
  * Enterprise-grade with Admin SDK, RBAC, tenant isolation, and caching.
  *
  * @module api/projects/[projectId]
- * @version 1.0.0
- * @created 2026-02-02 - ADR-167 Multi-address support
- *
- * 🏢 ARCHITECTURE:
- * - Admin SDK (server-side, bypasses Firestore rules)
- * - withAuth + RBAC protection
- * - Tenant isolation (companyId verification)
- * - Cache invalidation on mutations
- * - Type-safe field updates
- * - Audit logging
- *
- * 🔒 SECURITY:
- * - Permission: projects:projects:view (GET)
- * - Permission: projects:projects:update (PATCH)
- * - Permission: projects:projects:delete (DELETE)
- * - Tenant isolation: Verifies project ownership before updates
- * - No unauthorized cross-tenant operations
- *
- * 📝 FEATURES:
- * - Update project basic fields (name, title, description, status)
- * - Update legacy address fields (address, city) - backward compatible
- * - Update multi-address array (addresses[]) - ADR-167
- * - Auto-sync between legacy and new address fields
- * - Soft delete capability (status: 'archived')
- * - Hard delete with cascade options
+ * @see ADR-167 (Multi-address support)
  */
 
-import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { withAuth, logAuditEvent } from '@/lib/auth';
+import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { isRoleBypass } from '@/lib/auth/roles';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
-import { FieldValue } from 'firebase-admin/firestore';
 import type { ProjectAddress } from '@/types/project/addresses';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
-import { executeDeletion } from '@/lib/firestore/deletion-guard';
-import { linkEntity } from '@/lib/firestore/entity-linking.service';
-import { getErrorMessage } from '@/lib/error-utils';
-import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
-
-const ProjectUpdateSchema = z.object({
-  name: z.string().max(500).optional(),
-  title: z.string().max(500).optional(),
-  description: z.string().max(5000).optional(),
-  status: z.string().max(50).optional(),
-  companyId: z.string().max(128).nullable().optional(),
-  company: z.string().max(200).nullable().optional(),
-  linkedCompanyId: z.string().max(128).nullable().optional(),
-  linkedCompanyName: z.string().max(200).nullable().optional(),
-  address: z.string().max(500).optional(),
-  city: z.string().max(200).optional(),
-  addresses: z.array(z.record(z.unknown())).optional(),
-  progress: z.number().min(0).max(100).optional(),
-  totalValue: z.number().min(0).max(999_999_999).optional(),
-  totalArea: z.number().min(0).max(999_999_999).optional(),
-  startDate: z.string().max(30).nullable().optional(),
-  completionDate: z.string().max(30).nullable().optional(),
-  _v: z.number().int().optional(),
-}).passthrough();
+import {
+  handleUpdateProject,
+  handleDeleteProject,
+  ConflictError,
+} from './project-mutations.service';
+import type {
+  ProjectUpdateResponse,
+  ProjectDeleteResponse,
+} from './project-mutations.types';
 
 const logger = createModuleLogger('ProjectRoute');
-
-// =============================================================================
-// TYPES
-// =============================================================================
-
-/**
- * Project update payload - supports both legacy and new address fields
- */
-interface ProjectUpdatePayload {
-  name?: string;
-  title?: string;
-  description?: string;
-  status?: string;
-  // Company link fields
-  companyId?: string | null;
-  company?: string | null;
-  /** 🏢 ADR-232: Business entity link (separate from tenant companyId) */
-  linkedCompanyId?: string | null;
-  linkedCompanyName?: string | null;
-  // Legacy fields (backward compatible)
-  address?: string;
-  city?: string;
-  // 🏢 ENTERPRISE: Multi-address support (ADR-167)
-  addresses?: ProjectAddress[];
-  // Additional optional fields
-  progress?: number;
-  totalValue?: number;
-  totalArea?: number;
-  startDate?: string | Date;
-  completionDate?: string | Date;
-}
-
-interface ProjectUpdateResponse {
-  projectId: string;
-  updated: boolean;
-  _v?: number;
-}
-
-interface ProjectDeleteResponse {
-  projectId: string;
-  deleted: boolean;
-}
-
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-const CACHE_KEY_PREFIX = 'api:projects:list';
-
-/**
- * 🏢 ENTERPRISE: Recursively remove undefined values from objects/arrays
- * Firestore rejects undefined at ANY depth — this ensures clean data
- */
-function removeUndefinedDeep(obj: Record<string, unknown>): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    if (value === undefined) continue;
-    if (Array.isArray(value)) {
-      result[key] = value.map(item =>
-        item !== null && typeof item === 'object' && !Array.isArray(item)
-          ? removeUndefinedDeep(item as Record<string, unknown>)
-          : item
-      );
-    } else if (isPlainObject(value)) {
-      result[key] = removeUndefinedDeep(value as Record<string, unknown>);
-    } else {
-      result[key] = value;
-    }
-  }
-  return result;
-}
-
-/** Check if value is a plain object (not Date, FieldValue, Timestamp, etc.) */
-function isPlainObject(value: unknown): boolean {
-  if (value === null || typeof value !== 'object') return false;
-  const proto = Object.getPrototypeOf(value);
-  return proto === Object.prototype || proto === null;
-}
 
 // =============================================================================
 // FORCE DYNAMIC
@@ -162,15 +39,6 @@ export const dynamic = 'force-dynamic';
 // =============================================================================
 // GET HANDLER - Get Single Project
 // =============================================================================
-
-/**
- * GET /api/projects/[projectId]
- *
- * Fetch a single project by ID, including addresses array.
- *
- * @security Protected with RBAC - projects:projects:view
- * @security Tenant isolation - only access own company's projects
- */
 
 interface ProjectGetResponse {
   project: {
@@ -195,7 +63,6 @@ async function handleGet(
   const handler = withAuth<ApiSuccessResponse<ProjectGetResponse>>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       const adminDb = getAdminFirestore();
-
       const projectRef = adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId);
       const projectDoc = await projectRef.get();
 
@@ -205,7 +72,6 @@ async function handleGet(
 
       const projectData = projectDoc.data();
 
-      // Tenant isolation: bypass for Super Admin, enforce for regular users
       const isSuperAdmin = isRoleBypass(ctx.globalRole);
       if (!isSuperAdmin && projectData?.companyId !== ctx.companyId) {
         throw new ApiError(403, 'Access denied - Project not found');
@@ -215,12 +81,7 @@ async function handleGet(
       }
 
       return apiSuccess<ProjectGetResponse>(
-        {
-          project: {
-            id: projectDoc.id,
-            ...projectData,
-          } as ProjectGetResponse['project'],
-        },
+        { project: { id: projectDoc.id, ...projectData } as ProjectGetResponse['project'] },
         'Project fetched successfully'
       );
     },
@@ -236,22 +97,6 @@ export const GET = withStandardRateLimit(handleGet);
 // PATCH HANDLER - Update Project
 // =============================================================================
 
-/**
- * PATCH /api/projects/[projectId]
- *
- * Update a project's fields including addresses.
- *
- * 🔒 SECURITY: Protected with RBAC
- * - Permission: projects:projects:update
- * - Tenant isolation: Only update projects in same company
- * - Validates project existence and ownership
- * - Rate Limit: STANDARD (60 req/min)
- *
- * 🏢 ENTERPRISE: Supports both legacy and multi-address (ADR-167)
- * - Legacy: { address, city }
- * - New: { addresses: ProjectAddress[] }
- * - Auto-sync: Updates both formats automatically
- */
 async function handlePatch(
   request: NextRequest,
   segmentData?: { params: Promise<{ projectId: string }> }
@@ -263,7 +108,6 @@ async function handlePatch(
       try {
         return await handleUpdateProject(req, ctx, projectId);
       } catch (error) {
-        // SPEC-256A: Return 409 on version conflict
         if (error instanceof ConflictError) {
           return NextResponse.json(error.body, { status: error.statusCode });
         }
@@ -278,140 +122,10 @@ async function handlePatch(
 
 export const PATCH = withStandardRateLimit(handlePatch);
 
-async function handleUpdateProject(
-  request: NextRequest,
-  ctx: AuthContext,
-  projectId: string
-): Promise<ReturnType<typeof apiSuccess<ProjectUpdateResponse>>> {
-  const startTime = Date.now();
-
-  logger.info('[Projects/Update] User updating project', { email: ctx.email, projectId });
-
-  // 1. Parse request body (SPEC-256A: extract _v for version check)
-  const parsed = safeParseBody(ProjectUpdateSchema, await request.json());
-  if (parsed.error) throw new ApiError(400, 'Validation failed');
-  const { _v: expectedVersion, ...body } = parsed.data;
-
-  if (!body || Object.keys(body).length === 0) {
-    throw new ApiError(400, 'No update fields provided');
-  }
-
-  // 2. Get project document and verify ownership (tenant isolation)
-  const projectRef = getAdminFirestore().collection(COLLECTIONS.PROJECTS).doc(projectId);
-  const projectDoc = await projectRef.get();
-
-  if (!projectDoc.exists) {
-    logger.info('[Projects/Update] Project not found', { projectId });
-    throw new ApiError(404, 'Project not found');
-  }
-
-  const projectData = projectDoc.data();
-
-  // 3. Validate tenant isolation: bypass for Super Admin, enforce for regular users
-  // 🏢 ADR-232: Super admin entities may have companyId: null
-  const isSuperAdmin = isRoleBypass(ctx.globalRole);
-  if (!isSuperAdmin) {
-    if (!projectData?.companyId || projectData.companyId !== ctx.companyId) {
-      logger.warn('[Projects/Update] TENANT ISOLATION VIOLATION: attempted to update project', { uid: ctx.uid, userCompanyId: ctx.companyId, projectId, projectCompanyId: projectData?.companyId });
-      throw new ApiError(403, 'Access denied - Project not found');
-    }
-  } else if (projectData?.companyId !== ctx.companyId) {
-    logger.info('[SUPER_ADMIN] Cross-tenant project update', { email: ctx.email, projectId, projectCompanyId: projectData?.companyId });
-  }
-
-  // 4. Build update payload
-  // 🔒 ADR-232: companyId is IMMUTABLE (tenant key) — remove from update payload
-  const { companyId: _immutableCompanyId, ...safeBody } = body;
-  const updateData: Record<string, unknown> = {
-    ...safeBody,
-  };
-
-  // 🏢 ENTERPRISE: Remove undefined fields RECURSIVELY (Firestore rejects undefined at any depth)
-  const cleanData = removeUndefinedDeep(updateData);
-
-  logger.info('[Projects/Update] Updating fields', { fieldsCount: Object.keys(cleanData).length });
-
-  // 5. SPEC-256A: Version-checked write
-  const versionResult = await withVersionCheck({
-    db: getAdminFirestore(),
-    collection: COLLECTIONS.PROJECTS,
-    docId: projectId,
-    expectedVersion,
-    updates: cleanData,
-    userId: ctx.uid,
-  });
-
-  const duration = Date.now() - startTime;
-  logger.info('[Projects/Update] Project updated successfully', { projectId, durationMs: duration });
-
-  // 6. Invalidate caches
-  const cache = EnterpriseAPICache.getInstance();
-  cache.delete(`${CACHE_KEY_PREFIX}:${ctx.companyId}`);
-  cache.delete(`${CACHE_KEY_PREFIX}:all`);
-  logger.info('[Projects/Update] Cache invalidated for tenant', { companyId: ctx.companyId });
-
-  // 7. 🔗 ADR-239: Centralized linking — change detection + cascade + entity audit
-  // 🏢 ADR-232: Cascade linkedCompanyId (business link), NOT companyId (tenant key)
-  if ('linkedCompanyId' in body) {
-    linkEntity('project:linkedCompanyId', {
-      auth: ctx,
-      entityId: projectId,
-      newLinkValue: (body.linkedCompanyId as string) ?? null,
-      existingDoc: (projectData ?? {}) as Record<string, unknown>,
-      apiPath: '/api/projects/[projectId] (PATCH)',
-    }).catch((err) => {
-      logger.warn('[Projects/Update] linkEntity failed (non-blocking)', {
-        projectId,
-        error: getErrorMessage(err),
-      });
-    });
-  }
-
-  // 8. Audit log
-  await logAuditEvent(ctx, 'data_updated', 'projects', 'api', {
-    newValue: {
-      type: 'status',
-      value: {
-        projectId,
-        projectName: projectData?.name,
-        fieldsUpdated: Object.keys(cleanData),
-        duration,
-      },
-    },
-    metadata: { reason: 'Project updated' },
-  });
-
-  return apiSuccess<ProjectUpdateResponse>(
-    {
-      projectId,
-      updated: true,
-      _v: versionResult.newVersion,
-    },
-    `Project updated successfully in ${duration}ms`
-  );
-}
-
 // =============================================================================
 // DELETE HANDLER - Delete Project
 // =============================================================================
 
-/**
- * DELETE /api/projects/[projectId]
- *
- * Delete a project (soft delete by default).
- *
- * 🔒 SECURITY: Protected with RBAC
- * - Permission: projects:projects:delete
- * - Tenant isolation: Only delete projects in same company
- * - Validates project existence and ownership
- * - Rate Limit: STANDARD (60 req/min)
- *
- * 🏢 ENTERPRISE: Soft delete by default
- * - Sets status: 'archived'
- * - Adds deletedAt timestamp
- * - Preserves data for audit/recovery
- * - Hard delete requires ?hard=true query param
- */
 async function handleDelete(
   request: NextRequest,
   segmentData?: { params: Promise<{ projectId: string }> }
@@ -429,70 +143,3 @@ async function handleDelete(
 }
 
 export const DELETE = withStandardRateLimit(handleDelete);
-
-async function handleDeleteProject(
-  _request: NextRequest,
-  ctx: AuthContext,
-  projectId: string
-): Promise<ReturnType<typeof apiSuccess<ProjectDeleteResponse>>> {
-  const startTime = Date.now();
-  const db = getAdminFirestore();
-
-  logger.info('[Projects/Delete] User deleting project (bottom-up BLOCK guard)', { email: ctx.email, projectId });
-
-  // 1. Get project document and verify ownership (tenant isolation)
-  const projectRef = db.collection(COLLECTIONS.PROJECTS).doc(projectId);
-  const projectDoc = await projectRef.get();
-
-  if (!projectDoc.exists) {
-    logger.info('[Projects/Delete] Project not found', { projectId });
-    throw new ApiError(404, 'Project not found');
-  }
-
-  const projectData = projectDoc.data();
-
-  // 2. Validate tenant isolation: bypass for Super Admin, enforce for regular users
-  const isSuperAdmin = isRoleBypass(ctx.globalRole);
-  if (!isSuperAdmin && projectData?.companyId !== ctx.companyId) {
-    logger.warn('[Projects/Delete] TENANT ISOLATION VIOLATION: attempted to delete project', { uid: ctx.uid, userCompanyId: ctx.companyId, projectId, projectCompanyId: projectData?.companyId });
-    throw new ApiError(403, 'Access denied - Project not found');
-  }
-  if (isSuperAdmin && projectData?.companyId !== ctx.companyId) {
-    logger.info('[SUPER_ADMIN] Cross-tenant project delete', { email: ctx.email, projectId, projectCompanyId: projectData?.companyId });
-  }
-
-  // 3. 🛡️ ADR-226: BLOCK guard — refuses deletion if dependencies exist (bottom-up only)
-  await executeDeletion(db, 'project', projectId, ctx.uid, ctx.companyId);
-
-  logger.info('[Projects/Delete] Project DELETED (no dependencies)', { projectId });
-
-  const duration = Date.now() - startTime;
-
-  // 4. Invalidate caches
-  const cache = EnterpriseAPICache.getInstance();
-  cache.delete(`${CACHE_KEY_PREFIX}:${ctx.companyId}`);
-  cache.delete(`${CACHE_KEY_PREFIX}:all`);
-  logger.info('[Projects/Delete] Cache invalidated for tenant', { companyId: ctx.companyId });
-
-  // 5. Auth audit (dual audit — executeDeletion handles entity audit with full snapshot)
-  await logAuditEvent(ctx, 'data_deleted', 'projects', 'api', {
-    newValue: {
-      type: 'status',
-      value: {
-        projectId,
-        projectName: projectData?.name,
-        deleteType: 'hard',
-        duration,
-      },
-    },
-    metadata: { reason: 'Project hard deleted (bottom-up, no cascade)' },
-  });
-
-  return apiSuccess<ProjectDeleteResponse>(
-    {
-      projectId,
-      deleted: true,
-    },
-    `Project permanently deleted in ${duration}ms`
-  );
-}

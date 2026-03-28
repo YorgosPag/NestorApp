@@ -44,7 +44,7 @@ export type {
   ConstructionReportData,
   ComplianceReportData,
   FinancialReportData,
-} from './report-data-aggregator';
+} from './report-aggregator.types';
 
 // ── PDF Exporter (client-side) ──────────────────────────────────────────────
 export { exportReportToPdf } from './report-pdf-exporter';
