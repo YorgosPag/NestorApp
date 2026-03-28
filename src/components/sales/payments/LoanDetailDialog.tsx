@@ -39,6 +39,9 @@ import type {
   CommunicationEntryType,
 } from '@/types/loan-tracking';
 import { getValidNextStatuses } from '@/types/loan-tracking';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // TYPES
@@ -72,6 +75,7 @@ export function LoanDetailDialog({
   onDisburse,
   onAddCommLog,
 }: LoanDetailDialogProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('payments');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -192,7 +196,7 @@ export function LoanDetailDialog({
             {/* Status Transition */}
             {nextStatuses.length > 0 && (
               <fieldset className="space-y-2">
-                <legend className="text-xs font-semibold text-muted-foreground">
+                <legend className={cn("text-xs font-semibold", colors.text.muted)}>
                   {t('loanTracking.actions.updateStatus')}
                 </legend>
                 <nav className="flex flex-wrap gap-1">
@@ -329,7 +333,7 @@ export function LoanDetailDialog({
                 ))}
               </ul>
             ) : (
-              <p className="text-xs text-muted-foreground text-center py-2">
+              <p className={cn("text-xs text-center py-2", colors.text.muted)}>
                 {t('loanTracking.noDisbursements')}
               </p>
             )}
@@ -394,13 +398,13 @@ export function LoanDetailDialog({
                       <Badge variant="outline" className="text-[10px]">
                         {t(`loanTracking.commLog.type.${entry.type}`)}
                       </Badge>
-                      <time className="text-muted-foreground">
+                      <time className={colors.text.muted}>
                         {new Date(entry.date).toLocaleDateString('el-GR')}
                       </time>
                     </span>
                     <p>{entry.summary}</p>
                     {entry.nextAction && (
-                      <p className="text-muted-foreground">
+                      <p className={colors.text.muted}>
                         → {entry.nextAction}
                       </p>
                     )}
@@ -408,7 +412,7 @@ export function LoanDetailDialog({
                 ))}
               </ul>
             ) : (
-              <p className="text-xs text-muted-foreground text-center py-2">
+              <p className={cn("text-xs text-center py-2", colors.text.muted)}>
                 {t('loanTracking.noCommLog')}
               </p>
             )}

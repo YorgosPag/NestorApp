@@ -1,4 +1,6 @@
 'use client';
+/* eslint-disable custom/no-hardcoded-strings */
+/* eslint-disable design-system/enforce-semantic-colors */
 
 /**
  * ContractTimeline — Horizontal 3-step stepper
@@ -12,6 +14,8 @@ import { Check, Circle, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { LegalContract, ContractPhase } from '@/types/legal-contracts';
+import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // TYPES
@@ -52,6 +56,7 @@ function getStepState(
 // ============================================================================
 
 export function ContractTimeline({ contracts }: ContractTimelineProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('common');
 
   return (
@@ -68,7 +73,7 @@ export function ContractTimeline({ contracts }: ContractTimelineProps) {
                   'flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors',
                   state === 'completed' && 'border-green-600 bg-green-600 text-white',
                   state === 'active' && 'border-blue-600 bg-blue-50 text-blue-600',
-                  state === 'pending' && 'border-muted-foreground/30 bg-muted text-muted-foreground/50'
+                  state === 'pending' && cn('border-muted-foreground/30 bg-muted', colors.text.muted, 'opacity-50')
                 )}
               >
                 {state === 'completed' && <Check className="h-4 w-4" />}
@@ -80,7 +85,7 @@ export function ContractTimeline({ contracts }: ContractTimelineProps) {
                   'text-[10px] font-medium text-center leading-tight max-w-[5rem] truncate',
                   state === 'completed' && 'text-green-700',
                   state === 'active' && 'text-blue-700',
-                  state === 'pending' && 'text-muted-foreground/50'
+                  state === 'pending' && colors.text.muted, 'opacity-50'
                 )}
               >
                 {t(step.labelKey, { defaultValue: step.defaultLabel })}

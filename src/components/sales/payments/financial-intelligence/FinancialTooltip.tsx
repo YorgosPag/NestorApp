@@ -11,6 +11,9 @@
  */
 
 import React from 'react';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
 // TYPES
@@ -47,6 +50,7 @@ export function FinancialTooltip({
   labelFormatter,
   valueFormatter,
 }: FinancialTooltipProps) {
+  const colors = useSemanticColors();
   if (!active || !payload?.length) return null;
 
   const displayLabel = labelFormatter && label != null
@@ -67,7 +71,7 @@ export function FinancialTooltip({
 
           return (
             <div key={entry.dataKey ?? i} className="flex items-center justify-between gap-4">
-              <span className="flex items-center gap-1.5 text-muted-foreground">
+              <span className={cn("flex items-center gap-1.5", colors.text.muted)}>
                 <span
                   className="inline-block h-2.5 w-2.5 shrink-0 rounded-[2px]"
                   style={{ backgroundColor: color }}

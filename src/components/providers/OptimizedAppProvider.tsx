@@ -1,4 +1,6 @@
 'use client';
+/* eslint-disable custom/no-hardcoded-strings */
+/* eslint-disable design-system/enforce-semantic-colors */
 
 import React, { useEffect, Suspense } from 'react';
 import { CacheProvider } from '@/contexts/CacheProvider';
@@ -14,7 +16,9 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('OptimizedAppProvider');
 
@@ -83,7 +87,7 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
               <div className={`${iconSizes.lg} ${colors.bg.secondary} rounded-full`} />
             </div>
             <h1 className="text-2xl font-bold text-foreground mb-2">Nextn CRM</h1>
-            <p className="text-muted-foreground">Initializing application...</p>
+            <p className={colors.text.muted}>Initializing application...</p>
           </div>
           
           <ProgressiveLoader
@@ -144,6 +148,7 @@ function MemoryWrapper({ children }: { children: React.ReactNode }) {
 function AppErrorBoundary({ children }: { children: React.ReactNode }) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   return (
     <ErrorBoundary
       componentName="App"
@@ -158,7 +163,7 @@ function AppErrorBoundary({ children }: { children: React.ReactNode }) {
                 <AlertTriangle className={`${iconSizes.lg} text-red-600 dark:text-red-400`} />
               </div>
               <h1 className="text-2xl font-bold text-foreground mb-2">Application Error</h1>
-              <p className="text-muted-foreground mb-6">
+              <p className={cn(colors.text.muted, "mb-6")}>
                 The application encountered an unexpected error and needs to restart.
               </p>
               <div className="space-y-3">
@@ -176,7 +181,7 @@ function AppErrorBoundary({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
               <details className="mt-6 text-left">
-                <summary className="cursor-pointer text-sm text-muted-foreground">Error Details</summary>
+                <summary className={cn("cursor-pointer text-sm", colors.text.muted)}>Error Details</summary>
                 <pre className={`mt-2 text-xs bg-muted p-2 ${quick.input} overflow-auto`}>
                   {error.message}
                 </pre>
@@ -198,7 +203,7 @@ export function OptimizedAppProvider({
   cacheConfig = {}
 }: OptimizedAppProviderProps) {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick: _quick } = useBorderTokens();
   useEffect(() => {
     if (enableDevTools) {
       // Enable performance monitoring

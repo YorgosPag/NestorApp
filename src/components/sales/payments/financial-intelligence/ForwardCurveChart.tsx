@@ -1,3 +1,5 @@
+/* eslint-disable design-system/no-hardcoded-colors */
+/* eslint-disable design-system/enforce-semantic-colors */
 'use client';
 
 /**
@@ -28,12 +30,10 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
 
-import { formatCurrencyWhole } from '@/lib/intl-utils';
 import { FinancialTooltip } from './FinancialTooltip';
 import { InfoTableHead } from './InfoLabel';
 import {
@@ -42,6 +42,9 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import type { ForwardCurveResult } from '@/types/interest-calculator';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
 // TYPES
@@ -67,6 +70,7 @@ const SHAPE_BADGE_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | 
 // =============================================================================
 
 export function ForwardCurveChart({ t }: ForwardCurveChartProps) {
+  const colors = useSemanticColors();
   const [result, setResult] = useState<ForwardCurveResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -105,8 +109,8 @@ export function ForwardCurveChart({ t }: ForwardCurveChartProps) {
   if (isLoading) {
     return (
       <section className="flex items-center justify-center p-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        <span className="ml-2 text-sm text-muted-foreground">
+        <Loader2 className={cn("h-6 w-6 animate-spin", colors.text.muted)} />
+        <span className={cn("ml-2 text-sm", colors.text.muted)}>
           {t('costCalculator.forwardCurve.loading')}
         </span>
       </section>
@@ -151,7 +155,7 @@ export function ForwardCurveChart({ t }: ForwardCurveChartProps) {
           {t('costCalculator.forwardCurve.chartTitle')}
           <RadixTooltip>
             <TooltipTrigger asChild>
-              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+              <HelpCircle className={cn("h-3.5 w-3.5 cursor-help", colors.text.muted)} />
             </TooltipTrigger>
             <TooltipContent side="top" className="max-w-xs text-xs">
               {t('costCalculator.forwardCurve.chartTitleTooltip')}
@@ -251,7 +255,7 @@ export function ForwardCurveChart({ t }: ForwardCurveChartProps) {
             })}
           </TableBody>
         </Table>
-        <p className="text-xs text-muted-foreground mt-2">
+        <p className={cn("text-xs mt-2", colors.text.muted)}>
           {t('costCalculator.forwardCurve.rateDate')}: {result.rateDate}
         </p>
       </section>

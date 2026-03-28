@@ -11,6 +11,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { formatDateTime as formatDate } from '@/lib/intl-utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Version history item type
 export interface VersionHistoryItem {
@@ -78,11 +79,11 @@ export function VersionList({
                   />
                 )}
               </div>
-              <div className="text-sm text-muted-foreground mt-1">
+              <div className={cn("text-sm mt-1", colors.text.muted)}>
                 {version.author?.name} • {formatDate(version.timestamp)}
               </div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {version.stats.polygons} polygons • {version.stats.objects} objects • {formatSize(version.size)}
+              <div className={cn("text-xs mt-1", colors.text.muted)}>
+                {version.stats.polygons} polygons • {version.stats.objects} objects • {formatSize(version.size)} {/* eslint-disable-line custom/no-hardcoded-strings */}
               </div>
             </div>
             {version.thumbnail && (

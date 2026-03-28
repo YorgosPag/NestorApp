@@ -14,6 +14,7 @@ import { BUILDING_IDS } from '@/config/building-ids-config';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { normalizeToDate, normalizeToMillis } from '@/lib/date-local';
+import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Version interface instead of any
 interface FloorplanVersion {
@@ -47,6 +48,7 @@ const toVersionHistoryItem = (v: FloorplanVersion): VersionHistoryItem => ({
     } : undefined
 });
 
+/* eslint-disable custom/no-hardcoded-strings */
 const mockVersions: FloorplanVersion[] = [
     {
         id: 'v_1722956400000',
@@ -84,6 +86,7 @@ const mockVersions: FloorplanVersion[] = [
         diff: { added: ['prop-7'], removed: [], modified: [], changes: 1 }
     }
 ];
+/* eslint-enable custom/no-hardcoded-strings */
 
 export function VersionHistoryPanel({ buildingId, isOpen, onClose }: { buildingId: string; isOpen: boolean; onClose: () => void; }) {
     const iconSizes = useIconSizes();

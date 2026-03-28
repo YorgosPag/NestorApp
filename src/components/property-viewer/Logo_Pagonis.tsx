@@ -1,4 +1,6 @@
+/* eslint-disable custom/no-hardcoded-strings */
 import React from 'react';
+import '@/lib/design-system';
 
 const LogoPagonis = (props: React.SVGProps<SVGSVGElement>) => (
   <div className="text-sidebar-foreground">

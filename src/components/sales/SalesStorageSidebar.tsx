@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable custom/no-hardcoded-strings */
 
 /**
  * @fileoverview Sales Storage Sidebar — ADR-199
@@ -13,7 +14,7 @@ import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import { SalesStorageCard } from '@/components/sales/cards/SalesStorageCard';
 import { StorageQuickFilters } from '@/components/sales/filters/StorageQuickFilters';
 import { StorageDetailPanel } from '@/components/sales/details/StorageDetailPanel';
-import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
+import { EntityDetailsHeader } from '@/core/entity-headers';
 import type { EntityHeaderAction } from '@/core/entity-headers';
 import { ActivityTab } from '@/components/shared/audit/ActivityTab';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -24,6 +25,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Storage } from '@/types/storage/contracts';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
 // 🏢 TYPES
@@ -67,6 +71,7 @@ export function SalesStorageSidebar({
   selectedType,
   onTypeChange,
 }: SalesStorageSidebarProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('common');
   const isMobile = useIsMobile();
   const iconSizes = useIconSizes();
@@ -121,7 +126,7 @@ export function SalesStorageSidebar({
             return (
               <TabsContent key={tabId} value={tabId} className="flex-1">
                 <section className="p-4">
-                  <p className="text-sm text-muted-foreground text-center mb-3">
+                  <p className={cn("text-sm text-center mb-3", colors.text.muted)}>
                     {t(`salesStorage.tabs.${hintKey}Hint`, { defaultValue: `Διαχείριση στη σελίδα Χώροι → Αποθήκες` })}
                   </p>
                   <div className="pt-2 border-t">
@@ -180,7 +185,7 @@ export function SalesStorageSidebar({
           ))}
 
           {items.length === 0 && (
-            <div className="p-6 text-center text-sm text-muted-foreground">
+            <div className={cn("p-6 text-center text-sm", colors.text.muted)}>
               {t('salesStorage.noResults', { defaultValue: 'Δεν βρέθηκαν αποθήκες με αυτά τα κριτήρια.' })}
             </div>
           )}

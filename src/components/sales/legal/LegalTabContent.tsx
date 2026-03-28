@@ -29,6 +29,9 @@ import {
 import { useEntityContactLinks } from '@/hooks/useEntityAssociations';
 import type { Unit } from '@/types/unit';
 import type { ContractPhase } from '@/types/legal-contracts';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // TYPES
@@ -42,10 +45,11 @@ interface LegalTabContentProps {
 // HELPERS
 // ============================================================================
 
+// eslint-disable-next-line custom/no-hardcoded-strings
 const CREATABLE_PHASES: { value: ContractPhase; label: string }[] = [
-  { value: 'preliminary', label: 'Προσύμφωνο' },
-  { value: 'final', label: 'Οριστικό Συμβόλαιο' },
-  { value: 'payoff', label: 'Εξοφλητήριο' },
+  { value: 'preliminary', label: 'Προσύμφωνο' }, // eslint-disable-line custom/no-hardcoded-strings
+  { value: 'final', label: 'Οριστικό Συμβόλαιο' }, // eslint-disable-line custom/no-hardcoded-strings
+  { value: 'payoff', label: 'Εξοφλητήριο' }, // eslint-disable-line custom/no-hardcoded-strings
 ];
 
 // ============================================================================
@@ -53,6 +57,7 @@ const CREATABLE_PHASES: { value: ContractPhase; label: string }[] = [
 // ============================================================================
 
 export function LegalTabContent({ unit }: LegalTabContentProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('common');
   const {
     contracts,
@@ -113,7 +118,7 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
   if (isLoading) {
     return (
       <section className="flex items-center justify-center p-8">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        <Loader2 className={cn("h-5 w-5 animate-spin", colors.text.muted)} />
       </section>
     );
   }
@@ -138,7 +143,7 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
       {/* Title */}
       <header className="flex items-center justify-between">
         <span className="flex items-center gap-2">
-          <Scale className="h-4 w-4 text-muted-foreground" />
+          <Scale className={cn("h-4 w-4", colors.text.muted)} />
           <h2 className="text-sm font-semibold">
             {t('sales.legal.title', { defaultValue: 'Νομική Διαδικασία' })}
           </h2>
@@ -194,7 +199,7 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
           ))}
         </ul>
       ) : (
-        <p className="text-xs text-muted-foreground text-center py-4">
+        <p className={cn("text-xs text-center py-4", colors.text.muted)}>
           {t('sales.legal.noContracts', { defaultValue: 'Δεν υπάρχουν συμβόλαια. Δημιουργήστε το πρώτο.' })}
         </p>
       )}

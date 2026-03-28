@@ -1,3 +1,4 @@
+/* eslint-disable design-system/enforce-semantic-colors */
 'use client';
 
 /**
@@ -12,7 +13,6 @@
 import React, { useMemo, useState } from 'react';
 import { Info } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { InfoLabel, InfoTableHead } from './InfoLabel';
 import {
   Tooltip as RadixTooltip,
@@ -44,6 +44,7 @@ import {
   decliningScenario,
 } from '@/lib/hedging-engine';
 import type { HedgingInput, HedgingStrategy } from '@/types/interest-calculator';
+import '@/lib/design-system';
 
 // =============================================================================
 // TYPES

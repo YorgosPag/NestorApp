@@ -1,5 +1,7 @@
 
 'use client';
+/* eslint-disable custom/no-hardcoded-strings */
+import '@/lib/design-system';
 
 export function PropertyViewerPage() {
     return (

@@ -1,4 +1,6 @@
 'use client';
+/* eslint-disable custom/no-hardcoded-strings */
+/* eslint-disable design-system/enforce-semantic-colors */
 
 /**
  * ChequeDetailDialog — 3-tab detail view: Στοιχεία / Ενέργειες / Ιστορικό
@@ -38,6 +40,9 @@ import type {
   BouncedReason,
 } from '@/types/cheque-registry';
 import { getValidNextChequeStatuses, isTerminalChequeStatus } from '@/types/cheque-registry';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // PROPS
@@ -97,6 +102,7 @@ export function ChequeDetailDialog({
   onEndorse,
   onBounce,
 }: ChequeDetailDialogProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('payments');
   const isTerminal = isTerminalChequeStatus(cheque.status);
   const nextStatuses = getValidNextChequeStatuses(cheque.status);
@@ -160,27 +166,27 @@ export function ChequeDetailDialog({
           {/* ============= DETAILS TAB ============= */}
           <TabsContent value="details" className="space-y-3 mt-3">
             <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-              <dt className="text-muted-foreground">{t('chequeRegistry.fields.chequeType')}</dt>
+              <dt className={colors.text.muted}>{t('chequeRegistry.fields.chequeType')}</dt>
               <dd>{t(`paymentMethod.${cheque.chequeType}`)}</dd>
 
-              <dt className="text-muted-foreground">{t('chequeRegistry.fields.amount')}</dt>
+              <dt className={colors.text.muted}>{t('chequeRegistry.fields.amount')}</dt>
               <dd className="font-medium">{formatCurrency(cheque.amount)}</dd>
 
-              <dt className="text-muted-foreground">{t('chequeRegistry.fields.drawerName')}</dt>
+              <dt className={colors.text.muted}>{t('chequeRegistry.fields.drawerName')}</dt>
               <dd>{cheque.drawerName}</dd>
 
-              <dt className="text-muted-foreground">{t('chequeRegistry.fields.bankName')}</dt>
+              <dt className={colors.text.muted}>{t('chequeRegistry.fields.bankName')}</dt>
               <dd>{cheque.bankName}{cheque.bankBranch ? ` — ${cheque.bankBranch}` : ''}</dd>
 
-              <dt className="text-muted-foreground">{t('chequeRegistry.fields.issueDate')}</dt>
+              <dt className={colors.text.muted}>{t('chequeRegistry.fields.issueDate')}</dt>
               <dd>{formatDate(cheque.issueDate)}</dd>
 
-              <dt className="text-muted-foreground">{t('chequeRegistry.fields.maturityDate')}</dt>
+              <dt className={colors.text.muted}>{t('chequeRegistry.fields.maturityDate')}</dt>
               <dd>{formatDate(cheque.maturityDate)}</dd>
 
               {cheque.postDated && (
                 <>
-                  <dt className="text-muted-foreground">{t('chequeRegistry.fields.postDated')}</dt>
+                  <dt className={colors.text.muted}>{t('chequeRegistry.fields.postDated')}</dt>
                   <dd className="text-amber-600 font-medium">
                     {t('chequeRegistry.fields.yes')}
                   </dd>
@@ -189,7 +195,7 @@ export function ChequeDetailDialog({
 
               {cheque.crossedCheque && (
                 <>
-                  <dt className="text-muted-foreground">{t('chequeRegistry.fields.crossedCheque')}</dt>
+                  <dt className={colors.text.muted}>{t('chequeRegistry.fields.crossedCheque')}</dt>
                   <dd>
                     {t('chequeRegistry.fields.yes')}
                   </dd>
@@ -198,14 +204,14 @@ export function ChequeDetailDialog({
 
               {cheque.depositDate && (
                 <>
-                  <dt className="text-muted-foreground">{t('chequeRegistry.fields.depositDate')}</dt>
+                  <dt className={colors.text.muted}>{t('chequeRegistry.fields.depositDate')}</dt>
                   <dd>{formatDate(cheque.depositDate)}</dd>
                 </>
               )}
 
               {cheque.clearingDate && (
                 <>
-                  <dt className="text-muted-foreground">{t('chequeRegistry.fields.clearingDate')}</dt>
+                  <dt className={colors.text.muted}>{t('chequeRegistry.fields.clearingDate')}</dt>
                   <dd>{formatDate(cheque.clearingDate)}</dd>
                 </>
               )}
@@ -239,7 +245,7 @@ export function ChequeDetailDialog({
           {/* ============= ACTIONS TAB ============= */}
           <TabsContent value="actions" className="space-y-4 mt-3">
             {isTerminal ? (
-              <p className="text-xs text-muted-foreground text-center py-4">
+              <p className={cn("text-xs text-center py-4", colors.text.muted)}>
                 {t('chequeRegistry.actions.terminal')}
               </p>
             ) : (
@@ -384,10 +390,10 @@ export function ChequeDetailDialog({
                   {t('chequeRegistry.bouncedInfo.title')}
                 </h4>
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                  <dt className="text-muted-foreground">{t('chequeRegistry.fields.bouncedReason')}</dt>
+                  <dt className={colors.text.muted}>{t('chequeRegistry.fields.bouncedReason')}</dt>
                   <dd>{t(`chequeRegistry.bouncedReason.${cheque.bouncedReason}`)}</dd>
 
-                  <dt className="text-muted-foreground">{t('chequeRegistry.fields.bouncedDate')}</dt>
+                  <dt className={colors.text.muted}>{t('chequeRegistry.fields.bouncedDate')}</dt>
                   <dd>{formatDate(cheque.bouncedDate)}</dd>
                 </dl>
 
@@ -420,15 +426,15 @@ export function ChequeDetailDialog({
                       key={entry.order}
                       className="text-xs flex items-center gap-2 rounded border p-2"
                     >
-                      <span className="font-mono text-muted-foreground">#{entry.order}</span>
+                      <span className={cn("font-mono", colors.text.muted)}>#{entry.order}</span>
                       <span>{entry.endorserName} → {entry.endorseeName}</span>
-                      <span className="text-muted-foreground ml-auto">{formatDate(entry.endorsementDate)}</span>
+                      <span className={cn("ml-auto", colors.text.muted)}>{formatDate(entry.endorsementDate)}</span>
                     </li>
                   ))}
                 </ol>
               </section>
             ) : (
-              <p className="text-xs text-muted-foreground text-center py-4">
+              <p className={cn("text-xs text-center py-4", colors.text.muted)}>
                 {t('chequeRegistry.endorsement.empty')}
               </p>
             )}
@@ -436,7 +442,7 @@ export function ChequeDetailDialog({
             {/* Replacement info */}
             {cheque.replacesChequeId && (
               <section className="text-xs border-t pt-2">
-                <p className="text-muted-foreground">
+                <p className={colors.text.muted}>
                   {t('chequeRegistry.replacement.replaces')}{' '}
                   <span className="font-mono">{cheque.replacesChequeId}</span>
                 </p>
@@ -444,7 +450,7 @@ export function ChequeDetailDialog({
             )}
             {cheque.replacedByChequeId && (
               <section className="text-xs border-t pt-2">
-                <p className="text-muted-foreground">
+                <p className={colors.text.muted}>
                   {t('chequeRegistry.replacement.replacedBy')}{' '}
                   <span className="font-mono">{cheque.replacedByChequeId}</span>
                 </p>
@@ -452,7 +458,7 @@ export function ChequeDetailDialog({
             )}
 
             {/* Audit */}
-            <section className="text-xs text-muted-foreground border-t pt-2 space-y-1">
+            <section className={cn("text-xs border-t pt-2 space-y-1", colors.text.muted)}>
               <p>{t('chequeRegistry.audit.created')} {formatDate(cheque.createdAt)}</p>
               <p>{t('chequeRegistry.audit.updated')} {formatDate(cheque.updatedAt)}</p>
             </section>

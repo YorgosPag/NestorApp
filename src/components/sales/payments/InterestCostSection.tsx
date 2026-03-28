@@ -9,7 +9,7 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Calculator, RefreshCw, TrendingDown, ChevronRight } from 'lucide-react';
+import { Calculator, TrendingDown, ChevronRight } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useInterestCalculator } from '@/hooks/useInterestCalculator';
 import { InterestCostDialog } from '@/components/sales/payments/InterestCostDialog';
@@ -17,6 +17,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { Installment } from '@/types/payment-plan';
 import type { CostCalculationInput } from '@/types/interest-calculator';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
 // TYPES
@@ -53,6 +56,7 @@ export function InterestCostSection({
   planInstallments,
   salePrice,
 }: InterestCostSectionProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('payments');
   const {
     rates,
@@ -110,7 +114,7 @@ export function InterestCostSection({
         {/* Header */}
         <header className="flex items-center justify-between">
           <span className="flex items-center gap-2">
-            <Calculator className="h-4 w-4 text-muted-foreground" />
+            <Calculator className={cn("h-4 w-4", colors.text.muted)} />
             <h3 className="text-sm font-semibold">
               {t('costCalculator.title')}
             </h3>
@@ -123,7 +127,7 @@ export function InterestCostSection({
         </header>
 
         {/* Rate info */}
-        <article className="flex items-center gap-2 text-xs text-muted-foreground">
+        <article className={cn("flex items-center gap-2 text-xs", colors.text.muted)}>
           <span>{euriborLabel}</span>
           {rates && spreads && (
             <>
@@ -141,11 +145,11 @@ export function InterestCostSection({
         {result && (
           <article className="grid grid-cols-3 gap-2 text-center">
             <figure className="rounded-md bg-muted/50 p-2">
-              <figcaption className="text-[10px] text-muted-foreground">{t('costCalculator.cashFlow.npv')}</figcaption>
+              <figcaption className={cn("text-[10px]", colors.text.muted)}>{t('costCalculator.cashFlow.npv')}</figcaption>
               <p className="text-sm font-semibold">{formatCurrency(result.npv)}</p>
             </figure>
             <figure className="rounded-md bg-muted/50 p-2">
-              <figcaption className="text-[10px] text-muted-foreground flex items-center justify-center gap-1">
+              <figcaption className={cn("text-[10px] flex items-center justify-center gap-1", colors.text.muted)}>
                 <TrendingDown className="h-3 w-3" />
                 {t('costCalculator.timeCost')}
               </figcaption>
@@ -154,7 +158,7 @@ export function InterestCostSection({
               </p>
             </figure>
             <figure className="rounded-md bg-muted/50 p-2">
-              <figcaption className="text-[10px] text-muted-foreground">
+              <figcaption className={cn("text-[10px]", colors.text.muted)}>
                 {t('costCalculator.recommended')}
               </figcaption>
               <p className="text-sm font-semibold text-emerald-600">

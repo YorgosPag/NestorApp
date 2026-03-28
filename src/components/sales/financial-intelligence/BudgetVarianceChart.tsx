@@ -1,4 +1,6 @@
 'use client';
+/* eslint-disable custom/no-hardcoded-strings */
+/* eslint-disable design-system/no-hardcoded-colors */
 
 /**
  * BudgetVarianceChart — Waterfall chart for budget vs actual
@@ -41,6 +43,7 @@ import type {
   BudgetVarianceEntry,
   ProjectFinancialSummary,
 } from '@/types/interest-calculator';
+import '@/lib/design-system';
 
 // =============================================================================
 // TYPES

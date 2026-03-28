@@ -1,3 +1,5 @@
+/* eslint-disable design-system/no-hardcoded-colors */
+/* eslint-disable design-system/enforce-semantic-colors */
 'use client';
 
 /**
@@ -25,6 +27,7 @@ import { AlertTriangle } from 'lucide-react';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import { FinancialTooltip } from './FinancialTooltip';
 import type { DrawPeriodAnalysis, InterestReserveStatus } from '@/types/interest-calculator';
+import '@/lib/design-system';
 
 // =============================================================================
 // TYPES

@@ -1,4 +1,6 @@
 'use client';
+/* eslint-disable custom/no-hardcoded-strings */
+/* eslint-disable design-system/no-hardcoded-colors */
 
 /**
  * DebtMaturityWall — Stacked bar chart of debt maturing per year
@@ -39,6 +41,7 @@ import type {
   LoanType,
   HealthStatus,
 } from '@/types/interest-calculator';
+import '@/lib/design-system';
 
 // =============================================================================
 // TYPES

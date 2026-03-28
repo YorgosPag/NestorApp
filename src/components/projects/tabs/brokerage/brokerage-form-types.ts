@@ -1,0 +1,51 @@
+/**
+ * =============================================================================
+ * Brokerage Form Types — Inline form state & unit lookup
+ * =============================================================================
+ *
+ * @module components/projects/tabs/brokerage/brokerage-form-types
+ * @enterprise ADR-230 / SPEC-230B
+ */
+
+import type { ExclusivityType, CommissionType } from '@/types/brokerage';
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
+export interface InlineFormState {
+  agentContactId: string;
+  agentName: string;
+  scope: 'project' | 'unit';
+  unitId: string;
+  exclusivity: ExclusivityType;
+  commissionType: CommissionType;
+  commissionPercentage: string;
+  commissionFixedAmount: string;
+  startDate: string;
+  endDate: string;
+  notes: string;
+}
+
+export interface UnitSummary {
+  id: string;
+  name: string;
+}
+
+// =============================================================================
+// DEFAULTS
+// =============================================================================
+
+export const EMPTY_FORM: InlineFormState = {
+  agentContactId: '',
+  agentName: '',
+  scope: 'project',
+  unitId: '',
+  exclusivity: 'non_exclusive',
+  commissionType: 'percentage',
+  commissionPercentage: '',
+  commissionFixedAmount: '',
+  startDate: new Date().toISOString().split('T')[0],
+  endDate: '',
+  notes: '',
+};

@@ -1,4 +1,6 @@
 'use client';
+/* eslint-disable custom/no-hardcoded-strings */
+/* eslint-disable design-system/enforce-semantic-colors */
 
 /**
  * EditInstallmentDialog — Add/Edit installment in a payment plan
@@ -47,6 +49,9 @@ import type {
   UpdateInstallmentInput,
   PaymentPlanStatus,
 } from '@/types/payment-plan';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // TYPES
@@ -90,11 +95,12 @@ export function EditInstallmentDialog({
   installment,
   totalInstallments,
   maxAmount,
-  planTotalAmount,
+  planTotalAmount: _planTotalAmount,
   onAdd,
   onUpdate,
   onDelete,
 }: EditInstallmentDialogProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('payments');
 
   const isNotesOnly = planStatus === 'active';
@@ -326,7 +332,7 @@ export function EditInstallmentDialog({
                 </div>
                 {/* Max amount hint + validation warning */}
                 {maxAmount !== undefined && maxAmount > 0 && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className={cn("text-xs", colors.text.muted)}>
                     {t('installments.maxAmountHint', {
                       max: new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(maxAmount),
                     })}

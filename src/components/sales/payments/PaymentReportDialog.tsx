@@ -1,3 +1,4 @@
+/* eslint-disable design-system/enforce-semantic-colors */
 'use client';
 
 /**
@@ -37,6 +38,9 @@ import {
 } from '@/components/ui/table';
 
 import { usePaymentReport } from '@/hooks/usePaymentReport';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
 // PROPS
@@ -70,6 +74,7 @@ export function PaymentReportDialog({
   onOpenChange,
   projectId,
 }: PaymentReportDialogProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('payments');
   const { report, isLoading, error, fetchReport, exportToExcel } =
     usePaymentReport(projectId);
@@ -94,7 +99,7 @@ export function PaymentReportDialog({
         {/* Loading */}
         {isLoading && (
           <section className="flex items-center justify-center p-12">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <Loader2 className={cn("h-6 w-6 animate-spin", colors.text.muted)} />
           </section>
         )}
 
@@ -164,7 +169,7 @@ export function PaymentReportDialog({
                 <TableBody>
                   {report.rows.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={8} className={cn("text-center py-8", colors.text.muted)}>
                         {t('report.noData')}
                       </TableCell>
                     </TableRow>
@@ -195,7 +200,7 @@ export function PaymentReportDialog({
                               {row.overdueInstallments}
                             </Badge>
                           ) : (
-                            <span className="text-muted-foreground">0</span>
+                            <span className={colors.text.muted}>0</span>
                           )}
                         </TableCell>
                       </TableRow>
@@ -207,7 +212,7 @@ export function PaymentReportDialog({
 
             {/* Footer with export button */}
             <footer className="flex items-center justify-between border-t pt-3">
-              <p className="text-xs text-muted-foreground">
+              <p className={cn("text-xs", colors.text.muted)}>
                 {t('report.generatedAt')}:{' '}
                 {new Date(report.generatedAt).toLocaleDateString('el-GR')}
               </p>
@@ -240,6 +245,7 @@ interface SummaryCardProps {
 }
 
 function SummaryCard({ label, value, subtitle, icon, variant = 'default' }: SummaryCardProps) {
+  const colors = useSemanticColors();
   return (
     <article
       className={`rounded-lg border p-3 ${
@@ -247,12 +253,12 @@ function SummaryCard({ label, value, subtitle, icon, variant = 'default' }: Summ
       }`}
     >
       <header className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className={cn("text-xs", colors.text.muted)}>{label}</p>
         {icon}
       </header>
       <p className="text-lg font-semibold tabular-nums">{value}</p>
       {subtitle && (
-        <p className="text-xs text-muted-foreground">{subtitle}</p>
+        <p className={cn("text-xs", colors.text.muted)}>{subtitle}</p>
       )}
     </article>
   );

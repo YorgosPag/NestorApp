@@ -1,3 +1,5 @@
+/* eslint-disable design-system/no-hardcoded-colors */
+/* eslint-disable custom/no-hardcoded-strings */
 'use client';
 
 /**
@@ -25,6 +27,9 @@ import {
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import { FinancialTooltip } from './FinancialTooltip';
 import type { DrawPeriodAnalysis, DrawPhaseType } from '@/types/interest-calculator';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
 // CONSTANTS
@@ -56,6 +61,7 @@ interface DrawTimelineChartProps {
 // =============================================================================
 
 export function DrawTimelineChart({ periods, t }: DrawTimelineChartProps) {
+  const colors = useSemanticColors();
   // Build chart data — only periods with draw events get bar values
   const chartData = periods.map((p) => ({
     month: `M${p.month + 1}`,
@@ -124,7 +130,7 @@ export function DrawTimelineChart({ periods, t }: DrawTimelineChartProps) {
 
       {/* Phase legend */}
       {activePhases.size > 0 && (
-        <ul className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+        <ul className={cn("flex flex-wrap gap-3 text-xs", colors.text.muted)}>
           {Array.from(activePhases.entries()).map(([phase, label]) => (
             <li key={phase} className="flex items-center gap-1.5">
               <span

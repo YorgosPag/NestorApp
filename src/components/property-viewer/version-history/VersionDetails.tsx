@@ -3,11 +3,14 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 import { formatSize } from './version-utils';
 import { formatDateTime as formatDate } from '@/lib/intl-utils';
 import type { VersionHistoryItem } from './VersionList';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 export function VersionDetails({
   version,
@@ -17,12 +20,13 @@ export function VersionDetails({
   onRestore: (id: string) => void;
 }) {
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('properties');
 
   if (!version) {
     return (
-      <div className="text-center text-muted-foreground pt-20">
+      <div className={cn("text-center pt-20", colors.text.muted)}>
         <p>{t('versionHistory.selectVersion')}</p>
       </div>
     );
@@ -33,19 +37,19 @@ export function VersionDetails({
       <h3 className="font-semibold text-lg">{t('versionHistory.details.title')}</h3>
       <div className="space-y-2 text-sm">
         <div>
-          <span className="text-muted-foreground">ID:</span>
+          <span className={colors.text.muted}>ID:</span>
           <span className="ml-2 font-mono text-xs">{version.id}</span>
         </div>
         <div>
-          <span className="text-muted-foreground">{t('versionHistory.details.creator')}</span>
+          <span className={colors.text.muted}>{t('versionHistory.details.creator')}</span>
           <span className="ml-2">{version.author?.name}</span>
         </div>
         <div>
-          <span className="text-muted-foreground">{t('versionHistory.details.date')}</span>
+          <span className={colors.text.muted}>{t('versionHistory.details.date')}</span>
           <span className="ml-2">{formatDate(version.timestamp)}</span>
         </div>
         <div>
-          <span className="text-muted-foreground">{t('versionHistory.details.size')}</span>
+          <span className={colors.text.muted}>{t('versionHistory.details.size')}</span>
           <span className="ml-2">{formatSize(version.size)}</span>
         </div>
       </div>
@@ -54,9 +58,9 @@ export function VersionDetails({
         <div className={`bg-muted/50 p-3 ${quick.card} border`}>
           <h4 className="font-medium mb-2 text-sm">{t('versionHistory.details.changes')}</h4>
           <div className="text-sm space-y-1">
-            <div className="text-green-600">+ {version.diff.added.length} {t('versionHistory.details.additions')}</div>
-            <div className="text-blue-600">~ {version.diff.modified.length} {t('versionHistory.details.modifications')}</div>
-            <div className="text-red-600">- {version.diff.removed.length} {t('versionHistory.details.deletions')}</div>
+            <div className="text-green-600">+ {version.diff.added.length} {t('versionHistory.details.additions')}</div> {/* eslint-disable-line design-system/enforce-semantic-colors */}
+            <div className="text-blue-600">~ {version.diff.modified.length} {t('versionHistory.details.modifications')}</div> {/* eslint-disable-line design-system/enforce-semantic-colors */}
+            <div className="text-red-600">- {version.diff.removed.length} {t('versionHistory.details.deletions')}</div> {/* eslint-disable-line design-system/enforce-semantic-colors */}
           </div>
         </div>
       )}

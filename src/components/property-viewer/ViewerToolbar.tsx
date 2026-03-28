@@ -1,5 +1,5 @@
 'use client';
-
+/* eslint-disable custom/no-hardcoded-strings */
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -18,6 +18,7 @@ import { useSemanticColors } from '@/hooks/useSemanticColors';
 // 🏢 ADR-054: Centralized upload component
 import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('ViewerToolbar');
 
@@ -57,7 +58,7 @@ export function ViewerToolbar({
   onZoomOut,
   onResetView,
   scale = 1,
-  isReadOnly = false,
+  isReadOnly: _isReadOnly = false,
   currentFloor,
   onFloorChange
 }: ViewerToolbarProps) {

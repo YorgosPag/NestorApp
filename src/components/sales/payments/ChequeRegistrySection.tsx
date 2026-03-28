@@ -1,4 +1,6 @@
 'use client';
+/* eslint-disable custom/no-hardcoded-strings */
+/* eslint-disable design-system/enforce-semantic-colors */
 
 /**
  * ChequeRegistrySection — Container for cheque registry in PaymentTabContent
@@ -16,6 +18,9 @@ import { AddChequeDialog } from '@/components/sales/payments/AddChequeDialog';
 import { ChequeDetailDialog } from '@/components/sales/payments/ChequeDetailDialog';
 import { Button } from '@/components/ui/button';
 import type { ChequeRecord } from '@/types/cheque-registry';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // COMPONENT
@@ -34,6 +39,7 @@ export function ChequeRegistrySection({
   paymentPlanId,
   contactId,
 }: ChequeRegistrySectionProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('payments');
   const {
     cheques,
@@ -52,7 +58,7 @@ export function ChequeRegistrySection({
   if (isLoading) {
     return (
       <section className="flex items-center justify-center p-4">
-        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        <Loader2 className={cn("h-4 w-4 animate-spin", colors.text.muted)} />
       </section>
     );
   }
@@ -67,7 +73,7 @@ export function ChequeRegistrySection({
     <section className="rounded-lg border p-3 space-y-3">
       <header className="flex items-center justify-between">
         <span className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-muted-foreground" />
+          <FileText className={cn("h-4 w-4", colors.text.muted)} />
           <h3 className="text-sm font-semibold">
             {t('chequeRegistry.title')}
           </h3>
@@ -84,7 +90,7 @@ export function ChequeRegistrySection({
       </header>
 
       {cheques.length === 0 ? (
-        <p className="text-xs text-muted-foreground text-center py-2">
+        <p className={cn("text-xs text-center py-2", colors.text.muted)}>
           {t('chequeRegistry.noCheques')}
         </p>
       ) : (

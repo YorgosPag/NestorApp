@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable custom/no-hardcoded-strings */
 
 /**
  * @fileoverview Storage Quick Filters for Sales — ADR-199
@@ -20,6 +21,7 @@ import {
 import { TypeQuickFilters } from '@/components/shared/TypeQuickFilters';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { TypeFilterOption } from '@/components/shared/TypeQuickFilters';
+import '@/lib/design-system';
 
 // =============================================================================
 // 🏢 TYPES

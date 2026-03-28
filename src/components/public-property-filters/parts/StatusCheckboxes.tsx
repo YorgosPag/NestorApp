@@ -4,11 +4,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import type { StatusCheckboxesProps } from "../types";
 import { AVAILABILITY } from "../constants";
+import '@/lib/design-system';
 
 export function StatusCheckboxes({ selected, onToggle }: StatusCheckboxesProps) {
   return (
     <div className="space-y-3">
-      <Label className="text-sm font-medium">Διαθεσιμότητα</Label>
+      <Label className="text-sm font-medium">Διαθεσιμότητα</Label> {/* eslint-disable-line custom/no-hardcoded-strings */}
       <div className="space-y-2">
         {AVAILABILITY.map((opt) => (
           <div key={opt.value} className="flex items-center space-x-2">

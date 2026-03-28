@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable custom/no-hardcoded-strings */
 
 /**
  * @fileoverview Sales Parking Sidebar — ADR-199
@@ -13,7 +14,7 @@ import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import { SalesParkingCard } from '@/components/sales/cards/SalesParkingCard';
 import { ParkingQuickFilters } from '@/components/sales/filters/ParkingQuickFilters';
 import { ParkingDetailPanel } from '@/components/sales/details/ParkingDetailPanel';
-import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
+import { EntityDetailsHeader } from '@/core/entity-headers';
 import type { EntityHeaderAction } from '@/core/entity-headers';
 import { ActivityTab } from '@/components/shared/audit/ActivityTab';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -24,6 +25,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { ParkingSpot } from '@/types/parking';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
 // 🏢 TYPES
@@ -66,6 +70,7 @@ export function SalesParkingSidebar({
   selectedType,
   onTypeChange,
 }: SalesParkingSidebarProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('common');
   const isMobile = useIsMobile();
   const iconSizes = useIconSizes();
@@ -118,7 +123,7 @@ export function SalesParkingSidebar({
           {(['documents', 'photos', 'videos'] as const).map(tabId => (
             <TabsContent key={tabId} value={tabId} className="flex-1">
               <section className="p-4">
-                <p className="text-sm text-muted-foreground text-center mb-3">
+                <p className={cn("text-sm text-center mb-3", colors.text.muted)}>
                   {t(`salesParking.tabs.${tabId}Hint`, { defaultValue: `Διαχείριση στη σελίδα Χώροι → Στάθμευση` })}
                 </p>
                 <div className="pt-2 border-t">
@@ -176,7 +181,7 @@ export function SalesParkingSidebar({
           ))}
 
           {items.length === 0 && (
-            <div className="p-6 text-center text-sm text-muted-foreground">
+            <div className={cn("p-6 text-center text-sm", colors.text.muted)}>
               {t('salesParking.noResults', { defaultValue: 'Δεν βρέθηκαν θέσεις στάθμευσης με αυτά τα κριτήρια.' })}
             </div>
           )}

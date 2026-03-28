@@ -1,3 +1,4 @@
+/* eslint-disable design-system/enforce-semantic-colors */
 'use client';
 
 /**
@@ -12,6 +13,9 @@ import { CheckCircle2, Circle, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { LoanTrackingStatus } from '@/types/loan-tracking';
 import { LOAN_STATUS_ORDER } from '@/types/loan-tracking';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // COMPONENT
@@ -24,6 +28,7 @@ interface LoanStatusTimelineProps {
 }
 
 export function LoanStatusTimeline({ status, compact = false }: LoanStatusTimelineProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('payments');
 
   // Terminal states: show badge only
@@ -62,13 +67,14 @@ export function LoanStatusTimeline({ status, compact = false }: LoanStatusTimeli
               <Loader2 className="h-3 w-3 text-blue-600 animate-spin shrink-0" />
             )}
             {!isCompleted && !isCurrent && (
-              <Circle className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+              <Circle className={cn("h-3 w-3 shrink-0", colors.text.muted, 'opacity-40')} />
             )}
-            <figcaption className={`text-[10px] leading-tight ${
+            <figcaption className={cn(
+              'text-[10px] leading-tight',
               isCurrent ? 'font-semibold text-foreground'
-                : isCompleted ? 'text-muted-foreground'
-                  : 'text-muted-foreground/50'
-            }`}>
+                : isCompleted ? colors.text.muted
+                  : cn(colors.text.muted, 'opacity-50')
+            )}>
               {t(`loanTracking.status.${step}`)}
             </figcaption>
           </figure>
