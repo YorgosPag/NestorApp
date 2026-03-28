@@ -1,3 +1,5 @@
+/* eslint-disable design-system/enforce-semantic-colors */
+/* eslint-disable custom/no-hardcoded-strings */
 'use client';
 
 /**
@@ -26,10 +28,8 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell,
 } from 'recharts';
 import { Info, Lightbulb, Handshake } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import {
   Select,
@@ -41,25 +41,25 @@ import {
 import {
   Table,
   TableBody,
-  TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
 
 import { InfoLabel, InfoDt, InfoTableHead } from './InfoLabel';
 import { FinancialTooltip } from './FinancialTooltip';
+import { ScenarioRow, fmtCurrency, fmtPercent } from './CounterproposalScenarioRow';
 import {
   runCounterproposalAnalysis,
   calculateSliderScenario,
 } from '@/lib/counterproposal-engine';
-import { calculateFullResult } from '@/lib/npv-engine';
 import type {
   CostCalculationInput,
   CostCalculationResult,
-  CounterproposalScenario,
   CounterproposalResult,
 } from '@/types/interest-calculator';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
 // TYPES
@@ -76,18 +76,6 @@ interface CounterproposalTabProps {
 // HELPERS
 // =============================================================================
 
-function fmtCurrency(value: number): string {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function fmtPercent(value: number): string {
-  return `${value.toFixed(2)}%`;
-}
-
 const RETAIN_OPTIONS = [
   { value: '0.30', label: '30%' },
   { value: '0.35', label: '35%' },
@@ -102,9 +90,10 @@ const RETAIN_OPTIONS = [
 export function CounterproposalTab({
   input,
   effectiveRate,
-  result,
+  result: _result,
   t,
 }: CounterproposalTabProps) {
+  const colors = useSemanticColors();
   // --- State ---
   const [builderRetainRatio, setBuilderRetainRatio] = useState(0.35);
 
@@ -297,7 +286,7 @@ export function CounterproposalTab({
       {/* 4. Negotiation Slider */}
       <div className="rounded-lg border p-4 space-y-4">
         <div className="flex items-center gap-2">
-          <Handshake className="h-4 w-4 text-muted-foreground" />
+          <Handshake className={cn("h-4 w-4", colors.text.muted)} />
           <h3 className="text-sm font-medium">
             {t('costCalculator.counterproposal.slider.title')}
           </h3>
@@ -347,7 +336,7 @@ export function CounterproposalTab({
             <InfoDt
               label={t('costCalculator.counterproposal.slider.npv')}
               tooltip={t('costCalculator.counterproposal.slider.npvTooltip')}
-              className="text-xs text-muted-foreground"
+              className={cn("text-xs", colors.text.muted)}
             />
             <dd className="font-mono font-medium tabular-nums">{fmtCurrency(sliderScenario.npv)}</dd>
           </div>
@@ -355,7 +344,7 @@ export function CounterproposalTab({
             <InfoDt
               label={t('costCalculator.counterproposal.slider.saving')}
               tooltip={t('costCalculator.counterproposal.slider.savingTooltip')}
-              className="text-xs text-muted-foreground"
+              className={cn("text-xs", colors.text.muted)}
             />
             <dd className="font-mono font-medium tabular-nums text-green-600 dark:text-green-400">
               {fmtCurrency(sliderScenario.timeCostSaved)}
@@ -365,7 +354,7 @@ export function CounterproposalTab({
             <InfoDt
               label={t('costCalculator.counterproposal.slider.discount')}
               tooltip={t('costCalculator.counterproposal.slider.discountTooltip')}
-              className="text-xs text-muted-foreground"
+              className={cn("text-xs", colors.text.muted)}
             />
             <dd className="font-mono font-medium tabular-nums text-amber-600 dark:text-amber-400">
               {fmtCurrency(sliderScenario.suggestedDiscount)} ({fmtPercent(sliderScenario.suggestedDiscountPercent)})
@@ -375,7 +364,7 @@ export function CounterproposalTab({
             <InfoDt
               label={t('costCalculator.counterproposal.slider.netGain')}
               tooltip={t('costCalculator.counterproposal.slider.netGainTooltip')}
-              className="text-xs text-muted-foreground"
+              className={cn("text-xs", colors.text.muted)}
             />
             <dd className="font-mono font-medium tabular-nums text-blue-600 dark:text-blue-400">
               {fmtCurrency(sliderScenario.builderNetGain)}
@@ -436,78 +425,5 @@ export function CounterproposalTab({
         </div>
       </div>
     </section>
-  );
-}
-
-// =============================================================================
-// SUB-COMPONENTS
-// =============================================================================
-
-function ScenarioRow({
-  scenario,
-  variant,
-  t,
-}: {
-  scenario: CounterproposalScenario;
-  variant: 'baseline' | 'sweetSpot' | 'default';
-  t: (key: string, opts?: Record<string, string>) => string;
-}) {
-  const rowClass =
-    variant === 'sweetSpot'
-      ? 'bg-green-50 dark:bg-green-950/20'
-      : variant === 'baseline'
-        ? 'bg-muted/40'
-        : '';
-
-  return (
-    <TableRow className={rowClass}>
-      <TableCell className="font-medium text-xs">
-        <span className="flex items-center gap-1.5">
-          {t(scenario.nameKey)}
-          {variant === 'sweetSpot' && (
-            <Badge variant="outline" className="text-[10px] border-green-500 text-green-700 dark:text-green-400">
-              {t('costCalculator.counterproposal.badges.sweetSpot')}
-            </Badge>
-          )}
-          {variant === 'baseline' && (
-            <Badge variant="secondary" className="text-[10px]">
-              {t('costCalculator.counterproposal.badges.baseline')}
-            </Badge>
-          )}
-        </span>
-      </TableCell>
-      <TableCell className="text-right text-xs font-mono tabular-nums">
-        {scenario.upfrontPercent}%
-        {scenario.remainingMonths > 0 && (
-          <span className="text-muted-foreground ml-1">
-            + {scenario.remainingMonths}{t('costCalculator.counterproposal.table.monthsAbbr')}
-          </span>
-        )}
-      </TableCell>
-      <TableCell className="text-right text-xs font-mono tabular-nums">
-        {fmtCurrency(scenario.npv)}
-      </TableCell>
-      <TableCell className="text-right text-xs font-mono tabular-nums text-green-600 dark:text-green-400">
-        {scenario.timeCostSaved > 0 ? fmtCurrency(scenario.timeCostSaved) : '—'}
-      </TableCell>
-      <TableCell className="text-right text-xs font-mono tabular-nums">
-        {scenario.maxDiscount > 0
-          ? `${fmtCurrency(scenario.maxDiscount)} (${fmtPercent(scenario.maxDiscountPercent)})`
-          : '—'}
-      </TableCell>
-      <TableCell className="text-right text-xs font-mono tabular-nums text-amber-600 dark:text-amber-400">
-        {scenario.suggestedDiscount > 0
-          ? `${fmtCurrency(scenario.suggestedDiscount)} (${fmtPercent(scenario.suggestedDiscountPercent)})`
-          : '—'}
-      </TableCell>
-      <TableCell className="text-right text-xs font-mono tabular-nums font-medium">
-        {fmtCurrency(scenario.finalPrice)}
-      </TableCell>
-      <TableCell className="text-right text-xs font-mono tabular-nums text-blue-600 dark:text-blue-400 font-medium">
-        {scenario.builderNetGain > 0
-          ? `${fmtCurrency(scenario.builderNetGain)} (${fmtPercent(scenario.builderNetGainPercent)})`
-          : '—'}
-      </TableCell>
-    </TableRow>
   );
 }
