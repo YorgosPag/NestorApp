@@ -15,6 +15,7 @@ import '@/lib/design-system';
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useTypography } from '@/hooks/useTypography';
 import { RefreshCw, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
