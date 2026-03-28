@@ -90,6 +90,7 @@ if (typeof window !== 'undefined') {
       'accounting',    // 🏢 Accounting subapp - invoices, journal, VAT, tax, assets
       'obligations',   // 🏢 Obligations workspace translations
       'reports',       // 🏢 Enterprise Reports System (ADR-265)
+      'procurement',   // 🏢 Procurement module (ADR-267)
     ];
 
     const saved = safeGetItem(STORAGE_KEYS.PREFERRED_LANGUAGE, '');

@@ -209,6 +209,7 @@
   "sidebar": {
     "spaces": "Spaces",
     "sales": "Sales",
+    "procurement": "Procurement",
     "accounting": "Accounting",
     "users": "Users",
     "debug": "Debug",

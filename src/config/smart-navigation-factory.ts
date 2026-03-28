@@ -65,6 +65,7 @@ import {
   ClipboardCheck,
   BarChart3,
   PieChart,
+  ShoppingCart,
 } from "lucide-react";
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -82,6 +83,7 @@ const NAVIGATION_LABELS = {
   spaces: 'sidebar.spaces',
   sales: 'sidebar.sales',
   crm: 'pages.crm',
+  procurement: 'sidebar.procurement',
   accounting: 'sidebar.accounting',
 
   // Settings & Tools
@@ -425,6 +427,16 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
                 href: '/spaces/common'
               }
             ]
+          },
+          {
+            icon: ShoppingCart,
+            href: "/procurement",
+            badge: null,
+            smartConfig: {
+              priority: 'medium',
+              displayOrder: 55,
+              analyticsKey: 'nav_procurement'
+            }
           },
           {
             icon: DollarSign,
