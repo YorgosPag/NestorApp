@@ -17,6 +17,9 @@ import { Video } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Unit } from '@/types/unit';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 const logger = createModuleLogger('SalesVideosTab');
 
@@ -33,6 +36,7 @@ interface SalesVideosTabProps {
 // =============================================================================
 
 export function SalesVideosTab({ unit }: SalesVideosTabProps) {
+  const colors = useSemanticColors();
   const { user } = useAuth();
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
@@ -68,7 +72,7 @@ export function SalesVideosTab({ unit }: SalesVideosTabProps) {
 
   if (!companyId || !currentUserId) {
     return (
-      <section className="flex flex-col items-center justify-center gap-2 p-6 text-center text-muted-foreground">
+      <section className={cn("flex flex-col items-center justify-center gap-2 p-6 text-center", colors.text.muted)}>
         <Video className={`${iconSizes.xl} opacity-50`} />
         <p className="text-sm">
           {t('sales.tabs.videosNoAuth', { defaultValue: 'Απαιτείται σύνδεση για να δείτε τα βίντεο.' })}

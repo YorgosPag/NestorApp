@@ -15,6 +15,7 @@
  */
 
 import React from 'react';
+import { cn } from '@/lib/utils';
 import { Plus, MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { AddressCard } from './AddressCard';
 import type { ProjectAddress } from '@/types/project/addresses';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // =============================================================================
 // COMPONENT PROPS
@@ -70,6 +73,7 @@ export function AddressListCard({
 }: AddressListCardProps) {
   const { t } = useTranslation('addresses');
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const sortedAddresses = sortAddresses(addresses);
 
   return (
@@ -97,8 +101,8 @@ export function AddressListCard({
         {/* Empty state */}
         {sortedAddresses.length === 0 && (
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <MapPin className={`${iconSizes.lg} text-muted-foreground mb-3`} />
-            <p className="text-sm text-muted-foreground mb-1">
+            <MapPin className={cn(iconSizes.lg, colors.text.muted, "mb-3")} />
+            <p className={cn("text-sm mb-1", colors.text.muted)}>
               {t('list.empty')}
             </p>
             {onAddAddress && (
@@ -126,7 +130,7 @@ export function AddressListCard({
         {/* Address count */}
         {sortedAddresses.length > 0 && (
           <div className="pt-2 border-t border-border">
-            <p className="text-xs text-muted-foreground text-center">
+            <p className={cn("text-xs text-center", colors.text.muted)}>
               {t('list.total', { count: sortedAddresses.length })}
             </p>
           </div>

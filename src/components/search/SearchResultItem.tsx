@@ -20,6 +20,7 @@ import { FileText } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTypography } from '@/hooks/useTypography';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 
 // 🏢 ENTERPRISE: Centralized ListCard from Design System
@@ -33,6 +34,7 @@ import { NAVIGATION_ENTITIES, type NavigationEntityType } from '@/components/nav
 // 🏢 DOMAIN TYPES
 import type { SearchResult, SearchEntityType } from '@/types/search';
 import { SEARCH_ENTITY_TYPES } from '@/types/search';
+import '@/lib/design-system';
 
 // =============================================================================
 // TYPES
@@ -255,12 +257,13 @@ export function SearchResultGroup({
   const { t } = useTranslation('common');
   const spacing = useSpacingTokens();
   const typography = useTypography();
+  const colors = useSemanticColors();
 
   // 🏢 ENTERPRISE: Get icon and color from centralized NAVIGATION_ENTITIES
   const navigationEntityType = SEARCH_TO_NAVIGATION_ENTITY[entityType];
   const entityConfig = NAVIGATION_ENTITIES[navigationEntityType];
   const IconComponent = entityConfig?.icon || FileText;
-  const iconColor = entityConfig?.color || 'text-muted-foreground';
+  const iconColor = entityConfig?.color || colors.text.muted;
 
   const entityLabelKey = ENTITY_LABEL_KEYS[entityType];
   const label = t(entityLabelKey, ENTITY_LABELS[entityType] ?? entityLabelKey);
@@ -273,7 +276,7 @@ export function SearchResultGroup({
         spacing.gap.sm,
         'px-3 py-1.5',
         typography.label.xs,
-        'text-muted-foreground'
+        colors.text.muted
       )}>
         <IconComponent className={cn('h-3.5 w-3.5', iconColor)} aria-hidden="true" />
         <span>{label}</span>

@@ -106,7 +106,7 @@ export function useFileUpload({
     const currentUser = auth.currentUser;
     if (!currentUser) {
       logger.error('AUTH_GATE_FAILED', { reason: 'No authenticated user' });
-      showError(t('upload.errors.notAuthenticated') || 'Πρέπει να είστε συνδεδεμένος για να ανεβάσετε αρχεία');
+      showError(t('upload.errors.notAuthenticated'));
       return;
     }
 
@@ -119,7 +119,7 @@ export function useFileUpload({
       });
     } catch (authError) {
       logger.error('AUTH_TOKEN_REFRESH_FAILED', { error: String(authError) });
-      showError(t('upload.errors.authFailed') || 'Σφάλμα επαλήθευσης ταυτότητας. Παρακαλώ ξανασυνδεθείτε.');
+      showError(t('upload.errors.authFailed'));
       return;
     }
 
@@ -211,7 +211,7 @@ export function useFileUpload({
           }
 
           successCount++;
-          recordFileActivity('created', 'file_upload', null, displayName ?? file.name, 'Ανέβασμα αρχείου');
+          recordFileActivity('created', 'file_upload', null, displayName ?? file.name, t('audit.fileUpload'));
 
           // Delay between uploads to avoid rate limiting
           if (i < selectedFiles.length - 1) {
@@ -225,21 +225,18 @@ export function useFileUpload({
 
       // Toast notifications
       if (failCount > 0 && successCount > 0) {
-        warning(t('upload.errors.partialSuccess', { success: successCount, fail: failCount, total: selectedFiles.length })
-          || `${successCount} επιτυχία, ${failCount} αποτυχία από ${selectedFiles.length} αρχεία`);
+        warning(t('upload.errors.partialSuccess', { success: successCount, fail: failCount, total: selectedFiles.length }));
       } else if (failCount > 0) {
-        showError(t('upload.errors.allFailed', { count: failCount })
-          || `Αποτυχία αποστολής ${failCount} αρχείων`);
+        showError(t('upload.errors.allFailed', { count: failCount }));
       } else if (successCount > 0) {
-        success(t('upload.success', { count: successCount })
-          || `${successCount} αρχεία ανέβηκαν επιτυχώς`);
+        success(t('upload.success', { count: successCount }));
       }
 
       await refetch();
       onUploadComplete?.();
     } catch (error) {
       logger.error('Upload failed:', { error });
-      showError(t('upload.errors.generic') || 'Σφάλμα κατά την αποστολή αρχείων');
+      showError(t('upload.errors.generic'));
     } finally {
       setUploading(false);
     }

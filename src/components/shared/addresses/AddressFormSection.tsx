@@ -37,6 +37,10 @@ import type {
 } from '@/types/project/addresses';
 import { AdministrativeAddressPicker } from '@/components/contacts/pickers/AdministrativeAddressPicker';
 import type { AdministrativeAddress } from '@/components/contacts/pickers/AdministrativeAddressPicker';
+import { ADDRESS_TYPE_KEYS, BLOCK_SIDE_KEYS } from '@/components/projects/tabs/locations/address-constants';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 // =============================================================================
 // COMPONENT PROPS
@@ -74,16 +78,8 @@ interface AddressFormData {
 }
 
 // =============================================================================
-// TYPE/BLOCK SIDE KEYS (for iteration — labels come from i18n)
+// TYPE/BLOCK SIDE KEYS — imported from SSOT: address-constants.ts
 // =============================================================================
-
-const ADDRESS_TYPE_KEYS: readonly ProjectAddressType[] = [
-  'site', 'entrance', 'delivery', 'legal', 'postal', 'billing', 'correspondence', 'other'
-] as const;
-
-const BLOCK_SIDE_KEYS: readonly BlockSideDirection[] = [
-  'north', 'south', 'east', 'west', 'northeast', 'northwest', 'southeast', 'southwest', 'corner', 'internal'
-] as const;
 
 // =============================================================================
 // COMPONENT
@@ -92,10 +88,11 @@ const BLOCK_SIDE_KEYS: readonly BlockSideDirection[] = [
 export function AddressFormSection({
   initialValues,
   onChange,
-  showErrors = false,
+  showErrors: _showErrors = false,
   externalValues
 }: AddressFormSectionProps) {
   const { t } = useTranslation('addresses');
+  const colors = useSemanticColors();
 
   // Form state
   const [formData, setFormData] = useState<AddressFormData>({
@@ -232,10 +229,7 @@ export function AddressFormSection({
   }, [notifyParent]);
 
   // Validation — street is optional (villages/settlements may not have streets)
-  const errors = {
-    city: showErrors && !formData.city.trim(),
-    postalCode: showErrors && !formData.postalCode.trim()
-  };
+  // Note: errors computed but not yet used in UI — keeping showErrors prop for future use
 
   return (
     <div className="space-y-4">
@@ -392,7 +386,7 @@ export function AddressFormSection({
 
       {/* Help text */}
       <div className="pt-2 border-t border-border">
-        <p className="text-xs text-muted-foreground">
+        <p className={cn("text-xs", colors.text.muted)}>
           {t('form.requiredFields')}
         </p>
       </div>

@@ -23,6 +23,8 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import type { LegalContract, ContractStatus } from '@/types/legal-contracts';
 import { CONTRACT_STATUS_TRANSITIONS } from '@/types/legal-contracts';
+import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // TYPES
@@ -79,6 +81,7 @@ function formatCurrency(amount: number | null): string {
 // ============================================================================
 
 export function ContractCard({ contract, onTransition }: ContractCardProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('common');
   const [expanded, setExpanded] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
@@ -106,7 +109,7 @@ export function ContractCard({ contract, onTransition }: ContractCardProps) {
         className="flex w-full items-center justify-between gap-3 p-3 text-left hover:bg-muted/50 transition-colors"
       >
         <span className="flex items-center gap-2 min-w-0">
-          <FileSignature className="h-4 w-4 text-muted-foreground shrink-0" />
+          <FileSignature className={cn("h-4 w-4 shrink-0", colors.text.muted)} />
           <span className="font-medium text-sm truncate">
             {t(`sales.legal.${contract.phase}`, { defaultValue: PHASE_LABELS[contract.phase] })}
           </span>
@@ -125,7 +128,7 @@ export function ContractCard({ contract, onTransition }: ContractCardProps) {
         <section className="border-t px-3 pb-3 pt-2 space-y-3">
           {/* Financial info */}
           <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-            <dt className="flex items-center gap-1 text-muted-foreground">
+            <dt className={cn("flex items-center gap-1", colors.text.muted)}>
               <Euro className="h-3 w-3" />
               {t('sales.legal.amount', { defaultValue: 'Ποσό' })}
             </dt>
@@ -133,14 +136,14 @@ export function ContractCard({ contract, onTransition }: ContractCardProps) {
 
             {contract.depositAmount !== null && (
               <>
-                <dt className="text-muted-foreground">
+                <dt className={colors.text.muted}>
                   {t('sales.legal.deposit', { defaultValue: 'Αρραβώνας' })}
                 </dt>
                 <dd className="font-medium">{formatCurrency(contract.depositAmount)}</dd>
               </>
             )}
 
-            <dt className="flex items-center gap-1 text-muted-foreground">
+            <dt className={cn("flex items-center gap-1", colors.text.muted)}>
               <CalendarDays className="h-3 w-3" />
               {t('sales.legal.createdAt', { defaultValue: 'Δημιουργία' })}
             </dt>
@@ -148,7 +151,7 @@ export function ContractCard({ contract, onTransition }: ContractCardProps) {
 
             {contract.signedAt && (
               <>
-                <dt className="text-muted-foreground">
+                <dt className={colors.text.muted}>
                   {t('sales.legal.signedAt', { defaultValue: 'Υπογραφή' })}
                 </dt>
                 <dd>{formatDate(contract.signedAt)}</dd>
@@ -158,7 +161,7 @@ export function ContractCard({ contract, onTransition }: ContractCardProps) {
 
           {/* Professionals */}
           <section className="space-y-1">
-            <h4 className="text-xs font-medium text-muted-foreground">
+            <h4 className={cn("text-xs font-medium", colors.text.muted)}>
               {t('sales.legal.professionals', { defaultValue: 'Επαγγελματίες' })}
             </h4>
             <ul className="space-y-0.5 text-xs">
@@ -168,8 +171,8 @@ export function ContractCard({ contract, onTransition }: ContractCardProps) {
                 { label: t('sales.legal.notary', { defaultValue: 'Συμβολαιογράφος' }), snap: contract.notary },
               ].map(({ label, snap }) => (
                 <li key={label} className="flex items-center gap-1">
-                  <User className="h-3 w-3 text-muted-foreground" />
-                  <span className="text-muted-foreground">{label}:</span>
+                  <User className={cn("h-3 w-3", colors.text.muted)} />
+                  <span className={colors.text.muted}>{label}:</span>
                   <span className="font-medium">
                     {snap?.displayName ?? t('sales.legal.unassigned', { defaultValue: 'Μη ανατεθ.' })}
                   </span>
@@ -180,7 +183,7 @@ export function ContractCard({ contract, onTransition }: ContractCardProps) {
 
           {/* Notes */}
           {contract.notes && (
-            <p className="text-xs text-muted-foreground italic border-l-2 pl-2">
+            <p className={cn("text-xs italic border-l-2 pl-2", colors.text.muted)}>
               {contract.notes}
             </p>
           )}

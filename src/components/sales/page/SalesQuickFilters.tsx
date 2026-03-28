@@ -20,6 +20,7 @@ import {
 import { TypeQuickFilters } from '@/components/shared/TypeQuickFilters';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { TypeFilterOption } from '@/components/shared/TypeQuickFilters';
+import '@/lib/design-system';
 
 // =============================================================================
 // 🏢 TYPES

@@ -22,6 +22,9 @@ import { formatCurrencyWhole } from '@/lib/intl-utils';
 import { InfoRow } from '@/components/shared/InfoRow';
 import { SALES_ICON_COLORS } from '@/components/sales/config/sales-colors';
 import type { ParkingSpot } from '@/types/parking';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
 // 🏢 TYPES
@@ -36,12 +39,13 @@ interface ParkingDetailPanelProps {
 // =============================================================================
 
 export function ParkingDetailPanel({ data }: ParkingDetailPanelProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
 
   if (!data) {
     return (
-      <section className="p-4 text-center text-sm text-muted-foreground">
+      <section className={cn("p-4 text-center text-sm", colors.text.muted)}>
         {t('salesParking.details.noSelection', { defaultValue: 'Επιλέξτε μια θέση στάθμευσης για λεπτομέρειες.' })}
       </section>
     );
@@ -119,7 +123,7 @@ export function ParkingDetailPanel({ data }: ParkingDetailPanelProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+            <p className={cn("text-sm whitespace-pre-wrap", colors.text.muted)}>
               {data.notes}
             </p>
           </CardContent>

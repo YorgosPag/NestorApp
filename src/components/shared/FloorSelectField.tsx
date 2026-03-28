@@ -22,6 +22,9 @@ import { Spinner } from '@/components/ui/spinner';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { formatFloorLabel } from '@/lib/intl-utils';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // =============================================================================
 // TYPES
@@ -85,6 +88,7 @@ export function FloorSelectField({
   placeholder = '—',
   disabled = false,
 }: FloorSelectFieldProps) {
+  const colors = useSemanticColors();
   const [floors, setFloors] = useState<FloorOption[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -143,14 +147,14 @@ export function FloorSelectField({
 
   return (
     <fieldset className="space-y-1.5">
-      <Label className="text-muted-foreground text-xs">{label}</Label>
+      <Label className={cn("text-xs", colors.text.muted)}>{label}</Label>
 
       {!buildingId ? (
-        <p className="text-xs text-muted-foreground italic h-8 flex items-center">
+        <p className={cn("text-xs italic h-8 flex items-center", colors.text.muted)}>
           {noBuildingHint}
         </p>
       ) : loading ? (
-        <section className="flex items-center gap-2 text-muted-foreground h-8">
+        <section className={cn("flex items-center gap-2 h-8", colors.text.muted)}>
           <Spinner size="small" />
         </section>
       ) : (

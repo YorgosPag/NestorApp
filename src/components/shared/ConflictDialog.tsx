@@ -30,6 +30,9 @@ import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { ConflictResponseBody } from '@/types/versioning';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // ============================================
 // TYPES
@@ -78,6 +81,7 @@ export function ConflictDialog({
 }: ConflictDialogProps) {
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   if (!conflict) return null;
 
@@ -94,7 +98,7 @@ export function ConflictDialog({
           <AlertDialogDescription asChild>
             <section className="space-y-3">
               <p>{t('versioning.conflictMessage')}</p>
-              <p className="text-sm text-muted-foreground">
+              <p className={cn("text-sm", colors.text.muted)}>
                 {t('versioning.lastChangedBy', {
                   user: conflict.updatedBy,
                   time: timeAgo,

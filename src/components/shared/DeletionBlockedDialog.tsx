@@ -23,6 +23,8 @@ import { ShieldAlert } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { DependencyCheckResult } from '@/config/deletion-registry';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -47,6 +49,7 @@ export function DeletionBlockedDialog({
 }: DeletionBlockedDialogProps) {
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -72,7 +75,7 @@ export function DeletionBlockedDialog({
                         className="flex items-center justify-between rounded-md border border-border bg-muted/50 px-3 py-2 text-sm"
                       >
                         <span className="font-medium text-foreground">{dep.label}</span>
-                        <span className="text-muted-foreground">
+                        <span className={colors.text.muted}>
                           {t('deletionGuard.count', { count: dep.count })}
                         </span>
                       </li>

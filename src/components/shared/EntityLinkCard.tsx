@@ -35,6 +35,8 @@ import { useTypography } from '@/hooks/useTypography';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
+import '@/lib/design-system';
 
 // =============================================================================
 // TYPES
@@ -108,16 +110,19 @@ export function EntityLinkCard({
   onChanged,
   isEditing = true,
   searchable = false,
-  searchPlaceholder = 'Αναζήτηση...',
+  searchPlaceholder,
   hideCurrentLabel = false,
   autoSave = true,
   onValueChange,
   refreshSignal,
 }: EntityLinkCardProps) {
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const typography = useTypography();
+
+  const resolvedSearchPlaceholder = searchPlaceholder ?? t('entityLink.searchPlaceholder');
 
   const [options, setOptions] = useState<EntityLinkOption[]>([]);
   const [selectedId, setSelectedId] = useState<string>(currentValue || NONE_VALUE);
@@ -247,7 +252,7 @@ export function EntityLinkCard({
           className={cn(
             'w-full justify-between font-normal h-10',
             !isEditing && 'bg-muted',
-            !selectedName && selectedId === NONE_VALUE && 'text-muted-foreground',
+            !selectedName && selectedId === NONE_VALUE && colors.text.muted,
             saveStatus === 'success' && getStatusBorder('success'),
             saveStatus === 'error' && getStatusBorder('error')
           )}
@@ -267,7 +272,7 @@ export function EntityLinkCard({
           <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
           <Input
             ref={searchInputRef}
-            placeholder={searchPlaceholder}
+            placeholder={resolvedSearchPlaceholder}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="h-8 border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
@@ -294,7 +299,7 @@ export function EntityLinkCard({
             }}
           >
             <Check className={cn('mr-2 h-4 w-4', selectedId === NONE_VALUE ? 'opacity-100' : 'opacity-0')} />
-            <span className="text-muted-foreground">{labels.noSelection}</span>
+            <span className={colors.text.muted}>{labels.noSelection}</span>
           </li>
 
           {filteredOptions.map((option) => (
@@ -318,8 +323,8 @@ export function EntityLinkCard({
           ))}
 
           {filteredOptions.length === 0 && searchQuery.trim() && (
-            <li className="px-2 py-4 text-center text-sm text-muted-foreground">
-              Δεν βρέθηκαν αποτελέσματα
+            <li className={cn("px-2 py-4 text-center text-sm", colors.text.muted)}>
+              {t('entityLink.noResults')}
             </li>
           )}
         </ul>
@@ -377,7 +382,7 @@ export function EntityLinkCard({
           <Label htmlFor={cardId}>{labels.label}</Label>
 
           {loading ? (
-            <section className="flex items-center gap-2 text-muted-foreground">
+            <section className={cn("flex items-center gap-2", colors.text.muted)}>
               <Spinner size="small" />
               <span>{labels.loading}</span>
             </section>
@@ -396,7 +401,7 @@ export function EntityLinkCard({
 
         {/* Auto-save status indicators */}
         {saving && (
-          <p className="flex items-center gap-1 text-sm text-muted-foreground pt-1">
+          <p className={cn("flex items-center gap-1 text-sm pt-1", colors.text.muted)}>
             <Spinner size="small" />
             {labels.saving}
           </p>

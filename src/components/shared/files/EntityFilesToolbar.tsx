@@ -27,6 +27,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { FileCategory } from '@/config/domain-constants';
 import type { CaptureMetadata } from '@/config/upload-entry-points';
 import { AddCaptureMenu } from './AddCaptureMenu';
@@ -78,6 +79,7 @@ export function EntityFilesToolbar({
 }: EntityFilesToolbarProps) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation('files');
+  const colors = useSemanticColors();
 
   return (
     <CardHeader>
@@ -87,14 +89,14 @@ export function EntityFilesToolbar({
             <FileText className={iconSizes.md} aria-hidden="true" />
             {t('manager.filesTitle')}
             {fileCount > 0 && (
-              <span className="text-sm font-normal text-muted-foreground">
+              <span className={cn("text-sm font-normal", colors.text.muted)}>
                 ({fileCount})
               </span>
             )}
           </CardTitle>
 
           {workspaceName && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className={cn("flex items-center gap-2 text-xs", colors.text.muted)}>
               <span>{t('manager.belongsTo')}:</span>
               <span className="font-medium text-foreground">{workspaceName}</span>
             </div>

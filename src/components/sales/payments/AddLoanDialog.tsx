@@ -32,6 +32,7 @@ import { toast } from 'sonner';
 import { BankSelector } from '@/components/banking/BankSelector';
 import type { BankInfo } from '@/constants/greek-banks';
 import type { CreateLoanInput, DisbursementType } from '@/types/loan-tracking';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES

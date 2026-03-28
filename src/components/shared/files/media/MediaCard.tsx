@@ -31,6 +31,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatFileSize } from '@/utils/file-validation';
 import { formatDate } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized date formatting
 import type { FileRecord } from '@/types/file-record';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -250,7 +251,7 @@ export function MediaCard({
                 className="absolute inset-0 bg-muted animate-pulse flex items-center justify-center"
                 aria-hidden="true"
               >
-                <ImageIcon className={cn(sizeConfig.icon, 'text-muted-foreground/30')} />
+                <ImageIcon className={cn(sizeConfig.icon, `${colors.text.muted}/30`)} />
               </div>
             )}
 
@@ -260,8 +261,8 @@ export function MediaCard({
                 className="absolute inset-0 bg-muted flex flex-col items-center justify-center gap-1"
                 aria-label={t('media.loadError')}
               >
-                <AlertCircle className={cn(iconSizes.lg, 'text-muted-foreground/50')} />
-                <span className="text-xs text-muted-foreground">{t('media.loadError')}</span>
+                <AlertCircle className={cn(iconSizes.lg, `${colors.text.muted}/50`)} />
+                <span className={cn("text-xs", colors.text.muted)}>{t('media.loadError')}</span>
               </div>
             )}
 

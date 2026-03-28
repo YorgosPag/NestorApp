@@ -35,6 +35,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import type { UnitLevel } from '@/types/unit';
 import type { FloorOption } from '@/services/multi-level.service';
 import { buildLevelsFromSelection } from '@/services/multi-level.service';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // =============================================================================
 // TYPES
@@ -72,6 +74,7 @@ export function FloorMultiSelectField({
   const { t } = useTranslation(['units']);
   const { user } = useAuth();
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   // Floor options from Firestore
   const [allFloors, setAllFloors] = useState<FloorOption[]>([]);
@@ -193,14 +196,14 @@ export function FloorMultiSelectField({
 
   return (
     <fieldset className="space-y-2">
-      <Label className="text-muted-foreground text-xs">{label}</Label>
+      <Label className={cn("text-xs", colors.text.muted)}>{label}</Label>
 
       {!buildingId ? (
-        <p className="text-xs text-muted-foreground italic h-8 flex items-center">
+        <p className={cn("text-xs italic h-8 flex items-center", colors.text.muted)}>
           {noBuildingHint}
         </p>
       ) : loading ? (
-        <section className="flex items-center gap-2 text-muted-foreground h-8">
+        <section className={cn("flex items-center gap-2 h-8", colors.text.muted)}>
           <Spinner size="small" />
         </section>
       ) : (
@@ -215,7 +218,7 @@ export function FloorMultiSelectField({
               >
                 <SelectTrigger className="h-8 text-sm flex-1">
                   <SelectValue
-                    placeholder={t('units:multiLevel.addFloor', { defaultValue: 'Προσθήκη ορόφου' })}
+                    placeholder={t('units:multiLevel.addFloor')}
                   />
                 </SelectTrigger>
                 <SelectContent>
@@ -234,7 +237,7 @@ export function FloorMultiSelectField({
                 className="h-8 w-8 p-0 shrink-0"
                 disabled={selectValue === NONE_VALUE}
                 onClick={handleAddFloor}
-                aria-label={t('units:multiLevel.addFloor', { defaultValue: 'Προσθήκη ορόφου' })}
+                aria-label={t('units:multiLevel.addFloor')}
               >
                 <Plus className={iconSizes.sm} />
               </Button>
@@ -243,7 +246,7 @@ export function FloorMultiSelectField({
 
           {/* Selected floors as badges */}
           {value.length > 0 ? (
-            <section className="flex flex-wrap gap-1.5" aria-label={t('units:multiLevel.floors', { defaultValue: 'Όροφοι' })}>
+            <section className="flex flex-wrap gap-1.5" aria-label={t('units:multiLevel.floors')}>
               {value.map((level) => (
                 <Badge
                   key={level.floorId}
@@ -259,8 +262,8 @@ export function FloorMultiSelectField({
                   }
                   title={
                     level.isPrimary
-                      ? t('units:multiLevel.primaryFloor', { defaultValue: 'Κύριος όροφος' })
-                      : t('units:multiLevel.setPrimary', { defaultValue: 'Ορισμός ως κύριος' })
+                      ? t('units:multiLevel.primaryFloor')
+                      : t('units:multiLevel.setPrimary')
                   }
                 >
                   {level.isPrimary && <Star className="h-3 w-3" />}
@@ -273,7 +276,7 @@ export function FloorMultiSelectField({
                         e.stopPropagation();
                         handleRemoveFloor(level.floorId);
                       }}
-                      aria-label={t('units:multiLevel.removeFloor', { defaultValue: 'Αφαίρεση' })}
+                      aria-label={t('units:multiLevel.removeFloor')}
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -283,8 +286,8 @@ export function FloorMultiSelectField({
             </section>
           ) : (
             !isDisabled && (
-              <p className="text-xs text-muted-foreground italic">
-                {t('units:multiLevel.noFloors', { defaultValue: 'Επιλέξτε τουλάχιστον 2 ορόφους' })}
+              <p className={cn("text-xs italic", colors.text.muted)}>
+                {t('units:multiLevel.noFloors')}
               </p>
             )
           )}

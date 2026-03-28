@@ -37,6 +37,9 @@ import type { PropertyOwnerEntry } from '@/types/ownership-table';
 import { formatOwnerNames } from '@/lib/ownership/owner-utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { formatCurrency } from '@/lib/intl-utils';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // TYPES
@@ -75,6 +78,7 @@ const TAX_REGIMES: { value: SaleTaxRegime; rate: number }[] = [
 // ============================================================================
 
 export function CreatePaymentPlanWizard({
+  const colors = useSemanticColors();
   open,
   onOpenChange,
   buildingId,
@@ -249,7 +253,7 @@ export function CreatePaymentPlanWizard({
         {/* ADR-244: Step 0 — Plan Type (only for multi-owner) */}
         {hasMultipleOwners && step === STEP_PLAN_TYPE && owners && (
           <section className="space-y-4">
-            <p className="text-sm text-muted-foreground">
+            <p className={cn("text-sm", colors.text.muted)}>
               {t('wizard.planTypeDescription', { defaultValue: 'Επιλέξτε τον τύπο πλάνου αποπληρωμής' })}
             </p>
             <RadioGroup value={planMode} onValueChange={(v) => setPlanMode(v as 'joint' | 'individual')}>
@@ -259,7 +263,7 @@ export function CreatePaymentPlanWizard({
                   <p className="text-sm font-medium">
                     {t('wizard.jointPlan', { defaultValue: 'Κοινό πλάνο (ένα για όλους)' })}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className={cn("text-xs", colors.text.muted)}>
                     {formatOwnerNames(owners)} — {formatCurrency(suggestedAmount)}
                   </p>
                 </article>
@@ -272,7 +276,7 @@ export function CreatePaymentPlanWizard({
                   </p>
                   <ul className="mt-1 space-y-0.5">
                     {owners.map((owner) => (
-                      <li key={owner.contactId} className="text-xs text-muted-foreground">
+                      <li key={owner.contactId} className={cn("text-xs", colors.text.muted)}>
                         {owner.name} ({owner.ownershipPct}%) = {formatCurrency(Math.round(suggestedAmount * owner.ownershipPct / 100))}
                       </li>
                     ))}
@@ -301,7 +305,7 @@ export function CreatePaymentPlanWizard({
                 </SelectContent>
               </Select>
               {selectedTemplate && (
-                <p className="text-xs text-muted-foreground">{selectedTemplate.defaultDescription}</p>
+                <p className={cn("text-xs", colors.text.muted)}>{selectedTemplate.defaultDescription}</p>
               )}
             </div>
 
@@ -342,7 +346,7 @@ export function CreatePaymentPlanWizard({
           <div className="space-y-3 max-h-80 overflow-y-auto">
             {installments.map((inst, idx) => (
               <fieldset key={idx} className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground w-6">{idx + 1}.</span>
+                <span className={cn("text-xs w-6", colors.text.muted)}>{idx + 1}.</span>
                 <span className="text-sm flex-1 truncate">{inst.label}</span>
                 <Input
                   type="number"
@@ -352,7 +356,7 @@ export function CreatePaymentPlanWizard({
                   onChange={(e) => updateInstallmentAmount(idx, e.target.value)}
                   className="w-28 text-right"
                 />
-                <span className="text-xs text-muted-foreground">€</span>
+                <span className={cn("text-xs", colors.text.muted)}>€</span>
               </fieldset>
             ))}
 

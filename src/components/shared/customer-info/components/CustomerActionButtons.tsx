@@ -39,6 +39,7 @@ import type {
   CustomerActionType,
   CustomerInfoContext
 } from '../types/CustomerInfoTypes';
+import '@/lib/design-system';
 
 // ============================================================================
 // MODULE LOGGER

@@ -33,6 +33,9 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { useCustomerInfo } from '../hooks/useCustomerInfo';
 import type { Property } from '@/types/property-viewer';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 export interface UnitCustomerDisplayProps {
   /** The unit/property object from real Firebase database */
@@ -63,6 +66,7 @@ export function UnitCustomerDisplay({
   className = ''
 }: UnitCustomerDisplayProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('common');
 
@@ -128,7 +132,7 @@ export function UnitCustomerDisplay({
   if (loading) {
     return (
       <div className={`flex items-center ${styles.gap} ${className}`}>
-        <User className={`${styles.iconSize} text-muted-foreground`} />
+        <User className={cn(styles.iconSize, colors.text.muted)} />
         <div className="space-y-1">
           <Skeleton className={`${iconSizes.xs} w-20`} />
           <Skeleton className="h-2 w-16" />
@@ -158,7 +162,7 @@ export function UnitCustomerDisplay({
 
   if (!customerInfo) {
     return (
-      <div className={`flex items-center ${styles.gap} text-muted-foreground ${className}`}>
+      <div className={cn("flex items-center", styles.gap, colors.text.muted, className)}>
         <User className={`${styles.iconSize}`} />
         <span className={styles.text}>
           {t('customerActions.states.customerNotFound', { id: unit.soldTo })}
@@ -200,7 +204,7 @@ export function UnitCustomerDisplay({
             <div className={`${styles.text} font-medium text-foreground truncate`}>
               {customerName}
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className={cn("text-xs", colors.text.muted)}>
               {statusText} • {unit.saleDate ? formatDate(new Date(unit.saleDate)) : t('customerActions.states.unknownDate')}
             </div>
           </div>
@@ -286,13 +290,13 @@ export function UnitCustomerDisplay({
             {(customerInfo.primaryPhone || customerInfo.primaryEmail) && (
               <div className="space-y-1">
                 {customerInfo.primaryPhone && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className={cn("flex items-center gap-2 text-sm", colors.text.muted)}>
                     <Phone className={iconSizes.xs} />
                     <span>{customerInfo.primaryPhone}</span>
                   </div>
                 )}
                 {customerInfo.primaryEmail && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className={cn("flex items-center gap-2 text-sm", colors.text.muted)}>
                     <Mail className={iconSizes.xs} />
                     <span className="truncate">{customerInfo.primaryEmail}</span>
                   </div>

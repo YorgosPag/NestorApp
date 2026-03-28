@@ -33,6 +33,8 @@ import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from 'react-i18next';
 import { ContactsService } from '@/services/contacts.service';
 import type { CompanyContact } from '@/types/contacts';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -102,6 +104,7 @@ export function EmployerPicker({
   placeholder,
 }: EmployerPickerProps) {
   const { t } = useTranslation('contacts');
+  const colors = useSemanticColors();
 
   // State
   const [isOpen, setIsOpen] = useState(false);
@@ -340,7 +343,7 @@ export function EmployerPicker({
     <Popover open={isOpen && !disabled} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <div className="relative w-full">
-          <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Building2 className={cn("absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none", colors.text.muted)} />
           <Input
             ref={inputRef}
             value={inputValue}
@@ -353,7 +356,7 @@ export function EmployerPicker({
               }
             }}
             disabled={disabled}
-            placeholder={placeholder ?? t('individual.placeholders.employer', 'Αναζήτηση εταιρείας...')}
+            placeholder={placeholder ?? t('individual.placeholders.employer')}
             hasLeftIcon
             hasRightIcon={!!inputValue || isLoading}
             className={cn(
@@ -367,7 +370,7 @@ export function EmployerPicker({
           {/* LINKED badge when a company is selected */}
           {hasLinkedSelection && !disabled && (
             <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
-              LINKED
+              {t('employer.linkedBadge', 'LINKED')}
             </span>
           )}
           {/* Loading / Clear buttons */}
@@ -378,8 +381,8 @@ export function EmployerPicker({
             <button
               type="button"
               onClick={handleClearSelection}
-              className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label={t('common.clear', 'Clear')}
+              className={cn("absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 hover:text-foreground transition-colors", colors.text.muted)}
+              aria-label={t('common.clear')}
             >
               <X className="h-4 w-4" />
             </button>
@@ -396,7 +399,7 @@ export function EmployerPicker({
         <ul
           ref={listRef}
           role="listbox"
-          aria-label={t('employer.searchResults', 'Search results')}
+          aria-label={t('employer.searchResults')}
           className="py-1"
         >
           {/* Search results */}
@@ -417,14 +420,14 @@ export function EmployerPicker({
               <span className="text-sm font-medium">
                 {result.companyName}
                 {result.tradeName && result.tradeName !== result.companyName && (
-                  <span className="ml-1.5 text-xs text-muted-foreground">
+                  <span className={cn("ml-1.5 text-xs", colors.text.muted)}>
                     ({result.tradeName})
                   </span>
                 )}
               </span>
               {result.vatNumber && (
-                <span className="text-xs text-muted-foreground">
-                  {t('employer.vat', 'ΑΦΜ')}: {result.vatNumber}
+                <span className={cn("text-xs", colors.text.muted)}>
+                  {t('employer.vat')}: {result.vatNumber}
                 </span>
               )}
             </li>
@@ -432,8 +435,8 @@ export function EmployerPicker({
 
           {/* No results message */}
           {!isLoading && results.length === 0 && inputValue.trim().length >= MIN_CHARS && (
-            <li className="px-3 py-2 text-sm text-muted-foreground text-center">
-              {t('employer.noResults', 'Δεν βρέθηκαν εταιρείες')}
+            <li className={cn("px-3 py-2 text-sm text-center", colors.text.muted)}>
+              {t('employer.noResults')}
             </li>
           )}
 
@@ -456,9 +459,9 @@ export function EmployerPicker({
               onClick={handleUseFreeText}
               onMouseEnter={() => setHighlightedIndex(results.length)}
             >
-              <PenLine className="h-4 w-4 text-muted-foreground shrink-0" />
+              <PenLine className={cn("h-4 w-4 shrink-0", colors.text.muted)} />
               <span className="text-sm">
-                {t('employer.useFreeText', 'Χρήση ελεύθερου κειμένου')}: &quot;{inputValue}&quot;
+                {t('employer.useFreeText')}: &quot;{inputValue}&quot;
               </span>
             </li>
           )}

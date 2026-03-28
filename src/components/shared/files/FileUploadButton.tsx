@@ -36,6 +36,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { validateFile } from '@/utils/file-validation';
 import type { FileType } from '@/config/file-upload-config';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES

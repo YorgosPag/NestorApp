@@ -23,6 +23,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { SearchInput } from '@/components/ui/search/SearchInput';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -33,6 +34,7 @@ import type { PersonaType } from '@/types/contacts/personas';
 import type { UploadEntryPoint } from '@/config/upload-entry-points';
 import { getSortedEntryPoints, getFilteredContactEntryPoints } from '@/config/upload-entry-points';
 import * as LucideIcons from 'lucide-react';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -91,6 +93,7 @@ export function UploadEntryPointSelector({
 }: UploadEntryPointSelectorProps) {
   const iconSizes = useIconSizes();
   const { t, i18n } = useTranslation('files');
+  const colors = useSemanticColors();
   const [searchQuery, setSearchQuery] = useState('');
 
   // 🏢 ENTERPRISE: Use current i18n language unless explicitly overridden
@@ -167,7 +170,7 @@ export function UploadEntryPointSelector({
         <h3 className="text-sm font-semibold text-foreground mb-1">
           {t('upload.typeQuestion')}
         </h3>
-        <p className="text-xs text-muted-foreground">
+        <p className={cn("text-xs", colors.text.muted)}>
           {t('upload.categoryHint')}
         </p>
       </header>
@@ -185,7 +188,7 @@ export function UploadEntryPointSelector({
 
       {/* Entry Points Grid */}
       {filteredEntryPoints.length === 0 ? (
-        <p className="py-6 text-center text-sm text-muted-foreground">
+        <p className={cn("py-6 text-center text-sm", colors.text.muted)}>
           {t('upload.noSearchResults')}
         </p>
       ) : (
@@ -223,7 +226,7 @@ export function UploadEntryPointSelector({
                           ? 'bg-primary text-primary-foreground'
                           : isCustomTitle
                             ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400'
-                            : 'bg-muted text-muted-foreground'
+                            : `bg-muted ${colors.text.muted}`
                       )}
                     >
                       <Icon className={iconSizes.md} aria-hidden="true" />
@@ -246,7 +249,7 @@ export function UploadEntryPointSelector({
                     {/* Free-title hint for custom title entries */}
                     {isCustomTitle && (
                       <span className="text-[10px] text-amber-600 dark:text-amber-400 leading-tight">
-                        {currentLanguage === 'el' ? '(ελεύθερος τίτλος)' : '(free title)'}
+                        {t('upload.freeTitle')}
                       </span>
                     )}
 
@@ -271,7 +274,7 @@ export function UploadEntryPointSelector({
           {entryPoints
             .filter((ep) => ep.id === selectedEntryPointId)
             .map((ep) => (
-              <p key={ep.id} className="text-xs text-muted-foreground">
+              <p key={ep.id} className={cn("text-xs", colors.text.muted)}>
                 <strong className="text-foreground">{ep.label[currentLanguage]}:</strong>{' '}
                 {ep.description?.[currentLanguage] || t('upload.documentForCategory')}
               </p>
@@ -295,7 +298,7 @@ export function UploadEntryPointSelector({
             required
             className={cn(
               'w-full px-2 py-2 rounded-md border bg-background text-foreground',
-              'placeholder:text-muted-foreground',
+              `placeholder:${colors.text.muted}`,
               'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
               'transition-colors',
               customTitle.trim() === ''
@@ -306,7 +309,7 @@ export function UploadEntryPointSelector({
             aria-invalid={customTitle.trim() === ''}
             aria-describedby="custom-title-hint"
           />
-          <p id="custom-title-hint" className="text-xs text-muted-foreground">
+          <p id="custom-title-hint" className={cn("text-xs", colors.text.muted)}>
             {t('upload.customTitleHint')}
           </p>
         </div>

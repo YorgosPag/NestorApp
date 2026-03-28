@@ -36,6 +36,7 @@ import type {
   CreatePaymentInput,
   PaymentMethodDetails,
 } from '@/types/payment-plan';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES

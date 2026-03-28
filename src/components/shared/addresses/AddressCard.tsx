@@ -15,12 +15,15 @@
  */
 
 import React from 'react';
+import { cn } from '@/lib/utils';
 import { MapPin, Star } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ProjectAddress } from '@/types/project/addresses';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // =============================================================================
 // COMPONENT PROPS
@@ -62,6 +65,7 @@ function formatAddressLine(address: ProjectAddress): string {
 export function AddressCard({ address, onEdit, className }: AddressCardProps) {
   const { t } = useTranslation('addresses');
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   return (
     <Card className={className}>
@@ -83,13 +87,13 @@ export function AddressCard({ address, onEdit, className }: AddressCardProps) {
 
         {/* Address Line */}
         <div className="flex items-start gap-2 mb-2">
-          <MapPin className={`${iconSizes.sm} shrink-0 mt-0.5 text-muted-foreground`} />
+          <MapPin className={cn(iconSizes.sm, "shrink-0 mt-0.5", colors.text.muted)} />
           <div className="flex-1">
             <p className="text-sm font-medium">
               {formatAddressLine(address)}
             </p>
             {address.label && (
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className={cn("text-xs mt-1", colors.text.muted)}>
                 {address.label}
               </p>
             )}
@@ -99,7 +103,7 @@ export function AddressCard({ address, onEdit, className }: AddressCardProps) {
         {/* Block Side */}
         {address.blockSide && (
           <div className="mt-2 pt-2 border-t border-border">
-            <p className="text-xs text-muted-foreground">
+            <p className={cn("text-xs", colors.text.muted)}>
               {t('card.side')}: <span className="font-medium text-foreground">{t(`blockSides.${address.blockSide}`)}</span>
             </p>
           </div>

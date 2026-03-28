@@ -41,6 +41,9 @@ import type { CreateInstallmentInput, CreatePaymentPlanInput } from '@/types/pay
 import { formatOwnerNames, getPrimaryBuyerContactId } from '@/lib/ownership/owner-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // COMPONENT
@@ -51,11 +54,12 @@ interface PaymentTabContentProps {
 }
 
 export function PaymentTabContent({ unit }: PaymentTabContentProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('payments');
   const {
     plan,
     plans,
-    planGroup,
+    planGroup: _planGroup,
     createSplitPlans,
     isLoading,
     error,
@@ -154,7 +158,7 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
   if (isLoading) {
     return (
       <section className="flex items-center justify-center p-8">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        <Loader2 className={cn("h-5 w-5 animate-spin", colors.text.muted)} />
       </section>
     );
   }
@@ -176,13 +180,13 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
     return (
       <section className="space-y-4 p-3">
         <header className="flex items-center gap-2">
-          <CreditCard className="h-4 w-4 text-muted-foreground" />
+          <CreditCard className={cn("h-4 w-4", colors.text.muted)} />
           <h2 className="text-sm font-semibold">
             {t('title')}
           </h2>
         </header>
 
-        <p className="text-xs text-muted-foreground text-center py-4">
+        <p className={cn("text-xs text-center py-4", colors.text.muted)}>
           {t('paymentPlan.noPlan')}
         </p>
 
@@ -198,7 +202,7 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
         </Button>
 
         {!buyerContactId && (
-          <p className="text-[10px] text-muted-foreground text-center">
+          <p className={cn("text-[10px] text-center", colors.text.muted)}>
             {t('errors.noBuyer')}
           </p>
         )}
@@ -235,7 +239,7 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
       {/* Header */}
       <header className="flex items-center justify-between">
         <span className="flex items-center gap-2">
-          <CreditCard className="h-4 w-4 text-muted-foreground" />
+          <CreditCard className={cn("h-4 w-4", colors.text.muted)} />
           <h2 className="text-sm font-semibold">
             {t('title')}
           </h2>

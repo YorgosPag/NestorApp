@@ -18,6 +18,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
 // InfoLabel — Label + HelpCircle icon + Tooltip
@@ -31,6 +34,7 @@ interface InfoLabelProps {
 }
 
 export function InfoLabel({ htmlFor, label, tooltip, className }: InfoLabelProps) {
+  const colors = useSemanticColors();
   return (
     <span className="inline-flex items-center gap-1">
       <Label htmlFor={htmlFor} className={className ?? 'text-xs'}>
@@ -38,7 +42,7 @@ export function InfoLabel({ htmlFor, label, tooltip, className }: InfoLabelProps
       </Label>
       <Tooltip>
         <TooltipTrigger asChild>
-          <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help shrink-0" />
+          <HelpCircle className={cn("h-3.5 w-3.5 cursor-help shrink-0", colors.text.muted)} />
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs text-xs">
           {tooltip}
@@ -86,8 +90,9 @@ interface InfoDtProps {
 }
 
 export function InfoDt({ label, tooltip, className }: InfoDtProps) {
+  const colors = useSemanticColors();
   return (
-    <dt className={className ?? 'text-muted-foreground'}>
+    <dt className={className ?? colors.text.muted}>
       <Tooltip>
         <TooltipTrigger asChild>
           <span className="cursor-help border-b border-dashed border-muted-foreground">

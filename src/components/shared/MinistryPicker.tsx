@@ -14,7 +14,6 @@
  * @module components/shared/MinistryPicker
  */
 
-import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox';
@@ -60,8 +59,8 @@ export function MinistryPicker({
         onChange(selectedValue);
       }}
       options={MINISTRY_OPTIONS}
-      placeholder={t('service.fields.supervisionMinistry.searchPlaceholder', 'Αναζήτηση υπουργείου...')}
-      emptyMessage={t('service.fields.supervisionMinistry.noResults', 'Δεν βρέθηκε υπουργείο')}
+      placeholder={t('service.fields.supervisionMinistry.searchPlaceholder')}
+      emptyMessage={t('service.fields.supervisionMinistry.noResults')}
       allowFreeText
       maxDisplayed={21}
       disabled={disabled}

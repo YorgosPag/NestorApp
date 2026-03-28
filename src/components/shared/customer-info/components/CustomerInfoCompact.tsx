@@ -25,6 +25,9 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useCustomerInfo } from '../hooks/useCustomerInfo';
 import { CustomerActionButtons } from './CustomerActionButtons';
 import type { CustomerInfoCompactProps, CustomerActionType } from '../types/CustomerInfoTypes';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 /**
  * Compact customer info component για χρήση σε tables, lists και tight spaces
@@ -41,10 +44,10 @@ export function CustomerInfoCompact({
   nameOnly = false,
   showPhone = true,
   showActions = true,
-  showUnitsCount = false,
+  showUnitsCount: _showUnitsCount = false,
   unitsCount,
   maxWidth,
-  onUpdate,
+  onUpdate: _onUpdate,
   customerData
 }: CustomerInfoCompactProps) {
   // ========================================================================
@@ -52,6 +55,7 @@ export function CustomerInfoCompact({
   // ========================================================================
 
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n support
   const { t } = useTranslation('common');
   const {
@@ -150,14 +154,14 @@ export function CustomerInfoCompact({
         </p>
 
         {showPhone && displayInfo.primaryPhone && (
-          <p className={`${styles.subtext} text-muted-foreground truncate flex items-center gap-1`}>
+          <p className={cn(styles.subtext, colors.text.muted, "truncate flex items-center gap-1")}>
             <Phone className={`${iconSizes.xs} shrink-0`} />
             <span>{displayInfo.primaryPhone}</span>
           </p>
         )}
 
         {!showPhone && displayInfo.primaryEmail && (
-          <p className={`${styles.subtext} text-muted-foreground truncate flex items-center gap-1`}>
+          <p className={cn(styles.subtext, colors.text.muted, "truncate flex items-center gap-1")}>
             <Mail className={`${iconSizes.xs} shrink-0`} />
             <span>{displayInfo.primaryEmail}</span>
           </p>
@@ -306,7 +310,7 @@ export function CustomerInfoCompact({
     if (variant === 'table') {
       return (
         <div
-          className={`grid grid-cols-[2fr_1.2fr_1.5fr_auto_auto] gap-3 items-center py-3 px-1 ${className} text-muted-foreground`}
+          className={cn("grid grid-cols-[2fr_1.2fr_1.5fr_auto_auto] gap-3 items-center py-3 px-1", className, colors.text.muted)}
           style={containerStyle}
         >
           <div className="flex items-center gap-3">
@@ -327,7 +331,7 @@ export function CustomerInfoCompact({
 
     return (
       <div
-        className={`flex items-center ${styles.spacing} ${className} text-muted-foreground`}
+        className={cn("flex items-center", styles.spacing, className, colors.text.muted)}
         style={containerStyle}
       >
         <div className={`${styles.avatar} bg-muted rounded-full shrink-0 flex items-center justify-center`}>
@@ -366,13 +370,13 @@ export function CustomerInfoCompact({
         <div className="flex items-center gap-2 min-w-0">
           {displayInfo?.primaryPhone ? (
             <>
-              <Phone className={`${iconSizes.sm} text-muted-foreground shrink-0`} />
+              <Phone className={cn(iconSizes.sm, colors.text.muted, "shrink-0")} />
               <span className={`${styles.text} text-foreground truncate`}>
                 {displayInfo.primaryPhone}
               </span>
             </>
           ) : (
-            <span className={`${styles.text} text-muted-foreground`}>—</span>
+            <span className={cn(styles.text, colors.text.muted)}>—</span>
           )}
         </div>
 
@@ -380,13 +384,13 @@ export function CustomerInfoCompact({
         <div className="flex items-center gap-2 min-w-0">
           {displayInfo?.primaryEmail ? (
             <>
-              <Mail className={`${iconSizes.sm} text-muted-foreground shrink-0`} />
+              <Mail className={cn(iconSizes.sm, colors.text.muted, "shrink-0")} />
               <span className={`${styles.text} text-foreground truncate`}>
                 {displayInfo.primaryEmail}
               </span>
             </>
           ) : (
-            <span className={`${styles.text} text-muted-foreground`}>—</span>
+            <span className={cn(styles.text, colors.text.muted)}>—</span>
           )}
         </div>
 

@@ -122,7 +122,7 @@ export function FilesList({
         aria-label={t('list.noFiles')}
       >
         <FileText className={`${iconSizes.xl} mx-auto mb-2 ${colors.text.muted}`} />
-        <p className="text-sm text-muted-foreground">{t('list.noFilesDescription')}</p>
+        <p className={cn("text-sm", colors.text.muted)}>{t('list.noFilesDescription')}</p>
       </section>
     );
   }
@@ -216,7 +216,7 @@ export function FilesList({
               )}
 
               {/* Metadata */}
-              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+              <div className={cn("flex items-center gap-2 text-xs mt-1", colors.text.muted)}>
                 <span className="flex items-center gap-1">
                   <HardDrive className={iconSizes.xs} aria-hidden="true" />
                   {formatFileSize(file.sizeBytes ?? 0)}
@@ -269,7 +269,7 @@ export function FilesList({
                     onKeyDown={actions.handleDescriptionKeyDown}
                     onBlur={actions.handleDescriptionSave}
                     placeholder={t('list.descriptionPlaceholder')}
-                    className="flex-1 text-xs border rounded px-1.5 py-0.5 bg-background text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    className={cn("flex-1 text-xs border rounded px-1.5 py-0.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring", colors.text.muted)}
                     autoFocus
                   />
                 </div>
@@ -277,7 +277,7 @@ export function FilesList({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <p
-                      className="text-xs text-muted-foreground mt-0.5 truncate cursor-pointer hover:text-foreground transition-colors"
+                      className={cn("text-xs mt-0.5 truncate cursor-pointer hover:text-foreground transition-colors", colors.text.muted)}
                       onClick={(e) => { e.stopPropagation(); if (onDescriptionUpdate) actions.handleDescriptionStart(file); }}
                     >
                       {file.description}
@@ -288,7 +288,7 @@ export function FilesList({
               ) : onDescriptionUpdate ? (
                 <button
                   type="button"
-                  className="text-xs text-muted-foreground/50 mt-0.5 hover:text-muted-foreground transition-colors"
+                  className={cn("text-xs mt-0.5 transition-colors", `${colors.text.muted}/50`, `hover:${colors.text.muted}`)}
                   onClick={(e) => { e.stopPropagation(); actions.handleDescriptionStart(file); }}
                 >
                   {t('list.addDescription')}

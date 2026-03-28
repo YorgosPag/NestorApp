@@ -10,6 +10,9 @@ import { Landmark } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { LoanInfo } from '@/types/payment-plan';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // COMPONENT
@@ -30,6 +33,7 @@ const LOAN_STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive
 };
 
 export function LoanInfoCard({ loan }: LoanInfoCardProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('payments');
 
   if (loan.status === 'not_applicable') return null;
@@ -38,7 +42,7 @@ export function LoanInfoCard({ loan }: LoanInfoCardProps) {
     <section className="rounded-lg border p-3 space-y-2">
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Landmark className="h-4 w-4 text-muted-foreground" />
+          <Landmark className={cn("h-4 w-4", colors.text.muted)} />
           <h3 className="text-sm font-semibold">
             {t('loan.title')}
           </h3>
@@ -51,38 +55,38 @@ export function LoanInfoCard({ loan }: LoanInfoCardProps) {
       <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
         {loan.bankName && (
           <>
-            <dt className="text-muted-foreground">{t('loan.bankName')}</dt>
+            <dt className={colors.text.muted}>{t('loan.bankName')}</dt>
             <dd className="font-medium">{loan.bankName}</dd>
           </>
         )}
         {loan.loanAmount !== null && (
           <>
-            <dt className="text-muted-foreground">{t('loan.loanAmount')}</dt>
+            <dt className={colors.text.muted}>{t('loan.loanAmount')}</dt>
             <dd className="font-medium">€{loan.loanAmount.toLocaleString('el-GR')}</dd>
           </>
         )}
         {loan.financingPercentage !== null && (
           <>
-            <dt className="text-muted-foreground">{t('loan.financingPercentage')}</dt>
+            <dt className={colors.text.muted}>{t('loan.financingPercentage')}</dt>
             <dd className="font-medium">{loan.financingPercentage}%</dd>
           </>
         )}
         {loan.interestRate !== null && (
           <>
-            <dt className="text-muted-foreground">{t('loan.interestRate')}</dt>
+            <dt className={colors.text.muted}>{t('loan.interestRate')}</dt>
             <dd className="font-medium">{loan.interestRate}%</dd>
           </>
         )}
         {loan.termYears !== null && (
           <>
-            <dt className="text-muted-foreground">{t('loan.termYears')}</dt>
+            <dt className={colors.text.muted}>{t('loan.termYears')}</dt>
             <dd className="font-medium">{loan.termYears} {t('loan.termYears')}</dd>
           </>
         )}
       </dl>
 
       {loan.notes && (
-        <p className="text-xs text-muted-foreground border-t pt-2">{loan.notes}</p>
+        <p className={cn("text-xs border-t pt-2", colors.text.muted)}>{loan.notes}</p>
       )}
     </section>
   );

@@ -17,6 +17,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import type { ViewMode as CoreViewMode } from '@/core/headers';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 export type SalesViewMode = 'list' | 'grid';
 

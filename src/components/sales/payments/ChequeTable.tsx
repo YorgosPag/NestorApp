@@ -16,6 +16,7 @@ import {
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ChequeStatusBadge } from './ChequeStatusBadge';
 import type { ChequeRecord } from '@/types/cheque-registry';
+import '@/lib/design-system';
 
 interface ChequeTableProps {
   cheques: ChequeRecord[];

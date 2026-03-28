@@ -39,6 +39,7 @@ import {
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 // =============================================================================
 // 🏢 ENTERPRISE: Type Definitions
@@ -271,7 +272,7 @@ export function ChannelQuickFilters(props: Omit<TypeQuickFiltersProps, 'options'
     <TypeQuickFilters
       {...props}
       options={CHANNEL_OPTIONS}
-      ariaLabel={props.ariaLabel ?? t('filters.channels.ariaLabel', 'Φίλτρα καναλιών')}
+      ariaLabel={props.ariaLabel ?? t('filters.channels.ariaLabel')}
     />
   );
 }

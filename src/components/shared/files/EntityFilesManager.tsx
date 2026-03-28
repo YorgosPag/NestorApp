@@ -210,19 +210,19 @@ export function EntityFilesManager({
   const handleDelete = useCallback(async (fileId: string) => {
     const name = getFileName(fileId);
     await deleteFile(fileId, currentUserId);
-    recordFileActivity('deleted', 'file_trash', name, null, 'Μετακίνηση αρχείου στον κάδο');
+    recordFileActivity('deleted', 'file_trash', name, null, t('audit.fileTrash'));
   }, [deleteFile, currentUserId, getFileName, recordFileActivity]);
 
   const handleRename = useCallback((fileId: string, newDisplayName: string) => {
     const oldName = getFileName(fileId);
     renameFile(fileId, newDisplayName, currentUserId);
-    recordFileActivity('updated', 'file_rename', oldName, newDisplayName, 'Μετονομασία αρχείου');
+    recordFileActivity('updated', 'file_rename', oldName, newDisplayName, t('audit.fileRename'));
   }, [renameFile, currentUserId, getFileName, recordFileActivity]);
 
   const handleDescriptionUpdate = useCallback((fileId: string, description: string) => {
     const name = getFileName(fileId);
     updateDescription(fileId, description);
-    recordFileActivity('updated', 'file_description', name, description, 'Ενημέρωση περιγραφής αρχείου');
+    recordFileActivity('updated', 'file_description', name, description, t('audit.fileDescriptionUpdate'));
   }, [updateDescription, getFileName, recordFileActivity]);
 
   const handleLinkClick = useCallback((file: FileRecord) => {
@@ -232,7 +232,7 @@ export function EntityFilesManager({
   const handleUnlink = useCallback(async (fileId: string) => {
     const name = getFileName(fileId);
     await FileRecordService.unlinkFileFromEntity(fileId, entityType, entityId);
-    recordFileActivity('unlinked', 'file_unlink', name, null, 'Αποσύνδεση αρχείου');
+    recordFileActivity('unlinked', 'file_unlink', name, null, t('audit.fileUnlink'));
     await refetch();
   }, [entityType, entityId, refetch, getFileName, recordFileActivity]);
 
@@ -258,7 +258,7 @@ export function EntityFilesManager({
     const names = Array.from(selectedIds).map(getFileName);
     await batchDeleteRaw();
     for (const name of names) {
-      recordFileActivity('deleted', 'file_trash', name, null, 'Μαζική μετακίνηση αρχείου στον κάδο');
+      recordFileActivity('deleted', 'file_trash', name, null, t('audit.fileBatchTrash'));
     }
   }, [batchDeleteRaw, selectedIds, getFileName, recordFileActivity]);
 
@@ -266,7 +266,7 @@ export function EntityFilesManager({
     const names = Array.from(selectedIds).map(getFileName);
     await batchArchiveRaw();
     for (const name of names) {
-      recordFileActivity('updated', 'file_archive', name, null, 'Αρχειοθέτηση αρχείου');
+      recordFileActivity('updated', 'file_archive', name, null, t('audit.fileArchive'));
     }
   }, [batchArchiveRaw, selectedIds, getFileName, recordFileActivity]);
 
@@ -360,7 +360,7 @@ export function EntityFilesManager({
           companyId={companyId}
           entityId={entityId}
           onRestore={(fileId: string) => {
-            recordFileActivity('updated', 'file_restore', null, fileId, 'Επαναφορά αρχείου από κάδο');
+            recordFileActivity('updated', 'file_restore', null, fileId, t('audit.fileRestore'));
             refetch();
           }}
         />

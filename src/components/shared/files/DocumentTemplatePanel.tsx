@@ -12,11 +12,10 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   FileSignature,
   Plus,
-  Pencil,
   Trash2,
   Eye,
   Copy,
@@ -28,6 +27,7 @@ import {
   Mail,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -36,6 +36,8 @@ import {
   type DocumentTemplate,
   type TemplateCategory,
 } from '@/services/document-template.service';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -61,14 +63,14 @@ const CATEGORY_ICONS: Record<TemplateCategory, typeof FileText> = {
   other: FileText,
 };
 
-const CATEGORY_LABELS: Record<TemplateCategory, string> = {
-  contract: 'Σύμβαση',
-  permit: 'Άδεια',
-  invoice: 'Τιμολόγιο',
-  report: 'Αναφορά',
-  letter: 'Επιστολή',
-  certificate: 'Πιστοποιητικό',
-  other: 'Άλλο',
+const CATEGORY_KEYS: Record<TemplateCategory, string> = {
+  contract: 'templates.categories.contract',
+  permit: 'templates.categories.permit',
+  invoice: 'templates.categories.invoice',
+  report: 'templates.categories.report',
+  letter: 'templates.categories.letter',
+  certificate: 'templates.categories.certificate',
+  other: 'templates.categories.other',
 };
 
 // ============================================================================
@@ -81,6 +83,14 @@ export function DocumentTemplatePanel({
   className,
 }: DocumentTemplatePanelProps) {
   const { t } = useTranslation('files');
+  const colors = useSemanticColors();
+
+  const categoryLabels = useMemo<Record<TemplateCategory, string>>(() => {
+    const entries = Object.entries(CATEGORY_KEYS) as [TemplateCategory, string][];
+    return Object.fromEntries(
+      entries.map(([key, translationKey]) => [key, t(translationKey)])
+    ) as Record<TemplateCategory, string>;
+  }, [t]);
   const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTemplate, setSelectedTemplate] = useState<DocumentTemplate | null>(null);
@@ -184,8 +194,8 @@ export function DocumentTemplatePanel({
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b bg-muted/20">
         <h2 className="text-sm font-semibold flex items-center gap-2">
-          <FileSignature className="h-4 w-4 text-muted-foreground" />
-          {t('templates.title', 'Πρότυπα εγγράφων')}
+          <FileSignature className={cn("h-4 w-4", colors.text.muted)} />
+          {t('templates.title')}
         </h2>
         <Button
           variant="ghost"
@@ -194,7 +204,7 @@ export function DocumentTemplatePanel({
           className="h-7 px-2 text-xs"
         >
           <Plus className="h-3.5 w-3.5 mr-1" />
-          {t('templates.create', 'Νέο πρότυπο')}
+          {t('templates.create')}
         </Button>
       </header>
 
@@ -205,7 +215,7 @@ export function DocumentTemplatePanel({
             type="text"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            placeholder={t('templates.namePlaceholder', 'Όνομα προτύπου')}
+            placeholder={t('templates.namePlaceholder')}
             className="w-full text-sm border rounded px-2 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
           />
 
@@ -214,21 +224,19 @@ export function DocumentTemplatePanel({
             onChange={(e) => setNewCategory(e.target.value as TemplateCategory)}
             className="w-full text-sm border rounded px-2 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
           >
-            {(Object.keys(CATEGORY_LABELS) as TemplateCategory[]).map((cat) => (
+            {(Object.keys(CATEGORY_KEYS) as TemplateCategory[]).map((cat) => (
               <option key={cat} value={cat}>
-                {CATEGORY_LABELS[cat]}
+                {categoryLabels[cat]}
               </option>
             ))}
           </select>
 
-          <textarea
+          <Textarea
+            size="lg"
             value={newContent}
             onChange={(e) => setNewContent(e.target.value)}
-            placeholder={t(
-              'templates.contentPlaceholder',
-              'HTML περιεχόμενο με {{μεταβλητές}}...'
-            )}
-            className="w-full text-sm border rounded px-2 py-1.5 bg-background min-h-[120px] font-mono focus:outline-none focus:ring-2 focus:ring-ring"
+            placeholder={t('templates.contentPlaceholder')}
+            className="font-mono"
           />
 
           <nav className="flex gap-2 justify-end">
@@ -238,7 +246,7 @@ export function DocumentTemplatePanel({
               onClick={() => setCreating(false)}
               className="h-7 text-xs"
             >
-              {t('common.cancel', 'Ακύρωση')}
+              {t('common.cancel')}
             </Button>
             <Button
               variant="default"
@@ -247,7 +255,7 @@ export function DocumentTemplatePanel({
               disabled={!newName.trim() || !newContent.trim()}
               className="h-7 text-xs"
             >
-              {t('templates.save', 'Αποθήκευση')}
+              {t('templates.save')}
             </Button>
           </nav>
         </section>
@@ -261,8 +269,8 @@ export function DocumentTemplatePanel({
               <Spinner size="small" className="inline" />
             </p>
           ) : templates.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-8 px-2">
-              {t('templates.empty', 'Δεν υπάρχουν πρότυπα.')}
+            <p className={cn("text-xs text-center py-8 px-2", colors.text.muted)}>
+              {t('templates.empty')}
             </p>
           ) : (
             <ul className="p-1 space-y-0.5">
@@ -280,7 +288,7 @@ export function DocumentTemplatePanel({
                           : 'hover:bg-accent/50'
                       )}
                     >
-                      <Icon className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                      <Icon className={cn("h-3.5 w-3.5 flex-shrink-0", colors.text.muted)} />
                       <span className="truncate">{tmpl.name}</span>
                     </button>
                   </li>
@@ -293,8 +301,8 @@ export function DocumentTemplatePanel({
         {/* Template detail / fill-in form */}
         <section className="flex-1 overflow-y-auto p-4">
           {!selectedTemplate ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              {t('templates.selectTemplate', 'Επέλεξε ένα πρότυπο για να ξεκινήσεις.')}
+            <p className={cn("text-sm text-center py-8", colors.text.muted)}>
+              {t('templates.selectTemplate')}
             </p>
           ) : (
             <article className="space-y-4">
@@ -317,12 +325,12 @@ export function DocumentTemplatePanel({
               {/* Variables */}
               {selectedTemplate.variables.length > 0 && (
                 <fieldset className="space-y-2">
-                  <legend className="text-xs font-medium text-muted-foreground mb-1">
-                    {t('templates.variables', 'Μεταβλητές')}
+                  <legend className={cn("text-xs font-medium mb-1", colors.text.muted)}>
+                    {t('templates.variables')}
                   </legend>
                   {selectedTemplate.variables.map((v) => (
                     <label key={v.key} className="flex flex-col gap-0.5">
-                      <span className="text-xs text-muted-foreground">
+                      <span className={cn("text-xs", colors.text.muted)}>
                         {v.label}
                         {v.required && <span className="text-destructive ml-0.5">*</span>}
                       </span>
@@ -351,7 +359,7 @@ export function DocumentTemplatePanel({
                   className="text-xs"
                 >
                   <Eye className="h-3.5 w-3.5 mr-1" />
-                  {t('templates.preview', 'Προεπισκόπηση')}
+                  {t('templates.preview')}
                 </Button>
                 {preview && (
                   <Button
@@ -361,7 +369,7 @@ export function DocumentTemplatePanel({
                     className="text-xs"
                   >
                     <Copy className="h-3.5 w-3.5 mr-1" />
-                    {t('templates.copy', 'Αντιγραφή')}
+                    {t('templates.copy')}
                   </Button>
                 )}
               </nav>

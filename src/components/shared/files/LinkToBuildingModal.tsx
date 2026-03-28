@@ -25,6 +25,8 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Building2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
@@ -33,6 +35,7 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { FileRecord } from '@/types/file-record';
+import '@/lib/design-system';
 
 // ============================================================================
 // MODULE LOGGER
@@ -82,6 +85,7 @@ export function LinkToBuildingModal({
   onSaved,
 }: LinkToBuildingModalProps) {
   const { t } = useTranslation('files');
+  const colors = useSemanticColors();
   const { success, error: showError } = useNotifications();
 
   // State
@@ -210,7 +214,7 @@ export function LinkToBuildingModal({
           {loadingBuildings && (
             <div className="flex items-center justify-center py-6">
               <Spinner />
-              <span className="ml-2 text-sm text-muted-foreground">
+              <span className={cn("ml-2 text-sm", colors.text.muted)}>
                 {t('linkModal.loadingBuildings')}
               </span>
             </div>
@@ -225,7 +229,7 @@ export function LinkToBuildingModal({
 
           {/* Empty state */}
           {!loadingBuildings && !loadError && buildings.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">
+            <p className={cn("text-sm text-center py-4", colors.text.muted)}>
               {t('linkModal.noBuildings')}
             </p>
           )}
@@ -242,7 +246,7 @@ export function LinkToBuildingModal({
                 aria-label={building.name}
               />
               <div className="flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                <Building2 className={cn("h-4 w-4", colors.text.muted)} aria-hidden="true" />
                 <span className="text-sm font-medium">{building.name}</span>
               </div>
             </Label>

@@ -16,6 +16,9 @@ import { AddLoanDialog } from '@/components/sales/payments/AddLoanDialog';
 import { LoanDetailDialog } from '@/components/sales/payments/LoanDetailDialog';
 import { Button } from '@/components/ui/button';
 import type { LoanTracking } from '@/types/loan-tracking';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // COMPONENT
@@ -28,6 +31,7 @@ interface LoanTrackingSectionProps {
 const MAX_LOANS = 3;
 
 export function LoanTrackingSection({ unitId }: LoanTrackingSectionProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('payments');
   const {
     loans,
@@ -46,7 +50,7 @@ export function LoanTrackingSection({ unitId }: LoanTrackingSectionProps) {
   if (isLoading) {
     return (
       <section className="flex items-center justify-center p-4">
-        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        <Loader2 className={cn("h-4 w-4 animate-spin", colors.text.muted)} />
       </section>
     );
   }
@@ -63,7 +67,7 @@ export function LoanTrackingSection({ unitId }: LoanTrackingSectionProps) {
       <section className="rounded-lg border p-3 space-y-2">
         <header className="flex items-center justify-between">
           <span className="flex items-center gap-2">
-            <Landmark className="h-4 w-4 text-muted-foreground" />
+            <Landmark className={cn("h-4 w-4", colors.text.muted)} />
             <h3 className="text-sm font-semibold">
               {t('loanTracking.title')}
             </h3>
@@ -79,7 +83,7 @@ export function LoanTrackingSection({ unitId }: LoanTrackingSectionProps) {
           </Button>
         </header>
 
-        <p className="text-xs text-muted-foreground text-center py-2">
+        <p className={cn("text-xs text-center py-2", colors.text.muted)}>
           {t('loanTracking.noLoans')}
         </p>
 
@@ -97,7 +101,7 @@ export function LoanTrackingSection({ unitId }: LoanTrackingSectionProps) {
     <section className="rounded-lg border p-3 space-y-3">
       <header className="flex items-center justify-between">
         <span className="flex items-center gap-2">
-          <Landmark className="h-4 w-4 text-muted-foreground" />
+          <Landmark className={cn("h-4 w-4", colors.text.muted)} />
           <h3 className="text-sm font-semibold">
             {t('loanTracking.title')}
           </h3>

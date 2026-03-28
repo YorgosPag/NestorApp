@@ -14,8 +14,11 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { LoanStatusTimeline } from '@/components/sales/payments/LoanStatusTimeline';
-import type { LoanTracking, LoanTrackingStatus } from '@/types/loan-tracking';
+import type { LoanTracking } from '@/types/loan-tracking';
 import { calculateLTV, getLtvComplianceLevel } from '@/types/loan-tracking';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // STATUS → BADGE VARIANT
@@ -49,6 +52,7 @@ interface LoanCardProps {
 }
 
 export function LoanCard({ loan, onViewDetails }: LoanCardProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('payments');
 
   const ltv = calculateLTV(loan.approvedAmount, loan.appraisalValue);
@@ -81,7 +85,7 @@ export function LoanCard({ loan, onViewDetails }: LoanCardProps) {
       <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
         {loan.requestedAmount !== null && (
           <>
-            <dt className="text-muted-foreground">
+            <dt className={colors.text.muted}>
               {t('loanTracking.fields.requestedAmount')}
             </dt>
             <dd className="font-medium">€{loan.requestedAmount.toLocaleString('el-GR')}</dd>
@@ -89,7 +93,7 @@ export function LoanCard({ loan, onViewDetails }: LoanCardProps) {
         )}
         {loan.approvedAmount !== null && (
           <>
-            <dt className="text-muted-foreground">
+            <dt className={colors.text.muted}>
               {t('loanTracking.fields.approvedAmount')}
             </dt>
             <dd className="font-medium">€{loan.approvedAmount.toLocaleString('el-GR')}</dd>
@@ -97,7 +101,7 @@ export function LoanCard({ loan, onViewDetails }: LoanCardProps) {
         )}
         {loan.interestRate !== null && (
           <>
-            <dt className="text-muted-foreground">
+            <dt className={colors.text.muted}>
               {t('loanTracking.fields.interestRate')}
             </dt>
             <dd className="font-medium">
@@ -108,7 +112,7 @@ export function LoanCard({ loan, onViewDetails }: LoanCardProps) {
         )}
         {loan.termYears !== null && (
           <>
-            <dt className="text-muted-foreground">
+            <dt className={colors.text.muted}>
               {t('loanTracking.fields.termYears')}
             </dt>
             <dd className="font-medium">{loan.termYears} {t('loanTracking.fields.yearsUnit')}</dd>
@@ -120,7 +124,7 @@ export function LoanCard({ loan, onViewDetails }: LoanCardProps) {
       {ltv !== null && (
         <section className="space-y-1">
           <span className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">LTV</span>
+            <span className={colors.text.muted}>LTV</span>
             <span className={
               ltvLevel === 'exceeded' ? 'text-destructive font-medium'
                 : ltvLevel === 'warning' ? 'text-amber-600 font-medium'
@@ -140,7 +144,7 @@ export function LoanCard({ loan, onViewDetails }: LoanCardProps) {
       {loan.approvedAmount !== null && loan.approvedAmount > 0 && (
         <section className="space-y-1">
           <span className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">
+            <span className={colors.text.muted}>
               {t('loanTracking.fields.disbursedAmount')}
             </span>
             <span>

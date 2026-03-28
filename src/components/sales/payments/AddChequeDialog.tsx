@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { CreateChequeInput, ChequeType } from '@/types/cheque-registry';
+import '@/lib/design-system';
 
 interface AddChequeDialogProps {
   open: boolean;

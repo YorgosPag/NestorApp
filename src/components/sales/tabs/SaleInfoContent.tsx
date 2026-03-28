@@ -31,6 +31,8 @@ import { TransactionChainCard } from '@/components/sales/cards/TransactionChainC
 import { UnitHierarchyCard } from '@/components/sales/cards/UnitHierarchyCard';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
 
 // =============================================================================
 // 🏢 TYPES
@@ -177,7 +179,7 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
             )}
             {commercial?.buyerContactId && (
               <div className="flex items-center justify-between py-1.5">
-                <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className={cn("flex items-center gap-2 text-sm", colors.text.muted)}>
                   <UserCheck className={`${iconSizes.sm} ${SALES_ICON_COLORS.buyer} flex-shrink-0`} />
                   {t('sales.saleInfo.buyer')}
                 </span>

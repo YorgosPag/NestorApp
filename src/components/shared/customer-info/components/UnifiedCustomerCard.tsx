@@ -27,6 +27,9 @@ import { useTranslation } from 'react-i18next';
 import { useCustomerInfo } from '../hooks/useCustomerInfo';
 import { CustomerActionButtons } from './CustomerActionButtons';
 import type { UnifiedCustomerCardProps } from '../types/CustomerInfoTypes';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 /**
  * Κεντρικό component για εμφάνιση customer information
@@ -55,6 +58,7 @@ export function UnifiedCustomerCard({
 
   const { t } = useTranslation('contacts');
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   const {
     customerInfo,
@@ -165,21 +169,21 @@ export function UnifiedCustomerCard({
         {!isMinimalVariant && (
           <section className="mt-1 space-y-1">
             {displayInfo.primaryPhone && (
-              <p className={`${styles.subtitle} text-muted-foreground flex items-center gap-1`}>
+              <p className={cn(styles.subtitle, colors.text.muted, "flex items-center gap-1")}>
                 <Phone className={`${iconSizes.xs} shrink-0`} />
                 <span className="truncate">{displayInfo.primaryPhone}</span>
               </p>
             )}
 
             {displayInfo.primaryEmail && !compact && (
-              <p className={`${styles.subtitle} text-muted-foreground flex items-center gap-1`}>
+              <p className={cn(styles.subtitle, colors.text.muted, "flex items-center gap-1")}>
                 <Mail className={`${iconSizes.xs} shrink-0`} />
                 <span className="truncate">{displayInfo.primaryEmail}</span>
               </p>
             )}
 
             {extendedInfo?.city && !compact && (
-              <p className={`${styles.subtitle} text-muted-foreground flex items-center gap-1`}>
+              <p className={cn(styles.subtitle, colors.text.muted, "flex items-center gap-1")}>
                 <MapPin className={`${iconSizes.xs} shrink-0`} />
                 <span className="truncate">{extendedInfo.city}</span>
               </p>
@@ -354,7 +358,7 @@ export function UnifiedCustomerCard({
                   {displayInfo.displayName}
                 </h3>
                 {extendedInfo?.profession && (
-                  <p className={`${styles.subtitle} text-muted-foreground`}>
+                  <p className={cn(styles.subtitle, colors.text.muted)}>
                     {extendedInfo.profession}
                   </p>
                 )}
@@ -385,14 +389,14 @@ export function UnifiedCustomerCard({
               <section className="space-y-2">
                 {displayInfo.primaryPhone && (
                   <div className="flex items-center gap-2 text-sm">
-                    <Phone className={`${iconSizes.sm} text-muted-foreground`} />
+                    <Phone className={cn(iconSizes.sm, colors.text.muted)} />
                     <span>{displayInfo.primaryPhone}</span>
                   </div>
                 )}
 
                 {displayInfo.primaryEmail && (
                   <div className="flex items-center gap-2 text-sm">
-                    <Mail className={`${iconSizes.sm} text-muted-foreground`} />
+                    <Mail className={cn(iconSizes.sm, colors.text.muted)} />
                     <span className="truncate">{displayInfo.primaryEmail}</span>
                   </div>
                 )}

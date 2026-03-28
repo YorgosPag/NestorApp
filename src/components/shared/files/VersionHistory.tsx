@@ -13,7 +13,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { History, RotateCcw, Download, Clock, User } from 'lucide-react';
+import { History, RotateCcw, Download, Clock } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -23,8 +23,9 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatFileSize } from '@/utils/file-validation';
-import { formatDate, formatFlexibleDate } from '@/lib/intl-utils';
+import { formatFlexibleDate } from '@/lib/intl-utils';
 import { FileVersionService, type FileVersionSnapshot } from '@/services/file-version.service';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -111,24 +112,24 @@ export function VersionHistory({
     return (
       <section className={cn('p-4 text-center', colors.text.muted, className)}>
         <History className={cn(iconSizes.lg, 'mx-auto mb-2 opacity-50')} />
-        <p className="text-sm">{t('versions.noHistory', 'Δεν υπάρχει ιστορικό εκδόσεων')}</p>
+        <p className="text-sm">{t('versions.noHistory')}</p>
         <p className="text-xs mt-1 opacity-70">
-          {t('versions.currentOnly', 'Αυτή είναι η πρώτη έκδοση του αρχείου')}
+          {t('versions.currentOnly')}
         </p>
       </section>
     );
   }
 
   return (
-    <section className={cn('space-y-2', className)} aria-label={t('versions.title', 'Ιστορικό εκδόσεων')}>
+    <section className={cn('space-y-2', className)} aria-label={t('versions.title')}>
       {/* Header */}
       <header className="flex items-center gap-2 px-2">
         <History className={cn(iconSizes.sm, colors.text.muted)} />
         <h4 className="text-sm font-medium">
-          {t('versions.title', 'Ιστορικό εκδόσεων')}
+          {t('versions.title')}
         </h4>
         <span className={cn('text-xs', colors.text.muted)}>
-          ({versions.length} {t('versions.previous', 'προηγούμενες')})
+          ({t('versions.previousCount', { count: versions.length })})
         </span>
       </header>
 
@@ -144,7 +145,7 @@ export function VersionHistory({
           v{currentRevision}
         </span>
         <span className="text-sm font-medium flex-1">
-          {t('versions.current', 'Τρέχουσα έκδοση')}
+          {t('versions.current')}
         </span>
       </article>
 
@@ -209,7 +210,7 @@ export function VersionHistory({
                     <Download className="h-3.5 w-3.5" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>{t('versions.download', 'Λήψη αυτής της έκδοσης')}</TooltipContent>
+                <TooltipContent>{t('versions.download')}</TooltipContent>
               </Tooltip>
             )}
 
@@ -231,7 +232,7 @@ export function VersionHistory({
                     )}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>{t('versions.rollback', 'Επαναφορά σε αυτή την έκδοση')}</TooltipContent>
+                <TooltipContent>{t('versions.rollback')}</TooltipContent>
               </Tooltip>
             )}
           </nav>
