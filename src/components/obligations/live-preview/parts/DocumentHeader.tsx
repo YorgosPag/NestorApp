@@ -13,7 +13,6 @@ import { getObligationStatusLabel } from "@/constants/property-statuses-enterpri
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { cn } from '@/lib/utils';
 
 interface DocumentHeaderProps {
     doc: Partial<ObligationDocument>;
