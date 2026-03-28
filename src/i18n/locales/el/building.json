@@ -1216,7 +1216,74 @@
       },
       "views": {
         "milestones": "Ορόσημα",
-        "gantt": "Gantt"
+        "gantt": "Gantt",
+        "dashboard": "Πίνακας Ελέγχου"
+      },
+      "dashboard": {
+        "title": "Πίνακας Ελέγχου Χρονοδιαγράμματος",
+        "lastUpdated": "Τελευταία ενημέρωση",
+        "refresh": "Ανανέωση",
+        "export": "Εξαγωγή",
+        "exportPdf": "PDF",
+        "exportExcel": "Excel",
+        "kpis": {
+          "title": "Επισκόπηση Χρονοδιαγράμματος",
+          "overallProgress": "Συνολική Πρόοδος",
+          "spi": "SPI",
+          "spiDesc": "Δείκτης Απόδοσης Χρονοδιαγράμματος",
+          "cpi": "CPI",
+          "cpiDesc": "Δείκτης Κοστολογικής Απόδοσης",
+          "daysRemaining": "Ημέρες Υπολοιπ.",
+          "phasesOnTrack": "Φάσεις Εντός Χρόνου",
+          "delayedTasks": "Καθυστερημένες Εργασίες",
+          "totalTasks": "εργασίες",
+          "vsPlan": "vs Πλάνο"
+        },
+        "sCurve": {
+          "title": "Ανάλυση S-Curve",
+          "pv": "Προγραμματισμένη Αξία",
+          "ev": "Δεδουλευμένη Αξία",
+          "ac": "Πραγματικό Κόστος",
+          "today": "Σήμερα"
+        },
+        "variance": {
+          "title": "Απόκλιση Χρονοδιαγράμματος",
+          "expandAll": "Ανάπτυξη όλων",
+          "collapseAll": "Σύμπτυξη όλων",
+          "colName": "Όνομα",
+          "colPlannedStart": "Έναρξη Πλάνου",
+          "colPlannedEnd": "Λήξη Πλάνου",
+          "colActualStart": "Πραγμ. Έναρξη",
+          "colActualEnd": "Πραγμ. Λήξη",
+          "colVariance": "Απόκλιση",
+          "colStatus": "Κατάσταση",
+          "colProgress": "Πρόοδος"
+        },
+        "lookahead": {
+          "title": "Πρόβλεψη",
+          "weeks2": "2 Εβδομάδες",
+          "weeks4": "4 Εβδομάδες",
+          "empty": "Δεν υπάρχουν εργασίες τις επόμενες {{weeks}} εβδομάδες",
+          "colTask": "Εργασία",
+          "colPhase": "Φάση",
+          "colStart": "Έναρξη",
+          "colEnd": "Λήξη",
+          "colDuration": "Διάρκεια",
+          "colStatus": "Κατάσταση"
+        },
+        "ganttCard": {
+          "title": "Διάγραμμα Gantt",
+          "desc": "Δείτε το διαδραστικό Gantt και εξαγάγετε",
+          "cta": "Προβολή Gantt & Εξαγωγή"
+        },
+        "empty": {
+          "noPhases": "Δεν υπάρχουν φάσεις κατασκευής",
+          "noPhasesDesc": "Δημιουργήστε φάσεις στην προβολή Gantt για ανάλυση χρονοδιαγράμματος.",
+          "goToGantt": "Μετάβαση στο Gantt",
+          "notStarted": "Η κατασκευή δεν έχει ξεκινήσει ακόμα",
+          "noBOQ": "Δεν υπάρχουν δεδομένα κόστους BOQ",
+          "noBOQDesc": "Συνδέστε στοιχεία BOQ με φάσεις για ανάλυση κόστους. Η S-curve δείχνει μόνο πρόοδο."
+        }
       },
       "gantt": {
         "title": "Διάγραμμα Gantt",

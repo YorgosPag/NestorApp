@@ -3,14 +3,14 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { ListChecks, GanttChartSquare } from 'lucide-react';
+import { ListChecks, GanttChartSquare, LayoutDashboard } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
-export type TimelineView = 'milestones' | 'gantt';
+export type TimelineView = 'milestones' | 'gantt' | 'dashboard';
 
 interface TimelineViewToggleProps {
   activeView: TimelineView;
@@ -55,6 +55,22 @@ export function TimelineViewToggle({ activeView, onViewChange }: TimelineViewTog
           </Button>
         </TooltipTrigger>
         <TooltipContent>{t('tabs.timeline.views.gantt')}</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            role="tab"
+            aria-selected={activeView === 'dashboard'}
+            variant={activeView === 'dashboard' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => onViewChange('dashboard')}
+          >
+            <LayoutDashboard className={`${iconSizes.sm} mr-2`} />
+            {t('tabs.timeline.views.dashboard')}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{t('tabs.timeline.views.dashboard')}</TooltipContent>
       </Tooltip>
     </nav>
   );

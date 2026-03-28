@@ -30,7 +30,8 @@ export type ExportDomain =
   | 'contacts'
   | 'spaces'
   | 'construction'
-  | 'compliance';
+  | 'compliance'
+  | 'schedule';
 
 export interface ExportJob {
   domain: ExportDomain;

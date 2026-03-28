@@ -8,7 +8,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import {
   LayoutDashboard, CircleDollarSign, ShoppingCart, Building2,
-  Users, UserCheck, Archive, Construction, Shield,
+  Users, UserCheck, Archive, Construction, Shield, CalendarClock,
 } from 'lucide-react';
 import type { ExportDomainCard, ExportDomain, ExportJob } from '@/components/reports/sections/export/types';
 import type { ExportFormat } from '@/components/reports/core/ReportExportBar';
@@ -88,6 +88,14 @@ const DOMAIN_CARDS: ExportDomainCard[] = [
     descriptionKey: 'compliance.description',
     icon: Shield,
     href: '/reports/compliance',
+    formats: ['pdf', 'excel'],
+  },
+  {
+    domain: 'schedule',
+    titleKey: 'nav.schedule',
+    descriptionKey: 'schedule.description',
+    icon: CalendarClock,
+    href: '/reports/schedule',
     formats: ['pdf', 'excel'],
   },
 ];

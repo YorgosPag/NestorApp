@@ -1216,7 +1216,74 @@
       },
       "views": {
         "milestones": "Milestones",
-        "gantt": "Gantt"
+        "gantt": "Gantt",
+        "dashboard": "Dashboard"
+      },
+      "dashboard": {
+        "title": "Schedule Dashboard",
+        "lastUpdated": "Last updated",
+        "refresh": "Refresh",
+        "export": "Export",
+        "exportPdf": "PDF",
+        "exportExcel": "Excel",
+        "kpis": {
+          "title": "Schedule Overview",
+          "overallProgress": "Overall Progress",
+          "spi": "SPI",
+          "spiDesc": "Schedule Performance Index",
+          "cpi": "CPI",
+          "cpiDesc": "Cost Performance Index",
+          "daysRemaining": "Days Remaining",
+          "phasesOnTrack": "Phases On Track",
+          "delayedTasks": "Delayed Tasks",
+          "totalTasks": "tasks",
+          "vsPlan": "vs Plan"
+        },
+        "sCurve": {
+          "title": "S-Curve Analysis",
+          "pv": "Planned Value",
+          "ev": "Earned Value",
+          "ac": "Actual Cost",
+          "today": "Today"
+        },
+        "variance": {
+          "title": "Schedule Variance",
+          "expandAll": "Expand all",
+          "collapseAll": "Collapse all",
+          "colName": "Name",
+          "colPlannedStart": "Planned Start",
+          "colPlannedEnd": "Planned End",
+          "colActualStart": "Actual Start",
+          "colActualEnd": "Actual End",
+          "colVariance": "Variance",
+          "colStatus": "Status",
+          "colProgress": "Progress"
+        },
+        "lookahead": {
+          "title": "Lookahead",
+          "weeks2": "2 Weeks",
+          "weeks4": "4 Weeks",
+          "empty": "No tasks scheduled in the next {{weeks}} weeks",
+          "colTask": "Task",
+          "colPhase": "Phase",
+          "colStart": "Start",
+          "colEnd": "End",
+          "colDuration": "Duration",
+          "colStatus": "Status"
+        },
+        "ganttCard": {
+          "title": "Gantt Chart",
+          "desc": "View interactive Gantt chart and export",
+          "cta": "View Gantt & Export"
+        },
+        "empty": {
+          "noPhases": "No construction phases defined",
+          "noPhasesDesc": "Create phases in the Gantt view to see schedule analytics.",
+          "goToGantt": "Go to Gantt",
+          "notStarted": "Construction has not started yet",
+          "noBOQ": "No BOQ cost data linked",
+          "noBOQDesc": "Link BOQ items to phases for cost analytics. S-curve shows progress only."
+        }
       },
       "gantt": {
         "title": "Gantt Chart",

@@ -616,6 +616,10 @@
     "construction": "Construction & Timeline",
     "compliance": "Compliance & Labor",
     "financial": "Financial",
+    "schedule": "Schedule Analytics",
     "export": "Export Center"
+  },
+  "schedule": {
+    "description": "Construction schedule analytics and earned value management"
   }
 }

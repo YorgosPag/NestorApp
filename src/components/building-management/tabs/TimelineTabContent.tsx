@@ -47,6 +47,13 @@ const LazyGanttView = lazy(() =>
   }))
 );
 
+// Lazy load ScheduleDashboard (ADR-266) — only loaded when user switches to Dashboard view
+const LazyScheduleDashboard = lazy(() =>
+  import('./TimelineTabContent/dashboard').then((mod) => ({
+    default: mod.ScheduleDashboardView,
+  }))
+);
+
 interface TimelineTabContentProps {
   building: Building;
 }
@@ -295,6 +302,24 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
           }
         >
           <LazyGanttView building={building} />
+        </Suspense>
+      )}
+
+      {/* Schedule Dashboard (ADR-266) — lazy loaded */}
+      {activeView === 'dashboard' && (
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center py-2">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            </div>
+          }
+        >
+          <LazyScheduleDashboard
+            buildingId={building.id as string}
+            buildingName={(building.name as string) ?? ''}
+            milestones={firestoreMilestones}
+            onViewChange={setActiveView}
+          />
         </Suspense>
       )}
       {/* 🏢 ENTERPRISE: Milestone CRUD Dialog */}
