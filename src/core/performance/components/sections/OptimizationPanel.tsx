@@ -17,6 +17,8 @@ import { CheckCircle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { performanceMonitorUtilities } from '@/styles/design-tokens';
 import { migrateLegacyActionButton } from '@/core/actions/SmartActionFactory';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // TYPES
@@ -56,6 +58,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
   className
 }) => {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   // 🏢 ENTERPRISE: Get centralized success state classes (NO inline styles!)
   const successClasses = performanceMonitorUtilities.getSuccessStateClasses();
@@ -96,7 +99,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
               <p className="text-performance-xs text-foreground m-0">
                 {rec.description}
               </p>
-              <p className="text-performance-xs text-muted-foreground m-0">
+              <p className={cn("text-performance-xs m-0", colors.text.muted)}>
                 {rec.estimatedImprovement}
               </p>
             </div>

@@ -11,6 +11,8 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import type { SectionHeaderProps } from '../types';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import '@/lib/design-system';
+
 
 export const SectionHeader: React.FC<SectionHeaderProps> = ({
   title,
@@ -41,7 +43,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
   );
 
   const iconClasses = cn(
-    "text-blue-600",
+    "text-[hsl(var(--text-info))]",
     variant === 'minimal' ? iconSizes.xs : iconSizes.sm
   );
 
@@ -56,7 +58,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
           {displayTitle}
         </TitleTag>
         {subtitle && (
-          <span className="text-xs text-muted-foreground">
+          <span className={cn("text-xs", colors.text.muted)}>
             {subtitle}
           </span>
         )}

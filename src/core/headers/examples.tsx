@@ -14,6 +14,7 @@ import type { ViewMode } from './enterprise-system/types';
 import { CommonBadge } from '@/core/badges';
 import { COMMON_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 const logger = createModuleLogger('HeaderExamples');
 
 // ===== EXAMPLE 1: CONTACTS HEADER (Full Featured) =====

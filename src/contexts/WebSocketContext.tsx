@@ -1,7 +1,6 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
-import { useInterval } from '@/hooks/useInterval';
 import { generatePendingId } from '@/services/enterprise-id.service';
 import WebSocketService, {
   WebSocketEventType,
@@ -12,21 +11,31 @@ import { useUserRole } from '@/auth';
 import { useCache } from './CacheProvider';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { COLOR_BRIDGE } from '@/design-system/color-bridge';
-
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
+
 const logger = createModuleLogger('WebSocketContext');
 
-/** WebSocket payload type for type-safe messaging */
+// ── Re-exports for backward compatibility ──────────
+export {
+  useWebSocketEvent,
+  useRealTimeNotifications,
+  useUserPresence,
+  WebSocketDebugPanel,
+} from './websocket-hooks';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
 type WebSocketPayload = Record<string, unknown>;
 
-/** WebSocket statistics interface */
 interface WebSocketStats {
   reconnectAttempts: number;
   queuedMessages: number;
   activeListeners: number;
   connectionAttempts: number;
-  pendingListeners: number; // 🆕 ENTERPRISE: Pending listeners count
+  pendingListeners: number;
   user: { email: string; role: string } | null;
 }
 
@@ -56,56 +65,28 @@ interface WebSocketProviderProps {
 }
 
 // ============================================================================
-// 🏢 ENTERPRISE: WebSocket Transport Availability Detection
-// Pattern: SAP/Google/Microsoft - "Feature Availability + Graceful Degradation"
-//
-// Vercel Serverless does NOT support native WebSocket connections.
-// Real-time updates in production use Firestore onSnapshot listeners.
-// WebSocket is available ONLY when explicitly configured (e.g., development
-// with a local WS server, or production with a dedicated WS service).
-//
-// Configuration:
-//   NEXT_PUBLIC_WS_ENABLED=true   → Explicit opt-in for WebSocket
-//   NEXT_PUBLIC_WS_URL=wss://...  → WebSocket server endpoint
-//   Neither set                   → WebSocket disabled (graceful degradation)
+// TRANSPORT AVAILABILITY DETECTION
 // ============================================================================
 
-/** WebSocket transport configuration resolved from environment */
 interface WebSocketTransportConfig {
-  /** Whether WebSocket transport is available */
   readonly isAvailable: boolean;
-  /** Resolved WebSocket URL (empty if unavailable) */
   readonly url: string;
-  /** Reason why WebSocket is disabled (for diagnostics) */
   readonly disabledReason: string | null;
 }
 
-/**
- * Resolve WebSocket transport availability from environment.
- * @enterprise Explicit opt-in policy - never assume WS is available.
- *
- * Priority:
- *   1. NEXT_PUBLIC_WS_ENABLED=true + NEXT_PUBLIC_WS_URL → enabled
- *   2. NEXT_PUBLIC_WS_URL alone (dev only) → enabled with URL
- *   3. Development without URL → enabled with localhost fallback
- *   4. Production without explicit config → DISABLED (Vercel serverless)
- */
 function resolveTransportConfig(): WebSocketTransportConfig {
   const explicitUrl = process.env.NEXT_PUBLIC_WS_URL || '';
   const explicitEnabled = process.env.NEXT_PUBLIC_WS_ENABLED === 'true';
   const isDevelopment = process.env.NODE_ENV === 'development';
 
-  // Case 1: Explicitly enabled with URL → always available
   if (explicitEnabled && explicitUrl) {
     return { isAvailable: true, url: explicitUrl, disabledReason: null };
   }
 
-  // Case 2: URL provided without flag (dev) → available
   if (explicitUrl && isDevelopment) {
     return { isAvailable: true, url: explicitUrl, disabledReason: null };
   }
 
-  // Case 3: URL provided without flag (production) → require explicit opt-in
   if (explicitUrl && !isDevelopment && !explicitEnabled) {
     return {
       isAvailable: false,
@@ -114,10 +95,6 @@ function resolveTransportConfig(): WebSocketTransportConfig {
     };
   }
 
-  // Case 4: Development without any config → disabled (no WS server configured)
-  // 🏢 ENTERPRISE: Explicit opt-in policy — never auto-connect without configuration.
-  // Firestore onSnapshot provides real-time updates without WebSocket.
-  // To enable WS in dev: set NEXT_PUBLIC_WS_ENABLED=true and NEXT_PUBLIC_WS_URL=ws://localhost:8080/ws
   if (isDevelopment) {
     return {
       isAvailable: false,
@@ -126,7 +103,6 @@ function resolveTransportConfig(): WebSocketTransportConfig {
     };
   }
 
-  // Case 5: Production without config → disabled (Vercel serverless)
   return {
     isAvailable: false,
     url: '',
@@ -134,16 +110,22 @@ function resolveTransportConfig(): WebSocketTransportConfig {
   };
 }
 
-/** Singleton transport config (evaluated once at module load) */
 const WS_TRANSPORT = resolveTransportConfig();
 
-// 🏢 ENTERPRISE: Pending Listener Queue System (SAP/Google/Microsoft Pattern)
+// ============================================================================
+// PENDING LISTENER QUEUE
+// ============================================================================
+
 interface PendingListener {
   id: string;
   type: WebSocketEventType | '*';
   handler: (message: WebSocketMessage<WebSocketPayload>) => void;
   options?: { once?: boolean };
 }
+
+// ============================================================================
+// PROVIDER
+// ============================================================================
 
 export function WebSocketProvider({
   children,
@@ -152,18 +134,14 @@ export function WebSocketProvider({
 }: WebSocketProviderProps) {
   const { user, isAuthenticated } = useUserRole();
   const cache = useCache();
-  const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const _iconSizes = useIconSizes();
+  const { quick: _quick } = useBorderTokens();
   const wsRef = useRef<WebSocketService | null>(null);
   const [connectionState, setConnectionState] = useState<WebSocketConnectionState>('disconnected');
   const [connectionAttempts, setConnectionAttempts] = useState(0);
-
-  // 🏢 ENTERPRISE: Queue for pending listeners (attached before WebSocket initialization)
   const pendingListenersRef = useRef<PendingListener[]>([]);
-  // 🏢 ENTERPRISE: Map pending IDs to real IDs (for cleanup)
   const listenerMapRef = useRef<Map<string, string>>(new Map());
 
-  // Initialize WebSocket service
   const initializeWebSocket = useCallback(() => {
     if (wsRef.current) {
       wsRef.current.destroy();
@@ -177,47 +155,31 @@ export function WebSocketProvider({
       enableLogging: enableDevtools
     });
 
-    // Add authentication middleware
     ws.addMiddleware((message) => {
       if (user) {
         return {
           ...message,
           userId: user.email,
-          metadata: {
-            ...message.metadata,
-            userRole: user.role,
-            timestamp: Date.now()
-          }
+          metadata: { ...message.metadata, userRole: user.role, timestamp: Date.now() }
         };
       }
       return message;
     });
 
-    // Add caching middleware for certain message types
     ws.addMiddleware((message) => {
       const cachableTypes: WebSocketEventType[] = ['task_updated', 'property_updated'];
-      
       if (cachableTypes.includes(message.type)) {
-        // Cache the message for offline access
-        cache.set(`ws_${message.type}_${message.id}`, message, { ttl: 300000 }); // 5 minutes
+        cache.set(`ws_${message.type}_${message.id}`, message, { ttl: 300000 });
       }
-      
       return message;
     });
 
-    // Connection state listener
     ws.onConnectionStateChange((state) => {
       setConnectionState(state);
-      
       if (state === 'connected') {
         setConnectionAttempts(0);
-        // Send user presence
         if (user) {
-          ws.send('user_online', {
-            userId: user.email,
-            role: user.role,
-            timestamp: Date.now()
-          });
+          ws.send('user_online', { userId: user.email, role: user.role, timestamp: Date.now() });
         }
       } else if (state === 'reconnecting') {
         setConnectionAttempts(prev => prev + 1);
@@ -228,10 +190,8 @@ export function WebSocketProvider({
     return ws;
   }, [wsUrl, enableDevtools, user, cache]);
 
-  // 🏢 ENTERPRISE: Connect when authenticated AND transport is available
-  // Pattern: SAP/Salesforce - "Graceful Degradation with Diagnostic Logging"
+  // Connect when authenticated AND transport is available
   useEffect(() => {
-    // Guard: WebSocket transport must be available
     if (!WS_TRANSPORT.isAvailable) {
       if (enableDevtools && WS_TRANSPORT.disabledReason) {
         logger.info(`[WebSocket] Transport disabled: ${WS_TRANSPORT.disabledReason}`);
@@ -241,51 +201,28 @@ export function WebSocketProvider({
 
     if (isAuthenticated && user) {
       const ws = initializeWebSocket();
-
       ws.connect().catch((error) => {
         logger.warn('[WebSocket] Connection failed', { error });
       });
 
       return () => {
-        // Send offline status before disconnect
         if (ws.isConnected()) {
-          ws.send('user_offline', {
-            userId: user.email,
-            timestamp: Date.now()
-          });
+          ws.send('user_offline', { userId: user.email, timestamp: Date.now() });
         }
         ws.destroy();
       };
     }
   }, [isAuthenticated, user, initializeWebSocket, enableDevtools]);
 
-  // 🏢 ENTERPRISE: Flush Pending Listeners when WebSocket is Ready
+  // Flush pending listeners when WebSocket is ready
   useEffect(() => {
     if (wsRef.current && pendingListenersRef.current.length > 0) {
       const ws = wsRef.current;
-      const pendingCount = pendingListenersRef.current.length;
-
-      if (enableDevtools) {
-        logger.info(`[WebSocket] Flushing ${pendingCount} pending listeners...`);
-      }
-
-      // Attach all pending listeners to the now-ready WebSocket
       pendingListenersRef.current.forEach((pending) => {
         const realId = ws.addEventListener(pending.type, pending.handler, pending.options);
-        // Map pending ID → real ID (for cleanup later)
         listenerMapRef.current.set(pending.id, realId);
-
-        if (enableDevtools) {
-          logger.info(`[WebSocket] Attached "${pending.type}" (${pending.id} -> ${realId})`);
-        }
       });
-
-      // Clear the pending queue
       pendingListenersRef.current = [];
-
-      if (enableDevtools) {
-        logger.info(`[WebSocket] All pending listeners attached successfully`);
-      }
     }
   }, [wsRef.current, enableDevtools]);
 
@@ -293,36 +230,17 @@ export function WebSocketProvider({
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!wsRef.current || !user) return;
+      const status = document.hidden ? 'away' : 'online';
+      wsRef.current.send('user_status', { userId: user.email, status, timestamp: Date.now() });
+    };
 
-      if (document.hidden) {
-        // Page is hidden - send away status
-        wsRef.current.send('user_status', {
-          userId: user.email,
-          status: 'away' as const,
-          timestamp: Date.now()
-        });
-      } else {
-        // Page is visible - send online status
-        wsRef.current.send('user_status', {
-          userId: user.email,
-          status: 'online' as const,
-          timestamp: Date.now()
-        });
+    const handleBeforeUnload = () => {
+      if (wsRef.current && user) {
+        wsRef.current.send('user_offline', { userId: user.email, timestamp: Date.now() });
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    // Handle page unload
-    const handleBeforeUnload = () => {
-      if (wsRef.current && user) {
-        wsRef.current.send('user_offline', {
-          userId: user.email,
-          timestamp: Date.now()
-        });
-      }
-    };
-
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
@@ -335,10 +253,7 @@ export function WebSocketProvider({
   const send = useCallback((
     type: WebSocketEventType,
     payload: WebSocketPayload,
-    options?: {
-      targetUsers?: string[];
-      metadata?: Record<string, unknown>;
-    }
+    options?: { targetUsers?: string[]; metadata?: Record<string, unknown> }
   ) => {
     if (!wsRef.current) {
       logger.warn('WebSocket not initialized');
@@ -347,84 +262,54 @@ export function WebSocketProvider({
     return wsRef.current.send(type, payload, options);
   }, []);
 
-  // 🏢 ENTERPRISE: addEventListener with Pending Queue Support
   const addEventListener = useCallback((
     type: WebSocketEventType | '*',
     handler: (message: WebSocketMessage<WebSocketPayload>) => void,
     options?: { once?: boolean }
   ) => {
-    // Case 1: WebSocket not ready → Queue the listener
     if (!wsRef.current) {
       const pendingId = generatePendingId();
-      pendingListenersRef.current.push({
-        id: pendingId,
-        type,
-        handler,
-        options
-      });
-
-      if (enableDevtools) {
-        logger.info(`[WebSocket] Queued listener for "${type}" (ID: ${pendingId})`);
-      }
-
+      pendingListenersRef.current.push({ id: pendingId, type, handler, options });
       return pendingId;
     }
-
-    // Case 2: WebSocket ready → Attach immediately
     return wsRef.current.addEventListener(type, handler, options);
   }, [enableDevtools]);
 
-  // 🏢 ENTERPRISE: removeEventListener with Pending Queue Support
   const removeEventListener = useCallback((listenerId: string) => {
-    // Case 1: Pending listener (not yet attached)
     if (listenerId.startsWith('pending-')) {
-      // Remove from pending queue
       const index = pendingListenersRef.current.findIndex((p) => p.id === listenerId);
       if (index !== -1) {
-        const removed = pendingListenersRef.current.splice(index, 1)[0];
-        if (enableDevtools) {
-          logger.info(`[WebSocket] Removed pending listener "${removed.type}" (ID: ${listenerId})`);
-        }
+        pendingListenersRef.current.splice(index, 1);
         return true;
       }
 
-      // Check if it was already flushed and mapped to a real ID
       const realId = listenerMapRef.current.get(listenerId);
       if (realId && wsRef.current) {
         listenerMapRef.current.delete(listenerId);
-        const success = wsRef.current.removeEventListener(realId);
-        if (enableDevtools && success) {
-          logger.info(`[WebSocket] Removed mapped listener (${listenerId} -> ${realId})`);
-        }
-        return success;
+        return wsRef.current.removeEventListener(realId);
       }
 
       return false;
     }
 
-    // Case 2: Regular listener (already attached)
     if (!wsRef.current) return false;
     return wsRef.current.removeEventListener(listenerId);
   }, [enableDevtools]);
 
-  // 🏢 ENTERPRISE: getStats with Pending Listeners Count
   const getStats = useCallback(() => {
     const baseStats = wsRef.current ? wsRef.current.getStats() : {
-      reconnectAttempts: 0,
-      queuedMessages: 0,
-      activeListeners: 0
+      reconnectAttempts: 0, queuedMessages: 0, activeListeners: 0
     };
 
     return {
       ...baseStats,
       connectionAttempts,
-      pendingListeners: pendingListenersRef.current.length, // 🆕 ENTERPRISE: Track pending listeners
+      pendingListeners: pendingListenersRef.current.length,
       user: user ? { email: user.email, role: user.role } : null
     };
   }, [connectionAttempts, user]);
 
   const reconnect = useCallback(async () => {
-    // 🏢 ENTERPRISE: Prevent reconnect when transport is unavailable
     if (!WS_TRANSPORT.isAvailable) {
       logger.info('[WebSocket] Reconnect skipped -- transport not available');
       return;
@@ -460,213 +345,4 @@ export function useWebSocket() {
     throw new Error('useWebSocket must be used within a WebSocketProvider');
   }
   return context;
-}
-
-// Specialized hooks for different event types
-export function useWebSocketEvent<T = WebSocketPayload>(
-  eventType: WebSocketEventType,
-  handler: (message: WebSocketMessage<T>) => void,
-  dependencies: React.DependencyList = []
-) {
-  const { addEventListener, removeEventListener } = useWebSocket();
-
-  useEffect(() => {
-    const listenerId = addEventListener(eventType, handler as (message: WebSocketMessage<WebSocketPayload>) => void);
-    return () => {
-      removeEventListener(listenerId);
-    };
-  }, [addEventListener, removeEventListener, eventType, ...dependencies]);
-}
-
-/** User Presence payload interfaces */
-interface UserPresencePayload {
-  userId: string;
-  status?: 'online' | 'away' | 'offline';
-  timestamp?: number;
-  [key: string]: unknown;
-}
-
-/** Notification payload interface */
-interface NotificationPayload {
-  title?: string;
-  message?: string;
-  [key: string]: unknown;
-}
-
-// Hook for real-time notifications
-export function useRealTimeNotifications() {
-  const [notifications, setNotifications] = useState<WebSocketMessage<NotificationPayload>[]>([]);
-  const cache = useCache();
-
-  useWebSocketEvent<NotificationPayload>('notification', (message) => {
-    setNotifications(prev => [message, ...prev.slice(0, 49)]); // Keep last 50
-    
-    // Cache notification
-    cache.set(`notification_${message.id}`, message, { ttl: 86400000 }); // 24 hours
-    
-    // Show browser notification if permission granted
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification(message.payload.title || 'New Notification', {
-        body: message.payload.message || 'You have a new notification',
-        icon: '/favicon.ico',
-        tag: message.id
-      });
-    }
-  });
-
-  const clearNotifications = useCallback(() => {
-    setNotifications([]);
-  }, []);
-
-  const removeNotification = useCallback((messageId: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== messageId));
-  }, []);
-
-  return {
-    notifications,
-    clearNotifications,
-    removeNotification,
-    unreadCount: notifications.length
-  };
-}
-
-/** User presence data interface */
-interface UserPresenceData {
-  userId: string;
-  status?: 'online' | 'away' | 'offline';
-  lastSeen: number;
-  role?: string;
-  [key: string]: unknown;
-}
-
-// Hook for user presence
-export function useUserPresence() {
-  const [onlineUsers, setOnlineUsers] = useState<Map<string, UserPresenceData>>(new Map());
-
-  useWebSocketEvent<UserPresencePayload>('user_online', (message) => {
-    const userId = message.payload.userId;
-    setOnlineUsers(prev => new Map(prev.set(userId, {
-      ...message.payload,
-      lastSeen: Date.now()
-    } as UserPresenceData)));
-  });
-
-  useWebSocketEvent<UserPresencePayload>('user_offline', (message) => {
-    setOnlineUsers(prev => {
-      const newMap = new Map(prev);
-      const userId = message.payload.userId;
-      newMap.delete(userId);
-      return newMap;
-    });
-  });
-
-  useWebSocketEvent<UserPresencePayload>('user_status', (message) => {
-    setOnlineUsers(prev => {
-      const userId = message.payload.userId;
-      const user = prev.get(userId);
-      if (user) {
-        return new Map(prev.set(userId, {
-          ...user,
-          status: message.payload.status || 'online',
-          lastSeen: Date.now()
-        }));
-      }
-      return prev;
-    });
-  });
-
-  return {
-    onlineUsers: Array.from(onlineUsers.values()),
-    isUserOnline: (userId: string) => onlineUsers.has(userId),
-    getUserStatus: (userId: string) => onlineUsers.get(userId)?.status || 'offline'
-  };
-}
-
-// Development debug component
-export function WebSocketDebugPanel() {
-  const { connectionState, getStats, reconnect } = useWebSocket();
-  const [stats, setStats] = useState<WebSocketStats | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
-  const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
-
-  // Debug stats refresh (ADR-205 Phase 4 — useInterval)
-  useInterval(() => setStats(getStats()), isOpen ? 1000 : null);
-
-  if (process.env.NODE_ENV !== 'development') {
-    return null;
-  }
-
-  const getConnectionColor = () => {
-    switch (connectionState) {
-      case 'connected': return COLOR_BRIDGE.text.success;      // ✅ SEMANTIC: text-green-600 -> success
-      case 'connecting': return COLOR_BRIDGE.text.warning;     // ✅ SEMANTIC: text-yellow-600 -> warning
-      case 'reconnecting': return COLOR_BRIDGE.text.warning;   // ✅ SEMANTIC: text-orange-600 -> warning
-      case 'error': return COLOR_BRIDGE.text.error;            // ✅ SEMANTIC: text-red-600 -> error
-      default: return COLOR_BRIDGE.text.secondary;             // ✅ SEMANTIC: text-gray-600 -> secondary
-    }
-  };
-
-  return (
-    <div className="fixed top-4 right-4 z-50">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={`${iconSizes.xs} rounded-full ${getConnectionColor()}`}
-        title={`WebSocket: ${connectionState}`}
-      >
-        <span className="sr-only">WebSocket Status</span>
-      </button>
-      
-      {isOpen && (
-        <div className={`absolute top-6 right-0 w-80 bg-card ${quick.card} rounded-lg shadow-xl p-4 text-sm`}>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-bold">WebSocket Status</h3>
-            <button onClick={() => setIsOpen(false)}>×</button>
-          </div>
-          
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span>State:</span>
-              <span className={getConnectionColor()}>{connectionState}</span>
-            </div>
-            
-            {stats && (
-              <>
-                <div className="flex justify-between">
-                  <span>Reconnect Attempts:</span>
-                  <span>{stats.reconnectAttempts}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Queued Messages:</span>
-                  <span>{stats.queuedMessages}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Active Listeners:</span>
-                  <span>{stats.activeListeners}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Pending Listeners:</span>
-                  <span className={stats.pendingListeners > 0 ? COLOR_BRIDGE.text.warning : ''}>{stats.pendingListeners}</span>
-                </div>
-                {stats.user && (
-                  <div className="text-xs text-muted-foreground">
-                    User: {stats.user.email} ({stats.user.role})
-                  </div>
-                )}
-              </>
-            )}
-            
-            {connectionState !== 'connected' && (
-              <button
-                onClick={() => reconnect()}
-                className="w-full mt-2 px-3 py-1 bg-primary text-primary-foreground rounded text-xs"
-              >
-                Reconnect
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
 }

@@ -15,6 +15,7 @@
 import React from 'react';
 import { getDynamicHeightClass } from '@/components/ui/utils/dynamic-styles';
 import { performanceMonitorUtilities } from '@/styles/design-tokens';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // TYPES
@@ -67,7 +68,7 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
 
   if (chartData.length === 0) {
     return (
-      <div className="rounded bg-muted/30 p-performance-sm text-center text-muted-foreground text-xs">
+      <div className={cn("rounded bg-muted/30 p-performance-sm text-center text-xs", colors.text.muted)}>
         No performance data available
       </div>
     );
@@ -92,7 +93,7 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
       </div>
 
       {/* Time Labels */}
-      <div className="flex justify-between text-performance-xs text-muted-foreground mt-performance-xs">
+      <div className={cn("flex justify-between text-performance-xs mt-performance-xs", colors.text.muted)}>
         <span>-{maxPoints}s</span>
         <span>now</span>
       </div>

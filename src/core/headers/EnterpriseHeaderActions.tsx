@@ -30,6 +30,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
 import { GRADIENT_HOVER_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useTranslation } from 'react-i18next';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -101,10 +102,11 @@ const ENTITY_TYPE_KEYS: Record<string, string> = {
   'contact': 'headerActions.entities.contact',
   'unit': 'headerActions.entities.unit',
   // Legacy Greek identifiers for backward compatibility
-  'έργο': 'headerActions.entities.project',
-  'κτίριο': 'headerActions.entities.building',
-  'επαφή': 'headerActions.entities.contact',
-  'μονάδα': 'headerActions.entities.unit',
+  // eslint-disable-next-line custom/no-hardcoded-strings -- object keys used as identifiers, not user-facing
+  'έργο': 'headerActions.entities.project', // eslint-disable-line custom/no-hardcoded-strings
+  'κτίριο': 'headerActions.entities.building', // eslint-disable-line custom/no-hardcoded-strings
+  'επαφή': 'headerActions.entities.contact', // eslint-disable-line custom/no-hardcoded-strings
+  'μονάδα': 'headerActions.entities.unit', // eslint-disable-line custom/no-hardcoded-strings
 };
 
 // ============================================================================

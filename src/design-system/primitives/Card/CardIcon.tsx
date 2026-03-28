@@ -23,6 +23,7 @@ import {
 } from '@/components/navigation/config/navigation-entities';
 import type { CardIconProps, CardIconSize } from './types';
 import { CARD_ROUNDED } from './types';
+import { getStatusColor } from '@/lib/design-system';
 
 /**
  * 🏢 CardIcon Component
@@ -139,15 +140,27 @@ export function CardIcon({
 }
 
 /**
- * Helper function to get a background color from text color
- * Maps text-{color}-600 to bg-{color}-100 for filled variant
+ * Helper function to get a semantic background color from text color.
+ * Maps known status text classes to their semantic bg equivalents.
  */
 function getBackgroundFromColor(textColor: string): string {
-  // Extract color name from text-{color}-600 pattern
+  const statusMap: Record<string, string> = {
+    'blue': 'pending',
+    'green': 'available',
+    'emerald': 'available',
+    'red': 'error',
+    'orange': 'construction',
+    'amber': 'reserved',
+    'yellow': 'reserved',
+    'purple': 'completed',
+  };
   const match = textColor.match(/text-(\w+)-\d+/);
   if (match) {
     const colorName = match[1];
-    return `bg-${colorName}-100 dark:bg-${colorName}-900/30`;
+    const status = statusMap[colorName];
+    if (status) {
+      return `${getStatusColor(status, 'bg')}/10`;
+    }
   }
   return 'bg-muted';
 }

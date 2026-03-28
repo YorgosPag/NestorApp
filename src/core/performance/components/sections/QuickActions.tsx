@@ -16,6 +16,9 @@ import React from 'react';
 import { RefreshCcw, Zap, BarChart3 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { migrateLegacyActionButton } from '@/core/actions/SmartActionFactory';
+import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // TYPES
@@ -60,6 +63,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   className
 }) => {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   return (
     <section className={`flex flex-col gap-performance-sm ${className ?? ''}`}>
@@ -88,7 +92,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
         </div>
 
         {/* Recommendations Count */}
-        <span className="text-performance-xs text-muted-foreground">
+        <span className={cn("text-performance-xs", colors.text.muted)}>
           {recommendations.length} recommendations
         </span>
       </div>

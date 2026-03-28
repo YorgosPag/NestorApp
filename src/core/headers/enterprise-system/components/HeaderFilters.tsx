@@ -25,7 +25,10 @@ import {
   LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 import { HEADER_THEME } from '../constants';
+import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // Local interfaces για compatibility με UnifiedHeaderSystem
 interface HeaderFilterOption {
@@ -73,6 +76,8 @@ export const HeaderFilters: React.FC<UnifiedHeaderFiltersProps> = ({
   className
 }) => {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
+  const { t } = useTranslation('filters');
   const filtersClasses = cn(
     HEADER_THEME.components.filters.container,
     className
@@ -83,7 +88,7 @@ export const HeaderFilters: React.FC<UnifiedHeaderFiltersProps> = ({
       {/* Select Filters */}
       {filters.map((filter) => (
         <div key={filter.key} className="flex items-center gap-2">
-          <Filter className={`${iconSizes.sm} text-muted-foreground`} />
+          <Filter className={`${iconSizes.sm} ${colors.text.muted}`} />
           <Select value={filter.value} onValueChange={filter.onChange}>
             <SelectTrigger className="h-9 text-sm w-[180px]">
               <SelectValue placeholder={filter.placeholder} />
@@ -129,7 +134,7 @@ export const HeaderFilters: React.FC<UnifiedHeaderFiltersProps> = ({
             checked={filter.checked}
             onCheckedChange={filter.onChange}
           />
-          {filter.icon && <filter.icon className={`${iconSizes.sm} text-muted-foreground`} />}
+          {filter.icon && <filter.icon className={`${iconSizes.sm} ${colors.text.muted}`} />}
           <Label htmlFor={filter.key} className="text-sm font-medium whitespace-nowrap">
             {filter.label}
           </Label>
@@ -145,7 +150,7 @@ export const HeaderFilters: React.FC<UnifiedHeaderFiltersProps> = ({
       {hasActiveFilters && onClearFilters && (
         <Button variant="ghost" size="sm" onClick={onClearFilters} className="text-xs h-9">
           <X className={`${iconSizes.xs} mr-1`} />
-          Καθαρισμός
+          {t('clearFilters')}
         </Button>
       )}
     </div>
