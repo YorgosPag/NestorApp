@@ -6,6 +6,8 @@ import { Separator } from '@/components/ui/separator';
 import type { InvoiceLineItem } from '@/subapps/accounting/types';
 import { formatCurrency } from '../../../utils/format';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
 interface InvoicePreviewProps {
   totals: {
     totalNetAmount: number;
@@ -17,6 +19,7 @@ interface InvoicePreviewProps {
 
 export function InvoicePreview({ totals, lineItems }: InvoicePreviewProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   // Group VAT by rate
   const vatByRate = new Map<number, number>();
@@ -34,13 +37,13 @@ export function InvoicePreview({ totals, lineItems }: InvoicePreviewProps) {
       <CardContent>
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">{t('invoices.netAmount')}</span>
+            <span className={colors.text.muted}>{t('invoices.netAmount')}</span>
             <span className="font-medium">{formatCurrency(totals.totalNetAmount)}</span>
           </div>
 
           {Array.from(vatByRate.entries()).map(([rate, amount]) => (
             <div key={rate} className="flex justify-between text-sm">
-              <span className="text-muted-foreground">ΦΠΑ {rate}%</span>
+              <span className={colors.text.muted}>ΦΠΑ {rate}%</span>
               <span className="font-medium">{formatCurrency(amount)}</span>
             </div>
           ))}
@@ -48,7 +51,7 @@ export function InvoicePreview({ totals, lineItems }: InvoicePreviewProps) {
           <Separator />
 
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">{t('forms.totalVat')}</span>
+            <span className={colors.text.muted}>{t('forms.totalVat')}</span>
             <span className="font-medium">{formatCurrency(totals.totalVatAmount)}</span>
           </div>
 

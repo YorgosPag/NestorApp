@@ -34,6 +34,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { API_ROUTES } from '@/config/domain-constants';
 import type { DocumentType } from '@/subapps/accounting/types';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -95,6 +99,7 @@ export function UploadDocumentDialog({
   onSuccess,
 }: UploadDocumentDialogProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
   const { user } = useAuth();
 
   const [fileUrl, setFileUrl] = useState('');
@@ -171,7 +176,7 @@ export function UploadDocumentDialog({
               onChange={(e) => setFileUrl(e.target.value)}
               required
             />
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className={cn("text-xs mt-1", colors.text.muted)}>
               {t('documents.fileUrlHint')}
             </p>
           </fieldset>

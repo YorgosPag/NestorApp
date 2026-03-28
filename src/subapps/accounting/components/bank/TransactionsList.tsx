@@ -58,7 +58,7 @@ export function TransactionsList({ transactions }: TransactionsListProps) {
         <p className="text-lg font-medium text-foreground mb-1">
           {t('bank.noTransactions')}
         </p>
-        <p className="text-muted-foreground">
+        <p className={colors.text.muted}>
           {t('bank.noTransactionsDescription')}
         </p>
       </div>

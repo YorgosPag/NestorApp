@@ -30,6 +30,10 @@ import {
 } from '@/components/ui/select';
 import type { ImportBatch } from '@/subapps/accounting/types';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -70,6 +74,7 @@ export function ImportCSVDialog({
   onSuccess,
 }: ImportCSVDialogProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   const [selectedBank, setSelectedBank] = useState<BankCode | ''>('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -171,7 +176,7 @@ export function ImportCSVDialog({
                 {t('bank.chooseFile')}
               </Button>
               {selectedFile && (
-                <span className="text-sm text-muted-foreground truncate max-w-[200px]">
+                <span className={cn("text-sm truncate max-w-[200px]", colors.text.muted)}>
                   {selectedFile.name}
                 </span>
               )}

@@ -6,8 +6,13 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { InvoiceForm } from './forms/InvoiceForm';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 export function NewInvoicePageContent() {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
   const router = useRouter();
 
   return (
@@ -19,7 +24,7 @@ export function NewInvoicePageContent() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold text-foreground">{t('invoices.newInvoice')}</h1>
-            <p className="text-sm text-muted-foreground mt-1">{t('invoices.description')}</p>
+            <p className={cn("text-sm mt-1", colors.text.muted)}>{t('invoices.description')}</p>
           </div>
         </div>
       </header>

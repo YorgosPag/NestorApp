@@ -28,6 +28,10 @@ import { Spinner } from '@/components/ui/spinner';
 import { ExtractedDataDisplay } from './ExtractedDataDisplay';
 import type { ReceivedExpenseDocument, ExpenseCategory } from '@/subapps/accounting/types';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -78,6 +82,7 @@ export function DocumentReviewCard({
   confirming,
 }: DocumentReviewCardProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   // Editable confirmed fields — pre-populated from AI extraction
   const [category, setCategory] = useState<ExpenseCategory>(
@@ -121,7 +126,7 @@ export function DocumentReviewCard({
           <CardTitle className="text-base">{doc.fileName}</CardTitle>
           <Badge variant={statusVariant}>{statusLabel}</Badge>
         </div>
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className={cn("text-xs mt-1", colors.text.muted)}>
           {doc.mimeType} — {(doc.fileSize / 1024).toFixed(1)} KB
         </p>
       </CardHeader>

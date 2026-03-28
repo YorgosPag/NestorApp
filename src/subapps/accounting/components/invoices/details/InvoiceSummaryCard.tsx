@@ -7,12 +7,17 @@ import { Separator } from '@/components/ui/separator';
 import type { Invoice } from '@/subapps/accounting/types';
 import { formatCurrency, formatDate } from '../../../utils/format';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 interface InvoiceSummaryCardProps {
   invoice: Invoice;
 }
 
 export function InvoiceSummaryCard({ invoice }: InvoiceSummaryCardProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   return (
     <Card>
@@ -20,13 +25,13 @@ export function InvoiceSummaryCard({ invoice }: InvoiceSummaryCardProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Left: Customer */}
           <section>
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('invoices.customer')}</h3>
+            <h3 className={cn("text-sm font-medium mb-2", colors.text.muted)}>{t('invoices.customer')}</h3>
             <p className="font-medium">{invoice.customer.name}</p>
             {invoice.customer.vatNumber && (
-              <p className="text-sm text-muted-foreground">ΑΦΜ: {invoice.customer.vatNumber}</p>
+              <p className={cn("text-sm", colors.text.muted)}>ΑΦΜ: {invoice.customer.vatNumber}</p>
             )}
             {invoice.customer.address && (
-              <p className="text-sm text-muted-foreground">
+              <p className={cn("text-sm", colors.text.muted)}>
                 {invoice.customer.address}, {invoice.customer.city} {invoice.customer.postalCode}
               </p>
             )}
@@ -35,21 +40,21 @@ export function InvoiceSummaryCard({ invoice }: InvoiceSummaryCardProps) {
           {/* Right: Status & Dates */}
           <section className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">{t('invoices.issueDate')}</span>
+              <span className={cn("text-sm", colors.text.muted)}>{t('invoices.issueDate')}</span>
               <span className="text-sm">{formatDate(invoice.issueDate)}</span>
             </div>
             {invoice.dueDate && (
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">{t('invoices.dueDate')}</span>
+                <span className={cn("text-sm", colors.text.muted)}>{t('invoices.dueDate')}</span>
                 <span className="text-sm">{formatDate(invoice.dueDate)}</span>
               </div>
             )}
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">{t('invoices.paymentStatus')}</span>
+              <span className={cn("text-sm", colors.text.muted)}>{t('invoices.paymentStatus')}</span>
               <Badge>{t(`invoices.paymentStatuses.${invoice.paymentStatus}`)}</Badge>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">{t('invoices.mydataStatus')}</span>
+              <span className={cn("text-sm", colors.text.muted)}>{t('invoices.mydataStatus')}</span>
               <Badge variant="outline">{t(`invoices.mydataStatuses.${invoice.mydata.status}`)}</Badge>
             </div>
           </section>
@@ -60,15 +65,15 @@ export function InvoiceSummaryCard({ invoice }: InvoiceSummaryCardProps) {
         {/* Totals */}
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
-            <p className="text-xs text-muted-foreground">{t('invoices.netAmount')}</p>
+            <p className={cn("text-xs", colors.text.muted)}>{t('invoices.netAmount')}</p>
             <p className="text-lg font-medium">{formatCurrency(invoice.totalNetAmount)}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">{t('invoices.vatAmount')}</p>
+            <p className={cn("text-xs", colors.text.muted)}>{t('invoices.vatAmount')}</p>
             <p className="text-lg font-medium">{formatCurrency(invoice.totalVatAmount)}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">{t('invoices.grossAmount')}</p>
+            <p className={cn("text-xs", colors.text.muted)}>{t('invoices.grossAmount')}</p>
             <p className="text-lg font-bold">{formatCurrency(invoice.totalGrossAmount)}</p>
           </div>
         </div>

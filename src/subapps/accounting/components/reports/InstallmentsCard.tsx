@@ -24,6 +24,10 @@ import { Badge } from '@/components/ui/badge';
 import type { TaxInstallment, TaxInstallmentStatus } from '@/subapps/accounting/types';
 import { formatCurrency, formatDate } from '../../utils/format';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -52,6 +56,7 @@ const INSTALLMENT_STATUS_VARIANTS: Record<
 
 export function InstallmentsCard({ installments }: InstallmentsCardProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   const sortedInstallments = [...installments].sort(
     (a, b) => a.installmentNumber - b.installmentNumber,
@@ -67,7 +72,7 @@ export function InstallmentsCard({ installments }: InstallmentsCardProps) {
       <CardHeader>
         <CardTitle className="text-lg flex items-center justify-between">
           <span>{t('reports.installments')}</span>
-          <span className="text-sm font-normal text-muted-foreground">
+          <span className={cn("text-sm font-normal", colors.text.muted)}>
             {t('installmentsPaid', {
               paid: formatCurrency(paidAmount),
               total: formatCurrency(totalAmount),

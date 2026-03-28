@@ -22,7 +22,6 @@ import { AssociationService } from '@/services/association.service';
 import type {
   LegalContract,
   ContractPhase,
-  ContractStatus,
   LegalPhase,
   CreateContractInput,
   UpdateContractInput,

@@ -28,6 +28,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { BankTransaction, MatchCandidate } from '@/subapps/accounting/types';
 import { formatCurrency, formatDate } from '../../utils/format';
 
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -91,7 +93,7 @@ export function MatchingPanel({ transactions, candidates, onMatch }: MatchingPan
         </CardHeader>
         <CardContent>
           {unmatchedTransactions.length === 0 ? (
-            <p className="text-muted-foreground text-center py-6">
+            <p className={cn("text-center py-6", colors.text.muted)}>
               {t('bank.allTransactionsMatched')}
             </p>
           ) : (
@@ -146,11 +148,11 @@ export function MatchingPanel({ transactions, candidates, onMatch }: MatchingPan
         </CardHeader>
         <CardContent>
           {!selectedTransactionId ? (
-            <p className="text-muted-foreground text-center py-6">
+            <p className={cn("text-center py-6", colors.text.muted)}>
               {t('bank.selectTransactionToMatch')}
             </p>
           ) : candidates.length === 0 ? (
-            <p className="text-muted-foreground text-center py-6">
+            <p className={cn("text-center py-6", colors.text.muted)}>
               {t('bank.noCandidatesFound')}
             </p>
           ) : (
@@ -169,7 +171,7 @@ export function MatchingPanel({ transactions, candidates, onMatch }: MatchingPan
                     <TableRow key={candidate.entityId}>
                       <TableCell className="text-sm">
                         <span className="block font-medium">{candidate.displayLabel}</span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className={cn("text-xs", colors.text.muted)}>
                           {formatDate(candidate.date)}
                         </span>
                       </TableCell>

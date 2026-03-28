@@ -15,6 +15,10 @@ import { Badge } from '@/components/ui/badge';
 import type { ExtractedDocumentData } from '@/subapps/accounting/types';
 import { formatCurrencyOrDash } from '../../utils/format';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -39,6 +43,7 @@ function getConfidenceBadge(confidence: number): { variant: 'default' | 'seconda
 
 export function ExtractedDataDisplay({ data }: ExtractedDataDisplayProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   const confidenceBadge = getConfidenceBadge(data.overallConfidence);
 
@@ -72,7 +77,7 @@ export function ExtractedDataDisplay({ data }: ExtractedDataDisplayProps) {
       {/* Line Items */}
       {data.lineItems.length > 0 && (
         <section className="mt-4">
-          <h4 className="text-sm font-medium text-muted-foreground mb-2">
+          <h4 className={cn("text-sm font-medium mb-2", colors.text.muted)}>
             {t('documents.lineItems')} ({data.lineItems.length})
           </h4>
           <ul className="space-y-2">
@@ -97,11 +102,12 @@ export function ExtractedDataDisplay({ data }: ExtractedDataDisplayProps) {
 // ============================================================================
 
 function DataField({ label, value }: { label: string; value: string | null }) {
+  const colors = useSemanticColors();
   return (
     <div>
-      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dt className={cn("text-xs", colors.text.muted)}>{label}</dt>
       <dd className="text-sm font-medium text-foreground mt-0.5">
-        {value ?? <span className="text-muted-foreground italic">—</span>}
+        {value ?? <span className={cn("italic", colors.text.muted)}>—</span>}
       </dd>
     </div>
   );

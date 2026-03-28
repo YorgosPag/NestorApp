@@ -16,6 +16,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatCurrency } from '@/lib/intl-utils';
 import type { PartnershipEFKASummary } from '../../types/efka';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -30,11 +34,12 @@ interface PartnerEFKATabsProps {
 
 export function PartnerEFKATabs({ summary }: PartnerEFKATabsProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   if (summary.partnerSummaries.length === 0) {
     return (
       <Card>
-        <CardContent className="py-8 text-center text-muted-foreground">
+        <CardContent className={cn("py-8 text-center", colors.text.muted)}>
           {t('efka.partnerTabs.noPartners')}
         </CardContent>
       </Card>
@@ -53,11 +58,11 @@ export function PartnerEFKATabs({ summary }: PartnerEFKATabsProps) {
         <CardContent>
           <dl className="grid grid-cols-2 gap-4">
             <div>
-              <dt className="text-sm text-muted-foreground">{t('efka.totalPaid')}</dt>
+              <dt className={cn("text-sm", colors.text.muted)}>{t('efka.totalPaid')}</dt>
               <dd className="text-lg font-semibold">{formatCurrency(summary.totalAllPartnersPaid)}</dd>
             </div>
             <div>
-              <dt className="text-sm text-muted-foreground">{t('efka.totalDue')}</dt>
+              <dt className={cn("text-sm", colors.text.muted)}>{t('efka.totalDue')}</dt>
               <dd className="text-lg font-semibold">{formatCurrency(summary.totalAllPartnersDue)}</dd>
             </div>
           </dl>
@@ -84,19 +89,19 @@ export function PartnerEFKATabs({ summary }: PartnerEFKATabsProps) {
                 {/* Summary stats */}
                 <dl className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
-                    <dt className="text-sm text-muted-foreground">{t('efka.totalPaid')}</dt>
+                    <dt className={cn("text-sm", colors.text.muted)}>{t('efka.totalPaid')}</dt>
                     <dd className="font-semibold">{formatCurrency(ps.summary.totalPaid)}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm text-muted-foreground">{t('efka.totalDue')}</dt>
+                    <dt className={cn("text-sm", colors.text.muted)}>{t('efka.totalDue')}</dt>
                     <dd className="font-semibold">{formatCurrency(ps.summary.totalDue)}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm text-muted-foreground">{t('efka.balanceDue')}</dt>
+                    <dt className={cn("text-sm", colors.text.muted)}>{t('efka.balanceDue')}</dt>
                     <dd className="font-semibold">{formatCurrency(ps.summary.balanceDue)}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm text-muted-foreground">{t('efka.partnerTabs.paidMonths')}</dt>
+                    <dt className={cn("text-sm", colors.text.muted)}>{t('efka.partnerTabs.paidMonths')}</dt>
                     <dd className="font-semibold">{ps.summary.paidMonths}/12</dd>
                   </div>
                 </dl>

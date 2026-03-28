@@ -11,6 +11,10 @@ import { ServicePresetCombobox } from '../../shared/ServicePresetCombobox';
 import type { InvoiceLineItem, MyDataIncomeType, ServicePreset } from '@/subapps/accounting/types';
 import { formatCurrency } from '../../../utils/format';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 interface LineItemsEditorProps {
   lineItems: InvoiceLineItem[];
   onLineItemsChange: (items: InvoiceLineItem[]) => void;
@@ -19,6 +23,7 @@ interface LineItemsEditorProps {
 
 export function LineItemsEditor({ lineItems, onLineItemsChange, presets }: LineItemsEditorProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   const DEFAULT_LINE_ITEM: InvoiceLineItem = {
     lineNumber: 1,
@@ -94,7 +99,7 @@ export function LineItemsEditor({ lineItems, onLineItemsChange, presets }: LineI
             className="border border-border rounded-lg p-4 relative"
           >
             <div className="flex items-start justify-between mb-3">
-              <span className="text-sm font-medium text-muted-foreground">
+              <span className={cn("text-sm font-medium", colors.text.muted)}>
                 #{item.lineNumber}
               </span>
               {lineItems.length > 1 && (
@@ -161,17 +166,17 @@ export function LineItemsEditor({ lineItems, onLineItemsChange, presets }: LineI
               </fieldset>
 
               <div className="flex flex-col justify-end">
-                <span className="text-xs text-muted-foreground">{t('forms.subtotal')}</span>
+                <span className={cn("text-xs", colors.text.muted)}>{t('forms.subtotal')}</span>
                 <span className="text-sm font-medium">{formatCurrency(netAmount)}</span>
               </div>
 
               <div className="flex flex-col justify-end">
-                <span className="text-xs text-muted-foreground">ΦΠΑ</span>
+                <span className={cn("text-xs", colors.text.muted)}>ΦΠΑ</span>
                 <span className="text-sm font-medium">{formatCurrency(vatAmount)}</span>
               </div>
 
               <div className="flex flex-col justify-end">
-                <span className="text-xs text-muted-foreground">{t('forms.grandTotal')}</span>
+                <span className={cn("text-xs", colors.text.muted)}>{t('forms.grandTotal')}</span>
                 <span className="text-sm font-bold">{formatCurrency(grossAmount)}</span>
               </div>
             </div>

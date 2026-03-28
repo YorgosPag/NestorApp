@@ -222,6 +222,18 @@
     "soldProperties": "Πωληθέντα",
     "financialIntelligence": "Χρηματοοικονομική Ανάλυση"
   },
+  "reports": {
+    "overview": "Διοικητική Σύνοψη",
+    "financial": "Χρηματοοικονομικά & EVM",
+    "projects": "Έργα & Κτίρια",
+    "sales": "Πωλήσεις & Εισπράξεις",
+    "contacts": "Επαφές & Πελάτες",
+    "crm": "CRM & Pipeline",
+    "spaces": "Χώροι",
+    "construction": "Κατασκευή & Χρονοδιάγραμμα",
+    "compliance": "Συμμόρφωση & Εργατικά",
+    "export": "Κέντρο Εξαγωγής"
+  },
   "pages": {
     "home": "Αρχική",
     "properties": "Ευρετήριο Ακινήτων",
@@ -231,7 +243,8 @@
     "units": "Μονάδες (Units)",
     "crm": "CRM",
     "login": "Login",
-    "navigation": "Πλοήγηση"
+    "navigation": "Πλοήγηση",
+    "reports": "Αναφορές"
   },
   "accounting": {
     "setup": "Ρύθμιση",

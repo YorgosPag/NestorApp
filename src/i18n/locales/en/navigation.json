@@ -222,6 +222,18 @@
     "soldProperties": "Sold Properties",
     "financialIntelligence": "Financial Intelligence"
   },
+  "reports": {
+    "overview": "Executive Summary",
+    "financial": "Financial & EVM",
+    "projects": "Projects & Buildings",
+    "sales": "Sales & Collections",
+    "contacts": "Contacts & Customers",
+    "crm": "CRM & Pipeline",
+    "spaces": "Spaces",
+    "construction": "Construction & Timeline",
+    "compliance": "Compliance & Labor",
+    "export": "Export Center"
+  },
   "pages": {
     "home": "Home",
     "properties": "Property Directory",
@@ -231,7 +243,8 @@
     "units": "Units",
     "crm": "CRM",
     "login": "Login",
-    "navigation": "Navigation"
+    "navigation": "Navigation",
+    "reports": "Reports"
   },
   "accounting": {
     "setup": "Setup",

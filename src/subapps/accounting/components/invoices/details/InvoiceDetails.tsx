@@ -14,6 +14,10 @@ import { InvoiceSummaryCard } from './InvoiceSummaryCard';
 import { InvoiceActionsMenu } from './InvoiceActionsMenu';
 import { SendInvoiceEmailDialog } from './SendInvoiceEmailDialog';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 interface InvoiceDetailsProps {
   invoiceId: string;
   onBack: () => void;
@@ -21,6 +25,7 @@ interface InvoiceDetailsProps {
 
 export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
   const { user } = useAuth();
   const { profile: companyProfile } = useCompanySetup();
 
@@ -65,7 +70,7 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
   if (!invoice) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground">Invoice not found</p>
+        <p className={colors.text.muted}>Invoice not found</p>
         <Button variant="outline" onClick={onBack} className="mt-4">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
@@ -85,7 +90,7 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
             <h2 className="text-xl font-bold">
               {invoice.series}-{invoice.number}
             </h2>
-            <p className="text-sm text-muted-foreground">{t(`invoices.types.${invoice.type}`)}</p>
+            <p className={cn("text-sm", colors.text.muted)}>{t(`invoices.types.${invoice.type}`)}</p>
           </div>
         </div>
         <InvoiceActionsMenu
@@ -141,7 +146,7 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
             >
               <div className="flex-1">
                 <p className="text-sm font-medium">{item.description}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className={cn("text-xs", colors.text.muted)}>
                   {item.quantity} × {item.unit} @ €{item.unitPrice.toFixed(2)} | ΦΠΑ {item.vatRate}%
                 </p>
               </div>

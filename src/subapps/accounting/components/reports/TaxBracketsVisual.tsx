@@ -15,6 +15,10 @@ import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import type { TaxBracketResult } from '@/subapps/accounting/types';
 import { formatCurrency } from '../../utils/format';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -118,6 +122,7 @@ function findAmountForRate(breakdown: TaxBracketResult[], rate: number): number 
 
 export function TaxBracketsVisual({ bracketBreakdown, taxableIncome }: TaxBracketsVisualProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   return (
     <section aria-label={t('reports.taxBrackets')}>
@@ -143,7 +148,7 @@ export function TaxBracketsVisual({ bracketBreakdown, taxableIncome }: TaxBracke
                   <span className={`text-sm font-semibold ${bracket.colorClass}`}>
                     {bracket.rate}%
                   </span>
-                  <span className="text-xs text-muted-foreground">{bracket.label}</span>
+                  <span className={cn("text-xs", colors.text.muted)}>{bracket.label}</span>
                 </div>
                 {isActive && (
                   <span className="text-xs font-medium text-foreground">
@@ -168,7 +173,7 @@ export function TaxBracketsVisual({ bracketBreakdown, taxableIncome }: TaxBracke
 
               {/* Taxable Amount */}
               {isActive && (
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className={cn("text-xs mt-1", colors.text.muted)}>
                   {t('reports.taxableInBracket')}: {formatCurrency(taxableAmount)}
                 </p>
               )}

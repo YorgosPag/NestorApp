@@ -3,7 +3,6 @@
 import { db } from '@/lib/firebase'; // Αλλαγή σε client-side db
 import {
   doc,
-  setDoc,
   updateDoc,
   writeBatch,
   where,
@@ -108,43 +107,31 @@ export async function createUnit(
 
 // Get all units
 export async function getUnits(): Promise<Property[]> {
-  try {
-    const result = await firestoreQueryService.getAll<DocumentData>('UNITS', {
-      constraints: [orderBy('name', 'asc')],
-      tenantOverride: 'skip',
-    });
-    return result.documents.map(toProperty);
-  } catch (error) {
-    throw error;
-  }
+  const result = await firestoreQueryService.getAll<DocumentData>('UNITS', {
+    constraints: [orderBy('name', 'asc')],
+    tenantOverride: 'skip',
+  });
+  return result.documents.map(toProperty);
 }
 
 // Get units by owner ID
 export async function getUnitsByOwner(ownerId: string): Promise<Property[]> {
-  try {
-    if (!ownerId) return [];
-    const result = await firestoreQueryService.getAll<DocumentData>('UNITS', {
-      constraints: [where('soldTo', '==', ownerId)],
-      tenantOverride: 'skip',
-    });
-    return result.documents.map(toProperty);
-  } catch (error) {
-    throw error;
-  }
+  if (!ownerId) return [];
+  const result = await firestoreQueryService.getAll<DocumentData>('UNITS', {
+    constraints: [where('soldTo', '==', ownerId)],
+    tenantOverride: 'skip',
+  });
+  return result.documents.map(toProperty);
 }
 
 // Get units by building ID as UnitModel (NEW)
 export async function getUnitsByBuildingAsModels(buildingId: string): Promise<UnitModel[]> {
-    try {
-      if (!buildingId) return [];
-      const result = await firestoreQueryService.getAll<DocumentData>('UNITS', {
-        constraints: [where('buildingId', '==', buildingId)],
-        tenantOverride: 'skip',
-      });
-      return result.documents.map(toUnitModel);
-    } catch (error) {
-      throw error;
-    }
+  if (!buildingId) return [];
+  const result = await firestoreQueryService.getAll<DocumentData>('UNITS', {
+    constraints: [where('buildingId', '==', buildingId)],
+    tenantOverride: 'skip',
+  });
+  return result.documents.map(toUnitModel);
 }
 
 // Get units by building ID (LEGACY: Returns Property[])
@@ -152,83 +139,67 @@ export async function getUnitsByBuildingAsModels(buildingId: string): Promise<Un
  * @deprecated Use getUnitsByBuildingAsModels for new code
  */
 export async function getUnitsByBuilding(buildingId: string): Promise<Property[]> {
-    try {
-      if (!buildingId) return [];
-      const result = await firestoreQueryService.getAll<DocumentData>('UNITS', {
-        constraints: [where('buildingId', '==', buildingId)],
-        tenantOverride: 'skip',
-      });
-      return result.documents.map(toProperty);
-    } catch (error) {
-      throw error;
-    }
-  }
+  if (!buildingId) return [];
+  const result = await firestoreQueryService.getAll<DocumentData>('UNITS', {
+    constraints: [where('buildingId', '==', buildingId)],
+    tenantOverride: 'skip',
+  });
+  return result.documents.map(toProperty);
+}
 
 // Update a unit via Admin SDK API (server-side validation + audit trail)
 export async function updateUnit(unitId: string, updates: Partial<Property>): Promise<{ success: boolean }> {
-  try {
-    await apiClient.patch(API_ROUTES.UNITS.BY_ID(unitId), updates);
+  await apiClient.patch(API_ROUTES.UNITS.BY_ID(unitId), updates);
 
-    // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    // Dispatch event for all components to update their local state
-    RealtimeService.dispatch('UNIT_UPDATED',{
-      unitId,
-      updates: {
-        name: updates.name,
-        type: updates.type,
-        status: updates.status,
-        area: updates.area,
-        floor: updates.floor,
-        buildingId: updates.buildingId,
-        soldTo: updates.soldTo,
-      },
-      timestamp: Date.now()
-    });
+  // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+  // Dispatch event for all components to update their local state
+  RealtimeService.dispatch('UNIT_UPDATED',{
+    unitId,
+    updates: {
+      name: updates.name,
+      type: updates.type,
+      status: updates.status,
+      area: updates.area,
+      floor: updates.floor,
+      buildingId: updates.buildingId,
+      soldTo: updates.soldTo,
+    },
+    timestamp: Date.now()
+  });
 
-    return { success: true };
-  } catch (error) {
-    throw error;
-  }
+  return { success: true };
 }
 
 // NEW: Update multiple units' owner
 export async function updateMultipleUnitsOwner(unitIds: string[], contactId: string): Promise<{ success: boolean }> {
-    const batch = writeBatch(db);
+  const batch = writeBatch(db);
 
-    unitIds.forEach(unitId => {
-        const unitRef = doc(db, UNITS_COLLECTION, unitId);
-        batch.update(unitRef, {
-            soldTo: contactId,
-            status: 'sold',
-            saleDate: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-        });
+  unitIds.forEach(unitId => {
+    const unitRef = doc(db, UNITS_COLLECTION, unitId);
+    batch.update(unitRef, {
+      soldTo: contactId,
+      status: 'sold',
+      saleDate: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     });
+  });
 
-    try {
-        await batch.commit();
-        return { success: true };
-    } catch (error) {
-        throw error;
-    }
+  await batch.commit();
+  return { success: true };
 }
 
 
 // 🔒 SECURITY: Delete unit via Admin SDK API (client-side Firestore deletes are blocked)
 export async function deleteUnit(unitId: string): Promise<{ success: boolean }> {
-  try {
-    await apiClient.delete(API_ROUTES.UNITS.BY_ID(unitId));
+  await apiClient.delete(API_ROUTES.UNITS.BY_ID(unitId));
 
-    // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    RealtimeService.dispatch('UNIT_DELETED', {
-      unitId,
-      timestamp: Date.now()
-    });
+  // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+  RealtimeService.dispatch('UNIT_DELETED', {
+    unitId,
+    timestamp: Date.now()
+  });
 
-    return { success: true };
-  } catch (error) {
-    throw error;
-  }
+  return { success: true };
 }
 
 // =============================================================================
@@ -240,16 +211,12 @@ export async function deleteUnit(unitId: string): Promise<{ success: boolean }> 
  * @param featureCodes Array of interior feature codes to filter by
  */
 export async function getUnitsByFeatures(featureCodes: string[]): Promise<UnitModel[]> {
-  try {
-    if (!featureCodes || featureCodes.length === 0) return [];
-    const result = await firestoreQueryService.getAll<DocumentData>('UNITS', {
-      constraints: [where('interiorFeatures', 'array-contains-any', featureCodes)],
-      tenantOverride: 'skip',
-    });
-    return result.documents.map(toUnitModel);
-  } catch (error) {
-    throw error;
-  }
+  if (!featureCodes || featureCodes.length === 0) return [];
+  const result = await firestoreQueryService.getAll<DocumentData>('UNITS', {
+    constraints: [where('interiorFeatures', 'array-contains-any', featureCodes)],
+    tenantOverride: 'skip',
+  });
+  return result.documents.map(toUnitModel);
 }
 
 /**
@@ -257,15 +224,11 @@ export async function getUnitsByFeatures(featureCodes: string[]): Promise<UnitMo
  * @param status Operational status to filter by
  */
 export async function getUnitsByOperationalStatus(status: string): Promise<UnitModel[]> {
-  try {
-    const result = await firestoreQueryService.getAll<DocumentData>('UNITS', {
-      constraints: [where('operationalStatus', '==', status)],
-      tenantOverride: 'skip',
-    });
-    return result.documents.map(toUnitModel);
-  } catch (error) {
-    throw error;
-  }
+  const result = await firestoreQueryService.getAll<DocumentData>('UNITS', {
+    constraints: [where('operationalStatus', '==', status)],
+    tenantOverride: 'skip',
+  });
+  return result.documents.map(toUnitModel);
 }
 
 /**
@@ -273,8 +236,7 @@ export async function getUnitsByOperationalStatus(status: string): Promise<UnitM
  * Returns units missing photos, floorplans, or documents
  */
 export async function getIncompleteUnits(): Promise<UnitModel[]> {
-  try {
-    const queries: QueryConstraint[][] = [
+  const queries: QueryConstraint[][] = [
       [where('unitCoverage.hasPhotos', '==', false)],
       [where('unitCoverage.hasFloorplans', '==', false)],
       [where('unitCoverage.hasDocuments', '==', false)],
@@ -301,9 +263,6 @@ export async function getIncompleteUnits(): Promise<UnitModel[]> {
     }
 
     return Array.from(unitMap.values());
-  } catch (error) {
-    throw error;
-  }
 }
 
 /**
@@ -370,32 +329,24 @@ export async function updateUnitCoverage(
     hasDocuments: boolean;
   }>
 ): Promise<{ success: boolean }> {
-  try {
-    const unitRef = doc(db, UNITS_COLLECTION, unitId);
-    await updateDoc(unitRef, {
-      'unitCoverage.hasPhotos': coverage.hasPhotos,
-      'unitCoverage.hasFloorplans': coverage.hasFloorplans,
-      'unitCoverage.hasDocuments': coverage.hasDocuments,
-      'unitCoverage.updatedAt': serverTimestamp()
-    });
-    return { success: true };
-  } catch (error) {
-    throw error;
-  }
+  const unitRef = doc(db, UNITS_COLLECTION, unitId);
+  await updateDoc(unitRef, {
+    'unitCoverage.hasPhotos': coverage.hasPhotos,
+    'unitCoverage.hasFloorplans': coverage.hasFloorplans,
+    'unitCoverage.hasDocuments': coverage.hasDocuments,
+    'unitCoverage.updatedAt': serverTimestamp()
+  });
+  return { success: true };
 }
 
 // Batch add units (for seeding)
 export async function seedUnits(units: Omit<Property, 'id'>[]): Promise<{ success: boolean; count: number }> {
-    const batch = writeBatch(db);
-    units.forEach(unitData => {
-        const docRef = doc(db, UNITS_COLLECTION, generateUnitId());
-        batch.set(docRef, unitData);
-    });
+  const batch = writeBatch(db);
+  units.forEach(unitData => {
+    const docRef = doc(db, UNITS_COLLECTION, generateUnitId());
+    batch.set(docRef, unitData);
+  });
 
-    try {
-        await batch.commit();
-        return { success: true, count: units.length };
-    } catch(error) {
-        throw error;
-    }
+  await batch.commit();
+  return { success: true, count: units.length };
 }

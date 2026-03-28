@@ -20,8 +20,6 @@
  */
 
 import { safeJsonParse } from '@/lib/json-utils';
-import { ref, getDownloadURL, getBytes } from 'firebase/storage';
-import { storage } from '@/lib/firebase';
 import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES, FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import { FileRecordService } from '@/services/file-record.service';
 import { FloorplanSaveOrchestrator } from '@/services/floorplans/floorplan-save-orchestrator';

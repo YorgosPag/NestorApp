@@ -32,6 +32,10 @@ import type { EntryType, FiscalQuarter } from '@/subapps/accounting/types';
 import { JournalEntriesTable } from './JournalEntriesTable';
 import { JournalEntryForm } from './JournalEntryForm';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -114,6 +118,7 @@ function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
 
 export function JournalPageContent() {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   const [showForm, setShowForm] = useState(false);
   const [filters, setFilters] = useState<JournalFilterState>({ ...DEFAULT_FILTERS });
@@ -232,7 +237,7 @@ export function JournalPageContent() {
         ) : entries.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-lg font-medium text-foreground mb-1">{t('journal.noEntries')}</p>
-            <p className="text-muted-foreground mb-4">{t('journal.noEntriesDescription')}</p>
+            <p className={cn("mb-4", colors.text.muted)}>{t('journal.noEntriesDescription')}</p>
             <Button onClick={() => setShowForm(true)}>
               <Plus className="mr-2 h-4 w-4" />
               {t('journal.newEntry')}

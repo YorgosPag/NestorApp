@@ -80,15 +80,15 @@ export function JournalEntriesTable({ entries }: JournalEntriesTableProps) {
       {/* Totals Summary */}
       <footer className="mt-4 flex flex-wrap gap-6 text-sm">
         <dl className="flex items-center gap-2">
-          <dt className="text-muted-foreground">{t('journal.totalIncome')}:</dt>
+          <dt className={colors.text.muted}>{t('journal.totalIncome')}:</dt>
           <dd className={`font-semibold ${colors.text.success}`}>{formatCurrency(totalIncome)}</dd>
         </dl>
         <dl className="flex items-center gap-2">
-          <dt className="text-muted-foreground">{t('journal.totalExpenses')}:</dt>
+          <dt className={colors.text.muted}>{t('journal.totalExpenses')}:</dt>
           <dd className={`font-semibold ${colors.text.error}`}>{formatCurrency(totalExpenses)}</dd>
         </dl>
         <dl className="flex items-center gap-2">
-          <dt className="text-muted-foreground">{t('journal.netResult')}:</dt>
+          <dt className={colors.text.muted}>{t('journal.netResult')}:</dt>
           <dd className={`font-bold ${netResult >= 0 ? colors.text.success : colors.text.error}`}>
             {formatCurrency(netResult)}
           </dd>

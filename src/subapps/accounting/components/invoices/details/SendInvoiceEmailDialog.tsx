@@ -23,6 +23,10 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { API_ROUTES } from '@/config/domain-constants';
 import type { Invoice } from '@/subapps/accounting/types';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 import {
   detectInvoiceEmailLanguage,
   buildInvoiceEmailSubject,
@@ -76,6 +80,7 @@ export function SendInvoiceEmailDialog({
   onSuccess,
 }: SendInvoiceEmailDialogProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
   const { user } = useAuth();
 
   // Detect language from customer country
@@ -241,7 +246,7 @@ export function SendInvoiceEmailDialog({
           </div>
 
           {/* PDF attachment note */}
-          <p className="text-xs text-muted-foreground">
+          <p className={cn("text-xs", colors.text.muted)}>
             📎 {t('forms.sendEmailDialog.pdfAttachmentNote')}
           </p>
 

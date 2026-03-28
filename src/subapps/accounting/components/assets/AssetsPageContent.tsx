@@ -32,6 +32,10 @@ import { useFixedAssets } from '../../hooks/useFixedAssets';
 import { AssetsList } from './AssetsList';
 import { AddAssetForm } from './AddAssetForm';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -105,6 +109,7 @@ function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
 
 export function AssetsPageContent() {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   const [filters, setFilters] = useState<AssetFilterState>({ ...DEFAULT_FILTERS });
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -209,7 +214,7 @@ export function AssetsPageContent() {
         ) : assets.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-lg font-medium text-foreground mb-1">{t('assets.noAssets')}</p>
-            <p className="text-muted-foreground mb-4">{t('assets.noAssetsDescription')}</p>
+            <p className={cn("mb-4", colors.text.muted)}>{t('assets.noAssetsDescription')}</p>
             <Button onClick={() => setAddDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               {t('assets.addAsset')}

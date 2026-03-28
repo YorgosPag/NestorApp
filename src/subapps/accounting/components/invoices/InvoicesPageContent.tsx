@@ -33,6 +33,10 @@ import { AccountingPageHeader } from '../shared/AccountingPageHeader';
 import { InvoicesTable } from './InvoicesTable';
 import { InvoiceDetails } from './details/InvoiceDetails';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -117,6 +121,7 @@ function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
 
 export function InvoicesPageContent() {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
@@ -269,7 +274,7 @@ export function InvoicesPageContent() {
         ) : invoices.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-lg font-medium text-foreground mb-1">{t('invoices.noInvoices')}</p>
-            <p className="text-muted-foreground mb-4">{t('invoices.noInvoicesDescription')}</p>
+            <p className={cn("mb-4", colors.text.muted)}>{t('invoices.noInvoicesDescription')}</p>
             <Button onClick={() => router.push('/accounting/invoices/new')}>
               <Plus className="mr-2 h-4 w-4" />
               {t('invoices.newInvoice')}

@@ -31,6 +31,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { API_ROUTES } from '@/config/domain-constants';
 import { formatCurrency } from '../../utils/format';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -52,6 +56,7 @@ interface DashboardStats {
 
 export function AccountingDashboard() {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
   const router = useRouter();
   const { user } = useAuth();
 
@@ -153,7 +158,7 @@ export function AccountingDashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">{t('pages.dashboard')}</h1>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className={cn("text-sm mt-1", colors.text.muted)}>
               {new Date().getFullYear()}
             </p>
           </div>
@@ -180,7 +185,7 @@ export function AccountingDashboard() {
                 className="justify-start h-auto py-3"
                 onClick={() => router.push('/accounting/invoices')}
               >
-                <Receipt className="mr-3 h-5 w-5 text-muted-foreground" />
+                <Receipt className={cn("mr-3 h-5 w-5", colors.text.muted)} />
                 <span>{t('pages.invoices')}</span>
               </Button>
               <Button
@@ -188,7 +193,7 @@ export function AccountingDashboard() {
                 className="justify-start h-auto py-3"
                 onClick={() => router.push('/accounting/journal')}
               >
-                <BookOpen className="mr-3 h-5 w-5 text-muted-foreground" />
+                <BookOpen className={cn("mr-3 h-5 w-5", colors.text.muted)} />
                 <span>{t('pages.journal')}</span>
               </Button>
               <Button
@@ -196,7 +201,7 @@ export function AccountingDashboard() {
                 className="justify-start h-auto py-3"
                 onClick={() => router.push('/accounting/vat')}
               >
-                <DollarSign className="mr-3 h-5 w-5 text-muted-foreground" />
+                <DollarSign className={cn("mr-3 h-5 w-5", colors.text.muted)} />
                 <span>{t('pages.vat')}</span>
               </Button>
               <Button
@@ -204,7 +209,7 @@ export function AccountingDashboard() {
                 className="justify-start h-auto py-3"
                 onClick={() => router.push('/accounting/reports')}
               >
-                <FileWarning className="mr-3 h-5 w-5 text-muted-foreground" />
+                <FileWarning className={cn("mr-3 h-5 w-5", colors.text.muted)} />
                 <span>{t('pages.reports')}</span>
               </Button>
             </nav>

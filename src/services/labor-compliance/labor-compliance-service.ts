@@ -13,7 +13,7 @@
  * @enterprise ADR-090 — IKA/EFKA Labor Compliance System
  */
 
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
 import type { InsuranceClass, ContributionRates, LaborComplianceConfig } from '@/components/projects/ika/contracts';

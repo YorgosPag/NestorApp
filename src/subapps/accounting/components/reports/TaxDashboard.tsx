@@ -23,6 +23,8 @@ import { TaxBracketsVisual } from './TaxBracketsVisual';
 import { InstallmentsCard } from './InstallmentsCard';
 import { formatCurrency } from '../../utils/format';
 
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -121,25 +123,25 @@ export function TaxDashboard({ fiscalYear }: TaxDashboardProps) {
             {/* Key Figures */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <article className="space-y-1">
-                <p className="text-xs text-muted-foreground">{t('reports.grossIncome')}</p>
+                <p className={cn("text-xs", colors.text.muted)}>{t('reports.grossIncome')}</p>
                 <p className="text-lg font-bold text-foreground">
                   {formatCurrency(data.taxResult.grossIncome)}
                 </p>
               </article>
               <article className="space-y-1">
-                <p className="text-xs text-muted-foreground">{t('reports.deductibleExpenses')}</p>
+                <p className={cn("text-xs", colors.text.muted)}>{t('reports.deductibleExpenses')}</p>
                 <p className="text-lg font-bold text-foreground">
                   {formatCurrency(data.taxResult.deductibleExpenses)}
                 </p>
               </article>
               <article className="space-y-1">
-                <p className="text-xs text-muted-foreground">{t('reports.taxableIncome')}</p>
+                <p className={cn("text-xs", colors.text.muted)}>{t('reports.taxableIncome')}</p>
                 <p className="text-lg font-bold text-foreground">
                   {formatCurrency(data.taxResult.taxableIncome)}
                 </p>
               </article>
               <article className="space-y-1">
-                <p className="text-xs text-muted-foreground">{t('reports.finalAmount')}</p>
+                <p className={cn("text-xs", colors.text.muted)}>{t('reports.finalAmount')}</p>
                 <p
                   className={`text-lg font-bold ${
                     data.taxResult.finalAmount > 0

@@ -27,6 +27,10 @@ import {
 import { useVatUniqueness } from '@/hooks/useVatUniqueness';
 import type { InvoiceCustomer } from '@/subapps/accounting/types';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -100,6 +104,7 @@ function mapContactToCustomer(contact: Contact): InvoiceCustomer {
 
 export function CustomerSelector({ customer, onCustomerChange }: CustomerSelectorProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
   const [selectedContactId, setSelectedContactId] = useState(customer.contactId ?? '');
   const [autoFillMessage, setAutoFillMessage] = useState<string | null>(null);
   const { result: vatResult } = useVatUniqueness(customer.vatNumber ?? undefined);
@@ -152,7 +157,7 @@ export function CustomerSelector({ customer, onCustomerChange }: CustomerSelecto
             searchConfig={{ autoLoadContacts: true, maxResults: 20 }}
           />
           {autoFillMessage && (
-            <p className="text-sm text-muted-foreground">{autoFillMessage}</p>
+            <p className={cn("text-sm", colors.text.muted)}>{autoFillMessage}</p>
           )}
           <Input
             id="customerName"

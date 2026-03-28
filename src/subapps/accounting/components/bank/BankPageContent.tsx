@@ -31,6 +31,10 @@ import { useBankTransactions } from '../../hooks/useBankTransactions';
 import { TransactionsList } from './TransactionsList';
 import { ImportCSVDialog } from './ImportCSVDialog';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -99,6 +103,7 @@ function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
 
 export function BankPageContent() {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   const [filters, setFilters] = useState<BankFilterState>({ ...DEFAULT_FILTERS });
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -203,7 +208,7 @@ export function BankPageContent() {
             <p className="text-lg font-medium text-foreground mb-1">
               {t('bank.noTransactions')}
             </p>
-            <p className="text-muted-foreground mb-4">
+            <p className={cn("mb-4", colors.text.muted)}>
               {t('bank.noTransactionsDescription')}
             </p>
             <Button onClick={() => setImportDialogOpen(true)}>

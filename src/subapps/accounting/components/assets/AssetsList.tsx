@@ -23,6 +23,10 @@ import { Badge } from '@/components/ui/badge';
 import type { FixedAsset, AssetStatus } from '@/subapps/accounting/types';
 import { formatCurrency, formatDate } from '../../utils/format';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -52,12 +56,13 @@ const ASSET_STATUS_VARIANTS: Record<
 
 export function AssetsList({ assets }: AssetsListProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   if (assets.length === 0) {
     return (
       <div className="text-center py-12">
         <p className="text-lg font-medium text-foreground mb-1">{t('assets.noAssets')}</p>
-        <p className="text-muted-foreground">{t('assets.noAssetsDescription')}</p>
+        <p className={colors.text.muted}>{t('assets.noAssetsDescription')}</p>
       </div>
     );
   }
@@ -91,7 +96,7 @@ export function AssetsList({ assets }: AssetsListProps) {
               <TableCell className="text-right text-sm">
                 {formatCurrency(asset.acquisitionCost)}
               </TableCell>
-              <TableCell className="text-right text-sm text-muted-foreground">
+              <TableCell className={cn("text-right text-sm", colors.text.muted)}>
                 {formatCurrency(asset.accumulatedDepreciation)}
               </TableCell>
               <TableCell className="text-right font-medium text-sm">

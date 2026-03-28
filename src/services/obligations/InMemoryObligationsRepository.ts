@@ -1,23 +1,21 @@
 /**
  * 📄 ENTERPRISE OBLIGATIONS REPOSITORY - PRODUCTION READY
  *
- * Αντικατέστησε το InMemoryObligationsRepository με επαγγελματικό FirestoreObligationsRepository.
- * Όλα τα δεδομένα προέρχονται από production βάση δεδομένων.
+ * Firestore-backed repository for obligation documents.
+ * Normalizers → obligation-normalizers.ts | Transmittal ops → obligation-transmittal-operations.ts
  */
 
 import {
-  collection,
   doc,
   setDoc,
   updateDoc,
   deleteDoc,
-  query,
   where,
   orderBy,
   type DocumentData,
   type QueryConstraint,
 } from 'firebase/firestore';
-import { generateObligationId, generateTransmittalId } from '@/services/enterprise-id.service';
+import { generateObligationId } from '@/services/enterprise-id.service';
 import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 import { auth, db } from '@/lib/firebase';
 import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
@@ -31,236 +29,24 @@ import type {
   ObligationIssueRequest,
   ObligationIssueResult,
   ObligationTransmittal,
-  ObligationTransmittalRecipient,
-  ObligationDistributionEntry,
-  ObligationIssueLogEntry,
 } from '@/types/obligations';
 import { DEFAULT_TEMPLATE_SECTIONS } from '@/types/obligation-services';
 import type { IObligationsRepository, SearchFilters, ObligationStats } from './contracts';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import { normalizeToDate } from '@/lib/date-local';
 import { validateObligationStatusTransition } from './workflow-rules';
-import { exportObligationToPDF } from '@/services/pdf';
+import {
+  createAuditEvent,
+  normalizeObligationDocumentSafe,
+  normalizeTransmittalDocumentSafe,
+} from './obligation-normalizers';
+import { executeIssueWithTransmittal } from './obligation-transmittal-operations';
 
 const logger = createModuleLogger('FirestoreObligationsRepository');
 
-// ADR-218 Phase 2: Delegate to centralized normalizeToDate
-const toDateValue = (value: unknown): Date => normalizeToDate(value) ?? new Date();
-const toOptionalDate = (value: unknown): Date | undefined => normalizeToDate(value) ?? undefined;
-
-const createAuditEvent = (
-  action: ObligationAuditEvent['action'],
-  actor: string,
-  details: string
-): ObligationAuditEvent => ({
-  id: generateObligationId(),
-  action,
-  actor,
-  occurredAt: new Date(),
-  details,
-});
-
-
-const bytesToHex = (bytes: Uint8Array): string => {
-  return Array.from(bytes)
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('');
-};
-
-const sha256Hex = async (payload: Uint8Array): Promise<string> => {
-  if (!globalThis.crypto || !globalThis.crypto.subtle) {
-    throw new Error('CRYPTO_ERROR: Web Crypto API is not available for issue proof generation');
-  }
-
-  const digestBuffer = payload.byteOffset === 0 && payload.byteLength === payload.buffer.byteLength
-    ? payload.buffer
-    : payload.slice().buffer;
-  const digest = await globalThis.crypto.subtle.digest('SHA-256', digestBuffer as ArrayBuffer);
-  return bytesToHex(new Uint8Array(digest));
-};
-
-const buildIssuedPdfFileName = (document: ObligationDocument): string => {
-  const docNumber = document.docNumber?.trim() || document.id;
-  const revision = document.revision ?? 1;
-  const normalizedProjectName = document.projectName.trim().replace(/\s+/g, '-').toLowerCase() || 'project';
-  return `${docNumber.toLowerCase()}_r${revision}_${normalizedProjectName}.pdf`;
-};
-
-const normalizeDistributionEntries = (
-  distribution: ObligationDocument['distribution']
-): ObligationDistributionEntry[] | undefined => {
-  if (!distribution || distribution.length === 0) {
-    return undefined;
-  }
-
-  return distribution.map((entry) => ({
-    ...entry,
-    deliveredAt: toOptionalDate(entry.deliveredAt),
-  }));
-};
-
-const normalizeIssueLogEntries = (
-  issueLog: ObligationDocument['issueLog']
-): ObligationIssueLogEntry[] | undefined => {
-  if (!issueLog || issueLog.length === 0) {
-    return undefined;
-  }
-
-  return issueLog.map((entry) => ({
-    ...entry,
-    issuedAt: toDateValue(entry.issuedAt),
-  }));
-};
-
-const normalizeTransmittalDocument = (id: string, data: Partial<ObligationTransmittal>): ObligationTransmittal => ({
-  id,
-  companyId: data.companyId || null,
-  obligationId: data.obligationId || '',
-  projectId: data.projectId,
-  buildingId: data.buildingId,
-  docNumber: data.docNumber || '',
-  revision: typeof data.revision === 'number' ? data.revision : 1,
-  issuedAt: toDateValue(data.issuedAt),
-  issuedBy: data.issuedBy || 'system',
-  message: data.message,
-  recipients: data.recipients || [],
-  deliveryProof: (data.deliveryProof || []).map((entry: ObligationDistributionEntry) => ({
-    ...entry,
-    deliveredAt: toOptionalDate(entry.deliveredAt),
-  })),
-  issueProof: {
-    algorithm: data.issueProof?.algorithm || 'sha256',
-    pdfSha256: data.issueProof?.pdfSha256 || '',
-    generatedAt: toDateValue(data.issueProof?.generatedAt),
-    fileName: data.issueProof?.fileName || '',
-    byteSize: data.issueProof?.byteSize || 0,
-  },
-  createdAt: toDateValue(data.createdAt),
-  updatedAt: toDateValue(data.updatedAt),
-});
-
-const normalizeTransmittalDocumentSafe = (
-  id: string,
-  data: Partial<ObligationTransmittal>
-): ObligationTransmittal | null => {
-  try {
-    return normalizeTransmittalDocument(id, data);
-  } catch (error) {
-    logger.error('Error normalizing obligation transmittal document', {
-      error,
-      transmittalId: id,
-    });
-    return null;
-  }
-};
-
-const toDeliveryProofEntry = (
-  recipient: ObligationTransmittalRecipient,
-  now: Date
-): ObligationDistributionEntry => {
-  const isImmediateDelivery = recipient.channel === 'in-app';
-
-  return {
-    recipientName: recipient.recipientName,
-    recipientEmail: recipient.recipientEmail,
-    role: recipient.role,
-    channel: recipient.channel,
-    status: isImmediateDelivery ? 'delivered' : 'pending',
-    deliveredAt: isImmediateDelivery ? now : undefined,
-  };
-};
-
-const normalizeWorkflowTransitions = (
-  transitions: ObligationDocument['workflowTransitions']
-): ObligationWorkflowTransition[] | undefined => {
-  if (!transitions || transitions.length === 0) {
-    return undefined;
-  }
-
-  return transitions.map((transition) => ({
-    ...transition,
-    changedAt: toDateValue(transition.changedAt),
-  }));
-};
-
-const normalizeAuditTrail = (
-  auditTrail: ObligationDocument['auditTrail']
-): ObligationAuditEvent[] | undefined => {
-  if (!auditTrail || auditTrail.length === 0) {
-    return undefined;
-  }
-
-  return auditTrail.map((entry) => ({
-    ...entry,
-    occurredAt: toDateValue(entry.occurredAt),
-  }));
-};
-
-const normalizeObligationDocument = (id: string, data: Partial<ObligationDocument>): ObligationDocument => ({
-  id,
-  title: data.title || '',
-  projectName: data.projectName || '',
-  contractorCompany: data.contractorCompany || process.env.NEXT_PUBLIC_COMPANY_NAME || 'Contractor Company',
-  owners: data.owners || [],
-  createdAt: toDateValue(data.createdAt),
-  updatedAt: toDateValue(data.updatedAt),
-  status: data.status || 'draft',
-  sections: data.sections || DEFAULT_TEMPLATE_SECTIONS,
-  projectDetails: {
-    location: data.projectDetails?.location || '',
-    address: data.projectDetails?.address || '',
-    plotNumber: data.projectDetails?.plotNumber,
-    buildingPermitNumber: data.projectDetails?.buildingPermitNumber,
-    contractDate: toOptionalDate(data.projectDetails?.contractDate),
-    deliveryDate: toOptionalDate(data.projectDetails?.deliveryDate),
-    notaryName: data.projectDetails?.notaryName,
-  },
-  tableOfContents: data.tableOfContents,
-  companyId: data.companyId,
-  projectId: data.projectId,
-  buildingId: data.buildingId,
-  companyDetails: data.companyDetails,
-  projectInfo: data.projectInfo
-    ? {
-        ...data.projectInfo,
-        startDate: toOptionalDate(data.projectInfo.startDate),
-        endDate: toOptionalDate(data.projectInfo.endDate),
-      }
-    : undefined,
-  docNumber: data.docNumber,
-  revision: typeof data.revision === 'number' ? data.revision : 1,
-  revisionNotes: data.revisionNotes,
-  dueDate: toOptionalDate(data.dueDate),
-  assigneeId: data.assigneeId,
-  assigneeName: data.assigneeName,
-  workflowTransitions: normalizeWorkflowTransitions(data.workflowTransitions),
-  approvals: data.approvals,
-  auditTrail: normalizeAuditTrail(data.auditTrail),
-  distribution: normalizeDistributionEntries(data.distribution),
-  issueLog: normalizeIssueLogEntries(data.issueLog),
-  phaseBinding: data.phaseBinding,
-  costBinding: data.costBinding,
-});
-
-const normalizeObligationDocumentSafe = (
-  id: string,
-  data: Partial<ObligationDocument>
-): ObligationDocument | null => {
-  try {
-    return normalizeObligationDocument(id, data);
-  } catch (error) {
-    logger.error('Error normalizing obligation document', {
-      error,
-      obligationId: id,
-    });
-    return null;
-  }
-};
-
 export class FirestoreObligationsRepository implements IObligationsRepository {
-  // ADR-214 Phase 4: READ methods delegated to firestoreQueryService
+  // ── READ ──
 
   async getAll(): Promise<ObligationDocument[]> {
     try {
@@ -286,6 +72,8 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
       return null;
     }
   }
+
+  // ── CREATE ──
 
   async create(data: Partial<ObligationDocument>): Promise<ObligationDocument> {
     try {
@@ -349,10 +137,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
       });
       await setDoc(doc(db, COLLECTIONS.OBLIGATIONS, id), createPayload);
 
-      return {
-        id,
-        ...newObligation,
-      };
+      return { id, ...newObligation };
     } catch (error) {
       logger.error('Error creating obligation in Firebase', {
         error,
@@ -362,12 +147,12 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
     }
   }
 
+  // ── UPDATE ──
+
   async update(id: string, data: Partial<ObligationDocument>): Promise<ObligationDocument | null> {
     try {
       const current = await this.getById(id);
-      if (!current) {
-        return null;
-      }
+      if (!current) return null;
 
       const now = new Date();
       const auditTrail = [
@@ -382,8 +167,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
       };
 
       const docRef = doc(db, COLLECTIONS.OBLIGATIONS, id);
-      const updatePayload = stripUndefinedDeep(updateData);
-      await updateDoc(docRef, updatePayload);
+      await updateDoc(docRef, stripUndefinedDeep(updateData));
 
       return await this.getById(id);
     } catch (error) {
@@ -392,10 +176,11 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
     }
   }
 
+  // ── DELETE ──
+
   async delete(id: string): Promise<boolean> {
     try {
-      const docRef = doc(db, COLLECTIONS.OBLIGATIONS, id);
-      await deleteDoc(docRef);
+      await deleteDoc(doc(db, COLLECTIONS.OBLIGATIONS, id));
       return true;
     } catch (error) {
       logger.error('Error deleting obligation from Firebase', { error });
@@ -408,9 +193,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
       let deletedCount = 0;
       for (const id of ids) {
         const success = await this.delete(id);
-        if (success) {
-          deletedCount += 1;
-        }
+        if (success) deletedCount += 1;
       }
       return deletedCount;
     } catch (error) {
@@ -418,6 +201,8 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
       return 0;
     }
   }
+
+  // ── DUPLICATE ──
 
   async duplicate(id: string): Promise<ObligationDocument | null> {
     try {
@@ -455,16 +240,16 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
     }
   }
 
+  // ── WORKFLOW ──
+
   async updateStatus(
     id: string,
     status: ObligationStatus,
-    transition?: Pick<ObligationWorkflowTransition, 'changedBy' | 'reason'>
+    transition?: Pick<ObligationWorkflowTransition, 'changedBy' | 'reason'>,
   ): Promise<boolean> {
     try {
       const current = await this.getById(id);
-      if (!current) {
-        return false;
-      }
+      if (!current) return false;
 
       const validation = validateObligationStatusTransition(current, status);
       if (!validation.isValid) {
@@ -494,7 +279,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
         createAuditEvent(
           'status-transition',
           transition?.changedBy || 'system',
-          `Status changed from ${current.status} to ${status}${transition?.reason ? `: ${transition.reason}` : ''}`
+          `Status changed from ${current.status} to ${status}${transition?.reason ? `: ${transition.reason}` : ''}`,
         ),
       ];
 
@@ -512,147 +297,12 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
     }
   }
 
+  // ── TRANSMITTAL (delegated to standalone function) ──
 
   async issueWithTransmittal(request: ObligationIssueRequest): Promise<ObligationIssueResult | null> {
-    try {
-      const current = await this.getById(request.obligationId);
-      if (!current) {
-        return null;
-      }
-
-      if (!request.recipients || request.recipients.length === 0) {
-        throw new Error('VALIDATION_ERROR: At least one recipient is required to issue a transmittal');
-      }
-
-      const transitionValidation = validateObligationStatusTransition(current, 'issued');
-      if (!transitionValidation.isValid) {
-        throw new Error(`INVALID_STATUS_TRANSITION: ${transitionValidation.errors.join(' | ')}`);
-      }
-
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        throw new Error('AUTHENTICATION_ERROR: User must be logged in to issue obligations');
-      }
-
-      const tokenResult = await currentUser.getIdTokenResult();
-      const userCompanyId = tokenResult.claims?.companyId as string | undefined;
-      const companyId = current.companyId || userCompanyId;
-
-      if (!companyId) {
-        throw new Error('AUTHORIZATION_ERROR: Missing companyId for transmittal issuance');
-      }
-
-      const now = new Date();
-      const pdfData = await exportObligationToPDF(current);
-      const pdfHash = await sha256Hex(pdfData);
-      const fileName = buildIssuedPdfFileName(current);
-
-      const recipients = request.recipients.map((recipient: ObligationTransmittalRecipient) => ({ ...recipient }));
-      const deliveryProof = recipients.map((recipient: ObligationTransmittalRecipient) => toDeliveryProofEntry(recipient, now));
-
-      const transmittalPayload: Omit<ObligationTransmittal, 'id'> = {
-        companyId,
-        obligationId: current.id,
-        projectId: current.projectId !== undefined ? String(current.projectId) : undefined,
-        buildingId: current.buildingId,
-        docNumber: current.docNumber || current.id,
-        revision: current.revision ?? 1,
-        issuedAt: now,
-        issuedBy: currentUser.uid,
-        message: request.message,
-        recipients,
-        deliveryProof,
-        issueProof: {
-          algorithm: 'sha256',
-          pdfSha256: pdfHash,
-          generatedAt: now,
-          fileName,
-          byteSize: pdfData.byteLength,
-        },
-        createdAt: now,
-        updatedAt: now,
-      };
-
-      // 🏢 ADR-210: Enterprise ID generation — setDoc with pre-generated ID
-      const transmittalId = generateTransmittalId();
-      await setDoc(
-        doc(db, COLLECTIONS.OBLIGATION_TRANSMITTALS, transmittalId),
-        stripUndefinedDeep({
-          ...transmittalPayload,
-          id: transmittalId,
-          createdBy: currentUser.uid,
-        })
-      );
-
-      const issueLogEntry: ObligationIssueLogEntry = {
-        id: generateObligationId(),
-        transmittalId,
-        issuedAt: now,
-        issuedBy: currentUser.uid,
-        revision: current.revision ?? 1,
-        docNumber: current.docNumber || current.id,
-        recipientCount: recipients.length,
-        proofHash: pdfHash,
-      };
-
-      const workflowTransitions: ObligationWorkflowTransition[] = [
-        ...(current.workflowTransitions || []),
-        {
-          fromStatus: current.status,
-          toStatus: 'issued',
-          changedAt: now,
-          changedBy: currentUser.uid,
-          reason: 'Issued via obligation transmittal',
-        },
-      ];
-
-      const auditTrail: ObligationAuditEvent[] = [
-        ...(current.auditTrail || []),
-        createAuditEvent(
-          'status-transition',
-          currentUser.uid,
-          `Status changed from ${current.status} to issued: Issued via obligation transmittal`
-        ),
-        createAuditEvent('issued', currentUser.uid, `Issued obligation with transmittal ${transmittalId}`),
-        createAuditEvent('transmittal-created', currentUser.uid, `Created transmittal ${transmittalId}`),
-      ];
-
-      const nextDistribution: ObligationDistributionEntry[] = [
-        ...(current.distribution || []),
-        ...deliveryProof,
-      ];
-
-      const nextIssueLog: ObligationIssueLogEntry[] = [
-        ...(current.issueLog || []),
-        issueLogEntry,
-      ];
-
-      const obligationRef = doc(db, COLLECTIONS.OBLIGATIONS, current.id);
-      await updateDoc(
-        obligationRef,
-        stripUndefinedDeep({
-          status: 'issued',
-          workflowTransitions,
-          auditTrail,
-          distribution: nextDistribution,
-          issueLog: nextIssueLog,
-          updatedAt: now,
-        })
-      );
-
-      return {
-        transmittal: {
-          id: transmittalId,
-          ...transmittalPayload,
-        },
-        issueLogEntry,
-        distribution: deliveryProof,
-        pdfData,
-      };
-    } catch (error) {
-      logger.error('Error issuing obligation transmittal', { error, request });
-      return null;
-    }
+    return executeIssueWithTransmittal(request, {
+      getById: (id) => this.getById(id),
+    });
   }
 
   async getTransmittalsForObligation(obligationId: string): Promise<ObligationTransmittal[]> {
@@ -672,9 +322,10 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
     }
   }
 
+  // ── TEMPLATES ──
+
   async getTemplates(): Promise<ObligationTemplate[]> {
     try {
-      // Templates = system data — skip tenant filter
       const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('OBLIGATION_TEMPLATES', {
         constraints: [orderBy('isDefault', 'desc')],
         tenantOverride: 'skip',
@@ -716,6 +367,8 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
     }
   }
 
+  // ── SEARCH ──
+
   async search(searchText: string, filters?: SearchFilters): Promise<ObligationDocument[]> {
     try {
       const constraints: QueryConstraint[] = [];
@@ -723,14 +376,12 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
       if (filters?.status && filters.status !== 'all') {
         constraints.push(where('status', '==', filters.status));
       }
-
       if (filters?.dateFrom) {
         constraints.push(where('createdAt', '>=', filters.dateFrom));
       }
       if (filters?.dateTo) {
         constraints.push(where('createdAt', '<=', filters.dateTo));
       }
-
       constraints.push(orderBy('updatedAt', 'desc'));
 
       const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('OBLIGATIONS', {
@@ -743,11 +394,12 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
 
       if (searchText.trim()) {
         const searchTerm = searchText.toLowerCase();
-        results = results.filter((obligation) =>
-          obligation.title.toLowerCase().includes(searchTerm) ||
-          obligation.projectName.toLowerCase().includes(searchTerm) ||
-          obligation.contractorCompany.toLowerCase().includes(searchTerm) ||
-          obligation.owners.some((owner) => owner.name.toLowerCase().includes(searchTerm))
+        results = results.filter(
+          (obligation) =>
+            obligation.title.toLowerCase().includes(searchTerm) ||
+            obligation.projectName.toLowerCase().includes(searchTerm) ||
+            obligation.contractorCompany.toLowerCase().includes(searchTerm) ||
+            obligation.owners.some((owner) => owner.name.toLowerCase().includes(searchTerm)),
         );
       }
 
@@ -758,41 +410,37 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
     }
   }
 
+  // ── STATISTICS ──
+
   async getStatistics(): Promise<ObligationStats> {
     try {
       const now = new Date();
       const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
       const allObligations = await this.getAll();
 
       return {
         total: allObligations.length,
-        draft: allObligations.filter((obligation) => obligation.status === 'draft').length,
-        inReview: allObligations.filter((obligation) => obligation.status === 'in-review').length,
-        returned: allObligations.filter((obligation) => obligation.status === 'returned').length,
-        approved: allObligations.filter((obligation) => obligation.status === 'approved').length,
-        issued: allObligations.filter((obligation) => obligation.status === 'issued').length,
-        superseded: allObligations.filter((obligation) => obligation.status === 'superseded').length,
-        archived: allObligations.filter((obligation) => obligation.status === 'archived').length,
-        completed: allObligations.filter((obligation) => obligation.status === 'completed').length,
-        thisMonth: allObligations.filter((obligation) => obligation.createdAt >= thisMonth).length,
+        draft: allObligations.filter((o) => o.status === 'draft').length,
+        inReview: allObligations.filter((o) => o.status === 'in-review').length,
+        returned: allObligations.filter((o) => o.status === 'returned').length,
+        approved: allObligations.filter((o) => o.status === 'approved').length,
+        issued: allObligations.filter((o) => o.status === 'issued').length,
+        superseded: allObligations.filter((o) => o.status === 'superseded').length,
+        archived: allObligations.filter((o) => o.status === 'archived').length,
+        completed: allObligations.filter((o) => o.status === 'completed').length,
+        thisMonth: allObligations.filter((o) => o.createdAt >= thisMonth).length,
       };
     } catch (error) {
       logger.error('Error getting statistics from Firebase', { error });
       return {
-        total: 0,
-        draft: 0,
-        inReview: 0,
-        returned: 0,
-        approved: 0,
-        issued: 0,
-        superseded: 0,
-        archived: 0,
-        completed: 0,
-        thisMonth: 0,
+        total: 0, draft: 0, inReview: 0, returned: 0,
+        approved: 0, issued: 0, superseded: 0, archived: 0,
+        completed: 0, thisMonth: 0,
       };
     }
   }
+
+  // ── PDF EXPORT ──
 
   async exportToPDF(_id: string): Promise<Blob> {
     throw new Error('📝 PDF export not implemented yet - will be added in future update');
@@ -805,9 +453,3 @@ export class InMemoryObligationsRepository extends FirestoreObligationsRepositor
     super();
   }
 }
-
-
-
-
-
-

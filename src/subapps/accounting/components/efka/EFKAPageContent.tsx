@@ -13,7 +13,6 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageLoadingState, PageErrorState } from '@/core/states';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
   PiggyBank,
@@ -33,6 +32,8 @@ import { FiscalYearPicker } from '../shared/FiscalYearPicker';
 import { EFKAMonthlyBreakdown } from './EFKAMonthlyBreakdown';
 import { EFKAPaymentsList } from './EFKAPaymentsList';
 import { PartnerEFKATabs } from './PartnerEFKATabs';
+
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // TYPES
@@ -87,6 +88,7 @@ function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
 
 export function EFKAPageContent() {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [showDashboard, setShowDashboard] = useState(true);
@@ -226,7 +228,7 @@ export function EFKAPageContent() {
             <p className="text-lg font-medium text-foreground mb-1">
               {t('efka.noData')}
             </p>
-            <p className="text-muted-foreground">
+            <p className={colors.text.muted}>
               {t('efka.noDataDescription')}
             </p>
           </div>

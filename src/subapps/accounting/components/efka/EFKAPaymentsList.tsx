@@ -23,6 +23,8 @@ import { Badge } from '@/components/ui/badge';
 import type { EFKAPayment, EFKAPaymentStatus } from '@/subapps/accounting/types';
 import { formatCurrency, formatDate } from '../../utils/format';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -52,13 +54,14 @@ const PAYMENT_STATUS_VARIANTS: Record<
 
 export function EFKAPaymentsList({ payments }: EFKAPaymentsListProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   const sortedPayments = [...payments].sort((a, b) => a.month - b.month);
 
   if (sortedPayments.length === 0) {
     return (
       <div className="text-center py-6">
-        <p className="text-muted-foreground">{t('efka.noPayments')}</p>
+        <p className={colors.text.muted}>{t('efka.noPayments')}</p>
       </div>
     );
   }

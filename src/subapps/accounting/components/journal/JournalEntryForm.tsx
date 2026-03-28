@@ -41,6 +41,8 @@ import type {
 import { getCategoryByCode } from '../../config/account-categories';
 import { formatCurrency } from '../../utils/format';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -80,6 +82,7 @@ function getQuarterFromDate(dateStr: string): FiscalQuarter {
 
 export function JournalEntryForm({ onSuccess, onCancel }: JournalEntryFormProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
   const { user } = useAuth();
 
   const [submitting, setSubmitting] = useState(false);
@@ -299,11 +302,11 @@ export function JournalEntryForm({ onSuccess, onCancel }: JournalEntryFormProps)
           {/* Auto-calculated totals */}
           <dl className="grid grid-cols-3 gap-4 text-sm">
             <div>
-              <dt className="text-muted-foreground">{t('journal.vatAmount')}</dt>
+              <dt className={colors.text.muted}>{t('journal.vatAmount')}</dt>
               <dd className="text-lg font-semibold">{formatCurrency(calculations.vatAmount)}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">{t('journal.grossAmount')}</dt>
+              <dt className={colors.text.muted}>{t('journal.grossAmount')}</dt>
               <dd className="text-lg font-bold">{formatCurrency(calculations.grossAmount)}</dd>
             </div>
           </dl>

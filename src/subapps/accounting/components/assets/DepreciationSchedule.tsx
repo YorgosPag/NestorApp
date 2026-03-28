@@ -24,6 +24,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { DepreciationRecord } from '@/subapps/accounting/types';
 import { formatCurrency } from '../../utils/format';
 
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -56,7 +58,7 @@ export function DepreciationSchedule({ assetDescription, records }: Depreciation
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground text-center py-6">
+          <p className={cn("text-center py-6", colors.text.muted)}>
             {t('assets.noDepreciationRecords')}
           </p>
         </CardContent>

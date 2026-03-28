@@ -37,6 +37,10 @@ import { useExpenseDocuments } from '../../hooks/useExpenseDocuments';
 import { useExpenseDocument } from '../../hooks/useExpenseDocument';
 import type { DocumentProcessingStatus, ReceivedExpenseDocument } from '../../types/documents';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -101,6 +105,7 @@ function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
 
 export function DocumentsPageContent() {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [activeTab, setActiveTab] = useState<TabValue>('all');
@@ -272,8 +277,8 @@ export function DocumentsPageContent() {
         ) : filteredDocuments.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
-              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-sm text-muted-foreground">{t('documents.noDocuments')}</p>
+              <FileText className={cn("h-12 w-12 mx-auto mb-4", colors.text.muted)} />
+              <p className={cn("text-sm", colors.text.muted)}>{t('documents.noDocuments')}</p>
               <Button variant="outline" onClick={() => setUploadOpen(true)} className="mt-4">
                 <Plus className="h-4 w-4 mr-2" />
                 {t('documents.newDocument')}
@@ -296,10 +301,10 @@ export function DocumentsPageContent() {
                     <CardHeader className="py-3 px-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <FileText className="h-5 w-5 text-muted-foreground" />
+                          <FileText className={cn("h-5 w-5", colors.text.muted)} />
                           <div>
                             <CardTitle className="text-sm">{doc.fileName}</CardTitle>
-                            <p className="text-xs text-muted-foreground mt-0.5">
+                            <p className={cn("text-xs mt-0.5", colors.text.muted)}>
                               {doc.extractedData.issuerName ?? t('documents.unknownIssuer')}
                               {doc.extractedData.issueDate ? ` — ${doc.extractedData.issueDate}` : ''}
                             </p>
