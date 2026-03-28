@@ -22,6 +22,9 @@ import type {
   ConstructionPhaseUpdatePayload,
   ConstructionTaskCreatePayload,
   ConstructionTaskUpdatePayload,
+  ConstructionBaseline,
+  ConstructionBaselineSummary,
+  ConstructionBaselineCreatePayload,
 } from '@/types/building/construction';
 
 // ─── Response Interfaces ─────────────────────────────────────────────────
@@ -201,5 +204,90 @@ export async function deleteConstructionTask(
       success: false,
       error: getErrorMessage(error),
     };
+  }
+}
+
+// =============================================================================
+// BASELINE SNAPSHOTS (ADR-266 Phase C, Sub-phase 3)
+// =============================================================================
+
+interface BaselinesListApiResponse {
+  success: boolean;
+  baselines: ConstructionBaselineSummary[];
+  buildingId: string;
+}
+
+interface BaselineDetailApiResponse {
+  success: boolean;
+  baseline: ConstructionBaseline | null;
+}
+
+interface BaselineMutationApiResponse {
+  success: boolean;
+  baselineId?: string;
+  error?: string;
+}
+
+/** List baseline summaries for a building (no embedded phases/tasks) */
+export async function getConstructionBaselines(
+  buildingId: string
+): Promise<ConstructionBaselineSummary[]> {
+  try {
+    const result = await apiClient.get<BaselinesListApiResponse>(
+      API_ROUTES.BUILDINGS.CONSTRUCTION_BASELINES(buildingId)
+    );
+    return result?.baselines ?? [];
+  } catch (error) {
+    logger.error('getConstructionBaselines failed', { error });
+    return [];
+  }
+}
+
+/** Get full baseline with embedded phases + tasks (for comparison) */
+export async function getConstructionBaselineDetail(
+  buildingId: string,
+  baselineId: string
+): Promise<ConstructionBaseline | null> {
+  try {
+    const result = await apiClient.get<BaselineDetailApiResponse>(
+      `${API_ROUTES.BUILDINGS.CONSTRUCTION_BASELINES(buildingId)}/${encodeURIComponent(baselineId)}`
+    );
+    return result?.baseline ?? null;
+  } catch (error) {
+    logger.error('getConstructionBaselineDetail failed', { error });
+    return null;
+  }
+}
+
+/** Create a new baseline snapshot (captures current schedule state) */
+export async function createConstructionBaseline(
+  buildingId: string,
+  payload: ConstructionBaselineCreatePayload
+): Promise<{ success: boolean; baselineId?: string; error?: string }> {
+  try {
+    const result = await apiClient.post<BaselineMutationApiResponse>(
+      API_ROUTES.BUILDINGS.CONSTRUCTION_BASELINES(buildingId),
+      payload
+    );
+    return { success: true, baselineId: result?.baselineId };
+  } catch (error) {
+    logger.error('createConstructionBaseline failed', { error });
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
+/** Delete a baseline snapshot */
+export async function deleteConstructionBaseline(
+  buildingId: string,
+  baselineId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await apiClient.delete<BaselineMutationApiResponse>(
+      `${API_ROUTES.BUILDINGS.CONSTRUCTION_BASELINES(buildingId)}?id=${encodeURIComponent(baselineId)}`
+    );
+    return { success: true };
+  } catch (error) {
+    logger.error('deleteConstructionBaseline failed', { error });
+    return { success: false, error: getErrorMessage(error) };
   }
 }

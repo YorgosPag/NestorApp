@@ -28,6 +28,12 @@ export interface ScheduleVarianceRow {
   status: ConstructionPhaseStatus | ConstructionTaskStatus;
   progress: number;
   ragStatus: RAGStatus;
+  /** Baseline planned start (present only when comparing to a baseline) */
+  baselinePlannedStart?: string | null;
+  /** Baseline planned end (present only when comparing to a baseline) */
+  baselinePlannedEnd?: string | null;
+  /** Variance vs baseline in days (positive = slipped vs baseline) */
+  baselineVarianceDays?: number;
 }
 
 // ─── Lookahead Table ─────────────────────────────────────────────────────

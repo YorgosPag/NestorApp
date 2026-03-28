@@ -9,7 +9,7 @@
  */
 
 import { useMemo, useState, useCallback } from 'react';
-import { ChevronRight, ChevronDown, Minus } from 'lucide-react';
+import { ChevronRight, ChevronDown, Minus, GitCompare } from 'lucide-react';
 import { ReportSection } from '@/components/reports/core/ReportSection';
 import { ReportEmptyState } from '@/components/reports/core/ReportEmptyState';
 import { ReportTrafficLight } from '@/components/reports/core/ReportTrafficLight';
@@ -19,17 +19,22 @@ import { formatDateShort } from '@/lib/intl-utils';
 import { getStatusColor } from '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import type { ScheduleVarianceRow } from './schedule-dashboard.types';
+import type { ConstructionBaseline } from '@/types/building/construction';
 
 // ─── Props ───────────────────────────────────────────────────────────────
 
 interface ScheduleVarianceTableProps {
   rows: ScheduleVarianceRow[];
   loading?: boolean;
+  /** When provided, shows baseline comparison columns */
+  baselineData?: ConstructionBaseline | null;
+  /** Called when user clicks "clear comparison" */
+  onClearBaseline?: () => void;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────
 
-export function ScheduleVarianceTable({ rows, loading }: ScheduleVarianceTableProps) {
+export function ScheduleVarianceTable({ rows, loading, baselineData, onClearBaseline }: ScheduleVarianceTableProps) {
   const { t } = useTranslation('building');
   const colors = useSemanticColors();
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
@@ -67,6 +72,16 @@ export function ScheduleVarianceTable({ rows, loading }: ScheduleVarianceTablePr
     return result;
   }, [rows, expandedPhases]);
 
+  const isComparing = baselineData !== null && baselineData !== undefined;
+
+  // Build baseline lookup maps for O(1) access per row
+  const baselineLookup = useMemo(() => {
+    if (!baselineData) return null;
+    const phaseMap = new Map(baselineData.phases.map(p => [p.id, p]));
+    const taskMap = new Map(baselineData.tasks.map(t => [t.id, t]));
+    return { phaseMap, taskMap };
+  }, [baselineData]);
+
   const phases = rows.filter(r => r.type === 'phase');
   const isEmpty = phases.length === 0;
 
@@ -88,6 +103,25 @@ export function ScheduleVarianceTable({ rows, loading }: ScheduleVarianceTablePr
       title={t('tabs.timeline.dashboard.variance.title')}
       id="schedule-variance"
     >
+      {/* Baseline comparison badge */}
+      {isComparing && baselineData && (
+        <div className="flex items-center gap-2 mb-3 rounded-md bg-primary/10 px-3 py-1.5 text-sm">
+          <GitCompare className="h-4 w-4 text-primary shrink-0" />
+          <span className="font-medium">
+            {t('tabs.timeline.dashboard.baseline.variance.comparingTo', { name: baselineData.name })}
+          </span>
+          {onClearBaseline && (
+            <button
+              type="button"
+              onClick={onClearBaseline}
+              className="ml-auto text-xs underline text-muted-foreground hover:text-foreground"
+            >
+              {t('tabs.timeline.dashboard.baseline.variance.clearComparison')}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Expand/Collapse controls */}
       <div className="flex gap-2 mb-3">
         <button
@@ -125,6 +159,19 @@ export function ScheduleVarianceTable({ rows, loading }: ScheduleVarianceTablePr
               <th scope="col" className="text-left py-2 px-2 font-medium">
                 {t('tabs.timeline.dashboard.variance.colActualEnd')}
               </th>
+              {isComparing && (
+                <>
+                  <th scope="col" className="text-left py-2 px-2 font-medium hidden lg:table-cell text-primary/80">
+                    {t('tabs.timeline.dashboard.baseline.variance.colBaselineStart')}
+                  </th>
+                  <th scope="col" className="text-left py-2 px-2 font-medium hidden md:table-cell text-primary/80">
+                    {t('tabs.timeline.dashboard.baseline.variance.colBaselineEnd')}
+                  </th>
+                  <th scope="col" className="text-right py-2 px-2 font-medium text-primary/80">
+                    {t('tabs.timeline.dashboard.baseline.variance.colBaselineVariance')}
+                  </th>
+                </>
+              )}
               <th scope="col" className="text-right py-2 px-2 font-medium">
                 {t('tabs.timeline.dashboard.variance.colVariance')}
               </th>
@@ -190,6 +237,38 @@ export function ScheduleVarianceTable({ rows, loading }: ScheduleVarianceTablePr
                   <td className="py-2 px-2">
                     {row.actualEnd ? formatDateShort(row.actualEnd) : '—'}
                   </td>
+
+                  {/* Baseline columns (only when comparing) */}
+                  {isComparing && (() => {
+                    const bEntity = baselineLookup
+                      ? (row.type === 'phase'
+                        ? baselineLookup.phaseMap.get(row.id)
+                        : baselineLookup.taskMap.get(row.id))
+                      : undefined;
+                    const bStart = bEntity?.plannedStartDate ?? null;
+                    const bEnd = bEntity?.plannedEndDate ?? null;
+                    const bVar = bEnd && row.plannedEnd
+                      ? Math.round((new Date(row.plannedEnd).getTime() - new Date(bEnd).getTime()) / 86_400_000)
+                      : 0;
+                    return (
+                      <>
+                        <td className="py-2 px-2 hidden lg:table-cell text-primary/70">
+                          {bStart ? formatDateShort(bStart) : '—'}
+                        </td>
+                        <td className="py-2 px-2 hidden md:table-cell text-primary/70">
+                          {bEnd ? formatDateShort(bEnd) : '—'}
+                        </td>
+                        <td className={cn(
+                          'py-2 px-2 text-right tabular-nums',
+                          bVar > 0 && 'text-destructive',
+                          bVar === 0 && 'text-muted-foreground',
+                          bVar < 0 && getStatusColor('available', 'text'),
+                        )}>
+                          {bEntity ? (bVar > 0 ? `+${bVar}d` : `${bVar}d`) : '—'}
+                        </td>
+                      </>
+                    );
+                  })()}
 
                   {/* Variance */}
                   <td className={cn(

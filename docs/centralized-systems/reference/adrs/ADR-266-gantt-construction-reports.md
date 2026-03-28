@@ -1,6 +1,6 @@
 # ADR-266: Gantt & Construction Schedule Reports
 
-**Status**: PHASE C IN PROGRESS (Sub-phases 1+2 complete)
+**Status**: PHASE C IN PROGRESS (Sub-phases 1+2+3 complete)
 **Date**: 2026-03-28
 **Author**: Claude (Research Agents × 4)
 **Related ADRs**: ADR-034 (Gantt Chart), ADR-265 (Enterprise Reports System), ADR-175 (BOQ/Quantity Surveying)
@@ -13,6 +13,7 @@
 | 2026-03-28 | **Phase B IMPLEMENTED**: 3 new files, 7 modified — DelayBreakdownChart, Owner Report PDF, Gantt Table PDF, S-Curve Brush zoom, 4 export options |
 | 2026-03-28 | **Phase C Sub-phase 1 IMPLEMENTED**: delayReason + delayNote fields — SSoT DELAY_REASONS array, conditional UI in dialog, per-reason stacked bar chart, API + i18n. Also refactored: route.ts split (229+186), dialog split (490+186+245+79) |
 | 2026-03-28 | **Phase C Sub-phase 2 IMPLEMENTED**: Critical Path Method — CPM algorithm (forward/backward pass, Kahn's cycle detection), CriticalPathCard rewrite with real data, CriticalPathSection dashboard table, 7th KPI card, useCriticalPath hook, i18n (en+el) |
+| 2026-03-28 | **Phase C Sub-phase 3 IMPLEMENTED**: Baseline Snapshots — Firestore `construction_baselines` collection, `cbase_` enterprise IDs, API routes (GET list/detail, POST create, DELETE), client services, `useBaselineComparison` hook, `BaselineSection` UI (save dialog, list, compare toggle, delete), Variance Table baseline columns (start/end/vs baseline), i18n (en+el) |
 
 ---
 
@@ -548,8 +549,34 @@ Dashboard → [Export ▼]
 - `ScheduleOverviewKPIs.tsx` (+7th KPI card: Route icon)
 - `en/el building.json` (+criticalPath i18n keys)
 
-#### Sub-phase 3: Baseline Snapshots (Pending)
-2. Baseline snapshots (new Firestore collection `construction_baselines`)
+#### Sub-phase 3: Baseline Snapshots ✅ IMPLEMENTED
+- Firestore collection `construction_baselines` (top-level, `buildingId`+`companyId` indexed)
+- Enterprise ID prefix `cbase_` via `generateConstructionBaselineId()`
+- Full denormalized copies of phases+tasks per snapshot (~20KB max)
+- API routes: GET list (summary), GET /:id (full detail), POST (create), DELETE
+- Max 10 baselines per building (server-enforced)
+- `useBaselineComparison` hook: list, select, lazy-load detail, CRUD
+- `BaselineSection` UI: save dialog, baseline list with compare/delete, max warning
+- `ScheduleVarianceTable` enhanced: optional baseline columns (start/end/vs baseline)
+- i18n: en + el keys under `tabs.timeline.dashboard.baseline`
+
+**New files:**
+- `src/app/api/buildings/[buildingId]/construction-baselines/route.ts` (199 LOC)
+- `src/app/api/buildings/[buildingId]/construction-baselines/[baselineId]/route.ts` (68 LOC)
+- `src/components/.../dashboard/useBaselineComparison.ts` (120 LOC)
+- `src/components/.../dashboard/BaselineSection.tsx` (216 LOC)
+
+**Modified files:**
+- `src/types/building/construction.ts` (+ConstructionBaseline, +Summary, +CreatePayload)
+- `src/config/firestore-collections.ts` (+CONSTRUCTION_BASELINES)
+- `src/config/domain-constants.ts` (+CONSTRUCTION_BASELINES route)
+- `src/services/enterprise-id.service.ts` (+cbase prefix, +generator)
+- `construction-services.ts` (+4 baseline client functions)
+- `schedule-dashboard.types.ts` (+baseline fields on ScheduleVarianceRow)
+- `ScheduleVarianceTable.tsx` (+baseline columns, comparison badge)
+- `ScheduleDashboardView.tsx` (+useBaselineComparison, +BaselineSection)
+- `dashboard/index.ts` (+exports)
+- `en/el building.json` (+30 baseline i18n keys each)
 
 #### Sub-phase 4: Resource Allocation (Pending)
 3. Resource allocation tracking

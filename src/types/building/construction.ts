@@ -148,6 +148,37 @@ export interface ConstructionTaskUpdatePayload {
   delayNote?: string | null;
 }
 
+// ─── Baseline Snapshot Types (ADR-266 Phase C, Sub-phase 3) ─────────────
+
+/** Full snapshot of a schedule at a point in time — for Baseline vs Actual comparison */
+export interface ConstructionBaseline {
+  id: string;                          // cbase_uuid
+  buildingId: string;
+  companyId: string;
+  name: string;                        // "Baseline 1 - Initial Schedule"
+  version: number;                     // Auto-incremented per building (1, 2, 3…)
+  description?: string | null;
+  phases: ConstructionPhase[];         // Denormalized full copy at snapshot time
+  tasks: ConstructionTask[];           // Denormalized full copy at snapshot time
+  createdAt?: string;                  // ISO 8601
+  createdBy?: string;                  // uid
+}
+
+/** Lightweight summary for list views (no embedded phases/tasks) */
+export interface ConstructionBaselineSummary {
+  id: string;
+  name: string;
+  version: number;
+  createdAt: string;
+  phaseCount: number;
+  taskCount: number;
+}
+
+export interface ConstructionBaselineCreatePayload {
+  name: string;
+  description?: string;
+}
+
 // ─── API Response Types ──────────────────────────────────────────────────
 
 export interface ConstructionDataResponse {

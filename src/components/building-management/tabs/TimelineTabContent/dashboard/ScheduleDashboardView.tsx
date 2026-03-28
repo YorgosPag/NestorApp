@@ -28,6 +28,7 @@ import type { BuildingMilestone } from '@/types/building/milestone';
 import type { TimelineView } from '../TimelineViewToggle';
 
 import { useScheduleDashboard } from './useScheduleDashboard';
+import { useBaselineComparison } from './useBaselineComparison';
 import { ScheduleOverviewKPIs } from './ScheduleOverviewKPIs';
 import { SCurveChart } from './SCurveChart';
 import { ScheduleVarianceTable } from './ScheduleVarianceTable';
@@ -35,6 +36,7 @@ import { LookaheadTable } from './LookaheadTable';
 import { GanttSnapshotCard } from './GanttSnapshotCard';
 import { DelayBreakdownChart } from './DelayBreakdownChart';
 import { CriticalPathSection } from './CriticalPathSection';
+import { BaselineSection } from './BaselineSection';
 import { ReportEmptyState } from '@/components/reports/core/ReportEmptyState';
 
 // ─── Props ───────────────────────────────────────────────────────────────
@@ -75,6 +77,8 @@ export function ScheduleDashboardView({
     setLookAheadDays,
     refresh,
   } = useScheduleDashboard({ buildingId, milestones });
+
+  const baselineComparison = useBaselineComparison(buildingId);
 
   // ── Refresh handler ────────────────────────────────────────────────────
   const handleRefresh = useCallback(async () => {
@@ -312,7 +316,12 @@ export function ScheduleDashboardView({
           <SCurveChart data={sCurveData} loading={boqLoading} enableBrush />
           <DelayBreakdownChart data={delayBreakdownData} loading={boqLoading} />
           <CriticalPathSection tasks={tasks} phases={phases} loading={boqLoading} />
-          <ScheduleVarianceTable rows={varianceRows} />
+          <BaselineSection baseline={baselineComparison} loading={loading} />
+          <ScheduleVarianceTable
+            rows={varianceRows}
+            baselineData={baselineComparison.selectedBaseline}
+            onClearBaseline={baselineComparison.clearComparison}
+          />
           <LookaheadTable
             rows={lookaheadRows}
             lookAheadDays={lookAheadDays}

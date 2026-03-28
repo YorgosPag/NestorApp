@@ -1316,6 +1316,41 @@
           "other": "Άλλο",
           "unspecified": "Χωρίς Λόγο"
         },
+        "baseline": {
+          "title": "Στιγμιότυπα Βάσης",
+          "saveBaseline": "Αποθήκευση Βάσης",
+          "saveDialog": {
+            "title": "Αποθήκευση Στιγμιοτύπου Βάσης",
+            "description": "Καταγράψτε το τρέχον χρονοδιάγραμμα ως βάση για μελλοντική σύγκριση.",
+            "nameLabel": "Όνομα Βάσης",
+            "namePlaceholder": "π.χ. Αρχικό Χρονοδιάγραμμα",
+            "descriptionLabel": "Περιγραφή",
+            "descriptionPlaceholder": "Προαιρετικές σημειώσεις για αυτή τη βάση...",
+            "save": "Αποθήκευση",
+            "cancel": "Ακύρωση",
+            "saving": "Αποθήκευση...",
+            "maxReached": "Μέγιστο 10 βάσεις ανά κτίριο. Διαγράψτε μια παλιά βάση πρώτα."
+          },
+          "list": {
+            "empty": "Δεν υπάρχουν αποθηκευμένες βάσεις",
+            "emptyDesc": "Αποθηκεύστε μια βάση για να παρακολουθείτε αλλαγές στο χρονοδιάγραμμα.",
+            "version": "v{{version}}",
+            "compare": "Σύγκριση",
+            "comparing": "Σύγκριση",
+            "stopComparing": "Τέλος σύγκρισης",
+            "delete": "Διαγραφή",
+            "deleteConfirm": "Διαγραφή βάσης \"{{name}}\"; Δεν μπορεί να αναιρεθεί.",
+            "phases": "{{count}} φάσεις",
+            "tasks": "{{count}} εργασίες"
+          },
+          "variance": {
+            "comparingTo": "Σύγκριση με: {{name}}",
+            "clearComparison": "Καθαρισμός",
+            "colBaselineStart": "Αρχή Βάσης",
+            "colBaselineEnd": "Λήξη Βάσης",
+            "colBaselineVariance": "vs Βάση"
+          }
+        },
         "ownerReport": {
           "title": "Αναφορά Κατάστασης Έργου",
           "overallProgress": "Συνολική Πρόοδος Έργου",

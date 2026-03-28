@@ -573,6 +573,7 @@ export const API_ROUTES = {
     LIST: '/api/buildings',
     BY_ID: (id: string) => `/api/buildings/${id}` as const,
     CONSTRUCTION_PHASES: (buildingId: string) => `/api/buildings/${buildingId}/construction-phases` as const,
+    CONSTRUCTION_BASELINES: (buildingId: string) => `/api/buildings/${buildingId}/construction-baselines` as const,
     CUSTOMERS: (buildingId: string) => `/api/buildings/${buildingId}/customers` as const,
     MILESTONES: (buildingId: string) => `/api/buildings/${buildingId}/milestones` as const,
   },

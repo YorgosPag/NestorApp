@@ -1316,6 +1316,41 @@
           "other": "Other",
           "unspecified": "Unspecified"
         },
+        "baseline": {
+          "title": "Baseline Snapshots",
+          "saveBaseline": "Save Baseline",
+          "saveDialog": {
+            "title": "Save Baseline Snapshot",
+            "description": "Capture the current schedule as a baseline for future comparison.",
+            "nameLabel": "Baseline Name",
+            "namePlaceholder": "e.g. Initial Schedule",
+            "descriptionLabel": "Description",
+            "descriptionPlaceholder": "Optional notes about this baseline...",
+            "save": "Save",
+            "cancel": "Cancel",
+            "saving": "Saving...",
+            "maxReached": "Maximum 10 baselines per building. Delete an old baseline first."
+          },
+          "list": {
+            "empty": "No baselines saved",
+            "emptyDesc": "Save a baseline to track schedule changes over time.",
+            "version": "v{{version}}",
+            "compare": "Compare",
+            "comparing": "Comparing",
+            "stopComparing": "Stop comparing",
+            "delete": "Delete",
+            "deleteConfirm": "Delete baseline \"{{name}}\"? This cannot be undone.",
+            "phases": "{{count}} phases",
+            "tasks": "{{count}} tasks"
+          },
+          "variance": {
+            "comparingTo": "Comparing to: {{name}}",
+            "clearComparison": "Clear",
+            "colBaselineStart": "Baseline Start",
+            "colBaselineEnd": "Baseline End",
+            "colBaselineVariance": "vs Baseline"
+          }
+        },
         "ownerReport": {
           "title": "Project Status Report",
           "overallProgress": "Overall Project Progress",
