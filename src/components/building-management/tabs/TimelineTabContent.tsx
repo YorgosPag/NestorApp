@@ -38,6 +38,7 @@ import { MilestoneDialog } from './TimelineTabContent/MilestoneDialog';
 import type { Milestone } from './TimelineTabContent/MilestoneItem';
 import type { BuildingMilestone } from '@/types/building/milestone';
 import { Plus } from 'lucide-react';
+import '@/lib/design-system';
 
 // Lazy load GanttView (ADR-034) — only loaded when user switches to Gantt view
 const LazyGanttView = lazy(() =>
@@ -58,7 +59,7 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
   const fullscreen = useFullscreen();
 
   // i18n and semantic colors hooks
-  const { t, i18n } = useTranslation('building');
+  const { t } = useTranslation('building');
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
 
@@ -140,20 +141,13 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
     [t]
   );
 
-  // 🏢 ENTERPRISE: Safe i18n labels with fallback pattern
-  const exportLabels = useMemo(() => {
-    const isGreek = i18n.language === 'el';
-    const safeLabel = (key: string, el: string, en: string): string => {
-      const result = t(`tabs.timeline.milestoneExport.${key}`);
-      return result.includes('.') ? (isGreek ? el : en) : result;
-    };
-    return {
-      export: safeLabel('export', 'Εξαγωγή', 'Export'),
-      pdf: safeLabel('pdf', 'PDF (Αναφορά)', 'PDF (Report)'),
-      excel: safeLabel('excel', 'Excel (Δεδομένα)', 'Excel (Data)'),
-      exporting: safeLabel('exporting', 'Εξαγωγή...', 'Exporting...'),
-    };
-  }, [t, i18n.language]);
+  // 🏢 ENTERPRISE: i18n labels for milestone export
+  const exportLabels = useMemo(() => ({
+    export: t('tabs.timeline.milestoneExport.export'),
+    pdf: t('tabs.timeline.milestoneExport.pdf'),
+    excel: t('tabs.timeline.milestoneExport.excel'),
+    exporting: t('tabs.timeline.milestoneExport.exporting'),
+  }), [t]);
 
   // 🏢 ENTERPRISE: Milestone export handler
   const handleMilestoneExport = useCallback(async (format: MilestoneExportFormat) => {
@@ -208,10 +202,10 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
                 variant="outline"
                 size="sm"
                 onClick={fullscreen.enter}
-                title={i18n.language === 'el' ? 'Πλήρης Οθόνη' : 'Fullscreen'}
+                title={t('tabs.timeline.fullscreen')}
               >
                 <Maximize2 className={cn(iconSizes.sm, 'mr-1.5')} />
-                {i18n.language === 'el' ? 'Πλήρης Οθόνη' : 'Fullscreen'}
+                {t('tabs.timeline.fullscreen')}
               </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

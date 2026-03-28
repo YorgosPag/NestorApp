@@ -9,6 +9,9 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatDate } from '@/lib/intl-utils';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface CompletionForecastCardProps {
     milestones: { status: string; date: string }[];
@@ -17,6 +20,7 @@ interface CompletionForecastCardProps {
 export function CompletionForecastCard({ milestones }: CompletionForecastCardProps) {
     // 🏢 ENTERPRISE: i18n hook for translations
     const { t } = useTranslation('building');
+    const colors = useSemanticColors();
     const iconSizes = useIconSizes();
     const lastMilestone = milestones.length > 0 ? milestones[milestones.length - 1] : undefined;
     const delayDays = 5; // Mock data for delay
@@ -31,7 +35,7 @@ export function CompletionForecastCard({ milestones }: CompletionForecastCardPro
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-sm text-muted-foreground">
+                    <p className={cn("text-sm", colors.text.muted)}>
                         {t('tabs.timeline.forecast.noData', { defaultValue: 'Δεν υπάρχουν ορόσημα για πρόβλεψη.' })}
                     </p>
                 </CardContent>
@@ -51,11 +55,11 @@ export function CompletionForecastCard({ milestones }: CompletionForecastCardPro
                 <div className="space-y-2">
                     <div>
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm text-muted-foreground">{t('tabs.timeline.forecast.originalSchedule')}</span>
+                            <span className={cn("text-sm", colors.text.muted)}>{t('tabs.timeline.forecast.originalSchedule')}</span>
                             <span className="font-medium">{formatDate(lastMilestone.date)}</span>
                         </div>
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm text-muted-foreground">{t('tabs.timeline.forecast.currentForecast')}</span>
+                            <span className={cn("text-sm", colors.text.muted)}>{t('tabs.timeline.forecast.currentForecast')}</span>
                             <span className="font-medium text-orange-600">
                                 {(() => {
                                     const d = new Date(lastMilestone.date);
@@ -65,7 +69,7 @@ export function CompletionForecastCard({ milestones }: CompletionForecastCardPro
                             </span>
                         </div>
                         <div className="flex items-center justify-between">
-                            <span className="text-sm text-muted-foreground">{t('tabs.timeline.forecast.delay')}</span>
+                            <span className={cn("text-sm", colors.text.muted)}>{t('tabs.timeline.forecast.delay')}</span>
                             <CommonBadge
                                 status="building"
                                 customLabel={t('tabs.timeline.forecast.days', { days: delayDays })}
@@ -77,7 +81,7 @@ export function CompletionForecastCard({ milestones }: CompletionForecastCardPro
 
                     <Separator />
 
-                    <div className="text-sm text-muted-foreground">
+                    <div className={cn("text-sm", colors.text.muted)}>
                         <p className="mb-2 flex items-center gap-2">
                             <Lightbulb className={`${iconSizes.sm} text-yellow-500`} />
                             <strong>{t('tabs.timeline.forecast.tip')}</strong>

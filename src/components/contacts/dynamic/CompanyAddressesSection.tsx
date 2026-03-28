@@ -21,6 +21,8 @@ import { Plus, Trash2 } from 'lucide-react';
 import { AddressWithHierarchy } from '@/components/shared/addresses/AddressWithHierarchy';
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // TYPES
@@ -99,6 +101,7 @@ export function CompanyAddressesSection({
   onChange,
 }: CompanyAddressesSectionProps) {
   const { t } = useTranslation('contacts');
+  const colors = useSemanticColors();
   // Headquarters = first entry with type 'headquarters', or first entry
   const hqIndex = addresses.findIndex((a) => a.type === 'headquarters');
   const effectiveHqIndex = hqIndex >= 0 ? hqIndex : 0;
@@ -165,7 +168,7 @@ export function CompanyAddressesSection({
         </header>
 
         {branches.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-2 text-center">
+          <p className={cn("text-sm py-2 text-center", colors.text.muted)}>
             {t('addressesSection.noBranches')}
           </p>
         ) : (

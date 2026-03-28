@@ -13,6 +13,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { Button } from '@/components/ui/button';
@@ -57,6 +59,7 @@ const STORAGE_TYPES: StorageType[] = ['small', 'large', 'basement', 'ground', 's
 export function StorageTab({ building }: StorageTabProps) {
   const { t } = useTranslation('storage');
   const { t: tBuilding } = useTranslation('building');
+  const colors = useSemanticColors();
   const { confirm, dialogProps } = useConfirmDialog();
 
   // Data state
@@ -257,7 +260,7 @@ export function StorageTab({ building }: StorageTabProps) {
         <h2 className="flex items-center gap-2 text-lg font-semibold">
           <Warehouse className="h-5 w-5 text-primary" />
           {t('storages.header.title')}
-          <span className="text-sm font-normal text-muted-foreground">({storages.length})</span>
+          <span className={cn("text-sm font-normal", colors.text.muted)}>({storages.length})</span>
         </h2>
         <Button
           variant="default"
@@ -277,7 +280,7 @@ export function StorageTab({ building }: StorageTabProps) {
           onSubmit={(e) => { e.preventDefault(); handleCreate(); }}
         >
           <fieldset className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-muted-foreground">
+            <label className={cn("text-xs font-medium", colors.text.muted)}>
               {tBuilding('tabs.floors.name')}
             </label>
             <Input
@@ -290,7 +293,7 @@ export function StorageTab({ building }: StorageTabProps) {
             />
           </fieldset>
           <fieldset className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-muted-foreground">
+            <label className={cn("text-xs font-medium", colors.text.muted)}>
               {t('types.small')}
             </label>
             <select
@@ -305,7 +308,7 @@ export function StorageTab({ building }: StorageTabProps) {
             </select>
           </fieldset>
           <fieldset className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-muted-foreground">
+            <label className={cn("text-xs font-medium", colors.text.muted)}>
               {tBuilding('tabs.floors.name')}
             </label>
             <Input
@@ -317,7 +320,7 @@ export function StorageTab({ building }: StorageTabProps) {
             />
           </fieldset>
           <fieldset className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-muted-foreground">
+            <label className={cn("text-xs font-medium", colors.text.muted)}>
               m²
             </label>
             <Input
@@ -355,14 +358,14 @@ export function StorageTab({ building }: StorageTabProps) {
 
       {/* Table */}
       {storages.length === 0 ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">
+        <p className={cn("py-8 text-center text-sm", colors.text.muted)}>
           {t('storages.list.noResults')}
         </p>
       ) : (
         <>
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border text-left text-xs font-medium uppercase text-muted-foreground">
+              <tr className={cn("border-b border-border text-left text-xs font-medium uppercase", colors.text.muted)}>
                 <th className="px-3 py-2">{tBuilding('tabs.floors.name')}</th>
                 <th className="w-24 px-3 py-2">{t('types.small')}</th>
                 <th className="w-20 px-3 py-2">{tBuilding('tabs.floors.name')}</th>
@@ -441,8 +444,8 @@ export function StorageTab({ building }: StorageTabProps) {
                   ) : (
                     <>
                       <td className="px-3 py-2 font-medium">{storage.name}</td>
-                      <td className="px-3 py-2 text-muted-foreground">{t(`types.${storage.type}`)}</td>
-                      <td className="px-3 py-2 text-muted-foreground">{storage.floor || '—'}</td>
+                      <td className={cn("px-3 py-2", colors.text.muted)}>{t(`types.${storage.type}`)}</td>
+                      <td className={cn("px-3 py-2", colors.text.muted)}>{storage.floor || '—'}</td>
                       <td className="px-3 py-2 font-mono text-xs">{storage.area > 0 ? `${storage.area}` : '—'}</td>
                       <td className="px-3 py-2">{getStatusBadge(storage.status)}</td>
                       <td className="px-3 py-2">
@@ -477,7 +480,7 @@ export function StorageTab({ building }: StorageTabProps) {
             </tbody>
           </table>
 
-          <footer className="text-xs text-muted-foreground">
+          <footer className={cn("text-xs", colors.text.muted)}>
             {storages.length} {t('storages.header.title')}
           </footer>
         </>

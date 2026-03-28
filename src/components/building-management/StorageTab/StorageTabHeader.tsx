@@ -7,6 +7,9 @@ import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface StorageTabHeaderProps {
     buildingName: string;
@@ -23,6 +26,7 @@ export function StorageTabHeader({
 }: StorageTabHeaderProps) {
     // 🏢 ENTERPRISE: i18n hook for translations
     const { t } = useTranslation('building');
+    const colors = useSemanticColors();
     const iconSizes = useIconSizes();
 
     return (
@@ -32,7 +36,7 @@ export function StorageTabHeader({
                     <Archive className={iconSizes.md} />
                     {t('storageTabHeader.title')}
                 </h3>
-                <p className="text-sm text-muted-foreground">
+                <p className={cn("text-sm", colors.text.muted)}>
                     {t('storageTabHeader.description', { buildingName })}
                 </p>
             </div>

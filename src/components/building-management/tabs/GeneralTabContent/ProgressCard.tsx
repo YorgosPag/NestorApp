@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface ProgressCardProps {
     progress: number;

@@ -24,7 +24,10 @@ import { Input } from '@/components/ui/input';
 import { Search, Link2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Spinner } from '@/components/ui/spinner';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -70,6 +73,7 @@ export function BuildingSpaceLinkDialog({
   searchPlaceholder,
 }: BuildingSpaceLinkDialogProps) {
   const { t } = useTranslation('building');
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
 
   const [items, setItems] = useState<LinkableItem[]>([]);
@@ -132,7 +136,7 @@ export function BuildingSpaceLinkDialog({
 
         {/* Search */}
         <label className="relative">
-          <Search className={`absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground ${iconSizes.sm}`} />
+          <Search className={`absolute left-3 top-1/2 -translate-y-1/2 ${colors.text.muted} ${iconSizes.sm}`} />
           <Input
             placeholder={searchPlaceholder || t('spaceLink.searchPlaceholder')}
             value={searchTerm}
@@ -148,7 +152,7 @@ export function BuildingSpaceLinkDialog({
               <Spinner size="medium" />
             </article>
           ) : filtered.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
+            <p className={cn("py-8 text-center text-sm", colors.text.muted)}>
               {items.length === 0
                 ? t('spaceLink.noUnlinked')
                 : t('spaceLink.noResults')}
@@ -163,7 +167,7 @@ export function BuildingSpaceLinkDialog({
                   <article className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{item.label}</p>
                     {item.sublabel && (
-                      <p className="text-xs text-muted-foreground truncate">
+                      <p className={cn("text-xs truncate", colors.text.muted)}>
                         {item.sublabel}
                       </p>
                     )}
@@ -190,7 +194,7 @@ export function BuildingSpaceLinkDialog({
 
         {/* Footer */}
         {!loading && items.length > 0 && (
-          <footer className="text-xs text-muted-foreground pt-2 border-t border-border">
+          <footer className={cn("text-xs pt-2 border-t border-border", colors.text.muted)}>
             {filtered.length} / {items.length} {t('spaceLink.available')}
           </footer>
         )}

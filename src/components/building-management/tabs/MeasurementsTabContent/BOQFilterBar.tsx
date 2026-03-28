@@ -21,6 +21,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { BOQUIFilters } from '@/hooks/useBOQItems';
 import type { MasterBOQCategory } from '@/config/boq-categories';
 import { Search } from 'lucide-react';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -38,6 +40,7 @@ interface BOQFilterBarProps {
 
 export function BOQFilterBar({ filters, onFiltersChange, categories }: BOQFilterBarProps) {
   const { t } = useTranslation('building');
+  const colors = useSemanticColors();
 
   return (
     <nav
@@ -103,7 +106,7 @@ export function BOQFilterBar({ filters, onFiltersChange, categories }: BOQFilter
 
       {/* Search */}
       <fieldset className="relative flex-1 min-w-[200px]">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${colors.text.muted} pointer-events-none`} />
         <Input
           value={filters.searchQuery}
           onChange={(e) => onFiltersChange({ searchQuery: e.target.value })}

@@ -13,6 +13,7 @@ import { BuildingStats } from './BuildingStats';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 import type { Building } from '../BuildingsPageContent';
+import '@/lib/design-system';
 
 interface AnalyticsTabContentProps {
   building: Building;

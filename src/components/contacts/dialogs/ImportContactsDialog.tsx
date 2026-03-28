@@ -27,6 +27,7 @@ import type { ContactImportRecord } from '@/utils/contacts/contact-data-exchange
 import type { ImportResult } from '@/services/data-exchange/DataImportService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getStatusColor } from '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 const logger = createModuleLogger('ImportContactsDialog');
 
@@ -52,6 +53,7 @@ export function ImportContactsDialog({
   onImportComplete,
 }: ImportContactsDialogProps) {
   const { t } = useTranslation('contacts');
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -130,12 +132,12 @@ export function ImportContactsDialog({
               <FileText className={`${iconSizes.sm} mr-2`} />
               {selectedFile ? selectedFile.name : t('import.selectFile')}
             </Button>
-            <p className="text-xs text-muted-foreground">{t('import.acceptedFormats')}</p>
+            <p className={cn("text-xs", colors.text.muted)}>{t('import.acceptedFormats')}</p>
           </div>
 
           {/* Parsing state */}
           {state === 'parsing' && (
-            <p className="text-center text-sm text-muted-foreground animate-pulse">
+            <p className={cn("text-center text-sm animate-pulse", colors.text.muted)}>
               {t('import.parsing')}
             </p>
           )}
@@ -147,7 +149,7 @@ export function ImportContactsDialog({
                 <CheckCircle2 className={iconSizes.sm} />
                 {t('import.previewReady')}
               </div>
-              <ul className="text-sm space-y-1 text-muted-foreground">
+              <ul className={cn("text-sm space-y-1", colors.text.muted)}>
                 <li>{t('import.totalRecords', { count: result.totalRecords })}</li>
                 <li>{t('import.validRecords', { count: result.validRecords })}</li>
                 {result.invalidRecords > 0 && (

@@ -12,9 +12,12 @@
 
 import type { ReactNode } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { BuildingSpaceActions } from './BuildingSpaceActions';
 import type { SpaceCardField, SpaceActions, SpaceActionState } from './types';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -50,6 +53,7 @@ export function BuildingSpaceCardGrid<T>({
   actions,
   actionState,
 }: BuildingSpaceCardGridProps<T>) {
+  const colors = useSemanticColors();
   const hasActions = actions && (actions.onView || actions.onEdit || actions.onUnlink || actions.onDelete);
 
   return (
@@ -65,7 +69,7 @@ export function BuildingSpaceCardGrid<T>({
                 {renderStatus(item)}
               </header>
 
-              <dl className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+              <dl className={cn("grid grid-cols-2 gap-2 text-xs", colors.text.muted)}>
                 {fields.map((field) => (
                   <span key={field.label} className="contents">
                     <dt>{field.label}</dt>

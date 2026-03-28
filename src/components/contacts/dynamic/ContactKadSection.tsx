@@ -25,6 +25,8 @@ import { Separator } from '@/components/ui/separator';
 import { KadCodePicker } from '@/components/shared/KadCodePicker';
 import { Plus, Trash2 } from 'lucide-react';
 import type { KadActivity } from '@/types/ContactFormTypes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // TYPES
@@ -61,6 +63,7 @@ export function ContactKadSection({
   onChange,
 }: ContactKadSectionProps) {
   const { t } = useTranslation('forms');
+  const colors = useSemanticColors();
 
   // Derive primary from array (first 'primary', or first entry, or empty)
   const primary: KadActivity = activities.find((a) => a.type === 'primary') ?? {
@@ -129,7 +132,7 @@ export function ContactKadSection({
           onChange={handlePrimaryChange}
         />
         {primary.description && (
-          <p className="mt-1 text-sm text-muted-foreground">{primary.description}</p>
+          <p className={cn("mt-1 text-sm", colors.text.muted)}>{primary.description}</p>
         )}
       </section>
 
@@ -154,7 +157,7 @@ export function ContactKadSection({
         </header>
 
         {secondaries.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-2 text-center">
+          <p className={cn("text-sm py-2 text-center", colors.text.muted)}>
             {t('kad.noSecondaryActivities')}
           </p>
         ) : (
@@ -169,7 +172,7 @@ export function ContactKadSection({
                     onChange={(val) => handleSecondaryChange(index, val)}
                   />
                   {kad.description && (
-                    <p className="text-sm text-muted-foreground">{kad.description}</p>
+                    <p className={cn("text-sm", colors.text.muted)}>{kad.description}</p>
                   )}
                 </div>
                 <Button

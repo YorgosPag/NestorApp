@@ -14,6 +14,8 @@ import { CustomerPropertiesTable } from './CustomerPropertiesTable';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 interface ContactInfoProps {
   contact: Contact;
@@ -23,6 +25,7 @@ interface ContactInfoProps {
 
 export function ContactInfo({ contact, onAddUnit, onRefresh: _onRefresh }: ContactInfoProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { quick } = useBorderTokens();
     const { t } = useTranslation('contacts');
     const email = getPrimaryEmail(contact);
@@ -60,7 +63,7 @@ export function ContactInfo({ contact, onAddUnit, onRefresh: _onRefresh }: Conta
                     </a>
                 </div>
             )}
-            {!(email || phone) && <p className="text-sm text-muted-foreground">{t('details.contactInfo.noContactInfo')}</p>}
+            {!(email || phone) && <p className={cn("text-sm", colors.text.muted)}>{t('details.contactInfo.noContactInfo')}</p>}
         </div>
          {(contact.type === CONTACT_TYPES.COMPANY || contact.type === CONTACT_TYPES.INDIVIDUAL) && (
             <div className={`p-2 ${quick.card}`}>

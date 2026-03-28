@@ -6,6 +6,8 @@ import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import type { Building } from '../../BuildingsPageContent';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Milestone type with date for calculations
 interface MilestoneWithDate {
@@ -21,6 +23,7 @@ interface OverallProgressCardProps {
 export function OverallProgressCard({ building, milestones }: OverallProgressCardProps) {
     // 🏢 ENTERPRISE: i18n hook for translations
     const { t } = useTranslation('building');
+    const colors = useSemanticColors();
 
     return (
         <Card>
@@ -40,15 +43,15 @@ export function OverallProgressCard({ building, milestones }: OverallProgressCar
                 <dl className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
                     <div className="text-center">
                         <dd className="text-2xl font-bold text-green-600">{milestones.filter(m => m.status === 'completed').length}</dd>
-                        <dt className="text-muted-foreground">{t('tabs.timeline.overallProgress.completed')}</dt>
+                        <dt className={colors.text.muted}>{t('tabs.timeline.overallProgress.completed')}</dt>
                     </div>
                     <div className="text-center">
                         <dd className="text-2xl font-bold text-blue-600">{milestones.filter(m => m.status === 'in-progress').length}</dd>
-                        <dt className="text-muted-foreground">{t('tabs.timeline.overallProgress.inProgress')}</dt>
+                        <dt className={colors.text.muted}>{t('tabs.timeline.overallProgress.inProgress')}</dt>
                     </div>
                     <div className="text-center">
                         <dd className="text-2xl font-bold text-gray-600">{milestones.filter(m => m.status === 'pending').length}</dd>
-                        <dt className="text-muted-foreground">{t('tabs.timeline.overallProgress.pending')}</dt>
+                        <dt className={colors.text.muted}>{t('tabs.timeline.overallProgress.pending')}</dt>
                     </div>
                     <div className="text-center">
                         <dd className="text-2xl font-bold text-purple-600">
@@ -60,7 +63,7 @@ export function OverallProgressCard({ building, milestones }: OverallProgressCar
                                 return 0;
                             })()}
                         </dd>
-                        <dt className="text-muted-foreground">{t('tabs.timeline.overallProgress.daysRemaining')}</dt>
+                        <dt className={colors.text.muted}>{t('tabs.timeline.overallProgress.daysRemaining')}</dt>
                     </div>
                 </dl>
             </CardContent>

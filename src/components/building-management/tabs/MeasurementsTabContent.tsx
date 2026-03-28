@@ -31,6 +31,9 @@ import { useFullscreen } from '@/hooks/useFullscreen';
 import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 import type { Building } from '@/types/building/contracts';
 import type { BOQItem, BOQItemStatus, CreateBOQItemInput, UpdateBOQItemInput } from '@/types/boq';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -46,6 +49,7 @@ interface MeasurementsTabContentProps {
 
 export function MeasurementsTabContent({ building }: MeasurementsTabContentProps) {
   const { t } = useTranslation('building');
+  const colors = useSemanticColors();
   const { user } = useAuth();
   const { confirm, dialogProps } = useConfirmDialog();
   // 🏢 ADR-241: Fullscreen state
@@ -169,10 +173,10 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
   if (items.length === 0) {
     return (
       <section className="flex flex-col items-center justify-center py-2 gap-2">
-        <Ruler className="h-12 w-12 text-muted-foreground/50" />
+        <Ruler className={`h-12 w-12 ${colors.text.muted} opacity-50`} />
         <header className="text-center">
           <h3 className="font-semibold">{t('tabs.measurements.empty.title')}</h3>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className={cn("text-sm mt-1", colors.text.muted)}>
             {t('tabs.measurements.empty.description')}
           </p>
         </header>

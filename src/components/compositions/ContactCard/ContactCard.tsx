@@ -11,6 +11,9 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Opportunity } from '@/types/crm';
 import { INTERACTIVE_PATTERNS, HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 interface ContactCardProps {
   lead: Opportunity;
@@ -51,6 +54,7 @@ export function ContactCard({
   onSelectionChange 
 }: ContactCardProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const [isFavorite, setIsFavorite] = useState(false);
   // 🏢 ENTERPRISE: i18n support
   const { t } = useTranslation('crm');
@@ -98,7 +102,7 @@ export function ContactCard({
             <div className="space-y-3">
               {lead.email && (
                 <div className="flex items-center gap-3">
-                  <Mail className={`${iconSizes.sm} text-muted-foreground`} />
+                  <Mail className={`${iconSizes.sm} ${colors.text.muted}`} />
                   <div className="flex-1">
                     <a
                       href={`https://mail.google.com/mail/?view=cm&to=${lead.email}`}
@@ -110,13 +114,13 @@ export function ContactCard({
                     >
                       {lead.email}
                     </a>
-                    <p className="text-xs text-muted-foreground">{t('contactCard.email')}</p>
+                    <p className={cn("text-xs", colors.text.muted)}>{t('contactCard.email')}</p>
                   </div>
                 </div>
               )}
               {lead.phone && (
                 <div className="flex items-center gap-3">
-                  <Phone className={`${iconSizes.sm} text-muted-foreground`} />
+                  <Phone className={`${iconSizes.sm} ${colors.text.muted}`} />
                   <div className="flex-1">
                     <a
                       href={`tel:${lead.phone}`}
@@ -126,7 +130,7 @@ export function ContactCard({
                     >
                       {lead.phone}
                     </a>
-                    <p className="text-xs text-muted-foreground">{t('contactCard.phone')}</p>
+                    <p className={cn("text-xs", colors.text.muted)}>{t('contactCard.phone')}</p>
                   </div>
                 </div>
               )}
@@ -154,12 +158,12 @@ export function ContactCard({
           content: (
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">{t('contactCard.createdAt')}</span>
+                <span className={colors.text.muted}>{t('contactCard.createdAt')}</span>
                 <span>{formatContactDate(lead.createdAt)}</span>
               </div>
               {lead.lastActivity && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">{t('contactCard.lastActivity')}</span>
+                  <span className={colors.text.muted}>{t('contactCard.lastActivity')}</span>
                   <span>{formatContactDate(lead.lastActivity)}</span>
                 </div>
               )}
@@ -181,7 +185,7 @@ export function ContactCard({
         lead.notes && {
           title: t('contactCard.notes'),
           content: (
-            <div className="text-sm text-muted-foreground">
+            <div className={cn("text-sm", colors.text.muted)}>
               <p className="line-clamp-3">{lead.notes}</p>
             </div>
           )

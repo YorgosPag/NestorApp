@@ -24,8 +24,10 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Generic User interface for the UserCard - exported for type reuse
 export interface UserProfile {
@@ -86,6 +88,7 @@ export function UserCard({
 }: UserCardProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   const [isFavorite, setIsFavorite] = useState(false);
   // 🏢 ENTERPRISE: i18n support
   const { t } = useTranslation('users');
@@ -178,13 +181,13 @@ export function UserCard({
             <div className="space-y-2">
               {user.email && (
                 <div className="flex items-center gap-2 text-sm">
-                  <Mail className={`${iconSizes.sm} text-muted-foreground`} />
+                  <Mail className={`${iconSizes.sm} ${colors.text.muted}`} />
                   <span className="truncate">{user.email}</span>
                 </div>
               )}
               {user.phone && (
                 <div className="flex items-center gap-2 text-sm">
-                  <Phone className={`${iconSizes.sm} text-muted-foreground`} />
+                  <Phone className={`${iconSizes.sm} ${colors.text.muted}`} />
                   <span>{user.phone}</span>
                 </div>
               )}
@@ -206,7 +209,7 @@ export function UserCard({
               )}
               {user.location && (
                 <div className="flex items-center gap-2 text-sm">
-                  <MapPin className={`${iconSizes.sm} text-muted-foreground`} />
+                  <MapPin className={`${iconSizes.sm} ${colors.text.muted}`} />
                   <span>{user.location}</span>
                 </div>
               )}
@@ -220,7 +223,7 @@ export function UserCard({
           content: (
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">{t('card.activity.lastActive')}:</span>
+                <span className={colors.text.muted}>{t('card.activity.lastActive')}:</span>
                 <span className="flex items-center gap-1">
                   <Clock className={iconSizes.xs} />
                   {formatLastActive(user.lastActive)}
@@ -228,7 +231,7 @@ export function UserCard({
               </div>
               {user.joinedDate && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">{t('card.activity.joinedDate')}:</span>
+                  <span className={colors.text.muted}>{t('card.activity.joinedDate')}:</span>
                   <span className="flex items-center gap-1">
                     <Calendar className={iconSizes.xs} />
                     {formatDate(user.joinedDate)}
@@ -249,7 +252,7 @@ export function UserCard({
                   <div className="text-lg font-semibold text-blue-600 dark:text-blue-400">
                     {user.tasksCompleted}
                   </div>
-                  <div className="text-xs text-muted-foreground">{t('card.stats.tasks')}</div>
+                  <div className={cn("text-xs", colors.text.muted)}>{t('card.stats.tasks')}</div>
                 </div>
               )}
               {user.projectsAssigned !== undefined && (
@@ -257,7 +260,7 @@ export function UserCard({
                   <div className="text-lg font-semibold text-green-600 dark:text-green-400">
                     {user.projectsAssigned}
                   </div>
-                  <div className="text-xs text-muted-foreground">{t('card.stats.projects')}</div>
+                  <div className={cn("text-xs", colors.text.muted)}>{t('card.stats.projects')}</div>
                 </div>
               )}
               {user.achievements !== undefined && (
@@ -265,7 +268,7 @@ export function UserCard({
                   <div className="text-lg font-semibold text-purple-600 dark:text-purple-400">
                     {user.achievements}
                   </div>
-                  <div className="text-xs text-muted-foreground">{t('card.stats.achievements')}</div>
+                  <div className={cn("text-xs", colors.text.muted)}>{t('card.stats.achievements')}</div>
                 </div>
               )}
             </div>

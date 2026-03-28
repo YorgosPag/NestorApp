@@ -26,6 +26,9 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getCompanyById } from '@/services/companies.service';
 import type { Building } from '@/types/building/contracts';
 import { createModuleLogger } from '@/lib/telemetry';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('BuildingPhotosTab');
 
@@ -65,10 +68,11 @@ const PHOTOS_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png
 export function BuildingPhotosTab({
   building,
   data,
-  title,
+  title: _title,
 }: BuildingPhotosTabProps) {
   const { user } = useAuth();
   const { t } = useTranslation('building');
+  const colors = useSemanticColors();
 
   // Resolve building from props
   const resolvedBuilding = building || data;
@@ -107,8 +111,8 @@ export function BuildingPhotosTab({
   // If no building, companyId, or userId, show placeholder
   if (!resolvedBuilding?.id || !companyId || !currentUserId) {
     return (
-      <section className="p-2 text-center text-muted-foreground">
-        <p>{t('tabs.photos.noBuilding', 'Επιλέξτε ένα κτίριο για να δείτε τις φωτογραφίες.')}</p>
+      <section className={cn("p-2 text-center", colors.text.muted)}>
+        <p>{t('tabs.photos.noBuilding')}</p>
       </section>
     );
   }
@@ -119,7 +123,7 @@ export function BuildingPhotosTab({
       currentUserId={currentUserId}
       entityType="building"
       entityId={String(resolvedBuilding.id)}
-      entityLabel={resolvedBuilding.name || `Κτίριο ${resolvedBuilding.id}`}
+      entityLabel={resolvedBuilding.name || t('entityLabel', { id: resolvedBuilding.id })}
       projectId={resolvedBuilding.projectId}
       domain="construction"
       category="photos"

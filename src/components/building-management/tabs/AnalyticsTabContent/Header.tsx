@@ -7,6 +7,9 @@ import { BarChart3, DollarSign, TrendingUp, Scale } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface HeaderProps {
     timeRange: '1M' | '3M' | '6M' | '1Y';
@@ -20,6 +23,7 @@ interface HeaderProps {
 export default function Header({ timeRange, setTimeRange, analyticsView, setAnalyticsView, fullscreenToggle }: HeaderProps) {
     // 🏢 ENTERPRISE: i18n hook for translations
     const { t } = useTranslation('building');
+    const colors = useSemanticColors();
     const iconSizes = useIconSizes();
 
     // 🏢 ENTERPRISE: i18n-enabled view configuration
@@ -35,7 +39,7 @@ export default function Header({ timeRange, setTimeRange, analyticsView, setAnal
             <section className="flex items-center justify-between">
                 <hgroup>
                     <h3 className="text-lg font-semibold">{t('tabs.analytics.title')}</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className={cn("text-sm", colors.text.muted)}>
                         {t('tabs.analytics.subtitle')}
                     </p>
                 </hgroup>

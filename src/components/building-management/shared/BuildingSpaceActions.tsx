@@ -16,6 +16,7 @@ import { Eye, Pencil, Unlink2, Trash2 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES

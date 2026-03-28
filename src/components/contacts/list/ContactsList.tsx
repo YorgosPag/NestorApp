@@ -28,6 +28,8 @@ import type { ContactImportRecord } from '@/utils/contacts/contact-data-exchange
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 
 interface ContactsListProps {
@@ -55,6 +57,7 @@ export function ContactsList({
 }: ContactsListProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('contacts');
+  const colors = useSemanticColors();
   const { success, error } = useNotifications();
   // 🏢 ENTERPRISE: Sort state via centralized hook (ADR-205 Phase 4)
   const { sortBy, sortOrder, onSortChange } = useSortState<'name' | 'date' | 'status' | 'type'>('name');
@@ -365,7 +368,7 @@ export function ContactsList({
               </div>
             ))
           ) : contacts.length === 0 ? (
-            <div className="text-center p-2 text-muted-foreground">
+            <div className={cn("text-center p-2", colors.text.muted)}>
               <p>{t('list.empty.title')}</p>
               <p className="text-sm mt-1">{t('list.empty.subtitle')}</p>
             </div>

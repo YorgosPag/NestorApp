@@ -12,6 +12,7 @@ import type { Building } from '../../BuildingsPageContent';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Semantic colors for status mapping
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface TimelineTabContentProps {
   building: Building;

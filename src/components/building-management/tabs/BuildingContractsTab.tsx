@@ -28,6 +28,9 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import type { Building } from '@/types/building/contracts';
 import type { FloorInfo } from '@/config/upload-entry-points';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // =============================================================================
 // PROPS
@@ -66,6 +69,7 @@ export function BuildingContractsTab({
 }: BuildingContractsTabProps) {
   const { user } = useAuth();
   const { t } = useTranslation('building');
+  const colors = useSemanticColors();
   const [floors, setFloors] = useState<FloorInfo[]>([]);
 
   // Resolve building from props
@@ -100,8 +104,8 @@ export function BuildingContractsTab({
   // If no building, companyId, or userId, show placeholder
   if (!resolvedBuilding?.id || !companyId || !currentUserId) {
     return (
-      <section className="p-2 text-center text-muted-foreground">
-        <p>{t('tabs.contracts.noBuilding', 'Επιλέξτε ένα κτίριο για να δείτε τα έγγραφα.')}</p>
+      <section className={cn("p-2 text-center", colors.text.muted)}>
+        <p>{t('tabs.contracts.noBuilding')}</p>
       </section>
     );
   }
@@ -112,7 +116,7 @@ export function BuildingContractsTab({
       currentUserId={currentUserId}
       entityType="building"
       entityId={String(resolvedBuilding.id)}
-      entityLabel={resolvedBuilding.name || `Κτίριο ${resolvedBuilding.id}`}
+      entityLabel={resolvedBuilding.name || t('entityLabel', { id: resolvedBuilding.id })}
       projectId={resolvedBuilding.projectId}
       domain="construction"
       category="documents"

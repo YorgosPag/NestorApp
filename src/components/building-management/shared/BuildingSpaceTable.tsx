@@ -27,6 +27,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { BuildingSpaceActions } from './BuildingSpaceActions';
 import type { SpaceColumn, SpaceActions, SpaceActionState, SortDirection } from './types';
+import '@/lib/design-system';
 
 // ============================================================================
 // SORT STATE

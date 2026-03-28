@@ -7,9 +7,11 @@ import { Package, MapPin, Ruler, Thermometer, Shield, Edit, Trash2 } from 'lucid
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatPriceWithUnit, formatFloorString } from '@/lib/intl-utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
+import '@/lib/design-system';
 
 interface StorageCardProps {
   unit: StorageUnit;
@@ -135,17 +137,17 @@ export function StorageCard({
             <div className="space-y-1">
               {unit.building && (
                 <div className="flex items-center gap-2 text-sm">
-                  <MapPin className={`${iconSizes.sm} text-muted-foreground`} />
+                  <MapPin className={`${iconSizes.sm} ${colors.text.muted}`} />
                   <span>{unit.building}</span>
                 </div>
               )}
               {unit.section && (
-                <p className="text-sm text-muted-foreground ml-6">
+                <p className={cn("text-sm ml-6", colors.text.muted)}>
                   {t('card.sections.section')}: {unit.section}
                 </p>
               )}
               {unit.floor && (
-                <p className="text-sm text-muted-foreground ml-6">
+                <p className={cn("text-sm ml-6", colors.text.muted)}>
                   {t('card.sections.floor')}: {unit.floor}
                 </p>
               )}
@@ -160,7 +162,7 @@ export function StorageCard({
             <div className="space-y-2">
               {unit.area && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t('card.sections.area')}:</span>
+                  <span className={colors.text.muted}>{t('card.sections.area')}:</span>
                   <span className="font-medium flex items-center gap-1">
                     <Ruler className={iconSizes.xs} />
                     {formatArea(unit.area)}
@@ -169,13 +171,13 @@ export function StorageCard({
               )}
               {unit.dimensions && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t('card.sections.dimensions')}:</span>
+                  <span className={colors.text.muted}>{t('card.sections.dimensions')}:</span>
                   <span className="font-medium">{unit.dimensions}</span>
                 </div>
               )}
               {unit.height && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t('card.sections.height')}:</span>
+                  <span className={colors.text.muted}>{t('card.sections.height')}:</span>
                   <span className="font-medium">{unit.height}m</span>
                 </div>
               )}
@@ -229,7 +231,7 @@ export function StorageCard({
         unit.description && {
           title: t('card.sections.description'),
           content: (
-            <p className="text-sm text-muted-foreground line-clamp-3">
+            <p className={cn("text-sm line-clamp-3", colors.text.muted)}>
               {unit.description}
             </p>
           )

@@ -25,6 +25,7 @@ import {
   UserCheck, Package, FileSignature, Key,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // ICON MAPPING
@@ -60,6 +61,7 @@ export function PersonaSelector({
   className,
 }: PersonaSelectorProps) {
   const { t } = useTranslation('contacts');
+  const colors = useSemanticColors();
 
   const handleToggle = useCallback(
     (personaType: PersonaType) => {
@@ -74,7 +76,7 @@ export function PersonaSelector({
       className={cn('w-full', className)}
     >
       <header className="mb-3">
-        <p className="text-sm text-muted-foreground">
+        <p className={cn("text-sm", colors.text.muted)}>
           {t('persona.selector.description')}
         </p>
       </header>
@@ -107,7 +109,7 @@ export function PersonaSelector({
                   'focus-visible:ring-ring focus-visible:ring-offset-2',
                   isActive
                     ? 'border-primary bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm'
-                    : 'border-border bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                    : cn('border-border bg-background hover:bg-accent hover:text-accent-foreground', colors.text.muted),
                   isButtonDisabled && 'cursor-not-allowed opacity-50'
                 )}
               >
@@ -115,7 +117,7 @@ export function PersonaSelector({
                   <IconComponent
                     className={cn(
                       'h-3.5 w-3.5',
-                      isActive ? 'text-primary-foreground' : 'text-muted-foreground'
+                      isActive ? 'text-primary-foreground' : colors.text.muted
                     )}
                   />
                 )}
@@ -132,7 +134,7 @@ export function PersonaSelector({
         </div>
 
         {activePersonas.length === 0 && (
-          <p className="mt-2 text-xs text-muted-foreground italic">
+          <p className={cn("mt-2 text-xs italic", colors.text.muted)}>
             {t('persona.selector.empty')}
           </p>
         )}

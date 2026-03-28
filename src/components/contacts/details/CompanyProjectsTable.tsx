@@ -18,6 +18,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
 import { applyUpdates } from '@/lib/utils';
 import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 
 const logger = createModuleLogger('CompanyProjectsTable');
@@ -25,6 +27,7 @@ const logger = createModuleLogger('CompanyProjectsTable');
 function CompanyProjectsTable({ companyId }: { companyId: string }) {
     // 🏢 ENTERPRISE: i18n hook for translations
     const { t } = useTranslation('contacts');
+    const colors = useSemanticColors();
     const iconSizes = useIconSizes();
     const { quick } = useBorderTokens();
     const [projects, setProjects] = useState<Project[]>([]);
@@ -83,7 +86,7 @@ function CompanyProjectsTable({ companyId }: { companyId: string }) {
 
     if (projects.length === 0) {
         return (
-            <div className="text-center text-sm text-muted-foreground py-2">
+            <div className={cn("text-center text-sm py-2", colors.text.muted)}>
                 {t('projects.empty')}
             </div>
         )
@@ -92,7 +95,7 @@ function CompanyProjectsTable({ companyId }: { companyId: string }) {
     return (
         <div className="mt-4">
             <h3 className="font-semibold mb-2 text-sm flex items-center gap-2">
-                <Briefcase className={`${iconSizes.sm} text-muted-foreground`}/>
+                <Briefcase className={`${iconSizes.sm} ${colors.text.muted}`}/>
                 {t('projects.title')}
             </h3>
             <div className={quick.card}>

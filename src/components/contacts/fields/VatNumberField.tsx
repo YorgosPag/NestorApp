@@ -18,6 +18,8 @@ import { useTranslation } from 'react-i18next';
 import { UniversalClickableField } from '@/components/ui/form/UniversalClickableField';
 import { useVatUniqueness } from '@/hooks/useVatUniqueness';
 import type { IndividualFieldConfig } from '@/config/individual-config';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -43,6 +45,7 @@ export function VatNumberField({
   excludeContactId,
 }: VatNumberFieldProps) {
   const { t } = useTranslation('contacts');
+  const colors = useSemanticColors();
   const { isChecking, result } = useVatUniqueness(value, excludeContactId);
 
   const showWarning = result && !result.isUnique && result.existingContact;
@@ -64,7 +67,7 @@ export function VatNumberField({
 
       {/* Loading indicator */}
       {isChecking && (
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className={cn("mt-1 text-xs", colors.text.muted)}>
           {t('validation.vatChecking')}
         </p>
       )}

@@ -6,6 +6,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { MilestoneItem, type Milestone } from './MilestoneItem';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: LucideIcon type for icon components
 type LucideIconType = React.ComponentType<{ className?: string }>;

@@ -16,6 +16,7 @@ import { ENTITY_ROUTES } from '@/lib/routes';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // 🏢 ENTERPRISE: Centralized Unit Icon & Color
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
@@ -31,6 +32,7 @@ const logger = createModuleLogger('CustomerPropertiesTable');
 export function CustomerPropertiesTable({ contactId, onAddUnit }: CustomerPropertiesTableProps) {
     // 🏢 ENTERPRISE: i18n hook for translations
     const { t } = useTranslation('contacts');
+    const colors = useSemanticColors();
     const iconSizes = useIconSizes();
     const { quick } = useBorderTokens();
     const [properties, setProperties] = useState<Property[]>([]);
@@ -79,7 +81,7 @@ export function CustomerPropertiesTable({ contactId, onAddUnit }: CustomerProper
                 </Button>
             </div>
             {properties.length === 0 ? (
-                <div className={`text-center text-sm text-muted-foreground py-2 ${quick.card}`}>
+                <div className={`text-center text-sm ${colors.text.muted} py-2 ${quick.card}`}>
                     {t('properties.empty')}
                 </div>
             ) : (

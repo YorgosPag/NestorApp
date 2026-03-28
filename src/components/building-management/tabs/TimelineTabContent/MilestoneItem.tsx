@@ -12,6 +12,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { formatDate } from '@/lib/intl-utils';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Proper type safety - Zero 'any' tolerance
 export interface Milestone {
@@ -36,7 +37,7 @@ interface MilestoneItemProps {
     onDelete?: () => void;
 }
 
-export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTypeIcon, onEdit, onDelete }: MilestoneItemProps) {
+export function MilestoneItem({ milestone, getStatusColor: _getStatusColor, getStatusText, getTypeIcon, onEdit, onDelete }: MilestoneItemProps) {
     // 🏢 ENTERPRISE: i18n hook for translations
     const { t } = useTranslation('building');
     const iconSizes = useIconSizes();
@@ -89,13 +90,13 @@ export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTyp
                             `${colors.bg.secondary} ${colors.text.muted} ${quick.table}`
                           )}
                         />
-                        <span className="text-sm text-muted-foreground">
+                        <span className={cn("text-sm", colors.text.muted)}>
                             {formatDate(milestone.date)}
                         </span>
                     </div>
                 </div>
 
-                <p className="text-muted-foreground mb-2">
+                <p className={cn("mb-2", colors.text.muted)}>
                     {milestone.description}
                 </p>
 

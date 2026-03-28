@@ -16,6 +16,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import type { StorageType, StorageStatus } from '@/types/storage';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface StorageTabFiltersProps {
     searchTerm: string;
@@ -36,6 +38,7 @@ export function StorageTabFilters({
 }: StorageTabFiltersProps) {
     // 🏢 ENTERPRISE: i18n hook for translations
     const { t } = useTranslation('building');
+    const colors = useSemanticColors();
     const iconSizes = useIconSizes();
 
     return (
@@ -43,7 +46,7 @@ export function StorageTabFilters({
             <CardContent className="p-2">
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
                     <div className="relative md:col-span-2">
-                        <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground ${iconSizes.sm}`} />
+                        <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${colors.text.muted} ${iconSizes.sm}`} />
                         <Input
                             placeholder={t('tabs.storageTab.searchPlaceholder')}
                             value={searchTerm}

@@ -26,6 +26,8 @@ import {
   AlertCircle
 } from 'lucide-react';
 import type { CrmTask } from '@/types/crm';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 interface TaskCardProps {
   task: CrmTask;
@@ -83,6 +85,7 @@ export function TaskCard({
   compact = false
 }: TaskCardProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const [isFavorite, setIsFavorite] = useState(false);
   // 🏢 ENTERPRISE: i18n support
   const { t } = useTranslation('tasks');
@@ -167,7 +170,7 @@ export function TaskCard({
           title: t('card.sections.dueDate'),
           content: (
             <div className={`flex items-center gap-2 text-sm ${
-              overdue ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'
+              overdue ? 'text-red-600 dark:text-red-400' : colors.text.muted
             }`}>
               <Calendar className={iconSizes.sm} />
               <span>{formatLocalizedTaskDate(task.dueDate)}</span>
@@ -181,7 +184,7 @@ export function TaskCard({
           title: t('card.sections.assignedTo'),
           content: (
             <div className="flex items-center gap-2 text-sm">
-              <User className={`${iconSizes.sm} text-muted-foreground`} />
+              <User className={`${iconSizes.sm} ${colors.text.muted}`} />
               <span>{task.assignedTo}</span>
             </div>
           )
@@ -194,19 +197,19 @@ export function TaskCard({
             <div className="space-y-1 text-sm">
               {task.contactId && (
                 <div className="flex items-center gap-2">
-                  <User className={`${iconSizes.xs} text-muted-foreground`} />
+                  <User className={`${iconSizes.xs} ${colors.text.muted}`} />
                   <span className="text-xs">Contact: {task.contactId}</span>
                 </div>
               )}
               {task.projectId && (
                 <div className="flex items-center gap-2">
-                  <FileText className={`${iconSizes.xs} text-muted-foreground`} />
+                  <FileText className={`${iconSizes.xs} ${colors.text.muted}`} />
                   <span className="text-xs">Project: {task.projectId}</span>
                 </div>
               )}
               {task.unitId && (
                 <div className="flex items-center gap-2">
-                  <MapPin className={`${iconSizes.xs} text-muted-foreground`} />
+                  <MapPin className={`${iconSizes.xs} ${colors.text.muted}`} />
                   <span className="text-xs">Unit: {task.unitId}</span>
                 </div>
               )}
@@ -220,18 +223,18 @@ export function TaskCard({
           content: (
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
-                <MapPin className={`${iconSizes.sm} text-muted-foreground`} />
+                <MapPin className={`${iconSizes.sm} ${colors.text.muted}`} />
                 <span>{task.viewingDetails.location}</span>
               </div>
               {task.viewingDetails.units.length > 0 && (
                 <div>
-                  <span className="text-muted-foreground">{t('card.viewing.units')}: </span>
+                  <span className={colors.text.muted}>{t('card.viewing.units')}: </span>
                   <span>{task.viewingDetails.units.join(', ')}</span>
                 </div>
               )}
               {task.viewingDetails.attendees.length > 0 && (
                 <div>
-                  <span className="text-muted-foreground">{t('card.viewing.attendees')}: </span>
+                  <span className={colors.text.muted}>{t('card.viewing.attendees')}: </span>
                   <span>{task.viewingDetails.attendees.length}</span>
                 </div>
               )}

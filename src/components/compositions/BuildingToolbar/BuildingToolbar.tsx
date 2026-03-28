@@ -22,6 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import '@/lib/design-system';
 
 interface BuildingToolbarProps {
   // Selection state

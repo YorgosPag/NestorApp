@@ -7,6 +7,7 @@ import AnalyticsFinancial from './AnalyticsFinancial';
 import AnalyticsProgress from './AnalyticsProgress';
 import AnalyticsComparison from './AnalyticsComparison';
 import type { Building } from '../../BuildingsPageContent';
+import '@/lib/design-system';
 
 interface AnalyticsTabContentProps {
   building: Building;

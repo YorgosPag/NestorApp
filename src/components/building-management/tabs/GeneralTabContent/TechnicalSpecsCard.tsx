@@ -14,6 +14,7 @@ import { calculateBuildingRatio, calculateCostPerSqm } from './utils';
 import { formatCurrency } from '@/lib/intl-utils';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface TechnicalSpecsCardProps {
     formData: {
@@ -71,7 +72,7 @@ export function TechnicalSpecsCard({ formData, updateField, isEditing, errors }:
             />
             {errors.builtArea && <p className={`text-sm ${colors.text.error}`}>{errors.builtArea}</p>}
             {formData.totalArea > 0 && (
-              <p className="text-xs text-muted-foreground">
+              <p className={cn("text-xs", colors.text.muted)}>
                 {t('tabs.general.technicalSpecs.buildingRatio', { ratio: buildingRatio.toFixed(1) })}
               </p>
             )}
@@ -100,7 +101,7 @@ export function TechnicalSpecsCard({ formData, updateField, isEditing, errors }:
             />
             {errors.units && <p className={`text-sm ${colors.text.error}`}>{errors.units}</p>}
             {formData.floors > 0 && (
-              <p className="text-xs text-muted-foreground">
+              <p className={cn("text-xs", colors.text.muted)}>
                 {t('tabs.general.technicalSpecs.unitsPerFloor', { count: Math.round(formData.units / formData.floors * 10) / 10 })}
               </p>
             )}

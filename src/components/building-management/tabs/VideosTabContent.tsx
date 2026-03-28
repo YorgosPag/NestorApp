@@ -9,14 +9,18 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface VideosTabContentProps {
   building?: Building;
 }
 
-const VideosTabContent = ({ building }: VideosTabContentProps) => {
+const VideosTabContent = ({ building: _building }: VideosTabContentProps) => {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const borderTokens = useBorderTokens();
   const { quick } = borderTokens;
@@ -39,8 +43,8 @@ const VideosTabContent = ({ building }: VideosTabContentProps) => {
             className={`aspect-video bg-muted ${quick.card} flex items-center justify-center border border-dashed ${hoverBorderEffects.BLUE} transition-colors cursor-pointer group`}
           >
             <div className="text-center">
-              <Video className={`${iconSizes.xl} text-muted-foreground ${GROUP_HOVER_PATTERNS.BLUE_ICON_ON_GROUP} mx-auto mb-2`} />
-              <p className="text-sm text-muted-foreground">{t('videos.addVideo')}</p>
+              <Video className={`${iconSizes.xl} ${colors.text.muted} ${GROUP_HOVER_PATTERNS.BLUE_ICON_ON_GROUP} mx-auto mb-2`} />
+              <p className={cn("text-sm", colors.text.muted)}>{t('videos.addVideo')}</p>
             </div>
           </article>
         ))}

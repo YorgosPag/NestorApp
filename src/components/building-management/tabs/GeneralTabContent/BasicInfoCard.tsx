@@ -13,6 +13,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTypography } from '@/hooks/useTypography';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface BasicInfoCardProps {
     formData: { name: string; description: string };
@@ -24,6 +26,7 @@ interface BasicInfoCardProps {
 export function BasicInfoCard({ formData, updateField, isEditing, errors }: BasicInfoCardProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const typography = useTypography();
@@ -57,7 +60,7 @@ export function BasicInfoCard({ formData, updateField, isEditing, errors }: Basi
             rows={3}
             placeholder={t('tabs.general.basicInfo.descriptionPlaceholder')}
           />
-          <div className="text-xs text-muted-foreground text-right">
+          <div className={cn("text-xs text-right", colors.text.muted)}>
             {t('tabs.general.basicInfo.charactersCount', { count: formData.description.length })}
           </div>
         </div>

@@ -47,6 +47,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('BuildingAddressesCard');
 
@@ -76,6 +78,7 @@ export function BuildingAddressesCard({
   const iconSizes = useIconSizes();
   const typography = useTypography();
   const { t } = useTranslation('building');
+  const colors = useSemanticColors();
   const { success, error: notifyError } = useNotifications();
   const router = useRouter();
 
@@ -335,7 +338,7 @@ export function BuildingAddressesCard({
             )}
           </h2>
           {hasProject && (
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className={cn("text-sm mt-1", colors.text.muted)}>
               {t('address.labels.selectFromProject')}
             </p>
           )}
@@ -447,7 +450,7 @@ export function BuildingAddressesCard({
         <>
           {/* MODE 1: Building WITH project — loading/empty states */}
           {hasProject && loadingProject && (
-            <section className="flex items-center justify-center gap-2 py-2 text-muted-foreground">
+            <section className={cn("flex items-center justify-center gap-2 py-2", colors.text.muted)}>
               <Spinner />
               <span>{t('address.labels.loadingProjectAddresses')}</span>
             </section>
@@ -459,7 +462,7 @@ export function BuildingAddressesCard({
               <h3 className="text-lg font-semibold mb-2">
                 {t('address.labels.projectNoAddresses')}
               </h3>
-              <p className="text-sm text-muted-foreground mb-2">
+              <p className={cn("text-sm mb-2", colors.text.muted)}>
                 {t('address.labels.projectNoAddressesHint')}
               </p>
               <Button
@@ -476,9 +479,9 @@ export function BuildingAddressesCard({
           {/* MODE 2: No project — empty state */}
           {!hasProject && localAddresses.length === 0 && (
             <section className="text-center py-2 border-2 border-dashed rounded-lg">
-              <MapPin className={`${iconSizes.xl} mx-auto mb-2 text-muted-foreground`} />
+              <MapPin className={`${iconSizes.xl} mx-auto mb-2 ${colors.text.muted}`} />
               <h3 className="text-lg font-semibold mb-2">{t('address.labels.noAddresses')}</h3>
-              <p className="text-sm text-muted-foreground mb-2">
+              <p className={cn("text-sm mb-2", colors.text.muted)}>
                 {t('address.labels.addFirstAddress')}
               </p>
               <Button onClick={() => setIsAddFormOpen(true)}>
@@ -547,7 +550,7 @@ export function BuildingAddressesCard({
                             )}
                           </div>
 
-                          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                          <div className={cn("flex flex-wrap gap-2 text-xs", colors.text.muted)}>
                             {projAddr.type && (
                               <span>{t(`address.types.${projAddr.type}`)}</span>
                             )}
@@ -682,7 +685,7 @@ export function BuildingAddressesCard({
                         </Tooltip>
                       )}
                     </div>
-                    <div className="mt-2 pt-2 border-t text-xs text-muted-foreground">
+                    <div className={cn("mt-2 pt-2 border-t text-xs", colors.text.muted)}>
                       <span>ID: {address.id.slice(0, 8)}...</span>
                       {address.blockSide && <span className="ml-2">{t(`address.blockSides.${address.blockSide}`)}</span>}
                       {address.type && <span className="ml-2">{t(`address.types.${address.type}`)}</span>}

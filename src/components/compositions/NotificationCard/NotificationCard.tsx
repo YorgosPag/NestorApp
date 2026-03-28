@@ -9,6 +9,8 @@ import { getStatusBadgeClass } from '@/lib/design-system';
 import { badgeVariants } from '@/components/ui/badge';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 interface NotificationData {
   id: string;
@@ -66,6 +68,7 @@ export function NotificationCard({
   compact = false
 }: NotificationCardProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('compositions');
   const [isRead, setIsRead] = useState(notification.read);
@@ -117,14 +120,14 @@ export function NotificationCard({
         
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <h4 className={`text-sm font-medium truncate ${isRead ? 'text-muted-foreground' : 'text-foreground'}`}>
+            <h4 className={`text-sm font-medium truncate ${isRead ? colors.text.muted : 'text-foreground'}`}>
               {notification.title}
             </h4>
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
+            <span className={cn("text-xs whitespace-nowrap", colors.text.muted)}>
               {notification.time}
             </span>
           </div>
-          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+          <p className={cn("text-xs mt-1 line-clamp-2", colors.text.muted)}>
             {notification.description}
           </p>
         </div>
@@ -155,7 +158,7 @@ export function NotificationCard({
         backgroundGradient: isRead 
           ? "from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800"
           : "from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950 dark:via-indigo-950 dark:to-purple-900",
-        logo: <TypeIcon className={`${iconSizes.lg} ${isRead ? 'text-muted-foreground' : 'text-blue-600 dark:text-blue-400'}`} />,
+        logo: <TypeIcon className={`${iconSizes.lg} ${isRead ? colors.text.muted : 'text-blue-600 dark:text-blue-400'}`} />,
         showImageOverlay: false,
         compact: true
       }}
@@ -193,7 +196,7 @@ export function NotificationCard({
           title: t('notificationCard.sections.sender'),
           content: (
             <div className="flex items-center gap-2">
-              <User className={`${iconSizes.sm} text-muted-foreground`} />
+              <User className={`${iconSizes.sm} ${colors.text.muted}`} />
               <span className="text-sm font-medium">{notification.sender}</span>
             </div>
           )
@@ -213,7 +216,7 @@ export function NotificationCard({
         {
           title: t('notificationCard.sections.time'),
           content: (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className={cn("flex items-center gap-2 text-sm", colors.text.muted)}>
               <Calendar className={iconSizes.sm} />
               <span>{notification.time}</span>
             </div>

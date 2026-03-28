@@ -8,8 +8,11 @@ import { MapPin, Ruler, Eye, Edit, Trash2 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatCurrency } from '@/lib/intl-utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 import type { StorageUnit } from '@/types/storage';
+import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Centralized Unit Icon & Color
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
@@ -37,6 +40,7 @@ export function PropertyCard({
   selectable = false,
 }: PropertyCardProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { t } = useTranslation('properties');
 
   // Δημιουργία status configuration
@@ -121,7 +125,7 @@ export function PropertyCard({
           
           {property.price && (
             <div className="text-right">
-              <p className="text-sm text-muted-foreground">{t('building.storage.form.price')}</p>
+              <p className={cn("text-sm", colors.text.muted)}>{t('building.storage.form.price')}</p>
               <p className="font-semibold text-primary">
                 {formatCurrency(property.price)}
               </p>
@@ -131,13 +135,13 @@ export function PropertyCard({
 
         {/* Περιγραφή */}
         {property.description && (
-          <p className="text-sm text-muted-foreground line-clamp-2">
+          <p className={cn("text-sm line-clamp-2", colors.text.muted)}>
             {property.description}
           </p>
         )}
 
         {/* Στατιστικά */}
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+        <div className={cn("flex items-center gap-4 text-sm", colors.text.muted)}>
           {property.area && (
             <div className="flex items-center gap-1">
               <Ruler className={iconSizes.sm} />
@@ -155,7 +159,7 @@ export function PropertyCard({
 
         {/* Τοποθεσία αν υπάρχει */}
         {property.coordinates && (
-          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+          <div className={cn("flex items-center gap-1 text-sm", colors.text.muted)}>
             <MapPin className={iconSizes.sm} />
             <span>X: {property.coordinates.x}, Y: {property.coordinates.y}</span>
           </div>

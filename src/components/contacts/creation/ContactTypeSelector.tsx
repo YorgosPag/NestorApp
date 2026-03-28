@@ -8,6 +8,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 interface ContactTypeSelectorProps {
   onSelect: (type: ContactType) => void;
@@ -22,6 +24,7 @@ const TYPE_DESCRIPTION_KEYS: Record<ContactType, string> = {
 
 export function ContactTypeSelector({ onSelect, onCancel }: ContactTypeSelectorProps) {
   const { t } = useTranslation('contacts');
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
 
   const handleKeyDown = useCallback(
@@ -40,7 +43,7 @@ export function ContactTypeSelector({ onSelect, onCancel }: ContactTypeSelectorP
         <h2 className="text-xl font-semibold text-foreground">
           {t('creation.selectType.title')}
         </h2>
-        <p className="text-sm text-muted-foreground">
+        <p className={cn("text-sm", colors.text.muted)}>
           {t('creation.selectType.description')}
         </p>
       </header>
@@ -66,7 +69,7 @@ export function ContactTypeSelector({ onSelect, onCancel }: ContactTypeSelectorP
                 <h3 className="font-medium text-foreground">
                   {t(`types.${type}`)}
                 </h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
+                <p className={cn("text-xs leading-relaxed", colors.text.muted)}>
                   {t(TYPE_DESCRIPTION_KEYS[type])}
                 </p>
               </CardContent>

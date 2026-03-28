@@ -16,6 +16,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { generateContactId } from '@/services/enterprise-id.service';
 import type { CanonicalUploadContext } from '@/components/ContactFormSections/utils/PhotoUploadConfiguration';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface InlineContactCreationProps {
   contactType: ContactType;
@@ -26,6 +27,7 @@ interface InlineContactCreationProps {
 
 export function InlineContactCreation({ contactType, onContactAdded, onCancel, onBack }: InlineContactCreationProps) {
   const { t } = useTranslation('contacts');
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const { user } = useAuth();
 
@@ -99,7 +101,7 @@ export function InlineContactCreation({ contactType, onContactAdded, onCancel, o
             variant="ghost"
             size="sm"
             onClick={onBack}
-            className="gap-1.5 text-muted-foreground"
+            className={cn("gap-1.5", colors.text.muted)}
           >
             <ArrowLeft className={iconSizes.sm} />
             <span className="hidden sm:inline">{t('creation.inline.back')}</span>
