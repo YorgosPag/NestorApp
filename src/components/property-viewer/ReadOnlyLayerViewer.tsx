@@ -4,255 +4,69 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { CommonBadge } from '@/core/badges';
-// 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 import { DXF_LAYER_CATEGORY_LABELS } from '@/constants/property-statuses-enterprise';
-// 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ReadOnlyLayerViewer');
-import { 
-  Layers, 
-  Eye, 
-  EyeOff, 
-  Search, 
-  ChevronDown,
-  ChevronRight,
+import {
+  Layers,
+  Search,
   ChevronUp,
   Info,
-  Grid,
-  PenTool,
-  Type,
-  Ruler,
   Wifi,
   WifiOff
 } from 'lucide-react';
-import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { layoutUtilities } from '@/styles/design-tokens';
 
-// Import types
 import type { Property } from '@/types/property-viewer';
 import { LAYER_CATEGORIES } from '@/types/layers';
-import type { Layer, LayerCategory } from '@/types/layers';
+import type { Layer } from '@/types/layers';
 import { firestoreQueryService } from '@/services/firestore';
 import type { QueryResult } from '@/services/firestore';
 import { where, orderBy, type DocumentData } from 'firebase/firestore';
 
-type LayerCategoryKey = Exclude<LayerCategory, undefined>;
+// 🏢 ENTERPRISE: Import extracted sub-component + types/helpers
+import {
+  ReadOnlyLayerItem,
+  getCategoryInfo,
+  type ReadOnlyLayerState,
+  type LayerVisibilityState,
+} from './ReadOnlyLayerItem';
 
-const isLayerCategory = (value: string | undefined): value is LayerCategoryKey => {
-  return !!value && Object.hasOwn(LAYER_CATEGORIES, value);
-};
-
-// ?? ENTERPRISE: Helper function for safe LAYER_CATEGORIES access with proper type guard
-const DEFAULT_LAYER_CATEGORY = LAYER_CATEGORIES.structural;
-const getCategoryInfo = (category?: string): { color: string; name: string } => {
-  if (isLayerCategory(category)) {
-    return LAYER_CATEGORIES[category];
-  }
-  return {
-    color: DEFAULT_LAYER_CATEGORY.color,
-    name: category ?? DEFAULT_LAYER_CATEGORY.name
-  };
-};
+// Re-export for backward compatibility
+export { ReadOnlyLayerItem } from './ReadOnlyLayerItem';
+export type { ReadOnlyLayerItemProps, ReadOnlyLayerState, LayerVisibilityState } from './ReadOnlyLayerItem';
 
 interface ReadOnlyLayerViewerProps {
   floorId: string;
   buildingId: string;
-  
-  // Optional properties for fallback display
   properties?: Property[];
-  
-  // Display options
   className?: string;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
   onLayerVisibilityChange?: (layerId: string, isVisible: boolean) => void;
   onLayerOpacityChange?: (layerId: string, opacity: number) => void;
-  
-  // Styling options
   showSearch?: boolean;
   showCategoryFilter?: boolean;
   showStatistics?: boolean;
   maxHeight?: string;
 }
 
-interface ReadOnlyLayerState {
-  layers: Layer[];
-  isLoading: boolean;
-  isConnected: boolean;
-  error: string | null;
-  lastUpdated: string | null;
-}
-
-interface LayerVisibilityState {
-  [layerId: string]: {
-    isVisible: boolean;
-    opacity: number;
-  };
-}
-
-interface ReadOnlyLayerItemProps {
-  layer: Layer;
-  isExpanded: boolean;
-  onToggleExpand: () => void;
-  visibilityState: { isVisible: boolean; opacity: number };
-  onVisibilityChange: (isVisible: boolean) => void;
-  onOpacityChange: (opacity: number) => void;
-}
-
-function ReadOnlyLayerItem({
-  layer,
-  isExpanded,
-  onToggleExpand,
-  visibilityState,
-  onVisibilityChange,
-  onOpacityChange
-}: ReadOnlyLayerItemProps) {
-  const iconSizes = useIconSizes();
-  // 🏢 ENTERPRISE: i18n support
-  const { t } = useTranslation('dxf-viewer');
-  const categoryInfo = layer.metadata?.category ? getCategoryInfo(layer.metadata.category) : null;
-
-  return (
-    <Card className={`mb-2 transition-all ${visibilityState.isVisible ? '' : 'opacity-60'}`}>
-      <CardContent className="p-3">
-        <div className="flex items-center justify-between">
-          {/* Left side - Layer info */}
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            {layer.elements.length > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`${iconSizes.sm} p-0`}
-                onClick={onToggleExpand}
-              >
-                {isExpanded ? <ChevronDown className={iconSizes.xs} /> : <ChevronRight className={iconSizes.xs} />}
-              </Button>
-            )}
-            
-            {categoryInfo && (
-                <Tooltip>
-                  <TooltipTrigger>
-                    <div
-                      className={`${iconSizes.xs} flex-shrink-0 rounded-full`}
-                      style={layoutUtilities.dxf.colors.backgroundColor(categoryInfo.color)}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{categoryInfo.name}</p>
-                  </TooltipContent>
-                </Tooltip>
-            )}
-            
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{layer.name}</p>
-              {layer.description && (
-                <p className="text-xs text-muted-foreground truncate">{layer.description}</p>
-              )}
-            </div>
-            
-            <div className="flex items-center gap-1">
-              <CommonBadge
-                status="company"
-                customLabel={layer.elements.length}
-                variant="secondary"
-                className="text-xs"
-              />
-              {layer.isSystem && (
-                <CommonBadge
-                  status="company"
-                  customLabel={t('layerManager.badges.system')}
-                  variant="outline"
-                  className="text-xs"
-                />
-              )}
-            </div>
-          </div>
-
-          {/* Right side - Visibility control only */}
-          <div className="flex items-center gap-1 ml-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={`${iconSizes.md} p-0`}
-                    onClick={() => onVisibilityChange(!visibilityState.isVisible)}
-                  >
-                    {visibilityState.isVisible ? <Eye className={iconSizes.xs} /> : <EyeOff className={iconSizes.xs} />}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{visibilityState.isVisible ? t('layerManager.actions.hide') : t('layerManager.actions.show')} layer</p>
-                </TooltipContent>
-              </Tooltip>
-          </div>
-        </div>
-
-        {/* Opacity Slider - only if visible */}
-        {visibilityState.isVisible && (
-          <div className="mt-2 flex items-center gap-2">
-            <span className="text-xs text-muted-foreground w-16">{t('layerManager.labels.opacity')}</span>
-            <Slider
-              value={[visibilityState.opacity * 100]}
-              onValueChange={([value]) => onOpacityChange(value / 100)}
-              max={100}
-              step={5}
-              className="flex-1"
-            />
-            <span className="text-xs text-muted-foreground w-8">
-              {Math.round(visibilityState.opacity * 100)}%
-            </span>
-          </div>
-        )}
-
-        {/* Expanded content - Elements preview (read-only) */}
-        {isExpanded && layer.elements.length > 0 && (
-          <Collapsible open={isExpanded}>
-            <CollapsibleContent className="mt-3">
-              <div className="space-y-1 pl-4 border-l-2 border-muted">
-                {layer.elements.slice(0, 5).map((element) => (
-                  <div key={element.id} className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground flex items-center gap-2">
-                      {element.type === 'property' && <Grid className={iconSizes.xs} />}
-                      {element.type === 'annotation' && <Type className={iconSizes.xs} />}
-                      {element.type === 'measurement' && <Ruler className={iconSizes.xs} />}
-                      {element.type === 'line' && <PenTool className={iconSizes.xs} />}
-                      {element.type} - {element.id.substring(0, 8)}...
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {element.isVisible ? t('layerManager.actions.show') : t('layerManager.actions.hide')}
-                    </span>
-                  </div>
-                ))}
-                {layer.elements.length > 5 && (
-                  <p className="text-xs text-muted-foreground">
-                    {t('layerManager.labels.moreElements', { count: layer.elements.length - 5 })}
-                  </p>
-                )}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 export function ReadOnlyLayerViewer({
   floorId,
-  buildingId,
-  properties = [],
+  buildingId: _buildingId,
+  properties: _properties = [],
   className,
   isCollapsed = false,
   onToggleCollapse,
@@ -264,14 +78,13 @@ export function ReadOnlyLayerViewer({
   maxHeight = "400px"
 }: ReadOnlyLayerViewerProps) {
   const iconSizes = useIconSizes();
-  const { radius } = useBorderTokens();
-  // 🏢 ENTERPRISE: i18n support
+  const { radius: _radius } = useBorderTokens();
+  const colors = useSemanticColors();
   const { t } = useTranslation('dxf-viewer');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [expandedLayers, setExpandedLayers] = useState<Set<string>>(new Set());
-  
-  // Layer state from Firestore (real-time sync)
+
   const [layerState, setLayerState] = useState<ReadOnlyLayerState>({
     layers: [],
     isLoading: true,
@@ -279,11 +92,9 @@ export function ReadOnlyLayerViewer({
     error: null,
     lastUpdated: null
   });
-  
-  // Local visibility state (user can control what they see)
+
   const [visibilityState, setVisibilityState] = useState<LayerVisibilityState>({});
 
-  // 🔐 ENTERPRISE: Real-time sync via firestoreQueryService (auto tenant filter)
   useEffect(() => {
     if (!floorId) return;
 
@@ -297,7 +108,6 @@ export function ReadOnlyLayerViewer({
           ...doc,
         } as Layer));
 
-        // Initialize visibility state for new layers
         const newVisibilityState = { ...visibilityState };
         layers.forEach(layer => {
           if (!newVisibilityState[layer.id]) {
@@ -337,24 +147,18 @@ export function ReadOnlyLayerViewer({
     return () => unsubscribe();
   }, [floorId]);
 
-  // Filter layers based on search and category
   const filteredLayers = useMemo(() => {
     return layerState.layers.filter(layer => {
-      // Search filter
       if (searchQuery && !layer.name.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
-      
-      // Category filter
       if (selectedCategory !== 'all' && layer.metadata?.category !== selectedCategory) {
         return false;
       }
-      
       return true;
     });
   }, [layerState.layers, searchQuery, selectedCategory]);
 
-  // Group layers by category
   const groupedLayers = useMemo(() => {
     const groups: Record<string, Layer[]> = {};
     filteredLayers.forEach(layer => {
@@ -380,26 +184,16 @@ export function ReadOnlyLayerViewer({
   const handleVisibilityChange = (layerId: string, isVisible: boolean) => {
     setVisibilityState(prev => ({
       ...prev,
-      [layerId]: {
-        ...prev[layerId],
-        isVisible
-      }
+      [layerId]: { ...prev[layerId], isVisible }
     }));
-    
-    // Notify parent component
     onLayerVisibilityChange?.(layerId, isVisible);
   };
 
   const handleOpacityChange = (layerId: string, opacity: number) => {
     setVisibilityState(prev => ({
       ...prev,
-      [layerId]: {
-        ...prev[layerId],
-        opacity
-      }
+      [layerId]: { ...prev[layerId], opacity }
     }));
-    
-    // Notify parent component
     onLayerOpacityChange?.(layerId, opacity);
   };
 
@@ -433,9 +227,8 @@ export function ReadOnlyLayerViewer({
               </Button>
             )}
           </CardTitle>
-          
+
           <div className="flex items-center gap-2">
-            {/* Connection Status */}
               <Tooltip>
                 <TooltipTrigger>
                   {layerState.isConnected ? (
@@ -459,10 +252,9 @@ export function ReadOnlyLayerViewer({
                 </TooltipContent>
               </Tooltip>
 
-            {/* Info about read-only mode */}
               <Tooltip>
                 <TooltipTrigger>
-                  <Info className={`${iconSizes.sm} text-muted-foreground`} />
+                  <Info className={`${iconSizes.sm} ${colors.text.muted}`} />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>{t('layerManager.readOnly.viewModeOnly')}</p>
@@ -474,12 +266,11 @@ export function ReadOnlyLayerViewer({
       </CardHeader>
 
       <CardContent className="p-3 space-y-3">
-        {/* Search and Filters */}
         {(showSearch || showCategoryFilter) && (
           <div className="space-y-2">
             {showSearch && (
               <div className="relative">
-                <Search className={`absolute left-2 top-2.5 ${iconSizes.xs} text-muted-foreground`} />
+                <Search className={cn(`absolute left-2 top-2.5 ${iconSizes.xs}`, colors.text.muted)} />
                 <Input
                   placeholder={t('layerManager.labels.searchLayers')}
                   value={searchQuery}
@@ -488,7 +279,7 @@ export function ReadOnlyLayerViewer({
                 />
               </div>
             )}
-            
+
             {showCategoryFilter && (
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                 <SelectTrigger className="h-8 text-sm">
@@ -513,16 +304,14 @@ export function ReadOnlyLayerViewer({
           </div>
         )}
 
-        {/* Error display */}
         {layerState.error && (
           <div className="text-xs text-destructive bg-destructive/10 p-2 rounded">
             {layerState.error}
           </div>
         )}
 
-        {/* Layer Statistics */}
         {showStatistics && (
-          <div className="flex justify-between text-xs text-muted-foreground">
+          <div className={cn("flex justify-between text-xs", colors.text.muted)}>
             <span>{t('layerManager.stats.total')} {layerState.layers.length}</span>
             <span>{t('layerManager.stats.visible')} {visibleLayers.length}</span>
             <span>{t('layerManager.stats.elements')} {layerState.layers.reduce((acc, l) => acc + l.elements.length, 0)}</span>
@@ -531,9 +320,8 @@ export function ReadOnlyLayerViewer({
 
         <Separator />
 
-        {/* Loading state */}
         {layerState.isLoading && (
-          <div className="text-center py-4 text-muted-foreground">
+          <div className={cn("text-center py-4", colors.text.muted)}>
             <div className="flex items-center justify-center gap-2">
               <AnimatedSpinner size="small" />
               <span className="text-sm">{t('layerManager.loading')}</span>
@@ -541,13 +329,12 @@ export function ReadOnlyLayerViewer({
           </div>
         )}
 
-        {/* Layers List */}
         {!layerState.isLoading && (
           <ScrollArea style={{ maxHeight: layoutUtilities.maxHeight(maxHeight) }}>
             <div className="space-y-2">
               {Object.entries(groupedLayers).map(([category, layers]) => (
                 <div key={category}>
-                  <h4 className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-2">
+                  <h4 className={cn("text-xs font-medium mb-1 flex items-center gap-2", colors.text.muted)}>
                     {category !== 'other' && getCategoryInfo(category) && (
                       <>
                         <div
@@ -565,7 +352,7 @@ export function ReadOnlyLayerViewer({
                       className="text-xs"
                     />
                   </h4>
-                  
+
                   {layers.map(layer => (
                     <ReadOnlyLayerItem
                       key={layer.id}
@@ -579,9 +366,9 @@ export function ReadOnlyLayerViewer({
                   ))}
                 </div>
               ))}
-              
+
               {filteredLayers.length === 0 && !layerState.isLoading && (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className={cn("text-center py-8", colors.text.muted)}>
                   <Layers className={`${iconSizes.xl} mx-auto mb-2 opacity-50`} />
                   <p className="text-sm">{t('layerManager.labels.noLayersFound')}</p>
                   {layerState.isConnected ? (
@@ -595,9 +382,8 @@ export function ReadOnlyLayerViewer({
           </ScrollArea>
         )}
 
-        {/* Last updated info */}
         {layerState.lastUpdated && layerState.isConnected && (
-          <div className="text-xs text-muted-foreground text-center pt-2">
+          <div className={cn("text-xs text-center pt-2", colors.text.muted)}>
             {t('layerManager.readOnly.lastUpdate')} {new Date(layerState.lastUpdated).toLocaleTimeString('el-GR')}
           </div>
         )}
@@ -605,4 +391,3 @@ export function ReadOnlyLayerViewer({
     </Card>
   );
 }
-

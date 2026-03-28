@@ -24,7 +24,6 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type {
-  BankAccount,
   BankAccountInput,
   AccountType,
   CurrencyCode
@@ -43,28 +42,12 @@ import { Spinner } from '@/components/ui/spinner';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
+import type { BankAccountFormProps } from './bank-account-form-types';
 
 const logger = createModuleLogger('BankAccountForm');
-
-// ============================================================================
-// TYPES
-// ============================================================================
-
-interface BankAccountFormProps {
-  /** Existing account for editing, or undefined for new */
-  account?: BankAccount;
-  /** Submit handler */
-  onSubmit: (data: BankAccountInput) => Promise<void>;
-  /** Cancel handler */
-  onCancel: () => void;
-  /** Whether the form is in loading state */
-  loading?: boolean;
-  /** Contact display name — used to pre-fill holder name */
-  contactName?: string;
-  /** Custom className */
-  className?: string;
-}
 
 // ============================================================================
 // COMPONENT
@@ -100,6 +83,7 @@ export function BankAccountForm({
 }: BankAccountFormProps) {
   const { t } = useTranslation('banking');
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { warning } = useNotifications();
   const isEditing = !!account;
 
@@ -140,7 +124,7 @@ export function BankAccountForm({
     if (!isEditing && contactName && !formData.holderName) {
       setFormData(prev => ({ ...prev, holderName: contactName }));
     }
-  }, [isEditing, contactName]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isEditing, contactName]);
 
   // Auto-detect bank + account number from IBAN
   useEffect(() => {
@@ -273,7 +257,7 @@ export function BankAccountForm({
           allowOther
         />
         {bankDetectedFromIBAN && (
-          <p className="text-xs text-muted-foreground">{t('form.bankAutoDetected')}</p>
+          <p className={cn("text-xs", colors.text.muted)}>{t('form.bankAutoDetected')}</p>
         )}
         {errors.bankName && !formData.bankCode && (
           <p className="text-sm text-destructive">{errors.bankName}</p>
@@ -283,6 +267,7 @@ export function BankAccountForm({
       {/* BIC/SWIFT display */}
       {formData.bankCode && (
         <div className="space-y-2">
+          {/* eslint-disable-next-line custom/no-hardcoded-strings */}
           <Label>BIC / SWIFT</Label>
           <Input
             value={formData.bankCode}
@@ -317,7 +302,7 @@ export function BankAccountForm({
         {/* Account Number */}
         <div className="space-y-2">
           <Label htmlFor="accountNumber">
-            {t('form.accountNumber')} <span className="text-muted-foreground">{t('form.optional')}</span>
+            {t('form.accountNumber')} <span className={colors.text.muted}>{t('form.optional')}</span>
           </Label>
           <Input
             id="accountNumber"
@@ -332,7 +317,7 @@ export function BankAccountForm({
         {/* Branch */}
         <div className="space-y-2">
           <Label htmlFor="branch">
-            {t('form.branch')} <span className="text-muted-foreground">{t('form.optional')}</span>
+            {t('form.branch')} <span className={colors.text.muted}>{t('form.optional')}</span>
           </Label>
           <Input
             id="branch"
@@ -397,7 +382,7 @@ export function BankAccountForm({
       {/* Holder Name (optional) */}
       <div className="space-y-2">
         <Label htmlFor="holderName">
-          {t('form.holderName')} <span className="text-muted-foreground">{t('form.optional')}</span>
+          {t('form.holderName')} <span className={colors.text.muted}>{t('form.optional')}</span>
         </Label>
         <Input
           id="holderName"
@@ -407,7 +392,7 @@ export function BankAccountForm({
           placeholder={contactName || t('form.holderPlaceholder')}
         />
         {contactName && !formData.holderName && (
-          <p className="text-xs text-muted-foreground">
+          <p className={cn("text-xs", colors.text.muted)}>
             {t('form.holderHint', { name: contactName })}
           </p>
         )}
@@ -416,7 +401,7 @@ export function BankAccountForm({
       {/* Notes (optional) */}
       <div className="space-y-2">
         <Label htmlFor="notes">
-          {t('form.notes')} <span className="text-muted-foreground">{t('form.optional')}</span>
+          {t('form.notes')} <span className={colors.text.muted}>{t('form.optional')}</span>
         </Label>
         <Textarea
           id="notes"
@@ -489,9 +474,3 @@ export function BankAccountForm({
     </form>
   );
 }
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export default BankAccountForm;
