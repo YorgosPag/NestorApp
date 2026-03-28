@@ -1,6 +1,6 @@
 # ADR-267: Lightweight Procurement Module — Purchase Orders & Material Tracking
 
-**Status**: DRAFT — Αναμένει συζήτηση με Γιώργο
+**Status**: ✅ APPROVED — Συζήτηση ολοκληρώθηκε, 41 ερωτήσεις απαντήθηκαν (Γιώργος, 2026-03-28)
 **Date**: 2026-03-28
 **Author**: Claude (Research Agents × 4)
 **Related ADRs**: ADR-175 (BOQ/Quantity Surveying), ADR-034 (Gantt), ADR-017 (Enterprise ID), ADR-ACC-002 (Invoicing), ADR-121 (Contact Personas)
@@ -9,24 +9,80 @@
 | Date | Changes |
 |------|---------|
 | 2026-03-28 | Initial research & architecture — DRAFT for review |
+| 2026-03-28 | ✅ APPROVED — 41 ερωτήσεις Q&A με Γιώργο. Όλες οι αρχιτεκτονικές αποφάσεις κλείδωσαν |
+| 2026-03-28 | 🚀 Phase A Implementation — Batches 1-6: Types, Enterprise IDs, Config, Repository, Service, API Routes, Hooks, UI Components (5 components), Pages, Navigation, i18n (el+en). ~22 νέα αρχεία, ~3.800 LOC |
 
 ---
 
 ## 1. EXECUTIVE SUMMARY
 
-Σήμερα οι παραγγελίες υλικών γίνονται με email/τηλέφωνο/Excel. Προτείνεται ένα **lightweight** procurement module που:
+Σήμερα οι παραγγελίες υλικών γίνονται με email/τηλέφωνο/Excel. Το Procurement module:
 - Δημιουργεί **Purchase Orders** (PO) συνδεδεμένα με BOQ items + suppliers
-- Παρακολουθεί status: `Draft → Ordered → Delivered → Closed`
-- Δείχνει **overview dashboard** (τι περιμένω, τι έφτασε, τι πληρώθηκε)
-- Συνδέεται με υπάρχοντα: BOQ items, contacts (supplier persona), accounting invoices
-- **ΔΕΝ περιλαμβάνει**: RFQ/quotes, 3-way matching, complex approval workflows, vendor scoring
+- **6-state workflow**: `Draft → Approved → Ordered → Partially Delivered → Delivered → Closed`
+- **Automatic delivery status** based on quantities received (Procore/SAP pattern)
+- **7 KPI dashboard** + Budget vs Committed charts (Bar + Donut)
+- **Bilingual PDF** export (EL/EN) + Excel Level 2 (formulas, conditional formatting)
+- **Production-grade RBAC** (6 new permissions, reuse existing auth system)
+- **Full audit trail** (9 events via existing `logAuditEvent()`)
+- **Full responsive** (desktop + mobile — εργοτάξιο)
+- Συνδέεται με: BOQ items (ΑΤΟΕ codes), contacts (supplier persona), accounting invoices
+- **ΔΕΝ περιλαμβάνει**: RFQ/quotes, 3-way matching, recurring POs, delivery photos
 
-**ΥΠΑΡΧΟΥΣΑ ΥΠΟΔΟΜΗ**: Το 70% του integration layer υπάρχει ήδη:
+### Αποφάσεις (41 Q&A — Γιώργος, 2026-03-28)
+
+| # | Θέμα | Απόφαση |
+|---|------|---------|
+| 1 | Navigation | Standalone top-level (displayOrder: 55) |
+| 2 | Status workflow | 6 states + partially_delivered (auto) |
+| 3 | Approval | Feature flag: self-approve τώρα, separate approver αύριο |
+| 4 | Scope | 1 PO = 1 project πάντα |
+| 5 | ΦΠΑ | PO-level: 24/13/6/0% (ενδοκοινοτικές = 0%) |
+| 6 | Units | Predefined dropdown (14 units) + "Άλλο" |
+| 7 | PDF γλώσσα | Bilingual EL/EN, dropdown κατά export |
+| 8 | Delivery address | Auto-fill από project, editable |
+| 9 | BOQ integration | Optional link, ΑΤΟΕ mandatory |
+| 10 | Partial deliveries | Auto status: 0%→ordered, 1-99%→partial, 100%→delivered |
+| 11 | Currency | EUR only |
+| 12 | KPIs | 7 cards (incl. partially delivered, awaiting invoice, monthly spend) |
+| 13 | PO number | PO-NNNN sequential, no year reset |
+| 14 | Items limit | Embedded array, τυπικά 1-10, max 30 |
+| 15 | Notifications | In-app (Phase A) + Telegram (Phase B) |
+| 16 | Quick-create supplier | Inline dialog (mandatory: επωνυμία only) |
+| 17 | Duplicate PO | Button — copy all, edit ό,τι θες |
+| 18 | Price history | Inline last price + trend + modal (Phase A) |
+| 19 | Filters | Search + 4 quick filters (status, project, supplier, date) |
+| 20 | Sorting | "Απαιτούν ενέργεια" pinned + chronological |
+| 21 | Mobile | Full responsive (desktop + mobile) |
+| 22 | Deletion | Soft delete only (SAP/Procore) |
+| 23 | RBAC | 6 new permissions, production-grade |
+| 24 | i18n | Full EL + EN |
+| 25 | Audit trail | Full (9 events) |
+| 26 | Cancellation | Mandatory dropdown reason (7 options) |
+| 27 | Invoice linking | Manual link, Phase A |
+| 28 | Charts | Bar + Donut (Phase A), Line (Phase B) |
+| 29 | Phase C | AI scan, AI Telegram, Supplier metrics |
+| 30 | Notes | 2 πεδία: supplier (PDF) + internal (hidden) |
+| 31 | ΑΤΟΕ codes | Ίδιοι με BOQ/Gantt — μία γλώσσα παντού |
+| 32 | Date needed | Προαιρετικό |
+| 33 | Empty state | Onboarding (illustration + CTA) |
+| 34 | Send PO | PDF + Copy text (Phase A), Email + Share link (Phase B) |
+| 35 | Excel export | Level 2 Smart (2 sheets, formulas, conditional formatting) |
+| 36 | PDF list export | A4 landscape |
+| 37 | Attachments | Drag & drop, max 5 files / 10MB, Phase A |
+| 38 | Payment terms | Auto-fill from supplier + auto-calc due date |
+| 39 | T&C | Configurable, auto-include στο PDF footer |
+| 40 | Company branding | Logo + company info στο PDF header (reuse existing) |
+| 41 | Users | 5 άτομα, 2-3 δημιουργούν POs, οικογενειακή επιχ. |
+
+**ΥΠΑΡΧΟΥΣΑ ΥΠΟΔΟΜΗ** (70% integration layer ready):
 - BOQ items με `linkedContractorId` + `linkedInvoiceId`
 - Supplier contacts (persona 'supplier', 5 κατηγορίες)
 - Accounting invoices + expense documents
 - Enterprise ID system (χρειάζεται νέος generator)
 - Cheque registry (ήδη υποστηρίζει `ChequeContextType = 'supplier'`)
+- RBAC system (40+ permissions, `withAuth()` middleware)
+- Company config + logo + email templates
+- Recharts, jspdf, jspdf-autotable (ήδη installed)
 
 ---
 
@@ -36,18 +92,22 @@
 
 | Feature | Buildertrend | CoConstruct | Fieldwire | Nestor Πρόταση |
 |---------|-------------|-------------|-----------|---------------|
-| PO CRUD | ✅ Full | ✅ Full | 🔶 Task-based | ✅ **Core** |
-| Status Workflow | 7 states | 5 states | 5 states | ✅ **5 states** |
-| Line Items | ✅ + cost codes | ✅ + selections | Basic | ✅ **+ BOQ link** |
-| Budget Integration | ✅ Cost codes | ✅ Allowances | — | ✅ **Via BOQ** |
-| Supplier Link | ✅ Directory | ✅ Vendor list | ✅ | ✅ **Via contacts** |
-| Invoice Matching | ✅ PO↔Invoice | 🔶 Manual | — | 🔶 **Phase 2** |
-| Delivery Photos | — | — | ✅ | 🔶 **Phase 2** |
-| Email/Share PO | ✅ Auto-email | ✅ | — | 🔶 **Phase 2** |
-| PDF Export | ✅ | ✅ | — | ✅ **Core** |
-| Approval Workflow | ✅ Multi-level | 🔶 Simple | — | ❌ **Overkill** |
+| PO CRUD | ✅ Full | ✅ Full | 🔶 Task-based | ✅ **Phase A** |
+| Status Workflow | 7 states | 5 states | 5 states | ✅ **6 states (auto delivery)** |
+| Line Items | ✅ + cost codes | ✅ + selections | Basic | ✅ **+ BOQ link + ΑΤΟΕ** |
+| Budget Integration | ✅ Cost codes | ✅ Allowances | — | ✅ **Via BOQ + ΑΤΟΕ** |
+| Supplier Link | ✅ Directory | ✅ Vendor list | ✅ | ✅ **Via contacts + quick-create** |
+| Invoice Matching | ✅ PO↔Invoice | 🔶 Manual | — | ✅ **Phase A (manual)** |
+| Delivery Photos | — | — | ✅ | ❌ **Απορρίφθηκε** |
+| Email/Share PO | ✅ Auto-email | ✅ | — | 🔶 **Phase B** |
+| PDF Export | ✅ | ✅ | — | ✅ **Phase A (bilingual)** |
+| Excel Export | ✅ | 🔶 | — | ✅ **Phase A (Level 2)** |
+| Attachments | ✅ | 🔶 | ✅ | ✅ **Phase A** |
+| Price History | ✅ | — | — | ✅ **Phase A** |
+| Approval Workflow | ✅ Multi-level | 🔶 Simple | — | ✅ **Feature flag (flexible)** |
 | RFQ Process | ✅ | — | — | ❌ **Overkill** |
 | 3-Way Matching | ✅ | — | — | ❌ **Overkill** |
+| Recurring POs | ✅ | — | — | ❌ **Duplicate button αρκεί** |
 
 ### 2.2 Consensus Pattern (Cross-Platform)
 
@@ -182,7 +242,7 @@ interface PurchaseOrder {
 
   // Dates
   dateCreated: string;              // ISO
-  dateNeeded: string | null;        // Requested delivery date
+  dateNeeded: string | null;        // Προαιρετικό — ο χρήστης ορίζει αν θέλει. Overdue KPI μόνο αν set
   dateOrdered: string | null;       // When sent to supplier
   dateDelivered: string | null;     // When received
   dateInvoiced: string | null;      // When invoice linked
@@ -190,16 +250,54 @@ interface PurchaseOrder {
   // Delivery
   deliveryAddress: string | null;   // Auto-fill από project.address, editable override
 
+  // Payment Terms (auto-fill από supplier, editable per PO)
+  paymentTermsDays: number | null;  // Auto-fill από supplier.paymentTermsDays
+  paymentDueDate: string | null;    // Auto-calculated: dateOrdered + paymentTermsDays
+
   // Accounting Links
   linkedInvoiceIds: string[];       // ref → accounting_invoices (1:many)
 
+  // Notes (Procore/Oracle pattern — 2 πεδία)
+  supplierNotes: string | null;    // Εμφανίζεται στο PDF — ό,τι θέλεις να δει ο προμηθευτής
+  internalNotes: string | null;    // ΔΕΝ εμφανίζεται στο PDF — εσωτερικά σχόλια
+
+  // Attachments (Procore/Google pattern — Phase A)
+  attachments: POAttachment[];     // Max 5 files, 10MB each
+
+  // Cancellation (υποχρεωτικό αν status = cancelled)
+  cancellationReason: POCancellationReason | null;
+  cancellationComment: string | null;  // Προαιρετικό free text
+
   // Metadata
-  notes: string | null;
   createdBy: string;                // userId
   approvedBy: string | null;
   updatedAt: string;
-  isDeleted: boolean;
+  isDeleted: boolean;               // Soft delete ΜΟΝΟ — ποτέ hard delete (SAP/Procore pattern)
 }
+
+/** PO Attachment (Firebase Storage) */
+interface POAttachment {
+  id: string;              // 'poatt_XXXXX' (enterprise-id)
+  fileName: string;
+  fileSize: number;        // bytes
+  mimeType: string;        // pdf, jpg, png, dxf, dwg, xlsx, docx
+  storagePath: string;     // Firebase Storage: /purchase_orders/{poId}/attachments/{id}
+  uploadedBy: string;      // userId
+  uploadedAt: string;      // ISO
+}
+// Limits: Max 5 files, max 10MB each
+// Allowed: PDF, JPG, PNG, DXF, DWG, XLSX, DOCX
+// UI: Drag & drop + file picker, inline thumbnail for images, icon for docs
+
+/** Cancellation Reasons (υποχρεωτικό dropdown + optional comment) */
+type POCancellationReason =
+  | 'supplier_change'    // Αλλαγή προμηθευτή
+  | 'plan_change'        // Αλλαγή σχεδίου/scope
+  | 'wrong_order'        // Λάθος παραγγελία
+  | 'supplier_delay'     // Καθυστέρηση προμηθευτή
+  | 'budget_cut'         // Περικοπή budget
+  | 'duplicate'          // Διπλή παραγγελία
+  | 'other';             // Άλλο
 
 /** Purchase Order Line Item */
 interface PurchaseOrderItem {
@@ -212,7 +310,9 @@ interface PurchaseOrderItem {
 
   // BOQ Integration (optional link, categoryCode required)
   boqItemId: string | null;         // ref → boq_items (optional — search+select dropdown)
-  categoryCode: string;             // ΑΤΟΕ code (OIK-1...OIK-12) — ΥΠΟΧΡΕΩΤΙΚΟ για reports
+  categoryCode: string;             // ΑΤΟΕ code (OIK-1...OIK-12) — ΥΠΟΧΡΕΩΤΙΚΟ
+                                    // Auto-fill αν linked BOQ item, αλλιώς manual dropdown
+                                    // Ίδιοι κωδικοί με BOQ + Gantt → μία γλώσσα παντού
 
   // Delivery Tracking — Partial deliveries (ΣΥΧΝΟ στην πράξη)
   quantityReceived: number;         // Συνολικά παραληφθέντα (default: 0)
@@ -227,6 +327,7 @@ interface PurchaseOrderItem {
 interface ProcurementSettings {
   requireSeparateApprover: boolean;    // false = self-approve OK (default)
   autoApproveThreshold: number | null; // null = no auto-approve (default)
+  termsAndConditions: string | null;   // Standard T&C — εμφανίζεται στο PDF footer
 }
 
 // Defaults (Phase A)
@@ -280,32 +381,46 @@ DRAFT ──→ APPROVED ──→ ORDERED ──→ PART_DELIVERED ──→ DE
 ```
 src/
 ├── types/procurement/
-│   └── purchase-order.ts                      # Types + status FSM
+│   └── purchase-order.ts                      # Types + status FSM + POAttachment + POCancellationReason
+├── config/
+│   └── procurement-units.ts                   # PROCUREMENT_UNIT_OPTIONS (14 units + custom)
 ├── services/procurement/
-│   ├── procurement-repository.ts              # Firestore CRUD
-│   └── procurement-service.ts                 # Business logic + validation
+│   ├── procurement-repository.ts              # Firestore CRUD + counter + attachments
+│   ├── procurement-service.ts                 # Business logic, validation, auto status
+│   ├── procurement-pdf.service.ts             # PO PDF + list PDF (bilingual)
+│   └── procurement-excel.service.ts           # Excel Level 2 export (2 sheets)
 ├── app/
 │   ├── api/procurement/
 │   │   ├── route.ts                          # GET list, POST create
 │   │   └── [poId]/
-│   │       └── route.ts                      # GET one, PATCH update, DELETE
+│   │       ├── route.ts                      # GET one, PATCH update, DELETE
+│   │       └── attachments/
+│   │           └── route.ts                  # POST upload, DELETE attachment
 │   └── procurement/
 │       ├── page.tsx                           # Dashboard / list page
 │       └── [poId]/
 │           └── page.tsx                       # PO detail / edit page
 ├── components/procurement/
-│   ├── PurchaseOrderList.tsx                  # List with filters + status badges
+│   ├── PurchaseOrderList.tsx                  # List with "Requires Action" + filters
 │   ├── PurchaseOrderForm.tsx                  # Create / edit form
 │   ├── PurchaseOrderDetail.tsx                # Read-only view + status actions
-│   ├── PurchaseOrderKPIs.tsx                  # Dashboard summary cards
-│   ├── PurchaseOrderItemsTable.tsx            # Line items table (add/edit/remove)
-│   └── ProcurementBudgetOverview.tsx          # Budget vs committed vs spent
+│   ├── PurchaseOrderKPIs.tsx                  # 7 KPI dashboard cards
+│   ├── PurchaseOrderItemsTable.tsx            # Line items + price history inline
+│   ├── ProcurementBudgetOverview.tsx          # Bar chart + Donut chart
+│   ├── PriceHistoryModal.tsx                  # Full price history per item
+│   ├── QuickCreateSupplierDialog.tsx          # Inline supplier creation
+│   ├── DeliveryRecordDialog.tsx               # Record partial delivery quantities
+│   ├── CancellationDialog.tsx                 # Cancel PO with mandatory reason
+│   └── AttachmentsSection.tsx                 # Drag & drop file upload
 ├── hooks/procurement/
-│   ├── usePurchaseOrders.ts                   # List hook with filters
+│   ├── usePurchaseOrders.ts                   # List hook with filters + search
 │   └── usePurchaseOrderForm.ts                # Form state + validation
+├── i18n/locales/
+│   ├── el/procurement.json                    # Greek translations
+│   └── en/procurement.json                    # English translations
 ```
 
-**Εκτίμηση**: ~14 νέα αρχεία, ~2.500 LOC.
+**Εκτίμηση**: ~22 νέα αρχεία, ~3.800 LOC.
 
 ### 4.4 Firestore Collection
 
@@ -375,17 +490,30 @@ interface BudgetOverviewItem {
 
 **Display**: Supplier name, VAT number, supplier category, payment terms.
 
+**Quick-create supplier** (Απόφαση ✅ Γιώργος, 2026-03-28 — Procore/Google pattern):
+- Searchable dropdown + "➕ Προσθήκη νέου προμηθευτή" link
+- Click → Dialog με minimal fields:
+  - **Mandatory**: Επωνυμία
+  - **Optional**: ΑΦΜ, Τηλέφωνο, Κατηγορία (materials/equipment/subcontractor/services/other)
+- Δημιουργεί contact με `persona: 'supplier'` → auto-select στο dropdown
+- Υπόλοιπα στοιχεία συμπληρώνονται αργότερα στις Επαφές
+
 **Reverse Link**: Contact detail page → tab/section "Purchase Orders" (all POs for this supplier).
 
 ### 5.3 Accounting ↔ Procurement
 
-| Accounting Entity | Procurement Link | Direction |
-|-------------------|-----------------|-----------|
-| Expense Invoice | PO.linkedInvoiceIds[] | PO → Invoice |
-| Expense Document (AI) | Auto-suggest PO matching | Invoice → PO |
-| Journal Entry | Auto-generated on PO close | PO → Journal |
-| Cheque | `contextType: 'supplier'` + poId | PO → Cheque |
-| Bank Transaction | Matching via supplier + amount | Transaction → PO |
+**Phase A** (Απόφαση ✅ Γιώργος, 2026-03-28 — MVP feature, Procore/SAP pattern):
+| Accounting Entity | Procurement Link | Direction | Phase |
+|-------------------|-----------------|-----------|-------|
+| Expense Invoice | Manual link: button → dropdown → select | PO → Invoice | **A** |
+
+**Phase B+C:**
+| Accounting Entity | Procurement Link | Direction | Phase |
+|-------------------|-----------------|-----------|-------|
+| Expense Document (AI) | Auto-suggest PO matching | Invoice → PO | C |
+| Journal Entry | Auto-generated on PO close | PO → Journal | B |
+| Cheque | `contextType: 'supplier'` + poId | PO → Cheque | B |
+| Bank Transaction | Matching via supplier + amount | Transaction → PO | B |
 
 ### 5.4 Gantt ↔ Procurement
 
@@ -429,13 +557,29 @@ Via BOQ items: `BOQItem.linkedPhaseId` → `ConstructionPhase` → PO items link
 | System | Χρήση |
 |--------|-------|
 | `withAuth()` + `withStandardRateLimit()` | API route protection |
-| `logAuditEvent()` | PO create/update/status change audit |
+| `logAuditEvent()` | Full audit trail (see below) |
 | Enterprise ID: `generatePurchaseOrderId()` | New generator needed |
 | `getAdminFirestore()` | Server-side Firestore SDK |
 | i18n: `useTranslation('procurement')` | New namespace (el + en) |
 | `formatCurrency()` | Money display |
 | `formatDateShort()` | Date display |
 | `cn()` | Class merging |
+
+### 6.4 Audit Trail Events (Απόφαση ✅ Γιώργος, 2026-03-28 — Full audit, production-grade)
+
+Χρήση υπάρχοντος `logAuditEvent()` — μηδέν νέα infra.
+
+| Event | Action | Τι καταγράφεται |
+|-------|--------|----------------|
+| PO created | `procurement.po.created` | Ποιος, πότε, supplier, project, items, total |
+| PO approved | `procurement.po.approved` | Ποιος ενέκρινε, πότε |
+| PO ordered | `procurement.po.ordered` | Ποιος σημείωσε αποστολή, πότε |
+| Status changed | `procurement.po.status_changed` | Από τι → σε τι, ποιος, πότε |
+| Items edited | `procurement.po.items_edited` | Τι άλλαξε (ποσότητα, τιμή, added/removed) |
+| PO cancelled | `procurement.po.cancelled` | Ποιος, πότε, reason |
+| PO soft deleted | `procurement.po.deleted` | Ποιος, πότε |
+| Delivery recorded | `procurement.po.delivery_recorded` | Ποιος κατέγραψε, ποσότητες ανά item |
+| Invoice linked | `procurement.po.invoice_linked` | Ποιος, ποιο invoice ID |
 
 ---
 
@@ -504,15 +648,88 @@ const PROCUREMENT_UNIT_OPTIONS = [
 | 6 | Awaiting Invoice | COUNT WHERE status = 'delivered' AND linkedInvoiceIds = [] | FileWarning |
 | 7 | Monthly Spend | SUM(po.total) WHERE dateOrdered IN current month | TrendingUp |
 
-### 8.2 Budget vs Committed Chart
+### 9.2 Responsive Design (Απόφαση ✅ Γιώργος, 2026-03-28)
 
-**Visualization**: Recharts `<BarChart>` — stacked bars per ΑΤΟΕ category:
+**Χρήση**: Desktop (γραφείο) + Mobile (εργοτάξιο) — και τα δύο.
+
+| Component | Desktop | Mobile |
+|-----------|---------|--------|
+| KPI Cards | 4 columns row | 2×2 grid, swipeable |
+| PO List | Full table | Card list (stacked) |
+| PO Form | 2-column grid | Single column, stacked |
+| Items Table | Full table | Collapsible cards per item |
+| Filters | Horizontal bar | Collapsible "Φίλτρα" panel |
+| Actions | Button row | Bottom sticky bar |
+| PDF Export | Inline button | Full-width button |
+| Price History modal | Side panel | Full-screen sheet |
+
+**Mobile priorities** (εργοτάξιο use cases):
+- Γρήγορη καταγραφή παραλαβής (ποσότητες received)
+- Approval με 1 tap
+- Βλέπω status PO χωρίς scroll
+
+### 9.3 Price History (Απόφαση ✅ Γιώργος, 2026-03-28 — Phase A)
+
+**Pattern**: Procore/SAP — inline last price + on-demand full history.
+
+**Inline (στη φόρμα PO, κάτω από κάθε line item):**
+```
+Τσιμεντοσανίδα 12mm    [200] [τεμ] [€18.00]
+                        ⬆ €15.00 → €18.00 (+20%) | Τελ. PO-0038, 15/01/2026
+```
+
+**Modal (click "Ιστορικό τιμών"):**
+- Πίνακας: PO number, ημερομηνία, τιμή/μονάδα, ποσότητα
+- Μέση τιμή + trend %/τρίμηνο
+- Query: `WHERE supplierId == X AND item description LIKE Y ORDER BY dateCreated DESC LIMIT 5`
+
+### 9.2 Budget vs Committed Charts (Απόφαση ✅ Γιώργος, 2026-03-28)
+
+**Pattern**: Google "One chart, one question" + Procore layout.
+
+**Phase A — 2 charts:**
+
+**Chart 1: Stacked Bar** — "Πού πάνε τα λεφτά;"
+- Recharts `<BarChart>` — stacked bars per ΑΤΟΕ category:
 - **Budgeted** (gray) — from BOQ estimated costs
-- **Committed** (blue) — from POs ordered/delivered
+- **Committed** (blue) — from POs ordered/partially_delivered/delivered
 - **Spent** (green) — from linked invoices
 - **Remaining** (light gray) — budgeted - committed
 
+**Chart 2: Donut** — "Πόσο % φάγαμε;"
+- Recharts `<PieChart>` — συνολική κατανομή committed ανά ΑΤΟΕ category
+- Quick glance σε 1 δευτερόλεπτο
+
+**Phase B — 1 chart:**
+
+**Chart 3: Line/S-Curve** — "Πώς πάμε σε σχέση με τον χρόνο;"
+- Recharts `<LineChart>` — monthly spend trend
+- Χρειάζεται 3+ μήνες data για να έχει νόημα
+
 ### 8.3 PO List View
+
+**List Layout** (Απόφαση ✅ Γιώργος, 2026-03-28 — Google/Oracle hybrid):
+
+**Section 1: "⚡ Απαιτούν ενέργεια"** (pinned, πάντα πάνω):
+- Drafts pending approval
+- Overdue POs (dateNeeded < today AND status IN ordered, partially_delivered)
+- Partially delivered (items λείπουν)
+- Εξαφανίζεται αν δεν υπάρχει pending action
+
+**Section 2: "📋 Όλες οι παραγγελίες"** (dateCreated DESC):
+- Πλήρης λίστα με φίλτρα
+
+**Φίλτρα** (Απόφαση ✅ Γιώργος, 2026-03-28 — Google/Procore pattern: search + 4 quick filters):
+
+| # | Φίλτρο | Τύπος | Use case |
+|---|--------|-------|----------|
+| 🔍 | Search | Free text | PO number, supplier name, item description |
+| 1 | Status | Multi-select chips | "δείξε μόνο ordered" |
+| 2 | Project | Dropdown | "τι τρέχει στη Γλυφάδα;" |
+| 3 | Supplier | Dropdown | "τι παρήγγειλα από Παπαδόπουλο;" |
+| 4 | Date range | Date picker | "POs τελευταίου τριμήνου" |
+
+**Columns**:
 
 | Column | Source | Sort/Filter |
 |--------|--------|-------------|
@@ -523,7 +740,7 @@ const PROCUREMENT_UNIT_OPTIONS = [
 | Total | total (formatted) | Sort ↑↓ |
 | Date Needed | dateNeeded | Sort ↑↓ |
 | Date Created | dateCreated | Sort ↑↓ |
-| Actions | Edit, View, Status change | — |
+| Actions | Edit, View, Duplicate, Status change | — |
 
 ### 8.4 PO Detail View
 
@@ -547,11 +764,12 @@ const PROCUREMENT_UNIT_OPTIONS = [
 │ ΦΠΑ 24%:  €1,076.40                          │
 │ TOTAL:    €5,561.40                           │
 ├──────────────────────────────────────────────┤
-│ Notes: Παράδοση στο εργοτάξιο, πρωί 8-12    │
+│ Supplier Notes: Παράδοση στο εργοτάξιο, 8-12 │
+│ Internal Notes: Τσέκαρε ποιότητα παραλαβής   │
 │ Created: 28/03/2026 by Γιώργος               │
 │                                               │
 │ [Mark Delivered] [Link Invoice] [Export PDF]  │
-│ [Edit] [Cancel PO]                            │
+│ [Duplicate PO] [Copy Text] [Edit] [Cancel PO]  │
 └──────────────────────────────────────────────┘
 ```
 
@@ -567,12 +785,21 @@ const PROCUREMENT_UNIT_OPTIONS = [
 - Γλώσσα επιλέγεται κατά το export (dropdown: EL / EN)
 
 **Layout** (A4 portrait):
-1. Header: Company name, logo (optional), PO number, date
-2. Supplier info: Name, VAT, address, phone
-3. Line items table: Description, Qty, Unit, Price, Total
-4. Totals: Subtotal, Tax, Total
-5. Notes section
-6. Footer: Delivery address, date needed
+1. **Header**: Company logo (`public/images/logo-email.svg`) + name, ΑΦΜ, ΓΕΜΗ, address, phone (from `company-config.ts`)
+2. **PO info**: PO number, date, status
+3. **Supplier info**: Name, VAT, address, phone, category
+4. **Line items table**: Description, Qty, Unit, Price, Total
+5. **Totals**: Subtotal, Tax rate + amount, Grand Total
+6. **Payment terms**: "Όροι πληρωμής: 30 ημέρες | Πληρωτέο έως: DD/MM/YYYY"
+7. **Supplier notes**: Σημειώσεις προμηθευτή
+8. **Delivery**: Address + date needed
+9. **Terms & Conditions**: From ProcurementSettings (configurable by admin)
+10. **Footer**: "Powered by Nestor App" (ίδιο branding με email templates)
+
+**Reuse existing assets:**
+- Logo: `public/images/logo-email.svg` (120x120px)
+- Company info: `src/config/company-config.ts` (name, VAT, GEMI, address)
+- Footer branding: Ίδιο pattern με `src/services/email-templates.service.ts`
 
 **i18n PDF labels**:
 | Field | EL | EN |
@@ -588,47 +815,90 @@ const PROCUREMENT_UNIT_OPTIONS = [
 | Γενικό Σύνολο | Γενικό Σύνολο | Grand Total |
 | Ημ. Παράδοσης | Ημ. Παράδοσης | Delivery Date |
 | Σημειώσεις | Σημειώσεις | Notes |
+| Όροι Πληρωμής | Όροι Πληρωμής | Payment Terms |
+| Πληρωτέο έως | Πληρωτέο έως | Due Date |
 
 **Greek font**: Reuse Roboto font data from `src/services/gantt-export/roboto-font-data.ts`.
+
+### 9.1 Excel + PDF List Export (Απόφαση ✅ Γιώργος, 2026-03-28 — Procore Level 2)
+
+**Library**: `xlsx` (SheetJS) — MIT license
+
+**Excel export — 2 sheets:**
+
+**Sheet 1: "Purchase Orders"**:
+- Columns: PO#, Supplier, Project, Status, Subtotal, VAT, Total, Date Created, Date Needed
+- `=SUM()` formula στο total row
+- Auto-filters σε κάθε column
+- Conditional formatting: overdue = κόκκινο background
+
+**Sheet 2: "Budget Overview"**:
+- Columns: ΑΤΟΕ Category, Budgeted, Committed, Spent, Remaining
+- `Remaining = Budgeted - Committed` formula
+- `=SUM()` totals row
+- Conditional formatting: Remaining < 0 = κόκκινο, > 20% = πράσινο
+
+**Formatting**: Headers bold, currency €, auto-width columns, date format DD/MM/YYYY
+
+**PDF list export**:
+- A4 landscape
+- Same data as Excel Sheet 1 + Budget Overview
+- jspdf + jspdf-autotable (reuse existing)
 
 ---
 
 ## 10. IMPLEMENTATION PHASES
 
 ### Phase A: Core PO CRUD (MVP)
-**Εκτίμηση**: ~14 αρχεία, ~2.500 LOC
+**Εκτίμηση**: ~22 αρχεία, ~3.800 LOC
 
-1. Types: `PurchaseOrder`, `PurchaseOrderItem`, `PurchaseOrderStatus`
-2. Enterprise ID: `generatePurchaseOrderId()`, `generatePOItemId()`
-3. Firestore collection registration
-4. Repository: CRUD operations
-5. Service: Business logic, validation, status transitions
-6. API routes: `/api/procurement/` (list, create) + `/api/procurement/[poId]` (get, update, delete)
-7. Hooks: `usePurchaseOrders()`, `usePurchaseOrderForm()`
-8. Components: List, Form, Detail, Items Table
-9. Dashboard: KPIs, Budget Overview
-10. Navigation: Sidebar entry
-11. i18n: Greek + English keys
-12. PDF export: PO document
+| # | Feature | LOC est. |
+|---|---------|----------|
+| 1 | Types: `PurchaseOrder`, `PurchaseOrderItem`, `PurchaseOrderStatus`, `ProcurementSettings`, `POAttachment`, `POCancellationReason` | ~200 |
+| 2 | Enterprise ID: `generatePurchaseOrderId()`, `generatePOItemId()`, `generatePOAttachmentId()` | ~30 |
+| 3 | Firestore collection registration + procurement settings + indexes | ~50 |
+| 4 | Repository: CRUD operations + counter + attachments | ~350 |
+| 5 | Service: Business logic, validation, auto status transitions (partial delivery), price history query | ~400 |
+| 6 | API routes: `/api/procurement/` (list, create) + `/api/procurement/[poId]` (get, update, delete, attachments) | ~300 |
+| 7 | Hooks: `usePurchaseOrders()`, `usePurchaseOrderForm()` | ~250 |
+| 8 | Components: List (with "Requires Action" section), Form, Detail, Items Table | ~600 |
+| 9 | Dashboard: 7 KPIs + Budget Overview (Bar + Donut charts) | ~350 |
+| 10 | Navigation: Standalone top-level (displayOrder: 55) | ~30 |
+| 11 | i18n: Greek + English keys (procurement namespace) | ~150 |
+| 12 | PDF export: Bilingual (EL/EN) PO document (company logo, T&C, payment terms) | ~300 |
+| 13 | Copy to clipboard (plain text for WhatsApp/Viber) | ~40 |
+| 14 | Excel export: Level 2 Smart (2 sheets, formulas, conditional formatting) | ~200 |
+| 15 | PDF list export: A4 landscape | ~100 |
+| 16 | Duplicate PO button | ~40 |
+| 17 | Quick-create supplier (inline dialog) | ~150 |
+| 18 | Price history: inline last price + trend + modal full history | ~200 |
+| 19 | In-app notifications (bell icon + badge) | ~150 |
+| 20 | Unit of measure: predefined dropdown + custom | ~50 |
+| 21 | Attachments: drag & drop, Firebase Storage, max 5 files / 10MB | ~200 |
+| 22 | RBAC: 6 new permissions + role mappings | ~60 |
 
 ### Phase B: Enhanced Integration
-**Εκτίμηση**: ~6 αρχεία, ~1.000 LOC
+**Εκτίμηση**: ~8 αρχεία, ~1.200 LOC
 
 1. Invoice matching: Link PO → accounting expense invoice
 2. Status history subcollection (audit trail)
-3. Partial delivery tracking (quantityReceived per item)
-4. Contact detail page → "Purchase Orders" tab
-5. BOQ detail → "Related POs" section
-6. Email/share PO as PDF
+3. Contact detail page → "Purchase Orders" tab
+4. BOQ detail → "Related POs" section
+5. Send PO via Email (button → PDF στο email supplier)
+6. Share link (read-only PO view, χωρίς login)
+7. Telegram notifications (PO pending approval, overdue digest)
 
 ### Phase C: Advanced (Μελλοντικά)
-**Εκτίμηση**: ~1.500 LOC
+**Απόφαση**: ✅ 3 features επιλέχθηκαν (Γιώργος, 2026-03-28)
+**Εκτίμηση**: ~1.200 LOC
 
-1. Delivery photo verification (reuse `usePhotoCapture` from ADR-170)
-2. AI document processing: Scan supplier invoice → auto-match to PO
-3. AI Telegram module: "δημιούργησε PO για 200 τσιμεντοσανίδες στον Παπαδόπουλο"
-4. Recurring POs (for regular suppliers/materials)
-5. Supplier performance metrics (on-time %, quality rating)
+1. **AI scan supplier invoice → auto-match to PO** — Scan τιμολόγιο προμηθευτή, auto-suggest ποιο PO αφορά
+2. **AI Telegram: "δημιούργησε PO για 200 τσιμεντοσανίδες στον Παπαδόπουλο"** — Voice/text command via existing pipeline
+3. **Supplier performance metrics** — On-time %, price trend, avg delivery time, σύγκριση προμηθευτών
+
+**Απορρίφθηκαν:**
+- ~~Delivery photo verification~~ — Overkill για τώρα
+- ~~Recurring POs~~ — Duplicate PO button αρκεί, οι παραγγελίες δεν είναι σταθερές μηνιαίες
 
 ---
 
@@ -636,11 +906,42 @@ const PROCUREMENT_UNIT_OPTIONS = [
 
 ### Νέα Collection: `purchase_orders`
 
-**Security Rules**:
+**Απόφαση**: ✅ Production-grade RBAC — reuse existing system (Γιώργος, 2026-03-28)
+
+**Νέα Permissions** (προσθήκη στο `src/lib/auth/types.ts` PERMISSIONS registry):
+```typescript
+'procurement:po:read'           // Βλέπει POs
+'procurement:po:create'         // Δημιουργεί PO (draft)
+'procurement:po:approve'        // Εγκρίνει PO (draft → approved)
+'procurement:po:cancel'         // Ακυρώνει PO
+'procurement:po:delete'         // Soft delete PO
+'procurement:po:read_internal'  // Βλέπει internal notes
+```
+
+**Role → Permission Mapping:**
+| Permission | super_admin | company_admin | project_manager | site_manager | accountant | data_entry | vendor | viewer |
+|-----------|:-----------:|:-------------:|:---------------:|:------------:|:----------:|:----------:|:------:|:------:|
+| po:read | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| po:create | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| po:approve | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| po:cancel | ✅ | ✅ | ✅ | creator only | creator only | creator only | ❌ | ❌ |
+| po:delete | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| po:read_internal | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+
+**Security Rules** (production-grade):
 ```
 match /purchase_orders/{poId} {
-  allow read, write: if isAuthenticated() &&
-    resource.data.companyId == request.auth.token.companyId;
+  allow read: if isAuthenticated() &&
+    resource.data.companyId == request.auth.token.companyId &&
+    hasPermission('procurement:po:read');
+  allow create: if isAuthenticated() &&
+    request.resource.data.companyId == request.auth.token.companyId &&
+    hasPermission('procurement:po:create');
+  allow update: if isAuthenticated() &&
+    resource.data.companyId == request.auth.token.companyId &&
+    (hasPermission('procurement:po:approve') ||
+     resource.data.createdBy == request.auth.uid);
+  allow delete: if false; // Soft delete only — via API
 }
 ```
 
@@ -671,7 +972,29 @@ match /purchase_order_counters/{counterId} {
 | Items array grows too large | Slow reads | Max 100 items enforced in validation |
 | Concurrent PO number generation | Duplicate numbers | Firestore atomic increment (proven pattern from accounting) |
 | BOQ items not linked to suppliers | Empty "Budget vs Committed" | Allow POs without BOQ link (direct entry) |
-| Suppliers not in contacts system | Can't create PO | Quick-create supplier from PO form (link to contacts) |
+| Επαναλαμβανόμενες παραγγελίες | Manual re-entry | ✅ "Duplicate PO" button — copy items+supplier → edit ό,τι θες (qty, supplier, items) |
+| Deletion policy | Data loss risk | ✅ Soft delete only (SAP/Procore). Drafts: "Διαγραφή"→hide. Ordered+: μόνο "Ακύρωση". Admin: φίλτρο "Εμφάνιση διαγραμμένων" |
+| Suppliers not in contacts system | Can't create PO | ✅ Inline quick-create dialog (Procore/Google pattern) |
+
+### 12.1 Notifications
+
+**Απόφαση**: ✅ In-app + Telegram (Γιώργος, 2026-03-28)
+
+**Phase A — In-app notifications (bell icon + badge)**:
+| Event | Notification |
+|-------|-------------|
+| Νέο PO δημιουργήθηκε (draft) | ✅ badge counter |
+| PO περιμένει approval | ✅ badge counter + highlight |
+| PO εγκρίθηκε | ✅ |
+| PO overdue (πέρασε dateNeeded) | ✅ |
+| Μερική παραλαβή καταγράφηκε | ✅ |
+| Πλήρης παραλαβή (100%) | ✅ |
+
+**Phase B — Telegram notifications (reuse existing AI pipeline)**:
+| Event | Telegram |
+|-------|----------|
+| PO περιμένει approval | ✅ στον approver: "🔔 Νέο PO-0042 (€3.200) περιμένει έγκριση" |
+| PO overdue | ✅ daily digest |
 
 ---
 
@@ -679,7 +1002,7 @@ match /purchase_order_counters/{counterId} {
 
 1. **Unit tests**: Status transitions, total calculations, PO number generation
 2. **Integration**: API routes → Firestore CRUD → response validation
-3. **UI**: Form validation, status badge colors, responsive layout
+3. **UI**: Form validation, status badge colors, **full responsive layout (desktop + mobile)**
 4. **Edge cases**: Empty PO, 100-item PO, cancelled PO, partial delivery
 
 ---
@@ -688,7 +1011,7 @@ match /purchase_order_counters/{counterId} {
 
 | Ερώτημα | Απόφαση | Σκεπτικό |
 |---------|---------|----------|
-| Items: embedded array ή subcollection? | Embedded array | PO items always read with PO. Max ~100 items. Array is simpler + faster |
+| Items: embedded array ή subcollection? | ✅ Embedded array | Τυπικό PO: 1-10 items, σπάνια 10-30. Πάντα read μαζί. Array = simpler + faster |
 | Status: πόσα states; | ✅ 6 states (+ partially_delivered, χωρίς INVOICED) | Procore/SAP pattern. Delivery = auto based on qty. Invoice = action, όχι status |
 | Navigation: under Construction ή standalone? | ✅ Standalone top-level (displayOrder: 55) | Enterprise pattern: Procore/SAP/Oracle — cross-cutting domain |
 | Approval workflow? | ✅ Feature Flag: self-approve τώρα, separate approver αύριο | Οικογενειακή επιχ., ρόλοι αλληλοεπικαλύπτονται. Settings-driven flexibility |

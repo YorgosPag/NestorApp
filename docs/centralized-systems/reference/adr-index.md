@@ -291,6 +291,7 @@
 | **ADR-264** | Document Preview Mode — AI Auto-Analysis for File-Only Messages | ✅ IMPLEMENTED | 2026-03-26 | AI Architecture | [📄](./adrs/ADR-264-document-preview-mode.md) |
 | **ADR-265** | Vision-in-the-Loop — Document Images in Agentic Loop | ✅ IMPLEMENTED | 2026-03-27 | AI Architecture | [📄](./adrs/ADR-264-document-preview-mode.md#changelog) |
 | **ADR-266** | Gantt & Construction Schedule Reports (Dashboard) | ✅ PHASE A IMPLEMENTED | 2026-03-28 | Reports / Construction | [📄](./adrs/ADR-266-gantt-construction-reports.md) |
+| **ADR-267** | Lightweight Procurement Module — Purchase Orders & Material Tracking | ✅ PHASE A IMPLEMENTED | 2026-03-28 | Procurement / Supply Chain | [📄](./adrs/ADR-267-lightweight-procurement-module.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
