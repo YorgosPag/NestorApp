@@ -72,7 +72,7 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
 }
 
 export default function DxfViewerPage() {
-  const { t: _t } = useTranslation('common');
+  const { t } = useTranslation('common');
   const _spacing = useSpacingTokens();
   const _typography = useTypography();
   const _colors = useSemanticColors();
