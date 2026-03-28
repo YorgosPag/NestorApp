@@ -19,7 +19,31 @@ import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { normalizeToISO } from '@/lib/date-local';
 
 // ── Re-exports for backward compatibility ──────────
-export { approveCommunication, rejectCommunication } from './communications-triage-actions';
+// In 'use server' files, only async functions can be exported.
+// Wrap re-exports as async pass-through to satisfy Next.js constraint.
+type TriageResult<T = Record<string, never>> =
+  | ({ ok: true } & T)
+  | { ok: false; errorId: string; code: string };
+
+export async function approveCommunication(
+  communicationId: string,
+  adminUid: string,
+  companyId: string,
+  operationId?: string
+): Promise<TriageResult<{ taskId: string }>> {
+  const mod = await import('./communications-triage-actions');
+  return mod.approveCommunication(communicationId, adminUid, companyId, operationId);
+}
+
+export async function rejectCommunication(
+  communicationId: string,
+  companyId: string,
+  adminUid: string,
+  operationId?: string
+): Promise<TriageResult> {
+  const mod = await import('./communications-triage-actions');
+  return mod.rejectCommunication(communicationId, companyId, adminUid, operationId);
+}
 
 // 🏢 ENTERPRISE: Centralized collection configuration
 const COMMUNICATIONS_COLLECTION = COLLECTIONS.MESSAGES;

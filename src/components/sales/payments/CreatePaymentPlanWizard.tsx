@@ -78,7 +78,6 @@ const TAX_REGIMES: { value: SaleTaxRegime; rate: number }[] = [
 // ============================================================================
 
 export function CreatePaymentPlanWizard({
-  const colors = useSemanticColors();
   open,
   onOpenChange,
   buildingId,
@@ -90,6 +89,7 @@ export function CreatePaymentPlanWizard({
   owners,
   onCreateSplit,
 }: CreatePaymentPlanWizardProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('payments');
 
   // ADR-244: Multi-owner step — only shown when >1 owner
