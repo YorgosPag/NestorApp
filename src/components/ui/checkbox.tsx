@@ -7,6 +7,7 @@ import { Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useIconSizes } from "@/hooks/useIconSizes"
 import { useBorderTokens } from "@/hooks/useBorderTokens"
+import '@/lib/design-system';
 
 const Checkbox = React.forwardRef<
   React.ComponentRef<typeof CheckboxPrimitive.Root>,

@@ -8,6 +8,7 @@ import { useIconSizes } from "@/hooks/useIconSizes"
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors"
 // 🏢 ADR-128: Centralized Switch Tokens
 import { COLOR_BRIDGE } from "@/design-system/color-bridge"
+import '@/lib/design-system';
 
 /**
  * 🏢 ENTERPRISE SWITCH VARIANTS (ADR-128)

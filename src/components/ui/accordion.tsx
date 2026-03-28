@@ -58,6 +58,7 @@ import { cn } from "@/lib/utils"
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects'
 import { useIconSizes } from '@/hooks/useIconSizes'
 import { useBorderTokens } from '@/hooks/useBorderTokens'
+import '@/lib/design-system';
 
 // ===== TYPES =====
 

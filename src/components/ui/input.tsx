@@ -3,6 +3,7 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { useBorderTokens } from "@/hooks/useBorderTokens"
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors"
+import '@/lib/design-system';
 
 // =============================================================================
 // 🏢 ENTERPRISE INPUT COMPONENT
@@ -11,12 +12,23 @@ import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors"
 // Proper icon support via props instead of CSS override hacks
 // =============================================================================
 
+type InputSize = 'sm' | 'md' | 'lg';
+
 interface InputProps extends React.ComponentProps<"input"> {
   /** Has icon on the left side - applies correct padding */
   hasLeftIcon?: boolean;
   /** Has icon on the right side - applies correct padding */
   hasRightIcon?: boolean;
+  /** Controls the height of the input. Defaults to 'lg' (current behavior). */
+  size?: InputSize;
 }
+
+// 🏢 ENTERPRISE: Size tokens — SSoT for input height (ADR audit 2026-03-28)
+const INPUT_SIZE: Record<InputSize, string> = {
+  sm: "h-8 py-1 md:py-1",              // 32px — compact tables, dense inline forms
+  md: "h-10 md:h-9 py-2 md:py-2",      // 40/36px — standard forms, dialogs
+  lg: "h-12 md:h-9 py-3 md:py-2",      // 48/36px — default (mobile-first touch targets)
+} as const;
 
 // 🏢 ENTERPRISE: Padding tokens for icon inputs (centralized)
 // Icon at left-3 (12px) + icon width (16px) + gap (8px) = 36px minimum
@@ -29,7 +41,7 @@ const INPUT_PADDING = {
 } as const;
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, hasLeftIcon, hasRightIcon, ...props }, ref) => {
+  ({ className, type, hasLeftIcon, hasRightIcon, size = 'lg', ...props }, ref) => {
     const { quick } = useBorderTokens();
     const colors = useSemanticColors();
 
@@ -52,7 +64,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         type={type}
         className={cn(
           baseStyles,
-          "h-12 md:h-9 py-3 md:py-2", // Default height - can be overridden by className
+          INPUT_SIZE[size], // SSoT height — use size prop instead of className overrides
           // 🏢 ENTERPRISE: Explicit padding based on icon configuration
           hasLeftIcon && hasRightIcon && INPUT_PADDING.bothIcons,
           hasLeftIcon && !hasRightIcon && INPUT_PADDING.leftIcon,

@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 import { INTERACTIVE_PATTERNS } from "@/components/ui/effects"
 import { useBorderTokens } from '@/hooks/useBorderTokens'
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'
+import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Dynamic badge variants using centralized border tokens and semantic colors
 // ✅ CENTRALIZED: Single source of truth for ALL badges (Grid view + List view)

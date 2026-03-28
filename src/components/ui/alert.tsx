@@ -4,6 +4,7 @@ import { cva } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 import { useBorderTokens } from '@/hooks/useBorderTokens'
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'
+import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Dynamic alert variants using centralized border tokens
 const createAlertVariants = (borderTokens: ReturnType<typeof useBorderTokens>, colors?: ReturnType<typeof useSemanticColors>) => cva(

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects'
 import { useIconSizes } from '@/hooks/useIconSizes'
+import '@/lib/design-system';
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
