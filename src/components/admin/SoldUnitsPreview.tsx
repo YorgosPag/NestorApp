@@ -18,13 +18,15 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('SoldUnitsPreview');
 
-// 🏢 ENTERPRISE: Centralized Unit Icon & Color
+// 🏢 ENTERPRISE: Centralized Unit Icon
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
-const unitColor = NAVIGATION_ENTITIES.unit.color;
 
 interface Unit {
   id: string;
@@ -50,6 +52,7 @@ interface ContactLookup {
 export function SoldUnitsPreview() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('admin');
   const [units, setUnits] = useState<Unit[]>([]);
@@ -248,7 +251,7 @@ export function SoldUnitsPreview() {
                 <TableBody>
                   {displayUnits.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={7} className={cn("text-center py-8", colors.text.muted)}>
                         {t('units.notFound')}
                       </TableCell>
                     </TableRow>
@@ -279,20 +282,20 @@ export function SoldUnitsPreview() {
                               <Badge variant="default" className="text-xs">
                                 {contactLookup[unit.soldTo] || t('units.contactLoading')}
                               </Badge>
-                              <div className="text-xs text-muted-foreground font-mono">
+                              <div className={cn("text-xs font-mono", colors.text.muted)}>
                                 {t('units.table.idLabel')}: {unit.soldTo.substring(0, 8)}...
                               </div>
                             </div>
                           ) : (
-                            <Badge variant="outline" className="text-red-600">
+                            <Badge variant="outline" className="text-red-600" /* eslint-disable-line design-system/enforce-semantic-colors */>
                               {t('units.noCustomer')}
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
+                        <TableCell className={cn("text-sm", colors.text.muted)}>
                           {unit.buildingId?.substring(0, 15)}...
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
+                        <TableCell className={cn("text-sm", colors.text.muted)}>
                           {unit.project?.substring(0, 20)}...
                         </TableCell>
                         <TableCell className="text-right">
@@ -307,7 +310,7 @@ export function SoldUnitsPreview() {
           )}
 
           {/* Statistics */}
-          <div className="mt-4 text-sm text-muted-foreground">
+          <div className={cn("mt-4 text-sm", colors.text.muted)}>
             {t('units.displaying', { displayed: displayUnits.length, total: units.length })}
             {!showAll && ` ${t('units.filteredFor', { project: process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project' })}`}
           </div>

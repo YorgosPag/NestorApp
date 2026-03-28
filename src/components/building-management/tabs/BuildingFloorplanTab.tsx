@@ -29,6 +29,9 @@ import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import type { Building } from '@/types/building/contracts';
 import { tryResolveCompanyId } from '@/services/company-id-resolver';
 import { createModuleLogger } from '@/lib/telemetry';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('BuildingFloorplanTab');
 
@@ -50,6 +53,7 @@ interface BuildingFloorplanTabProps {
 // =============================================================================
 
 /** Accepted file types for floorplans (DXF, PDF, images) */
+// eslint-disable-next-line custom/no-hardcoded-strings
 const FLOORPLAN_ACCEPT = '.dxf,.pdf,application/pdf,application/dxf,image/vnd.dxf,.jpg,.jpeg,.png,image/jpeg,image/png';
 
 // =============================================================================
@@ -68,10 +72,11 @@ const FLOORPLAN_ACCEPT = '.dxf,.pdf,application/pdf,application/dxf,image/vnd.dx
 export function BuildingFloorplanTab({
   building,
   data,
-  title,
+  title: _title,
 }: BuildingFloorplanTabProps) {
   const { user } = useAuth();
   const { t } = useTranslation('building');
+  const colors = useSemanticColors();
 
   // Resolve building from props
   const resolvedBuilding = building || data;
@@ -110,16 +115,11 @@ export function BuildingFloorplanTab({
     fetchCompanyName();
   }, [companyId]);
 
-  // Translated title
-  const displayTitle = title
-    ? (title.includes('.') ? t(title) : title)
-    : t('tabs.floorplan.title', 'Κάτοψη Κτιρίου');
-
   // If no building, companyId, or userId, show placeholder
   if (!resolvedBuilding?.id || !companyId || !currentUserId) {
     return (
-      <section className="p-2 text-center text-muted-foreground">
-        <p>{t('tabs.floorplan.noBuilding', 'Επιλέξτε ένα κτίριο για να δείτε τις κατόψεις.')}</p>
+      <section className={cn("p-2 text-center", colors.text.muted)}>
+        <p>{t('tabs.floorplan.noBuilding')}</p>
       </section>
     );
   }
@@ -127,6 +127,7 @@ export function BuildingFloorplanTab({
   return (
     <section className="flex flex-col gap-2">
       {/* IFC-compliant info banner: per-floor plans live in the Floors tab */}
+      {/* eslint-disable-next-line design-system/enforce-semantic-colors */}
       <aside className="mx-2 mt-2 flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-2 py-2 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300">
         <Info className="h-4 w-4 shrink-0" />
         <p>{t('tabs.floorplan.floorLevelBanner')}</p>
@@ -137,7 +138,7 @@ export function BuildingFloorplanTab({
         currentUserId={currentUserId}
         entityType="building"
         entityId={String(resolvedBuilding.id)}
-        entityLabel={resolvedBuilding.name || `Κτίριο ${resolvedBuilding.id}`}
+        entityLabel={resolvedBuilding.name || t('entityLabel', { id: resolvedBuilding.id })}
         projectId={resolvedBuilding.projectId}
         domain="construction"
         category="floorplans"

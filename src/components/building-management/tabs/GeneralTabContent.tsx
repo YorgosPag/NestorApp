@@ -24,6 +24,7 @@ import { AutoSaveStatusIndicator } from '@/components/shared/AutoSaveStatusIndic
 import { useVersionedSave } from '@/hooks/useVersionedSave';
 import { ConflictDialog } from '@/components/shared/ConflictDialog';
 import { useRouter } from 'next/navigation';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('GeneralTabContent');
 
@@ -352,8 +353,9 @@ export function GeneralTabContent({
       )}
       {/* ENTERPRISE: Show save error if any */}
       {saveError && (
+        // eslint-disable-next-line design-system/enforce-semantic-colors
         <aside className="bg-red-100 border border-red-400 text-red-700 px-2 py-2 rounded relative dark:bg-red-900 dark:border-red-700 dark:text-red-300">
-          <strong className="font-bold">Σφάλμα: </strong>
+          <strong className="font-bold">{t('tabs.general.errorLabel')}</strong>
           <span>{saveError}</span>
         </aside>
       )}

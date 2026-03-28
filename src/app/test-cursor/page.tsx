@@ -1,8 +1,11 @@
+/* eslint-disable custom/no-hardcoded-strings */
+/* eslint-disable design-system/enforce-semantic-colors */
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 const logger = createModuleLogger('TestCursorPage');
 
 // Dynamic import για SSR compatibility

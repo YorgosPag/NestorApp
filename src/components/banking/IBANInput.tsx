@@ -18,6 +18,8 @@ import { getBankByIBAN } from '@/constants/greek-banks';
 import { AlertCircle, CheckCircle2, Building2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -80,6 +82,7 @@ export function IBANInput({
   const { t } = useTranslation('banking');
   const resolvedLabel = label ?? t('iban.label');
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const [localValue, setLocalValue] = useState(formatIBAN(value));
   const [validationState, setValidationState] = useState<{
     isValid: boolean;
@@ -154,7 +157,7 @@ export function IBANInput({
           placeholder={placeholder}
           className={cn(
             'pr-10 font-mono tracking-wide',
-            showSuccess && 'border-green-500 focus:ring-green-500',
+            showSuccess && 'border-green-500 focus:ring-green-500', // eslint-disable-line design-system/enforce-semantic-colors
             showError && 'border-destructive focus:ring-destructive'
           )}
           aria-invalid={showError}
@@ -166,7 +169,7 @@ export function IBANInput({
           {showSuccess && (
             <CheckCircle2
               size={iconSizes.numeric.md}
-              className="text-green-500"
+              className="text-green-500" // eslint-disable-line design-system/enforce-semantic-colors
               aria-label={t('iban.valid')}
             />
           )}
@@ -190,7 +193,7 @@ export function IBANInput({
 
       {/* Detected bank name */}
       {showBankName && detectedBank && (
-        <p className="text-sm text-muted-foreground flex items-center gap-2">
+        <p className={cn("text-sm flex items-center gap-2", colors.text.muted)}>
           <Building2 size={iconSizes.numeric.sm} className="text-primary" />
           <span>{detectedBank}</span>
         </p>

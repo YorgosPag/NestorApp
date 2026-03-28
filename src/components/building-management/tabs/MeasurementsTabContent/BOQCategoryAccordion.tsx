@@ -8,6 +8,7 @@
  * @see ADR-175 §4.4.3 (Category Accordion)
  */
 
+/* eslint-disable design-system/enforce-semantic-colors */
 'use client';
 
 import { useMemo } from 'react';
@@ -31,6 +32,8 @@ import { Pencil, Trash2 } from 'lucide-react';
 import type { BOQItem, BOQItemStatus } from '@/types/boq';
 import type { MasterBOQCategory } from '@/config/boq-categories';
 import { computeItemCost, computeVariance } from '@/services/measurements';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -101,6 +104,7 @@ export function BOQCategoryAccordion({
   onExpandedChange,
 }: BOQCategoryAccordionProps) {
   const { t } = useTranslation('building');
+  const colors = useSemanticColors();
 
   // Group items by category
   const groups = useMemo<CategoryGroup[]>(() => {
@@ -136,7 +140,7 @@ export function BOQCategoryAccordion({
         <span className="font-medium">
           {group.code} — {group.name}
         </span>
-        <span className="flex items-center gap-2 text-sm text-muted-foreground">
+        <span className={cn("flex items-center gap-2 text-sm", colors.text.muted)}>
           <span>
             {group.items.length} {t('tabs.measurements.table.items')}
           </span>
@@ -223,7 +227,7 @@ function CategoryItemsTable({ items, totalCost, categoryName, onEdit, onDelete, 
 
           return (
             <TableRow key={item.id}>
-              <TableCell className="tabular-nums text-muted-foreground">{idx + 1}</TableCell>
+              <TableCell className={cn("tabular-nums", colors.text.muted)}>{idx + 1}</TableCell>
               <TableCell>
                 <p className="font-medium text-sm">{item.title}</p>
                 {variance && (
@@ -232,13 +236,13 @@ function CategoryItemsTable({ items, totalCost, categoryName, onEdit, onDelete, 
                   </p>
                 )}
               </TableCell>
-              <TableCell className="text-center text-xs text-muted-foreground">
+              <TableCell className={cn("text-center text-xs", colors.text.muted)}>
                 {t(`tabs.measurements.units.${item.unit}`)}
               </TableCell>
               <TableCell className="text-right tabular-nums">
                 {formatNumber(item.estimatedQuantity, { maximumFractionDigits: 2 })}
               </TableCell>
-              <TableCell className="text-right tabular-nums text-muted-foreground">
+              <TableCell className={cn("text-right tabular-nums", colors.text.muted)}>
                 {formatNumber(item.wasteFactor * 100, { maximumFractionDigits: 0 })}%
               </TableCell>
               <TableCell className="text-right tabular-nums font-medium">

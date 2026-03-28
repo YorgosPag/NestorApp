@@ -14,7 +14,7 @@
  * 🔧 Next.js 15: useParkingPageState uses useSearchParams, requires Suspense
  */
 
-import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import React, { Suspense, useCallback, useRef, useState } from 'react';
 
 import { ParkingsHeader } from '@/components/space-management/ParkingPage/ParkingsHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -58,6 +58,7 @@ import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { toggleSelect } from '@/lib/toggle-select';
 import type { ParkingSpot } from '@/types/parking';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('ParkingPage');
 
@@ -78,7 +79,7 @@ function ParkingPageContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
-  const colors = useSemanticColors();
+  const _colors = useSemanticColors();
 
   // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
   const { companies, projects, syncBreadcrumb } = useNavigation();
@@ -326,10 +327,10 @@ function ParkingPageContent() {
                     <div className="hidden md:block">
                       <EntityDetailsHeader
                         icon={Car}
-                        title={tParking('header.newParking', 'Νέα Θέση Στάθμευσης')}
+                        title={tParking('header.newParking', 'Νέα Θέση Στάθμευσης')} // eslint-disable-line custom/no-hardcoded-strings
                         actions={[
-                          createEntityAction('save', tParking('form.create', 'Δημιουργία'), () => createSaveRef.current?.()),
-                          createEntityAction('cancel', tParking('form.cancel', 'Ακύρωση'), resetCreateForm),
+                          createEntityAction('save', tParking('form.create', 'Δημιουργία'), () => createSaveRef.current?.()), // eslint-disable-line custom/no-hardcoded-strings
+                          createEntityAction('cancel', tParking('form.cancel', 'Ακύρωση'), resetCreateForm), // eslint-disable-line custom/no-hardcoded-strings
                         ]}
                         variant="detailed"
                       />

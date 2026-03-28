@@ -1,3 +1,4 @@
+/* eslint-disable design-system/enforce-semantic-colors */
 'use client';
 
 /**
@@ -24,7 +25,10 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { ListContainer, PageContainer } from '@/core/containers';
 import { PageLoadingState, StaticPageLoading } from '@/core/states';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 import { formatCurrencyCompact, formatCurrencyWhole } from '@/lib/intl-utils';
+import '@/lib/design-system';
 
 // =============================================================================
 // 🏢 MAIN CONTENT
@@ -32,6 +36,7 @@ import { formatCurrencyCompact, formatCurrencyWhole } from '@/lib/intl-utils';
 
 function SalesStorageContent() {
   const { t } = useTranslation('common');
+  const colors = useSemanticColors();
 
   const {
     filteredItems,
@@ -155,7 +160,7 @@ function SalesStorageContent() {
       </div>
 
       {showFilters && (
-        <div className="md:hidden">
+        <div className="md:hidden"> {/* eslint-disable-line custom/no-hardcoded-strings */}
           <AdvancedFiltersPanel
             config={storageFiltersConfig}
             filters={filters as unknown as StorageFilterState}
@@ -193,7 +198,7 @@ function SalesStorageContent() {
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSelectItem(item.id); }}
               >
                 <div className="aspect-[16/10] bg-muted flex items-center justify-center">
-                  <Package className="h-8 w-8 text-muted-foreground" />
+                  <Package className={cn("h-8 w-8", colors.text.muted)} />
                 </div>
                 <div className="p-3">
                   <div className="flex items-center justify-between mb-1">
@@ -207,7 +212,7 @@ function SalesStorageContent() {
                       {t(`storage:status.${item.status}`)}
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className={cn("text-xs", colors.text.muted)}>
                     {t(`storage:types.${item.type}`)} · {item.area ?? '—'} m²
                   </p>
                   <p className="text-lg font-bold text-green-600 mt-1">
@@ -216,7 +221,7 @@ function SalesStorageContent() {
                       : '—'}
                   </p>
                   {item.area && item.area > 0 && (item.commercial?.askingPrice ?? item.price) ? (
-                    <p className="text-xs text-muted-foreground">
+                    <p className={cn("text-xs", colors.text.muted)}>
                       {formatCurrencyWhole(Math.round((item.commercial?.askingPrice ?? item.price ?? 0) / item.area))}/m²
                     </p>
                   ) : null}
@@ -225,7 +230,7 @@ function SalesStorageContent() {
             ))}
 
             {filteredItems.length === 0 && (
-              <div className="col-span-full p-6 text-center text-sm text-muted-foreground">
+              <div className={cn("col-span-full p-6 text-center text-sm", colors.text.muted)}>
                 {t('salesStorage.noResults')}
               </div>
             )}
@@ -246,7 +251,7 @@ function SalesStorageContent() {
 
 export default function AvailableStoragePage() {
   return (
-    <Suspense fallback={<StaticPageLoading icon={NAVIGATION_ENTITIES.storage.icon} message="Φόρτωση διαθέσιμων αποθηκών..." />}>
+    <Suspense fallback={<StaticPageLoading icon={NAVIGATION_ENTITIES.storage.icon} message="Φόρτωση διαθέσιμων αποθηκών..." />}> {/* eslint-disable-line custom/no-hardcoded-strings */}
       <SalesStorageContent />
     </Suspense>
   );

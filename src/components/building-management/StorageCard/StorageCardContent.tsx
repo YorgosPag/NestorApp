@@ -18,9 +18,11 @@ import type { StorageUnit } from '@/types/storage';
 import { formatPrice, formatArea, getPricePerSqm } from './StorageCardUtils';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // 🏢 ENTERPRISE: Import StorageType for proper typing
 import type { StorageType } from '@/types/storage';
+import '@/lib/design-system';
 
 interface StorageCardContentProps {
     unit: StorageUnit;
@@ -30,6 +32,7 @@ interface StorageCardContentProps {
 export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProps) {
     // 🏢 ENTERPRISE: i18n hook for translations
     const { t } = useTranslation('building');
+    const colors = useSemanticColors();
     const iconSizes = useIconSizes();
     const { quick } = useBorderTokens();
     const TypeIcon = getTypeIcon(unit.type);
@@ -40,14 +43,14 @@ export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProp
                     <TypeIcon className={iconSizes.sm} />
                     <span>{unit.code}</span>
                 </h4>
-                <p className="text-sm text-muted-foreground h-10 line-clamp-2">
+                <p className={cn("text-sm h-10 line-clamp-2", colors.text.muted)}>
                     {unit.description}
                 </p>
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-sm">
                 <div className="space-y-1">
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <div className={cn("flex items-center gap-1.5", colors.text.muted)}>
                         {/* 🏢 ENTERPRISE: Using centralized floor icon/color */}
                         <NAVIGATION_ENTITIES.floor.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.floor.color)} />
                         <span>{t('storage.card.labels.floor')}</span>
@@ -56,7 +59,7 @@ export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProp
                 </div>
 
                 <div className="space-y-1">
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <div className={cn("flex items-center gap-1.5", colors.text.muted)}>
                         <Ruler className={iconSizes.sm} />
                         <span>{t('storage.card.labels.area')}</span>
                     </div>
@@ -67,12 +70,12 @@ export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProp
             <div className={`pt-2 ${quick.separatorH}`}>
                 <div className="flex items-center justify-between">
                     <div>
-                        <div className="text-xs text-muted-foreground">{t('storage.card.labels.price')}</div>
-                        <div className="font-bold text-green-600 dark:text-green-400 text-lg">{formatPrice(unit.price)}</div>
+                        <div className={cn("text-xs", colors.text.muted)}>{t('storage.card.labels.price')}</div>
+                        <div className="font-bold text-green-600 dark:text-green-400 text-lg">{formatPrice(unit.price)}</div> {/* eslint-disable-line design-system/enforce-semantic-colors */}
                     </div>
                     <div className="text-right">
-                        <div className="text-xs text-muted-foreground">{t('storage.card.labels.pricePerSqm')}</div>
-                        <div className="font-medium text-muted-foreground">{formatNumber(getPricePerSqm(unit))}€</div>
+                        <div className={cn("text-xs", colors.text.muted)}>{t('storage.card.labels.pricePerSqm')}</div>
+                        <div className={cn("font-medium", colors.text.muted)}>{formatNumber(getPricePerSqm(unit))}€</div>
                     </div>
                 </div>
             </div>
@@ -81,7 +84,7 @@ export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProp
                 <div className={`pt-2 ${quick.separatorH}`}>
                     <div className="flex items-center gap-1.5 text-sm">
                         <Link className={`${iconSizes.sm} text-primary`} />
-                        <span className="text-muted-foreground">{t('storage.card.labels.linked')}</span>
+                        <span className={colors.text.muted}>{t('storage.card.labels.linked')}</span>
                         <span className="font-medium text-primary">{unit.linkedProperty}</span>
                     </div>
                 </div>

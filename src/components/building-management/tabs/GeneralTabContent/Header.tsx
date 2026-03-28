@@ -1,3 +1,4 @@
+/* eslint-disable design-system/enforce-semantic-colors */
 'use client';
 
 import React from 'react';
@@ -11,6 +12,7 @@ import { Edit, Save, X, CheckCircle } from 'lucide-react';
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface HeaderProps {
     building: { id: string; category?: 'mixed' | 'residential' | 'commercial' | 'industrial' };

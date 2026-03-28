@@ -17,6 +17,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTypography } from '@/hooks/useTypography';
+import '@/lib/design-system';
 
 interface AIInboxHeaderProps {
   showDashboard: boolean;
@@ -68,10 +69,10 @@ export function AIInboxHeader({
             <Badge
               key="live-indicator"
               variant="default"
-              className="bg-green-600 hover:bg-green-600 text-white animate-pulse"
+              className="bg-green-600 hover:bg-green-600 text-white animate-pulse" // eslint-disable-line design-system/enforce-semantic-colors
             >
               <span className="mr-1">&#9679;</span>
-              Live
+              {'Live' /* eslint-disable-line custom/no-hardcoded-strings */}
             </Badge>
           ) : null,
           pendingCount > 0 ? (

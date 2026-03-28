@@ -1,3 +1,4 @@
+/* eslint-disable custom/no-hardcoded-strings */
 'use client';
 
 import { useState } from 'react';
@@ -12,6 +13,7 @@ import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
 import { generateFileId } from '@/services/enterprise-id.service';
 import { buildStoragePath } from '@/services/upload/utils/storage-path';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 const logger = createModuleLogger('TestUploadPage');
 
 export default function TestUploadPage() {

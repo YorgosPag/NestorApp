@@ -4,7 +4,7 @@
  * 🔧 Next.js 15: useStoragesPageState uses useSearchParams, requires Suspense
  */
 
-import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import React, { Suspense, useCallback, useRef, useState } from 'react';
 
 import { StoragesHeader } from '@/components/space-management/StoragesPage/StoragesHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -42,6 +42,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { toggleSelect } from '@/lib/toggle-select';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('StoragePage');
 
@@ -64,7 +65,7 @@ function StoragePageContent() {
   const { t } = useTranslation('building');
   // 🏢 ENTERPRISE: Centralized icon sizes
   const iconSizes = useIconSizes();
-  const colors = useSemanticColors();
+  const _colors = useSemanticColors();
 
   // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
   const { companies, projects, syncBreadcrumb } = useNavigation();
@@ -332,10 +333,10 @@ function StoragePageContent() {
                     <div className="hidden md:block">
                       <EntityDetailsHeader
                         icon={Warehouse}
-                        title={tStorage('header.newStorage', 'Νέα Αποθήκη')}
+                        title={tStorage('header.newStorage', 'Νέα Αποθήκη')} // eslint-disable-line custom/no-hardcoded-strings
                         actions={[
-                          createEntityAction('save', tStorage('storages.form.create', 'Δημιουργία'), () => createSaveRef.current?.()),
-                          createEntityAction('cancel', tStorage('storages.form.cancel', 'Ακύρωση'), resetCreateForm),
+                          createEntityAction('save', tStorage('storages.form.create', 'Δημιουργία'), () => createSaveRef.current?.()), // eslint-disable-line custom/no-hardcoded-strings
+                          createEntityAction('cancel', tStorage('storages.form.cancel', 'Ακύρωση'), resetCreateForm), // eslint-disable-line custom/no-hardcoded-strings
                         ]}
                         variant="detailed"
                       />

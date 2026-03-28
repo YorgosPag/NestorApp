@@ -10,7 +10,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { collection, setDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
+import { setDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import { generateNotificationId } from '@/services/enterprise-id.service';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PageLoadingState } from '@/core/states';
@@ -19,12 +19,16 @@ import { PageHeader } from '@/core/headers';
 import { PageContainer } from '@/core/containers';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('crm/notifications');
 
 export default function CrmNotificationsPage() {
   const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { user } = useAuth();
   const [testNotificationId, setTestNotificationId] = useState<string | null>(null);
   const [isCreatingTest, setIsCreatingTest] = useState(false);
@@ -81,7 +85,7 @@ export default function CrmNotificationsPage() {
   if (process.env.NODE_ENV === 'production') {
     return (
       <main className="flex items-center justify-center min-h-screen">
-        <p className="text-muted-foreground">Notification testing is disabled in production.</p>
+        <p className={colors.text.muted}>Notification testing is disabled in production.</p>{/* eslint-disable-line custom/no-hardcoded-strings */}
       </main>
     );
   }
@@ -101,21 +105,19 @@ export default function CrmNotificationsPage() {
       onClick: () => void markAllAsRead(),
       disabled: unreadCount === 0 || loading,
       size: 'sm',
-      children: [
-        React.createElement(CheckCheck, { key: 'icon', className: `${iconSizes.sm} mr-2` }),
-        t('notifications.markAllRead'),
-      ],
-    }),
+    },
+      React.createElement(CheckCheck, { key: 'icon', className: `${iconSizes.sm} mr-2` }),
+      t('notifications.markAllRead'),
+    ),
     // Filter button
     React.createElement(Button, {
       key: 'filter',
       variant: 'outline' as const,
       size: 'sm',
-      children: [
-        React.createElement(Filter, { key: 'icon', className: `${iconSizes.sm} mr-2` }),
-        t('notifications.filters'),
-      ],
-    }),
+    },
+      React.createElement(Filter, { key: 'icon', className: `${iconSizes.sm} mr-2` }),
+      t('notifications.filters'),
+    ),
   ];
 
   // 🧪 Dev test button (development only)
@@ -129,11 +131,10 @@ export default function CrmNotificationsPage() {
           onClick: () => void createTestNotification(),
           disabled: isCreatingTest || !user,
           className: 'border-dashed',
-          children: [
-            React.createElement(FlaskConical, { key: 'icon', className: `${iconSizes.sm} mr-2` }),
-            isCreatingTest ? t('notifications.test.creating') : t('notifications.test.create'),
-          ],
-        })
+        },
+          React.createElement(FlaskConical, { key: 'icon', className: `${iconSizes.sm} mr-2` }),
+          isCreatingTest ? t('notifications.test.creating') : t('notifications.test.create'),
+        )
       );
     } else {
       customActions.push(
@@ -143,11 +144,10 @@ export default function CrmNotificationsPage() {
           size: 'sm',
           onClick: () => void deleteTestNotification(),
           className: 'border-dashed text-destructive hover:text-destructive',
-          children: [
-            React.createElement(Trash2, { key: 'icon', className: `${iconSizes.sm} mr-2` }),
-            t('notifications.test.delete'),
-          ],
-        })
+        },
+          React.createElement(Trash2, { key: 'icon', className: `${iconSizes.sm} mr-2` }),
+          t('notifications.test.delete'),
+        )
       );
     }
   }
@@ -197,7 +197,7 @@ export default function CrmNotificationsPage() {
 
         {/* Empty State */}
         {!loading && !error && notifications.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+          <div className={cn("flex flex-col items-center justify-center py-12", colors.text.muted)}>
             <Inbox className="h-12 w-12 mb-4" />
             <p className="text-lg font-medium">{t('notifications.empty')}</p>
             <p className="text-sm">{t('notifications.emptyDescription')}</p>

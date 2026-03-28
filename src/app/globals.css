@@ -110,6 +110,16 @@
     --chart-3: 25 95% 53%;      /* Orange - tertiary series */
     --chart-4: 280 68% 55%;     /* Purple - quaternary series */
     --chart-5: 340 82% 52%;     /* Rose - quinary series */
+
+    /* 🏢 ENTERPRISE: Report Chart Palette — Okabe-Ito Color-Blind Safe (ADR-265) */
+    --report-chart-1: 201 100% 35%;   /* #0072B2 Blue */
+    --report-chart-2: 40 100% 45%;    /* #E69F00 Orange */
+    --report-chart-3: 164 100% 31%;   /* #009E73 Bluish Green */
+    --report-chart-4: 326 40% 64%;    /* #CC79A7 Reddish Purple */
+    --report-chart-5: 202 80% 63%;    /* #56B4E9 Sky Blue */
+    --report-chart-6: 20 100% 42%;    /* #D55E00 Vermillion */
+    --report-chart-7: 56 90% 60%;     /* #F0E442 Yellow */
+    --report-chart-8: 0 0% 0%;        /* #000000 Black */
   }
 
   .dark {
@@ -182,6 +192,16 @@
     --chart-3: 32 95% 64%;      /* Orange-400 - tertiary series */
     --chart-4: 270 95% 75%;     /* Purple-300 - quaternary series */
     --chart-5: 350 89% 72%;     /* Rose-300 - quinary series */
+
+    /* 🏢 ENTERPRISE: Report Chart Palette — Okabe-Ito Dark Mode (ADR-265) */
+    --report-chart-1: 202 80% 63%;    /* Sky Blue */
+    --report-chart-2: 56 90% 60%;     /* Yellow */
+    --report-chart-3: 164 100% 31%;   /* Bluish Green */
+    --report-chart-4: 326 40% 64%;    /* Reddish Purple */
+    --report-chart-5: 225 100% 70%;   /* Blue */
+    --report-chart-6: 38 100% 50%;    /* Amber */
+    --report-chart-7: 25 100% 50%;    /* Orange */
+    --report-chart-8: 0 0% 100%;      /* White */
 
     /* Sidebar Variables - Dark Mode */
     --sidebar-background: 220 20% 11%;

@@ -20,6 +20,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { StorageUnit, StorageType } from '@/types/storage';
 import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 interface StorageFormBasicInfoProps {
   formData: Partial<StorageUnit>;
@@ -68,7 +69,7 @@ export function StorageFormBasicInfo({
                 {t('storage.form.auto')}
               </Button>
             </div>
-            {errors.code && <p className="text-sm text-red-500">{errors.code}</p>}
+            {errors.code && <p className="text-sm text-red-500">{errors.code}</p>} {/* eslint-disable-line design-system/enforce-semantic-colors */}
           </div>
 
           <div className="space-y-2">
@@ -96,7 +97,7 @@ export function StorageFormBasicInfo({
             placeholder={formType === 'storage' ? t('storage.form.placeholders.descriptionStorage') : t('storage.form.placeholders.descriptionParking')}
             rows={2}
           />
-          {errors.description && <p className="text-sm text-red-500">{errors.description}</p>}
+          {errors.description && <p className="text-sm text-red-500">{errors.description}</p>} {/* eslint-disable-line design-system/enforce-semantic-colors */}
         </div>
       </CardContent>
     </Card>

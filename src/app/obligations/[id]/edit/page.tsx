@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { getSpacingClass } from '@/lib/design-system';
+import { cn, getSpacingClass } from '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { ObligationDocument, ObligationStatus } from '@/types/obligations';
 import { generateTableOfContents } from '@/types/obligations';
 import { useObligation } from '@/hooks/useObligations';
@@ -84,6 +85,7 @@ const buildMetadataState = (obligation: ObligationDocument): ObligationMetadataS
 
 export default function EditObligationPage() {
   const { t, isNamespaceReady } = useTranslation('obligations');
+  const colors = useSemanticColors();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const obligationId = typeof params.id === 'string' ? params.id : '';
@@ -153,7 +155,7 @@ export default function EditObligationPage() {
             buildings?: Array<{ id: string }>;
           }
 
-          const query = draft?.projectId ? `?projectId=${encodeURIComponent(String(draft.projectId))}` : '';
+          const query = draft?.projectId ? `?projectId=${encodeURIComponent(String(draft.projectId))}` : ''; // eslint-disable-line custom/no-hardcoded-strings
           const scopedResponse = await apiClient.get<BuildingsResponse>(`${API_ROUTES.BUILDINGS.LIST}${query}`);
           const scopedBuildings = scopedResponse?.buildings || [];
 
@@ -304,7 +306,7 @@ export default function EditObligationPage() {
     return (
       <PageLayout>
         <main className={`max-w-full mx-auto ${getSpacingClass('p', 'md')} md:p-6 lg:p-8`}>
-          <section className="rounded-lg border p-6 text-sm text-muted-foreground">...</section>
+          <section className={cn("rounded-lg border p-6 text-sm", colors.text.muted)}>...</section>
         </main>
       </PageLayout>
     );
@@ -314,7 +316,7 @@ export default function EditObligationPage() {
     return (
       <PageLayout>
         <main className={`max-w-full mx-auto ${getSpacingClass('p', 'md')} md:p-6 lg:p-8`}>
-          <section className="rounded-lg border p-6 text-sm text-muted-foreground">{t('workspace.edit.loading')}</section>
+          <section className={cn("rounded-lg border p-6 text-sm", colors.text.muted)}>{t('workspace.edit.loading')}</section>
         </main>
       </PageLayout>
     );
@@ -340,9 +342,9 @@ export default function EditObligationPage() {
       <main className={`max-w-full mx-auto ${getSpacingClass('p', 'md')} md:p-6 lg:p-8 space-y-6`}>
         <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <div className="text-sm text-muted-foreground">{draft.docNumber || draft.id}</div>
+            <div className={cn("text-sm", colors.text.muted)}>{draft.docNumber || draft.id}</div>
             <h1 className="text-2xl font-bold">{t('workspace.edit.title')}</h1>
-            <p className="text-sm text-muted-foreground">{t('workspace.edit.subtitle')}</p>
+            <p className={cn("text-sm", colors.text.muted)}>{t('workspace.edit.subtitle')}</p>
           </div>
           <div className="flex items-center gap-2">
             <Link href={ENTITY_ROUTES.obligations.list}>

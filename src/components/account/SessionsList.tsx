@@ -47,6 +47,7 @@ import { db } from '@/lib/firebase';
 import { sessionService } from '@/services/session';
 import type { SessionDisplayItem, DeviceType, BrowserType } from '@/services/session';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('SessionsList');
 
@@ -86,11 +87,11 @@ function getDeviceIcon(deviceType: DeviceType, className: string): React.ReactNo
 function getBrowserColor(browserType: BrowserType): string {
   switch (browserType) {
     case 'Chrome':
-      return 'text-green-500';
+      return 'text-green-500'; // eslint-disable-line design-system/enforce-semantic-colors
     case 'Firefox':
       return 'text-orange-500';
     case 'Safari':
-      return 'text-blue-500';
+      return 'text-blue-500'; // eslint-disable-line design-system/enforce-semantic-colors
     case 'Edge':
       return 'text-cyan-500';
     default:

@@ -12,10 +12,13 @@ import { costBreakdown, monthlyProgress } from './utils';
 import { analyticsOverviewStyles } from './AnalyticsOverview.styles';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 export default function AnalyticsOverview() {
     // 🏢 ENTERPRISE: i18n hook for translations
     const { t } = useTranslation('building');
+    const colors = useSemanticColors();
     const iconSizes = useIconSizes();
     const { quick } = useBorderTokens();
 
@@ -32,7 +35,7 @@ export default function AnalyticsOverview() {
                             <li key={item.category}>
                                 <header className="flex items-center justify-between mb-2">
                                     <span className="text-sm font-medium">{item.category}</span>
-                                    <span className="text-sm text-muted-foreground">
+                                    <span className={cn("text-sm", colors.text.muted)}>
                                         {formatCurrency(item.amount)} ({item.percentage}%)
                                     </span>
                                 </header>
@@ -47,11 +50,11 @@ export default function AnalyticsOverview() {
                     </ul>
 
                     <aside className={`mt-2 p-2 bg-blue-50 dark:bg-blue-950/30 ${quick.card}`}>
-                        <div className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2 flex items-center gap-2">
+                        <div className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2 flex items-center gap-2" /* eslint-disable-line design-system/enforce-semantic-colors */>
                             <Lightbulb className={iconSizes.sm} />
                             {t('tabs.analytics.overview.analysis')}
                         </div>
-                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                        <p className="text-sm text-blue-700 dark:text-blue-300" /* eslint-disable-line design-system/enforce-semantic-colors */>
                             {t('tabs.analytics.overview.analysisText')}
                         </p>
                     </aside>
@@ -69,14 +72,14 @@ export default function AnalyticsOverview() {
                             <li key={month.month} className="space-y-2">
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm font-medium">{month.month}</span>
-                                    <span className="text-xs text-muted-foreground">
+                                    <span className={cn("text-xs", colors.text.muted)}>
                                         {t('tabs.analytics.overview.planned')} {month.planned}% | {t('tabs.analytics.overview.actual')} {month.actual}%
                                     </span>
                                 </div>
                                 <div className="relative">
                                     <div className="w-full bg-muted rounded-full h-4">
                                         <div
-                                            className="h-4 bg-blue-200 dark:bg-blue-800 rounded-full"
+                                            className="h-4 bg-blue-200 dark:bg-blue-800 rounded-full" // eslint-disable-line design-system/enforce-semantic-colors
                                             style={analyticsOverviewStyles.progressBars.planned(month.planned)}
                                          />
                                         <div

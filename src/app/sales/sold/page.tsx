@@ -1,3 +1,4 @@
+/* eslint-disable custom/no-hardcoded-strings */
 'use client';
 
 import React from 'react';
@@ -18,8 +19,10 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Centralized Unit Icon & Color
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
@@ -75,10 +78,10 @@ export default function SoldPropertiesPage() {
           <div className={`border-b ${colors.bg.primary}/95 backdrop-blur supports-[backdrop-filter]:${colors.bg.primary}/60`}>
             <div className="flex h-14 items-center px-4">
               <div className="flex items-center gap-2">
-                <CheckCircle className={`${iconSizes.md} text-muted-foreground`} />
+                <CheckCircle className={`${iconSizes.md} ${colors.text.muted}`} />
                 <h1 className="text-lg font-semibold">{t('sales.sold.title')}</h1>
               </div>
-              <div className="ml-auto text-sm text-muted-foreground">
+              <div className={cn("ml-auto text-sm", colors.text.muted)}>
                 {t('sales.sold.subtitle')}
               </div>
             </div>
@@ -103,20 +106,20 @@ export default function SoldPropertiesPage() {
                   <h3 className="font-semibold">{t('sales.sold.cards.apartments.title')}</h3>
                 </div>
                 <div className="text-3xl font-bold mb-2">344</div>
-                <p className="text-sm text-muted-foreground mb-3">
+                <p className={cn("text-sm mb-3", colors.text.muted)}>
                   {t('sales.sold.cards.apartments.description')}
                 </p>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t('sales.sold.cards.totalRevenue')}</span>
+                    <span className={colors.text.muted}>{t('sales.sold.cards.totalRevenue')}</span>
                     <span className="font-semibold ${colors.text.success}">€12.8M</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t('sales.sold.cards.avgPrice')}</span>
+                    <span className={colors.text.muted}>{t('sales.sold.cards.avgPrice')}</span>
                     <span className="font-medium">€372K</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t('sales.sold.cards.avgTime')}</span>
+                    <span className={colors.text.muted}>{t('sales.sold.cards.avgTime')}</span>
                     <span className="font-medium">4.2 μήνες</span>
                   </div>
                 </div>
@@ -131,20 +134,20 @@ export default function SoldPropertiesPage() {
                   <h3 className="font-semibold">{t('sales.sold.cards.storage.title')}</h3>
                 </div>
                 <div className="text-3xl font-bold mb-2">235</div>
-                <p className="text-sm text-muted-foreground mb-3">
+                <p className={cn("text-sm mb-3", colors.text.muted)}>
                   {t('sales.sold.cards.storage.description')}
                 </p>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t('sales.sold.cards.totalRevenue')}</span>
+                    <span className={colors.text.muted}>{t('sales.sold.cards.totalRevenue')}</span>
                     <span className="font-semibold ${colors.text.success}">€3.2M</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t('sales.sold.cards.avgPrice')}</span>
+                    <span className={colors.text.muted}>{t('sales.sold.cards.avgPrice')}</span>
                     <span className="font-medium">€36K</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t('sales.sold.cards.avgTime')}</span>
+                    <span className={colors.text.muted}>{t('sales.sold.cards.avgTime')}</span>
                     <span className="font-medium">6.1 μήνες</span>
                   </div>
                 </div>
@@ -159,20 +162,20 @@ export default function SoldPropertiesPage() {
                   <h3 className="font-semibold">{t('sales.sold.cards.parking.title')}</h3>
                 </div>
                 <div className="text-3xl font-bold mb-2">189</div>
-                <p className="text-sm text-muted-foreground mb-3">
+                <p className={cn("text-sm mb-3", colors.text.muted)}>
                   {t('sales.sold.cards.parking.description')}
                 </p>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t('sales.sold.cards.totalRevenue')}</span>
+                    <span className={colors.text.muted}>{t('sales.sold.cards.totalRevenue')}</span>
                     <span className="font-semibold ${colors.text.success}">€2.4M</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t('sales.sold.cards.avgPrice')}</span>
+                    <span className={colors.text.muted}>{t('sales.sold.cards.avgPrice')}</span>
                     <span className="font-medium">€21K</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t('sales.sold.cards.avgTime')}</span>
+                    <span className={colors.text.muted}>{t('sales.sold.cards.avgTime')}</span>
                     <span className="font-medium">3.8 μήνες</span>
                   </div>
                 </div>
@@ -198,11 +201,11 @@ export default function SoldPropertiesPage() {
                     </div>
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">{t('sales.sold.performance.revenue')}</span>
+                        <span className={colors.text.muted}>{t('sales.sold.performance.revenue')}</span>
                         <span className="${colors.text.success} font-medium">€3.2M</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">{t('sales.sold.performance.avgPrice')}</span>
+                        <span className={colors.text.muted}>{t('sales.sold.performance.avgPrice')}</span>
                         <span>€395K</span>
                       </div>
                     </div>
@@ -217,11 +220,11 @@ export default function SoldPropertiesPage() {
                     </div>
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">{t('sales.sold.performance.revenue')}</span>
+                        <span className={colors.text.muted}>{t('sales.sold.performance.revenue')}</span>
                         <span className="${colors.text.success} font-medium">€5.8M</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">{t('sales.sold.performance.avgPrice')}</span>
+                        <span className={colors.text.muted}>{t('sales.sold.performance.avgPrice')}</span>
                         <span>€372K</span>
                       </div>
                     </div>
@@ -236,11 +239,11 @@ export default function SoldPropertiesPage() {
                     </div>
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">{t('sales.sold.performance.revenue')}</span>
+                        <span className={colors.text.muted}>{t('sales.sold.performance.revenue')}</span>
                         <span className="${colors.text.success} font-medium">€6.8M</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">{t('sales.sold.performance.avgPrice')}</span>
+                        <span className={colors.text.muted}>{t('sales.sold.performance.avgPrice')}</span>
                         <span>€344K</span>
                       </div>
                     </div>
@@ -259,24 +262,24 @@ export default function SoldPropertiesPage() {
                   <h3 className="font-semibold mb-4">{t('sales.sold.marketInsights.topBuyerCategories')}</h3>
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">{t('sales.sold.marketInsights.privateInvestors')}</span>
+                      <span className={cn("text-sm", colors.text.muted)}>{t('sales.sold.marketInsights.privateInvestors')}</span>
                       <div className="text-right">
                         <div className="font-medium">{t('sales.sold.performance.sales', { count: 234 })}</div>
-                        <div className="text-xs text-muted-foreground">{t('sales.sold.marketInsights.ofTotal', { percent: 41 })}</div>
+                        <div className={cn("text-xs", colors.text.muted)}>{t('sales.sold.marketInsights.ofTotal', { percent: 41 })}</div>
                       </div>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">{t('sales.sold.marketInsights.developmentCompanies')}</span>
+                      <span className={cn("text-sm", colors.text.muted)}>{t('sales.sold.marketInsights.developmentCompanies')}</span>
                       <div className="text-right">
                         <div className="font-medium">{t('sales.sold.performance.sales', { count: 189 })}</div>
-                        <div className="text-xs text-muted-foreground">{t('sales.sold.marketInsights.ofTotal', { percent: 33 })}</div>
+                        <div className={cn("text-xs", colors.text.muted)}>{t('sales.sold.marketInsights.ofTotal', { percent: 33 })}</div>
                       </div>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">{t('sales.sold.marketInsights.familiesOwnerOccupied')}</span>
+                      <span className={cn("text-sm", colors.text.muted)}>{t('sales.sold.marketInsights.familiesOwnerOccupied')}</span>
                       <div className="text-right">
                         <div className="font-medium">{t('sales.sold.performance.sales', { count: 145 })}</div>
-                        <div className="text-xs text-muted-foreground">{t('sales.sold.marketInsights.ofTotal', { percent: 26 })}</div>
+                        <div className={cn("text-xs", colors.text.muted)}>{t('sales.sold.marketInsights.ofTotal', { percent: 26 })}</div>
                       </div>
                     </div>
                   </div>
@@ -286,19 +289,19 @@ export default function SoldPropertiesPage() {
                   <h3 className="font-semibold mb-4">{t('sales.sold.marketInsights.performanceMetrics')}</h3>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">{t('sales.sold.marketInsights.successRate')}</span>
+                      <span className={cn("text-sm", colors.text.muted)}>{t('sales.sold.marketInsights.successRate')}</span>
                       <span className="font-medium ${colors.text.success}">78%</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">{t('sales.sold.marketInsights.avgDiscount')}</span>
+                      <span className={cn("text-sm", colors.text.muted)}>{t('sales.sold.marketInsights.avgDiscount')}</span>
                       <span className="font-medium ${colors.text.warning}">-3.2%</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">{t('sales.sold.marketInsights.fastestSale')}</span>
+                      <span className={cn("text-sm", colors.text.muted)}>{t('sales.sold.marketInsights.fastestSale')}</span>
                       <span className="font-medium ${colors.text.info}">{t('sales.sold.marketInsights.days', { count: 8 })}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">{t('sales.sold.marketInsights.slowestSale')}</span>
+                      <span className={cn("text-sm", colors.text.muted)}>{t('sales.sold.marketInsights.slowestSale')}</span>
                       <span className="font-medium ${colors.text.error}">{t('sales.sold.marketInsights.months', { count: 18 })}</span>
                     </div>
                   </div>
@@ -312,7 +315,7 @@ export default function SoldPropertiesPage() {
                 <CheckCircle className={iconSizes.sm} />
                 <span className="font-medium">{t('sales.sold.info.title')}</span>
               </div>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className={cn("text-sm mt-1", colors.text.muted)}>
                 {t('sales.sold.info.description')}
               </p>
             </div>

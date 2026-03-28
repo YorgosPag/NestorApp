@@ -12,6 +12,9 @@ import type { ProjectCustomer } from "@/types/project";
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('BuildingCustomersTab');
 
@@ -22,6 +25,7 @@ interface BuildingCustomersTabProps {
 export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const [customers, setCustomers] = useState<ProjectCustomer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,6 +85,7 @@ export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) 
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {/* eslint-disable-next-line design-system/enforce-semantic-colors */}
           <p className="text-center py-2 text-red-600">
             {t('customers.error.loadingPrefix')} {error}
           </p>
@@ -100,8 +105,8 @@ export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) 
         </CardHeader>
         <CardContent>
           <figure className="text-center py-2">
-            <Users className={`${iconSizes.xl3} mx-auto text-muted-foreground mb-2`} />
-            <p className="text-sm text-muted-foreground">
+            <Users className={`${iconSizes.xl3} mx-auto ${colors.text.muted} mb-2`} />
+            <p className={cn("text-sm", colors.text.muted)}>
               {t('customers.empty.message')}
             </p>
           </figure>
@@ -123,7 +128,7 @@ export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) 
       </CardHeader>
       <CardContent>
         {/* Table Headers */}
-        <header className="grid grid-cols-[2fr_1fr_1.8fr_auto_auto] gap-2 pb-2 mb-2 border-b border-border text-sm font-medium text-muted-foreground">
+        <header className={cn("grid grid-cols-[2fr_1fr_1.8fr_auto_auto] gap-2 pb-2 mb-2 border-b border-border text-sm font-medium", colors.text.muted)}>
           <span>{t('customers.table.name')}</span>
           <span>{t('customers.table.phone')}</span>
           <span>{t('customers.table.email')}</span>

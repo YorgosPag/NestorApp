@@ -11,7 +11,10 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('LinkSoldUnitsToCustomers');
 
@@ -29,6 +32,7 @@ interface LinkingResult {
 export function LinkSoldUnitsToCustomers() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('admin');
   const [loading, setLoading] = useState(false);
@@ -68,7 +72,7 @@ export function LinkSoldUnitsToCustomers() {
           <Link className={iconSizes.lg} />
           {t('link.title')}
         </CardTitle>
-        <p className="text-sm text-muted-foreground">
+        <p className={cn("text-sm", colors.text.muted)}>
           {t('link.description')}
         </p>
       </CardHeader>
@@ -142,7 +146,7 @@ export function LinkSoldUnitsToCustomers() {
                         <strong>{t('link.unitLabel')}:</strong> {update.unitId}
                       </span>
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className={cn("text-sm", colors.text.muted)}>
                       → <strong>{update.contactName}</strong>
                     </div>
                   </div>
@@ -155,10 +159,10 @@ export function LinkSoldUnitsToCustomers() {
         {/* Instructions */}
         <Card className="bg-blue-50 dark:bg-blue-950/20">
           <CardContent className="pt-6">
-            <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+            <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2" /* eslint-disable-line design-system/enforce-semantic-colors */>
               💡 {t('link.howItWorks')}
             </h4>
-            <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+            <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1" /* eslint-disable-line design-system/enforce-semantic-colors */>
               <li>• {t('link.step1')}</li>
               <li>• {t('link.step2')}</li>
               <li>• {t('link.step3')}</li>

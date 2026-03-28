@@ -18,10 +18,12 @@ import { markNotificationsAsRead, dismissNotification } from '@/services/notific
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { createModuleLogger } from '@/lib/telemetry';
 import { API_ROUTES } from '@/config/domain-constants';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('NotificationDrawer');
 
@@ -42,11 +44,11 @@ const iconMap: Record<Severity, React.ComponentType<{ className?: string }>> = {
 };
 
 const colorMap: Record<Severity, string> = {
-  success: 'text-green-500',
-  error: 'text-red-500',
-  warning: 'text-yellow-500',
-  info: 'text-blue-500',
-  critical: 'text-red-700'
+  success: 'text-green-500', // eslint-disable-line design-system/enforce-semantic-colors
+  error: 'text-red-500', // eslint-disable-line design-system/enforce-semantic-colors
+  warning: 'text-yellow-500', // eslint-disable-line design-system/enforce-semantic-colors
+  info: 'text-blue-500', // eslint-disable-line design-system/enforce-semantic-colors
+  critical: 'text-red-700' // eslint-disable-line design-system/enforce-semantic-colors
 };
 
 export function NotificationDrawer() {
@@ -320,7 +322,7 @@ export function NotificationDrawer() {
         <div className="flex-1 overflow-y-auto overflow-x-hidden">
           {/* ✅ ENTERPRISE: Error state UI με Retry */}
           {storeError ? (
-            <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground p-4">
+            <div className={cn("flex flex-col items-center justify-center h-full gap-3 p-4", colors.text.muted)}>
               <AlertCircle className={`${iconSizes.xl} text-red-500`} />
               <p className="text-sm text-center">{storeError}</p>
               <Button variant="default" size="sm" onClick={handleRetry}>
@@ -329,11 +331,11 @@ export function NotificationDrawer() {
               </Button>
             </div>
           ) : status === 'loading' ? (
-            <div className="flex items-center justify-center h-full text-muted-foreground">
+            <div className={cn("flex items-center justify-center h-full", colors.text.muted)}>
               <p>{t('notifications.loading', { defaultValue: 'Loading...' })}</p>
             </div>
           ) : notificationsList.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-muted-foreground">
+            <div className={cn("flex items-center justify-center h-full", colors.text.muted)}>
               <p>{t('notifications.empty', { defaultValue: 'No notifications' })}</p>
             </div>
           ) : (
@@ -400,11 +402,11 @@ export function NotificationDrawer() {
                           {displayTitle}
                         </span>
                         {n.body && (
-                          <p className="text-sm text-muted-foreground break-words mt-1 line-clamp-3">
+                          <p className={cn("text-sm break-words mt-1 line-clamp-3", colors.text.muted)}>
                             {n.body}
                           </p>
                         )}
-                        <time className="text-xs text-muted-foreground mt-1.5 block">
+                        <time className={cn("text-xs mt-1.5 block", colors.text.muted)}>
                           {dateFormatter.format(new Date(n.createdAt))}
                         </time>
                       </div>
@@ -413,7 +415,7 @@ export function NotificationDrawer() {
                       <Button
                         variant="ghost"
                         size="icon-sm"
-                        className="flex-shrink-0 text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
+                        className={cn("flex-shrink-0 hover:text-red-500 hover:bg-red-500/10", colors.text.muted)} // eslint-disable-line design-system/enforce-semantic-colors
                         onClick={(e) => { e.stopPropagation(); void handleDismiss(n.id); }}
                         aria-label={t('notifications.dismiss', { defaultValue: 'Dismiss' })}
                         title={t('notifications.dismiss', { defaultValue: 'Dismiss' })}

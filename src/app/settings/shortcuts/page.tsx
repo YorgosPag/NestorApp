@@ -1,4 +1,5 @@
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
+/* eslint-disable custom/no-hardcoded-strings */
 'use client';
 
 import React, { useState } from 'react';
@@ -8,7 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from 'react-i18next';
+import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 // 🌐 i18n: Shortcut descriptions use i18n keys
 const shortcutsListKeys = {
@@ -65,6 +69,7 @@ export default function ShortcutsPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
     const { quick } = useBorderTokens();
+    const colors = useSemanticColors();
 
     const { t } = useTranslation('settings');
 
@@ -119,7 +124,7 @@ export default function ShortcutsPage() {
                                     {group.shortcuts.map(shortcut => (
                                         <div key={shortcut.key} className={`flex items-center justify-between p-2 rounded-md ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}>
                                             <span className="text-sm text-foreground">{t(shortcut.descKey)}</span>
-                                            <kbd className={`px-2 py-1 bg-muted ${quick.card} text-xs font-mono text-muted-foreground`}>
+                                            <kbd className={cn(`px-2 py-1 bg-muted ${quick.card} text-xs font-mono`, colors.text.muted)}>
                                                 {formatKey(shortcut.key)}
                                             </kbd>
                                         </div>

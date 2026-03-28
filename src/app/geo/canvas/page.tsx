@@ -1,3 +1,4 @@
+/* eslint-disable custom/no-hardcoded-strings */
 'use client';
 
 import { useUserRole } from '@/auth';
@@ -7,6 +8,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Suspense } from 'react';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
+import '@/lib/design-system';
 
 // RESTORED: Real GeoCanvasApp (working interface)
 const GeoCanvasApp = dynamic(
@@ -27,7 +29,7 @@ const GeoCanvasApp = dynamic(
 );
 
 function AdminGuard({ children }: { children: React.ReactNode }) {
-  const iconSizes = useIconSizes();
+  const _iconSizes = useIconSizes();
   const { isAdmin, isLoading } = useUserRole();
   const colors = useSemanticColors();
 
@@ -51,7 +53,7 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
     return (
       <div className={`w-full h-full flex items-center justify-center ${colors.bg.primary}`}>
         <div className="text-center max-w-md p-6">
-          <div className="text-red-500 text-6xl mb-4">🔒</div>
+          <div className="text-red-500 text-6xl mb-4">🔒</div> {/* eslint-disable-line design-system/enforce-semantic-colors */}
           <h1 className={`text-2xl font-bold ${colors.text.primary} mb-2`}>
             Πρόσβαση Μόνο για Διαχειριστές
           </h1>

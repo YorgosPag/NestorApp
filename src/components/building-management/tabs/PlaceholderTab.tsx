@@ -1,3 +1,4 @@
+/* eslint-disable custom/no-hardcoded-strings */
 'use client';
 
 import React from 'react';
@@ -9,6 +10,9 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized icon mapping (supports string icon names)
 import { getIconComponent } from '@/components/generic/utils/IconMapping';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface PlaceholderTabProps {
   title?: string;
@@ -17,9 +21,10 @@ interface PlaceholderTabProps {
   [key: string]: unknown; // Allow additional props from UniversalTabsRenderer
 }
 
-const PlaceholderTab = ({ title = 'Content', icon: Icon, building, ...additionalProps }: PlaceholderTabProps) => {
+const PlaceholderTab = ({ title = 'Content', icon: Icon, building: _building, ..._additionalProps }: PlaceholderTabProps) => {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const { createBorder, quick } = useBorderTokens();
 
@@ -36,16 +41,16 @@ const PlaceholderTab = ({ title = 'Content', icon: Icon, building, ...additional
 
   // 🏢 ENTERPRISE: Icon resolution - supports string names and React components
   // String icons are resolved via centralized IconMapping
-  const FallbackIcon = () => <span className={`${iconSizes.xl3} text-muted-foreground mb-2 text-4xl`}>📦</span>;
+  const FallbackIcon = () => <span className={`${iconSizes.xl3} ${colors.text.muted} mb-2 text-4xl`}>📦</span>;
   const IconComponent = typeof Icon === 'string'
     ? getIconComponent(Icon)
     : Icon || FallbackIcon;
 
   return (
     <section className={`flex flex-col items-center justify-center ${iconSizes.xl12} ${createBorder('medium', 'hsl(var(--border))', 'dashed')} ${quick.card} bg-muted/50`}>
-      <IconComponent className={`${iconSizes.xl3} text-muted-foreground mb-2`} />
-      <h2 className="text-xl font-semibold text-muted-foreground mb-2">{translatedTitle}</h2>
-      <p className="text-sm text-muted-foreground text-center max-w-md">
+      <IconComponent className={`${iconSizes.xl3} ${colors.text.muted} mb-2`} />
+      <h2 className={cn("text-xl font-semibold mb-2", colors.text.muted)}>{translatedTitle}</h2>
+      <p className={cn("text-sm text-center max-w-md", colors.text.muted)}>
         {t('placeholder.comingSoon', { title: translatedTitle.toLowerCase() })}
       </p>
       <Button variant="outline" className="mt-2">

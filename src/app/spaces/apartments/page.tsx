@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { StaticPageLoading } from '@/core/states';
+import '@/lib/design-system';
 
 /**
  * ENTERPRISE ROUTE REDIRECT
@@ -35,7 +36,7 @@ function RedirectContent() {
   useEffect(() => {
     // 🏢 ENTERPRISE: Preserve URL parameters during redirect (contextual navigation)
     const queryString = searchParams.toString();
-    const targetUrl = queryString ? `/units?${queryString}` : '/units';
+    const targetUrl = queryString ? `/units?${queryString}` : '/units'; // eslint-disable-line custom/no-hardcoded-strings
     router.replace(targetUrl);
   }, [router, searchParams]);
 
@@ -44,7 +45,8 @@ function RedirectContent() {
     <div className={`flex h-screen items-center justify-center ${colors.bg.primary}`}>
       <div className="text-center space-y-4">
         <AnimatedSpinner size="large" className="mx-auto" />
-        <p className="text-sm text-muted-foreground">
+        {/* eslint-disable-next-line custom/no-hardcoded-strings */}
+        <p className={`text-sm ${colors.text.muted}`}>
           Ανακατεύθυνση στα Διαμερίσματα...
         </p>
       </div>

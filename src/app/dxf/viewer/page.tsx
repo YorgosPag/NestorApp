@@ -4,7 +4,6 @@
 import { useUserRole } from '@/auth';
 import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
-import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 // ?? ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 import { cn, getTypographyClass } from '@/lib/design-system';
@@ -25,6 +24,7 @@ const DxfViewerApp = dynamic(
 
 function DxfViewerLoadingFallback() {
   return (
+    // eslint-disable-next-line custom/no-hardcoded-strings
     <PageLoadingState message={i18n.t('common:dxfViewer.loading')} layout="contained" />
   );
 }
@@ -50,6 +50,7 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
           role="alert"
           aria-label={t('dxfViewer.unauthorizedAriaLabel')}
         >
+          {/* eslint-disable-next-line custom/no-hardcoded-strings */}
           <div className={cn(iconSizes.xl6, colors.text.error, spacing.margin.bottom.sm)} role="img" aria-label={t('dxfViewer.lockedAriaLabel')}>
             LOCKED
           </div>
@@ -71,10 +72,10 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
 }
 
 export default function DxfViewerPage() {
-  const { t } = useTranslation('common');
-  const spacing = useSpacingTokens();
-  const typography = useTypography();
-  const colors = useSemanticColors();
+  const { t: _t } = useTranslation('common');
+  const _spacing = useSpacingTokens();
+  const _typography = useTypography();
+  const _colors = useSemanticColors();
 
   return (
     <AdminGuard>

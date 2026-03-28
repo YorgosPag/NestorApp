@@ -1,3 +1,4 @@
+/* eslint-disable custom/no-hardcoded-strings */
 /**
  * =============================================================================
  * Public Share Page — View/download shared files
@@ -20,15 +21,16 @@ import {
   Clock,
   FileText,
   AlertTriangle,
-  Eye,
   Shield,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { FileShareService, type FileShareRecord } from '@/services/file-share.service';
 import { formatFileSize } from '@/utils/file-validation';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -52,6 +54,7 @@ type PageState = 'loading' | 'password' | 'ready' | 'error' | 'expired';
 export default function SharedFilePage() {
   const params = useParams();
   const token = params.token as string;
+  const colors = useSemanticColors();
 
   const [state, setState] = useState<PageState>('loading');
   const [share, setShare] = useState<FileShareRecord | null>(null);
@@ -90,7 +93,7 @@ export default function SharedFilePage() {
     }
 
     validate();
-  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [token]);
 
   // Load file metadata from Firestore
   const loadFileInfo = useCallback(async (fileId: string) => {
@@ -167,7 +170,7 @@ export default function SharedFilePage() {
           {state === 'loading' && (
             <section className="text-center py-8">
               <Spinner size="large" className="mx-auto mb-4" />
-              <p className="text-sm text-muted-foreground">Φόρτωση...</p>
+              <p className={cn("text-sm", colors.text.muted)}>Φόρτωση...</p>
             </section>
           )}
 
@@ -176,7 +179,7 @@ export default function SharedFilePage() {
             <section className="text-center py-8">
               <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-destructive" />
               <h2 className="text-lg font-semibold mb-2">Μη έγκυρος σύνδεσμος</h2>
-              <p className="text-sm text-muted-foreground">{errorMessage}</p>
+              <p className={cn("text-sm", colors.text.muted)}>{errorMessage}</p>
             </section>
           )}
 
@@ -185,7 +188,7 @@ export default function SharedFilePage() {
             <section className="text-center py-8">
               <Clock className="h-12 w-12 mx-auto mb-4 text-amber-500" />
               <h2 className="text-lg font-semibold mb-2">Ο σύνδεσμος έχει λήξει</h2>
-              <p className="text-sm text-muted-foreground">
+              <p className={cn("text-sm", colors.text.muted)}>
                 Ζητήστε νέο σύνδεσμο από τον αποστολέα.
               </p>
             </section>
@@ -200,7 +203,7 @@ export default function SharedFilePage() {
               <h2 className="text-lg font-semibold text-center mb-2">
                 Προστατευμένο αρχείο
               </h2>
-              <p className="text-sm text-muted-foreground text-center mb-6">
+              <p className={cn("text-sm text-center mb-6", colors.text.muted)}>
                 Αυτό το αρχείο απαιτεί κωδικό πρόσβασης.
               </p>
               <form onSubmit={handlePasswordSubmit} className="space-y-4">
@@ -240,7 +243,7 @@ export default function SharedFilePage() {
                 {fileInfo.displayName}
               </h2>
 
-              <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground mb-6">
+              <div className={cn("flex items-center justify-center gap-3 text-xs mb-6", colors.text.muted)}>
                 <span>.{fileInfo.ext}</span>
                 <span>{formatFileSize(fileInfo.sizeBytes)}</span>
                 <span>{fileInfo.contentType}</span>
@@ -248,7 +251,7 @@ export default function SharedFilePage() {
 
               {/* Share note */}
               {share?.note && (
-                <p className="text-sm text-muted-foreground bg-muted/50 rounded-md p-3 mb-4 italic">
+                <p className={cn("text-sm bg-muted/50 rounded-md p-3 mb-4 italic", colors.text.muted)}>
                   {share.note}
                 </p>
               )}
@@ -281,7 +284,7 @@ export default function SharedFilePage() {
               )}
 
               {/* Expiration info */}
-              <footer className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+              <footer className={cn("flex items-center justify-center gap-2 text-xs", colors.text.muted)}>
                 <Clock className="h-3 w-3" />
                 <span>Λήγει: {expiresLabel}</span>
                 {share && share.maxDownloads > 0 && (

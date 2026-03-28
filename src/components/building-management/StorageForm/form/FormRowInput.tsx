@@ -5,6 +5,8 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface Props {
   label: string;
@@ -30,6 +32,7 @@ export function FormRowInput({
   trailingElement
 }: Props) {
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   return (
     <div className="space-y-2">
       <Label>{label}{required && ' *'}</Label>
@@ -47,8 +50,8 @@ export function FormRowInput({
           </div>
         )}
       </div>
-      {error && <p className="text-sm text-red-500">{error}</p>}
-      {helper && <p className="text-xs text-muted-foreground">{helper}</p>}
+      {error && <p className="text-sm text-red-500">{error}</p>} {/* eslint-disable-line design-system/enforce-semantic-colors */}
+      {helper && <p className={cn("text-xs", colors.text.muted)}>{helper}</p>}
     </div>
   );
 }

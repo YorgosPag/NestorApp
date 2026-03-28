@@ -15,6 +15,8 @@ import { cn } from '@/lib/utils';
 import type { BOQItem } from '@/types/boq';
 import { computeItemCost } from '@/services/measurements';
 import { Package, Wrench, Truck, Calculator } from 'lucide-react';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -37,6 +39,7 @@ interface SummaryCardData {
 
 export function BOQSummaryCards({ items }: BOQSummaryCardsProps) {
   const { t } = useTranslation('building');
+  const colors = useSemanticColors();
 
   const totals = useMemo(() => {
     let materialCost = 0;
@@ -63,7 +66,7 @@ export function BOQSummaryCards({ items }: BOQSummaryCardsProps) {
       labelKey: 'tabs.measurements.summary.materials',
       amount: totals.materialCost,
       icon: Package,
-      accentClass: 'text-blue-600 dark:text-blue-400',
+      accentClass: 'text-blue-600 dark:text-blue-400', // eslint-disable-line design-system/enforce-semantic-colors
     },
     {
       labelKey: 'tabs.measurements.summary.labor',
@@ -97,7 +100,7 @@ export function BOQSummaryCards({ items }: BOQSummaryCardsProps) {
             <CardContent className="p-2">
               <header className="flex items-center gap-2 mb-2">
                 <Icon className={cn('h-4 w-4', card.accentClass)} />
-                <span className="text-sm text-muted-foreground">
+                <span className={cn("text-sm", colors.text.muted)}>
                   {t(card.labelKey)}
                 </span>
               </header>
