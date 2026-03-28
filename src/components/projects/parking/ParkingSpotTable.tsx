@@ -15,6 +15,8 @@ import { FooterBar } from '@/components/parking/parking-spot-table/parts/FooterB
 
 import type { ParkingSpotTableProps } from '@/components/parking/parking-spot-table/types';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useTypography } from '@/hooks/useTypography';
+import '@/lib/design-system';
 
 export function ParkingSpotTable({
   spots,
@@ -25,6 +27,7 @@ export function ParkingSpotTable({
   onViewFloorPlan,
 }: ParkingSpotTableProps) {
   const { quick } = useBorderTokens();
+  const typography = useTypography();
   const { columnWidths, handleColumnResize } = useColumnWidths();
   const { activeFilters, handleFilterChange, filteredSpots: spotsAfterLocalFilter } = useParkingFilters(spots);
   const { sortConfig, handleSort, sortedSpots } = useParkingSort(spotsAfterLocalFilter);
@@ -43,7 +46,7 @@ export function ParkingSpotTable({
   const tableColumns = useMemo(() => COLUMNS.filter(c => c.key !== 'select'), []);
 
   return (
-    <div className="${quick.table} flex flex-col h-[600px] text-sm w-max">
+    <div className={`${quick.table} flex flex-col h-[600px] ${typography.body.sm} w-max`}>
       <ParkingTableHeader
         columns={tableColumns}
         columnWidths={columnWidths.slice(1)}

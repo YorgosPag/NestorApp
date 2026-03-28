@@ -112,7 +112,7 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
     <article>
       {/* 🏢 ENTERPRISE: Building header */}
       <div
-        className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer ${quick.card} ${colors.bg.primary} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+        className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer ${quick.card} ${colors.bg.infoSubtle} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
         onClick={() => setIsExpanded(!isExpanded)}
       >
         {isExpanded ?
@@ -138,7 +138,7 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
 
       {/* 🏢 ENTERPRISE: Expandable content with tabs */}
       {isExpanded && (
-        <div className={cn(spacing.margin.left.lg, spacing.margin.top.sm)}>
+        <div className={cn(spacing.margin.left.sm, spacing.margin.top.sm)}>
           {/* Tab triggers */}
           <nav className={cn("flex", spacing.gap.sm, spacing.margin.bottom.sm)} role="tablist">
             {tabs.map((tab) => {

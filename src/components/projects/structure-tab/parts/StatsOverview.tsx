@@ -19,6 +19,7 @@ import type { DashboardStat } from '@/components/property-management/dashboard/U
 import type { ProjectTotals } from '../utils/selectors';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 type StatsOverviewProps = ProjectTotals;
 

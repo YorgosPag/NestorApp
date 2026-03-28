@@ -6,6 +6,7 @@ import { FormField } from '../FormField';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface FinancialRightColumnProps {
     financialData: {

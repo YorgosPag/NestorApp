@@ -20,6 +20,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Sort types from CompactToolbar
 import type { SortField } from '@/components/core/CompactToolbar/types';
+import '@/lib/design-system';
 
 interface ProjectsListProps {
   projects: Project[];
@@ -35,7 +36,7 @@ export function ProjectsList({
   projects,
   selectedProject,
   onSelectProject,
-  companies,
+  companies: _companies,
   onNewProject,
   onEditProject,
   onDeleteProject,
@@ -70,12 +71,13 @@ export function ProjectsList({
         case 'name':
           comparison = (a.name || '').localeCompare(b.name || '', 'el');
           break;
-        case 'date':
+        case 'date': {
           // 🏢 ENTERPRISE: Use startDate or lastUpdate for date sorting
           const dateA = a.startDate ? new Date(a.startDate).getTime() : (a.lastUpdate ? new Date(a.lastUpdate).getTime() : 0);
           const dateB = b.startDate ? new Date(b.startDate).getTime() : (b.lastUpdate ? new Date(b.lastUpdate).getTime() : 0);
           comparison = dateA - dateB;
           break;
+        }
         case 'status':
           comparison = (a.status || '').localeCompare(b.status || '', 'el');
           break;

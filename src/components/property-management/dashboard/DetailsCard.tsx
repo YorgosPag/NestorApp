@@ -3,9 +3,12 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 import { CommonBadge } from '@/core/badges';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import '@/lib/design-system';
 
 interface DetailsCardProps {
     title: string;
@@ -18,6 +21,7 @@ interface DetailsCardProps {
 
 export function DetailsCard({ title, icon: Icon, data, labelFormatter, isFloorData = false, isThreeColumnGrid = false }: DetailsCardProps) {
     const iconSizes = useIconSizes();
+    const colors = useSemanticColors();
     const spacing = useSpacingTokens();
     
     if (isThreeColumnGrid) {
@@ -25,14 +29,14 @@ export function DetailsCard({ title, icon: Icon, data, labelFormatter, isFloorDa
             <Card className="lg:col-span-2">
                 <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${spacing.padding.sm} pb-2`}>
                     <CardTitle className="text-sm font-medium">{title}</CardTitle>
-                    <Icon className={`${iconSizes.sm} text-muted-foreground`} />
+                    <Icon className={`${iconSizes.sm} ${colors.text.muted}`} />
                 </CardHeader>
                 <CardContent className={`${spacing.padding.sm} pt-0`}>
                     <div className="grid grid-cols-3 gap-4 text-center">
                         {Object.entries(data).map(([label, count]) => (
                             <div key={label}>
                                 <p className="text-xl font-bold">{count}</p>
-                                <p className="text-xs text-muted-foreground">{label}</p>
+                                <p className={cn("text-xs", colors.text.muted)}>{label}</p>
                             </div>
                         ))}
                     </div>
@@ -45,7 +49,7 @@ export function DetailsCard({ title, icon: Icon, data, labelFormatter, isFloorDa
         <Card className={isFloorData ? "" : "lg:col-span-2"}>
             <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${spacing.padding.sm} pb-2`}>
                 <CardTitle className="text-sm font-medium">{title}</CardTitle>
-                <Icon className={`${iconSizes.sm} text-muted-foreground`} />
+                <Icon className={`${iconSizes.sm} ${colors.text.muted}`} />
             </CardHeader>
             <CardContent className={`${spacing.padding.sm} pt-0`}>
                 <div className={isFloorData ? "space-y-2" : "flex flex-wrap gap-2"}>

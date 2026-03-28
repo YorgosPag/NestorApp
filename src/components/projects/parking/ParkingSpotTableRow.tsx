@@ -18,6 +18,8 @@ import { formatNumber } from '@/lib/intl-utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import styles from '@/components/ui/table/EnterpriseTable.module.css';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useTypography } from '@/hooks/useTypography';
+import '@/lib/design-system';
 
 interface ParkingSpotTableRowProps {
   spot: ParkingSpot;
@@ -31,7 +33,7 @@ interface ParkingSpotTableRowProps {
 
 export function ParkingSpotTableRow({
   spot,
-  columnWidths,
+  columnWidths: _columnWidths,
   isSelected,
   onSelectionChange,
   onEdit,
@@ -41,6 +43,7 @@ export function ParkingSpotTableRow({
   const { t } = useTranslation('parking');
   const { t: tProjects } = useTranslation('projects');
   const iconSizes = useIconSizes();
+  const typography = useTypography();
 
   const handleSelect = () => {
     onSelectionChange(isSelected ? [] : [spot.id]);
@@ -99,7 +102,7 @@ export function ParkingSpotTableRow({
           status={spot.status || 'available'}
           variant="outline"
           size="sm"
-          className="text-xs"
+          className={typography.body.xs}
         />
       </div>
 

@@ -13,6 +13,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { PROJECT_STATUS_LABELS } from '@/types/project';
 import { COMPLEX_HOVER_EFFECTS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useTypography } from '@/hooks/useTypography';
+import '@/lib/design-system';
 
 interface ProjectCardProps {
   project: Project;
@@ -29,6 +31,7 @@ export function ProjectCard({
 }: ProjectCardProps) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
+  const typography = useTypography();
   const [isFavorite, setIsFavorite] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -54,7 +57,7 @@ export function ProjectCard({
         onMouseLeave={() => setIsHovered(false)}
       >
         {isSelected && (
-          <div className={`absolute top-2 right-2 z-20 bg-primary text-white rounded-full ${iconSizes.md} text-xs flex items-center justify-center`}>
+          <div className={cn(`absolute top-2 right-2 z-20 bg-primary text-white rounded-full ${iconSizes.md} flex items-center justify-center`, typography.body.xs)}>
             ✓
           </div>
         )}

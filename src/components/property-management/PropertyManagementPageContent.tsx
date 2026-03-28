@@ -34,6 +34,7 @@ import { useViewerProps } from '@/features/property-management/hooks/useViewerPr
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Semantic colors for consistent styling
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 export function PropertyManagementPageContent() {
   const searchParams = useSearchParams();

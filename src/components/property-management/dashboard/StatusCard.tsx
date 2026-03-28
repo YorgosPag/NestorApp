@@ -5,9 +5,11 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Activity } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import '@/lib/design-system';
 
 interface StatusCardProps {
     statsByStatus: Record<string, number>;
@@ -35,7 +37,7 @@ export function StatusCard({ statsByStatus, getStatusLabel }: StatusCardProps) {
         <Card>
             <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${spacing.padding.sm} pb-2`}>
                 <CardTitle className="text-sm font-medium">{t('page.dashboard.unitStatus')}</CardTitle>
-                <Activity className={`${iconSizes.sm} text-muted-foreground`} />
+                <Activity className={`${iconSizes.sm} ${colors.text.muted}`} />
             </CardHeader>
             <CardContent className={`${spacing.padding.sm} pt-0`}>
                 <div className="space-y-2">

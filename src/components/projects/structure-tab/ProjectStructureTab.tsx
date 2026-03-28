@@ -15,6 +15,7 @@ import { EmptyState } from './parts/EmptyState';
 import { StatsOverview } from './parts/StatsOverview';
 import { ProjectHeader } from './parts/ProjectHeader';
 import { BuildingNode } from './parts/BuildingNode';
+import '@/lib/design-system';
 
 export function ProjectStructureTab({ projectId }: ProjectStructureTabProps) {
   const { structure, loading, error } = useProjectStructure(projectId);
@@ -39,7 +40,7 @@ export function ProjectStructureTab({ projectId }: ProjectStructureTabProps) {
   const totals = getTotals(structure);
 
   return (
-    <section className={`${spacing.padding.top.md} ${spacing.spaceBetween.lg}`}>
+    <section className={`${spacing.padding.top.sm} ${spacing.spaceBetween.sm}`}>
       <StatsOverview {...totals} />
 
       {/* 🏢 ENTERPRISE: Project header - minimal design (no border wrapper) */}
@@ -49,8 +50,8 @@ export function ProjectStructureTab({ projectId }: ProjectStructureTabProps) {
         totalUnits={totals.totalUnits}
       />
 
-      {/* 🏢 ENTERPRISE: Buildings list - minimal design */}
-      <div className={spacing.spaceBetween.md}>
+      {/* 🏢 ENTERPRISE: Buildings list - 8px unified spacing */}
+      <div className={spacing.spaceBetween.sm}>
         {structure.buildings.map(building => (
           <BuildingNode key={String(building.id)} building={building} />
         ))}

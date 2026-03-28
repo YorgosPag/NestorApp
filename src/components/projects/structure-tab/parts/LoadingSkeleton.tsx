@@ -4,6 +4,7 @@ import React from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 export function LoadingSkeleton() {
   const spacing = useSpacingTokens();

@@ -11,6 +11,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 export function ParkingTab() {
   // 🏢 ENTERPRISE: i18n hook

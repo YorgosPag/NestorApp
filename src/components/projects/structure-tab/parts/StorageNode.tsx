@@ -56,7 +56,7 @@ export const StorageNode = ({ storage }: StorageNodeProps) => {
       className={cn(
         'flex items-center gap-2 p-2 rounded-md',
         quick.card,
-        colors.bg.primary,
+        colors.bg.infoSubtle,
         HOVER_BACKGROUND_EFFECTS.LIGHT,
         TRANSITION_PRESETS.STANDARD_COLORS
       )}

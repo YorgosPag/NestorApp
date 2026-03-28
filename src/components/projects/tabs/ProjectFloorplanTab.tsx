@@ -28,6 +28,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getCompanyById } from '@/services/companies.service'; // 🏢 ENTERPRISE: Fetch company name (ADR-031)
 import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import type { Project } from '@/types/project';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('ProjectFloorplanTab');
 
@@ -74,6 +76,7 @@ export function ProjectFloorplanTab({
   title,
 }: ProjectFloorplanTabProps) {
   const { user } = useAuth();
+  const colors = useSemanticColors();
   const { t } = useTranslation('building');
 
   // Resolve project from props
@@ -124,7 +127,7 @@ export function ProjectFloorplanTab({
   // If no project, companyId, or userId, show placeholder
   if (!resolvedProject?.id || !companyId || !currentUserId) {
     return (
-      <section className="p-2 text-center text-muted-foreground">
+      <section className={cn("p-2 text-center", colors.text.muted)}>
         <p>{t('tabs.floorplan.noProject', 'Επιλέξτε ένα έργο για να δείτε τις κατόψεις.')}</p>
       </section>
     );

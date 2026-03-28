@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTypography } from '@/hooks/useTypography';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
@@ -51,6 +52,7 @@ export function ProjectParkingTab({ project, data, title }: ProjectParkingTabPro
   const { t: _tBuilding } = useTranslation('building');
   const spacing = useSpacingTokens();
   const colors = useSemanticColors();
+  const typography = useTypography();
   const { quick } = useBorderTokens();
   const iconSizes = useIconSizes();
 
@@ -73,7 +75,7 @@ export function ProjectParkingTab({ project, data, title }: ProjectParkingTabPro
           <List className={iconSizes.sm} />
           {t('projectTab.subtabs.list', 'Λίστα')}
           {!loading && parkingSpots.length > 0 && (
-            <span className={cn('ml-1 rounded-full px-2 py-0.5 text-xs', colors.bg.accentSubtle, colors.text.accent)}>
+            <span className={cn('ml-1 rounded-full px-2 py-0.5', typography.body.xs, colors.bg.accentSubtle, colors.text.accent)}>
               {parkingSpots.length}
             </span>
           )}
@@ -121,6 +123,8 @@ interface ParkingSpotsListProps {
 }
 
 function ParkingSpotsList({ parkingSpots, loading, error, t, colors, quick, iconSizes, spacing }: ParkingSpotsListProps) {
+  const typography = useTypography();
+
   if (loading) {
     return (
       <section className="flex items-center justify-center p-2">
@@ -154,49 +158,49 @@ function ParkingSpotsList({ parkingSpots, loading, error, t, colors, quick, icon
       {/* Summary */}
       <header className={cn('grid grid-cols-2 md:grid-cols-4', spacing.gap.sm)}>
         <article className={cn('bg-card p-2 text-center', quick.card)}>
-          <p className={cn('text-2xl font-bold', colors.text.accent)}>{parkingSpots.length}</p>
-          <p className="text-sm text-muted-foreground">{t('projectTab.stats.total', 'Σύνολο')}</p>
+          <p className={cn(typography.heading.h3, colors.text.accent)}>{parkingSpots.length}</p>
+          <p className={typography.special.secondary}>{t('projectTab.stats.total', 'Σύνολο')}</p>
         </article>
         <article className={cn('bg-card p-2 text-center', quick.card)}>
-          <p className={cn('text-2xl font-bold', colors.text.success)}>
+          <p className={cn(typography.heading.h3, colors.text.success)}>
             {parkingSpots.filter(s => s.status === 'available').length}
           </p>
-          <p className="text-sm text-muted-foreground">{t('projectTab.stats.available', 'Διαθέσιμες')}</p>
+          <p className={typography.special.secondary}>{t('projectTab.stats.available', 'Διαθέσιμες')}</p>
         </article>
         <article className={cn('bg-card p-2 text-center', quick.card)}>
-          <p className={cn('text-2xl font-bold', colors.text.warning)}>
+          <p className={cn(typography.heading.h3, colors.text.warning)}>
             {parkingSpots.filter(s => s.status === 'reserved').length}
           </p>
-          <p className="text-sm text-muted-foreground">{t('projectTab.stats.reserved', 'Δεσμευμένες')}</p>
+          <p className={typography.special.secondary}>{t('projectTab.stats.reserved', 'Δεσμευμένες')}</p>
         </article>
         <article className={cn('bg-card p-2 text-center', quick.card)}>
-          <p className={cn('text-2xl font-bold', colors.text.info)}>
+          <p className={cn(typography.heading.h3, colors.text.info)}>
             {parkingSpots.filter(s => s.status === 'sold').length}
           </p>
-          <p className="text-sm text-muted-foreground">{t('projectTab.stats.sold', 'Πωλημένες')}</p>
+          <p className={typography.special.secondary}>{t('projectTab.stats.sold', 'Πωλημένες')}</p>
         </article>
       </header>
 
       {/* Table */}
       <article className={cn('overflow-x-auto', quick.card)}>
-        <table className="w-full text-sm">
+        <table className={cn("w-full", typography.body.sm)}>
           <thead>
-            <tr className="border-b text-left text-muted-foreground">
-              <th className="p-2 font-medium">{t('fields.number', 'Αριθμός')}</th>
-              <th className="p-2 font-medium">{t('fields.type', 'Τύπος')}</th>
-              <th className="p-2 font-medium">{t('fields.status', 'Κατάσταση')}</th>
-              <th className="p-2 font-medium">{t('fields.floor', 'Όροφος')}</th>
-              <th className="p-2 font-medium">{t('fields.locationZone', 'Ζώνη')}</th>
-              <th className="p-2 font-medium">{t('fields.area', 'Εμβαδόν')}</th>
-              <th className="p-2 font-medium text-right">{t('fields.price', 'Τιμή')}</th>
+            <tr className={cn("border-b text-left", colors.text.muted)}>
+              <th className={cn("p-2", typography.label.sm)}>{t('fields.number', 'Αριθμός')}</th>
+              <th className={cn("p-2", typography.label.sm)}>{t('fields.type', 'Τύπος')}</th>
+              <th className={cn("p-2", typography.label.sm)}>{t('fields.status', 'Κατάσταση')}</th>
+              <th className={cn("p-2", typography.label.sm)}>{t('fields.floor', 'Όροφος')}</th>
+              <th className={cn("p-2", typography.label.sm)}>{t('fields.locationZone', 'Ζώνη')}</th>
+              <th className={cn("p-2", typography.label.sm)}>{t('fields.area', 'Εμβαδόν')}</th>
+              <th className={cn("p-2 text-right", typography.label.sm)}>{t('fields.price', 'Τιμή')}</th>
             </tr>
           </thead>
           <tbody>
             {parkingSpots.map(spot => (
               <tr key={spot.id} className="border-b last:border-0 hover:bg-muted/50">
-                <td className="p-2 font-medium">{spot.number}</td>
+                <td className={cn("p-2", typography.label.sm)}>{spot.number}</td>
                 <td className="p-2">
-                  <span className={cn('rounded px-2 py-1 text-xs', colors.bg.accentSubtle)}>
+                  <span className={cn('rounded px-2 py-1', typography.body.xs, colors.bg.accentSubtle)}>
                     {spot.type ? PARKING_TYPE_LABELS[spot.type] : '—'}
                   </span>
                 </td>
@@ -223,6 +227,7 @@ function ParkingSpotsList({ parkingSpots, loading, error, t, colors, quick, icon
 // =============================================================================
 
 function ParkingStatusBadge({ status, colors }: { status: string; colors: ReturnType<typeof useSemanticColors> }) {
+  const typography = useTypography();
   const colorMap: Record<string, string> = {
     available: `${colors.bg.successSubtle} ${colors.text.success}`,
     occupied: `${colors.bg.warningSubtle} ${colors.text.warning}`,
@@ -234,7 +239,7 @@ function ParkingStatusBadge({ status, colors }: { status: string; colors: Return
   const label = status ? (PARKING_STATUS_LABELS[status as keyof typeof PARKING_STATUS_LABELS] || status) : '—';
 
   return (
-    <span className={cn('rounded px-2 py-1 text-xs', colorMap[status] || `${colors.bg.muted} ${colors.text.muted}`)}>
+    <span className={cn('rounded px-2 py-1', typography.body.xs, colorMap[status] || `${colors.bg.muted} ${colors.text.muted}`)}>
       {label}
     </span>
   );

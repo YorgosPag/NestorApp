@@ -23,6 +23,7 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { cn } from '@/lib/utils';
+import { useTypography } from '@/hooks/useTypography';
 import { Landmark, Save } from 'lucide-react';
 import type { LandownerEntry, PropertyOwnerEntry } from '@/types/ownership-table';
 
@@ -103,6 +104,7 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
   const { t } = useTranslation('common');
   const { t: tProjects } = useTranslation('projects');
   const { success: showSuccess, error: showError } = useNotifications();
+  const typography = useTypography();
   const iconSizes = useIconSizes();
 
   // ── State ──────────────────────────────────────────────────────────────
@@ -191,7 +193,7 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
   if (!projectData) {
     return (
       <section className="flex items-center justify-center p-2">
-        <p className={cn('text-sm', COLOR_BRIDGE.text.muted)}>{tProjects('common.loading')}</p>
+        <p className={cn(typography.body.sm, COLOR_BRIDGE.text.muted)}>{tProjects('common.loading')}</p>
       </section>
     );
   }
@@ -201,7 +203,7 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
     <section className="space-y-2 p-2">
       {/* Header */}
       <header className="flex items-center justify-between">
-        <h3 className="flex items-center gap-2 text-lg font-semibold">
+        <h3 className={cn("flex items-center gap-2", typography.heading.md)}>
           <Landmark className={iconSizes.md} />
           {t('ownership.landownersTab.title')}
         </h3>
@@ -259,9 +261,11 @@ function BartexPercentageField({
   onChange: (value: string) => void;
   t: (key: string) => string;
 }) {
+  const typography = useTypography();
+
   return (
     <fieldset className="flex items-center gap-2">
-      <Label className="shrink-0 text-sm font-medium">
+      <Label className={cn("shrink-0", typography.label.sm)}>
         {t('ownership.bartex.percentage')}
       </Label>
       <Input
@@ -274,7 +278,7 @@ function BartexPercentageField({
         className="w-24 text-right"
         placeholder="0"
       />
-      <span className={cn('text-sm', COLOR_BRIDGE.text.muted)}>%</span>
+      <span className={cn(typography.body.sm, COLOR_BRIDGE.text.muted)}>%</span>
     </fieldset>
   );
 }

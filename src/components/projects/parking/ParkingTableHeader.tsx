@@ -3,6 +3,9 @@
 import React, { useRef, useCallback } from 'react';
 import { ParkingColumnHeader } from './ParkingColumnHeader';
 import { ParkingColumnFilter } from './ParkingColumnFilter';
+import { cn } from '@/lib/utils';
+import { useTypography } from '@/hooks/useTypography';
+import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Column configuration type
 interface TableColumn {
@@ -32,6 +35,7 @@ export function ParkingTableHeader({
   onSort,
 }: ParkingTableHeaderProps) {
 
+  const typography = useTypography();
   const headerRef = useRef<HTMLDivElement>(null);
   const activeResizeIndex = useRef<number | null>(null);
 
@@ -68,7 +72,7 @@ export function ParkingTableHeader({
   }, []);
 
   return (
-    <div className="shrink-0 text-sm">
+    <div className={cn("shrink-0", typography.body.sm)}>
       {/* Headers */}
       <div 
         ref={headerRef}

@@ -6,6 +6,7 @@ import { StatsCard } from './StatsCard';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import '@/lib/design-system';
 
 interface DashboardStat {
   title: string;

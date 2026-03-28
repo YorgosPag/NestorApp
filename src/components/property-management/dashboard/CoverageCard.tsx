@@ -27,6 +27,7 @@ import { useTranslation } from 'react-i18next';
 
 // 🏢 ENTERPRISE: Types
 import type { CoverageStats } from '@/hooks/useUnitsStats';
+import '@/lib/design-system';
 
 // =============================================================================
 // 🏢 TYPES
@@ -96,7 +97,7 @@ export function CoverageCard({
         <CardTitle className="text-sm font-medium">
           {t('page.dashboard.coverage.title')}
         </CardTitle>
-        <TrendingUp className={`${iconSizes.sm} text-muted-foreground`} />
+        <TrendingUp className={`${iconSizes.sm} ${colors.text.muted}`} />
       </CardHeader>
 
       <CardContent className={`${spacing.padding.sm} pt-0`}>

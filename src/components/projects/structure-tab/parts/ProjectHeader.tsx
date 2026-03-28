@@ -10,6 +10,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface ProjectHeaderProps {
   name: string;
@@ -26,7 +27,7 @@ export function ProjectHeader({ name, buildingsCount, totalUnits }: ProjectHeade
   const iconSizes = useIconSizes();
 
   return (
-    <div className={cn("flex items-center", spacing.gap.sm, spacing.padding.md, colors.bg.infoSubtle, "rounded-lg border")}>
+    <div className={cn("flex items-center", spacing.gap.sm, spacing.padding.sm, colors.bg.infoSubtle, "rounded-lg border")}>
       <NAVIGATION_ENTITIES.building.icon className={cn(NAVIGATION_ENTITIES.building.color, iconSizes.lg)} />
       <div>
         <div className={cn(typography.heading.sm, colors.text.foreground)}>{name}</div>

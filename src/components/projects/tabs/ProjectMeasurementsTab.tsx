@@ -34,6 +34,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { formatCurrency as formatCurrencyIntl } from '@/lib/intl-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -75,6 +76,7 @@ const formatCurrencyWithDecimals = (amount: number): string =>
 export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTabProps) {
   const iconSizes = useIconSizes();
   const typography = useTypography();
+  const colors = useSemanticColors();
   const { t } = useTranslation('projects');
 
   const [buildings, setBuildings] = useState<BuildingInfo[]>([]);
@@ -200,7 +202,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
 
   if (loading) {
     return (
-      <section className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
+      <section className={cn("flex items-center justify-center gap-2 py-12", colors.text.muted)}>
         <Spinner size="large" />
         {/* eslint-disable-next-line custom/no-hardcoded-strings */}
         <span className={typography.body.base}>Φόρτωση επιμετρήσεων...</span>
@@ -220,9 +222,9 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
   if (buildings.length === 0) {
     return (
       <section className="text-center py-12 border-2 border-dashed rounded-lg">
-        <Building2 className={cn(iconSizes.xl, 'mx-auto mb-2 text-muted-foreground')} />
+        <Building2 className={cn(iconSizes.xl, 'mx-auto mb-2', colors.text.muted)} />
         <h3 className={cn(typography.heading.md, 'mb-2')}>{t('measurements.noBuildings')}</h3>
-        <p className="text-sm text-muted-foreground">
+        <p className={typography.special.secondary}>
           {t('measurements.noBuildingsHint')}
         </p>
       </section>
@@ -232,12 +234,12 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
   if (totalItems === 0) {
     return (
       <section className="text-center py-12 border-2 border-dashed rounded-lg">
-        <Ruler className={cn(iconSizes.xl, 'mx-auto mb-2 text-muted-foreground')} />
+        <Ruler className={cn(iconSizes.xl, 'mx-auto mb-2', colors.text.muted)} />
         <h3 className={cn(typography.heading.md, 'mb-2')}>{t('measurements.noMeasurements')}</h3>
-        <p className="text-sm text-muted-foreground">
+        <p className={typography.special.secondary}>
           {t('measurements.noMeasurementsHint')}
         </p>
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className={cn(typography.special.tertiary, 'mt-1')}>
           {buildings.length === 1
             ? t('measurements.buildingsInProject', { count: buildings.length })
             : t('measurements.buildingsInProjectPlural', { count: buildings.length })}
@@ -256,7 +258,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
           <Ruler className={iconSizes.lg} />
           {t('measurements.title')}
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className={cn(typography.special.secondary, 'mt-1')}>
           {t('measurements.subtitle')}
         </p>
       </header>
@@ -267,12 +269,12 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         <Card>
           <CardContent className="p-2">
-            <div className="flex items-center gap-2 text-muted-foreground mb-1">
+            <div className={cn("flex items-center gap-2 mb-1", colors.text.muted)}>
               <Package className="h-4 w-4" />
-              <span className="text-xs font-medium">{t('measurements.works')}</span>
+              <span className={typography.label.xs}>{t('measurements.works')}</span>
             </div>
             <p className={cn(typography.heading.lg, 'tabular-nums')}>{totalItems}</p>
-            <p className="text-xs text-muted-foreground">
+            <p className={typography.special.tertiary}>
               {t('measurements.inBuildingsCount', { with: String(buildingsWithItems), total: String(buildings.length) })}
             </p>
           </CardContent>
@@ -280,9 +282,9 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
 
         <Card>
           <CardContent className="p-2">
-            <div className="flex items-center gap-2 text-muted-foreground mb-1">
+            <div className={cn("flex items-center gap-2 mb-1", colors.text.muted)}>
               <TrendingUp className="h-4 w-4" />
-              <span className="text-xs font-medium">{t('measurements.estimate')}</span>
+              <span className={typography.label.xs}>{t('measurements.estimate')}</span>
             </div>
             <p className={cn(typography.heading.lg, 'tabular-nums')}>
               {formatCurrencyWithDecimals(projectSummary.totalEstimatedCost)}
@@ -292,9 +294,9 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
 
         <Card>
           <CardContent className="p-2">
-            <div className="flex items-center gap-2 text-muted-foreground mb-1">
+            <div className={cn("flex items-center gap-2 mb-1", colors.text.muted)}>
               <Ruler className="h-4 w-4" />
-              <span className="text-xs font-medium">{t('measurements.actual')}</span>
+              <span className={typography.label.xs}>{t('measurements.actual')}</span>
             </div>
             <p className={cn(typography.heading.lg, 'tabular-nums')}>
               {projectSummary.totalActualCost !== null
@@ -307,12 +309,12 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
 
         <Card>
           <CardContent className="p-2">
-            <div className="flex items-center gap-2 text-muted-foreground mb-1">
+            <div className={cn("flex items-center gap-2 mb-1", colors.text.muted)}>
               <Building2 className="h-4 w-4" />
-              <span className="text-xs font-medium">{t('measurements.buildings')}</span>
+              <span className={typography.label.xs}>{t('measurements.buildings')}</span>
             </div>
             <p className={cn(typography.heading.lg, 'tabular-nums')}>{buildings.length}</p>
-            <p className="text-xs text-muted-foreground">
+            <p className={typography.special.tertiary}>
               {buildingsWithItems} {t('measurements.withWorks')}
             </p>
           </CardContent>
@@ -350,7 +352,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
                     {hasData ? (
                       isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />
                     ) : (
-                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <Building2 className={cn("h-4 w-4", colors.text.muted)} />
                     )}
                     {building.name}
                     <Badge variant="secondary" className="ml-1">
@@ -373,14 +375,14 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
                 {summary && (
                   <div className="flex items-center gap-2">
                     <Progress value={percent} className="h-2 flex-1" />
-                    <span className="text-xs text-muted-foreground tabular-nums w-12 text-right">
+                    <span className={cn(typography.special.tertiary, 'tabular-nums w-12 text-right')}>
                       {percent.toFixed(1)}%
                     </span>
                   </div>
                 )}
 
                 {!hasData && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className={typography.special.tertiary}>
                     {t('measurements.noMeasurementsInBuilding')}
                   </p>
                 )}
@@ -388,7 +390,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
                 {/* Expanded: Category breakdown */}
                 {isExpanded && summary && (
                   <div className="mt-2 space-y-1">
-                    <div className="grid grid-cols-[1fr_auto_auto] gap-2 text-xs font-medium text-muted-foreground border-b pb-1">
+                    <div className={cn('grid grid-cols-[1fr_auto_auto] gap-2 border-b pb-1', colors.text.muted, typography.label.xs)}>
                       <span>{t('measurements.category')}</span>
                       <span className="text-right">{t('measurements.worksHeader')}</span>
                       <span className="text-right w-24">{t('measurements.estimateHeader')}</span>
@@ -396,18 +398,18 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
                     {summary.categories.map(cat => (
                       <div
                         key={cat.categoryCode}
-                        className="grid grid-cols-[1fr_auto_auto] gap-2 text-sm py-1 border-b border-muted/40 last:border-0"
+                        className={cn('grid grid-cols-[1fr_auto_auto] gap-2 py-1 border-b border-muted/40 last:border-0', typography.body.sm)}
                       >
                         <span className="truncate">
-                          <span className="font-mono text-xs text-muted-foreground mr-1">
+                          <span className={cn(typography.special.codeId, colors.text.muted, 'mr-1')}>
                             {cat.categoryCode}
                           </span>
                           {cat.categoryName}
                         </span>
-                        <span className="text-right tabular-nums text-muted-foreground">
+                        <span className={cn("text-right tabular-nums", colors.text.muted)}>
                           {cat.itemCount}
                         </span>
-                        <span className="text-right tabular-nums w-24 font-medium">
+                        <span className={cn(typography.label.sm, 'text-right tabular-nums w-24')}>
                           {formatCurrencyWithDecimals(cat.totalEstimatedCost)}
                         </span>
                       </div>

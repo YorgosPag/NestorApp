@@ -12,6 +12,8 @@ import {
 import { FilterSelect } from '../FilterSelect';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
+import { useTypography } from '@/hooks/useTypography';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { PROJECT_STATUS_LABELS } from '@/types/project';
@@ -41,6 +43,8 @@ export function SearchAndFilters({
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
+  const typography = useTypography();
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: Centralized spacing tokens
   const spacing = useSpacingTokens();
   const hasActiveFilters =
@@ -67,7 +71,7 @@ export function SearchAndFilters({
           />
         </div>
         <div className={cn("flex items-center flex-wrap", spacing.gap.sm)}>
-          <Filter className={`${iconSizes.sm} text-muted-foreground`} />
+          <Filter className={cn(`${iconSizes.sm}`, colors.text.muted)} />
           <FilterSelect
             value={filterCompany}
             onChange={setFilterCompany}
@@ -75,7 +79,7 @@ export function SearchAndFilters({
             placeholder={t('search.allCompanies')}
           />
           {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs">
+            <Button variant="ghost" size="sm" onClick={clearFilters} className={typography.body.xs}>
               <X className={`${iconSizes.xs} mr-1`} />
               {t('search.clear')}
             </Button>
@@ -89,7 +93,7 @@ export function SearchAndFilters({
           <TabsList className="w-auto">
             <TabsTrigger
               value="all"
-              className={`text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`}
+              className={cn(typography.body.xs, `data-[state=active]:bg-orange-500 data-[state=active]:text-white ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`)}
             >
               {t('search.allStatuses')}
             </TabsTrigger>
@@ -100,7 +104,7 @@ export function SearchAndFilters({
                 <TabsTrigger
                   key={key}
                   value={key}
-                  className={`text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`}
+                  className={cn(typography.body.xs, `data-[state=active]:bg-orange-500 data-[state=active]:text-white ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`)}
                 >
                   {t(`status.${i18nKey}`)}
                 </TabsTrigger>

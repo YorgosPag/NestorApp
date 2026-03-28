@@ -9,6 +9,7 @@ import { UnifiedDashboard } from '@/components/property-management/dashboard/Uni
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface ParkingStatsSummaryProps {
     stats: ParkingStats;

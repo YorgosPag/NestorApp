@@ -15,6 +15,7 @@ import { GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface RowActionsProps {
     isFavorite: boolean;

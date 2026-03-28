@@ -12,6 +12,7 @@ import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-ente
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized currency formatting
+import '@/lib/design-system';
 
 interface PropertyDashboardProps {
   stats: PropertyStats;

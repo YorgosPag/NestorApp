@@ -6,8 +6,10 @@ import { ArrowUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { parkingComponentsStyles } from './ParkingComponents.styles';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface ParkingColumnHeaderProps {
   column: { key: string; label: string };
@@ -27,6 +29,7 @@ export function ParkingColumnHeader({
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   // 🏢 ENTERPRISE: Translate label if it's an i18n key (contains '.')
   const displayLabel = column.label.includes('.') ? t(column.label) : column.label;
@@ -45,7 +48,7 @@ export function ParkingColumnHeader({
         <span>{displayLabel}</span>
         <ArrowUpDown className={cn(
           `ml-2 ${iconSizes.xs} transition-transform`,
-          sortConfig?.key === column.key ? 'text-primary' : 'text-muted-foreground/50',
+          sortConfig?.key === column.key ? 'text-primary' : cn(colors.text.muted, 'opacity-50'),
           sortConfig?.key === column.key && sortConfig.direction === 'desc' && 'rotate-180'
         )} />
       </Button>

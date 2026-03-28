@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import '@/lib/design-system';
 
 interface OverflowContainerProps {
   children: React.ReactNode;

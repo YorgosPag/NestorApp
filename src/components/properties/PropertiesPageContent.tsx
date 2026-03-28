@@ -9,6 +9,7 @@ import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { PropertyGridViewCompatible as PropertyGridView } from '@/components/property-viewer/PropertyGrid';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 // Loading component for dynamic import
 const LoadingComponent = () => {

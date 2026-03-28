@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { FormField } from '../FormField';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import '@/lib/design-system';
 
 interface FinancialLeftColumnProps {
     financialData: {

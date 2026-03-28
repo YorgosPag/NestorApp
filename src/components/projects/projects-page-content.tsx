@@ -3,8 +3,6 @@
 import React, { useState, useMemo, useCallback, startTransition } from 'react';
 
 import type { Project } from '@/types/project';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useProjectsPageState } from '@/hooks/useProjectsPageState';
 import { useFirestoreProjects } from '@/hooks/useFirestoreProjects';
 import { AdvancedFiltersPanel, projectFiltersConfig, type FilterPanelConfig } from '@/components/core/AdvancedFilters';
@@ -23,7 +21,6 @@ import {
 // 🏢 ENTERPRISE: All icons from centralized NAVIGATION_ENTITIES
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { ProjectViewSwitch } from './ProjectViewSwitch';
-import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: Centralized page states (ADR-229)
 import { PageLoadingState, PageErrorState } from '@/core/states';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
@@ -32,14 +29,13 @@ import { deleteProject } from '@/services/projects-client.service';
 import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('ProjectsPageContent');
 
 export function ProjectsPageContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('projects');
-  const iconSizes = useIconSizes();
-  const colors = useSemanticColors();
 
   // Note: Deep-link tab is read from useProjectsPageState (same useSearchParams instance)
 
@@ -85,7 +81,7 @@ export function ProjectsPageContent() {
 
   // Mobile-only states
   const [showFilters, setShowFilters] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [_searchTerm, _setSearchTerm] = useState('');
 
   // 🏢 ENTERPRISE: "Fill then Create" pattern (Salesforce/Procore/SAP)
   // No API call on "New" — open empty form, create on Save

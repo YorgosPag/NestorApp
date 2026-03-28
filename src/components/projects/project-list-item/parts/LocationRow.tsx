@@ -4,6 +4,9 @@
 import React from 'react';
 import { MapPin } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTypography } from '@/hooks/useTypography';
+import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 interface LocationRowProps {
     address?: string;
@@ -12,10 +15,11 @@ interface LocationRowProps {
 
 export function LocationRow({ address, city }: LocationRowProps) {
     const iconSizes = useIconSizes();
+    const typography = useTypography();
     if (!address) return null;
 
     return (
-        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+        <div className={cn("flex items-center gap-1 mb-1", typography.special.tertiary)}>
             <MapPin className={iconSizes.xs} />
             <span className="truncate">{address}, {city}</span>
         </div>

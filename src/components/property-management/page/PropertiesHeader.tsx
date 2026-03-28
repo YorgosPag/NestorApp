@@ -22,6 +22,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ViewMode as CoreViewMode } from '@/core/headers';
+import '@/lib/design-system';
 
 export type PropertiesViewMode = 'list' | 'grid';
 

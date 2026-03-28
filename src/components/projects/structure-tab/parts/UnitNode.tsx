@@ -32,8 +32,8 @@ export const UnitNode = ({ unit }: { unit: UnitModel }) => {
   const showCustomerInfo = unit.status === 'sold' || unit.status === 'reserved' || unit.status === 'rented';
 
   return (
-    <div className={cn("border-l-2", quick.table, spacing.padding.left.md)}>
-      <div className={cn(spacing.padding.md, colors.bg.primary, quick.card, HOVER_SHADOWS.MEDIUM, "transition-all")}>
+    <div className={cn("border-l-2", quick.table, "pl-2")}>
+      <div className={cn("p-2", colors.bg.infoSubtle, quick.card, HOVER_SHADOWS.MEDIUM, "transition-all")}>
         <div className={cn("flex items-start justify-between", spacing.margin.bottom.sm)}>
           <div className="flex items-center gap-2">
             <UnitIcon size={18} className={`${unitColor} mt-1`} />
@@ -66,10 +66,10 @@ export const UnitNode = ({ unit }: { unit: UnitModel }) => {
               <div className={cn(colors.bg.success, "p-2", quick.card)}>
                 <div className={cn("flex items-center", spacing.gap.sm, spacing.margin.bottom.sm)}>
                   <User size={16} className={`${colors.text.success}`} />
-                  <span className={`font-medium ${colors.text.success}`}>{t('structure.customer')}</span>
+                  <span className={cn(typography.label.sm, colors.text.success)}>{t('structure.customer')}</span>
                 </div>
                 <div className="ml-2">
-                  <div className={`font-medium ${colors.text.foreground}`}>
+                  <div className={cn(typography.label.sm, colors.text.foreground)}>
                     {unit.customerName}
                   </div>
                   {unit.soldTo && (

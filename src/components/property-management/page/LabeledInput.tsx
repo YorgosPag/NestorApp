@@ -5,6 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface LabeledInputProps {
   id: string;
@@ -18,6 +20,7 @@ interface LabeledInputProps {
 
 export function LabeledInput({ id, icon, label, value, onChange, placeholder, className }: LabeledInputProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   return (
     <div className={cn("space-y-2", className)}>
       <Label htmlFor={id} className="text-xs font-medium flex items-center gap-1">
@@ -25,7 +28,7 @@ export function LabeledInput({ id, icon, label, value, onChange, placeholder, cl
         {label}
       </Label>
       <div className="relative w-full">
-        <div className={`absolute left-2.5 top-1/2 -translate-y-1/2 ${iconSizes.sm} text-muted-foreground`}>{icon}</div>
+        <div className={`absolute left-2.5 top-1/2 -translate-y-1/2 ${iconSizes.sm} ${colors.text.muted}`}>{icon}</div>
         <Input
           id={id}
           value={value}
