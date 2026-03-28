@@ -30,35 +30,13 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Property } from '@/types/property-viewer';
-
-// 🏢 ENTERPRISE: Translation key type for OPERATIONAL status labels (Physical Truth - No Sales!)
-type OperationalStatusKey = 'ready' | 'underConstruction' | 'inspection' | 'maintenance' | 'draft';
-// 🏢 ENTERPRISE: Translation key type for type labels
-type TypeKey = 'apartment' | 'studio' | 'maisonette' | 'shop' | 'office' | 'storage';
-
-// ✅ ENTERPRISE: Factory function that creates an OPERATIONAL status label getter
-// 🎯 DOMAIN SEPARATION: Units = Physical Truth, NO sales statuses!
-const createStatusLabelGetter = (t: (key: string) => string) => (status: string): string => {
-  const operationalStatuses: OperationalStatusKey[] = ['ready', 'underConstruction', 'inspection', 'maintenance', 'draft'];
-  if (operationalStatuses.includes(status as OperationalStatusKey)) {
-    return t(`operationalStatus.${status}`);
-  }
-  return status;
-};
-
-// ✅ ENTERPRISE: Factory function that creates a type label getter with translation support
-const createTypeLabelGetter = (t: (key: string) => string) => (type: string): string => {
-  const knownTypes: TypeKey[] = ['apartment', 'studio', 'maisonette', 'shop', 'office', 'storage'];
-  if (knownTypes.includes(type as TypeKey)) {
-    return t(`page.typeLabels.${type}`);
-  }
-  return type;
-};
+import '@/lib/design-system';
+import { createStatusLabelGetter, createTypeLabelGetter } from './units-page-helpers';
 
 function UnitsPageContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('units');
-  const colors = useSemanticColors();
+  const _colors = useSemanticColors();
   const searchParams = useSearchParams();
   const urlUnitId = searchParams.get('unitId');
   const urlTab = searchParams.get('tab');
@@ -104,7 +82,7 @@ function UnitsPageContent() {
     showDashboard,
     setShowDashboard,
     suggestionToDisplay,
-    setSuggestionToDisplay,
+    setSuggestionToDisplay: _setSuggestionToDisplay,
     connections,
     setConnections,
     groups,
@@ -118,7 +96,7 @@ function UnitsPageContent() {
     filteredProperties,
     dashboardStats,
     selectedUnit,
-    handleSelectUnit,
+    handleSelectUnit: _handleSelectUnit,
     handlePolygonSelect,
     handlePolygonCreated,
     handlePolygonUpdated,
@@ -134,7 +112,7 @@ function UnitsPageContent() {
   // 🏢 ENTERPRISE: Start inline new unit creation
   const handleNewUnitInline = useCallback(() => {
     const blankUnit: Property = {
-      id: '__new__',
+      id: '__new__', // eslint-disable-line custom/no-hardcoded-strings
       name: '',
       type: '',
       status: 'reserved',
@@ -153,7 +131,7 @@ function UnitsPageContent() {
     setNewUnitTemplate(blankUnit);
     setIsCreatingNewUnit(true);
     // Select the template so it shows in the details panel
-    handlePolygonSelect('__new__', false);
+    handlePolygonSelect('__new__', false); // eslint-disable-line custom/no-hardcoded-strings
   }, [handlePolygonSelect]);
 
   // 🏢 ENTERPRISE: Callback when new unit is successfully created
@@ -169,7 +147,7 @@ function UnitsPageContent() {
   const handleCancelCreate = useCallback(() => {
     setIsCreatingNewUnit(false);
     setNewUnitTemplate(null);
-    handlePolygonSelect('__none__', false);
+    handlePolygonSelect('__none__', false); // eslint-disable-line custom/no-hardcoded-strings
   }, [handlePolygonSelect]);
 
   // 🏢 ENTERPRISE: Delete unit handler — Firestore + local state sync
@@ -179,7 +157,7 @@ function UnitsPageContent() {
       await deleteUnit(unitId);
       handleDelete(unitId);
       // Deselect the deleted unit
-      handlePolygonSelect('__none__', false);
+      handlePolygonSelect('__none__', false); // eslint-disable-line custom/no-hardcoded-strings
     } catch {
       // Error is logged in the service
     }
@@ -305,7 +283,7 @@ function UnitsPageContent() {
 
   // 🔥 NEW: Handle dashboard card clicks για filtering
   // 🎯 DOMAIN SEPARATION: Units = Physical Truth - Operational status filters only!
-  const handleCardClick = (stat: DashboardStat, index: number) => {
+  const handleCardClick = (stat: DashboardStat, _index: number) => {
     const cardTitle = stat.title;
     const totalUnitsTitle = t('page.dashboard.totalUnits');
     const readyTitle = t('operationalStatus.ready');
@@ -450,7 +428,7 @@ function UnitsPageContent() {
 
         {/* Mobile: Show only when showFilters is true */}
         {showFilters && (
-          <div className="md:hidden">
+          <div className="md:hidden"> {/* eslint-disable-line custom/no-hardcoded-strings */}
             <AdvancedFiltersPanel
               config={unitFiltersConfig}
               filters={filters as unknown as UnitFilterState}

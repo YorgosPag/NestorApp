@@ -47,60 +47,16 @@ import {
   SearchResultItem,
   SearchResultGroup,
 } from './SearchResultItem';
-import { SEARCH_CONFIG, SEARCH_ENTITY_TYPES } from '@/types/search';
-import type { SearchResult, SearchEntityType } from '@/types/search';
+import { SEARCH_CONFIG } from '@/types/search';
+import type { SearchResult } from '@/types/search';
+import '@/lib/design-system';
+import {
+  ENTITY_DISPLAY_ORDER,
+  KBD_STYLES,
+} from './global-search-config';
+import type { GlobalSearchDialogProps } from './global-search-config';
 
-// =============================================================================
-// TYPES
-// =============================================================================
-
-interface GlobalSearchDialogProps {
-  /** Whether the dialog is open (controlled) */
-  open?: boolean;
-
-  /** Callback when open state changes */
-  onOpenChange?: (open: boolean) => void;
-
-  /** Filter by specific entity types */
-  types?: SearchEntityType[];
-}
-
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-/**
- * Order in which entity groups should be displayed.
- */
-const ENTITY_DISPLAY_ORDER: SearchEntityType[] = [
-  SEARCH_ENTITY_TYPES.PROJECT,
-  SEARCH_ENTITY_TYPES.CONTACT,
-  SEARCH_ENTITY_TYPES.BUILDING,
-  SEARCH_ENTITY_TYPES.UNIT,
-  SEARCH_ENTITY_TYPES.FILE,
-  SEARCH_ENTITY_TYPES.PARKING,
-  SEARCH_ENTITY_TYPES.STORAGE,
-  // 🏢 ADR-029 Phase 2: CRM Entities
-  SEARCH_ENTITY_TYPES.OPPORTUNITY,
-  SEARCH_ENTITY_TYPES.COMMUNICATION,
-  SEARCH_ENTITY_TYPES.TASK,
-];
-
-/**
- * 🏢 ENTERPRISE: Centralized keyboard hint styling
- * Single source of truth for kbd element appearance in search dialog
- *
- * @design Based on macOS/Windows keyboard shortcut UI patterns
- * @see SAP Fiori, Salesforce Lightning Design System kbd patterns
- */
-const KBD_STYLES = {
-  /** Base classes for all kbd elements */
-  base: 'inline-flex items-center justify-center font-medium bg-muted border rounded',
-  /** Small kbd for arrow keys and single characters */
-  sm: 'min-w-[1.5rem] h-6 px-1.5 text-xs',
-  /** Medium kbd for text labels like "ESC" */
-  md: 'min-w-[2rem] h-7 px-2 text-xs',
-} as const;
+export type { GlobalSearchDialogProps } from './global-search-config';
 
 // =============================================================================
 // COMPONENT
@@ -279,7 +235,6 @@ export function GlobalSearchDialog({
    * Render grouped results.
    */
   const renderResults = () => {
-    const flatResults = getFlatResults();
     let currentIndex = 0;
 
     return ENTITY_DISPLAY_ORDER.map((entityType) => {
@@ -328,11 +283,11 @@ export function GlobalSearchDialog({
           spacing.padding.y['2xl']
         )}>
           <Search className={cn(iconSizes.lg, 'text-muted-foreground/40', spacing.margin.bottom.sm)} />
-          <p className={cn(typography.body.sm, 'text-muted-foreground')}>
-            {t('search.hints.startTyping', 'Πληκτρολογήστε για αναζήτηση...')}
+          <p className={cn(typography.body.sm, colors.text.muted)}>
+            {t('search.hints.startTyping')}
           </p>
           <p className={cn(typography.body.xs, 'text-muted-foreground/60', spacing.margin.top.xs)}>
-            {t('search.hints.minChars', 'Τουλάχιστον {{count}} χαρακτήρες', { count: SEARCH_CONFIG.MIN_QUERY_LENGTH })}
+            {t('search.hints.minChars', { count: SEARCH_CONFIG.MIN_QUERY_LENGTH })}
           </p>
         </div>
       );
@@ -345,11 +300,11 @@ export function GlobalSearchDialog({
           spacing.padding.y['2xl']
         )}>
           <Search className={cn(iconSizes.lg, 'text-muted-foreground/40', spacing.margin.bottom.sm)} />
-          <p className={cn(typography.body.sm, 'text-muted-foreground')}>
-            {t('search.noResults', 'Δεν βρέθηκαν αποτελέσματα')}
+          <p className={cn(typography.body.sm, colors.text.muted)}>
+            {t('search.noResults')}
           </p>
           <p className={cn(typography.body.xs, 'text-muted-foreground/60', spacing.margin.top.xs)}>
-            {t('search.tryDifferent', 'Δοκιμάστε διαφορετική αναζήτηση')}
+            {t('search.tryDifferent')}
           </p>
         </div>
       );
@@ -402,7 +357,7 @@ export function GlobalSearchDialog({
       >
         {/* Visually hidden title for accessibility */}
         <DialogTitle className="sr-only">
-          {t('search.globalSearch', 'Παγκόσμια Αναζήτηση')}
+          {t('search.globalSearch')}
         </DialogTitle>
 
         {/* 🏢 ENTERPRISE: Centralized Search Input */}
@@ -419,16 +374,16 @@ export function GlobalSearchDialog({
             {/* Spinner REPLACES the search icon when loading (not overlay) */}
             <div className="shrink-0 flex items-center justify-center w-5 h-5">
               {isLoading ? (
-                <Spinner size="small" className="text-muted-foreground" />
+                <Spinner size="small" className={colors.text.muted} />
               ) : (
-                <Search className={cn(iconSizes.sm, 'text-muted-foreground')} />
+                <Search className={cn(iconSizes.sm, colors.text.muted)} />
               )}
             </div>
 
             <SearchInput
               value={query}
               onChange={setQuery}
-              placeholder={t('search.placeholder', 'Αναζήτηση σε έργα, επαφές, κτίρια...')}
+              placeholder={t('search.placeholder')}
               debounceMs={0} // Debouncing handled by useGlobalSearch hook
               showClearButton
               onClear={() => setQuery('')}
@@ -445,21 +400,21 @@ export function GlobalSearchDialog({
                 'hidden sm:inline-flex',
                 KBD_STYLES.base,
                 KBD_STYLES.md,
-                'text-muted-foreground'
+                colors.text.muted
               )}>
-                {t('search.hints.escKey', 'ESC')}
+                {t('search.hints.escKey')}
               </kbd>
               <DialogClose className={cn(
                 // 🏢 ENTERPRISE: Override default absolute positioning
                 'static',
                 'inline-flex items-center justify-center',
                 'rounded-md p-1.5',
-                'text-muted-foreground hover:text-foreground',
+                `${colors.text.muted} hover:text-foreground`,
                 'hover:bg-muted transition-colors',
                 'focus:outline-none focus:ring-2 focus:ring-ring'
               )}>
                 <X className={iconSizes.sm} />
-                <span className="sr-only">{t('buttons.close', 'Κλείσιμο')}</span>
+                <span className="sr-only">{t('buttons.close')}</span>
               </DialogClose>
             </div>
           </div>
@@ -469,7 +424,7 @@ export function GlobalSearchDialog({
         <ScrollArea
           className="max-h-[60vh]"
           role="listbox"
-          aria-label={t('search.results', 'Αποτελέσματα αναζήτησης')}
+          aria-label={t('search.results')}
         >
           <div className={cn(
             // 🏢 ENTERPRISE: Standard padding for command palette
@@ -497,7 +452,7 @@ export function GlobalSearchDialog({
               borders.quick.borderT,
               // Centralized typography
               typography.body.xs,
-              'text-muted-foreground'
+              colors.text.muted
             )}
           >
             <div className={cn('flex items-center', spacing.gap.md)}>
@@ -505,18 +460,15 @@ export function GlobalSearchDialog({
               <span className={cn('flex items-center', spacing.gap.xs)}>
                 <kbd className={cn(KBD_STYLES.base, KBD_STYLES.sm)}>↑</kbd>
                 <kbd className={cn(KBD_STYLES.base, KBD_STYLES.sm)}>↓</kbd>
-                <span className={spacing.margin.left.xs}>{t('search.navigate', 'πλοήγηση')}</span>
+                <span className={spacing.margin.left.xs}>{t('search.navigate')}</span>
               </span>
               <span className={cn('flex items-center', spacing.gap.xs)}>
                 <kbd className={cn(KBD_STYLES.base, KBD_STYLES.sm)}>↵</kbd>
-                <span className={spacing.margin.left.xs}>{t('search.select', 'επιλογή')}</span>
+                <span className={spacing.margin.left.xs}>{t('search.select')}</span>
               </span>
             </div>
             <span>
-              {totalResults === 1
-                ? t('search.resultsCount_one', '1 αποτέλεσμα').replace('{{count}}', '1')
-                : t('search.resultsCount_other', `${totalResults} αποτελέσματα`).replace('{{count}}', String(totalResults))
-              }
+              {t('search.resultsCount', { count: totalResults })}
             </span>
           </div>
         )}
@@ -525,8 +477,3 @@ export function GlobalSearchDialog({
   );
 }
 
-// =============================================================================
-// EXPORTS
-// =============================================================================
-
-export type { GlobalSearchDialogProps };
