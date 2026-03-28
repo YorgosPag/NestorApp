@@ -1206,13 +1206,17 @@
         "tipContent": "Επιτάχυνση ηλ/μηχ εργασιών μπορεί να μειώσει την καθυστέρηση στις 2-3 ημέρες."
       },
       "criticalPath": {
-        "title": "Κρίσιμα Σημεία",
-        "mecInstallations": "Ηλ/Μηχ Εγκαταστάσεις",
-        "affectsDelivery": "Επηρεάζει την παράδοση",
-        "daysDelay": "{days} ημέρες καθυστέρηση",
-        "finalWorks": "Τελικές Εργασίες",
-        "dependsOnPrevious": "Εξαρτάται από προηγούμενο",
-        "waiting": "Αναμονή"
+        "title": "Κρίσιμη Διαδρομή",
+        "noData": "Δεν υπάρχουν δεδομένα κρίσιμης διαδρομής",
+        "noDataDesc": "Προσθέστε εξαρτήσεις μεταξύ εργασιών για υπολογισμό κρίσιμης διαδρομής.",
+        "noCriticalTasks": "Δεν εντοπίστηκαν κρίσιμες εργασίες",
+        "noCriticalDesc": "Όλες οι εργασίες έχουν float — καμία αλυσίδα δεν καθορίζει το τέλος του έργου.",
+        "delayImpact": "+{days}μ καθυστέρηση",
+        "floatDays": "{days}μ float",
+        "critical": "Κρίσιμο",
+        "cyclicWarning": "Κυκλική εξάρτηση",
+        "viewAll": "Προβολή όλων στο Dashboard",
+        "loading": "Υπολογισμός κρίσιμης διαδρομής..."
       },
       "views": {
         "milestones": "Ορόσημα",
@@ -1236,6 +1240,8 @@
           "daysRemaining": "Ημέρες Υπολοιπ.",
           "phasesOnTrack": "Φάσεις Εντός Χρόνου",
           "delayedTasks": "Καθυστερημένες Εργασίες",
+          "criticalPathLength": "Κρίσιμη Διαδρομή",
+          "criticalPathDays": "{days} ημέρες",
           "totalTasks": "εργασίες",
           "vsPlan": "vs Πλάνο"
         },
@@ -1278,6 +1284,24 @@
         },
         "exportOwnerPdf": "Αναφορά Ιδιοκτήτη (PDF)",
         "exportGanttTable": "Πίνακας Gantt (PDF)",
+        "criticalPath": {
+          "title": "Ανάλυση Κρίσιμης Διαδρομής",
+          "description": "Εργασίες με μηδενικό float που καθορίζουν τη διάρκεια του έργου",
+          "colTask": "Εργασία",
+          "colPhase": "Φάση",
+          "colDuration": "Διάρκεια",
+          "colES": "ES",
+          "colEF": "EF",
+          "colLS": "LS",
+          "colLF": "LF",
+          "colFloat": "Float",
+          "colStatus": "Κατάσταση",
+          "days": "{days}μ",
+          "critical": "Κρίσιμο",
+          "cyclicDep": "Κυκλική εξ.",
+          "pathLength": "Μήκος Κρίσιμης Διαδρομής",
+          "empty": "Δεν υπάρχει κρίσιμη διαδρομή — προσθέστε εξαρτήσεις μεταξύ εργασιών"
+        },
         "delayBreakdown": {
           "title": "Ανάλυση Καθυστερήσεων ανά Φάση",
           "delayed": "Καθυστερημένες",

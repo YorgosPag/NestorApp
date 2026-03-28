@@ -15,6 +15,7 @@ import {
   CalendarDays,
   CheckCircle2,
   AlertTriangle,
+  Route,
 } from 'lucide-react';
 import { ReportSection } from '@/components/reports/core/ReportSection';
 import { ReportKPIGrid, type ReportKPI } from '@/components/reports/core/ReportKPIGrid';
@@ -122,6 +123,16 @@ export function ScheduleOverviewKPIs({ kpis, loading }: ScheduleOverviewKPIsProp
         icon: AlertTriangle,
         color: kpis.delayedTasks === 0 ? 'green' : 'red',
         status: delayedRAG(kpis.delayedTasks),
+        loading,
+      },
+      {
+        title: t('tabs.timeline.dashboard.kpis.criticalPathLength'),
+        value: kpis.criticalPathLength > 0
+          ? t('tabs.timeline.dashboard.kpis.criticalPathDays', { days: kpis.criticalPathLength })
+          : '—',
+        icon: Route,
+        color: 'orange',
+        status: 'gray' as RAGStatus,
         loading,
       },
     ];

@@ -50,7 +50,7 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
         getTypeIcon={getTypeIcon}
       />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-        <CriticalPathCard />
+        <CriticalPathCard buildingId={building.id as string} />
         <CompletionForecastCard milestones={milestones} />
       </div>
     </section>

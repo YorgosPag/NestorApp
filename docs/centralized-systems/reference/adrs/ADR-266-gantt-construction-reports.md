@@ -1,6 +1,6 @@
 # ADR-266: Gantt & Construction Schedule Reports
 
-**Status**: PHASE C IN PROGRESS (Sub-phase 1 complete)
+**Status**: PHASE C IN PROGRESS (Sub-phases 1+2 complete)
 **Date**: 2026-03-28
 **Author**: Claude (Research Agents × 4)
 **Related ADRs**: ADR-034 (Gantt Chart), ADR-265 (Enterprise Reports System), ADR-175 (BOQ/Quantity Surveying)
@@ -12,6 +12,7 @@
 | 2026-03-28 | **Phase A IMPLEMENTED**: 8 new files, 7 modified — Dashboard view toggle, KPIs, S-Curve, Variance Table, Lookahead, Export (PDF/Excel), i18n (el+en) |
 | 2026-03-28 | **Phase B IMPLEMENTED**: 3 new files, 7 modified — DelayBreakdownChart, Owner Report PDF, Gantt Table PDF, S-Curve Brush zoom, 4 export options |
 | 2026-03-28 | **Phase C Sub-phase 1 IMPLEMENTED**: delayReason + delayNote fields — SSoT DELAY_REASONS array, conditional UI in dialog, per-reason stacked bar chart, API + i18n. Also refactored: route.ts split (229+186), dialog split (490+186+245+79) |
+| 2026-03-28 | **Phase C Sub-phase 2 IMPLEMENTED**: Critical Path Method — CPM algorithm (forward/backward pass, Kahn's cycle detection), CriticalPathCard rewrite with real data, CriticalPathSection dashboard table, 7th KPI card, useCriticalPath hook, i18n (en+el) |
 
 ---
 
@@ -521,8 +522,31 @@ Dashboard → [Export ▼]
 - `src/components/building-management/dialogs/NameComboboxField.tsx` (245 LOC)
 - `src/components/building-management/dialogs/construction-dialog.types.ts` (79 LOC)
 
-#### Sub-phase 2: Critical Path (Pending)
-1. Critical Path calculation (forward/backward pass)
+#### Sub-phase 2: Critical Path ✅ IMPLEMENTED
+- CPM algorithm: forward/backward pass, Kahn's cycle detection, float computation
+- `computeCPM()` pure function → CPMResult with ES/EF/LS/LF/Float per task
+- `useCriticalPath` hook for Milestones view (lazy load via useConstructionGantt)
+- CriticalPathCard: real CPM data (top-5 critical tasks, delay impact badges)
+- CriticalPathSection: full dashboard table (all tasks, sorted by float ASC)
+- KPI card: "Critical Path Length: X days" in ScheduleOverviewKPIs (7th card)
+- Edge cases: no deps (float>0), circular deps (detect+exclude+warning), empty tasks
+- i18n: en + el keys for card + dashboard section + KPI
+
+**New files:**
+- `src/services/construction-scheduling/cpm-types.ts` (58 LOC)
+- `src/services/construction-scheduling/cpm-calculator.ts` (336 LOC)
+- `src/services/construction-scheduling/index.ts` (barrel)
+- `src/hooks/useCriticalPath.ts` (30 LOC)
+- `src/components/.../dashboard/CriticalPathSection.tsx` (218 LOC)
+
+**Modified files:**
+- `CriticalPathCard.tsx` (rewrite: 56→203 LOC, real CPM data)
+- `TimelineTabContent.tsx` + `index.tsx` (+buildingId prop)
+- `schedule-dashboard.types.ts` (+criticalPathLength KPI)
+- `useScheduleDashboard.ts` (+computeCPM import, criticalPathLength in KPIs)
+- `ScheduleDashboardView.tsx` (+CriticalPathSection)
+- `ScheduleOverviewKPIs.tsx` (+7th KPI card: Route icon)
+- `en/el building.json` (+criticalPath i18n keys)
 
 #### Sub-phase 3: Baseline Snapshots (Pending)
 2. Baseline snapshots (new Firestore collection `construction_baselines`)

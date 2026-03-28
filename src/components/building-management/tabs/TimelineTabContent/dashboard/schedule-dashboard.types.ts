@@ -55,6 +55,8 @@ export interface ScheduleKPIs {
   totalPhases: number;
   delayedTasks: number;
   totalTasks: number;
+  /** Critical path length in days (ADR-266 Phase C) */
+  criticalPathLength: number;
 }
 
 // ─── Delay Breakdown ────────────────────────────────────────────────

@@ -34,6 +34,7 @@ import { ScheduleVarianceTable } from './ScheduleVarianceTable';
 import { LookaheadTable } from './LookaheadTable';
 import { GanttSnapshotCard } from './GanttSnapshotCard';
 import { DelayBreakdownChart } from './DelayBreakdownChart';
+import { CriticalPathSection } from './CriticalPathSection';
 import { ReportEmptyState } from '@/components/reports/core/ReportEmptyState';
 
 // ─── Props ───────────────────────────────────────────────────────────────
@@ -310,6 +311,7 @@ export function ScheduleDashboardView({
           <ScheduleOverviewKPIs kpis={kpis} loading={boqLoading} />
           <SCurveChart data={sCurveData} loading={boqLoading} enableBrush />
           <DelayBreakdownChart data={delayBreakdownData} loading={boqLoading} />
+          <CriticalPathSection tasks={tasks} phases={phases} loading={boqLoading} />
           <ScheduleVarianceTable rows={varianceRows} />
           <LookaheadTable
             rows={lookaheadRows}

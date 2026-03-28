@@ -21,6 +21,7 @@ import {
   generateSCurveData,
   getTrafficLight,
 } from '@/services/report-engine/evm-calculator';
+import { computeCPM } from '@/services/construction-scheduling/cpm-calculator';
 import { boqService } from '@/services/measurements';
 import { countBy, sumBy } from '@/utils/collection-utils';
 import { useConstructionGantt } from '@/components/building-management/hooks/useConstructionGantt';
@@ -269,6 +270,7 @@ export function useScheduleDashboard({
         spi: 0, cpi: 0, daysRemaining: 0,
         phasesOnTrack: 0, totalPhases: 0,
         delayedTasks: 0, totalTasks: 0,
+        criticalPathLength: 0,
       };
     }
 
@@ -282,6 +284,7 @@ export function useScheduleDashboard({
 
     const onTrack = countBy(phases, p => !isDelayedOrBlocked(p.status));
     const delayedCount = countBy(tasks, t => isDelayedOrBlocked(t.status));
+    const cpm = computeCPM(tasks, phases);
 
     return {
       overallProgress: Math.round(progress * 10) / 10,
@@ -293,6 +296,7 @@ export function useScheduleDashboard({
       totalPhases: phases.length,
       delayedTasks: delayedCount,
       totalTasks: tasks.length,
+      criticalPathLength: cpm.criticalPathLength,
     };
   }, [phases, tasks, boqItems, milestones]);
 

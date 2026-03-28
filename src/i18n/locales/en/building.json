@@ -1206,13 +1206,17 @@
         "tipContent": "Speeding up M&E works could reduce delay to 2-3 days."
       },
       "criticalPath": {
-        "title": "Critical Points",
-        "mecInstallations": "M&E Installations",
-        "affectsDelivery": "Affects delivery",
-        "daysDelay": "{days} days delay",
-        "finalWorks": "Final Works",
-        "dependsOnPrevious": "Depends on previous",
-        "waiting": "Waiting"
+        "title": "Critical Path",
+        "noData": "No critical path data",
+        "noDataDesc": "Add task dependencies to compute the critical path.",
+        "noCriticalTasks": "No critical tasks identified",
+        "noCriticalDesc": "All tasks have float — no single chain determines the project end.",
+        "delayImpact": "+{days}d delay",
+        "floatDays": "{days}d float",
+        "critical": "Critical",
+        "cyclicWarning": "Circular dependency",
+        "viewAll": "View all in Dashboard",
+        "loading": "Computing critical path..."
       },
       "views": {
         "milestones": "Milestones",
@@ -1236,6 +1240,8 @@
           "daysRemaining": "Days Remaining",
           "phasesOnTrack": "Phases On Track",
           "delayedTasks": "Delayed Tasks",
+          "criticalPathLength": "Critical Path",
+          "criticalPathDays": "{days} days",
           "totalTasks": "tasks",
           "vsPlan": "vs Plan"
         },
@@ -1278,6 +1284,24 @@
         },
         "exportOwnerPdf": "Owner Report (PDF)",
         "exportGanttTable": "Gantt Table (PDF)",
+        "criticalPath": {
+          "title": "Critical Path Analysis",
+          "description": "Tasks with zero float that determine project duration",
+          "colTask": "Task",
+          "colPhase": "Phase",
+          "colDuration": "Duration",
+          "colES": "ES",
+          "colEF": "EF",
+          "colLS": "LS",
+          "colLF": "LF",
+          "colFloat": "Float",
+          "colStatus": "Status",
+          "days": "{days}d",
+          "critical": "Critical",
+          "cyclicDep": "Circular dep.",
+          "pathLength": "Critical Path Length",
+          "empty": "No critical path — add dependencies between tasks"
+        },
         "delayBreakdown": {
           "title": "Delay Breakdown by Phase",
           "delayed": "Delayed",
