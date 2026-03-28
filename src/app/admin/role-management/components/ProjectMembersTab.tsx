@@ -38,6 +38,8 @@ import type {
   ProjectMemberEntry,
   ProjectMembersResponse,
 } from '../types';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 // =============================================================================
 // PROPS
@@ -68,6 +70,7 @@ interface ProjectListApiResponse {
 
 export function ProjectMembersTab({ canEdit }: ProjectMembersTabProps) {
   const { t } = useTranslation('admin');
+  const colors = useSemanticColors();
   const { success, error: notifyError } = useNotifications();
 
   // State
@@ -209,11 +212,11 @@ export function ProjectMembersTab({ canEdit }: ProjectMembersTabProps) {
 
       {/* Project selector */}
       <fieldset className="max-w-sm">
-        <label className="text-sm font-medium text-muted-foreground mb-1 block">
+        <label className={cn("text-sm font-medium mb-1 block", colors.text.muted)}>
           {t('roleManagement.projectMembers.selectProject', 'Select Project')}
         </label>
         {isLoadingProjects ? (
-          <p className="text-sm text-muted-foreground animate-pulse">
+          <p className={cn("text-sm animate-pulse", colors.text.muted)}>
             {t('roleManagement.projectMembers.loadingProjects', 'Loading projects...')}
           </p>
         ) : (
@@ -235,7 +238,7 @@ export function ProjectMembersTab({ canEdit }: ProjectMembersTabProps) {
       {/* Members table */}
       {selectedProjectId && (
         isLoadingMembers ? (
-          <p className="py-8 text-center text-muted-foreground animate-pulse">
+          <p className={cn("py-8 text-center animate-pulse", colors.text.muted)}>
             {t('roleManagement.projectMembers.loadingMembers', 'Loading members...')}
           </p>
         ) : (
@@ -250,7 +253,7 @@ export function ProjectMembersTab({ canEdit }: ProjectMembersTabProps) {
 
       {!selectedProjectId && !isLoadingProjects && (
         <section className="rounded-lg border p-8 text-center">
-          <p className="text-muted-foreground">
+          <p className={colors.text.muted}>
             {t('roleManagement.projectMembers.selectPrompt', 'Select a project to view its members.')}
           </p>
         </section>

@@ -18,6 +18,8 @@ import {
 } from '@/components/ui/select';
 import type { AuditLogFilters as FilterType } from '../types';
 import { AUDIT_ACTION_DISPLAY } from '../types';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 // =============================================================================
 // PROPS
@@ -35,6 +37,7 @@ interface AuditFiltersProps {
 
 export function AuditFilters({ filters, onFiltersChange, onReset }: AuditFiltersProps) {
   const { t } = useTranslation('admin');
+  const colors = useSemanticColors();
 
   const actionOptions = Object.entries(AUDIT_ACTION_DISPLAY).map(([key, config]) => ({
     value: key,
@@ -44,7 +47,7 @@ export function AuditFilters({ filters, onFiltersChange, onReset }: AuditFilters
   return (
     <section className="flex flex-wrap items-end gap-3 rounded-lg border bg-muted/30 p-4">
       <fieldset className="flex flex-col gap-1.5">
-        <label className="text-xs font-medium text-muted-foreground">
+        <label className={cn("text-xs font-medium", colors.text.muted)}>
           {t('roleManagement.auditTab.dateFrom', 'From')}
         </label>
         <Input
@@ -56,7 +59,7 @@ export function AuditFilters({ filters, onFiltersChange, onReset }: AuditFilters
       </fieldset>
 
       <fieldset className="flex flex-col gap-1.5">
-        <label className="text-xs font-medium text-muted-foreground">
+        <label className={cn("text-xs font-medium", colors.text.muted)}>
           {t('roleManagement.auditTab.dateTo', 'To')}
         </label>
         <Input
@@ -68,7 +71,7 @@ export function AuditFilters({ filters, onFiltersChange, onReset }: AuditFilters
       </fieldset>
 
       <fieldset className="flex flex-col gap-1.5">
-        <label className="text-xs font-medium text-muted-foreground">
+        <label className={cn("text-xs font-medium", colors.text.muted)}>
           {t('roleManagement.auditTab.action', 'Action')}
         </label>
         <Select
@@ -92,7 +95,7 @@ export function AuditFilters({ filters, onFiltersChange, onReset }: AuditFilters
       </fieldset>
 
       <fieldset className="flex flex-col gap-1.5">
-        <label className="text-xs font-medium text-muted-foreground">
+        <label className={cn("text-xs font-medium", colors.text.muted)}>
           {t('roleManagement.auditTab.actorId', 'Actor ID')}
         </label>
         <Input
@@ -105,7 +108,7 @@ export function AuditFilters({ filters, onFiltersChange, onReset }: AuditFilters
       </fieldset>
 
       <fieldset className="flex flex-col gap-1.5">
-        <label className="text-xs font-medium text-muted-foreground">
+        <label className={cn("text-xs font-medium", colors.text.muted)}>
           {t('roleManagement.auditTab.targetId', 'Target ID')}
         </label>
         <Input

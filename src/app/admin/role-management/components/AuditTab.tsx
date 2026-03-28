@@ -20,6 +20,8 @@ import { AuditExport } from './AuditExport';
 
 import type { AuditLogFilters, AuditLogResponse, FrontendAuditEntry } from '../types';
 import { DEFAULT_AUDIT_FILTERS } from '../types';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 // =============================================================================
 // PROPS
@@ -92,6 +94,7 @@ export function AuditTab({ canExport }: AuditTabProps) {
   // Filter callbacks
   // ---------------------------------------------------------------------------
   const handleFilterByActor = useCallback((actorId: string) => {
+  const colors = useSemanticColors();
     setFilters((prev) => ({ ...prev, actorId }));
   }, []);
 
@@ -122,7 +125,7 @@ export function AuditTab({ canExport }: AuditTabProps) {
       />
 
       {isLoading ? (
-        <p className="py-8 text-center text-muted-foreground animate-pulse">
+        <p className={cn("py-8 text-center animate-pulse", colors.text.muted)}>
           {t('roleManagement.auditTab.loading', 'Loading audit logs...')}
         </p>
       ) : (

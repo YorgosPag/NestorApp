@@ -10,7 +10,9 @@
 import { useMemo } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Badge } from '@/components/ui/badge';
-import type { FrontendAuditEntry, AuditLogFilters } from '../types';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
+import type { FrontendAuditEntry } from '../types';
 import { AUDIT_ACTION_DISPLAY } from '../types';
 
 // =============================================================================
@@ -96,6 +98,7 @@ function getChangeDescription(entry: FrontendAuditEntry): string {
 
 export function AuditTimeline({ entries, onFilterByActor, onFilterByTarget }: AuditTimelineProps) {
   const { t } = useTranslation('admin');
+  const colors = useSemanticColors();
 
   const groups = useMemo(
     () => groupByDate(
@@ -109,7 +112,7 @@ export function AuditTimeline({ entries, onFilterByActor, onFilterByTarget }: Au
   if (entries.length === 0) {
     return (
       <section className="py-12 text-center">
-        <p className="text-muted-foreground">
+        <p className={colors.text.muted}>
           {t('roleManagement.auditTab.noEntries', 'No audit log entries found.')}
         </p>
       </section>
@@ -120,7 +123,7 @@ export function AuditTimeline({ entries, onFilterByActor, onFilterByTarget }: Au
     <section className="space-y-6">
       {groups.map((group) => (
         <article key={group.label}>
-          <h3 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+          <h3 className={cn("mb-3 text-sm font-semibold uppercase tracking-wider", colors.text.muted)}>
             {group.label}
           </h3>
           <ol className="space-y-2 border-l-2 border-muted pl-4">
@@ -140,7 +143,7 @@ export function AuditTimeline({ entries, onFilterByActor, onFilterByTarget }: Au
                     aria-hidden="true"
                   />
 
-                  <time className="shrink-0 text-xs text-muted-foreground tabular-nums w-12">
+                  <time className={cn("shrink-0 text-xs tabular-nums w-12", colors.text.muted)}>
                     {formatTime(entry.timestamp)}
                   </time>
 
@@ -154,7 +157,7 @@ export function AuditTimeline({ entries, onFilterByActor, onFilterByTarget }: Au
                       >
                         {entry.actorDisplayName ?? entry.actorId.slice(0, 12)}
                       </button>
-                      <span className="mx-1.5 text-muted-foreground">
+                      <span className={cn("mx-1.5", colors.text.muted)}>
                         {actionConfig?.label ?? entry.action}
                       </span>
                       {entry.targetType === 'user' ? (
@@ -167,7 +170,7 @@ export function AuditTimeline({ entries, onFilterByActor, onFilterByTarget }: Au
                           {entry.targetDisplayName ?? entry.targetId.slice(0, 12)}
                         </button>
                       ) : (
-                        <span className="font-mono text-xs text-muted-foreground">
+                        <span className={cn("font-mono text-xs", colors.text.muted)}>
                           {entry.targetId.slice(0, 16)}
                         </span>
                       )}
@@ -178,12 +181,12 @@ export function AuditTimeline({ entries, onFilterByActor, onFilterByTarget }: Au
                         {actionConfig?.icon} {actionConfig?.label ?? entry.action}
                       </Badge>
                       {changeDesc && (
-                        <span className="text-xs text-muted-foreground truncate max-w-[300px]">
+                        <span className={cn("text-xs truncate max-w-[300px]", colors.text.muted)}>
                           {changeDesc}
                         </span>
                       )}
                       {entry.metadata?.reason && (
-                        <span className="text-xs text-muted-foreground italic truncate max-w-[200px]">
+                        <span className={cn("text-xs italic truncate max-w-[200px]", colors.text.muted)}>
                           &mdash; {entry.metadata.reason}
                         </span>
                       )}

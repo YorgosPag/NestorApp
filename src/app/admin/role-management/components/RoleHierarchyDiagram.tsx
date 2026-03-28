@@ -12,6 +12,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Badge } from '@/components/ui/badge';
 import { PREDEFINED_ROLES } from '@/lib/auth/roles';
 import type { BadgeVariant } from '../types';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 // =============================================================================
 // HIERARCHY DATA
@@ -133,11 +135,11 @@ function TreeNode({ node }: { node: HierarchyNode }) {
           L{node.level}
         </Badge>
         <span className="font-medium text-sm">{node.label}</span>
-        <span className="text-[10px] text-muted-foreground">
+        <span className={cn("text-[10px]", colors.text.muted)}>
           ({permCount} perms)
         </span>
         {roleDef?.isProjectRole && (
-          <span className="text-[10px] text-muted-foreground italic">
+          <span className={cn("text-[10px] italic", colors.text.muted)}>
             project-scoped
           </span>
         )}
@@ -160,6 +162,7 @@ function TreeNode({ node }: { node: HierarchyNode }) {
 
 export function RoleHierarchyDiagram() {
   const { t } = useTranslation('admin');
+  const colors = useSemanticColors();
 
   return (
     <nav
@@ -173,7 +176,7 @@ export function RoleHierarchyDiagram() {
               L{HIERARCHY.level}
             </Badge>
             <span className="font-medium text-sm">{HIERARCHY.label}</span>
-            <span className="text-[10px] text-muted-foreground">
+            <span className={cn("text-[10px]", colors.text.muted)}>
               (all perms — bypass)
             </span>
           </article>
@@ -189,7 +192,7 @@ export function RoleHierarchyDiagram() {
       </ul>
 
       <footer className="mt-2 p-3 rounded-lg bg-muted/50">
-        <p className="text-xs text-muted-foreground">
+        <p className={cn("text-xs", colors.text.muted)}>
           {t(
             'roleManagement.hierarchyNote',
             'Lower level numbers mean higher access. Global roles (L0-L1) are organization-wide. Project roles (L2-L6) are scoped per project.'

@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 import type { CompanyUser, UpdatePermissionSetsResponse } from '../types';
 import {
@@ -33,6 +34,8 @@ import {
   requiresMfaEnrollment,
 } from '@/lib/auth/permission-sets';
 import type { PermissionSetDefinition } from '@/lib/auth/permission-sets';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 // =============================================================================
 // TYPES
@@ -99,6 +102,7 @@ export function PermissionSetManager({
   // Submit
   // ---------------------------------------------------------------------------
   const handleSubmit = useCallback(async () => {
+  const colors = useSemanticColors();
     if (!canSubmit) return;
 
     setIsSubmitting(true);
@@ -165,7 +169,7 @@ export function PermissionSetManager({
                         </Badge>
                       )}
                     </span>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className={cn("text-xs mt-0.5", colors.text.muted)}>
                       {definition.description}
                     </p>
                     <p className="text-[10px] text-muted-foreground/70 mt-1">
@@ -184,9 +188,9 @@ export function PermissionSetManager({
           <Label htmlFor="perm-set-reason">
             {t('roleManagement.reason', 'Reason')} ({t('roleManagement.minChars', 'min 10 characters')})
           </Label>
-          <textarea
+          <Textarea
             id="perm-set-reason"
-            className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            size="sm"
             rows={2}
             value={reason}
             onChange={(e) => setReason(e.target.value)}

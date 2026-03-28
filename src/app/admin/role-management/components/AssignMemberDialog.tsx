@@ -34,6 +34,8 @@ import {
 import type { CompanyUser, UserListResponse, ProjectMemberEntry } from '../types';
 import { PERMISSION_SETS } from '@/lib/auth/permission-sets';
 import { GLOBAL_ROLES } from '@/lib/auth/types';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 // =============================================================================
 // PROPS
@@ -76,6 +78,7 @@ export function AssignMemberDialog({
   onConfirm,
 }: AssignMemberDialogProps) {
   const { t } = useTranslation('admin');
+  const colors = useSemanticColors();
 
   // Wizard state
   const [step, setStep] = useState<WizardStep>(1);
@@ -170,7 +173,7 @@ export function AssignMemberDialog({
             <span
               key={s}
               className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold
-                ${s === step ? 'bg-primary text-primary-foreground' : s < step ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}
+                ${s === step ? 'bg-primary text-primary-foreground' : s < step ? 'bg-primary/20 text-primary' : 'bg-muted ${colors.text.muted}'}`}
             >
               {s}
             </span>
@@ -188,7 +191,7 @@ export function AssignMemberDialog({
               onChange={(e) => setUserSearch(e.target.value)}
             />
             {isLoadingUsers ? (
-              <p className="py-4 text-center text-muted-foreground animate-pulse">
+              <p className={cn("py-4 text-center animate-pulse", colors.text.muted)}>
                 {t('roleManagement.usersTab.loadingUsers', 'Loading users...')}
               </p>
             ) : (
@@ -202,12 +205,12 @@ export function AssignMemberDialog({
                         ${selectedUid === user.uid ? 'bg-primary/10 ring-1 ring-primary' : 'hover:bg-muted'}`}
                     >
                       <span className="font-medium">{user.displayName ?? user.email}</span>
-                      <span className="ml-2 text-muted-foreground text-xs">{user.email}</span>
+                      <span className={cn("ml-2 text-xs", colors.text.muted)}>{user.email}</span>
                     </button>
                   </li>
                 ))}
                 {availableUsers.length === 0 && (
-                  <li className="py-4 text-center text-muted-foreground text-sm">
+                  <li className={cn("py-4 text-center text-sm", colors.text.muted)}>
                     {t('roleManagement.projectMembers.noAvailableUsers', 'No available users to add.')}
                   </li>
                 )}
@@ -254,7 +257,7 @@ export function AssignMemberDialog({
                     <label htmlFor={`ps-${opt.id}`} className="text-sm cursor-pointer">
                       <span className="font-medium">{opt.label}</span>
                       {opt.description && (
-                        <span className="block text-xs text-muted-foreground">{opt.description}</span>
+                        <span className={cn("block text-xs", colors.text.muted)}>{opt.description}</span>
                       )}
                     </label>
                   </li>
@@ -270,13 +273,13 @@ export function AssignMemberDialog({
         {step === 3 && (
           <section className="space-y-4">
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-              <dt className="text-muted-foreground">{t('roleManagement.table.user', 'User')}</dt>
+              <dt className={colors.text.muted}>{t('roleManagement.table.user', 'User')}</dt>
               <dd className="font-medium">{selectedUser?.displayName ?? selectedUser?.email ?? selectedUid}</dd>
 
-              <dt className="text-muted-foreground">{t('roleManagement.projectMembers.role', 'Role')}</dt>
+              <dt className={colors.text.muted}>{t('roleManagement.projectMembers.role', 'Role')}</dt>
               <dd><Badge variant="secondary">{selectedRoleId}</Badge></dd>
 
-              <dt className="text-muted-foreground">{t('roleManagement.projectMembers.permissionSets', 'Permission Sets')}</dt>
+              <dt className={colors.text.muted}>{t('roleManagement.projectMembers.permissionSets', 'Permission Sets')}</dt>
               <dd>
                 {selectedPermissionSets.length > 0 ? (
                   <span className="flex flex-wrap gap-1">
@@ -285,7 +288,7 @@ export function AssignMemberDialog({
                     ))}
                   </span>
                 ) : (
-                  <span className="text-muted-foreground">—</span>
+                  <span className={colors.text.muted}>—</span>
                 )}
               </dd>
             </dl>

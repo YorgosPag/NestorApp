@@ -33,12 +33,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 import type { CompanyUser, ChangeRoleResponse } from '../types';
 import { ROLE_BADGE_VARIANT } from '../types';
 import { GLOBAL_ROLES } from '@/lib/auth/types';
 import type { GlobalRole } from '@/lib/auth/types';
 import { PREDEFINED_ROLES } from '@/lib/auth/roles';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 // =============================================================================
 // TYPES
@@ -90,6 +93,7 @@ export function RoleChangeDialog({
   // Submit
   // ---------------------------------------------------------------------------
   const handleSubmit = useCallback(async () => {
+  const colors = useSemanticColors();
     if (!canSubmit) return;
 
     setIsSubmitting(true);
@@ -135,7 +139,7 @@ export function RoleChangeDialog({
               <span className="font-medium text-sm">
                 {user.displayName ?? user.email}
               </span>
-              <span className="text-xs text-muted-foreground">{user.email}</span>
+              <span className={cn("text-xs", colors.text.muted)}>{user.email}</span>
             </figure>
           </article>
 
@@ -168,7 +172,7 @@ export function RoleChangeDialog({
                       <span className="flex flex-col">
                         <span>{ROLE_LABELS[role]}</span>
                         {roleDef && (
-                          <span className="text-xs text-muted-foreground">
+                          <span className={cn("text-xs", colors.text.muted)}>
                             L{roleDef.level} — {roleDef.description}
                           </span>
                         )}
@@ -185,9 +189,8 @@ export function RoleChangeDialog({
             <Label htmlFor="role-change-reason">
               {t('roleManagement.reason', 'Reason')} ({t('roleManagement.minChars', 'min 10 characters')})
             </Label>
-            <textarea
+            <Textarea
               id="role-change-reason"
-              className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               rows={3}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
