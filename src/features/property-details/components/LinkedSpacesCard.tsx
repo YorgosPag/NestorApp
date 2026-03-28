@@ -36,6 +36,7 @@ import { API_ROUTES, ALLOCATION_SPACE_TYPES, SPACE_INCLUSION_TYPES, SELECT_CLEAR
 import type { LinkedSpace } from '@/types/unit';
 import type { SpaceInclusionType } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 const logger = createModuleLogger('LinkedSpacesCard');
 
 // ============================================================================
@@ -394,7 +395,7 @@ export function LinkedSpacesCard({
         {/* 🏢 ENTERPRISE: Currently linked spaces (from draft) */}
         {draftLinkedSpaces.length > 0 && (
           <section className={spacing.spaceBetween.sm}>
-            <Label className="text-xs text-muted-foreground">
+            <Label className={cn("text-xs", colors.text.muted)}>
               {t('linkedSpaces.currentlyLinked', { defaultValue: 'Συνδεδεμένα' })}
             </Label>
             <ul className={`flex flex-wrap ${spacing.gap.sm}`}>
@@ -410,7 +411,7 @@ export function LinkedSpacesCard({
                       <Package className={cn(iconSizes.xs, 'text-amber-600')} />
                     )}
                     <span>{getSpaceName(space)}</span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className={cn("text-xs", colors.text.muted)}>
                       ({getInclusionLabel(space.inclusion)})
                     </span>
                     {isEditing && (
@@ -419,7 +420,7 @@ export function LinkedSpacesCard({
                         onClick={() => handleRemoveSpace(space.spaceId)}
                         className={cn(
                           'ml-1 p-0.5 rounded-full hover:bg-destructive/20',
-                          'text-muted-foreground hover:text-destructive',
+                          `${colors.text.muted} hover:text-destructive`,
                           'transition-colors'
                         )}
                         aria-label={t('linkedSpaces.remove', { defaultValue: 'Αφαίρεση' })}
@@ -470,7 +471,7 @@ export function LinkedSpacesCard({
                 {t('linkedSpaces.addParking', { defaultValue: 'Προσθήκη Parking' })}
               </Label>
               {loadingParking ? (
-                <section className={`flex items-center ${spacing.gap.sm} text-muted-foreground text-sm`}>
+                <section className={cn(`flex items-center ${spacing.gap.sm} text-sm`, colors.text.muted)}>
                   <Spinner size="small" />
                   <span>{t('linkedSpaces.loadingParking', { defaultValue: 'Φόρτωση...' })}</span>
                 </section>
@@ -509,7 +510,7 @@ export function LinkedSpacesCard({
                 {t('linkedSpaces.addStorage', { defaultValue: 'Προσθήκη Αποθήκης' })}
               </Label>
               {loadingStorage ? (
-                <section className={`flex items-center ${spacing.gap.sm} text-muted-foreground text-sm`}>
+                <section className={cn(`flex items-center ${spacing.gap.sm} text-sm`, colors.text.muted)}>
                   <Spinner size="small" />
                   <span>{t('linkedSpaces.loadingStorage', { defaultValue: 'Φόρτωση...' })}</span>
                 </section>
@@ -545,7 +546,7 @@ export function LinkedSpacesCard({
             {(saving || saveStatus !== 'idle') && (
               <footer className={`flex items-center ${spacing.gap.sm} ${spacing.padding.top.sm}`}>
                 {saving && (
-                  <span className={`flex items-center ${spacing.gap.sm} text-sm text-muted-foreground`}>
+                  <span className={cn(`flex items-center ${spacing.gap.sm} text-sm`, colors.text.muted)}>
                     <Spinner size="small" />
                     {t('linkedSpaces.saving', { defaultValue: 'Αποθήκευση...' })}
                   </span>

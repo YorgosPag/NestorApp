@@ -18,7 +18,6 @@ import type {
   SensitivityResult,
   HeatMapCell,
   HeatMapResult,
-  CashFlowEntry,
 } from '@/types/interest-calculator';
 
 // =============================================================================

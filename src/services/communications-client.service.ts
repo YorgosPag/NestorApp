@@ -18,7 +18,7 @@
  *                + getCommunicationsByContact, deleteAllCommunications relocated from server file
  */
 
-import { orderBy, where, collection, doc, updateDoc, setDoc, deleteDoc, serverTimestamp, writeBatch, type DocumentData } from 'firebase/firestore';
+import { orderBy, where, doc, updateDoc, setDoc, deleteDoc, serverTimestamp, writeBatch, type DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateMessageId } from '@/services/enterprise-id.service';

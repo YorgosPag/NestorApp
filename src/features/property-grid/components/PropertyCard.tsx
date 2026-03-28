@@ -18,6 +18,7 @@ import { formatFloorLabel, formatCurrency } from '@/lib/intl-utils';
 import type { Property } from '@/types/property-viewer';
 import type { PropertyStatus } from '@/core/types/BadgeTypes';
 import type { CommercialStatus } from '@/types/unit';
+import '@/lib/design-system';
 
 /**
  * Maps commercialStatus / legacy status to PropertyBadge status + i18n label key

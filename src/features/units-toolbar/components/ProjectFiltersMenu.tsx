@@ -16,6 +16,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from 'react-i18next';
 // 🏢 ENTERPRISE: Import centralized unit filter options - NO MORE HARDCODED VALUES
 import { getUnitFilterOptions } from '@/subapps/dxf-viewer/config/modal-select';
+import '@/lib/design-system';
 
 interface Props {
   activeFilters: string[];

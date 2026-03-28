@@ -82,6 +82,7 @@
     "selectDocumentType": "Επιλογή τύπου εγγράφου",
     "searchDocumentPlaceholder": "Αναζήτηση εγγράφου...",
     "noSearchResults": "Δεν βρέθηκαν έγγραφα",
+    "freeTitle": "(ελεύθερος τίτλος)",
     "success": "{count, plural, =1 {1 αρχείο ανέβηκε επιτυχώς} other {{count} αρχεία ανέβηκαν επιτυχώς}}",
     "errors": {
       "generic": "Σφάλμα κατά την αποστολή του αρχείου",
@@ -288,7 +289,14 @@
     "uploading": "Μεταφόρτωση σε εξέλιξη...",
     "processing": "Επεξεργασία αρχείων...",
     "errors": {
-      "fileTooLarge": "Το αρχείο {fileName} είναι πολύ μεγάλο. Μέγιστο μέγεθος: {maxSize}"
+      "fileTooLarge": "Το αρχείο {fileName} είναι πολύ μεγάλο. Μέγιστο μέγεθος: {maxSize}",
+      "fileTooSmall": "Το αρχείο {{fileName}} είναι πολύ μικρό"
+    },
+    "compressed": "{{fileName}}: Συμπιέστηκε κατά {{savings}}% ({{originalSize}} → {{compressedSize}})",
+    "fileTypes": {
+      "images": "Εικόνες",
+      "pdf": "PDF",
+      "documents": "Έγγραφα"
     }
   },
   "pathSegments": {
@@ -529,7 +537,13 @@
     "cancel": "Ακύρωση",
     "rejectReason": "Αιτιολογία...",
     "by": "από",
-    "empty": "Δεν υπάρχουν αιτήματα έγκρισης."
+    "empty": "Δεν υπάρχουν αιτήματα έγκρισης.",
+    "status": {
+      "pending": "Εκκρεμεί",
+      "approved": "Εγκρίθηκε",
+      "rejected": "Απορρίφθηκε",
+      "cancelled": "Ακυρώθηκε"
+    }
   },
   "templates": {
     "title": "Πρότυπα εγγράφων",
@@ -542,7 +556,16 @@
     "copy": "Αντιγραφή",
     "selectTemplate": "Επέλεξε ένα πρότυπο για να ξεκινήσεις.",
     "empty": "Δεν υπάρχουν πρότυπα.",
-    "generatePdf": "Δημιουργία PDF"
+    "generatePdf": "Δημιουργία PDF",
+    "categories": {
+      "contract": "Σύμβαση",
+      "permit": "Άδεια",
+      "invoice": "Τιμολόγιο",
+      "report": "Αναφορά",
+      "letter": "Επιστολή",
+      "certificate": "Πιστοποιητικό",
+      "other": "Άλλο"
+    }
   },
   "gdpr": {
     "export": "Εξαγωγή δεδομένων (GDPR)",
@@ -601,5 +624,49 @@
     "next": "Επόμενο",
     "upload": "Ανέβασμα",
     "cancel": "Ακύρωση"
+  },
+  "share": {
+    "title": "Κοινοποίηση αρχείου",
+    "expiration": "Λήξη",
+    "password": "Κωδικός",
+    "optional": "προαιρετικό",
+    "passwordPlaceholder": "Εισάγετε κωδικό...",
+    "maxDownloads": "Μέγιστες λήψεις",
+    "unlimited": "Χωρίς όριο",
+    "note": "Σημείωση",
+    "notePlaceholder": "Μήνυμα για τον παραλήπτη...",
+    "create": "Δημιουργία συνδέσμου",
+    "created": "Ο σύνδεσμος δημιουργήθηκε!",
+    "expiresIn": "Λήγει σε {{label}}",
+    "passwordProtected": "Προστατεύεται με κωδικό",
+    "maxDownloadsLabel": "Μέγιστες λήψεις: {{count}}",
+    "expirationOptions": {
+      "1hour": "1 ώρα",
+      "24hours": "24 ώρες",
+      "3days": "3 ημέρες",
+      "1week": "1 εβδομάδα",
+      "30days": "30 ημέρες"
+    }
+  },
+  "versions": {
+    "title": "Ιστορικό εκδόσεων",
+    "noHistory": "Δεν υπάρχει ιστορικό εκδόσεων",
+    "currentOnly": "Αυτή είναι η πρώτη έκδοση του αρχείου",
+    "current": "Τρέχουσα έκδοση",
+    "previousCount": "{{count}} προηγούμενες",
+    "download": "Λήψη αυτής της έκδοσης",
+    "rollback": "Επαναφορά σε αυτή την έκδοση"
+  },
+  "audit": {
+    "title": "Ιστορικό ενεργειών",
+    "noEntries": "Δεν υπάρχουν καταγραφές",
+    "fileUpload": "Ανέβασμα αρχείου",
+    "fileTrash": "Μετακίνηση αρχείου στον κάδο",
+    "fileRename": "Μετονομασία αρχείου",
+    "fileDescriptionUpdate": "Ενημέρωση περιγραφής αρχείου",
+    "fileUnlink": "Αποσύνδεση αρχείου",
+    "fileBatchTrash": "Μαζική μετακίνηση αρχείου στον κάδο",
+    "fileArchive": "Αρχειοθέτηση αρχείου",
+    "fileRestore": "Επαναφορά αρχείου από κάδο"
   }
 }

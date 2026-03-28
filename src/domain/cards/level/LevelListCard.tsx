@@ -33,6 +33,7 @@ import type { Level } from '@/subapps/dxf-viewer/systems/levels/config';
 
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 // =============================================================================
 // 🏢 TYPES

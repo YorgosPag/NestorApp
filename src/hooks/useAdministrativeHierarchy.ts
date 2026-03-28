@@ -11,7 +11,7 @@
  * @see src/data/administrative-hierarchy.json
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox';
 
 // ============================================================================

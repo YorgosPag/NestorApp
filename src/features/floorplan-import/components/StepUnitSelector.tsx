@@ -25,6 +25,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { EntityOption } from '../hooks/useFloorplanImportState';
+import '@/lib/design-system';
 
 // =============================================================================
 // TYPES
@@ -125,7 +126,7 @@ export function StepUnitSelector({
                       <span className="h-2 w-2 rounded-full bg-primary" />
                     )}
                   </span>
-                  <Layers className={`h-4 w-4 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <Layers className={`h-4 w-4 ${isSelected ? 'text-primary' : colors.text.muted}`} />
                   <span className={`text-sm ${isSelected ? 'font-medium' : ''}`}>
                     {level.label}
                   </span>

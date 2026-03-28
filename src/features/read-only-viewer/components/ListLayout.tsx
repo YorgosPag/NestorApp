@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import type { Property } from '@/types/property-viewer';
+import '@/lib/design-system';
 
 /** Viewer props interface */
 interface ViewerPropsType {
@@ -29,7 +30,7 @@ export function ListLayout({
   handlePolygonSelect,
   hoveredPropertyId,
   onHoverProperty,
-  readOnlyViewerProps,
+  readOnlyViewerProps: _readOnlyViewerProps,
   viewerProps,
 }: {
   isLoading: boolean;

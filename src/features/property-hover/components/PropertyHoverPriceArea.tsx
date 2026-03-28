@@ -5,6 +5,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from 'react-i18next';
+import '@/lib/design-system';
 
 export function PropertyHoverPriceArea({
   hasPrice, price, priceLabel, isRentLike,
@@ -21,16 +22,16 @@ export function PropertyHoverPriceArea({
     <div className="space-y-2">
       {hasPrice && (
         <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">{priceLabel}:</p>
+          <p className={`text-xs ${colors.text.muted}`}>{priceLabel}:</p>
           <div className="flex items-center gap-1">
             <Euro className={`${iconSizes.sm} ${colors.text.success}`} />
             {price && price > 0 ? (
               <span className={`font-semibold text-sm ${colors.text.success}`}>
                 {price.toLocaleString('el-GR')}€
-                {isRentLike && <span className="text-xs text-muted-foreground">{t('hover.perMonth')}</span>}
+                {isRentLike && <span className={`text-xs ${colors.text.muted}`}>{t('hover.perMonth')}</span>}
               </span>
             ) : (
-              <span className="italic text-muted-foreground text-xs">{t('hover.priceOnRequest')}</span>
+              <span className={`italic text-xs ${colors.text.muted}`}>{t('hover.priceOnRequest')}</span>
             )}
           </div>
         </div>
@@ -38,9 +39,9 @@ export function PropertyHoverPriceArea({
 
       {hasArea && (
         <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">{t('hover.area')}:</p>
+          <p className={`text-xs ${colors.text.muted}`}>{t('hover.area')}:</p>
           <div className="flex items-center gap-1">
-            <Ruler className={`${iconSizes.xs} text-muted-foreground`} />
+            <Ruler className={`${iconSizes.xs} ${colors.text.muted}`} />
             <span className="text-sm font-medium">{area}{t('units.sqm')}</span>
           </div>
         </div>
@@ -48,7 +49,7 @@ export function PropertyHoverPriceArea({
 
       {hasPrice && hasArea && price && price > 0 && area && (
         <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">{t('hover.pricePerSqm')}:</p>
+          <p className={`text-xs ${colors.text.muted}`}>{t('hover.pricePerSqm')}:</p>
           <Tooltip>
             <TooltipTrigger asChild>
               <span className="text-xs font-medium cursor-help underline decoration-dotted">

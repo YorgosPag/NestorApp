@@ -42,6 +42,7 @@ import { CardStats } from '../../primitives/Card/CardStats';
 
 // 🏢 TYPES
 import type { GridCardProps, GridCardAction } from './GridCard.types';
+import '@/lib/design-system';
 
 /**
  * 🏢 GridCard Component

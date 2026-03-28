@@ -7,6 +7,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 export function NavButton({
   item,
@@ -28,7 +29,7 @@ export function NavButton({
         <Icon className={`mr-3 ${iconSizes.sm}`} />
         <div className="flex flex-col items-start">
           <span className="text-sm font-medium">{item.title}</span>
-          <span className="text-xs text-muted-foreground">{item.description}</span>
+          <span className={cn("text-xs", colors.text.muted)}>{item.description}</span>
         </div>
       </Button>
     </Link>

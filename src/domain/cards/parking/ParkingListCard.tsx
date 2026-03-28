@@ -58,6 +58,7 @@ interface ParkingSpotAdapter {
 
 // 🏢 BADGE VARIANT MAPPING
 import type { ListCardBadgeVariant } from '@/design-system/components/ListCard/ListCard.types';
+import '@/lib/design-system';
 
 // =============================================================================
 // 🏢 TYPES

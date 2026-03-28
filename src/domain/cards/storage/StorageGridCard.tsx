@@ -35,6 +35,7 @@ import type { GridCardBadgeVariant } from '@/design-system/components/GridCard/G
 
 // 🏢 ENTERPRISE: i18n support (using custom hook with lazy loading)
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 // =============================================================================
 // 🏢 TYPES

@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { Property } from '@/types/property-viewer';
+import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Centralized Unit Icon & Color
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;

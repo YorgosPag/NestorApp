@@ -41,6 +41,7 @@ import {
 } from '@/components/core/AdvancedFilters';
 import type { PropertyFilterState } from '@/components/core/AdvancedFilters';
 import type { ViewMode as CoreViewMode } from '@/core/headers';
+import '@/lib/design-system';
 
 export function PropertyGridView() {
   const router = useRouter();
@@ -52,7 +53,7 @@ export function PropertyGridView() {
 
   // Local state
   const [showDashboard, setShowDashboard] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, _setShowFilters] = useState(false);
   const [enterpriseFilters, setEnterpriseFilters] = useState<PropertyFilterState>(defaultPropertyFilters);
 
   const {

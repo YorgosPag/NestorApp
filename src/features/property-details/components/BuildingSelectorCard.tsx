@@ -25,9 +25,6 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-e
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { RealtimeService } from '@/services/realtime';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
@@ -40,6 +37,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: Centralized Select clear value (Radix forbids empty string in SelectItem)
 import { SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 const logger = createModuleLogger('BuildingSelectorCard');
 
 // ============================================================================
@@ -327,7 +325,7 @@ export function BuildingSelectorCard({
           <Label htmlFor="building-selector">{t('buildingSelector.selectLabel')}</Label>
 
           {loading ? (
-            <section className={`flex items-center ${spacing.gap.sm} text-muted-foreground`}>
+            <section className={cn(`flex items-center ${spacing.gap.sm}`, colors.text.muted)}>
               <Spinner size="small" />
               <span>{t('buildingSelector.loading')}</span>
             </section>
@@ -373,7 +371,7 @@ export function BuildingSelectorCard({
             </Label>
 
             {loadingFloors ? (
-              <section className={`flex items-center ${spacing.gap.sm} text-muted-foreground`}>
+              <section className={cn(`flex items-center ${spacing.gap.sm}`, colors.text.muted)}>
                 <Spinner size="small" />
                 <span>{t('buildingSelector.loadingFloors', { defaultValue: 'Φόρτωση ορόφων...' })}</span>
               </section>

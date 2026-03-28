@@ -1054,6 +1054,12 @@
       "badge": "ESCO"
     }
   },
+  "employer": {
+    "vat": "VAT",
+    "noResults": "No companies found",
+    "useFreeText": "Use as free text",
+    "searchResults": "Search results"
+  },
   "persona": {
     "selector": {
       "title": "Roles",

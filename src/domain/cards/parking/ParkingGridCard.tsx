@@ -36,6 +36,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 BADGE VARIANT MAPPING
 import type { GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
+import '@/lib/design-system';
 
 // =============================================================================
 // 🏢 ADAPTER TYPE - Supports both ParkingSpot schemas

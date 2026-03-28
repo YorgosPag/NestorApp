@@ -39,6 +39,7 @@ import { MapPin } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 export function PropertyDetailsContent({
   property,
@@ -82,7 +83,7 @@ export function PropertyDetailsContent({
   const isEditMode = externalEditMode !== undefined ? externalEditMode : localEditMode;
 
   // 🏢 ENTERPRISE: Toggle edit mode callback - use external if provided
-  const handleToggleEditMode = useCallback(() => {
+  const _handleToggleEditMode = useCallback(() => {
     if (externalToggleEditMode) {
       externalToggleEditMode();
     } else {

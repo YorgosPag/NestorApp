@@ -16,7 +16,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { API_ROUTES } from '@/config/domain-constants';
 import type {
   LegalContract,
-  ContractPhase,
   ContractStatus,
   LegalPhase,
   CreateContractInput,
@@ -24,7 +23,6 @@ import type {
 } from '@/types/legal-contracts';
 import { computeLegalPhase, CONTRACT_PHASE_ORDER } from '@/types/legal-contracts';
 import type { BrokerageAgreement } from '@/types/brokerage';
-import { BrokerageService } from '@/services/brokerage.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { clientSafeFireAndForget } from '@/lib/safe-fire-and-forget';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';

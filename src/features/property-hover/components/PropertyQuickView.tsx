@@ -21,6 +21,8 @@ import type { OrientationType } from '@/types/unit';
 import type { Property } from '@/types/property-viewer';
 import type { PropertyStatus } from '@/core/types/BadgeTypes';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface PropertyQuickViewProps {
   property: Property;
@@ -28,10 +30,11 @@ interface PropertyQuickViewProps {
 
 /** Local compact row — label (left) + value (right), no icon. Different from shared InfoRow (has icon). */
 function QuickViewRow({ label, value }: { label: string; value: React.ReactNode }) {
+  const colors = useSemanticColors();
   if (!value && value !== 0) return null;
   return (
     <div className="flex justify-between gap-2 text-xs">
-      <span className="text-muted-foreground shrink-0">{label}</span>
+      <span className={`${colors.text.muted} shrink-0`}>{label}</span>
       <span className="text-right font-medium">{value}</span>
     </div>
   );
@@ -40,6 +43,7 @@ function QuickViewRow({ label, value }: { label: string; value: React.ReactNode 
 export function PropertyQuickView({ property }: PropertyQuickViewProps) {
   const { t } = useTranslation('properties');
   const { t: tUnits } = useTranslation('units');
+  const colors = useSemanticColors();
   const statusConfig = getPropertyStatusConfig();
   // 🏢 ADR-258: commercialStatus is SSoT, legacy status is fallback
   const effectiveStatus = property.commercialStatus ?? property.status;
@@ -151,7 +155,7 @@ export function PropertyQuickView({ property }: PropertyQuickViewProps) {
                 <span className={`${COLOR_BRIDGE.text.price} font-semibold`}>
                   {effectivePrice.toLocaleString('el-GR')}€
                   {pricePerSqm && (
-                    <span className="text-muted-foreground font-normal text-[10px]"> ({pricePerSqm.toLocaleString('el-GR')}€/m²)</span>
+                    <span className={`${colors.text.muted} font-normal text-[10px]`}> ({pricePerSqm.toLocaleString('el-GR')}€/m²)</span>
                   )}
                 </span>
               }

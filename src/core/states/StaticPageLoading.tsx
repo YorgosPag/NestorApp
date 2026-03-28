@@ -23,6 +23,8 @@
 
 import { Loader2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
 
 // =============================================================================
 // TYPES
@@ -52,7 +54,7 @@ export function StaticPageLoading({
       aria-live="polite"
     >
       <div className="text-center">
-        <SpinnerIcon className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+        <SpinnerIcon className={cn("h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground")} />
         <p className="text-muted-foreground">{message}</p>
       </div>
     </section>

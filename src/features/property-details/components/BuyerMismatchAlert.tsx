@@ -4,6 +4,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from 'react-i18next';
+import '@/lib/design-system';
 
 export function BuyerMismatchAlert() {
   const { t } = useTranslation('properties');

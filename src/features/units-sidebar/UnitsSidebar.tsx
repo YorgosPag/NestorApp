@@ -33,6 +33,7 @@ import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effect
 import { useUnitsSidebar } from './hooks/useUnitsSidebar';
 import { UnitDetailsHeader } from './components/UnitDetailsHeader';
 import type { UnitsSidebarProps } from './types';
+import '@/lib/design-system';
 
 export function UnitsSidebar({
   units,

@@ -26,6 +26,8 @@ import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { Spinner } from '@/components/ui/spinner';
+import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
 // TYPES
@@ -50,6 +52,7 @@ export function PageLoadingState({
   layout = 'fullscreen',
 }: PageLoadingStateProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   const layoutClass = layout === 'fullscreen'
     ? 'flex h-screen items-center justify-center'
@@ -59,10 +62,10 @@ export function PageLoadingState({
     <section className={layoutClass} role="status" aria-live="polite">
       <div className="text-center">
         {Icon && (
-          <Icon className={cn(iconSizes.xl, 'mx-auto mb-2 text-muted-foreground')} />
+          <Icon className={cn(iconSizes.xl, 'mx-auto mb-2', colors.text.muted)} />
         )}
         <Spinner size="large" className="mx-auto mb-4" />
-        <p className="text-muted-foreground">{message}</p>
+        <p className={colors.text.muted}>{message}</p>
       </div>
     </section>
   );

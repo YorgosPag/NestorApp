@@ -8,7 +8,6 @@
 
 import { useMemo, useState, useCallback } from 'react';
 import { useFirestoreStorages } from '@/hooks/useFirestoreStorages';
-import type { Storage } from '@/types/storage/contracts';
 import type {
   SalesSpaceFilterState,
   SalesSpaceDashboardStats,

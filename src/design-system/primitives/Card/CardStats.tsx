@@ -19,6 +19,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTypography } from '@/hooks/useTypography';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { CardStatsProps, StatItem, StatsLayout } from './types';
+import '@/lib/design-system';
 
 /**
  * 🏢 CardStats Component

@@ -34,6 +34,7 @@ import { FloorPlanViewer } from '@/components/property-viewer/FloorPlanViewer';
 import type { Property } from '@/types/property-viewer';
 import type { FloorData } from '@/features/floorplan-viewer/types';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 const logger = createModuleLogger('PropertyViewerWithLayers');
 
 interface PropertyViewerWithLayersProps {
@@ -155,7 +156,7 @@ export function PropertyViewerWithLayers({
   if (!currentFloor) {
     return (
       <Card className={className}>
-        <CardContent className="flex flex-col items-center justify-center h-96 text-center text-muted-foreground">
+        <CardContent className={cn("flex flex-col items-center justify-center h-96 text-center", colors.text.muted)}>
           <UnitIcon className={`${iconSizes.xl6} mb-4 opacity-50 ${unitColor}`} />
           <h3 className="text-xl font-semibold mb-2">{t('viewer.emptyState.noFloorplan')}</h3>
           <p className="text-sm max-w-sm">
@@ -236,7 +237,7 @@ export function PropertyViewerWithLayers({
               </ul>
 
               {/* Right side - Status info */}
-              <section className="flex items-center gap-2 text-xs text-muted-foreground" aria-label="Status information">
+              <section className={cn("flex items-center gap-2 text-xs", colors.text.muted)} aria-label="Status information">
                 <CommonBadge
                   status="units"
                   customLabel={t('viewer.badges.propertiesCount', { count: properties.length })}
@@ -323,7 +324,7 @@ export function PropertyViewerWithLayers({
 
       {/* Status bar */}
       <footer className={`px-4 py-2 bg-muted/30 ${getDirectionalBorder('muted', 'top')}`}>
-        <div className="flex justify-between items-center text-xs text-muted-foreground">
+        <div className={cn("flex justify-between items-center text-xs", colors.text.muted)}>
           <div className="flex items-center gap-4">
             <span>{t('viewer.statusBar.floor')} {currentFloor.name}</span>
             <span>{t('viewer.info.zoom')} {zoomLevel}%</span>

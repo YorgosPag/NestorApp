@@ -3,6 +3,7 @@
 import { SearchInput } from '@/components/ui/search';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
+import '@/lib/design-system';
 
 export function SearchBar({ value, onChange }: { value: string; onChange: (v: string) => void; }) {
   const { t } = useTranslation('properties');

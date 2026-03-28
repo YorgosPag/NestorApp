@@ -45,6 +45,7 @@ import { CardStats } from '../../primitives/Card/CardStats';
 
 // 🏢 TYPES
 import type { ListCardProps, ListCardAction } from './ListCard.types';
+import '@/lib/design-system';
 
 /**
  * 🏢 ListCard Component

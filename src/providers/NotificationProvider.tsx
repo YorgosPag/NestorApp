@@ -19,6 +19,7 @@ import type {
 } from '@/types/notifications';
 
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 const logger = createModuleLogger('NotificationProvider');
 
 const NotificationContext = createContext<NotificationContextValue | null>(null);
@@ -57,7 +58,7 @@ export function NotificationProvider({
 
   // Rate limiting and deduplication
   const recentNotifications = useRef<Map<string, number>>(new Map());
-  const notificationQueue = useRef<NotificationData[]>([]);
+  const _notificationQueue = useRef<NotificationData[]>([]);
 
   // Cleanup old rate limiting entries (ADR-205 Phase 4 — useInterval)
   useInterval(() => {
@@ -155,10 +156,10 @@ export function NotificationProvider({
       duration = settings.defaultDuration,
       id: customId,
       dismissible = true,
-      ariaLabel,
+      ariaLabel: _ariaLabel,
       actions = [],
       content,
-      showProgress = false,
+      showProgress: _showProgress = false,
       cancel,
       onCancel
     } = options;
@@ -199,7 +200,7 @@ export function NotificationProvider({
     announceToScreenReader(resolvedMessage, type === 'error' ? 'assertive' : 'polite');
 
     // Create toast with Sonner
-    const toastId = toast(resolvedMessage, {
+    toast(resolvedMessage, {
       id: notificationId,
       duration: duration === 0 ? Infinity : duration,
       icon: getNotificationIcon(type),

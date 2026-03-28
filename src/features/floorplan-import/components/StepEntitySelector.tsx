@@ -26,6 +26,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { EntityOption } from '../hooks/useFloorplanImportState';
+import '@/lib/design-system';
 
 // =============================================================================
 // TYPES

@@ -5,6 +5,7 @@ import { ToolbarButton } from '@/components/ui/ToolbarButton';
 import { RefreshCw } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from 'react-i18next';
+import '@/lib/design-system';
 
 export function RefreshButton({ onRefresh }: { onRefresh: () => void }) {
   const { t } = useTranslation('common');

@@ -3,6 +3,8 @@
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from 'react-i18next';
+import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 export function QuickStats({
   availableLabel,
@@ -19,14 +21,14 @@ export function QuickStats({
   const colors = useSemanticColors();
   return (
     <div className="px-6">
-      <h3 className="text-sm font-medium text-muted-foreground mb-3">{t('public.quickStats')}</h3>
+      <h3 className={cn("text-sm font-medium mb-3", colors.text.muted)}>{t('public.quickStats')}</h3>
       <div className="space-y-2 text-sm">
         <div className="flex justify-between">
-          <span className="text-muted-foreground">{availableLabel}</span>
+          <span className={colors.text.muted}>{availableLabel}</span>
           <span className={`font-medium ${colors.text.success}`}>{availableValue}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">{pricesFromLabel}</span>
+          <span className={colors.text.muted}>{pricesFromLabel}</span>
           <span className="font-medium">{pricesFromValue}</span>
         </div>
       </div>

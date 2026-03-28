@@ -34,6 +34,7 @@ import type { ListCardBadgeVariant } from '@/design-system/components/ListCard/L
 import { MESSAGE_PREVIEW_LENGTH } from '@/config/domain-constants';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 // =============================================================================
 // 🏢 TYPES

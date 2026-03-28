@@ -26,6 +26,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { FloorplanType, EntityOption } from '../hooks/useFloorplanImportState';
+import '@/lib/design-system';
 
 // =============================================================================
 // TYPES
@@ -106,7 +107,7 @@ export function StepFloorplanType({
               />
               <Icon
                 className={`${iconSizes.xl2} transition-colors ${
-                  isSelected ? 'text-primary' : 'text-muted-foreground'
+                  isSelected ? 'text-primary' : colors.text.muted
                 }`}
               />
               <span className={`text-center text-sm ${isSelected ? 'font-semibold' : 'font-medium'}`}>
@@ -183,7 +184,7 @@ export function StepFloorplanType({
                       <span className="h-2 w-2 rounded-full bg-primary" />
                     )}
                   </span>
-                  <Layers className={`h-4 w-4 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <Layers className={`h-4 w-4 ${isSelected ? 'text-primary' : colors.text.muted}`} />
                   <span className={`text-sm ${isSelected ? 'font-medium' : ''}`}>
                     {level.label}
                   </span>

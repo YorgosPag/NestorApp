@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from 'react-i18next';
+import '@/lib/design-system';
 
 export function CustomerLinkButton({ contactId }: { contactId: string }) {
   const { t } = useTranslation('properties');

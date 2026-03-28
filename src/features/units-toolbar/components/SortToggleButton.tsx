@@ -5,6 +5,7 @@ import { ToolbarButton } from '@/components/ui/ToolbarButton';
 import { SortAsc, SortDesc } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from 'react-i18next';
+import '@/lib/design-system';
 
 export function SortToggleButton({
   sortDirection,

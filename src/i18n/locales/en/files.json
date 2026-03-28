@@ -82,6 +82,7 @@
     "selectDocumentType": "Select document type",
     "searchDocumentPlaceholder": "Search document...",
     "noSearchResults": "No documents found",
+    "freeTitle": "(free title)",
     "success": "{count, plural, =1 {1 file uploaded successfully} other {{count} files uploaded successfully}}",
     "errors": {
       "generic": "Error uploading file",
@@ -288,7 +289,14 @@
     "uploading": "Uploading...",
     "processing": "Processing files...",
     "errors": {
-      "fileTooLarge": "File {fileName} is too large. Maximum size: {maxSize}"
+      "fileTooLarge": "File {fileName} is too large. Maximum size: {maxSize}",
+      "fileTooSmall": "File {{fileName}} is too small"
+    },
+    "compressed": "{{fileName}}: Compressed by {{savings}}% ({{originalSize}} → {{compressedSize}})",
+    "fileTypes": {
+      "images": "Images",
+      "pdf": "PDF",
+      "documents": "Documents"
     }
   },
   "pathSegments": {
@@ -529,7 +537,13 @@
     "cancel": "Cancel",
     "rejectReason": "Reason...",
     "by": "by",
-    "empty": "No approval requests."
+    "empty": "No approval requests.",
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled"
+    }
   },
   "templates": {
     "title": "Document templates",
@@ -542,7 +556,16 @@
     "copy": "Copy",
     "selectTemplate": "Select a template to start.",
     "empty": "No templates available.",
-    "generatePdf": "Generate PDF"
+    "generatePdf": "Generate PDF",
+    "categories": {
+      "contract": "Contract",
+      "permit": "Permit",
+      "invoice": "Invoice",
+      "report": "Report",
+      "letter": "Letter",
+      "certificate": "Certificate",
+      "other": "Other"
+    }
   },
   "gdpr": {
     "export": "Export data (GDPR)",
@@ -601,5 +624,49 @@
     "next": "Next",
     "upload": "Upload",
     "cancel": "Cancel"
+  },
+  "share": {
+    "title": "Share file",
+    "expiration": "Expiration",
+    "password": "Password",
+    "optional": "optional",
+    "passwordPlaceholder": "Enter password...",
+    "maxDownloads": "Max downloads",
+    "unlimited": "Unlimited",
+    "note": "Note",
+    "notePlaceholder": "Message for recipient...",
+    "create": "Create link",
+    "created": "Link created!",
+    "expiresIn": "Expires in {{label}}",
+    "passwordProtected": "Password protected",
+    "maxDownloadsLabel": "Max downloads: {{count}}",
+    "expirationOptions": {
+      "1hour": "1 hour",
+      "24hours": "24 hours",
+      "3days": "3 days",
+      "1week": "1 week",
+      "30days": "30 days"
+    }
+  },
+  "versions": {
+    "title": "Version history",
+    "noHistory": "No version history",
+    "currentOnly": "This is the first version of the file",
+    "current": "Current version",
+    "previousCount": "{{count}} previous",
+    "download": "Download this version",
+    "rollback": "Restore to this version"
+  },
+  "audit": {
+    "title": "Activity history",
+    "noEntries": "No entries",
+    "fileUpload": "File upload",
+    "fileTrash": "Move file to trash",
+    "fileRename": "File rename",
+    "fileDescriptionUpdate": "File description update",
+    "fileUnlink": "File unlink",
+    "fileBatchTrash": "Batch move file to trash",
+    "fileArchive": "File archive",
+    "fileRestore": "Restore file from trash"
   }
 }

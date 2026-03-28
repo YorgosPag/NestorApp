@@ -19,6 +19,7 @@ import { getContactDisplayName } from '@/types/contacts';
 import { useBulkAssign } from './hooks/useBulkAssign';
 import { DROPDOWN_PLACEHOLDERS } from '@/constants/property-statuses-enterprise';
 import { useTranslation } from 'react-i18next';
+import '@/lib/design-system';
 
 export function BulkAssignToolbar({
   selectedIds,

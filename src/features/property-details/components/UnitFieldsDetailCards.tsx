@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import {
   Bed, Bath, Compass, Wrench, Zap,
   Thermometer, Snowflake, Home, Shield, Flame,
@@ -48,6 +49,7 @@ export function UnitFieldsDetailCards(props: DetailCardsProps) {
     isMultiLevel, activeLevelId, currentLevelData, aggregatedTotals,
     toggleArrayItem, updateLevelField, t, typography, iconSizes, quick,
   } = props;
+  const colors = useSemanticColors();
 
   return (
     <>
@@ -68,22 +70,22 @@ export function UnitFieldsDetailCards(props: DetailCardsProps) {
           <CardContent className="p-2 pt-0">
             {isMultiLevel && activeLevelId === null && aggregatedTotals ? (
               <div className="space-y-1.5">
-                <p className="text-[10px] text-muted-foreground italic">{t('multiLevel.perLevel.autoComputed')}</p>
+                <p className={cn("text-[10px] italic", colors.text.muted)}>{t('multiLevel.perLevel.autoComputed')}</p>
                 {aggregatedTotals.layout.bedrooms > 0 && (
                   <dl className="flex items-baseline gap-1.5">
-                    <dt className="text-xs text-muted-foreground">{t('card.stats.bedrooms')}:</dt>
+                    <dt className={cn("text-xs", colors.text.muted)}>{t('card.stats.bedrooms')}:</dt>
                     <dd className="text-xs font-semibold">{aggregatedTotals.layout.bedrooms}</dd>
                   </dl>
                 )}
                 {aggregatedTotals.layout.bathrooms > 0 && (
                   <dl className="flex items-baseline gap-1.5">
-                    <dt className="text-xs text-muted-foreground">{t('card.stats.bathrooms')}:</dt>
+                    <dt className={cn("text-xs", colors.text.muted)}>{t('card.stats.bathrooms')}:</dt>
                     <dd className="text-xs font-semibold">{aggregatedTotals.layout.bathrooms}</dd>
                   </dl>
                 )}
                 {aggregatedTotals.layout.wc > 0 && (
                   <dl className="flex items-baseline gap-1.5">
-                    <dt className="text-xs text-muted-foreground">{t('fields.layout.wc')}:</dt>
+                    <dt className={cn("text-xs", colors.text.muted)}>{t('fields.layout.wc')}:</dt>
                     <dd className="text-xs font-semibold">{aggregatedTotals.layout.wc}</dd>
                   </dl>
                 )}
@@ -100,7 +102,7 @@ export function UnitFieldsDetailCards(props: DetailCardsProps) {
                     : formData[layoutKey];
                   return (
                     <fieldset key={layoutKey} className="space-y-1">
-                      <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Label className={cn("text-xs flex items-center gap-1", colors.text.muted)}>
                         <Icon className={cn(iconSizes.xs, iconColor)} />
                         {t(labelKey)}
                       </Label>
@@ -141,7 +143,7 @@ export function UnitFieldsDetailCards(props: DetailCardsProps) {
           <CardContent className="p-2 pt-0 space-y-2">
             {isMultiLevel && activeLevelId === null && aggregatedTotals ? (
               <div className="space-y-1.5">
-                <p className="text-[10px] text-muted-foreground italic">{t('multiLevel.perLevel.autoComputed')}</p>
+                <p className={cn("text-[10px] italic", colors.text.muted)}>{t('multiLevel.perLevel.autoComputed')}</p>
                 {aggregatedTotals.orientations.length > 0 && (
                   <p className="text-xs font-medium">
                     {aggregatedTotals.orientations.map(o => t(`orientation.short.${o}`, { defaultValue: o })).join(', ')}
@@ -150,7 +152,7 @@ export function UnitFieldsDetailCards(props: DetailCardsProps) {
               </div>
             ) : (
               <fieldset className="space-y-1">
-                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                <Label className={cn("text-xs flex items-center gap-1", colors.text.muted)}>
                   {t('orientation.sectionTitle')}
                 </Label>
                 <div className="flex flex-wrap gap-1">
@@ -193,7 +195,7 @@ export function UnitFieldsDetailCards(props: DetailCardsProps) {
               {t('condition.sectionTitle')}
               <Zap className={cn(iconSizes.sm, 'text-green-500')} />
               {isMultiLevel && (
-                <span className="ml-auto text-[9px] font-normal text-muted-foreground">
+                <span className="ml-auto text-[9px] font-normal ${colors.text.muted}">
                   {t('multiLevel.perLevel.sharedHint')}
                 </span>
               )}
@@ -202,7 +204,7 @@ export function UnitFieldsDetailCards(props: DetailCardsProps) {
           <CardContent className="p-2 pt-0">
             <div className="space-y-2">
               <fieldset className="space-y-1">
-                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                <Label className={cn("text-xs flex items-center gap-1", colors.text.muted)}>
                   <Wrench className={cn(iconSizes.xs, 'text-orange-600')} />
                   {t('condition.sectionTitle')}
                 </Label>
@@ -217,7 +219,7 @@ export function UnitFieldsDetailCards(props: DetailCardsProps) {
                 </Select>
               </fieldset>
               <fieldset className="space-y-1">
-                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                <Label className={cn("text-xs flex items-center gap-1", colors.text.muted)}>
                   <Zap className={cn(iconSizes.xs, 'text-green-600')} />
                   {t('energy.class')}
                 </Label>
@@ -248,7 +250,7 @@ export function UnitFieldsDetailCards(props: DetailCardsProps) {
               <Thermometer className={cn(iconSizes.sm, 'text-red-500')} />
               {t('systems.sectionTitle')}
               {isMultiLevel && (
-                <span className="ml-auto text-[9px] font-normal text-muted-foreground">
+                <span className="ml-auto text-[9px] font-normal ${colors.text.muted}">
                   {t('multiLevel.perLevel.sharedHint')}
                 </span>
               )}
@@ -257,7 +259,7 @@ export function UnitFieldsDetailCards(props: DetailCardsProps) {
           <CardContent className="p-2 pt-0">
             <div className="space-y-2">
               <fieldset className="space-y-1">
-                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                <Label className={cn("text-xs flex items-center gap-1", colors.text.muted)}>
                   <Flame className={cn(iconSizes.xs, 'text-orange-500')} />
                   {t('systems.heating.label')}
                 </Label>
@@ -272,7 +274,7 @@ export function UnitFieldsDetailCards(props: DetailCardsProps) {
                 </Select>
               </fieldset>
               <fieldset className="space-y-1">
-                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                <Label className={cn("text-xs flex items-center gap-1", colors.text.muted)}>
                   <Snowflake className={cn(iconSizes.xs, 'text-blue-500')} />
                   {t('systems.cooling.label')}
                 </Label>
@@ -318,7 +320,7 @@ export function UnitFieldsDetailCards(props: DetailCardsProps) {
                 <>
                   {/* Flooring */}
                   <fieldset className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">{t('finishes.flooring.label')}</Label>
+                    <Label className={cn("text-xs", colors.text.muted)}>{t('finishes.flooring.label')}</Label>
                     <div className="flex flex-wrap gap-1">
                       {FLOORING_OPTIONS.map((floor) => {
                         const isSelected = levelFlooring.includes(floor);
@@ -350,7 +352,7 @@ export function UnitFieldsDetailCards(props: DetailCardsProps) {
                   {/* Frames & Glazing */}
                   <div className="grid grid-cols-2 gap-2">
                     <fieldset className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">{t('finishes.frames.label')}</Label>
+                      <Label className={cn("text-xs", colors.text.muted)}>{t('finishes.frames.label')}</Label>
                       <Select value={levelFrames} disabled={!isEditing || isSoldOrRented}
                         onValueChange={(value) => {
                           if (isMultiLevel && activeLevelId) {
@@ -371,7 +373,7 @@ export function UnitFieldsDetailCards(props: DetailCardsProps) {
                       </Select>
                     </fieldset>
                     <fieldset className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">{t('finishes.glazing.label')}</Label>
+                      <Label className={cn("text-xs", colors.text.muted)}>{t('finishes.glazing.label')}</Label>
                       <Select value={levelGlazing} disabled={!isEditing || isSoldOrRented}
                         onValueChange={(value) => {
                           if (isMultiLevel && activeLevelId) {
@@ -405,7 +407,7 @@ export function UnitFieldsDetailCards(props: DetailCardsProps) {
               <Shield className={cn(iconSizes.sm, 'text-purple-500')} />
               {t('features.sectionTitle')}
               {isMultiLevel && (
-                <span className="ml-auto text-[9px] font-normal text-muted-foreground">
+                <span className="ml-auto text-[9px] font-normal ${colors.text.muted}">
                   {t('multiLevel.perLevel.sharedHint')}
                 </span>
               )}
@@ -414,7 +416,7 @@ export function UnitFieldsDetailCards(props: DetailCardsProps) {
           <CardContent className="p-2 pt-0 space-y-2">
             {/* Interior Features */}
             <fieldset className="space-y-1">
-              <Label className="text-xs text-muted-foreground">{t('features.interior.label')}</Label>
+              <Label className={cn("text-xs", colors.text.muted)}>{t('features.interior.label')}</Label>
               <div className="flex flex-wrap gap-1">
                 {INTERIOR_FEATURE_OPTIONS.map((feature) => {
                   const isSelected = formData.interiorFeatures.includes(feature);
@@ -433,7 +435,7 @@ export function UnitFieldsDetailCards(props: DetailCardsProps) {
 
             {/* Security Features */}
             <fieldset className="space-y-1">
-              <Label className="text-xs text-muted-foreground">{t('features.security.label')}</Label>
+              <Label className={cn("text-xs", colors.text.muted)}>{t('features.security.label')}</Label>
               <div className="flex flex-wrap gap-1">
                 {SECURITY_FEATURE_OPTIONS.map((feature) => {
                   const isSelected = formData.securityFeatures.includes(feature);

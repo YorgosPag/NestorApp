@@ -37,6 +37,7 @@ import type { GridCardBadgeVariant } from '@/design-system/components/GridCard/G
 
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 // =============================================================================
 // 🏢 TYPES

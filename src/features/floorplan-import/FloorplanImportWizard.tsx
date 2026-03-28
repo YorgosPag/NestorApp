@@ -36,6 +36,7 @@ import { StepEntitySelector } from './components/StepEntitySelector';
 import { StepUnitSelector } from './components/StepUnitSelector';
 import { StepUpload } from './components/StepUpload';
 import type { FloorplanType } from './hooks/useFloorplanImportState';
+import '@/lib/design-system';
 
 // =============================================================================
 // TYPES

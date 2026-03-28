@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 // 🏢 ENTERPRISE: Import centralized unit filter options - NO MORE HARDCODED VALUES
 import { getUnitFilterOptions } from '@/subapps/dxf-viewer/config/modal-select';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 const logger = createModuleLogger('ToolbarFiltersMenu');
 
 // --- UnitFiltersMenu Logic ---

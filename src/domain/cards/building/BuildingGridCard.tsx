@@ -34,6 +34,7 @@ import type { Building } from '@/types/building/contracts';
 
 // 🏢 BADGE VARIANT MAPPING
 import type { GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
+import '@/lib/design-system';
 
 // =============================================================================
 // 🏢 TYPES

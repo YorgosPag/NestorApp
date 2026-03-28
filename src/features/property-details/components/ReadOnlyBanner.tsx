@@ -8,17 +8,20 @@ import { useTranslation } from 'react-i18next';
 import { NAVIGATION_ACTIONS } from '@/components/navigation/config/navigation-entities';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 export function ReadOnlyBanner() {
   const { t } = useTranslation('properties');
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
+  const colors = useSemanticColors();
 
   return (
     // 🏢 ENTERPRISE: Using centralized spacing tokens - NO hardcoded values
     <div className={`flex items-center ${spacing.gap.sm} ${spacing.padding.sm} bg-muted/50 rounded-md`}>
       <NAVIGATION_ACTIONS.view.icon className={cn(iconSizes.sm, NAVIGATION_ACTIONS.view.color, 'shrink-0')} />
-      <span className="text-xs text-muted-foreground truncate">{t(NAVIGATION_ACTIONS.view.label, { ns: 'navigation' })}</span>
+      <span className={cn("text-xs truncate", colors.text.muted)}>{t(NAVIGATION_ACTIONS.view.label, { ns: 'navigation' })}</span>
       <CommonBadge
         status="property"
         customLabel={t('details.publicView')}

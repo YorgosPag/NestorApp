@@ -10,6 +10,7 @@ import { GridLayout } from './components/GridLayout';
 import { buildReadOnlyViewerProps } from './utils/buildReadOnlyViewerProps';
 // 🏢 ENTERPRISE: Centralized layout spacing tokens
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
+import '@/lib/design-system';
 
 export function ReadOnlyPropertyViewerLayout({
   isLoading,
@@ -22,7 +23,7 @@ export function ReadOnlyPropertyViewerLayout({
   handlePolygonSelect,
   onSelectFloor,
   onHoverProperty,
-  handleUpdateProperty,
+  handleUpdateProperty: _handleUpdateProperty,
   ...viewerProps
 }: ReadOnlyPropertyViewerLayoutProps) {
   const layout = useLayoutClasses();

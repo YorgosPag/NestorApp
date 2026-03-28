@@ -8,7 +8,6 @@
 
 import { useMemo, useState, useCallback } from 'react';
 import { useFirestoreParkingSpots } from '@/hooks/useFirestoreParkingSpots';
-import type { ParkingSpot } from '@/types/parking';
 import type {
   SalesSpaceFilterState,
   SalesSpaceDashboardStats,

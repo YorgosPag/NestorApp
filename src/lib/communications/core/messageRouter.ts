@@ -2,7 +2,7 @@
 
 import { MESSAGE_DIRECTIONS, MESSAGE_STATUSES, isChannelEnabled } from '../../config/communications.config';
 import { db } from '@/lib/firebase';
-import { collection, doc, setDoc, updateDoc, serverTimestamp, FieldValue } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, serverTimestamp, FieldValue } from 'firebase/firestore';
 import type { Channel, BaseMessageInput, SendResult } from '@/types/communications';
 import { ATTACHMENT_TYPES, type MessageAttachment } from '@/types/conversations';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -218,54 +218,43 @@ class MessageRouter {
    * Δημιουργία εγγραφής μηνύματος στη βάση δεδομένων
    */
   async createMessageRecord(messageData: MessageRecordInput, direction: 'inbound' | 'outbound') {
-    try {
-      const record = {
-        type: messageData.channel as Channel,
-        direction,
-        channel: messageData.channel as Channel,
-        from: messageData.from || '',
-        to: messageData.to || '',
-        subject: messageData.subject || '',
-        content: messageData.content,
-        status: MESSAGE_STATUSES.PENDING,
-        entityType: messageData.entityType || null,
-        entityId: messageData.entityId || null,
-        externalId: messageData.externalId || null,
-        threadId: messageData.threadId || null,
-        attachments: messageData.attachments || [],
-        metadata: messageData.metadata || {},
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      };
+    const record = {
+      type: messageData.channel as Channel,
+      direction,
+      channel: messageData.channel as Channel,
+      from: messageData.from || '',
+      to: messageData.to || '',
+      subject: messageData.subject || '',
+      content: messageData.content,
+      status: MESSAGE_STATUSES.PENDING,
+      entityType: messageData.entityType || null,
+      entityId: messageData.entityId || null,
+      externalId: messageData.externalId || null,
+      threadId: messageData.threadId || null,
+      attachments: messageData.attachments || [],
+      metadata: messageData.metadata || {},
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
 
-      // 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES
-      // 🏢 ENTERPRISE: setDoc + enterprise ID (SOS N.6)
-      const enterpriseId = generateMessageId();
-      const docRef = doc(db, COLLECTIONS.MESSAGES, enterpriseId);
-      await setDoc(docRef, record);
-      return { id: enterpriseId, ...record };
-
-    } catch (error) {
-      // Error logging removed
-      throw error;
-    }
+    // 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES
+    // 🏢 ENTERPRISE: setDoc + enterprise ID (SOS N.6)
+    const enterpriseId = generateMessageId();
+    const docRef = doc(db, COLLECTIONS.MESSAGES, enterpriseId);
+    await setDoc(docRef, record);
+    return { id: enterpriseId, ...record };
   }
 
   /**
    * Ενημέρωση status μηνύματος
    */
   async updateMessageStatus(messageId: string, updates: MessageStatusUpdate) {
-    try {
-      // 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES
-      const messageRef = doc(db, COLLECTIONS.MESSAGES, messageId);
-      await updateDoc(messageRef, {
-        ...updates,
-        updatedAt: serverTimestamp()
-      });
-    } catch (error) {
-      // Error logging removed
-      throw error;
-    }
+    // 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES
+    const messageRef = doc(db, COLLECTIONS.MESSAGES, messageId);
+    await updateDoc(messageRef, {
+      ...updates,
+      updatedAt: serverTimestamp()
+    });
   }
 
   /**

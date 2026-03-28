@@ -16,6 +16,7 @@ import { BulkAssignToolbar } from './BulkAssignToolbar';
 import { useUnitsToolbarState } from './hooks/useUnitsToolbarState';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from 'react-i18next';
+import '@/lib/design-system';
 
 export function UnitsToolbar({
   selectedUnitIds,
