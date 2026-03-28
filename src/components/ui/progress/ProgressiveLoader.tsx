@@ -6,6 +6,8 @@ import { Progress } from '@/components/ui/progress';
 // 🏢 ENTERPRISE: Import from canonical location (not DXF Viewer)
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface LoadingStep {
   id: string;
@@ -35,6 +37,7 @@ export function ProgressiveLoader({
   onStepChange
 }: ProgressiveLoaderProps) {
   const colors = useSemanticColors();
+  const { t } = useTranslation('common');
   const [internalProgress, setInternalProgress] = useState(0);
   const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState<number | null>(null);
   const [startTime] = useState(Date.now());
@@ -98,9 +101,9 @@ export function ProgressiveLoader({
           className="h-2"
         />
         <div className="flex justify-between text-sm text-muted-foreground">
-          <span>{internalProgress}% Complete</span>
+          <span>{t('progressiveLoader.percentComplete', { percent: internalProgress })}</span>
           {estimatedTimeRemaining !== null && showEstimatedTime && (
-            <span>{formatTime(estimatedTimeRemaining)} remaining</span>
+            <span>{t('progressiveLoader.remaining', { time: formatTime(estimatedTimeRemaining) })}</span>
           )}
         </div>
       </div>

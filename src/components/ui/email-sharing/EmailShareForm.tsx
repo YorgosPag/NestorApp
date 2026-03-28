@@ -1,8 +1,10 @@
 'use client';
 
 import React from 'react';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import type { EmailShareData, ShareData } from './types';
+import '@/lib/design-system';
 
 export type { EmailShareData, ShareData };
 
@@ -15,13 +17,14 @@ export interface EmailShareFormProps {
 }
 
 export const EmailShareForm: React.FC<EmailShareFormProps> = ({
-  shareData,
-  onEmailShare
+  shareData: _shareData,
+  onEmailShare: _onEmailShare
 }) => {
+  const { t } = useTranslation('common');
   return (
     <div className="space-y-6">
       <div className="text-center">
-        Email Share Form - Temporarily Simplified
+        {t('photoManager.emailShareSimplified')}
       </div>
     </div>
   );

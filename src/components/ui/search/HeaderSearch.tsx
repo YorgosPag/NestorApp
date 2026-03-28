@@ -26,6 +26,7 @@ import { SEARCH_UI } from "./constants"; // 🏢 ENTERPRISE search constants
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors";
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface HeaderSearchProps {
   placeholder?: string;
@@ -133,7 +134,7 @@ export function HeaderSearch({
             )}
           >
             <kbd className={`pointer-events-none inline-flex ${iconSizes.md} select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground`}>
-              <span className="text-xs">ESC</span>
+              <span className="text-xs">{t('a11y.escKey')}</span>
             </kbd>
           </div>
         )}

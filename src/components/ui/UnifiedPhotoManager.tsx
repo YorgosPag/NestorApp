@@ -17,6 +17,8 @@ import { openGalleryPhotoModal } from '@/core/modals/usePhotoPreviewModal';
 import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
 import { asDate } from '@/lib/firestore/utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('UnifiedPhotoManager');
 
@@ -82,6 +84,7 @@ function IndividualPhotoManager({
   disabled?: boolean;
   iconSizes: ReturnType<typeof useIconSizes>;
 }) {
+  const { t } = useTranslation('common');
   // 🏢 ENTERPRISE: Global PhotoPreviewModal για gallery functionality
   const photoPreviewModal = useGlobalPhotoPreview();
 
@@ -122,7 +125,7 @@ function IndividualPhotoManager({
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-sm">
           <Camera className={iconSizes.sm} />
-          📸 Φωτογραφίες Προσώπου (6)
+          {t('photoManager.individualPhotos', { count: 6 })}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -169,6 +172,7 @@ function CompanyPhotoManager({
   disabled?: boolean;
   iconSizes: ReturnType<typeof useIconSizes>;
 }) {
+  const { t } = useTranslation('common');
   const handleLogoChange = handlers.handleLogoChange ?? (() => {});
 
 
@@ -193,7 +197,7 @@ function CompanyPhotoManager({
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm">
               <Building2 className={iconSizes.sm} />
-              Λογότυπο Εταιρείας
+              {t('photoManager.companyLogo')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -228,7 +232,7 @@ function CompanyPhotoManager({
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm">
               <User className={iconSizes.sm} />
-              Φωτογραφία Εκπροσώπου
+              {t('photoManager.representativePhoto')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -281,7 +285,7 @@ function CompanyPhotoManager({
 function ServicePhotoManager({
   formData,
   handlers,
-  uploadHandlers,
+  uploadHandlers: _uploadHandlers,
   disabled,
   iconSizes
 }: {
@@ -291,12 +295,13 @@ function ServicePhotoManager({
   disabled?: boolean;
   iconSizes: ReturnType<typeof useIconSizes>;
 }) {
+  const { t } = useTranslation('common');
   return (
     <Card className="mt-4">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-sm">
           <Building2 className={iconSizes.sm} />
-          🏛️ Λογότυπο Δημόσιας Υπηρεσίας
+          {t('photoManager.serviceLogo')}
         </CardTitle>
       </CardHeader>
       <CardContent>

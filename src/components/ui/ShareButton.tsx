@@ -17,6 +17,7 @@ import { type ShareData } from '@/lib/share-utils';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-utils';
+import '@/lib/design-system';
 
 export interface ShareButtonProps {
   /** Data to share */
@@ -65,7 +66,7 @@ export function ShareButton({
     onShareSuccess?.();
   };
 
-  const handleShareSuccess = (platform: string) => {
+  const handleShareSuccess = (_platform: string) => {
     onShareSuccess?.();
     // Keep modal open briefly to show success, then close
     setTimeout(() => closeModal(), 1500);
@@ -192,7 +193,10 @@ function generatePropertyShareText(property: {
     text += `\n\n${property.description}`;
   }
 
-  text += `\n\nΔείτε περισσότερα στο ${process.env.NEXT_PUBLIC_COMPANY_NAME || 'την εταιρεία μας'}!`;
+  const companyName = process.env.NEXT_PUBLIC_COMPANY_NAME || '';
+  if (companyName) {
+    text += `\n\n${companyName}`;
+  }
 
   return text;
 }

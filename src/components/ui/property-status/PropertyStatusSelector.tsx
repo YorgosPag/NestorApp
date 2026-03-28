@@ -47,9 +47,16 @@ import {
 } from '@/services/property-status/PropertyStatusEngine';
 
 import { UnifiedPropertyStatusBadge } from './UnifiedPropertyStatusBadge';
+import {
+  StatusOption,
+  getCategoryKey,
+  getStatusDescriptionKey,
+  getValidationWarningKey
+} from './property-status-helpers';
 
 // Icons
 import { Check, AlertTriangle, Info } from 'lucide-react';
+import '@/lib/design-system';
 
 // ============================================================================
 // INTERFACES & TYPES
@@ -103,16 +110,6 @@ export interface PropertyStatusSelectorProps {
 
   /** Validation handler */
   onValidate?: (status: EnhancedPropertyStatus) => Promise<boolean>;
-}
-
-interface StatusOption {
-  status: EnhancedPropertyStatus;
-  label: string;
-  category: string;
-  isAllowed: boolean;
-  requiresApproval: boolean;
-  description?: string;
-  warning?: string;
 }
 
 // ============================================================================
@@ -488,52 +485,6 @@ export function PropertyStatusSelector({
       </div>
     </div>
   );
-}
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-// 🏢 ENTERPRISE: Returns i18n key for category label
-function getCategoryKey(category: string): string {
-  const keys: Record<string, string> = {
-    'AVAILABLE': 'statusSelector.categories.available',
-    'COMMITTED': 'statusSelector.categories.committed',
-    'OFF_MARKET': 'statusSelector.categories.offMarket',
-    'IN_PROCESS': 'statusSelector.categories.inProcess',
-    'OTHER': 'statusSelector.categories.other'
-  };
-  return keys[category] || category;
-}
-
-// 🏢 ENTERPRISE: Returns i18n key for status description
-function getStatusDescriptionKey(status: EnhancedPropertyStatus): string {
-  const keys: Partial<Record<EnhancedPropertyStatus, string>> = {
-    'rental-only': 'statusSelector.descriptions.rentalOnly',
-    'reserved-pending': 'statusSelector.descriptions.reservedPending',
-    'contract-signed': 'statusSelector.descriptions.contractSigned',
-    'company-owned': 'statusSelector.descriptions.companyOwned',
-    'urgent-sale': 'statusSelector.descriptions.urgentSale',
-    'under-renovation': 'statusSelector.descriptions.underRenovation'
-  };
-  return keys[status] || '';
-}
-
-// 🏢 ENTERPRISE: Returns i18n key for validation warning
-function getValidationWarningKey(
-  from: EnhancedPropertyStatus,
-  to: EnhancedPropertyStatus,
-  userRole: string
-): string {
-  if (from === 'sold') {
-    return 'statusSelector.warnings.soldCannotChange';
-  }
-
-  if (userRole === 'agent' && to === 'company-owned') {
-    return 'statusSelector.warnings.managerApprovalRequired';
-  }
-
-  return 'statusSelector.warnings.notAllowed';
 }
 
 // ============================================================================

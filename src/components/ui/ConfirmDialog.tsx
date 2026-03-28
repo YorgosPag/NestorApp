@@ -45,6 +45,7 @@ import {
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/spinner';
+import { getStatusColor } from '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -88,7 +89,7 @@ export interface ConfirmDialogProps {
 const VARIANT_STYLES: Record<ConfirmDialogVariant, string> = {
   default: 'bg-primary text-primary-foreground hover:bg-primary/90',
   destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
-  warning: 'bg-yellow-600 text-white hover:bg-yellow-600/90',
+  warning: `${getStatusColor('reserved', 'bg')} text-white hover:opacity-90`,
 };
 
 // ============================================================================

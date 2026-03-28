@@ -23,65 +23,16 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { normalizeForSearch } from '@/utils/greek-text';
+import { useDropdownTokens } from '@/hooks/useDropdownTokens';
+import '@/lib/design-system';
+import {
+  ComboboxOption,
+  SearchableComboboxProps,
+  DEFAULT_MAX_DISPLAYED,
+  DEFAULT_DEBOUNCE_MS,
+} from './searchable-combobox-types';
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
-export interface ComboboxOption {
-  /** Unique value stored on selection */
-  value: string;
-  /** Primary display text */
-  label: string;
-  /** Optional secondary text (e.g. code, region) */
-  secondaryLabel?: string;
-  /** When true, option is visible but not selectable (greyed out) */
-  disabled?: boolean;
-  /** Hint text shown next to disabled options (e.g. "Ήδη καταχωρημένο") */
-  disabledHint?: string;
-}
-
-export interface SearchableComboboxProps {
-  /** Current value (matches option.value or free text) */
-  value: string;
-  /** Callback on value change. Passes the selected option or null for free text. */
-  onValueChange: (value: string, option: ComboboxOption | null) => void;
-  /** Available options to search through */
-  options: ComboboxOption[];
-  /** Input placeholder */
-  placeholder?: string;
-  /** Message when no options match the search */
-  emptyMessage?: string;
-  /** Shows loading spinner (e.g. while lazy-loading options) */
-  isLoading?: boolean;
-  /** Maximum number of options to display at once. Default: 50 */
-  maxDisplayed?: number;
-  /** Debounce delay in ms for filtering. Default: 150 */
-  debounceMs?: number;
-  /** Allow typing values not in the options list. Default: false */
-  allowFreeText?: boolean;
-  /** Disabled state */
-  disabled?: boolean;
-  /** Error message */
-  error?: string;
-  /** Additional CSS classes for the wrapper */
-  className?: string;
-  /**
-   * When set, shows a "+ Add new" button at the bottom of the dropdown.
-   * Callback receives the new label typed by the user.
-   * The parent is responsible for adding the new option to the options array.
-   */
-  onAddNew?: (label: string) => void;
-  /** Label for the "add new" button. Default: "+ Add new" */
-  addNewButtonLabel?: string;
-}
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-const DEFAULT_MAX_DISPLAYED = 50;
-const DEFAULT_DEBOUNCE_MS = 150;
+export type { ComboboxOption, SearchableComboboxProps } from './searchable-combobox-types';
 
 // ============================================================================
 // HELPERS
@@ -107,6 +58,7 @@ export function SearchableCombobox({
   onAddNew,
   addNewButtonLabel = '+ Προσθήκη νέου',
 }: SearchableComboboxProps) {
+  const dropdown = useDropdownTokens();
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -337,7 +289,7 @@ export function SearchableCombobox({
             aria-autocomplete="list"
             aria-invalid={!!error}
             autoComplete="off"
-            className="pr-16"
+            className={dropdown.combobox.inputPaddingRight}
           />
           {/* Loading spinner */}
           {isLoading && (
@@ -376,23 +328,23 @@ export function SearchableCombobox({
       <PopoverContent
         className="w-[var(--radix-popover-trigger-width)] p-0"
         align="start"
-        sideOffset={4}
+        sideOffset={dropdown.content.sideOffset}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         {isLoading ? (
-          <div className="flex items-center justify-center py-4">
+          <div className={`flex items-center justify-center ${dropdown.combobox.loadingState}`}>
             <Spinner />
           </div>
         ) : (
           <>
             {filtered.length === 0 && !onAddNew ? (
-              <p className="p-3 text-sm text-muted-foreground text-center">
+              <p className={`${dropdown.combobox.emptyState} text-muted-foreground text-center`}>
                 {emptyMessage}
               </p>
             ) : (
-              <ul ref={listRef} role="listbox" className="py-1 max-h-60 overflow-y-auto">
+              <ul ref={listRef} role="listbox" className={`${dropdown.combobox.listPadding} ${dropdown.content.maxHeightCombobox} overflow-y-auto`}>
                 {filtered.length === 0 && (
-                  <li className="px-3 py-2 text-sm text-muted-foreground text-center">
+                  <li className={`px-3 py-2 ${dropdown.item.fontSize} text-muted-foreground text-center`}>
                     {emptyMessage}
                   </li>
                 )}
@@ -403,7 +355,7 @@ export function SearchableCombobox({
                     aria-selected={highlightedIndex === index}
                     aria-disabled={option.disabled || undefined}
                     className={cn(
-                      'flex flex-col px-3 py-1.5 transition-colors text-sm',
+                      `flex flex-col ${dropdown.item.combobox} transition-colors ${dropdown.item.fontSize}`,
                       option.disabled
                         ? 'cursor-not-allowed opacity-50'
                         : 'cursor-pointer',
@@ -420,13 +372,13 @@ export function SearchableCombobox({
                     <span className="font-medium">
                       {option.label}
                       {option.disabled && option.disabledHint && (
-                        <span className="ml-2 text-xs font-normal text-muted-foreground italic">
+                        <span className={`ml-2 ${dropdown.item.fontSizeSecondary} font-normal text-muted-foreground italic`}>
                           ({option.disabledHint})
                         </span>
                       )}
                     </span>
                     {option.secondaryLabel && (
-                      <span className="text-xs text-muted-foreground">
+                      <span className={`${dropdown.item.fontSizeSecondary} text-muted-foreground`}>
                         {option.secondaryLabel}
                       </span>
                     )}
@@ -437,9 +389,9 @@ export function SearchableCombobox({
 
             {/* Add New section — shown when onAddNew prop is provided */}
             {onAddNew && (
-              <div className="border-t p-1">
+              <div className={dropdown.combobox.addNewSection}>
                 {isAddingNew ? (
-                  <div className="flex items-center gap-2 px-2 py-1">
+                  <div className={`flex items-center ${dropdown.combobox.addNewRow}`}>
                     <Input
                       ref={newInputRef}
                       type="text"
@@ -458,7 +410,7 @@ export function SearchableCombobox({
                       }}
                       onMouseDown={e => e.stopPropagation()}
                       placeholder={placeholder}
-                      className="h-8 text-sm flex-1"
+                      className={dropdown.combobox.addNewInput}
                     />
                     <button
                       type="button"
@@ -468,7 +420,7 @@ export function SearchableCombobox({
                         handleAddNewSubmit();
                       }}
                       disabled={!newItemInput.trim()}
-                      className="h-8 px-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                      className={`${dropdown.combobox.addNewButton} rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50`}
                     >
                       OK
                     </button>
@@ -482,7 +434,7 @@ export function SearchableCombobox({
                       setIsAddingNew(true);
                     }}
                     className={cn(
-                      'flex w-full items-center gap-2 rounded-sm px-3 py-1.5 text-sm cursor-pointer',
+                      `flex w-full items-center ${dropdown.item.gap} rounded-sm ${dropdown.item.combobox} ${dropdown.item.fontSize} cursor-pointer`,
                       'hover:bg-accent hover:text-accent-foreground text-primary'
                     )}
                   >
