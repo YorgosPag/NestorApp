@@ -39,7 +39,7 @@ type DialogStep = 'company' | 'project' | 'building' | 'unit';
 export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimpleProjectDialogProps) {
   const { t } = useTranslation('dxf-viewer');
   const { user } = useAuth();
-  const _colors = useSemanticColors();
+  const colors = useSemanticColors();
   const typography = useTypography();
 
   const {
@@ -367,7 +367,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
               {t('wizard.replace.title', { typeLabel: floorplanImport.pendingImportData?.typeLabel })}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
-              <div className={`${PANEL_LAYOUT.SPACING.GAP_MD} ${PANEL_LAYOUT.TYPOGRAPHY.SM} text-muted-foreground`}>
+              <div className={`${PANEL_LAYOUT.SPACING.GAP_MD} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted}`}>
                 <p>{t('wizard.replace.existingWarning', { typeLabel: floorplanImport.pendingImportData?.typeLabel })}</p>
                 <p>{t('wizard.replace.layerWarning')}</p>
                 <p className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('wizard.replace.confirmQuestion')}</p>

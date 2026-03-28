@@ -38,6 +38,10 @@ import { useCustomCategories } from '../../hooks/useCustomCategories';
 import type { CustomCategoryDocument, CreateCustomCategoryInput } from '../../types';
 import type { MyDataIncomeType, MyDataExpenseType } from '../../types/common';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // MYDATA OPTIONS — Dropdown για υποχρεωτικό mapping
 // ============================================================================
@@ -93,6 +97,7 @@ function emptyForm(): CategoryFormState {
 
 export function CustomCategoriesSection() {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
   const { categories, loading, error, createCategory, updateCategory, deleteCategory } =
     useCustomCategories({ includeInactive: true });
 
@@ -203,7 +208,7 @@ export function CustomCategoriesSection() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-muted-foreground mb-4">
+        <p className={cn("text-sm mb-4", colors.text.muted)}>
           {t(
             'setup.customCategories.description',
             'Δημιουργήστε εξειδικευμένες κατηγορίες εσόδων/εξόδων για αναλυτικότερη παρακολούθηση.'
@@ -211,7 +216,7 @@ export function CustomCategoriesSection() {
         </p>
 
         {deleteMessage && (
-          <p className="text-sm text-muted-foreground mb-3 p-2 bg-muted rounded-md">
+          <p className={cn("text-sm mb-3 p-2 bg-muted rounded-md", colors.text.muted)}>
             {deleteMessage}
           </p>
         )}
@@ -227,7 +232,7 @@ export function CustomCategoriesSection() {
         ) : (
           <section aria-label="Λίστα custom κατηγοριών">
             {categories.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-2">
+              <p className={cn("text-sm py-2", colors.text.muted)}>
                 {t('setup.customCategories.empty', 'Δεν υπάρχουν custom κατηγορίες ακόμη.')}
               </p>
             ) : (
@@ -245,7 +250,7 @@ export function CustomCategoriesSection() {
                       )}
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{cat.label}</p>
-                        <p className="text-xs text-muted-foreground">{cat.mydataCode}</p>
+                        <p className={cn("text-xs", colors.text.muted)}>{cat.mydataCode}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">

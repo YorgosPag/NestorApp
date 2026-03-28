@@ -19,6 +19,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import type { ServicePreset } from '@/subapps/accounting/types';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -48,6 +50,7 @@ export function ServicePresetCombobox({
   placeholder,
 }: ServicePresetComboboxProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
   const [open, setOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -169,7 +172,8 @@ export function ServicePresetCombobox({
           />
           <ChevronDown
             className={cn(
-              'absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none transition-transform',
+              'absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none transition-transform',
+              colors.text.muted,
               open && 'rotate-180',
             )}
           />
@@ -182,7 +186,7 @@ export function ServicePresetCombobox({
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         {filtered.length === 0 ? (
-          <p className="p-2 text-sm text-muted-foreground">
+          <p className={cn("p-2 text-sm", colors.text.muted)}>
             {t('servicePresets.noResults')}
           </p>
         ) : (
@@ -205,7 +209,7 @@ export function ServicePresetCombobox({
                 onMouseEnter={() => setHighlightedIndex(index)}
               >
                 <span className="font-medium">{preset.description}</span>
-                <span className="text-xs text-muted-foreground">
+                <span className={cn("text-xs", colors.text.muted)}>
                   {preset.unit} · {preset.unitPrice > 0 ? `${preset.unitPrice}€` : t('servicePresets.variablePrice')} · {t('common.vatRates.standard').includes(String(preset.vatRate)) ? `${preset.vatRate}%` : `${preset.vatRate}%`}
                 </span>
               </li>

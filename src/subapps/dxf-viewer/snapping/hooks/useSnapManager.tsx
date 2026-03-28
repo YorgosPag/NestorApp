@@ -9,7 +9,7 @@ import { ExtendedSnapType } from '../extended-types';
 import type { SceneModel } from '../../types/scene';
 import type { Entity } from '../extended-types';
 import type { Point2D } from '../../rendering/types/Types';
-import { dlog, dwarn } from '../../debug';
+import { dlog } from '../../debug';
 
 /**
  * 🏢 ENTERPRISE: Canvas wrapper interface for components that wrap HTMLCanvasElement
@@ -224,7 +224,6 @@ export const useSnapManager = (
         dlog('Snap', '[useSnapManager] Entity types:', entityTypes);
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dxfLen, overlayLen, scene, overlayEntities]);
 
   // 🏢 ENTERPRISE: Stable findSnapPoint callback.

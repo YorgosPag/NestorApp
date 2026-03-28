@@ -15,6 +15,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/intl-utils';
 import type { PartnershipTaxResult } from '../../types/tax';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -29,6 +33,7 @@ interface PartnerTaxBreakdownProps {
 
 export function PartnerTaxBreakdown({ result }: PartnerTaxBreakdownProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   return (
     <section className="space-y-4">
@@ -40,19 +45,19 @@ export function PartnerTaxBreakdown({ result }: PartnerTaxBreakdownProps) {
         <CardContent>
           <dl className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <dt className="text-sm text-muted-foreground">{t('tax.partnerBreakdown.totalIncome')}</dt>
+              <dt className={cn("text-sm", colors.text.muted)}>{t('tax.partnerBreakdown.totalIncome')}</dt>
               <dd className="text-lg font-semibold">{formatCurrency(result.totalEntityIncome)}</dd>
             </div>
             <div>
-              <dt className="text-sm text-muted-foreground">{t('tax.partnerBreakdown.totalExpenses')}</dt>
+              <dt className={cn("text-sm", colors.text.muted)}>{t('tax.partnerBreakdown.totalExpenses')}</dt>
               <dd className="text-lg font-semibold">{formatCurrency(result.totalEntityExpenses)}</dd>
             </div>
             <div>
-              <dt className="text-sm text-muted-foreground">{t('tax.partnerBreakdown.totalProfit')}</dt>
+              <dt className={cn("text-sm", colors.text.muted)}>{t('tax.partnerBreakdown.totalProfit')}</dt>
               <dd className="text-lg font-semibold">{formatCurrency(result.totalEntityProfit)}</dd>
             </div>
             <div>
-              <dt className="text-sm text-muted-foreground">{t('tax.partnerBreakdown.professionalTax')}</dt>
+              <dt className={cn("text-sm", colors.text.muted)}>{t('tax.partnerBreakdown.professionalTax')}</dt>
               <dd className="text-lg font-semibold">{formatCurrency(result.entityProfessionalTax)}</dd>
             </div>
           </dl>
@@ -65,7 +70,7 @@ export function PartnerTaxBreakdown({ result }: PartnerTaxBreakdownProps) {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>{pr.partnerName}</span>
-              <span className="text-sm font-normal text-muted-foreground">
+              <span className={cn("text-sm font-normal", colors.text.muted)}>
                 {pr.profitSharePercent}%
               </span>
             </CardTitle>
@@ -73,19 +78,19 @@ export function PartnerTaxBreakdown({ result }: PartnerTaxBreakdownProps) {
           <CardContent>
             <dl className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <dt className="text-sm text-muted-foreground">{t('tax.partnerBreakdown.profitShare')}</dt>
+                <dt className={cn("text-sm", colors.text.muted)}>{t('tax.partnerBreakdown.profitShare')}</dt>
                 <dd className="font-semibold">{formatCurrency(pr.profitShare)}</dd>
               </div>
               <div>
-                <dt className="text-sm text-muted-foreground">{t('tax.partnerBreakdown.taxableIncome')}</dt>
+                <dt className={cn("text-sm", colors.text.muted)}>{t('tax.partnerBreakdown.taxableIncome')}</dt>
                 <dd className="font-semibold">{formatCurrency(pr.taxResult.taxableIncome)}</dd>
               </div>
               <div>
-                <dt className="text-sm text-muted-foreground">{t('tax.partnerBreakdown.incomeTax')}</dt>
+                <dt className={cn("text-sm", colors.text.muted)}>{t('tax.partnerBreakdown.incomeTax')}</dt>
                 <dd className="font-semibold">{formatCurrency(pr.taxResult.incomeTax)}</dd>
               </div>
               <div>
-                <dt className="text-sm text-muted-foreground">{t('tax.partnerBreakdown.finalAmount')}</dt>
+                <dt className={cn("text-sm", colors.text.muted)}>{t('tax.partnerBreakdown.finalAmount')}</dt>
                 <dd className="font-semibold text-primary">{formatCurrency(pr.taxResult.finalAmount)}</dd>
               </div>
             </dl>
@@ -93,7 +98,7 @@ export function PartnerTaxBreakdown({ result }: PartnerTaxBreakdownProps) {
             {/* Bracket breakdown */}
             {pr.taxResult.bracketBreakdown.length > 0 && (
               <details className="mt-3">
-                <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
+                <summary className={cn("cursor-pointer text-sm hover:text-foreground", colors.text.muted)}>
                   {t('tax.partnerBreakdown.bracketDetails')}
                 </summary>
                 <table className="mt-2 w-full text-sm">

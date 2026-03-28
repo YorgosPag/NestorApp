@@ -22,6 +22,10 @@ import {
 } from '@/components/ui/select';
 import type { EntityType } from '../../types/entity';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -37,6 +41,7 @@ interface EntityTypeSelectorProps {
 
 export function EntityTypeSelector({ value, onChange }: EntityTypeSelectorProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   return (
     <Card>
@@ -68,7 +73,7 @@ export function EntityTypeSelector({ value, onChange }: EntityTypeSelectorProps)
               </SelectItem>
             </SelectContent>
           </Select>
-          <p className="text-sm text-muted-foreground">
+          <p className={cn("text-sm", colors.text.muted)}>
             {t('setup.entityType.hint')}
           </p>
         </fieldset>

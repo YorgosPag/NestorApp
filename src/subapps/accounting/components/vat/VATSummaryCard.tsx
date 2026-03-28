@@ -42,13 +42,13 @@ export function VATSummaryCard({ summary }: VATSummaryCardProps) {
         <dl className="space-y-3">
           {/* Output VAT */}
           <div className="flex justify-between">
-            <dt className="text-muted-foreground">{t('vat.outputVat')}</dt>
+            <dt className={colors.text.muted}>{t('vat.outputVat')}</dt>
             <dd className="font-medium">{formatCurrency(summary.annualOutputVat)}</dd>
           </div>
 
           {/* Deductible Input VAT */}
           <div className="flex justify-between">
-            <dt className="text-muted-foreground">{t('vat.deductibleVat')}</dt>
+            <dt className={colors.text.muted}>{t('vat.deductibleVat')}</dt>
             <dd className="font-medium">{formatCurrency(summary.annualDeductibleInputVat)}</dd>
           </div>
 
@@ -65,7 +65,7 @@ export function VATSummaryCard({ summary }: VATSummaryCardProps) {
           {/* Credit if applicable */}
           {summary.annualVatCredit > 0 && (
             <div className="flex justify-between">
-              <dt className="text-muted-foreground">{t('vat.vatCredit')}</dt>
+              <dt className={colors.text.muted}>{t('vat.vatCredit')}</dt>
               <dd className={`font-medium ${colors.text.success}`}>{formatCurrency(summary.annualVatCredit)}</dd>
             </div>
           )}
@@ -74,7 +74,7 @@ export function VATSummaryCard({ summary }: VATSummaryCardProps) {
 
           {/* Settlement details */}
           <div className="flex justify-between text-sm">
-            <dt className="text-muted-foreground">
+            <dt className={colors.text.muted}>
               {t('vat.vatPayable')} ({t('vat.quarterlyReturns')})
             </dt>
             <dd>{formatCurrency(summary.totalVatPaid)}</dd>

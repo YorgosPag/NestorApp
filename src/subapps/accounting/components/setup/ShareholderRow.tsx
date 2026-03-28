@@ -27,6 +27,10 @@ import { Trash2 } from 'lucide-react';
 import { useVatUniqueness } from '@/hooks/useVatUniqueness';
 import type { Shareholder, BoardRole, ShareholderEFKAConfig, ShareholderEFKAMode } from '../../types/entity';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -77,6 +81,7 @@ function deriveEfkaMode(
 
 export function ShareholderRow({ shareholder, index, totalShares, onChange, onRemove }: ShareholderRowProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
   const { result: vatResult } = useVatUniqueness(shareholder.vatNumber);
 
   const capitalContribution = shareholder.sharesCount * shareholder.shareNominalValue;
@@ -241,7 +246,7 @@ export function ShareholderRow({ shareholder, index, totalShares, onChange, onRe
             />
             {t('setup.shareholders.isBoardMember')}
           </label>
-          <p className="text-xs text-muted-foreground">
+          <p className={cn("text-xs", colors.text.muted)}>
             {t('setup.shareholders.boardMemberOnlyEfka')}
           </p>
         </fieldset>
@@ -320,7 +325,7 @@ export function ShareholderRow({ shareholder, index, totalShares, onChange, onRe
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
+            <p className={cn("text-xs", colors.text.muted)}>
               {t('setup.shareholders.efkaSelfEmployedExplain')}
             </p>
           </fieldset>

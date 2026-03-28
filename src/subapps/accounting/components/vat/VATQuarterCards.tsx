@@ -17,6 +17,8 @@ import { Badge } from '@/components/ui/badge';
 import type { VATQuarterSummary, VATQuarterStatus, FiscalQuarter } from '@/subapps/accounting/types';
 import { formatCurrency } from '@/subapps/accounting/utils/format';
 
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -67,18 +69,18 @@ function QuarterCard({ quarter }: QuarterCardProps) {
             {t(`vat.statuses.${quarter.status}`)}
           </Badge>
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className={cn("text-xs", colors.text.muted)}>
           {QUARTER_PERIOD_LABELS[quarter.quarter]}
         </p>
       </CardHeader>
       <CardContent>
         <dl className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <dt className="text-muted-foreground">{t('vat.outputVat')}</dt>
+            <dt className={colors.text.muted}>{t('vat.outputVat')}</dt>
             <dd className="font-medium">{formatCurrency(quarter.totalOutputVat)}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-muted-foreground">{t('vat.deductibleVat')}</dt>
+            <dt className={colors.text.muted}>{t('vat.deductibleVat')}</dt>
             <dd className="font-medium">{formatCurrency(quarter.totalDeductibleInputVat)}</dd>
           </div>
           <div className="flex justify-between border-t border-border pt-2">
@@ -89,7 +91,7 @@ function QuarterCard({ quarter }: QuarterCardProps) {
           </div>
           {quarter.vatCredit > 0 && (
             <div className="flex justify-between">
-              <dt className="text-muted-foreground">{t('vat.vatCredit')}</dt>
+              <dt className={colors.text.muted}>{t('vat.vatCredit')}</dt>
               <dd className={`font-medium ${colors.text.success}`}>{formatCurrency(quarter.vatCredit)}</dd>
             </div>
           )}
@@ -120,18 +122,18 @@ function EmptyQuarterCard({ quarterNumber }: EmptyQuarterCardProps) {
           </CardTitle>
           <Badge variant="outline">{t('vat.statuses.open')}</Badge>
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className={cn("text-xs", colors.text.muted)}>
           {QUARTER_PERIOD_LABELS[quarterNumber]}
         </p>
       </CardHeader>
       <CardContent>
         <dl className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <dt className="text-muted-foreground">{t('vat.outputVat')}</dt>
+            <dt className={colors.text.muted}>{t('vat.outputVat')}</dt>
             <dd className="font-medium">{formatCurrency(0)}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-muted-foreground">{t('vat.deductibleVat')}</dt>
+            <dt className={colors.text.muted}>{t('vat.deductibleVat')}</dt>
             <dd className="font-medium">{formatCurrency(0)}</dd>
           </div>
           <div className="flex justify-between border-t border-border pt-2">

@@ -11,6 +11,7 @@ import { CheckCircle2, XCircle, AlertTriangle, Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useTranslation } from '@/i18n';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { formatCurrency } from '@/lib/intl-utils';
 import { useGuideState } from '../../../hooks/state/useGuideState';
 import {
@@ -36,6 +37,7 @@ const RATING_COLORS: Record<string, string> = {
 
 export const SustainabilityTab: React.FC = () => {
   const { t } = useTranslation('dxf-viewer');
+  const colors = useSemanticColors();
   const { guides } = useGuideState();
 
   const [slabThickness, setSlabThickness] = useState(0.20);
@@ -55,7 +57,7 @@ export const SustainabilityTab: React.FC = () => {
 
   if (guides.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground py-6 text-center">
+      <p className={`text-sm ${colors.text.muted} py-6 text-center`}>
         {t('guideAnalysis.sustainability.empty')}
       </p>
     );
@@ -66,7 +68,7 @@ export const SustainabilityTab: React.FC = () => {
       {/* Inputs */}
       <div className="grid grid-cols-2 gap-2">
         <fieldset>
-          <label className="text-xs text-muted-foreground block mb-1">
+          <label className={`text-xs ${colors.text.muted} block mb-1`}>
             {t('guideAnalysis.sustainability.slabThickness')}
           </label>
           <Input
@@ -80,7 +82,7 @@ export const SustainabilityTab: React.FC = () => {
           />
         </fieldset>
         <fieldset>
-          <label className="text-xs text-muted-foreground block mb-1">
+          <label className={`text-xs ${colors.text.muted} block mb-1`}>
             {t('guideAnalysis.sustainability.columnSize')}
           </label>
           <Input
@@ -102,17 +104,17 @@ export const SustainabilityTab: React.FC = () => {
       {/* Material Estimate */}
       {material && (
         <section className="space-y-1">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <h4 className={`text-xs font-semibold uppercase tracking-wide ${colors.text.muted}`}>
             {t('guideAnalysis.sustainability.material')}
           </h4>
           <dl className="grid grid-cols-2 gap-1 text-sm">
-            <dt className="text-muted-foreground">{t('guideAnalysis.sustainability.concrete')}</dt>
+            <dt className={colors.text.muted}>{t('guideAnalysis.sustainability.concrete')}</dt>
             <dd className="text-right font-medium tabular-nums">{material.concreteVolume_m3.toFixed(1)} m³</dd>
-            <dt className="text-muted-foreground">{t('guideAnalysis.sustainability.steel')}</dt>
+            <dt className={colors.text.muted}>{t('guideAnalysis.sustainability.steel')}</dt>
             <dd className="text-right font-medium tabular-nums">{material.steelWeight_kg.toFixed(0)} kg</dd>
-            <dt className="text-muted-foreground">{t('guideAnalysis.sustainability.waste')}</dt>
+            <dt className={colors.text.muted}>{t('guideAnalysis.sustainability.waste')}</dt>
             <dd className="text-right font-medium tabular-nums">{(material.wasteFactor * 100).toFixed(0)}%</dd>
-            <dt className="text-muted-foreground">{t('guideAnalysis.sustainability.cost')}</dt>
+            <dt className={colors.text.muted}>{t('guideAnalysis.sustainability.cost')}</dt>
             <dd className="text-right font-medium tabular-nums">{formatCurrency(material.totalCost_EUR)}</dd>
           </dl>
         </section>
@@ -121,15 +123,15 @@ export const SustainabilityTab: React.FC = () => {
       {/* Carbon Footprint */}
       {carbon && (
         <section className="space-y-1">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <h4 className={`text-xs font-semibold uppercase tracking-wide ${colors.text.muted}`}>
             {t('guideAnalysis.sustainability.carbon')}
           </h4>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">{t('guideAnalysis.sustainability.totalCO2')}</span>
+            <span className={colors.text.muted}>{t('guideAnalysis.sustainability.totalCO2')}</span>
             <span className="font-medium tabular-nums">{carbon.totalCO2_kg.toFixed(0)} kg CO₂</span>
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">{t('guideAnalysis.sustainability.rating')}</span>
+            <span className={colors.text.muted}>{t('guideAnalysis.sustainability.rating')}</span>
             <span className={`inline-flex h-6 w-6 items-center justify-center rounded text-xs font-bold text-white ${RATING_COLORS[carbon.rating] ?? 'bg-gray-500'}`}>
               {carbon.rating}
             </span>
@@ -140,7 +142,7 @@ export const SustainabilityTab: React.FC = () => {
       {/* Green Deal */}
       {greenDeal && (
         <section className="space-y-1">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <h4 className={`text-xs font-semibold uppercase tracking-wide ${colors.text.muted}`}>
             {t('guideAnalysis.sustainability.greenDeal')}
           </h4>
           <ul className="space-y-0.5">
@@ -158,7 +160,7 @@ export const SustainabilityTab: React.FC = () => {
 
       {/* Eco Presets */}
       <section className="space-y-1">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <h4 className={`text-xs font-semibold uppercase tracking-wide ${colors.text.muted}`}>
           {t('guideAnalysis.sustainability.ecoPresets')}
         </h4>
         <div className="flex flex-wrap gap-1.5">

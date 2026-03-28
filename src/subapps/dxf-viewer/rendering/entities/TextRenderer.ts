@@ -29,7 +29,7 @@
 import { BaseEntityRenderer } from './BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
-import type { TextEntity, Entity } from '../../types/entities';
+import type { Entity } from '../../types/entities';
 // 🏢 ADR-102: Centralized Entity Type Guards
 import { isTextEntity, isMTextEntity } from '../../types/entities';
 import { UI_COLORS } from '../../config/color-config';

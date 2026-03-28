@@ -15,6 +15,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/intl-utils';
 import type { EPETaxResult } from '../../types/tax';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -29,6 +33,7 @@ interface CorporateTaxBreakdownProps {
 
 export function CorporateTaxBreakdown({ result }: CorporateTaxBreakdownProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
   const { corporateTax, memberDividends, profitAfterTax, distributedDividends, retainedEarnings, totalDividendTax } = result;
 
   return (
@@ -41,32 +46,32 @@ export function CorporateTaxBreakdown({ result }: CorporateTaxBreakdownProps) {
         <CardContent>
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <dt className="text-muted-foreground">{t('tax.totalIncome')}</dt>
+              <dt className={colors.text.muted}>{t('tax.totalIncome')}</dt>
               <dd className="font-medium">{formatCurrency(corporateTax.grossIncome)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-muted-foreground">{t('tax.totalExpenses')}</dt>
+              <dt className={colors.text.muted}>{t('tax.totalExpenses')}</dt>
               <dd className="font-medium">-{formatCurrency(corporateTax.deductibleExpenses)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-muted-foreground">ΕΦΚΑ</dt>
+              <dt className={colors.text.muted}>ΕΦΚΑ</dt>
               <dd className="font-medium">-{formatCurrency(corporateTax.efkaContributions)}</dd>
             </div>
             <hr />
             <div className="flex justify-between">
-              <dt className="text-muted-foreground">{t('tax.taxableIncome')}</dt>
+              <dt className={colors.text.muted}>{t('tax.taxableIncome')}</dt>
               <dd className="font-semibold">{formatCurrency(corporateTax.taxableIncome)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-muted-foreground">{t('setup.corporateTax.flatRate')}</dt>
+              <dt className={colors.text.muted}>{t('setup.corporateTax.flatRate')}</dt>
               <dd className="font-medium">{formatCurrency(corporateTax.corporateTaxAmount)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-muted-foreground">{t('setup.corporateTax.professionalTax')}</dt>
+              <dt className={colors.text.muted}>{t('setup.corporateTax.professionalTax')}</dt>
               <dd className="font-medium">{formatCurrency(corporateTax.professionalTax)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-muted-foreground">{t('setup.corporateTax.prepayment')}</dt>
+              <dt className={colors.text.muted}>{t('setup.corporateTax.prepayment')}</dt>
               <dd className="font-medium">{formatCurrency(corporateTax.prepaymentAmount)}</dd>
             </div>
             <hr />
@@ -86,19 +91,19 @@ export function CorporateTaxBreakdown({ result }: CorporateTaxBreakdownProps) {
         <CardContent>
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <dt className="text-muted-foreground">{t('setup.corporateTax.profitAfterTax')}</dt>
+              <dt className={colors.text.muted}>{t('setup.corporateTax.profitAfterTax')}</dt>
               <dd className="font-medium">{formatCurrency(profitAfterTax)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-muted-foreground">{t('setup.corporateTax.dividends')}</dt>
+              <dt className={colors.text.muted}>{t('setup.corporateTax.dividends')}</dt>
               <dd className="font-medium">{formatCurrency(distributedDividends)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-muted-foreground">{t('setup.corporateTax.dividendTax')}</dt>
+              <dt className={colors.text.muted}>{t('setup.corporateTax.dividendTax')}</dt>
               <dd className="font-medium text-destructive">{formatCurrency(totalDividendTax)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-muted-foreground">{t('setup.corporateTax.retainedEarnings')}</dt>
+              <dt className={colors.text.muted}>{t('setup.corporateTax.retainedEarnings')}</dt>
               <dd className="font-medium">{formatCurrency(retainedEarnings)}</dd>
             </div>
           </dl>
@@ -117,21 +122,21 @@ export function CorporateTaxBreakdown({ result }: CorporateTaxBreakdownProps) {
                 <article key={md.memberId} className="rounded-md border p-3">
                   <header className="flex items-center justify-between mb-2">
                     <h4 className="font-medium text-sm">{md.memberName}</h4>
-                    <span className="text-xs text-muted-foreground">
+                    <span className={cn("text-xs", colors.text.muted)}>
                       {md.dividendSharePercent}%
                     </span>
                   </header>
                   <dl className="grid grid-cols-3 gap-2 text-xs">
                     <div>
-                      <dt className="text-muted-foreground">{t('setup.corporateTax.grossDividend')}</dt>
+                      <dt className={colors.text.muted}>{t('setup.corporateTax.grossDividend')}</dt>
                       <dd className="font-medium">{formatCurrency(md.grossDividend)}</dd>
                     </div>
                     <div>
-                      <dt className="text-muted-foreground">{t('setup.corporateTax.dividendTax')}</dt>
+                      <dt className={colors.text.muted}>{t('setup.corporateTax.dividendTax')}</dt>
                       <dd className="font-medium text-destructive">{formatCurrency(md.dividendTaxAmount)}</dd>
                     </div>
                     <div>
-                      <dt className="text-muted-foreground">{t('setup.corporateTax.netDividend')}</dt>
+                      <dt className={colors.text.muted}>{t('setup.corporateTax.netDividend')}</dt>
                       <dd className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(md.netDividend)}</dd>
                     </div>
                   </dl>

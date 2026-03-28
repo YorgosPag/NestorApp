@@ -11,7 +11,7 @@
 //
 // ============================================================================
 
-import type { ContactFormData, CompanyAddress, KadActivity } from '@/types/ContactFormTypes';
+import type { ContactFormData, CompanyAddress } from '@/types/ContactFormTypes';
 import type { Contact, AddressInfo, WebsiteInfo, PhoneInfo, EmailInfo, SocialMediaInfo } from '@/types/contacts';
 
 import { createModuleLogger } from '@/lib/telemetry';

@@ -19,8 +19,6 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet';
 import type { SceneModel } from '../types/scene';
-import type { OverlayEditorMode, OverlayKind, Status, Overlay } from '../overlays/types';
-import type { ToolType } from '../ui/toolbar/types';
 import type { FloatingPanelHandle } from '../ui/FloatingPanelContainer';
 import { ColorManager } from '../ui/components/ColorManager';
 import CursorSettingsPanel from '../ui/CursorSettingsPanel';
@@ -102,7 +100,7 @@ export const MobilePanelManager: React.FC<MobilePanelManagerProps> = ({
             <SheetDescription className="sr-only">Adjust cursor and crosshair settings</SheetDescription>
           </SheetHeader>
           <CursorSettingsPanel
-            isVisible={true}
+            isVisible
             onClose={() => {
               closePanel();
               handleAction('toggle-cursor-settings');

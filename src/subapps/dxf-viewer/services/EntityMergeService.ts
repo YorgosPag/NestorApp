@@ -21,7 +21,7 @@ import type {
   LWPolylineEntity,
 } from '../types/entities';
 import { entityToSegments, samePoint, arePointsCollinear } from '../utils/geometry/GeometryUtils';
-import { chainSegments, chainSegmentsDetailed } from '../utils/geometry/SegmentChaining';
+import { chainSegmentsDetailed } from '../utils/geometry/SegmentChaining';
 import { publishHighlight } from '../events/selection-bus';
 // ADR-065: Centralized ID Generation (crypto-secure, collision-resistant)
 import { generateEntityId } from '../systems/entity-creation/utils';

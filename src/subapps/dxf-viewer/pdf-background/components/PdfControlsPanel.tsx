@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { usePdfBackgroundStore } from '../stores/pdfBackgroundStore';
 import { PDF_RENDER_CONFIG } from '../types/pdf.types';
 // 🏢 ENTERPRISE: Centralized panel dimensions (ADR-029)
@@ -98,6 +99,8 @@ export const PdfControlsPanel: React.FC<PdfControlsPanelProps> = ({
   // ============================================================
   // STORE
   // ============================================================
+
+  const colors = useSemanticColors();
 
   const {
     enabled,
@@ -279,7 +282,7 @@ export const PdfControlsPanel: React.FC<PdfControlsPanelProps> = ({
                   className="w-full"
                   icon={<FileUp className="h-4 w-4 mr-2" />}
                 />
-                <p className="text-xs text-muted-foreground text-center">
+                <p className={`text-xs ${colors.text.muted} text-center`}>
                   Select a PDF file to use as background
                 </p>
               </article>
@@ -309,7 +312,7 @@ export const PdfControlsPanel: React.FC<PdfControlsPanelProps> = ({
                 {/* Page navigation */}
                 {numPages > 1 && (
                   <article className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">
+                    <Label className={`text-xs ${colors.text.muted}`}>
                       Page {currentPage} of {numPages}
                     </Label>
                     <nav className="flex items-center gap-2">
@@ -341,7 +344,7 @@ export const PdfControlsPanel: React.FC<PdfControlsPanelProps> = ({
                 <article className="space-y-3 border-t pt-3">
                   {/* Scale control */}
                   <fieldset className="space-y-2">
-                    <legend className="flex items-center justify-between text-xs text-muted-foreground">
+                    <legend className={`flex items-center justify-between text-xs ${colors.text.muted}`}>
                       <span>Scale</span>
                       <span>{formatPercent(transform.scale)}</span>
                     </legend>
@@ -377,7 +380,7 @@ export const PdfControlsPanel: React.FC<PdfControlsPanelProps> = ({
 
                   {/* Rotation control */}
                   <fieldset className="space-y-2">
-                    <legend className="flex items-center justify-between text-xs text-muted-foreground">
+                    <legend className={`flex items-center justify-between text-xs ${colors.text.muted}`}>
                       <span>Rotation</span>
                       <span>{transform.rotation}°</span>
                     </legend>
@@ -405,7 +408,7 @@ export const PdfControlsPanel: React.FC<PdfControlsPanelProps> = ({
 
                   {/* Opacity control */}
                   <fieldset className="space-y-2">
-                    <legend className="flex items-center justify-between text-xs text-muted-foreground">
+                    <legend className={`flex items-center justify-between text-xs ${colors.text.muted}`}>
                       <span>Opacity</span>
                       <span>{formatPercent(opacity)}</span>
                     </legend>
@@ -434,7 +437,7 @@ export const PdfControlsPanel: React.FC<PdfControlsPanelProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={resetTransform}
-                    className="w-full text-muted-foreground"
+                    className={`w-full ${colors.text.muted}`}
                   >
                     <RotateCcw className="h-3 w-3 mr-2" />
                     Reset Transform

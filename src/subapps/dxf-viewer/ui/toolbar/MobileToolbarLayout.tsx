@@ -26,7 +26,7 @@ import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTranslation } from '@/i18n';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
-import type { ToolType, ToolDefinition, ActionDefinition } from './types';
+import type { ToolType, ToolDefinition } from './types';
 import { toolGroups, createActionButtons } from './toolDefinitions';
 import { isMobileDisabledTool, isMobilePrimaryTool } from './toolbar-responsive-config';
 import { ToolButton, ActionButton } from './ToolButton';

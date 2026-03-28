@@ -9,6 +9,7 @@
 import React, { useState, useCallback } from 'react';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import {
   Select,
   SelectContent,
@@ -30,6 +31,7 @@ const SEISMIC_ZONES: readonly SeismicZone[] = [
 
 export const ComplianceTab: React.FC = () => {
   const { t } = useTranslation('dxf-viewer');
+  const colors = useSemanticColors();
   const { guides } = useGuideState();
 
   const [codeType, setCodeType] = useState<BuildingCodeType>('generic');
@@ -46,7 +48,7 @@ export const ComplianceTab: React.FC = () => {
 
   if (guides.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground py-6 text-center">
+      <p className={`text-sm ${colors.text.muted} py-6 text-center`}>
         {t('guideAnalysis.compliance.empty')}
       </p>
     );
@@ -57,7 +59,7 @@ export const ComplianceTab: React.FC = () => {
       {/* Controls */}
       <div className="grid grid-cols-2 gap-2">
         <fieldset>
-          <label className="text-xs text-muted-foreground block mb-1">
+          <label className={`text-xs ${colors.text.muted} block mb-1`}>
             {t('guideAnalysis.compliance.buildingCode')}
           </label>
           <Select value={codeType} onValueChange={(v) => setCodeType(v as BuildingCodeType)}>
@@ -72,7 +74,7 @@ export const ComplianceTab: React.FC = () => {
           </Select>
         </fieldset>
         <fieldset>
-          <label className="text-xs text-muted-foreground block mb-1">
+          <label className={`text-xs ${colors.text.muted} block mb-1`}>
             {t('guideAnalysis.compliance.seismicZone')}
           </label>
           <Select value={String(zoneIndex)} onValueChange={(v) => setZoneIndex(Number(v))}>
@@ -109,7 +111,9 @@ interface ComplianceResultSectionProps {
   t: (key: string) => string;
 }
 
-const ComplianceResultSection: React.FC<ComplianceResultSectionProps> = ({ result, t }) => (
+const ComplianceResultSection: React.FC<ComplianceResultSectionProps> = ({ result, t }) => {
+  const colors = useSemanticColors();
+  return (
   <section className="space-y-1.5">
     {/* Pass/Fail banner */}
     <div className={`flex items-center gap-1.5 rounded px-2 py-1 text-sm font-medium ${
@@ -126,7 +130,7 @@ const ComplianceResultSection: React.FC<ComplianceResultSectionProps> = ({ resul
     {/* Checklist table */}
     <table className="w-full text-xs">
       <thead>
-        <tr className="text-muted-foreground border-b">
+        <tr className={`${colors.text.muted} border-b`}>
           <th className="text-left py-1 font-medium">{t('guideAnalysis.compliance.description')}</th>
           <th className="text-right py-1 font-medium">{t('guideAnalysis.compliance.value')}</th>
           <th className="text-right py-1 font-medium">{t('guideAnalysis.compliance.limit')}</th>
@@ -149,6 +153,7 @@ const ComplianceResultSection: React.FC<ComplianceResultSectionProps> = ({ resul
       </tbody>
     </table>
   </section>
-);
+  );
+};
 
 ComplianceTab.displayName = 'ComplianceTab';

@@ -33,6 +33,10 @@ import type { EscoPickerValue } from '@/types/contacts/esco-types';
 import { useVatUniqueness } from '@/hooks/useVatUniqueness';
 import type { CompanySetupInput } from '../../types';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -116,6 +120,7 @@ function mapContactToSetupFields(contact: Contact): Partial<CompanySetupInput> {
 
 export function BasicInfoSection({ data, onChange, errors }: BasicInfoSectionProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
   const [selectedContactId, setSelectedContactId] = useState('');
   const [autoFillMessage, setAutoFillMessage] = useState<string | null>(null);
   const { result: vatResult } = useVatUniqueness(data.vatNumber);
@@ -178,7 +183,7 @@ export function BasicInfoSection({ data, onChange, errors }: BasicInfoSectionPro
                 searchConfig={{ autoLoadContacts: true, maxResults: 20 }}
               />
               {autoFillMessage && (
-                <p className="text-sm text-muted-foreground">{autoFillMessage}</p>
+                <p className={cn("text-sm", colors.text.muted)}>{autoFillMessage}</p>
               )}
               {/* Editable fallback — πάντα ορατό, χρήστης μπορεί να αλλάξει μετά auto-fill */}
               <Input

@@ -19,6 +19,8 @@ import { useVATSummary } from '../../hooks/useVATSummary';
 import type { VATAnnualSummary } from '@/subapps/accounting/types';
 import { formatCurrency } from '../../utils/format';
 
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -63,14 +65,14 @@ export function VATReportCard({ fiscalYear }: VATReportCardProps) {
         ) : error ? (
           <p className="text-sm text-destructive text-center py-4">{error}</p>
         ) : !summary || !isAnnualSummary(summary) ? (
-          <p className="text-sm text-muted-foreground text-center py-4">
+          <p className={cn("text-sm text-center py-4", colors.text.muted)}>
             {t('reports.noVATData')}
           </p>
         ) : (
           <dl className="space-y-3">
             {/* Output VAT */}
             <div className="flex items-center justify-between">
-              <dt className="text-sm text-muted-foreground">{t('reports.outputVAT')}</dt>
+              <dt className={cn("text-sm", colors.text.muted)}>{t('reports.outputVAT')}</dt>
               <dd className="font-medium text-sm">
                 {formatCurrency(summary.annualOutputVat)}
               </dd>
@@ -78,7 +80,7 @@ export function VATReportCard({ fiscalYear }: VATReportCardProps) {
 
             {/* Deductible Input VAT */}
             <div className="flex items-center justify-between">
-              <dt className="text-sm text-muted-foreground">{t('reports.inputVAT')}</dt>
+              <dt className={cn("text-sm", colors.text.muted)}>{t('reports.inputVAT')}</dt>
               <dd className="font-medium text-sm">
                 {formatCurrency(summary.annualDeductibleInputVat)}
               </dd>
@@ -103,7 +105,7 @@ export function VATReportCard({ fiscalYear }: VATReportCardProps) {
             {/* VAT Credit (if any) */}
             {summary.annualVatCredit > 0 && (
               <div className="flex items-center justify-between">
-                <dt className="text-sm text-muted-foreground">{t('reports.vatCredit')}</dt>
+                <dt className={cn("text-sm", colors.text.muted)}>{t('reports.vatCredit')}</dt>
                 <dd className={`font-medium text-sm ${colors.text.success}`}>
                   {formatCurrency(summary.annualVatCredit)}
                 </dd>
@@ -112,7 +114,7 @@ export function VATReportCard({ fiscalYear }: VATReportCardProps) {
 
             {/* Already Paid */}
             <div className="flex items-center justify-between">
-              <dt className="text-sm text-muted-foreground">{t('reports.vatPaid')}</dt>
+              <dt className={cn("text-sm", colors.text.muted)}>{t('reports.vatPaid')}</dt>
               <dd className="font-medium text-sm">
                 {formatCurrency(summary.totalVatPaid)}
               </dd>
@@ -120,7 +122,7 @@ export function VATReportCard({ fiscalYear }: VATReportCardProps) {
 
             {/* Settlement */}
             <div className="flex items-center justify-between">
-              <dt className="text-sm text-muted-foreground">{t('reports.vatSettlement')}</dt>
+              <dt className={cn("text-sm", colors.text.muted)}>{t('reports.vatSettlement')}</dt>
               <dd
                 className={`font-semibold text-sm ${
                   summary.settlementAmount > 0

@@ -24,6 +24,10 @@ import { Plus, Trash2 } from 'lucide-react';
 import type { CompanySetupInput, KadEntry } from '../../types';
 import type { KadCode } from '../../data/greek-kad-codes';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -98,6 +102,7 @@ function useKadOptions() {
 
 export function KadSection({ data, onChange, errors }: KadSectionProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
   const { options: kadOptions, isLoading: kadLoading } = useKadOptions();
 
   /**
@@ -200,7 +205,7 @@ export function KadSection({ data, onChange, errors }: KadSectionProps) {
                 <p className="text-sm text-destructive">{errors.mainKad}</p>
               )}
               {data.mainKad.description && (
-                <p className="text-sm text-muted-foreground">
+                <p className={cn("text-sm", colors.text.muted)}>
                   {data.mainKad.description}
                 </p>
               )}
@@ -227,7 +232,7 @@ export function KadSection({ data, onChange, errors }: KadSectionProps) {
             </div>
 
             {data.secondaryKads.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">
+              <p className={cn("text-sm py-4 text-center", colors.text.muted)}>
                 {t('setup.noSecondaryKads')}
               </p>
             ) : (
@@ -249,7 +254,7 @@ export function KadSection({ data, onChange, errors }: KadSectionProps) {
                         maxDisplayed={30}
                       />
                       {kad.description && (
-                        <p className="text-sm text-muted-foreground">
+                        <p className={cn("text-sm", colors.text.muted)}>
                           {kad.description}
                         </p>
                       )}

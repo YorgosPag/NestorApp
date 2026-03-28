@@ -26,6 +26,10 @@ import { Trash2 } from 'lucide-react';
 import { useVatUniqueness } from '@/hooks/useVatUniqueness';
 import type { Member, MemberEFKAConfig } from '../../types/entity';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -58,6 +62,7 @@ const DEFAULT_EFKA_CONFIG: MemberEFKAConfig = {
 
 export function MemberRow({ member, index, onChange, onRemove }: MemberRowProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
   const { result: vatResult } = useVatUniqueness(member.vatNumber);
 
   const capitalContribution = member.sharesCount * member.shareNominalValue;
@@ -189,7 +194,7 @@ export function MemberRow({ member, index, onChange, onRemove }: MemberRowProps)
             />
             {t('setup.members.isManager')}
           </label>
-          <p className="text-xs text-muted-foreground">
+          <p className={cn("text-xs", colors.text.muted)}>
             {t('setup.members.managerOnlyEfka')}
           </p>
         </fieldset>

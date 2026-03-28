@@ -29,6 +29,7 @@ import React, { useEffect, useState } from 'react';
 import { Activity, Pen, Edit, Copy, RotateCcw, RotateCw, Square, Circle, Triangle, Grid, X, Save, XCircle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { FloatingPanel } from '@/components/ui/floating';
 import type { OverlayEditorMode, Status, OverlayKind } from '../../overlays/types';
 import type { ToolType } from '../toolbar/types';
@@ -129,6 +130,7 @@ interface DraggableOverlayToolbarProps {
 export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (props) => {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   // 🌐 i18n - Load both namespaces for status labels
   const { t } = useTranslation('dxf-viewer');
 
@@ -294,7 +296,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
             {props.mode === 'draw' && draftPolygonInfo.pointCount > 0 && (
               <>
                 {/* Point Counter Badge */}
-                <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} text-muted-foreground px-1.5 py-0.5 bg-muted rounded`}>
+                <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted} px-1.5 py-0.5 bg-muted rounded`}>
                   {draftPolygonInfo.pointCount}
                 </span>
 

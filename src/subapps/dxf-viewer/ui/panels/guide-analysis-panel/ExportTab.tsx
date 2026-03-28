@@ -11,6 +11,7 @@ import { Download, Calculator, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useTranslation } from '@/i18n';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { formatCurrency } from '@/lib/intl-utils';
 import { useGuideState } from '../../../hooks/state/useGuideState';
 import {
@@ -22,6 +23,7 @@ import type { QuantityTakeoff, NLPGridResult } from '../../../systems/guides';
 
 export const ExportTab: React.FC = () => {
   const { t } = useTranslation('dxf-viewer');
+  const colors = useSemanticColors();
   const { guides } = useGuideState();
 
   const [takeoff, setTakeoff] = useState<QuantityTakeoff | null>(null);
@@ -55,7 +57,7 @@ export const ExportTab: React.FC = () => {
 
   if (guides.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground py-6 text-center">
+      <p className={`text-sm ${colors.text.muted} py-6 text-center`}>
         {t('guideAnalysis.export.empty')}
       </p>
     );
@@ -65,7 +67,7 @@ export const ExportTab: React.FC = () => {
     <section className="space-y-4">
       {/* IFC Export */}
       <section className="space-y-1.5">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <h4 className={`text-xs font-semibold uppercase tracking-wide ${colors.text.muted}`}>
           {t('guideAnalysis.export.ifcExport')}
         </h4>
         <Button size="sm" variant="outline" className="w-full gap-1.5" onClick={handleExportIFC}>
@@ -76,7 +78,7 @@ export const ExportTab: React.FC = () => {
 
       {/* Quantity Takeoff */}
       <section className="space-y-1.5">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <h4 className={`text-xs font-semibold uppercase tracking-wide ${colors.text.muted}`}>
           {t('guideAnalysis.export.quantityTakeoff')}
         </h4>
         <Button size="sm" variant="outline" className="w-full gap-1.5" onClick={handleCalculate}>
@@ -85,17 +87,17 @@ export const ExportTab: React.FC = () => {
         </Button>
         {takeoff && (
           <dl className="grid grid-cols-2 gap-1 text-sm mt-1.5">
-            <dt className="text-muted-foreground">{t('guideAnalysis.export.columns')}</dt>
+            <dt className={colors.text.muted}>{t('guideAnalysis.export.columns')}</dt>
             <dd className="text-right font-medium tabular-nums">
               {takeoff.columns.count} ({takeoff.columns.totalLength_m.toFixed(1)}m)
             </dd>
-            <dt className="text-muted-foreground">{t('guideAnalysis.export.beams')}</dt>
+            <dt className={colors.text.muted}>{t('guideAnalysis.export.beams')}</dt>
             <dd className="text-right font-medium tabular-nums">
               {takeoff.beams.count} ({takeoff.beams.totalLength_m.toFixed(1)}m)
             </dd>
-            <dt className="text-muted-foreground">{t('guideAnalysis.export.slabArea')}</dt>
+            <dt className={colors.text.muted}>{t('guideAnalysis.export.slabArea')}</dt>
             <dd className="text-right font-medium tabular-nums">{takeoff.slabArea_m2.toFixed(1)} m²</dd>
-            <dt className="text-muted-foreground">{t('guideAnalysis.export.estimatedCost')}</dt>
+            <dt className={colors.text.muted}>{t('guideAnalysis.export.estimatedCost')}</dt>
             <dd className="text-right font-medium tabular-nums">{formatCurrency(takeoff.estimatedCost_EUR)}</dd>
           </dl>
         )}
@@ -103,7 +105,7 @@ export const ExportTab: React.FC = () => {
 
       {/* NLP Command */}
       <section className="space-y-1.5">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <h4 className={`text-xs font-semibold uppercase tracking-wide ${colors.text.muted}`}>
           {t('guideAnalysis.export.nlpCommand')}
         </h4>
         <div className="flex gap-1.5">
@@ -122,7 +124,7 @@ export const ExportTab: React.FC = () => {
         {nlpResult && (
           <div className="rounded border p-2 text-sm space-y-1">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">{t('guideAnalysis.export.confidence')}</span>
+              <span className={colors.text.muted}>{t('guideAnalysis.export.confidence')}</span>
               <span className="font-medium">{Math.round(nlpResult.confidence * 100)}%</span>
             </div>
             {nlpResult.type === 'preset' && nlpResult.presetId && (

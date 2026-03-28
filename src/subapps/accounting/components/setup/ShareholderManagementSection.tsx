@@ -20,6 +20,10 @@ import { Plus, AlertTriangle, Info } from 'lucide-react';
 import { ShareholderRow } from './ShareholderRow';
 import type { Shareholder } from '../../types/entity';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -79,6 +83,7 @@ export function ShareholderManagementSection({
   onShareCapitalChange,
 }: ShareholderManagementSectionProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   const activeShareSum = shareholders
     .filter((s) => s.isActive)
@@ -134,7 +139,7 @@ export function ShareholderManagementSection({
             placeholder={t('setup.gemiNumberPlaceholder')}
             required
           />
-          <p className="text-xs text-muted-foreground">
+          <p className={cn("text-xs", colors.text.muted)}>
             {t('setup.shareholders.gemiRequired')}
           </p>
         </fieldset>
@@ -157,7 +162,7 @@ export function ShareholderManagementSection({
             </p>
           )}
           {capitalValid && (
-            <p className="text-xs text-muted-foreground">
+            <p className={cn("text-xs", colors.text.muted)}>
               {t('setup.shareholders.minCapitalNotice')}
             </p>
           )}

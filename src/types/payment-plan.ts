@@ -10,7 +10,6 @@
  * @enterprise ADR-234 - Payment Plan & Installment Tracking
  */
 
-import type { Timestamp } from 'firebase/firestore';
 import type { LoanTracking, LoanTrackingStatus } from './loan-tracking';
 
 // =============================================================================

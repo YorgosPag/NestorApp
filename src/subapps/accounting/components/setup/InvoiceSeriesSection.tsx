@@ -21,6 +21,10 @@ import { Separator } from '@/components/ui/separator';
 import { Plus } from 'lucide-react';
 import type { CompanySetupInput, InvoiceSeries } from '../../types';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -51,6 +55,7 @@ function createEmptySeries(): InvoiceSeries {
 
 export function InvoiceSeriesSection({ data, onChange }: InvoiceSeriesSectionProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
   const [showNewForm, setShowNewForm] = useState(false);
   const [newSeries, setNewSeries] = useState<InvoiceSeries>(createEmptySeries);
 
@@ -97,7 +102,7 @@ export function InvoiceSeriesSection({ data, onChange }: InvoiceSeriesSectionPro
         <section className="space-y-4">
           {/* Existing Series */}
           {data.invoiceSeries.length === 0 && !showNewForm ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
+            <p className={cn("text-sm py-4 text-center", colors.text.muted)}>
               {t('setup.noSeries')}
             </p>
           ) : (
@@ -112,14 +117,14 @@ export function InvoiceSeriesSection({ data, onChange }: InvoiceSeriesSectionPro
                       {series.prefix} ({series.code})
                     </p>
                     {series.description && (
-                      <p className="text-sm text-muted-foreground">{series.description}</p>
+                      <p className={cn("text-sm", colors.text.muted)}>{series.description}</p>
                     )}
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className={cn("text-xs mt-1", colors.text.muted)}>
                       {t('setup.nextNumber')}: {series.nextNumber}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Label htmlFor={`series-active-${index}`} className="text-sm text-muted-foreground">
+                    <Label htmlFor={`series-active-${index}`} className={cn("text-sm", colors.text.muted)}>
                       {t('setup.seriesActive')}
                     </Label>
                     <Switch

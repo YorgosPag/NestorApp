@@ -50,9 +50,7 @@ import type {
 } from './tax';
 import type {
   EFKAPayment,
-  EFKAAnnualSummary,
   EFKAUserConfig,
-  EFKAYearConfig,
 } from './efka';
 import type {
   FixedAsset,

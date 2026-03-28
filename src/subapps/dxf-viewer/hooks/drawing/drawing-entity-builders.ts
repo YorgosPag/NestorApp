@@ -20,9 +20,7 @@ import type {
 import type {
   DrawingTool,
   ExtendedSceneEntity,
-  ExtendedCircleEntity,
   ExtendedPolylineEntity,
-  ExtendedArcEntity,
 } from './drawing-types';
 import {
   calculateDistance,

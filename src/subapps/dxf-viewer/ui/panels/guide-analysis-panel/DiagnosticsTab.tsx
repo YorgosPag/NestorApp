@@ -10,6 +10,7 @@ import React, { useState, useCallback } from 'react';
 import { AlertTriangle, AlertCircle, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useGuideState } from '../../../hooks/state/useGuideState';
 import {
   computeAnalytics,
@@ -20,6 +21,7 @@ import type { GuideAnalytics, GuideAnomaly } from '../../../systems/guides';
 
 export const DiagnosticsTab: React.FC = () => {
   const { t } = useTranslation('dxf-viewer');
+  const colors = useSemanticColors();
   const { guides } = useGuideState();
 
   const [analytics, setAnalytics] = useState<GuideAnalytics | null>(null);
@@ -37,7 +39,7 @@ export const DiagnosticsTab: React.FC = () => {
 
   if (guides.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground py-6 text-center">
+      <p className={`text-sm ${colors.text.muted} py-6 text-center`}>
         {t('guideAnalysis.diagnostics.empty')}
       </p>
     );
@@ -51,20 +53,20 @@ export const DiagnosticsTab: React.FC = () => {
 
       {analytics && (
         <dl className="grid grid-cols-2 gap-2 text-sm">
-          <dt className="text-muted-foreground">{t('guideAnalysis.diagnostics.totalGuides')}</dt>
+          <dt className={colors.text.muted}>{t('guideAnalysis.diagnostics.totalGuides')}</dt>
           <dd className="font-medium text-right">{analytics.totalGuides}</dd>
 
-          <dt className="text-muted-foreground">{t('guideAnalysis.diagnostics.byAxis')}</dt>
+          <dt className={colors.text.muted}>{t('guideAnalysis.diagnostics.byAxis')}</dt>
           <dd className="font-medium text-right">
             X:{analytics.byAxis.X} Y:{analytics.byAxis.Y} XZ:{analytics.byAxis.XZ}
           </dd>
 
-          <dt className="text-muted-foreground">{t('guideAnalysis.diagnostics.avgSpacing')}</dt>
+          <dt className={colors.text.muted}>{t('guideAnalysis.diagnostics.avgSpacing')}</dt>
           <dd className="font-medium text-right">
             X:{analytics.averageSpacing.X.toFixed(2)}m Y:{analytics.averageSpacing.Y.toFixed(2)}m
           </dd>
 
-          <dt className="text-muted-foreground">{t('guideAnalysis.diagnostics.density')}</dt>
+          <dt className={colors.text.muted}>{t('guideAnalysis.diagnostics.density')}</dt>
           <dd>
             <div className="flex items-center gap-1.5">
               <div className="h-2 flex-1 rounded-full bg-muted overflow-hidden">
@@ -77,7 +79,7 @@ export const DiagnosticsTab: React.FC = () => {
             </div>
           </dd>
 
-          <dt className="text-muted-foreground">{t('guideAnalysis.diagnostics.complexity')}</dt>
+          <dt className={colors.text.muted}>{t('guideAnalysis.diagnostics.complexity')}</dt>
           <dd>
             <div className="flex items-center gap-1.5">
               <div className="h-2 flex-1 rounded-full bg-muted overflow-hidden">
@@ -94,7 +96,7 @@ export const DiagnosticsTab: React.FC = () => {
 
       {analytics && (
         <section className="space-y-1.5">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <h4 className={`text-xs font-semibold uppercase tracking-wide ${colors.text.muted}`}>
             {t('guideAnalysis.diagnostics.anomalies')}
           </h4>
           {anomalies.length === 0 ? (
@@ -116,7 +118,7 @@ export const DiagnosticsTab: React.FC = () => {
 
       {fixes.length > 0 && (
         <section className="space-y-1.5">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <h4 className={`text-xs font-semibold uppercase tracking-wide ${colors.text.muted}`}>
             {t('guideAnalysis.diagnostics.suggestedFixes')}
           </h4>
           <ul className="space-y-1">

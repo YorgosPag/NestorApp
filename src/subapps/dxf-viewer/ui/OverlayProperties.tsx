@@ -13,6 +13,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useTranslation } from '@/i18n';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useIconSizes } from '../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { getDynamicBackgroundClass } from '../../../components/ui/utils/dynamic-styles';
@@ -99,6 +100,7 @@ function buildLinkedPayload(kind: OverlayKind, entityId: string): Overlay['linke
  */
 export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, onUpdate, overlays }) => {
   const { t } = useTranslation('dxf-viewer');
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const [label, setLabel] = useState('');
@@ -161,7 +163,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
   // 🏢 ENTERPRISE: Empty state - no overlay selected
   if (!overlay) {
     return (
-      <p className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} text-muted-foreground`}>
+      <p className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.text.muted}`}>
         {t('overlayProperties.selectOverlay')}
       </p>
     );
@@ -338,12 +340,12 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
                           )}
                           <span>{entity.displayName}</span>
                           {resolvedStatus && (
-                            <span className="text-muted-foreground text-xs">
+                            <span className={`${colors.text.muted} text-xs`}>
                               ({t(STATUS_LABELS[resolvedStatus])})
                             </span>
                           )}
                           {isLinkedElsewhere && (
-                            <span className="text-muted-foreground text-xs">(linked)</span>
+                            <span className={`${colors.text.muted} text-xs`}>(linked)</span>
                           )}
                         </span>
                       </SelectItem>
@@ -389,7 +391,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
       {/* Geometry Info */}
       <div className={PANEL_LAYOUT.SPACING.GAP_XS}>
         <Label className={PANEL_LAYOUT.TYPOGRAPHY.XS}>{t('overlayProperties.geometry')}</Label>
-        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} text-muted-foreground leading-tight`}>
+        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} leading-tight`}>
           <div>{t('overlayProperties.points')} {overlay && overlay.polygon ? overlay.polygon.length : 0}</div>
           <div>{t('overlayProperties.area')} {formatDistance(area)} m²</div>
           <div>{t('overlayProperties.perimeter')} {formatDistance(perimeter)} m</div>

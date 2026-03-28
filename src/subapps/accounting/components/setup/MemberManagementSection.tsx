@@ -20,6 +20,10 @@ import { Plus, AlertTriangle, Info } from 'lucide-react';
 import { MemberRow } from './MemberRow';
 import type { Member } from '../../types/entity';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -69,6 +73,7 @@ export function MemberManagementSection({
   onShareCapitalChange,
 }: MemberManagementSectionProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   const activeShareSum = members
     .filter((m) => m.isActive)
@@ -121,7 +126,7 @@ export function MemberManagementSection({
             placeholder={t('setup.gemiNumberPlaceholder')}
             required
           />
-          <p className="text-xs text-muted-foreground">
+          <p className={cn("text-xs", colors.text.muted)}>
             {t('setup.members.gemiRequired')}
           </p>
         </fieldset>

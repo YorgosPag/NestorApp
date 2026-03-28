@@ -26,6 +26,10 @@ import { getVatDeductibilityRules } from '../../services/config/vat-config';
 import { getCategoryByCode } from '../../config/account-categories';
 import type { VATDeductibilityRule } from '@/subapps/accounting/types';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // HELPERS
 // ============================================================================
@@ -48,6 +52,7 @@ function getDeductibilityLabel(percent: number): string {
 
 export function VATDeductibilityTable() {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   const rules = useMemo(() => {
     const rulesMap = getVatDeductibilityRules();
@@ -91,10 +96,10 @@ export function VATDeductibilityTable() {
                       {getDeductibilityLabel(rule.deductiblePercent)}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className={cn("text-sm", colors.text.muted)}>
                     {rule.legalBasis}
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className={cn("text-sm", colors.text.muted)}>
                     {rule.notes ?? '\u2014'}
                   </TableCell>
                 </TableRow>
