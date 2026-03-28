@@ -34,7 +34,7 @@ import { FloorPlanViewer } from '@/components/property-viewer/FloorPlanViewer';
 import type { Property } from '@/types/property-viewer';
 import type { FloorData } from '@/features/floorplan-viewer/types';
 import { createModuleLogger } from '@/lib/telemetry';
-import '@/lib/design-system';
+import { cn } from '@/lib/design-system';
 const logger = createModuleLogger('PropertyViewerWithLayers');
 
 interface PropertyViewerWithLayersProps {

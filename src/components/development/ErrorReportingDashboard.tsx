@@ -21,7 +21,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { errorTracker } from '@/services/ErrorTracker';
 import type { ErrorReport } from '@/services/ErrorTracker';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
-import '@/lib/design-system';
+import { cn } from '@/lib/design-system';
 
 interface ErrorReportingDashboardProps {
   position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';

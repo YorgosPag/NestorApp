@@ -8,7 +8,7 @@
 
 'use client';
 
-import '@/lib/design-system';
+import { cn } from '@/lib/design-system';
 import React, { useState, useRef } from 'react';
 import {
   Dialog,

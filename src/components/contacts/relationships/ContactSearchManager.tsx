@@ -16,7 +16,7 @@ import { EnterpriseContactDropdown, type ContactSummary } from '@/components/ui/
 import { ContactsService } from '@/services/contacts.service';
 import { ContactNameResolver } from '@/services/contacts/ContactNameResolver';
 import type { ContactType } from '@/types/contacts';
-import { designSystem } from '@/lib/design-system';
+import { cn, designSystem } from '@/lib/design-system';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🔐 ENTERPRISE: Defense-in-depth auth guard

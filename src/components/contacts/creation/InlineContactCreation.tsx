@@ -8,7 +8,7 @@ import type { ContactType } from '@/types/contacts';
 import { useContactForm } from '@/hooks/useContactForm';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { getTypeLabel } from '@/utils/contactFormUtils';
-import '@/lib/design-system';
+import { cn } from '@/lib/design-system';
 import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/UnifiedContactTabbedSection';
 import { RelationshipProvider } from '@/components/contacts/relationships/context/RelationshipProvider';
 import { CONTACT_TYPES, CONTACT_ICONS, CONTACT_COLORS } from '@/constants/contacts';
