@@ -7,11 +7,11 @@ export default {
     'pl-10', 'pl-11', 'pl-12', 'pr-10', 'pr-11', 'pr-12',  // Input icon padding
     '!pl-10', '!pl-11', '!pl-12', '!pr-10', '!pr-11', '!pr-12',  // Input icon padding with !important
     // 🏢 ENTERPRISE: Entity List Column width constraints (CSS variables)
-    // CRITICAL: These classes are defined in design-tokens/modules/layout.ts
-    // which is NOT directly in the content[] scan paths — safelist is required
-    { pattern: /^min-w-\[var\(--entity-list-.*\)\]$/ },
-    { pattern: /^max-w-\[var\(--entity-list-.*\)\]$/ },
-    { pattern: /^w-\[calc\(100%-var\(--entity-list-.*\)\)\]$/ },
+    // CRITICAL: Explicit strings because Tailwind safelist regex cannot match arbitrary-value classes
+    // Source: src/styles/design-tokens/modules/layout.ts → ENTITY_LIST_TOKENS
+    'min-w-[var(--entity-list-min)]',
+    'max-w-[var(--entity-list-max)]',
+    'w-[calc(100%-var(--entity-list-scrollbar-space))]',
   ],
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
