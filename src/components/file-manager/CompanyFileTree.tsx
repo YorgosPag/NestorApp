@@ -1,15 +1,14 @@
+/* eslint-disable custom/no-hardcoded-strings */
 /**
  * =============================================================================
  * 🏢 ENTERPRISE: CompanyFileTree Component
  * =============================================================================
  *
- * Tree view component για εμφάνιση ΟΛΩΝ των αρχείων εταιρείας
- * με δυνατότητα ομαδοποίησης by Entity ή by Category.
+ * Tree view component for displaying all company files
+ * with grouping by Entity or Category.
  *
  * @module components/file-manager/CompanyFileTree
  * @enterprise ADR-031 - Canonical File Storage System
- *
- * Enterprise Patterns: Google Drive, Dropbox Business, Procore Documents
  */
 
 'use client';
@@ -20,128 +19,21 @@ import {
   ChevronDown,
   Folder,
   FolderOpen,
-  File,
-  FileText,
-  FileSignature,
-  Camera,
-  Film,
-  Map as MapIcon,
 } from 'lucide-react';
-import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFileDisplayName } from '@/hooks/useFileDisplayName';
 import type { FileRecord } from '@/types/file-record';
-import type { FileCategory } from '@/config/domain-constants';
-import { getFileIconInfo } from '@/components/shared/files/utils/file-icons';
-import {
-  getGroupForPurpose,
-  STUDY_GROUPS,
-  type StudyGroupMeta,
-} from '@/config/study-groups-config';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { getStatusColor } from '@/lib/design-system';
 
-// ============================================================================
-// TYPES
-// ============================================================================
+import type { TreeNodeData, CompanyFileTreeProps, ViewMode } from './company-file-tree-builders';
+import { buildTreeByEntity, buildTreeByCategory } from './company-file-tree-builders';
 
-/**
- * Supported entity types for file tree grouping
- * Subset of EntityType that makes sense for file management
- */
-type FileEntityType = 'project' | 'building' | 'unit' | 'contact' | 'company';
-
-export type GroupingMode = 'entity' | 'category';
-export type ViewMode = 'business' | 'technical';
-
-interface CompanyFileTreeProps {
-  /** All files to display */
-  files: FileRecord[];
-  /** Company name for display */
-  companyName?: string;
-  /** Grouping mode */
-  groupingMode?: GroupingMode;
-  /** View mode */
-  viewMode?: ViewMode;
-  /** On file click */
-  onFileClick?: (file: FileRecord) => void;
-  /** On file double click */
-  onFileDoubleClick?: (file: FileRecord) => void;
-  /** On file rename */
-  onRename?: (fileId: string, newDisplayName: string) => void;
-  /** Additional class names */
-  className?: string;
-}
-
-interface TreeNodeData {
-  id: string;
-  label: string;
-  type: 'root' | 'folder' | 'file';
-  icon: React.ReactNode;
-  children?: TreeNodeData[];
-  file?: FileRecord;
-  path: string[];
-  metadata?: Record<string, unknown>;
-}
-
-// ============================================================================
-// ICON HELPERS
-// ============================================================================
-
-const ENTITY_ICONS: Record<FileEntityType, React.ReactNode> = {
-  project: React.createElement(NAVIGATION_ENTITIES.project.icon, { className: `h-4 w-4 ${NAVIGATION_ENTITIES.project.color}` }),
-  building: React.createElement(NAVIGATION_ENTITIES.building.icon, { className: `h-4 w-4 ${NAVIGATION_ENTITIES.building.color}` }),
-  unit: React.createElement(NAVIGATION_ENTITIES.unit.icon, { className: `h-4 w-4 ${NAVIGATION_ENTITIES.unit.color}` }),
-  contact: React.createElement(NAVIGATION_ENTITIES.contact.icon, { className: `h-4 w-4 ${NAVIGATION_ENTITIES.contact.color}` }),
-  company: React.createElement(NAVIGATION_ENTITIES.company.icon, { className: `h-4 w-4 ${NAVIGATION_ENTITIES.company.color}` }),
-};
-
-/**
- * Icons for file categories
- * Only includes categories commonly used in file management
- */
-const CATEGORY_ICONS: Partial<Record<FileCategory | 'other', React.ReactNode>> = {
-  photos: <Camera className="h-4 w-4 text-pink-500" />,
-  videos: <Film className="h-4 w-4 text-red-500" />,
-  documents: <FileText className="h-4 w-4 text-blue-500" />,
-  contracts: <FileSignature className="h-4 w-4 text-amber-500" />,
-  floorplans: <MapIcon className="h-4 w-4 text-teal-500" />,
-  other: <File className="h-4 w-4 text-gray-500" />,
-};
-
-/**
- * Get icon for category with fallback
- */
-function getCategoryIcon(category: string): React.ReactNode {
-  return CATEGORY_ICONS[category as FileCategory] || CATEGORY_ICONS.other || <File className="h-4 w-4 text-gray-500" />;
-}
-
-function getFileIcon(file: FileRecord): React.ReactNode {
-  const { icon: Icon, colorClass } = getFileIconInfo(file.ext, file.contentType);
-  return <Icon className={`h-4 w-4 ${colorClass}`} />;
-}
-
-// ============================================================================
-// ENTITY LABELS
-// ============================================================================
-
-const ENTITY_LABELS: Record<FileEntityType, string> = {
-  project: 'files.entities.projects',
-  building: 'files.entities.buildings',
-  unit: 'files.entities.units',
-  contact: 'files.entities.contacts',
-  company: 'files.entities.company',
-};
-
-const CATEGORY_LABELS: Partial<Record<FileCategory | 'other', string>> = {
-  photos: 'files.categories.photos',
-  videos: 'files.categories.videos',
-  documents: 'files.categories.documents',
-  contracts: 'files.categories.contracts',
-  floorplans: 'files.categories.floorplans',
-  other: 'files.categories.other',
-};
+// Re-export types for consumers
+export type { GroupingMode, ViewMode } from './company-file-tree-builders';
 
 // ============================================================================
 // TREE NODE COMPONENT
@@ -159,20 +51,14 @@ interface TreeNodeProps {
 }
 
 function TreeNode({
-  node,
-  depth,
-  expandedNodes,
-  toggleNode,
-  onFileClick,
-  onFileDoubleClick,
-  onRename,
-  viewMode,
+  node, depth, expandedNodes, toggleNode,
+  onFileClick, onFileDoubleClick, onRename, viewMode,
 }: TreeNodeProps) {
+  const colors = useSemanticColors();
   const isExpanded = expandedNodes.has(node.id);
   const hasChildren = node.children && node.children.length > 0;
   const paddingLeft = depth * 16 + 8;
 
-  // Inline rename state
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
 
@@ -223,33 +109,22 @@ function TreeNode({
         )}
         style={{ paddingLeft }}
       >
-        {/* Expand/Collapse Icon */}
         {hasChildren ? (
-          <span className="flex-shrink-0 text-muted-foreground">
-            {isExpanded ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )}
+          <span className={cn("flex-shrink-0", colors.text.muted)}>
+            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </span>
         ) : (
           <span className="w-4 flex-shrink-0" />
         )}
 
-        {/* Node Icon */}
         <span className="flex-shrink-0">
           {node.type === 'folder' ? (
-            isExpanded ? (
-              <FolderOpen className="h-4 w-4 text-amber-500" />
-            ) : (
-              <Folder className="h-4 w-4 text-amber-500" />
-            )
+            isExpanded ? <FolderOpen className={`h-4 w-4 ${getStatusColor('reserved', 'text')}`} /> : <Folder className={`h-4 w-4 ${getStatusColor('reserved', 'text')}`} />
           ) : (
             node.icon
           )}
         </span>
 
-        {/* Node Label — inline editable on double-click */}
         {isEditing ? (
           <input
             type="text"
@@ -262,16 +137,13 @@ function TreeNode({
             autoFocus
           />
         ) : (
-          <span className="truncate flex-1 text-left">
-            {node.label}
-          </span>
+          <span className="truncate flex-1 text-left">{node.label}</span>
         )}
 
-        {/* Technical Mode: Show path */}
         {viewMode === 'technical' && node.type === 'file' && node.file && !isEditing && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+              <span className={cn("text-xs truncate max-w-[200px]", colors.text.muted)}>
                 {node.file.storagePath}
               </span>
             </TooltipTrigger>
@@ -281,15 +153,13 @@ function TreeNode({
           </Tooltip>
         )}
 
-        {/* File Count for folders */}
         {node.type === 'folder' && hasChildren && (
-          <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+          <span className={cn("text-xs bg-muted px-1.5 py-0.5 rounded", colors.text.muted)}>
             {node.children?.length}
           </span>
         )}
       </button>
 
-      {/* Children */}
       {hasChildren && isExpanded && (
         <ul role="group" className="ml-0">
           {node.children!.map(child => (
@@ -312,248 +182,6 @@ function TreeNode({
 }
 
 // ============================================================================
-// TREE BUILDING FUNCTIONS
-// ============================================================================
-
-/** Translator function type from useFileDisplayName */
-type DisplayNameTranslator = (file: FileRecord) => string;
-
-function buildTreeByEntity(
-  files: FileRecord[],
-  companyName: string,
-  translateDisplayName?: DisplayNameTranslator,
-  lang: string = 'el',
-): TreeNodeData {
-  // Group files by entity type -> entity ID
-  const groupedByType: Record<FileEntityType, Record<string, FileRecord[]>> = {
-    project: {},
-    building: {},
-    unit: {},
-    contact: {},
-    company: {},
-  };
-
-  const supportedEntityTypes: FileEntityType[] = ['project', 'building', 'unit', 'contact', 'company'];
-
-  for (const file of files) {
-    const entityType = file.entityType as string;
-    const entityId = file.entityId;
-
-    // Skip unsupported entity types
-    if (!supportedEntityTypes.includes(entityType as FileEntityType)) {
-      continue;
-    }
-
-    const typedEntityType = entityType as FileEntityType;
-    if (!groupedByType[typedEntityType]) {
-      groupedByType[typedEntityType] = {};
-    }
-    if (!groupedByType[typedEntityType][entityId]) {
-      groupedByType[typedEntityType][entityId] = [];
-    }
-    groupedByType[typedEntityType][entityId].push(file);
-  }
-
-  // Build tree
-  const entityTypes: FileEntityType[] = ['project', 'building', 'unit', 'contact', 'company'];
-  const entityChildren: TreeNodeData[] = [];
-
-  for (const entityType of entityTypes) {
-    const entitiesMap = groupedByType[entityType];
-    const entityIds = Object.keys(entitiesMap);
-
-    if (entityIds.length === 0) continue;
-
-    const entityFolders: TreeNodeData[] = entityIds.map(entityId => {
-      const entityFiles = entitiesMap[entityId];
-
-      // Get entity label from first file's entityLabel or use ID
-      // Note: entityLabel is an optional property that may not exist on all files
-      const firstFile = entityFiles[0];
-      const entityLabel = (firstFile as { entityLabel?: string })?.entityLabel || entityId;
-
-      // Group by study group within entity (ADR-191)
-      const studyGroupBuckets = new Map<string, { meta: StudyGroupMeta | null; files: FileRecord[] }>();
-
-      for (const file of entityFiles) {
-        const group = getGroupForPurpose(file.purpose);
-        const key = group ?? '__general__';
-
-        if (!studyGroupBuckets.has(key)) {
-          const meta = group
-            ? STUDY_GROUPS.find((sg) => sg.group === group) ?? null
-            : null;
-          studyGroupBuckets.set(key, { meta, files: [] });
-        }
-        studyGroupBuckets.get(key)!.files.push(file);
-      }
-
-      // Sort: study groups by order first, then general
-      const sortedBuckets = [...studyGroupBuckets.entries()].sort((a, b) => {
-        const orderA = a[1].meta?.order ?? 999;
-        const orderB = b[1].meta?.order ?? 999;
-        return orderA - orderB;
-      });
-
-      const categoryFolders: TreeNodeData[] = sortedBuckets.map(([key, bucket]) => {
-        const folderLabel = bucket.meta
-          ? (lang === 'en' ? bucket.meta.label.en : bucket.meta.label.el)
-          : (lang === 'en' ? 'General Documents' : 'Γενικά Έγγραφα');
-
-        return {
-          id: `${entityType}-${entityId}-${key}`,
-          label: folderLabel,
-          type: 'folder' as const,
-          icon: bucket.meta
-            ? getCategoryIcon(bucket.meta.group)
-            : (CATEGORY_ICONS.other || <File className="h-4 w-4 text-gray-500" />),
-          path: [companyName, entityType, entityId, key],
-          children: bucket.files.map(file => ({
-            id: file.id,
-            label: translateDisplayName
-              ? translateDisplayName(file)
-              : (file.displayName || file.originalFilename),
-            type: 'file' as const,
-            icon: getFileIcon(file),
-            path: [companyName, entityType, entityId, key, file.displayName],
-            file,
-          })),
-        };
-      });
-
-      return {
-        id: `${entityType}-${entityId}`,
-        label: entityLabel,
-        type: 'folder' as const,
-        icon: ENTITY_ICONS[entityType],
-        path: [companyName, entityType, entityId],
-        children: categoryFolders,
-      };
-    });
-
-    entityChildren.push({
-      id: `entity-${entityType}`,
-      label: entityType,
-      type: 'folder' as const,
-      icon: ENTITY_ICONS[entityType],
-      path: [companyName, entityType],
-      children: entityFolders,
-      metadata: { count: entityIds.length },
-    });
-  }
-
-  return {
-    id: 'root',
-    label: companyName,
-    type: 'root' as const,
-    icon: React.createElement(NAVIGATION_ENTITIES.company.icon, { className: `h-4 w-4 ${NAVIGATION_ENTITIES.company.color}` }),
-    path: [companyName],
-    children: entityChildren,
-  };
-}
-
-function buildTreeByCategory(
-  files: FileRecord[],
-  companyName: string,
-  translateDisplayName?: DisplayNameTranslator,
-  lang: string = 'el',
-): TreeNodeData {
-  // Group files by study group -> entity type (ADR-191)
-  const groupedByStudyGroup = new Map<
-    string,
-    { meta: StudyGroupMeta | null; entities: Record<FileEntityType, FileRecord[]> }
-  >();
-
-  const supportedEntityTypes: FileEntityType[] = ['project', 'building', 'unit', 'contact', 'company'];
-
-  for (const file of files) {
-    const group = getGroupForPurpose(file.purpose);
-    const key = group ?? '__general__';
-    const entityType = file.entityType as string;
-
-    // Skip unsupported entity types
-    if (!supportedEntityTypes.includes(entityType as FileEntityType)) {
-      continue;
-    }
-
-    if (!groupedByStudyGroup.has(key)) {
-      const meta = group
-        ? STUDY_GROUPS.find((sg) => sg.group === group) ?? null
-        : null;
-      groupedByStudyGroup.set(key, {
-        meta,
-        entities: { project: [], building: [], unit: [], contact: [], company: [] },
-      });
-    }
-    groupedByStudyGroup.get(key)!.entities[entityType as FileEntityType].push(file);
-  }
-
-  // Sort: study groups by order first, then general
-  const sortedGroups = [...groupedByStudyGroup.entries()].sort((a, b) => {
-    const orderA = a[1].meta?.order ?? 999;
-    const orderB = b[1].meta?.order ?? 999;
-    return orderA - orderB;
-  });
-
-  // Build tree
-  const categoryChildren: TreeNodeData[] = [];
-
-  for (const [key, { meta, entities }] of sortedGroups) {
-    const entityTypes: FileEntityType[] = ['project', 'building', 'unit', 'contact', 'company'];
-    const entityFolders: TreeNodeData[] = [];
-
-    for (const entityType of entityTypes) {
-      const entityFiles = entities[entityType];
-      if (entityFiles.length === 0) continue;
-
-      entityFolders.push({
-        id: `${key}-${entityType}`,
-        label: entityType,
-        type: 'folder' as const,
-        icon: ENTITY_ICONS[entityType],
-        path: [companyName, key, entityType],
-        children: entityFiles.map(file => ({
-          id: file.id,
-          label: translateDisplayName
-            ? translateDisplayName(file)
-            : (file.displayName || file.originalFilename),
-          type: 'file' as const,
-          icon: getFileIcon(file),
-          path: [companyName, key, entityType, file.displayName],
-          file,
-        })),
-      });
-    }
-
-    if (entityFolders.length > 0) {
-      const folderLabel = meta
-        ? (lang === 'en' ? meta.label.en : meta.label.el)
-        : (lang === 'en' ? 'General Documents' : 'Γενικά Έγγραφα');
-
-      categoryChildren.push({
-        id: `category-${key}`,
-        label: folderLabel,
-        type: 'folder' as const,
-        icon: meta
-          ? getCategoryIcon(meta.group)
-          : (CATEGORY_ICONS.other || <File className="h-4 w-4 text-gray-500" />),
-        path: [companyName, key],
-        children: entityFolders,
-      });
-    }
-  }
-
-  return {
-    id: 'root',
-    label: companyName,
-    type: 'root' as const,
-    icon: React.createElement(NAVIGATION_ENTITIES.company.icon, { className: `h-4 w-4 ${NAVIGATION_ENTITIES.company.color}` }),
-    path: [companyName],
-    children: categoryChildren,
-  };
-}
-
-// ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
@@ -568,11 +196,11 @@ export function CompanyFileTree({
   className,
 }: CompanyFileTreeProps) {
   const { t, i18n } = useTranslation('files');
+  const colors = useSemanticColors();
   const translateDisplayName = useFileDisplayName();
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['root']));
   const lang = i18n.language;
 
-  // Build tree based on grouping mode
   const treeData = useMemo(() => {
     if (groupingMode === 'entity') {
       return buildTreeByEntity(files, companyName, translateDisplayName, lang);
@@ -580,42 +208,31 @@ export function CompanyFileTree({
     return buildTreeByCategory(files, companyName, translateDisplayName, lang);
   }, [files, companyName, groupingMode, translateDisplayName, lang]);
 
-  // Toggle node expansion
   const toggleNode = useCallback((nodeId: string) => {
     setExpandedNodes(prev => {
       const next = new Set(prev);
-      if (next.has(nodeId)) {
-        next.delete(nodeId);
-      } else {
-        next.add(nodeId);
-      }
+      if (next.has(nodeId)) { next.delete(nodeId); } else { next.add(nodeId); }
       return next;
     });
   }, []);
 
-  // Expand all nodes
   const expandAll = useCallback(() => {
     const allNodeIds = new Set<string>();
-
     function collectIds(node: TreeNodeData) {
       allNodeIds.add(node.id);
-      if (node.children) {
-        node.children.forEach(collectIds);
-      }
+      node.children?.forEach(collectIds);
     }
-
     collectIds(treeData);
     setExpandedNodes(allNodeIds);
   }, [treeData]);
 
-  // Collapse all nodes
   const collapseAll = useCallback(() => {
     setExpandedNodes(new Set(['root']));
   }, []);
 
   if (files.length === 0) {
     return (
-      <section className={cn('p-8 text-center text-muted-foreground', className)}>
+      <section className={cn('p-8 text-center', colors.text.muted, className)}>
         <Folder className="h-12 w-12 mx-auto mb-4 opacity-50" />
         <p>{t('tree.empty', 'No files found')}</p>
       </section>
@@ -624,37 +241,21 @@ export function CompanyFileTree({
 
   return (
     <section className={cn('flex flex-col', className)}>
-      {/* Toolbar */}
       <header className="flex items-center justify-between px-4 py-2 border-b">
-        <span className="text-sm text-muted-foreground">
+        <span className={cn("text-sm", colors.text.muted)}>
           {t('tree.fileCount', '{{count}} files', { count: files.length })}
         </span>
         <nav className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={expandAll}
-            className="h-7 px-2"
-          >
+          <Button variant="ghost" size="sm" onClick={expandAll} className="h-7 px-2">
             {t('tree.expandAll', 'Expand All')}
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={collapseAll}
-            className="h-7 px-2"
-          >
+          <Button variant="ghost" size="sm" onClick={collapseAll} className="h-7 px-2">
             {t('tree.collapseAll', 'Collapse All')}
           </Button>
         </nav>
       </header>
 
-      {/* Tree */}
-      <nav
-        className="flex-1 overflow-auto p-2"
-        role="tree"
-        aria-label={t('tree.ariaLabel', 'File tree')}
-      >
+      <nav className="flex-1 overflow-auto p-2" role="tree" aria-label={t('tree.ariaLabel', 'File tree')}>
         <ul role="group" className="space-y-0.5">
           <TreeNode
             node={treeData}

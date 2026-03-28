@@ -32,74 +32,17 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { API_ROUTES } from '@/config/domain-constants';
-
-// ============================================================================
-// TYPES
-// ============================================================================
-
-interface PdfCanvasViewerProps {
-  /** PDF download URL (Firebase Storage) */
-  url: string;
-  /** Accessible title */
-  title: string;
-  /** Optional className */
-  className?: string;
-}
-
-interface PdfState {
-  numPages: number;
-  currentPage: number;
-  scale: number;
-  rotation: number;
-  loading: boolean;
-  error: string | null;
-}
-
-// PDF.js types (minimal interface to avoid import issues)
-interface PdfDocProxy {
-  numPages: number;
-  getPage(num: number): Promise<PdfPageProxy>;
-  destroy(): Promise<void>;
-}
-
-interface PdfPageProxy {
-  getViewport(opts: { scale: number; rotation?: number }): {
-    width: number;
-    height: number;
-  };
-  render(params: {
-    canvasContext: CanvasRenderingContext2D;
-    viewport: { width: number; height: number };
-  }): { promise: Promise<void>; cancel(): void };
-}
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-const MIN_SCALE = 0.25;
-const MAX_SCALE = 5;
-const WHEEL_ZOOM_FACTOR = 1.1;
-const WORKER_URL = '/pdf.worker.min.mjs';
-
-// ============================================================================
-// PDF.JS LOADER (lazy, avoids SSR issues)
-// ============================================================================
-
-let pdfjsLib: {
-  getDocument(params: { url?: string; data?: Uint8Array; cMapUrl?: string; cMapPacked?: boolean }): {
-    promise: Promise<PdfDocProxy>;
-  };
-  GlobalWorkerOptions: { workerSrc: string };
-} | null = null;
-
-async function loadPdfJs() {
-  if (pdfjsLib) return pdfjsLib;
-  const lib = await import('pdfjs-dist');
-  lib.GlobalWorkerOptions.workerSrc = WORKER_URL;
-  pdfjsLib = lib as unknown as typeof pdfjsLib;
-  return pdfjsLib!;
-}
+import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import {
+  type PdfCanvasViewerProps,
+  type PdfState,
+  type PdfDocProxy,
+  MIN_SCALE,
+  MAX_SCALE,
+  WHEEL_ZOOM_FACTOR,
+  loadPdfJs,
+} from './pdf-canvas-config';
 
 // ============================================================================
 // COMPONENT
@@ -107,6 +50,7 @@ async function loadPdfJs() {
 
 export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps) {
   const { t } = useTranslation('files');
+  const colors = useSemanticColors();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const docRef = useRef<PdfDocProxy | null>(null);
@@ -404,7 +348,7 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
             <TooltipContent>{t('floorplan.previous', 'Προηγούμενη')}</TooltipContent>
           </Tooltip>
 
-          <span className="text-xs text-muted-foreground min-w-[60px] text-center tabular-nums">
+          <span className={cn("text-xs min-w-[60px] text-center tabular-nums", colors.text.muted)}>
             {state.currentPage} / {state.numPages}
           </span>
 
@@ -441,7 +385,7 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
             <TooltipContent>{t('preview.zoomOut', 'Σμίκρυνση')}</TooltipContent>
           </Tooltip>
 
-          <span className="text-xs text-muted-foreground w-10 text-center tabular-nums">
+          <span className={cn("text-xs w-10 text-center tabular-nums", colors.text.muted)}>
             {Math.round(state.scale * 100)}%
           </span>
 
@@ -498,7 +442,7 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
         {showOverlay && (
           <div className="absolute inset-0 flex items-center justify-center z-10 bg-muted/20">
             {state.loading && (
-              <p className="text-sm text-muted-foreground animate-pulse">
+              <p className={cn("text-sm animate-pulse", colors.text.muted)}>
                 {t('floorplan.loading', 'Φόρτωση PDF...')}
               </p>
             )}
