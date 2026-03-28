@@ -28,9 +28,12 @@ import { getCompanyById } from '@/services/companies.service';
 import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
 import type { FloorData } from '../types';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 const logger = createModuleLogger('FloorPlanTab');
 
 // =============================================================================
@@ -84,6 +87,7 @@ export function FloorPlanTab({
   const { user } = useAuth();
   const { t } = useTranslation('units');
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const fallbackCompanyId = useCompanyId()?.companyId;
 
   // 🏢 ENTERPRISE: Use unit's companyId (from Firestore) if available,
@@ -124,7 +128,7 @@ export function FloorPlanTab({
   // If no unit selected, show placeholder
   if (!selectedUnit) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
+      <div className={cn("flex flex-col items-center justify-center h-full text-center p-8", colors.text.muted)}>
         <UnitIcon className={`${iconSizes['2xl']} ${unitColor} mb-4 opacity-50`} />
         <h3 className="text-xl font-semibold mb-2">{t('floorplan.selectUnit')}</h3>
         <p className="text-sm max-w-sm">
@@ -137,7 +141,7 @@ export function FloorPlanTab({
   // If no companyId or userId, show auth placeholder
   if (!companyId || !currentUserId) {
     return (
-      <section className="p-6 text-center text-muted-foreground">
+      <section className={cn("p-6 text-center", colors.text.muted)}>
         <p>{t('floorplan.noAuth', 'Απαιτείται σύνδεση για να δείτε τις κατόψεις.')}</p>
       </section>
     );

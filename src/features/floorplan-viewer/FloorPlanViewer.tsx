@@ -36,12 +36,15 @@ import { useZoom } from '@/subapps/dxf-viewer/systems/zoom/hooks/useZoom';
 import type { ViewTransform, Viewport } from '@/subapps/dxf-viewer/rendering/types/Types';
 import { asArray, ensureFloor, safeGetProperty } from './utils/safeProps';
 import { truncateText } from '@/lib/text-utils';
+import { useTranslation } from 'react-i18next';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 const logger = createModuleLogger('FloorPlanViewer');
 
 export function FloorPlanViewer(props: FloorPlanViewerLayoutProps) {
-  const { quick } = useBorderTokens();
+  const { quick: _quick } = useBorderTokens();
   const colors = useSemanticColors();
+  const { t } = useTranslation('properties');
 
   const {
     currentFloor,
@@ -154,7 +157,7 @@ export function FloorPlanViewer(props: FloorPlanViewerLayoutProps) {
   }, [zoomSystem, initialTransform]);
 
   // Get selected property safely
-  const selectedProperty = safeGetProperty(properties, selectedPropertyId);
+  const _selectedProperty = safeGetProperty(properties, selectedPropertyId);
 
   // Show empty state if no floor
   if (!currentFloor && properties.length === 0) {
@@ -235,17 +238,17 @@ export function FloorPlanViewer(props: FloorPlanViewerLayoutProps) {
         {/* STATUS BAR */}
         <div className={`flex items-center justify-between px-4 py-2 ${colors.bg.primary} border-t text-sm ${colors.text.secondary}`}>
           <div className="flex items-center gap-4">
-            <span>Properties: {properties.length}</span>
-            <span>Selected: {selectedPropertyId || 'None'}</span>
-            <span>Connections: {(connectionPairs || []).length}</span>
+            <span>{t('floorPlan.statusBar.properties')}: {properties.length}</span>
+            <span>{t('floorPlan.statusBar.selected')}: {selectedPropertyId || t('floorPlan.statusBar.none')}</span>
+            <span>{t('floorPlan.statusBar.connections')}: {(connectionPairs || []).length}</span>
           </div>
           <div className="flex items-center gap-4">
             {pdfUrl && (
-              <span className={`${colors.text.primary}`}>• PDF Loaded</span>
+              <span className={`${colors.text.primary}`}>• {t('floorPlan.statusBar.pdfLoaded')}</span>
             )}
-            <span>Zoom: {Math.round(scale * 100)}%</span>
-            <span className="capitalize">Mode: {viewMode}</span>
-            {isConnecting && <span className={`${colors.text.primary}`}>• Connecting</span>}
+            <span>{t('floorPlan.statusBar.zoom')}: {Math.round(scale * 100)}%</span>
+            <span className="capitalize">{t('floorPlan.statusBar.mode')}: {viewMode}</span>
+            {isConnecting && <span className={`${colors.text.primary}`}>• {t('floorPlan.statusBar.connecting')}</span>}
           </div>
         </div>
       </div>

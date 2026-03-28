@@ -1,4 +1,5 @@
-/* eslint-disable custom/no-hardcoded-strings, design-system/prefer-design-system-imports */
+'use client';
+/* eslint-disable custom/no-hardcoded-strings */
 /**
  * =============================================================================
  * 🏢 ENTERPRISE: Unit Fields Read-Only Components
@@ -14,6 +15,9 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Layers } from 'lucide-react';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { Property } from '@/types/property-viewer';
 import type { UnitLevel } from '@/types/unit';
@@ -25,10 +29,11 @@ import type { TFunction } from 'i18next';
 
 /** Single label:value row for compact view */
 export function CompactField({ label, value }: { label: string; value: string | number | undefined }) {
+  const colors = useSemanticColors();
   if (!value && value !== 0) return null;
   return (
     <dl className="flex items-baseline gap-1.5">
-      <dt className="text-xs text-muted-foreground whitespace-nowrap">{label}:</dt>
+      <dt className={cn("text-xs whitespace-nowrap", colors.text.muted)}>{label}:</dt>
       <dd className="text-xs font-medium truncate">{String(value)}</dd>
     </dl>
   );
@@ -40,6 +45,7 @@ export function CompactField({ label, value }: { label: string; value: string | 
 
 /** Compact plain-text view for read-only mode (Ευρετήριο) */
 export function ReadOnlyCompactView({ property, t }: { property: Property; t: TFunction }) {
+  const colors = useSemanticColors();
   const orientationLabels = (property.orientations ?? [])
     .map((o) => t(`orientation.short.${o}`, { defaultValue: o }))
     .join(', ');
@@ -144,7 +150,7 @@ export function ReadOnlyCompactView({ property, t }: { property: Property; t: TF
       {/* Description — full width */}
       {property.description && (
         <dl className="mt-1">
-          <dt className="text-xs text-muted-foreground">{t('fields.identity.description', { defaultValue: 'Περιγραφή' })}</dt>
+          <dt className={cn("text-xs", colors.text.muted)}>{t('fields.identity.description', { defaultValue: 'Περιγραφή' })}</dt>
           <dd className="text-xs mt-0.5">{property.description}</dd>
         </dl>
       )}
@@ -167,11 +173,12 @@ export function LevelTabStrip({
   onSelectLevel: (id: string | null) => void;
   t: TFunction;
 }) {
+  const colors = useSemanticColors();
   const sorted = [...levels].sort((a, b) => a.floorNumber - b.floorNumber);
 
   return (
     <nav aria-label="Level tabs" className="flex items-center gap-1 rounded-md bg-muted/50 p-1">
-      <Layers className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+      <Layers className={cn("h-3.5 w-3.5 shrink-0", colors.text.muted)} />
       {sorted.map((level) => (
         <Button
           key={level.floorId}

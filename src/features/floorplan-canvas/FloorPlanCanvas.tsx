@@ -16,32 +16,35 @@ import {
 import type {
   FloorPlanCanvasProps
 } from './types';
+import { useTranslation } from 'react-i18next';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 const logger = createModuleLogger('FloorPlanCanvas');
 
 export function FloorPlanCanvas({
-  floorData,
-  onFloorDataChange,
-  mode = 'view',
-  selectedPropertyId,
-  onPropertySelect,
-  onPropertyCreate,
-  onPropertyUpdate,
-  isReadOnly = false,
+  floorData: _floorData,
+  onFloorDataChange: _onFloorDataChange,
+  mode: _mode = 'view',
+  selectedPropertyId: _selectedPropertyId,
+  onPropertySelect: _onPropertySelect,
+  onPropertyCreate: _onPropertyCreate,
+  onPropertyUpdate: _onPropertyUpdate,
+  isReadOnly: _isReadOnly = false,
   className,
   pdfBackgroundUrl,
-  enableGrid = true,
-  enableMeasurements = true,
-  enableConnections = false,
-  showStatusLegend = true,
-  showPropertyCount = true,
-  connectionPairs = [],
-  onConnectionPairsChange,
-  onModeChange,
-  validationErrors = []
+  enableGrid: _enableGrid = true,
+  enableMeasurements: _enableMeasurements = true,
+  enableConnections: _enableConnections = false,
+  showStatusLegend: _showStatusLegend = true,
+  showPropertyCount: _showPropertyCount = true,
+  connectionPairs: _connectionPairs = [],
+  onConnectionPairsChange: _onConnectionPairsChange,
+  onModeChange: _onModeChange,
+  validationErrors: _validationErrors = []
 }: FloorPlanCanvasProps) {
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  const { t } = useTranslation('properties');
 
   // PDF state
   const [numPages, setNumPages] = useState<number>(0);
@@ -86,12 +89,12 @@ export function FloorPlanCanvas({
         style={floorPlanStyles.debugInfo}
         {...floorPlanAccessibility.getDebugPanelProps()}
       >
-        <div>🔍 PDF DEBUG INFO</div>
-        <div>PDF URL: {pdfBackgroundUrl ? '✅ EXISTS' : '❌ NONE'}</div>
-        <div>PDF Ready: {isPdfReady ? '✅ YES' : '❌ NO'}</div>
-        <div>Pages: {numPages}</div>
-        <div>Test Mode: {testMode}</div>
-        <div>Error: {pdfLoadError || 'None'}</div>
+        <div>{t('floorPlan.canvas.debugTitle')}</div>
+        <div>{t('floorPlan.canvas.debugPdfUrl')}: {pdfBackgroundUrl ? t('floorPlan.canvas.debugExists') : t('floorPlan.canvas.debugNone')}</div>
+        <div>{t('floorPlan.canvas.debugPdfReady')}: {isPdfReady ? t('floorPlan.canvas.debugYes') : t('floorPlan.canvas.debugNo')}</div>
+        <div>{t('floorPlan.canvas.debugPages')}: {numPages}</div>
+        <div>{t('floorPlan.canvas.debugTestMode')}: {testMode}</div>
+        <div>{t('floorPlan.canvas.debugError')}: {pdfLoadError || t('floorPlan.canvas.debugNone')}</div>
       </aside>
 
       {/* TEST MODE BUTTONS - TOP RIGHT */}
@@ -106,7 +109,7 @@ export function FloorPlanCanvas({
           aria-pressed={testMode === 'hidden'}
           aria-label="Hide PDF display mode"
         >
-          🙈 Hidden
+          {t('floorPlan.canvas.modeHidden')}
         </button>
         <button
           onClick={() => setTestMode('normal')}
@@ -114,7 +117,7 @@ export function FloorPlanCanvas({
           aria-pressed={testMode === 'normal'}
           aria-label="Normal PDF display mode"
         >
-          📄 Normal
+          {t('floorPlan.canvas.modeNormal')}
         </button>
         <button
           onClick={() => setTestMode('fullscreen')}
@@ -122,7 +125,7 @@ export function FloorPlanCanvas({
           aria-pressed={testMode === 'fullscreen'}
           aria-label="Fullscreen PDF display mode"
         >
-          📺 FULLSCREEN
+          {t('floorPlan.canvas.modeFullscreen')}
         </button>
       </nav>
 
@@ -164,7 +167,7 @@ export function FloorPlanCanvas({
           style={floorPlanStyles.warningOverlay}
           {...floorPlanAccessibility.getOverlayProps('warning')}
         >
-          ⚠️ NO PDF URL PROVIDED ⚠️
+          {t('floorPlan.canvas.noPdfProvided')}
         </section>
       )}
 
@@ -175,7 +178,7 @@ export function FloorPlanCanvas({
           style={floorPlanStyles.loadingOverlay}
           {...floorPlanAccessibility.getOverlayProps('loading')}
         >
-          ⏳ PDF LOADING... ⏳
+          {t('floorPlan.canvas.pdfLoading')}
         </section>
       )}
 
@@ -187,7 +190,7 @@ export function FloorPlanCanvas({
           {...floorPlanAccessibility.getOverlayProps('error')}
         >
           <div className="text-center">
-            ❌ PDF ERROR ❌<br/>
+            {t('floorPlan.canvas.pdfError')}<br/>
             {pdfLoadError}
           </div>
         </section>
@@ -200,7 +203,7 @@ export function FloorPlanCanvas({
           style={floorPlanStyles.successMessage}
           {...floorPlanAccessibility.getOverlayProps('success')}
         >
-          ✅ PDF LOADED & DISPLAYED! Pages: {numPages}
+          {t('floorPlan.canvas.pdfLoaded', { count: numPages })}
         </section>
       )}
 
@@ -212,11 +215,11 @@ export function FloorPlanCanvas({
         role="complementary"
         aria-label="Test instructions"
       >
-        <div className="font-bold mb-2">�� TEST INSTRUCTIONS:</div>
-        <div>1. Click FULLSCREEN button</div>
-        <div>2. PDF should cover ENTIRE screen</div>
-        <div>3. Look for colored borders</div>
-        <div>4. Check debug info top-left</div>
+        <div className="font-bold mb-2">{t('floorPlan.canvas.testInstructions')}</div>
+        <div>1. {t('floorPlan.canvas.testStep1')}</div>
+        <div>2. {t('floorPlan.canvas.testStep2')}</div>
+        <div>3. {t('floorPlan.canvas.testStep3')}</div>
+        <div>4. {t('floorPlan.canvas.testStep4')}</div>
       </aside>
     </main>
   );

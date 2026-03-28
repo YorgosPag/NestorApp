@@ -15,6 +15,7 @@ import { Upload, Download, FileText } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from 'react-i18next';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 const logger = createModuleLogger('ToolbarExportMenu');
 
 interface ToolbarExportMenuProps {
@@ -29,27 +30,27 @@ export function ToolbarExportMenu({ onExport }: ToolbarExportMenuProps) {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <div>
-            <ToolbarButton tooltip={t('toolbar.exportData')}>
+            <ToolbarButton tooltip={t('toolbar.tooltips.exportData')}>
               <Download className={iconSizes.sm} />
             </ToolbarButton>
           </div>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>{t('toolbar.exportTo')}:</DropdownMenuLabel>
+          <DropdownMenuLabel>{t('toolbar.labels.exportTo')}:</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={onExport}>
             <FileText className={`${iconSizes.sm} mr-2`} />
-            Excel (.xlsx)
+            {t('toolbar.labels.excelFormat')}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={onExport}>
             <FileText className={`${iconSizes.sm} mr-2`} />
-            {t('toolbar.pdfReport')}
+            {t('toolbar.labels.pdfReport')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
       <ToolbarButton
-        tooltip={t('toolbar.importData')}
+        tooltip={t('toolbar.tooltips.importData')}
         onClick={() => logger.info('Importing...')}
       >
         <Upload className={iconSizes.sm} />
