@@ -1,0 +1,621 @@
+{
+  "page": {
+    "title": "Αναφορές",
+    "description": "Επιχειρηματικά αναλυτικά στοιχεία και αναφορές"
+  },
+  "dateRange": {
+    "label": "Περίοδος",
+    "presets": {
+      "week": "Αυτή η Εβδομάδα",
+      "month": "Αυτός ο Μήνας",
+      "quarter": "Αυτό το Τρίμηνο",
+      "half": "Αυτό το Εξάμηνο",
+      "year": "Αυτό το Έτος",
+      "ytd": "Από Αρχή Έτους",
+      "custom": "Προσαρμοσμένο Εύρος"
+    },
+    "comparison": {
+      "toggle": "Σύγκριση",
+      "yoy": "Σε σχέση με πέρυσι",
+      "pop": "Προηγούμενη Περίοδος",
+      "custom": "Προσαρμοσμένη Σύγκριση"
+    },
+    "from": "Από",
+    "to": "Έως"
+  },
+  "export": {
+    "title": "Εξαγωγή",
+    "pdf": "PDF",
+    "excel": "Excel",
+    "csv": "CSV",
+    "comingSoon": "Η εξαγωγή θα είναι διαθέσιμη σε μελλοντική ενημέρωση"
+  },
+  "empty": {
+    "noData": {
+      "title": "Δεν Υπάρχουν Δεδομένα",
+      "description": "Δεν υπάρχουν δεδομένα για την επιλεγμένη περίοδο."
+    },
+    "noResults": {
+      "title": "Κανένα Αποτέλεσμα",
+      "description": "Κανένα αποτέλεσμα δεν ταιριάζει με τα τρέχοντα φίλτρα."
+    },
+    "error": {
+      "title": "Σφάλμα Φόρτωσης",
+      "description": "Παρουσιάστηκε σφάλμα κατά τη φόρτωση. Δοκιμάστε ξανά."
+    },
+    "noPermission": {
+      "title": "Δεν Επιτρέπεται η Πρόσβαση",
+      "description": "Δεν έχετε δικαίωμα πρόσβασης σε αυτή την αναφορά."
+    }
+  },
+  "table": {
+    "previous": "Προηγούμενη",
+    "next": "Επόμενη",
+    "page": "Σελίδα",
+    "of": "από",
+    "noData": "Δεν υπάρχουν δεδομένα",
+    "rowsPerPage": "Γραμμές ανά σελίδα"
+  },
+  "gauge": {
+    "target": "Στόχος",
+    "value": "Τιμή"
+  },
+  "trafficLight": {
+    "red": "Κρίσιμο",
+    "amber": "Προειδοποίηση",
+    "green": "Εντός Προγράμματος",
+    "gray": "Μη Διαθέσιμο"
+  },
+  "kpi": {
+    "trend": "Τάση",
+    "vs": "vs"
+  },
+  "section": {
+    "collapse": "Σύμπτυξη ενότητας",
+    "expand": "Ανάπτυξη ενότητας",
+    "retry": "Δοκιμάστε ξανά"
+  },
+  "aging": {
+    "total": "Σύνολο",
+    "overdue": "Εκπρόθεσμα",
+    "buckets": {
+      "current": "0-30 ημέρες",
+      "thirtyOne": "31-60 ημέρες",
+      "sixtyOne": "61-90 ημέρες",
+      "ninetyOne": "91-120 ημέρες",
+      "overdue": "120+ ημέρες"
+    }
+  },
+  "sales": {
+    "description": "Απόδοση πωλήσεων, παρακολούθηση πληρωμών, επιταγές και ανάλυση μετατροπών",
+    "kpis": {
+      "title": "Επισκόπηση Πωλήσεων",
+      "totalRevenue": "Συνολικά Έσοδα",
+      "pipelineValue": "Αξία Pipeline",
+      "soldUnits": "Πωληθέντα",
+      "forSaleUnits": "Διαθέσιμα",
+      "conversionRate": "Ποσοστό Μετατροπής",
+      "paymentCoverage": "Κάλυψη Πληρωμών",
+      "overdueInstallments": "Ληξιπρόθεσμες Δόσεις",
+      "outstanding": "Εκκρεμές Υπόλοιπο"
+    },
+    "payment": {
+      "title": "Κατάσταση Πληρωμών",
+      "description": "Κατανομή πληρωμένων vs εκκρεμών ποσών",
+      "paid": "Πληρωμένα",
+      "outstanding": "Εκκρεμή"
+    },
+    "cheques": {
+      "title": "Κατάσταση Επιταγών",
+      "description": "Κατανομή επιταγών ανά τρέχουσα κατάσταση",
+      "statuses": {
+        "received": "Παραλήφθηκε",
+        "in_custody": "Σε Φύλαξη",
+        "deposited": "Κατατέθηκε",
+        "clearing": "Σε Εκκαθάριση",
+        "cleared": "Εισπράχθηκε",
+        "bounced": "Σφραγίστηκε",
+        "endorsed": "Οπισθογραφήθηκε",
+        "cancelled": "Ακυρώθηκε",
+        "expired": "Έληξε",
+        "replaced": "Αντικαταστάθηκε",
+        "unknown": "Άγνωστο"
+      }
+    },
+    "legal": {
+      "title": "Κατανομή Νομικών Φάσεων",
+      "description": "Φάσεις συμβολαίων στα πωληθέντα ακίνητα",
+      "count": "Ακίνητα",
+      "phases": {
+        "none": "Χωρίς Σύμβαση",
+        "preliminary_pending": "Προσύμφωνο Εκκρεμεί",
+        "preliminary_signed": "Προσύμφωνο Υπογράφηκε",
+        "final_pending": "Οριστικό Εκκρεμεί",
+        "final_signed": "Οριστικό Υπογράφηκε",
+        "payoff_pending": "Εξόφληση Εκκρεμεί",
+        "payoff_completed": "Εξόφληση Ολοκληρώθηκε"
+      }
+    },
+    "funnel": {
+      "title": "Χωνί Πωλήσεων",
+      "description": "Μετατροπή από διαθέσιμα σε πωληθέντα",
+      "total": "Σύνολο Ακινήτων",
+      "forSale": "Διαθέσιμα",
+      "sold": "Πωληθέντα"
+    },
+    "aging": {
+      "title": "Ανάλυση Aging Πληρωμών",
+      "description": "Ληξιπρόθεσμες δόσεις ανά χρονικό bucket",
+      "portfolio": "Χαρτοφυλάκιο",
+      "noOverdue": "Δεν υπάρχουν ληξιπρόθεσμες πληρωμές"
+    }
+  },
+  "financial": {
+    "description": "Χρηματοοικονομική επισκόπηση με EVM, ανάλυση κόστους και ταμειακές ροές",
+    "evm": {
+      "title": "Πίνακας EVM",
+      "description": "Δείκτες Earned Value Management σε επίπεδο χαρτοφυλακίου",
+      "cpi": "Δείκτης Κόστους (CPI)",
+      "spi": "Δείκτης Χρονοδιαγράμματος (SPI)",
+      "bac": "Προϋπολογισμός Ολοκλήρωσης",
+      "eac": "Εκτίμηση Ολοκλήρωσης",
+      "cv": "Απόκλιση Κόστους",
+      "sv": "Απόκλιση Χρονοδιαγράμματος"
+    },
+    "scurve": {
+      "title": "Καμπύλη S (PV / EV / AC)",
+      "description": "Σωρευτική σχεδιασμένη αξία, κερδισμένη αξία και πραγματικό κόστος στο χρόνο",
+      "pv": "Σχεδιασμένη Αξία",
+      "ev": "Κερδισμένη Αξία",
+      "ac": "Πραγματικό Κόστος"
+    },
+    "costVariance": {
+      "title": "Απόκλιση Κόστους ανά Κτίριο",
+      "description": "Σύγκριση εκτιμώμενου vs πραγματικού κόστους ανά κτίριο",
+      "estimated": "Εκτιμώμενο",
+      "actual": "Πραγματικό",
+      "variance": "Απόκλιση"
+    },
+    "cashFlow": {
+      "title": "Ταμειακές Ροές & Aging",
+      "description": "Εισπράξεις και ανάλυση ληξιπρόθεσμων πληρωμών",
+      "receivables": "Σύνολο Απαιτήσεων",
+      "collected": "Σύνολο Εισπράξεων",
+      "collectionRate": "Ποσοστό Είσπραξης"
+    },
+    "revenue": {
+      "title": "Αναγνώριση Εσόδων",
+      "description": "Κερδισμένη αξία ανά κτίριο ως αναγνωρισμένα έσοδα",
+      "earnedValue": "Κερδισμένη Αξία",
+      "building": "Κτίριο"
+    }
+  },
+  "executive": {
+    "description": "KPIs χαρτοφυλακίου, υγεία έργων, τάσεις εσόδων και εκτελεστική επισκόπηση",
+    "kpis": {
+      "title": "Επισκόπηση Χαρτοφυλακίου",
+      "portfolioValue": "Αξία Χαρτοφυλακίου",
+      "revenueYTD": "Έσοδα YTD",
+      "collectionRate": "Ποσοστό Είσπραξης",
+      "avgCPI": "Μέσος CPI",
+      "activeProjects": "Ενεργά Έργα",
+      "availableProperties": "Διαθέσιμα Ακίνητα",
+      "pendingPayments": "Εκκρεμείς Εργασίες",
+      "pipelineValue": "Αξία Pipeline"
+    },
+    "projectHealth": {
+      "title": "Υγεία Έργων",
+      "description": "Κατάσταση RAG σε ενεργά έργα",
+      "project": "Έργο",
+      "progress": "Πρόοδος",
+      "budget": "Προϋπολογισμός (CPI)",
+      "timeline": "Χρονοδιάγραμμα (SPI)",
+      "health": "Υγεία"
+    },
+    "revenueTrend": {
+      "title": "Τάση Εσόδων",
+      "description": "Μηνιαία έσοδα από πωλήσεις (τρέχον έτος)",
+      "revenue": "Έσοδα"
+    },
+    "overdue": {
+      "title": "Πρόσφατες Πωλήσεις",
+      "description": "Επισκόπηση πωληθέντων ακινήτων",
+      "unit": "Ακίνητο",
+      "project": "Έργο",
+      "buyer": "Αγοραστής",
+      "amount": "Ποσό",
+      "daysOverdue": "Ημέρες Καθυστέρησης",
+      "noOverdue": "Δεν υπάρχουν πωληθέντα ακίνητα"
+    },
+    "pipeline": {
+      "title": "Pipeline Πωλήσεων",
+      "description": "Ευκαιρίες ανά στάδιο",
+      "value": "Αξία (€)",
+      "count": "Πλήθος",
+      "stages": {
+        "initial_contact": "Αρχική Επαφή",
+        "qualification": "Αξιολόγηση",
+        "viewing": "Επίσκεψη",
+        "proposal": "Πρόταση",
+        "negotiation": "Διαπραγμάτευση",
+        "contract": "Σύμβαση",
+        "closed_won": "Κλεισμένη (Κερδ.)",
+        "closed_lost": "Κλεισμένη (Χαμ.)"
+      }
+    }
+  },
+  "projects": {
+    "description": "Χαρτοφυλάκιο έργων, πρόοδος κτιρίων, κατανομή ακινήτων και ανάλυση κόστους",
+    "kpis": {
+      "title": "Επισκόπηση Χαρτοφυλακίου",
+      "totalProjects": "Σύνολο Έργων",
+      "portfolioValue": "Αξία Χαρτοφυλακίου",
+      "averageProgress": "Μέση Πρόοδος",
+      "totalUnits": "Σύνολο Ακινήτων",
+      "soldUnits": "Πωληθέντα",
+      "availableUnits": "Διαθέσιμα",
+      "unitTypes": "Τύποι Ακινήτων",
+      "energyRated": "Ενεργειακά Πιστοποιημένα"
+    },
+    "status": {
+      "title": "Κατανομή Κατάστασης Έργων",
+      "description": "Έργα ομαδοποιημένα ανά τρέχουσα κατάσταση",
+      "statuses": {
+        "planning": "Σχεδιασμός",
+        "in_progress": "Σε Εξέλιξη",
+        "completed": "Ολοκληρωμένα",
+        "on_hold": "Σε Αναμονή",
+        "cancelled": "Ακυρωμένα",
+        "unknown": "Άγνωστο"
+      }
+    },
+    "progress": {
+      "title": "Πρόοδος Έργων",
+      "description": "Ποσοστό ολοκλήρωσης ανά έργο",
+      "progress": "Πρόοδος"
+    },
+    "unitStatus": {
+      "title": "Κατάσταση Ακινήτων ανά Κτίριο",
+      "description": "Κατανομή εμπορικής κατάστασης ανά κτίριο",
+      "statuses": {
+        "unavailable": "Μη Διαθέσιμο",
+        "for-sale": "Προς Πώληση",
+        "for-rent": "Προς Ενοικίαση",
+        "for-sale-and-rent": "Πώληση & Ενοικίαση",
+        "reserved": "Κρατημένο",
+        "sold": "Πωληθέν",
+        "rented": "Ενοικιασμένο",
+        "unknown": "Άγνωστο"
+      }
+    },
+    "revenue": {
+      "title": "Έσοδα ανά Έργο",
+      "description": "Συνολικά έσοδα πωλήσεων ανά έργο",
+      "revenue": "Έσοδα"
+    },
+    "pricePerSqm": {
+      "title": "Τιμή ανά τ.μ.",
+      "description": "Μέση τιμή ανά τετραγωνικό μέτρο ανά κτίριο",
+      "pricePerSqm": "Τιμή/τ.μ."
+    },
+    "boqVariance": {
+      "title": "Απόκλιση Κόστους BOQ",
+      "description": "Εκτιμώμενο vs πραγματικό κόστος ανά κτίριο",
+      "estimated": "Εκτιμώμενο",
+      "actual": "Πραγματικό"
+    },
+    "energyClass": {
+      "title": "Κατανομή Ενεργειακής Κλάσης",
+      "description": "Ακίνητα ομαδοποιημένα ανά πιστοποιητικό ενεργειακής απόδοσης"
+    }
+  },
+  "contacts": {
+    "description": "Χαρτοφυλάκιο επαφών, κατανομή τύπων, personas, γεωγραφία και κορυφαίοι αγοραστές",
+    "kpis": {
+      "title": "Επισκόπηση Επαφών",
+      "total": "Σύνολο Επαφών",
+      "active": "Ενεργές",
+      "newInPeriod": "Νέες Περιόδου",
+      "companies": "Εταιρείες",
+      "cities": "Πόλεις",
+      "personas": "Τύποι Ρόλων",
+      "completeness": "Πληρότητα Προφίλ",
+      "topBuyers": "Κορυφαίοι Αγοραστές"
+    },
+    "types": {
+      "individual": "Ιδιώτης",
+      "company": "Εταιρεία",
+      "service": "Υπηρεσία",
+      "unknown": "Άγνωστο"
+    },
+    "statuses": {
+      "active": "Ενεργή",
+      "inactive": "Ανενεργή",
+      "archived": "Αρχειοθετημένη",
+      "unknown": "Άγνωστο"
+    },
+    "distribution": {
+      "title": "Κατανομή Επαφών",
+      "description": "Επαφές ομαδοποιημένες ανά τύπο και κατάσταση"
+    },
+    "persona": {
+      "title": "Κατανομή Ρόλων",
+      "description": "Επαφές ανά επαγγελματικό ρόλο",
+      "count": "Επαφές"
+    },
+    "personas": {
+      "construction_worker": "Εργάτης Κατασκευών",
+      "engineer": "Μηχανικός",
+      "accountant": "Λογιστής",
+      "lawyer": "Δικηγόρος",
+      "property_owner": "Ιδιοκτήτης",
+      "client": "Πελάτης",
+      "supplier": "Προμηθευτής",
+      "notary": "Συμβολαιογράφος",
+      "real_estate_agent": "Μεσίτης",
+      "unknown": "Άγνωστο"
+    },
+    "geographic": {
+      "title": "Γεωγραφική Κατανομή",
+      "description": "Επαφές ανά πόλη (κορυφαίες 15)",
+      "count": "Επαφές"
+    },
+    "buyers": {
+      "title": "Κορυφαίοι Αγοραστές",
+      "description": "Αγοραστές μεγαλύτερης αξίας στο χαρτοφυλάκιο",
+      "name": "Όνομα",
+      "value": "Συνολική Αξία",
+      "units": "Ακίνητα"
+    }
+  },
+  "crm": {
+    "description": "Pipeline CRM, διαχείριση εργασιών, επικοινωνίες και απόδοση ομάδας",
+    "kpis": {
+      "title": "Επισκόπηση CRM",
+      "opportunities": "Ευκαιρίες",
+      "wonDeals": "Κερδισμένες",
+      "winRate": "Ποσοστό Κέρδους",
+      "avgDeal": "Μέση Αξία Συμφ.",
+      "totalTasks": "Σύνολο Εργασιών",
+      "overdueTasks": "Εκπρόθεσμες",
+      "communications": "Επικοινωνίες",
+      "lostDeals": "Χαμένες"
+    },
+    "pipeline": {
+      "title": "Pipeline ανά Στάδιο",
+      "description": "Πλήθος και αξία ευκαιριών ανά στάδιο pipeline",
+      "count": "Πλήθος",
+      "value": "Αξία"
+    },
+    "stages": {
+      "initial_contact": "Αρχική Επαφή",
+      "qualification": "Αξιολόγηση",
+      "viewing": "Επίσκεψη",
+      "proposal": "Πρόταση",
+      "negotiation": "Διαπραγμάτευση",
+      "contract": "Σύμβαση",
+      "closed_won": "Κλεισμένη (Κερδ.)",
+      "closed_lost": "Κλεισμένη (Χαμ.)",
+      "unknown": "Άγνωστο"
+    },
+    "tasks": {
+      "title": "Κατανομή Εργασιών",
+      "description": "Εργασίες ομαδοποιημένες ανά κατάσταση και προτεραιότητα"
+    },
+    "taskStatuses": {
+      "pending": "Εκκρεμεί",
+      "in_progress": "Σε Εξέλιξη",
+      "completed": "Ολοκληρωμένη",
+      "cancelled": "Ακυρωμένη",
+      "unknown": "Άγνωστο"
+    },
+    "priorities": {
+      "low": "Χαμηλή",
+      "medium": "Μεσαία",
+      "high": "Υψηλή",
+      "critical": "Κρίσιμη",
+      "unknown": "Άγνωστο"
+    },
+    "comms": {
+      "title": "Επικοινωνίες ανά Κανάλι",
+      "description": "Μηνύματα κατανεμημένα σε κανάλια επικοινωνίας",
+      "count": "Μηνύματα"
+    },
+    "channels": {
+      "email": "Email",
+      "phone": "Τηλέφωνο",
+      "sms": "SMS",
+      "whatsapp": "WhatsApp",
+      "telegram": "Telegram",
+      "meeting": "Συνάντηση",
+      "note": "Σημείωση",
+      "unknown": "Άγνωστο"
+    },
+    "leads": {
+      "title": "Leads ανά Πηγή",
+      "description": "Ανάλυση πηγών ευκαιριών"
+    },
+    "sources": {
+      "website": "Ιστοσελίδα",
+      "referral": "Σύσταση",
+      "social_media": "Κοινωνικά Δίκτυα",
+      "cold_call": "Cold Call",
+      "advertising": "Διαφήμιση",
+      "event": "Εκδήλωση",
+      "unknown": "Άγνωστο"
+    },
+    "team": {
+      "title": "Απόδοση Ομάδας",
+      "description": "Εργασίες ανατεθειμένες ανά μέλος ομάδας",
+      "tasks": "Εργασίες"
+    }
+  },
+  "exportCenter": {
+    "description": "Εξαγωγή όλων των αναφορών σε PDF ή Excel από ένα κεντρικό σημείο",
+    "grid": {
+      "title": "Διαθέσιμες Αναφορές",
+      "description": "Επιλέξτε αναφορά και μορφή για εξαγωγή"
+    },
+    "status": {
+      "title": "Ιστορικό Εξαγωγών",
+      "description": "Παρακολούθηση κατάστασης πρόσφατων εξαγωγών",
+      "pending": "Αναμονή",
+      "exporting": "Εξαγωγή...",
+      "done": "Ολοκληρώθηκε",
+      "error": "Αποτυχία"
+    }
+  },
+  "compliance": {
+    "description": "Εργατική συμμόρφωση, παρακολούθηση ασφάλισης ΕΦΚΑ και αναλυτικά παρουσίας",
+    "kpis": {
+      "title": "Βασικοί Δείκτες",
+      "totalWorkers": "Σύνολο Εργαζομένων",
+      "hoursLogged": "Ώρες Εργασίας",
+      "overtime": "Υπερωρίες",
+      "stamps": "Ένσημα",
+      "attendanceRate": "Ποσοστό Παρουσίας",
+      "checkInMethods": "Μέθοδοι Check-in"
+    },
+    "attendance": {
+      "title": "Μέθοδοι Check-in",
+      "description": "Κατανομή check-in παρουσίας ανά μέθοδο"
+    },
+    "methods": {
+      "manual": "Χειροκίνητο",
+      "qr": "QR Code",
+      "geofence": "Geofence",
+      "nfc": "NFC",
+      "unknown": "Άγνωστο"
+    },
+    "insurance": {
+      "title": "Εργαζόμενοι ανά Ασφαλιστική Κλάση",
+      "description": "Κατανομή εργαζομένων στις ασφαλιστικές κλάσεις ΕΦΚΑ",
+      "classLabel": "Κλάση"
+    }
+  },
+  "construction": {
+    "description": "Ορόσημα κατασκευής, πρόοδος φάσεων, αναλύσεις EVM και παρακολούθηση κόστους BOQ",
+    "kpis": {
+      "title": "Βασικοί Δείκτες",
+      "totalMilestones": "Σύνολο Ορόσημων",
+      "completed": "Ολοκληρωμένα",
+      "phases": "Φάσεις Κατασκευής",
+      "avgProgress": "Μέση Πρόοδος",
+      "boqEstimated": "BOQ Εκτίμηση",
+      "boqActual": "BOQ Πραγματικό",
+      "boqVariance": "BOQ Απόκλιση",
+      "avgCpi": "Μέσος CPI"
+    },
+    "milestones": {
+      "title": "Ολοκλήρωση Ορόσημων",
+      "description": "Κατανομή ορόσημων ανά τρέχουσα κατάσταση",
+      "statuses": {
+        "completed": "Ολοκληρωμένο",
+        "in_progress": "Σε Εξέλιξη",
+        "pending": "Εκκρεμεί",
+        "overdue": "Εκπρόθεσμο",
+        "cancelled": "Ακυρωμένο",
+        "unknown": "Άγνωστο"
+      }
+    },
+    "evm": {
+      "title": "Απόδοση EVM ανά Κτίριο",
+      "description": "Δείκτης Κόστους (CPI) και Δείκτης Χρονοδιαγράμματος (SPI) ανά κτίριο",
+      "cpi": "CPI",
+      "spi": "SPI"
+    },
+    "boq": {
+      "title": "Σύγκριση Κόστους BOQ",
+      "description": "Εκτιμώμενο vs πραγματικό κόστος ανά κτίριο",
+      "estimated": "Εκτιμώμενο",
+      "actual": "Πραγματικό"
+    }
+  },
+  "spaces": {
+    "description": "Αναλυτικά στοιχεία θέσεων στάθμευσης και αποθηκών ανά κτίριο",
+    "kpis": {
+      "title": "Βασικοί Δείκτες",
+      "totalParking": "Σύνολο Parking",
+      "totalStorage": "Σύνολο Αποθηκών",
+      "parkingUtilization": "Χρήση Parking",
+      "storageUtilization": "Χρήση Αποθηκών",
+      "totalValue": "Συνολική Αξία",
+      "totalArea": "Εμβαδόν Αποθηκών",
+      "avgPricePerSqm": "Μέση Τιμή/m²",
+      "totalSold": "Πωληθέντα",
+      "linked": "Συνδεδεμένα με Κτίριο",
+      "unlinked": "Ασύνδετα"
+    },
+    "parking": {
+      "title": "Κατάληψη Parking",
+      "description": "Θέσεις στάθμευσης ανά κατάσταση και τύπο",
+      "zoneTitle": "Parking ανά Ζώνη Θέσης",
+      "zoneDescription": "Κατανομή θέσεων στάθμευσης ανά ζώνη τοποθεσίας",
+      "statuses": {
+        "available": "Διαθέσιμη",
+        "occupied": "Κατειλημμένη",
+        "reserved": "Δεσμευμένη",
+        "sold": "Πωλημένη",
+        "maintenance": "Συντήρηση"
+      },
+      "types": {
+        "standard": "Κανονική",
+        "handicapped": "ΑμεΑ",
+        "motorcycle": "Μοτοσικλέτα",
+        "electric": "Ηλεκτρικό",
+        "visitor": "Επισκέπτης",
+        "unknown": "Άγνωστο"
+      },
+      "zones": {
+        "pilotis": "Πιλοτή",
+        "underground": "Υπόγειο",
+        "open_space": "Ανοιχτός Χώρος",
+        "rooftop": "Ταράτσα",
+        "covered_outdoor": "Στεγασμένος Εξωτερικός",
+        "unknown": "Άγνωστο"
+      }
+    },
+    "storage": {
+      "title": "Χρήση Αποθηκών",
+      "description": "Αποθηκευτικοί χώροι ανά κατάσταση και τύπο",
+      "statuses": {
+        "available": "Διαθέσιμη",
+        "occupied": "Κατειλημμένη",
+        "maintenance": "Συντήρηση",
+        "reserved": "Δεσμευμένη",
+        "sold": "Πωλημένη",
+        "unavailable": "Μη Διαθέσιμη"
+      },
+      "types": {
+        "large": "Μεγάλη",
+        "small": "Μικρή",
+        "basement": "Υπόγειο",
+        "ground": "Ισόγειο",
+        "special": "Ειδική",
+        "storage": "Αποθήκη",
+        "parking": "Parking",
+        "garage": "Γκαράζ",
+        "warehouse": "Αποθήκη Μεγάλη",
+        "unknown": "Άγνωστο"
+      }
+    },
+    "byBuilding": {
+      "title": "Αξία ανά Κτίριο",
+      "description": "Κατανομή αξίας parking και αποθηκών ανά κτίριο",
+      "parkingValue": "Αξία Parking",
+      "storageValue": "Αξία Αποθηκών"
+    }
+  },
+  "nav": {
+    "overview": "Επισκόπηση",
+    "contacts": "Επαφές & Πελάτες",
+    "projects": "Έργα & Κτίρια",
+    "sales": "Πωλήσεις & Οικονομικά",
+    "crm": "CRM & Pipeline",
+    "spaces": "Χώροι",
+    "construction": "Κατασκευή & Χρονοδιάγραμμα",
+    "compliance": "Συμμόρφωση & Εργατικά",
+    "financial": "Οικονομικά",
+    "export": "Κέντρο Εξαγωγής"
+  }
+}
