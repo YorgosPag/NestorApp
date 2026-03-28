@@ -5,6 +5,7 @@ import * as ProgressPrimitive from "@radix-ui/react-progress"
 
 import { cn } from "@/lib/utils"
 import { getDynamicTransformClass } from '@/components/ui/utils/dynamic-styles';
+import '@/lib/design-system';
 
 const Progress = React.forwardRef<
   React.ComponentRef<typeof ProgressPrimitive.Root>,

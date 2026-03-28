@@ -10,6 +10,8 @@ import { HOVER_COLOR_EFFECTS } from '@/components/ui/effects'
 import { useIconSizes } from '@/hooks/useIconSizes'
 import { useBorderTokens } from '@/hooks/useBorderTokens'
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'
+import { useTranslation } from '@/i18n/hooks/useTranslation'
+import '@/lib/design-system';
 
 // =============================================================================
 // CVA Size Variants for DialogContent (ADR-241 composition refactor)
@@ -42,6 +44,7 @@ const DialogClose = React.forwardRef<
 >(({ className, ...props }, ref) => {
   const iconSizes = useIconSizes();
   const { radius } = useBorderTokens();
+  const { t } = useTranslation('common');
 
   return (
     <DialogPrimitive.Close
@@ -53,7 +56,7 @@ const DialogClose = React.forwardRef<
       {...props}
     >
       <X className={iconSizes.sm} />
-      <span className="sr-only">Close</span>
+      <span className="sr-only">{t('buttons.close')}</span>
     </DialogPrimitive.Close>
   );
 })

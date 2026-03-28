@@ -19,6 +19,7 @@ import {
   type PanelImperativeHandle,
 } from 'react-resizable-panels';
 import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 const ResizablePanelGroup = ({
   className,

@@ -8,6 +8,7 @@ import { TRANSITION_PRESETS } from '@/components/ui/effects'
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens'
+import '@/lib/design-system';
 
 const Tabs = TabsPrimitive.Root
 

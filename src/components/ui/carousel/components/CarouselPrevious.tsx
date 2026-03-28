@@ -4,13 +4,16 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useIconSizes } from "@/hooks/useIconSizes";
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useCarousel } from "../context";
+import '@/lib/design-system';
 
 export const CarouselPrevious = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<typeof Button>
 >(({ className, variant = "outline", size = "icon", ...props }, ref) => {
   const iconSizes = useIconSizes();
+  const { t } = useTranslation('common');
   const { orientation, scrollPrev, canScrollPrev } = useCarousel();
   return (
     <Button
@@ -27,7 +30,7 @@ export const CarouselPrevious = React.forwardRef<
       {...props}
     >
       <ArrowLeft className={iconSizes.sm} />
-      <span className="sr-only">Previous slide</span>
+      <span className="sr-only">{t('buttons.previousSlide')}</span>
     </Button>
   );
 });

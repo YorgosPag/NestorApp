@@ -3,6 +3,7 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { INTERACTIVE_PATTERNS } from "@/components/ui/effects"
 import { useBorderTokens } from "@/hooks/useBorderTokens"
+import '@/lib/design-system';
 
 // =============================================================================
 // TABLE SIZE SYSTEM — Centralized density tokens

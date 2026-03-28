@@ -5,6 +5,7 @@ import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 
 import { cn } from "@/lib/utils"
 import { useBorderTokens } from '@/hooks/useBorderTokens'
+import '@/lib/design-system';
 
 const TooltipProvider = TooltipPrimitive.Provider
 

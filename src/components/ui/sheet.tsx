@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils"
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects'
 import { useIconSizes } from '@/hooks/useIconSizes'
 import { useSemanticColors, type SemanticColors } from '@/ui-adapters/react/useSemanticColors'
+import { useTranslation } from '@/i18n/hooks/useTranslation'
+import '@/lib/design-system';
 
 // ╭─────────────────────────────────────────────╮
 // │          SECTION: Sheet Root Primitives     │
@@ -24,6 +26,7 @@ const SheetClose = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof SheetPrimitive.Close>
 >(({ className, ...props }, ref) => {
   const iconSizes = useIconSizes();
+  const { t } = useTranslation('common');
   return (
     <SheetPrimitive.Close
       ref={ref}
@@ -34,7 +37,7 @@ const SheetClose = React.forwardRef<
       {...props}
     >
       <X className={iconSizes.sm} />
-      <span className="sr-only">Close</span>
+      <span className="sr-only">{t('buttons.close')}</span>
     </SheetPrimitive.Close>
   );
 })
