@@ -1276,6 +1276,35 @@
           "desc": "Δείτε το διαδραστικό Gantt και εξαγάγετε",
           "cta": "Προβολή Gantt & Εξαγωγή"
         },
+        "exportOwnerPdf": "Αναφορά Ιδιοκτήτη (PDF)",
+        "exportGanttTable": "Πίνακας Gantt (PDF)",
+        "delayBreakdown": {
+          "title": "Ανάλυση Καθυστερήσεων ανά Φάση",
+          "delayed": "Καθυστερημένες",
+          "blocked": "Μπλοκαρισμένες",
+          "tasks": "εργασίες",
+          "empty": "Δεν υπάρχουν καθυστερημένες ή μπλοκαρισμένες εργασίες",
+          "emptyDesc": "Όλες οι εργασίες βρίσκονται εντός χρονοδιαγράμματος."
+        },
+        "ownerReport": {
+          "title": "Αναφορά Κατάστασης Έργου",
+          "overallProgress": "Συνολική Πρόοδος Έργου",
+          "expectedCompletion": "Αναμενόμενη Ολοκλήρωση",
+          "daysRemaining": "Ημέρες Υπολοιπόμενες",
+          "milestonesTitle": "Ορόσημα",
+          "phasesTitle": "Φάσεις Κατασκευής",
+          "colTitle": "Τίτλος",
+          "colDate": "Ημερομηνία",
+          "colStatus": "Κατάσταση",
+          "colProgress": "Πρόοδος",
+          "colPhase": "Φάση",
+          "colPlannedEnd": "Λήξη Πλάνου",
+          "colCode": "Κωδικός",
+          "statusOnTrack": "Εντός Χρόνου",
+          "statusDelayed": "Καθυστερημένη",
+          "statusBlocked": "Μπλοκαρισμένη",
+          "statusCompleted": "Ολοκληρωμένη"
+        },
         "empty": {
           "noPhases": "Δεν υπάρχουν φάσεις κατασκευής",
           "noPhasesDesc": "Δημιουργήστε φάσεις στην προβολή Gantt για ανάλυση χρονοδιαγράμματος.",

@@ -142,13 +142,15 @@ generatePOItemId()           // 'poi_XXXXX' ← NEW (αν items σε subcollecti
 ```typescript
 // src/types/procurement/purchase-order.ts — NEW
 
-/** PO Status — Tier 2 Workflow */
+/** PO Status — 5-state workflow (Procore/Buildertrend pattern)
+ *  Invoice linking γίνεται ως action (linkedInvoiceIds[]), ΟΧΙ ως status.
+ *  "Delivered without invoice" εμφανίζεται ως KPI/filter στο dashboard.
+ */
 type PurchaseOrderStatus =
-  | 'draft'       // Δημιουργήθηκε, δεν στάλθηκε
-  | 'approved'    // Εγκρίθηκε (optional, for future multi-user)
+  | 'draft'       // Δημιουργήθηκε, δεν εγκρίθηκε ακόμα
+  | 'approved'    // Εγκρίθηκε από boss — έτοιμο για αποστολή
   | 'ordered'     // Στάλθηκε στον προμηθευτή
   | 'delivered'   // Παραλήφθηκε (πλήρως ή μερικώς)
-  | 'invoiced'    // Τιμολογήθηκε (linked to accounting invoice)
   | 'closed'      // Ολοκληρώθηκε
   | 'cancelled';  // Ακυρώθηκε
 
@@ -171,7 +173,7 @@ interface PurchaseOrder {
 
   // Financial Summary (computed, stored for query efficiency)
   subtotal: number;
-  taxRate: number;                  // Default: 24 (Greece FPA)
+  taxRate: 24 | 13 | 6 | 0;         // PO-level ΦΠΑ: 24% default, 0% ενδοκοινοτικές
   taxAmount: number;
   total: number;
 
@@ -201,7 +203,7 @@ interface PurchaseOrderItem {
   id: string;                       // 'poi_XXXXX'
   description: string;
   quantity: number;
-  unit: string;                     // 'τεμ', 'm²', 'kg', 'lt', etc.
+  unit: string;                     // Predefined dropdown + custom (see UNIT_OPTIONS)
   unitPrice: number;
   total: number;                    // quantity × unitPrice
 
@@ -215,36 +217,52 @@ interface PurchaseOrderItem {
 }
 ```
 
-### 4.2 Status State Machine
+### 4.2 Procurement Settings (Feature Flags)
+
+```typescript
+// Firestore: settings/{companyId}/modules/procurement
+interface ProcurementSettings {
+  requireSeparateApprover: boolean;    // false = self-approve OK (default)
+  autoApproveThreshold: number | null; // null = no auto-approve (default)
+}
+
+// Defaults (Phase A)
+const PROCUREMENT_DEFAULTS: ProcurementSettings = {
+  requireSeparateApprover: false,
+  autoApproveThreshold: null,
+};
+```
+
+### 4.3 Status State Machine
 
 ```
-                    ┌─── CANCELLED ───┐
-                    │                 │
-DRAFT ──→ APPROVED ──→ ORDERED ──→ DELIVERED ──→ INVOICED ──→ CLOSED
-  │         │           │              │            │
-  └─cancel──┘──cancel───┘──cancel──────┘            │
-                                                    └── CLOSED
+                    ┌──── CANCELLED ────┐
+                    │                   │
+DRAFT ──→ APPROVED ──→ ORDERED ──→ DELIVERED ──→ CLOSED
+  │         │           │              │
+  └─cancel──┘──cancel───┘──cancel──────┘
 ```
+
+**Απόφαση**: ✅ 5 states, χωρίς INVOICED (Γιώργος, 2026-03-28)
+- Invoice linking = action (`linkedInvoiceIds[]`), ΟΧΙ status
+- "Delivered χωρίς τιμολόγιο" = KPI/filter στο dashboard
+- 2-3 άτομα δημιουργούν POs → APPROVED step απαραίτητο
+
+**Approval Model**: ✅ Feature Flag (Γιώργος, 2026-03-28)
+- **Τώρα**: Self-approve επιτρέπεται (οικογενειακή επιχ., ρόλοι αλληλοεπικαλύπτονται)
+- **Αύριο**: Setting `requireSeparateApprover: true` → ο δημιουργός δεν εγκρίνει το δικό του
+- **Optional**: `autoApproveThreshold: number | null` → POs κάτω από ποσό = auto-approve
 
 **Allowed Transitions**:
 | From | To | Trigger |
 |------|----|---------|
-| draft | approved | User approves (or auto-approve for single-user) |
-| draft | cancelled | User cancels |
-| approved | ordered | User marks as sent |
-| approved | cancelled | User cancels |
-| ordered | delivered | User confirms delivery |
-| ordered | cancelled | User cancels (before delivery) |
-| delivered | invoiced | User links accounting invoice |
-| invoiced | closed | Auto (or manual close) |
-| delivered | closed | Manual close (without invoice link) |
-
-**Phase A**: Simplified (auto-approve for single-user):
-```
-DRAFT ──→ ORDERED ──→ DELIVERED ──→ CLOSED
-  │          │                      │
-  └─cancel───┘──────────────────────┘
-```
+| draft | approved | Boss εγκρίνει |
+| draft | cancelled | User ακυρώνει |
+| approved | ordered | User σημειώνει ως σταλμένο |
+| approved | cancelled | User ακυρώνει |
+| ordered | delivered | User επιβεβαιώνει παραλαβή |
+| ordered | cancelled | User ακυρώνει (πριν παραλαβή) |
+| delivered | closed | Manual close (με ή χωρίς linked invoice) |
 
 ### 4.3 File Structure
 
@@ -300,23 +318,17 @@ PURCHASE_ORDERS: 'purchase_orders',
 
 ### 4.5 Navigation Placement
 
+**Απόφαση**: ✅ **Standalone top-level module** (Γιώργος, 2026-03-28)
+
 ```
 Sidebar
 ├── ...existing items...
-├── Construction (HardHat icon)
-│   ├── Timeline & Gantt
-│   ├── BOQ / Measurements
-│   └── Procurement          ← NEW (displayOrder: TBD)
-```
-
-Ή ως top-level item:
-```
-├── Procurement (ShoppingCart / Package icon, displayOrder: 55)
+├── Procurement (ShoppingCart icon, displayOrder: 55)
 │   ├── Purchase Orders       /procurement
 │   └── Budget Overview       /procurement/budget
 ```
 
-**Απόφαση**: Συζήτηση με Γιώργο — εξαρτάται αν θέλουμε tight coupling με Construction ή standalone.
+**Σκεπτικό**: Enterprise pattern (Procore, Oracle Primavera, SAP). Procurement είναι cross-cutting domain (BOQ + Accounting + Contacts), όχι sub-feature του Construction. Επιτρέπει πρόσβαση σε CFO/λογιστή χωρίς να μπει σε Construction section.
 
 ---
 
@@ -428,7 +440,37 @@ Atomic increment via `FieldValue.increment(1)` → race-condition safe.
 
 ---
 
-## 8. DASHBOARD SPECIFICATIONS
+## 8. UNIT OF MEASURE — PREDEFINED LIST
+
+**Απόφαση**: ✅ Predefined dropdown + "Άλλο" (Γιώργος, 2026-03-28)
+**Pattern**: Procore/SAP — strict dropdown για consistency, extensible via custom entry.
+
+```typescript
+// src/config/procurement-units.ts
+const PROCUREMENT_UNIT_OPTIONS = [
+  { value: 'τεμ',  label: 'Τεμάχιο' },
+  { value: 'm',    label: 'Μέτρο' },
+  { value: 'm²',   label: 'Τετραγωνικό μέτρο' },
+  { value: 'm³',   label: 'Κυβικό μέτρο' },
+  { value: 'kg',   label: 'Κιλό' },
+  { value: 'ton',  label: 'Τόνος' },
+  { value: 'lt',   label: 'Λίτρο' },
+  { value: 'σακ',  label: 'Σακί' },
+  { value: 'κουτ', label: 'Κουτί' },
+  { value: 'παλ',  label: 'Παλέτα' },
+  { value: 'ρολ',  label: 'Ρολό' },
+  { value: 'ζεύγ', label: 'Ζεύγος' },
+  { value: 'δοχ',  label: 'Δοχείο' },
+  { value: 'σετ',  label: 'Σετ' },
+] as const;
+```
+
+- **"Άλλο"** option: free text input, αποθηκεύεται και γίνεται διαθέσιμο σε μελλοντικά POs
+- **Γιατί**: Aggregation/reports σπάνε αν "τεμ" vs "τεμάχια" vs "TEM" — strict dropdown = consistency
+
+---
+
+## 9. DASHBOARD SPECIFICATIONS
 
 ### 8.1 KPI Cards
 
@@ -604,8 +646,8 @@ match /purchase_order_counters/{counterId} {
 | Ερώτημα | Απόφαση | Σκεπτικό |
 |---------|---------|----------|
 | Items: embedded array ή subcollection? | Embedded array | PO items always read with PO. Max ~100 items. Array is simpler + faster |
-| Status: Tier 1 (4 states) ή Tier 2 (7 states)? | Tier 2 schema, Tier 1 UI | Schema supports full workflow, Phase A UI shows simplified transitions |
-| Navigation: under Construction ή standalone? | TBD — Γιώργος decides | Both patterns viable |
-| Approval workflow? | Auto-approve for single-user | Team has 1-5 people, multi-level approval is overkill |
-| PO per building ή per project? | Per project (buildingId optional) | POs often span multiple buildings in same project |
-| Tax handling? | Default 24% with override | Greece standard VAT, allow override for exempt suppliers |
+| Status: πόσα states; | ✅ 5 states (χωρίς INVOICED) | Procore/Buildertrend pattern. Invoice = action, όχι status. 2-3 users → approval required |
+| Navigation: under Construction ή standalone? | ✅ Standalone top-level (displayOrder: 55) | Enterprise pattern: Procore/SAP/Oracle — cross-cutting domain |
+| Approval workflow? | ✅ Feature Flag: self-approve τώρα, separate approver αύριο | Οικογενειακή επιχ., ρόλοι αλληλοεπικαλύπτονται. Settings-driven flexibility |
+| PO per building ή per project? | ✅ Per project (buildingId optional), πάντα 1 PO = 1 project | Γιώργος: κάθε PO ανήκει σε ένα project. Cross-project PO δεν χρειάζεται |
+| Tax handling? | ✅ ΦΠΑ σε επίπεδο PO, default 24%, dropdown: 24%/13%/6%/0% | Ενδοκοινοτικές παραγγελίες = 0%. Πάντα ίδιο ΦΠΑ σε όλο το PO |

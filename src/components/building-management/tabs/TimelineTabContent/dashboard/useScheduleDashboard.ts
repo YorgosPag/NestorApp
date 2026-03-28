@@ -28,6 +28,7 @@ import type {
   ScheduleVarianceRow,
   LookaheadRow,
   ScheduleKPIs,
+  DelayBreakdownDataPoint,
 } from './schedule-dashboard.types';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -198,6 +199,8 @@ interface UseScheduleDashboardParams {
 }
 
 interface UseScheduleDashboardReturn extends ScheduleDashboardData {
+  phases: ConstructionPhase[];
+  tasks: ConstructionTask[];
   lookAheadDays: number;
   setLookAheadDays: (days: number) => void;
   refresh: () => Promise<void>;
@@ -294,6 +297,28 @@ export function useScheduleDashboard({
     [tasks, phases, lookAheadDays],
   );
 
+  // ── Delay Breakdown ───────────────────────────────────────────────────
+  const delayBreakdownData = useMemo((): DelayBreakdownDataPoint[] => {
+    const points: DelayBreakdownDataPoint[] = [];
+    for (const phase of phases) {
+      const phaseTasks = tasks.filter(t => t.phaseId === phase.id);
+      const delayed = phaseTasks.filter(t => t.status === 'delayed').length;
+      const blocked = phaseTasks.filter(t => t.status === 'blocked').length;
+      const total = delayed + blocked;
+      if (total > 0) {
+        points.push({
+          phaseId: phase.id,
+          phaseName: phase.name,
+          phaseCode: phase.code,
+          delayed,
+          blocked,
+          total,
+        });
+      }
+    }
+    return points.sort((a, b) => b.total - a.total);
+  }, [phases, tasks]);
+
   // ── Refresh ────────────────────────────────────────────────────────────
   const refresh = useCallback(async () => {
     await reloadGantt();
@@ -309,6 +334,9 @@ export function useScheduleDashboard({
     sCurveData,
     varianceRows,
     lookaheadRows,
+    delayBreakdownData,
+    phases,
+    tasks,
     loading,
     boqLoading,
     lastUpdated,

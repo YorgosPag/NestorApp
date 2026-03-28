@@ -18,6 +18,7 @@ import {
   Tooltip,
   Legend,
   ReferenceLine,
+  Brush,
   ResponsiveContainer,
 } from 'recharts';
 import { ReportSection } from '@/components/reports/core/ReportSection';
@@ -74,11 +75,13 @@ function SCurveTooltip({ active, payload, label }: SCurveTooltipProps) {
 interface SCurveChartProps {
   data: SCurveDataPoint[];
   loading?: boolean;
+  /** Enable recharts Brush for zoom (Phase B). Shown only when data.length >= 6 */
+  enableBrush?: boolean;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────
 
-export function SCurveChart({ data, loading }: SCurveChartProps) {
+export function SCurveChart({ data, loading, enableBrush }: SCurveChartProps) {
   const { t } = useTranslation('building');
 
   const todayStr = useMemo(() => {
@@ -165,6 +168,15 @@ export function SCurveChart({ data, loading }: SCurveChartProps) {
               dot={false}
               activeDot={{ r: 4 }}
             />
+            {/* Brush zoom — Phase B (ADR-266) */}
+            {enableBrush && data.length >= 6 && (
+              <Brush
+                dataKey="date"
+                height={28}
+                stroke="hsl(var(--chart-1))"
+                tickFormatter={(v: string) => formatDateShort(v)}
+              />
+            )}
           </LineChart>
         </ResponsiveContainer>
       </div>

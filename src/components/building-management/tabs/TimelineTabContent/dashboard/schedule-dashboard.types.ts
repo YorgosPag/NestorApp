@@ -57,6 +57,20 @@ export interface ScheduleKPIs {
   totalTasks: number;
 }
 
+// ─── Delay Breakdown ────────────────────────────────────────────────
+
+export interface DelayBreakdownDataPoint {
+  phaseId: string;
+  phaseName: string;
+  phaseCode: string;
+  /** Tasks with status === 'delayed' */
+  delayed: number;
+  /** Tasks with status === 'blocked' */
+  blocked: number;
+  /** delayed + blocked */
+  total: number;
+}
+
 // ─── Hook Return ─────────────────────────────────────────────────────────
 
 export interface ScheduleDashboardData {
@@ -64,6 +78,7 @@ export interface ScheduleDashboardData {
   sCurveData: SCurveDataPoint[];
   varianceRows: ScheduleVarianceRow[];
   lookaheadRows: LookaheadRow[];
+  delayBreakdownData: DelayBreakdownDataPoint[];
   loading: boolean;
   boqLoading: boolean;
   lastUpdated: Date | null;

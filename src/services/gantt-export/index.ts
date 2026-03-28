@@ -9,3 +9,5 @@ export type { GanttExportFormat, GanttExportOptions, GanttTaskExportRow } from '
 export { exportGanttToPDF } from './gantt-pdf-exporter';
 export { exportGanttAsImage } from './gantt-image-exporter';
 export { exportGanttToExcel } from './gantt-excel-exporter';
+export { exportGanttTableToPdf } from './gantt-table-pdf-exporter';
+export type { GanttTablePdfConfig } from './gantt-table-pdf-exporter';

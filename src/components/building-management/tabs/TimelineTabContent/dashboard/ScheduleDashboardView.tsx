@@ -9,7 +9,7 @@
  */
 
 import { useCallback, useState } from 'react';
-import { RefreshCw, Download, FileDown, FileSpreadsheet } from 'lucide-react';
+import { RefreshCw, Download, FileDown, FileSpreadsheet, UserCheck, Table2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -33,6 +33,7 @@ import { SCurveChart } from './SCurveChart';
 import { ScheduleVarianceTable } from './ScheduleVarianceTable';
 import { LookaheadTable } from './LookaheadTable';
 import { GanttSnapshotCard } from './GanttSnapshotCard';
+import { DelayBreakdownChart } from './DelayBreakdownChart';
 import { ReportEmptyState } from '@/components/reports/core/ReportEmptyState';
 
 // ─── Props ───────────────────────────────────────────────────────────────
@@ -63,6 +64,9 @@ export function ScheduleDashboardView({
     sCurveData,
     varianceRows,
     lookaheadRows,
+    delayBreakdownData,
+    phases,
+    tasks,
     loading,
     boqLoading,
     lastUpdated,
@@ -82,15 +86,18 @@ export function ScheduleDashboardView({
   }, [refresh]);
 
   // ── Export handler ─────────────────────────────────────────────────────
-  const handleExport = useCallback(async (format: 'pdf' | 'excel') => {
+  type ExportFormat = 'pdf' | 'excel' | 'owner-pdf' | 'gantt-table';
+
+  const handleExport = useCallback(async (format: ExportFormat) => {
     setIsExporting(true);
+    const dateStr = new Date().toISOString().slice(0, 10);
     try {
       if (format === 'pdf') {
         const { exportReportToPdf } = await import('@/services/report-engine/report-pdf-exporter');
         await exportReportToPdf({
           title: `${t('tabs.timeline.dashboard.title')} — ${buildingName}`,
           orientation: 'landscape',
-          filename: `Schedule_Dashboard_${buildingName}_${new Date().toISOString().slice(0, 10)}.pdf`,
+          filename: `Schedule_Dashboard_${buildingName}_${dateStr}.pdf`,
           kpiCards: [
             { label: t('tabs.timeline.dashboard.kpis.overallProgress'), value: `${kpis.overallProgress}%`, color: [59, 130, 246] },
             { label: t('tabs.timeline.dashboard.kpis.spi'), value: kpis.spi.toFixed(2), color: [34, 197, 94] },
@@ -119,11 +126,11 @@ export function ScheduleDashboardView({
               ]),
           }],
         });
-      } else {
+      } else if (format === 'excel') {
         const { exportReportToExcel } = await import('@/services/report-engine/report-excel-exporter');
         await exportReportToExcel({
           title: `${t('tabs.timeline.dashboard.title')} — ${buildingName}`,
-          filename: `Schedule_Dashboard_${buildingName}_${new Date().toISOString().slice(0, 10)}.xlsx`,
+          filename: `Schedule_Dashboard_${buildingName}_${dateStr}.xlsx`,
           summaryRows: [
             { metric: t('tabs.timeline.dashboard.kpis.overallProgress'), value: kpis.overallProgress, format: 'percentage' },
             { metric: t('tabs.timeline.dashboard.kpis.spi'), value: kpis.spi, format: 'number' },
@@ -149,11 +156,78 @@ export function ScheduleDashboardView({
               progress: r.progress / 100,
             })),
         });
+      } else if (format === 'owner-pdf') {
+        const { exportOwnerReportToPdf } = await import('@/services/report-engine/owner-report-pdf-exporter');
+        const ends = phases.map(p => new Date(p.plannedEndDate).getTime());
+        const latestEnd = ends.length > 0 ? new Date(Math.max(...ends)).toISOString() : new Date().toISOString();
+        const daysRem = ends.length > 0 ? Math.max(0, Math.ceil((Math.max(...ends) - Date.now()) / 86_400_000)) : 0;
+
+        await exportOwnerReportToPdf({
+          buildingName,
+          reportDate: new Date(),
+          overallProgress: kpis.overallProgress,
+          expectedProgress: kpis.expectedProgress,
+          expectedCompletionDate: latestEnd,
+          daysRemaining: daysRem,
+          phases: phases.map(p => ({
+            name: p.name,
+            code: p.code,
+            progress: p.progress,
+            status: p.status,
+            plannedEnd: p.plannedEndDate,
+          })),
+          milestones: milestones.map(m => ({
+            title: m.title,
+            date: m.date,
+            status: m.status,
+            progress: m.progress,
+          })),
+          filename: `Owner_Report_${buildingName}_${dateStr}.pdf`,
+          statusLabels: {
+            planning: t('tabs.timeline.dashboard.ownerReport.statusOnTrack'),
+            notStarted: t('tabs.timeline.dashboard.ownerReport.statusOnTrack'),
+            inProgress: t('tabs.timeline.dashboard.ownerReport.statusOnTrack'),
+            completed: t('tabs.timeline.dashboard.ownerReport.statusCompleted'),
+            delayed: t('tabs.timeline.dashboard.ownerReport.statusDelayed'),
+            blocked: t('tabs.timeline.dashboard.ownerReport.statusBlocked'),
+          },
+          labels: {
+            title: t('tabs.timeline.dashboard.ownerReport.title'),
+            overallProgress: t('tabs.timeline.dashboard.ownerReport.overallProgress'),
+            expectedCompletion: t('tabs.timeline.dashboard.ownerReport.expectedCompletion'),
+            daysRemaining: t('tabs.timeline.dashboard.ownerReport.daysRemaining'),
+            milestonesTitle: t('tabs.timeline.dashboard.ownerReport.milestonesTitle'),
+            phasesTitle: t('tabs.timeline.dashboard.ownerReport.phasesTitle'),
+            colTitle: t('tabs.timeline.dashboard.ownerReport.colTitle'),
+            colDate: t('tabs.timeline.dashboard.ownerReport.colDate'),
+            colStatus: t('tabs.timeline.dashboard.ownerReport.colStatus'),
+            colProgress: t('tabs.timeline.dashboard.ownerReport.colProgress'),
+            colPhase: t('tabs.timeline.dashboard.ownerReport.colPhase'),
+            colPlannedEnd: t('tabs.timeline.dashboard.ownerReport.colPlannedEnd'),
+            colCode: t('tabs.timeline.dashboard.ownerReport.colCode'),
+          },
+        });
+      } else if (format === 'gantt-table') {
+        const { exportGanttTableToPdf } = await import('@/services/gantt-export/gantt-table-pdf-exporter');
+        await exportGanttTableToPdf({
+          buildingName,
+          phases,
+          tasks,
+          filename: `Gantt_Table_${buildingName}_${dateStr}.pdf`,
+          statusLabels: {
+            planning: t('tabs.timeline.dashboard.ownerReport.statusOnTrack'),
+            notStarted: t('tabs.timeline.dashboard.ownerReport.statusOnTrack'),
+            inProgress: t('tabs.timeline.dashboard.ownerReport.statusOnTrack'),
+            completed: t('tabs.timeline.dashboard.ownerReport.statusCompleted'),
+            delayed: t('tabs.timeline.dashboard.ownerReport.statusDelayed'),
+            blocked: t('tabs.timeline.dashboard.ownerReport.statusBlocked'),
+          },
+        });
       }
     } finally {
       setIsExporting(false);
     }
-  }, [kpis, varianceRows, buildingName, t]);
+  }, [kpis, varianceRows, phases, tasks, milestones, buildingName, t]);
 
   // ── Global empty state ─────────────────────────────────────────────────
   if (!loading && kpis.totalPhases === 0) {
@@ -211,6 +285,14 @@ export function ScheduleDashboardView({
                 <FileSpreadsheet className={cn(iconSizes.sm, 'mr-2')} />
                 {t('tabs.timeline.dashboard.exportExcel')}
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('owner-pdf')}>
+                <UserCheck className={cn(iconSizes.sm, 'mr-2')} />
+                {t('tabs.timeline.dashboard.exportOwnerPdf')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('gantt-table')}>
+                <Table2 className={cn(iconSizes.sm, 'mr-2')} />
+                {t('tabs.timeline.dashboard.exportGanttTable')}
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -226,7 +308,8 @@ export function ScheduleDashboardView({
       ) : (
         <>
           <ScheduleOverviewKPIs kpis={kpis} loading={boqLoading} />
-          <SCurveChart data={sCurveData} loading={boqLoading} />
+          <SCurveChart data={sCurveData} loading={boqLoading} enableBrush />
+          <DelayBreakdownChart data={delayBreakdownData} loading={boqLoading} />
           <ScheduleVarianceTable rows={varianceRows} />
           <LookaheadTable
             rows={lookaheadRows}

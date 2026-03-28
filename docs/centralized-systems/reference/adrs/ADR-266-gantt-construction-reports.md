@@ -1,6 +1,6 @@
 # ADR-266: Gantt & Construction Schedule Reports
 
-**Status**: PHASE A IMPLEMENTED
+**Status**: PHASE B IMPLEMENTED
 **Date**: 2026-03-28
 **Author**: Claude (Research Agents × 4)
 **Related ADRs**: ADR-034 (Gantt Chart), ADR-265 (Enterprise Reports System), ADR-175 (BOQ/Quantity Surveying)
@@ -10,6 +10,7 @@
 |------|---------|
 | 2026-03-28 | Initial research & architecture — DRAFT for review |
 | 2026-03-28 | **Phase A IMPLEMENTED**: 8 new files, 7 modified — Dashboard view toggle, KPIs, S-Curve, Variance Table, Lookahead, Export (PDF/Excel), i18n (el+en) |
+| 2026-03-28 | **Phase B IMPLEMENTED**: 3 new files, 7 modified — DelayBreakdownChart, Owner Report PDF, Gantt Table PDF, S-Curve Brush zoom, 4 export options |
 
 ---
 
@@ -477,15 +478,29 @@ Dashboard → [Export ▼]
 11. Refresh button + "Last updated" timestamp
 12. Export: PDF + Excel via existing `exportReportToPdf()` / `exportReportToExcel()`
 
-### Phase B: Enhanced Analysis + Owner Report
-**Εκτίμηση**: ~6 αρχεία, ~900 LOC
+### Phase B: Enhanced Analysis + Owner Report ✅ IMPLEMENTED
+**Εκτίμηση**: ~6 αρχεία, ~900 LOC → **Actual: 3 new + 7 modified, ~750 LOC**
 
-1. `DelayBreakdownChart` — Delays ανά phase
-2. `exportOwnerReportToPdf()` — Simplified 1-2 page PDF for building owner
-3. Server-side Gantt table PDF (jspdf-autotable, χωρίς DOM)
-4. EVM Trend sparklines (SPI/CPI over time — needs monthly snapshots)
-5. Procurement contextual badges in Lookahead (after ADR-267)
-6. Chart zoom via recharts `<Brush>` component
+1. ✅ `DelayBreakdownChart` — Stacked bar chart: delayed + blocked tasks ανά phase
+2. ✅ `exportOwnerReportToPdf()` — Simplified 1-2 page portrait PDF for building owner
+3. ✅ `exportGanttTableToPdf()` — Server-side Gantt table PDF (jspdf-autotable, χωρίς DOM)
+4. ⏭️ EVM Trend sparklines — **Moved to Phase C** (needs monthly snapshot collection)
+5. ⏭️ Procurement contextual badges — **Moved to Phase C** (ADR-267 procurement module not yet built)
+6. ✅ S-Curve Brush zoom — `enableBrush` prop, renders `<Brush>` when data.length ≥ 6
+
+**New files:**
+- `src/components/building-management/tabs/TimelineTabContent/dashboard/DelayBreakdownChart.tsx` (144 LOC)
+- `src/services/report-engine/owner-report-pdf-exporter.ts` (315 LOC)
+- `src/services/gantt-export/gantt-table-pdf-exporter.ts` (208 LOC)
+
+**Modified files:**
+- `schedule-dashboard.types.ts` (+DelayBreakdownDataPoint)
+- `useScheduleDashboard.ts` (+delay computation, expose phases/tasks)
+- `SCurveChart.tsx` (+Brush import, enableBrush prop)
+- `ScheduleDashboardView.tsx` (+DelayBreakdownChart, +3 export options in dropdown)
+- `gantt-export/index.ts` (+re-export)
+- `dashboard/index.ts` (+re-export)
+- i18n en/el building.json (+30 keys each)
 
 ### Phase C: Advanced (Μελλοντικά)
 **Εκτίμηση**: ~1.500 LOC, αλγοριθμική πολυπλοκότητα

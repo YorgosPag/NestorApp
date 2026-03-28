@@ -1276,6 +1276,35 @@
           "desc": "View interactive Gantt chart and export",
           "cta": "View Gantt & Export"
         },
+        "exportOwnerPdf": "Owner Report (PDF)",
+        "exportGanttTable": "Gantt Table (PDF)",
+        "delayBreakdown": {
+          "title": "Delay Breakdown by Phase",
+          "delayed": "Delayed",
+          "blocked": "Blocked",
+          "tasks": "tasks",
+          "empty": "No delayed or blocked tasks",
+          "emptyDesc": "All tasks are on schedule."
+        },
+        "ownerReport": {
+          "title": "Project Status Report",
+          "overallProgress": "Overall Project Progress",
+          "expectedCompletion": "Expected Completion",
+          "daysRemaining": "Days Remaining",
+          "milestonesTitle": "Milestones",
+          "phasesTitle": "Construction Phases",
+          "colTitle": "Title",
+          "colDate": "Date",
+          "colStatus": "Status",
+          "colProgress": "Progress",
+          "colPhase": "Phase",
+          "colPlannedEnd": "Planned End",
+          "colCode": "Code",
+          "statusOnTrack": "On Track",
+          "statusDelayed": "Delayed",
+          "statusBlocked": "Blocked",
+          "statusCompleted": "Completed"
+        },
         "empty": {
           "noPhases": "No construction phases defined",
           "noPhasesDesc": "Create phases in the Gantt view to see schedule analytics.",
