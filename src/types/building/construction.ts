@@ -23,6 +23,20 @@ export type ConstructionTaskStatus =
   | 'delayed'
   | 'blocked';
 
+// ─── Delay Reason (SSoT — ADR-266 Phase C) ─────────────────────────────
+
+/** Single source of truth for delay/block reason categories.
+ *  Runtime-iterable + compile-time typed. Add new reasons HERE only. */
+export const DELAY_REASONS = [
+  'weather',
+  'materials',
+  'permits',
+  'subcontractor',
+  'other',
+] as const;
+
+export type DelayReason = (typeof DELAY_REASONS)[number];
+
 // ─── Core Entities ───────────────────────────────────────────────────────
 
 export interface ConstructionPhase {
@@ -40,6 +54,10 @@ export interface ConstructionPhase {
   progress: number;                // 0-100
   barColor?: string;               // Custom hex color for Gantt bar (#RRGGBB)
   description?: string;
+  /** Reason for delay/block — set when status is 'delayed' or 'blocked', null otherwise */
+  delayReason?: DelayReason | null;
+  /** Free-text notes about the delay/block */
+  delayNote?: string | null;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: string;
@@ -63,6 +81,10 @@ export interface ConstructionTask {
   dependencies?: string[];         // Array of task IDs
   barColor?: string;               // Custom hex color for Gantt bar (#RRGGBB)
   description?: string;
+  /** Reason for delay/block — set when status is 'delayed' or 'blocked', null otherwise */
+  delayReason?: DelayReason | null;
+  /** Free-text notes about the delay/block */
+  delayNote?: string | null;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: string;
@@ -93,6 +115,8 @@ export interface ConstructionPhaseUpdatePayload {
   progress?: number;
   barColor?: string;
   description?: string;
+  delayReason?: DelayReason | null;
+  delayNote?: string | null;
 }
 
 export interface ConstructionTaskCreatePayload {
@@ -120,6 +144,8 @@ export interface ConstructionTaskUpdatePayload {
   barColor?: string;
   dependencies?: string[];
   description?: string;
+  delayReason?: DelayReason | null;
+  delayNote?: string | null;
 }
 
 // ─── API Response Types ──────────────────────────────────────────────────

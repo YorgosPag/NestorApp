@@ -6,7 +6,7 @@
  * client-side from existing ConstructionPhase/Task/BOQ data.
  */
 
-import type { ConstructionPhaseStatus, ConstructionTaskStatus } from '@/types/building/construction';
+import type { ConstructionPhaseStatus, ConstructionTaskStatus, DelayReason } from '@/types/building/construction';
 import type { RAGStatus } from '@/components/reports/core/ReportTrafficLight';
 import type { SCurveDataPoint } from '@/services/report-engine/evm-calculator';
 
@@ -69,6 +69,8 @@ export interface DelayBreakdownDataPoint {
   blocked: number;
   /** delayed + blocked */
   total: number;
+  /** Per-reason breakdown for delayed+blocked combined (ADR-266 Phase C) */
+  byReason: Record<DelayReason | 'unspecified', number>;
 }
 
 // ─── Hook Return ─────────────────────────────────────────────────────────

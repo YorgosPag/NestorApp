@@ -2,12 +2,14 @@
 
 /**
  * @module DelayBreakdownChart
- * @enterprise ADR-266 Phase B — Stacked bar chart: delayed + blocked tasks per phase
+ * @enterprise ADR-266 Phase C — Stacked bar chart: delay reasons per phase
  *
- * Aggregates task status by phase. Shows only phases with at least 1 delayed/blocked task.
- * Colors from design system — no hardcoded hex.
+ * Shows per-reason breakdown (weather, materials, permits, subcontractor, other, unspecified).
+ * Colors from design system CSS variables — no hardcoded hex.
+ * Reason keys derive from DELAY_REASONS SSoT array.
  */
 
+import { useMemo } from 'react';
 import {
   BarChart,
   Bar,
@@ -22,7 +24,21 @@ import { ReportSection } from '@/components/reports/core/ReportSection';
 import { ReportEmptyState } from '@/components/reports/core/ReportEmptyState';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
+import { DELAY_REASONS } from '@/types/building/construction';
 import type { DelayBreakdownDataPoint } from './schedule-dashboard.types';
+
+// ─── Reason Chart Config (SSoT — keys from DELAY_REASONS) ──────────────
+
+const REASON_KEYS = [...DELAY_REASONS, 'unspecified'] as const;
+
+const REASON_COLORS: Record<string, string> = {
+  weather: 'hsl(var(--chart-1))',
+  materials: 'hsl(var(--chart-2))',
+  permits: 'hsl(var(--chart-3))',
+  subcontractor: 'hsl(var(--chart-4))',
+  other: 'hsl(var(--chart-5))',
+  unspecified: 'hsl(var(--muted-foreground))',
+};
 
 // ─── Custom Tooltip ──────────────────────────────────────────────────────
 
@@ -30,9 +46,10 @@ interface TooltipPayloadItem {
   name: string;
   value: number;
   color: string;
+  dataKey: string;
 }
 
-interface DelayTooltipProps {
+interface ReasonTooltipProps {
   active?: boolean;
   payload?: TooltipPayloadItem[];
   label?: string;
@@ -40,22 +57,20 @@ interface DelayTooltipProps {
   t: (key: string) => string;
 }
 
-function DelayTooltip({ active, payload, label, labelMap, t }: DelayTooltipProps) {
+function ReasonTooltip({ active, payload, label, labelMap, t }: ReasonTooltipProps) {
   if (!active || !payload?.length) return null;
 
   const phaseName = labelMap.get(label ?? '') ?? label;
-  const delayed = payload.find(p => p.name === 'delayed')?.value ?? 0;
-  const blocked = payload.find(p => p.name === 'blocked')?.value ?? 0;
+  const nonZeroEntries = payload.filter(p => p.value > 0);
 
   return (
     <div className="rounded-md border bg-popover p-3 shadow-md text-sm">
       <p className="font-medium mb-1.5">{phaseName}</p>
-      <p className="text-amber-500">
-        {t('tabs.timeline.dashboard.delayBreakdown.delayed')}: {delayed} {t('tabs.timeline.dashboard.delayBreakdown.tasks')}
-      </p>
-      <p className="text-destructive">
-        {t('tabs.timeline.dashboard.delayBreakdown.blocked')}: {blocked} {t('tabs.timeline.dashboard.delayBreakdown.tasks')}
-      </p>
+      {nonZeroEntries.map((entry) => (
+        <p key={entry.dataKey} style={{ color: entry.color }}>
+          {entry.name}: {entry.value} {t('tabs.timeline.dashboard.delayBreakdown.tasks')}
+        </p>
+      ))}
     </div>
   );
 }
@@ -72,7 +87,19 @@ interface DelayBreakdownChartProps {
 export function DelayBreakdownChart({ data, loading }: DelayBreakdownChartProps) {
   const { t } = useTranslation('building');
 
-  const labelMap = new Map(data.map(d => [d.phaseCode, d.phaseName]));
+  const labelMap = useMemo(
+    () => new Map(data.map(d => [d.phaseCode, d.phaseName])),
+    [data],
+  );
+
+  // Flatten byReason into top-level keys for Recharts
+  const chartData = useMemo(
+    () => data.map(d => ({
+      phaseCode: d.phaseCode,
+      ...d.byReason,
+    })),
+    [data],
+  );
 
   if (!loading && data.length === 0) {
     return (
@@ -88,6 +115,8 @@ export function DelayBreakdownChart({ data, loading }: DelayBreakdownChartProps)
     );
   }
 
+  const rotateLabels = data.length > 6;
+
   return (
     <ReportSection
       title={t('tabs.timeline.dashboard.delayBreakdown.title')}
@@ -96,7 +125,7 @@ export function DelayBreakdownChart({ data, loading }: DelayBreakdownChartProps)
       <div className="h-[300px] w-full sm:h-[350px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
-            data={data}
+            data={chartData}
             margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
@@ -104,9 +133,9 @@ export function DelayBreakdownChart({ data, loading }: DelayBreakdownChartProps)
               dataKey="phaseCode"
               className="text-xs"
               interval={0}
-              angle={data.length > 6 ? -45 : 0}
-              textAnchor={data.length > 6 ? 'end' : 'middle'}
-              height={data.length > 6 ? 60 : 30}
+              angle={rotateLabels ? -45 : 0}
+              textAnchor={rotateLabels ? 'end' : 'middle'}
+              height={rotateLabels ? 60 : 30}
             />
             <YAxis
               allowDecimals={false}
@@ -115,7 +144,7 @@ export function DelayBreakdownChart({ data, loading }: DelayBreakdownChartProps)
             />
             <Tooltip
               content={
-                <DelayTooltip
+                <ReasonTooltip
                   labelMap={labelMap}
                   t={t}
                 />
@@ -123,20 +152,16 @@ export function DelayBreakdownChart({ data, loading }: DelayBreakdownChartProps)
             />
             <Legend />
 
-            <Bar
-              dataKey="delayed"
-              name={t('tabs.timeline.dashboard.delayBreakdown.delayed')}
-              stackId="delays"
-              fill="hsl(var(--chart-4))"
-              radius={[0, 0, 0, 0]}
-            />
-            <Bar
-              dataKey="blocked"
-              name={t('tabs.timeline.dashboard.delayBreakdown.blocked')}
-              stackId="delays"
-              fill="hsl(var(--destructive))"
-              radius={[4, 4, 0, 0]}
-            />
+            {REASON_KEYS.map((reason, idx) => (
+              <Bar
+                key={reason}
+                dataKey={reason}
+                name={t(`tabs.timeline.dashboard.delayBreakdown.${reason}`)}
+                stackId="reasons"
+                fill={REASON_COLORS[reason]}
+                radius={idx === REASON_KEYS.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+              />
+            ))}
           </BarChart>
         </ResponsiveContainer>
       </div>

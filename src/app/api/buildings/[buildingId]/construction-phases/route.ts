@@ -7,33 +7,21 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { FieldValue } from 'firebase-admin/firestore';
-import type {
-  ConstructionPhase,
-  ConstructionTask,
-} from '@/types/building/construction';
+import type { ConstructionPhase, ConstructionTask } from '@/types/building/construction';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeToISO } from '@/lib/date-local';
-import { generateConstructionPhaseId, generateConstructionTaskId } from '@/services/enterprise-id.service';
+import {
+  handleCreate,
+  handleDelete,
+  type ConstructionPhasesGetResponse,
+  type ConstructionMutationResponse,
+  type CreatePayload,
+  type UpdatePayload,
+} from './_helpers';
 
 const logger = createModuleLogger('ConstructionPhasesRoute');
 
-// ─── Response Types ──────────────────────────────────────────────────────
-
-interface ConstructionPhasesGetResponse {
-  success: boolean;
-  phases: ConstructionPhase[];
-  tasks: ConstructionTask[];
-  buildingId: string;
-}
-
-interface ConstructionMutationResponse {
-  success: boolean;
-  id: string;
-  type: 'phase' | 'task';
-  cascadedTasks?: number;
-}
-
-// ADR-217: firestoreTimestampToISO replaced by centralized normalizeToISO from @/lib/date-local
+// ADR-217: firestoreTimestampToISO replaced by centralised normalizeToISO from @/lib/date-local
 
 // =============================================================================
 // GET — Load construction phases + tasks for a building
@@ -54,14 +42,12 @@ export async function GET(
         } as ConstructionPhasesGetResponse);
       }
 
-      // Tenant isolation: verify building belongs to user's company
       await requireBuildingInTenant({
         ctx,
         buildingId,
         path: `/api/buildings/${buildingId}/construction-phases`,
       });
 
-      // Fetch phases ordered by 'order' field
       const phasesSnapshot = await adminDb
         .collection(COLLECTIONS.CONSTRUCTION_PHASES)
         .where(FIELDS.BUILDING_ID, '==', buildingId)
@@ -85,6 +71,8 @@ export async function GET(
           progress: data.progress ?? 0,
           barColor: data.barColor,
           description: data.description,
+          delayReason: data.delayReason ?? null,
+          delayNote: data.delayNote ?? null,
           createdAt: normalizeToISO(data.createdAt) ?? undefined,
           updatedAt: normalizeToISO(data.updatedAt) ?? undefined,
           createdBy: data.createdBy,
@@ -92,7 +80,6 @@ export async function GET(
         };
       });
 
-      // Fetch tasks ordered by 'order' field
       const tasksSnapshot = await adminDb
         .collection(COLLECTIONS.CONSTRUCTION_TASKS)
         .where(FIELDS.BUILDING_ID, '==', buildingId)
@@ -118,6 +105,8 @@ export async function GET(
           dependencies: data.dependencies ?? [],
           barColor: data.barColor,
           description: data.description,
+          delayReason: data.delayReason ?? null,
+          delayNote: data.delayNote ?? null,
           createdAt: normalizeToISO(data.createdAt) ?? undefined,
           updatedAt: normalizeToISO(data.updatedAt) ?? undefined,
           createdBy: data.createdBy,
@@ -128,10 +117,7 @@ export async function GET(
       logger.info('[Construction] Loaded phases and tasks for building', { phasesCount: phases.length, tasksCount: tasks.length, buildingId });
 
       return NextResponse.json({
-        success: true,
-        phases,
-        tasks,
-        buildingId,
+        success: true, phases, tasks, buildingId,
       } as ConstructionPhasesGetResponse);
     },
     { permissions: 'buildings:buildings:view' }
@@ -141,21 +127,8 @@ export async function GET(
 }
 
 // =============================================================================
-// POST — Create a construction phase or task
+// POST — Create a construction phase or task (delegated to _helpers)
 // =============================================================================
-
-interface CreatePayload {
-  type: 'phase' | 'task';
-  name: string;
-  code?: string;
-  order?: number;
-  status?: string;
-  plannedStartDate: string;
-  plannedEndDate: string;
-  description?: string;
-  phaseId?: string;
-  dependencies?: string[];
-}
 
 export async function POST(
   request: NextRequest,
@@ -164,90 +137,9 @@ export async function POST(
   const { buildingId } = await segmentData.params;
 
   const handler = withStandardRateLimit(withAuth<ConstructionMutationResponse>(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      const adminDb = getAdminFirestore();
-      if (!adminDb) {
-        throw new ApiError(503, 'Database unavailable');
-      }
-
-      // Tenant isolation
-      await requireBuildingInTenant({
-        ctx,
-        buildingId,
-        path: `/api/buildings/${buildingId}/construction-phases`,
-      });
-
+    async (req: NextRequest, ctx: AuthContext) => {
       const body: CreatePayload = await req.json();
-      const { type, name, plannedStartDate, plannedEndDate } = body;
-
-      // Validation
-      if (!name || !plannedStartDate || !plannedEndDate) {
-        throw new ApiError(400, 'name, plannedStartDate, and plannedEndDate are required');
-      }
-
-      if (type === 'task' && !body.phaseId) {
-        throw new ApiError(400, 'phaseId is required for tasks');
-      }
-
-      const collection = type === 'task'
-        ? COLLECTIONS.CONSTRUCTION_TASKS
-        : COLLECTIONS.CONSTRUCTION_PHASES;
-
-      // Auto-generate code if not provided
-      const existingCount = await adminDb
-        .collection(collection)
-        .where(FIELDS.BUILDING_ID, '==', buildingId)
-        .count()
-        .get();
-
-      const nextNumber = (existingCount.data().count ?? 0) + 1;
-      const prefix = type === 'task' ? 'TSK' : 'PH';
-      const code = body.code || `${prefix}-${String(nextNumber).padStart(3, '0')}`;
-
-      const docData: Record<string, unknown> = {
-        buildingId,
-        companyId: ctx.companyId,
-        name,
-        code,
-        order: body.order ?? nextNumber,
-        status: body.status ?? (type === 'task' ? 'notStarted' : 'planning'),
-        plannedStartDate,
-        plannedEndDate,
-        progress: 0,
-        description: body.description ?? '',
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-        createdBy: ctx.uid,
-      };
-
-      // Task-specific fields
-      if (type === 'task') {
-        docData.phaseId = body.phaseId;
-        docData.dependencies = body.dependencies ?? [];
-      }
-
-      // 🏢 ENTERPRISE: setDoc + enterprise ID (SOS N.6)
-      const enterpriseId = type === 'task'
-        ? generateConstructionTaskId()
-        : generateConstructionPhaseId();
-      const docRef = adminDb.collection(collection).doc(enterpriseId);
-      await docRef.set(docData);
-
-      logger.info('[Construction] Created entity for building', { type, id: enterpriseId, code, buildingId });
-
-      await logAuditEvent(ctx, 'data_created', buildingId, 'building', {
-        newValue: {
-          type: 'building_update',
-          value: { id: enterpriseId, code, name, entityType: `construction_${type}` },
-        },
-        metadata: { reason: `Construction ${type} created` },
-      });
-
-      return NextResponse.json({
-        success: true,
-        id: enterpriseId,
-        type,
-      } as ConstructionMutationResponse);
+      return handleCreate(body, buildingId, ctx);
     },
     { permissions: 'buildings:buildings:update' }
   ));
@@ -259,12 +151,6 @@ export async function POST(
 // PATCH — Update a construction phase or task
 // =============================================================================
 
-interface UpdatePayload {
-  type: 'phase' | 'task';
-  id: string;
-  updates: Record<string, unknown>;
-}
-
 export async function PATCH(
   request: NextRequest,
   segmentData: { params: Promise<{ buildingId: string }> }
@@ -272,47 +158,27 @@ export async function PATCH(
   const { buildingId } = await segmentData.params;
 
   const handler = withStandardRateLimit(withAuth<ConstructionMutationResponse>(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+    async (req: NextRequest, ctx: AuthContext) => {
       const adminDb = getAdminFirestore();
-      if (!adminDb) {
-        throw new ApiError(503, 'Database unavailable');
-      }
+      if (!adminDb) throw new ApiError(503, 'Database unavailable');
 
-      // Tenant isolation
-      await requireBuildingInTenant({
-        ctx,
-        buildingId,
-        path: `/api/buildings/${buildingId}/construction-phases`,
-      });
+      await requireBuildingInTenant({ ctx, buildingId, path: `/api/buildings/${buildingId}/construction-phases` });
 
       const body: UpdatePayload = await req.json();
       const { type, id, updates } = body;
 
-      if (!id || !type) {
-        throw new ApiError(400, 'id and type are required');
-      }
+      if (!id || !type) throw new ApiError(400, 'id and type are required');
 
-      const collection = type === 'task'
-        ? COLLECTIONS.CONSTRUCTION_TASKS
-        : COLLECTIONS.CONSTRUCTION_PHASES;
-
-      // Verify document exists and belongs to this building
+      const collection = type === 'task' ? COLLECTIONS.CONSTRUCTION_TASKS : COLLECTIONS.CONSTRUCTION_PHASES;
       const docRef = adminDb.collection(collection).doc(id);
       const docSnap = await docRef.get();
 
-      if (!docSnap.exists) {
-        throw new ApiError(404, `${type} not found`);
-      }
+      if (!docSnap.exists) throw new ApiError(404, `${type} not found`);
+      if (docSnap.data()?.buildingId !== buildingId) throw new ApiError(403, 'Document does not belong to this building');
 
-      const existingData = docSnap.data();
-      if (existingData?.buildingId !== buildingId) {
-        throw new ApiError(403, 'Document does not belong to this building');
-      }
-
-      // Sanitize updates: remove undefined values and system fields
       const allowedFields = type === 'task'
-        ? ['name', 'code', 'order', 'status', 'plannedStartDate', 'plannedEndDate', 'actualStartDate', 'actualEndDate', 'progress', 'dependencies', 'barColor', 'description', 'phaseId']
-        : ['name', 'code', 'order', 'status', 'plannedStartDate', 'plannedEndDate', 'actualStartDate', 'actualEndDate', 'progress', 'barColor', 'description'];
+        ? ['name', 'code', 'order', 'status', 'plannedStartDate', 'plannedEndDate', 'actualStartDate', 'actualEndDate', 'progress', 'dependencies', 'barColor', 'description', 'phaseId', 'delayReason', 'delayNote']
+        : ['name', 'code', 'order', 'status', 'plannedStartDate', 'plannedEndDate', 'actualStartDate', 'actualEndDate', 'progress', 'barColor', 'description', 'delayReason', 'delayNote'];
 
       const cleanUpdates: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(updates)) {
@@ -321,31 +187,20 @@ export async function PATCH(
         }
       }
 
-      if (Object.keys(cleanUpdates).length === 0) {
-        throw new ApiError(400, 'No valid fields to update');
-      }
+      if (Object.keys(cleanUpdates).length === 0) throw new ApiError(400, 'No valid fields to update');
 
-      // Add audit fields
       cleanUpdates.updatedAt = FieldValue.serverTimestamp();
       cleanUpdates.updatedBy = ctx.uid;
-
       await docRef.update(cleanUpdates);
 
       logger.info('[Construction] Updated entity for building', { type, id, buildingId, fields: Object.keys(cleanUpdates) });
 
       await logAuditEvent(ctx, 'data_updated', buildingId, 'building', {
-        newValue: {
-          type: 'building_update',
-          value: { id, fields: Object.keys(cleanUpdates), entityType: `construction_${type}` },
-        },
+        newValue: { type: 'building_update', value: { id, fields: Object.keys(cleanUpdates), entityType: `construction_${type}` } },
         metadata: { reason: `Construction ${type} updated` },
       });
 
-      return NextResponse.json({
-        success: true,
-        id,
-        type,
-      } as ConstructionMutationResponse);
+      return NextResponse.json({ success: true, id, type } as ConstructionMutationResponse);
     },
     { permissions: 'buildings:buildings:update' }
   ));
@@ -354,7 +209,7 @@ export async function PATCH(
 }
 
 // =============================================================================
-// DELETE — Delete a construction phase or task
+// DELETE — Delete a construction phase or task (delegated to _helpers)
 // =============================================================================
 
 export async function DELETE(
@@ -364,81 +219,8 @@ export async function DELETE(
   const { buildingId } = await segmentData.params;
 
   const handler = withStandardRateLimit(withAuth<ConstructionMutationResponse>(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      const adminDb = getAdminFirestore();
-      if (!adminDb) {
-        throw new ApiError(503, 'Database unavailable');
-      }
-
-      // Tenant isolation
-      await requireBuildingInTenant({
-        ctx,
-        buildingId,
-        path: `/api/buildings/${buildingId}/construction-phases`,
-      });
-
-      // Read from query params (DELETE doesn't support body in apiClient)
-      const { searchParams } = new URL(req.url);
-      const type = searchParams.get('type') as 'phase' | 'task' | null;
-      const id = searchParams.get('id');
-
-      if (!id || !type) {
-        throw new ApiError(400, 'id and type query params are required');
-      }
-
-      const collection = type === 'task'
-        ? COLLECTIONS.CONSTRUCTION_TASKS
-        : COLLECTIONS.CONSTRUCTION_PHASES;
-
-      // Verify document exists and belongs to this building
-      const docRef = adminDb.collection(collection).doc(id);
-      const docSnap = await docRef.get();
-
-      if (!docSnap.exists) {
-        throw new ApiError(404, `${type} not found`);
-      }
-
-      const existingData = docSnap.data();
-      if (existingData?.buildingId !== buildingId) {
-        throw new ApiError(403, 'Document does not belong to this building');
-      }
-
-      let cascadedTasks = 0;
-
-      // If deleting a phase, also delete all its tasks
-      if (type === 'phase') {
-        const childTasks = await adminDb
-          .collection(COLLECTIONS.CONSTRUCTION_TASKS)
-          .where('phaseId', '==', id)
-          .get();
-
-        if (!childTasks.empty) {
-          const batch = adminDb.batch();
-          childTasks.docs.forEach((taskDoc) => batch.delete(taskDoc.ref));
-          await batch.commit();
-          cascadedTasks = childTasks.size;
-          logger.info('[Construction] Cascade-deleted tasks for phase', { cascadedTasks, phaseId: id });
-        }
-      }
-
-      await docRef.delete();
-
-      logger.info('[Construction] Deleted entity from building', { type, id, buildingId });
-
-      await logAuditEvent(ctx, 'data_deleted', buildingId, 'building', {
-        newValue: {
-          type: 'building_update',
-          value: { id, cascadedTasks, entityType: `construction_${type}` },
-        },
-        metadata: { reason: `Construction ${type} deleted` },
-      });
-
-      return NextResponse.json({
-        success: true,
-        id,
-        type,
-        cascadedTasks: type === 'phase' ? cascadedTasks : undefined,
-      } as ConstructionMutationResponse);
+    async (req: NextRequest, ctx: AuthContext) => {
+      return handleDelete(req.url, buildingId, ctx);
     },
     { permissions: 'buildings:buildings:update' }
   ));

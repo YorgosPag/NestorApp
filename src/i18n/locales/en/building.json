@@ -1284,7 +1284,13 @@
           "blocked": "Blocked",
           "tasks": "tasks",
           "empty": "No delayed or blocked tasks",
-          "emptyDesc": "All tasks are on schedule."
+          "emptyDesc": "All tasks are on schedule.",
+          "weather": "Weather",
+          "materials": "Materials",
+          "permits": "Permits",
+          "subcontractor": "Subcontractor",
+          "other": "Other",
+          "unspecified": "Unspecified"
         },
         "ownerReport": {
           "title": "Project Status Report",
@@ -1433,7 +1439,18 @@
           "phase": "Phase",
           "selectPhase": "Select phase...",
           "cancel": "Cancel",
-          "save": "Save"
+          "save": "Save",
+          "delayReason": "Delay Reason",
+          "delayReasonPlaceholder": "Select reason...",
+          "delayNote": "Delay Notes",
+          "delayNotePlaceholder": "Additional details about the delay..."
+        },
+        "delayReasons": {
+          "weather": "Weather",
+          "materials": "Materials",
+          "permits": "Permits",
+          "subcontractor": "Subcontractor",
+          "other": "Other"
         },
         "validation": {
           "nameRequired": "Name is required",

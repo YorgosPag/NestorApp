@@ -11,7 +11,8 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { ConstructionPhase, ConstructionTask } from '@/types/building/construction';
+import type { ConstructionPhase, ConstructionTask, DelayReason } from '@/types/building/construction';
+import { DELAY_REASONS } from '@/types/building/construction';
 import type { BuildingMilestone } from '@/types/building/milestone';
 import type { BOQItem } from '@/types/boq';
 import type { RAGStatus } from '@/components/reports/core/ReportTrafficLight';
@@ -54,6 +55,22 @@ function progressRAG(actual: number, expected: number): RAGStatus {
 
 function isDelayedOrBlocked(status: string): boolean {
   return status === 'delayed' || status === 'blocked';
+}
+
+/** Tally delay reasons across problematic tasks — SSoT from DELAY_REASONS */
+function buildReasonCounts(
+  problematicTasks: ConstructionTask[],
+): Record<DelayReason | 'unspecified', number> {
+  const counts = Object.fromEntries([
+    ...DELAY_REASONS.map(r => [r, 0] as const),
+    ['unspecified', 0] as const,
+  ]) as Record<DelayReason | 'unspecified', number>;
+
+  for (const t of problematicTasks) {
+    const key: DelayReason | 'unspecified' = t.delayReason ?? 'unspecified';
+    counts[key] += 1;
+  }
+  return counts;
 }
 
 /** Weighted average progress — weight = planned duration in days */
@@ -302,19 +319,22 @@ export function useScheduleDashboard({
     const points: DelayBreakdownDataPoint[] = [];
     for (const phase of phases) {
       const phaseTasks = tasks.filter(t => t.phaseId === phase.id);
-      const delayed = phaseTasks.filter(t => t.status === 'delayed').length;
-      const blocked = phaseTasks.filter(t => t.status === 'blocked').length;
+      const delayedTasks = phaseTasks.filter(t => t.status === 'delayed');
+      const blockedTasks = phaseTasks.filter(t => t.status === 'blocked');
+      const delayed = delayedTasks.length;
+      const blocked = blockedTasks.length;
       const total = delayed + blocked;
-      if (total > 0) {
-        points.push({
-          phaseId: phase.id,
-          phaseName: phase.name,
-          phaseCode: phase.code,
-          delayed,
-          blocked,
-          total,
-        });
-      }
+      if (total === 0) continue;
+
+      points.push({
+        phaseId: phase.id,
+        phaseName: phase.name,
+        phaseCode: phase.code,
+        delayed,
+        blocked,
+        total,
+        byReason: buildReasonCounts([...delayedTasks, ...blockedTasks]),
+      });
     }
     return points.sort((a, b) => b.total - a.total);
   }, [phases, tasks]);
