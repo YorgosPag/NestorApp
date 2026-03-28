@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useNotifications } from '@/providers/NotificationProvider';
+import '@/lib/design-system';
 
 interface ParsedEvent {
   title: string;

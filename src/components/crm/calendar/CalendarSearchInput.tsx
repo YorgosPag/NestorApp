@@ -11,6 +11,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { CalendarEvent } from '@/types/calendar-event';
+import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 interface CalendarSearchInputProps {
   events: CalendarEvent[];
@@ -54,10 +57,11 @@ export function CalendarSearchInput({ events, onFilteredEvents }: CalendarSearch
     : null;
 
   const handleClear = useCallback(() => setQuery(''), []);
+  const colors = useSemanticColors();
 
   return (
     <search className="relative flex items-center gap-2" role="search">
-      <Search className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+      <Search className={cn("absolute left-3 h-4 w-4 pointer-events-none", colors.text.muted)} />
       <Input
         type="search"
         value={query}

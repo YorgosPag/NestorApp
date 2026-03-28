@@ -11,6 +11,7 @@ import { getIconComponent } from './utils/IconMapping';
 // 🏢 ENTERPRISE: i18n support - Direct useTranslation for reliability
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('GenericFormRenderer');
 
@@ -315,6 +316,8 @@ function renderField(
  * @example
  * ```tsx
  * import { getSortedSections } from '@/config/company-gemi';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
  *
  * function MyForm() {
  *   const sections = getSortedSections();
@@ -341,6 +344,7 @@ export function GenericFormRenderer({
   sectionFooterRenderers
 }: GenericFormRendererProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n - Direct translation with forms namespace
   const { t, isNamespaceReady } = useTranslation('forms');
 
@@ -390,7 +394,7 @@ export function GenericFormRenderer({
 
   return (
     <div className="space-y-8 md:space-y-6">
-      {sections.map((section, sectionIndex) => {
+      {sections.map((section, _sectionIndex) => {
         const IconComponent = getIconComponent(section.icon);
 
         return (
@@ -401,7 +405,7 @@ export function GenericFormRenderer({
               <h3 className="font-semibold text-sm">{translate(section.title)}</h3>
             </div>
             {section.description && (
-              <p className="text-xs text-muted-foreground -mt-2">{translate(section.description)}</p>
+              <p className={cn("text-xs -mt-2", colors.text.muted)}>{translate(section.description)}</p>
             )}
 
             {/* Section Fields - Enhanced Mobile Layout */}
@@ -417,7 +421,7 @@ export function GenericFormRenderer({
                     {renderField(field, formData, onChange, onSelectChange, disabled, t, customRenderers)}
                   </FormInput>
                   {field.helpText && (
-                    <p className="text-xs text-muted-foreground mt-1 whitespace-nowrap overflow-hidden text-ellipsis">{translate(field.helpText)}</p>
+                    <p className={cn("text-xs mt-1 whitespace-nowrap overflow-hidden text-ellipsis", colors.text.muted)}>{translate(field.helpText)}</p>
                   )}
                 </FormField>
               ))}

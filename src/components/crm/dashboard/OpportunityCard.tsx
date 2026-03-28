@@ -31,6 +31,8 @@ import {
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getStatusColor } from '@/components/leads/utils/formatters';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
 
 const getCreatedAtLabel = (timestamp: Opportunity['createdAt'], unknownLabel: string): string => {
     const date = normalizeToDate(timestamp);
@@ -69,7 +71,7 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
                 />
             </div>
             
-            <div className="space-y-1.5 text-xs text-muted-foreground">
+            <div className={cn("space-y-1.5 text-xs", colors.text.muted)}>
                 {opportunity.email && (
                     <div className="flex items-center gap-2">
                         <Mail className={iconSizes.xs} />
@@ -89,7 +91,7 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
             </div>
 
             {opportunity.notes && (
-                <div className="mt-2 pt-2 border-t text-xs text-muted-foreground">
+                <div className={cn("mt-2 pt-2 border-t text-xs", colors.text.muted)}>
                     <p className="flex items-start gap-2">
                         <FileText className={`${iconSizes.xs} mt-0.5 shrink-0`}/>
                         <span className="flex-1">{opportunity.notes}</span>

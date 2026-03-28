@@ -13,6 +13,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from "@/i18n";
 import { COMPLEX_HOVER_EFFECTS, GROUP_HOVER_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import '@/lib/design-system';
 
 export function QuickActions() {
   const iconSizes = useIconSizes();
@@ -36,7 +37,7 @@ export function QuickActions() {
                   <User className={`${iconSizes.lg} ${colors.text.info}`} />
                 </div>
                 <h3 className="font-semibold">{t('quickActions.individual.title')}</h3>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className={`text-sm mt-1 ${colors.text.muted}`}>
                   {t('quickActions.individual.description')}
                 </p>
               </CardContent>
@@ -50,7 +51,7 @@ export function QuickActions() {
                   <Building2 className={`${iconSizes.lg} ${colors.text.accent}`} />
                 </div>
                 <h3 className="font-semibold">{t('quickActions.company.title')}</h3>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className={`text-sm mt-1 ${colors.text.muted}`}>
                   {t('quickActions.company.description')}
                 </p>
               </CardContent>
@@ -64,7 +65,7 @@ export function QuickActions() {
                   <Landmark className={`${iconSizes.lg} ${colors.text.success}`} />
                 </div>
                 <h3 className="font-semibold">{t('quickActions.service.title')}</h3>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className={`text-sm mt-1 ${colors.text.muted}`}>
                   {t('quickActions.service.description')}
                 </p>
               </CardContent>

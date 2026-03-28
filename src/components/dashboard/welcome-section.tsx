@@ -6,6 +6,7 @@ import { useTranslation } from "@/i18n";
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface WelcomeSectionProps {
   activeToday: number;

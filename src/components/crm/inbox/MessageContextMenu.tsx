@@ -33,6 +33,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Trash2, Copy, CheckSquare, Square, Reply, Forward, Pencil, Pin, PinOff } from 'lucide-react';
 import { QUICK_REACTION_EMOJIS } from '@/types/conversations';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -241,20 +242,20 @@ export function MessageContextMenu({
         {/* Reply */}
         <ContextMenuItem onClick={handleReply} className="gap-2 cursor-pointer">
           <Reply className={iconSizes.sm} />
-          <span>{t('inbox.contextMenu.reply', 'Απάντηση')}</span>
+          <span>{t('inbox.contextMenu.reply')}</span>
         </ContextMenuItem>
 
         {/* Forward */}
         <ContextMenuItem onClick={handleForward} className="gap-2 cursor-pointer">
           <Forward className={iconSizes.sm} />
-          <span>{t('inbox.contextMenu.forward', 'Προώθηση')}</span>
+          <span>{t('inbox.contextMenu.forward')}</span>
         </ContextMenuItem>
 
         {/* Edit - only for own messages */}
         {isOwnMessage && (
           <ContextMenuItem onClick={handleEdit} className="gap-2 cursor-pointer">
             <Pencil className={iconSizes.sm} />
-            <span>{t('inbox.contextMenu.edit', 'Επεξεργασία')}</span>
+            <span>{t('inbox.contextMenu.edit')}</span>
           </ContextMenuItem>
         )}
 
@@ -263,12 +264,12 @@ export function MessageContextMenu({
           {isPinned ? (
             <>
               <PinOff className={iconSizes.sm} />
-              <span>{t('inbox.contextMenu.unpin', 'Ξεκαρφίτσωμα')}</span>
+              <span>{t('inbox.contextMenu.unpin')}</span>
             </>
           ) : (
             <>
               <Pin className={iconSizes.sm} />
-              <span>{t('inbox.contextMenu.pin', 'Καρφίτσωμα')}</span>
+              <span>{t('inbox.contextMenu.pin')}</span>
             </>
           )}
         </ContextMenuItem>
@@ -280,12 +281,12 @@ export function MessageContextMenu({
           {isSelected ? (
             <>
               <CheckSquare className={iconSizes.sm} />
-              <span>{t('inbox.contextMenu.deselect', 'Αποεπιλογή')}</span>
+              <span>{t('inbox.contextMenu.deselect')}</span>
             </>
           ) : (
             <>
               <Square className={iconSizes.sm} />
-              <span>{t('inbox.contextMenu.select', 'Επιλογή')}</span>
+              <span>{t('inbox.contextMenu.select')}</span>
             </>
           )}
         </ContextMenuItem>
@@ -293,7 +294,7 @@ export function MessageContextMenu({
         {/* Copy */}
         <ContextMenuItem onClick={handleCopy} className="gap-2 cursor-pointer">
           <Copy className={iconSizes.sm} />
-          <span>{t('inbox.contextMenu.copy', 'Αντιγραφή')}</span>
+          <span>{t('inbox.contextMenu.copy')}</span>
         </ContextMenuItem>
 
         <ContextMenuSeparator />
@@ -304,7 +305,7 @@ export function MessageContextMenu({
           className={`gap-2 cursor-pointer ${colors.text.error}`}
         >
           <Trash2 className={iconSizes.sm} />
-          <span>{t('inbox.contextMenu.delete', 'Διαγραφή')}</span>
+          <span>{t('inbox.contextMenu.delete')}</span>
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

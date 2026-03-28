@@ -17,6 +17,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { CalendarEvent } from '@/types/calendar-event';
+import '@/lib/design-system';
 
 interface CalendarSidebarProps {
   events: CalendarEvent[];

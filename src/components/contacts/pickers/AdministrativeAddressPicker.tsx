@@ -25,6 +25,8 @@ import {
   type AdminLevel,
 } from '@/hooks/useAdministrativeHierarchy';
 import { MapPin } from 'lucide-react';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // TYPES
@@ -143,6 +145,7 @@ export function AdministrativeAddressPicker({
   showPostalCode = true,
 }: AdministrativeAddressPickerProps) {
   const { t } = useTranslation('contacts');
+  const colors = useSemanticColors();
   const { isLoading, resolvePath, levelOptions } =
     useAdministrativeHierarchy();
 
@@ -224,7 +227,7 @@ export function AdministrativeAddressPicker({
 
   return (
     <section className="space-y-3" aria-label={t('addressesSection.administrative.title')}>
-      <header className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+      <header className={cn("flex items-center gap-2 text-sm font-medium", colors.text.muted)}>
         <MapPin className="h-4 w-4" />
         <span>{t('addressesSection.administrative.title')}</span>
       </header>
@@ -240,7 +243,7 @@ export function AdministrativeAddressPicker({
               key={field.level}
               className="space-y-1"
             >
-              <label className="text-xs font-medium text-muted-foreground">
+              <label className={cn("text-xs font-medium", colors.text.muted)}>
                 {field.label}
               </label>
               <SearchableCombobox
@@ -254,7 +257,7 @@ export function AdministrativeAddressPicker({
                 }}
                 options={optionsByLevel.get(field.level) ?? []}
                 placeholder={t(LEVEL_PLACEHOLDER_KEYS[field.level])}
-                emptyMessage="Πληκτρολογήστε για αναζήτηση..."
+                emptyMessage={t('addressesSection.administrative.searchHint')}
                 isLoading={isLoading}
                 allowFreeText
                 disabled={disabled}
@@ -267,7 +270,7 @@ export function AdministrativeAddressPicker({
 
         {showPostalCode && (
           <fieldset className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">
+            <label className={cn("text-xs font-medium", colors.text.muted)}>
               {t('addressesSection.administrative.postalCode')}
             </label>
             <input
@@ -278,10 +281,10 @@ export function AdministrativeAddressPicker({
                 const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 5);
                 onChange({ ...currentAddress, postalCode: val });
               }}
-              placeholder="π.χ. 69100"
+              placeholder={t('addressesSection.administrative.postalCodePlaceholder')}
               disabled={disabled}
               maxLength={5}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              className={cn("flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder: focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50", colors.text.muted)}
             />
           </fieldset>
         )}

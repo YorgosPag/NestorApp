@@ -26,6 +26,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 // 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { formatCurrency, formatNumber, formatPercentage } from '@/lib/intl-utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
@@ -183,6 +185,7 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
   ...props
 }, ref) => {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { quick, getStatusBorder, radius } = useBorderTokens();
   const { t } = useTranslation('forms');
   const [showPassword, setShowPassword] = React.useState(false);
@@ -313,7 +316,7 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
                   <div className="flex flex-col">
                     <span>{option.label}</span>
                     {option.description && (
-                      <span className="text-xs text-muted-foreground">
+                      <span className={cn("text-xs", colors.text.muted)}>
                         {option.description}
                       </span>
                     )}
@@ -356,7 +359,7 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
         return (
           <div className="relative flex">
             {unit && unitPosition === 'left' && (
-              <span className={`inline-flex items-center px-3 text-sm text-muted-foreground bg-muted ${quick.input} border-r-0 ${radius.md} rounded-r-none`}>
+              <span className={`inline-flex items-center px-3 text-sm ${colors.text.muted} bg-muted ${quick.input} border-r-0 ${radius.md} rounded-r-none`}>
                 {unit}
               </span>
             )}
@@ -374,7 +377,7 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
               ref={ref as React.RefObject<HTMLInputElement>}
             />
             {unit && unitPosition === 'right' && (
-              <span className={`inline-flex items-center px-3 text-sm text-muted-foreground bg-muted ${quick.input} border-l-0 ${radius.md} rounded-l-none`}>
+              <span className={`inline-flex items-center px-3 text-sm ${colors.text.muted} bg-muted ${quick.input} border-l-0 ${radius.md} rounded-l-none`}>
                 {unit}
               </span>
             )}
@@ -416,7 +419,7 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
         {tooltip && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <HelpCircle className={`${iconSizes.sm} text-muted-foreground`} />
+                <HelpCircle className={`${iconSizes.sm} ${colors.text.muted}`} />
               </TooltipTrigger>
               <TooltipContent>
                 <p>{tooltip}</p>
@@ -478,7 +481,7 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
           
           {/* Description */}
           {description && (
-            <p className="text-sm text-muted-foreground">
+            <p className={cn("text-sm", colors.text.muted)}>
               {description}
             </p>
           )}
@@ -493,7 +496,7 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
           
           {/* Help text */}
           {helpText && !error && (
-            <p className="text-xs text-muted-foreground">
+            <p className={cn("text-xs", colors.text.muted)}>
               {helpText}
             </p>
           )}

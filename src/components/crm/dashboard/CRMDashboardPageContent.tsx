@@ -18,10 +18,10 @@ import { GenericCRMDashboardTabsRenderer } from '@/components/generic/GenericCRM
 import { getSortedCRMDashboardTabs } from '@/config/crm-dashboard-tabs-config';
 import { TelegramNotifications } from './TelegramNotifications';
 import { useAuth } from '@/auth/contexts/AuthContext';
-import type { Opportunity } from '@/types/crm';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Real-time opportunities (ADR-227 Phase 1)
 import { useRealtimeOpportunities } from '@/services/realtime';
+import '@/lib/design-system';
 
 export function CRMDashboardPageContent() {
   const layout = useLayoutClasses();

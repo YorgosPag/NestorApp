@@ -10,10 +10,14 @@ import { useRouter } from 'next/navigation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
+import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 export function EmailAnalyticsDashboard() {
   const router = useRouter();
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: Use centralized unit icon for residential
   const ResidentialIcon = NAVIGATION_ENTITIES.unit.icon;
 
@@ -68,7 +72,7 @@ export function EmailAnalyticsDashboard() {
           </Button>
           <div>
             <h2 className="text-2xl font-bold">Email Analytics</h2>
-            <p className="text-muted-foreground">Αναλυτικά στοιχεία email marketing</p>
+            <p className={colors.text.muted}>Αναλυτικά στοιχεία email marketing</p>
           </div>
         </div>
       </div>
@@ -89,23 +93,23 @@ export function EmailAnalyticsDashboard() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
+          <div className={cn("text-center py-8", colors.text.muted)}>
             <Mail className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
             <h3 className="text-lg font-medium mb-2">
               Analytics Dashboard Υπό Κατασκευή
             </h3>
-            <p className="text-muted-foreground mb-4">
+            <p className={cn("mb-4", colors.text.muted)}>
               Σύντομα θα μπορείτε να δείτε:
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-              <ul className="text-left space-y-2 text-sm text-muted-foreground">
+              <ul className={cn("text-left space-y-2 text-sm", colors.text.muted)}>
                 <li>Αναλυτικά στοιχεία email campaigns</li>
                 <li>Ποσοστά ανοίγματος και κλικ</li>
                 <li>Πρόσφατη δραστηριότητα emails</li>
                 <li>Στατιστικά ανά ακίνητο</li>
                 <li>Email performance tracking</li>
               </ul>
-              <ul className="text-left space-y-2 text-sm text-muted-foreground">
+              <ul className={cn("text-left space-y-2 text-sm", colors.text.muted)}>
                 <li className="flex items-center gap-2"><ResidentialIcon className={iconSizes.sm} /> Residential template analytics</li>
                 <li className="flex items-center gap-2"><Building2 className={iconSizes.sm} /> Commercial template analytics</li>
                 <li className="flex items-center gap-2"><Star className={iconSizes.sm} /> Premium template analytics</li>
@@ -113,7 +117,7 @@ export function EmailAnalyticsDashboard() {
                 <li>A/B testing results</li>
               </ul>
             </div>
-            <p className="text-xs text-muted-foreground mt-6">
+            <p className={cn("text-xs mt-6", colors.text.muted)}>
               Τα analytics θα ενεργοποιηθούν μόλις ρυθμιστεί το Mailgun webhook.<br/>
               Τώρα διαθέσιμα 3 email templates στο Share Modal!
             </p>

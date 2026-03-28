@@ -14,6 +14,8 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { isNonEmptyArray } from '@/lib/type-guards';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 /** Range value for filter fields */
 interface RangeValue {
@@ -45,6 +47,7 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
   // 🏢 ENTERPRISE: i18n hook with configurable namespace
   const { t } = useTranslation(i18nNamespace);
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const spacing = useSpacingTokens();
 
   // 🏢 ENTERPRISE: Helper to translate option labels
@@ -86,7 +89,7 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
         const placeholderText = typeof config.placeholder === 'string' ? config.placeholder : '';
         return (
           <div className="relative w-full">
-            <Search className={`absolute left-2.5 top-2.5 ${iconSizes.sm} text-muted-foreground`} />
+            <Search className={`absolute left-2.5 top-2.5 ${iconSizes.sm} ${colors.text.muted}`} />
             <Input
               id={config.id}
               aria-label={config.ariaLabel}

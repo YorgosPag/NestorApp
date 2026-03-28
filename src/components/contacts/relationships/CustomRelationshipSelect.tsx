@@ -141,7 +141,7 @@ export const CustomRelationshipSelect: React.FC<CustomRelationshipSelectProps> =
               <span className="text-foreground">{selectedConfig.label}</span>
             </>
           ) : (
-            <span className="text-muted-foreground">{displayPlaceholder}</span>
+            <span className={colors.text.muted}>{displayPlaceholder}</span>
           )}
         </div>
         <ChevronDown className={`${iconSizes.sm} ${TRANSITION_PRESETS.STANDARD_TRANSFORM} ${isOpen ? 'rotate-180' : ''}`} />
@@ -192,7 +192,7 @@ export const CustomRelationshipSelect: React.FC<CustomRelationshipSelectProps> =
                       ${isSelected ? 'bg-accent text-accent-foreground' : 'text-foreground'}
                     `}
                   >
-                    <Icon className={`${iconSizes.sm} flex-shrink-0 text-muted-foreground`} />
+                    <Icon className={`${iconSizes.sm} flex-shrink-0 ${colors.text.muted}`} />
                     <span className="flex-1 text-sm font-medium">
                       {config.label}
                     </span>

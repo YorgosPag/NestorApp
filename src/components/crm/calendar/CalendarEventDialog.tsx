@@ -36,6 +36,8 @@ import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import type { CalendarEvent } from '@/types/calendar-event';
 import { SafeHTMLContent } from '@/components/shared/email/EmailContentRenderer';
 import { CALENDAR_EVENT_COLORS } from './calendar-event-colors';
+import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // PROPS
@@ -55,6 +57,7 @@ interface CalendarEventDialogProps {
 
 export function CalendarEventDialog({ event, open, onOpenChange, onEditTask }: CalendarEventDialogProps) {
   const { t, i18n } = useTranslation('crm');
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const sp = useSpacingTokens();
   const typo = useTypography();
@@ -64,7 +67,7 @@ export function CalendarEventDialog({ event, open, onOpenChange, onEditTask }: C
 
   if (!event) return null;
 
-  const colorScheme = CALENDAR_EVENT_COLORS[event.eventType];
+  const _colorScheme = CALENDAR_EVENT_COLORS[event.eventType];
   const originalLink = event.source === 'task'
     ? `/crm/tasks/${event.entityId}`
     : null;
@@ -110,7 +113,7 @@ export function CalendarEventDialog({ event, open, onOpenChange, onEditTask }: C
           {/* Description — uses centralized SafeHTMLContent (ADR-072) for XSS-safe rendering with clickable links */}
           {event.description && (
             <section className={`flex items-start ${sp.gap.sm} ${typo.body.sm}`}>
-              <FileText className={`${iconSizes.sm} shrink-0 ${sp.margin.top.xs} text-muted-foreground`} />
+              <FileText className={`${iconSizes.sm} shrink-0 ${sp.margin.top.xs} ${colors.text.muted}`} />
               <div className="min-w-0 flex-1">
                 <SafeHTMLContent html={event.description} />
               </div>

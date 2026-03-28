@@ -9,10 +9,14 @@ import {
 import { ThemeProgressBar } from "@/core/progress/ThemeProgressBar";
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 export function StorageInfo() {
   // 🏢 ENTERPRISE: i18n support
   const { t } = useTranslation('common');
+  const colors = useSemanticColors();
 
   return (
     <Card>
@@ -31,7 +35,7 @@ export function StorageInfo() {
             size="sm"
             showPercentage={false}
           />
-          <p className="text-xs text-muted-foreground">
+          <p className={cn("text-xs", colors.text.muted)}>
             {t('storage.availableSpace', { size: '7.6 GB' })}
           </p>
         </div>

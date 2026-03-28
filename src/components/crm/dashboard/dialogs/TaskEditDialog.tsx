@@ -51,6 +51,7 @@ import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 
 import { updateTask } from '@/services/tasks.service';
 import type { CrmTask } from '@/types/crm';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES

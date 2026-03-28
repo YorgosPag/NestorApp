@@ -6,6 +6,7 @@ import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { getContactFormConfig } from '@/components/ContactFormSections/utils/ContactFormConfigProvider';
 import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface ContactBasicInfoTabProps {
   data: Contact;
@@ -28,6 +29,7 @@ export function ContactBasicInfoTab({
   additionalData,
 }: ContactBasicInfoTabProps) {
   const { t } = useTranslation('contacts');
+  const colors = useSemanticColors();
   const config = getContactFormConfig(data.type);
   const sections = config.getSections();
 
@@ -48,7 +50,7 @@ export function ContactBasicInfoTab({
   if (!basicInfoSection) {
     return (
       <div className="p-2">
-        <p className="text-muted-foreground">
+        <p className={colors.text.muted}>
           {t('basicInfo.noInfoFound')}
         </p>
       </div>

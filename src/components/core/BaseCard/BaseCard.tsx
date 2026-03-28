@@ -16,6 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import '@/lib/design-system';
 
 // Types για το BaseCard system
 export interface CardAction {
@@ -283,7 +284,7 @@ const BaseCard = forwardRef<HTMLDivElement, BaseCardProps>(({
                   <h3 className="font-semibold text-foreground truncate">{title}</h3>
                 )}
                 {subtitle && (
-                  <p className="text-sm text-muted-foreground truncate">{subtitle}</p>
+                  <p className={cn("text-sm truncate", colors.text.muted)}>{subtitle}</p>
                 )}
               </div>
             )}
@@ -336,7 +337,7 @@ const BaseCard = forwardRef<HTMLDivElement, BaseCardProps>(({
             {(title || subtitle) && !headerConfig && (
               <div>
                 {title && <h3 className="font-semibold text-foreground">{title}</h3>}
-                {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+                {subtitle && <p className={cn("text-sm", colors.text.muted)}>{subtitle}</p>}
               </div>
             )}
             {header}
@@ -444,7 +445,7 @@ const BaseCard = forwardRef<HTMLDivElement, BaseCardProps>(({
               <div className="space-y-4">
                 {validContentSections.map((section, index) => (
                   <div key={index} className="space-y-2">
-                    <h4 className="text-sm font-medium text-muted-foreground">{section.title}</h4>
+                    <h4 className={cn("text-sm font-medium", colors.text.muted)}>{section.title}</h4>
                     <div>{section.content}</div>
                   </div>
                 ))}

@@ -273,7 +273,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
         onMouseEnter={() => setHighlightedIndex(index)}
       >
         <div className="flex items-start space-x-2">
-          <Icon className={`${iconSizes.md} text-muted-foreground mt-0.5 flex-shrink-0`} />
+          <Icon className={`${iconSizes.md} ${colors.text.muted} mt-0.5 flex-shrink-0`} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium text-foreground truncate">{contact.name}</h4>
@@ -282,7 +282,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
               </Badge>
             </div>
             {(contact.company || contact.department) && (
-              <div className="flex items-center space-x-2 mt-1 text-xs text-muted-foreground">
+              <div className={cn("flex items-center space-x-2 mt-1 text-xs", colors.text.muted)}>
                 {contact.company && (
                   <>
                     <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.building.color)} />
@@ -298,7 +298,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
               </div>
             )}
             <div className="flex items-center justify-between mt-2">
-              <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+              <div className={cn("flex items-center space-x-2 text-xs", colors.text.muted)}>
                 {contact.email && (
                   <div className="flex items-center space-x-1">
                     <NAVIGATION_ENTITIES.email.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.email.color)} />
@@ -313,7 +313,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
                 )}
               </div>
               {contact.lastActivity && (
-                <span className="text-xs text-muted-foreground">
+                <span className={cn("text-xs", colors.text.muted)}>
                   {formatDateShort(new Date(contact.lastActivity))}
                 </span>
               )}
@@ -339,7 +339,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
               </Badge>
             </div>
             {(selectedContact.company || selectedContact.department) && (
-              <div className="text-xs text-muted-foreground mt-1 truncate">
+              <div className={cn("text-xs mt-1 truncate", colors.text.muted)}>
                 {selectedContact.company}
                 {selectedContact.company && selectedContact.department && ' • '}
                 {selectedContact.department}
@@ -434,7 +434,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
             >
               <CardContent className={getEmployeeSelectorCardStyle()}>
                 {isSearching ? (
-                  <div className="p-4 text-center text-muted-foreground">
+                  <div className={cn("p-4 text-center", colors.text.muted)}>
                     <Spinner size="large" className="mx-auto mb-2" />
                     <span className="text-sm">{t('placeholders.searching')}</span>
                   </div>
@@ -443,7 +443,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
                     {searchResults.map((contact, index) => renderContactItem(contact, index))}
                   </div>
                 ) : (
-                  <div className="p-4 text-center text-muted-foreground">
+                  <div className={cn("p-4 text-center", colors.text.muted)}>
                     <Search className={`${iconSizes.lg} mx-auto mb-2`} />
                     <span className="text-sm">
                       {searchQuery ? t('placeholders.noResults') : t('placeholders.startTyping')}

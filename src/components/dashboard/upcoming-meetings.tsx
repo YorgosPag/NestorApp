@@ -12,9 +12,12 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Calendar, Clock, MapPin, ChevronRight } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 import type { Meeting } from "@/types/dashboard";
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface UpcomingMeetingsProps {
   meetings: Meeting[];
@@ -22,6 +25,7 @@ interface UpcomingMeetingsProps {
 
 export function UpcomingMeetings({ meetings }: UpcomingMeetingsProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n support
   const { t } = useTranslation('dashboard');
 
@@ -29,7 +33,7 @@ export function UpcomingMeetings({ meetings }: UpcomingMeetingsProps) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base">{t('upcomingMeetings.title')}</CardTitle>
-        <Calendar className={`${iconSizes.sm} text-muted-foreground`} />
+        <Calendar className={`${iconSizes.sm} ${colors.text.muted}`} />
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -40,13 +44,13 @@ export function UpcomingMeetings({ meetings }: UpcomingMeetingsProps) {
                   <p className="text-sm font-medium leading-none">
                     {meeting.title}
                   </p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className={cn("flex items-center gap-2 text-xs", colors.text.muted)}>
                     <Clock className={iconSizes.xs} />
                     <span>{meeting.time}</span>
                     <span>•</span>
                     <span>{meeting.date}</span>
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <div className={cn("flex items-center gap-1 text-xs", colors.text.muted)}>
                     <MapPin className={iconSizes.xs} />
                     <span>{meeting.location}</span>
                   </div>

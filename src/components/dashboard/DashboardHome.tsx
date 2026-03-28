@@ -19,6 +19,7 @@ import { useTranslation } from '@/i18n';
 import { DashboardWelcome } from './DashboardWelcome';
 import { QuickActionsStrip } from './QuickActionsStrip';
 import { NavigationGrid, type NavigationTile } from './NavigationGrid';
+import '@/lib/design-system';
 
 // ============================================================================
 // Dashboard Home — SAP Fiori-inspired Navigation Launchpad (ADR-179)

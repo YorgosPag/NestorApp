@@ -36,6 +36,7 @@ import { useNotifications } from '@/providers/NotificationProvider';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('CommunicationsIntegration');
 
@@ -173,7 +174,7 @@ const CommunicationsIntegration: React.FC<CommunicationsIntegrationProps> = ({ l
   /**
    * Callback όταν στέλνεται μήνυμα
    */
-  const handleMessageSent = async (result: { success: boolean }) => {
+  const handleMessageSent = async (_result: { success: boolean }) => {
     // Refresh inbox για να φανεί το νέο μήνυμα
     await loadData();
   };

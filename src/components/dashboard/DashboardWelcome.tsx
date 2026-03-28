@@ -2,6 +2,7 @@
 
 import { useTranslation } from '@/i18n';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // ============================================================================
 // Dashboard Welcome — Time-based greeting header (ADR-179)

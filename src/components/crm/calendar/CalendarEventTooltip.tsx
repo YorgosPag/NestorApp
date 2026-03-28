@@ -15,9 +15,13 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import type { CalendarEvent } from '@/types/calendar-event';
 import type { EventProps } from 'react-big-calendar';
+import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 export function CalendarEventTooltip({ event, title }: EventProps<CalendarEvent>) {
   const { t } = useTranslation('crm');
+  const colors = useSemanticColors();
 
   const descriptionPreview = event.description
     ? event.description.length > 100
@@ -40,11 +44,11 @@ export function CalendarEventTooltip({ event, title }: EventProps<CalendarEvent>
               {t(`calendarPage.eventTypes.${event.eventType}`)}
             </Badge>
           </header>
-          <time className="block text-xs text-muted-foreground">
+          <time className={cn("block text-xs", colors.text.muted)}>
             {format(event.start, 'HH:mm')} — {format(event.end, 'HH:mm')}
           </time>
           {descriptionPreview && (
-            <p className="text-xs text-muted-foreground leading-relaxed">
+            <p className={cn("text-xs leading-relaxed", colors.text.muted)}>
               {descriptionPreview}
             </p>
           )}

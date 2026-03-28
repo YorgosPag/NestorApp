@@ -5,6 +5,7 @@ import UnifiedInbox from '../UnifiedInbox';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 
 export function CommunicationsTab() {

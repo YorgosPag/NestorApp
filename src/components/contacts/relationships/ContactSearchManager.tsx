@@ -21,6 +21,7 @@ import { designSystem } from '@/lib/design-system';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🔐 ENTERPRISE: Defense-in-depth auth guard
 import { useAuth } from '@/auth/hooks/useAuth';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -89,6 +90,7 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
 }) => {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('contacts');
+  const colors = useSemanticColors();
   // 🔐 ENTERPRISE: Defense-in-depth — gate data fetching on auth state
   const { user, loading: authLoading } = useAuth();
 
@@ -251,7 +253,7 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
 
       {/* Debug panel — dev-only, not user-facing */}
       {finalSearchConfig.debug && (
-        <div className="text-xs text-muted-foreground space-y-1 p-2 bg-muted/50 rounded">
+        <div className={cn("text-xs space-y-1 p-2 bg-muted/50 rounded", colors.text.muted)}>
           {/* eslint-disable custom/no-hardcoded-strings */}
           <div>🔍 DEBUG INFO:</div>
           <div>Results: {searchResults.length}</div>

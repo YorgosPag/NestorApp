@@ -37,6 +37,8 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { COMMUNICATION_CHANNELS, type CommunicationChannel } from '@/types/communications';
 import { MESSAGE_DIRECTION } from '@/types/conversations';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // TYPES
@@ -306,19 +308,19 @@ export function ContactActivityTimeline({
         <div className={`grid grid-cols-2 md:grid-cols-4 ${spacing.gap.md}`}>
           <div className={`bg-card ${quick.card} ${spacing.padding.md} text-center`}>
             <div className={`text-2xl font-bold ${colors.text.muted}`}>{stats.total}</div>
-            <div className="text-sm text-muted-foreground">{t('inbox.activity.totalEvents')}</div>
+            <div className={cn("text-sm", colors.text.muted)}>{t('inbox.activity.totalEvents')}</div>
           </div>
           <div className={`bg-card ${quick.card} ${spacing.padding.md} text-center`}>
             <div className={`text-2xl font-bold ${colors.text.info}`}>{stats.inbound}</div>
-            <div className="text-sm text-muted-foreground">{t('inbox.activity.received')}</div>
+            <div className={cn("text-sm", colors.text.muted)}>{t('inbox.activity.received')}</div>
           </div>
           <div className={`bg-card ${quick.card} ${spacing.padding.md} text-center`}>
             <div className={`text-2xl font-bold ${colors.text.success}`}>{stats.outbound}</div>
-            <div className="text-sm text-muted-foreground">{t('inbox.activity.sent')}</div>
+            <div className={cn("text-sm", colors.text.muted)}>{t('inbox.activity.sent')}</div>
           </div>
           <div className={`bg-card ${quick.card} ${spacing.padding.md} text-center`}>
             <div className={`text-2xl font-bold ${colors.text.warning}`}>{stats.assignments}</div>
-            <div className="text-sm text-muted-foreground">{t('inbox.activity.assignments')}</div>
+            <div className={cn("text-sm", colors.text.muted)}>{t('inbox.activity.assignments')}</div>
           </div>
         </div>
       </section>
@@ -366,11 +368,11 @@ export function ContactActivityTimeline({
                               <DirectionIcon className={`${iconSizes.xs} ${colors.text.muted}`} />
                             )}
                           </div>
-                          <p className={`text-sm text-muted-foreground ${spacing.margin.top.xs}`}>
+                          <p className={`text-sm ${colors.text.muted} ${spacing.margin.top.xs}`}>
                             {event.description}
                           </p>
                         </div>
-                        <div className={`flex items-center ${spacing.gap.xs} text-xs text-muted-foreground ${spacing.margin.left.md}`}>
+                        <div className={`flex items-center ${spacing.gap.xs} text-xs ${colors.text.muted} ${spacing.margin.left.md}`}>
                           <StatusIcon className={iconSizes.xs} />
                           <span>
                             {event.status === 'completed'
@@ -384,7 +386,7 @@ export function ContactActivityTimeline({
                         </div>
                       </header>
 
-                      <footer className="flex items-center justify-between text-xs text-muted-foreground">
+                      <footer className={cn("flex items-center justify-between text-xs", colors.text.muted)}>
                         <div className={`flex items-center ${spacing.gap.md}`}>
                           <time className={`flex items-center ${spacing.gap.xs}`}>
                             <Clock className={iconSizes.xs} />
@@ -421,29 +423,29 @@ export function ContactActivityTimeline({
           <div className={`bg-card ${quick.card} ${spacing.padding.md}`}>
             <dl className={`grid grid-cols-1 md:grid-cols-3 ${spacing.gap.md} text-sm`}>
               <div>
-                <dt className="font-medium text-muted-foreground">{t('inbox.activity.channel')}:</dt>
+                <dt className={cn("font-medium", colors.text.muted)}>{t('inbox.activity.channel')}:</dt>
                 <dd className={spacing.margin.left.sm}>{conversation.channel.toUpperCase()}</dd>
               </div>
               <div>
-                <dt className="font-medium text-muted-foreground">{t('inbox.activity.status')}:</dt>
+                <dt className={cn("font-medium", colors.text.muted)}>{t('inbox.activity.status')}:</dt>
                 <dd className="ml-2 capitalize">{conversation.status}</dd>
               </div>
               <div>
-                <dt className="font-medium text-muted-foreground">{t('inbox.activity.created')}:</dt>
+                <dt className={cn("font-medium", colors.text.muted)}>{t('inbox.activity.created')}:</dt>
                 <dd className={spacing.margin.left.sm}>{formatDateTime(new Date(conversation.audit.createdAt))}</dd>
               </div>
               {conversation.assignedTo && (
                 <div>
-                  <dt className="font-medium text-muted-foreground">{t('inbox.activity.assignedTo')}:</dt>
+                  <dt className={cn("font-medium", colors.text.muted)}>{t('inbox.activity.assignedTo')}:</dt>
                   <dd className={spacing.margin.left.sm}>{conversation.assignedTo}</dd>
                 </div>
               )}
               <div>
-                <dt className="font-medium text-muted-foreground">{t('inbox.activity.lastUpdated')}:</dt>
+                <dt className={cn("font-medium", colors.text.muted)}>{t('inbox.activity.lastUpdated')}:</dt>
                 <dd className={spacing.margin.left.sm}>{formatDateTime(new Date(conversation.audit.updatedAt))}</dd>
               </div>
               <div>
-                <dt className="font-medium text-muted-foreground">{t('inbox.activity.participants')}:</dt>
+                <dt className={cn("font-medium", colors.text.muted)}>{t('inbox.activity.participants')}:</dt>
                 <dd className={spacing.margin.left.sm}>{conversation.participants.length}</dd>
               </div>
             </dl>

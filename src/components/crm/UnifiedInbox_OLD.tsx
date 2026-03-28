@@ -53,6 +53,7 @@ import { COMMUNICATION_CHANNELS } from '@/types/communications';
 // 🏢 ENTERPRISE: Inbox sub-components
 import { ThreadView } from './inbox/ThreadView';
 import { ReplyComposer } from './inbox/ReplyComposer';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES

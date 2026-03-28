@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/select';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { FileClassification } from '@/config/domain-constants';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES

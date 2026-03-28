@@ -7,6 +7,8 @@ import { OpportunityCard } from './OpportunityCard';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
 
 interface OpportunityColumnsProps {
     opportunities: Opportunity[];
@@ -26,7 +28,7 @@ export function OpportunityColumns({ opportunities, onEdit, onDelete }: Opportun
                 <div className={`${colors.bg.primary} rounded-lg p-4 h-full`}>
                 <div className="flex items-center justify-between mb-3">
                     <h3 className="font-medium text-foreground">{t(`opportunities.stages.${stageId}`)}</h3>
-                    <span className="text-sm text-muted-foreground">{opportunitiesByStage(opportunities, stageId).length}</span>
+                    <span className={cn("text-sm", colors.text.muted)}>{opportunitiesByStage(opportunities, stageId).length}</span>
                 </div>
 
                 <div className="space-y-2">

@@ -21,6 +21,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { errorTracker } from '@/services/ErrorTracker';
 import type { ErrorReport } from '@/services/ErrorTracker';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import '@/lib/design-system';
 
 interface ErrorReportingDashboardProps {
   position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
@@ -188,7 +189,7 @@ export function ErrorReportingDashboard({
           {/* Error List */}
           <div className="flex-1 overflow-y-auto">
             {filteredErrors.length === 0 ? (
-              <div className="p-4 text-center ${colors.text.muted} text-sm">
+              <div className={cn("p-4 text-center text-sm", colors.text.muted)}>
                 {filter ? 'No errors match filter' : 'No errors captured'}
               </div>
             ) : (
@@ -205,7 +206,7 @@ export function ErrorReportingDashboard({
                           <span className={`text-xs ${getStatusColor(error.severity)}`}>
                             ●
                           </span>
-                          <span className="text-xs ${colors.text.muted}">
+                          <span className={cn("text-xs", colors.text.muted)}>
                             {error.category}
                           </span>
                           {error.count > 1 && (
@@ -217,7 +218,7 @@ export function ErrorReportingDashboard({
                         <div className="text-sm font-medium truncate mt-1">
                           {error.message}
                         </div>
-                        <div className="text-xs ${colors.text.muted} truncate">
+                        <div className={cn("text-xs truncate", colors.text.muted)}>
                           {error.context.component} • {new Date(error.lastSeen).toLocaleTimeString()}
                         </div>
                       </div>
@@ -251,21 +252,21 @@ export function ErrorReportingDashboard({
                 <div className={`${colors.bg.backgroundTertiary} p-3 ${radius.md} text-sm`}>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <div className="${colors.text.muted}">Error ID</div>
+                      <div className={colors.text.muted}>Error ID</div>
                       <div className="font-mono text-xs">{selectedError.id}</div>
                     </div>
                     <div>
-                      <div className="${colors.text.muted}">Severity</div>
+                      <div className={colors.text.muted}>Severity</div>
                       <div className={getStatusColor(selectedError.severity)}>
                         {selectedError.severity.toUpperCase()}
                       </div>
                     </div>
                     <div>
-                      <div className="${colors.text.muted}">Category</div>
+                      <div className={colors.text.muted}>Category</div>
                       <div>{selectedError.category}</div>
                     </div>
                     <div>
-                      <div className="${colors.text.muted}">Occurrences</div>
+                      <div className={colors.text.muted}>Occurrences</div>
                       <div>{selectedError.count}x</div>
                     </div>
                   </div>

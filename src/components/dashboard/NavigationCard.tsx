@@ -7,7 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n';
+import '@/lib/design-system';
 
 // ============================================================================
 // Navigation Card — SAP Fiori-inspired tile for Dashboard Home (ADR-179)
@@ -86,6 +88,7 @@ export function NavigationCard({
 }: NavigationCardProps) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation('dashboard');
+  const semanticColors = useSemanticColors();
   const colors = COLOR_MAP[colorVariant];
 
   return (
@@ -120,13 +123,13 @@ export function NavigationCard({
           <h3 className="font-semibold text-sm leading-tight mb-1 text-foreground">
             {title}
           </h3>
-          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+          <p className={cn("text-xs leading-relaxed line-clamp-2", semanticColors.text.muted)}>
             {description}
           </p>
 
           {subItemCount != null && subItemCount > 0 && (
             <footer className="mt-3 pt-2 border-t border-border/50">
-              <span className="text-[11px] text-muted-foreground">
+              <span className={cn("text-[11px]", semanticColors.text.muted)}>
                 {t('home.subItems', { count: subItemCount })}
               </span>
             </footer>

@@ -30,6 +30,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import type { MessageReactionsMap } from '@/types/conversations';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -120,7 +121,7 @@ export function ReactionBubbles({
   const hiddenReactions = sortedReactions.slice(maxVisible);
 
   // Calculate total count for hidden reactions
-  const hiddenTotalCount = hiddenReactions.reduce((sum, [_, r]) => sum + r.count, 0);
+  const _hiddenTotalCount = hiddenReactions.reduce((sum, [_, r]) => sum + r.count, 0);
 
   return (
     <div

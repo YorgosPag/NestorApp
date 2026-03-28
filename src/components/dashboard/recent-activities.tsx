@@ -14,8 +14,10 @@ import { cn } from "@/lib/utils";
 import type { Activity } from "@/types/dashboard";
 import { INTERACTIVE_PATTERNS } from "@/components/ui/effects";
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface RecentActivitiesProps {
   activities: Activity[];
@@ -23,6 +25,7 @@ interface RecentActivitiesProps {
 
 export function RecentActivities({ activities }: RecentActivitiesProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n support
   const { t } = useTranslation('dashboard');
 
@@ -59,11 +62,11 @@ export function RecentActivities({ activities }: RecentActivitiesProps) {
               </div>
               <div className="flex-1 space-y-1">
                 <p className="text-sm font-medium">{activity.title}</p>
-                <p className="text-sm text-muted-foreground">
+                <p className={cn("text-sm", colors.text.muted)}>
                   {activity.description}
                 </p>
               </div>
-              <span className="text-xs text-muted-foreground">
+              <span className={cn("text-xs", colors.text.muted)}>
                 {activity.time}
               </span>
             </div>

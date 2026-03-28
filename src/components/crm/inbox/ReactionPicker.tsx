@@ -24,6 +24,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { QUICK_REACTION_EMOJIS, type QuickReactionEmoji } from '@/types/conversations';
 import { TRANSITION_PRESETS } from '@/components/ui/effects';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -90,7 +91,7 @@ export function ReactionPicker({
   isLoading = false,
 }: ReactionPickerProps) {
   const { t } = useTranslation('crm');
-  const colors = useSemanticColors();
+  const _colors = useSemanticColors();
 
   // Handle reaction click
   const handleClick = useCallback((emoji: string) => {

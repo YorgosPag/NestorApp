@@ -5,6 +5,7 @@ import { useTranslation } from "@/i18n";
 import { UnifiedDashboard } from "@/components/property-management/dashboard/UnifiedDashboard";
 import type { DashboardStat } from "@/components/property-management/dashboard/UnifiedDashboard";
 import type { QuickStats } from "@/types/dashboard";
+import '@/lib/design-system';
 
 interface StatsCardsProps {
   stats: QuickStats;

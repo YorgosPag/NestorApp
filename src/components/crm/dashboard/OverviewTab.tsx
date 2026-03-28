@@ -6,6 +6,7 @@ import { RecentActivities } from './RecentActivities';
 import { QuickActions } from './QuickActions';
 import { TeamPerformance } from './TeamPerformance';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
+import '@/lib/design-system';
 
 export function OverviewTab() {
   const layout = useLayoutClasses();

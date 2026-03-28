@@ -5,6 +5,7 @@ import React from 'react';
 import { getSortedPeriods } from '@/config/period-selector-config';
 import { HOVER_TEXT_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface PeriodSelectorProps {
   value: string;

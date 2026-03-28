@@ -7,6 +7,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatDate } from '@/lib/intl-utils';
+import '@/lib/design-system';
 
 export function CalendarTab() {
   const colors = useSemanticColors();

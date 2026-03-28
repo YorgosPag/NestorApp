@@ -18,6 +18,7 @@ import { OpportunityColumns } from './OpportunityColumns';
 import LeadsList from '@/components/leads/LeadsList';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 
 export function PipelineTab() {
@@ -42,7 +43,7 @@ export function PipelineTab() {
     setEditingOpportunity(opportunity);
   };
 
-  const handleRefresh = useCallback(async () => {
+  const _handleRefresh = useCallback(async () => {
     await fetchOpportunities();
     setRefreshCounter(prev => prev + 1);
   }, [fetchOpportunities]);

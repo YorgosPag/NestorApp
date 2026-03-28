@@ -5,10 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Zap, Sparkles, Target, MessageSquare } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 export function AIAssistantCard() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   return (
     <Card className={`bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950 dark:to-blue-950 ${quick.info}`}>
       <CardHeader>
@@ -20,7 +24,7 @@ export function AIAssistantCard() {
         </div>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-muted-foreground mb-4">
+        <p className={cn("text-sm mb-4", colors.text.muted)}>
           Χρησιμοποιήστε τον AI βοηθό για έξυπνες προτάσεις και αυτοματισμούς
         </p>
         <div className="space-y-2">

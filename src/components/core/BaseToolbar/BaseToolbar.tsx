@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import '@/lib/design-system';
 
 // Types για το BaseToolbar system
 export interface ToolbarAction {
@@ -162,7 +163,7 @@ export function BaseToolbar({
                 </h2>
               )}
               {subtitle && (
-                <p className="text-sm text-muted-foreground">
+                <p className={cn("text-sm", colors.text.muted)}>
                   {subtitle}
                 </p>
               )}
@@ -216,7 +217,7 @@ export function BaseToolbar({
                 {title}
               </h2>
               {subtitle && (
-                <p className="text-sm text-muted-foreground">
+                <p className={cn("text-sm", colors.text.muted)}>
                   {subtitle}
                 </p>
               )}
@@ -263,7 +264,7 @@ function ToolbarSearchComponent({ search, compact }: { search: ToolbarSearch; co
   const iconSizes = useIconSizes();
   return (
     <div className="relative">
-      <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${iconSizes.sm} text-muted-foreground`} />
+      <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${iconSizes.sm} ${colors.text.muted}`} />
       <Input
         placeholder={search.placeholder || t('placeholders.search')}
         value={search.value || ''}
@@ -388,7 +389,7 @@ function ToolbarActionsComponent({ actions }: { actions: ToolbarAction[] }) {
         />
       )}
       {action.shortcut && (
-        <span className="ml-2 text-xs text-muted-foreground">
+        <span className={cn("ml-2 text-xs", colors.text.muted)}>
           {action.shortcut}
         </span>
       )}

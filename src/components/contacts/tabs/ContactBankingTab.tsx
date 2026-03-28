@@ -39,6 +39,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { createModuleLogger } from '@/lib/telemetry';
 import { groupByKey } from '@/utils/collection-utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 const logger = createModuleLogger('ContactBankingTab');
 
 // ============================================================================
@@ -82,6 +84,7 @@ export function ContactBankingTab({
   additionalData
 }: ContactBankingTabProps) {
   const { t } = useTranslation('contacts');
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const { success, error: notifyError } = useNotifications();
   const disabled = additionalData?.disabled ?? false;
@@ -114,7 +117,7 @@ export function ContactBankingTab({
       setAccounts(loadedAccounts);
     } catch (err) {
       logger.error('[ContactBankingTab] Error loading accounts:', { error: err });
-      setError('Σφάλμα φόρτωσης λογαριασμών');
+      setError(t('bankingTab.errors.loadError'));
     } finally {
       setLoading(false);
     }
@@ -164,10 +167,10 @@ export function ContactBankingTab({
     try {
       setActionLoading(true);
       await BankAccountsService.deleteAccount(contactId, deletingAccount.id);
-      success(`Ο λογαριασμός ${deletingAccount.bankName} διαγράφηκε επιτυχώς.`);
+      success(t('bankingTab.toasts.deleted', { bankName: deletingAccount.bankName }));
     } catch (err) {
       logger.error('[ContactBankingTab] Error deleting account:', { error: err });
-      notifyError('Δεν ήταν δυνατή η διαγραφή του λογαριασμού.');
+      notifyError(t('bankingTab.toasts.deleteError'));
     } finally {
       setActionLoading(false);
       setDeletingAccount(null);
@@ -181,10 +184,10 @@ export function ContactBankingTab({
     try {
       setActionLoading(true);
       await BankAccountsService.setPrimaryAccount(contactId, account.id);
-      success(`Ο λογαριασμός ${account.bankName} ορίστηκε ως κύριος.`);
+      success(t('bankingTab.toasts.setPrimary', { bankName: account.bankName }));
     } catch (err) {
       logger.error('[ContactBankingTab] Error setting primary:', { error: err });
-      notifyError('Δεν ήταν δυνατός ο ορισμός κύριου λογαριασμού.');
+      notifyError(t('bankingTab.toasts.setPrimaryError'));
     } finally {
       setActionLoading(false);
     }
@@ -200,11 +203,11 @@ export function ContactBankingTab({
       if (editingAccount) {
         // Update existing
         await BankAccountsService.updateAccount(contactId, editingAccount.id, formData);
-        success(`Ο λογαριασμός ${formData.bankName} ενημερώθηκε επιτυχώς.`);
+        success(t('bankingTab.toasts.updated', { bankName: formData.bankName }));
       } else {
         // Create new
         await BankAccountsService.addAccount(contactId, formData);
-        success(`Ο λογαριασμός ${formData.bankName} προστέθηκε επιτυχώς.`);
+        success(t('bankingTab.toasts.created', { bankName: formData.bankName }));
       }
 
       setIsFormOpen(false);
@@ -255,12 +258,12 @@ export function ContactBankingTab({
           <CardContent className="flex flex-col items-center justify-center py-12">
             <CreditCard
               size={iconSizes.numeric.xl}
-              className="text-muted-foreground mb-2"
+              className={cn("mb-2", colors.text.muted)}
             />
             <h3 className="text-lg font-medium mb-2">
               {t('bankingTab.empty.title')}
             </h3>
-            <p className="text-muted-foreground text-center mb-2 max-w-md">
+            <p className={cn("text-center mb-2 max-w-md", colors.text.muted)}>
               {t('bankingTab.empty.description')}
             </p>
             {!disabled && (
@@ -278,7 +281,7 @@ export function ContactBankingTab({
             <CardContent className="pt-2">
               <header className="mb-2">
                 <h3 className="text-lg font-medium">{t('bankingTab.newAccount.title')}</h3>
-                <p className="text-sm text-muted-foreground">
+                <p className={cn("text-sm", colors.text.muted)}>
                   {t('bankingTab.newAccount.description')}
                 </p>
               </header>
@@ -319,7 +322,7 @@ export function ContactBankingTab({
         {Object.entries(accountsByBank).map(([bankName, bankAccounts]) => (
           <div key={bankName} className="space-y-2">
             {Object.keys(accountsByBank).length > 1 && (
-              <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <h4 className={cn("text-sm font-medium flex items-center gap-2", colors.text.muted)}>
                 <Building2 size={iconSizes.numeric.sm} />
                 {bankName}
               </h4>
@@ -346,12 +349,12 @@ export function ContactBankingTab({
           <CardContent className="pt-2">
             <header className="mb-2">
               <h3 className="text-lg font-medium">
-                {editingAccount ? 'Επεξεργασία Λογαριασμού' : 'Νέος Λογαριασμός'}
+                {editingAccount ? t('bankingTab.editAccount.title') : t('bankingTab.newAccount.title')}
               </h3>
-              <p className="text-sm text-muted-foreground">
+              <p className={cn("text-sm", colors.text.muted)}>
                 {editingAccount
-                  ? 'Τροποποιήστε τα στοιχεία του τραπεζικού λογαριασμού.'
-                  : 'Προσθέστε τα στοιχεία του τραπεζικού λογαριασμού.'}
+                  ? t('bankingTab.editAccount.description')
+                  : t('bankingTab.newAccount.description')}
               </p>
             </header>
             <BankAccountForm
