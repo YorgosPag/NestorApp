@@ -142,22 +142,24 @@ generatePOItemId()           // 'poi_XXXXX' ← NEW (αν items σε subcollecti
 ```typescript
 // src/types/procurement/purchase-order.ts — NEW
 
-/** PO Status — 5-state workflow (Procore/Buildertrend pattern)
- *  Invoice linking γίνεται ως action (linkedInvoiceIds[]), ΟΧΙ ως status.
- *  "Delivered without invoice" εμφανίζεται ως KPI/filter στο dashboard.
+/** PO Status — 6-state workflow (Procore/SAP pattern)
+ *  Invoice linking = action (linkedInvoiceIds[]), ΟΧΙ status.
+ *  Delivery status = AUTOMATIC based on quantities received.
+ *  "Delivered without invoice" = KPI/filter στο dashboard.
  */
 type PurchaseOrderStatus =
-  | 'draft'       // Δημιουργήθηκε, δεν εγκρίθηκε ακόμα
-  | 'approved'    // Εγκρίθηκε από boss — έτοιμο για αποστολή
-  | 'ordered'     // Στάλθηκε στον προμηθευτή
-  | 'delivered'   // Παραλήφθηκε (πλήρως ή μερικώς)
-  | 'closed'      // Ολοκληρώθηκε
-  | 'cancelled';  // Ακυρώθηκε
+  | 'draft'                // Δημιουργήθηκε, δεν εγκρίθηκε ακόμα
+  | 'approved'             // Εγκρίθηκε — έτοιμο για αποστολή
+  | 'ordered'              // Στάλθηκε στον προμηθευτή (0% received)
+  | 'partially_delivered'  // Μερική παραλαβή (1-99% received) — AUTO
+  | 'delivered'            // Πλήρης παραλαβή (100% received) — AUTO
+  | 'closed'               // Ολοκληρώθηκε
+  | 'cancelled';           // Ακυρώθηκε
 
 /** Purchase Order — Core Entity */
 interface PurchaseOrder {
   id: string;                       // 'po_XXXXX' (enterprise-id)
-  poNumber: string;                 // 'PO-2026-0042' (human-readable, auto-increment)
+  poNumber: string;                 // 'PO-0042' (sequential, no year reset)
   companyId: string;
 
   // References
@@ -172,6 +174,7 @@ interface PurchaseOrder {
   items: PurchaseOrderItem[];
 
   // Financial Summary (computed, stored for query efficiency)
+  currency: 'EUR';                   // Πάντα EUR — ακόμα και ενδοκοινοτικοί (hardcoded)
   subtotal: number;
   taxRate: 24 | 13 | 6 | 0;         // PO-level ΦΠΑ: 24% default, 0% ενδοκοινοτικές
   taxAmount: number;
@@ -185,7 +188,7 @@ interface PurchaseOrder {
   dateInvoiced: string | null;      // When invoice linked
 
   // Delivery
-  deliveryAddress: string | null;   // Default: project site address
+  deliveryAddress: string | null;   // Auto-fill από project.address, editable override
 
   // Accounting Links
   linkedInvoiceIds: string[];       // ref → accounting_invoices (1:many)
@@ -207,12 +210,12 @@ interface PurchaseOrderItem {
   unitPrice: number;
   total: number;                    // quantity × unitPrice
 
-  // BOQ Integration (optional)
-  boqItemId: string | null;         // ref → boq_items
-  categoryCode: string | null;      // ΑΤΟΕ code (OIK-1...OIK-12)
+  // BOQ Integration (optional link, categoryCode required)
+  boqItemId: string | null;         // ref → boq_items (optional — search+select dropdown)
+  categoryCode: string;             // ΑΤΟΕ code (OIK-1...OIK-12) — ΥΠΟΧΡΕΩΤΙΚΟ για reports
 
-  // Delivery Tracking
-  quantityReceived: number;         // For partial deliveries (default: 0)
+  // Delivery Tracking — Partial deliveries (ΣΥΧΝΟ στην πράξη)
+  quantityReceived: number;         // Συνολικά παραληφθέντα (default: 0)
   quantityRemaining: number;        // quantity - quantityReceived (computed)
 }
 ```
@@ -236,14 +239,19 @@ const PROCUREMENT_DEFAULTS: ProcurementSettings = {
 ### 4.3 Status State Machine
 
 ```
-                    ┌──── CANCELLED ────┐
-                    │                   │
-DRAFT ──→ APPROVED ──→ ORDERED ──→ DELIVERED ──→ CLOSED
-  │         │           │              │
-  └─cancel──┘──cancel───┘──cancel──────┘
+                    ┌────────── CANCELLED ──────────┐
+                    │                               │
+DRAFT ──→ APPROVED ──→ ORDERED ──→ PART_DELIVERED ──→ DELIVERED ──→ CLOSED
+  │         │           │    ↑         │                │
+  └─cancel──┘──cancel───┘    └─────────┘ (more deliv.)  │
+                             (auto: 1-99%)  (auto: 100%) │
+                                                         └── CLOSED
 ```
 
-**Απόφαση**: ✅ 5 states, χωρίς INVOICED (Γιώργος, 2026-03-28)
+**Απόφαση**: ✅ 6 states — automatic delivery status (Γιώργος, 2026-03-28)
+- `partially_delivered` + `delivered` = **AUTOMATIC** based on quantities
+- Χρήστης καταγράφει ποσότητες → σύστημα αλλάζει status αυτόματα
+- 0% received → `ordered` | 1-99% → `partially_delivered` | 100% → `delivered`
 - Invoice linking = action (`linkedInvoiceIds[]`), ΟΧΙ status
 - "Delivered χωρίς τιμολόγιο" = KPI/filter στο dashboard
 - 2-3 άτομα δημιουργούν POs → APPROVED step απαραίτητο
@@ -256,12 +264,15 @@ DRAFT ──→ APPROVED ──→ ORDERED ──→ DELIVERED ──→ CLOSED
 **Allowed Transitions**:
 | From | To | Trigger |
 |------|----|---------|
-| draft | approved | Boss εγκρίνει |
+| draft | approved | User εγκρίνει (self-approve OK τώρα) |
 | draft | cancelled | User ακυρώνει |
 | approved | ordered | User σημειώνει ως σταλμένο |
 | approved | cancelled | User ακυρώνει |
-| ordered | delivered | User επιβεβαιώνει παραλαβή |
+| ordered | partially_delivered | **AUTO**: πρώτη καταγραφή ποσοτήτων (1-99%) |
+| ordered | delivered | **AUTO**: καταγραφή ποσοτήτων = 100% |
 | ordered | cancelled | User ακυρώνει (πριν παραλαβή) |
+| partially_delivered | partially_delivered | **AUTO**: νέα καταγραφή, ακόμα <100% |
+| partially_delivered | delivered | **AUTO**: τελική καταγραφή = 100% |
 | delivered | closed | Manual close (με ή χωρίς linked invoice) |
 
 ### 4.3 File Structure
@@ -336,10 +347,14 @@ Sidebar
 
 ### 5.1 BOQ ↔ Procurement
 
-**Pattern: Hybrid Linking** (best for Nestor):
-- Κάθε PO line item **μπορεί** (optional) να δείχνει σε `boqItemId`
-- Αν δεν δείχνει, τουλάχιστον δείχνει σε `categoryCode` (ΑΤΟΕ)
-- Dashboard δείχνει: **Budget (BOQ estimated) → Committed (POs ordered) → Spent (Invoices) → Remaining**
+**Απόφαση**: ✅ Optional BOQ link + mandatory categoryCode (Γιώργος, 2026-03-28)
+**Pattern**: Procore/SAP — optional link, αλλά πάντα κατηγοριοποίηση για reports.
+
+- `boqItemId`: Optional — search+select dropdown αν υπάρχει BOQ item
+- `categoryCode`: **ΥΠΟΧΡΕΩΤΙΚΟ** (ΑΤΟΕ) — reports/budget overview δουλεύουν πάντα
+- Αν item δεν έχει BOQ link → subtle κίτρινο dot indicator (nudge, όχι blocker)
+- Dashboard: Budget overview per category + ξεχωριστή γραμμή "Unlinked / Ad-hoc"
+- **Budget flow**: Budget (BOQ estimated) → Committed (POs ordered) → Spent (Invoices) → Remaining
 
 ```typescript
 // Budget Awareness Calculation
@@ -426,13 +441,16 @@ Via BOQ items: `BOQItem.linkedPhaseId` → `ConstructionPhase` → PO items link
 
 ## 7. PO NUMBER FORMAT
 
-**Pattern**: `PO-{YYYY}-{NNNN}` (human-readable, auto-increment)
+**Απόφαση**: ✅ Συνεχής αρίθμηση `PO-NNNN` (Γιώργος, 2026-03-28)
 
-**Examples**: `PO-2026-0001`, `PO-2026-0042`, `PO-2027-0001`
+**Pattern**: `PO-{NNNN}` — sequential, no year reset, no project prefix
+**Examples**: `PO-0001`, `PO-0042`, `PO-0999`, `PO-10000`
 
-**Implementation**: Counter document στο Firestore (ίδιο pattern με `accounting_invoice_counters`):
+**Σκεπτικό**: Procore/SAP/Google pattern. Ο αριθμός = μοναδικό ID. Year + Project = searchable fields στο UI, όχι μέρος του αριθμού. Ποτέ confusion, ποτέ duplicate.
+
+**Implementation**: Counter document στο Firestore:
 ```typescript
-// purchase_order_counters/{companyId}_{year}
+// purchase_order_counters/{companyId}
 { lastNumber: 42 }
 ```
 
@@ -472,14 +490,19 @@ const PROCUREMENT_UNIT_OPTIONS = [
 
 ## 9. DASHBOARD SPECIFICATIONS
 
-### 8.1 KPI Cards
+### 9.1 KPI Cards (7 cards)
 
-| KPI | Υπολογισμός | Icon |
-|-----|-------------|------|
-| Active POs | COUNT WHERE status IN (ordered, delivered) | Package |
-| Pending Delivery | COUNT WHERE status = 'ordered' | Truck |
-| Total Committed | SUM(po.total) WHERE status IN (ordered, delivered) | DollarSign |
-| Overdue Deliveries | COUNT WHERE dateNeeded < today AND status = 'ordered' | AlertTriangle |
+**Απόφαση**: ✅ 7 KPIs (Γιώργος, 2026-03-28)
+
+| # | KPI | Υπολογισμός | Icon |
+|---|-----|-------------|------|
+| 1 | Active POs | COUNT WHERE status IN (ordered, partially_delivered, delivered) | Package |
+| 2 | Pending Delivery | COUNT WHERE status = 'ordered' | Truck |
+| 3 | Total Committed | SUM(po.total) WHERE status IN (ordered, partially_delivered, delivered) | DollarSign |
+| 4 | Overdue Deliveries | COUNT WHERE dateNeeded < today AND status IN ('ordered', 'partially_delivered') | AlertTriangle |
+| 5 | Partially Delivered | COUNT WHERE status = 'partially_delivered' | PackageOpen |
+| 6 | Awaiting Invoice | COUNT WHERE status = 'delivered' AND linkedInvoiceIds = [] | FileWarning |
+| 7 | Monthly Spend | SUM(po.total) WHERE dateOrdered IN current month | TrendingUp |
 
 ### 8.2 Budget vs Committed Chart
 
@@ -538,6 +561,11 @@ const PROCUREMENT_UNIT_OPTIONS = [
 
 **Pattern**: Reuse jspdf + jspdf-autotable (same as accounting invoices).
 
+**Απόφαση**: ✅ Bilingual PDF — Ελληνικά + Αγγλικά (Γιώργος, 2026-03-28)
+- Ενδοκοινοτικοί προμηθευτές → αγγλικό PDF
+- Έλληνες προμηθευτές → ελληνικό PDF
+- Γλώσσα επιλέγεται κατά το export (dropdown: EL / EN)
+
 **Layout** (A4 portrait):
 1. Header: Company name, logo (optional), PO number, date
 2. Supplier info: Name, VAT, address, phone
@@ -545,6 +573,21 @@ const PROCUREMENT_UNIT_OPTIONS = [
 4. Totals: Subtotal, Tax, Total
 5. Notes section
 6. Footer: Delivery address, date needed
+
+**i18n PDF labels**:
+| Field | EL | EN |
+|-------|----|----|
+| Αρ. Παραγγελίας | Αρ. Παραγγελίας | Purchase Order No. |
+| Προμηθευτής | Προμηθευτής | Supplier |
+| Περιγραφή | Περιγραφή | Description |
+| Ποσότητα | Ποσότητα | Quantity |
+| Τιμή Μονάδος | Τιμή Μονάδος | Unit Price |
+| Σύνολο | Σύνολο | Total |
+| Υποσύνολο | Υποσύνολο | Subtotal |
+| ΦΠΑ | ΦΠΑ | VAT |
+| Γενικό Σύνολο | Γενικό Σύνολο | Grand Total |
+| Ημ. Παράδοσης | Ημ. Παράδοσης | Delivery Date |
+| Σημειώσεις | Σημειώσεις | Notes |
 
 **Greek font**: Reuse Roboto font data from `src/services/gantt-export/roboto-font-data.ts`.
 
@@ -646,7 +689,7 @@ match /purchase_order_counters/{counterId} {
 | Ερώτημα | Απόφαση | Σκεπτικό |
 |---------|---------|----------|
 | Items: embedded array ή subcollection? | Embedded array | PO items always read with PO. Max ~100 items. Array is simpler + faster |
-| Status: πόσα states; | ✅ 5 states (χωρίς INVOICED) | Procore/Buildertrend pattern. Invoice = action, όχι status. 2-3 users → approval required |
+| Status: πόσα states; | ✅ 6 states (+ partially_delivered, χωρίς INVOICED) | Procore/SAP pattern. Delivery = auto based on qty. Invoice = action, όχι status |
 | Navigation: under Construction ή standalone? | ✅ Standalone top-level (displayOrder: 55) | Enterprise pattern: Procore/SAP/Oracle — cross-cutting domain |
 | Approval workflow? | ✅ Feature Flag: self-approve τώρα, separate approver αύριο | Οικογενειακή επιχ., ρόλοι αλληλοεπικαλύπτονται. Settings-driven flexibility |
 | PO per building ή per project? | ✅ Per project (buildingId optional), πάντα 1 PO = 1 project | Γιώργος: κάθε PO ανήκει σε ένα project. Cross-project PO δεν χρειάζεται |
