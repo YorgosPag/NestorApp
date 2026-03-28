@@ -30,6 +30,7 @@ export const colors = {
     "500": "#3b82f6"
   },
   blue: {
+    "50": "#eff6ff",
     "200": "#bfdbfe",
     "300": "#93c5fd",
     "400": "#60a5fa",

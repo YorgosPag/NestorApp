@@ -17,7 +17,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { ChevronDown } from 'lucide-react';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Card, CardContent } from '@/components/ui/card';
-import { ErrorBoundary } from '@/components/ui/ErrorBoundary/ErrorBoundary';
+import { EnterpriseErrorBoundary as ErrorBoundary } from '@/components/ui/ErrorBoundary/ErrorBoundary';
 import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
