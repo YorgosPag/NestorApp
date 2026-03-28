@@ -555,7 +555,9 @@
     "directCall": "Άμεση Κλήση",
     "fullProfile": "Πλήρες Προφίλ",
     "schedule": "Προγραμματισμός",
-    "report": "Αναφορά"
+    "report": "Αναφορά",
+    "email": "Email",
+    "statusLabel": "Κατάσταση"
   },
   "inlineCreate": {
     "askingPrice": "Ζητούμενη Τιμή",

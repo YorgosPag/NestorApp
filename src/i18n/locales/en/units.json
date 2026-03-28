@@ -544,7 +544,9 @@
     "directCall": "Direct Call",
     "fullProfile": "Full Profile",
     "schedule": "Schedule",
-    "report": "Report"
+    "report": "Report",
+    "email": "Email",
+    "statusLabel": "Status"
   },
   "inlineCreate": {
     "askingPrice": "Asking Price",

@@ -4,33 +4,25 @@
 import { db } from '@/lib/firebase';
 import { randomUUID } from 'crypto';
 import {
-  collection,
   doc,
   setDoc,
   updateDoc,
   serverTimestamp,
 } from 'firebase/firestore';
-import { FieldValue as AdminFieldValue, Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
 import type { Communication } from '@/types/crm';
 import { TRIAGE_STATUSES, TRIAGE_STATUS_VALUES, type TriageStatus } from '@/constants/triage-statuses';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
-import { generateMessageId, generateTaskId } from '@/services/enterprise-id.service';
+import { generateMessageId } from '@/services/enterprise-id.service';
 import { getAdminFirestore } from '@/server/admin/admin-guards';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
-import { getCompanyWidePolicyAdmin, getProjectPolicyAdmin } from '@/services/assignment/AssignmentPolicyRepository';
-import { resolveTaskDueInHours } from '@/services/assignment/AssignmentPolicyService';
-import { logCommunicationApproved, logCommunicationRejected } from '@/lib/auth/audit';
 import { normalizeToISO } from '@/lib/date-local';
-import type { AuthContext } from '@/lib/auth/types';
+
+// ── Re-exports for backward compatibility ──────────
+export { approveCommunication, rejectCommunication } from './communications-triage-actions';
 
 // 🏢 ENTERPRISE: Centralized collection configuration
-// 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES (COMMUNICATIONS collection deprecated)
 const COMMUNICATIONS_COLLECTION = COLLECTIONS.MESSAGES;
-
-// ============================================================================
-// LOGGER
-// ============================================================================
 
 const logger = createModuleLogger('COMMUNICATIONS_SERVICE');
 
@@ -69,45 +61,30 @@ function buildActionErrorMetadata(params: {
   };
 }
 
-// ADR-214 Phase 5: transformCommunication removed — was only used by getCommunicationsByContact
-// which has been relocated to communications-client.service.ts
-
 const resolveDateValue = (value: unknown): Date => {
-  if (value instanceof Date) {
-    return value;
-  }
-  if (typeof value === 'string' || typeof value === 'number') {
-    return new Date(value);
-  }
+  if (value instanceof Date) return value;
+  if (typeof value === 'string' || typeof value === 'number') return new Date(value);
   if (value && typeof value === 'object' && 'toDate' in value) {
     const dateValue = (value as { toDate?: () => Date }).toDate?.();
-    if (dateValue instanceof Date) {
-      return dateValue;
-    }
+    if (dateValue instanceof Date) return dateValue;
   }
   return new Date();
 };
 
 // ============================================================================
-// 🏢 ENTERPRISE: Shared triage query helper (Admin SDK)
+// SHARED TRIAGE QUERY HELPER (Admin SDK)
 // ============================================================================
 
-// NOTE: TRIAGE_STATUS_VALUES imported from @/constants/triage-statuses (isomorphic module)
-
 async function fetchTriageCommunications(params: {
-  companyId?: string;  // Optional for global admin access
+  companyId?: string;
   status?: TriageStatus;
 }): Promise<Communication[]> {
   const adminDb = getAdminFirestore();
   const messagesRef = adminDb.collection(COLLECTIONS.MESSAGES);
-
-  // 🏢 ENTERPRISE: Global Admin Support
-  // If companyId is undefined/null, fetch ALL messages (global admin view)
   const isGlobalAccess = !params.companyId;
 
   let snapshots;
   if (isGlobalAccess) {
-    // Global admin: fetch all messages without company filter
     snapshots = params.status
       ? [await messagesRef.where('triageStatus', '==', params.status).get()]
       : await Promise.all(
@@ -116,11 +93,9 @@ async function fetchTriageCommunications(params: {
           )
         );
   } else {
-    // Tenant-scoped: filter by companyId
     if (params.status) {
       snapshots = [await messagesRef.where(FIELDS.COMPANY_ID, '==', params.companyId).where('triageStatus', '==', params.status).get()];
     } else {
-      // 🐛 DEBUG: Log each query
       logger.info('📊 Fetching stats - running queries for each status', {
         companyId: params.companyId,
         statuses: TRIAGE_STATUS_VALUES
@@ -132,11 +107,7 @@ async function fetchTriageCommunications(params: {
             .where(FIELDS.COMPANY_ID, '==', params.companyId)
             .where('triageStatus', '==', status)
             .get();
-
-          logger.info(`📊 Query result for status "${status}"`, {
-            count: snapshot.size
-          });
-
+          logger.info(`📊 Query result for status "${status}"`, { count: snapshot.size });
           return snapshot;
         })
       );
@@ -147,79 +118,45 @@ async function fetchTriageCommunications(params: {
     snapshot.docs.map((doc) => {
       const data = doc.data();
       const communication: Partial<Communication> & { id: string } = { id: doc.id };
-
       for (const key in data) {
         const value = data[key];
         const iso = normalizeToISO(value);
         (communication as Record<string, unknown>)[key] = iso ?? value;
       }
-
       return communication as Communication;
     })
   );
 
-  const sorted = communications.sort((a, b) => {
-    const dateA = resolveDateValue(a.createdAt).getTime();
-    const dateB = resolveDateValue(b.createdAt).getTime();
-    return dateB - dateA;
+  return communications.sort((a, b) => {
+    return resolveDateValue(b.createdAt).getTime() - resolveDateValue(a.createdAt).getTime();
   });
-
-  return sorted;
 }
+
+// ============================================================================
+// BASIC CRUD
+// ============================================================================
 
 export async function addCommunication(communicationData: Omit<Communication, 'id' | 'createdAt' | 'updatedAt'>) {
-  try {
-    const enterpriseId = generateMessageId();
-    const docRef = doc(db, COMMUNICATIONS_COLLECTION, enterpriseId);
-    await setDoc(docRef, {
-      ...communicationData,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
-    return { id: enterpriseId, success: true };
-  } catch (error) {
-    // Error logging removed //('Σφάλμα κατά την προσθήκη επικοινωνίας:', error);
-    throw error;
-  }
+  const enterpriseId = generateMessageId();
+  const docRef = doc(db, COMMUNICATIONS_COLLECTION, enterpriseId);
+  await setDoc(docRef, {
+    ...communicationData,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+  return { id: enterpriseId, success: true };
 }
-
-// ADR-214 Phase 5: getCommunicationsByContact relocated to communications-client.service.ts
-// SECURITY FIX: Was missing companyId tenant filter. Now auto-injected via firestoreQueryService.
-// Import from '@/services/communications-client.service' instead.
 
 export async function updateCommunicationStatus(communicationId: string, status: Communication['status']) {
-  try {
-    const commRef = doc(db, COMMUNICATIONS_COLLECTION, communicationId);
-    await updateDoc(commRef, {
-      status,
-      updatedAt: serverTimestamp()
-    });
-    
-    return { success: true };
-  } catch (error) {
-    // Error logging removed //('Σφάλμα κατά την ενημέρωση επικοινωνίας:', error);
-    throw error;
-  }
+  const commRef = doc(db, COMMUNICATIONS_COLLECTION, communicationId);
+  await updateDoc(commRef, { status, updatedAt: serverTimestamp() });
+  return { success: true };
 }
 
-// ADR-214 Phase 5: deleteAllCommunications relocated to communications-client.service.ts
-// SECURITY FIX: Was deleting ENTIRE collection without companyId filter!
-// Now auto-scoped to current company via firestoreQueryService.
-// Import from '@/services/communications-client.service' instead.
-
 // ============================================================================
-// 🏢 ENTERPRISE: AI INBOX SERVER ACTIONS (Stage 2)
+// TRIAGE QUERIES
 // ============================================================================
 
-/**
- * Get pending communications for AI Inbox triage queue
- *
- * @param companyId - Company ID for tenant isolation
- * @returns Array of communications with triageStatus="pending"
- *
- * @enterprise Tenant-scoped query, server-side only
- * @created 2026-02-03 - Stage 2: Real Data + Actions
- */
 export async function getPendingTriageCommunications(
   companyId: string,
   operationId?: string
@@ -230,15 +167,6 @@ export async function getPendingTriageCommunications(
   return getTriageCommunications(companyId, operationId, TRIAGE_STATUSES.PENDING);
 }
 
-/**
- * Get triage communications for AI Inbox (optional status filter)
- *
- * @param companyId - Company ID for tenant isolation (undefined = global admin access)
- * @param status - Optional triage status filter
- * @returns Array of communications in triage workflow
- *
- * @enterprise Tenant-scoped query OR global admin access (if companyId is undefined)
- */
 export async function getTriageCommunications(
   companyId: string | undefined,
   operationId?: string,
@@ -249,15 +177,11 @@ export async function getTriageCommunications(
 > {
   const errorId = randomUUID();
 
-  // 🏢 ENTERPRISE: Global Admin Support
-  // companyId undefined = global admin access (all companies)
-  const isGlobalAccess = !companyId;
-
   try {
     logger.info('Fetching triage communications', {
       companyId: companyId || 'GLOBAL_ACCESS',
       status,
-      isGlobalAccess,
+      isGlobalAccess: !companyId,
     });
     const data = await fetchTriageCommunications({ companyId, status });
     return { ok: true, data };
@@ -270,14 +194,6 @@ export async function getTriageCommunications(
   }
 }
 
-/**
- * Get triage summary stats for AI Inbox
- *
- * @param companyId - Company ID for tenant isolation (undefined = global admin access)
- * @returns Counts per triage status
- *
- * @enterprise Tenant-scoped query OR global admin access (if companyId is undefined)
- */
 export async function getTriageStats(
   companyId: string | undefined,
   operationId?: string
@@ -287,48 +203,28 @@ export async function getTriageStats(
 > {
   const errorId = randomUUID();
 
-  // 🏢 ENTERPRISE: Global Admin Support - companyId undefined = all companies
-  const isGlobalAccess = !companyId;
-
   try {
     logger.info('Fetching triage stats', {
       companyId: companyId || 'GLOBAL_ACCESS',
-      isGlobalAccess,
+      isGlobalAccess: !companyId,
     });
 
     const communications = await fetchTriageCommunications({ companyId });
 
-    // 🐛 DEBUG: Log communications for troubleshooting
     logger.info('📊 Stats calculation', {
       totalCommunications: communications.length,
-      sample: communications.slice(0, 2).map(c => ({
-        id: c.id,
-        triageStatus: c.triageStatus,
-        from: c.from
-      }))
+      sample: communications.slice(0, 2).map(c => ({ id: c.id, triageStatus: c.triageStatus, from: c.from }))
     });
 
     const counts = communications.reduce(
       (acc, comm) => {
         switch (comm.triageStatus) {
-          case TRIAGE_STATUSES.PENDING:
-            acc.pending += 1;
-            break;
-          case TRIAGE_STATUSES.APPROVED:
-            acc.approved += 1;
-            break;
-          case TRIAGE_STATUSES.REJECTED:
-            acc.rejected += 1;
-            break;
-          case TRIAGE_STATUSES.REVIEWED:
-            acc.reviewed += 1;
-            break;
+          case TRIAGE_STATUSES.PENDING: acc.pending += 1; break;
+          case TRIAGE_STATUSES.APPROVED: acc.approved += 1; break;
+          case TRIAGE_STATUSES.REJECTED: acc.rejected += 1; break;
+          case TRIAGE_STATUSES.REVIEWED: acc.reviewed += 1; break;
           default:
-            // 🐛 DEBUG: Log unknown status
-            logger.warn('Unknown triage status', {
-              status: comm.triageStatus,
-              commId: comm.id
-            });
+            logger.warn('Unknown triage status', { status: comm.triageStatus, commId: comm.id });
             break;
         }
         return acc;
@@ -337,329 +233,13 @@ export async function getTriageStats(
     );
 
     const total = counts.pending + counts.approved + counts.rejected + counts.reviewed;
-
     logger.info('📊 Stats result', { total, ...counts });
 
-    return {
-      ok: true,
-      data: {
-        total,
-        pending: counts.pending,
-        approved: counts.approved,
-        rejected: counts.rejected,
-        reviewed: counts.reviewed
-      }
-    };
+    return { ok: true, data: { total, ...counts } };
   } catch (error) {
     logger.error(
       'Failed to fetch triage stats',
       buildActionErrorMetadata({ errorId, companyId: companyId || 'GLOBAL_ACCESS', operationId, error })
-    );
-    return { ok: false, errorId, code: 'unknown' };
-  }
-}
-
-/**
- * Approve communication and create linked CRM task (idempotent)
- *
- * @param communicationId - Communication ID to approve
- * @param adminUid - Admin user ID (from auth context)
- * @returns Success status with task ID
- *
- * @enterprise Idempotent operation (safe to retry)
- * @audit Logs admin action
- */
-export async function approveCommunication(
-  communicationId: string,
-  adminUid: string,
-  companyId: string,
-  operationId?: string
-): Promise<
-  | { ok: true; taskId: string }
-  | { ok: false; errorId: string; code: ActionErrorCode }
-> {
-  const errorId = randomUUID();
-
-  if (!companyId || !adminUid) {
-    logger.error(
-      'Invalid context for approveCommunication',
-      buildActionErrorMetadata({
-        errorId,
-        companyId,
-        communicationId,
-        adminUid,
-        operationId,
-        error: new Error('Missing companyId or adminUid'),
-      })
-    );
-    return { ok: false, errorId, code: 'invalid_context' };
-  }
-
-  try {
-    // 🏢 ENTERPRISE: Use Firebase Admin SDK
-    const adminDb = getAdminFirestore();
-    const commDoc = await adminDb.collection(COLLECTIONS.MESSAGES).doc(communicationId).get();
-
-    if (!commDoc.exists) {
-      logger.error(
-        'Communication not found on approveCommunication',
-        buildActionErrorMetadata({
-          errorId,
-          companyId,
-          communicationId,
-          adminUid,
-          operationId,
-          error: new Error('Communication not found'),
-        })
-      );
-      return { ok: false, errorId, code: 'not_found' };
-    }
-
-    const data = commDoc.data()!;
-    const communication: Partial<Communication> & { id: string } = { id: commDoc.id };
-
-    // ADR-217: Centralized timestamp conversion
-    for (const key in data) {
-      const value = data[key];
-      const iso = normalizeToISO(value);
-      (communication as Record<string, unknown>)[key] = iso ?? value;
-    }
-    const comm = communication as Communication;
-
-    if (comm.companyId !== companyId) {
-      logger.error(
-        'Tenant isolation violation on approveCommunication',
-        buildActionErrorMetadata({
-          errorId,
-          companyId,
-          communicationId,
-          adminUid,
-          operationId,
-          error: new Error('Communication belongs to different company'),
-        })
-      );
-      return { ok: false, errorId, code: 'tenant_mismatch' };
-    }
-
-    // 2. Idempotency: If already approved and has linkedTaskId, return existing task ID
-    if (comm.triageStatus === 'approved' && comm.linkedTaskId) {
-      return { ok: true, taskId: comm.linkedTaskId };
-    }
-
-    const projectPolicy = comm.projectId
-      ? await getProjectPolicyAdmin(companyId, comm.projectId)
-      : null;
-    const companyPolicy = projectPolicy ?? await getCompanyWidePolicyAdmin(companyId);
-    const dueInHours = resolveTaskDueInHours(comm.intentAnalysis?.intentType, companyPolicy ?? undefined);
-    const dueDate = AdminTimestamp.fromMillis(Date.now() + dueInHours * 60 * 60 * 1000);
-
-    // 3. Create CRM Task using Admin SDK (STOP 5 fix - no client-side repository)
-    const tasksRef = adminDb.collection(COLLECTIONS.TASKS);
-
-    const taskData = {
-      title: comm.subject || `Follow-up: ${comm.from}`,
-      description: comm.content,
-      type: 'follow_up',
-      contactId: comm.contactId,
-      companyId,
-      status: 'pending',
-      priority: comm.intentAnalysis?.needsTriage ? 'high' : 'medium',
-      assignedTo: adminUid, // TODO: Use AssignmentPolicyService to resolve assignee
-      dueDate,
-      createdAt: AdminFieldValue.serverTimestamp(),
-      updatedAt: AdminFieldValue.serverTimestamp(),
-      completedAt: null,
-      reminderSent: false,
-    };
-
-    // 🏢 ENTERPRISE: Server-side task creation with Admin SDK + Enterprise ID (ADR-260)
-    const taskId = generateTaskId();
-    await tasksRef.doc(taskId).set(taskData);
-
-    // 4. Update communication with approval + linkedTaskId (Admin SDK)
-    await adminDb.collection(COLLECTIONS.MESSAGES).doc(communicationId).update({
-      triageStatus: 'approved',
-      linkedTaskId: taskId,
-      updatedAt: AdminFieldValue.serverTimestamp()
-    });
-
-    // 5. 🏢 ENTERPRISE: Log audit event for approval (2026-02-06)
-    try {
-      const authContext: AuthContext = {
-        uid: adminUid,
-        email: '', // Email not available here, audit will work without it
-        companyId,
-        globalRole: 'company_admin', // Assume company_admin for now
-        mfaEnrolled: false,
-        isAuthenticated: true,
-      };
-
-      await logCommunicationApproved(
-        authContext,
-        communicationId,
-        comm.triageStatus ?? 'pending',
-        taskId,
-        {
-          assignedTo: adminUid,
-          dueDate: normalizeToISO(dueDate) ?? new Date().toISOString(),
-          priority: comm.intentAnalysis?.needsTriage ? 'high' : 'medium',
-          contactId: comm.contactId,
-          projectId: comm.projectId,
-        },
-        comm.intentAnalysis?.intentType
-          ? `Approved communication with intent: ${comm.intentAnalysis.intentType}`
-          : 'Communication approved'
-      );
-
-      logger.info('Audit log created for communication approval', {
-        communicationId,
-        taskId,
-        adminUid,
-      });
-    } catch (auditError) {
-      // Never throw on audit failure - just log
-      logger.error('Failed to log communication approval audit', {
-        communicationId,
-        taskId,
-        error: auditError,
-      });
-    }
-
-    return { ok: true, taskId };
-  } catch (error) {
-    logger.error(
-      'Failed to approve communication',
-      buildActionErrorMetadata({
-        errorId,
-        companyId,
-        communicationId,
-        adminUid,
-        operationId,
-        error,
-      })
-    );
-    return { ok: false, errorId, code: 'unknown' };
-  }
-}
-
-/**
- * Reject communication (mark as rejected, no task creation)
- *
- * @param communicationId - Communication ID to reject
- * @returns Success status
- *
- * @enterprise Simple status update
- * @audit Logs admin action
- */
-export async function rejectCommunication(
-  communicationId: string,
-  companyId: string,
-  adminUid: string,
-  operationId?: string
-): Promise<
-  | { ok: true }
-  | { ok: false; errorId: string; code: ActionErrorCode }
-> {
-  const errorId = randomUUID();
-
-  if (!companyId || !adminUid) {
-    logger.error(
-      'Invalid context for rejectCommunication',
-      buildActionErrorMetadata({
-        errorId,
-        companyId,
-        communicationId,
-        adminUid,
-        operationId,
-        error: new Error('Missing companyId or adminUid'),
-      })
-    );
-    return { ok: false, errorId, code: 'invalid_context' };
-  }
-
-  try {
-    // 🏢 ENTERPRISE: Use Firebase Admin SDK
-    const adminDb = getAdminFirestore();
-    const commDoc = await adminDb.collection(COLLECTIONS.MESSAGES).doc(communicationId).get();
-
-    if (!commDoc.exists) {
-      logger.error(
-        'Communication not found on rejectCommunication',
-        buildActionErrorMetadata({
-          errorId,
-          companyId,
-          communicationId,
-          adminUid,
-          operationId,
-          error: new Error('Communication not found'),
-        })
-      );
-      return { ok: false, errorId, code: 'not_found' };
-    }
-
-    const data = commDoc.data() as Communication | undefined;
-    if (data?.companyId !== companyId) {
-      logger.error(
-        'Tenant isolation violation on rejectCommunication',
-        buildActionErrorMetadata({
-          errorId,
-          companyId,
-          communicationId,
-          adminUid,
-          operationId,
-          error: new Error('Communication belongs to different company'),
-        })
-      );
-      return { ok: false, errorId, code: 'tenant_mismatch' };
-    }
-
-    await adminDb.collection(COLLECTIONS.MESSAGES).doc(communicationId).update({
-      triageStatus: 'rejected',
-      updatedAt: AdminFieldValue.serverTimestamp()
-    });
-
-    // 🏢 ENTERPRISE: Log audit event for rejection (2026-02-06)
-    try {
-      const authContext: AuthContext = {
-        uid: adminUid,
-        email: '', // Email not available here, audit will work without it
-        companyId,
-        globalRole: 'company_admin', // Assume company_admin for now
-        mfaEnrolled: false,
-        isAuthenticated: true,
-      };
-
-      await logCommunicationRejected(
-        authContext,
-        communicationId,
-        data?.triageStatus ?? 'pending',
-        'Communication rejected by admin'
-      );
-
-      logger.info('Audit log created for communication rejection', {
-        communicationId,
-        adminUid,
-      });
-    } catch (auditError) {
-      // Never throw on audit failure - just log
-      logger.error('Failed to log communication rejection audit', {
-        communicationId,
-        error: auditError,
-      });
-    }
-
-    return { ok: true };
-  } catch (error) {
-    logger.error(
-      'Failed to reject communication',
-      buildActionErrorMetadata({
-        errorId,
-        companyId,
-        communicationId,
-        adminUid,
-        operationId,
-        error,
-      })
     );
     return { ok: false, errorId, code: 'unknown' };
   }

@@ -12,7 +12,10 @@
     "close": "Κλείσιμο",
     "changeSelection": "Αλλαγή επιλογής",
     "clearAll": "Διαγραφή όλων",
-    "clearAllCount": "Καθαρισμός ({count})"
+    "clearAllCount": "Καθαρισμός ({count})",
+    "toggleSidebar": "Εναλλαγή Πλαϊνού Μενού",
+    "nextSlide": "Επόμενη διαφάνεια",
+    "previousSlide": "Προηγούμενη διαφάνεια"
   },
   "periods": {
     "day": "Ημέρα",
@@ -255,7 +258,10 @@
     "labels": {
       "favoritesManagement": "Διαχείριση αγαπημένων",
       "share": "Κοινοποίηση",
-      "sorting": "Ταξινόμηση"
+      "sorting": "Ταξινόμηση",
+      "exportTo": "Εξαγωγή σε",
+      "excelFormat": "Excel (.xlsx)",
+      "pdfReport": "Αναφορά PDF"
     },
     "sort": {
       "name": {
@@ -2024,7 +2030,16 @@
       "company": "Εταιρεία",
       "officeDirectory": "Κοινός Κατάλογος",
       "personal": "Προσωπικός"
-    }
+    },
+    "title": "Χώροι εργασίας",
+    "loading": "Φόρτωση χώρων εργασίας...",
+    "noWorkspaces": "Κανένας χώρος εργασίας",
+    "selectWorkspace": "Επιλέξτε χώρο εργασίας",
+    "switchFailed": "Αποτυχία εναλλαγής χώρου εργασίας. Δοκιμάστε ξανά.",
+    "selectLabel": "Επιλογή χώρου εργασίας",
+    "availableLabel": "Διαθέσιμοι χώροι εργασίας",
+    "refreshLabel": "Ανανέωση χώρων εργασίας",
+    "settings": "Ρυθμίσεις"
   },
   "productTour": {
     "next": "Επόμενο",
@@ -2140,7 +2155,8 @@
   "a11y": {
     "addFavorite": "Προσθήκη στα αγαπημένα",
     "removeFavorite": "Αφαίρεση από αγαπημένα",
-    "cardActions": "Ενέργειες κάρτας"
+    "cardActions": "Ενέργειες κάρτας",
+    "escKey": "ESC"
   },
   "deletionGuard": {
     "blocked": "Η διαγραφή δεν είναι δυνατή",
@@ -2300,5 +2316,16 @@
     "error": "Αποτυχία αποθήκευσης",
     "retry": "Επανάληψη",
     "lastSaved": "Τελευταία αποθήκευση"
+  },
+  "progressiveLoader": {
+    "percentComplete": "{percent}% Ολοκληρωμένο",
+    "remaining": "{time} απομένουν"
+  },
+  "photoManager": {
+    "individualPhotos": "Φωτογραφίες Προσώπου ({count})",
+    "companyLogo": "Λογότυπο Εταιρείας",
+    "representativePhoto": "Φωτογραφία Εκπροσώπου",
+    "serviceLogo": "Λογότυπο Δημόσιας Υπηρεσίας",
+    "emailShareSimplified": "Φόρμα Κοινοποίησης Email - Προσωρινά Απλοποιημένη"
   }
 }

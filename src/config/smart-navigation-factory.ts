@@ -64,6 +64,7 @@ import {
   FileBarChart,
   ClipboardCheck,
   BarChart3,
+  PieChart,
 } from "lucide-react";
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -136,6 +137,18 @@ const NAVIGATION_LABELS = {
   accounting_documents: 'accounting.documents',
   accounting_apy_certificates: 'accounting.apyCertificates',
   accounting_reports: 'accounting.reports',
+
+  // Reports submenu
+  reports_overview: 'reports.overview',
+  reports_financial: 'reports.financial',
+  reports_projects: 'reports.projects',
+  reports_sales: 'reports.sales',
+  reports_contacts: 'reports.contacts',
+  reports_crm: 'reports.crm',
+  reports_spaces: 'reports.spaces',
+  reports_construction: 'reports.construction',
+  reports_compliance: 'reports.compliance',
+  reports_export: 'reports.export',
 
   // CRM submenu
   crm_overview: 'crm.overview',
@@ -216,27 +229,6 @@ interface NavigationConfigBase {
   href: string;
   badge?: string | null;
   subItems?: NavigationConfigBase[];
-  smartConfig?: {
-    priority?: NavigationItemPriority;
-    displayOrder?: number;
-    featureFlag?: string;
-    permissions?: string[];
-    environments?: NavigationEnvironment[];
-    analyticsKey?: string;
-    metadata?: Record<string, unknown>;
-  };
-}
-
-/**
- * ✅ ENTERPRISE: Smart navigation item base (with title)
- * Final interface after adding labels
- */
-interface SmartNavigationItemBase {
-  title: string;
-  icon: LucideIcon;
-  href: string;
-  badge?: string | null;
-  subItems?: SmartNavigationItemBase[];
   smartConfig?: {
     priority?: NavigationItemPriority;
     displayOrder?: number;
@@ -368,6 +360,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
           {
             icon: Library,
             href: "/properties",
+            // eslint-disable-next-line custom/no-hardcoded-strings -- development-only badge, not shown in production
             badge: process.env.NODE_ENV === 'development' ? 'ΝΕΟ' : null,
             smartConfig: {
               priority: 'high',
@@ -492,6 +485,28 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
               {  icon: Filter, href: '/crm/pipeline' },
               {  icon: Users2, href: '/crm/teams' },
               {  icon: Bell, href: '/crm/notifications' },
+            ]
+          },
+          {
+            icon: PieChart,
+            href: "/reports",
+            badge: null,
+            smartConfig: {
+              priority: 'medium',
+              displayOrder: 75,
+              analyticsKey: 'nav_reports',
+            },
+            subItems: [
+              { icon: PieChart, href: '/reports' },
+              { icon: DollarSign, href: '/reports/financial' },
+              { icon: Building, href: '/reports/projects' },
+              { icon: BarChart3, href: '/reports/sales' },
+              { icon: Users, href: '/reports/contacts' },
+              { icon: Phone, href: '/reports/crm' },
+              { icon: Archive, href: '/reports/spaces' },
+              { icon: Construction, href: '/reports/construction' },
+              { icon: Shield, href: '/reports/compliance' },
+              { icon: FileBarChart, href: '/reports/export' },
             ]
           },
           {
@@ -700,6 +715,18 @@ function getLabelKeyForPath(path: string): string {
     'accounting/documents': 'accounting_documents',
     'accounting/apy-certificates': 'accounting_apy_certificates',
     'accounting/reports': 'accounting_reports',
+
+    // Reports
+    'reports': 'reports_overview',
+    'reports/financial': 'reports_financial',
+    'reports/projects': 'reports_projects',
+    'reports/sales': 'reports_sales',
+    'reports/contacts': 'reports_contacts',
+    'reports/crm': 'reports_crm',
+    'reports/spaces': 'reports_spaces',
+    'reports/construction': 'reports_construction',
+    'reports/compliance': 'reports_compliance',
+    'reports/export': 'reports_export',
 
     // CRM main
     'crm': 'crm',

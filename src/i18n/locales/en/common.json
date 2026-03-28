@@ -12,7 +12,10 @@
     "close": "Close",
     "changeSelection": "Change selection",
     "clearAll": "Clear all",
-    "clearAllCount": "Clear ({count})"
+    "clearAllCount": "Clear ({count})",
+    "toggleSidebar": "Toggle Sidebar",
+    "nextSlide": "Next slide",
+    "previousSlide": "Previous slide"
   },
   "periods": {
     "day": "Day",
@@ -255,7 +258,10 @@
     "labels": {
       "favoritesManagement": "Manage favorites",
       "share": "Share",
-      "sorting": "Sorting"
+      "sorting": "Sorting",
+      "exportTo": "Export to",
+      "excelFormat": "Excel (.xlsx)",
+      "pdfReport": "PDF Report"
     },
     "sort": {
       "name": {
@@ -2025,7 +2031,16 @@
       "company": "Company",
       "officeDirectory": "Office Directory",
       "personal": "Personal"
-    }
+    },
+    "title": "Workspaces",
+    "loading": "Loading workspaces...",
+    "noWorkspaces": "No workspace",
+    "selectWorkspace": "Select workspace",
+    "switchFailed": "Failed to switch workspace. Please try again.",
+    "selectLabel": "Select workspace",
+    "availableLabel": "Available workspaces",
+    "refreshLabel": "Refresh workspaces",
+    "settings": "Settings"
   },
   "productTour": {
     "next": "Next",
@@ -2141,7 +2156,8 @@
   "a11y": {
     "addFavorite": "Add to favorites",
     "removeFavorite": "Remove from favorites",
-    "cardActions": "Card actions"
+    "cardActions": "Card actions",
+    "escKey": "ESC"
   },
   "deletionGuard": {
     "blocked": "Deletion is not allowed",
@@ -2311,5 +2327,16 @@
     "understood": "I understand",
     "viewContact": "View contact",
     "unknownError": "Unknown error"
+  },
+  "progressiveLoader": {
+    "percentComplete": "{percent}% Complete",
+    "remaining": "{time} remaining"
+  },
+  "photoManager": {
+    "individualPhotos": "Face Photos ({count})",
+    "companyLogo": "Company Logo",
+    "representativePhoto": "Representative Photo",
+    "serviceLogo": "Public Service Logo",
+    "emailShareSimplified": "Email Share Form - Temporarily Simplified"
   }
 }

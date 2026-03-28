@@ -9,6 +9,7 @@
   "showAdvanced": "Εμφάνιση προχωρημένων",
   "hideAdvanced": "Απόκρυψη προχωρημένων",
   "resetFilters": "Επαναφορά φίλτρων",
+  "clearFilters": "Καθαρισμός",
   "typeLabel": "Τύπος:",
   "typeAriaLabel": "Φίλτρα τύπου",
   "filterBy": "Φιλτράρισμα:",

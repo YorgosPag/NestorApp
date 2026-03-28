@@ -628,6 +628,47 @@
       "parking": "Θέση Στάθμευσης"
     }
   },
+  "floorPlan": {
+    "emptyState": {
+      "title": "Δεν φορτώθηκε Κάτοψη",
+      "description": "Ανεβάστε μια κάτοψη PDF για να ξεκινήσετε τη διαχείριση ακινήτων",
+      "uploadHint": "Χρησιμοποιήστε το κουμπί \"Φόρτωση PDF\" στη γραμμή εργαλείων"
+    },
+    "statusBar": {
+      "properties": "Ιδιοκτησίες",
+      "selected": "Επιλεγμένο",
+      "none": "Κανένα",
+      "connections": "Συνδέσεις",
+      "pdfLoaded": "PDF Φορτωμένο",
+      "zoom": "Μεγέθυνση",
+      "mode": "Λειτουργία",
+      "connecting": "Σύνδεση"
+    },
+    "canvas": {
+      "noPdfProvided": "ΔΕΝ ΔΟΘΗΚΕ PDF URL",
+      "pdfLoading": "ΦΟΡΤΩΣΗ PDF...",
+      "pdfError": "ΣΦΑΛΜΑ PDF",
+      "pdfLoaded": "PDF ΦΟΡΤΩΘΗΚΕ & ΕΜΦΑΝΙΣΤΗΚΕ! Σελίδες: {count}",
+      "debugTitle": "ΠΛΗΡΟΦΟΡΙΕΣ DEBUG PDF",
+      "debugPdfUrl": "PDF URL",
+      "debugPdfReady": "PDF Έτοιμο",
+      "debugPages": "Σελίδες",
+      "debugTestMode": "Λειτουργία Test",
+      "debugError": "Σφάλμα",
+      "debugNone": "Κανένα",
+      "debugExists": "ΥΠΑΡΧΕΙ",
+      "debugYes": "ΝΑΙ",
+      "debugNo": "ΟΧΙ",
+      "testInstructions": "ΟΔΗΓΙΕΣ ΔΟΚΙΜΗΣ",
+      "testStep1": "Πατήστε FULLSCREEN",
+      "testStep2": "Το PDF πρέπει να καλύπτει ΟΛΗ την οθόνη",
+      "testStep3": "Ψάξτε για χρωματιστά borders",
+      "testStep4": "Ελέγξτε debug info πάνω-αριστερά",
+      "modeHidden": "Κρυφό",
+      "modeNormal": "Κανονικό",
+      "modeFullscreen": "ΠΛΗΡΗΣ ΟΘΟΝΗ"
+    }
+  },
   "floorPlanToolbar": {
     "uploadPDF": "Φόρτωση PDF",
     "uploading": "Φόρτωση...",

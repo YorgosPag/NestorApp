@@ -634,6 +634,47 @@
       "parking": "Parking"
     }
   },
+  "floorPlan": {
+    "emptyState": {
+      "title": "No Floor Plan Loaded",
+      "description": "Upload a PDF floor plan to get started with property management",
+      "uploadHint": "Use the \"Upload PDF\" button in the toolbar"
+    },
+    "statusBar": {
+      "properties": "Properties",
+      "selected": "Selected",
+      "none": "None",
+      "connections": "Connections",
+      "pdfLoaded": "PDF Loaded",
+      "zoom": "Zoom",
+      "mode": "Mode",
+      "connecting": "Connecting"
+    },
+    "canvas": {
+      "noPdfProvided": "NO PDF URL PROVIDED",
+      "pdfLoading": "PDF LOADING...",
+      "pdfError": "PDF ERROR",
+      "pdfLoaded": "PDF LOADED & DISPLAYED! Pages: {count}",
+      "debugTitle": "PDF DEBUG INFO",
+      "debugPdfUrl": "PDF URL",
+      "debugPdfReady": "PDF Ready",
+      "debugPages": "Pages",
+      "debugTestMode": "Test Mode",
+      "debugError": "Error",
+      "debugNone": "None",
+      "debugExists": "EXISTS",
+      "debugYes": "YES",
+      "debugNo": "NO",
+      "testInstructions": "TEST INSTRUCTIONS",
+      "testStep1": "Click FULLSCREEN button",
+      "testStep2": "PDF should cover ENTIRE screen",
+      "testStep3": "Look for colored borders",
+      "testStep4": "Check debug info top-left",
+      "modeHidden": "Hidden",
+      "modeNormal": "Normal",
+      "modeFullscreen": "FULLSCREEN"
+    }
+  },
   "floorPlanToolbar": {
     "uploadPDF": "Upload PDF",
     "uploading": "Uploading...",

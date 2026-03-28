@@ -9,6 +9,7 @@
   "showAdvanced": "Show advanced",
   "hideAdvanced": "Hide advanced",
   "resetFilters": "Reset filters",
+  "clearFilters": "Clear",
   "typeLabel": "Type:",
   "typeAriaLabel": "Type filters",
   "filterBy": "Filter by:",
