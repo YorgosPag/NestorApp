@@ -5,10 +5,13 @@ import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CommonBadge } from '@/core/badges';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Property } from '@/types/property-viewer';
 import type { Connection, PropertyGroup } from '@/types/connections';
+import '@/lib/design-system';
 
 export interface LayerState {
   visible: boolean;
@@ -44,19 +47,20 @@ interface SidebarPanelProps {
 export function SidebarPanel({
   floorData,
   selectedPolygonIds = [],
-  layerStates = {},
-  setLayerStates,
-  onPolygonSelect,
+  layerStates: _layerStates = {},
+  setLayerStates: _setLayerStates,
+  onPolygonSelect: _onPolygonSelect,
   onDuplicate,
   onDelete,
-  connections = [],
-  setConnections,
-  groups = [],
-  setGroups,
+  connections: _connections = [],
+  setConnections: _setConnections,
+  groups: _groups = [],
+  setGroups: _setGroups,
   isConnecting = false,
   setIsConnecting,
 }: SidebarPanelProps) {
   const { radius } = useBorderTokens();
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n support
   const { t } = useTranslation('common');
 
@@ -69,7 +73,7 @@ export function SidebarPanel({
       <Card className="border-none shadow-none">
         <CardHeader className="pb-2">
           <h3 className="text-lg font-semibold">{t('propertyEditor.nodeEditing')}</h3>
-          <p className="text-sm text-muted-foreground">
+          <p className={cn("text-sm", colors.text.muted)}>
             {t('propertyEditor.selectedProperties', { count: safeSelectedPolygonIds.length })}
           </p>
         </CardHeader>
@@ -107,7 +111,7 @@ export function SidebarPanel({
               ))}
             </div>
           ) : (
-            <div className="text-center text-muted-foreground py-8">
+            <div className={cn("text-center py-8", colors.text.muted)}>
               <p>{t('propertyEditor.selectPropertiesToEdit')}</p>
             </div>
           )}
@@ -115,7 +119,7 @@ export function SidebarPanel({
           {/* Layer Controls */}
           <div className="space-y-2">
             <h4 className="font-medium">{t('propertyEditor.layers')}</h4>
-            <div className="text-sm text-muted-foreground">
+            <div className={cn("text-sm", colors.text.muted)}>
               {t('propertyEditor.layerVisibilityControl')}
             </div>
           </div>

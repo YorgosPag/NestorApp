@@ -2,6 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import '@/lib/design-system';
 
 export function PropertyListSkeleton() {
   return (

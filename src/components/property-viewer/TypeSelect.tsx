@@ -12,6 +12,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PROPERTY_TYPE_LABELS } from '@/constants/property-statuses-enterprise';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Property type keys for i18n translation
 const PROPERTY_TYPE_KEYS = Object.keys(PROPERTY_TYPE_LABELS) as Array<keyof typeof PROPERTY_TYPE_LABELS>;

@@ -39,6 +39,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ADR-054: Centralized upload component
 import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
+import '@/lib/design-system';
 
 type ViewMode = 'view' | 'create' | 'measure' | 'edit';
 

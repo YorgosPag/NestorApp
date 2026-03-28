@@ -10,6 +10,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ConnectionControls } from './connection-panel/ConnectionControls';
 import { GroupManager } from './connection-panel/GroupManager';
 import { Legend } from './connection-panel/Legend';
+import '@/lib/design-system';
 
 interface SimpleConnectionPanelProps {
     properties: Property[];

@@ -10,6 +10,8 @@ import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface PropertyAttachmentsProps {
   storage: StorageUnitStub[];
@@ -19,6 +21,7 @@ interface PropertyAttachmentsProps {
 export function PropertyAttachments({ storage, parking }: PropertyAttachmentsProps) {
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('properties');
 
@@ -33,7 +36,7 @@ export function PropertyAttachments({ storage, parking }: PropertyAttachmentsPro
           <div className={spacing.padding.left.sm}>
             {storage.map(item => (
               <Link key={item.id} href={`/storage/${item.id}`} className="block">
-                <p className={`text-xs text-muted-foreground cursor-pointer ${HOVER_TEXT_EFFECTS.PRIMARY_WITH_UNDERLINE}`}>
+                <p className={`text-xs ${colors.text.muted} cursor-pointer ${HOVER_TEXT_EFFECTS.PRIMARY_WITH_UNDERLINE}`}>
                   {item.code} - {item.floor} ({item.area} {t('attachments.sqm')})
                 </p>
               </Link>
@@ -50,7 +53,7 @@ export function PropertyAttachments({ storage, parking }: PropertyAttachmentsPro
           <div className={spacing.padding.left.sm}>
             {parking.map(item => (
               <Link key={item.id} href={`/storage/${item.id}`} className="block">
-                <p className={`text-xs text-muted-foreground cursor-pointer ${HOVER_TEXT_EFFECTS.PRIMARY_WITH_UNDERLINE}`}>
+                <p className={`text-xs ${colors.text.muted} cursor-pointer ${HOVER_TEXT_EFFECTS.PRIMARY_WITH_UNDERLINE}`}>
                   {item.code} - {item.level} ({item.type})
                 </p>
               </Link>

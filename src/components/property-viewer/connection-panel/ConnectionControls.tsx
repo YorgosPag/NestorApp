@@ -9,6 +9,7 @@ import type { Connection, ConnectionType } from '@/types/connections';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface ConnectionControlsProps {
     connectionType: ConnectionType;

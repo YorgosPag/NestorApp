@@ -10,6 +10,7 @@ import { PROPERTY_STATUS_CONFIG } from "@/lib/property-utils";
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface LayerManagerHeaderProps {
   propertyCount: number;

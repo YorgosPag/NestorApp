@@ -9,6 +9,7 @@ import type { ExtendedPropertyDetails } from '@/types/property-viewer';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import '@/lib/design-system';
 
 interface PropertyDocumentsProps {
   documents: ExtendedPropertyDetails['documents'];

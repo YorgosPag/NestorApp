@@ -26,6 +26,7 @@ import type { LucideIcon } from 'lucide-react';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('ViewerTools');
 
@@ -85,9 +86,9 @@ export function ViewerTools({
   onPropertySelect,
   isConnecting = false,
   onConnectingChange,
-  connectionPairs = [],
-  onConnectionPairsChange,
-  properties = [],
+  connectionPairs: _connectionPairs = [],
+  onConnectionPairsChange: _onConnectionPairsChange,
+  properties: _properties = [],
   isReadOnly = false,
   className
 }: ViewerToolsProps) {

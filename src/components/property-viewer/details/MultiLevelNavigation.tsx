@@ -27,6 +27,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { FloorMultiSelectField } from '@/components/shared/FloorMultiSelectField';
+import '@/lib/design-system';
 
 interface MultiLevelNavigationProps {
   property: Property;
@@ -125,7 +126,7 @@ export function MultiLevelNavigation({
 
         {/* No levels yet — show hint */}
         {!hasLevels && !isEditing && (
-          <p className="text-xs text-muted-foreground italic">
+          <p className={cn("text-xs italic", colors.text.muted)}>
             {t('units:multiLevel.noFloors', { defaultValue: 'Επιλέξτε τουλάχιστον 2 ορόφους' })}
           </p>
         )}

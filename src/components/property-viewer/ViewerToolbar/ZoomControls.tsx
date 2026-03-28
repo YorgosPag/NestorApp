@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import '@/lib/design-system';
 
 interface ZoomControlsProps {
   zoom: number;

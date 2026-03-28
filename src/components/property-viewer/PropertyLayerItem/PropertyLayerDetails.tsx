@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Copy, Trash2, Palette } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
 import type { LayerState } from '../useLayerStates';
 import { PROPERTY_STATUS_CONFIG } from "@/lib/property-utils";
@@ -15,6 +17,7 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface PropertyLayerDetailsProps {
   property: Property;
@@ -33,6 +36,7 @@ export function PropertyLayerDetails({
 }: PropertyLayerDetailsProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('properties');
   const statusInfo = PROPERTY_STATUS_CONFIG[property.status] || PROPERTY_STATUS_CONFIG.default;
@@ -63,12 +67,12 @@ export function PropertyLayerDetails({
       {property.area && (
         <div className="text-xs">
           <div>
-            <span className="text-muted-foreground">{t('layerDetails.area')}</span>
+            <span className={colors.text.muted}>{t('layerDetails.area')}</span>
             <div className="font-medium">{property.area}{t('layerDetails.sqm')}</div>
           </div>
         </div>
       )}
-      <div className="text-xs text-muted-foreground">{t('layerDetails.nodes')} {property.vertices.length}</div>
+      <div className={cn("text-xs", colors.text.muted)}>{t('layerDetails.nodes')} {property.vertices.length}</div>
       <div className="flex gap-1 pt-1">
         <Button variant="outline" size="sm" className="h-7 px-2 text-xs flex-1" onClick={onDuplicate}>
           <Copy className={`${iconSizes.xs} mr-1`} /> {t('layerDetails.duplicate')}

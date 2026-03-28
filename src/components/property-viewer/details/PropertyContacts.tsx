@@ -11,6 +11,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface PropertyContactsProps {
   owner: ExtendedPropertyDetails['owner'];
@@ -20,6 +22,7 @@ interface PropertyContactsProps {
 export function PropertyContacts({ owner, agent }: PropertyContactsProps) {
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('properties');
 
@@ -37,14 +40,14 @@ export function PropertyContacts({ owner, agent }: PropertyContactsProps) {
             {owner.phone && (
               <div className={`flex items-center ${spacing.gap.sm} text-xs`}>
                 <NAVIGATION_ENTITIES.phone.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.phone.color)} />
-                <span className="text-muted-foreground">{owner.phone}</span>
+                <span className={colors.text.muted}>{owner.phone}</span>
               </div>
             )}
             {/* 🏢 ENTERPRISE: Using centralized email icon/color */}
             {owner.email && (
               <div className={`flex items-center ${spacing.gap.sm} text-xs`}>
                 <NAVIGATION_ENTITIES.email.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.email.color)} />
-                <span className="text-muted-foreground">{owner.email}</span>
+                <span className={colors.text.muted}>{owner.email}</span>
               </div>
             )}
           </div>
@@ -63,14 +66,14 @@ export function PropertyContacts({ owner, agent }: PropertyContactsProps) {
             {agent.phone && (
               <div className={`flex items-center ${spacing.gap.sm} text-xs`}>
                 <NAVIGATION_ENTITIES.phone.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.phone.color)} />
-                <span className="text-muted-foreground">{agent.phone}</span>
+                <span className={colors.text.muted}>{agent.phone}</span>
               </div>
             )}
             {/* 🏢 ENTERPRISE: Using centralized email icon/color */}
             {agent.email && (
               <div className={`flex items-center ${spacing.gap.sm} text-xs`}>
                 <NAVIGATION_ENTITIES.email.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.email.color)} />
-                <span className="text-muted-foreground">{agent.email}</span>
+                <span className={colors.text.muted}>{agent.email}</span>
               </div>
             )}
           </div>

@@ -11,7 +11,9 @@ import type { PropertyStatus } from '@/core/types/BadgeTypes';
 import type { LayerState } from '../useLayerStates';
 import { PROPERTY_STATUS_CONFIG, PROPERTY_TYPE_ICONS } from "@/lib/property-utils";
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Centralized Unit Icon (fallback)
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
@@ -36,6 +38,7 @@ export function PropertyLayerHeader({
   onToggleLock,
 }: PropertyLayerHeaderProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const statusInfo = PROPERTY_STATUS_CONFIG[property.status] || PROPERTY_STATUS_CONFIG.default;
   const IconComponent = PROPERTY_TYPE_ICONS[property.type] || UnitIcon;
 
@@ -46,21 +49,21 @@ export function PropertyLayerHeader({
           {isExpanded ? <ChevronDown className={iconSizes.xs} /> : <ChevronRight className={iconSizes.xs} />}
         </Button>
         <div className="flex items-center gap-2 flex-1 cursor-pointer" onClick={(e) => onSelect(e.shiftKey)}>
-          <IconComponent className={`${iconSizes.sm} text-muted-foreground`} />
+          <IconComponent className={`${iconSizes.sm} ${colors.text.muted}`} />
           <span className="text-sm font-medium truncate">{property.name}</span>
         </div>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="sm" className={`${iconSizes.lg} p-0`} onClick={onToggleVisibility}>
-            {layerState.visible ? <Eye className={iconSizes.xs} /> : <EyeOff className={`${iconSizes.xs} text-muted-foreground`} />}
+            {layerState.visible ? <Eye className={iconSizes.xs} /> : <EyeOff className={`${iconSizes.xs} ${colors.text.muted}`} />}
           </Button>
           <Button variant="ghost" size="sm" className={`${iconSizes.lg} p-0`} onClick={onToggleLock}>
-            {layerState.locked ? <Lock className={`${iconSizes.xs} text-muted-foreground`} /> : <Unlock className={iconSizes.xs} />}
+            {layerState.locked ? <Lock className={`${iconSizes.xs} ${colors.text.muted}`} /> : <Unlock className={iconSizes.xs} />}
           </Button>
         </div>
       </div>
 
       <div className="flex items-center justify-between text-xs pl-7">
-        <span className="text-muted-foreground">{property.type}</span>
+        <span className={colors.text.muted}>{property.type}</span>
         <PropertyBadge
           status={property.status as PropertyStatus}
           variant="outline"

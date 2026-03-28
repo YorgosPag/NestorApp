@@ -7,6 +7,7 @@ import type { Property } from '@/types/property-viewer';
 import { DROPDOWN_PLACEHOLDERS } from '@/constants/property-statuses-enterprise';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface FloorData {
     id: string;

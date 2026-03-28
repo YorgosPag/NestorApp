@@ -9,6 +9,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface PropertyDatesProps {
   dates: ExtendedPropertyDetails['dates'];
@@ -17,6 +19,7 @@ interface PropertyDatesProps {
 export function PropertyDates({ dates }: PropertyDatesProps) {
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('properties');
 
@@ -28,7 +31,7 @@ export function PropertyDates({ dates }: PropertyDatesProps) {
         <Calendar className={iconSizes.xs} />
         {t('dates.title')}
       </h4>
-      <div className={`${spacing.spaceBetween.sm} text-xs text-muted-foreground`}>
+      <div className={`${spacing.spaceBetween.sm} text-xs ${colors.text.muted}`}>
         {dates.created && <div>{t('dates.created')} {formatDate(new Date(dates.created))}</div>}
         {dates.updated && <div>{t('dates.updated')} {formatDate(new Date(dates.updated))}</div>}
         {dates.available && (

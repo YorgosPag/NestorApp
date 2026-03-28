@@ -8,6 +8,7 @@ import type { LayerState } from './useLayerStates';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { PropertyLayerHeader } from './PropertyLayerItem/PropertyLayerHeader';
 import { PropertyLayerDetails } from './PropertyLayerItem/PropertyLayerDetails';
+import '@/lib/design-system';
 
 
 interface PropertyLayerItemProps {
@@ -31,7 +32,7 @@ export function PropertyLayerItem({
   onToggleVisibility,
   onToggleLock,
   onOpacityChange,
-  onEdit,
+  onEdit: _onEdit,
   onDelete,
   onDuplicate
 }: PropertyLayerItemProps) {

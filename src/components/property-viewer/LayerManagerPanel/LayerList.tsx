@@ -6,6 +6,7 @@ import type { Property } from '@/types/property-viewer';
 import type { LayerState } from '../useLayerStates';
 import { PropertyLayerItem } from '../PropertyLayerItem';
 import { EmptyLayerMessage } from './EmptyLayerMessage';
+import '@/lib/design-system';
 
 interface LayerListProps {
   properties: Property[];

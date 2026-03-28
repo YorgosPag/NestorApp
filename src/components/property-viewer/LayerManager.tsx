@@ -18,6 +18,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('LayerManager');
 
 import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
+import '@/lib/design-system';
 
 type Point = { x:number; y:number };
 
@@ -104,10 +105,10 @@ const DxfCanvasComponent = forwardRef<DxfCanvasRef, Props>(function DxfCanvas({
   className = '',
   showCalibration = false,
   onCalibrationToggle,
-  onSceneChange,
+  onSceneChange: _onSceneChange,
   onTransformChange,
   isZoomWindowActive = false,
-  onZoomWindowModeChange,
+  onZoomWindowModeChange: _onZoomWindowModeChange,
 }: Props, ref) {
 
   const rendererRef = useRef<RendererInstance | null>(null);
@@ -127,7 +128,7 @@ const DxfCanvasComponent = forwardRef<DxfCanvasRef, Props>(function DxfCanvas({
     try {
       const rect = renderer.getCanvas?.()?.getBoundingClientRect?.();
       if (rect) setCanvasRect(rect);
-    } catch {}
+    } catch { /* rect measurement may fail silently */ }
     
     if (currentScene) {
       requestAnimationFrame(() => {
@@ -172,7 +173,7 @@ const DxfCanvasComponent = forwardRef<DxfCanvasRef, Props>(function DxfCanvas({
   };
   
   const handleWheel = (e: React.WheelEvent) => {
-    e.deltaY > 0 ? rendererRef.current?.zoomOut() : rendererRef.current?.zoomIn();
+    if (e.deltaY > 0) { rendererRef.current?.zoomOut(); } else { rendererRef.current?.zoomIn(); }
     const transform = rendererRef.current?.getTransform();
     if (transform) onTransformChange?.(transform);
   };

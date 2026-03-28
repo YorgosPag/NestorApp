@@ -11,6 +11,7 @@ import { PropertyMultiLevelIndicator } from './PropertyMultiLevelIndicator';
 import { PropertyPolygonTooltip } from './PropertyPolygonTooltip';
 import { SelectionOverlay } from './SelectionOverlay';
 import { isMultiLevelCapableType } from '@/config/domain-constants';
+import '@/lib/design-system';
 
 interface PropertyPolygonProps {
   property: Property;

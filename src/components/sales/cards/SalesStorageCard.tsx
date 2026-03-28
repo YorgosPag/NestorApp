@@ -12,6 +12,7 @@ import { ListCard } from '@/design-system/components/ListCard/ListCard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { Storage } from '@/types/storage/contracts';
+import '@/lib/design-system';
 
 // =============================================================================
 // 🏢 TYPES

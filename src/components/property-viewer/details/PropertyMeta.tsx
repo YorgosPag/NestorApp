@@ -13,10 +13,12 @@ import { NAVIGATION_ENTITIES, NAVIGATION_ACTIONS } from '@/components/navigation
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { ExtendedPropertyDetails, Property } from '@/types/property-viewer';
 import type { PropertyStatus } from '@/core/types/BadgeTypes';
 import { PROPERTY_STATUS_CONFIG } from '@/lib/property-utils';
 import { formatFloorLabel } from '@/lib/intl-utils';
+import '@/lib/design-system';
 
 interface PropertyMetaProps {
   property: ExtendedPropertyDetails;
@@ -31,14 +33,15 @@ interface PropertyMetaProps {
 
 export function PropertyMeta({
   property,
-  onUpdateProperty,
-  isEditMode = false,
-  onToggleEditMode,
+  onUpdateProperty: _onUpdateProperty,
+  isEditMode: _isEditMode = false,
+  onToggleEditMode: _onToggleEditMode,
   onNavigateToFloorPlan
 }: PropertyMetaProps) {
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
-  const statusInfo = PROPERTY_STATUS_CONFIG[property.status] || PROPERTY_STATUS_CONFIG.default;
+  const colors = useSemanticColors();
+  const _statusInfo = PROPERTY_STATUS_CONFIG[property.status] || PROPERTY_STATUS_CONFIG.default;
   // 🏢 ENTERPRISE: i18n support - properties + units namespaces
   const { t } = useTranslation('properties');
   const { t: tUnits } = useTranslation('units');
@@ -47,12 +50,6 @@ export function PropertyMeta({
   const displayArea = property.areas?.gross ?? property.area;
 
   // 🏢 ENTERPRISE: Edit button now toggles full edit mode (not prompt-based rename)
-  const handleEditClick = () => {
-    if (onToggleEditMode) {
-      onToggleEditMode();
-    }
-  };
-
   // 🏢 ENTERPRISE: View button navigates to Floor Plan tab
   const handleViewClick = () => {
     if (onNavigateToFloorPlan) {
@@ -74,7 +71,7 @@ export function PropertyMeta({
           />
         </div>
         {/* 🏢 ENTERPRISE: Type translation via i18n (Fix "apartment" → "Διαμέρισμα") */}
-        <p className="text-xs text-muted-foreground">
+        <p className={cn("text-xs", colors.text.muted)}>
           {tUnits(`types.${property.type}`, { defaultValue: property.type })}
         </p>
       </div>
@@ -93,7 +90,7 @@ export function PropertyMeta({
           <NAVIGATION_ENTITIES.floor.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.floor.color)} />
           <span>{formatFloorLabel(property.floor)}</span>
         </div>
-        <div className={`flex items-center ${spacing.gap.sm} text-xs text-muted-foreground`}>
+        <div className={`flex items-center ${spacing.gap.sm} text-xs ${colors.text.muted}`}>
           <span>{property.project}</span>
         </div>
       </div>

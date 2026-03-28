@@ -21,6 +21,7 @@ import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { Unit, CommercialStatus } from '@/types/unit';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
+import '@/lib/design-system';
 
 // =============================================================================
 // 🏢 TYPES

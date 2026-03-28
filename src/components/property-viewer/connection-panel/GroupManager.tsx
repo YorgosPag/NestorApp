@@ -9,6 +9,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { PropertyGroup } from '@/types/connections';
+import '@/lib/design-system';
 
 interface GroupManagerProps {
     groups: PropertyGroup[];

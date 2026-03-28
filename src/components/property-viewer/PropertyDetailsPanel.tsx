@@ -4,6 +4,8 @@ import React from 'react';
 import { Layers } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 import { ScrollArea } from "@/components/ui/scroll-area";
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -11,6 +13,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Property } from '@/types/property-viewer';
 import { PropertyDetailsContent } from './details/PropertyDetailsContent';
 import type { ExtendedPropertyDetails } from '@/types/property-viewer';
+import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Centralized Unit Icon & Color
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
@@ -32,6 +35,7 @@ export function PropertyDetailsPanel({
   isReadOnly = false // NEW: Default to false
 }: PropertyDetailsPanelProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('properties');
   // Safe check για το propertyIds - εξασφαλίζουμε ότι είναι array
@@ -45,7 +49,7 @@ export function PropertyDetailsPanel({
   if (safePropertyIds.length === 0) {
     return (
       // 🏢 ENTERPRISE: No internal padding - parent CardContent handles padding
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+      <div className={cn("flex flex-col items-center justify-center h-full", colors.text.muted)}>
         <UnitIcon className={`${iconSizes.xl} mb-2 ${unitColor}`} />
         <p className="text-sm text-center">{t('detailsPanel.selectProperty')}</p>
         <p className="text-xs text-center">{t('detailsPanel.toViewDetails')}</p>
@@ -56,7 +60,7 @@ export function PropertyDetailsPanel({
   if (safePropertyIds.length > 1) {
     return (
       // 🏢 ENTERPRISE: No internal padding - parent CardContent handles padding
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+      <div className={cn("flex flex-col items-center justify-center h-full", colors.text.muted)}>
         <Layers className={`${iconSizes.xl} mb-2`} />
         <p className="text-sm font-medium text-center">{t('detailsPanel.propertiesSelected', { count: safePropertyIds.length })}</p>
         <p className="text-xs text-center mt-2">{t('detailsPanel.selectSingleProperty')}</p>
@@ -70,7 +74,7 @@ export function PropertyDetailsPanel({
   if (!property) {
     return (
       // 🏢 ENTERPRISE: No internal padding - parent CardContent handles padding
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+      <div className={cn("flex flex-col items-center justify-center h-full", colors.text.muted)}>
         <UnitIcon className={`${iconSizes.xl} mb-2 ${unitColor}`} />
         <p className="text-sm text-center">{t('detailsPanel.noDataFound')}</p>
         <p className="text-xs text-center">{t('detailsPanel.forSelectedProperty')}</p>

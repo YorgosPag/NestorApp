@@ -14,6 +14,9 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency, formatDate as formatDateIntl } from '@/lib/intl-utils';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
 // TYPES
@@ -77,6 +80,7 @@ function getPaymentBadgeClass(status: string): string {
 // =============================================================================
 
 export function TransactionChainCard({ unitId }: TransactionChainCardProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const [invoices, setInvoices] = useState<InvoiceSummary[]>([]);
@@ -125,11 +129,11 @@ export function TransactionChainCard({ unitId }: TransactionChainCardProps) {
                 className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0"
               >
                 <span className="flex items-center gap-2 text-sm">
-                  <Icon className={`${iconSizes.sm} text-muted-foreground flex-shrink-0`} />
+                  <Icon className={cn(`${iconSizes.sm} flex-shrink-0`, colors.text.muted)} />
                   <span className="font-medium">
                     {t(`sales.saleInfo.invoiceType.${inv.type}`)} {inv.series}-{inv.number}
                   </span>
-                  <span className="text-muted-foreground text-xs">
+                  <span className={cn("text-xs", colors.text.muted)}>
                     {formatDate(inv.issueDate)}
                   </span>
                 </span>

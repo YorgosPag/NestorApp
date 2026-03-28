@@ -23,6 +23,9 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { formatFloorLabel } from '@/lib/intl-utils';
 import { useNavigation } from '@/components/navigation/core/NavigationContext';
 import type { UnitHierarchyResponse } from '@/app/api/units/[id]/hierarchy/route';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
 // TYPES
@@ -37,6 +40,7 @@ interface UnitHierarchyCardProps {
 // =============================================================================
 
 export function UnitHierarchyCard({ unitId }: UnitHierarchyCardProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const { syncBreadcrumb } = useNavigation();
@@ -160,7 +164,7 @@ export function UnitHierarchyCard({ unitId }: UnitHierarchyCardProps) {
 
         {/* Διεύθυνση */}
         {address && (
-          <footer className="mt-3 pt-2 border-t text-sm text-muted-foreground space-y-1">
+          <footer className={cn("mt-3 pt-2 border-t text-sm space-y-1", colors.text.muted)}>
             <p className="flex items-center gap-2">
               <MapPin className={`${iconSizes.sm} text-red-500 flex-shrink-0`} />
               <span>{address}</span>
@@ -200,13 +204,14 @@ function HierarchyNode({
   iconSizeClass: string;
   isLast?: boolean;
 }) {
+  const colors = useSemanticColors();
   return (
     <li className={`relative pl-5 ${isLast ? 'pb-0' : 'pb-2'}`}>
       {/* Bullet on the timeline */}
       <span className="absolute -left-[5px] top-1.5 flex items-center justify-center rounded-full bg-background border-2 border-muted">
         <Icon className={`${iconSizeClass} ${iconColor}`} />
       </span>
-      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={cn("text-xs", colors.text.muted)}>{label}</p>
       <p className="text-sm font-medium text-foreground">{value}</p>
     </li>
   );

@@ -5,6 +5,7 @@ import { getCentroid } from '@/lib/geometry';
 import type { Property } from '@/types/property-viewer';
 import type { ConnectionType } from '@/types/connections';
 import { CONNECTION_COLORS, CONNECTION_FALLBACK_COLOR } from '@/config/connection-config';
+import '@/lib/design-system';
 
 interface Props {
   prop1: Property;

@@ -116,7 +116,7 @@ export function PropertyDetails({ property }: PropertyDetailsProps) {
                 <h4 className={typography.heading.sm}>{t('details.buyer')}</h4>
                 <div className="flex items-center justify-between">
                     <div className={`${layout.flexCenterGap2} ${typography.body.sm}`}>
-                        <Users className={`${iconSizes.sm} text-muted-foreground`} />
+                        <Users className={`${iconSizes.sm} ${colors.text.muted}`} />
                         <span>{property.buyer || '-'}</span>
                     </div>
                     <Button {...buttonPatterns.actions.view} className={`${typography.body.xs} h-7`}>{t('details.viewContact')}</Button>

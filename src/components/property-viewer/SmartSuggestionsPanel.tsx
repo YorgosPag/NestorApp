@@ -8,8 +8,11 @@ import type { Property } from '@/types/property-viewer';
 import type { Suggestion } from '@/types/suggestions';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { SuggestionsList } from './suggestion-panel/SuggestionsList';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface SmartSuggestionsPanelProps {
   properties: Property[];
@@ -21,6 +24,7 @@ export function SmartSuggestionsPanel({ properties, onShowSuggestion, onAcceptSu
   const notifications = useNotifications();
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [selectedSuggestionId, setSelectedSuggestionId] = useState<string | null>(null);
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('properties');
 
@@ -72,7 +76,7 @@ export function SmartSuggestionsPanel({ properties, onShowSuggestion, onAcceptSu
       </CardHeader>
       <CardContent className="p-2">
         {suggestions.length === 0 ? (
-            <div className="text-center py-4 text-muted-foreground">
+            <div className={cn("text-center py-4", colors.text.muted)}>
                 <p className="text-xs">{t('suggestions.clickAnalyze')}</p>
             </div>
         ) : (

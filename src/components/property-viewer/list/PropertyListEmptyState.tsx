@@ -3,6 +3,7 @@
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { EmptyState } from '@/components/shared/EmptyState';
+import '@/lib/design-system';
 
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
 const unitColor = NAVIGATION_ENTITIES.unit.color;

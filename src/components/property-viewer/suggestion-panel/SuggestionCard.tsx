@@ -5,8 +5,11 @@ import { Button } from '@/components/ui/button';
 import type { Suggestion } from '@/types/suggestions';
 import { HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 export function SuggestionCard({
   suggestion,
@@ -20,6 +23,7 @@ export function SuggestionCard({
   onAccept: () => void;
 }) {
   const { quick, getStatusBorder, radius } = useBorderTokens();
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('properties');
   const topRecommendation = suggestion.recommendations[0];
@@ -35,7 +39,7 @@ export function SuggestionCard({
         <div className="flex-1">
           <h5 className="font-medium text-xs">{suggestion.propertyName}</h5>
           <div className="mt-1 space-y-1">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <div className={cn("flex items-center gap-1.5 text-xs", colors.text.muted)}>
               <span
                 className={`w-1.5 h-1.5 ${radius.full} ${
                   topRecommendation.priority === 'high'
@@ -50,7 +54,7 @@ export function SuggestionCard({
           </div>
         </div>
         <div className="flex flex-col items-end gap-1 ml-2">
-          <div className="text-xs font-medium text-muted-foreground">Score: {suggestion.score}</div>
+          <div className={cn("text-xs font-medium", colors.text.muted)}>Score: {suggestion.score}</div>
           {isSelected && (
             <Button size="sm" className="h-5 px-1.5 text-xs" onClick={(e) => { e.stopPropagation(); onAccept(); }}>
               {t('suggestions.accept')}

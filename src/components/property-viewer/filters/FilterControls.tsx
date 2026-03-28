@@ -8,8 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search } from "lucide-react";
 import type { FilterState } from '@/types/property-viewer';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface FilterControlsProps {
     filters: FilterState;
@@ -19,6 +22,7 @@ interface FilterControlsProps {
 
 export function FilterControls({ filters, onFilterChange, onRangeChange }: FilterControlsProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n support
   const { t } = useTranslation('properties');
 
@@ -28,7 +32,7 @@ export function FilterControls({ filters, onFilterChange, onRangeChange }: Filte
         <div className="flex items-center gap-2">
           <Label htmlFor="search" className="text-xs font-medium shrink-0">{t('filterControls.search.label')}</Label>
           <div className="relative w-full">
-            <Search className={`absolute left-2.5 top-2.5 ${iconSizes.sm} text-muted-foreground`} />
+            <Search className={cn(`absolute left-2.5 top-2.5 ${iconSizes.sm}`, colors.text.muted)} />
             <Input
               id="search"
               aria-label={t('filterControls.search.ariaLabel')}

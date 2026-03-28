@@ -4,6 +4,7 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SuggestionCard } from "./SuggestionCard";
 import type { Suggestion } from '@/types/suggestions';
+import '@/lib/design-system';
 
 export function SuggestionsList({
   suggestions,

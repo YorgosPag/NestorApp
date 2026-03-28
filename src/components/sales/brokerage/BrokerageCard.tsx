@@ -11,6 +11,10 @@ import { Building2, Percent, Banknote, Shield } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Badge } from '@/components/ui/badge';
 import type { BrokerageAgreement } from '@/types/brokerage';
+import { formatCommission } from '@/components/projects/tabs/brokerage/brokerage-helpers';
+import '@/lib/design-system';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // TYPES
@@ -21,35 +25,21 @@ interface BrokerageCardProps {
 }
 
 // ============================================================================
-// HELPERS
-// ============================================================================
-
-function formatCommission(agreement: BrokerageAgreement): string {
-  if (agreement.commissionType === 'percentage' && agreement.commissionPercentage !== null) {
-    return `${agreement.commissionPercentage}%`;
-  }
-  if (agreement.commissionType === 'fixed' && agreement.commissionFixedAmount !== null) {
-    return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' })
-      .format(agreement.commissionFixedAmount);
-  }
-  return '—';
-}
-
-// ============================================================================
 // COMPONENT
 // ============================================================================
 
 export function BrokerageCard({ agreements }: BrokerageCardProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('common');
 
   if (agreements.length === 0) {
     return (
       <section className="rounded-lg border bg-card p-3">
         <h3 className="text-sm font-semibold flex items-center gap-1.5 mb-1">
-          <Building2 className="h-4 w-4 text-muted-foreground" />
+          <Building2 className={cn("h-4 w-4", colors.text.muted)} />
           {t('sales.legal.brokerageTitle', { defaultValue: 'Μεσιτικές Συμβάσεις' })}
         </h3>
-        <p className="text-xs text-muted-foreground">
+        <p className={cn("text-xs", colors.text.muted)}>
           {t('sales.legal.noBrokerage', { defaultValue: 'Δεν υπάρχουν μεσιτικές συμβάσεις.' })}
         </p>
       </section>
@@ -59,7 +49,7 @@ export function BrokerageCard({ agreements }: BrokerageCardProps) {
   return (
     <section className="rounded-lg border bg-card p-3 space-y-2">
       <h3 className="text-sm font-semibold flex items-center gap-1.5">
-        <Building2 className="h-4 w-4 text-muted-foreground" />
+        <Building2 className={cn("h-4 w-4", colors.text.muted)} />
         {t('sales.legal.brokerageTitle', { defaultValue: 'Μεσιτικές Συμβάσεις' })}
       </h3>
 
@@ -78,7 +68,7 @@ export function BrokerageCard({ agreements }: BrokerageCardProps) {
               </Badge>
             </header>
 
-            <dl className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+            <dl className={cn("grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs", colors.text.muted)}>
               <dt className="flex items-center gap-1">
                 <Shield className="h-3 w-3" />
                 {t('sales.legal.exclusivity', { defaultValue: 'Τύπος' })}

@@ -7,6 +7,7 @@ import type { Property } from '@/types/property-viewer';
 import { PropertyListCard } from '@/domain';
 import { PropertyListSkeleton } from "./list/PropertyListSkeleton";
 import { PropertyListEmptyState } from "./list/PropertyListEmptyState";
+import '@/lib/design-system';
 
 interface PropertyListProps {
   properties: Property[];

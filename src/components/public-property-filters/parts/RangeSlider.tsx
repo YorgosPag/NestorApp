@@ -4,6 +4,9 @@ import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import type { RangeSliderProps } from "../types";
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 export function RangeSlider({
   label,
@@ -17,6 +20,7 @@ export function RangeSlider({
   formatRight,
 }: RangeSliderProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const [left, right] = value;
   return (
     <div className="space-y-2">
@@ -33,7 +37,7 @@ export function RangeSlider({
           step={step}
           className="w-full"
         />
-        <div className="flex justify-between text-xs text-muted-foreground mt-1">
+        <div className={cn("flex justify-between text-xs mt-1", colors.text.muted)}>
           <span>{formatLeft ? formatLeft(left) : left}</span>
           <span>{formatRight ? formatRight(right) : right}</span>
         </div>

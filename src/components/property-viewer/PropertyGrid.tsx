@@ -17,6 +17,7 @@ import { UnitGridCard } from '@/domain';
 import { usePublicPropertyViewer } from '@/hooks/usePublicPropertyViewer';
 // 🏢 ADR-051: Use centralized usePropertyGridFilters from Enterprise Filter System
 import { usePropertyGridFilters } from '@/components/core/AdvancedFilters';
+import '@/lib/design-system';
 
 
 // 🏢 ENTERPRISE: Centralized Unit Icon & Color (for empty state)

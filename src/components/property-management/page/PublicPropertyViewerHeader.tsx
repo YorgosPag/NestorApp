@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { NAVIGATION_ACTIONS } from '@/components/navigation/config';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface PublicPropertyViewerHeaderProps {
   viewMode: 'list' | 'grid';
@@ -27,7 +28,7 @@ export function PublicPropertyViewerHeader({
   viewMode,
   setViewMode,
   filters,
-  onFiltersChange,
+  onFiltersChange: _onFiltersChange,
   availableCount
 }: PublicPropertyViewerHeaderProps) {
   const iconSizes = useIconSizes();
@@ -71,7 +72,7 @@ export function PublicPropertyViewerHeader({
             {/* Title */}
             <div>
               <h1 className="text-xl font-bold text-foreground">{t('propertyViewer.header.floorPlan')}</h1>
-              <p className="text-sm text-muted-foreground">
+              <p className={cn("text-sm", colors.text.muted)}>
                 {t('propertyViewer.header.availableProperties', { count: availableCount })}
               </p>
             </div>
@@ -128,7 +129,7 @@ export function PublicPropertyViewerHeader({
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="p-4 bg-muted/50 rounded-b-lg">
-              <p className="text-sm text-muted-foreground">{t('propertyViewer.header.filtersPlaceholder')}</p>
+              <p className={cn("text-sm", colors.text.muted)}>{t('propertyViewer.header.filtersPlaceholder')}</p>
             </div>
           </CollapsibleContent>
         </Collapsible>
