@@ -11,3 +11,5 @@ export { PurchaseOrderList } from './PurchaseOrderList';
 export { PurchaseOrderDetail } from './PurchaseOrderDetail';
 export { PurchaseOrderActions } from './PurchaseOrderActions';
 export { BOQRelatedPOs } from './BOQRelatedPOs';
+export { SupplierMetricsCard } from './SupplierMetricsCard';
+export { SupplierComparisonTable } from './SupplierComparisonTable';

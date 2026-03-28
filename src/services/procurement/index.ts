@@ -25,3 +25,11 @@ export {
   getNextPONumber,
   type POListFilters,
 } from './procurement-repository';
+
+export { matchInvoiceToPO } from './po-invoice-matcher';
+
+export {
+  calculateSupplierMetrics,
+  getSupplierComparison,
+  getSupplierPriceTrend,
+} from './supplier-metrics-service';

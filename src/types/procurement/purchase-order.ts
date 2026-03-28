@@ -37,6 +37,15 @@ export const PO_STATUS_TRANSITIONS: Record<PurchaseOrderStatus, PurchaseOrderSta
   cancelled: [],
 } as const;
 
+/** Status sets for filtering — SSoT, avoid hardcoding in services */
+export const PO_MATCHABLE_STATUSES: ReadonlySet<PurchaseOrderStatus> = new Set([
+  'ordered', 'partially_delivered', 'delivered',
+]);
+
+export const PO_COMMITTED_STATUSES: ReadonlySet<PurchaseOrderStatus> = new Set([
+  'ordered', 'partially_delivered', 'delivered', 'closed',
+]);
+
 /** Status metadata for UI rendering */
 export const PO_STATUS_META: Record<PurchaseOrderStatus, {
   label: { el: string; en: string };
@@ -308,3 +317,82 @@ export const PROCUREMENT_PERMISSIONS = {
 } as const;
 
 export type ProcurementPermission = typeof PROCUREMENT_PERMISSIONS[keyof typeof PROCUREMENT_PERMISSIONS];
+
+// ============================================================================
+// PO-INVOICE MATCHING (ADR-267 Phase C)
+// ============================================================================
+
+/** Candidate PO match for an expense document */
+export interface POMatchCandidate {
+  poId: string;
+  poNumber: string;
+  supplierId: string;
+  total: number;
+  subtotal: number;
+  status: PurchaseOrderStatus;
+  confidence: number;
+  matchReasons: string[];
+}
+
+/** Result of PO-invoice matching */
+export interface POMatchResult {
+  candidates: POMatchCandidate[];
+  bestMatch: POMatchCandidate | null;
+  autoMatched: boolean;
+}
+
+/** Scoring config for PO-invoice matching */
+export const PO_MATCH_SCORING = {
+  AMOUNT_EXACT_POINTS: 40,
+  AMOUNT_NEAR_POINTS: 25,
+  AMOUNT_EXACT_TOLERANCE: 0.05,
+  AMOUNT_NEAR_TOLERANCE: 0.10,
+  DATE_NEAR_POINTS: 20,
+  DATE_FAR_POINTS: 10,
+  DATE_NEAR_DAYS: 30,
+  DATE_FAR_DAYS: 60,
+  LINE_ITEM_COUNT_POINTS: 15,
+  DESCRIPTION_MATCH_POINTS: 15,
+  REFERENCE_MATCH_POINTS: 10,
+  AUTO_MATCH_THRESHOLD: 85,
+  MAX_CANDIDATES: 10,
+} as const;
+
+// ============================================================================
+// SUPPLIER METRICS (ADR-267 Phase C)
+// ============================================================================
+
+/** Aggregated supplier performance metrics */
+export interface SupplierMetrics {
+  supplierId: string;
+  supplierName: string;
+  totalOrders: number;
+  totalSpend: number;
+  averageOrderValue: number;
+  onTimeDeliveryRate: number;
+  averageLeadTimeDays: number | null;
+  cancellationRate: number;
+  categoryBreakdown: CategorySpend[];
+}
+
+/** Spend per ΑΤΟΕ category */
+export interface CategorySpend {
+  categoryCode: string;
+  categoryName: string;
+  totalSpend: number;
+  orderCount: number;
+}
+
+/** Supplier comparison result */
+export interface SupplierComparison {
+  suppliers: SupplierMetrics[];
+  totalSuppliers: number;
+}
+
+/** Monthly price trend data */
+export interface SupplierPriceTrend {
+  month: string;
+  averageUnitPrice: number;
+  orderCount: number;
+  totalQuantity: number;
+}
