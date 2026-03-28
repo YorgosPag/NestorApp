@@ -53,7 +53,7 @@ async function handleGet(
 
         const filename = `${po.poNumber}.pdf`;
 
-        return new NextResponse(pdfBytes, {
+        return new NextResponse(Buffer.from(pdfBytes), {
           status: 200,
           headers: {
             'Content-Type': 'application/pdf',

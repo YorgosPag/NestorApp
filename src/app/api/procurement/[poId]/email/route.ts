@@ -16,7 +16,6 @@ import { getPO } from '@/services/procurement';
 import { sendPurchaseOrderEmail } from '@/services/procurement/po-email-service';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { getErrorMessage } from '@/lib/error-utils';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
 const logger = createModuleLogger('PO_EMAIL_API');
@@ -36,15 +35,18 @@ async function handlePost(
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const bodyResult = await safeParseBody(SendEmailSchema, req);
-        if (!bodyResult.success) {
+        let body: { recipientEmail: string; recipientName: string; language: 'el' | 'en' };
+        try {
+          const raw = await req.json();
+          body = SendEmailSchema.parse(raw);
+        } catch {
           return NextResponse.json(
-            { success: false, error: bodyResult.error },
+            { success: false, error: 'Invalid request body' },
             { status: 400 }
           );
         }
 
-        const { recipientEmail, recipientName, language } = bodyResult.data;
+        const { recipientEmail, recipientName, language } = body;
 
         const po = await getPO(poId);
         if (!po || po.companyId !== ctx.companyId) {
@@ -85,7 +87,7 @@ async function handlePost(
           entityName: po.poNumber,
           action: 'email_sent',
           changes: [{ field: 'email', oldValue: null, newValue: recipientEmail, label: 'Email Sent' }],
-          performedBy: ctx.userId,
+          performedBy: ctx.uid,
           performedByName: null,
           companyId: ctx.companyId,
         }).catch(() => {});

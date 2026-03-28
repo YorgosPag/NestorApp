@@ -41,7 +41,7 @@ async function handlePost(
           );
         }
 
-        const result = await createPOShare(poId, ctx.userId, ctx.companyId);
+        const result = await createPOShare(poId, ctx.uid, ctx.companyId);
 
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://nestor-app.vercel.app';
         const shareUrl = `${baseUrl}/shared/po/${result.token}`;
