@@ -3,27 +3,23 @@
  *
  * Lists, creates, edits and deletes storage units for a building.
  * Uses API routes (/api/storages) for proper tenant isolation.
- * Inline create/edit forms — same pattern as ParkingTabContent.
  *
+ * Split: useStorageTabState (hook), StorageCreateForm (Google SRP).
  * @module components/building-management/StorageTab
  * @see ADR-184 (Building Spaces Tabs)
  */
 
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 import type { Building } from '@/types/building/contracts';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { apiClient } from '@/lib/api/enterprise-api-client';
-import { API_ROUTES } from '@/config/domain-constants';
-import { createModuleLogger } from '@/lib/telemetry';
-import { useNotifications } from '@/providers/NotificationProvider';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -32,403 +28,65 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { TableCell } from '@/components/ui/table';
-import { Warehouse, Plus, Layers, Table as TableIcon, Link2, Check, X, Unlink2 } from 'lucide-react';
+import { Warehouse, Plus, Layers, Table as TableIcon, Link2, Check, X } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { StorageTabStats } from './StorageTab/StorageTabStats';
 import { StorageTabFilters } from './StorageTab/StorageTabFilters';
-import {
-  getStatusLabel,
-  getTypeLabel,
-  filterUnits,
-  calculateStats,
-} from './StorageTab/utils';
+import { StorageCreateForm } from './StorageTab/StorageCreateForm';
+import { useStorageTabState } from './StorageTab/useStorageTabState';
 import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog } from './shared';
-import type { SpaceColumn, SpaceCardField, LinkableItem } from './shared';
+import type { SpaceColumn, SpaceCardField } from './shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
-import { useDeletionGuard } from '@/hooks/useDeletionGuard';
-import { RealtimeService } from '@/services/realtime';
-
-const logger = createModuleLogger('StorageTab');
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
+import { getStatusColor } from '@/lib/design-system';
 
 const STORAGE_TYPES: StorageType[] = ['storage', 'large', 'small', 'basement', 'ground', 'special', 'garage', 'warehouse'];
 const STORAGE_STATUSES: StorageStatus[] = ['available', 'occupied', 'maintenance', 'reserved', 'sold', 'unavailable'];
-
-// ============================================================================
-// TYPES
-// ============================================================================
 
 interface StorageTabProps {
   building: Building;
 }
 
-interface StoragesApiResponse {
-  storages: StorageUnit[];
-  count: number;
-}
-
-interface StorageCreateResult {
-  storageId: string;
-}
-
-interface StorageMutationResult {
-  id: string;
-}
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
 export function StorageTab({ building }: StorageTabProps) {
-  const { t } = useTranslation('building');
-  const { success, error: notifyError } = useNotifications();
+  const colors = useSemanticColors();
   const router = useRouter();
+  const s = useStorageTabState(building);
 
-  // Data state
-  const [units, setUnits] = useState<StorageUnit[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // Create form state
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [createCode, setCreateCode] = useState('');
-  const [createType, setCreateType] = useState<StorageType>('storage');
-  const [createStatus, setCreateStatus] = useState<StorageStatus>('available');
-  const [createFloor, setCreateFloor] = useState('');
-  const [createArea, setCreateArea] = useState('');
-  const [createPrice, setCreatePrice] = useState('');
-  const [createDescription, setCreateDescription] = useState('');
-  const [creating, setCreating] = useState(false);
-
-  // Edit state
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editCode, setEditCode] = useState('');
-  const [editType, setEditType] = useState<StorageType>('storage');
-  const [editStatus, setEditStatus] = useState<StorageStatus>('available');
-  const [editFloor, setEditFloor] = useState('');
-  const [editArea, setEditArea] = useState('');
-  const [editPrice, setEditPrice] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  // Delete state
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<StorageUnit | null>(null);
-  const [confirmLoading, setConfirmLoading] = useState(false);
-
-  // Unlink state
-  const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
-  const [confirmUnlink, setConfirmUnlink] = useState<StorageUnit | null>(null);
-  const [unlinkLoading, setUnlinkLoading] = useState(false);
-
-  // 🛡️ ADR-226 Phase 3: Deletion Guard
-  const { checkBeforeDelete, BlockedDialog } = useDeletionGuard('storage');
-
-  // Link dialog state
-  const [showLinkDialog, setShowLinkDialog] = useState(false);
-
-  // Filter & view state
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<StorageType | 'all'>('all');
-  const [filterStatus, setFilterStatus] = useState<StorageStatus | 'all'>('all');
-  const filterFloor = 'all';
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
-
-  const translatedGetStatusLabel = useCallback(
-    (status: StorageStatus) => getStatusLabel(status, t),
-    [t]
-  );
-
-  const translatedGetTypeLabel = useCallback(
-    (type: StorageType) => getTypeLabel(type, t),
-    [t]
-  );
-
-  // ============================================================================
-  // FETCH — API-based with tenant isolation
-  // ============================================================================
-
-  const fetchStorageUnits = useCallback(async () => {
-    try {
-      setLoading(true);
-      const result = await apiClient.get<StoragesApiResponse>(
-        `${API_ROUTES.STORAGES.LIST}?buildingId=${building.id}`
-      );
-
-      if (result?.storages) {
-        // Map API Storage → StorageUnit (compatibility layer)
-        const storageUnits: StorageUnit[] = result.storages.map(s => ({
-          id: s.id,
-          code: s.name || s.code || `S-${s.id.substring(0, 6)}`,
-          type: (s.type || 'small') as StorageType,
-          status: (s.status || 'available') as StorageStatus,
-          floor: s.floor || '',
-          area: typeof s.area === 'number' ? s.area : 0,
-          price: typeof s.price === 'number' ? s.price : 0,
-          description: s.description || '',
-          building: s.building || building.name,
-          project: s.project || '',
-          company: s.company || '',
-          linkedProperty: s.linkedProperty ?? null,
-          features: s.features || [],
-          coordinates: s.coordinates || { x: 0, y: 0 },
-        }));
-
-        setUnits(storageUnits);
-        logger.info('Loaded storage units via API', { count: storageUnits.length, buildingId: building.id });
-      }
-    } catch (error) {
-      logger.error('Error fetching storage units', { error });
-      setUnits([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [building.id, building.name]);
-
-  useEffect(() => {
-    fetchStorageUnits();
-  }, [fetchStorageUnits]);
-
-  // 🔄 Real-time sync: refetch when storages change from other pages
-  useEffect(() => {
-    const unsubCreated = RealtimeService.subscribe('STORAGE_CREATED', () => {
-      logger.debug('STORAGE_CREATED event — refetching');
-      fetchStorageUnits();
-    });
-    const unsubUpdated = RealtimeService.subscribe('STORAGE_UPDATED', () => {
-      logger.debug('STORAGE_UPDATED event — refetching');
-      fetchStorageUnits();
-    });
-    const unsubDeleted = RealtimeService.subscribe('STORAGE_DELETED', () => {
-      logger.debug('STORAGE_DELETED event — refetching');
-      fetchStorageUnits();
-    });
-
-    return () => { unsubCreated(); unsubUpdated(); unsubDeleted(); };
-  }, [fetchStorageUnits]);
-
-  const filteredUnits = useMemo(() =>
-    filterUnits(units, searchTerm, filterType, filterStatus, filterFloor),
-    [units, searchTerm, filterType, filterStatus, filterFloor]
-  );
-
-  const stats = useMemo(() => calculateStats(filteredUnits), [filteredUnits]);
-
-  // ============================================================================
-  // CREATE — Inline form
-  // ============================================================================
-
-  const resetCreateForm = () => {
-    setShowCreateForm(false);
-    setCreateCode('');
-    setCreateType('storage');
-    setCreateStatus('available');
-    setCreateFloor('');
-    setCreateArea('');
-    setCreatePrice('');
-    setCreateDescription('');
-  };
-
-  const handleCreate = async () => {
-    setCreating(true);
-    try {
-      const storageName = createCode.trim() || `Αποθήκη-${Date.now().toString(36).toUpperCase()}`;
-
-      await apiClient.post<StorageCreateResult>(API_ROUTES.STORAGES.LIST, {
-        name: storageName,
-        buildingId: building.id,
-        projectId: building.projectId || null,
-        type: createType,
-        status: createStatus,
-        floor: createFloor.trim() || null,
-        area: createArea ? parseFloat(createArea) : null,
-        price: createPrice ? parseFloat(createPrice) : null,
-        description: createDescription.trim() || null,
-        building: building.name,
-      });
-
-      success('Η αποθήκη δημιουργήθηκε');
-      resetCreateForm();
-      await fetchStorageUnits();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Σφάλμα δημιουργίας';
-      logger.error('Create storage error', { error: msg });
-      notifyError(`Αποτυχία: ${msg}`);
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  // ============================================================================
-  // EDIT — Inline table row editing
-  // ============================================================================
-
-  const startEdit = (unit: StorageUnit) => {
-    setEditingId(unit.id);
-    setEditCode(unit.code || '');
-    setEditType(unit.type || 'storage');
-    setEditStatus(unit.status || 'available');
-    setEditFloor(unit.floor || '');
-    setEditArea(unit.area ? String(unit.area) : '');
-    setEditPrice(unit.price ? String(unit.price) : '');
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingId) return;
-    setSaving(true);
-    try {
-      await apiClient.patch<StorageMutationResult>(API_ROUTES.STORAGES.BY_ID(editingId), {
-        name: editCode.trim() || undefined,
-        type: editType,
-        status: editStatus,
-        floor: editFloor.trim() || null,
-        area: editArea ? parseFloat(editArea) : null,
-        price: editPrice ? parseFloat(editPrice) : null,
-      });
-      success('Η αποθήκη ενημερώθηκε');
-      setEditingId(null);
-      await fetchStorageUnits();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Σφάλμα ενημέρωσης';
-      logger.error('Edit storage error', { error: msg });
-      notifyError(`Αποτυχία: ${msg}`);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // ============================================================================
-  // DELETE
-  // ============================================================================
-
-  const handleDeleteClick = async (unit: StorageUnit) => {
-    const allowed = await checkBeforeDelete(unit.id);
-    if (allowed) {
-      setConfirmDelete(unit);
-    }
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!confirmDelete) return;
-    setConfirmLoading(true);
-    setDeletingId(confirmDelete.id);
-    try {
-      await apiClient.delete(API_ROUTES.STORAGES.BY_ID(confirmDelete.id));
-      success('Η αποθήκη διαγράφηκε');
-      await fetchStorageUnits();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Σφάλμα διαγραφής';
-      logger.error('Delete storage error', { error: msg });
-      notifyError(`Αποτυχία: ${msg}`);
-    } finally {
-      setConfirmLoading(false);
-      setConfirmDelete(null);
-      setDeletingId(null);
-    }
-  };
-
-  // ============================================================================
-  // UNLINK — Detach storage from building (remains in system for independent sale)
-  // ============================================================================
-
-  const handleUnlinkClick = (unit: StorageUnit) => {
-    setConfirmUnlink(unit);
-  };
-
-  const handleUnlinkConfirm = async () => {
-    if (!confirmUnlink) return;
-    setUnlinkLoading(true);
-    setUnlinkingId(confirmUnlink.id);
-    try {
-      const result = await apiClient.patch<StorageMutationResult>(
-        API_ROUTES.STORAGES.BY_ID(confirmUnlink.id),
-        { buildingId: null }
-      );
-      if (result?.id) {
-        RealtimeService.dispatch('STORAGE_UPDATED', {
-          storageId: confirmUnlink.id,
-          updates: { buildingId: null },
-          timestamp: Date.now(),
-        });
-      }
-      success('Η αποθήκη αποσυνδέθηκε');
-      await fetchStorageUnits();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Σφάλμα αποσύνδεσης';
-      logger.error('Unlink storage error', { error: msg });
-      notifyError(`Αποτυχία: ${msg}`);
-    } finally {
-      setUnlinkLoading(false);
-      setConfirmUnlink(null);
-      setUnlinkingId(null);
-    }
-  };
-
-  // ============================================================================
-  // LINK — Fetch unlinked storages + link to this building
-  // ============================================================================
-
-  const fetchUnlinkedStorages = useCallback(async (): Promise<LinkableItem[]> => {
-    const result = await apiClient.get<StoragesApiResponse>(API_ROUTES.STORAGES.LIST);
-    if (!result?.storages) return [];
-    return result.storages
-      .filter((s) => !s.buildingId)
-      .map((s) => ({
-        id: s.id,
-        label: s.name || s.code || s.id,
-        sublabel: `${translatedGetTypeLabel(s.type)} · ${s.floor || '—'}`,
-      }));
-  }, [translatedGetTypeLabel]);
-
-  const handleLinkStorage = useCallback(async (itemId: string) => {
-    await apiClient.patch(API_ROUTES.STORAGES.BY_ID(itemId), { buildingId: building.id });
-    success('Η αποθήκη συνδέθηκε');
-    await fetchStorageUnits();
-  }, [building.id, fetchStorageUnits]);
-
-  // ============================================================================
-  // CENTRALIZED: Column & Card Field Definitions
-  // ============================================================================
+  // ── Column & card definitions ──
 
   const storageColumns: SpaceColumn<StorageUnit>[] = useMemo(() => [
-    { key: 'code', label: t('storageTable.columns.code'), sortValue: (u) => u.code, render: (u) => <span className="font-medium">{u.code}</span> },
-    { key: 'type', label: t('storageTable.columns.type'), width: 'w-28', sortValue: (u) => u.type, render: (u) => <span className="text-muted-foreground">{translatedGetTypeLabel(u.type)}</span> },
-    { key: 'floor', label: t('storageTable.columns.floor'), width: 'w-20', sortValue: (u) => u.floor || '', render: (u) => <span className="text-muted-foreground">{u.floor || '—'}</span> },
-    { key: 'area', label: t('storageTable.columns.area'), width: 'w-20', sortValue: (u) => u.area || 0, render: (u) => <span className="font-mono text-xs">{u.area ? `${u.area}` : '—'}</span> },
-    { key: 'price', label: t('storageTable.columns.price'), width: 'w-24', sortValue: (u) => u.price || 0, render: (u) => <span className="font-mono text-xs">{formatCurrencyWhole(u.price)}</span> },
-    { key: 'status', label: t('storageTable.columns.status'), width: 'w-28', sortValue: (u) => u.status, render: (u) => (
+    { key: 'code', label: s.t('storageTable.columns.code'), sortValue: (u) => u.code, render: (u) => <span className="font-medium">{u.code}</span> },
+    { key: 'type', label: s.t('storageTable.columns.type'), width: 'w-28', sortValue: (u) => u.type, render: (u) => <span className={colors.text.muted}>{s.translatedGetTypeLabel(u.type)}</span> },
+    { key: 'floor', label: s.t('storageTable.columns.floor'), width: 'w-20', sortValue: (u) => u.floor || '', render: (u) => <span className={colors.text.muted}>{u.floor || '—'}</span> },
+    { key: 'area', label: s.t('storageTable.columns.area'), width: 'w-20', sortValue: (u) => u.area || 0, render: (u) => <span className="font-mono text-xs">{u.area ? `${u.area}` : '—'}</span> },
+    { key: 'price', label: s.t('storageTable.columns.price'), width: 'w-24', sortValue: (u) => u.price || 0, render: (u) => <span className="font-mono text-xs">{formatCurrencyWhole(u.price)}</span> },
+    { key: 'status', label: s.t('storageTable.columns.status'), width: 'w-28', sortValue: (u) => u.status, render: (u) => (
       <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getStatusBadgeClass(u.status)}`}>
-        {translatedGetStatusLabel(u.status)}
+        {s.translatedGetStatusLabel(u.status)}
       </span>
     )},
-  ], [t, translatedGetTypeLabel, translatedGetStatusLabel]);
+  ], [s.t, s.translatedGetTypeLabel, s.translatedGetStatusLabel, colors.text.muted]);
 
   const storageCardFields: SpaceCardField<StorageUnit>[] = useMemo(() => [
-    { label: t('storageTable.columns.type'), render: (u) => translatedGetTypeLabel(u.type) },
-    { label: t('storageTable.columns.floor'), render: (u) => u.floor || '—' },
+    { label: s.t('storageTable.columns.type'), render: (u) => s.translatedGetTypeLabel(u.type) },
+    { label: s.t('storageTable.columns.floor'), render: (u) => u.floor || '—' },
     { label: 'm²', render: (u) => u.area || '—' },
-    { label: t('storageTable.columns.price'), render: (u) => formatCurrencyWhole(u.price) },
-  ], [t, translatedGetTypeLabel]);
+    { label: s.t('storageTable.columns.price'), render: (u) => formatCurrencyWhole(u.price) },
+  ], [s.t, s.translatedGetTypeLabel]);
 
-  // ============================================================================
-  // RENDER
-  // ============================================================================
+  // ── Loading ──
 
-  if (loading) {
+  if (s.loading) {
     return (
       <section className="flex items-center justify-center py-2" role="status" aria-live="polite">
         <article className="text-center">
           <Spinner size="large" className="mx-auto mb-2" />
-          <p className="text-muted-foreground">{t('tabs.storageTab.loading')}</p>
+          <p className={colors.text.muted}>{s.t('tabs.storageTab.loading')}</p>
         </article>
       </section>
     );
   }
+
+  // ── Main render ──
 
   return (
     <section className="flex flex-col gap-2 p-2">
@@ -436,272 +94,152 @@ export function StorageTab({ building }: StorageTabProps) {
       <header className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
           <Warehouse className="h-5 w-5 text-primary" />
-          {t('tabs.labels.storage')}
-          <span className="text-sm font-normal text-muted-foreground">({units.length})</span>
+          {s.t('tabs.labels.storage')}
+          <span className={cn('text-sm font-normal', colors.text.muted)}>({s.units.length})</span>
         </h2>
         <nav className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowLinkDialog(true)}>
+          <Button variant="outline" size="sm" onClick={() => s.setShowLinkDialog(true)}>
             <Link2 className="mr-1 h-4 w-4" />
-            {t('spaceLink.linkExisting')}
+            {s.t('spaceLink.linkExisting')}
           </Button>
-          <Button variant="default" size="sm" onClick={() => setShowCreateForm(true)}>
+          <Button variant="default" size="sm" onClick={() => s.setShowCreateForm(true)}>
             <Plus className="mr-1 h-4 w-4" />
-            {t('tabs.labels.storage')}
+            {s.t('tabs.labels.storage')}
           </Button>
         </nav>
       </header>
 
       {/* Stats Cards */}
       <StorageTabStats
-        storageCount={stats.storageCount}
-        available={stats.available}
-        totalValue={stats.totalValue}
-        totalArea={stats.totalArea}
+        storageCount={s.stats.storageCount}
+        available={s.stats.available}
+        totalValue={s.stats.totalValue}
+        totalArea={s.stats.totalArea}
       />
 
       {/* Filters */}
       <StorageTabFilters
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        filterType={filterType}
-        onFilterTypeChange={setFilterType}
-        filterStatus={filterStatus}
-        onFilterStatusChange={setFilterStatus}
+        searchTerm={s.searchTerm}
+        onSearchChange={s.setSearchTerm}
+        filterType={s.filterType}
+        onFilterTypeChange={s.setFilterType}
+        filterStatus={s.filterStatus}
+        onFilterStatusChange={s.setFilterStatus}
       />
 
       {/* Inline Create Form */}
-      {showCreateForm && (
-        <form
-          className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-2"
-          onSubmit={(e) => { e.preventDefault(); handleCreate(); }}
-        >
-          {/* Row 1: Code, Type, Status */}
-          <fieldset className="grid grid-cols-3 gap-2">
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground">
-                {t('storageTable.columns.code')}
-              </span>
-              <Input
-                value={createCode}
-                onChange={(e) => setCreateCode(e.target.value)}
-                placeholder="A-001"
-                className="h-9"
-                disabled={creating}
-                autoFocus
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground">
-                {t('storageTable.columns.type')}
-              </span>
-              <Select value={createType} onValueChange={(v) => setCreateType(v as StorageType)} disabled={creating}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STORAGE_TYPES.map(st => (
-                    <SelectItem key={st} value={st}>{translatedGetTypeLabel(st)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground">
-                {t('storageTable.columns.status')}
-              </span>
-              <Select value={createStatus} onValueChange={(v) => setCreateStatus(v as StorageStatus)} disabled={creating}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STORAGE_STATUSES.map(ss => (
-                    <SelectItem key={ss} value={ss}>{translatedGetStatusLabel(ss)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </label>
-          </fieldset>
-
-          {/* Row 2: Floor, Area, Price */}
-          <fieldset className="grid grid-cols-3 gap-2">
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground">
-                {t('storageTable.columns.floor')}
-              </span>
-              <Input
-                value={createFloor}
-                onChange={(e) => setCreateFloor(e.target.value)}
-                placeholder="-1"
-                className="h-9"
-                disabled={creating}
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground">
-                m²
-              </span>
-              <Input
-                type="number"
-                step="0.01"
-                value={createArea}
-                onChange={(e) => setCreateArea(e.target.value)}
-                placeholder="12"
-                className="h-9"
-                disabled={creating}
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground">
-                {t('storageTable.columns.price')} (€)
-              </span>
-              <Input
-                type="number"
-                step="0.01"
-                value={createPrice}
-                onChange={(e) => setCreatePrice(e.target.value)}
-                placeholder="5000"
-                className="h-9"
-                disabled={creating}
-              />
-            </label>
-          </fieldset>
-
-          {/* Row 3: Description */}
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-muted-foreground">
-              Περιγραφή
-            </span>
-            <Textarea
-              value={createDescription}
-              onChange={(e) => setCreateDescription(e.target.value)}
-              placeholder="Περιγραφή αποθήκης..."
-              className="h-16 resize-none"
-              disabled={creating}
-            />
-          </label>
-
-          {/* Actions */}
-          <nav className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={resetCreateForm}
-              disabled={creating}
-            >
-              <X className="mr-1 h-4 w-4" />
-              Ακύρωση
-            </Button>
-            <Button
-              type="submit"
-              size="sm"
-              disabled={creating}
-            >
-              {creating ? <Spinner size="small" color="inherit" className="mr-1" /> : <Check className="mr-1 h-4 w-4" />}
-              Αποθήκευση
-            </Button>
-          </nav>
-        </form>
+      {s.showCreateForm && (
+        <StorageCreateForm
+          code={s.createCode} onCodeChange={s.setCreateCode}
+          type={s.createType} onTypeChange={s.setCreateType}
+          status={s.createStatus} onStatusChange={s.setCreateStatus}
+          floor={s.createFloor} onFloorChange={s.setCreateFloor}
+          area={s.createArea} onAreaChange={s.setCreateArea}
+          price={s.createPrice} onPriceChange={s.setCreatePrice}
+          description={s.createDescription} onDescriptionChange={s.setCreateDescription}
+          creating={s.creating}
+          onSubmit={s.handleCreate}
+          onCancel={s.resetCreateForm}
+          translatedGetTypeLabel={s.translatedGetTypeLabel}
+          translatedGetStatusLabel={s.translatedGetStatusLabel}
+          t={s.t}
+        />
       )}
 
       {/* View Toggle */}
       <nav className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">
-          {filteredUnits.length} αποτελέσματα
+        <span className={cn('text-sm', colors.text.muted)}>
+          {s.filteredUnits.length} {s.t('storageView.results')}
         </span>
         <fieldset className="flex items-center gap-2">
-          <Button variant={viewMode === 'cards' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('cards')}>
-            <Layers className="mr-1 h-4 w-4" /> Κάρτες
+          <Button variant={s.viewMode === 'cards' ? 'default' : 'outline'} size="sm" onClick={() => s.setViewMode('cards')}>
+            <Layers className="mr-1 h-4 w-4" /> {s.t('storageView.cards')}
           </Button>
-          <Button variant={viewMode === 'table' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('table')}>
-            <TableIcon className="mr-1 h-4 w-4" /> Πίνακας
+          <Button variant={s.viewMode === 'table' ? 'default' : 'outline'} size="sm" onClick={() => s.setViewMode('table')}>
+            <TableIcon className="mr-1 h-4 w-4" /> {s.t('storageView.table')}
           </Button>
         </fieldset>
       </nav>
 
-      {/* Content — Centralized shared components */}
-      {filteredUnits.length === 0 ? (
-        <p className="py-2 text-center text-sm text-muted-foreground">
-          {t('tabs.labels.storage')} — 0
+      {/* Content */}
+      {s.filteredUnits.length === 0 ? (
+        <p className={cn('py-2 text-center text-sm', colors.text.muted)}>
+          {s.t('tabs.labels.storage')} — 0
         </p>
-      ) : viewMode === 'cards' ? (
+      ) : s.viewMode === 'cards' ? (
         <>
           <BuildingSpaceCardGrid<StorageUnit>
-            items={filteredUnits}
+            items={s.filteredUnits}
             getKey={(u) => u.id}
             getName={(u) => u.code}
             renderStatus={(u) => (
               <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getStatusBadgeClass(u.status)}`}>
-                {translatedGetStatusLabel(u.status)}
+                {s.translatedGetStatusLabel(u.status)}
               </span>
             )}
             fields={storageCardFields}
             actions={{
               onView: (u) => router.push(ENTITY_ROUTES.spaces.storage(u.id)),
-              onEdit: startEdit,
-              onUnlink: handleUnlinkClick,
-              onDelete: handleDeleteClick,
+              onEdit: s.startEdit,
+              onUnlink: s.handleUnlinkClick,
+              onDelete: s.handleDeleteClick,
             }}
-            actionState={{ deletingId, unlinkingId }}
+            actionState={{ deletingId: s.deletingId, unlinkingId: s.unlinkingId }}
           />
-          <footer className="text-xs text-muted-foreground">
-            {filteredUnits.length} {t('tabs.labels.storage')}
+          <footer className={cn('text-xs', colors.text.muted)}>
+            {s.filteredUnits.length} {s.t('tabs.labels.storage')}
           </footer>
         </>
       ) : (
         <>
           <BuildingSpaceTable<StorageUnit>
-            items={filteredUnits}
+            items={s.filteredUnits}
             columns={storageColumns}
             getKey={(u) => u.id}
             actions={{
               onView: (u) => router.push(ENTITY_ROUTES.spaces.storage(u.id)),
-              onEdit: startEdit,
-              onUnlink: handleUnlinkClick,
-              onDelete: handleDeleteClick,
+              onEdit: s.startEdit,
+              onUnlink: s.handleUnlinkClick,
+              onDelete: s.handleDeleteClick,
             }}
-            actionState={{ deletingId, unlinkingId }}
-            editingId={editingId}
+            actionState={{ deletingId: s.deletingId, unlinkingId: s.unlinkingId }}
+            editingId={s.editingId}
             renderEditRow={() => (
               <>
                 <TableCell>
-                  <Input value={editCode} onChange={(e) => setEditCode(e.target.value)} className="h-8" disabled={saving} />
+                  <Input value={s.editCode} onChange={(e) => s.setEditCode(e.target.value)} className="h-8" disabled={s.saving} />
                 </TableCell>
                 <TableCell>
-                  <Select value={editType} onValueChange={(v) => setEditType(v as StorageType)} disabled={saving}>
-                    <SelectTrigger className="h-8">
-                      <SelectValue />
-                    </SelectTrigger>
+                  <Select value={s.editType} onValueChange={(v) => s.setEditType(v as StorageType)} disabled={s.saving}>
+                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {STORAGE_TYPES.map(st => (<SelectItem key={st} value={st}>{translatedGetTypeLabel(st)}</SelectItem>))}
+                      {STORAGE_TYPES.map((st) => (<SelectItem key={st} value={st}>{s.translatedGetTypeLabel(st)}</SelectItem>))}
                     </SelectContent>
                   </Select>
                 </TableCell>
                 <TableCell>
-                  <Input value={editFloor} onChange={(e) => setEditFloor(e.target.value)} className="h-8 w-16" disabled={saving} />
+                  <Input value={s.editFloor} onChange={(e) => s.setEditFloor(e.target.value)} className="h-8 w-16" disabled={s.saving} />
                 </TableCell>
                 <TableCell>
-                  <Input type="number" step="0.01" value={editArea} onChange={(e) => setEditArea(e.target.value)} className="h-8 w-16" disabled={saving} />
+                  <Input type="number" step="0.01" value={s.editArea} onChange={(e) => s.setEditArea(e.target.value)} className="h-8 w-16" disabled={s.saving} />
                 </TableCell>
                 <TableCell>
-                  <Input type="number" step="0.01" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} className="h-8 w-20" disabled={saving} />
+                  <Input type="number" step="0.01" value={s.editPrice} onChange={(e) => s.setEditPrice(e.target.value)} className="h-8 w-20" disabled={s.saving} />
                 </TableCell>
                 <TableCell>
-                  <Select value={editStatus} onValueChange={(v) => setEditStatus(v as StorageStatus)} disabled={saving}>
-                    <SelectTrigger className="h-8">
-                      <SelectValue />
-                    </SelectTrigger>
+                  <Select value={s.editStatus} onValueChange={(v) => s.setEditStatus(v as StorageStatus)} disabled={s.saving}>
+                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {STORAGE_STATUSES.map(ss => (<SelectItem key={ss} value={ss}>{translatedGetStatusLabel(ss)}</SelectItem>))}
+                      {STORAGE_STATUSES.map((ss) => (<SelectItem key={ss} value={ss}>{s.translatedGetStatusLabel(ss)}</SelectItem>))}
                     </SelectContent>
                   </Select>
                 </TableCell>
                 <TableCell>
                   <nav className="flex justify-end gap-1">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleSaveEdit} disabled={saving}>
-                      {saving ? <Spinner size="small" color="inherit" /> : <Check className="h-3.5 w-3.5 text-green-500" />}
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={s.handleSaveEdit} disabled={s.saving}>
+                      {s.saving ? <Spinner size="small" color="inherit" /> : <Check className={`h-3.5 w-3.5 ${getStatusColor('available', 'text')}`} />}
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={cancelEdit} disabled={saving}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={s.cancelEdit} disabled={s.saving}>
                       <X className="h-3.5 w-3.5" />
                     </Button>
                   </nav>
@@ -709,10 +247,10 @@ export function StorageTab({ building }: StorageTabProps) {
               </>
             )}
           />
-          <footer className="text-xs text-muted-foreground">
-            {filteredUnits.length} {t('tabs.labels.storage')}
-            {filteredUnits.length !== units.length && (
-              <span className="ml-1">({units.length} σύνολο)</span>
+          <footer className={cn('text-xs', colors.text.muted)}>
+            {s.filteredUnits.length} {s.t('tabs.labels.storage')}
+            {s.filteredUnits.length !== s.units.length && (
+              <span className="ml-1">({s.units.length} {s.t('storageView.total')})</span>
             )}
           </footer>
         </>
@@ -720,68 +258,67 @@ export function StorageTab({ building }: StorageTabProps) {
 
       {/* Link Existing Dialog */}
       <BuildingSpaceLinkDialog
-        open={showLinkDialog}
-        onOpenChange={setShowLinkDialog}
-        title={t('spaceLink.linkStorage')}
-        description={t('spaceLink.linkStorageDesc')}
-        fetchUnlinked={fetchUnlinkedStorages}
-        onLink={handleLinkStorage}
+        open={s.showLinkDialog}
+        onOpenChange={s.setShowLinkDialog}
+        title={s.t('spaceLink.linkStorage')}
+        description={s.t('spaceLink.linkStorageDesc')}
+        fetchUnlinked={s.fetchUnlinkedStorages}
+        onLink={s.handleLinkStorage}
       />
 
-      {/* 🛡️ ADR-226: Deletion Guard blocked dialog */}
-      {BlockedDialog}
+      {/* ADR-226: Deletion Guard blocked dialog */}
+      {s.BlockedDialog}
 
-      {/* Centralized Confirm Dialog (unlink) */}
+      {/* Confirm Dialog (unlink) */}
       <BuildingSpaceConfirmDialog
-        open={!!confirmUnlink}
-        onOpenChange={(open) => { if (!open) setConfirmUnlink(null); }}
-        title={t('spaceConfirm.unlinkStorage')}
+        open={!!s.confirmUnlink}
+        onOpenChange={(open) => { if (!open) s.setConfirmUnlink(null); }}
+        title={s.t('spaceConfirm.unlinkStorage')}
         description={
           <>
-            {t('spaceConfirm.unlinkStorageDesc')}{' '}
-            <strong>&quot;{confirmUnlink?.code}&quot;</strong>
+            {s.t('spaceConfirm.unlinkStorageDesc')}{' '}
+            <strong>&quot;{s.confirmUnlink?.code}&quot;</strong>
           </>
         }
-        confirmLabel={t('spaceActions.unlink')}
-        onConfirm={handleUnlinkConfirm}
-        loading={unlinkLoading}
+        confirmLabel={s.t('spaceActions.unlink')}
+        onConfirm={s.handleUnlinkConfirm}
+        loading={s.unlinkLoading}
         variant="default"
       />
 
-      {/* Centralized Confirm Dialog (delete) */}
+      {/* Confirm Dialog (delete) */}
       <BuildingSpaceConfirmDialog
-        open={!!confirmDelete}
-        onOpenChange={(open) => { if (!open) setConfirmDelete(null); }}
-        title={t('spaceConfirm.deleteStorage')}
+        open={!!s.confirmDelete}
+        onOpenChange={(open) => { if (!open) s.setConfirmDelete(null); }}
+        title={s.t('spaceConfirm.deleteStorage')}
         description={
           <>
-            {t('spaceConfirm.deleteStorageDesc')}{' '}
-            <strong>&quot;{confirmDelete?.code}&quot;</strong>;
+            {s.t('spaceConfirm.deleteStorageDesc')}{' '}
+            <strong>&quot;{s.confirmDelete?.code}&quot;</strong>;
             <br /><br />
-            {t('spaceConfirm.irreversible')}
+            {s.t('spaceConfirm.irreversible')}
           </>
         }
-        confirmLabel={t('spaceActions.delete')}
-        onConfirm={handleDeleteConfirm}
-        loading={confirmLoading}
+        confirmLabel={s.t('spaceActions.delete')}
+        onConfirm={s.handleDeleteConfirm}
+        loading={s.confirmLoading}
         variant="destructive"
       />
     </section>
   );
 }
 
-// ============================================================================
-// HELPER: Status badge class mapping
-// ============================================================================
+// ── Status badge class mapping ──
 
 function getStatusBadgeClass(status: StorageStatus): string {
-  const colorMap: Record<string, string> = {
-    available: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-    occupied: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-    maintenance: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-    reserved: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
-    sold: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-    unavailable: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
+  const statusMap: Record<string, string> = {
+    available: 'available',
+    occupied: 'pending',      // info/blue
+    maintenance: 'error',     // red
+    reserved: 'reserved',     // warning/amber
+    sold: 'sold',             // purple
+    unavailable: 'cancelled', // neutral/error
   };
-  return colorMap[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400';
+  const mapped = statusMap[status] || 'cancelled';
+  return `${getStatusColor(mapped, 'bg')}/10 ${getStatusColor(mapped, 'text')}`;
 }
