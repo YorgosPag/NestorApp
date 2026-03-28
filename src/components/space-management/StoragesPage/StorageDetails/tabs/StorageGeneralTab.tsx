@@ -4,7 +4,15 @@
 /** ADR-193: Storage general tab — inline editing, Cards layout, ADR-233 entity code */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
+import type { StorageType, StorageStatus } from '@/types/storage/contracts';
+import {
+  type StorageGeneralTabProps,
+  type StorageFormState,
+  type StoragePatchResult,
+  STORAGE_TYPES,
+  STORAGE_STATUSES,
+  buildFormState,
+} from './storage-general-tab-config';
 import { MapPin, StickyNote, Building2, Lock } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -36,83 +44,9 @@ import { FloorSelectField } from '@/components/shared/FloorSelectField';
 import type { FloorChangePayload } from '@/components/shared/FloorSelectField';
 import { useEntityLink } from '@/hooks/useEntityLink';
 import { EntityCodeField } from '@/components/shared/EntityCodeField';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 const logger = createModuleLogger('StorageGeneralTab');
-
-interface StorageGeneralTabProps {
-  storage: Storage;
-  /** Inline editing active (from parent via globalProps) */
-  isEditing?: boolean;
-  /** Notify parent when editing state changes */
-  onEditingChange?: (editing: boolean) => void;
-  /** Ref for save delegation from header button */
-  onSaveRef?: React.MutableRefObject<(() => Promise<boolean>) | null>;
-  /** Create mode: POST new entity instead of PATCH existing */
-  createMode?: boolean;
-  /** Callback when entity is created successfully (create mode only) */
-  onCreated?: (id: string) => void;
-}
-
-interface StorageFormState {
-  name: string;
-  /** ADR-233: Entity coding system */
-  code: string;
-  type: StorageType;
-  status: StorageStatus;
-  floor: string;
-  floorId: string;
-  area: string;
-  price: string;
-  description: string;
-  notes: string;
-}
-
-interface StoragePatchResult {
-  id: string;
-}
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-const STORAGE_TYPES: { value: StorageType; labelKey: string }[] = [
-  { value: 'large', labelKey: 'general.types.large' },
-  { value: 'small', labelKey: 'general.types.small' },
-  { value: 'basement', labelKey: 'general.types.basement' },
-  { value: 'ground', labelKey: 'general.types.ground' },
-  { value: 'special', labelKey: 'general.types.special' },
-  { value: 'storage', labelKey: 'general.types.storage' },
-  { value: 'garage', labelKey: 'general.types.garage' },
-  { value: 'warehouse', labelKey: 'general.types.warehouse' },
-];
-
-const STORAGE_STATUSES: { value: StorageStatus; labelKey: string }[] = [
-  { value: 'available', labelKey: 'general.statuses.available' },
-  { value: 'occupied', labelKey: 'general.statuses.occupied' },
-  { value: 'maintenance', labelKey: 'general.statuses.maintenance' },
-  { value: 'reserved', labelKey: 'general.statuses.reserved' },
-  { value: 'sold', labelKey: 'general.statuses.sold' },
-  { value: 'unavailable', labelKey: 'general.statuses.unavailable' },
-];
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function buildFormState(storage: Storage): StorageFormState {
-  return {
-    name: storage.name || '',
-    code: storage.code || '',
-    type: storage.type || 'storage',
-    status: storage.status || 'available',
-    floor: storage.floor || '',
-    floorId: storage.floorId || '',
-    area: storage.area !== undefined ? String(storage.area) : '',
-    price: storage.price !== undefined ? String(storage.price) : '',
-    description: storage.description || '',
-    notes: storage.notes || '',
-  };
-}
 
 // ============================================================================
 // COMPONENT
@@ -127,6 +61,7 @@ export function StorageGeneralTab({
   onCreated,
 }: StorageGeneralTabProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const typography = useTypography();
   const { t } = useTranslation('storage');
   const router = useRouter();
@@ -377,7 +312,7 @@ export function StorageGeneralTab({
               t={t}
             />
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.name')}</Label>
+              <Label className={cn("text-xs", colors.text.muted)}>{t('general.fields.name')}</Label>
               <Input
                 value={form.name}
                 onChange={(e) => updateField('name', e.target.value)}
@@ -386,7 +321,7 @@ export function StorageGeneralTab({
               />
             </fieldset>
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.type')}</Label>
+              <Label className={cn("text-xs", colors.text.muted)}>{t('general.fields.type')}</Label>
               <Select
                 value={form.type}
                 onValueChange={(v) => updateField('type', v as StorageType)}
@@ -405,7 +340,7 @@ export function StorageGeneralTab({
               </Select>
             </fieldset>
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.status')}</Label>
+              <Label className={cn("text-xs", colors.text.muted)}>{t('general.fields.status')}</Label>
               <Select
                 value={form.status}
                 onValueChange={(v) => updateField('status', v as StorageStatus)}
@@ -424,7 +359,7 @@ export function StorageGeneralTab({
               </Select>
             </fieldset>
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.area')}</Label>
+              <Label className={cn("text-xs", colors.text.muted)}>{t('general.fields.area')}</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -438,7 +373,7 @@ export function StorageGeneralTab({
             {/* Millesimal shares — read-only, from ownership table */}
             {storage.millesimalShares != null && storage.millesimalShares > 0 && (
               <fieldset className="space-y-1.5">
-                <Label className="text-muted-foreground text-xs flex items-center gap-1">
+                <Label className={cn("text-xs flex items-center gap-1", colors.text.muted)}>
                   <Lock className="h-3 w-3" />
                   {t('general.fields.millesimalShares', { defaultValue: 'Χιλιοστά (‰)' })}
                 </Label>
@@ -446,7 +381,7 @@ export function StorageGeneralTab({
               </fieldset>
             )}
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.price')}</Label>
+              <Label className={cn("text-xs", colors.text.muted)}>{t('general.fields.price')}</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -473,7 +408,7 @@ export function StorageGeneralTab({
         </CardHeader>
         <CardContent className="space-y-2">
           <fieldset className="space-y-1.5">
-            <Label className="text-muted-foreground text-xs">{t('general.fields.description')}</Label>
+            <Label className={cn("text-xs", colors.text.muted)}>{t('general.fields.description')}</Label>
             <Textarea
               value={form.description}
               onChange={(e) => updateField('description', e.target.value)}
@@ -482,7 +417,7 @@ export function StorageGeneralTab({
             />
           </fieldset>
           <fieldset className="space-y-1.5">
-            <Label className="text-muted-foreground text-xs">{t('general.fields.notes')}</Label>
+            <Label className={cn("text-xs", colors.text.muted)}>{t('general.fields.notes')}</Label>
             <Textarea
               value={form.notes}
               onChange={(e) => updateField('notes', e.target.value)}

@@ -23,6 +23,7 @@ import { getCompanyById } from '@/services/companies.service';
 import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('ParkingFloorplanTab');
 

@@ -23,6 +23,7 @@ import { getCompanyById } from '@/services/companies.service';
 import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { Storage } from '@/types/storage/contracts';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('StorageFloorplanTab');
 

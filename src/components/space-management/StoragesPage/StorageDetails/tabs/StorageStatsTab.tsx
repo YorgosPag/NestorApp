@@ -5,9 +5,12 @@ import { formatCurrency } from '@/lib/intl-utils';
 import type { Storage } from '@/types/storage/contracts';
 import { BarChart3, TrendingUp, DollarSign, Square } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { efficiencyProgressStyle, getEfficiencyColorClass } from './StorageStatsTab.styles';
+import { getStatusColor } from '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface StorageStatsTabProps {
   storage: Storage;
@@ -27,6 +30,7 @@ function getEfficiencyScore(storage: Storage): number {
 
 export function StorageStatsTab({ storage }: StorageStatsTabProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n support
   const { t } = useTranslation('storage');
   const pricePerSqm = storage.price && storage.area ? storage.price / storage.area : 0;
@@ -37,26 +41,26 @@ export function StorageStatsTab({ storage }: StorageStatsTabProps) {
       icon: Square,
       label: t('stats.metrics.totalArea'),
       value: `${storage.area} m²`,
-      color: 'text-blue-600'
+      color: getStatusColor('pending', 'text')
     },
     {
       icon: DollarSign,
       label: t('stats.metrics.totalValue'),
       value: storage.price ? formatCurrency(storage.price) : t('stats.notSet'),
-      color: 'text-green-600'
+      color: getStatusColor('available', 'text')
     },
     {
       icon: TrendingUp,
       label: t('stats.metrics.pricePerSqm'),
       value: pricePerSqm ? formatCurrency(pricePerSqm) : t('stats.notCalculated'),
-      color: 'text-purple-600'
+      color: getStatusColor('completed', 'text')
     },
     {
       icon: BarChart3,
       label: t('stats.metrics.efficiencyScore'),
       value: `${efficiencyScore}%`,
-      color: efficiencyScore > 70 ? 'text-green-600' :
-             efficiencyScore > 40 ? 'text-yellow-600' : 'text-red-600'
+      color: efficiencyScore > 70 ? getStatusColor('available', 'text') :
+             efficiencyScore > 40 ? getStatusColor('reserved', 'text') : getStatusColor('error', 'text')
     }
   ];
 
@@ -75,7 +79,7 @@ export function StorageStatsTab({ storage }: StorageStatsTabProps) {
               <div key={index} className="bg-card border rounded-lg p-4 text-center">
                 <IconComponent className={`${iconSizes.xl} mx-auto mb-2 ${stat.color}`} />
                 <p className="text-lg font-semibold">{stat.value}</p>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
+                <p className={cn("text-sm", colors.text.muted)}>{stat.label}</p>
               </div>
             );
           })}
@@ -103,7 +107,7 @@ export function StorageStatsTab({ storage }: StorageStatsTabProps) {
           {/* Status Analysis */}
           <div>
             <span className="text-sm font-medium">{t('stats.statusAnalysis.title')}</span>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className={cn("text-sm mt-1", colors.text.muted)}>
               {t(`stats.statusAnalysis.${storage.status || 'maintenance'}`)}
             </p>
           </div>
@@ -114,11 +118,11 @@ export function StorageStatsTab({ storage }: StorageStatsTabProps) {
               <span className="text-sm font-medium">{t('stats.financialAnalysis.title')}</span>
               <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-muted-foreground">{t('stats.financialAnalysis.totalValue')}</span>
+                  <span className={colors.text.muted}>{t('stats.financialAnalysis.totalValue')}</span>
                   <span className="font-medium ml-2">{formatCurrency(storage.price)}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">{t('stats.financialAnalysis.costPerSqm')}</span>
+                  <span className={colors.text.muted}>{t('stats.financialAnalysis.costPerSqm')}</span>
                   <span className="font-medium ml-2">{formatCurrency(pricePerSqm)}</span>
                 </div>
               </div>
@@ -133,17 +137,17 @@ export function StorageStatsTab({ storage }: StorageStatsTabProps) {
         <div className="bg-card border rounded-lg p-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div>
-              <span className="text-muted-foreground">{t('stats.technicalFields.type')}</span>
+              <span className={colors.text.muted}>{t('stats.technicalFields.type')}</span>
               <span className="font-medium ml-2">
                 {t(`stats.types.${storage.type || 'unknown'}`)}
               </span>
             </div>
             <div>
-              <span className="text-muted-foreground">{t('stats.technicalFields.building')}</span>
+              <span className={colors.text.muted}>{t('stats.technicalFields.building')}</span>
               <span className="font-medium ml-2">{storage.building}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">{t('stats.technicalFields.floor')}</span>
+              <span className={colors.text.muted}>{t('stats.technicalFields.floor')}</span>
               <span className="font-medium ml-2">{storage.floor}</span>
             </div>
           </div>
