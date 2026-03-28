@@ -1,6 +1,6 @@
 # ADR-266: Gantt & Construction Schedule Reports
 
-**Status**: PHASE B IMPLEMENTED
+**Status**: PHASE C IN PROGRESS (Sub-phase 1 complete)
 **Date**: 2026-03-28
 **Author**: Claude (Research Agents × 4)
 **Related ADRs**: ADR-034 (Gantt Chart), ADR-265 (Enterprise Reports System), ADR-175 (BOQ/Quantity Surveying)
@@ -11,6 +11,7 @@
 | 2026-03-28 | Initial research & architecture — DRAFT for review |
 | 2026-03-28 | **Phase A IMPLEMENTED**: 8 new files, 7 modified — Dashboard view toggle, KPIs, S-Curve, Variance Table, Lookahead, Export (PDF/Excel), i18n (el+en) |
 | 2026-03-28 | **Phase B IMPLEMENTED**: 3 new files, 7 modified — DelayBreakdownChart, Owner Report PDF, Gantt Table PDF, S-Curve Brush zoom, 4 export options |
+| 2026-03-28 | **Phase C Sub-phase 1 IMPLEMENTED**: delayReason + delayNote fields — SSoT DELAY_REASONS array, conditional UI in dialog, per-reason stacked bar chart, API + i18n. Also refactored: route.ts split (229+186), dialog split (490+186+245+79) |
 
 ---
 
@@ -502,14 +503,35 @@ Dashboard → [Export ▼]
 - `dashboard/index.ts` (+re-export)
 - i18n en/el building.json (+30 keys each)
 
-### Phase C: Advanced (Μελλοντικά)
+### Phase C: Advanced
 **Εκτίμηση**: ~1.500 LOC, αλγοριθμική πολυπλοκότητα
 
+#### Sub-phase 1: delayReason Field Migration ✅ IMPLEMENTED
+- `DELAY_REASONS` SSoT array in `construction.ts`: weather, materials, permits, subcontractor, other
+- `delayReason?: DelayReason | null` + `delayNote?: string | null` on Phase & Task
+- Conditional UI in ConstructionPhaseDialog (visible when delayed/blocked, cleared otherwise)
+- API route PATCH allowlist updated
+- DelayBreakdownChart: 6 stacked bars per reason (from 2 bars delayed/blocked)
+- i18n: en + el keys for dialog + dashboard
+- **Refactored**: route.ts → route.ts (229) + _helpers.ts (186); dialog → 4 files (490+186+245+79)
+
+**New files:**
+- `src/app/api/buildings/[buildingId]/construction-phases/_helpers.ts` (186 LOC)
+- `src/components/building-management/dialogs/usePhaseNameCombobox.ts` (186 LOC)
+- `src/components/building-management/dialogs/NameComboboxField.tsx` (245 LOC)
+- `src/components/building-management/dialogs/construction-dialog.types.ts` (79 LOC)
+
+#### Sub-phase 2: Critical Path (Pending)
 1. Critical Path calculation (forward/backward pass)
+
+#### Sub-phase 3: Baseline Snapshots (Pending)
 2. Baseline snapshots (new Firestore collection `construction_baselines`)
-3. `delayReason` field migration στο task/phase schema
-4. Resource allocation tracking
-5. Chart accessibility layer for screen readers
+
+#### Sub-phase 4: Resource Allocation (Pending)
+3. Resource allocation tracking
+
+#### Sub-phase 5: Accessibility (Pending)
+4. Chart accessibility layer for screen readers
 
 ---
 
