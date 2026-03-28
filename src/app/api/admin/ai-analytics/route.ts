@@ -20,7 +20,7 @@
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';

@@ -27,6 +27,7 @@ import type { CompanyUser, UserListFilters } from '../types';
 import { ROLE_BADGE_VARIANT, STATUS_BADGE_VARIANT } from '../types';
 import { formatRelativeDate } from '../utils/format-relative-date';
 import type { GlobalRole } from '@/lib/auth/types';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
 // TYPES
@@ -118,6 +119,7 @@ export function UserTable({
   onViewDetails,
 }: UserTableProps) {
   const { t } = useTranslation('admin');
+  const colors = useSemanticColors();
 
   const renderSortableHead = useCallback(
     (column: UserListFilters['sortBy'], label: string) => (
@@ -142,7 +144,7 @@ export function UserTable({
   if (isLoading) {
     return (
       <section className="flex items-center justify-center py-16">
-        <p className="text-muted-foreground animate-pulse">
+        <p className={cn("animate-pulse", colors.text.muted)}>
           {t('roleManagement.loadingUsers', 'Loading users...')}
         </p>
       </section>
@@ -155,7 +157,7 @@ export function UserTable({
   if (users.length === 0) {
     return (
       <section className="flex items-center justify-center py-16 rounded-lg border">
-        <p className="text-muted-foreground">
+        <p className={colors.text.muted}>
           {t('roleManagement.noUsersFound', 'No users found matching your filters.')}
         </p>
       </section>
@@ -209,7 +211,7 @@ export function UserTable({
                       <span className="font-medium text-sm">
                         {companyUser.displayName ?? t('roleManagement.unnamed', 'Unnamed')}
                         {isSelf && (
-                          <span className="ml-1 text-xs text-muted-foreground">
+                          <span className={cn("ml-1 text-xs", colors.text.muted)}>
                             ({t('roleManagement.you', 'you')})
                           </span>
                         )}
@@ -219,7 +221,7 @@ export function UserTable({
                 </TableCell>
 
                 {/* Email */}
-                <TableCell className="text-sm text-muted-foreground">
+                <TableCell className={cn("text-sm", colors.text.muted)}>
                   {companyUser.email}
                 </TableCell>
 
@@ -242,7 +244,7 @@ export function UserTable({
                   <span
                     className={cn(
                       'text-sm',
-                      companyUser.mfaEnrolled ? 'text-green-600' : 'text-muted-foreground'
+                      companyUser.mfaEnrolled ? 'text-green-600' : colors.text.muted
                     )}
                     title={companyUser.mfaEnrolled ? 'MFA Enabled' : 'MFA Not Enabled'}
                     aria-label={companyUser.mfaEnrolled ? 'MFA Enabled' : 'MFA Not Enabled'}
@@ -257,7 +259,7 @@ export function UserTable({
                 </TableCell>
 
                 {/* Last Sign-In */}
-                <TableCell className="text-sm text-muted-foreground">
+                <TableCell className={cn("text-sm", colors.text.muted)}>
                   {formatRelativeDate(companyUser.lastSignIn)}
                 </TableCell>
 

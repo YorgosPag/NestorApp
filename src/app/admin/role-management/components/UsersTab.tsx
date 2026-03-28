@@ -16,6 +16,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -275,7 +276,7 @@ export function UsersTab({ canEdit }: UsersTabProps) {
         <RoleChangeDialog
           user={selectedUser}
           currentUserId={user?.uid ?? ''}
-          open={true}
+          open
           onClose={handleCloseDialog}
           onSuccess={handleDialogSuccess}
         />
@@ -285,7 +286,7 @@ export function UsersTab({ canEdit }: UsersTabProps) {
       {dialogMode === 'permissions' && selectedUser && (
         <PermissionSetManager
           user={selectedUser}
-          open={true}
+          open
           onClose={handleCloseDialog}
           onSuccess={handleDialogSuccess}
         />
@@ -295,14 +296,14 @@ export function UsersTab({ canEdit }: UsersTabProps) {
       {dialogMode === 'detail' && selectedUser && (
         <UserDetailPanel
           user={selectedUser}
-          open={true}
+          open
           onClose={handleCloseDialog}
         />
       )}
 
       {/* Suspend / Activate confirm dialog */}
       {dialogMode === 'suspend' && selectedUser && (
-        <Dialog open={true} onOpenChange={handleCloseDialog}>
+        <Dialog open onOpenChange={handleCloseDialog}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
@@ -326,8 +327,8 @@ export function UsersTab({ canEdit }: UsersTabProps) {
                 <span className="text-sm font-medium">
                   {t('roleManagement.reason', 'Reason')} ({t('roleManagement.minChars', 'min 10 characters')})
                 </span>
-                <textarea
-                  className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                <Textarea
+                  className="mt-1"
                   rows={3}
                   value={suspendReason}
                   onChange={(e) => setSuspendReason(e.target.value)}

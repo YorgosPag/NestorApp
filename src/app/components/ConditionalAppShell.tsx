@@ -53,6 +53,7 @@ import { GlobalErrorSetup } from '@/components/GlobalErrorSetup';
 // 🚀 ENTERPRISE: Route prefetching system (SAP/Salesforce/Google pattern)
 import { preloadUserRoutes } from '@/utils/preloadRoutes';
 import { useAuth } from '@/auth';
+import '@/lib/design-system';
 
 /**
  * Routes that should display standalone (no sidebar/header, minimal providers)

@@ -24,7 +24,6 @@ import { sendMessengerMessage, sendMessengerQuickReplies, markMessengerSeen } fr
 import type {
   MessengerWebhookPayload,
   MessengerMessagingEvent,
-  MessengerMessage,
 } from './types';
 import { getCompanyId } from '@/config/tenant';
 import { createModuleLogger } from '@/lib/telemetry';

@@ -23,6 +23,8 @@ import { PREDEFINED_ROLES } from '@/lib/auth/roles';
 import type { RoleDefinition } from '@/lib/auth/roles';
 import { PERMISSIONS } from '@/lib/auth/types';
 import type { PermissionId, GlobalRole } from '@/lib/auth/types';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 // =============================================================================
 // CONSTANTS
@@ -106,6 +108,7 @@ export function RolePermissionMatrix() {
   const { t } = useTranslation('admin');
 
   const domainGroups = useMemo(() => groupPermissionsByDomain(), []);
+  const colors = useSemanticColors();
 
   return (
     <section className="rounded-lg border overflow-auto">
@@ -130,13 +133,13 @@ export function RolePermissionMatrix() {
                 <details>
                   <summary className="cursor-pointer font-medium text-sm capitalize">
                     {group.domain}
-                    <span className="text-xs text-muted-foreground ml-1">
+                    <span className={cn("text-xs ml-1", colors.text.muted)}>
                       ({group.permissions.length})
                     </span>
                   </summary>
                   <ul className="ml-2 mt-1 space-y-0.5">
                     {group.permissions.map((perm) => (
-                      <li key={perm} className="text-[10px] text-muted-foreground font-mono">
+                      <li key={perm} className={cn("text-[10px] font-mono", colors.text.muted)}>
                         {perm}
                       </li>
                     ))}

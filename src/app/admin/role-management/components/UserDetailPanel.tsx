@@ -34,6 +34,8 @@ import type { RoleDefinition } from '@/lib/auth/roles';
 import { PERMISSION_SETS, computeEffectivePermissions } from '@/lib/auth/permission-sets';
 import type { PermissionId } from '@/lib/auth/types';
 import type { GlobalRole } from '@/lib/auth/types';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 // =============================================================================
 // TYPES
@@ -62,6 +64,7 @@ const ROLE_LABELS: Record<GlobalRole, string> = {
 
 export function UserDetailPanel({ user, open, onClose }: UserDetailPanelProps) {
   const { t } = useTranslation('admin');
+  const colors = useSemanticColors();
 
   // ---------------------------------------------------------------------------
   // Compute effective permissions from globalRole + org-level permission sets
@@ -116,51 +119,51 @@ export function UserDetailPanel({ user, open, onClose }: UserDetailPanelProps) {
         <article className="space-y-6 max-h-[65vh] overflow-y-auto">
           {/* Section 1: User Info */}
           <section>
-            <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">
+            <h3 className={cn("text-sm font-semibold mb-3 uppercase tracking-wide", colors.text.muted)}>
               {t('roleManagement.userInfo', 'User Information')}
             </h3>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-              <dt className="text-muted-foreground">{t('roleManagement.name', 'Name')}</dt>
+              <dt className={colors.text.muted}>{t('roleManagement.name', 'Name')}</dt>
               <dd className="font-medium">{user.displayName ?? '—'}</dd>
 
-              <dt className="text-muted-foreground">{t('roleManagement.email', 'Email')}</dt>
+              <dt className={colors.text.muted}>{t('roleManagement.email', 'Email')}</dt>
               <dd>{user.email}</dd>
 
-              <dt className="text-muted-foreground">{t('roleManagement.uid', 'UID')}</dt>
+              <dt className={colors.text.muted}>{t('roleManagement.uid', 'UID')}</dt>
               <dd className="font-mono text-xs break-all">{user.uid}</dd>
 
-              <dt className="text-muted-foreground">{t('roleManagement.globalRole', 'Global Role')}</dt>
+              <dt className={colors.text.muted}>{t('roleManagement.globalRole', 'Global Role')}</dt>
               <dd>
                 <Badge variant={ROLE_BADGE_VARIANT[user.globalRole]}>
                   {ROLE_LABELS[user.globalRole]}
                 </Badge>
               </dd>
 
-              <dt className="text-muted-foreground">{t('roleManagement.table.status', 'Status')}</dt>
+              <dt className={colors.text.muted}>{t('roleManagement.table.status', 'Status')}</dt>
               <dd>
                 <Badge variant={STATUS_BADGE_VARIANT[user.status]}>
                   {user.status}
                 </Badge>
               </dd>
 
-              <dt className="text-muted-foreground">{t('roleManagement.mfa', 'MFA')}</dt>
+              <dt className={colors.text.muted}>{t('roleManagement.mfa', 'MFA')}</dt>
               <dd>{user.mfaEnrolled ? 'Enabled' : 'Not enrolled'}</dd>
 
-              <dt className="text-muted-foreground">{t('roleManagement.lastSignIn', 'Last Sign-In')}</dt>
+              <dt className={colors.text.muted}>{t('roleManagement.lastSignIn', 'Last Sign-In')}</dt>
               <dd>{formatRelativeDate(user.lastSignIn)}</dd>
 
-              <dt className="text-muted-foreground">{t('roleManagement.projects', 'Projects')}</dt>
+              <dt className={colors.text.muted}>{t('roleManagement.projects', 'Projects')}</dt>
               <dd>{user.projectCount}</dd>
             </dl>
           </section>
 
           {/* Section 2: Org-Level Permission Sets */}
           <section>
-            <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">
+            <h3 className={cn("text-sm font-semibold mb-3 uppercase tracking-wide", colors.text.muted)}>
               {t('roleManagement.orgPermissionSets', 'Org-Level Permission Sets')}
             </h3>
             {user.permissionSetIds.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className={cn("text-sm", colors.text.muted)}>
                 {t('roleManagement.noPermissionSets', 'No org-level permission sets assigned.')}
               </p>
             ) : (
@@ -181,11 +184,11 @@ export function UserDetailPanel({ user, open, onClose }: UserDetailPanelProps) {
 
           {/* Section 3: Project Memberships */}
           <section>
-            <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">
+            <h3 className={cn("text-sm font-semibold mb-3 uppercase tracking-wide", colors.text.muted)}>
               {t('roleManagement.projectMemberships', 'Project Memberships')}
             </h3>
             {user.projectMemberships.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className={cn("text-sm", colors.text.muted)}>
                 {t('roleManagement.noProjectMemberships', 'Not a member of any projects.')}
               </p>
             ) : (
@@ -220,19 +223,19 @@ export function UserDetailPanel({ user, open, onClose }: UserDetailPanelProps) {
 
           {/* Section 4: Effective Permissions */}
           <section>
-            <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">
+            <h3 className={cn("text-sm font-semibold mb-3 uppercase tracking-wide", colors.text.muted)}>
               {t('roleManagement.effectivePermissions', 'Effective Permissions')}
             </h3>
 
             {isBypass ? (
-              <p className="text-sm text-muted-foreground">
+              <p className={cn("text-sm", colors.text.muted)}>
                 {t(
                   'roleManagement.bypassRole',
                   'This user has a bypass role (super_admin) — all permission checks are granted.'
                 )}
               </p>
             ) : effectivePermissions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className={cn("text-sm", colors.text.muted)}>
                 {t('roleManagement.noPermissions', 'No permissions computed.')}
               </p>
             ) : (
@@ -244,7 +247,7 @@ export function UserDetailPanel({ user, open, onClose }: UserDetailPanelProps) {
                     </summary>
                     <ul className="ml-4 mt-1 space-y-0.5">
                       {perms.map((perm) => (
-                        <li key={perm} className="text-xs text-muted-foreground font-mono">
+                        <li key={perm} className={cn("text-xs font-mono", colors.text.muted)}>
                           {perm}
                         </li>
                       ))}

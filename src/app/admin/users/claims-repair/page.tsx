@@ -61,6 +61,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
 // TYPES
@@ -95,6 +96,7 @@ interface SetClaimsResponse {
 export default function ClaimsRepairPage() {
   const { refreshToken } = useAuth();
   const { t } = useTranslation('admin');
+  const colors = useSemanticColors();
   const spacing = useSpacingTokens();
   const layout = useLayoutClasses();
 
@@ -164,7 +166,7 @@ export default function ClaimsRepairPage() {
         <h1 className={`${SEMANTIC_TYPOGRAPHY_TOKENS.h2.tailwind} ${spacing.margin.bottom.sm}`}>
           {t('claimsRepair.title')}
         </h1>
-        <p className="text-muted-foreground">
+        <p className={colors.text.muted}>
           {t('claimsRepair.description')}
         </p>
       </header>
