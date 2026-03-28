@@ -225,6 +225,13 @@ export const ENTERPRISE_ID_PREFIXES = {
   BUDGET_VARIANCE: 'bvar',
 
   // ==========================================================================
+  // PROCUREMENT (ADR-267: Lightweight Procurement Module)
+  // ==========================================================================
+  PURCHASE_ORDER: 'po',
+  PO_ITEM: 'poi',
+  PO_ATTACHMENT: 'poatt',
+
+  // ==========================================================================
   // OPTIMISTIC & TEMPORARY
   // ==========================================================================
   OPTIMISTIC: 'opt',
@@ -1245,6 +1252,34 @@ export class EnterpriseIdService {
   }
 
   // ==========================================================================
+  // PROCUREMENT (ADR-267: Lightweight Procurement Module)
+  // ==========================================================================
+
+  /**
+   * 📦 Generate Purchase Order ID
+   * Format: po_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generatePurchaseOrderId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.PURCHASE_ORDER).id;
+  }
+
+  /**
+   * 📦 Generate PO Item ID
+   * Format: poi_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generatePOItemId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.PO_ITEM).id;
+  }
+
+  /**
+   * 📎 Generate PO Attachment ID
+   * Format: poatt_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generatePOAttachmentId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.PO_ATTACHMENT).id;
+  }
+
+  // ==========================================================================
   // UTILITY METHODS
   // ==========================================================================
 
@@ -1503,6 +1538,13 @@ export const generateQueryStrategyDocId = (collection: string, failedFilters: st
   enterpriseIdService.generateQueryStrategyDocId(collection, failedFilters);
 export const generateChatHistoryDocId = (channel: string, senderId: string) =>
   enterpriseIdService.generateChatHistoryDocId(channel, senderId);
+
+// =============================================================================
+// PROCUREMENT (ADR-267: Lightweight Procurement Module)
+// =============================================================================
+export const generatePurchaseOrderId = () => enterpriseIdService.generatePurchaseOrderId();
+export const generatePOItemId = () => enterpriseIdService.generatePOItemId();
+export const generatePOAttachmentId = () => enterpriseIdService.generatePOAttachmentId();
 
 // =============================================================================
 // OPTIMISTIC & TEMPORARY
