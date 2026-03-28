@@ -12,6 +12,7 @@ import type { Building } from '../../BuildingsPageContent';
 import { formatCurrency } from '@/lib/intl-utils';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface BuildingCardMetricsProps {
   building: Building;

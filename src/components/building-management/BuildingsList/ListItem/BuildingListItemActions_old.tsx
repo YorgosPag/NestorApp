@@ -20,6 +20,8 @@ import {
 import { Star, MoreVertical, Edit, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TRANSITION_PRESETS, HOVER_TEXT_EFFECTS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface BuildingListItemActionsProps {
   isFavorite: boolean;
@@ -29,6 +31,7 @@ interface BuildingListItemActionsProps {
 
 export function BuildingListItemActions({ isFavorite, onToggleFavorite, onEdit }: BuildingListItemActionsProps) {
   // 🏢 ENTERPRISE: Centralized systems
+  const { t } = useTranslation('building');
   const buttonPatterns = useButtonPatterns();
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
@@ -53,7 +56,7 @@ export function BuildingListItemActions({ isFavorite, onToggleFavorite, onEdit }
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>{isFavorite ? 'Αφαίρεση από αγαπημένα' : 'Προσθήκη στα αγαπημένα'}</p>
+          <p>{isFavorite ? t('listItem.actions.removeFavorite') : t('listItem.actions.addFavorite')}</p>
         </TooltipContent>
       </Tooltip>
 
@@ -64,12 +67,12 @@ export function BuildingListItemActions({ isFavorite, onToggleFavorite, onEdit }
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem><Eye className={`${iconSizes.sm} mr-2`} />Προβολή</DropdownMenuItem>
-          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}><Edit className={`${iconSizes.sm} mr-2`} />Επεξεργασία</DropdownMenuItem>
+          <DropdownMenuItem><Eye className={`${iconSizes.sm} mr-2`} />{t('listItem.actions.view')}</DropdownMenuItem>
+          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}><Edit className={`${iconSizes.sm} mr-2`} />{t('listItem.actions.edit')}</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}>
             <Star className={`${iconSizes.sm} mr-2`} />
-            {isFavorite ? 'Αφαίρεση από αγαπημένα' : 'Προσθήκη στα αγαπημένα'}
+            {isFavorite ? t('listItem.actions.removeFavorite') : t('listItem.actions.addFavorite')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

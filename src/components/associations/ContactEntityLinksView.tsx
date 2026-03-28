@@ -18,7 +18,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useContactEntityLinks } from '@/hooks/useEntityAssociations';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 import type { ContactEntityLink } from '@/types/entity-associations';
+import '@/lib/design-system';
 
 // ============================================================================
 // PROPS
@@ -34,6 +37,7 @@ export interface ContactEntityLinksViewProps {
 
 export function ContactEntityLinksView({ contactId }: ContactEntityLinksViewProps) {
   const { t } = useTranslation('building');
+  const colors = useSemanticColors();
   const { grouped, isLoading } = useContactEntityLinks(contactId);
 
   const hasLinks =
@@ -58,11 +62,11 @@ export function ContactEntityLinksView({ contactId }: ContactEntityLinksViewProp
 
       <CardContent>
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">
+          <p className={cn("text-sm", colors.text.muted)}>
             {t('associations.loading')}
           </p>
         ) : !hasLinks ? (
-          <p className="text-sm text-muted-foreground py-6 text-center">
+          <p className={cn("text-sm py-6 text-center", colors.text.muted)}>
             {t('associations.entityLinks.noLinks')}
           </p>
         ) : (
@@ -115,12 +119,13 @@ interface EntityGroupProps {
 }
 
 function EntityGroup({ icon, title, links, getRoleLabel }: EntityGroupProps) {
+  const colors = useSemanticColors();
   return (
     <section>
       <h3 className="flex items-center gap-2 text-sm font-semibold mb-2">
         {icon}
         {title}
-        <span className="text-muted-foreground font-normal">({links.length})</span>
+        <span className={cn("font-normal", colors.text.muted)}>({links.length})</span>
       </h3>
       <ul className="space-y-1.5">
         {links.map((link) => (

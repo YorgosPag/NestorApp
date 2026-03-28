@@ -6,6 +6,7 @@
  */
 
 import React, { useState } from 'react';
+import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { BaseToolbar } from '@/components/core/BaseToolbar/BaseToolbar';
 import type { ToolbarAction, ToolbarFilter, ToolbarSearch } from '@/components/core/BaseToolbar/BaseToolbar';
@@ -33,6 +34,7 @@ import { UNIFIED_STATUS_FILTER_LABELS, PROPERTY_BUILDING_TYPE_LABELS } from '@/c
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('BuildingToolbar');
 
@@ -52,7 +54,7 @@ interface BuildingToolbarProps {
 
 export function BuildingToolbar({
   selectedItems = [],
-  onSelectionChange,
+  onSelectionChange: _onSelectionChange,
   searchTerm = '',
   onSearchChange,
   activeFilters = [],
@@ -270,7 +272,7 @@ export function BuildingToolbar({
       onClearAllFilters={handleClearFilters}
       leftContent={
         selectedItems.length > 0 && (
-          <div className="text-sm text-muted-foreground">
+          <div className={cn("text-sm", colors.text.muted)}>
             {t('toolbar.selection.selected', { count: selectedItems.length })}
           </div>
         )

@@ -13,6 +13,7 @@ import { AddressWithHierarchy } from '@/components/shared/addresses/AddressWithH
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
 import { ContactAddressMapPreview, type DragResolvedAddress } from '@/components/contacts/details/ContactAddressMapPreview';
 import type { RendererContext, CustomRendererField } from './contactRenderersCore';
+import '@/lib/design-system';
 
 type RendererFn = (
   field: CustomRendererField,

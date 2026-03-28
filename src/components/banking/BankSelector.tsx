@@ -29,6 +29,7 @@ import {
   getAllBanksSorted,
   type BankInfo
 } from '@/constants/greek-banks';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES

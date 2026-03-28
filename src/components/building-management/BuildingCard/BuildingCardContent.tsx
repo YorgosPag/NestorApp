@@ -8,6 +8,7 @@ import { BuildingCardLocation } from './BuildingCardContent/BuildingCardLocation
 import { BuildingCardProgress } from './BuildingCardContent/BuildingCardProgress';
 import { BuildingCardMetrics } from './BuildingCardContent/BuildingCardMetrics';
 import { BuildingCardFeatures } from './BuildingCardContent/BuildingCardFeatures';
+import '@/lib/design-system';
 
 interface BuildingCardContentProps {
   building: Building;

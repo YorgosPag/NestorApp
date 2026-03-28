@@ -5,6 +5,7 @@ import { RefreshCw } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 export function RefreshButton({ onRefresh }: { onRefresh: () => void }) {
   // 🏢 ENTERPRISE: i18n hook for translations

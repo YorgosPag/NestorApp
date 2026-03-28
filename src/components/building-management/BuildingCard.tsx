@@ -11,12 +11,14 @@ import { COMPLEX_HOVER_EFFECTS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import { BuildingCardContent } from './BuildingCard/BuildingCardContent';
 import { BuildingCardTimeline } from './BuildingCard/BuildingCardTimeline';
 // 🏢 ENTERPRISE: Only import non-i18n utilities - labels come from centralized i18n
 import { getCategoryIcon } from './BuildingCard/BuildingCardUtils';
+import '@/lib/design-system';
 
 
 interface BuildingCardProps {
@@ -32,6 +34,7 @@ export function BuildingCard({
 }: BuildingCardProps) {
   // 🏢 ENTERPRISE: i18n hook for translations with namespace readiness check
   const { t, isNamespaceReady } = useTranslation('building');
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const [isFavorite, setIsFavorite] = useState(false);
@@ -86,7 +89,7 @@ export function BuildingCard({
             variant: 'ghost',
             className: cn(
               `${iconSizes.lg} p-0`,
-              isFavorite ? 'text-yellow-500 fill-current' : 'text-muted-foreground'
+              isFavorite ? 'text-yellow-500 fill-current' : colors.text.muted
             )
           }
         ]}

@@ -25,12 +25,14 @@ import { EmailContentWithSignature } from '@/components/shared/email/EmailConten
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTypography } from '@/hooks/useTypography';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type {
   PipelineContext,
   PipelineAction,
   PipelineChannelValue,
   PipelineIntentTypeValue,
 } from '@/types/ai-pipeline';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -109,6 +111,7 @@ interface ProposalActionRendererProps {
 }
 
 function ProposalActionRenderer({ action, spacing, typography, t, editedDraftReply, onDraftReplyChange, onDraftReplyReset }: ProposalActionRendererProps) {
+  const colors = useSemanticColors();
   const params = action.params;
 
   // ── reply_property_list — UC-003 Property Search ──
@@ -126,7 +129,7 @@ function ProposalActionRenderer({ action, spacing, typography, t, editedDraftRep
         <div className={`${spacing.gap.sm} flex flex-wrap items-center`}>
           <Badge variant="outline">{t('operatorInbox.actions.replyPropertyList')}</Badge>
           {senderName && (
-            <span className={`${typography.body.sm} text-muted-foreground`}>
+            <span className={`${typography.body.sm} ${colors.text.muted}`}>
               → {senderName}
             </span>
           )}
@@ -148,7 +151,7 @@ function ProposalActionRenderer({ action, spacing, typography, t, editedDraftRep
         {matchingUnits && matchingUnits.length > 0 && (
           <ul className={`${spacing.margin.top.xs} ${spacing.gap.xs} list-disc list-inside`}>
             {matchingUnits.map((unit, idx) => (
-              <li key={idx} className={`${typography.body.sm} text-muted-foreground`}>
+              <li key={idx} className={`${typography.body.sm} ${colors.text.muted}`}>
                 <strong>{unit.name}</strong>
                 {unit.area ? ` — ${unit.area} τ.μ.` : ''}
                 {unit.floor ? `, ${unit.floor}ος` : ''}
@@ -165,7 +168,7 @@ function ProposalActionRenderer({ action, spacing, typography, t, editedDraftRep
             <CardContent className={spacing.padding.md}>
               <div className={`${spacing.gap.xs} flex items-center justify-between ${spacing.margin.bottom.xs}`}>
                 <div className={`${spacing.gap.xs} flex items-center`}>
-                  <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                  <Pencil className={`h-3.5 w-3.5 ${colors.text.muted}`} />
                   <h5 className={typography.label.sm}>
                     {t('operatorInbox.sections.draftReply')}
                   </h5>
@@ -219,14 +222,14 @@ function ProposalActionRenderer({ action, spacing, typography, t, editedDraftRep
         <div className={`${spacing.gap.sm} flex flex-wrap items-center`}>
           <Badge variant="outline">{t('operatorInbox.actions.createAppointment')}</Badge>
           {senderName && (
-            <span className={`${typography.body.sm} text-muted-foreground`}>
+            <span className={`${typography.body.sm} ${colors.text.muted}`}>
               → {senderName}
             </span>
           )}
         </div>
 
         {/* Appointment details */}
-        <dl className={`${spacing.gap.xs} grid grid-cols-[auto_1fr] ${typography.body.sm} text-muted-foreground`}>
+        <dl className={`${spacing.gap.xs} grid grid-cols-[auto_1fr] ${typography.body.sm} ${colors.text.muted}`}>
           <dt className="font-medium">{t('operatorInbox.fields.requestedDate')}:</dt>
           <dd>{requestedDate ?? notSpecified}</dd>
 
@@ -248,7 +251,7 @@ function ProposalActionRenderer({ action, spacing, typography, t, editedDraftRep
               <h5 className={`${typography.label.sm} ${spacing.margin.bottom.xs} ${hasTimeConflict ? 'text-destructive' : 'text-blue-600 dark:text-blue-400'}`}>
                 {t('operatorInbox.sections.aiBriefing')}
               </h5>
-              <div className={`${typography.body.sm} whitespace-pre-line text-muted-foreground`}>
+              <div className={`${typography.body.sm} whitespace-pre-line ${colors.text.muted}`}>
                 {operatorBriefing}
               </div>
             </CardContent>
@@ -261,7 +264,7 @@ function ProposalActionRenderer({ action, spacing, typography, t, editedDraftRep
             <CardContent className={spacing.padding.md}>
               <div className={`${spacing.gap.xs} flex items-center justify-between ${spacing.margin.bottom.xs}`}>
                 <div className={`${spacing.gap.xs} flex items-center`}>
-                  <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                  <Pencil className={`h-3.5 w-3.5 ${colors.text.muted}`} />
                   <h5 className={typography.label.sm}>
                     {t('operatorInbox.sections.draftReply')}
                   </h5>
@@ -311,7 +314,7 @@ function ProposalActionRenderer({ action, spacing, typography, t, editedDraftRep
     <div className={`${spacing.gap.xs} flex flex-col`}>
       <Badge variant="outline">{action.type}</Badge>
       {visibleParams.length > 0 && (
-        <dl className={`${spacing.gap.xs} grid grid-cols-[auto_1fr] ${typography.body.sm} text-muted-foreground`}>
+        <dl className={`${spacing.gap.xs} grid grid-cols-[auto_1fr] ${typography.body.sm} ${colors.text.muted}`}>
           {visibleParams.map(([key, value]) => (
             <div key={key} className="contents">
               <dt className="font-medium">{key}:</dt>
@@ -338,6 +341,7 @@ export function ProposalReviewCard({
   const { t } = useTranslation('admin');
   const spacing = useSpacingTokens();
   const typography = useTypography();
+  const colors = useSemanticColors();
 
   const [rejectReason, setRejectReason] = useState('');
   const [showApproveDialog, setShowApproveDialog] = useState(false);
@@ -368,20 +372,20 @@ export function ProposalReviewCard({
       <Card>
         <CardContent className={spacing.padding.md}>
           <header className={`${spacing.gap.sm} flex items-center ${spacing.margin.bottom.sm}`}>
-            <ChannelIcon className="h-4 w-4 text-muted-foreground" />
+            <ChannelIcon className={`h-4 w-4 ${colors.text.muted}`} />
             <h4 className={typography.label.sm}>
               {t('operatorInbox.sections.originalMessage')}
             </h4>
           </header>
           <dl className={`${spacing.gap.xs} grid grid-cols-[auto_1fr]`}>
-            <dt className={`${typography.body.sm} text-muted-foreground`}>
+            <dt className={`${typography.body.sm} ${colors.text.muted}`}>
               {t('operatorInbox.fields.sender')}:
             </dt>
             <dd className={typography.body.sm}>
               {sender?.name ?? sender?.email ?? 'Unknown'}
             </dd>
 
-            <dt className={`${typography.body.sm} text-muted-foreground`}>
+            <dt className={`${typography.body.sm} ${colors.text.muted}`}>
               {t('operatorInbox.fields.channel')}:
             </dt>
             <dd>
@@ -396,7 +400,7 @@ export function ProposalReviewCard({
             </p>
           )}
           {intake?.normalized?.contentText && (
-            <div className={`${typography.body.sm} ${spacing.margin.top.xs} text-muted-foreground`}>
+            <div className={`${typography.body.sm} ${spacing.margin.top.xs} ${colors.text.muted}`}>
               <EmailContentWithSignature content={intake.normalized.contentText} />
             </div>
           )}
@@ -408,7 +412,7 @@ export function ProposalReviewCard({
         <Card>
           <CardContent className={spacing.padding.md}>
             <header className={`${spacing.gap.sm} flex items-center ${spacing.margin.bottom.sm}`}>
-              <Bot className="h-4 w-4 text-muted-foreground" />
+              <Bot className={`h-4 w-4 ${colors.text.muted}`} />
               <h4 className={typography.label.sm}>
                 {t('operatorInbox.sections.aiUnderstanding')}
               </h4>
@@ -422,7 +426,7 @@ export function ProposalReviewCard({
             {/* Primary Intent */}
             <div className={`${spacing.gap.sm} flex flex-wrap items-center`}>
               {understanding.detectedIntents && understanding.detectedIntents.length > 1 && (
-                <span className={`${typography.body.sm} font-medium text-muted-foreground`}>
+                <span className={`${typography.body.sm} font-medium ${colors.text.muted}`}>
                   {t('operatorInbox.multiIntent.primary')}:
                 </span>
               )}
@@ -442,7 +446,7 @@ export function ProposalReviewCard({
               <div className={`${spacing.margin.top.xs} ${spacing.gap.sm} flex flex-col`}>
                 {understanding.detectedIntents.slice(1).map((di, idx) => (
                   <div key={idx} className={`${spacing.gap.sm} flex flex-wrap items-center`}>
-                    <span className={`${typography.body.sm} font-medium text-muted-foreground`}>
+                    <span className={`${typography.body.sm} font-medium ${colors.text.muted}`}>
                       {t('operatorInbox.multiIntent.secondary')}:
                     </span>
                     <Badge variant={getIntentBadgeVariant(di.intent)}>
@@ -457,7 +461,7 @@ export function ProposalReviewCard({
             )}
 
             {understanding.rationale && (
-              <p className={`${typography.body.sm} ${spacing.margin.top.xs} text-muted-foreground`}>
+              <p className={`${typography.body.sm} ${spacing.margin.top.xs} ${colors.text.muted}`}>
                 {understanding.rationale}
               </p>
             )}
@@ -470,7 +474,7 @@ export function ProposalReviewCard({
         <Card>
           <CardContent className={spacing.padding.md}>
             <header className={`${spacing.gap.sm} flex items-center ${spacing.margin.bottom.sm}`}>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              <CheckCircle className={`h-4 w-4 ${colors.text.muted}`} />
               <h4 className={typography.label.sm}>
                 {t('operatorInbox.sections.proposal')}
               </h4>
@@ -567,10 +571,11 @@ export function ProposalReviewCard({
       >
         <label className={`${spacing.gap.xs} flex flex-col`}>
           <span className={typography.body.sm}>{t('operatorInbox.fields.reason')}</span>
-          <textarea
+          <Textarea
+            size="sm"
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
-            className="min-h-[80px] rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+            className="min-h-[80px]"
             placeholder={t('operatorInbox.fields.reason')}
           />
         </label>

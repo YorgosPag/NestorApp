@@ -7,9 +7,7 @@ import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import type { Building } from '../BuildingsPageContent';
 // ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { createModuleLogger } from '@/lib/telemetry';
-
-const logger = createModuleLogger('BuildingDetailsHeader');
+import '@/lib/design-system';
 
 
 interface BuildingDetailsHeaderProps {

@@ -15,6 +15,9 @@ import {
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface ToolbarAdvancedSectionProps {
   selectedItems: number[];
@@ -27,6 +30,7 @@ export function ToolbarAdvancedSection({
 }: ToolbarAdvancedSectionProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   return (
     <div className="px-2 pb-2 border-t border-border/50">
@@ -85,7 +89,7 @@ export function ToolbarAdvancedSection({
         <div className="flex-1" />
 
         {/* Status Indicators */}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className={cn("flex items-center gap-2 text-xs", colors.text.muted)}>
           {selectedItems.length > 0 && (
             <BuildingBadge
               status="occupied"

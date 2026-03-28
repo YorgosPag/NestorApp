@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { Filter, X } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { ToolbarButton } from '@/components/ui/ToolbarButton';
+import '@/lib/design-system';
 
 interface Props {
   activeFilters: string[];

@@ -17,6 +17,7 @@ import { useAuth } from "@/auth/contexts/AuthContext"
 import { useTranslation } from "@/i18n/hooks/useTranslation"
 import { cn } from "@/lib/utils"
 import { TRANSITION_PRESETS, HOVER_BACKGROUND_EFFECTS } from "@/components/ui/effects"
+import '@/lib/design-system';
 
 // ⚡ ENTERPRISE PERFORMANCE (2026-01-27): Dynamic import for GlobalSearchDialog
 // Pattern: Google, Vercel, Microsoft - Heavy dialogs loaded only when opened
@@ -57,7 +58,7 @@ export function AppHeader() {
           onClick={() => setSearchOpen(true)}
           className={cn(
             "hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md",
-            "text-sm text-muted-foreground",
+            "text-sm", colors.text.muted,
             "bg-muted/50 border border-border/50",
             TRANSITION_PRESETS.SMOOTH_ALL,
             HOVER_BACKGROUND_EFFECTS.MUTED,
@@ -82,7 +83,7 @@ export function AppHeader() {
           type="button"
           onClick={() => setSearchOpen(true)}
           className={cn(
-            "sm:hidden p-2 rounded-md text-muted-foreground",
+            "sm:hidden p-2 rounded-md", colors.text.muted,
             TRANSITION_PRESETS.STANDARD_COLORS,
             "hover:text-foreground hover:bg-muted"
           )}

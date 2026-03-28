@@ -48,8 +48,10 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTypography } from '@/hooks/useTypography';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { EntityType } from '@/config/domain-constants';
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
+import '@/lib/design-system';
 
 // ============================================================================
 // PROPS
@@ -74,6 +76,7 @@ export function EntityAssociationsManager({
   const { t } = useTranslation('building');
   const spacing = useSpacingTokens();
   const typography = useTypography();
+  const colors = useSemanticColors();
   const { links, isLoading, addLink, removeLink } = useEntityContactLinks(
     entityType,
     entityId,
@@ -159,13 +162,13 @@ export function EntityAssociationsManager({
 
       <CardContent>
         {isLoading ? (
-          <p className="text-muted-foreground text-sm">
+          <p className={cn("text-sm", colors.text.muted)}>
             {t('associations.loading')}
           </p>
         ) : links.length === 0 ? (
           <section className="flex flex-col items-center justify-center py-12 text-center">
-            <Users className="h-10 w-10 text-muted-foreground/40 mb-3" />
-            <p className="text-muted-foreground text-sm">
+            <Users className={cn("h-10 w-10 mb-3", `${colors.text.muted}/40`)} />
+            <p className={cn("text-sm", colors.text.muted)}>
               {t('associations.noAssociations')}
             </p>
           </section>
@@ -194,7 +197,7 @@ export function EntityAssociationsManager({
                       {t('associations.inheritedFromProject')}
                     </Badge>
                   )}
-                  <span className="text-xs text-muted-foreground capitalize">
+                  <span className={cn("text-xs capitalize", colors.text.muted)}>
                     {link.contactType}
                   </span>
                 </div>

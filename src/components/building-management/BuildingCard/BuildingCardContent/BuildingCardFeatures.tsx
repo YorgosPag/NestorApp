@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized building features translation utility
 import { translateBuildingFeature } from '@/utils/building-features-i18n';
+import '@/lib/design-system';
 
 interface BuildingCardFeaturesProps {
   features?: string[];

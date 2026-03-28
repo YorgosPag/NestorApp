@@ -31,6 +31,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { colors } from '@/styles/design-tokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // TYPES
@@ -86,6 +87,7 @@ export function BankAccountCard({
 }: BankAccountCardProps) {
   const { t } = useTranslation('banking');
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { copy, copied } = useCopyToClipboard();
 
   // Get bank info for color
@@ -147,7 +149,7 @@ export function BankAccountCard({
             <div className="flex items-center gap-2">
               <CreditCard
                 size={iconSizes.numeric.sm}
-                className="text-muted-foreground shrink-0"
+                className={cn(colors.text.muted, "shrink-0")}
                 aria-hidden="true"
               />
               <code className="font-mono text-sm text-foreground bg-muted px-2 py-1 rounded">
@@ -171,7 +173,7 @@ export function BankAccountCard({
             {/* BIC/SWIFT code */}
             {account.bankCode && (
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground font-medium">BIC/SWIFT:</span>
+                <span className={cn("text-xs font-medium", colors.text.muted)}>BIC/SWIFT:</span>
                 <code className="font-mono text-xs text-foreground bg-muted px-2 py-0.5 rounded">
                   {account.bankCode}
                 </code>
@@ -180,7 +182,7 @@ export function BankAccountCard({
 
             {/* Account number and branch */}
             {(account.accountNumber || account.branch) && (
-              <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
+              <div className={cn("flex items-center gap-3 flex-wrap text-xs", colors.text.muted)}>
                 {account.accountNumber && (
                   <span>
                     <span className="font-medium">{t('account.accountNumber')}:</span> {account.accountNumber}
@@ -203,7 +205,7 @@ export function BankAccountCard({
                 {CURRENCY_LABELS[account.currency] || account.currency}
               </Badge>
               {account.holderName && (
-                <span className="text-sm text-muted-foreground">
+                <span className={cn("text-sm", colors.text.muted)}>
                   {t('account.holder')}: {account.holderName}
                 </span>
               )}
@@ -211,7 +213,7 @@ export function BankAccountCard({
 
             {/* Notes */}
             {account.notes && (
-              <p className="text-sm text-muted-foreground line-clamp-2">
+              <p className={cn("text-sm line-clamp-2", colors.text.muted)}>
                 {account.notes}
               </p>
             )}

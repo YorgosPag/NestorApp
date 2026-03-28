@@ -18,6 +18,7 @@ import { useTranslation } from "@/i18n";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('ToolbarMainActions');
 

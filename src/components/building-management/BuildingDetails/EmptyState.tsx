@@ -4,6 +4,7 @@ import React from 'react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { EmptyState as SharedEmptyState } from '@/components/shared/EmptyState';
+import '@/lib/design-system';
 
 export function EmptyState() {
   const { t } = useTranslation('building');

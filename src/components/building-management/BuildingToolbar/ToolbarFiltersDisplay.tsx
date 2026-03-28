@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
+import { cn } from '@/lib/utils';
 import { CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
@@ -10,6 +11,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized building features translation utility
 import { translateBuildingFeature } from '@/utils/building-features-i18n';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface ToolbarFiltersDisplayProps {
   activeFilters: string[];
@@ -22,6 +25,7 @@ export function ToolbarFiltersDisplay({
 }: ToolbarFiltersDisplayProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t, isNamespaceReady } = useTranslation('building');
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
 
   // 🏢 ENTERPRISE: Translate filter label using centralized utility
@@ -42,7 +46,7 @@ export function ToolbarFiltersDisplay({
   return (
     <div className="px-2 pb-2 border-t border-border/50">
       <div className="flex items-center gap-2 pt-2">
-        <span className="text-xs text-muted-foreground">{t('filtersDisplay.activeFilters')}</span>
+        <span className={cn("text-xs", colors.text.muted)}>{t('filtersDisplay.activeFilters')}</span>
         <div className="flex flex-wrap gap-1">
           {activeFilters.map((filter) => (
             <CommonBadge

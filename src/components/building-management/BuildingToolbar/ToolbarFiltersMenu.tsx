@@ -5,6 +5,7 @@ import { SortToggleButton } from './SortToggleButton';
 import { BuildingFiltersMenu } from './BuildingFiltersMenu';
 import { RefreshButton } from './RefreshButton';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('ToolbarFiltersMenu');
 

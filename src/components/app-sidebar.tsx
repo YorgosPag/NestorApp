@@ -19,6 +19,7 @@ import { MapPin } from "lucide-react"
 import { useSidebar } from "@/components/ui/sidebar"
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from "@/components/ui/effects"
 import { useAuth } from "@/auth/contexts/AuthContext"
+import '@/lib/design-system';
 
 export function AppSidebar() {
   const iconSizes = useIconSizes()
