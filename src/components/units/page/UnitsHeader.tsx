@@ -20,6 +20,7 @@ import type { ViewMode as CoreViewMode } from '@/core/headers';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import '@/lib/design-system';
 
 export type UnitsViewMode = 'list' | 'grid';
 

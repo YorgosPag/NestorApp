@@ -6,6 +6,7 @@ import { HOVER_TEXT_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects'
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 // ============================================================================
 // 🏢 ENTERPRISE UNIVERSAL CLICKABLE FIELD RENDERER

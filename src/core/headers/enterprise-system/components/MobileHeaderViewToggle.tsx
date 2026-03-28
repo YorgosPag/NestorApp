@@ -22,6 +22,7 @@ import { HEADER_THEME } from '../constants';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import '@/lib/design-system';
 
 export const MobileHeaderViewToggle: React.FC<HeaderViewToggleProps> = ({
   viewMode,

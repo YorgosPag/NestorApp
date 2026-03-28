@@ -15,6 +15,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { portalComponents, photoPreviewComponents } from '../../../styles/design-tokens';
 import { useClickOutside } from '@/hooks/useClickOutside';
+import '@/lib/design-system';
 
 
 
@@ -123,7 +124,7 @@ export const useSmartPortalPositioning = (
           break;
 
         case 'auto':
-        default:
+        default: {
           // Smart placement based on viewport space
           const viewportHeight = window.innerHeight;
           const spaceBelow = viewportHeight - triggerRect.bottom;
@@ -142,6 +143,7 @@ export const useSmartPortalPositioning = (
             width: triggerRect.width
           };
           break;
+        }
       }
 
       setPosition(calculatedPosition);
@@ -283,8 +285,9 @@ export const useEnterprisePortal = (config: Omit<EnterprisePortalConfig, 'onClos
         isOpen={isOpen}
         onClose={close}
         config={portalConfig}
-        children={children}
-      />
+      >
+        {children}
+      </EnterprisePortal>
     )
   };
 };

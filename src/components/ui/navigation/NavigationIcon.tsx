@@ -22,6 +22,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('NavigationIcon');
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -138,7 +139,7 @@ export function NavigationIcon({
   visibility = 'hover',
   position = 'top-right',
   analyticsLabel,
-  asChild = false
+  asChild: _asChild = false
 }: NavigationIconProps & { asChild?: boolean }) {
   const router = useRouter();
   // 🏢 ENTERPRISE: i18n hook

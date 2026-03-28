@@ -66,7 +66,7 @@ export function ThemeProgressBar({
   return (
     <div className="mb-3">
       <div className={cn("flex items-center justify-between mb-1", textSizeClasses[size])}>
-        <span className="text-muted-foreground">{displayLabel}</span>
+        <span className={colors.text.muted}>{displayLabel}</span>
         {showPercentage && (
           <span className={cn(
             "font-medium",

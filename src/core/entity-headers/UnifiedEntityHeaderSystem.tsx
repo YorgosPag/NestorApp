@@ -17,6 +17,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import '@/lib/design-system';
 
 // ===== TYPES & INTERFACES =====
 
@@ -152,7 +153,7 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
 
             {/* Subtitle */}
             {subtitle && (
-              <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">
+              <p className={cn("text-sm mt-0.5 line-clamp-1", colors.text.muted)}>
                 {subtitle}
               </p>
             )}

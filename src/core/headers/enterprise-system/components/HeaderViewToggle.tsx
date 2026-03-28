@@ -22,6 +22,7 @@ import type { HeaderViewToggleProps, ViewMode } from '../types';
 import { HEADER_THEME, VIEW_MODE_CONFIG } from '../constants';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import '@/lib/design-system';
 
 export const HeaderViewToggle: React.FC<HeaderViewToggleProps> = ({
   viewMode,

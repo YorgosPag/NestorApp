@@ -7,6 +7,7 @@ import { Circle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useIconSizes } from "@/hooks/useIconSizes"
 import { useBorderTokens } from "@/hooks/useBorderTokens"
+import '@/lib/design-system';
 
 const RadioGroup = React.forwardRef<
   React.ComponentRef<typeof RadioGroupPrimitive.Root>,

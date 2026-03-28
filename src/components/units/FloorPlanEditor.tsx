@@ -5,6 +5,7 @@ import React from 'react';
 import { FloorPlanViewer } from '@/components/property-viewer/FloorPlanViewer';
 import { ViewerTools } from '@/components/property-viewer/ViewerTools';
 import type { Property } from '@/types/property-viewer';
+import '@/lib/design-system';
 
 /** Viewer props that can be passed through */
 type ViewerMode = 'view' | 'create' | 'measure' | 'edit';

@@ -19,6 +19,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { designSystem } from '@/lib/design-system';
 import { performanceMonitorUtilities } from '@/styles/design-tokens';
 import { formatMetricValue, type TrendDirection, type MetricType } from '../utils/performance-utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // TYPES
@@ -92,7 +93,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
         <span className={cn('text-lg font-semibold', valueColorClass)}>
           {formatMetricValue(value)}
           {unit && (
-            <span className="text-muted-foreground ml-1 text-sm">
+            <span className={cn("ml-1 text-sm", colors.text.muted)}>
               {unit}
             </span>
           )}

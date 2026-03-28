@@ -33,6 +33,7 @@ import type {
   PropertyStatus,
   BadgeFactoryOptions
 } from '@/core/types/BadgeTypes';
+import '@/lib/design-system';
 
 // ============================================================================
 // INTERFACES & TYPES

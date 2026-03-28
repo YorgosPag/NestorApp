@@ -9,6 +9,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 // =============================================================================
 // 🏢 ENTERPRISE: FullscreenOverlay (ADR-241 — composition refactor)

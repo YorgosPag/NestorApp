@@ -8,13 +8,14 @@ import {
 } from './SkeletonComponents.styles';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import '@/lib/design-system';
 
 // Base skeleton component
 export function Skeleton({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
-  const { quick, radius } = useBorderTokens();
+  const { quick } = useBorderTokens();
 
   return (
     <div
@@ -57,7 +58,7 @@ export function SkeletonAvatar({
   ...props
 }: React.HTMLAttributes<HTMLDivElement> & { size?: "sm" | "md" | "lg" | "xl" }) {
   const iconSizes = useIconSizes();
-  const { quick, radius } = useBorderTokens();
+  useBorderTokens();
   const sizeClasses = {
     sm: iconSizes.xl, // h-8 w-8
     md: iconSizes.xl2, // h-12 w-12
@@ -92,7 +93,7 @@ export function SkeletonCard({
   showActions?: boolean;
 }) {
   const iconSizes = useIconSizes();
-  const { quick, radius } = useBorderTokens();
+  const { quick } = useBorderTokens();
 
   return (
     <div
@@ -140,7 +141,7 @@ export function SkeletonTable({
   columns?: number;
   showHeader?: boolean;
 }) {
-  const { quick, radius } = useBorderTokens();
+  const { quick } = useBorderTokens();
   const iconSizes = useIconSizes();
 
   return (
@@ -333,7 +334,7 @@ export function SkeletonStatsCard({
   showTrend?: boolean;
 }) {
   const iconSizes = useIconSizes();
-  const { quick, radius } = useBorderTokens();
+  const { quick } = useBorderTokens();
   return (
     <div
       className={cn(
@@ -365,7 +366,7 @@ export function SkeletonModal({
   showFooter?: boolean;
 }) {
   const iconSizes = useIconSizes();
-  const { quick, radius } = useBorderTokens();
+  const { quick } = useBorderTokens();
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div

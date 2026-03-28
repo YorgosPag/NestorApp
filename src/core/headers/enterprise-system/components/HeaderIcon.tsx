@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import type { HeaderIconProps } from '../types';
 import { ICON_VARIANTS } from '../constants';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import '@/lib/design-system';
 
 export const HeaderIcon: React.FC<HeaderIconProps> = ({
   icon: Icon,

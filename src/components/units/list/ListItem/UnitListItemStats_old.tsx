@@ -4,6 +4,7 @@ import React from 'react';
 import { formatCurrency, formatNumber as formatNumberIntl } from '@/lib/intl-utils';
 import type { Property } from '@/types/property-viewer';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import '@/lib/design-system';
 
 interface UnitListItemStatsProps {
   unit: Property;

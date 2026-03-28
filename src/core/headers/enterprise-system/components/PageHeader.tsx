@@ -16,6 +16,7 @@ import { HeaderSearch } from './HeaderSearch';
 import { HeaderFilters } from './HeaderFilters';
 import { HeaderActions } from './HeaderActions';
 import { LucideIcon } from 'lucide-react';
+import '@/lib/design-system';
 
 // Local interfaces για compatibility με UnifiedHeaderSystem
 interface HeaderTitleProps {

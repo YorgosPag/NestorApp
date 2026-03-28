@@ -9,6 +9,7 @@ export { TabsContent };
 import { cn } from '@/lib/utils';
 import { getThemeVariant, type ThemeVariant } from '@/components/ui/theme/ThemeComponents';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Centralized tabs styling using the theme system (8px spacing)
 export const TABS_STYLES = {
@@ -128,7 +129,7 @@ export function TabsContainer({
 }
 
 // Specialized toolbar variant for quick usage
-interface ToolbarTabsProps extends TabsContainerProps {}
+type ToolbarTabsProps = TabsContainerProps;
 
 export function ToolbarTabs(props: ToolbarTabsProps) {
   return <TabsContainer {...props} />;

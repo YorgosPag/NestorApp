@@ -15,6 +15,7 @@ import { matchesSearchTerm } from '@/lib/search/search';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface UnitsListProps {
   units: Property[];
@@ -33,7 +34,7 @@ export function UnitsList({
   units,
   selectedUnitIds,
   onSelectUnit,
-  onAssignmentSuccess,
+  onAssignmentSuccess: _onAssignmentSuccess,
   onNewUnit,
   onEditUnit,
   onDeleteUnit,
@@ -137,7 +138,7 @@ export function UnitsList({
     }
   });
 
-  const handleSelectAll = (checked: boolean) => {
+  const _handleSelectAll = (checked: boolean) => {
     if (checked) {
         onSelectUnit('__all__', false);
     } else {

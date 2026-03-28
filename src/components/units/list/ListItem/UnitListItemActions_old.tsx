@@ -18,6 +18,7 @@ import { Star, MoreVertical, Edit, Eye, Copy, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { GROUP_HOVER_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import '@/lib/design-system';
 
 interface UnitListItemActionsProps {
   isFavorite: boolean;

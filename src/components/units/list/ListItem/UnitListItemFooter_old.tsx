@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { UnitCustomerDisplay } from '@/components/shared/customer-info';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import '@/lib/design-system';
 
 
 interface UnitListItemFooterProps {

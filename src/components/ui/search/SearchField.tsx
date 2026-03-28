@@ -29,6 +29,7 @@ import type { SearchFieldProps } from './types';
 import { SEARCH_UI, LEGACY_PATTERNS } from './constants';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 /**
  * 🏢 Enterprise Search Field με Label

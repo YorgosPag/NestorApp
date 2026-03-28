@@ -4,6 +4,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: Centralized layout classes
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
+import '@/lib/design-system';
 
 interface ListContainerProps {
   children: React.ReactNode;

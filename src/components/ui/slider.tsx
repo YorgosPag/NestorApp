@@ -5,6 +5,7 @@ import * as SliderPrimitive from "@radix-ui/react-slider"
 
 // ✅ ENTERPRISE FIX: Use relative paths instead of @ aliases
 import { cn } from "../../lib/utils"
+import '@/lib/design-system';
 
 const Slider = React.forwardRef<
   React.ComponentRef<typeof SliderPrimitive.Root>,

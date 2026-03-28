@@ -7,6 +7,7 @@ import { EntityDetailsHeader } from '@/core/entity-headers';
 import type { Property } from '@/types/property-viewer';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { LucideIcon } from 'lucide-react';
+import '@/lib/design-system';
 
 interface UnitListItemHeaderProps {
   unit: Property;

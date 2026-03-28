@@ -21,6 +21,7 @@ import React from 'react';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES

@@ -25,6 +25,7 @@ import type {
   BadgeFactoryOptions,
   BadgeDefinition
 } from '../types/BadgeTypes';
+import '@/lib/design-system';
 
 // ===== MAIN UNIFIED BADGE COMPONENT =====
 
@@ -243,12 +244,12 @@ export const useBadgeValidation = (domain: DomainType, status: string) => {
 /**
  * HOC για conditional badge rendering
  */
-export const withConditionalBadge = <T extends {}>(
+export const withConditionalBadge = <T extends Record<string, unknown>>(
   Component: React.ComponentType<T>,
   condition: (props: T) => boolean,
   badgeConfig: { domain: DomainType; status: string; options?: BadgeFactoryOptions }
 ) => {
-  return (props: T) => (
+  const WrappedComponent = (props: T) => (
     <div className="relative">
       <Component {...props} />
       {condition(props) && (
@@ -263,6 +264,8 @@ export const withConditionalBadge = <T extends {}>(
       )}
     </div>
   );
+  WrappedComponent.displayName = `withConditionalBadge(${Component.displayName || Component.name || 'Component'})`;
+  return WrappedComponent;
 };
 
 // ===== EXPORTS =====

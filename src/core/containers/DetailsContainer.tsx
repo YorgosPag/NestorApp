@@ -9,6 +9,8 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
+import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface EmptyStateProps {
   icon?: React.ElementType;
@@ -26,15 +28,16 @@ function DefaultEmptyState({
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
   const { t } = useTranslation('common');
+  const colors = useSemanticColors();
 
   // 🏢 ENTERPRISE: i18n-enabled default values
   const displayTitle = title || t('emptyState.selectItem.title');
   const displayDescription = description || t('emptyState.selectItem.description');
   return (
     <div className={`flex-1 flex flex-col items-center justify-center bg-card border rounded-lg min-w-0 shadow-sm text-center ${spacing.padding.lg}`}>
-      <Icon className={`${iconSizes.xl4} text-muted-foreground ${spacing.margin.bottom.md}`} />
+      <Icon className={`${iconSizes.xl4} ${colors.text.muted} ${spacing.margin.bottom.md}`} />
       <h2 className="text-xl font-semibold text-foreground">{displayTitle}</h2>
-      <p className="text-muted-foreground">{displayDescription}</p>
+      <p className={colors.text.muted}>{displayDescription}</p>
       {action && <div className="mt-4">{action}</div>}
     </div>
   );

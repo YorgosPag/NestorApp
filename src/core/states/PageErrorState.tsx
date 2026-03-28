@@ -29,6 +29,8 @@ import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { Button } from '@/components/ui/button';
+import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
 // TYPES
@@ -62,6 +64,7 @@ export function PageErrorState({
   icon: Icon = AlertTriangle,
 }: PageErrorStateProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   const layoutClass = layout === 'fullscreen'
     ? 'flex h-screen items-center justify-center'
@@ -73,7 +76,7 @@ export function PageErrorState({
         <Icon className={cn(iconSizes.xl, 'mx-auto mb-4 text-destructive')} />
         <p className="text-destructive text-lg font-medium mb-2">{title}</p>
         {message && (
-          <p className="text-muted-foreground mb-4">{message}</p>
+          <p className={cn("mb-4", colors.text.muted)}>{message}</p>
         )}
         {onRetry && (
           <Button onClick={onRetry} variant="default">

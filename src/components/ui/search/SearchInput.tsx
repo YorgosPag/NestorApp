@@ -24,6 +24,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { SearchInputProps } from './types';
 import { SEARCH_CONFIG, SEARCH_UI, DEBOUNCE_PRESETS } from './constants';
+import '@/lib/design-system';
 
 /**
  * 🏢 Enterprise Search Input Component
@@ -115,7 +116,7 @@ export function SearchInput({
     'absolute right-3 top-1/2 -translate-y-1/2',
     `${iconSizes.sm} text-muted-foreground hover:text-foreground`,
     'cursor-pointer transition-colors',
-    'focus:outline-none focus:ring-1 focus:ring-blue-500 focus:rounded'
+    'focus:outline-none focus:ring-1 focus:ring-ring focus:rounded'
   );
 
   return (

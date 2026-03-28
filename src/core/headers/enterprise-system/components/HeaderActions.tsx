@@ -38,6 +38,7 @@ interface UnifiedHeaderActionsProps {
 import { HEADER_THEME } from '../constants';
 import { HeaderViewToggle } from './HeaderViewToggle';
 import { MobileHeaderViewToggle } from './MobileHeaderViewToggle';
+import '@/lib/design-system';
 
 export const HeaderActions: React.FC<UnifiedHeaderActionsProps> = ({
   showDashboard,

@@ -25,6 +25,7 @@ import { SearchInput } from './SearchInput';
 import { SEARCH_UI } from './constants';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface TableHeaderSearchProps {
   searchTerm: string;

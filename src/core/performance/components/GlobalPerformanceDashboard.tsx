@@ -28,6 +28,7 @@ const logger = createModuleLogger('GlobalPerformanceDashboard');
 import { PerformanceGradeBadge, PerformanceChart } from './shared';
 import { CurrentMetrics, PerformanceAlerts, QuickActions, OptimizationPanel } from './sections';
 import { getInitialPosition, PANEL_DIMENSIONS } from './utils/performance-utils';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // TYPES
@@ -131,7 +132,7 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
       <PerformanceGradeBadge grade={status.grade} />
       <button
         onClick={() => setShowOptimizations(prev => !prev)}
-        className="p-1 rounded transition-colors hover:bg-muted text-muted-foreground hover:text-foreground"
+        className={cn("p-1 rounded transition-colors hover:bg-muted hover:text-foreground", colors.text.muted)}
         title="Toggle optimizations"
         type="button"
       >

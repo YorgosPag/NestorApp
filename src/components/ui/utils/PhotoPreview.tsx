@@ -16,6 +16,7 @@ import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('PhotoPreview');
 

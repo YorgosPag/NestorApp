@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import type { HeaderTitleProps } from '../types';
 import { HEADER_THEME } from '../constants';
 import { HeaderIcon } from './HeaderIcon';
+import '@/lib/design-system';
 
 export const HeaderTitle: React.FC<HeaderTitleProps> = ({
   icon,

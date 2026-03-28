@@ -22,11 +22,13 @@ import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useDropdownTokens } from '@/hooks/useDropdownTokens';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES
@@ -98,6 +100,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
 }) => {
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
+  const dropdown = useDropdownTokens();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
 
@@ -213,7 +216,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
         key={contact.id}
         data-contact-index={index}
         className={cn(
-          "p-3 border-b border-border last:border-b-0 cursor-pointer",
+          `${dropdown.contact.contactItem} cursor-pointer`,
           TRANSITION_PRESETS.STANDARD_COLORS,
           isHighlighted ? "bg-accent text-accent-foreground" : INTERACTIVE_PATTERNS.ACCENT_HOVER
         )}
@@ -296,7 +299,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
             variant="outline"
             disabled={readonly}
             className={cn(
-              `w-full justify-between h-10 px-3 py-2 text-sm border ${colors.bg.primary}`,
+              `w-full justify-between ${dropdown.trigger.lg} border ${colors.bg.primary}`,
               error ? "border-destructive" : "border-input",
               INTERACTIVE_PATTERNS.ACCENT_HOVER,
               "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
@@ -350,23 +353,23 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
 
         <PopoverContent
           className={cn(
-            "w-[var(--radix-popover-trigger-width)] min-w-[300px] max-w-[450px] p-0",
+            `w-[var(--radix-popover-trigger-width)] ${dropdown.contact.contentMin} ${dropdown.contact.contentMax} p-0`,
             quick.card
           )}
           align="start"
-          sideOffset={4}
+          sideOffset={dropdown.content.sideOffset}
           onKeyDown={handleKeyDown}
         >
           {/* Search Input */}
-          <div className="p-3 border-b border-border">
+          <div className={`${dropdown.contact.searchArea} border-border`}>
             <div className="relative">
-              <Search className={`absolute left-2 top-2.5 ${iconSizes.sm} text-muted-foreground`} />
+              <Search className={`${dropdown.contact.searchIconPosition} ${iconSizes.sm} text-muted-foreground`} />
               <Input
                 ref={inputRef}
                 value={searchQuery}
                 onChange={handleSearchChange}
                 placeholder={t('placeholders.searchContacts')}
-                className="pl-8"
+                className={dropdown.contact.searchInputIndent}
               />
             </div>
           </div>
@@ -374,12 +377,12 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
           {/* Results - Scrollable Area (onWheel stopPropagation for Radix Popover) */}
           <div
             ref={resultsRef}
-            className="max-h-[300px] overflow-y-auto"
+            className={`${dropdown.contact.resultsMaxHeight} overflow-y-auto`}
             role="listbox"
             onWheel={(e) => e.stopPropagation()}
           >
             {isSearching ? (
-              <div className="p-4 text-center text-muted-foreground">
+              <div className={`${dropdown.contact.emptyState} text-center text-muted-foreground`}>
                 <Spinner size="large" className="mx-auto mb-2" />
                 <span className="text-sm">{t('placeholders.searching')}</span>
               </div>
@@ -387,7 +390,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
               <>
                 {searchResults.map((contact, index) => renderContactItem(contact, index))}
                 {searchResults.length > 15 && (
-                  <div className="p-3 text-center text-xs text-muted-foreground bg-muted/50 border-t border-border sticky bottom-0">
+                  <div className={`${dropdown.contact.summaryFooter} text-muted-foreground bg-muted/50 border-t border-border sticky bottom-0`}>
                     {t('dropdown.totalContacts', { count: searchResults.length })}
                   </div>
                 )}
@@ -396,7 +399,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
                     type="button"
                     onClick={() => { setIsOpen(false); onCreateNew(); }}
                     className={cn(
-                      "w-full flex items-center gap-2 p-3 text-sm font-medium text-primary border-t border-border cursor-pointer",
+                      `w-full flex items-center ${dropdown.item.gap} ${dropdown.contact.createButton} text-primary border-t border-border cursor-pointer`,
                       INTERACTIVE_PATTERNS.ACCENT_HOVER,
                       TRANSITION_PRESETS.STANDARD_COLORS
                     )}
@@ -407,7 +410,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
                 )}
               </>
             ) : (
-              <div className="p-4 text-center text-muted-foreground">
+              <div className={`${dropdown.contact.emptyState} text-center text-muted-foreground`}>
                 <Search className={`${iconSizes.lg} mx-auto mb-2`} />
                 <span className="text-sm">
                   {searchQuery ? t('placeholders.noResults') : t('placeholders.startTyping')}
@@ -417,7 +420,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
                     type="button"
                     onClick={() => { setIsOpen(false); onCreateNew(); }}
                     className={cn(
-                      "mt-3 mx-auto flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary rounded-md border border-primary/20 cursor-pointer",
+                      `mt-3 mx-auto flex items-center ${dropdown.item.gap} px-4 py-2 ${dropdown.item.fontSize} ${dropdown.item.fontWeightOption} text-primary rounded-md border border-primary/20 cursor-pointer`,
                       INTERACTIVE_PATTERNS.ACCENT_HOVER,
                       TRANSITION_PRESETS.STANDARD_COLORS
                     )}

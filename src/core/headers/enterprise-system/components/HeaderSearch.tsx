@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import type { HeaderSearchProps } from '../types';
 import { SEARCH_CONFIG, HEADER_THEME } from '../constants';
 import { SEARCH_UI } from '@/components/ui/search/constants'; // 🏢 Enterprise centralized search constants
+import '@/lib/design-system';
 
 export const HeaderSearch: React.FC<HeaderSearchProps> = ({
   value = '',

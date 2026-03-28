@@ -22,6 +22,7 @@ import { Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { SEARCH_UI } from './constants';
+import '@/lib/design-system';
 
 interface QuickSearchProps {
   searchTerm: string;
