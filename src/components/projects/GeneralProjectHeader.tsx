@@ -18,6 +18,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { AutoSaveStatusIndicator } from '@/components/shared/AutoSaveStatusIndicator';
 import type { SaveStatus } from '@/types/auto-save';
+import '@/lib/design-system';
 
 interface GeneralProjectHeaderProps {
     isEditing: boolean;
@@ -81,7 +82,7 @@ export function GeneralProjectHeader({
                             <div className={spacing.spaceBetween.xs}>
                                 <p className={typography.label.xs}>{t('projectHeader.technicalIdLabel')}</p>
                                 <div className={cn("flex items-center", spacing.gap.sm)}>
-                                    <code className="text-xs bg-muted px-1 py-0.5 rounded">
+                                    <code className={cn(typography.body.xs, "bg-muted px-1 py-0.5 rounded")}>
                                         {projectId || 'N/A'}
                                     </code>
                                     <Copy className={cn(iconSizes.xs, copied ? colors.text.success : '')} />

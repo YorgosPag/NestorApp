@@ -16,6 +16,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useTypography } from '@/hooks/useTypography';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 
 export function ProjectCustomersTab({ projectId }: ProjectCustomersTabProps) {
@@ -25,6 +26,7 @@ export function ProjectCustomersTab({ projectId }: ProjectCustomersTabProps) {
   const typography = useTypography();
   // 🏢 ENTERPRISE: Centralized spacing tokens
   const spacing = useSpacingTokens();
+  const colors = useSemanticColors();
   const { customers, loading, error } = useProjectCustomers(projectId);
 
   if (loading) {
@@ -47,7 +49,7 @@ export function ProjectCustomersTab({ projectId }: ProjectCustomersTabProps) {
       </CardHeader>
       <CardContent>
         {/* Table Headers */}
-        <header className={cn("grid grid-cols-[2fr_1fr_1.8fr_auto_auto] gap-2 border-b border-border text-sm font-medium text-muted-foreground", spacing.padding.bottom.sm, spacing.margin.bottom.md)}>
+        <header className={cn("grid grid-cols-[2fr_1fr_1.8fr_auto_auto] gap-2 border-b border-border", colors.text.muted, typography.label.sm, spacing.padding.bottom.sm, spacing.margin.bottom.md)}>
           <span>{t('customers.table.name')}</span>
           <span>{t('customers.table.phone')}</span>
           <span>{t('customers.table.email')}</span>

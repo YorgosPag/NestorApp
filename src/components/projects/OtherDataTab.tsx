@@ -9,6 +9,7 @@ import { FinancialRightColumn } from './other-data/FinancialRightColumn';
 import { useTypography } from '@/hooks/useTypography';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 export function OtherDataTab() {
     // 🏢 ENTERPRISE: i18n hook

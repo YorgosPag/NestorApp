@@ -19,6 +19,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Grid view imports - Using proper GridCard (PR: Enterprise Grid System)
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ProjectGridCard } from '@/domain';
+import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: View mode type (matches useProjectsPageState)
 type ProjectsViewMode = 'list' | 'grid' | 'byType' | 'byStatus';

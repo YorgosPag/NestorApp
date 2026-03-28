@@ -51,6 +51,8 @@ import { DIALOG_SIZES, DIALOG_HEIGHT, DIALOG_SCROLL } from '@/styles/design-toke
 // 🏢 ENTERPRISE: Centralized hooks
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useTypography } from '@/hooks/useTypography';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Form state management hook
@@ -102,6 +104,8 @@ export function AddProjectDialog({
   // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ HOOKS - ENTERPRISE PATTERN
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
+  const typography = useTypography();
+  const colors = useSemanticColors();
 
   // 🏢 ENTERPRISE: Form state management (CREATE-ONLY — edit happens inline in GeneralProjectTab)
   const {
@@ -207,7 +211,7 @@ export function AddProjectDialog({
                       className={errors.name ? 'border-destructive' : ''}
                     />
                     {errors.name && (
-                      <p className="text-xs text-destructive mt-1">{errors.name}</p>
+                      <p className={cn(typography.body.xs, 'text-destructive mt-1')}>{errors.name}</p>
                     )}
                   </FormInput>
                 </FormField>
@@ -252,7 +256,7 @@ export function AddProjectDialog({
                       </SelectContent>
                     </Select>
                     {errors.companyId && (
-                      <p className="text-xs text-destructive mt-1">{errors.companyId}</p>
+                      <p className={cn(typography.body.xs, 'text-destructive mt-1')}>{errors.companyId}</p>
                     )}
                   </FormInput>
                 </FormField>
@@ -346,7 +350,7 @@ export function AddProjectDialog({
                 {/* Existing Addresses List */}
                 {formData.addresses.length > 0 && (
                   <div className="space-y-2">
-                    <h3 className="text-sm font-semibold text-muted-foreground">
+                    <h3 className={cn(typography.heading.sm, colors.text.muted)}>
                       {t('locations.existingAddresses')} ({formData.addresses.length})
                     </h3>
                     {formData.addresses.map((address, index) => (
@@ -384,7 +388,7 @@ export function AddProjectDialog({
 
                 {/* Add New Address Form */}
                 <div className="border-t pt-2">
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-2">
+                  <h3 className={cn(typography.heading.sm, colors.text.muted, 'mb-2')}>
                     {t('locations.addNewAddress')}
                   </h3>
                   <AddressFormSection onChange={setTempAddress} />

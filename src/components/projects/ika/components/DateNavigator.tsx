@@ -26,8 +26,10 @@ import {
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
 import type { AttendanceViewMode } from '../contracts';
+import '@/lib/design-system';
 
 interface DateNavigatorProps {
   /** Currently selected date */
@@ -49,6 +51,7 @@ export function DateNavigator({
   const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
+  const typography = useTypography();
 
   const handlePrevDay = () => onDateChange(subDays(date, 1));
   const handleNextDay = () => onDateChange(addDays(date, 1));
@@ -90,7 +93,7 @@ export function DateNavigator({
       </Button>
 
       {/* Date label */}
-      <span className="text-sm font-medium capitalize">{dateLabel}</span>
+      <span className={cn(typography.label.sm, 'capitalize')}>{dateLabel}</span>
 
       {/* View mode selector */}
       <Select

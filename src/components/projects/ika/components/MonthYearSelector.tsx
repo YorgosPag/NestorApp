@@ -26,6 +26,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 interface MonthYearSelectorProps {
   /** Selected month (1-12) */

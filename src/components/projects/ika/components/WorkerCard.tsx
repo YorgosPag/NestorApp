@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
 import type { ProjectWorker } from '../contracts';
 
@@ -22,6 +23,7 @@ export function WorkerCard({ worker, onRemove }: WorkerCardProps) {
   const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  const typography = useTypography();
 
   const statusKey = worker.employmentStatus ?? 'active';
   const isActive = statusKey === 'active';
@@ -37,14 +39,14 @@ export function WorkerCard({ worker, onRemove }: WorkerCardProps) {
           'flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
           isActive ? 'bg-primary/10' : 'bg-muted'
         )}>
-          <User className={cn(iconSizes.sm, isActive ? 'text-primary' : 'text-muted-foreground')} />
+          <User className={cn(iconSizes.sm, isActive ? 'text-primary' : colors.text.muted)} />
         </div>
 
         {/* Name & specialty */}
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium truncate">{worker.name}</p>
+          <p className={cn(typography.label.sm, 'truncate')}>{worker.name}</p>
           {worker.specialty && (
-            <p className="text-xs text-muted-foreground truncate">
+            <p className={cn(typography.special.tertiary, 'truncate')}>
               <Briefcase className={cn(iconSizes.xs, 'inline-block mr-1')} />
               {worker.specialty}
             </p>
@@ -53,7 +55,7 @@ export function WorkerCard({ worker, onRemove }: WorkerCardProps) {
 
         {/* Company */}
         {worker.company && (
-          <div className="hidden md:flex items-center gap-1 text-xs text-muted-foreground">
+          <div className={cn('hidden md:flex items-center gap-1', typography.special.tertiary)}>
             <Building2 className={iconSizes.xs} />
             <span className="truncate max-w-[120px]">{worker.company}</span>
           </div>
@@ -61,7 +63,7 @@ export function WorkerCard({ worker, onRemove }: WorkerCardProps) {
 
         {/* Hire date */}
         {worker.hireDate && (
-          <div className="hidden lg:flex items-center gap-1 text-xs text-muted-foreground">
+          <div className={cn('hidden lg:flex items-center gap-1', typography.special.tertiary)}>
             <Calendar className={iconSizes.xs} />
             <span>{formatDateShort(new Date(worker.hireDate))}</span>
           </div>
@@ -69,7 +71,7 @@ export function WorkerCard({ worker, onRemove }: WorkerCardProps) {
 
         {/* AMKA */}
         {worker.amka && (
-          <div className="hidden xl:flex items-center gap-1 text-xs text-muted-foreground">
+          <div className={cn('hidden xl:flex items-center gap-1', typography.special.tertiary)}>
             <ShieldCheck className={iconSizes.xs} />
             <span>{worker.amka}</span>
           </div>

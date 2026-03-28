@@ -25,6 +25,7 @@ import type { EntityLinkOption } from '@/components/shared/EntityLinkCard';
 import { getAllCompaniesForSelect } from '@/services/companies.service';
 import { useEntityLink } from '@/hooks/useEntityLink';
 import { useCompanyId } from '@/hooks/useCompanyId';
+import '@/lib/design-system';
 const logger = createModuleLogger('GeneralProjectTab');
 
 interface ExtendedGeneralProjectTabProps extends GeneralProjectTabProps {
@@ -134,10 +135,6 @@ export function GeneralProjectTab({
     isEditing && !isCreateMode && !versioned.isConflicted,
     { saveFn: autoSaveFn }
   );
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setProjectData(prev => ({ ...prev, [e.target.name]: e.target.value }));
-  };
 
   useEffect(() => {
     setProjectData(prev => ({

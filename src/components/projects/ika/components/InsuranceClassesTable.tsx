@@ -24,9 +24,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useTypography } from '@/hooks/useTypography';
-import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 import type { InsuranceClass } from '../contracts';
+import '@/lib/design-system';
 
 interface InsuranceClassesTableProps {
   /** Array of 28 insurance classes */
@@ -40,8 +40,6 @@ interface InsuranceClassesTableProps {
 export const InsuranceClassesTable = React.memo(function InsuranceClassesTable({ classes, isEditing, onClassChange }: InsuranceClassesTableProps) {
   const { t } = useTranslation('projects');
   const typography = useTypography();
-  const spacing = useSpacingTokens();
-
   const handleChange = (index: number, field: keyof Pick<InsuranceClass, 'minDailyWage' | 'maxDailyWage' | 'imputedDailyWage'>, rawValue: string) => {
     const parsed = parseFloat(rawValue);
     if (!isNaN(parsed) && parsed >= 0) {
@@ -70,7 +68,7 @@ export const InsuranceClassesTable = React.memo(function InsuranceClassesTable({
       <TableBody>
         {classes.map((cls, index) => (
           <TableRow key={cls.classNumber}>
-            <TableCell className={cn(typography.label.sm, 'text-center font-medium')}>
+            <TableCell className={cn(typography.label.sm, 'text-center')}>
               {cls.classNumber}
             </TableCell>
             <TableCell className="text-right">
@@ -114,7 +112,7 @@ export const InsuranceClassesTable = React.memo(function InsuranceClassesTable({
                   className={cn('w-28 text-right', typography.label.sm)}
                 />
               ) : (
-                <span className={cn(typography.label.sm, 'font-semibold')}>{cls.imputedDailyWage.toFixed(2)}</span>
+                <span className={cn(typography.label.sm, 'font-bold')}>{cls.imputedDailyWage.toFixed(2)}</span>
               )}
             </TableCell>
           </TableRow>

@@ -123,7 +123,7 @@ export function EfkaDeclarationTabContent({ projectId }: EfkaDeclarationTabConte
       <Card>
         <CardContent className="flex items-center justify-center gap-2 py-12">
           <AlertCircle className={cn(iconSizes.md, colors.text.error)} />
-          <p className="text-sm text-muted-foreground">{error}</p>
+          <p className={typography.special.secondary}>{error}</p>
         </CardContent>
       </Card>
     );
@@ -134,8 +134,8 @@ export function EfkaDeclarationTabContent({ projectId }: EfkaDeclarationTabConte
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <Landmark className={cn(iconSizes.xl, 'text-muted-foreground mb-2')} />
-          <p className="text-sm font-medium text-muted-foreground mb-2">
+          <Landmark className={cn(iconSizes.xl, colors.text.muted, 'mb-2')} />
+          <p className={cn(typography.label.sm, colors.text.muted, 'mb-2')}>
             {t('ika.efka.description')}
           </p>
           <Button onClick={handleInitialize}>
@@ -178,10 +178,10 @@ export function EfkaDeclarationTabContent({ projectId }: EfkaDeclarationTabConte
         {declaration.amoe && (
           <CardContent>
             <div className={cn('p-2 rounded-lg', colors.bg.success)}>
-              <p className="text-sm font-medium">
+              <p className={typography.label.sm}>
                 {t('ika.efka.amoe.fullLabel')}
               </p>
-              <p className="text-lg font-bold">{declaration.amoe}</p>
+              <p className={typography.heading.md}>{declaration.amoe}</p>
             </div>
           </CardContent>
         )}

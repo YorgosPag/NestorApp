@@ -34,6 +34,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 import type { LaborComplianceConfig, WorkerStampsSummary } from '../contracts';
+import '@/lib/design-system';
 
 interface EmploymentRecordDialogProps {
   /** Whether the dialog is open */

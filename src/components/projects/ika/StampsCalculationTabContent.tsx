@@ -38,6 +38,7 @@ import { StampsSummaryDashboard } from './components/StampsSummaryDashboard';
 import { WorkerStampsTable } from './components/WorkerStampsTable';
 import { EmploymentRecordDialog } from './components/EmploymentRecordDialog';
 import type { WorkerStampsSummary } from './contracts';
+import '@/lib/design-system';
 
 interface StampsCalculationTabContentProps {
   /** Project ID from parent IKA tab */
@@ -91,7 +92,8 @@ export function StampsCalculationTabContent({ projectId }: StampsCalculationTabC
   // We need to query attendance for the entire month
   // useAttendanceEvents queries a single day, so we query day-by-day for the month
   // Actually, we'll compute days from events more efficiently
-  const monthEndDate = useMemo(
+  // Month end date computed for future use
+  const _monthEndDate = useMemo(
     () => getMonthEnd(selectedMonth, selectedYear),
     [selectedMonth, selectedYear]
   );
@@ -178,8 +180,8 @@ export function StampsCalculationTabContent({ projectId }: StampsCalculationTabC
   if (!projectId) {
     return (
       <section className={cn('flex flex-col items-center justify-center', spacing.padding.xl)}>
-        <Calculator className={cn(iconSizes.xl, 'text-muted-foreground')} />
-        <p className={cn(typography.body.sm, 'text-muted-foreground', spacing.margin.top.sm)}>
+        <Calculator className={cn(iconSizes.xl, colors.text.muted)} />
+        <p className={cn(typography.body.sm, colors.text.muted, spacing.margin.top.sm)}>
           {t('ika.stampsTab.noProjectId')}
         </p>
       </section>
@@ -221,7 +223,7 @@ export function StampsCalculationTabContent({ projectId }: StampsCalculationTabC
       {/* Loading */}
       {isLoading && (
         <Card>
-          <CardContent className={cn('text-center', spacing.padding.xl, 'text-muted-foreground')}>
+          <CardContent className={cn('text-center', spacing.padding.xl, colors.text.muted)}>
             <p className={typography.body.sm}>{t('common.loading', { defaultValue: 'Loading...' })}</p>
           </CardContent>
         </Card>
@@ -231,11 +233,11 @@ export function StampsCalculationTabContent({ projectId }: StampsCalculationTabC
       {!isLoading && workers.length === 0 && (
         <Card>
           <CardContent className={cn('flex flex-col items-center', spacing.padding.xl)}>
-            <Calculator className={cn(iconSizes.xl, 'text-muted-foreground')} />
-            <p className={cn(typography.body.sm, 'text-muted-foreground', spacing.margin.top.sm)}>
+            <Calculator className={cn(iconSizes.xl, colors.text.muted)} />
+            <p className={cn(typography.body.sm, colors.text.muted, spacing.margin.top.sm)}>
               {t('ika.stampsTab.noWorkers')}
             </p>
-            <p className={cn(typography.body.xs, 'text-muted-foreground', spacing.margin.top.xs)}>
+            <p className={cn(typography.body.xs, colors.text.muted, spacing.margin.top.xs)}>
               {t('ika.stampsTab.noWorkersHint')}
             </p>
           </CardContent>

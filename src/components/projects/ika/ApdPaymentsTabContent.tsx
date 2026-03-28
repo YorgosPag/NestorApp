@@ -34,6 +34,7 @@ import { cn } from '@/lib/utils';
 import { useEmploymentRecords } from './hooks/useEmploymentRecords';
 import type { EmploymentRecord, ApdStatus } from './contracts';
 import { formatCurrency } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized currency formatting
+import '@/lib/design-system';
 
 interface ApdPaymentsTabContentProps {
   /** Project ID from parent IKA tab */
@@ -151,8 +152,8 @@ export function ApdPaymentsTabContent({ projectId }: ApdPaymentsTabContentProps)
   if (!projectId) {
     return (
       <section className={cn('flex flex-col items-center justify-center', spacing.padding.xl)}>
-        <CreditCard className={cn(iconSizes.xl, 'text-muted-foreground')} />
-        <p className={cn(typography.body.sm, 'text-muted-foreground', spacing.margin.top.sm)}>
+        <CreditCard className={cn(iconSizes.xl, colors.text.muted)} />
+        <p className={cn(typography.body.sm, colors.text.muted, spacing.margin.top.sm)}>
           {t('ika.apdTab.noProjectId')}
         </p>
       </section>
@@ -176,7 +177,7 @@ export function ApdPaymentsTabContent({ projectId }: ApdPaymentsTabContentProps)
       {/* Loading */}
       {isLoading && (
         <Card>
-          <CardContent className={cn('text-center', spacing.padding.xl, 'text-muted-foreground')}>
+          <CardContent className={cn('text-center', spacing.padding.xl, colors.text.muted)}>
             <p className={typography.body.sm}>{t('common.loading', { defaultValue: 'Loading...' })}</p>
           </CardContent>
         </Card>
@@ -186,11 +187,11 @@ export function ApdPaymentsTabContent({ projectId }: ApdPaymentsTabContentProps)
       {!isLoading && monthGroups.length === 0 && (
         <Card>
           <CardContent className={cn('flex flex-col items-center', spacing.padding.xl)}>
-            <FileCheck className={cn(iconSizes.xl, 'text-muted-foreground')} />
-            <p className={cn(typography.body.sm, 'text-muted-foreground', spacing.margin.top.sm)}>
+            <FileCheck className={cn(iconSizes.xl, colors.text.muted)} />
+            <p className={cn(typography.body.sm, colors.text.muted, spacing.margin.top.sm)}>
               {t('ika.apdTab.noRecords')}
             </p>
-            <p className={cn(typography.body.xs, 'text-muted-foreground', spacing.margin.top.xs)}>
+            <p className={cn(typography.body.xs, colors.text.muted, spacing.margin.top.xs)}>
               {t('ika.apdTab.noRecordsHint')}
             </p>
           </CardContent>
@@ -243,7 +244,7 @@ export function ApdPaymentsTabContent({ projectId }: ApdPaymentsTabContentProps)
                           </Button>
                         )}
                         {group.overallStatus !== 'pending' && (
-                          <span className="text-muted-foreground">—</span>
+                          <span className={colors.text.muted}>—</span>
                         )}
                       </TableCell>
                     </TableRow>

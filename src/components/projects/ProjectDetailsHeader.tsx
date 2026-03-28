@@ -6,6 +6,7 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import type { Project } from '@/types/project';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface ProjectDetailsHeaderProps {
     project: Project;

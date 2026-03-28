@@ -33,6 +33,7 @@ import { cn } from '@/lib/utils';
 import { InsuranceClassBadge } from './InsuranceClassBadge';
 import type { StampsMonthSummary, WorkerStampsSummary } from '../contracts';
 import { formatCurrency } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized currency formatting
+import '@/lib/design-system';
 
 interface WorkerStampsTableProps {
   /** Monthly stamps summary */
@@ -73,7 +74,7 @@ export function WorkerStampsTable({ summary, onEditWorker }: WorkerStampsTablePr
               <div>
                 <p className={typography.label.sm}>{ws.workerName}</p>
                 {ws.companyName && (
-                  <p className={cn(typography.body.xs, 'text-muted-foreground')}>
+                  <p className={cn(typography.body.xs, colors.text.muted)}>
                     {ws.companyName}
                   </p>
                 )}
@@ -119,7 +120,7 @@ export function WorkerStampsTable({ summary, onEditWorker }: WorkerStampsTablePr
         ))}
         {summary.workerSummaries.length === 0 && (
           <TableRow>
-            <TableCell colSpan={8} className={cn('text-center', spacing.padding.lg, 'text-muted-foreground')}>
+            <TableCell colSpan={8} className={cn('text-center', spacing.padding.lg, colors.text.muted)}>
               {t('ika.stampsTab.noWorkers')}
             </TableCell>
           </TableRow>

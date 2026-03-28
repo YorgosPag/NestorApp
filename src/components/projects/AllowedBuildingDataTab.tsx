@@ -7,6 +7,7 @@ import { FormField } from './FormField';
 import { useTypography } from '@/hooks/useTypography';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n';
 import { getStatusColor } from '@/lib/design-system';
 
@@ -36,11 +37,13 @@ interface AllowedBuildingDataTabProps {
 }
 
 const CalculationFormula = ({ text, className }: { text: string; className?: string }) => {
+    const typography = useTypography();
+    const colors = useSemanticColors();
     if (!text) return <div className="h-8" />;
     return (
-        <div className={cn("h-8 flex items-center text-sm")}>
-            <span className="mr-2 text-muted-foreground">=</span>
-            <span className={cn("text-muted-foreground", className)}>{text}</span>
+        <div className={cn("h-8 flex items-center", typography.body.sm)}>
+            <span className={cn("mr-2", colors.text.muted)}>=</span>
+            <span className={cn(colors.text.muted, className)}>{text}</span>
         </div>
     );
 };

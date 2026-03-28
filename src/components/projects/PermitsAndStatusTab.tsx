@@ -12,6 +12,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ProjectFormData } from './general-tab/types';
+import '@/lib/design-system';
 
 interface PermitsAndStatusTabProps {
     data: ProjectFormData;
@@ -49,23 +50,23 @@ export const PermitsAndStatusTab = React.memo(function PermitsAndStatusTab({ dat
                 <div className={cn("grid grid-cols-1 md:grid-cols-5", spacing.gap.md)}>
                     <div className={spacing.spaceBetween.sm}>
                         <Label htmlFor="buildingBlock" className={typography.label.sm}>{t('permitsTab.buildingBlock')}</Label>
-                        <Input id="buildingBlock" name="buildingBlock" value={data.buildingBlock} onChange={handleChange} disabled={!isEditing} placeholder={t('permits.buildingBlockPlaceholder')} className="h-10" />
+                        <Input id="buildingBlock" name="buildingBlock" value={data.buildingBlock} onChange={handleChange} disabled={!isEditing} placeholder={t('permits.buildingBlockPlaceholder')} size="md" />
                     </div>
                     <div className={spacing.spaceBetween.sm}>
                         <Label htmlFor="protocolNumber" className={typography.label.sm}>{t('permitsTab.protocolNumber')}</Label>
-                        <Input id="protocolNumber" name="protocolNumber" value={data.protocolNumber} onChange={handleChange} disabled={!isEditing} placeholder={t('permits.protocolPlaceholder')} className="h-10" />
+                        <Input id="protocolNumber" name="protocolNumber" value={data.protocolNumber} onChange={handleChange} disabled={!isEditing} placeholder={t('permits.protocolPlaceholder')} size="md" />
                     </div>
                     <div className={spacing.spaceBetween.sm}>
                         <Label htmlFor="licenseNumber" className={typography.label.sm}>{t('permitsTab.licenseNumber')}</Label>
-                        <Input id="licenseNumber" name="licenseNumber" value={data.licenseNumber} onChange={handleChange} disabled={!isEditing} placeholder={t('permits.licensePlaceholder')} className="h-10" />
+                        <Input id="licenseNumber" name="licenseNumber" value={data.licenseNumber} onChange={handleChange} disabled={!isEditing} placeholder={t('permits.licensePlaceholder')} size="md" />
                     </div>
                     <div className={spacing.spaceBetween.sm}>
                         <Label htmlFor="issuingAuthority" className={typography.label.sm}>{t('permitsTab.issuingAuthority')}</Label>
-                        <Input id="issuingAuthority" name="issuingAuthority" value={data.issuingAuthority} onChange={handleChange} disabled={!isEditing} placeholder={t('permits.authorityPlaceholder')} className="h-10" />
+                        <Input id="issuingAuthority" name="issuingAuthority" value={data.issuingAuthority} onChange={handleChange} disabled={!isEditing} placeholder={t('permits.authorityPlaceholder')} size="md" />
                     </div>
                     <div className={spacing.spaceBetween.sm}>
                         <Label htmlFor="issueDate" className={typography.label.sm}>{t('permitsTab.issueDate')}</Label>
-                        <Input id="issueDate" name="issueDate" type="date" value={data.issueDate} onChange={handleChange} disabled={!isEditing} className="h-10" />
+                        <Input id="issueDate" name="issueDate" type="date" value={data.issueDate} onChange={handleChange} disabled={!isEditing} size="md" />
                     </div>
                 </div>
 

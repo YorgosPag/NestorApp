@@ -14,6 +14,7 @@ import { SelectAllRow } from './parts/SelectAllRow';
 import { FooterBar } from './parts/FooterBar';
 
 import type { ParkingSpotTableProps } from './types';
+import '@/lib/design-system';
 
 export function ParkingSpotTable({
   spots,

@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized typography tokens
 import { useTypography } from '@/hooks/useTypography';
+import '@/lib/design-system';
 
 export function LoadingCard() {
   // 🏢 ENTERPRISE: i18n hook

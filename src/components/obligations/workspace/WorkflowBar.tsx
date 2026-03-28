@@ -3,6 +3,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getSpacingClass } from '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { ObligationStatus } from '@/types/obligations';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
@@ -20,6 +21,7 @@ interface WorkflowBarProps {
 
 export function WorkflowBar({ status, onTransition, disabled = false }: WorkflowBarProps) {
   const { t } = useTranslation('obligations');
+  const colors = useSemanticColors();
 
   return (
     <section className={`rounded-lg border ${getSpacingClass('p', 'md')} space-y-4`} aria-label={t('workspace.workflow.title')}>
@@ -37,7 +39,7 @@ export function WorkflowBar({ status, onTransition, disabled = false }: Workflow
             <li key={workflowStatus}>
               <Badge
                 variant="outline"
-                className={`w-full justify-center py-1 ${isActive ? getStatusToneClass(workflowStatus) : 'text-muted-foreground'}`}
+                className={`w-full justify-center py-1 ${isActive ? getStatusToneClass(workflowStatus) : colors.text.muted}`}
               >
                 {t(OBLIGATION_WORKFLOW_LABEL_KEYS[workflowStatus])}
               </Badge>

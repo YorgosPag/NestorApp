@@ -47,7 +47,7 @@ export function EfkaChecklist({ declaration, completedFields, totalFields }: Efk
         <CardTitle className={typography.card.titleCompact}>
           {t('ika.efka.checklist.title')}
         </CardTitle>
-        <p className={cn('text-sm', allComplete ? colors.text.success : 'text-muted-foreground')}>
+        <p className={cn(typography.body.sm, allComplete ? colors.text.success : colors.text.muted)}>
           {allComplete
             ? t('ika.efka.checklist.allComplete')
             : t('ika.efka.checklist.completion', {
@@ -66,11 +66,11 @@ export function EfkaChecklist({ declaration, completedFields, totalFields }: Efk
                 {completed ? (
                   <CheckCircle className={cn(iconSizes.sm, colors.text.success)} />
                 ) : (
-                  <Circle className={cn(iconSizes.sm, 'text-muted-foreground')} />
+                  <Circle className={cn(iconSizes.sm, colors.text.muted)} />
                 )}
                 <span className={cn(
-                  'text-sm',
-                  completed ? 'line-through text-muted-foreground' : 'text-foreground'
+                  typography.body.sm,
+                  completed ? cn('line-through', colors.text.muted) : 'text-foreground'
                 )}>
                   {t(`ika.efka.checklist.${fieldKey}`)}
                 </span>

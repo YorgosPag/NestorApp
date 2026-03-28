@@ -128,7 +128,7 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
       <Card>
         <CardContent className="flex items-center justify-center gap-2 py-12">
           <AlertCircle className={cn(iconSizes.md, colors.text.error)} />
-          <p className="text-sm text-muted-foreground">{error}</p>
+          <p className={typography.special.secondary}>{error}</p>
         </CardContent>
       </Card>
     );
@@ -150,7 +150,7 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
               </CardDescription>
             </hgroup>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
+              <span className={typography.special.secondary}>
                 {t('ika.workersTab.totalWorkers')}: {workers.length}
               </span>
               {projectId && !showSearch && (
@@ -191,7 +191,7 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
 
               {selectedContact && (
                 <div className="flex items-center justify-between pt-2">
-                  <p className="text-sm">
+                  <p className={typography.body.sm}>
                     {t('ika.workersTab.selected')} <strong>{selectedContact.name}</strong>
                   </p>
                   <Button
@@ -214,11 +214,11 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
           {/* Workers list or empty state */}
           {workers.length === 0 && !showSearch ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Users className={cn(iconSizes.xl, 'text-muted-foreground mb-2')} />
-              <p className="text-sm font-medium text-muted-foreground">
+              <Users className={cn(iconSizes.xl, colors.text.muted, 'mb-2')} />
+              <p className={cn(typography.label.sm, colors.text.muted)}>
                 {t('ika.workersTab.noWorkers')}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className={cn(typography.special.tertiary, 'mt-1')}>
                 {t('ika.workersTab.noWorkersHint')}
               </p>
             </div>

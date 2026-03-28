@@ -20,8 +20,9 @@ import { NavigationBreadcrumb } from '@/components/navigation/components/Navigat
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
-const logger = createModuleLogger('ProjectsHeader');
+const _logger = createModuleLogger('ProjectsHeader');
 
 // 🏢 ENTERPRISE: Added 'grid' view mode for card grid layout (PR: Projects Grid View)
 type ProjectsViewMode = 'list' | 'grid' | 'byType' | 'byStatus';
@@ -44,7 +45,7 @@ export function ProjectsHeader({
   setViewMode,
   showDashboard,
   setShowDashboard,
-  onNewProject,
+  onNewProject: _onNewProject,
   showFilters,
   setShowFilters,
 }: ProjectsHeaderProps) {

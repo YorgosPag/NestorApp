@@ -34,6 +34,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTypography } from '@/hooks/useTypography';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { cn } from '@/lib/utils';
 import { getStatusColor } from '@/lib/design-system';
@@ -63,6 +64,7 @@ interface QrGenerateResult {
 export function QrCodePanel({ projectId }: QrCodePanelProps) {
   const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
+  const typography = useTypography();
 
   const [qrData, setQrData] = useState<QrGenerateResult | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -151,7 +153,7 @@ export function QrCodePanel({ projectId }: QrCodePanelProps) {
       <CardHeader>
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <CardTitle className={cn(typography.card.title, 'flex items-center gap-2')}>
               <QrCode className={iconSizes.md} />
               {t('ika.attendance.qr.title')}
             </CardTitle>
@@ -181,7 +183,7 @@ export function QrCodePanel({ projectId }: QrCodePanelProps) {
       <CardContent>
         {/* Error */}
         {error && (
-          <div className={cn("flex items-center gap-2 text-sm mb-2", getStatusColor('error', 'text'))}>
+          <div className={cn("flex items-center gap-2 mb-2", typography.body.sm, getStatusColor('error', 'text'))}>
             <AlertCircle className={iconSizes.sm} />
             {error}
           </div>
@@ -201,10 +203,10 @@ export function QrCodePanel({ projectId }: QrCodePanelProps) {
 
             {/* Date badge */}
             <div className="flex items-center gap-2">
-              <span className={cn("inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium", getStatusColor('active', 'bg'), 'bg-opacity-10', getStatusColor('active', 'text'))}>
+              <span className={cn("inline-flex items-center px-2.5 py-0.5 rounded-full", typography.label.xs, getStatusColor('active', 'bg'), 'bg-opacity-10', getStatusColor('active', 'text'))}>
                 {t('ika.attendance.qr.active')}
               </span>
-              <span className="text-sm text-slate-500">
+              <span className={cn(typography.body.sm, 'text-slate-500')}>
                 {qrData.validDate}
               </span>
             </div>
@@ -242,7 +244,7 @@ export function QrCodePanel({ projectId }: QrCodePanelProps) {
         {!qrData && !isGenerating && !error && (
           <div className="flex flex-col items-center py-2 text-center">
             <QrCode className="h-12 w-12 text-slate-300 mb-2" />
-            <p className="text-sm text-slate-500">
+            <p className={cn(typography.body.sm, 'text-slate-500')}>
               {t('ika.attendance.qr.emptyState')}
             </p>
           </div>

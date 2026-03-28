@@ -16,6 +16,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 /**
  * 🏢 ENTERPRISE: Database-driven contributor data (NO MORE HARDCODED VALUES)
@@ -71,7 +72,7 @@ export function ContributorsTab() {
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: Centralized spacing tokens
   const spacing = useSpacingTokens();
-  const { contributors, isLoading, error } = useContributors();
+  const { contributors, error } = useContributors();
 
   if (error) {
     return (
@@ -116,7 +117,7 @@ export function ContributorsTab() {
               <TableBody>
                 {contributors.map((contributor) => (
                   <TableRow key={contributor.id}>
-                    <TableCell className="font-medium">{contributor.role}</TableCell>
+                    <TableCell className={typography.label.sm}>{contributor.role}</TableCell>
                     <TableCell>{contributor.name}</TableCell>
                     <TableCell>{contributor.company}</TableCell>
                     <TableCell>{contributor.phone}</TableCell>

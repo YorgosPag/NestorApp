@@ -19,11 +19,8 @@
  * @enterprise ADR-170 — QR Code + GPS Geofencing + Photo Verification
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { API_ROUTES } from '@/config/domain-constants';
+import React from 'react';
 import { Map, Marker, Source, Layer } from 'react-map-gl/maplibre';
-import type { MapLayerMouseEvent } from 'react-map-gl/maplibre';
-import type { FillLayerSpecification, LineLayerSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   MapPin,
@@ -38,151 +35,30 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
 import { getStatusColor } from '@/lib/design-system';
-import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
-import type { GeofenceConfig } from '../contracts';
-
-// =============================================================================
-// TYPES
-// =============================================================================
-
-interface GeofenceConfigMapProps {
-  projectId: string;
-}
-
-interface GeofenceApiResponse {
-  success: boolean;
-  geofence: GeofenceConfig | null;
-  error?: string;
-}
+import { OSM_MAP_STYLE, MAP_ZOOM, createGeofenceLayerStyles } from '../map-shared';
+import { GeofenceMarkerPin } from './GeofenceMarkerPin';
+import { useGeofenceConfig, MIN_RADIUS, MAX_RADIUS } from '../hooks/useGeofenceConfig';
 
 // =============================================================================
 // CONSTANTS
 // =============================================================================
 
-const MIN_RADIUS = 50;
-const MAX_RADIUS = 500;
-const DEFAULT_RADIUS = 200;
-const MAP_ZOOM = 15;
-
-/** OSM raster tile style (same as geo-canvas DEVELOPMENT style) */
-const MAP_STYLE = {
-  version: 8 as const,
-  name: 'Geofence Map',
-  sources: {
-    osm: {
-      type: 'raster' as const,
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-      tileSize: 256,
-      // eslint-disable-next-line custom/no-hardcoded-strings
-      attribution: '&copy; OpenStreetMap contributors',
-    },
-  },
-  layers: [
-    {
-      id: 'osm-raster',
-      type: 'raster' as const,
-      source: 'osm',
-    },
-  ],
-};
-
-/** GeoJSON circle fill style */
-/* eslint-disable design-system/no-hardcoded-colors -- MapLibre GL API requires literal color strings */
-const CIRCLE_FILL_STYLE: FillLayerSpecification = {
-  id: 'geofence-fill',
-  type: 'fill',
-  source: 'geofence-circle',
-  paint: {
-    'fill-color': '#3b82f6',
-    'fill-opacity': 0.15,
-  },
-};
-
-/** GeoJSON circle border style */
-const CIRCLE_LINE_STYLE: LineLayerSpecification = {
-  id: 'geofence-line',
-  type: 'line',
-  source: 'geofence-circle',
-  paint: {
-    'line-color': '#2563eb',
-    'line-width': 2,
-    'line-dasharray': [3, 2],
-  },
-};
-/* eslint-enable design-system/no-hardcoded-colors */
+const GEOFENCE_SOURCE_ID = 'geofence-circle';
+const { fill: CIRCLE_FILL, line: CIRCLE_LINE } = createGeofenceLayerStyles(
+  GEOFENCE_SOURCE_ID,
+  'geofence'
+);
 
 // =============================================================================
-// HELPERS
+// PROPS
 // =============================================================================
 
-/**
- * Generate a GeoJSON polygon approximating a circle.
- * Uses Haversine-based bearing calculation for accurate meter-based radius.
- */
-function generateCircleGeoJSON(
-  centerLat: number,
-  centerLng: number,
-  radiusMeters: number,
-  points: number = 64
-): GeoJSON.Feature<GeoJSON.Polygon> {
-  const EARTH_RADIUS = 6_371_008.8;
-  const coords: [number, number][] = [];
-
-  for (let i = 0; i <= points; i++) {
-    const angle = (i / points) * 2 * Math.PI;
-    const latRad = (centerLat * Math.PI) / 180;
-    const lngRad = (centerLng * Math.PI) / 180;
-    const d = radiusMeters / EARTH_RADIUS;
-
-    const newLat = Math.asin(
-      Math.sin(latRad) * Math.cos(d) +
-      Math.cos(latRad) * Math.sin(d) * Math.cos(angle)
-    );
-    const newLng = lngRad + Math.atan2(
-      Math.sin(angle) * Math.sin(d) * Math.cos(latRad),
-      Math.cos(d) - Math.sin(latRad) * Math.sin(newLat)
-    );
-
-    coords.push([
-      (newLng * 180) / Math.PI,
-      (newLat * 180) / Math.PI,
-    ]);
-  }
-
-  return {
-    type: 'Feature',
-    properties: {},
-    geometry: {
-      type: 'Polygon',
-      coordinates: [coords],
-    },
-  };
+interface GeofenceConfigMapProps {
+  projectId: string;
 }
-
-// =============================================================================
-// MARKER PIN
-// =============================================================================
-
-/* eslint-disable design-system/no-hardcoded-colors -- SVG marker requires literal color strings */
-function GeofenceMarkerPin() {
-  return (
-    <svg width="32" height="42" viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg">
-      {/* eslint-disable-next-line custom/no-hardcoded-strings */}
-      <ellipse cx="16" cy="40" rx="6" ry="2" fill="rgba(0,0,0,0.2)" />
-      <path
-        d="M16 0C7.2 0 0 7.2 0 16c0 12 16 26 16 26s16-14 16-26C32 7.2 24.8 0 16 0z"
-        fill="#dc2626"
-        stroke="#fff"
-        strokeWidth="1.5"
-      />
-      <circle cx="16" cy="15" r="6" fill="#fff" />
-      <circle cx="16" cy="15" r="3" fill="#dc2626" />
-    </svg>
-  );
-}
-/* eslint-enable design-system/no-hardcoded-colors */
 
 // =============================================================================
 // COMPONENT
@@ -191,141 +67,28 @@ function GeofenceMarkerPin() {
 export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
   const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
+  const typography = useTypography();
 
-  // Geofence state
-  const [latitude, setLatitude] = useState(GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE);
-  const [longitude, setLongitude] = useState(GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE);
-  const [radiusMeters, setRadiusMeters] = useState(DEFAULT_RADIUS);
-  const [enabled, setEnabled] = useState(false);
-
-  // UI state
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
-
-  // =========================================================================
-  // LOAD EXISTING CONFIG
-  // =========================================================================
-
-  useEffect(() => {
-    async function loadGeofence() {
-      try {
-        setIsLoading(true);
-        const res = await fetch(`${API_ROUTES.ATTENDANCE.GEOFENCE}?projectId=${projectId}`);
-        const data = (await res.json()) as GeofenceApiResponse;
-
-        if (data.success && data.geofence) {
-          setLatitude(data.geofence.latitude);
-          setLongitude(data.geofence.longitude);
-          setRadiusMeters(data.geofence.radiusMeters);
-          setEnabled(data.geofence.enabled);
-        }
-      } catch {
-        // Not configured yet — use defaults
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    loadGeofence();
-  }, [projectId]);
-
-  // =========================================================================
-  // SAVE CONFIG
-  // =========================================================================
-
-  const handleSave = useCallback(async () => {
-    setIsSaving(true);
-    setError(null);
-    setSaveSuccess(false);
-
-    try {
-      const res = await fetch(API_ROUTES.ATTENDANCE.GEOFENCE, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectId,
-          latitude,
-          longitude,
-          radiusMeters,
-          enabled,
-        }),
-      });
-
-      const data = (await res.json()) as GeofenceApiResponse;
-
-      if (data.success) {
-        setSaveSuccess(true);
-        setHasChanges(false);
-        setTimeout(() => setSaveSuccess(false), 3000);
-      } else {
-        setError(data.error ?? t('ika.attendance.geofence.saveError'));
-      }
-    } catch {
-      setError(t('ika.attendance.geofence.networkError'));
-    } finally {
-      setIsSaving(false);
-    }
-  }, [projectId, latitude, longitude, radiusMeters, enabled, t]);
-
-  // =========================================================================
-  // MAP INTERACTION HANDLERS
-  // =========================================================================
-
-  const handleMapClick = useCallback((event: MapLayerMouseEvent) => {
-    setLatitude(event.lngLat.lat);
-    setLongitude(event.lngLat.lng);
-    setHasChanges(true);
-  }, []);
-
-  const handleMarkerDragEnd = useCallback((event: { lngLat: { lat: number; lng: number } }) => {
-    setLatitude(event.lngLat.lat);
-    setLongitude(event.lngLat.lng);
-    setHasChanges(true);
-  }, []);
-
-  // =========================================================================
-  // COORDINATE INPUT HANDLERS
-  // =========================================================================
-
-  const handleLatChange = useCallback((value: string) => {
-    const num = parseFloat(value);
-    if (!isNaN(num) && num >= -90 && num <= 90) {
-      setLatitude(num);
-      setHasChanges(true);
-    }
-  }, []);
-
-  const handleLngChange = useCallback((value: string) => {
-    const num = parseFloat(value);
-    if (!isNaN(num) && num >= -180 && num <= 180) {
-      setLongitude(num);
-      setHasChanges(true);
-    }
-  }, []);
-
-  const handleRadiusSliderChange = useCallback((values: number[]) => {
-    const value = values[0];
-    if (value >= MIN_RADIUS && value <= MAX_RADIUS) {
-      setRadiusMeters(value);
-      setHasChanges(true);
-    }
-  }, []);
-
-  // =========================================================================
-  // GEOJSON CIRCLE (reactive)
-  // =========================================================================
-
-  const circleGeoJSON = useMemo(
-    () => generateCircleGeoJSON(latitude, longitude, radiusMeters),
-    [latitude, longitude, radiusMeters]
-  );
-
-  // =========================================================================
-  // RENDER
-  // =========================================================================
+  const {
+    latitude,
+    longitude,
+    radiusMeters,
+    enabled,
+    isLoading,
+    isSaving,
+    error,
+    saveSuccess,
+    hasChanges,
+    circleGeoJSON,
+    handleSave,
+    handleMapClick,
+    handleMarkerDragEnd,
+    handleLatChange,
+    handleLngChange,
+    handleRadiusSliderChange,
+    handleReset,
+    handleToggleEnabled,
+  } = useGeofenceConfig(projectId, t);
 
   if (isLoading) {
     return (
@@ -342,7 +105,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
       <CardHeader>
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <CardTitle className={cn(typography.card.title, 'flex items-center gap-2')}>
               <CircleDot className={iconSizes.md} />
               {t('ika.attendance.geofence.title')}
             </CardTitle>
@@ -353,10 +116,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
           <Button
             variant={enabled ? 'default' : 'outline'}
             size="sm"
-            onClick={() => {
-              setEnabled(!enabled);
-              setHasChanges(true);
-            }}
+            onClick={handleToggleEnabled}
           >
             {enabled
               ? t('ika.attendance.geofence.enabled')
@@ -369,7 +129,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
       <CardContent className="space-y-2">
         {/* Error */}
         {error && (
-          <div className={cn("flex items-center gap-2 text-sm", getStatusColor('error', 'text'))}>
+          <div className={cn("flex items-center gap-2", typography.body.sm, getStatusColor('error', 'text'))}>
             <AlertCircle className={iconSizes.sm} />
             {error}
           </div>
@@ -377,7 +137,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
 
         {/* Save Success */}
         {saveSuccess && (
-          <div className={cn("flex items-center gap-2 text-sm", getStatusColor('active', 'text'))}>
+          <div className={cn("flex items-center gap-2", typography.body.sm, getStatusColor('active', 'text'))}>
             <Save className={iconSizes.sm} />
             {t('ika.attendance.geofence.saved')}
           </div>
@@ -392,18 +152,16 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
               zoom: MAP_ZOOM,
             }}
             style={{ width: '100%', height: 320 }}
-            mapStyle={MAP_STYLE}
+            mapStyle={OSM_MAP_STYLE}
             onClick={handleMapClick}
             cursor="crosshair"
             attributionControl={false}
           >
-            {/* Geofence radius circle */}
-            <Source id="geofence-circle" type="geojson" data={circleGeoJSON}>
-              <Layer {...CIRCLE_FILL_STYLE} />
-              <Layer {...CIRCLE_LINE_STYLE} />
+            <Source id={GEOFENCE_SOURCE_ID} type="geojson" data={circleGeoJSON}>
+              <Layer {...CIRCLE_FILL} />
+              <Layer {...CIRCLE_LINE} />
             </Source>
 
-            {/* Draggable center marker */}
             <Marker
               longitude={longitude}
               latitude={latitude}
@@ -415,8 +173,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
             </Marker>
           </Map>
 
-          {/* Coordinate overlay badge */}
-          <div className="absolute bottom-2 left-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-xs text-slate-600 pointer-events-none">
+          <div className={cn("absolute bottom-2 left-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded pointer-events-none", typography.body.xs, 'text-slate-600')}>
             <MapPin className="h-3 w-3 inline mr-1" />
             {latitude.toFixed(6)}, {longitude.toFixed(6)}
           </div>
@@ -425,7 +182,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
         {/* Coordinate Inputs */}
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label htmlFor="geofence-lat" className="block text-xs font-medium text-slate-600 mb-1">
+            <label htmlFor="geofence-lat" className={cn('block mb-1', typography.label.xs, 'text-slate-600')}>
               {t('ika.attendance.geofence.latitude')}
             </label>
             <input
@@ -436,11 +193,11 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
               max="90"
               value={latitude}
               onChange={(e) => handleLatChange(e.target.value)}
-              className="w-full px-2 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={cn('w-full px-2 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500', typography.body.sm)}
             />
           </div>
           <div>
-            <label htmlFor="geofence-lng" className="block text-xs font-medium text-slate-600 mb-1">
+            <label htmlFor="geofence-lng" className={cn('block mb-1', typography.label.xs, 'text-slate-600')}>
               {t('ika.attendance.geofence.longitude')}
             </label>
             <input
@@ -451,18 +208,18 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
               max="180"
               value={longitude}
               onChange={(e) => handleLngChange(e.target.value)}
-              className="w-full px-2 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={cn('w-full px-2 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500', typography.body.sm)}
             />
           </div>
         </div>
 
-        {/* Radius Slider (Radix) */}
+        {/* Radius Slider */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-medium text-slate-600">
+            <label className={cn(typography.label.xs, 'text-slate-600')}>
               {t('ika.attendance.geofence.radius')}
             </label>
-            <span className="text-sm font-semibold text-slate-700">
+            <span className={cn(typography.heading.sm, 'text-slate-700')}>
               {radiusMeters}m
             </span>
           </div>
@@ -473,7 +230,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
             value={[radiusMeters]}
             onValueChange={handleRadiusSliderChange}
           />
-          <div className="flex justify-between text-xs text-slate-400 mt-1">
+          <div className={cn("flex justify-between mt-1", typography.body.xs, 'text-slate-400')}>
             <span>{MIN_RADIUS}m</span>
             <span>{MAX_RADIUS}m</span>
           </div>
@@ -481,24 +238,11 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
 
         {/* Save / Reset Buttons */}
         <div className="flex items-center justify-end gap-2 pt-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setLatitude(GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE);
-              setLongitude(GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE);
-              setRadiusMeters(DEFAULT_RADIUS);
-              setHasChanges(true);
-            }}
-          >
+          <Button variant="outline" size="sm" onClick={handleReset}>
             <RotateCcw className={cn(iconSizes.sm, 'mr-2')} />
             {t('ika.attendance.geofence.reset')}
           </Button>
-          <Button
-            onClick={handleSave}
-            disabled={isSaving || !hasChanges}
-            size="sm"
-          >
+          <Button onClick={handleSave} disabled={isSaving || !hasChanges} size="sm">
             {isSaving ? (
               <Spinner size="small" color="inherit" className="mr-2" />
             ) : (

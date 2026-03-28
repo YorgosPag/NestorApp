@@ -117,7 +117,7 @@ export function TimesheetTabContent({ projectId }: TimesheetTabContentProps) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-12">
-          <p className="text-sm text-muted-foreground">
+          <p className={typography.special.secondary}>
             {t('ika.timesheetTab.noProjectId')}
           </p>
         </CardContent>
@@ -142,7 +142,7 @@ export function TimesheetTabContent({ projectId }: TimesheetTabContentProps) {
       <Card>
         <CardContent className="flex items-center justify-center gap-2 py-12">
           <AlertCircle className={cn(iconSizes.md, colors.text.error)} />
-          <p className="text-sm text-muted-foreground">{error}</p>
+          <p className={typography.special.secondary}>{error}</p>
         </CardContent>
       </Card>
     );
@@ -153,11 +153,11 @@ export function TimesheetTabContent({ projectId }: TimesheetTabContentProps) {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <ClipboardList className={cn(iconSizes.xl, 'text-muted-foreground mb-2')} />
-          <p className="text-sm font-medium text-muted-foreground">
+          <ClipboardList className={cn(iconSizes.xl, colors.text.muted, 'mb-2')} />
+          <p className={cn(typography.label.sm, colors.text.muted)}>
             {t('ika.timesheetTab.noWorkers')}
           </p>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className={cn(typography.special.tertiary, 'mt-1')}>
             {t('ika.timesheetTab.noWorkersHint')}
           </p>
         </CardContent>

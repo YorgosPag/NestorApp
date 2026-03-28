@@ -8,8 +8,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Info } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTypography } from '@/hooks/useTypography';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import '@/lib/design-system';
 
 interface FormFieldProps {
   id: string;
@@ -46,6 +48,7 @@ export function FormField({
 }: FormFieldProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  const typography = useTypography();
   // 🏢 ENTERPRISE: Centralized spacing tokens
   const spacing = useSpacingTokens();
   const formatValue = (val: number | string) => {
@@ -74,12 +77,12 @@ export function FormField({
             "flex",
             labelPosition === 'top' ? cn("flex-col", spacing.spaceBetween.sm) : cn("flex-row items-center justify-between", spacing.gap.md)
         )}>
-        <Label htmlFor={id} className={cn("text-sm font-medium", labelClassName)}>
+        <Label htmlFor={id} className={cn(typography.label.sm, labelClassName)}>
             {label}
             {tooltipText && (
             <Tooltip>
                 <TooltipTrigger asChild>
-                <Info className={`${iconSizes.xs} text-muted-foreground ml-1 inline-block cursor-help`} />
+                <Info className={cn(iconSizes.xs, colors.text.muted, "ml-1 inline-block cursor-help")} />
                 </TooltipTrigger>
                 <TooltipContent>
                 <p>{tooltipText}</p>
@@ -88,7 +91,7 @@ export function FormField({
             )}
         </Label>
         <div className={cn("relative", inputClassName)}>
-            {unit && unitPosition === 'left' && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{unit}</span>}
+            {unit && unitPosition === 'left' && <span className={cn("absolute left-3 top-1/2 -translate-y-1/2", typography.special.secondary)}>{unit}</span>}
             <Input
             id={id}
             name={id}
@@ -104,7 +107,7 @@ export function FormField({
                 unit && unitPosition === 'right' && 'pr-8'
             )}
             />
-            {unit && unitPosition === 'right' && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{unit}</span>}
+            {unit && unitPosition === 'right' && <span className={cn("absolute right-3 top-1/2 -translate-y-1/2", typography.special.secondary)}>{unit}</span>}
         </div>
         </div>
   );

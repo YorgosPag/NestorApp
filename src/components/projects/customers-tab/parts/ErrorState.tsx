@@ -84,13 +84,13 @@ export function ErrorState({ error, errorType, canRetry = true, onRetry }: Error
           {getErrorIcon()}
 
           <div className="space-y-2 mb-2">
-            <h3 className="text-lg font-semibold text-foreground">
+            <h3 className={typography.heading.md}>
               {errorContext.title}
             </h3>
-            <p className="text-sm text-muted-foreground">
+            <p className={typography.special.secondary}>
               {errorContext.subtitle}
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className={typography.special.secondary}>
               {error}
             </p>
           </div>
@@ -107,7 +107,7 @@ export function ErrorState({ error, errorType, canRetry = true, onRetry }: Error
                 {t('errors.retryButton')}
               </Button>
 
-              <p className="text-xs text-muted-foreground">
+              <p className={typography.special.tertiary}>
                 {t('errors.supportMessage')}
               </p>
             </div>

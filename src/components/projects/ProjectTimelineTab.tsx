@@ -16,6 +16,7 @@ import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized typography tokens
 import { useTypography } from '@/hooks/useTypography';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized API client
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
@@ -45,6 +46,7 @@ export function ProjectTimelineTab({ project }: { project: Project }) {
   const { t } = useTranslation('projects');
   const typography = useTypography();
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { quick } = useBorderTokens();
 
   const [buildings, setBuildings] = useState<ProjectBuilding[]>([]);
@@ -99,9 +101,9 @@ export function ProjectTimelineTab({ project }: { project: Project }) {
       </CardHeader>
       <CardContent className="space-y-2">
         <section>
-            <h3 className="text-lg font-semibold mb-2">{t('timelineTab.totalProgress')}</h3>
+            <h3 className={cn(typography.heading.md, "mb-2")}>{t('timelineTab.totalProgress')}</h3>
             <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-primary">{aggregatedProgress}%</span>
+                <span className={cn(typography.heading.h3, "text-primary")}>{aggregatedProgress}%</span>
                 <div className="w-full">
                   <ThemeProgressBar
                     progress={aggregatedProgress}
@@ -114,23 +116,23 @@ export function ProjectTimelineTab({ project }: { project: Project }) {
         </section>
 
         <section className="space-y-2">
-            <h3 className="text-lg font-semibold">{t('timelineTab.buildingProgress')}</h3>
+            <h3 className={typography.heading.md}>{t('timelineTab.buildingProgress')}</h3>
 
             {loading && (
-              <div className="flex items-center gap-2 py-2 justify-center text-muted-foreground">
+              <div className={cn("flex items-center gap-2 py-2 justify-center", colors.text.muted)}>
                 <Spinner size="small" />
-                <span className="text-sm">{t('timelineTab.loading', { defaultValue: 'Φόρτωση κτιρίων...' })}</span>
+                <span className={typography.body.sm}>{t('timelineTab.loading', { defaultValue: 'Φόρτωση κτιρίων...' })}</span>
               </div>
             )}
 
             {error && (
-              <p className="text-sm text-destructive py-2 text-center">{error}</p>
+              <p className={cn(typography.body.sm, "text-destructive py-2 text-center")}>{error}</p>
             )}
 
             {!loading && !error && buildings.length === 0 && (
-              <div className="flex flex-col items-center gap-2 py-2 text-muted-foreground">
+              <div className={cn("flex flex-col items-center gap-2 py-2", colors.text.muted)}>
                 <Building2 className={iconSizes.lg} />
-                <p className="text-sm">{t('timelineTab.noBuildings', { defaultValue: 'Δεν υπάρχουν κτίρια σε αυτό το έργο.' })}</p>
+                <p className={typography.body.sm}>{t('timelineTab.noBuildings', { defaultValue: 'Δεν υπάρχουν κτίρια σε αυτό το έργο.' })}</p>
               </div>
             )}
 
@@ -139,17 +141,17 @@ export function ProjectTimelineTab({ project }: { project: Project }) {
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                             <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.building.color)} />
-                            <span className="font-medium">{building.name}</span>
+                            <span className={typography.label.md}>{building.name}</span>
                         </div>
                         <BuildingBadge
                           status={building.status}
                           variant="secondary"
                           size="sm"
-                          className="text-xs"
+                          className={typography.body.xs}
                         />
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-primary">{building.progress}%</span>
+                        <span className={cn(typography.heading.sm, "text-primary")}>{building.progress}%</span>
                         <div className="w-full">
                           <ThemeProgressBar
                             progress={building.progress}

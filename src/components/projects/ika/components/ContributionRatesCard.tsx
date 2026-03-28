@@ -23,9 +23,11 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
 import type { ContributionRates } from '../contracts';
+import '@/lib/design-system';
 
 interface ContributionRatesCardProps {
   /** Current contribution rates */
@@ -47,6 +49,7 @@ interface RateRow {
 
 export const ContributionRatesCard = React.memo(function ContributionRatesCard({ rates, isEditing, onRateChange }: ContributionRatesCardProps) {
   const { t } = useTranslation('projects');
+  const colors = useSemanticColors();
   const typography = useTypography();
 
   const rows = useMemo<RateRow[]>(() => [
@@ -142,7 +145,7 @@ export const ContributionRatesCard = React.memo(function ContributionRatesCard({
             </TableCell>
             <TableCell className="text-right">
               {row.employer === null ? (
-                <span className={cn(typography.label.sm, 'text-muted-foreground')}>—</span>
+                <span className={cn(typography.label.sm, colors.text.muted)}>—</span>
               ) : isEditing ? (
                 <Input
                   type="number"

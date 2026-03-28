@@ -55,9 +55,9 @@ export function EfkaDocumentTracker({ documents }: EfkaDocumentTrackerProps) {
                     iconSizes.sm,
                     docItem.status === 'approved' ? colors.text.success :
                     docItem.status === 'submitted' ? colors.text.info :
-                    'text-muted-foreground'
+                    colors.text.muted
                   )} />
-                  <span className="text-sm">{docItem.label}</span>
+                  <span className={typography.body.sm}>{docItem.label}</span>
                 </div>
                 <Badge variant={STATUS_VARIANT_MAP[docItem.status]}>
                   {t(`ika.efka.documents.status.${docItem.status}`)}

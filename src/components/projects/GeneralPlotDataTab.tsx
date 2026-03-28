@@ -7,6 +7,7 @@ import { PlotZoningSelectors } from './PlotZoningSelectors';
 import { useTypography } from '@/hooks/useTypography';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 export interface PlotData {
     sdNoSocial: number;

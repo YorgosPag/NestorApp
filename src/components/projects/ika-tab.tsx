@@ -31,6 +31,7 @@ import { LaborComplianceSettingsTabContent } from './ika/LaborComplianceSettings
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import '@/lib/design-system';
 
 interface IkaTabProps {
   /** Project data passed from UniversalTabsRenderer */

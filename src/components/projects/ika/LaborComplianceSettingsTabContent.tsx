@@ -48,7 +48,7 @@ interface LaborComplianceSettingsTabContentProps {
 export function LaborComplianceSettingsTabContent({ projectId: _projectId }: LaborComplianceSettingsTabContentProps) {
   const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
-  const _colors = useSemanticColors();
+  const colors = useSemanticColors();
   const typography = useTypography();
   const spacing = useSpacingTokens();
   const _borders = useBorderTokens();
@@ -189,7 +189,7 @@ export function LaborComplianceSettingsTabContent({ projectId: _projectId }: Lab
   if (isLoading) {
     return (
       <section className={cn('flex items-center justify-center', spacing.padding.xl)}>
-        <RefreshCw className={cn(iconSizes.md, 'animate-spin text-muted-foreground')} />
+        <RefreshCw className={cn(iconSizes.md, 'animate-spin', colors.text.muted)} />
       </section>
     );
   }
@@ -203,7 +203,7 @@ export function LaborComplianceSettingsTabContent({ projectId: _projectId }: Lab
             <Settings className={iconSizes.md} />
             {t('ika.efkaSettingsTab.title')}
           </h2>
-          <p className={cn(typography.body.sm, 'text-muted-foreground')}>
+          <p className={cn(typography.body.sm, colors.text.muted)}>
             {t('ika.efkaSettingsTab.description')}
           </p>
         </hgroup>
@@ -262,7 +262,7 @@ export function LaborComplianceSettingsTabContent({ projectId: _projectId }: Lab
         <CardContent>
           <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <dt className={cn(typography.label.sm, 'text-muted-foreground mb-1')}>
+              <dt className={cn(typography.label.sm, colors.text.muted, 'mb-1')}>
                 {t('ika.efkaSettingsTab.activeYear')}
               </dt>
               <dd>
@@ -276,12 +276,12 @@ export function LaborComplianceSettingsTabContent({ projectId: _projectId }: Lab
                     className="w-28"
                   />
                 ) : (
-                  <span className={cn(typography.body.md, 'font-semibold')}>{activeYear}</span>
+                  <span className={typography.label.md}>{activeYear}</span>
                 )}
               </dd>
             </div>
             <div>
-              <dt className={cn(typography.label.sm, 'text-muted-foreground mb-1')}>
+              <dt className={cn(typography.label.sm, colors.text.muted, 'mb-1')}>
                 {t('ika.efkaSettingsTab.sourceCircular')}
               </dt>
               <dd>
@@ -297,7 +297,7 @@ export function LaborComplianceSettingsTabContent({ projectId: _projectId }: Lab
               </dd>
             </div>
             <div>
-              <dt className={cn(typography.label.sm, 'text-muted-foreground mb-1')}>
+              <dt className={cn(typography.label.sm, colors.text.muted, 'mb-1')}>
                 {t('ika.efkaSettingsTab.effectiveDate')}
               </dt>
               <dd>
@@ -315,7 +315,7 @@ export function LaborComplianceSettingsTabContent({ projectId: _projectId }: Lab
             </div>
             {fullDoc && (
               <div>
-                <dt className={cn(typography.label.sm, 'text-muted-foreground mb-1')}>
+                <dt className={cn(typography.label.sm, colors.text.muted, 'mb-1')}>
                   {t('ika.efkaSettingsTab.lastUpdated')}
                 </dt>
                 <dd>

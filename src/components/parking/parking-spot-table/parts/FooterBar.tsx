@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { CommonBadge } from '@/core/badges';
+import '@/lib/design-system';
 
 interface FooterBarProps {
   filteredCount: number;

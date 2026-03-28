@@ -22,6 +22,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 import type { ProjectDailySummary } from '../contracts';
+import '@/lib/design-system';
 
 interface AttendanceDashboardProps {
   /** Project-level daily summary */
@@ -100,7 +101,7 @@ export function AttendanceDashboard({ summary }: AttendanceDashboardProps) {
                 {card.label}
               </p>
               {card.subtitle && (
-                <p className="text-xs text-muted-foreground">{card.subtitle}</p>
+                <p className={typography.special.tertiary}>{card.subtitle}</p>
               )}
             </div>
           </CardContent>

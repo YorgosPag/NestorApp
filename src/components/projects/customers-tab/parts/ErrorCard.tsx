@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized typography tokens
 import { useTypography } from '@/hooks/useTypography';
+import '@/lib/design-system';
 
 interface ErrorCardProps {
   message: string;

@@ -20,6 +20,7 @@ import { COMMON_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('ProjectsTabContent');
 
@@ -84,7 +85,7 @@ export function ActionsTabContent({
         <Trash2 className={`${iconSizes.sm} mr-1`} />
         {t('toolbar.delete')}
         {selectedItems.length > 0 && (
-          <span className={`ml-1 ${colors.bg.primary} text-destructive px-1 rounded text-xs`}>
+          <span className={`ml-1 ${colors.bg.primary} text-destructive px-1 rounded ${typography.body.xs}`}>
             {selectedItems.length}
           </span>
         )}

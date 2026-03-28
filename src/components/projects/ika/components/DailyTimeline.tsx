@@ -101,8 +101,8 @@ export function DailyTimeline({ workerSummaries, onRecordEvent }: DailyTimelineP
   if (workerSummaries.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
-        <Clock className={cn(iconSizes.xl, 'text-muted-foreground mb-2')} />
-        <p className="text-sm font-medium text-muted-foreground">
+        <Clock className={cn(iconSizes.xl, colors.text.muted, 'mb-2')} />
+        <p className={cn(typography.label.sm, colors.text.muted)}>
           {t('ika.timesheetTab.noEvents')}
         </p>
       </div>
@@ -154,7 +154,7 @@ export function DailyTimeline({ workerSummaries, onRecordEvent }: DailyTimelineP
                 <TableCell>
                   <p className={typography.body.sm}>{summary.workerName}</p>
                   {summary.companyName && (
-                    <p className="text-xs text-muted-foreground">{summary.companyName}</p>
+                    <p className={typography.special.tertiary}>{summary.companyName}</p>
                   )}
                 </TableCell>
 
@@ -164,28 +164,28 @@ export function DailyTimeline({ workerSummaries, onRecordEvent }: DailyTimelineP
                 </TableCell>
 
                 {/* Check-in time */}
-                <TableCell className="font-mono text-sm tabular-nums">
+                <TableCell className={cn('font-mono', typography.body.sm, 'tabular-nums')}>
                   {summary.firstCheckIn
                     ? format(new Date(summary.firstCheckIn), 'HH:mm')
                     : '—'}
                 </TableCell>
 
                 {/* Check-out time */}
-                <TableCell className="font-mono text-sm tabular-nums">
+                <TableCell className={cn('font-mono', typography.body.sm, 'tabular-nums')}>
                   {summary.lastCheckOut
                     ? format(new Date(summary.lastCheckOut), 'HH:mm')
                     : '—'}
                 </TableCell>
 
                 {/* Effective hours */}
-                <TableCell className="font-mono text-sm tabular-nums">
+                <TableCell className={cn('font-mono', typography.body.sm, 'tabular-nums')}>
                   {summary.effectiveWorkMinutes > 0
                     ? formatMinutes(summary.effectiveWorkMinutes)
                     : '—'}
                 </TableCell>
 
                 {/* Gaps (off-site minutes) */}
-                <TableCell className="font-mono text-sm tabular-nums">
+                <TableCell className={cn('font-mono', typography.body.sm, 'tabular-nums')}>
                   {summary.totalOffSiteMinutes > 0
                     ? formatMinutes(summary.totalOffSiteMinutes)
                     : '—'}
@@ -199,7 +199,7 @@ export function DailyTimeline({ workerSummaries, onRecordEvent }: DailyTimelineP
                       {summary.anomalies.length}
                     </Badge>
                   ) : (
-                    <span className="text-xs text-muted-foreground">—</span>
+                    <span className={typography.special.tertiary}>—</span>
                   )}
                 </TableCell>
 
@@ -234,7 +234,7 @@ export function DailyTimeline({ workerSummaries, onRecordEvent }: DailyTimelineP
                             className={cn('flex items-center', spacing.gap.xs)}
                           >
                             <AlertTriangle className={cn(iconSizes.xxs, colors.text.warning)} />
-                            <span className="text-xs text-muted-foreground">
+                            <span className={typography.special.tertiary}>
                               {anomaly.description}
                             </span>
                           </div>

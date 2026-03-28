@@ -12,6 +12,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ProjectFormData } from './general-tab/types';
+import '@/lib/design-system';
 
 interface BasicProjectInfoTabProps {
     data: ProjectFormData;
@@ -44,19 +45,19 @@ export const BasicProjectInfoTab = React.memo(function BasicProjectInfoTab({ dat
             <CardContent className={cn(spacing.padding.sm, spacing.spaceBetween.md)}>
                 <div className={cn("grid grid-cols-1 lg:grid-cols-2", spacing.gap.md)}>
                     <div className={spacing.spaceBetween.sm}>
-                        <Label htmlFor="name" className="text-sm font-medium">{t('basicInfo.projectTitle')}</Label>
-                        <Input id="name" name="name" value={data.name} onChange={handleChange} disabled={!isEditing} placeholder={t('basicInfo.projectTitlePlaceholder')} className="h-10" />
+                        <Label htmlFor="name" className={typography.label.sm}>{t('basicInfo.projectTitle')}</Label>
+                        <Input id="name" name="name" value={data.name} onChange={handleChange} disabled={!isEditing} placeholder={t('basicInfo.projectTitlePlaceholder')} size="md" />
                     </div>
                     <div className={spacing.spaceBetween.sm}>
-                        <Label htmlFor="licenseTitle" className="text-sm font-medium">{t('basicInfo.licenseTitle')}</Label>
-                        <Input id="licenseTitle" name="licenseTitle" value={data.licenseTitle} onChange={handleChange} disabled={!isEditing} placeholder={t('basicInfo.licenseTitlePlaceholder')} className="h-10" />
+                        <Label htmlFor="licenseTitle" className={typography.label.sm}>{t('basicInfo.licenseTitle')}</Label>
+                        <Input id="licenseTitle" name="licenseTitle" value={data.licenseTitle} onChange={handleChange} disabled={!isEditing} placeholder={t('basicInfo.licenseTitlePlaceholder')} size="md" />
                     </div>
                 </div>
 
                 {/* Company link moved to top-level EntityLinkCard in GeneralProjectTab */}
 
                 <div className={spacing.spaceBetween.sm}>
-                    <Label htmlFor="description" className="text-sm font-medium">{t('basicInfo.projectDescription')}</Label>
+                    <Label htmlFor="description" className={typography.label.sm}>{t('basicInfo.projectDescription')}</Label>
                     <Textarea
                         id="description"
                         name="description"

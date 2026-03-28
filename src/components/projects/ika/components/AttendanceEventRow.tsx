@@ -27,8 +27,10 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
 import type { AttendanceEvent, AttendanceEventType } from '../contracts';
+import '@/lib/design-system';
 
 interface AttendanceEventRowProps {
   /** The attendance event to display */
@@ -65,6 +67,7 @@ export function AttendanceEventRow({ event }: AttendanceEventRowProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
+  const typography = useTypography();
 
   const config = getEventConfig(event.eventType);
   const Icon = config.icon;
@@ -74,14 +77,14 @@ export function AttendanceEventRow({ event }: AttendanceEventRowProps) {
 
   return (
     <div className={cn('flex items-center', spacing.gap.sm, spacing.padding.y.xs)}>
-      <Icon className={cn(iconSizes.xs, 'text-muted-foreground')} />
-      <span className="text-xs font-mono tabular-nums">{timeStr}</span>
-      <Badge variant={config.variant} className="text-xs">
+      <Icon className={cn(iconSizes.xs, colors.text.muted)} />
+      <span className={cn('font-mono', typography.body.xs, 'tabular-nums')}>{timeStr}</span>
+      <Badge variant={config.variant} className={typography.body.xs}>
         {eventLabel}
       </Badge>
-      <span className="text-xs text-muted-foreground">{methodLabel}</span>
+      <span className={typography.special.tertiary}>{methodLabel}</span>
       {event.notes && (
-        <span className={cn('text-xs italic', colors.text.secondary)}>
+        <span className={cn(typography.body.xs, 'italic', colors.text.secondary)}>
           — {event.notes}
         </span>
       )}
