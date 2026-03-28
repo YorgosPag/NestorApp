@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n';
 import { Eye, Printer } from "lucide-react";
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 interface PreviewHeaderProps {
   showToc: boolean;
@@ -14,14 +17,15 @@ interface PreviewHeaderProps {
 export function PreviewHeader({ showToc, onToggleToc, onPrint }: PreviewHeaderProps) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation('obligations');
+  const colors = useSemanticColors();
 
   return (
     <div className="flex items-center justify-between p-4 border-b bg-muted/30">
       <div className="flex items-center gap-3">
-        <Eye className={`${iconSizes.md} text-muted-foreground`} />
+        <Eye className={cn(iconSizes.md, colors.text.muted)} />
         <div>
           <h3 className="font-medium text-foreground">{t('preview.title')}</h3>
-          <p className="text-sm text-muted-foreground">{t('preview.description')}</p>
+          <p className={cn("text-sm", colors.text.muted)}>{t('preview.description')}</p>
         </div>
       </div>
       <div className="flex items-center gap-2">

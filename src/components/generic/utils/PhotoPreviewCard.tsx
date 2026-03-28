@@ -14,6 +14,7 @@ import { usePhotoPreviewStyles } from '@/components/ui/enterprise-portal';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES & INTERFACES

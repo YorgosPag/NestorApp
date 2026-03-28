@@ -16,6 +16,7 @@ import { formatDateTime as formatDate } from '@/lib/intl-utils';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects/hover-effects';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 export default function LeadsList({ refreshTrigger }: { refreshTrigger?: number | string | boolean | null }) {
   // 🏢 ENTERPRISE: i18n hook for translations

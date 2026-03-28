@@ -12,6 +12,8 @@ import { formatDate } from '@/lib/intl-utils';
 import { getObligationStatusLabel } from "@/constants/property-statuses-enterprise";
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 interface DocumentHeaderProps {
     doc: Partial<ObligationDocument>;
@@ -21,6 +23,7 @@ export function DocumentHeader({ doc }: DocumentHeaderProps) {
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n support
   const { t } = useTranslation('obligations');
+  const colors = useSemanticColors();
   const statusKeyOrValue = getObligationStatusLabel(doc.status || "draft");
   const statusLabel = statusKeyOrValue.includes(':') ? t(statusKeyOrValue) : statusKeyOrValue;
 
@@ -30,7 +33,7 @@ export function DocumentHeader({ doc }: DocumentHeaderProps) {
         <h1 className="text-2xl font-bold text-foreground uppercase tracking-wide">
           {doc.contractorCompany || t('documentHeader.defaultContractor')}
         </h1>
-        <div className="text-sm text-muted-foreground">{t('documentHeader.companyType')}</div>
+        <div className={cn("text-sm", colors.text.muted)}>{t('documentHeader.companyType')}</div>
       </div>
 
       <div className="space-y-3">
@@ -49,8 +52,8 @@ export function DocumentHeader({ doc }: DocumentHeaderProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 pt-6 border-t text-sm">
           {doc.projectDetails.location && (
             <div className="flex items-center gap-2">
-              <MapPin className={`${iconSizes.sm} text-muted-foreground`} />
-              <span className="text-muted-foreground">{t('documentHeader.fields.location')}</span>
+              <MapPin className={cn(iconSizes.sm, colors.text.muted)} />
+              <span className={colors.text.muted}>{t('documentHeader.fields.location')}</span>
               <span>{doc.projectDetails.location}</span>
             </div>
           )}
@@ -58,21 +61,21 @@ export function DocumentHeader({ doc }: DocumentHeaderProps) {
             <div className="flex items-center gap-2">
               {/* 🏢 ENTERPRISE: Using centralized building icon/color */}
               <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.building.color)} />
-              <span className="text-muted-foreground">{t('documentHeader.fields.address')}</span>
+              <span className={colors.text.muted}>{t('documentHeader.fields.address')}</span>
               <span>{doc.projectDetails.address}</span>
             </div>
           )}
           {doc.projectDetails.plotNumber && (
             <div className="flex items-center gap-2">
-              <Hash className={`${iconSizes.sm} text-muted-foreground`} />
-              <span className="text-muted-foreground">{t('documentHeader.fields.plot')}</span>
+              <Hash className={cn(iconSizes.sm, colors.text.muted)} />
+              <span className={colors.text.muted}>{t('documentHeader.fields.plot')}</span>
               <span>{doc.projectDetails.plotNumber}</span>
             </div>
           )}
           {doc.projectDetails.buildingPermitNumber && (
             <div className="flex items-center gap-2">
-              <FileText className={`${iconSizes.sm} text-muted-foreground`} />
-              <span className="text-muted-foreground">{t('documentHeader.fields.buildingPermit')}</span>
+              <FileText className={cn(iconSizes.sm, colors.text.muted)} />
+              <span className={colors.text.muted}>{t('documentHeader.fields.buildingPermit')}</span>
               <span>{doc.projectDetails.buildingPermitNumber}</span>
             </div>
           )}
@@ -82,7 +85,7 @@ export function DocumentHeader({ doc }: DocumentHeaderProps) {
       {doc.owners && doc.owners.length > 0 && (
         <div className="mt-6 pt-6 border-t">
           <div className="flex items-center gap-2 mb-3">
-            <Users className={`${iconSizes.sm} text-muted-foreground`} />
+            <Users className={cn(iconSizes.sm, colors.text.muted)} />
             <span className="font-medium text-foreground">{t('documentHeader.fields.owners')}</span>
           </div>
           <div className="space-y-2 text-sm">
@@ -100,7 +103,7 @@ export function DocumentHeader({ doc }: DocumentHeaderProps) {
         </div>
       )}
 
-      <div className="flex justify-between items-center mt-6 pt-6 border-t text-xs text-muted-foreground">
+      <div className={cn("flex justify-between items-center mt-6 pt-6 border-t text-xs", colors.text.muted)}>
         <div>
           {t('documentHeader.fields.status')}{" "}
           <Badge variant="outline">

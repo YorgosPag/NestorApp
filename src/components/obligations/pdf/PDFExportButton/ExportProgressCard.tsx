@@ -8,6 +8,9 @@ import { CheckCircle } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 interface ExportProgressCardProps {
   progress: number;
@@ -16,6 +19,7 @@ interface ExportProgressCardProps {
 export function ExportProgressCard({ progress }: ExportProgressCardProps) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation('obligations');
+  const colors = useSemanticColors();
   const isComplete = progress === 100;
 
   // 🏢 ENTERPRISE: i18n-enabled progress message getter
@@ -35,7 +39,7 @@ export function ExportProgressCard({ progress }: ExportProgressCardProps) {
             <CheckCircle className={`${iconSizes.md} text-accent-foreground`} />
             <div>
               <h4 className="font-medium text-foreground">{t('export.success.title')}</h4>
-              <p className="text-sm text-muted-foreground">{t('export.success.message')}</p>
+              <p className={cn("text-sm", colors.text.muted)}>{t('export.success.message')}</p>
             </div>
           </div>
         </CardContent>
@@ -51,11 +55,11 @@ export function ExportProgressCard({ progress }: ExportProgressCardProps) {
             <Spinner size="medium" className="text-primary" />
             <div>
               <h4 className="font-medium">{t('export.creating')}</h4>
-              <p className="text-sm text-muted-foreground">{getProgressMessage(progress)}</p>
+              <p className={cn("text-sm", colors.text.muted)}>{getProgressMessage(progress)}</p>
             </div>
           </div>
           <Progress value={progress} className="w-full" />
-          <div className="text-center text-sm text-muted-foreground">
+          <div className={cn("text-center text-sm", colors.text.muted)}>
             {t('export.percentComplete', { percent: progress })}
           </div>
         </div>

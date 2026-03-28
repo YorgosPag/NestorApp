@@ -11,6 +11,7 @@ import type { ServiceSectionConfig } from '@/config/service-config';
 import { useTranslation } from 'react-i18next';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('ServiceFormTabRenderer');
 

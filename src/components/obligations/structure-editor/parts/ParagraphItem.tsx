@@ -8,6 +8,7 @@ import { RichTextEditor } from '@/components/obligations/rich-text-editor';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { GripVertical, Edit3, Save, X, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
 import type { ObligationParagraph } from '@/types/obligations';
@@ -41,6 +42,7 @@ export function ParagraphItem({
   const { t } = useTranslation('obligations');
   const { t: tCommon } = useTranslation('common');
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   return (
     <div
@@ -54,7 +56,7 @@ export function ParagraphItem({
         dragState?.dragId === paragraph.id && "opacity-50"
       )}
     >
-      {!readOnly && <GripVertical className={`${iconSizes.sm} text-muted-foreground cursor-move opacity-0 group-hover:opacity-100 mt-1`} />}
+      {!readOnly && <GripVertical className={cn(iconSizes.sm, colors.text.muted, "cursor-move opacity-0 group-hover:opacity-100 mt-1")} />}
       <Badge variant="outline" className="text-xs mt-1 min-w-6">{paragraph.number}</Badge>
       <div className="flex-1 space-y-2">
         {isEditing ? (
@@ -73,7 +75,7 @@ export function ParagraphItem({
           </div>
         ) : (
           <div className="cursor-pointer text-sm text-foreground hover:text-foreground/80" onClick={() => handlers.startEditing('paragraph', paragraph.id)}>
-            {paragraph.content || <span className="text-muted-foreground italic">{t('paragraph.noContent')}</span>}
+            {paragraph.content || <span className={cn(colors.text.muted, "italic")}>{t('paragraph.noContent')}</span>}
           </div>
         )}
       </div>

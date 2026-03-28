@@ -10,11 +10,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { generatePriceRanges } from '@/constants/property-statuses-enterprise';
-import { safeJsonParse } from '@/lib/json-utils';
-import { createModuleLogger } from '@/lib/telemetry';
-
-const logger = createModuleLogger('LandingPage');
+import '@/lib/design-system';
 
 export function LandingPage() {
   const iconSizes = useIconSizes();
@@ -26,19 +22,6 @@ export function LandingPage() {
   const [location, setLocation] = useState('');
   const [priceRange, setPriceRange] = useState('all');
   const [areaRange, setAreaRange] = useState('all');
-
-  // 🏢 ENTERPRISE: Configurable price ranges
-  const getPriceRanges = () => {
-    const envPriceRanges = process.env.NEXT_PUBLIC_PRICE_RANGES_JSON;
-    if (envPriceRanges) {
-      const parsed = safeJsonParse<Record<string, unknown>[]>(envPriceRanges, null as unknown as Record<string, unknown>[]);
-      if (parsed !== null) return parsed;
-      logger.warn('Failed to parse price ranges, using defaults');
-    }
-
-    const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '€';
-    return generatePriceRanges(currency);
-  };
 
   const handleSearch = () => {
     const params = new URLSearchParams();

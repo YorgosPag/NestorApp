@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import type { TableOfContentsItem } from '@/types/obligations';
 import { cn } from "@/lib/design-system";
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface TableOfContentsPartProps {
   toc: TableOfContentsItem[];
@@ -14,6 +15,7 @@ interface TableOfContentsPartProps {
 
 export function TableOfContentsPart({ toc, activeItemId, onClick, show }: TableOfContentsPartProps) {
   const { t } = useTranslation('obligations');
+  const colors = useSemanticColors();
   if (!show || toc.length === 0) return null;
 
   const renderTocItem = (item: TableOfContentsItem, level: number = 0) => (
@@ -35,7 +37,7 @@ export function TableOfContentsPart({ toc, activeItemId, onClick, show }: TableO
           </span>
         </div>
         {item.page && (
-          <span className="text-xs text-muted-foreground">{t('tableOfContents.pageShort')} {item.page}</span>
+          <span className={cn("text-xs", colors.text.muted)}>{t('tableOfContents.pageShort')} {item.page}</span>
         )}
       </div>
       {item.children?.map(child => renderTocItem(child, level + 1))}

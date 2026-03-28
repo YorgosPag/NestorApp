@@ -3,6 +3,9 @@
 import type { Notification } from "@/types/header"
 import { useIconSizes } from '@/hooks/useIconSizes'
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects/hover-effects'
+import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 interface NotificationItemProps {
   notification: Notification
@@ -10,14 +13,7 @@ interface NotificationItemProps {
 
 export function NotificationItem({ notification }: NotificationItemProps) {
   const iconSizes = useIconSizes();
-  const getAvatarFallback = (name: string) => {
-    const parts = name.split(" ")
-    if (parts.length > 1) {
-      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
-    }
-    return name.substring(0, 2).toUpperCase()
-  }
-
+  const colors = useSemanticColors();
   return (
     <div className={`flex items-start gap-3 p-2 rounded-lg cursor-pointer transition-colors ${HOVER_BACKGROUND_EFFECTS.MUTED}`}>
       <div
@@ -29,7 +25,7 @@ export function NotificationItem({ notification }: NotificationItemProps) {
       </div>
       <div className="flex-1 space-y-1">
         <p className="text-sm font-medium">{notification.title}</p>
-        <p className="text-xs text-muted-foreground">
+        <p className={cn("text-xs", colors.text.muted)}>
           {notification.description}
         </p>
       </div>

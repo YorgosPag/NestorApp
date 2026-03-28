@@ -11,6 +11,7 @@ import { cn } from '@/lib/design-system';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export function TocItem({
   item,
@@ -25,6 +26,7 @@ export function TocItem({
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const { t } = useTranslation('obligations');
+  const colors = useSemanticColors();
   const hasChildren = item.children && item.children.length > 0;
   const isExpanded = expandedIds.includes(item.id);
   const isActive = activeItemId === item.id;
@@ -76,7 +78,7 @@ export function TocItem({
             "text-sm truncate block",
             item.type === 'section' && "font-semibold",
             item.type === 'article' && "font-medium",
-            item.type === 'paragraph' && "font-normal text-muted-foreground"
+            item.type === 'paragraph' && cn("font-normal", colors.text.muted)
           )}>
             {item.title}
           </span>
@@ -89,7 +91,7 @@ export function TocItem({
         )}
 
         {compact && (
-          <span className="text-xs text-muted-foreground/80 uppercase tracking-wide">
+          <span className={cn("text-xs uppercase tracking-wide", `${colors.text.muted}/80`)}>
             {item.type === 'section' ? t('tableOfContents.short.section') : item.type === 'article' ? t('tableOfContents.short.article') : t('tableOfContents.short.paragraph')}
           </span>
         )}

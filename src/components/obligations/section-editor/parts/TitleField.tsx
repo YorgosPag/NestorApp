@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useTranslation } from '@/i18n';
 import type { FieldUpdate } from '../types';
+import '@/lib/design-system';
 
 interface TitleFieldProps {
   isEditing: boolean;

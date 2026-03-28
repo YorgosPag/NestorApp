@@ -34,6 +34,9 @@ import { createCommunicationClient } from '@/services/communications-client.serv
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 interface SpeechRecognitionResultLike {
   isFinal: boolean;
@@ -75,6 +78,7 @@ function getSpeechRecognitionConstructor(): SpeechRecognitionConstructorLike | n
 
 export function QuickAddMenu() {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n support
   const { t, currentLanguage } = useTranslation('common');
   const { user } = useAuth();
@@ -241,7 +245,7 @@ export function QuickAddMenu() {
               <p className="text-sm text-destructive">{dictationError}</p>
             )}
             {!recognitionAvailable && (
-              <p className="text-sm text-muted-foreground">
+              <p className={cn("text-sm", colors.text.muted)}>
                 {t('voiceDictation.notSupported')}
               </p>
             )}

@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import type { SectionCategory } from '@/types/obligations';
 import type { FieldUpdate } from '../types';
+import '@/lib/design-system';
 
 interface CategoryRequiredFieldsProps {
   isEditing: boolean;

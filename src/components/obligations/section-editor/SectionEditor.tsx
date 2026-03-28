@@ -14,6 +14,7 @@ import { UnsavedBanner } from './parts/UnsavedBanner';
 import type { SectionEditorProps } from './types';
 import { ConfirmDialog, WarningConfirmDialog } from '@/components/ui/ConfirmDialog'; // 🏢 ENTERPRISE: Centralized modal confirmation
 import { useTranslation } from '@/i18n/hooks/useTranslation'; // 🏢 ENTERPRISE: i18n support
+import '@/lib/design-system';
 
 export default function SectionEditor({
   section,

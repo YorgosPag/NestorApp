@@ -38,6 +38,8 @@ import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { useVoiceCommand } from '@/hooks/useVoiceCommand';
 import { cn } from '@/lib/utils';
 import { TRANSITION_PRESETS } from '@/components/ui/effects';
+import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
 // COMPONENT
@@ -45,6 +47,7 @@ import { TRANSITION_PRESETS } from '@/components/ui/effects';
 
 export function VoiceAssistantButton() {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { t } = useTranslation('common');
   const { user } = useAuth();
 
@@ -206,7 +209,7 @@ export function VoiceAssistantButton() {
             {status === 'transcribing' && (
               <div className="flex flex-col items-center gap-3">
                 <Spinner size="large" />
-                <p className="text-sm text-muted-foreground" suppressHydrationWarning>
+                <p className={cn("text-sm", colors.text.muted)} suppressHydrationWarning>
                   {t('voiceAssistant.processing', 'Processing audio...')}
                 </p>
               </div>

@@ -5,6 +5,7 @@ import { ComponentProps } from 'react';
 import { LandingPage } from './LandingPage';
 // 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
+import '@/lib/design-system';
 
 // Lazy-loaded LandingPage with optimized loading
 const LandingPageDynamic = dynamic(

@@ -7,6 +7,7 @@ import { cn } from "@/lib/design-system";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { convertMarkdownToHtml } from '@/lib/obligations-utils';
 
 interface DocumentContentProps {
@@ -18,14 +19,15 @@ export function DocumentContent({ doc, activeItemId }: DocumentContentProps) {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const { t } = useTranslation('obligations');
+  const colors = useSemanticColors();
   const sections = doc.sections || [];
 
   if (sections.length === 0) {
     return (
       <div className="text-center py-16">
-        <FileText className={`${iconSizes.xl4} mx-auto mb-4 text-muted-foreground`} />
-        <h3 className="text-lg font-medium text-muted-foreground mb-2">{t('livePreview.emptyTitle')}</h3>
-        <p className="text-sm text-muted-foreground/70">{t('livePreview.emptyDescription')}</p>
+        <FileText className={cn(iconSizes.xl4, "mx-auto mb-4", colors.text.muted)} />
+        <h3 className={cn("text-lg font-medium mb-2", colors.text.muted)}>{t('livePreview.emptyTitle')}</h3>
+        <p className={cn("text-sm", `${colors.text.muted}/70`)}>{t('livePreview.emptyDescription')}</p>
       </div>
     );
   }
@@ -55,7 +57,7 @@ export function DocumentContent({ doc, activeItemId }: DocumentContentProps) {
               {article.content && <div className="prose prose-sm max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: convertMarkdownToHtml(article.content) }} />}
               {article.paragraphs?.map((paragraph) => (
                 <div key={paragraph.id} id={`preview-${paragraph.id}`} className={cn("flex gap-3 text-sm text-foreground", activeItemId === paragraph.id && "bg-accent/30 -ml-3 pl-3 py-2 rounded")}>
-                  <span className={`font-mono text-muted-foreground ${iconSizes.lg}`}>{paragraph.number}.</span>
+                  <span className={cn("font-mono", colors.text.muted, iconSizes.lg)}>{paragraph.number}.</span>
                   <div className="flex-1" dangerouslySetInnerHTML={{ __html: convertMarkdownToHtml(paragraph.content) }} />
                 </div>
               ))}

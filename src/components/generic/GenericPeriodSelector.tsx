@@ -6,6 +6,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { PeriodConfig } from '@/config/period-selector-config';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 // ============================================================================
 // INTERFACES
@@ -60,17 +61,12 @@ export function GenericPeriodSelector({
   value,
   onChange,
   className = '',
-  theme = 'compact',
+  theme: _theme = 'compact',
   disabled = false,
 }: GenericPeriodSelectorProps) {
   const { t } = useTranslation('common');
   // Φιλτράρισμα enabled periods
   const enabledPeriods = periods.filter(period => period.enabled !== false);
-
-  const handlePeriodClick = (period: PeriodConfig) => {
-    if (disabled || period.enabled === false) return;
-    onChange(period.value);
-  };
 
   return (
     <Tabs value={value} onValueChange={onChange} className={className}>

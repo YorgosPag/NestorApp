@@ -13,6 +13,7 @@ import { GripVertical, ChevronRight, ChevronDown, FileText, Plus, Save, X, Copy,
 import { RichTextEditor } from '@/components/obligations/rich-text-editor';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { ObligationSection, SectionCategory } from '@/types/obligations';
 import { categoryLabels } from '../config/categoryLabels';
 import { ArticleItem } from './ArticleItem';
@@ -49,6 +50,7 @@ export function SectionCard({
 }: SectionCardProps) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation('obligations');
+  const colors = useSemanticColors();
   const hasArticles = section.articles && section.articles.length > 0;
 
   return (
@@ -66,7 +68,7 @@ export function SectionCard({
     >
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          {!readOnly && <GripVertical className={`${iconSizes.sm} text-muted-foreground cursor-move opacity-0 group-hover:opacity-100`} />}
+          {!readOnly && <GripVertical className={cn(iconSizes.sm, colors.text.muted, "cursor-move opacity-0 group-hover:opacity-100")} />}
           {(hasArticles || section.content) && (
             <Button variant="ghost" size="sm" onClick={() => handlers.toggleExpanded(section.id)} className={`${iconSizes.md} p-0`} aria-label={isExpanded ? t('aria.collapseArticles') : t('aria.expandArticles')}>
               {isExpanded ? <ChevronDown className={iconSizes.sm} /> : <ChevronRight className={iconSizes.sm} />}
@@ -101,7 +103,7 @@ export function SectionCard({
               </div>
             ) : (
               <div className="cursor-pointer" onClick={() => handlers.startEditing('section', section.id)}>
-                <CardTitle className="text-base">{section.title || <span className="text-muted-foreground italic">{t('section.noTitle')}</span>}</CardTitle>
+                <CardTitle className="text-base">{section.title || <span className={cn(colors.text.muted, "italic")}>{t('section.noTitle')}</span>}</CardTitle>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge variant="secondary" className="text-xs">{t(categoryLabels[section.category])}</Badge>
                   {section.isRequired && <Badge variant="destructive" className="text-xs">{t('section.required')}</Badge>}

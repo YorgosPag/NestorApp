@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getSpacingClass } from '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 import type { ObligationDocument } from '@/types/obligations';
 import { formatDate } from '@/lib/intl-utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -16,12 +18,13 @@ interface ObligationsRegisterTableProps {
 
 export function ObligationsRegisterTable({ obligations, onDelete }: ObligationsRegisterTableProps) {
   const { t } = useTranslation('obligations');
+  const colors = useSemanticColors();
 
   if (obligations.length === 0) {
     return (
       <section className={`rounded-lg border ${getSpacingClass('p', 'xl')} text-center`}>
         <h2 className="text-lg font-semibold">{t('workspace.register.table.emptyTitle')}</h2>
-        <p className="text-sm text-muted-foreground">{t('workspace.register.table.emptyDescription')}</p>
+        <p className={cn("text-sm", colors.text.muted)}>{t('workspace.register.table.emptyDescription')}</p>
       </section>
     );
   }
@@ -44,7 +47,7 @@ export function ObligationsRegisterTable({ obligations, onDelete }: ObligationsR
             <tr key={obligation.id} className="border-t">
               <td className="px-4 py-3">
                 <div className="font-medium">{obligation.docNumber || obligation.id.slice(0, 8)}</div>
-                <div className="text-muted-foreground">{obligation.title}</div>
+                <div className={colors.text.muted}>{obligation.title}</div>
               </td>
               <td className="px-4 py-3">{obligation.projectName}</td>
               <td className="px-4 py-3">

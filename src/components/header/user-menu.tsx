@@ -43,12 +43,16 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized routes
 import { ACCOUNT_ROUTES, AUTH_ROUTES } from '@/lib/routes';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 const logger = createModuleLogger('UserMenu');
 
 export function UserMenu() {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('common');
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const layout = useLayoutClasses();
   const router = useRouter();
@@ -141,7 +145,7 @@ export function UserMenu() {
               <p className="text-sm font-medium leading-none">
                 {user?.displayName || t('userMenu.defaultUser')}
               </p>
-              <p className="text-xs leading-none text-muted-foreground">
+              <p className={cn("text-xs leading-none", colors.text.muted)}>
                 {user?.email || t('userMenu.noEmail')}
               </p>
             </div>

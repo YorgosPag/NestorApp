@@ -16,6 +16,7 @@ import type { Notification } from "@/types/header"
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation'
 import { createModuleLogger } from '@/lib/telemetry'
+import '@/lib/design-system';
 
 const logger = createModuleLogger('NotificationsPopover')
 

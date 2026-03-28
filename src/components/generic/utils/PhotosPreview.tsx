@@ -13,6 +13,8 @@ import {
 } from '../config/photo-config';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
+import '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -64,6 +66,7 @@ export function PhotosPreview({
   className = ''
 }: PhotosPreviewProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { t } = useTranslation('common');
 
   // ========================================================================
@@ -89,7 +92,7 @@ export function PhotosPreview({
     // Empty state για company
     if (!hasLogo && !hasPhoto) {
       return (
-        <div className={`text-center text-muted-foreground p-8 ${className}`}>
+        <div className={`text-center ${colors.text.muted} p-8 ${className}`}>
           <Camera className={`${iconSizes.xl2} mx-auto mb-4 ${PHOTO_TEXT_COLORS.MUTED}`} />
           <p>{t('photoPreview.empty.noPhotos')}</p>
         </div>
@@ -157,8 +160,6 @@ export function PhotosPreview({
     }, [photoUrl, multiplePhotoURLs]);
 
     const totalPhotos = allPhotos.filter(photo => photo).length;
-    const mainPhoto = allPhotos[0]; // Κύρια φωτογραφία προφίλ
-
     const handlePhotoClick = (photoUrl: string, photoIndex: number) => {
       if (onPhotoClick) {
         onPhotoClick(photoUrl, photoIndex);
@@ -244,7 +245,7 @@ export function PhotosPreview({
   // ========================================================================
 
   return (
-    <div className={`text-center text-muted-foreground p-8 ${className}`}>
+    <div className={`text-center ${colors.text.muted} p-8 ${className}`}>
       <Camera className={`${iconSizes.xl4} mx-auto mb-4 ${PHOTO_TEXT_COLORS.MUTED}`} />
       <p>{t('photoPreview.unsupportedType', { type: contactType })}</p>
     </div>

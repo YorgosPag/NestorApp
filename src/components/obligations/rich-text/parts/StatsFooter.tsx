@@ -1,6 +1,9 @@
 "use client";
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 interface StatsFooterProps {
   words: number;
@@ -9,9 +12,10 @@ interface StatsFooterProps {
 
 export function StatsFooter({ words, chars }: StatsFooterProps) {
   const { t } = useTranslation('obligations');
+  const colors = useSemanticColors();
 
   return (
-    <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
+    <div className={cn("flex items-center justify-between text-xs pt-2 border-t", colors.text.muted)}>
       <div className="space-x-4">
         <span aria-live="polite">{t('richText.stats.words')}: {words}</span>
         <span aria-live="polite">{t('richText.stats.characters')}: {chars}</span>

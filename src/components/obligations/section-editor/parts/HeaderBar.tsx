@@ -5,6 +5,7 @@ import { CardDescription, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { ObligationSection } from '@/types/obligations';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface HeaderBarProps {
   isEditing: boolean;

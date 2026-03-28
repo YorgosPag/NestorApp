@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { Textarea } from '@/components/ui/textarea';
+import '@/lib/design-system';
 
 interface EditorAreaProps {
   value: string;

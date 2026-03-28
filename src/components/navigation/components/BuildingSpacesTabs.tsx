@@ -26,6 +26,9 @@ import { ContextualNavigationService } from '@/services/navigation/ContextualNav
 import type { NavigationUnit, NavigationParkingSpot } from '../core/types';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 // =============================================================================
 // 🏢 ENTERPRISE TYPE DEFINITIONS
@@ -116,6 +119,7 @@ export function BuildingSpacesTabs({
 
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('navigation');
+  const colors = useSemanticColors();
 
   // ==========================================================================
   // STATE MANAGEMENT
@@ -242,7 +246,7 @@ export function BuildingSpacesTabs({
             data-navigation-scroll="true"
           >
             {filteredUnits.length === 0 ? (
-              <li className="text-center py-4 text-gray-500 dark:text-muted-foreground text-sm">
+              <li className={cn("text-center py-4 text-sm", colors.text.muted)}>
                 {t('buildingSpaces.units.empty')}
               </li>
             ) : (
@@ -289,7 +293,7 @@ export function BuildingSpacesTabs({
             data-navigation-scroll="true"
           >
             {filteredStorages.length === 0 ? (
-              <li className="text-center py-4 text-gray-500 dark:text-muted-foreground text-sm">
+              <li className={cn("text-center py-4 text-sm", colors.text.muted)}>
                 {t('buildingSpaces.storage.empty')}
               </li>
             ) : (
@@ -336,7 +340,7 @@ export function BuildingSpacesTabs({
             data-navigation-scroll="true"
           >
             {filteredParkingSpots.length === 0 ? (
-              <li className="text-center py-4 text-gray-500 dark:text-muted-foreground text-sm">
+              <li className={cn("text-center py-4 text-sm", colors.text.muted)}>
                 {t('buildingSpaces.parking.empty')}
               </li>
             ) : (

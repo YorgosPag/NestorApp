@@ -10,6 +10,7 @@ import { useTranslation } from '@/i18n';
 import { GripVertical, ChevronRight, ChevronDown, Hash, Plus, Save, X, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { ObligationArticle } from '@/types/obligations';
 import { ParagraphItem } from './ParagraphItem';
 import type { useStructureEditorState } from '../hooks/useStructureEditorState';
@@ -45,6 +46,7 @@ export function ArticleItem({
 }: ArticleItemProps) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation('obligations');
+  const colors = useSemanticColors();
 
   return (
     <div
@@ -59,7 +61,7 @@ export function ArticleItem({
       )}
     >
       <div className="flex items-center gap-2 p-3">
-        {!readOnly && <GripVertical className={`${iconSizes.sm} text-muted-foreground cursor-move opacity-0 group-hover:opacity-100`} />}
+        {!readOnly && <GripVertical className={cn(iconSizes.sm, colors.text.muted, "cursor-move opacity-0 group-hover:opacity-100")} />}
         {hasParagraphs && (
           <Button variant="ghost" size="sm" onClick={() => handlers.toggleExpanded(article.id)} className={`${iconSizes.md} p-0`} aria-label={isExpanded ? t('aria.collapseParagraphs') : t('aria.expandParagraphs')}>
             {isExpanded ? <ChevronDown className={iconSizes.xs} /> : <ChevronRight className={iconSizes.xs} />}
@@ -86,8 +88,8 @@ export function ArticleItem({
             </div>
           ) : (
             <div className="cursor-pointer" onClick={() => handlers.startEditing('article', article.id)}>
-              <div className="font-medium text-sm">{article.title || <span className="text-muted-foreground italic">{t('article.noTitle')}</span>}</div>
-              {article.content && <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{article.content}</div>}
+              <div className="font-medium text-sm">{article.title || <span className={cn(colors.text.muted, "italic")}>{t('article.noTitle')}</span>}</div>
+              {article.content && <div className={cn("text-xs mt-1 line-clamp-2", colors.text.muted)}>{article.content}</div>}
             </div>
           )}
         </div>

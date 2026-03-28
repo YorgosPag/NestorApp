@@ -6,6 +6,7 @@ import { Save, X, Trash2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface ActionsBarProps {
   isEditing: boolean;

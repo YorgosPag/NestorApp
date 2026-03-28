@@ -10,6 +10,7 @@ import {
   PHOTO_TEXT_COLORS
 } from '../config/photo-config';
 import { GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
+import '@/lib/design-system';
 
 // ============================================================================
 // TYPES & INTERFACES

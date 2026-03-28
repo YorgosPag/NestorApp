@@ -8,6 +8,7 @@ import { SectionCard } from './parts/SectionCard';
 import { EmptyState } from './parts/EmptyState';
 import type { StructureEditorProps } from './types';
 import type { ObligationSection } from '@/types/obligations';
+import '@/lib/design-system';
 
 export default function StructureEditor({
   sections,

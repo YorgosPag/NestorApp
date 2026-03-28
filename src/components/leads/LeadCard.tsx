@@ -9,6 +9,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { normalizeToDate } from '@/lib/date-local';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 
 // 🏢 ENTERPRISE: Type-safe props that match the actual function signatures used

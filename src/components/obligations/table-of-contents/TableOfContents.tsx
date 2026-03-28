@@ -10,6 +10,7 @@ import { TocBody } from './parts/TocBody';
 import type { TableOfContentsProps } from './types';
 import { cn } from '@/lib/design-system';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export default function TableOfContents({
   items,
@@ -21,6 +22,7 @@ export default function TableOfContents({
 }: TableOfContentsProps) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation('obligations');
+  const colors = useSemanticColors();
   const { expandedIds, toggle, expandAll, collapseAll } = useExpandedToc(items);
 
   if (items.length === 0) {
@@ -39,9 +41,9 @@ export default function TableOfContents({
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <BookOpen className={`${iconSizes.xl} mx-auto mb-4 text-muted-foreground/50`} />
-            <p className="text-sm text-muted-foreground">{t('tableOfContents.emptyTitle')}</p>
-            <p className="text-xs text-muted-foreground/80 mt-1">
+            <BookOpen className={cn(iconSizes.xl, "mx-auto mb-4", `${colors.text.muted}/50`)} />
+            <p className={cn("text-sm", colors.text.muted)}>{t('tableOfContents.emptyTitle')}</p>
+            <p className={cn("text-xs mt-1", `${colors.text.muted}/80`)}>
               {t('tableOfContents.emptyDescription')}
             </p>
           </div>

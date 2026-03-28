@@ -4,6 +4,7 @@ import React from 'react';
 import { Label } from '@/components/ui/label';
 import { useTranslation } from '@/i18n';
 import { RichTextEditor } from '@/components/obligations/rich-text-editor';
+import '@/lib/design-system';
 
 interface ContentEditorProps {
   value: string;

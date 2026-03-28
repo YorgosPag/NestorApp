@@ -19,6 +19,9 @@ import { Spinner } from '@/components/ui/spinner';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '../../ui/effects';
 // 🏢 ENTERPRISE: Icons/Colors από centralized config - ZERO hardcoded values
 import { NAVIGATION_ENTITIES, type NavigationEntityType } from '../config';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 interface Item {
   id: string;
@@ -77,6 +80,7 @@ export function SelectItemModal({
   isLoading = false,
 }: SelectItemModalProps) {
   const { t } = useTranslation('common');
+  const colors = useSemanticColors();
   const [filteredItems, setFilteredItems] = useState<Item[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -172,7 +176,7 @@ export function SelectItemModal({
                           {item.name}
                         </div>
                         {item.subtitle && (
-                          <div className="text-sm text-gray-500 dark:text-muted-foreground">
+                          <div className={cn("text-sm", colors.text.muted)}>
                             {item.subtitle}
                           </div>
                         )}

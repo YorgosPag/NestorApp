@@ -15,6 +15,7 @@ import type { ContactFormData } from '@/types/ContactFormTypes';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('IndividualFormTabRenderer');
 

@@ -30,6 +30,7 @@ import type { BreadcrumbItem } from '../core/types';
 import { ContextualNavigationService, type NavigableEntityType } from '@/services/navigation/ContextualNavigationService';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 interface NavigationBreadcrumbProps {
   className?: string;

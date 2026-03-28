@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import type { ServiceFieldConfig, ServiceSectionConfig } from '@/config/service-config';
 import { getIconComponent } from './utils/IconMapping';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 
 const logger = createModuleLogger('ServiceFormRenderer');
 
@@ -278,7 +279,7 @@ export function ServiceFormRenderer({
   onChange,
   onSelectChange,
   disabled = false,
-  onPhotosChange,
+  onPhotosChange: _onPhotosChange,
   customRenderers,
   sectionFooterRenderers
 }: ServiceFormRendererProps) {

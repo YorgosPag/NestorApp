@@ -6,7 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { FileText } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 import type { ObligationDocument } from "@/types/obligations";
+import '@/lib/design-system';
 
 interface DocumentInfoCardProps {
   document: ObligationDocument;
@@ -15,6 +18,7 @@ interface DocumentInfoCardProps {
 export function DocumentInfoCard({ document }: DocumentInfoCardProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   return (
     <Card className={`bg-primary/10 ${quick.info}`}>
       <CardContent className="pt-4">
@@ -25,7 +29,7 @@ export function DocumentInfoCard({ document }: DocumentInfoCardProps) {
               {document.title}
             </h4>
             <p className="text-sm text-foreground">{document.projectName}</p>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className={cn("text-xs mt-1", colors.text.muted)}>
               {document.contractorCompany}
             </p>
           </div>

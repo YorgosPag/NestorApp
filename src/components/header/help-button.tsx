@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 export function HelpButton() {
   const iconSizes = useIconSizes();
