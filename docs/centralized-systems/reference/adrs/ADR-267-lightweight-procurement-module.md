@@ -1,6 +1,6 @@
 # ADR-267: Lightweight Procurement Module — Purchase Orders & Material Tracking
 
-**Status**: ✅ APPROVED — Συζήτηση ολοκληρώθηκε, 41 ερωτήσεις απαντήθηκαν (Γιώργος, 2026-03-28)
+**Status**: ✅ IMPLEMENTED — All 3 phases complete (A: Core CRUD, B: Enhanced Integration, C: Advanced Features). 2026-03-28
 **Date**: 2026-03-28
 **Author**: Claude (Research Agents × 4)
 **Related ADRs**: ADR-175 (BOQ/Quantity Surveying), ADR-034 (Gantt), ADR-017 (Enterprise ID), ADR-ACC-002 (Invoicing), ADR-121 (Contact Personas)
@@ -12,6 +12,7 @@
 | 2026-03-28 | ✅ APPROVED — 41 ερωτήσεις Q&A με Γιώργο. Όλες οι αρχιτεκτονικές αποφάσεις κλείδωσαν |
 | 2026-03-28 | 🚀 Phase A Implementation — Batches 1-6: Types, Enterprise IDs, Config, Repository, Service, API Routes, Hooks, UI Components (5 components), Pages, Navigation, i18n (el+en). ~22 νέα αρχεία, ~3.800 LOC |
 | 2026-03-28 | 🚀 Phase B Implementation — Enhanced Integration: (1) SSOT registerGreekFont consolidation (7 duplicates → 1 module), (2) Entity audit trail integration (EntityAuditService.recordChange in all status transitions), (3) Notification system (3 procurement events: approval, approved, overdue), (4) PO PDF generator (bilingual EL/EN, jsPDF+autoTable), (5) PO Email service (Mailgun + PDF attachment), (6) Share link service (token-based, 7-day expiry, public API), (7) 4 new API routes (pdf, email, share, public), (8) PurchaseOrderActions component (PDF/Email/Share buttons), (9) ContactPurchaseOrdersTab (supplier POs in contact detail), (10) BOQRelatedPOs component, (11) Activity tab in PO detail (reuses ActivityTab SSOT), (12) Public share page (/shared/po/[token]). ~14 νέα αρχεία, ~1.700 LOC, 12+ modified |
+| 2026-03-28 | 🚀 Phase C Implementation — Advanced Features: (1) AI Telegram PO creation — 3 new agentic tools (create_purchase_order, list_purchase_orders, get_purchase_order_status) + ProcurementHandler in ai-pipeline, (2) AI Invoice→PO auto-match — scoring algorithm (amount/date/items/description/reference, threshold 85pts), POST /api/procurement/invoice-match, suggestedPOId+poMatchConfidence on expense docs, (3) Supplier performance metrics — calculateSupplierMetrics+getSupplierComparison+getSupplierPriceTrend services, 2 API routes, useSupplierMetrics hook, SupplierMetricsCard+SupplierComparisonTable components. SSOT: PO_MATCHABLE_STATUSES, PO_COMMITTED_STATUSES, PO_MATCH_SCORING. ~9 νέα αρχεία, ~1.634 LOC, 5+ modified. **MODULE COMPLETE — All 3 phases delivered.** |
 
 ---
 
