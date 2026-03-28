@@ -89,6 +89,7 @@ if (typeof window !== 'undefined') {
       'geo-canvas',
       'accounting',    // 🏢 Accounting subapp - invoices, journal, VAT, tax, assets
       'obligations',   // 🏢 Obligations workspace translations
+      'reports',       // 🏢 Enterprise Reports System (ADR-265)
     ];
 
     const saved = safeGetItem(STORAGE_KEYS.PREFERRED_LANGUAGE, '');
