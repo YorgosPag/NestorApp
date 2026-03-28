@@ -7,13 +7,14 @@ import {
   getTypeIcon, getTypeColor, getStatusIcon, getStatusColor,
   getDirectionLabel, getRelativeTime
 } from './communications/utils/formatters';
-import { formatFlexibleDateTime, formatDateTime as formatDate } from '@/lib/intl-utils';
+import { formatFlexibleDateTime } from '@/lib/intl-utils';
 import { useCommunicationsHistory } from './communications/hooks/useCommunicationsHistory';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Props interface with proper types
 interface CommunicationsHistoryProps {

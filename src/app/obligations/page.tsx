@@ -6,7 +6,8 @@ import { PageLayout } from '@/components/app/page-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getSpacingClass } from '@/lib/design-system';
+import { cn, getSpacingClass } from '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useObligations } from '@/hooks/useObligations';
 import { ObligationsRegisterTable } from '@/components/obligations/workspace';
 import type { ObligationStatus } from '@/types/obligations';
@@ -25,6 +26,7 @@ type StatusFilter = ObligationStatus | typeof STATUS_ALL;
 
 export default function ObligationsPage() {
   const { t, isNamespaceReady } = useTranslation('obligations');
+  const colors = useSemanticColors();
   const { obligations, loading, error, deleteObligation } = useObligations();
 
   const [search, setSearch] = useState('');
@@ -76,7 +78,7 @@ export default function ObligationsPage() {
           <ModuleBreadcrumb className="mb-1" />
           <div>
             <h1 className="text-2xl font-bold">{t('workspace.register.title')}</h1>
-            <p className="text-sm text-muted-foreground">{t('workspace.register.subtitle')}</p>
+            <p className={cn("text-sm", colors.text.muted)}>{t('workspace.register.subtitle')}</p>
           </div>
           <Link href="/obligations/new">
             <Button>{t('workspace.register.create')}</Button>

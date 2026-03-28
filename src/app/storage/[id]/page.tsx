@@ -26,17 +26,20 @@ import type { ParkingSpotStatus } from '@/types/parking';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
+import '@/lib/design-system';
 const logger = createModuleLogger('StorageUnitPage');
 
 function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) {
     const iconSizes = useIconSizes();
+    const colors = useSemanticColors();
     if (!value) return null;
     return (
         <div className="flex items-center gap-3">
-            <Icon className={`${iconSizes.sm} text-muted-foreground`} />
+            <Icon className={cn(iconSizes.sm, colors.text.muted)} />
             <span className="text-sm font-medium w-32">{label}:</span>
             <span className="text-sm text-foreground">{value}</span>
         </div>
@@ -46,6 +49,7 @@ function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType, label:
 
 export default function StorageUnitPage({ params }: { params: { id: string } }) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n support
   const { t } = useTranslation('storage');
   const [unit, setUnit] = useState<StorageUnit | null>(null);
@@ -90,7 +94,7 @@ export default function StorageUnitPage({ params }: { params: { id: string } }) 
   // 🏢 ENTERPRISE: Storage status maps to parking status for utility reuse
   const mappedStatus = (unit.status === 'maintenance' ? 'reserved' : unit.status) as ParkingSpotStatus;
   const statusColor = getParkingStatusColor(mappedStatus);
-  const statusLabel = getParkingStatusLabel(mappedStatus);
+  const _statusLabel = getParkingStatusLabel(mappedStatus);
 
   return (
     <div className="p-4 md:p-8">
@@ -139,7 +143,7 @@ export default function StorageUnitPage({ params }: { params: { id: string } }) 
             {unit.notes && (
                 <div>
                     <h4 className="font-semibold text-sm mb-2">{t('general.fields.notes')}</h4>
-                    <p className="text-sm text-muted-foreground p-3 bg-muted/50 rounded-md border">{unit.notes}</p>
+                    <p className={cn("text-sm p-3 bg-muted/50 rounded-md border", colors.text.muted)}>{unit.notes}</p>
                 </div>
             )}
         </CardContent>

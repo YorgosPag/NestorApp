@@ -14,6 +14,7 @@ import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { PageLoadingState, PageErrorState } from '@/core/states';
 import { cn } from '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getAvatarPlaceholderUrl } from '@/config/media-constants';
 import { getInitials } from '@/types/contacts/helpers';
@@ -36,7 +37,8 @@ export default function CrmTeamsPage() {
   const logger = createModuleLogger('crm/teams');
   const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
-  const { user } = useAuth();
+  const colors = useSemanticColors();
+  const { user: _user } = useAuth();
   const resolvedCompanyId = useCompanyId()?.companyId;
   const [teams, setTeams] = useState<DisplayTeam[]>([]);
   const [loading, setLoading] = useState(true);
@@ -160,10 +162,10 @@ export default function CrmTeamsPage() {
       {teams.length === 0 ? (
         <section className={cn('flex items-center justify-center min-h-[400px]')} role="region" aria-label={t('teams.empty.title')}>
           <div className={cn('text-center space-y-4')}>
-            <Users2 className={cn(iconSizes.xl2, 'text-muted-foreground/50 mx-auto')} />
+            <Users2 className={cn(iconSizes.xl2, colors.text.muted, 'opacity-50 mx-auto')} />
             <div className="space-y-2">
               <p className="font-medium">{t('teams.empty.title')}</p>
-              <p className="text-sm text-muted-foreground">
+              <p className={cn("text-sm", colors.text.muted)}>
                 {t('teams.empty.description')}
               </p>
               <Button className="mt-4">
@@ -188,7 +190,7 @@ export default function CrmTeamsPage() {
                 <CardDescription>{team.description}</CardDescription>
               </CardHeader>
               <CardContent className={cn('flex-1 space-y-4')}>
-                <h4 className="text-sm font-medium text-muted-foreground">
+                <h4 className={cn("text-sm font-medium", colors.text.muted)}>
                   {t('teams.members', { count: team.members.length })}
                 </h4>
                 <div className={cn('space-y-3')}>
@@ -203,7 +205,7 @@ export default function CrmTeamsPage() {
                       </Avatar>
                       <div>
                         <p className="text-sm font-medium">{member.displayName}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className={cn("text-xs", colors.text.muted)}>
                           {member.position?.title || member.role}
                         </p>
                       </div>

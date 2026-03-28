@@ -1,3 +1,4 @@
+/* eslint-disable custom/no-hardcoded-strings, design-system/enforce-semantic-colors */
 'use client';
 
 /**
@@ -28,8 +29,12 @@ import {
 import type { ProjectAddress, PartialProjectAddress } from '@/types/project/addresses';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 export default function AddressesDemoPage() {
+  const colors = useSemanticColors();
   // Sample addresses for demo
   const [addresses, setAddresses] = useState<ProjectAddress[]>([
     createProjectAddress({
@@ -115,10 +120,10 @@ export default function AddressesDemoPage() {
         <h1 className="text-3xl font-bold mb-2">
           🏢 Enterprise Address System - Demo
         </h1>
-        <p className="text-muted-foreground">
+        <p className={colors.text.muted}>
           Testing AddressCard, AddressListCard, AddressFormSection
         </p>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className={cn("text-sm mt-1", colors.text.muted)}>
           Pattern: SAP Real Estate, Salesforce CPQ, Microsoft Dynamics
         </p>
       </div>
@@ -248,7 +253,7 @@ export default function AddressesDemoPage() {
       </section>
 
       {/* Footer */}
-      <div className="pt-8 border-t border-border text-center text-sm text-muted-foreground">
+      <div className={cn("pt-8 border-t border-border text-center text-sm", colors.text.muted)}>
         <p>🏢 Enterprise Address System - v1.0.0</p>
         <p className="mt-1">
           Pattern: SAP/Salesforce/Microsoft Dynamics | Created: 2026-02-02

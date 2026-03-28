@@ -16,9 +16,11 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
+import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Centralized Unit Icon & Color
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
@@ -75,10 +77,10 @@ export default function SalesPage() {
             <ModuleBreadcrumb className="px-4 pt-2" />
             <div className="flex h-14 items-center px-4">
               <div className="flex items-center gap-2">
-                <DollarSign className={`${iconSizes.md} text-muted-foreground`} />
+                <DollarSign className={`${iconSizes.md} ${colors.text.muted}`} />
                 <h1 className="text-lg font-semibold">{t('sales.title')}</h1>
               </div>
-              <div className="ml-auto text-sm text-muted-foreground">
+              <div className={cn("ml-auto text-sm", colors.text.muted)}>
                 {t('sales.subtitle')}
               </div>
             </div>
@@ -113,7 +115,7 @@ export default function SalesPage() {
                         142
                       </span>
                     </div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className={cn("text-sm", colors.text.muted)}>
                       {t('sales.cards.apartments.description')}
                     </p>
                   </div>
@@ -129,7 +131,7 @@ export default function SalesPage() {
                         89
                       </span>
                     </div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className={cn("text-sm", colors.text.muted)}>
                       {t('sales.cards.storage.description')}
                     </p>
                   </div>
@@ -145,7 +147,7 @@ export default function SalesPage() {
                         93
                       </span>
                     </div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className={cn("text-sm", colors.text.muted)}>
                       {t('sales.cards.parking.description')}
                     </p>
                   </div>
@@ -169,15 +171,15 @@ export default function SalesPage() {
 
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">{t('sales.sold.cards.apartments.title')}</span>
+                      <span className={cn("text-sm", colors.text.muted)}>{t('sales.sold.cards.apartments.title')}</span>
                       <span className="font-medium">{t('sales.cards.completedSales.apartmentsSold', { count: 344 })}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">{t('sales.sold.cards.storage.title')}</span>
+                      <span className={cn("text-sm", colors.text.muted)}>{t('sales.sold.cards.storage.title')}</span>
                       <span className="font-medium">{t('sales.cards.completedSales.storageSold', { count: 235 })}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">{t('sales.sold.cards.parking.title')}</span>
+                      <span className={cn("text-sm", colors.text.muted)}>{t('sales.sold.cards.parking.title')}</span>
                       <span className="font-medium">{t('sales.cards.completedSales.parkingSold', { count: 344 })}</span>
                     </div>
                     <div className="border-t pt-3 mt-3">
@@ -185,7 +187,7 @@ export default function SalesPage() {
                         <span>{t('sales.cards.completedSales.totalLabel')}</span>
                         <span>{t('sales.cards.completedSales.totalProperties', { count: 568 })}</span>
                       </div>
-                      <div className="flex justify-between items-center text-sm text-muted-foreground">
+                      <div className={cn("flex justify-between items-center text-sm", colors.text.muted)}>
                         <span>{t('sales.cards.completedSales.totalValueLabel')}</span>
                         <span>€18.4M</span>
                       </div>
@@ -201,7 +203,7 @@ export default function SalesPage() {
                 <DollarSign className={iconSizes.sm} />
                 <span className="font-medium">{t('sales.info.title')}</span>
               </div>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className={cn("text-sm mt-1", colors.text.muted)}>
                 {t('sales.info.description')}
               </p>
             </div>

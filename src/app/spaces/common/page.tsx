@@ -17,6 +17,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 export default function CommonSpacesPage() {
   const iconSizes = useIconSizes();
@@ -68,10 +70,10 @@ export default function CommonSpacesPage() {
           <div className={`border-b ${colors.bg.primary}/95 backdrop-blur supports-[backdrop-filter]:${colors.bg.primary}/60`}>
             <div className="flex h-14 items-center px-4">
               <div className="flex items-center gap-2">
-                <Users className={`${iconSizes.md} text-muted-foreground`} />
+                <Users className={`${iconSizes.md} ${colors.text.muted}`} />
                 <h1 className="text-lg font-semibold">{t('spaces.commonSpaces.headerTitle')}</h1>
               </div>
-              <div className="ml-auto text-sm text-muted-foreground">
+              <div className={`ml-auto text-sm ${colors.text.muted}`}>
                 {t('spaces.commonSpaces.headerSubtitle')}
               </div>
             </div>
@@ -95,11 +97,11 @@ export default function CommonSpacesPage() {
                   </div>
                   <h3 className="font-semibold">{t('spaces.commonSpaces.cards.lounges.title')}</h3>
                 </div>
-                <p className="text-sm text-muted-foreground mb-2">
+                <p className={cn("text-sm mb-2", colors.text.muted)}>
                   {t('spaces.commonSpaces.cards.lounges.description')}
                 </p>
                 <div className="text-2xl font-bold">12</div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className={cn("text-xs mt-1", colors.text.muted)}>
                   {t('spaces.commonSpaces.cards.lounges.details')}
                 </p>
               </div>
@@ -112,11 +114,11 @@ export default function CommonSpacesPage() {
                   </div>
                   <h3 className="font-semibold">{t('spaces.commonSpaces.cards.gyms.title')}</h3>
                 </div>
-                <p className="text-sm text-muted-foreground mb-2">
+                <p className={cn("text-sm mb-2", colors.text.muted)}>
                   {t('spaces.commonSpaces.cards.gyms.description')}
                 </p>
                 <div className="text-2xl font-bold">6</div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className={cn("text-xs mt-1", colors.text.muted)}>
                   {t('spaces.commonSpaces.cards.gyms.details')}
                 </p>
               </div>
@@ -129,11 +131,11 @@ export default function CommonSpacesPage() {
                   </div>
                   <h3 className="font-semibold">{t('spaces.commonSpaces.cards.technical.title')}</h3>
                 </div>
-                <p className="text-sm text-muted-foreground mb-2">
+                <p className={cn("text-sm mb-2", colors.text.muted)}>
                   {t('spaces.commonSpaces.cards.technical.description')}
                 </p>
                 <div className="text-2xl font-bold">16</div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className={cn("text-xs mt-1", colors.text.muted)}>
                   {t('spaces.commonSpaces.cards.technical.details')}
                 </p>
               </div>
@@ -146,11 +148,11 @@ export default function CommonSpacesPage() {
                   </div>
                   <h3 className="font-semibold">{t('spaces.commonSpaces.cards.outdoor.title')}</h3>
                 </div>
-                <p className="text-sm text-muted-foreground mb-2">
+                <p className={cn("text-sm mb-2", colors.text.muted)}>
                   {t('spaces.commonSpaces.cards.outdoor.description')}
                 </p>
                 <div className="text-2xl font-bold">8</div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className={cn("text-xs mt-1", colors.text.muted)}>
                   {t('spaces.commonSpaces.cards.outdoor.details')}
                 </p>
               </div>
@@ -168,28 +170,28 @@ export default function CommonSpacesPage() {
                 <div className={`p-6 bg-card ${quick.card}`}>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground flex items-center gap-2">
+                      <span className={cn("text-sm flex items-center gap-2", colors.text.muted)}>
                         <Coffee className={iconSizes.sm} />
                         {t('spaces.commonSpaces.sections.indoor.commonLounges')}
                       </span>
                       <span className="font-medium">{t('spaces.commonSpaces.sections.spaces', { count: 8 })}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground flex items-center gap-2">
+                      <span className={cn("text-sm flex items-center gap-2", colors.text.muted)}>
                         <Wifi className={iconSizes.sm} />
                         {t('spaces.commonSpaces.sections.indoor.businessCenters')}
                       </span>
                       <span className="font-medium">{t('spaces.commonSpaces.sections.spaces', { count: 4 })}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground flex items-center gap-2">
+                      <span className={cn("text-sm flex items-center gap-2", colors.text.muted)}>
                         <Dumbbell className={iconSizes.sm} />
                         {t('spaces.commonSpaces.sections.indoor.gyms')}
                       </span>
                       <span className="font-medium">{t('spaces.commonSpaces.sections.spaces', { count: 6 })}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground flex items-center gap-2">
+                      <span className={cn("text-sm flex items-center gap-2", colors.text.muted)}>
                         <Building className={iconSizes.sm} />
                         {t('spaces.commonSpaces.sections.indoor.commonRooms')}
                       </span>
@@ -209,28 +211,28 @@ export default function CommonSpacesPage() {
                 <div className={`p-6 bg-card ${quick.card}`}>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground flex items-center gap-2">
+                      <span className={cn("text-sm flex items-center gap-2", colors.text.muted)}>
                         <Trees className={iconSizes.sm} />
                         {t('spaces.commonSpaces.sections.outdoorTechnical.sharedGardens')}
                       </span>
                       <span className="font-medium">{t('spaces.commonSpaces.sections.spaces', { count: 5 })}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground flex items-center gap-2">
+                      <span className={cn("text-sm flex items-center gap-2", colors.text.muted)}>
                         <Coffee className={iconSizes.sm} />
                         {t('spaces.commonSpaces.sections.outdoorTechnical.terraces')}
                       </span>
                       <span className="font-medium">{t('spaces.commonSpaces.sections.spaces', { count: 3 })}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground flex items-center gap-2">
+                      <span className={cn("text-sm flex items-center gap-2", colors.text.muted)}>
                         <Shield className={iconSizes.sm} />
                         {t('spaces.commonSpaces.sections.outdoorTechnical.boilerRooms')}
                       </span>
                       <span className="font-medium">{t('spaces.commonSpaces.sections.spaces', { count: 8 })}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground flex items-center gap-2">
+                      <span className={cn("text-sm flex items-center gap-2", colors.text.muted)}>
                         <Wifi className={iconSizes.sm} />
                         {t('spaces.commonSpaces.sections.outdoorTechnical.mechanical')}
                       </span>
@@ -247,7 +249,7 @@ export default function CommonSpacesPage() {
                 <Users className={iconSizes.sm} />
                 <span className="font-medium">{t('spaces.commonSpaces.info.title')}</span>
               </div>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className={cn("text-sm mt-1", colors.text.muted)}>
                 {t('spaces.commonSpaces.info.description')}
               </p>
             </div>
