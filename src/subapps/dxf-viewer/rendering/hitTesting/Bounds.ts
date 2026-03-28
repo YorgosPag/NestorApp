@@ -4,13 +4,9 @@
  */
 
 import type { EntityModel, Point2D } from '../types/Types';
-// 🏢 ADR-066: Centralized Distance to Bounds
-import { SpatialUtils } from '../../core/spatial/SpatialUtils';
 // 🏢 ADR-107: Centralized Text Metrics Ratios
 // 🏢 ADR-142: Centralized Default Font Size
-import { TEXT_METRICS_RATIOS, TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
-// 🏢 ADR-151: Centralized Simple Coordinate Transforms
-import { transformBoundsToScreen } from '../core/CoordinateTransforms';
+import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
 
 // 🏢 ENTERPRISE: Entity-specific type interfaces for safe type casting
 interface LineEntityProperties {
@@ -354,168 +350,29 @@ export class BoundsCalculator {
   /**
    * 🔺 BOUNDING BOX FACTORY
    * Δημιουργεί BoundingBox object με όλες τις computed properties
+   * Delegates to the exported standalone function for use by other modules.
    */
   private static createBoundingBox(minX: number, minY: number, maxX: number, maxY: number): BoundingBox {
-    return {
-      minX,
-      minY,
-      maxX,
-      maxY,
-      width: maxX - minX,
-      height: maxY - minY,
-      centerX: (minX + maxX) / 2,
-      centerY: (minY + maxY) / 2
-    };
+    return createBoundingBox(minX, minY, maxX, maxY);
   }
 }
 
 /**
- * 🔺 BOUNDING BOX OPERATIONS
- * Utilities για operations μεταξύ bounding boxes
+ * 🔺 BOUNDING BOX FACTORY — Standalone exported function
+ * Χρησιμοποιείται από BoundsCalculator, BoundsOperations, και ViewportBounds.
  */
-export class BoundsOperations {
-  /**
-   * 🔺 INTERSECTION CHECK
-   * Ελέγχει αν δύο bounding boxes τέμνονται
-   */
-  static intersects(box1: BoundingBox, box2: BoundingBox): boolean {
-    return !(box1.maxX < box2.minX ||
-             box1.minX > box2.maxX ||
-             box1.maxY < box2.minY ||
-             box1.minY > box2.maxY);
-  }
-
-  /**
-   * 🔺 CONTAINS CHECK
-   * Ελέγχει αν το box1 περιέχει εντελώς το box2
-   */
-  static contains(box1: BoundingBox, box2: BoundingBox): boolean {
-    return box1.minX <= box2.minX &&
-           box1.minY <= box2.minY &&
-           box1.maxX >= box2.maxX &&
-           box1.maxY >= box2.maxY;
-  }
-
-  /**
-   * 🔺 POINT INSIDE CHECK
-   * Ελέγχει αν ένα point είναι μέσα σε bounding box
-   */
-  static containsPoint(box: BoundingBox, point: Point2D): boolean {
-    return point.x >= box.minX &&
-           point.x <= box.maxX &&
-           point.y >= box.minY &&
-           point.y <= box.maxY;
-  }
-
-  /**
-   * 🔺 UNION
-   * Δημιουργεί το μικρότερο box που περιέχει και τα δύο
-   */
-  static union(box1: BoundingBox, box2: BoundingBox): BoundingBox {
-    return BoundsCalculator['createBoundingBox'](
-      Math.min(box1.minX, box2.minX),
-      Math.min(box1.minY, box2.minY),
-      Math.max(box1.maxX, box2.maxX),
-      Math.max(box1.maxY, box2.maxY)
-    );
-  }
-
-  /**
-   * 🔺 EXPAND
-   * Επεκτείνει ένα bounding box κατά ένα margin
-   */
-  static expand(box: BoundingBox, margin: number): BoundingBox {
-    return BoundsCalculator['createBoundingBox'](
-      box.minX - margin,
-      box.minY - margin,
-      box.maxX + margin,
-      box.maxY + margin
-    );
-  }
-
-  /**
-   * 🔺 AREA CALCULATION
-   * Υπολογίζει την επιφάνεια ενός bounding box
-   */
-  static area(box: BoundingBox): number {
-    return box.width * box.height;
-  }
-
-  /**
-   * 🔺 DISTANCE FROM POINT
-   * Υπολογίζει την απόσταση από ένα point στο κοντινότερο σημείο του box
-   * 🏢 ADR-066: Delegates to centralized SpatialUtils.distanceToPoint
-   */
-  static distanceFromPoint(box: BoundingBox, point: Point2D): number {
-    // 🏢 ADR-066: Delegate to centralized SpatialUtils - DRY compliance
-    return SpatialUtils.distanceToPoint(point, box);
-  }
-
-  // ✅ ENTERPRISE FIX: Added missing methods για HitTester.ts TS2339 errors
-
-  /**
-   * Create bounds from viewport dimensions
-   */
-  static fromViewport(viewport: { width: number; height: number; x?: number; y?: number }) {
-    return {
-      minX: viewport.x || 0,
-      minY: viewport.y || 0,
-      maxX: (viewport.x || 0) + viewport.width,
-      maxY: (viewport.y || 0) + viewport.height,
-      width: viewport.width,
-      height: viewport.height
-    };
-  }
-
-  /**
-   * Transform bounds using transform matrix/function
-   */
-  static transform(bounds: BoundingBox, transform: { scale?: number; offsetX?: number; offsetY?: number }): BoundingBox {
-    // Basic transform implementation - extend as needed
-    return bounds;
-  }
+export function createBoundingBox(minX: number, minY: number, maxX: number, maxY: number): BoundingBox {
+  return {
+    minX,
+    minY,
+    maxX,
+    maxY,
+    width: maxX - minX,
+    height: maxY - minY,
+    centerX: (minX + maxX) / 2,
+    centerY: (minY + maxY) / 2
+  };
 }
 
-/**
- * 🔺 VIEWPORT BOUNDS
- * Utilities για viewport-based operations
- */
-export class ViewportBounds {
-  /**
-   * 🔺 CREATE VIEWPORT BOUNDS
-   * Δημιουργεί bounding box από viewport coordinates
-   */
-  static fromViewport(x: number, y: number, width: number, height: number): BoundingBox {
-    return BoundsCalculator['createBoundingBox'](x, y, x + width, y + height);
-  }
-
-  /**
-   * 🔺 TRANSFORM BOUNDS
-   * Εφαρμόζει transform σε bounding box
-   * 🏢 ADR-151: Delegates to centralized transformBoundsToScreen
-   */
-  static transform(box: BoundingBox, transform: { scale: number; offsetX: number; offsetY: number }): BoundingBox {
-    // 🏢 ADR-151: Use centralized transformBoundsToScreen
-    const transformed = transformBoundsToScreen(box, transform);
-
-    return BoundsCalculator['createBoundingBox'](
-      transformed.minX,
-      transformed.minY,
-      transformed.maxX,
-      transformed.maxY
-    );
-  }
-
-  /**
-   * 🔺 SCREEN TO WORLD BOUNDS
-   * Μετατρέπει screen coordinates σε world coordinates
-   */
-  static screenToWorld(screenBox: BoundingBox, transform: { scale: number; offsetX: number; offsetY: number }): BoundingBox {
-    const minX = (screenBox.minX - transform.offsetX) / transform.scale;
-    const minY = (screenBox.minY - transform.offsetY) / transform.scale;
-    const maxX = (screenBox.maxX - transform.offsetX) / transform.scale;
-    const maxY = (screenBox.maxY - transform.offsetY) / transform.scale;
-
-    return BoundsCalculator['createBoundingBox'](minX, minY, maxX, maxY);
-  }
-}
+// 🏢 Re-exports for backward compatibility
+export { BoundsOperations, ViewportBounds } from './bounds-operations';

@@ -16,14 +16,18 @@ import type {
 } from '../types/interfaces';
 import type { VATQuarterSummary, VATAnnualSummary } from '../types/vat';
 import type { TaxResult, TaxEstimate, PartnershipTaxResult, EPETaxResult, AETaxResult } from '../types/tax';
-import type { EFKAAnnualSummary, PartnershipEFKASummary, PartnerEFKASummary, EPEEFKASummary, ManagerEFKASummary, AEEFKASummary, EmployeeBoardMemberEFKA } from '../types/efka';
+import type { EFKAAnnualSummary, PartnershipEFKASummary, EPEEFKASummary, AEEFKASummary } from '../types/efka';
 import type { DepreciationRecord } from '../types/assets';
 import type { CreateJournalEntryInput, JournalEntry } from '../types/journal';
 import type { FiscalQuarter } from '../types/common';
-import type { Partner, Member, Shareholder } from '../types/entity';
 import { TaxEngine } from './engines/tax-engine';
 import { getCategoryByCode } from '../config/account-categories';
-import { getEfkaConfigForYear, calculateMonthlyBreakdown } from './config/efka-config';
+import { calculateMonthlyBreakdown } from './config/efka-config';
+import {
+  calculatePartnershipEfkaSummary,
+  calculateEPEEfkaSummary,
+  calculateAEEfkaSummary,
+} from './accounting-efka-operations';
 
 // ============================================================================
 // ACCOUNTING SERVICE — ORCHESTRATOR
@@ -255,58 +259,7 @@ export class AccountingService {
    * Σύνοψη ΕΦΚΑ ΕΠΕ (μόνο διαχειριστές)
    */
   async getEPEEfkaSummary(year: number): Promise<EPEEFKASummary> {
-    const members = await this.repository.getMembers();
-    const managers = members.filter((m) => m.isManager && m.isActive);
-    const managerSummaries: ManagerEFKASummary[] = [];
-    let totalAllManagersPaid = 0;
-    let totalAllManagersDue = 0;
-
-    for (const mgr of managers) {
-      const payments = await this.repository.getMemberEFKAPayments(mgr.memberId, year);
-      const mainCode = mgr.efkaConfig?.selectedMainPensionCode || 'main_1';
-      const suppCode = mgr.efkaConfig?.selectedSupplementaryCode || 'supplementary_1';
-      const lumpCode = mgr.efkaConfig?.selectedLumpSumCode || 'lump_sum_1';
-
-      const monthlyBreakdown = calculateMonthlyBreakdown(year, mainCode, suppCode, lumpCode);
-
-      const totalPaid = payments
-        .filter((pay) => pay.status === 'paid')
-        .reduce((sum, pay) => sum + pay.amount, 0);
-      const totalDue = monthlyBreakdown.reduce((sum, m) => sum + m.totalMonthly, 0);
-      const balanceDue = Math.round((totalDue - totalPaid) * 100) / 100;
-      const paidMonths = payments.filter((pay) => pay.status === 'paid').length;
-      const overdueMonths = payments.filter(
-        (pay) => pay.status === 'overdue' || pay.status === 'keao'
-      ).length;
-
-      const summary = {
-        year,
-        monthlyBreakdown,
-        payments,
-        totalPaid,
-        totalDue,
-        balanceDue,
-        taxDeductibleAmount: totalPaid,
-        paidMonths,
-        overdueMonths,
-      };
-
-      managerSummaries.push({
-        memberId: mgr.memberId,
-        memberName: mgr.fullName,
-        summary,
-      });
-
-      totalAllManagersPaid += totalPaid;
-      totalAllManagersDue += totalDue;
-    }
-
-    return {
-      year,
-      managerSummaries,
-      totalAllManagersPaid,
-      totalAllManagersDue,
-    };
+    return calculateEPEEfkaSummary(this.repository, year);
   }
 
   // ── AE Corporate Tax (ADR-ACC-016) ──────────────────────────────────
@@ -360,140 +313,14 @@ export class AccountingService {
    * @see ADR-ACC-017 Board of Directors & EFKA
    */
   async getAEEfkaSummary(year: number): Promise<AEEFKASummary> {
-    const shareholders = await this.repository.getShareholders();
-
-    // Board members with compensation
-    const boardWithComp = shareholders.filter(
-      (s) => s.isBoardMember && s.monthlyCompensation !== null && s.monthlyCompensation > 0 && s.isActive
-    );
-
-    const employeeBoardMembers: EmployeeBoardMemberEFKA[] = [];
-    const selfEmployedBoardMembers: ManagerEFKASummary[] = [];
-    let totalEmployeeEFKA = 0;
-    let totalSelfEmployedEFKA = 0;
-
-    for (const bm of boardWithComp) {
-      if (bm.efkaMode === 'employee') {
-        // Employee mode: 33,60% (12,47% employee + 21,13% employer)
-        const compensation = bm.monthlyCompensation ?? 0;
-        const employeeContribution = roundToTwo(compensation * 0.1247 * 12);
-        const employerContribution = roundToTwo(compensation * 0.2113 * 12);
-        const totalAnnual = roundToTwo(employeeContribution + employerContribution);
-
-        employeeBoardMembers.push({
-          shareholderId: bm.shareholderId,
-          shareholderName: bm.fullName,
-          monthlyCompensation: compensation,
-          employeeContribution,
-          employerContribution,
-          totalAnnual,
-        });
-
-        totalEmployeeEFKA += employerContribution; // Employer cost
-      } else if (bm.efkaMode === 'self_employed') {
-        // Self-employed mode: same as EPE managers
-        const payments = await this.repository.getShareholderEFKAPayments(bm.shareholderId, year);
-        const mainCode = bm.efkaConfig?.selectedMainPensionCode || 'main_1';
-        const suppCode = bm.efkaConfig?.selectedSupplementaryCode || 'supplementary_1';
-        const lumpCode = bm.efkaConfig?.selectedLumpSumCode || 'lump_sum_1';
-
-        const monthlyBreakdown = calculateMonthlyBreakdown(year, mainCode, suppCode, lumpCode);
-
-        const totalPaid = payments
-          .filter((pay) => pay.status === 'paid')
-          .reduce((sum, pay) => sum + pay.amount, 0);
-        const totalDue = monthlyBreakdown.reduce((sum, m) => sum + m.totalMonthly, 0);
-        const balanceDue = roundToTwo(totalDue - totalPaid);
-        const paidMonths = payments.filter((pay) => pay.status === 'paid').length;
-        const overdueMonths = payments.filter(
-          (pay) => pay.status === 'overdue' || pay.status === 'keao'
-        ).length;
-
-        selfEmployedBoardMembers.push({
-          memberId: bm.shareholderId,
-          memberName: bm.fullName,
-          summary: {
-            year,
-            monthlyBreakdown,
-            payments,
-            totalPaid,
-            totalDue,
-            balanceDue,
-            taxDeductibleAmount: totalPaid,
-            paidMonths,
-            overdueMonths,
-          },
-        });
-
-        totalSelfEmployedEFKA += totalPaid;
-      }
-    }
-
-    return {
-      year,
-      employeeBoardMembers,
-      selfEmployedBoardMembers,
-      totalEmployeeEFKA,
-      totalSelfEmployedEFKA,
-      totalAllEFKA: roundToTwo(totalEmployeeEFKA + totalSelfEmployedEFKA),
-    };
+    return calculateAEEfkaSummary(this.repository, year);
   }
 
   /**
    * Σύνοψη ΕΦΚΑ ΟΕ (per-partner)
    */
   async getPartnershipEfkaSummary(year: number): Promise<PartnershipEFKASummary> {
-    const partners = await this.repository.getPartners();
-    const partnerSummaries: PartnerEFKASummary[] = [];
-    let totalAllPartnersPaid = 0;
-    let totalAllPartnersDue = 0;
-
-    for (const p of partners) {
-      const payments = await this.repository.getPartnerEFKAPayments(p.partnerId, year);
-      const mainCode = p.efkaConfig.selectedMainPensionCode || 'main_1';
-      const suppCode = p.efkaConfig.selectedSupplementaryCode || 'supplementary_1';
-      const lumpCode = p.efkaConfig.selectedLumpSumCode || 'lump_sum_1';
-
-      const monthlyBreakdown = calculateMonthlyBreakdown(year, mainCode, suppCode, lumpCode);
-
-      const totalPaid = payments
-        .filter((pay) => pay.status === 'paid')
-        .reduce((sum, pay) => sum + pay.amount, 0);
-      const totalDue = monthlyBreakdown.reduce((sum, m) => sum + m.totalMonthly, 0);
-      const balanceDue = Math.round((totalDue - totalPaid) * 100) / 100;
-      const paidMonths = payments.filter((pay) => pay.status === 'paid').length;
-      const overdueMonths = payments.filter(
-        (pay) => pay.status === 'overdue' || pay.status === 'keao'
-      ).length;
-
-      const summary = {
-        year,
-        monthlyBreakdown,
-        payments,
-        totalPaid,
-        totalDue,
-        balanceDue,
-        taxDeductibleAmount: totalPaid,
-        paidMonths,
-        overdueMonths,
-      };
-
-      partnerSummaries.push({
-        partnerId: p.partnerId,
-        partnerName: p.fullName,
-        summary,
-      });
-
-      totalAllPartnersPaid += totalPaid;
-      totalAllPartnersDue += totalDue;
-    }
-
-    return {
-      year,
-      partnerSummaries,
-      totalAllPartnersPaid,
-      totalAllPartnersDue,
-    };
+    return calculatePartnershipEfkaSummary(this.repository, year);
   }
 
   // ── EFKA ────────────────────────────────────────────────────────────────
@@ -537,10 +364,6 @@ export class AccountingService {
 // ============================================================================
 // INTERNAL HELPERS
 // ============================================================================
-
-function roundToTwo(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
-}
 
 function getQuarterFromMonth(month: number): FiscalQuarter {
   if (month <= 3) return 1;

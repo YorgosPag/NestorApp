@@ -24,12 +24,19 @@ import { useServicePresets } from '../../hooks';
 import type { ServicePreset, MyDataIncomeType } from '../../types';
 import { formatCurrency } from '../../utils/format';
 
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+import { cn } from '@/lib/utils';
+
 // ============================================================================
 // DEFAULT PRESETS — 10 τυπικές υπηρεσίες μηχανικού
 // ============================================================================
 
+/** Generate a unique service preset ID using timestamp + random suffix */
 function generatePresetId(): string {
-  return `sp_${crypto.randomUUID().split('-')[0]}`;
+  const ts = Date.now().toString(36);
+  const rand = Math.random().toString(36).substring(2, 8);
+  return `sp_${ts}_${rand}`;
 }
 
 function createDefaultPresets(t: (key: string) => string): ServicePreset[] {
@@ -71,6 +78,7 @@ const INITIAL_FORM: NewPresetFormState = {
 
 export function ServicePresetsSection() {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
   const { presets, loading, saving, error, savePresets } = useServicePresets();
 
   const [localPresets, setLocalPresets] = useState<ServicePreset[]>([]);
@@ -195,7 +203,7 @@ export function ServicePresetsSection() {
             </Button>
           </div>
         </div>
-        <p className="text-sm text-muted-foreground">{t('servicePresets.description')}</p>
+        <p className={cn("text-sm", colors.text.muted)}>{t('servicePresets.description')}</p>
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -275,7 +283,7 @@ export function ServicePresetsSection() {
 
         {/* Presets list */}
         {localPresets.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-4 text-center">
+          <p className={cn("text-sm py-4 text-center", colors.text.muted)}>
             {t('servicePresets.noPresets')}
           </p>
         ) : (
@@ -314,7 +322,7 @@ export function ServicePresetsSection() {
                         <Check className="h-4 w-4 text-green-600" />
                       </Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={cancelEdit}>
-                        <X className="h-4 w-4 text-muted-foreground" />
+                        <X className={cn("h-4 w-4", colors.text.muted)} />
                       </Button>
                     </div>
                   </div>
@@ -322,11 +330,11 @@ export function ServicePresetsSection() {
                   /* View mode */
                   <>
                     <span className="flex-1 text-sm font-medium truncate">{preset.description}</span>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">{preset.unit}</span>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    <span className={cn("text-xs whitespace-nowrap", colors.text.muted)}>{preset.unit}</span>
+                    <span className={cn("text-xs whitespace-nowrap", colors.text.muted)}>
                       {formatCurrency(preset.unitPrice)}
                     </span>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">{preset.vatRate}%</span>
+                    <span className={cn("text-xs whitespace-nowrap", colors.text.muted)}>{preset.vatRate}%</span>
                     <Button
                       variant="ghost"
                       size="icon"

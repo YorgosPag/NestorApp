@@ -96,3 +96,83 @@ export interface UnifiedGripState {
   /** All grips selected via Shift+Click (overlay multi-select) */
   readonly selectedGrips: UnifiedGripInfo[];
 }
+
+// ============================================================================
+// HOOK INTERFACE TYPES (extracted from useUnifiedGripInteraction)
+// ============================================================================
+
+import type { ViewTransform } from '../../rendering/types/Types';
+import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
+import type { Overlay } from '../../overlays/types';
+import type { ICommand } from '../../core/commands/interfaces';
+import type { useOverlayStore } from '../../overlays/overlay-store';
+import type { UniversalSelectionHook } from '../../systems/selection';
+
+export interface UseUnifiedGripInteractionParams {
+  selectedEntityIds: string[];
+  dxfScene: DxfScene | null;
+  transform: ViewTransform;
+  currentOverlays: Overlay[];
+  universalSelection: UniversalSelectionHook;
+  overlayStore: ReturnType<typeof useOverlayStore>;
+  overlayStoreRef: React.MutableRefObject<ReturnType<typeof useOverlayStore>>;
+  activeTool: string;
+  gripSettings: { gripSize?: number; dpiScale?: number };
+  executeCommand: (command: ICommand) => void;
+  movementDetectionThreshold: number;
+}
+
+/** DXF projection — backward-compatible with UseDxfGripInteractionReturn */
+export interface DxfProjection {
+  gripInteractionState: DxfGripInteractionState;
+  isDraggingGrip: boolean;
+  isFollowingGrip: boolean;
+  handleGripMouseMove: (worldPos: Point2D, screenPos: Point2D) => boolean;
+  handleGripMouseDown: (worldPos: Point2D) => boolean;
+  handleGripMouseUp: (worldPos: Point2D) => boolean;
+  handleGripClick: (worldPos: Point2D) => boolean;
+  handleGripEscape: () => boolean;
+  handleGripRightClick: () => boolean;
+  dragPreview: DxfGripDragPreview | null;
+}
+
+/** Overlay projection — backward-compatible with useGripSystem + useLayerCanvasMouseMove */
+export interface OverlayProjection {
+  hoveredVertexInfo: VertexHoverInfo | null;
+  hoveredEdgeInfo: EdgeHoverInfo | null;
+  selectedGrips: SelectedGrip[];
+  selectedGrip: SelectedGrip | null;
+  draggingVertex: DraggingVertexState | null;
+  draggingVertices: DraggingVertexState[] | null;
+  draggingEdgeMidpoint: DraggingEdgeMidpointState | null;
+  draggingOverlayBody: DraggingOverlayBodyState | null;
+  dragPreviewPosition: Point2D | null;
+}
+
+export interface UseUnifiedGripInteractionReturn {
+  handleMouseMove: (worldPos: Point2D, screenPos: Point2D) => void;
+  handleMouseDown: (worldPos: Point2D, isShift: boolean) => boolean;
+  handleMouseUp: (worldPos: Point2D) => Promise<boolean>;
+  handleEscape: () => boolean;
+  dxfProjection: DxfProjection;
+  overlayProjection: OverlayProjection;
+  gripStateForStack: {
+    draggingVertex: DraggingVertexState | null;
+    draggingEdgeMidpoint: DraggingEdgeMidpointState | null;
+    hoveredVertexInfo: VertexHoverInfo | null;
+    hoveredEdgeInfo: EdgeHoverInfo | null;
+    draggingOverlayBody: DraggingOverlayBodyState | null;
+    dragPreviewPosition: Point2D | null;
+  };
+  selectedGrips: SelectedGrip[];
+  setSelectedGrips: React.Dispatch<React.SetStateAction<SelectedGrip[]>>;
+  setDragPreviewPosition: React.Dispatch<React.SetStateAction<Point2D | null>>;
+  isDragging: boolean;
+  gripHoverThrottleRef: React.MutableRefObject<GripHoverThrottle>;
+  justFinishedDragRef: React.MutableRefObject<boolean>;
+  markDragFinished: () => void;
+  setDraggingOverlayBody: React.Dispatch<React.SetStateAction<DraggingOverlayBodyState | null>>;
+  draggingOverlayBody: DraggingOverlayBodyState | null;
+  draggingVertices: DraggingVertexState[] | null;
+  draggingEdgeMidpoint: DraggingEdgeMidpointState | null;
+}

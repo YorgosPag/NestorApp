@@ -3,17 +3,21 @@
  *
  * @description Handles all canvas click logic with priority-based routing:
  * 1. Grip interaction (DXF entity grips)
- * 1.5. Rotation tool click
- * 1.8. Angle entity measurement picking (constraint, line-arc, two-arcs)
- * 2. Circle TTT entity picking
- * 3. Line Perpendicular entity picking
- * 4. Line Parallel entity picking
+ * 1.3. Rotation tool entity selection (awaiting-entity phase)
+ * 1.5. Rotation tool click (base point or angle confirmation)
+ * 1.6. Guide tool clicks (delegated to guide-click-handlers.ts)
+ * 1.9. Angle entity measurement picking (delegated to entity-pick-handlers.ts)
+ * 2. Circle TTT entity picking (delegated to entity-pick-handlers.ts)
+ * 3. Line Perpendicular entity picking (delegated to entity-pick-handlers.ts)
+ * 4. Line Parallel entity picking (delegated to entity-pick-handlers.ts)
  * 5. Overlay polygon drawing (draftPolygon)
  * 6. Unified drawing/measurement tools
  * 7. Move tool overlay body drag
  * 8. Empty canvas deselection
  *
  * EXTRACTED FROM: CanvasSection.tsx — ~260 lines of click routing logic
+ * SPLIT: Types → canvas-click-types.ts, Guides → guide-click-handlers.ts,
+ *        Entity picks → entity-pick-handlers.ts
  *
  * @see ADR-030: Universal Selection System
  * @see ADR-046: World Coordinate Click Pattern
@@ -22,295 +26,39 @@
 
 'use client';
 
-import { useCallback, type MutableRefObject } from 'react';
+import { useCallback } from 'react';
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { ViewTransform } from '../../rendering/types/Types';
-import type { OverlayEditorMode, Overlay } from '../../overlays/types';
-import type { AnySceneEntity, SceneModel } from '../../types/entities';
-import type { UniversalSelectionHook } from '../../systems/selection/SelectionSystem';
-import type { SelectedGrip } from '../grips/useGripSystem';
-import { isLineEntity, isPolylineEntity, isLWPolylineEntity, isArcEntity, isCircleEntity, isRectangleEntity, isRectEntity, isTextEntity, isMTextEntity, isEllipseEntity } from '../../types/entities';
+import {
+  isLineEntity, isPolylineEntity, isLWPolylineEntity,
+  isArcEntity, isCircleEntity, isRectangleEntity, isRectEntity,
+  isTextEntity, isMTextEntity, isEllipseEntity,
+} from '../../types/entities';
 import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 import { pointToArcDistance } from '../../utils/angle-entity-math';
 import { isInteractiveTool } from '../../systems/tools/ToolStateManager';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { dlog, dwarn } from '../../debug';
-// ADR-189: Guide system imports
-import type { Guide, ConstructionPoint } from '../../systems/guides/guide-types';
-import { pointToSegmentDistance } from '../../systems/guides/guide-types';
-import type { GridAxis } from '../../ai-assistant/grid-types';
-import type { CreateGuideCommand, DeleteGuideCommand, CreateDiagonalGuideCommand } from '../../systems/guides/guide-commands';
-import type { AddConstructionPointCommand, AddConstructionPointBatchCommand, DeleteConstructionPointCommand } from '../../systems/guides/construction-point-commands';
 
-// ============================================================================
-// TYPES
-// ============================================================================
+// ── Re-exports for backward compatibility ───────────────────────────────────
+export type {
+  ArcPickableEntity,
+  LinePickableEntity,
+  UseCanvasClickHandlerParams,
+  UseCanvasClickHandlerReturn,
+} from './canvas-click-types';
 
-/** ADR-189 §3.9/3.10: Arc or circle entity for entity-picking callbacks */
-export interface ArcPickableEntity {
-  center: Point2D;
-  radius: number;
-  startAngle: number;
-  endAngle: number;
-  isFullCircle: boolean;
-}
-
-/** ADR-189 §3.12: Line entity for entity-picking callbacks */
-export interface LinePickableEntity {
-  start: Point2D;
-  end: Point2D;
-}
-
-/** Minimal interface for drawing handlers ref */
-interface DrawingHandlersLike {
-  onDrawingPoint?: (point: Point2D) => void;
-  drawingState?: { tempPoints?: Array<unknown> };
-}
-
-/** Minimal interface for special tool hooks */
-interface SpecialToolLike {
-  isWaitingForSelection?: boolean;
-  isActive?: boolean;
-  currentStep?: number;
-  onEntityClick: (entity: AnySceneEntity, point: Point2D) => boolean;
-  onCanvasClick?: (point: Point2D) => void;
-}
-
-/** Minimal interface for angle entity measurement tool */
-interface AngleEntityToolLike {
-  isActive: boolean;
-  isWaitingForEntitySelection: boolean;
-  currentStep: 0 | 1;
-  onEntityClick: (entity: AnySceneEntity, point: Point2D) => boolean;
-  acceptsEntityType: (entityType: string) => boolean;
-}
-
-/** Minimal interface for DXF grip interaction */
-interface DxfGripInteractionLike {
-  handleGripClick: (worldPoint: Point2D) => boolean;
-}
-
-/** Minimal interface for level manager (read-only for click handling) */
-interface LevelManagerLike {
-  currentLevelId: string | null;
-  getLevelScene: (levelId: string) => SceneModel | null;
-}
-
-export interface UseCanvasClickHandlerParams {
-  // ── Viewport / Transform ─────────────────────────────────────────────
-  viewportReady: boolean;
-  viewport: { width: number; height: number };
-  transform: ViewTransform;
-
-  // ── Tools ─────────────────────────────────────────────────────────────
-  activeTool: string;
-  overlayMode: OverlayEditorMode;
-  circleTTT: SpecialToolLike;
-  linePerpendicular: SpecialToolLike;
-  lineParallel: SpecialToolLike;
-  angleEntityMeasurement: AngleEntityToolLike;
-  dxfGripInteraction: DxfGripInteractionLike;
-
-  // ── ADR-188: Rotation tool ────────────────────────────────────────────
-  /** Whether the rotation tool is active and collecting input */
-  rotationIsActive?: boolean;
-  /** Click handler for rotation state machine */
-  handleRotationClick?: (worldPoint: Point2D) => void;
-
-  // ── Level / Scene ─────────────────────────────────────────────────────
-  levelManager: LevelManagerLike;
-
-  // ── Overlay drawing ───────────────────────────────────────────────────
-  draftPolygon: Array<[number, number]>;
-  setDraftPolygon: React.Dispatch<React.SetStateAction<Array<[number, number]>>>;
-  isSavingPolygon: boolean;
-  setIsSavingPolygon: (val: boolean) => void;
-  isNearFirstPoint: boolean;
-  finishDrawingWithPolygonRef: MutableRefObject<(polygon: Array<[number, number]>) => Promise<boolean>>;
-
-  // ── Refs (mutable, avoids stale closures) ─────────────────────────────
-  drawingHandlersRef: MutableRefObject<DrawingHandlersLike | null>;
-  entitySelectedOnMouseDownRef: MutableRefObject<boolean>;
-
-  // ── Selection / Grips ─────────────────────────────────────────────────
-  universalSelection: UniversalSelectionHook;
-  hoveredVertexInfo: unknown;
-  hoveredEdgeInfo: unknown;
-  selectedGrip: SelectedGrip | null;
-  selectedGrips: SelectedGrip[];
-  setSelectedGrips: (grips: SelectedGrip[]) => void;
-  justFinishedDragRef: MutableRefObject<boolean>;
-  draggingOverlayBody: unknown;
-  setSelectedEntityIds: (ids: string[]) => void;
-
-  // ── Overlay handlers ──────────────────────────────────────────────────
-  currentOverlays: Overlay[];
-  handleOverlayClick: (overlayId: string, point: Point2D) => void;
-
-  // ── ADR-189: Construction guide handlers ────────────────────────────
-  guideAddGuide?: (axis: GridAxis, offset: number) => CreateGuideCommand;
-  guideRemoveGuide?: (guideId: string) => DeleteGuideCommand;
-  guides?: readonly Guide[];
-  /** Currently selected reference guide for parallel creation (null = step 1) */
-  parallelRefGuideId?: string | null;
-  /** Step 1 callback: user clicked near a guide → select as reference */
-  onParallelRefSelected?: (refGuideId: string) => void;
-  /** Step 2 callback: user clicked on a side → determines direction + opens dialog */
-  onParallelSideChosen?: (refGuideId: string, sign: 1 | -1) => void;
-
-  // ── ADR-189 §3.3: Diagonal guide 3-click workflow ────────────────────
-  guideAddDiagonalGuide?: (startPoint: Point2D, endPoint: Point2D) => CreateDiagonalGuideCommand;
-  /** Current step of the diagonal workflow (0=start, 1=direction, 2=end) */
-  diagonalStep?: 0 | 1 | 2;
-  /** Start point (set after step 0) */
-  diagonalStartPoint?: Point2D | null;
-  /** Direction point (set after step 1) */
-  diagonalDirectionPoint?: Point2D | null;
-  /** Step 0 callback: set the start point */
-  onDiagonalStartSet?: (point: Point2D) => void;
-  /** Step 1 callback: set the direction point */
-  onDiagonalDirectionSet?: (point: Point2D) => void;
-  /** Step 2 callback: set the end point + create guide + reset */
-  onDiagonalComplete?: () => void;
-
-  // ── ADR-189 §3.7-3.16: Construction snap point tools ──────────────────
-  /** Add a single construction point */
-  cpAddPoint?: (point: Point2D, label?: string | null) => AddConstructionPointCommand;
-  /** Delete a construction point by ID */
-  cpDeletePoint?: (pointId: string) => DeleteConstructionPointCommand;
-  /** Find nearest construction point to a world position */
-  cpFindNearest?: (worldPoint: Point2D, maxDistance: number) => ConstructionPoint | null;
-  /** Current step for segments tool (0=start, 1=end) */
-  segmentsStep?: 0 | 1;
-  /** Start point for segments tool (set after step 0) */
-  segmentsStartPoint?: Point2D | null;
-  /** Step 0 callback: set segments start point */
-  onSegmentsStartSet?: (point: Point2D) => void;
-  /** Step 1 callback: end point set → triggers dialog */
-  onSegmentsComplete?: (start: Point2D, end: Point2D) => void;
-  /** Current step for distance tool (0=start, 1=end) */
-  distanceStep?: 0 | 1;
-  /** Start point for distance tool (set after step 0) */
-  distanceStartPoint?: Point2D | null;
-  /** Step 0 callback: set distance start point */
-  onDistanceStartSet?: (point: Point2D) => void;
-  /** Step 1 callback: end point set → triggers dialog */
-  onDistanceComplete?: (start: Point2D, end: Point2D) => void;
-
-  // ── ADR-189 §3.9, §3.10, §3.12: Arc guide entity picking ────────────
-  /** §3.9 callback: user picked an arc/circle → triggers segment dialog */
-  onArcSegmentsPicked?: (entity: ArcPickableEntity) => void;
-  /** §3.10 callback: user picked an arc/circle → triggers distance dialog */
-  onArcDistancePicked?: (entity: ArcPickableEntity) => void;
-  /** §3.12 arc-line intersect: current step (0=pick line, 1=pick arc) */
-  arcLineStep?: 0 | 1;
-  /** §3.12 callback: user picked a line entity (step 0) */
-  onArcLineLinePicked?: (entity: LinePickableEntity) => void;
-  /** §3.12 callback: user picked an arc/circle entity (step 1) */
-  onArcLineArcPicked?: (entity: ArcPickableEntity) => void;
-
-  // ── ADR-189 §3.11: Circle-Circle intersection entity picking ──────────
-  /** §3.11 circle-circle intersect: current step (0=pick first, 1=pick second) */
-  circleIntersectStep?: 0 | 1;
-  /** §3.11 callback: user picked the first arc/circle entity (step 0) */
-  onCircleIntersectFirstPicked?: (entity: ArcPickableEntity) => void;
-  /** §3.11 callback: user picked the second arc/circle entity (step 1) */
-  onCircleIntersectSecondPicked?: (entity: ArcPickableEntity) => void;
-
-  // ── Two-step perpendicular guide placement ──────────────────────────
-  /** Selected reference guide for perpendicular (null = step 0: select guide) */
-  perpRefGuideId?: string | null;
-  /** Step 0 callback: user clicked near a guide → select as perpendicular reference */
-  onPerpRefSelected?: (guideId: string) => void;
-  /** Step 1 callback: perpendicular placed → reset */
-  onPerpPlaced?: () => void;
-
-  // ── Guide rect-center tool ─────────────────────────────────────────
-  /** Callback: place construction point at center of enclosing guide rectangle */
-  onRectCenterPlace?: (center: Point2D) => void;
-
-  // ── Guide line-midpoint + circle-center tools ─────────────────────
-  /** Callback: place construction point at midpoint of a line entity */
-  onLineMidpointPlace?: (midpoint: Point2D) => void;
-  /** Callback: place construction point at center of a circle/arc entity */
-  onCircleCenterPlace?: (center: Point2D) => void;
-
-  // ── ADR-189 B2: Grid generation tool ──────────────────────────────
-  /** Callback: user clicked grid origin → opens spacing dialog */
-  onGridOriginSet?: (origin: Point2D) => void;
-
-  // ── ADR-189 B28: Guide rotation tool ───────────────────────────────
-  /** Currently selected reference guide for rotation (null = step 0) */
-  rotateRefGuideId?: string | null;
-  /** Step 0 callback: user clicked near guide → select as rotation reference */
-  onRotateRefSelected?: (guideId: string) => void;
-  /** Step 1 callback: user set pivot → opens angle dialog */
-  onRotatePivotSet?: (guideId: string, pivot: Point2D) => void;
-
-  // ── ADR-189 B30: Rotate all guides tool ──────────────────────────
-  /** Step 0 callback: user clicked pivot → opens angle dialog for all guides */
-  onRotateAllPivotSet?: (pivot: Point2D) => void;
-
-  // ── ADR-189 B29: Rotate guide group tool ─────────────────────────
-  /** Set of currently selected guide IDs for group rotation */
-  rotateGroupSelectedIds?: ReadonlySet<string>;
-  /** Toggle a guide in/out of the group selection */
-  onRotateGroupToggle?: (guideId: string) => void;
-  /** Set pivot for group rotation (fires when clicking empty space with ≥1 selected) */
-  onRotateGroupPivotSet?: (guideIds: readonly string[], pivot: Point2D) => void;
-
-  // ── ADR-189 B33: Equalize guide spacing tool ──────────────────────
-  /** Set of currently selected guide IDs for equalization */
-  equalizeSelectedIds?: ReadonlySet<string>;
-  /** Toggle a guide in/out of the equalize selection */
-  onEqualizeToggle?: (guideId: string) => void;
-  /** Apply equalization (fires when clicking empty space with ≥3 same-axis selected) */
-  onEqualizeApply?: (guideIds: readonly string[]) => void;
-
-  // ── ADR-189 B31: Polar array tool ──────────────────────
-  /** Set center point for polar array (opens PromptDialog for count) */
-  onPolarArrayCenterSet?: (center: Point2D) => void;
-
-  // ── ADR-189 B32: Scale grid tool ──────────────────────
-  /** Set scale origin point (opens PromptDialog for scale factor) */
-  onScaleOriginSet?: (origin: Point2D) => void;
-
-  // ── ADR-189 B16: Guide at angle tool ──────────────────
-  /** Set origin point for guide-at-angle (opens PromptDialog for angle) */
-  onGuideAngleOriginSet?: (origin: Point2D) => void;
-
-  // ── ADR-189 B19: Mirror guides tool ──────────────────
-  /** Click on X/Y guide → mirror all others across it */
-  onMirrorAxisSelected?: (axisGuideId: string) => void;
-
-  // ── ADR-189 B8: Guide from entity tool ────────────────
-  /** Callback: entity picked → create guide(s) from it */
-  onGuideFromEntity?: (entityType: 'LINE' | 'CIRCLE' | 'ARC' | 'POLYLINE', params: {
-    lineStart?: Point2D; lineEnd?: Point2D;
-    center?: Point2D; radius?: number;
-    clickPoint?: Point2D;
-  }) => void;
-
-  // ── ADR-189 B24: Guide offset from entity tool ──────────
-  /** Callback: entity picked → prompt offset → create offset guides */
-  onGuideOffsetFromEntity?: (entityType: 'LINE' | 'CIRCLE' | 'ARC' | 'POLYLINE', params: {
-    lineStart?: Point2D; lineEnd?: Point2D;
-    center?: Point2D; radius?: number;
-    clickPoint?: Point2D;
-  }) => void;
-
-  // ── ADR-189 B14: Guide multi-select tool ──────────────
-  /** Toggle guide selection (shift = add to selection) */
-  onGuideSelectToggle?: (guideId: string, addToSelection: boolean) => void;
-  /** Deselect all guides (click on empty space) */
-  onGuideDeselectAll?: () => void;
-}
-
-export interface UseCanvasClickHandlerReturn {
-  handleCanvasClick: (worldPoint: Point2D, shiftKey?: boolean) => void;
-}
+import type { UseCanvasClickHandlerParams, UseCanvasClickHandlerReturn } from './canvas-click-types';
+import { handleGuideToolClick } from './guide-click-handlers';
+import type { GuideClickContext } from './guide-click-handlers';
+import {
+  handleAngleEntityPick,
+  handleCircleTTTPick,
+  handleLinePerpendicularPick,
+  handleLineParallelPick,
+} from './entity-pick-handlers';
+import type { EntityPickContext } from './entity-pick-handlers';
 
 // ============================================================================
 // HOOK
@@ -331,51 +79,6 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     setSelectedGrips, justFinishedDragRef,
     draggingOverlayBody, setSelectedEntityIds,
     currentOverlays, handleOverlayClick,
-    // ADR-189: Guide handlers
-    guideAddGuide, guideRemoveGuide, guides,
-    parallelRefGuideId, onParallelRefSelected, onParallelSideChosen,
-    // ADR-189 §3.3: Diagonal guide handlers
-    guideAddDiagonalGuide,
-    diagonalStep = 0, diagonalStartPoint, diagonalDirectionPoint,
-    onDiagonalStartSet, onDiagonalDirectionSet, onDiagonalComplete,
-    // ADR-189 §3.7-3.16: Construction snap point handlers
-    cpAddPoint, cpDeletePoint, cpFindNearest,
-    segmentsStep = 0, segmentsStartPoint, onSegmentsStartSet, onSegmentsComplete,
-    distanceStep = 0, distanceStartPoint, onDistanceStartSet, onDistanceComplete,
-    // ADR-189 §3.9/3.10/3.11/3.12: Arc guide entity picking
-    onArcSegmentsPicked, onArcDistancePicked,
-    arcLineStep = 0, onArcLineLinePicked, onArcLineArcPicked,
-    circleIntersectStep = 0, onCircleIntersectFirstPicked, onCircleIntersectSecondPicked,
-    // Two-step perpendicular guide
-    perpRefGuideId, onPerpRefSelected, onPerpPlaced,
-    // Guide rect-center
-    onRectCenterPlace,
-    // Guide line-midpoint + circle-center
-    onLineMidpointPlace, onCircleCenterPlace,
-    // ADR-189 B2: Grid generation
-    onGridOriginSet,
-    // ADR-189 B28: Guide rotation
-    rotateRefGuideId, onRotateRefSelected, onRotatePivotSet,
-    // ADR-189 B30: Rotate all guides
-    onRotateAllPivotSet,
-    // ADR-189 B29: Rotate guide group
-    rotateGroupSelectedIds, onRotateGroupToggle, onRotateGroupPivotSet,
-    // ADR-189 B33: Equalize guide spacing
-    equalizeSelectedIds, onEqualizeToggle, onEqualizeApply,
-    // ADR-189 B31: Polar array
-    onPolarArrayCenterSet,
-    // ADR-189 B32: Scale grid
-    onScaleOriginSet,
-    // ADR-189 B16: Guide at angle
-    onGuideAngleOriginSet,
-    // ADR-189 B19: Mirror guides
-    onMirrorAxisSelected,
-    // ADR-189 B8: Guide from entity
-    onGuideFromEntity,
-    // ADR-189 B24: Guide offset from entity
-    onGuideOffsetFromEntity,
-    // ADR-189 B14: Guide multi-select
-    onGuideSelectToggle, onGuideDeselectAll,
   } = params;
 
   const handleCanvasClick = useCallback((worldPoint: Point2D, shiftKey: boolean = false) => {
@@ -391,123 +94,9 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     }
 
     // PRIORITY 1.3: ADR-188 — Rotation tool entity selection (awaiting-entity phase)
-    // When rotation tool is active but NOT collecting geometric input (= awaiting-entity
-    // phase), clicks select an entity. The rotation state machine then auto-transitions
-    // to awaiting-base-point via its useEffect.
     if (activeTool === 'rotate' && !rotationIsActive) {
-      const scene = levelManager.currentLevelId
-        ? levelManager.getLevelScene(levelManager.currentLevelId)
-        : null;
-
-      if (scene?.entities) {
-        const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
-
-        for (const entity of scene.entities) {
-          let isHit = false;
-
-          if (isLineEntity(entity)) {
-            isHit = pointToLineDistance(worldPoint, entity.start, entity.end) <= hitTolerance;
-          } else if (isArcEntity(entity)) {
-            isHit = pointToArcDistance(worldPoint, entity) <= hitTolerance;
-          } else if (isCircleEntity(entity)) {
-            // Circle hit-test: distance from point to circumference
-            const dx = worldPoint.x - entity.center.x;
-            const dy = worldPoint.y - entity.center.y;
-            const distFromCenter = Math.sqrt(dx * dx + dy * dy);
-            isHit = Math.abs(distFromCenter - entity.radius) <= hitTolerance;
-          } else if (isPolylineEntity(entity)) {
-            if (entity.vertices && entity.vertices.length >= 2) {
-              for (let i = 0; i < entity.vertices.length - 1; i++) {
-                if (pointToLineDistance(worldPoint, entity.vertices[i], entity.vertices[i + 1]) <= hitTolerance) {
-                  isHit = true;
-                  break;
-                }
-              }
-              if (!isHit && entity.closed && entity.vertices.length > 2) {
-                isHit = pointToLineDistance(worldPoint, entity.vertices[entity.vertices.length - 1], entity.vertices[0]) <= hitTolerance;
-              }
-            }
-          } else if (isLWPolylineEntity(entity)) {
-            // LWPolyline hit-test: same as polyline (vertices + closed)
-            if (entity.vertices && entity.vertices.length >= 2) {
-              for (let i = 0; i < entity.vertices.length - 1; i++) {
-                if (pointToLineDistance(worldPoint, entity.vertices[i], entity.vertices[i + 1]) <= hitTolerance) {
-                  isHit = true;
-                  break;
-                }
-              }
-              if (!isHit && entity.closed && entity.vertices.length > 2) {
-                isHit = pointToLineDistance(worldPoint, entity.vertices[entity.vertices.length - 1], entity.vertices[0]) <= hitTolerance;
-              }
-            }
-          } else if (isRectangleEntity(entity) || isRectEntity(entity)) {
-            // Rectangle hit-test: check all 4 edges
-            const x = entity.x;
-            const y = entity.y;
-            const w = entity.width;
-            const h = entity.height;
-            const corners = [
-              { x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }
-            ];
-            for (let i = 0; i < 4; i++) {
-              if (pointToLineDistance(worldPoint, corners[i], corners[(i + 1) % 4]) <= hitTolerance) {
-                isHit = true;
-                break;
-              }
-            }
-          } else if (isEllipseEntity(entity)) {
-            // Ellipse hit-test: approximate distance from circumference
-            const dx = worldPoint.x - entity.center.x;
-            const dy = worldPoint.y - entity.center.y;
-            const rx = entity.majorAxis;
-            const ry = entity.minorAxis;
-            // Normalized distance: (dx/rx)^2 + (dy/ry)^2 ≈ 1 means on ellipse
-            const normalizedDist = (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry);
-            isHit = Math.abs(normalizedDist - 1) <= hitTolerance / Math.min(rx, ry);
-          } else if (isTextEntity(entity)) {
-            // Text hit-test: bounding box around position
-            const height = entity.height ?? entity.fontSize ?? 2.5;
-            const width = entity.text.length * height * 0.6;
-            isHit = worldPoint.x >= entity.position.x - hitTolerance &&
-                    worldPoint.x <= entity.position.x + width + hitTolerance &&
-                    worldPoint.y >= entity.position.y - height - hitTolerance &&
-                    worldPoint.y <= entity.position.y + hitTolerance;
-          } else if (isMTextEntity(entity)) {
-            // MText hit-test: bounding box around position
-            const height = entity.height ?? entity.fontSize ?? 2.5;
-            const width = entity.width || (entity.text.length * height * 0.6);
-            isHit = worldPoint.x >= entity.position.x - hitTolerance &&
-                    worldPoint.x <= entity.position.x + width + hitTolerance &&
-                    worldPoint.y >= entity.position.y - height - hitTolerance &&
-                    worldPoint.y <= entity.position.y + hitTolerance;
-          }
-
-          if (isHit) {
-            setSelectedEntityIds([entity.id]);
-            universalSelection.clearByType('dxf-entity');
-            universalSelection.select(entity.id, 'dxf-entity');
-            dlog('useCanvasClickHandler', 'Rotation entity selected:', entity.id);
-            return;
-          }
-        }
-      }
-
-      // Also check overlays (colored layers) — these are separate from scene entities
-      for (const overlay of currentOverlays) {
-        if (!overlay.polygon || overlay.polygon.length < 3) continue;
-        const vertices = overlay.polygon.map(([x, y]) => ({ x, y }));
-        if (isPointInPolygon(worldPoint, vertices)) {
-          setSelectedEntityIds([overlay.id]);
-          universalSelection.clearByType('dxf-entity');
-          universalSelection.clearByType('overlay');
-          universalSelection.select(overlay.id, 'overlay');
-          dlog('useCanvasClickHandler', 'Rotation overlay selected:', overlay.id);
-          return;
-        }
-      }
-
-      // Click on empty space during awaiting-entity → do nothing (stay in phase)
-      return;
+      if (handleRotationEntitySelection(worldPoint, params)) return;
+      return; // Click on empty space during awaiting-entity → stay in phase
     }
 
     // PRIORITY 1.5: ADR-188 — Rotation tool click (base point or angle confirmation)
@@ -517,975 +106,18 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     }
 
     // PRIORITY 1.6: ADR-189 — Construction guide tools
-
-    // ADR-189 §3.3: Diagonal (XZ) guide — 3-click state machine
-    if (activeTool === 'guide-xz') {
-      if (diagonalStep === 0 && onDiagonalStartSet) {
-        // Step 0 → 1: Set start point
-        onDiagonalStartSet(worldPoint);
-        dlog('useCanvasClickHandler', 'Diagonal step 0: start set', worldPoint);
-        return;
-      }
-      if (diagonalStep === 1 && onDiagonalDirectionSet) {
-        // Step 1 → 2: Set direction point
-        onDiagonalDirectionSet(worldPoint);
-        dlog('useCanvasClickHandler', 'Diagonal step 1: direction set', worldPoint);
-        return;
-      }
-      if (diagonalStep === 2 && diagonalStartPoint && diagonalDirectionPoint && guideAddDiagonalGuide) {
-        // Step 2 → 0: Project click onto direction line → create guide → reset
-        const dx = diagonalDirectionPoint.x - diagonalStartPoint.x;
-        const dy = diagonalDirectionPoint.y - diagonalStartPoint.y;
-        const lenSq = dx * dx + dy * dy;
-        if (lenSq > 0) {
-          const t = ((worldPoint.x - diagonalStartPoint.x) * dx + (worldPoint.y - diagonalStartPoint.y) * dy) / lenSq;
-          const endPoint = { x: diagonalStartPoint.x + t * dx, y: diagonalStartPoint.y + t * dy };
-          guideAddDiagonalGuide(diagonalStartPoint, endPoint);
-          dlog('useCanvasClickHandler', 'Diagonal step 2: guide created', { start: diagonalStartPoint, end: endPoint });
-        }
-        onDiagonalComplete?.();
-      }
+    const guideCtx: GuideClickContext = { worldPoint, shiftKey, transform, levelManager };
+    if (handleGuideToolClick(guideCtx, params)) {
       return;
     }
 
-    if (activeTool === 'guide-x' && guideAddGuide) {
-      guideAddGuide('X', worldPoint.x);
-      dlog('useCanvasClickHandler', 'Guide X added at offset', worldPoint.x);
-      return;
-    }
-    if (activeTool === 'guide-z' && guideAddGuide) {
-      guideAddGuide('Y', worldPoint.y);
-      dlog('useCanvasClickHandler', 'Guide Z added at offset', worldPoint.y);
-      return;
-    }
-    if (activeTool === 'guide-delete' && guideRemoveGuide && guides && guides.length > 0) {
-      // ADR-189: Find the nearest visible guide — generous tolerance (30px)
-      const hitToleranceWorld = 30 / transform.scale;
-      let nearestGuide: Guide | null = null;
-      let nearestDist = hitToleranceWorld;
-      for (const guide of guides) {
-        if (!guide.visible) continue;
-        let dist: number;
-        if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
-          dist = pointToSegmentDistance(worldPoint, guide.startPoint, guide.endPoint);
-        } else {
-          dist = guide.axis === 'X'
-            ? Math.abs(worldPoint.x - guide.offset)
-            : Math.abs(worldPoint.y - guide.offset);
-        }
-        if (dist < nearestDist) {
-          nearestDist = dist;
-          nearestGuide = guide;
-        }
-      }
-      if (nearestGuide) {
-        guideRemoveGuide(nearestGuide.id);
-        dlog('useCanvasClickHandler', 'Guide deleted:', nearestGuide.id);
-      } else {
-        dlog('useCanvasClickHandler', 'No guide within delete tolerance', {
-          worldPoint, tolerance: hitToleranceWorld, guideCount: guides.length
-        });
-      }
-      return;
-    }
-    if (activeTool === 'guide-parallel' && guides && guides.length > 0) {
-      // ADR-189: Three-step parallel workflow
-      // Step 1: Select reference guide (click near a guide)
-      // Step 2: Choose side (click on desired side of guide → determines ± direction)
-      // Step 3: Prompt dialog for distance (handled by CanvasSection)
-
-      if (!parallelRefGuideId && onParallelRefSelected) {
-        // Step 1: Find nearest guide to use as reference
-        const hitToleranceWorld = 30 / transform.scale;
-        let nearestGuide: Guide | null = null;
-        let nearestDist = hitToleranceWorld;
-        for (const guide of guides) {
-          if (!guide.visible) continue;
-          let dist: number;
-          if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
-            dist = pointToSegmentDistance(worldPoint, guide.startPoint, guide.endPoint);
-          } else {
-            dist = guide.axis === 'X'
-              ? Math.abs(worldPoint.x - guide.offset)
-              : Math.abs(worldPoint.y - guide.offset);
-          }
-          if (dist < nearestDist) {
-            nearestDist = dist;
-            nearestGuide = guide;
-          }
-        }
-        if (nearestGuide) {
-          onParallelRefSelected(nearestGuide.id);
-          dlog('useCanvasClickHandler', 'Parallel step 1: reference selected', nearestGuide.id, nearestGuide.axis);
-        }
-        return;
-      }
-
-      if (parallelRefGuideId && onParallelSideChosen) {
-        // Step 2: Determine which side of the reference guide the user clicked
-        const refGuide = guides.find(g => g.id === parallelRefGuideId);
-        if (refGuide) {
-          let sign: 1 | -1;
-          if (refGuide.axis === 'XZ' && refGuide.startPoint && refGuide.endPoint) {
-            // Cross product: (click - start) × direction → sign indicates which side
-            const dx = refGuide.endPoint.x - refGuide.startPoint.x;
-            const dy = refGuide.endPoint.y - refGuide.startPoint.y;
-            const cx = worldPoint.x - refGuide.startPoint.x;
-            const cy = worldPoint.y - refGuide.startPoint.y;
-            sign = (cx * dy - cy * dx) >= 0 ? 1 : -1;
-          } else {
-            sign = refGuide.axis === 'X'
-              ? (worldPoint.x >= refGuide.offset ? 1 : -1)
-              : (worldPoint.y >= refGuide.offset ? 1 : -1);
-          }
-          onParallelSideChosen(refGuide.id, sign);
-          dlog('useCanvasClickHandler', 'Parallel step 2: side chosen', sign > 0 ? '+' : '-', refGuide.axis);
-        }
-        return;
-      }
-      return;
-    }
-
-    // PRIORITY 1.75: Perpendicular guide — two-step: click 1 = select guide, click 2 = place perpendicular
-    if (activeTool === 'guide-perpendicular' && guides && guides.length > 0) {
-      // Step 0: Select reference guide (click near a guide to highlight it)
-      if (!perpRefGuideId && onPerpRefSelected) {
-        const hitToleranceWorld = 30 / transform.scale;
-        let nearestGuide: Guide | null = null;
-        let nearestDist = hitToleranceWorld;
-        for (const guide of guides) {
-          if (!guide.visible) continue;
-          let dist: number;
-          if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
-            dist = pointToSegmentDistance(worldPoint, guide.startPoint, guide.endPoint);
-          } else {
-            dist = guide.axis === 'X'
-              ? Math.abs(worldPoint.x - guide.offset)
-              : Math.abs(worldPoint.y - guide.offset);
-          }
-          if (dist < nearestDist) {
-            nearestDist = dist;
-            nearestGuide = guide;
-          }
-        }
-        if (nearestGuide) {
-          onPerpRefSelected(nearestGuide.id);
-          dlog('useCanvasClickHandler', 'Perpendicular step 0: reference selected', nearestGuide.id, nearestGuide.axis);
-        }
-        return;
-      }
-
-      // Step 1: Place perpendicular guide through click point
-      if (perpRefGuideId) {
-        const refGuide = guides.find(g => g.id === perpRefGuideId);
-        if (refGuide) {
-          if (refGuide.axis === 'X' && guideAddGuide) {
-            guideAddGuide('Y', worldPoint.y);
-            dlog('useCanvasClickHandler', 'Perpendicular: X→Y at offset', worldPoint.y);
-          } else if (refGuide.axis === 'Y' && guideAddGuide) {
-            guideAddGuide('X', worldPoint.x);
-            dlog('useCanvasClickHandler', 'Perpendicular: Y→X at offset', worldPoint.x);
-          } else if (refGuide.axis === 'XZ' && refGuide.startPoint && refGuide.endPoint && guideAddDiagonalGuide) {
-            const dx = refGuide.endPoint.x - refGuide.startPoint.x;
-            const dy = refGuide.endPoint.y - refGuide.startPoint.y;
-            const lenSq = dx * dx + dy * dy;
-            if (lenSq > 0) {
-              const len = Math.sqrt(lenSq);
-              const t = Math.max(0, Math.min(1,
-                ((worldPoint.x - refGuide.startPoint.x) * dx + (worldPoint.y - refGuide.startPoint.y) * dy) / lenSq
-              ));
-              const base = {
-                x: refGuide.startPoint.x + t * dx,
-                y: refGuide.startPoint.y + t * dy,
-              };
-              const nx = -dy / len;
-              const ny = dx / len;
-              const halfLen = len / 2;
-              const perpStart = { x: base.x - nx * halfLen, y: base.y - ny * halfLen };
-              const perpEnd = { x: base.x + nx * halfLen, y: base.y + ny * halfLen };
-              guideAddDiagonalGuide(perpStart, perpEnd);
-              dlog('useCanvasClickHandler', 'Perpendicular: XZ diagonal through base', base);
-            }
-          }
-        }
-        onPerpPlaced?.();
-      }
-      return;
-    }
-
-    // PRIORITY 1.8: ADR-189 §3.15 — Add single construction point
-    if (activeTool === 'guide-add-point' && cpAddPoint) {
-      cpAddPoint(worldPoint);
-      dlog('useCanvasClickHandler', 'Construction point added at', worldPoint);
-      return;
-    }
-
-    // PRIORITY 1.82: ADR-189 §3.16 — Delete construction point
-    if (activeTool === 'guide-delete-point' && cpDeletePoint && cpFindNearest) {
-      const hitToleranceWorld = 30 / transform.scale;
-      const nearest = cpFindNearest(worldPoint, hitToleranceWorld);
-      if (nearest) {
-        cpDeletePoint(nearest.id);
-        dlog('useCanvasClickHandler', 'Construction point deleted:', nearest.id);
-      }
-      return;
-    }
-
-    // PRIORITY 1.84: ADR-189 §3.7 — Segment points (2-click + dialog)
-    if (activeTool === 'guide-segments') {
-      if (segmentsStep === 0 && onSegmentsStartSet) {
-        onSegmentsStartSet(worldPoint);
-        dlog('useCanvasClickHandler', 'Segments step 0: start set', worldPoint);
-        return;
-      }
-      if (segmentsStep === 1 && segmentsStartPoint && onSegmentsComplete) {
-        onSegmentsComplete(segmentsStartPoint, worldPoint);
-        dlog('useCanvasClickHandler', 'Segments step 1: end set, opening dialog', worldPoint);
-        return;
-      }
-      return;
-    }
-
-    // PRIORITY 1.86: ADR-189 §3.8 — Distance points (2-click + dialog)
-    if (activeTool === 'guide-distance') {
-      if (distanceStep === 0 && onDistanceStartSet) {
-        onDistanceStartSet(worldPoint);
-        dlog('useCanvasClickHandler', 'Distance step 0: start set', worldPoint);
-        return;
-      }
-      if (distanceStep === 1 && distanceStartPoint && onDistanceComplete) {
-        onDistanceComplete(distanceStartPoint, worldPoint);
-        dlog('useCanvasClickHandler', 'Distance step 1: end set, opening dialog', worldPoint);
-        return;
-      }
-      return;
-    }
-
-    // PRIORITY 1.88: ADR-189 §3.9 — Arc segment points (1-click entity pick)
-    if (activeTool === 'guide-arc-segments' && onArcSegmentsPicked) {
-      const scene = levelManager.currentLevelId
-        ? levelManager.getLevelScene(levelManager.currentLevelId)
-        : null;
-
-      if (scene?.entities) {
-        const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
-        for (const entity of scene.entities) {
-          if (isArcEntity(entity)) {
-            if (pointToArcDistance(worldPoint, entity) <= hitTolerance) {
-              onArcSegmentsPicked({
-                center: entity.center, radius: entity.radius,
-                startAngle: entity.startAngle, endAngle: entity.endAngle,
-                isFullCircle: false,
-              });
-              return;
-            }
-          } else if (isCircleEntity(entity)) {
-            const dx = worldPoint.x - entity.center.x;
-            const dy = worldPoint.y - entity.center.y;
-            if (Math.abs(Math.sqrt(dx * dx + dy * dy) - entity.radius) <= hitTolerance) {
-              onArcSegmentsPicked({
-                center: entity.center, radius: entity.radius,
-                startAngle: 0, endAngle: 360,
-                isFullCircle: true,
-              });
-              return;
-            }
-          }
-        }
-      }
-      return;
-    }
-
-    // PRIORITY 1.89: ADR-189 §3.10 — Arc distance points (1-click entity pick)
-    if (activeTool === 'guide-arc-distance' && onArcDistancePicked) {
-      const scene = levelManager.currentLevelId
-        ? levelManager.getLevelScene(levelManager.currentLevelId)
-        : null;
-
-      if (scene?.entities) {
-        const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
-        for (const entity of scene.entities) {
-          if (isArcEntity(entity)) {
-            if (pointToArcDistance(worldPoint, entity) <= hitTolerance) {
-              onArcDistancePicked({
-                center: entity.center, radius: entity.radius,
-                startAngle: entity.startAngle, endAngle: entity.endAngle,
-                isFullCircle: false,
-              });
-              return;
-            }
-          } else if (isCircleEntity(entity)) {
-            const dx = worldPoint.x - entity.center.x;
-            const dy = worldPoint.y - entity.center.y;
-            if (Math.abs(Math.sqrt(dx * dx + dy * dy) - entity.radius) <= hitTolerance) {
-              onArcDistancePicked({
-                center: entity.center, radius: entity.radius,
-                startAngle: 0, endAngle: 360,
-                isFullCircle: true,
-              });
-              return;
-            }
-          }
-        }
-      }
-      return;
-    }
-
-    // PRIORITY 1.895: ADR-189 §3.12 — Arc-Line intersection (2-click: line → arc)
-    if (activeTool === 'guide-arc-line-intersect') {
-      const scene = levelManager.currentLevelId
-        ? levelManager.getLevelScene(levelManager.currentLevelId)
-        : null;
-
-      if (scene?.entities) {
-        const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
-
-        if (arcLineStep === 0 && onArcLineLinePicked) {
-          // Step 0: Pick a line entity
-          for (const entity of scene.entities) {
-            if (isLineEntity(entity)) {
-              if (pointToLineDistance(worldPoint, entity.start, entity.end) <= hitTolerance) {
-                onArcLineLinePicked({ start: entity.start, end: entity.end });
-                return;
-              }
-            }
-          }
-        } else if (arcLineStep === 1 && onArcLineArcPicked) {
-          // Step 1: Pick an arc/circle entity
-          for (const entity of scene.entities) {
-            if (isArcEntity(entity)) {
-              if (pointToArcDistance(worldPoint, entity) <= hitTolerance) {
-                onArcLineArcPicked({
-                  center: entity.center, radius: entity.radius,
-                  startAngle: entity.startAngle, endAngle: entity.endAngle,
-                  isFullCircle: false,
-                });
-                return;
-              }
-            } else if (isCircleEntity(entity)) {
-              const dx = worldPoint.x - entity.center.x;
-              const dy = worldPoint.y - entity.center.y;
-              if (Math.abs(Math.sqrt(dx * dx + dy * dy) - entity.radius) <= hitTolerance) {
-                onArcLineArcPicked({
-                  center: entity.center, radius: entity.radius,
-                  startAngle: 0, endAngle: 360,
-                  isFullCircle: true,
-                });
-                return;
-              }
-            }
-          }
-        }
-      }
-      return;
-    }
-
-    // PRIORITY 1.896: ADR-189 §3.11 — Circle-Circle intersection (2-click: arc/circle → arc/circle)
-    if (activeTool === 'guide-circle-intersect') {
-      const scene = levelManager.currentLevelId
-        ? levelManager.getLevelScene(levelManager.currentLevelId)
-        : null;
-
-      if (scene?.entities) {
-        const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
-
-        const pickArc = (step: 0 | 1): boolean => {
-          const callback = step === 0 ? onCircleIntersectFirstPicked : onCircleIntersectSecondPicked;
-          if (!callback) return false;
-
-          for (const entity of scene.entities) {
-            if (isArcEntity(entity)) {
-              if (pointToArcDistance(worldPoint, entity) <= hitTolerance) {
-                callback({
-                  center: entity.center, radius: entity.radius,
-                  startAngle: entity.startAngle, endAngle: entity.endAngle,
-                  isFullCircle: false,
-                });
-                return true;
-              }
-            } else if (isCircleEntity(entity)) {
-              const dx = worldPoint.x - entity.center.x;
-              const dy = worldPoint.y - entity.center.y;
-              if (Math.abs(Math.sqrt(dx * dx + dy * dy) - entity.radius) <= hitTolerance) {
-                callback({
-                  center: entity.center, radius: entity.radius,
-                  startAngle: 0, endAngle: 360,
-                  isFullCircle: true,
-                });
-                return true;
-              }
-            }
-          }
-          return false;
-        };
-
-        pickArc(circleIntersectStep as 0 | 1);
-      }
-      return;
-    }
-
-    // PRIORITY 1.897: Guide rect-center — click inside rectangle of 4 guides → center point
-    if (activeTool === 'guide-rect-center' && guides && guides.length >= 4 && onRectCenterPlace) {
-      // Find the 2 nearest X-guides (left/right of click) and 2 nearest Y-guides (above/below)
-      const xGuides = guides.filter(g => g.visible && g.axis === 'X').map(g => g.offset).sort((a, b) => a - b);
-      const yGuides = guides.filter(g => g.visible && g.axis === 'Y').map(g => g.offset).sort((a, b) => a - b);
-
-      // Find enclosing X pair: largest offset < click.x (left) and smallest offset > click.x (right)
-      let leftX: number | null = null;
-      let rightX: number | null = null;
-      for (const x of xGuides) {
-        if (x <= worldPoint.x) leftX = x;
-      }
-      for (const x of xGuides) {
-        if (x >= worldPoint.x) { rightX = x; break; }
-      }
-
-      // Find enclosing Y pair
-      let bottomY: number | null = null;
-      let topY: number | null = null;
-      for (const y of yGuides) {
-        if (y <= worldPoint.y) bottomY = y;
-      }
-      for (const y of yGuides) {
-        if (y >= worldPoint.y) { topY = y; break; }
-      }
-
-      if (leftX !== null && rightX !== null && bottomY !== null && topY !== null
-        && leftX !== rightX && bottomY !== topY) {
-        const center: Point2D = {
-          x: (leftX + rightX) / 2,
-          y: (bottomY + topY) / 2,
-        };
-        onRectCenterPlace(center);
-        dlog('useCanvasClickHandler', 'Rect center placed', { center, rect: { leftX, rightX, bottomY, topY } });
-      } else {
-        dlog('useCanvasClickHandler', 'Rect center: no enclosing rectangle found', { xGuides, yGuides, worldPoint });
-      }
-      return;
-    }
-
-    // PRIORITY 1.898: Guide line-midpoint — click on LINE entity → place point at midpoint
-    if (activeTool === 'guide-line-midpoint' && onLineMidpointPlace) {
-      const scene = levelManager.currentLevelId
-        ? levelManager.getLevelScene(levelManager.currentLevelId)
-        : null;
-
-      if (scene?.entities) {
-        const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
-        let closestEntity: { start: Point2D; end: Point2D } | null = null;
-        let closestDist = hitTolerance;
-
-        for (const entity of scene.entities) {
-          if (isLineEntity(entity)) {
-            const dist = pointToLineDistance(worldPoint, entity.start, entity.end);
-            if (dist < closestDist) {
-              closestDist = dist;
-              closestEntity = { start: entity.start, end: entity.end };
-            }
-          }
-        }
-
-        if (closestEntity) {
-          const midpoint: Point2D = {
-            x: (closestEntity.start.x + closestEntity.end.x) / 2,
-            y: (closestEntity.start.y + closestEntity.end.y) / 2,
-          };
-          onLineMidpointPlace(midpoint);
-          dlog('useCanvasClickHandler', 'Line midpoint placed', midpoint);
-        }
-      }
-      return;
-    }
-
-    // PRIORITY 1.899: Guide circle-center — click on CIRCLE/ARC entity → place point at center
-    if (activeTool === 'guide-circle-center' && onCircleCenterPlace) {
-      const scene = levelManager.currentLevelId
-        ? levelManager.getLevelScene(levelManager.currentLevelId)
-        : null;
-
-      if (scene?.entities) {
-        const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
-        let closestCenter: Point2D | null = null;
-        let closestDist = hitTolerance;
-
-        for (const entity of scene.entities) {
-          if (isCircleEntity(entity)) {
-            const dx = worldPoint.x - entity.center.x;
-            const dy = worldPoint.y - entity.center.y;
-            const distFromCircumference = Math.abs(Math.sqrt(dx * dx + dy * dy) - entity.radius);
-            if (distFromCircumference < closestDist) {
-              closestDist = distFromCircumference;
-              closestCenter = entity.center;
-            }
-          } else if (isArcEntity(entity)) {
-            const dist = pointToArcDistance(worldPoint, entity);
-            if (dist < closestDist) {
-              closestDist = dist;
-              closestCenter = entity.center;
-            }
-          }
-        }
-
-        if (closestCenter) {
-          onCircleCenterPlace(closestCenter);
-          dlog('useCanvasClickHandler', 'Circle/arc center placed', closestCenter);
-        }
-      }
-      return;
-    }
-
-    // PRIORITY 1.8991: ADR-189 B2 — Grid generation (1-click → origin, opens spacing dialog)
-    if (activeTool === 'guide-grid' && onGridOriginSet) {
-      onGridOriginSet(worldPoint);
-      dlog('useCanvasClickHandler', 'Grid origin set', worldPoint);
-      return;
-    }
-
-    // PRIORITY 1.8992: ADR-189 B28 — Guide rotation (2-click + dialog)
-    if (activeTool === 'guide-rotate' && guides && guides.length > 0) {
-      // Step 0: Select reference guide
-      if (!rotateRefGuideId && onRotateRefSelected) {
-        const hitToleranceWorld = 30 / transform.scale;
-        let nearestGuide: Guide | undefined;
-        let nearestDist = hitToleranceWorld;
-
-        for (const guide of guides) {
-          if (!guide.visible || guide.locked) continue;
-          let dist: number;
-          if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
-            dist = pointToSegmentDistance(worldPoint, guide.startPoint, guide.endPoint);
-          } else {
-            dist = guide.axis === 'X'
-              ? Math.abs(worldPoint.x - guide.offset)
-              : Math.abs(worldPoint.y - guide.offset);
-          }
-          if (dist < nearestDist) {
-            nearestDist = dist;
-            nearestGuide = guide;
-          }
-        }
-
-        if (nearestGuide) {
-          onRotateRefSelected(nearestGuide.id);
-          dlog('useCanvasClickHandler', 'Rotate step 0: guide selected', nearestGuide.id);
-        }
-        return;
-      }
-
-      // Step 1: Set pivot point → trigger angle dialog
-      if (rotateRefGuideId && onRotatePivotSet) {
-        onRotatePivotSet(rotateRefGuideId, worldPoint);
-        dlog('useCanvasClickHandler', 'Rotate step 1: pivot set', worldPoint);
-        return;
-      }
-      return;
-    }
-
-    // PRIORITY 1.8993: ADR-189 B30 — Rotate ALL guides (1-click pivot + dialog)
-    if (activeTool === 'guide-rotate-all' && onRotateAllPivotSet && guides && guides.length > 0) {
-      onRotateAllPivotSet(worldPoint);
-      dlog('useCanvasClickHandler', 'Rotate-all: pivot set', worldPoint);
-      return;
-    }
-
-    // PRIORITY 1.8994: ADR-189 B29 — Rotate guide GROUP (click guides → click empty = pivot)
-    if (activeTool === 'guide-rotate-group' && guides && guides.length > 0) {
-      const hitToleranceWorld = 30 / transform.scale;
-
-      // Find nearest guide within tolerance
-      let nearestGuide: Guide | undefined;
-      let nearestDist = hitToleranceWorld;
-      for (const guide of guides) {
-        if (!guide.visible || guide.locked) continue;
-        let dist: number;
-        if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
-          dist = pointToSegmentDistance(worldPoint, guide.startPoint, guide.endPoint);
-        } else {
-          dist = guide.axis === 'X'
-            ? Math.abs(worldPoint.x - guide.offset)
-            : Math.abs(worldPoint.y - guide.offset);
-        }
-        if (dist < nearestDist) {
-          nearestDist = dist;
-          nearestGuide = guide;
-        }
-      }
-
-      if (nearestGuide && onRotateGroupToggle) {
-        // Clicked near a guide → toggle its selection
-        onRotateGroupToggle(nearestGuide.id);
-        dlog('useCanvasClickHandler', 'Rotate-group: toggled guide', nearestGuide.id);
-        return;
-      }
-
-      // Clicked empty space → set pivot (if at least 1 guide selected)
-      if (!nearestGuide && rotateGroupSelectedIds && rotateGroupSelectedIds.size > 0 && onRotateGroupPivotSet) {
-        onRotateGroupPivotSet(Array.from(rotateGroupSelectedIds), worldPoint);
-        dlog('useCanvasClickHandler', 'Rotate-group: pivot set', worldPoint);
-        return;
-      }
-      return;
-    }
-
-    // PRIORITY 1.8995: ADR-189 B33 — Equalize guide spacing (click guides → click empty = apply)
-    if (activeTool === 'guide-equalize' && guides && guides.length > 0) {
-      const hitToleranceWorld = 30 / transform.scale;
-
-      // Find nearest guide within tolerance (X/Y only — XZ excluded from equalization)
-      let nearestGuide: Guide | undefined;
-      let nearestDist = hitToleranceWorld;
-      for (const guide of guides) {
-        if (!guide.visible || guide.locked || guide.axis === 'XZ') continue;
-        const dist = guide.axis === 'X'
-          ? Math.abs(worldPoint.x - guide.offset)
-          : Math.abs(worldPoint.y - guide.offset);
-        if (dist < nearestDist) {
-          nearestDist = dist;
-          nearestGuide = guide;
-        }
-      }
-
-      if (nearestGuide && onEqualizeToggle) {
-        // Clicked near a guide → toggle its selection
-        onEqualizeToggle(nearestGuide.id);
-        dlog('useCanvasClickHandler', 'Equalize: toggled guide', nearestGuide.id);
-        return;
-      }
-
-      // Clicked empty space → apply equalization (if ≥3 same-axis guides selected)
-      if (!nearestGuide && equalizeSelectedIds && equalizeSelectedIds.size >= 3 && onEqualizeApply) {
-        onEqualizeApply(Array.from(equalizeSelectedIds));
-        dlog('useCanvasClickHandler', 'Equalize: applied', equalizeSelectedIds.size, 'guides');
-        return;
-      }
-      return;
-    }
-
-    // PRIORITY 1.8996: ADR-189 B31 — Polar array (1-click center → PromptDialog for count)
-    if (activeTool === 'guide-polar-array' && onPolarArrayCenterSet) {
-      onPolarArrayCenterSet(worldPoint);
-      dlog('useCanvasClickHandler', 'Polar array: center set', worldPoint);
-      return;
-    }
-
-    // PRIORITY 1.8997: ADR-189 B32 — Scale grid (1-click origin → PromptDialog for factor)
-    if (activeTool === 'guide-scale' && onScaleOriginSet) {
-      onScaleOriginSet(worldPoint);
-      dlog('useCanvasClickHandler', 'Scale grid: origin set', worldPoint);
-      return;
-    }
-
-    // PRIORITY 1.8998: ADR-189 B16 — Guide at angle (1-click origin → PromptDialog for angle)
-    if (activeTool === 'guide-angle' && onGuideAngleOriginSet) {
-      onGuideAngleOriginSet(worldPoint);
-      dlog('useCanvasClickHandler', 'Guide at angle: origin set', worldPoint);
-      return;
-    }
-
-    // PRIORITY 1.8999: ADR-189 B19 — Mirror guides (1-click on X/Y guide as axis)
-    if (activeTool === 'guide-mirror' && guides && guides.length > 0 && onMirrorAxisSelected) {
-      const hitToleranceWorld = 30 / transform.scale;
-      let nearestGuide: Guide | undefined;
-      let nearestDist = hitToleranceWorld;
-      for (const guide of guides) {
-        if (!guide.visible || guide.axis === 'XZ') continue; // Only X/Y as mirror axis
-        const dist = guide.axis === 'X'
-          ? Math.abs(worldPoint.x - guide.offset)
-          : Math.abs(worldPoint.y - guide.offset);
-        if (dist < nearestDist) {
-          nearestDist = dist;
-          nearestGuide = guide;
-        }
-      }
-      if (nearestGuide) {
-        onMirrorAxisSelected(nearestGuide.id);
-        dlog('useCanvasClickHandler', 'Mirror: axis guide selected', nearestGuide.id, nearestGuide.axis);
-      }
-      return;
-    }
-
-    // PRIORITY 1.89991: ADR-189 B8 — Guide from entity (entity picking)
-    if (activeTool === 'guide-from-entity' && onGuideFromEntity) {
-      const scene = levelManager.currentLevelId
-        ? levelManager.getLevelScene(levelManager.currentLevelId)
-        : null;
-
-      if (scene?.entities) {
-        const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
-        // Iterate backwards (top-most first)
-        for (let i = scene.entities.length - 1; i >= 0; i--) {
-          const entity = scene.entities[i];
-
-          if (isLineEntity(entity)) {
-            const start: Point2D = { x: entity.start.x, y: entity.start.y };
-            const end: Point2D = { x: entity.end.x, y: entity.end.y };
-            const dist = pointToLineDistance(worldPoint, start, end);
-            if (dist < hitTolerance) {
-              onGuideFromEntity('LINE', { lineStart: start, lineEnd: end });
-              dlog('useCanvasClickHandler', 'B8: Guide from LINE entity');
-              return;
-            }
-          }
-
-          if (isCircleEntity(entity)) {
-            const center: Point2D = { x: entity.center.x, y: entity.center.y };
-            const distToCenter = Math.sqrt(
-              (worldPoint.x - center.x) ** 2 + (worldPoint.y - center.y) ** 2,
-            );
-            if (Math.abs(distToCenter - entity.radius) < hitTolerance) {
-              onGuideFromEntity('CIRCLE', { center, radius: entity.radius });
-              dlog('useCanvasClickHandler', 'B8: Guide from CIRCLE entity');
-              return;
-            }
-          }
-
-          if (isArcEntity(entity)) {
-            const center: Point2D = { x: entity.center.x, y: entity.center.y };
-            const dist = pointToArcDistance(worldPoint, entity);
-            if (dist < hitTolerance) {
-              onGuideFromEntity('ARC', { center, radius: entity.radius, clickPoint: worldPoint });
-              dlog('useCanvasClickHandler', 'B8: Guide from ARC entity');
-              return;
-            }
-          }
-
-          if ((isPolylineEntity(entity) || isLWPolylineEntity(entity)) && entity.vertices && entity.vertices.length >= 2) {
-            for (let j = 0; j < entity.vertices.length - 1; j++) {
-              const v0 = entity.vertices[j];
-              const v1 = entity.vertices[j + 1];
-              const segStart: Point2D = { x: v0.x, y: v0.y };
-              const segEnd: Point2D = { x: v1.x, y: v1.y };
-              const dist = pointToLineDistance(worldPoint, segStart, segEnd);
-              if (dist < hitTolerance) {
-                onGuideFromEntity('POLYLINE', { lineStart: segStart, lineEnd: segEnd });
-                dlog('useCanvasClickHandler', 'B8: Guide from POLYLINE segment');
-                return;
-              }
-            }
-          }
-        }
-      }
-      return;
-    }
-
-    // PRIORITY 1.89991b: ADR-189 B24 — Guide offset from entity (entity picking → offset prompt)
-    if (activeTool === 'guide-offset-entity' && onGuideOffsetFromEntity) {
-      const scene = levelManager.currentLevelId
-        ? levelManager.getLevelScene(levelManager.currentLevelId)
-        : null;
-
-      if (scene?.entities) {
-        const hitTolerance = 30 / transform.scale;
-
-        for (const entity of scene.entities) {
-          if (isLineEntity(entity)) {
-            const start: Point2D = { x: entity.start.x, y: entity.start.y };
-            const end: Point2D = { x: entity.end.x, y: entity.end.y };
-            const dist = pointToLineDistance(worldPoint, start, end);
-            if (dist < hitTolerance) {
-              onGuideOffsetFromEntity('LINE', { lineStart: start, lineEnd: end });
-              dlog('useCanvasClickHandler', 'B24: Offset guide from LINE entity');
-              return;
-            }
-          }
-
-          if (isCircleEntity(entity)) {
-            const center: Point2D = { x: entity.center.x, y: entity.center.y };
-            const distToCenter = Math.sqrt(
-              (worldPoint.x - center.x) ** 2 + (worldPoint.y - center.y) ** 2,
-            );
-            if (Math.abs(distToCenter - entity.radius) < hitTolerance) {
-              onGuideOffsetFromEntity('CIRCLE', { center, radius: entity.radius });
-              dlog('useCanvasClickHandler', 'B24: Offset guide from CIRCLE entity');
-              return;
-            }
-          }
-        }
-      }
-      return;
-    }
-
-    // PRIORITY 1.89992: ADR-189 B14 — Guide select (multi-select guides)
-    if (activeTool === 'guide-select' && guides) {
-      const hitToleranceWorld = 30 / transform.scale;
-      let nearestGuide: Guide | undefined;
-      let nearestDist = hitToleranceWorld;
-      for (const guide of guides) {
-        if (!guide.visible) continue;
-        let dist: number;
-        if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
-          dist = pointToSegmentDistance(worldPoint, guide.startPoint, guide.endPoint);
-        } else {
-          dist = guide.axis === 'X'
-            ? Math.abs(worldPoint.x - guide.offset)
-            : Math.abs(worldPoint.y - guide.offset);
-        }
-        if (dist < nearestDist) {
-          nearestDist = dist;
-          nearestGuide = guide;
-        }
-      }
-      if (nearestGuide && onGuideSelectToggle) {
-        onGuideSelectToggle(nearestGuide.id, shiftKey);
-        dlog('useCanvasClickHandler', 'B14: Guide select toggle', nearestGuide.id, 'shift:', shiftKey);
-      } else if (onGuideDeselectAll) {
-        onGuideDeselectAll();
-        dlog('useCanvasClickHandler', 'B14: Guide deselect all (empty click)');
-      }
-      return;
-    }
-
-    // PRIORITY 1.9: Angle entity measurement picking (constraint, line-arc, two-arcs)
-    if (angleEntityMeasurement.isActive && angleEntityMeasurement.isWaitingForEntitySelection) {
-      const scene = levelManager.currentLevelId
-        ? levelManager.getLevelScene(levelManager.currentLevelId)
-        : null;
-
-      if (scene?.entities) {
-        const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
-
-        for (const entity of scene.entities) {
-          // Check if this entity type is accepted for the current step
-          if (!angleEntityMeasurement.acceptsEntityType(entity.type)) continue;
-
-          let isHit = false;
-
-          if (isLineEntity(entity)) {
-            isHit = pointToLineDistance(worldPoint, entity.start, entity.end) <= hitTolerance;
-          } else if (isArcEntity(entity)) {
-            isHit = pointToArcDistance(worldPoint, entity) <= hitTolerance;
-          } else if (isPolylineEntity(entity)) {
-            // Polyline segments count as lines
-            if (entity.vertices && entity.vertices.length >= 2) {
-              for (let i = 0; i < entity.vertices.length - 1; i++) {
-                if (pointToLineDistance(worldPoint, entity.vertices[i], entity.vertices[i + 1]) <= hitTolerance) {
-                  isHit = true;
-                  break;
-                }
-              }
-            }
-          }
-
-          if (isHit) {
-            const stepBeforeClick = angleEntityMeasurement.currentStep;
-            const accepted = angleEntityMeasurement.onEntityClick(entity as AnySceneEntity, worldPoint);
-            if (accepted) {
-              // Visual feedback: highlight first entity, clear after measurement created
-              if (stepBeforeClick === 0) {
-                setSelectedEntityIds([entity.id]);
-              } else {
-                setSelectedEntityIds([]);
-              }
-              dlog('useCanvasClickHandler', 'AngleEntityMeasurement entity accepted:', entity.id, 'step:', stepBeforeClick);
-              return;
-            }
-          }
-        }
-        dlog('useCanvasClickHandler', 'AngleEntityMeasurement: No matching entity at click point');
-      }
-      return;
-    }
-
-    // PRIORITY 2: Circle TTT entity picking
-    if (activeTool === 'circle-ttt' && circleTTT.isWaitingForSelection) {
-      const scene = levelManager.currentLevelId
-        ? levelManager.getLevelScene(levelManager.currentLevelId)
-        : null;
-
-      if (scene?.entities) {
-        const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
-
-        for (const entity of scene.entities) {
-          if (isLineEntity(entity) || isPolylineEntity(entity)) {
-            let isHit = false;
-
-            if (isLineEntity(entity)) {
-              isHit = pointToLineDistance(worldPoint, entity.start, entity.end) <= hitTolerance;
-            } else if (isPolylineEntity(entity)) {
-              if (entity.vertices && entity.vertices.length >= 2) {
-                for (let i = 0; i < entity.vertices.length - 1; i++) {
-                  if (pointToLineDistance(worldPoint, entity.vertices[i], entity.vertices[i + 1]) <= hitTolerance) {
-                    isHit = true;
-                    break;
-                  }
-                }
-                if (!isHit && entity.closed && entity.vertices.length > 2) {
-                  isHit = pointToLineDistance(worldPoint, entity.vertices[entity.vertices.length - 1], entity.vertices[0]) <= hitTolerance;
-                }
-              }
-            }
-
-            if (isHit) {
-              const accepted = circleTTT.onEntityClick(entity as AnySceneEntity, worldPoint);
-              if (accepted) {
-                dlog('useCanvasClickHandler', 'Circle TTT entity accepted:', entity.id);
-                return;
-              }
-            }
-          }
-        }
-        dlog('useCanvasClickHandler', 'Circle TTT: No line/polyline found at click point');
-      }
-      return;
-    }
-
-    // PRIORITY 3: Line Perpendicular entity picking
-    if (activeTool === 'line-perpendicular' && linePerpendicular.isActive) {
-      if (linePerpendicular.currentStep === 0) {
-        const scene = levelManager.currentLevelId
-          ? levelManager.getLevelScene(levelManager.currentLevelId)
-          : null;
-
-        if (scene?.entities) {
-          const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
-          for (const entity of scene.entities) {
-            if (isLineEntity(entity)) {
-              if (pointToLineDistance(worldPoint, entity.start, entity.end) <= hitTolerance) {
-                const accepted = linePerpendicular.onEntityClick(entity as AnySceneEntity, worldPoint);
-                if (accepted) {
-                  dlog('useCanvasClickHandler', 'LinePerpendicular entity accepted:', entity.id);
-                  return;
-                }
-              }
-            }
-          }
-          dlog('useCanvasClickHandler', 'LinePerpendicular: No line found at click point');
-        }
-        return;
-      } else if (linePerpendicular.currentStep === 1) {
-        linePerpendicular.onCanvasClick?.(worldPoint);
-        return;
-      }
-    }
-
-    // PRIORITY 4: Line Parallel entity picking
-    if (activeTool === 'line-parallel' && lineParallel.isActive) {
-      if (lineParallel.currentStep === 0) {
-        const scene = levelManager.currentLevelId
-          ? levelManager.getLevelScene(levelManager.currentLevelId)
-          : null;
-
-        if (scene?.entities) {
-          const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
-          for (const entity of scene.entities) {
-            if (isLineEntity(entity)) {
-              if (pointToLineDistance(worldPoint, entity.start, entity.end) <= hitTolerance) {
-                const accepted = lineParallel.onEntityClick(entity as AnySceneEntity, worldPoint);
-                if (accepted) {
-                  dlog('useCanvasClickHandler', 'LineParallel entity accepted:', entity.id);
-                  return;
-                }
-              }
-            }
-          }
-          dlog('useCanvasClickHandler', 'LineParallel: No line found at click point');
-        }
-        return;
-      } else if (lineParallel.currentStep === 1) {
-        lineParallel.onCanvasClick?.(worldPoint);
-        return;
-      }
-    }
+    // PRIORITY 1.9-4: Entity picking tools (angle, circle-ttt, perpendicular, parallel)
+    const entityCtx: EntityPickContext = { worldPoint, transform, levelManager };
+
+    if (handleAngleEntityPick(entityCtx, angleEntityMeasurement, setSelectedEntityIds)) return;
+    if (handleCircleTTTPick(entityCtx, circleTTT, activeTool)) return;
+    if (handleLinePerpendicularPick(entityCtx, linePerpendicular, activeTool)) return;
+    if (handleLineParallelPick(entityCtx, lineParallel, activeTool)) return;
 
     // PRIORITY 5: Overlay polygon drawing
     if (overlayMode === 'draw') {
@@ -1557,39 +189,157 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     draggingOverlayBody, setSelectedEntityIds,
     currentOverlays, handleOverlayClick,
     setDraftPolygon, setIsSavingPolygon,
-    // ADR-189
-    guideAddGuide, guideRemoveGuide, guides,
-    parallelRefGuideId, onParallelRefSelected, onParallelSideChosen,
-    // ADR-189 construction points
-    cpAddPoint, cpDeletePoint, cpFindNearest,
-    segmentsStep, segmentsStartPoint, onSegmentsStartSet, onSegmentsComplete,
-    distanceStep, distanceStartPoint, onDistanceStartSet, onDistanceComplete,
-    // ADR-189 §3.9/3.10/3.11/3.12
-    onArcSegmentsPicked, onArcDistancePicked,
-    arcLineStep, onArcLineLinePicked, onArcLineArcPicked,
-    circleIntersectStep, onCircleIntersectFirstPicked, onCircleIntersectSecondPicked,
-    // Two-step perpendicular guide
-    perpRefGuideId, onPerpRefSelected, onPerpPlaced,
-    // Guide rect-center
-    onRectCenterPlace,
-    // Guide line-midpoint + circle-center
-    onLineMidpointPlace, onCircleCenterPlace,
-    onGridOriginSet,
-    // ADR-189 B31: Polar array
-    onPolarArrayCenterSet,
-    // ADR-189 B32: Scale grid
-    onScaleOriginSet,
-    // ADR-189 B16: Guide at angle
-    onGuideAngleOriginSet,
-    // ADR-189 B19: Mirror guides
-    onMirrorAxisSelected,
-    // ADR-189 B8: Guide from entity
-    onGuideFromEntity,
-    // ADR-189 B24: Guide offset from entity
-    onGuideOffsetFromEntity,
-    // ADR-189 B14: Guide multi-select
-    onGuideSelectToggle, onGuideDeselectAll,
+    // Pass full params to delegated handlers
+    params,
   ]);
 
   return { handleCanvasClick };
+}
+
+// ============================================================================
+// ROTATION ENTITY SELECTION (PRIORITY 1.3)
+// ============================================================================
+
+/**
+ * ADR-188: Rotation tool entity selection in awaiting-entity phase.
+ * Checks scene entities + overlays for hit. Returns true if entity was selected.
+ */
+function handleRotationEntitySelection(
+  worldPoint: Point2D,
+  p: UseCanvasClickHandlerParams,
+): boolean {
+  const scene = p.levelManager.currentLevelId
+    ? p.levelManager.getLevelScene(p.levelManager.currentLevelId)
+    : null;
+
+  if (scene?.entities) {
+    const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / p.transform.scale;
+
+    for (const entity of scene.entities) {
+      if (testEntityHit(worldPoint, entity, hitTolerance)) {
+        p.setSelectedEntityIds([entity.id]);
+        p.universalSelection.clearByType('dxf-entity');
+        p.universalSelection.select(entity.id, 'dxf-entity');
+        dlog('useCanvasClickHandler', 'Rotation entity selected:', entity.id);
+        return true;
+      }
+    }
+  }
+
+  // Check overlays (colored layers)
+  for (const overlay of p.currentOverlays) {
+    if (!overlay.polygon || overlay.polygon.length < 3) continue;
+    const vertices = overlay.polygon.map(([x, y]) => ({ x, y }));
+    if (isPointInPolygon(worldPoint, vertices)) {
+      p.setSelectedEntityIds([overlay.id]);
+      p.universalSelection.clearByType('dxf-entity');
+      p.universalSelection.clearByType('overlay');
+      p.universalSelection.select(overlay.id, 'overlay');
+      dlog('useCanvasClickHandler', 'Rotation overlay selected:', overlay.id);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// ============================================================================
+// ENTITY HIT-TESTING (used by rotation selection)
+// ============================================================================
+
+/**
+ * Tests if a world point hits any entity type. Returns true if hit.
+ * Supports: LINE, ARC, CIRCLE, POLYLINE, LWPOLYLINE, RECTANGLE, ELLIPSE, TEXT, MTEXT.
+ */
+function testEntityHit(
+  worldPoint: Point2D,
+  entity: { type: string; id: string; [key: string]: unknown },
+  hitTolerance: number,
+): boolean {
+  if (isLineEntity(entity)) {
+    return pointToLineDistance(worldPoint, entity.start, entity.end) <= hitTolerance;
+  }
+
+  if (isArcEntity(entity)) {
+    return pointToArcDistance(worldPoint, entity) <= hitTolerance;
+  }
+
+  if (isCircleEntity(entity)) {
+    const dx = worldPoint.x - entity.center.x;
+    const dy = worldPoint.y - entity.center.y;
+    const distFromCenter = Math.sqrt(dx * dx + dy * dy);
+    return Math.abs(distFromCenter - entity.radius) <= hitTolerance;
+  }
+
+  if (isPolylineEntity(entity)) {
+    return testPolylineHit(worldPoint, entity.vertices, entity.closed, hitTolerance);
+  }
+
+  if (isLWPolylineEntity(entity)) {
+    return testPolylineHit(worldPoint, entity.vertices, entity.closed, hitTolerance);
+  }
+
+  if (isRectangleEntity(entity) || isRectEntity(entity)) {
+    const { x, y, width: w, height: h } = entity;
+    const corners = [
+      { x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h },
+    ];
+    for (let i = 0; i < 4; i++) {
+      if (pointToLineDistance(worldPoint, corners[i], corners[(i + 1) % 4]) <= hitTolerance) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  if (isEllipseEntity(entity)) {
+    const dx = worldPoint.x - entity.center.x;
+    const dy = worldPoint.y - entity.center.y;
+    const rx = entity.majorAxis;
+    const ry = entity.minorAxis;
+    const normalizedDist = (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry);
+    return Math.abs(normalizedDist - 1) <= hitTolerance / Math.min(rx, ry);
+  }
+
+  if (isTextEntity(entity)) {
+    const height = entity.height ?? entity.fontSize ?? 2.5;
+    const width = entity.text.length * height * 0.6;
+    return worldPoint.x >= entity.position.x - hitTolerance &&
+           worldPoint.x <= entity.position.x + width + hitTolerance &&
+           worldPoint.y >= entity.position.y - height - hitTolerance &&
+           worldPoint.y <= entity.position.y + hitTolerance;
+  }
+
+  if (isMTextEntity(entity)) {
+    const height = entity.height ?? entity.fontSize ?? 2.5;
+    const width = entity.width || (entity.text.length * height * 0.6);
+    return worldPoint.x >= entity.position.x - hitTolerance &&
+           worldPoint.x <= entity.position.x + width + hitTolerance &&
+           worldPoint.y >= entity.position.y - height - hitTolerance &&
+           worldPoint.y <= entity.position.y + hitTolerance;
+  }
+
+  return false;
+}
+
+/** Helper: Test if point hits a polyline (vertices + optional closed) */
+function testPolylineHit(
+  worldPoint: Point2D,
+  vertices: ReadonlyArray<{ x: number; y: number }> | undefined,
+  closed: boolean | undefined,
+  hitTolerance: number,
+): boolean {
+  if (!vertices || vertices.length < 2) return false;
+
+  for (let i = 0; i < vertices.length - 1; i++) {
+    if (pointToLineDistance(worldPoint, vertices[i], vertices[i + 1]) <= hitTolerance) {
+      return true;
+    }
+  }
+  if (closed && vertices.length > 2) {
+    if (pointToLineDistance(worldPoint, vertices[vertices.length - 1], vertices[0]) <= hitTolerance) {
+      return true;
+    }
+  }
+  return false;
 }
