@@ -1286,6 +1286,8 @@
         },
         "empty": "Δεν υπάρχουν εργασίες κατασκευής.",
         "emptyHint": "Πατήστε «Νέα Φάση» για να δημιουργήσετε την πρώτη κατασκευαστική φάση.",
+        "actionsAriaLabel": "Ενέργειες Gantt",
+        "fullscreenActionsAriaLabel": "Ενέργειες Gantt πλήρους οθόνης",
         "actions": {
           "newPhase": "Νέα Φάση",
           "newTask": "Νέα Εργασία",

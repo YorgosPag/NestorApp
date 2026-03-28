@@ -113,6 +113,10 @@
       "noFloorHint": "Link a building first"
     }
   },
+  "auth": {
+    "signInToViewPhotos": "Sign in to view photos.",
+    "signInToViewVideos": "Sign in to view videos."
+  },
   "projectTab": {
     "subtabs": {
       "floorplans": "Floor Plans",

@@ -43,6 +43,11 @@
     "blockSide": "Block Side",
     "region": "Region",
     "regionPlaceholder": "e.g. Central Macedonia",
+    "communityPlaceholder": "e.g. Municipal Community...",
+    "municipalUnitPlaceholder": "e.g. Municipal Unit...",
+    "municipalityPlaceholder": "e.g. Municipality of Athens...",
+    "regionalUnitPlaceholder": "e.g. Regional Unit of Attica...",
+    "regionHierarchyPlaceholder": "e.g. Region of Attica...",
     "area": "Area",
     "country": "Country",
     "countryPlaceholder": "e.g. Greece",
@@ -83,6 +88,14 @@
     "locationDenied": "Location access denied",
     "locationError": "Could not determine location",
     "myLocation": "My location"
+  },
+  "hierarchy": {
+    "settlementCity": "Settlement / City",
+    "administrativeDivision": "Greek Administrative Division",
+    "country": "Country",
+    "searchPlaceholder": "Type to search...",
+    "settlementPlaceholder": "e.g. Thessaloniki, Marousi, Leptokarya...",
+    "countryValue": "Greece"
   },
   "locations": {
     "title": "Locations & Addresses",

@@ -53,7 +53,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useFullscreen } from '@/hooks/useFullscreen';
-import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
+import { FullscreenOverlay } from '@/core/containers/FullscreenOverlay';
 import { useTypography } from '@/hooks/useTypography';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { typography as designTypography, zIndex, colors as tokenColors } from '@/styles/design-tokens';
@@ -124,11 +124,11 @@ interface HoverTooltipData {
 // ─── Gantt Bar Color Resolver ─────────────────────────────────────────────
 
 const STATUS_TO_CSS_COLOR: Record<GanttTaskStatus, string> = {
-  completed: 'hsl(var(--status-success))',
-  inProgress: 'hsl(var(--status-info))',
-  notStarted: 'hsl(var(--muted-foreground))',
-  delayed: 'hsl(var(--status-error))',
-  blocked: 'hsl(var(--status-warning))',
+  completed: 'hsl(var(--status-success))', // eslint-disable-line custom/no-hardcoded-strings
+  inProgress: 'hsl(var(--status-info))', // eslint-disable-line custom/no-hardcoded-strings
+  notStarted: 'hsl(var(--muted-foreground))', // eslint-disable-line custom/no-hardcoded-strings
+  delayed: 'hsl(var(--status-error))', // eslint-disable-line custom/no-hardcoded-strings
+  blocked: 'hsl(var(--status-warning))', // eslint-disable-line custom/no-hardcoded-strings
 };
 
 // ─── View Mode Options ────────────────────────────────────────────────────
@@ -144,7 +144,7 @@ const AVAILABLE_VIEW_MODES: ViewMode[] = [
 // ─── Component ────────────────────────────────────────────────────────────
 
 export function GanttView({ building }: GanttViewProps) {
-  const { t, i18n } = useTranslation('building');
+  const { t } = useTranslation('building');
   const spacingTokens = useSpacingTokens();
   const iconSizes = useIconSizes();
   const typography = useTypography();
@@ -514,57 +514,34 @@ export function GanttView({ building }: GanttViewProps) {
   // which clips it behind the header. This custom tooltip uses createPortal to
   // document.body, escaping all overflow containers.
 
-  // Tooltip labels with safe fallback — ensures correct language even if
-  // namespace lazy-loading hasn't completed when the tooltip first renders
-  const tooltipLabels = useMemo(() => {
-    const isGreek = i18n.language === 'el';
-    const safeLabel = (key: string, el: string, en: string): string => {
-      const result = t(`tabs.timeline.gantt.tooltip.${key}`);
-      // If t() returned the full key path (namespace not loaded), use fallback
-      return result.includes('.') ? (isGreek ? el : en) : result;
-    };
-    return {
-      start: safeLabel('start', 'Έναρξη', 'Start'),
-      end: safeLabel('end', 'Λήξη', 'End'),
-      duration: safeLabel('duration', 'Διάρκεια', 'Duration'),
-      progress: safeLabel('progress', 'Πρόοδος', 'Progress'),
-      days: safeLabel('days', 'ημέρες', 'days'),
-    };
-  }, [t, i18n.language]);
+  // Tooltip labels — resolved via i18n namespace
+  const tooltipLabels = useMemo(() => ({
+    start: t('tabs.timeline.gantt.tooltip.start'),
+    end: t('tabs.timeline.gantt.tooltip.end'),
+    duration: t('tabs.timeline.gantt.tooltip.duration'),
+    progress: t('tabs.timeline.gantt.tooltip.progress'),
+    days: t('tabs.timeline.gantt.tooltip.days'),
+  }), [t]);
 
-  // Context menu labels with same safe fallback pattern
-  const contextMenuLabels = useMemo(() => {
-    const isGreek = i18n.language === 'el';
-    const safeLabel = (key: string, el: string, en: string): string => {
-      const result = t(`tabs.timeline.gantt.contextMenu.${key}`);
-      return result.includes('.') ? (isGreek ? el : en) : result;
-    };
-    return {
-      editPhase: safeLabel('editPhase', 'Επεξεργασία Φάσης', 'Edit Phase'),
-      editTask: safeLabel('editTask', 'Επεξεργασία Εργασίας', 'Edit Task'),
-      newPhase: safeLabel('newPhase', 'Νέα Φάση', 'New Phase'),
-      newTask: safeLabel('newTask', 'Νέα Εργασία', 'New Task'),
-      changeColor: safeLabel('changeColor', 'Αλλαγή Χρώματος', 'Change Color'),
-      colorPickerTitle: safeLabel('colorPickerTitle', 'Επιλογή Χρώματος Μπάρας', 'Choose Bar Color'),
-      delete: safeLabel('delete', 'Διαγραφή', 'Delete'),
-    };
-  }, [t, i18n.language]);
+  // Context menu labels — resolved via i18n namespace
+  const contextMenuLabels = useMemo(() => ({
+    editPhase: t('tabs.timeline.gantt.contextMenu.editPhase'),
+    editTask: t('tabs.timeline.gantt.contextMenu.editTask'),
+    newPhase: t('tabs.timeline.gantt.contextMenu.newPhase'),
+    newTask: t('tabs.timeline.gantt.contextMenu.newTask'),
+    changeColor: t('tabs.timeline.gantt.contextMenu.changeColor'),
+    colorPickerTitle: t('tabs.timeline.gantt.contextMenu.colorPickerTitle'),
+    delete: t('tabs.timeline.gantt.contextMenu.delete'),
+  }), [t]);
 
-  // Export labels with safe fallback (same pattern as tooltip/contextMenu)
-  const exportLabels = useMemo(() => {
-    const isGreek = i18n.language === 'el';
-    const safeLabel = (key: string, el: string, en: string): string => {
-      const result = t(`tabs.timeline.gantt.export.${key}`);
-      return result.includes('.') ? (isGreek ? el : en) : result;
-    };
-    return {
-      export: safeLabel('export', 'Εξαγωγή', 'Export'),
-      pdf: safeLabel('pdf', 'PDF (Έγγραφο)', 'PDF (Document)'),
-      png: safeLabel('png', 'PNG (Εικόνα)', 'PNG (Image)'),
-      svg: safeLabel('svg', 'SVG (Διάνυσμα)', 'SVG (Vector)'),
-      excel: safeLabel('excel', 'Excel (Δεδομένα)', 'Excel (Data)'),
-    };
-  }, [t, i18n.language]);
+  // Export labels — resolved via i18n namespace
+  const exportLabels = useMemo(() => ({
+    export: t('tabs.timeline.gantt.export.export'),
+    pdf: t('tabs.timeline.gantt.export.pdf'),
+    png: t('tabs.timeline.gantt.export.png'),
+    svg: t('tabs.timeline.gantt.export.svg'),
+    excel: t('tabs.timeline.gantt.export.excel'),
+  }), [t]);
 
   // Export handler — dispatches to format-specific exporter
   const handleExport = useCallback(async (format: GanttExportFormat) => {
@@ -723,7 +700,7 @@ export function GanttView({ building }: GanttViewProps) {
         return;
       }
     }
-  }, [taskGroups]); // eslint-disable-line react-hooks/exhaustive-deps -- intentionally watches only taskGroups
+  }, [taskGroups]); // intentionally watches only taskGroups
 
   // 🏢 ENTERPRISE: Auto-scroll to today on initial mount
   useEffect(() => {
@@ -777,7 +754,7 @@ export function GanttView({ building }: GanttViewProps) {
   return (
     <section className={cn('flex-1 flex flex-col min-h-0', spacingTokens.gap.sm)} aria-label={t('tabs.timeline.gantt.title')}>
       {/* Toolbar: New Phase / New Task / Export */}
-      <nav className={cn('shrink-0 flex items-center', spacingTokens.gap.sm)} aria-label="Gantt actions">
+      <nav className={cn('shrink-0 flex items-center', spacingTokens.gap.sm)} aria-label={t('tabs.timeline.gantt.actionsAriaLabel')}>
         <Button variant="default" size="sm" onClick={openCreatePhaseDialog}>
           <FolderPlus className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
           {t('tabs.timeline.gantt.actions.newPhase')}
@@ -832,10 +809,10 @@ export function GanttView({ building }: GanttViewProps) {
             variant="outline"
             size="sm"
             onClick={fullscreen.enter}
-            title={i18n.language === 'el' ? 'Πλήρης Οθόνη' : 'Fullscreen'}
+            title={t('tabs.timeline.fullscreen')}
           >
             <Maximize2 className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
-            {i18n.language === 'el' ? 'Πλήρης Οθόνη' : 'Fullscreen'}
+            {t('tabs.timeline.fullscreen')}
           </Button>
         )}
       </nav>
@@ -918,7 +895,7 @@ export function GanttView({ building }: GanttViewProps) {
         ariaLabel={t('tabs.timeline.gantt.title')}
       >
         {/* Action buttons inside fullscreen */}
-        <nav className={cn('flex-shrink-0 flex items-center', spacingTokens.gap.sm, 'px-2 pt-2')} aria-label="Gantt fullscreen actions">
+        <nav className={cn('flex-shrink-0 flex items-center', spacingTokens.gap.sm, 'px-2 pt-2')} aria-label={t('tabs.timeline.gantt.fullscreenActionsAriaLabel')}>
           <Button variant="default" size="sm" onClick={openCreatePhaseDialog}>
             <FolderPlus className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
             {t('tabs.timeline.gantt.actions.newPhase')}
@@ -1110,19 +1087,19 @@ export function GanttView({ building }: GanttViewProps) {
         >
           <p className="font-bold mb-1">{tooltipData.name}</p>
           <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5">
-            <dt className="text-muted-foreground font-semibold">
+            <dt className={cn("font-semibold", colors.text.muted)}>
               {tooltipLabels.start}:
             </dt>
             <dd>{tooltipData.startDate}</dd>
-            <dt className="text-muted-foreground font-semibold">
+            <dt className={cn("font-semibold", colors.text.muted)}>
               {tooltipLabels.end}:
             </dt>
             <dd>{tooltipData.endDate}</dd>
-            <dt className="text-muted-foreground font-semibold">
+            <dt className={cn("font-semibold", colors.text.muted)}>
               {tooltipLabels.duration}:
             </dt>
             <dd>{tooltipData.duration} {tooltipLabels.days}</dd>
-            <dt className="text-muted-foreground font-semibold">
+            <dt className={cn("font-semibold", colors.text.muted)}>
               {tooltipLabels.progress}:
             </dt>
             <dd>{tooltipData.progress}%</dd>

@@ -43,6 +43,11 @@
     "blockSide": "Πλευρά Οικοδομικού Τετραγώνου",
     "region": "Περιφέρεια",
     "regionPlaceholder": "π.χ. Κεντρική Μακεδονία",
+    "communityPlaceholder": "π.χ. Δημοτική Κοινότητα...",
+    "municipalUnitPlaceholder": "π.χ. Δημοτική Ενότητα...",
+    "municipalityPlaceholder": "π.χ. Δήμος Αθηναίων...",
+    "regionalUnitPlaceholder": "π.χ. Π.Ε. Αττικής...",
+    "regionHierarchyPlaceholder": "π.χ. Περιφέρεια Αττικής...",
     "area": "Περιοχή",
     "country": "Χώρα",
     "countryPlaceholder": "π.χ. Ελλάδα",
@@ -83,6 +88,14 @@
     "locationDenied": "Η πρόσβαση στην τοποθεσία απορρίφθηκε",
     "locationError": "Δεν ήταν δυνατός ο εντοπισμός",
     "myLocation": "Η θέση μου"
+  },
+  "hierarchy": {
+    "settlementCity": "Οικισμός / Πόλη",
+    "administrativeDivision": "Διοικητική Διαίρεση Ελλάδας",
+    "country": "Χώρα",
+    "searchPlaceholder": "Πληκτρολογήστε για αναζήτηση...",
+    "settlementPlaceholder": "π.χ. Θεσσαλονίκη, Μαρούσι, Λεπτοκαρυά...",
+    "countryValue": "Ελλάδα"
   },
   "locations": {
     "title": "Τοποθεσίες & Διευθύνσεις",

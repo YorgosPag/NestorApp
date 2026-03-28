@@ -1286,6 +1286,8 @@
         },
         "empty": "No construction tasks available.",
         "emptyHint": "Click «New Phase» to create the first construction phase.",
+        "actionsAriaLabel": "Gantt actions",
+        "fullscreenActionsAriaLabel": "Gantt fullscreen actions",
         "actions": {
           "newPhase": "New Phase",
           "newTask": "New Task",

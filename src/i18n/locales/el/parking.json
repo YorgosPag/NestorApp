@@ -113,6 +113,10 @@
       "noFloorHint": "Συνδέστε πρώτα κτίριο"
     }
   },
+  "auth": {
+    "signInToViewPhotos": "Συνδεθείτε για να δείτε τις φωτογραφίες.",
+    "signInToViewVideos": "Συνδεθείτε για να δείτε τα βίντεο."
+  },
   "projectTab": {
     "subtabs": {
       "floorplans": "Κατόψεις",

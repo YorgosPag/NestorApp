@@ -18,6 +18,10 @@ import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { DEFAULT_VIDEO_ACCEPT } from '@/config/file-upload-config';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
+import '@/lib/design-system';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // TYPES
@@ -34,14 +38,16 @@ interface ParkingVideosTabProps {
 
 export function ParkingVideosTab({ parking }: ParkingVideosTabProps) {
   const { user } = useAuth();
+  const { t } = useTranslation('parking');
+  const colors = useSemanticColors();
 
   const companyId = useCompanyId()?.companyId;
   const currentUserId = user?.uid;
 
   if (!companyId || !currentUserId) {
     return (
-      <p className="p-4 text-center text-muted-foreground">
-        Συνδεθείτε για να δείτε τα βίντεο.
+      <p className={cn("p-4 text-center", colors.text.muted)}>
+        {t('auth.signInToViewVideos')}
       </p>
     );
   }

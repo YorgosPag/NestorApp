@@ -32,6 +32,10 @@ import {
 } from '@/hooks/useAdministrativeHierarchy';
 import { ChevronDown, ChevronUp, MapPin } from 'lucide-react';
 import { geocodeAddress } from '@/lib/geocoding/geocoding-service';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 // =============================================================================
 // TYPES
@@ -124,13 +128,13 @@ const HIERARCHY_FIELDS: ReadonlyArray<{
   idField: keyof AddressWithHierarchyValue;
   nameField: keyof AddressWithHierarchyValue;
   label: string;
-  placeholder: string;
+  placeholderKey: string;
 }> = [
-  { level: 7, idField: 'communityId', nameField: 'communityName', label: ADMIN_LEVEL_LABELS[7], placeholder: 'π.χ. Δημοτική Κοινότητα...' },
-  { level: 6, idField: 'municipalUnitId', nameField: 'municipalUnitName', label: ADMIN_LEVEL_LABELS[6], placeholder: 'π.χ. Δημοτική Ενότητα...' },
-  { level: 5, idField: 'municipalityId', nameField: 'municipalityName', label: ADMIN_LEVEL_LABELS[5], placeholder: 'π.χ. Δήμος Αθηναίων...' },
-  { level: 4, idField: 'regionalUnitId', nameField: 'regionalUnitName', label: ADMIN_LEVEL_LABELS[4], placeholder: 'π.χ. Π.Ε. Αττικής...' },
-  { level: 3, idField: 'regionId', nameField: 'regionName', label: ADMIN_LEVEL_LABELS[3], placeholder: 'π.χ. Περιφέρεια Αττικής...' },
+  { level: 7, idField: 'communityId', nameField: 'communityName', label: ADMIN_LEVEL_LABELS[7], placeholderKey: 'form.communityPlaceholder' },
+  { level: 6, idField: 'municipalUnitId', nameField: 'municipalUnitName', label: ADMIN_LEVEL_LABELS[6], placeholderKey: 'form.municipalUnitPlaceholder' },
+  { level: 5, idField: 'municipalityId', nameField: 'municipalityName', label: ADMIN_LEVEL_LABELS[5], placeholderKey: 'form.municipalityPlaceholder' },
+  { level: 4, idField: 'regionalUnitId', nameField: 'regionalUnitName', label: ADMIN_LEVEL_LABELS[4], placeholderKey: 'form.regionalUnitPlaceholder' },
+  { level: 3, idField: 'regionId', nameField: 'regionName', label: ADMIN_LEVEL_LABELS[3], placeholderKey: 'form.regionHierarchyPlaceholder' },
 ];
 
 // =============================================================================
@@ -145,7 +149,9 @@ export function AddressWithHierarchy({
   hierarchyLevels = [7, 6, 5, 4, 3],
   defaultExpanded = false,
 }: AddressWithHierarchyProps) {
-  const { isLoading, findById, resolvePath, getByLevel, searchOptions, levelOptions } = useAdministrativeHierarchy();
+  const { isLoading, resolvePath, getByLevel, searchOptions, levelOptions } = useAdministrativeHierarchy();
+  const { t } = useTranslation('addresses');
+  const colors = useSemanticColors();
   const [isHierarchyOpen, setIsHierarchyOpen] = useState(defaultExpanded);
 
   const current = useMemo(
@@ -410,7 +416,6 @@ export function AddressWithHierarchy({
     }
 
     onChange(updated);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current.settlementName, current.settlementId, current.postalCode, isLoading]);
 
   // =========================================================================
@@ -425,20 +430,20 @@ export function AddressWithHierarchy({
         {showStreetFields && (
           <div className="grid grid-cols-3 gap-3">
             <fieldset className="col-span-2 space-y-1">
-              <Label className="text-xs font-medium text-muted-foreground">Οδός</Label>
+              <Label className={cn("text-xs font-medium", colors.text.muted)}>{t('form.street')}</Label>
               <Input
                 value={current.street}
                 onChange={e => handleBasicChange('street', e.target.value)}
-                placeholder="π.χ. Σαμοθράκης"
+                placeholder={t('form.streetPlaceholder')}
                 disabled={disabled}
               />
             </fieldset>
             <fieldset className="space-y-1">
-              <Label className="text-xs font-medium text-muted-foreground">Αριθμός</Label>
+              <Label className={cn("text-xs font-medium", colors.text.muted)}>{t('form.number')}</Label>
               <Input
                 value={current.number}
                 onChange={e => handleBasicChange('number', e.target.value)}
-                placeholder="π.χ. 16"
+                placeholder={t('form.numberPlaceholder')}
                 disabled={disabled}
               />
             </fieldset>
@@ -448,29 +453,29 @@ export function AddressWithHierarchy({
         {/* Row 2: Postal Code + Settlement / City (same line) */}
         <div className="grid grid-cols-3 gap-3">
           <fieldset className="space-y-1">
-            <Label className="text-xs font-medium text-muted-foreground">Τ.Κ.</Label>
+            <Label className={cn("text-xs font-medium", colors.text.muted)}>{t('form.postalCode')}</Label>
             <Input
               value={current.postalCode}
               onChange={e => {
                 const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 5);
                 handleBasicChange('postalCode', val);
               }}
-              placeholder="π.χ. 54621"
+              placeholder={t('form.postalCodePlaceholder')}
               maxLength={5}
               inputMode="numeric"
               disabled={disabled}
             />
           </fieldset>
           <fieldset className="col-span-2 space-y-1">
-            <Label className="text-xs font-medium text-muted-foreground">
-              Οικισμός / Πόλη
+            <Label className={cn("text-xs font-medium", colors.text.muted)}>
+              {t('hierarchy.settlementCity')}
             </Label>
             <SearchableCombobox
               value={current.settlementName}
               onValueChange={(newValue, option) => handleSettlementChange(newValue, option)}
               options={settlementOptions}
-              placeholder="π.χ. Θεσσαλονίκη, Μαρούσι, Λεπτοκαρυά..."
-              emptyMessage="Πληκτρολογήστε για αναζήτηση..."
+              placeholder={t('hierarchy.settlementPlaceholder')}
+              emptyMessage={t('hierarchy.searchPlaceholder')}
               isLoading={isLoading}
               allowFreeText
               disabled={disabled}
@@ -486,12 +491,12 @@ export function AddressWithHierarchy({
           type="button"
           variant="ghost"
           size="sm"
-          className="w-full flex items-center justify-between text-muted-foreground hover:text-foreground"
+          className={cn("w-full flex items-center justify-between hover:text-foreground", colors.text.muted)}
           onClick={() => setIsHierarchyOpen(prev => !prev)}
         >
           <span className="flex items-center gap-2 text-xs font-medium">
             <MapPin className="h-3.5 w-3.5" />
-            Διοικητική Διαίρεση Ελλάδας
+            {t('hierarchy.administrativeDivision')}
           </span>
           {isHierarchyOpen
             ? <ChevronUp className="h-4 w-4" />
@@ -508,7 +513,7 @@ export function AddressWithHierarchy({
 
               return (
                 <fieldset key={field.level} className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">
+                  <label className={cn("text-xs font-medium", colors.text.muted)}>
                     {field.label}
                   </label>
                   <SearchableCombobox
@@ -517,8 +522,8 @@ export function AddressWithHierarchy({
                       handleHierarchyChange(field.level, newValue, option)
                     }
                     options={optionsByLevel.get(field.level) ?? []}
-                    placeholder={field.placeholder}
-                    emptyMessage="Πληκτρολογήστε για αναζήτηση..."
+                    placeholder={t(field.placeholderKey)}
+                    emptyMessage={t('hierarchy.searchPlaceholder')}
                     isLoading={isLoading}
                     allowFreeText
                     disabled={disabled}
@@ -529,13 +534,13 @@ export function AddressWithHierarchy({
               );
             })}
 
-            {/* Country — auto-filled as "Ελλάδα" for Greek admin hierarchy */}
+            {/* Country — auto-filled for Greek admin hierarchy */}
             <fieldset className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">
-                Χώρα
+              <label className={cn("text-xs font-medium", colors.text.muted)}>
+                {t('hierarchy.country')}
               </label>
               <Input
-                value="Ελλάδα"
+                value={t('hierarchy.countryValue')}
                 disabled
                 readOnly
                 className="opacity-75"
