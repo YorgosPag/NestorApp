@@ -76,6 +76,60 @@
     "copyText": "Copy Text",
     "cancelPO": "Cancel PO"
   },
+  "email": {
+    "sendButton": "Send via Email",
+    "subject": "Purchase Order {{poNumber}}",
+    "recipientLabel": "Recipient Email",
+    "recipientPlaceholder": "supplier@example.com",
+    "recipientName": "Recipient Name",
+    "language": "PDF Language",
+    "sending": "Sending...",
+    "success": "Email sent successfully",
+    "error": "Failed to send email"
+  },
+  "share": {
+    "createLink": "Create Share Link",
+    "copyLink": "Copy Link",
+    "copied": "Link copied!",
+    "expires": "Expires in {{days}} days",
+    "readOnly": "Read-only access",
+    "revoke": "Revoke Link",
+    "revokeConfirm": "Are you sure you want to revoke this share link?",
+    "noInternalNotes": "Internal notes are hidden in shared view"
+  },
+  "pdf": {
+    "exportButton": "Export PDF",
+    "generating": "Generating PDF...",
+    "title": "Purchase Order",
+    "companyDetails": "Company Details",
+    "supplierDetails": "Supplier Details",
+    "termsAndConditions": "Terms & Conditions",
+    "page": "Page {{current}} of {{total}}"
+  },
+  "activity": {
+    "tabLabel": "Activity",
+    "noHistory": "No activity recorded yet"
+  },
+  "tabs": {
+    "details": "Details",
+    "activity": "Activity"
+  },
+  "contactTab": {
+    "title": "Purchase Orders",
+    "empty": "No purchase orders with this supplier",
+    "viewAll": "View all orders"
+  },
+  "boqRelated": {
+    "title": "Related Purchase Orders",
+    "empty": "No POs reference this BOQ item",
+    "orderedQty": "Ordered",
+    "receivedQty": "Received"
+  },
+  "notifications": {
+    "approvalNeeded": "PO {{poNumber}} requires approval",
+    "poApproved": "PO {{poNumber}} has been approved",
+    "poOverdue": "PO {{poNumber}} is overdue (needed by {{dateNeeded}})"
+  },
   "categories": {
     "OIK-1": "Earthworks",
     "OIK-2": "Concrete",

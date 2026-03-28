@@ -76,6 +76,60 @@
     "copyText": "Αντιγραφή Κειμένου",
     "cancelPO": "Ακύρωση PO"
   },
+  "email": {
+    "sendButton": "Αποστολή μέσω Email",
+    "subject": "Παραγγελία Αγοράς {{poNumber}}",
+    "recipientLabel": "Email Παραλήπτη",
+    "recipientPlaceholder": "supplier@example.com",
+    "recipientName": "Όνομα Παραλήπτη",
+    "language": "Γλώσσα PDF",
+    "sending": "Αποστολή...",
+    "success": "Το email στάλθηκε επιτυχώς",
+    "error": "Αποτυχία αποστολής email"
+  },
+  "share": {
+    "createLink": "Δημιουργία Συνδέσμου",
+    "copyLink": "Αντιγραφή Συνδέσμου",
+    "copied": "Ο σύνδεσμος αντιγράφηκε!",
+    "expires": "Λήγει σε {{days}} ημέρες",
+    "readOnly": "Μόνο ανάγνωση",
+    "revoke": "Ανάκληση Συνδέσμου",
+    "revokeConfirm": "Είστε σίγουροι ότι θέλετε να ανακαλέσετε αυτόν τον σύνδεσμο;",
+    "noInternalNotes": "Οι εσωτερικές σημειώσεις δεν εμφανίζονται"
+  },
+  "pdf": {
+    "exportButton": "Εξαγωγή PDF",
+    "generating": "Δημιουργία PDF...",
+    "title": "Παραγγελία Αγοράς",
+    "companyDetails": "Στοιχεία Εταιρείας",
+    "supplierDetails": "Στοιχεία Προμηθευτή",
+    "termsAndConditions": "Όροι & Προϋποθέσεις",
+    "page": "Σελίδα {{current}} από {{total}}"
+  },
+  "activity": {
+    "tabLabel": "Δραστηριότητα",
+    "noHistory": "Δεν υπάρχει καταγεγραμμένη δραστηριότητα"
+  },
+  "tabs": {
+    "details": "Λεπτομέρειες",
+    "activity": "Δραστηριότητα"
+  },
+  "contactTab": {
+    "title": "Παραγγελίες",
+    "empty": "Δεν υπάρχουν παραγγελίες με αυτόν τον προμηθευτή",
+    "viewAll": "Προβολή όλων"
+  },
+  "boqRelated": {
+    "title": "Σχετικές Παραγγελίες",
+    "empty": "Κανένα PO δεν αναφέρεται σε αυτό το αντικείμενο",
+    "orderedQty": "Παραγγελθέν",
+    "receivedQty": "Παραληφθέν"
+  },
+  "notifications": {
+    "approvalNeeded": "Το PO {{poNumber}} απαιτεί έγκριση",
+    "poApproved": "Το PO {{poNumber}} εγκρίθηκε",
+    "poOverdue": "Το PO {{poNumber}} έχει καθυστερήσει (ημ. παράδοσης: {{dateNeeded}})"
+  },
   "categories": {
     "OIK-1": "Χωματουργικά",
     "OIK-2": "Σκυροδέματα",

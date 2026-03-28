@@ -20,6 +20,8 @@ import {
   type POCancellationReason,
   type ProcurementAuditAction,
 } from '@/types/procurement';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import { notifyPOApproved } from './po-notification-service';
 import {
   createPurchaseOrder,
   getPurchaseOrder,
@@ -108,6 +110,18 @@ export async function createPO(
     projectId: dto.projectId,
     itemCount: dto.items.length,
   });
+
+  // Entity audit trail (fire-and-forget)
+  EntityAuditService.recordChange({
+    entityType: 'purchase_order',
+    entityId: result.id,
+    entityName: result.poNumber,
+    action: 'created',
+    changes: [{ field: 'status', oldValue: null, newValue: 'draft', label: 'Status' }],
+    performedBy: ctx.userId,
+    performedByName: null,
+    companyId: ctx.companyId,
+  }).catch(() => {});
 
   return result;
 }
@@ -208,6 +222,21 @@ export async function approvePO(
   await audit(ctx, 'procurement.po.approved', poId, {
     poNumber: po.poNumber,
   });
+
+  // Entity audit trail
+  EntityAuditService.recordChange({
+    entityType: 'purchase_order',
+    entityId: poId,
+    entityName: po.poNumber,
+    action: 'status_changed',
+    changes: [{ field: 'status', oldValue: 'draft', newValue: 'approved', label: 'Status' }],
+    performedBy: ctx.userId,
+    performedByName: null,
+    companyId: ctx.companyId,
+  }).catch(() => {});
+
+  // Notify creator that PO was approved
+  notifyPOApproved(po, po.createdBy).catch(() => {});
 }
 
 export async function markOrdered(
@@ -232,6 +261,17 @@ export async function markOrdered(
   await audit(ctx, 'procurement.po.ordered', poId, {
     poNumber: po.poNumber,
   });
+
+  EntityAuditService.recordChange({
+    entityType: 'purchase_order',
+    entityId: poId,
+    entityName: po.poNumber,
+    action: 'status_changed',
+    changes: [{ field: 'status', oldValue: 'approved', newValue: 'ordered', label: 'Status' }],
+    performedBy: ctx.userId,
+    performedByName: null,
+    companyId: ctx.companyId,
+  }).catch(() => {});
 }
 
 export async function closePO(
@@ -250,6 +290,17 @@ export async function closePO(
     from: po.status,
     to: 'closed',
   });
+
+  EntityAuditService.recordChange({
+    entityType: 'purchase_order',
+    entityId: poId,
+    entityName: po.poNumber,
+    action: 'status_changed',
+    changes: [{ field: 'status', oldValue: po.status, newValue: 'closed', label: 'Status' }],
+    performedBy: ctx.userId,
+    performedByName: null,
+    companyId: ctx.companyId,
+  }).catch(() => {});
 }
 
 export async function cancelPO(
@@ -272,6 +323,20 @@ export async function cancelPO(
     poNumber: po.poNumber,
     reason,
   });
+
+  EntityAuditService.recordChange({
+    entityType: 'purchase_order',
+    entityId: poId,
+    entityName: po.poNumber,
+    action: 'status_changed',
+    changes: [
+      { field: 'status', oldValue: po.status, newValue: 'cancelled', label: 'Status' },
+      { field: 'cancellationReason', oldValue: null, newValue: reason, label: 'Reason' },
+    ],
+    performedBy: ctx.userId,
+    performedByName: null,
+    companyId: ctx.companyId,
+  }).catch(() => {});
 }
 
 // ============================================================================
@@ -298,6 +363,17 @@ export async function recordPODelivery(
     itemsDelivered: dto.items.length,
   });
 
+  EntityAuditService.recordChange({
+    entityType: 'purchase_order',
+    entityId: poId,
+    entityName: po.poNumber,
+    action: 'status_changed',
+    changes: [{ field: 'status', oldValue: po.status, newValue: result.newStatus, label: 'Status' }],
+    performedBy: ctx.userId,
+    performedByName: null,
+    companyId: ctx.companyId,
+  }).catch(() => {});
+
   return result;
 }
 
@@ -315,6 +391,17 @@ export async function linkInvoiceToPO(
   await audit(ctx, 'procurement.po.invoice_linked', poId, {
     invoiceId,
   });
+
+  EntityAuditService.recordChange({
+    entityType: 'purchase_order',
+    entityId: poId,
+    entityName: poId,
+    action: 'linked',
+    changes: [{ field: 'linkedInvoiceIds', oldValue: null, newValue: invoiceId, label: 'Invoice Linked' }],
+    performedBy: ctx.userId,
+    performedByName: null,
+    companyId: ctx.companyId,
+  }).catch(() => {});
 }
 
 // ============================================================================
@@ -333,6 +420,17 @@ export async function deletePO(
   await audit(ctx, 'procurement.po.deleted', poId, {
     poNumber: po.poNumber,
   });
+
+  EntityAuditService.recordChange({
+    entityType: 'purchase_order',
+    entityId: poId,
+    entityName: po.poNumber,
+    action: 'deleted',
+    changes: [{ field: 'isDeleted', oldValue: false, newValue: true, label: 'Deleted' }],
+    performedBy: ctx.userId,
+    performedByName: null,
+    companyId: ctx.companyId,
+  }).catch(() => {});
 }
 
 // ============================================================================

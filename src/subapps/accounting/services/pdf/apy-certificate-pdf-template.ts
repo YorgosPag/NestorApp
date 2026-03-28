@@ -396,12 +396,9 @@ export async function renderAPYCertificatePDF(
     format: 'a4',
   });
 
-  // Register Roboto font for Greek character support
-  const { ROBOTO_REGULAR_BASE64 } = await import('@/services/gantt-export/roboto-font-data');
-  pdf.addFileToVFS('Roboto-Regular.ttf', ROBOTO_REGULAR_BASE64);
-  pdf.addFont('Roboto-Regular.ttf', 'Roboto', 'normal', undefined, 'Identity-H');
-  pdf.addFont('Roboto-Regular.ttf', 'Roboto', 'bold', undefined, 'Identity-H');
-  pdf.setFont('Roboto', 'normal');
+  // Greek font registration — SSOT: src/services/pdf/greek-font-loader.ts
+  const { registerGreekFont } = await import('@/services/pdf/greek-font-loader');
+  await registerGreekFont(pdf);
 
   // ─── Render sections sequentially ─────────────────────────────────────
   let y = LAYOUT.marginTop;

@@ -17,7 +17,7 @@
 /**
  * Available notification categories
  */
-export type NotificationCategory = 'crm' | 'properties' | 'tasks' | 'security';
+export type NotificationCategory = 'crm' | 'properties' | 'tasks' | 'security' | 'procurement';
 
 /**
  * Email frequency preferences
@@ -71,6 +71,18 @@ export interface TasksNotificationSettings {
 }
 
 /**
+ * Procurement notification settings (ADR-267 Phase B)
+ */
+export interface ProcurementNotificationSettings {
+  /** Notify when PO requires approval */
+  approvalNeeded: boolean;
+  /** Notify when PO is approved */
+  poApproved: boolean;
+  /** Notify when PO is overdue (past dateNeeded) */
+  poOverdue: boolean;
+}
+
+/**
  * Security notification settings
  */
 export interface SecurityNotificationSettings {
@@ -116,6 +128,7 @@ export interface UserNotificationSettings {
     properties: PropertiesNotificationSettings;
     tasks: TasksNotificationSettings;
     security: SecurityNotificationSettings;
+    procurement: ProcurementNotificationSettings;
   };
 
   /** Quiet hours settings */
@@ -165,6 +178,15 @@ export const DEFAULT_TASKS_SETTINGS: TasksNotificationSettings = {
 };
 
 /**
+ * Default Procurement notification settings (ADR-267 Phase B)
+ */
+export const DEFAULT_PROCUREMENT_SETTINGS: ProcurementNotificationSettings = {
+  approvalNeeded: true,
+  poApproved: true,
+  poOverdue: true,
+};
+
+/**
  * Default Security notification settings
  */
 export const DEFAULT_SECURITY_SETTINGS: SecurityNotificationSettings = {
@@ -190,6 +212,7 @@ export function getDefaultNotificationSettings(userId: string): UserNotification
       properties: { ...DEFAULT_PROPERTIES_SETTINGS },
       tasks: { ...DEFAULT_TASKS_SETTINGS },
       security: { ...DEFAULT_SECURITY_SETTINGS },
+      procurement: { ...DEFAULT_PROCUREMENT_SETTINGS },
     },
     quietHours: {
       enabled: false,

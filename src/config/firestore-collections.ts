@@ -269,6 +269,7 @@ export const COLLECTIONS = {
   // 📦 PROCUREMENT (ADR-267: Lightweight Procurement Module)
   PURCHASE_ORDERS: process.env.NEXT_PUBLIC_PURCHASE_ORDERS_COLLECTION || 'purchase_orders',
   PURCHASE_ORDER_COUNTERS: process.env.NEXT_PUBLIC_PURCHASE_ORDER_COUNTERS_COLLECTION || 'purchase_order_counters',
+  PO_SHARES: process.env.NEXT_PUBLIC_PO_SHARES_COLLECTION || 'po_shares',
 } as const;
 
 // ============================================================================

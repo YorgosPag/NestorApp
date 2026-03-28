@@ -9,3 +9,5 @@ export { PurchaseOrderItemsTable } from './PurchaseOrderItemsTable';
 export { PurchaseOrderForm } from './PurchaseOrderForm';
 export { PurchaseOrderList } from './PurchaseOrderList';
 export { PurchaseOrderDetail } from './PurchaseOrderDetail';
+export { PurchaseOrderActions } from './PurchaseOrderActions';
+export { BOQRelatedPOs } from './BOQRelatedPOs';

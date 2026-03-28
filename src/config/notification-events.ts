@@ -16,6 +16,7 @@ import type {
   PropertiesNotificationSettings,
   TasksNotificationSettings,
   SecurityNotificationSettings,
+  ProcurementNotificationSettings,
 } from '@/services/user-notification-settings/user-notification-settings.types';
 import type { Channel, Severity } from '@/types/notification';
 
@@ -73,6 +74,10 @@ export const NOTIFICATION_EVENT_TYPES = {
   SECURITY_PASSWORD_CHANGE: 'security.passwordChange',
   SECURITY_TWO_FACTOR_CHANGE: 'security.twoFactorChange',
   SECURITY_SUSPICIOUS_ACTIVITY: 'security.suspiciousActivity',
+  // Procurement Events (ADR-267 Phase B)
+  PROCUREMENT_APPROVAL_NEEDED: 'procurement.approvalNeeded',
+  PROCUREMENT_PO_APPROVED: 'procurement.poApproved',
+  PROCUREMENT_PO_OVERDUE: 'procurement.poOverdue',
 } as const;
 
 export type NotificationEventType = typeof NOTIFICATION_EVENT_TYPES[keyof typeof NOTIFICATION_EVENT_TYPES];
@@ -86,7 +91,7 @@ export type NotificationEventType = typeof NOTIFICATION_EVENT_TYPES[keyof typeof
  */
 export interface EventCategoryMapping {
   category: NotificationCategory;
-  settingKey: keyof CrmNotificationSettings | keyof PropertiesNotificationSettings | keyof TasksNotificationSettings | keyof SecurityNotificationSettings;
+  settingKey: keyof CrmNotificationSettings | keyof PropertiesNotificationSettings | keyof TasksNotificationSettings | keyof SecurityNotificationSettings | keyof ProcurementNotificationSettings;
   isMandatory: boolean;
   defaultSeverity: Severity;
 }
@@ -196,6 +201,25 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
     isMandatory: true,
     defaultSeverity: NOTIFICATION_SEVERITIES.ERROR,
   },
+  // Procurement (ADR-267 Phase B)
+  [NOTIFICATION_EVENT_TYPES.PROCUREMENT_APPROVAL_NEEDED]: {
+    category: 'procurement',
+    settingKey: 'approvalNeeded',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
+  },
+  [NOTIFICATION_EVENT_TYPES.PROCUREMENT_PO_APPROVED]: {
+    category: 'procurement',
+    settingKey: 'poApproved',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.SUCCESS,
+  },
+  [NOTIFICATION_EVENT_TYPES.PROCUREMENT_PO_OVERDUE]: {
+    category: 'procurement',
+    settingKey: 'poOverdue',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
+  },
 };
 
 // ============================================================================
@@ -214,6 +238,7 @@ export const NOTIFICATION_ENTITY_TYPES = {
   BUILDING: 'building',
   UNIT: 'unit',
   USER: 'user',
+  PURCHASE_ORDER: 'purchase_order',
 } as const;
 
 export type NotificationEntityType = typeof NOTIFICATION_ENTITY_TYPES[keyof typeof NOTIFICATION_ENTITY_TYPES];
@@ -283,6 +308,7 @@ export const SOURCE_SERVICES = {
   PROPERTIES: 'properties',
   TASKS: 'tasks',
   SYSTEM: 'system',
+  PROCUREMENT: 'procurement',
 } as const;
 
 export type SourceService = typeof SOURCE_SERVICES[keyof typeof SOURCE_SERVICES];

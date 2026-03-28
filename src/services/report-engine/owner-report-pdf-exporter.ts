@@ -76,17 +76,8 @@ const GREEN: [number, number, number] = [34, 197, 94];
 const AMBER: [number, number, number] = [245, 158, 11];
 const RED: [number, number, number] = [239, 68, 68];
 
-// ============================================================================
-// FONT REGISTRATION
-// ============================================================================
-
-async function registerGreekFont(pdf: jsPDF): Promise<void> {
-  const { ROBOTO_REGULAR_BASE64 } = await import('../gantt-export/roboto-font-data');
-  pdf.addFileToVFS('Roboto-Regular.ttf', ROBOTO_REGULAR_BASE64);
-  pdf.addFont('Roboto-Regular.ttf', 'Roboto', 'normal', undefined, 'Identity-H');
-  pdf.addFont('Roboto-Regular.ttf', 'Roboto', 'bold', undefined, 'Identity-H');
-  pdf.setFont('Roboto', 'normal');
-}
+// Greek font registration — SSOT: src/services/pdf/greek-font-loader.ts
+import { registerGreekFont } from '@/services/pdf/greek-font-loader';
 
 // ============================================================================
 // HELPERS

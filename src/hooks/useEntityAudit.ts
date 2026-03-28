@@ -38,6 +38,7 @@ const ENTITY_EVENT_MAP: Record<string, string[]> = {
   building: ['BUILDING_UPDATED', 'BUILDING_CREATED', 'BUILDING_DELETED'],
   contact: ['CONTACT_UPDATED', 'CONTACT_CREATED', 'CONTACT_DELETED'],
   project: ['PROJECT_UPDATED', 'PROJECT_CREATED', 'PROJECT_DELETED'],
+  purchase_order: ['PO_UPDATED', 'PO_CREATED', 'PO_DELETED', 'PO_STATUS_CHANGED'],
 };
 
 export function useEntityAudit({

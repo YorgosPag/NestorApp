@@ -9,19 +9,26 @@
  * @see ADR-267 §8.4 (PO Detail View)
  */
 
+import { lazy, Suspense } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn, getStatusColor } from '@/lib/design-system';
 import {
-  CheckCircle, Send, PackageCheck, XCircle, FileText, Copy, Edit, Clipboard,
+  CheckCircle, Send, PackageCheck, XCircle, Copy, Edit, Clipboard, Loader2,
 } from 'lucide-react';
 import { PO_STATUS_META } from '@/types/procurement';
 import type { PurchaseOrder } from '@/types/procurement';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { PurchaseOrderActions } from './PurchaseOrderActions';
+
+const ActivityTab = lazy(() =>
+  import('@/components/shared/audit/ActivityTab').then((m) => ({ default: m.ActivityTab }))
+);
 
 function formatCurrency(n: number): string {
   return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(n);
@@ -52,7 +59,7 @@ interface PurchaseOrderDetailProps {
 
 export function PurchaseOrderDetail({
   po, onApprove, onMarkOrdered, onRecordDelivery, onClose,
-  onCancel, onEdit, onDuplicate, onExportPDF, onCopyText,
+  onCancel, onEdit, onDuplicate, onExportPDF: _onExportPDF, onCopyText,
 }: PurchaseOrderDetailProps) {
   const { t } = useTranslation('procurement');
   const statusMeta = PO_STATUS_META[po.status];
@@ -61,6 +68,9 @@ export function PurchaseOrderDetail({
 
   return (
     <div className="space-y-6">
+      {/* Phase B: Actions toolbar (PDF, Email, Share) */}
+      <PurchaseOrderActions po={po} />
+
       {/* Header */}
       <Card>
         <CardHeader>
@@ -196,6 +206,24 @@ export function PurchaseOrderDetail({
         </Card>
       )}
 
+      {/* Phase B: Activity Tab */}
+      <Tabs defaultValue="details" className="w-full">
+        <TabsList>
+          <TabsTrigger value="details">{t('tabs.details')}</TabsTrigger>
+          <TabsTrigger value="activity">{t('tabs.activity')}</TabsTrigger>
+        </TabsList>
+        <TabsContent value="details">
+          <p className="text-sm text-muted-foreground py-4">
+            {t('activity.noHistory')}
+          </p>
+        </TabsContent>
+        <TabsContent value="activity">
+          <Suspense fallback={<Loader2 className="mx-auto my-8 h-5 w-5 animate-spin" />}>
+            <ActivityTab entityType="purchase_order" entityId={po.id} />
+          </Suspense>
+        </TabsContent>
+      </Tabs>
+
       {/* Actions */}
       <nav className={cn(
         'flex flex-wrap gap-2',
@@ -219,9 +247,6 @@ export function PurchaseOrderDetail({
         )}
         {onDuplicate && (
           <Button variant="outline" onClick={onDuplicate}><Copy className="mr-1.5 h-4 w-4" />{t('detail.duplicate')}</Button>
-        )}
-        {onExportPDF && (
-          <Button variant="outline" onClick={onExportPDF}><FileText className="mr-1.5 h-4 w-4" />{t('detail.pdf')}</Button>
         )}
         {onCopyText && (
           <Button variant="outline" onClick={onCopyText}><Clipboard className="mr-1.5 h-4 w-4" />{t('detail.copyText')}</Button>

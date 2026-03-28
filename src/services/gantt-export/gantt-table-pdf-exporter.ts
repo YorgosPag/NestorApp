@@ -43,13 +43,8 @@ const PHASE_BG: [number, number, number] = [239, 246, 255]; // blue-50
 // FONT + HELPERS
 // ============================================================================
 
-async function registerGreekFont(pdf: jsPDF): Promise<void> {
-  const { ROBOTO_REGULAR_BASE64 } = await import('./roboto-font-data');
-  pdf.addFileToVFS('Roboto-Regular.ttf', ROBOTO_REGULAR_BASE64);
-  pdf.addFont('Roboto-Regular.ttf', 'Roboto', 'normal', undefined, 'Identity-H');
-  pdf.addFont('Roboto-Regular.ttf', 'Roboto', 'bold', undefined, 'Identity-H');
-  pdf.setFont('Roboto', 'normal');
-}
+// Greek font registration — SSOT: src/services/pdf/greek-font-loader.ts
+import { registerGreekFont } from '@/services/pdf/greek-font-loader';
 
 function statusColor(status: string): [number, number, number] {
   if (status === 'completed') return GREEN;

@@ -18,22 +18,8 @@ import { captureGanttAsDataUrl, flattenTaskGroupsToRows } from './gantt-export-u
 
 // ─── Font Registration ────────────────────────────────────────────────────
 
-/**
- * Registers Roboto font with jsPDF for Greek character support.
- * Uses lazy dynamic import to load the ~687KB base64 data only when needed.
- * The default Helvetica font only supports Latin characters.
- */
-async function registerGreekFont(pdf: jsPDF): Promise<void> {
-  const { ROBOTO_REGULAR_BASE64 } = await import('./roboto-font-data');
-  pdf.addFileToVFS('Roboto-Regular.ttf', ROBOTO_REGULAR_BASE64);
-  // "Identity-H" encoding is CRITICAL for Unicode/Greek support
-  // Without it, jsPDF defaults to WinAnsiEncoding (Latin-only)
-  pdf.addFont('Roboto-Regular.ttf', 'Roboto', 'normal', undefined, 'Identity-H');
-  // Register same TTF as 'bold' — autoTable uses fontStyle:'bold' for header cells.
-  // Without this, header cells fall back to Helvetica (no Identity-H) → garbled Greek.
-  pdf.addFont('Roboto-Regular.ttf', 'Roboto', 'bold', undefined, 'Identity-H');
-  pdf.setFont('Roboto', 'normal');
-}
+// Greek font registration — SSOT: src/services/pdf/greek-font-loader.ts
+import { registerGreekFont } from '@/services/pdf/greek-font-loader';
 
 // ─── PDF Export ───────────────────────────────────────────────────────────
 

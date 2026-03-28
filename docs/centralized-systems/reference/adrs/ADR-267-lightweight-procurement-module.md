@@ -11,6 +11,7 @@
 | 2026-03-28 | Initial research & architecture — DRAFT for review |
 | 2026-03-28 | ✅ APPROVED — 41 ερωτήσεις Q&A με Γιώργο. Όλες οι αρχιτεκτονικές αποφάσεις κλείδωσαν |
 | 2026-03-28 | 🚀 Phase A Implementation — Batches 1-6: Types, Enterprise IDs, Config, Repository, Service, API Routes, Hooks, UI Components (5 components), Pages, Navigation, i18n (el+en). ~22 νέα αρχεία, ~3.800 LOC |
+| 2026-03-28 | 🚀 Phase B Implementation — Enhanced Integration: (1) SSOT registerGreekFont consolidation (7 duplicates → 1 module), (2) Entity audit trail integration (EntityAuditService.recordChange in all status transitions), (3) Notification system (3 procurement events: approval, approved, overdue), (4) PO PDF generator (bilingual EL/EN, jsPDF+autoTable), (5) PO Email service (Mailgun + PDF attachment), (6) Share link service (token-based, 7-day expiry, public API), (7) 4 new API routes (pdf, email, share, public), (8) PurchaseOrderActions component (PDF/Email/Share buttons), (9) ContactPurchaseOrdersTab (supplier POs in contact detail), (10) BOQRelatedPOs component, (11) Activity tab in PO detail (reuses ActivityTab SSOT), (12) Public share page (/shared/po/[token]). ~14 νέα αρχεία, ~1.700 LOC, 12+ modified |
 
 ---
 
