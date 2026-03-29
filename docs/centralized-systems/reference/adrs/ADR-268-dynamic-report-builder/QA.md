@@ -471,7 +471,406 @@
 | Cursor pagination | 5,000-50,000 | Δεν χρειάζεται Phase 1 |
 | Full-text search index | >50,000 | Δεν χρειάζεται |
 
-**Απόφαση**: Ο default limit 500 (SPEC-006) + max 2,000 καλύπτει **ΟΛΑ τα σενάρια** ακόμα και για τη μεγαλύτερη εταιρεία. Δεν χρειαζόμαστε cursor pagination. Αν κάποτε χρειαστεί (>5K records) → Phase 2+ extension.
+### Industry Benchmarks (Google + Κατασκευαστικές)
+
+| Εταιρεία | Approach | Limit |
+|----------|----------|-------|
+| **Google Looker** | Lazy loading (100 πρώτα, scroll batches), server-side aggregation, streaming results, 5-min query cache |
+| **Procore** | Max 10K records, server pagination 100/σελίδα, async export (background → email) |
+| **Oracle Primavera** | Cursor pagination, 5K activities/query, cached aggregations (ανανέωση 15 λεπτά) |
+| **Autodesk BIM 360** | Real-time <1K, async job >1K, server-side export → download notification |
+| **SAP S/4HANA** | Background execution, progress bar, notification on completion |
+
+### Αρχιτεκτονική Απόφαση: Future-Proof Θεμέλια
+
+**Εντολή Γιώργου**: Η υποδομή πρέπει να εξυπηρετεί πολύ μεγαλύτερες εταιρείες αργότερα χωρίς τεράστια refactorings.
+
+**Απόφαση — Layered Architecture (Google Pattern)**:
+
+Χτίζουμε **abstractions** που σήμερα τρέχουν sync αλλά αύριο γίνονται async χωρίς αλλαγή interface:
+
+```
+Phase 1 (τώρα):     QueryEngine.execute(request) → Promise<rows[]>         (sync, <5K records)
+Phase 2+ (αργότερα): QueryEngine.execute(request) → Promise<rows[]> | JobId  (async, >5K records)
+```
+
+| Θεμέλιο | Phase 1 (σήμερα) | Phase 2+ (αργότερα, χωρίς rewrite) |
+|---------|------------------|-----------------------------------|
+| **Query abstraction** | `QueryEngine.execute()` → sync Firestore | Ίδιο interface → async job + polling |
+| **Pagination interface** | `{ limit, offset }` → fetch + slice | Ίδιο interface → cursor pagination |
+| **Export abstraction** | `ExportEngine.export()` → sync blob | Ίδιο interface → background job → notification |
+| **Cache layer** | No-op (pass-through) | Ίδιο interface → Redis/in-memory 5-min cache |
+| **Aggregation** | Server-side Firestore | Ίδιο interface → pre-computed materialized views |
+
+**Πρακτικά**: Σήμερα `limit: 500, max: 2000` αρκεί. Αύριο αλλάζουμε ΜΟΝΟ τα internals, ΟΧΙ τα interfaces.
+
+---
+
+## Q26 (2026-03-29): Pre-built Report Templates — Google/Procore Pattern
+
+**Ερώτηση**: Θέλουμε έτοιμες αναφορές (templates) ή μόνο blank builder;
+
+**Απάντηση Γιώργου**: Δεν έχει δουλέψει ακόμα την εφαρμογή, δεν ξέρει ακριβώς τι θα χρειαστεί. Θέλει να ακολουθήσουμε Google/Procore pattern.
+
+### Industry Standard
+
+| Εταιρεία | Approach |
+|----------|----------|
+| **Procore** | ~30 pre-built + custom builder. Templates ανά κατηγορία (Budget, Commitments, Schedule, Safety) |
+| **Oracle Primavera** | ~50 standard reports (Activity, Resource, Cost, Earned Value) + custom |
+| **Google Analytics** | ~20 standard + Explore (custom builder). Templates = shortcuts, NOT separate code |
+| **Salesforce** | ~15 standard + drag-and-drop builder. Templates = saved report configs |
+
+### Απόφαση: Templates = Saved Report Configs (Salesforce Pattern)
+
+Δεν χτίζουμε ξεχωριστό template system. Τα templates είναι **pre-configured saved reports** — ίδιος μηχανισμός με τα user-saved reports, απλά `isTemplate: true`.
+
+```typescript
+// Ίδιο interface — template ΚΑΙ user report
+interface SavedReport {
+  id: string;
+  name: string;
+  domain: ReportDomain;
+  columns: string[];
+  filters: ReportFilter[];
+  groupBy?: string[];
+  isTemplate: boolean;    // true = system template, false = user saved
+  createdBy: string;      // 'system' for templates
+  companyId: string;      // tenant isolation
+}
+```
+
+**Phase 1**: Blank builder μόνο (δεν ξέρουμε ακόμα ποιες αναφορές χρειάζονται)
+**Phase 7 (Saved Reports)**: Ο Γιώργος φτιάχνει τις αναφορές που χρειάζεται → τις σώζει → γίνονται de facto templates
+**Phase 7+**: Προσθέτουμε ~15-20 system templates βάσει πραγματικής χρήσης
+
+**Zero wasted code**: Κανένας ξεχωριστός template engine. Ό,τι δουλεύει για saved reports, δουλεύει για templates.
+
+---
+
+## Q27 (2026-03-29): Mobile/Tablet Support — Responsive Strategy
+
+**Ερώτηση**: Ο Report Builder δουλεύει σε mobile/tablet ή μόνο desktop;
+
+**Απάντηση Γιώργου**: Mobile/tablet + desktop.
+
+### Industry Pattern (Procore)
+
+Procore (η κορυφαία construction platform) κάνει **adaptive layout**, ΟΧΙ ίδιο UI σε mobile:
+
+| Viewport | UI Pattern |
+|----------|-----------|
+| **Desktop (>1024px)** | Full builder: DomainSelector + ColumnSelector + FilterPanel + Table + Charts side-by-side |
+| **Tablet (768-1024px)** | Stacked layout: selectors πάνω, results κάτω. Charts σε full-width. Column selector = drawer |
+| **Mobile (<768px)** | Simplified: Domain → Filters → Results (step-by-step wizard). Table = horizontal scroll. Charts = full-width stacked |
+
+### Απόφαση: Procore Adaptive Pattern
+
+- **Phase 1**: Desktop-first, αλλά responsive foundations (CSS grid/flex, no fixed widths, mobile-safe components)
+- **Phase 2**: Tablet optimization (stacked layout, drawer selectors)
+- **Phase 4+**: Mobile wizard mode (step-by-step flow)
+- **Export**: Πάντα landscape PDF — ίδιο σε όλες τις συσκευές
+
+**Υπάρχον foundation**: Η εφαρμογή ήδη χρησιμοποιεί responsive patterns (ADR-265 `ReportKPIGrid` = 4→2→1 cols). Δεν χρειάζεται νέο responsive system.
+
+---
+
+## Q28 (2026-03-29): Γλώσσα UI — Bilingual Column Labels
+
+**Ερώτηση**: Τα labels στηλών/filters θα είναι μόνο EL, μόνο EN, ή bilingual;
+
+**Απάντηση Γιώργου**: Bilingual (EL + EN).
+
+### Εκτίμηση μεταφραστικού όγκου
+
+| Κατηγορία | Εκτίμηση κλειδιών |
+|-----------|-------------------|
+| Domain names (20) | 20 |
+| Column labels (~20/domain × 20 domains) | ~400 |
+| Filter operators (contains, equals, before, κλπ) | ~15 |
+| UI labels (builder page, buttons, placeholders) | ~30 |
+| Enum values (status, type, phase — ήδη translated σε ADR-265) | REUSE |
+| **Σύνολο νέων κλειδιών** | **~465** |
+
+### Απόφαση: i18n Namespace Extension (Google Pattern)
+
+**Εντολή Γιώργου**: Τα JSON αρχεία να μην είναι τεράστια — όπως το κάνει η Google.
+
+Η εφαρμογή **ήδη** κάνει Google pattern: ~30 split namespaces, lazy loaded ανά σελίδα. Μεγαλύτερα: `common.json` (117KB), `building.json` (113KB), `dxf-viewer.json` (88KB). Τα υπόλοιπα <30KB.
+
+**Report Builder i18n — Split ανά domain group (ΟΧΙ 1 τεράστιο αρχείο)**:
+
+```
+src/i18n/locales/el/
+├── report-builder.json          ← Core UI (~30 κλειδιά: buttons, labels, placeholders)
+├── report-builder-domains.json  ← Domain names + column labels (~400 κλειδιά)
+└── (existing reports.json)      ← Ήδη 25KB — ΔΕΝ πειράζεται
+```
+
+- **report-builder.json**: ~2KB — μόνο UI strings (φορτώνεται μόνο στο `/reports/builder`)
+- **report-builder-domains.json**: ~15KB — column labels ανά domain (φορτώνεται lazy, μόνο όταν ανοίξει builder)
+- **Enum values**: REUSE υπάρχοντα namespaces (contacts.json, projects.json, payments.json ήδη τα έχουν)
+- **Fallback**: Αν λείπει μετάφραση → fallback στο field name (camelCase → human readable)
+- **Phase 1**: ~80 κλειδιά (4 domains). **Phase 4-6**: incremental ~400 κλειδιά
+
+---
+
+## Q29 (2026-03-29): Report Sharing — URL + Saved + Export
+
+**Ερώτηση**: Θέλουμε sharing αναφορών πέρα από PDF/Excel; Τι σημαίνει σε υποδομή/κόστος;
+
+**Απάντηση Γιώργου**: Και τα τρία.
+
+### 3 Sharing Methods — Phased Delivery
+
+| Method | Phase | Effort | Server Cost | Περιγραφή |
+|--------|-------|--------|-------------|-----------|
+| **A. URL Sharing** | Phase 1 | ~20 γρ. | Μηδέν | Filters encoded στο URL → copy link → live data |
+| **B. PDF/Excel Export** | Phase 3 | Ήδη σχεδιασμένο (SPEC-003) | Μηδέν | Static snapshot → email/Viber |
+| **C. Saved Report Sharing** | Phase 7 | ~100 γρ. | Firestore reads (ελάχιστο) | Share με χρήστες/ρόλους → "Κοινές Αναφορές" |
+
+### Τεχνικές Λεπτομέρειες
+
+**A. URL Sharing (Phase 1)**:
+- URL pattern: `/reports/builder?d=units&c=code,name,status&f=status:eq:sold`
+- Encode/decode via `URLSearchParams` — zero storage
+- Ο παραλήπτης βλέπει live data (αν έχει `reports:reports:view` permission)
+
+**C. Saved Report Sharing (Phase 7)**:
+- Extend `SavedReport` interface: `sharedWith: string[]`, `sharedWithRoles: string[]`
+- Query: `where('sharedWith', 'array-contains', userId)`
+- UI: "Κοινοποίηση" button → user/role picker
+- Respects RBAC — ο παραλήπτης βλέπει μόνο data του companyId του
+
+---
+
+## Q30 (2026-03-29): Chart Types — Βασικά + Advanced
+
+**Ερώτηση**: Ποιους τύπους chart θέλουμε στον builder;
+
+**Απάντηση Γιώργου**: Όλους — βασικά + advanced (heatmap, treemap, scatter).
+
+### Chart Types — Phased Delivery
+
+| Τύπος | Ήδη υπάρχει (ADR-265) | Phase | Use Case Κατασκευής |
+|-------|----------------------|-------|---------------------|
+| **Bar** | ✅ ReportChart | Phase 2 | Πωλήσεις ανά μήνα, κόστος ανά κτίριο |
+| **Pie** | ✅ ReportChart | Phase 2 | Κατανομή status μονάδων, τύποι επαφών |
+| **Line** | ✅ ReportChart | Phase 2 | Τάσεις πληρωμών, πρόοδος κατασκευής |
+| **Area** | ✅ ReportChart | Phase 2 | Σωρευτικά έσοδα |
+| **Stacked Bar** | ✅ ReportChart | Phase 2 | Status breakdown ανά έργο |
+| **Funnel** | ✅ ReportFunnel | Phase 2 | Pipeline ευκαιριών |
+| **Gauge** | ✅ ReportGauge | Phase 2 | % ολοκλήρωσης, CPI/SPI |
+| **Scatter** | ❌ Νέο | Phase 4+ | Εμβαδόν vs τιμή, €/m² analysis |
+| **Treemap** | ❌ Νέο | Phase 4+ | Κατανομή κόστους BOQ, budget breakdown |
+| **Heatmap** | ❌ Νέο | Phase 6+ | Καθυστερήσεις ανά μήνα/κτίριο, seasonal patterns |
+
+### Τεχνική Σημείωση
+
+- **Recharts** (ήδη εγκατεστημένο) υποστηρίζει: Bar, Pie, Line, Area, Scatter, Treemap — **μηδέν νέο dependency**
+- **Heatmap**: Recharts δεν έχει native heatmap — υλοποίηση με custom `<Cell>` grid ή lightweight add-on
+- **Κόστος**: Μηδέν νέες βιβλιοθήκες, μόνο γραμμές κώδικα
+- **Smart auto-suggest**: Ο builder θα προτείνει τύπο chart βάσει data type (enum → pie, date → line, number × number → scatter)
+
+---
+
+## Q31 (2026-03-29): Real-time vs Snapshot Data
+
+**Ερώτηση**: Τα data ενημερώνονται real-time ή snapshot + refresh;
+
+**Απάντηση Γιώργου**: Snapshot + Refresh button.
+
+**Απόφαση**: Snapshot + Refresh (Procore/Oracle/SAP pattern)
+- Ο χρήστης πατάει "Εκτέλεση" → βλέπει data εκείνης της στιγμής
+- Πατάει "Ανανέωση" → fresh query
+- **ΟΧΙ** `onSnapshot` (real-time) → λιγότερα Firestore reads = λιγότερο κόστος
+- Timestamp "Τελευταία ενημέρωση: 14:32" στο UI
+
+---
+
+## Q32 (2026-03-29): Cross-Domain Join Depth — Max 3 Levels
+
+**Ερώτηση**: Πόσα επίπεδα βάθους σε joins μεταξύ collections;
+
+**Απάντηση Γιώργου**: 3 max.
+
+### Cost Analysis
+
+| Επίπεδα | Reads/query (100 units) | Κόστος/query | 5 users × 10 rpts/day × 30 days |
+|---------|------------------------|-------------|----------------------------------|
+| 1 | ~180 | $0.000108 | $0.16/μήνα |
+| 2 | ~380 | $0.000228 | $0.34/μήνα |
+| **3** | **~600** | **$0.000360** | **$0.54/μήνα** |
+
+Διαφορά 2→3 = ~$0.20/μήνα. Ακόμα 20 users × 20 rpts/day = ~$4.30/μήνα.
+
+### Απόφαση
+
+- **Max 3 επίπεδα** (π.χ. Unit → Payment Plan → Cheque)
+- Αρχιτεκτονική extensible σε N — αν χρειαστεί 4ο, προστίθεται χωρίς rewrite
+- Τα denormalized πεδία (snapshots, cached names) μειώνουν τα πραγματικά επίπεδα
+- 4+ δεν βρέθηκε ρεαλιστικό use case λόγω SAP-pattern denormalization
+
+---
+
+## Q33 (2026-03-29): Project Isolation — Company-Wide Access
+
+**Ερώτηση**: Αν χρήστης είναι project_manager σε 2/5 projects, βλέπει data από όλα ή μόνο τα δικά του;
+
+**Απάντηση Γιώργου**: OK σε company-wide.
+
+**Απόφαση**: Company-wide (data filtered μόνο by companyId, ΟΧΙ by project membership).
+- Συμβαδίζει με ADR-265 reports (ήδη company-wide)
+- Αρχικά 5-6 users — project isolation δεν έχει νόημα
+- **Future-proof**: Config flag `projectIsolation: boolean` για μελλοντική ενεργοποίηση
+- Υλοποίηση αργότερα = +1 γραμμή (`WHERE projectId IN [user's projects]`), 0 rewrite
+
+### Τεχνικό Εύρημα: Subcollection Group Queries
+
+Τα `payment_plans` και `payments` είναι subcollections (`units/{unitId}/payment_plans`). **Δεν υπάρχει collection group index** στο `firestore.indexes.json` για αυτές.
+
+**Λύση Phase 1**: Query parent collection (units) → resolve subcollections per unit (batch). Με max ~1,000 units = ~1,000 subcollection queries (OK performance).
+
+**Λύση Phase 4+ (αν χρειαστεί)**: Προσθήκη collection group index → `db.collectionGroup('payment_plans').where('projectId', '==', x)`.
+
+---
+
+## Q34 (2026-03-29): Conditional Formatting — Automatic Status Colors
+
+**Ερώτηση**: Θέλουμε χρώματα βάσει τιμής στον πίνακα;
+
+**Απάντηση Γιώργου**: A. Automatic.
+
+**Απόφαση**: Automatic conditional formatting (Procore pattern)
+- **Enum/Status πεδία**: Αυτόματο χρώμα βάσει status (green=completed/paid, red=overdue/bounced/cancelled, amber=pending/draft)
+- **Boolean πεδία**: ✅ green / ❌ red
+- **Currency πεδία**: Κόκκινο αν αρνητικό
+- **Date πεδία**: Κόκκινο αν παρελθόν + status δεν είναι completed (overdue indication)
+- **REUSE**: Η εφαρμογή ήδη έχει status color mappings σε κάθε domain — δεν χρειάζεται νέο color system
+- Phase 1: Enum/status colors. Phase 2+: Date-based overdue, threshold rules.
+
+---
+
+## Q35 (2026-03-29): Drill-Down — Clickable Entity Links
+
+**Ερώτηση**: Κλικ σε entity name → navigation στη σελίδα του;
+
+**Απάντηση Γιώργου**: A. Clickable links.
+
+**Απόφαση**: Clickable links (Procore pattern)
+- Entity columns (Project name, Unit code, Contact name, PO number) = clickable → opens entity page (new tab)
+- **REUSE**: Routes ήδη υπάρχουν (`/projects/[id]`, `/contacts/[id]`, `/procurement/[poId]`, κλπ)
+- Domain config: κάθε domain ορίζει `linkField` + `linkTemplate` (π.χ. `{ field: 'unitId', template: '/units/{id}' }`)
+- Phase 1: Primary entity link. Phase 2+: Joined entity links (π.χ. κλικ σε buyer name → contact page)
+
+---
+
+## Q36 (2026-03-29): Row Limit Notification — Warning Banner
+
+**Ερώτηση**: Αν τα results ξεπερνούν το limit (500), τι βλέπει ο χρήστης;
+
+**Απάντηση Γιώργου**: A. Warning banner.
+
+**Απόφαση**: Warning banner (Google/Procore pattern)
+- Banner: "Εμφανίζονται 500 από 2,000 αποτελέσματα. Πρόσθεσε φίλτρα ή αύξησε το limit."
+- Κουμπί "Εμφάνιση περισσότερων" (αυξάνει limit σε 1000 → 2000 → max)
+- Aggregations (SUM/COUNT/AVG) υπολογίζονται στο **σύνολο**, ΟΧΙ στα truncated rows
+- Export: Εξάγει ΟΛΑ τα rows (μέχρι max 2000), ΟΧΙ μόνο τα εμφανιζόμενα
+
+---
+
+## Q37 (2026-03-29): Filter Chips UI — Google/Procore Pattern
+
+**Ερώτηση**: Θέλουμε filter chips πάνω από τον πίνακα;
+
+**Απάντηση Γιώργου**: Ναι.
+
+**Απόφαση**: Filter Chips (Phase 1)
+- Ενεργά φίλτρα εμφανίζονται ως chips: `[Status: Sold ✕] [Ποσό: > 10.000€ ✕] [+ Φίλτρο]`
+- Κλικ ✕ → αφαιρεί φίλτρο + re-execute query
+- Κλικ "+ Φίλτρο" → ανοίγει filter row
+- Κλικ στο chip → edit inline (αλλαγή τιμής/operator)
+- Mobile: horizontal scroll στα chips
+
+---
+
+## Q38 (2026-03-29): AI Natural Language Query — Phase 1
+
+**Ερώτηση**: Θέλουμε AI text input που μεταφράζει φυσική γλώσσα σε query;
+
+**Απάντηση Γιώργου**: ΝΑΙ, στο Phase 1.
+
+**Απόφαση**: AI Query Translator (Phase 1, Procore Assist pattern)
+
+### Flow
+```
+Χρήστης: "Δείξε μου τις ληξιπρόθεσμες δόσεις πάνω από 10K"
+    ↓
+AI (gpt-4o-mini): μεταφράζει σε BuilderQueryRequest
+    ↓
+Confirmation: "Κατάλαβα: Domain=Πλάνα Πληρωμών, Filter: status=due, amount>10000"
+    ↓
+Χρήστης: ✅ Εκτέλεση / ✏️ Διόρθωση
+    ↓
+Ίδιο Query Engine → Αποτελέσματα
+```
+
+### Νέα αρχεία (3)
+- `src/services/report-engine/ai-query-translator.ts` — Prompt + OpenAI → BuilderQueryRequest
+- `src/components/reports/builder/AIQueryInput.tsx` — Text field + confirmation UI
+- `src/app/api/reports/builder/ai/route.ts` — API endpoint (withAuth + rate limit)
+
+### Αρχιτεκτονική
+- REUSE ADR-171 AI pipeline (OpenAI provider, structured outputs)
+- System prompt: domain names + column names + filter operators (injected from domain configs)
+- Bilingual: κατανοεί EL + EN
+- Confirmation step ΥΠΟΧΡΕΩΤΙΚΟ — ο χρήστης βλέπει τι κατάλαβε πριν εκτελέσει
+- Αν αποτύχει parsing → fallback: "Δεν κατάλαβα, δοκίμασε διαφορετικά ή χρησιμοποίησε τα φίλτρα"
+- Κόστος: ~$0.001/query (gpt-4o-mini) = αμελητέο
+
+### UI Position
+```
+┌────────────────────────────────────────────────────────────┐
+│ 🤖 "Ρώτησε με κάτι..." [___________________________] [→] │
+├────────────────────────────────────────────────────────────┤
+│ [Domain ▾] [Στήλες ▾] [+ Φίλτρο]                         │
+│ [Status: Sold ✕]  [Ποσό: > 10K ✕]                        │
+├────────────────────────────────────────────────────────────┤
+│ Πίνακας αποτελεσμάτων...                                  │
+└────────────────────────────────────────────────────────────┘
+```
+
+Δύο τρόποι: Manual (κλασικά φίλτρα) ΚΑΙ AI (text input). Ίδιο αποτέλεσμα.
+
+---
+
+## Q39 (2026-03-29): Drag-and-Drop Column Reordering — Phase 1
+
+**Ερώτηση**: Drag-and-drop για αλλαγή σειράς στηλών; Phase 1 ή αργότερα;
+
+**Απάντηση Γιώργου**: Phase 1.
+
+**Απόφαση**: Checkboxes ΓΙΑ ΕΠΙΛΟΓΗ + Drag-and-drop ΓΙΑ ΣΕΙΡΑ (Phase 1)
+- Column selector: checkboxes ενεργοποιούν/απενεργοποιούν στήλες
+- Επιλεγμένες στήλες εμφανίζονται σε sortable list — drag handle (⠿) για reorder
+- Table headers: ΟΧΙ drag (πολύπλοκο) — η σειρά ορίζεται μόνο στον selector
+- Library: HTML5 Drag-and-Drop ή `@dnd-kit/sortable` (αν ήδη υπάρχει στο project)
+- Αποθηκεύεται στο URL sharing (column order encoded)
+
+---
+
+## Q40 (2026-03-29): Expand/Collapse Grouped Rows — Mandatory Phase 2
+
+**Ερώτηση**: Expand/collapse σε grouped rows — mandatory ή nice-to-have;
+
+**Απάντηση Γιώργου**: Ναι (mandatory).
+
+**Απόφαση**: Mandatory στο Phase 2 (μαζί με grouping)
+- ▼ Expanded: δείχνει child rows
+- ▶ Collapsed: δείχνει μόνο summary (count + aggregations)
+- Κουμπιά "Ανάπτυξη Όλων" / "Σύμπτυξη Όλων" (Procore Feb 2026 pattern)
+- Default: Level 1 expanded, Level 2 collapsed
+- Max 1,000 rows (Procore limit)
 
 ---
 
