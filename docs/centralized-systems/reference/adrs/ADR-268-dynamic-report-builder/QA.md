@@ -438,6 +438,51 @@
 
 ---
 
+## Q24 (2026-03-29): Ποιο auth/RBAC model χρησιμοποιεί το Report Builder;
+
+**Ερώτηση**: Ποιοι χρήστες θα έχουν πρόσβαση στο Report Builder; Τι RBAC model ακολουθούμε;
+
+**Απάντηση** (βάσει ανάλυσης κώδικα `src/lib/auth/`):
+
+Η εφαρμογή έχει **πλήρες enterprise RBAC** ήδη υλοποιημένο:
+
+### Υπάρχον Auth Stack
+- **Multi-tenant**: `companyId` σε κάθε AuthContext — automatic data isolation
+- **11 roles**: 2 global (super_admin bypass, company_admin) + 9 project-scoped (project_manager, architect, engineer, site_manager, accountant, sales_agent, data_entry, vendor, viewer)
+- **~70 permission IDs**: Fine-grained, compile-time safe (TypeScript `as const`)
+- **9 permission sets**: Add-on bundles (3 require MFA: finance_approver, legal_viewer, legal_manager)
+- **Tenant isolation**: `requireProjectInTenant()`, `requireBuildingInTenant()` κλπ — verified in Firestore
+
+### Report-Specific Permissions (ήδη υπάρχουν)
+- `reports:reports:view` — Βλέπει αναφορές (all current ADR-265 APIs use this)
+- `reports:reports:create` — Δημιουργεί αναφορές (available in `report_creator` permission set)
+
+### ADR-268 Report Builder Απόφαση
+- **API**: `POST /api/reports/builder` → `withAuth({ requiredPermission: 'reports:reports:view' })` — ίδιο pattern με ADR-265
+- **Saved Reports**: `reports:reports:create` permission required (ήδη στο `report_creator` set)
+- **Navigation**: `/reports/builder` visible αν user has `reports:reports:view`
+- **Data isolation**: `filter.companyId = ctx.companyId` — automatic, zero new code
+- **Domain-level restrictions**: ΟΧΙ στο Phase 1 — αν χρειαστεί Phase 2+, extend permissions (π.χ. `reports:financial:view`)
+
+### Ποιοι ρόλοι βλέπουν Reports
+| Role | `reports:reports:view` | `reports:reports:create` |
+|------|----------------------|------------------------|
+| super_admin | ✅ (bypass) | ✅ (bypass) |
+| company_admin | ✅ | ✅ |
+| project_manager | ✅ | ✅ |
+| site_manager | ✅ | ✅ |
+| accountant | ✅ | ❌ (μόνο view) |
+| viewer | ✅ | ❌ |
+| architect | ❌ | ❌ |
+| engineer | ❌ | ❌ |
+| sales_agent | ❌ | ❌ |
+| data_entry | ❌ | ❌ |
+| vendor | ❌ | ❌ |
+
+**Δεν χρειάζεται ΚΑΝΕΝΑ νέο RBAC code** — REUSE 100% του υπάρχοντος auth stack.
+
+---
+
 ## Q23 (2026-03-29): Ανάλυση Overlap ADR-265/266/267 vs ADR-268 — Anti-Duplication Rules
 
 **Ερώτηση Γιώργου**: Μήπως ο κώδικας που θα δημιουργηθεί για το ADR-268 έρχεται σε σύγκρουση ή είναι διπλότυπος με τον κώδικα που γράψαμε ήδη για τα ADR-265, ADR-266, ADR-267;
