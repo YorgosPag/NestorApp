@@ -1351,6 +1351,20 @@
             "colBaselineVariance": "vs Βάση"
           }
         },
+        "resourceHistogram": {
+          "title": "Φόρτος Πόρων",
+          "empty": "Δεν υπάρχουν αναθέσεις πόρων",
+          "emptyDesc": "Αναθέστε εργάτες ή εξοπλισμό σε εργασίες για να δείτε τον φόρτο πόρων.",
+          "hoursPerWeek": "Ώρες / Εβδομάδα",
+          "capacity": "40ω Χωρητικότητα",
+          "total": "Σύνολο"
+        },
+        "resourceUtilization": {
+          "title": "Αξιοποίηση Πόρων",
+          "totalResources": "Σύνολο Πόρων",
+          "avgUtilization": "Μ.Ο. Αξιοποίησης",
+          "overAllocated": "Υπερ-Κατανεμημένοι"
+        },
         "ownerReport": {
           "title": "Αναφορά Κατάστασης Έργου",
           "overallProgress": "Συνολική Πρόοδος Έργου",
@@ -1502,7 +1516,21 @@
           "delayReason": "Λόγος Καθυστέρησης",
           "delayReasonPlaceholder": "Επιλέξτε λόγο...",
           "delayNote": "Σημειώσεις Καθυστέρησης",
-          "delayNotePlaceholder": "Επιπλέον λεπτομέρειες για την καθυστέρηση..."
+          "delayNotePlaceholder": "Επιπλέον λεπτομέρειες για την καθυστέρηση...",
+          "resources": {
+            "title": "Ανατεθειμένοι Πόροι",
+            "addWorker": "Προσθήκη Εργάτη",
+            "addEquipment": "Προσθήκη Εξοπλισμού",
+            "selectWorker": "Επιλέξτε εργάτη...",
+            "equipmentPlaceholder": "π.χ. Γερανός #2, Εκσκαφέας...",
+            "hours": "ώρες",
+            "add": "Προσθήκη",
+            "remove": "Αφαίρεση",
+            "noWorkers": "Δεν υπάρχουν διαθέσιμοι εργάτες",
+            "maxReached": "Μέγιστο 20 πόροι ανά εργασία.",
+            "loading": "Φόρτωση πόρων...",
+            "overAllocated": "Υπερ-κατανεμημένος"
+          }
         },
         "delayReasons": {
           "weather": "Καιρός",

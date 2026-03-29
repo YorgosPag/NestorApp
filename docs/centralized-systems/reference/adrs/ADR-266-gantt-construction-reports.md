@@ -1,6 +1,6 @@
 # ADR-266: Gantt & Construction Schedule Reports
 
-**Status**: PHASE C IN PROGRESS (Sub-phases 1+2+3 complete)
+**Status**: PHASE C IN PROGRESS (Sub-phases 1+2+3+4 complete)
 **Date**: 2026-03-28
 **Author**: Claude (Research Agents × 4)
 **Related ADRs**: ADR-034 (Gantt Chart), ADR-265 (Enterprise Reports System), ADR-175 (BOQ/Quantity Surveying)
@@ -14,6 +14,7 @@
 | 2026-03-28 | **Phase C Sub-phase 1 IMPLEMENTED**: delayReason + delayNote fields — SSoT DELAY_REASONS array, conditional UI in dialog, per-reason stacked bar chart, API + i18n. Also refactored: route.ts split (229+186), dialog split (490+186+245+79) |
 | 2026-03-28 | **Phase C Sub-phase 2 IMPLEMENTED**: Critical Path Method — CPM algorithm (forward/backward pass, Kahn's cycle detection), CriticalPathCard rewrite with real data, CriticalPathSection dashboard table, 7th KPI card, useCriticalPath hook, i18n (en+el) |
 | 2026-03-28 | **Phase C Sub-phase 3 IMPLEMENTED**: Baseline Snapshots — Firestore `construction_baselines` collection, `cbase_` enterprise IDs, API routes (GET list/detail, POST create, DELETE), client services, `useBaselineComparison` hook, `BaselineSection` UI (save dialog, list, compare toggle, delete), Variance Table baseline columns (start/end/vs baseline), i18n (en+el) |
+| 2026-03-29 | **Phase C Sub-phase 4 IMPLEMENTED**: Resource Allocation — Firestore `construction_resource_assignments`, `crasn_` enterprise IDs, API route (GET/POST/PATCH/DELETE), cascade delete on task/phase deletion, client service + `useResourceAssignments` hook, `ResourceAssignmentSection` in task edit dialog (workers + equipment), `ResourceHistogramChart` (stacked bar/week, 40h capacity line), `ResourceUtilizationKPIs` (3 cards), `DelayFieldsSection` extracted, i18n (en+el) |
 
 ---
 
@@ -578,8 +579,29 @@ Dashboard → [Export ▼]
 - `dashboard/index.ts` (+exports)
 - `en/el building.json` (+30 baseline i18n keys each)
 
-#### Sub-phase 4: Resource Allocation (Pending)
-3. Resource allocation tracking
+#### Sub-phase 4: Resource Allocation ✅ IMPLEMENTED
+- Firestore collection `construction_resource_assignments` (top-level, buildingId+taskId+phaseId indexed)
+- Enterprise ID prefix `crasn_` via `generateConstructionResourceAssignmentId()`
+- Resource types: `worker` (from contacts) | `equipment` (free text)
+- API route: GET (list, ?taskId filter), POST (create, max 20/task), PATCH (hours/notes), DELETE
+- Cascade delete: task deletion → delete assignments; phase deletion → delete all child assignments
+- `useResourceAssignments` hook: CRUD with optimistic updates
+- `ResourceAssignmentSection` in task edit dialog: worker select, equipment input, hours, remove
+- `ResourceHistogramChart`: stacked bars per resource per week, 40h capacity reference line
+- `ResourceUtilizationKPIs`: 3 cards (Total Resources, Avg Utilization, Over-Allocated)
+- `DelayFieldsSection` extracted from dialog (SRP, 500-line limit)
+- i18n: en + el keys
+
+**New files:**
+- `src/app/api/buildings/[buildingId]/construction-resource-assignments/route.ts` (250 LOC)
+- `src/services/construction-scheduling/resource-assignment.service.ts` (115 LOC)
+- `src/hooks/useResourceAssignments.ts` (115 LOC)
+- `src/components/.../dialogs/ResourceAssignmentSection.tsx` (255 LOC)
+- `src/components/.../dialogs/DelayFieldsSection.tsx` (80 LOC)
+- `src/components/.../dashboard/resource-histogram.types.ts` (50 LOC)
+- `src/components/.../dashboard/useResourceHistogram.ts` (210 LOC)
+- `src/components/.../dashboard/ResourceHistogramChart.tsx` (165 LOC)
+- `src/components/.../dashboard/ResourceUtilizationKPIs.tsx` (80 LOC)
 
 #### Sub-phase 5: Accessibility (Pending)
 4. Chart accessibility layer for screen readers

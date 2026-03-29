@@ -179,6 +179,58 @@ export interface ConstructionBaselineCreatePayload {
   description?: string;
 }
 
+// ─── Resource Allocation Types (ADR-266 Phase C, Sub-phase 4) ──────────
+
+export type ResourceType = 'worker' | 'equipment';
+
+/** Resource assigned to a construction task — stored in construction_resource_assignments */
+export interface ConstructionResourceAssignment {
+  id: string;                          // crasn_uuid
+  taskId: string;                      // → construction_tasks
+  phaseId: string;                     // Denormalized for histogram queries
+  buildingId: string;
+  companyId: string;
+  resourceType: ResourceType;
+  /** Contact ID — only for 'worker' type */
+  contactId?: string | null;
+  /** Display name (worker full name or equipment label) */
+  resourceName: string;
+  /** Free-text label for equipment (e.g. "Crane #2") */
+  equipmentLabel?: string | null;
+  /** Total hours allocated to this task */
+  allocatedHours: number;
+  notes?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
+}
+
+/** Lightweight summary for list views */
+export interface ResourceAssignmentSummary {
+  id: string;
+  taskId: string;
+  resourceType: ResourceType;
+  resourceName: string;
+  allocatedHours: number;
+}
+
+export interface ResourceAssignmentCreatePayload {
+  taskId: string;
+  phaseId: string;
+  resourceType: ResourceType;
+  contactId?: string;
+  resourceName: string;
+  equipmentLabel?: string;
+  allocatedHours: number;
+  notes?: string;
+}
+
+export interface ResourceAssignmentUpdatePayload {
+  allocatedHours?: number;
+  notes?: string | null;
+}
+
 // ─── API Response Types ──────────────────────────────────────────────────
 
 export interface ConstructionDataResponse {

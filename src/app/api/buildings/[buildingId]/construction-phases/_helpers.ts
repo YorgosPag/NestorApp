@@ -156,6 +156,7 @@ export async function handleDelete(
   let cascadedTasks = 0;
 
   if (type === 'phase') {
+    // Cascade-delete child tasks
     const childTasks = await adminDb
       .collection(COLLECTIONS.CONSTRUCTION_TASKS)
       .where('phaseId', '==', id)
@@ -167,6 +168,32 @@ export async function handleDelete(
       await batch.commit();
       cascadedTasks = childTasks.size;
       logger.info('[Construction] Cascade-deleted tasks for phase', { cascadedTasks, phaseId: id });
+    }
+
+    // Cascade-delete resource assignments for all tasks in this phase (ADR-266 C4)
+    const phaseAssignments = await adminDb
+      .collection(COLLECTIONS.CONSTRUCTION_RESOURCE_ASSIGNMENTS)
+      .where('phaseId', '==', id)
+      .get();
+
+    if (!phaseAssignments.empty) {
+      const batch = adminDb.batch();
+      phaseAssignments.docs.forEach((doc) => batch.delete(doc.ref));
+      await batch.commit();
+      logger.info('[Construction] Cascade-deleted resource assignments for phase', { count: phaseAssignments.size, phaseId: id });
+    }
+  } else {
+    // Cascade-delete resource assignments for this task (ADR-266 C4)
+    const taskAssignments = await adminDb
+      .collection(COLLECTIONS.CONSTRUCTION_RESOURCE_ASSIGNMENTS)
+      .where('taskId', '==', id)
+      .get();
+
+    if (!taskAssignments.empty) {
+      const batch = adminDb.batch();
+      taskAssignments.docs.forEach((doc) => batch.delete(doc.ref));
+      await batch.commit();
+      logger.info('[Construction] Cascade-deleted resource assignments for task', { count: taskAssignments.size, taskId: id });
     }
   }
 

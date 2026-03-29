@@ -149,6 +149,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   CONSTRUCTION_PHASE: 'cphase',
   CONSTRUCTION_TASK: 'ctask',
   CONSTRUCTION_BASELINE: 'cbase',
+  CONSTRUCTION_RESOURCE_ASSIGNMENT: 'crasn',
   MILESTONE: 'mile',
 
   // ==========================================================================
@@ -948,6 +949,14 @@ export class EnterpriseIdService {
   }
 
   /**
+   * 📋 Generate Construction Resource Assignment ID (ADR-266)
+   * Format: crasn_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateConstructionResourceAssignmentId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.CONSTRUCTION_RESOURCE_ASSIGNMENT).id;
+  }
+
+  /**
    * 🎫 Generate Attendance QR Token ID (ADR-170)
    * Format: qrtok_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
    */
@@ -1526,6 +1535,7 @@ export const generateLearnedPatternId = () => enterpriseIdService.generateLearne
 export const generateConstructionPhaseId = () => enterpriseIdService.generateConstructionPhaseId();
 export const generateConstructionTaskId = () => enterpriseIdService.generateConstructionTaskId();
 export const generateConstructionBaselineId = () => enterpriseIdService.generateConstructionBaselineId();
+export const generateConstructionResourceAssignmentId = () => enterpriseIdService.generateConstructionResourceAssignmentId();
 export const generateAttendanceQrTokenId = () => enterpriseIdService.generateAttendanceQrTokenId();
 export const generateAttendanceEventId = () => enterpriseIdService.generateAttendanceEventId();
 export const generateEmploymentRecordId = () => enterpriseIdService.generateEmploymentRecordId();

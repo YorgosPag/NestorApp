@@ -30,8 +30,9 @@ import { useTypography } from '@/hooks/useTypography';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { DIALOG_SIZES } from '@/styles/design-tokens';
 import type { ConstructionPhaseStatus, ConstructionTaskStatus, DelayReason } from '@/types/building/construction';
-import { DELAY_REASONS } from '@/types/building/construction';
 import { usePhaseNameCombobox } from './usePhaseNameCombobox';
+import { ResourceAssignmentSection } from './ResourceAssignmentSection';
+import { DelayFieldsSection } from './DelayFieldsSection';
 import { PHASE_STATUSES, TASK_STATUSES } from './construction-dialog.types';
 import type { ConstructionPhaseDialogProps } from './construction-dialog.types';
 
@@ -51,6 +52,8 @@ export function ConstructionPhaseDialog({
   onSaveTask,
   onUpdateTask,
   onDeleteTask,
+  buildingId,
+  workers = [],
 }: ConstructionPhaseDialogProps) {
   const { t } = useTranslation('building');
   const spacingTokens = useSpacingTokens();
@@ -352,48 +355,14 @@ export function ConstructionPhaseDialog({
             </FormInput>
           </FormField>
 
-          {/* Delay Reason — visible only when delayed/blocked */}
+          {/* Delay fields — visible only when delayed/blocked (extracted ADR-266) */}
           {showDelayFields && (
-            <FormField
-              label={t('tabs.timeline.gantt.dialog.delayReason')}
-              htmlFor="construction-delay-reason"
-            >
-              <FormInput>
-                <Select
-                  value={delayReason}
-                  onValueChange={(v) => setDelayReason(v as DelayReason)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('tabs.timeline.gantt.dialog.delayReasonPlaceholder')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DELAY_REASONS.map((reason) => (
-                      <SelectItem key={reason} value={reason}>
-                        {t(`tabs.timeline.gantt.delayReasons.${reason}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormInput>
-            </FormField>
-          )}
-
-          {/* Delay Notes — visible only when delayed/blocked */}
-          {showDelayFields && (
-            <FormField
-              label={t('tabs.timeline.gantt.dialog.delayNote')}
-              htmlFor="construction-delay-note"
-            >
-              <FormInput>
-                <Textarea
-                  id="construction-delay-note"
-                  value={delayNote}
-                  onChange={(e) => setDelayNote(e.target.value)}
-                  placeholder={t('tabs.timeline.gantt.dialog.delayNotePlaceholder')}
-                  rows={2}
-                />
-              </FormInput>
-            </FormField>
+            <DelayFieldsSection
+              delayReason={delayReason}
+              delayNote={delayNote}
+              onDelayReasonChange={setDelayReason}
+              onDelayNoteChange={setDelayNote}
+            />
           )}
 
           {/* Start Date */}
@@ -469,6 +438,16 @@ export function ConstructionPhaseDialog({
             </FormInput>
           </FormField>
         </FormGrid>
+
+        {/* Resource Assignments — only in editTask mode (ADR-266 C4) */}
+        {mode === 'editTask' && task && buildingId && (
+          <ResourceAssignmentSection
+            taskId={task.id}
+            phaseId={task.phaseId}
+            buildingId={buildingId}
+            workers={workers}
+          />
+        )}
 
         <DialogFooter className="flex justify-between">
           <div>

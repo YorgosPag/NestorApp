@@ -1351,6 +1351,20 @@
             "colBaselineVariance": "vs Baseline"
           }
         },
+        "resourceHistogram": {
+          "title": "Resource Loading",
+          "empty": "No resource assignments",
+          "emptyDesc": "Assign workers or equipment to tasks to see resource loading.",
+          "hoursPerWeek": "Hours / Week",
+          "capacity": "40h Capacity",
+          "total": "Total"
+        },
+        "resourceUtilization": {
+          "title": "Resource Utilization",
+          "totalResources": "Total Resources",
+          "avgUtilization": "Avg. Utilization",
+          "overAllocated": "Over-Allocated"
+        },
         "ownerReport": {
           "title": "Project Status Report",
           "overallProgress": "Overall Project Progress",
@@ -1502,7 +1516,21 @@
           "delayReason": "Delay Reason",
           "delayReasonPlaceholder": "Select reason...",
           "delayNote": "Delay Notes",
-          "delayNotePlaceholder": "Additional details about the delay..."
+          "delayNotePlaceholder": "Additional details about the delay...",
+          "resources": {
+            "title": "Assigned Resources",
+            "addWorker": "Add Worker",
+            "addEquipment": "Add Equipment",
+            "selectWorker": "Select worker...",
+            "equipmentPlaceholder": "e.g. Crane #2, Excavator...",
+            "hours": "hrs",
+            "add": "Add",
+            "remove": "Remove",
+            "noWorkers": "No workers available",
+            "maxReached": "Maximum 20 resources per task.",
+            "loading": "Loading resources...",
+            "overAllocated": "Over-allocated"
+          }
         },
         "delayReasons": {
           "weather": "Weather",

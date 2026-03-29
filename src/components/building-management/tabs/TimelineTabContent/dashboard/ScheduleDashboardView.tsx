@@ -37,6 +37,10 @@ import { GanttSnapshotCard } from './GanttSnapshotCard';
 import { DelayBreakdownChart } from './DelayBreakdownChart';
 import { CriticalPathSection } from './CriticalPathSection';
 import { BaselineSection } from './BaselineSection';
+import { ResourceHistogramChart } from './ResourceHistogramChart';
+import { ResourceUtilizationKPIs } from './ResourceUtilizationKPIs';
+import { useResourceHistogram } from './useResourceHistogram';
+import { useResourceAssignments } from '@/hooks/useResourceAssignments';
 import { ReportEmptyState } from '@/components/reports/core/ReportEmptyState';
 
 // ─── Props ───────────────────────────────────────────────────────────────
@@ -79,6 +83,10 @@ export function ScheduleDashboardView({
   } = useScheduleDashboard({ buildingId, milestones });
 
   const baselineComparison = useBaselineComparison(buildingId);
+
+  // Resource assignments + histogram (ADR-266 C4)
+  const { assignments: resourceAssignments } = useResourceAssignments({ buildingId });
+  const resourceHistogram = useResourceHistogram({ assignments: resourceAssignments, tasks });
 
   // ── Refresh handler ────────────────────────────────────────────────────
   const handleRefresh = useCallback(async () => {
@@ -316,6 +324,17 @@ export function ScheduleDashboardView({
           <SCurveChart data={sCurveData} loading={boqLoading} enableBrush />
           <DelayBreakdownChart data={delayBreakdownData} loading={boqLoading} />
           <CriticalPathSection tasks={tasks} phases={phases} loading={boqLoading} />
+          {resourceHistogram.hasData && (
+            <>
+              <ResourceUtilizationKPIs utilization={resourceHistogram.utilization} loading={boqLoading} />
+              <ResourceHistogramChart
+                data={resourceHistogram.histogramData}
+                chartConfig={resourceHistogram.chartConfig}
+                resourceNames={resourceHistogram.resourceNames}
+                loading={boqLoading}
+              />
+            </>
+          )}
           <BaselineSection baseline={baselineComparison} loading={loading} />
           <ScheduleVarianceTable
             rows={varianceRows}

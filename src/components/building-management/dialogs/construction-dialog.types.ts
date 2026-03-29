@@ -48,12 +48,23 @@ export interface ConstructionPhaseDialogProps {
   task?: ConstructionTask;
   phaseId?: string;
   phases?: ConstructionPhase[];
+  /** Building ID — needed for resource assignments (ADR-266 C4) */
+  buildingId?: string;
+  /** Available workers for resource assignment (ADR-266 C4) */
+  workers?: WorkerOptionItem[];
   onSavePhase: (data: PhaseFormData) => Promise<boolean>;
   onUpdatePhase: (phaseId: string, updates: Record<string, unknown>) => Promise<boolean>;
   onDeletePhase: (phaseId: string) => Promise<boolean>;
   onSaveTask: (data: TaskFormData) => Promise<boolean>;
   onUpdateTask: (taskId: string, updates: Record<string, unknown>) => Promise<boolean>;
   onDeleteTask: (taskId: string) => Promise<boolean>;
+}
+
+/** Worker option for resource assignment (ADR-266 C4) */
+export interface WorkerOptionItem {
+  contactId: string;
+  name: string;
+  specialty?: string | null;
 }
 
 // ─── Status Options ─────────────────────────────────────────────────────
