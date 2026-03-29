@@ -39,6 +39,8 @@ interface ChartSectionProps {
   suggestedChartType: BuilderChartType | null;
   onChartTypeChange: (type: BuilderChartType | null) => void;
   onCrossFilter: (filter: ChartCrossFilter) => void;
+  /** Ref to chart container for html-to-image capture (Phase 3 export) */
+  chartContainerRef?: React.Ref<HTMLDivElement>;
   className?: string;
 }
 
@@ -103,13 +105,14 @@ export function ChartSection({
   suggestedChartType,
   onChartTypeChange,
   onCrossFilter,
+  chartContainerRef,
   className,
 }: ChartSectionProps) {
   const { t } = useTranslation('report-builder');
   const [showLegend, setShowLegend] = useState(true);
 
   const unknownLabel = t('grouping.noGrouping');
-  const { data } = useMemo(
+  const { data, config } = useMemo(
     () => buildChartData(filteredGroups, groupByConfig, unknownLabel),
     [filteredGroups, groupByConfig, unknownLabel],
   );
@@ -172,7 +175,7 @@ export function ChartSection({
       </div>
 
       {/* Chart */}
-      <div className="motion-safe:transition-all motion-safe:duration-300">
+      <div ref={chartContainerRef} className="motion-safe:transition-all motion-safe:duration-300">
         <ReportChart
           type={chartType}
           data={data}

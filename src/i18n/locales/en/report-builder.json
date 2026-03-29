@@ -116,6 +116,27 @@
     "label": "Grand Total"
   },
 
+  "export": {
+    "title": "Export Report",
+    "pdf": "PDF",
+    "excel": "Excel",
+    "format": "Format",
+    "watermark": "Watermark",
+    "watermarkNone": "No watermark",
+    "watermarkConfidential": "CONFIDENTIAL",
+    "watermarkConfidentialUser": "CONFIDENTIAL + User",
+    "scope": "Export Scope",
+    "scopeAll": "Export all data ({{count}} records)",
+    "scopeFiltered": "Export current view ({{count}} records)",
+    "exporting": "Exporting...",
+    "successPdf": "Report exported to PDF",
+    "successExcel": "Report exported to Excel",
+    "error": "Export failed — try again",
+    "crossFilterActive": "Active filter: {{field}} = {{value}}",
+    "cancel": "Cancel",
+    "confirm": "Export"
+  },
+
   "accessibility": {
     "expandGroup": "Expand group {{group}}",
     "collapseGroup": "Collapse group {{group}}",

@@ -8,6 +8,14 @@
 
 import { generateTempId } from '@/services/enterprise-id.service';
 
+// Phase 3 — Export types (barrel re-export for convenience)
+export type {
+  WatermarkMode,
+  ExportFormat,
+  ExportScope,
+  BuilderExportParams,
+} from '@/services/report-engine/builder-export-types';
+
 // ============================================================================
 // Field & Filter Types
 // ============================================================================

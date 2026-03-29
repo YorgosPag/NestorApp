@@ -9,8 +9,11 @@
 'use client';
 
 import '@/lib/design-system';
+import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Database } from 'lucide-react';
+import { toast } from 'sonner';
+import { toPng } from 'html-to-image';
 import { useReportBuilder } from '@/hooks/reports/useReportBuilder';
 import { DomainSelector } from './DomainSelector';
 import { ColumnSelector } from './ColumnSelector';
@@ -19,14 +22,99 @@ import { ReportResults } from './ReportResults';
 import { AIQueryInput } from './AIQueryInput';
 import { GroupBySelector } from './GroupBySelector';
 import { ChartSection } from './ChartSection';
+import { ExportDialog } from './ExportDialog';
 import { ReportKPIGrid } from '@/components/reports/core/ReportKPIGrid';
+import { ReportExportBar } from '@/components/reports/core/ReportExportBar';
 import { Button } from '@/components/ui/button';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { designTokens } from '@/styles/design-tokens';
+import type { ExportFormat as BarExportFormat } from '@/components/reports/core/ReportExportBar';
+import type {
+  ExportFormat,
+  WatermarkMode,
+  ExportScope,
+} from '@/services/report-engine/builder-export-types';
 
 export function ReportBuilder() {
   const { t } = useTranslation('report-builder');
   const colors = useSemanticColors();
   const builder = useReportBuilder();
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportBarClick = useCallback((format: BarExportFormat) => {
+    if (format === 'csv') return; // CSV deferred to Phase 4
+    if (builder.chartCrossFilter) {
+      setExportDialogOpen(true);
+    } else {
+      void handleExport(format as ExportFormat, 'none', 'all');
+    }
+  }, [builder.chartCrossFilter, handleExport]);
+
+  const handleExport = useCallback(async (
+    format: ExportFormat,
+    watermark: WatermarkMode,
+    scope: ExportScope,
+  ) => {
+    if (!builder.results || !builder.domainDefinition) return;
+
+    setExporting(true);
+    try {
+      // Capture chart image if chart is visible
+      let chartImageDataUrl: string | null = null;
+      if (chartContainerRef.current && builder.groupingResult) {
+        try {
+          chartImageDataUrl = await toPng(chartContainerRef.current, {
+            backgroundColor: designTokens.colors.background.primary,
+            quality: 1.0,
+            pixelRatio: 2,
+          });
+        } catch {
+          // Chart capture failed — continue without chart
+        }
+      }
+
+      const params = {
+        domain: builder.domain!,
+        domainDefinition: builder.domainDefinition,
+        results: builder.results,
+        columns: builder.columns,
+        filters: builder.filters,
+        groupingResult: builder.groupingResult,
+        filteredGroups: scope === 'filtered' && builder.chartCrossFilter
+          ? builder.filteredGroups
+          : (builder.groupingResult?.groups ?? null),
+        grandTotals: builder.groupingResult?.grandTotals ?? {},
+        chartImageDataUrl,
+        activeChartType: builder.activeChartType,
+        format,
+        watermark,
+        scope,
+        userName: 'Γιώργος Παγώνης',
+      };
+
+      if (format === 'pdf') {
+        const { exportBuilderToPdf } = await import(
+          '@/services/report-engine/builder-pdf-exporter'
+        );
+        await exportBuilderToPdf(params);
+        toast.success(t('export.successPdf'));
+      } else {
+        const { exportBuilderToExcel } = await import(
+          '@/services/report-engine/builder-excel-exporter'
+        );
+        await exportBuilderToExcel(params);
+        toast.success(t('export.successExcel'));
+      }
+
+      setExportDialogOpen(false);
+    } catch {
+      toast.error(t('export.error'));
+    } finally {
+      setExporting(false);
+    }
+  }, [builder, t]);
 
   return (
     <section className="space-y-6 p-6" aria-label={t('title')}>
@@ -79,7 +167,7 @@ export function ReportBuilder() {
               hasGroups={!!builder.groupingResult && builder.groupingResult.groups.length > 0}
             />
 
-            {/* Execute button */}
+            {/* Execute + Export buttons */}
             <div className="flex items-center gap-3">
               <Button
                 onClick={builder.executeQuery}
@@ -91,6 +179,13 @@ export function ReportBuilder() {
                 <Button variant="outline" onClick={builder.refetch}>
                   {t('refresh')}
                 </Button>
+              )}
+              {builder.results && (
+                <ReportExportBar
+                  onExport={handleExportBarClick}
+                  disabled={exporting}
+                  formats={['pdf', 'excel']}
+                />
               )}
             </div>
 
@@ -108,6 +203,7 @@ export function ReportBuilder() {
                 suggestedChartType={builder.suggestedChartType}
                 onChartTypeChange={builder.setChartType}
                 onCrossFilter={builder.applyChartCrossFilter}
+                chartContainerRef={chartContainerRef}
               />
             )}
 
@@ -144,6 +240,17 @@ export function ReportBuilder() {
           </aside>
         </div>
       )}
+
+      {/* Export Dialog (cross-filter scope choice) */}
+      <ExportDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
+        onExport={handleExport}
+        crossFilter={builder.chartCrossFilter ?? null}
+        totalRecords={builder.results?.totalMatched ?? 0}
+        filteredRecords={builder.filteredGroups?.reduce((sum, g) => sum + g.rowCount, 0) ?? 0}
+        exporting={exporting}
+      />
     </section>
   );
 }

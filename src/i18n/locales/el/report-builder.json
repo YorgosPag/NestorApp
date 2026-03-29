@@ -116,6 +116,27 @@
     "label": "Γενικό Σύνολο"
   },
 
+  "export": {
+    "title": "Εξαγωγή Αναφοράς",
+    "pdf": "PDF",
+    "excel": "Excel",
+    "format": "Μορφή",
+    "watermark": "Υδατογράφημα",
+    "watermarkNone": "Χωρίς υδατογράφημα",
+    "watermarkConfidential": "ΕΜΠΙΣΤΕΥΤΙΚΟ",
+    "watermarkConfidentialUser": "ΕΜΠΙΣΤΕΥΤΙΚΟ + Χρήστης",
+    "scope": "Εύρος Εξαγωγής",
+    "scopeAll": "Εξαγωγή όλων ({{count}} εγγραφές)",
+    "scopeFiltered": "Εξαγωγή τρέχουσας προβολής ({{count}} εγγραφές)",
+    "exporting": "Εξαγωγή...",
+    "successPdf": "Η αναφορά εξήχθη σε PDF",
+    "successExcel": "Η αναφορά εξήχθη σε Excel",
+    "error": "Αποτυχία εξαγωγής — δοκιμάστε ξανά",
+    "crossFilterActive": "Ενεργό φίλτρο: {{field}} = {{value}}",
+    "cancel": "Ακύρωση",
+    "confirm": "Εξαγωγή"
+  },
+
   "accessibility": {
     "expandGroup": "Ανάπτυξη ομάδας {{group}}",
     "collapseGroup": "Σύμπτυξη ομάδας {{group}}",

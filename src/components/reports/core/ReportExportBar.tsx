@@ -30,7 +30,7 @@ export type ExportFormat = 'pdf' | 'excel' | 'csv';
 export interface ReportExportBarProps {
   /** Export handler — noop in Phase 1 */
   onExport?: (format: ExportFormat) => void;
-  /** Force all buttons disabled (default: true in Phase 1) */
+  /** Force all buttons disabled */
   disabled?: boolean;
   /** Which formats to show (default: all) */
   formats?: ExportFormat[];
@@ -56,7 +56,7 @@ const FORMAT_CONFIG: Record<ExportFormat, {
 
 export function ReportExportBar({
   onExport,
-  disabled = true,
+  disabled = false,
   formats = ['pdf', 'excel', 'csv'],
   className,
 }: ReportExportBarProps) {
