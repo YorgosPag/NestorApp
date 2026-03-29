@@ -438,6 +438,34 @@
 
 ---
 
+## Q23 (2026-03-29): Ανάλυση Overlap ADR-265/266/267 vs ADR-268 — Anti-Duplication Rules
+
+**Ερώτηση Γιώργου**: Μήπως ο κώδικας που θα δημιουργηθεί για το ADR-268 έρχεται σε σύγκρουση ή είναι διπλότυπος με τον κώδικα που γράψαμε ήδη για τα ADR-265, ADR-266, ADR-267;
+
+**Απάντηση**: Πλήρης ανάλυση ~21,500 γραμμών production κώδικα:
+
+- **ADR-265**: 80+ components, 8 API routes, 7,500 γρ. — 9 hardcoded dashboards
+- **ADR-266**: 36 files, 8,000 γρ. — Gantt, S-Curve, CPM, Resource Histogram (per-building)
+- **ADR-267**: 10 services, 10 components, 6,000 γρ. — PO CRUD workflow
+
+**Αποτέλεσμα**: ΜΗΔΕΝ overlap αν τηρηθούν 5 κανόνες:
+
+1. **REUSE Core UI** — ReportTable, ReportChart, ReportKPIGrid κλπ (13 primitives). ΠΟΤΕ νέο component.
+2. **REUSE Export Engines** — report-pdf-exporter.ts + report-excel-exporter.ts. ΠΟΤΕ νέο PDF/Excel wrapper.
+3. **ΠΟΤΕ specialized visualizations** (S-Curve, CPM, Gantt, Resource Histogram) — μένουν στο 266.
+4. **ΠΟΤΕ CRUD actions** (PO create/approve/cancel, delivery, email) — μένουν στο 267.
+5. **Νέος κώδικας ΜΟΝΟ** για: dynamic query engine, filter engine, domain configs, saved reports, builder page/API.
+
+**Διαχωρισμός**:
+- ADR-265 = "Δώσε μου το dashboard Πωλήσεων" (σταθερά KPIs + charts)
+- ADR-268 = "Δώσε μου ΟΛΕΣ τις μονάδες >100τμ grouped by status" (ad-hoc, user-defined)
+- ADR-266 = Βαθιά ανάλυση per-building (specialized viz)
+- ADR-267 = Operational PO module (CRUD + workflow)
+
+Προστέθηκε §7 "Anti-Duplication Rules" στο ADR-268.md με πλήρεις πίνακες REUSE mapping.
+
+---
+
 ## Q18 (2026-03-29): Πλήρης χαρτογράφηση Οικονομικών B — Purchase Orders + Brokerage + Commissions
 
 **Εντολή Γιώργου**: Πλήρης χαρτογράφηση 3 οντοτήτων (Purchase Orders, Brokerage Agreements, Commission Records) — ακολουθώντας τη δομή SPEC-008.
