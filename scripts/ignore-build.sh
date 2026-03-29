@@ -23,8 +23,14 @@ fi
 echo "Changed files:"
 echo "$CHANGED_FILES"
 
-# Check if ANY app-relevant file changed
-APP_CHANGES=$(echo "$CHANGED_FILES" | grep -E "^(src/|public/|packages/|next\.config|package\.json|package-lock|tsconfig|vercel\.json|\.env)" || true)
+# Filter out non-code files BEFORE checking for app changes:
+# - *.md files (documentation, even inside src/)
+# - docs/ folders anywhere (src/subapps/*/docs/, src/md_files/)
+# - ADR files, README files
+CODE_CHANGES=$(echo "$CHANGED_FILES" | grep -v -E "\.(md|mdx)$" | grep -v -E "(^docs/|/docs/|/adrs/)" || true)
+
+# Check if ANY remaining file is app-relevant
+APP_CHANGES=$(echo "$CODE_CHANGES" | grep -E "^(src/|public/|packages/|next\.config|package\.json|package-lock|tsconfig|vercel\.json|\.env)" || true)
 
 if [ -z "$APP_CHANGES" ]; then
   echo ""
