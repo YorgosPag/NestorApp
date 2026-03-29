@@ -151,6 +151,7 @@ const NAVIGATION_LABELS = {
   reports_construction: 'reports.construction',
   reports_compliance: 'reports.compliance',
   reports_export: 'reports.export',
+  reports_builder: 'reports.builder',
 
   // CRM submenu
   crm_overview: 'crm.overview',
@@ -739,6 +740,7 @@ function getLabelKeyForPath(path: string): string {
     'reports/construction': 'reports_construction',
     'reports/compliance': 'reports_compliance',
     'reports/export': 'reports_export',
+    'reports/builder': 'reports_builder',
 
     // CRM main
     'crm': 'crm',

@@ -1,0 +1,184 @@
+{
+  "domains": {
+    "projects": {
+      "label": "Έργα",
+      "description": "Κατασκευαστικά έργα και αναπτύξεις ακινήτων",
+      "fields": {
+        "name": "Όνομα",
+        "projectCode": "Κωδικός",
+        "status": "Κατάσταση",
+        "type": "Τύπος",
+        "progress": "Πρόοδος",
+        "totalValue": "Συνολική Αξία",
+        "budget": "Προϋπολογισμός",
+        "totalArea": "Συνολικό Εμβαδόν (τ.μ.)",
+        "priority": "Προτεραιότητα",
+        "city": "Πόλη",
+        "startDate": "Ημ. Έναρξης",
+        "completionDate": "Ημ. Ολοκλήρωσης",
+        "createdAt": "Δημιουργία"
+      },
+      "enums": {
+        "status": {
+          "planning": "Σχεδιασμός",
+          "in_progress": "Σε Εξέλιξη",
+          "completed": "Ολοκληρωμένο",
+          "on_hold": "Σε Αναμονή",
+          "cancelled": "Ακυρωμένο"
+        },
+        "type": {
+          "residential": "Κατοικία",
+          "commercial": "Εμπορικό",
+          "industrial": "Βιομηχανικό",
+          "mixed": "Μικτής Χρήσης",
+          "infrastructure": "Υποδομή",
+          "renovation": "Ανακαίνιση"
+        },
+        "priority": {
+          "low": "Χαμηλή",
+          "medium": "Μέτρια",
+          "high": "Υψηλή",
+          "critical": "Κρίσιμη"
+        }
+      }
+    },
+    "buildings": {
+      "label": "Κτήρια",
+      "description": "Μεμονωμένα κτήρια εντός έργων",
+      "fields": {
+        "name": "Όνομα",
+        "project": "Έργο",
+        "status": "Κατάσταση",
+        "type": "Τύπος",
+        "progress": "Πρόοδος",
+        "totalArea": "Συνολικό Εμβαδόν (τ.μ.)",
+        "totalValue": "Συνολική Αξία",
+        "floorCount": "Όροφοι",
+        "totalUnits": "Σύνολο Μονάδων",
+        "energyClass": "Ενεργειακή Κλάση",
+        "city": "Πόλη",
+        "createdAt": "Δημιουργία"
+      },
+      "enums": {
+        "status": {
+          "planning": "Σχεδιασμός",
+          "construction": "Υπό Κατασκευή",
+          "completed": "Ολοκληρωμένο",
+          "active": "Ενεργό"
+        },
+        "type": {
+          "residential": "Κατοικία",
+          "commercial": "Εμπορικό",
+          "industrial": "Βιομηχανικό",
+          "mixed": "Μικτής Χρήσης",
+          "office": "Γραφείο",
+          "warehouse": "Αποθήκη"
+        },
+        "energyClass": {
+          "A+": "A+",
+          "A": "A",
+          "B+": "B+",
+          "B": "B",
+          "C": "C",
+          "D": "D",
+          "E": "E",
+          "F": "F",
+          "G": "G"
+        }
+      }
+    },
+    "floors": {
+      "label": "Όροφοι",
+      "description": "Όροφοι και επίπεδα κτηρίων",
+      "fields": {
+        "name": "Όνομα",
+        "number": "Αριθμός Ορόφου",
+        "building": "Κτήριο",
+        "area": "Εμβαδόν (τ.μ.)",
+        "elevation": "Υψόμετρο (μ)",
+        "createdAt": "Δημιουργία"
+      }
+    },
+    "units": {
+      "label": "Μονάδες",
+      "description": "Διαμερίσματα, καταστήματα, γραφεία και άλλες μονάδες ακινήτων",
+      "fields": {
+        "name": "Όνομα",
+        "code": "Κωδικός",
+        "type": "Τύπος",
+        "building": "Κτήριο",
+        "project": "Έργο",
+        "floor": "Όροφος",
+        "commercialStatus": "Εμπορική Κατάσταση",
+        "operationalStatus": "Λειτουργική Κατάσταση",
+        "grossArea": "Μικτό Εμβαδόν (τ.μ.)",
+        "netArea": "Καθαρό Εμβαδόν (τ.μ.)",
+        "energyClass": "Ενεργειακή Κλάση",
+        "askingPrice": "Τιμή Ζητούμενη",
+        "finalPrice": "Τελική Τιμή",
+        "buyerName": "Αγοραστής",
+        "legalPhase": "Νομική Φάση",
+        "paymentTotal": "Σύνολο Πληρωμών",
+        "paymentPaid": "Πληρωμένο Ποσό",
+        "paymentPaidPct": "Πληρωμένο %",
+        "overdueInstallments": "Ληξιπρόθεσμες Δόσεις",
+        "bedrooms": "Υπνοδωμάτια",
+        "bathrooms": "Μπάνια",
+        "createdAt": "Δημιουργία"
+      },
+      "enums": {
+        "type": {
+          "studio": "Στούντιο",
+          "apartment_1br": "Διαμέρισμα 1ΥΔ",
+          "apartment": "Διαμέρισμα",
+          "apartment_2br": "Διαμέρισμα 2ΥΔ",
+          "apartment_3br": "Διαμέρισμα 3ΥΔ",
+          "maisonette": "Μεζονέτα",
+          "penthouse": "Ρετιρέ",
+          "loft": "Loft",
+          "detached_house": "Μονοκατοικία",
+          "villa": "Βίλα",
+          "shop": "Κατάστημα",
+          "office": "Γραφείο",
+          "hall": "Αίθουσα",
+          "storage": "Αποθήκη"
+        },
+        "commercialStatus": {
+          "unavailable": "Μη Διαθέσιμο",
+          "for-sale": "Προς Πώληση",
+          "for-rent": "Προς Ενοικίαση",
+          "for-sale-and-rent": "Πώληση & Ενοικίαση",
+          "reserved": "Κρατημένο",
+          "sold": "Πωλημένο",
+          "rented": "Ενοικιασμένο"
+        },
+        "operationalStatus": {
+          "ready": "Έτοιμο",
+          "under-construction": "Υπό Κατασκευή",
+          "inspection": "Επιθεώρηση",
+          "maintenance": "Συντήρηση",
+          "draft": "Πρόχειρο"
+        },
+        "legalPhase": {
+          "initial": "Αρχική",
+          "deedPrep": "Προετοιμασία Συμβολαίου",
+          "documentReview": "Έλεγχος Εγγράφων",
+          "signaturePending": "Εκκρεμής Υπογραφή",
+          "completed": "Ολοκληρωμένη",
+          "cancelled": "Ακυρωμένη"
+        },
+        "energyClass": {
+          "A+": "A+",
+          "A": "A",
+          "B+": "B+",
+          "B": "B",
+          "C": "C",
+          "D": "D",
+          "E": "E",
+          "F": "F",
+          "G": "G"
+        }
+      }
+    }
+  }
+}

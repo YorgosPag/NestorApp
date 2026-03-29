@@ -1,0 +1,184 @@
+{
+  "domains": {
+    "projects": {
+      "label": "Projects",
+      "description": "Construction projects and real estate developments",
+      "fields": {
+        "name": "Name",
+        "projectCode": "Code",
+        "status": "Status",
+        "type": "Type",
+        "progress": "Progress",
+        "totalValue": "Total Value",
+        "budget": "Budget",
+        "totalArea": "Total Area (m²)",
+        "priority": "Priority",
+        "city": "City",
+        "startDate": "Start Date",
+        "completionDate": "Completion Date",
+        "createdAt": "Created"
+      },
+      "enums": {
+        "status": {
+          "planning": "Planning",
+          "in_progress": "In Progress",
+          "completed": "Completed",
+          "on_hold": "On Hold",
+          "cancelled": "Cancelled"
+        },
+        "type": {
+          "residential": "Residential",
+          "commercial": "Commercial",
+          "industrial": "Industrial",
+          "mixed": "Mixed Use",
+          "infrastructure": "Infrastructure",
+          "renovation": "Renovation"
+        },
+        "priority": {
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High",
+          "critical": "Critical"
+        }
+      }
+    },
+    "buildings": {
+      "label": "Buildings",
+      "description": "Individual buildings within projects",
+      "fields": {
+        "name": "Name",
+        "project": "Project",
+        "status": "Status",
+        "type": "Type",
+        "progress": "Progress",
+        "totalArea": "Total Area (m²)",
+        "totalValue": "Total Value",
+        "floorCount": "Floors",
+        "totalUnits": "Total Units",
+        "energyClass": "Energy Class",
+        "city": "City",
+        "createdAt": "Created"
+      },
+      "enums": {
+        "status": {
+          "planning": "Planning",
+          "construction": "Under Construction",
+          "completed": "Completed",
+          "active": "Active"
+        },
+        "type": {
+          "residential": "Residential",
+          "commercial": "Commercial",
+          "industrial": "Industrial",
+          "mixed": "Mixed Use",
+          "office": "Office",
+          "warehouse": "Warehouse"
+        },
+        "energyClass": {
+          "A+": "A+",
+          "A": "A",
+          "B+": "B+",
+          "B": "B",
+          "C": "C",
+          "D": "D",
+          "E": "E",
+          "F": "F",
+          "G": "G"
+        }
+      }
+    },
+    "floors": {
+      "label": "Floors",
+      "description": "Building floors and levels",
+      "fields": {
+        "name": "Name",
+        "number": "Floor Number",
+        "building": "Building",
+        "area": "Area (m²)",
+        "elevation": "Elevation (m)",
+        "createdAt": "Created"
+      }
+    },
+    "units": {
+      "label": "Units",
+      "description": "Apartments, shops, offices, and other property units",
+      "fields": {
+        "name": "Name",
+        "code": "Code",
+        "type": "Type",
+        "building": "Building",
+        "project": "Project",
+        "floor": "Floor",
+        "commercialStatus": "Commercial Status",
+        "operationalStatus": "Operational Status",
+        "grossArea": "Gross Area (m²)",
+        "netArea": "Net Area (m²)",
+        "energyClass": "Energy Class",
+        "askingPrice": "Asking Price",
+        "finalPrice": "Final Price",
+        "buyerName": "Buyer",
+        "legalPhase": "Legal Phase",
+        "paymentTotal": "Payment Total",
+        "paymentPaid": "Paid Amount",
+        "paymentPaidPct": "Paid %",
+        "overdueInstallments": "Overdue Installments",
+        "bedrooms": "Bedrooms",
+        "bathrooms": "Bathrooms",
+        "createdAt": "Created"
+      },
+      "enums": {
+        "type": {
+          "studio": "Studio",
+          "apartment_1br": "1BR Apartment",
+          "apartment": "Apartment",
+          "apartment_2br": "2BR Apartment",
+          "apartment_3br": "3BR Apartment",
+          "maisonette": "Maisonette",
+          "penthouse": "Penthouse",
+          "loft": "Loft",
+          "detached_house": "Detached House",
+          "villa": "Villa",
+          "shop": "Shop",
+          "office": "Office",
+          "hall": "Hall",
+          "storage": "Storage"
+        },
+        "commercialStatus": {
+          "unavailable": "Unavailable",
+          "for-sale": "For Sale",
+          "for-rent": "For Rent",
+          "for-sale-and-rent": "For Sale & Rent",
+          "reserved": "Reserved",
+          "sold": "Sold",
+          "rented": "Rented"
+        },
+        "operationalStatus": {
+          "ready": "Ready",
+          "under-construction": "Under Construction",
+          "inspection": "Inspection",
+          "maintenance": "Maintenance",
+          "draft": "Draft"
+        },
+        "legalPhase": {
+          "initial": "Initial",
+          "deedPrep": "Deed Preparation",
+          "documentReview": "Document Review",
+          "signaturePending": "Signature Pending",
+          "completed": "Completed",
+          "cancelled": "Cancelled"
+        },
+        "energyClass": {
+          "A+": "A+",
+          "A": "A",
+          "B+": "B+",
+          "B": "B",
+          "C": "C",
+          "D": "D",
+          "E": "E",
+          "F": "F",
+          "G": "G"
+        }
+      }
+    }
+  }
+}

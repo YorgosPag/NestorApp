@@ -53,7 +53,9 @@ export const SUPPORTED_NAMESPACES = [
   'payments',   // 🏢 Payment plans, installments, loans, cheques, reports (ADR-234)
   'attendance', // 🏢 Worker attendance check-in/out (ADR-170)
   'legal',      // 🏢 Legal pages — privacy policy, terms, data deletion
-  'reports'     // 🏢 Enterprise Reports System (ADR-265)
+  'reports',    // 🏢 Enterprise Reports System (ADR-265)
+  'report-builder',         // 🏢 Dynamic Report Builder UI (ADR-268)
+  'report-builder-domains'  // 🏢 Report Builder domain/field labels (ADR-268)
 ] as const;
 export type Namespace = typeof SUPPORTED_NAMESPACES[number];
 

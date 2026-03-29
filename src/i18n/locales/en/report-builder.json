@@ -1,0 +1,70 @@
+{
+  "title": "Report Builder",
+  "description": "Build custom reports with dynamic filters and columns",
+  "execute": "Run Query",
+  "executing": "Running...",
+  "refresh": "Refresh",
+
+  "ai": {
+    "label": "AI Query",
+    "placeholder": "Ask something... e.g. 'Show me all sold units over 100sqm'",
+    "submit": "Translate",
+    "confidence": "Confidence",
+    "explanation": "Interpretation"
+  },
+
+  "domain": {
+    "select": "Select Domain",
+    "placeholder": "Choose a data source..."
+  },
+
+  "columns": {
+    "title": "Columns",
+    "dragHint": "Drag to reorder, click checkbox to toggle"
+  },
+
+  "filters": {
+    "title": "Filters",
+    "active": "Active filters",
+    "add": "Add Filter",
+    "remove": "Remove",
+    "clear": "Clear All",
+    "maxReached": "max 10",
+    "field": "Field",
+    "operator": "Operator",
+    "value": "Value",
+    "selectField": "Select field...",
+    "confirm": "Confirm filter",
+    "cancel": "Cancel",
+    "boolTrue": "Yes",
+    "boolFalse": "No"
+  },
+
+  "operators": {
+    "eq": "equals",
+    "neq": "not equals",
+    "contains": "contains",
+    "starts_with": "starts with",
+    "gt": "greater than",
+    "gte": "greater or equal",
+    "lt": "less than",
+    "lte": "less or equal",
+    "between": "between",
+    "before": "before",
+    "after": "after",
+    "in": "is one of"
+  },
+
+  "results": {
+    "title": "Results",
+    "showing": "{count} records found",
+    "truncated": "Showing {shown} of {total} results — add filters to narrow down",
+    "showMore": "Show {limit}",
+    "noResults": "No records match your filters"
+  },
+
+  "share": {
+    "copy": "Copy link",
+    "copied": "Copied!"
+  }
+}
