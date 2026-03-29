@@ -19,7 +19,24 @@ import {
   type FieldValueType,
   type DomainGroup,
 } from '../report-builder-types';
-import { getNestedValue } from '@/services/report-engine/report-query-executor';
+/**
+ * Inline copy of getNestedValue for testing — avoids importing server-only module.
+ * The real function lives in report-query-executor.ts (server-only, Firebase Admin).
+ */
+function getNestedValue(obj: Record<string, unknown>, dotPath: string): unknown {
+  const parts = dotPath.split('.');
+  let current: unknown = obj;
+  for (const part of parts) {
+    if (current === null || current === undefined) return undefined;
+    if (typeof current !== 'object') return undefined;
+    if (Array.isArray(current) && /^\d+$/.test(part)) {
+      current = (current as unknown[])[parseInt(part, 10)];
+    } else {
+      current = (current as Record<string, unknown>)[part];
+    }
+  }
+  return current;
+}
 
 // ============================================================================
 // Schema Integrity
