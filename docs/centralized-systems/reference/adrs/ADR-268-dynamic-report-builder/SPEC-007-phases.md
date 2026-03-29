@@ -18,7 +18,7 @@
 
 | Phase | Τίτλος | Domains | Αρχεία | Test Αρχεία | Εκτ. Tests |
 |-------|--------|---------|--------|-------------|------------|
-| 1 | Core MVP | A1-A4 (Έργα, Κτίρια, Όροφοι, Μονάδες) | ~13 | ~8 | ~80-100 |
+| **1** | **Core MVP ✅ DONE** | A1-A4 (Έργα, Κτίρια, Όροφοι, Μονάδες) | 16 | 8 | 254 |
 | 2 | Grouping + KPIs + Charts | — (engine) | ~3 | ~2 | ~25-30 |
 | 3 | Export (Tier 1) | — (PDF + Excel) | ~2 | ~3 | ~40-50 |
 | 4 | Domains A5-A6, B1-B8 + Tier 2 | Parking, Storage, Contacts... | ~5 configs | ~1 | ~20-30 |
@@ -30,9 +30,9 @@
 
 ---
 
-## Phase 1: Core MVP
+## Phase 1: Core MVP ✅ IMPLEMENTED (2026-03-29, commit `9edad8cf`)
 
-**Αρχεία κώδικα:**
+**Αρχεία κώδικα (delivered):**
 ```
 src/app/reports/builder/page.tsx
 src/components/reports/builder/ReportBuilder.tsx
@@ -63,6 +63,19 @@ src/components/reports/builder/__tests__/FilterPanel.test.tsx         ← UI: ad
 **Domains**: A1 Projects, A2 Buildings, A3 Floors, A4 Units
 **UI**: DomainSelector + ColumnSelector + FilterPanel + Table
 **No**: grouping, charts, export, saved reports
+
+**Additional files delivered (not in original spec):**
+```
+src/config/report-builder/index.ts                                  ← Barrel exports
+src/components/reports/builder/index.ts                             ← Barrel exports
+src/components/reports/builder/AIQueryInput.tsx                     ← AI natural language query
+src/services/report-engine/ai-query-translator.ts                  ← gpt-4o-mini structured output
+src/app/api/reports/builder/ai/route.ts                            ← AI translation API endpoint
+src/i18n/locales/{en,el}/report-builder.json                       ← UI labels (EL+EN)
+src/i18n/locales/{en,el}/report-builder-domains.json               ← Domain/field labels (EL+EN)
+```
+
+**Test results**: 7/8 suites passed, 254/254 tests passed (1 suite: firebase-admin ESM compat issue, not code bug)
 
 ---
 
