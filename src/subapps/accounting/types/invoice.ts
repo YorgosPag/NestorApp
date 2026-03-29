@@ -42,6 +42,24 @@ export type InvoiceType =
   | 'service_invoice_3rd';
 
 // ============================================================================
+// CANCELLATION REASON (Phase 1a — AUDIT A-1, ΑΑΔΕ compliance)
+// ============================================================================
+
+/**
+ * Λόγοι ακύρωσης/πιστωτικού (SAP/Oracle pattern, ΑΑΔΕ compliance)
+ *
+ * Ο λόγος αποστέλλεται μαζί με το ακυρωτικό παραστατικό στο myDATA.
+ * Όταν ο κωδικός = 'OTHER', το πεδίο cancellationNotes είναι υποχρεωτικό.
+ */
+export type CancellationReasonCode =
+  | 'BILLING_ERROR'
+  | 'DUPLICATE'
+  | 'ORDER_CANCELLED'
+  | 'TERMS_CHANGED'
+  | 'GOODS_RETURNED'
+  | 'OTHER';
+
+// ============================================================================
 // INVOICE LINE ITEM
 // ============================================================================
 
@@ -306,6 +324,14 @@ export interface Invoice {
    * Backward compatible με existing invoices (απουσία = δεν έχει σταλεί ποτέ).
    */
   emailHistory?: EmailSendRecord[];
+
+  // — Ακύρωση / Πιστωτικό (Phase 1a — AUDIT A-1) —
+  /** Κωδικός λόγου ακύρωσης (set κατά void ή credit note) */
+  cancellationReason?: CancellationReasonCode;
+  /** Ελεύθερο κείμενο ακύρωσης (υποχρεωτικό αν reason='OTHER') */
+  cancellationNotes?: string;
+  /** ID πιστωτικού τιμολογίου που εκδόθηκε κατά αυτού (bidirectional link) */
+  creditNoteInvoiceId?: string;
 
   // — Metadata —
   /** Σημειώσεις/Παρατηρήσεις */

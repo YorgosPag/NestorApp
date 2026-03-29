@@ -22,9 +22,13 @@ import { withAuth, logAuditEvent, logFinancialTransition } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import type { MyDataDocumentStatus, UpdateInvoiceInput } from '@/subapps/accounting/types';
+import {
+  reverseJournalEntryForCancelledInvoice,
+  createCreditNoteForInvoice,
+} from '@/subapps/accounting/services/reversal-service';
+import type { MyDataDocumentStatus, UpdateInvoiceInput, CancellationReasonCode } from '@/subapps/accounting/types';
 import { getErrorMessage } from '@/lib/error-utils';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { safeParseBody, safeJsonBody } from '@/lib/validation/shared-schemas';
 
 const UpdateInvoiceSchema = z.object({
   type: z.string().max(50).optional(),
@@ -150,13 +154,40 @@ async function handlePatch(
 export const PATCH = withStandardRateLimit(handlePatch);
 
 // =============================================================================
-// DELETE — Cancel Invoice (Soft Delete)
+// DELETE — Cancel Invoice (Void or Credit Note)
 // =============================================================================
 
 /**
  * Fiscal documents (invoices) must NEVER be hard-deleted per Greek tax law.
- * Instead, we update the mydata status to 'cancelled'.
+ *
+ * Phase 1a routing (AUDIT A-1, ελληνική νομοθεσία):
+ * - Draft/Rejected → VOID: soft-delete + journal reversal
+ * - Sent/Accepted  → CREDIT NOTE: new credit_invoice + journal reversal
+ * - Cancelled       → 409 Conflict
+ *
+ * Request body (mandatory):
+ * - reasonCode: CancellationReasonCode (6 values)
+ * - notes: string (mandatory when reasonCode = 'OTHER')
  */
+
+const CANCELLATION_REASON_CODES: readonly CancellationReasonCode[] = [
+  'BILLING_ERROR', 'DUPLICATE', 'ORDER_CANCELLED',
+  'TERMS_CHANGED', 'GOODS_RETURNED', 'OTHER',
+];
+
+const CancelInvoiceSchema = z.object({
+  reasonCode: z.enum(CANCELLATION_REASON_CODES as unknown as [string, ...string[]]),
+  notes: z.string().max(2000).optional().default(''),
+}).refine(
+  (data) => data.reasonCode !== 'OTHER' || (data.notes.trim().length > 0),
+  { message: 'Notes are mandatory when reason is OTHER', path: ['notes'] }
+);
+
+/** Draft or rejected → can be voided */
+const VOIDABLE_STATUSES: ReadonlySet<string> = new Set(['draft', 'rejected']);
+/** Issued → requires credit note */
+const CREDIT_NOTE_STATUSES: ReadonlySet<string> = new Set(['sent', 'accepted']);
+
 async function handleDelete(
   request: NextRequest,
   segmentData?: { params: Promise<{ id: string }> }
@@ -164,11 +195,15 @@ async function handleDelete(
   const { id } = await segmentData!.params;
 
   const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const { repository } = createAccountingServices();
 
-        // Verify invoice exists
+        // Parse cancellation reason from body
+        const parsed = await safeJsonBody(CancelInvoiceSchema, req);
+        if (parsed.error) return parsed.error;
+        const { reasonCode, notes } = parsed.data;
+
         const existing = await repository.getInvoice(id);
         if (!existing) {
           return NextResponse.json(
@@ -177,7 +212,6 @@ async function handleDelete(
           );
         }
 
-        // 🛡️ ADR-249 P0-1: Prevent double-cancellation (409 Conflict)
         if (existing.mydata?.status === 'cancelled') {
           return NextResponse.json(
             { success: false, error: 'Invoice is already cancelled' },
@@ -185,22 +219,59 @@ async function handleDelete(
           );
         }
 
-        const previousStatus = existing.mydata?.status ?? 'draft';
+        const currentStatus = existing.mydata?.status ?? 'draft';
+        const reasonNotes = notes.trim() || null;
 
-        // Soft delete: mark as cancelled (fiscal docs are never hard-deleted)
-        await repository.updateInvoice(id, {
-          mydata: {
-            ...existing.mydata,
-            status: 'cancelled',
-          },
-        });
+        // ── Path A: Draft/Rejected → VOID ─────────────────────────────
+        if (VOIDABLE_STATUSES.has(currentStatus)) {
+          await repository.updateInvoice(id, {
+            mydata: { ...existing.mydata, status: 'cancelled' },
+            cancellationReason: reasonCode as CancellationReasonCode,
+            cancellationNotes: reasonNotes ?? undefined,
+          });
 
-        await logFinancialTransition(ctx, 'invoice', id, previousStatus, 'cancelled').catch(() => {/* non-blocking */});
+          const reversal = await reverseJournalEntryForCancelledInvoice(
+            repository, id, ctx.uid, reasonCode as CancellationReasonCode, reasonNotes
+          );
 
-        return NextResponse.json({
-          success: true,
-          data: { invoiceId: id, cancelled: true },
-        });
+          await logFinancialTransition(ctx, 'invoice', id, currentStatus, 'cancelled').catch(() => {/* non-blocking */});
+
+          return NextResponse.json({
+            success: true,
+            data: {
+              invoiceId: id,
+              action: 'voided',
+              cancelled: true,
+              reversalEntryId: reversal?.reversalEntryId ?? null,
+            },
+          });
+        }
+
+        // ── Path B: Sent/Accepted → CREDIT NOTE ──────────────────────
+        if (CREDIT_NOTE_STATUSES.has(currentStatus)) {
+          const result = await createCreditNoteForInvoice(
+            repository, existing, ctx.uid, reasonCode as CancellationReasonCode, reasonNotes
+          );
+
+          await logFinancialTransition(ctx, 'invoice', id, currentStatus, 'credit_note_issued').catch(() => {/* non-blocking */});
+
+          return NextResponse.json({
+            success: true,
+            data: {
+              invoiceId: id,
+              action: 'credit_note_issued',
+              creditNoteId: result.creditNoteId,
+              creditNoteNumber: result.creditNoteNumber,
+              reversalEntryId: result.reversalEntryId,
+            },
+          });
+        }
+
+        // ── Unknown status → reject ──────────────────────────────────
+        return NextResponse.json(
+          { success: false, error: `Cannot cancel invoice with status '${currentStatus}'` },
+          { status: 400 }
+        );
       } catch (error) {
         const message = getErrorMessage(error, 'Failed to cancel invoice');
         return NextResponse.json(

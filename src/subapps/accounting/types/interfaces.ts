@@ -102,6 +102,7 @@ export interface IAccountingRepository {
   updateJournalEntry(entryId: string, updates: UpdateJournalEntryInput): Promise<void>;
   deleteJournalEntry(entryId: string): Promise<void>;
   listJournalEntries(filters: JournalEntryFilters, pageSize?: number): Promise<PaginatedResult<JournalEntry>>;
+  getJournalEntryByInvoiceId(invoiceId: string): Promise<JournalEntry | null>;
 
   // ── Invoices ────────────────────────────────────────────────────────────
   createInvoice(data: CreateInvoiceInput): Promise<{ id: string; number: number }>;

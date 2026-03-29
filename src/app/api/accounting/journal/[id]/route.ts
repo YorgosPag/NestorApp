@@ -116,6 +116,20 @@ async function handlePatch(
           );
         }
 
+        // Phase 1a: Immutability guard — reversed/reversal entries are locked
+        if (existing.status === 'REVERSED') {
+          return NextResponse.json(
+            { success: false, error: 'Cannot edit a reversed journal entry. It has been superseded by a reversal entry.' },
+            { status: 403 }
+          );
+        }
+        if (existing.isReversal) {
+          return NextResponse.json(
+            { success: false, error: 'Cannot edit a reversal journal entry. Reversal entries are immutable.' },
+            { status: 403 }
+          );
+        }
+
         await repository.updateJournalEntry(id, body as UpdateJournalEntryInput);
 
         await logAuditEvent(ctx, 'data_updated', id, 'journal_entry', {
@@ -162,6 +176,14 @@ async function handleDelete(
           return NextResponse.json(
             { success: false, error: 'Journal entry not found' },
             { status: 404 }
+          );
+        }
+
+        // Phase 1a: Immutability guard — reversed/reversal entries cannot be deleted
+        if (existing.status === 'REVERSED' || existing.isReversal) {
+          return NextResponse.json(
+            { success: false, error: 'Cannot delete reversed or reversal journal entries. They form an immutable audit trail.' },
+            { status: 403 }
           );
         }
 

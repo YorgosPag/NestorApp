@@ -76,6 +76,7 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
   updateJournalEntry = financial.updateJournalEntry;
   deleteJournalEntry = financial.deleteJournalEntry;
   listJournalEntries = financial.listJournalEntries;
+  getJournalEntryByInvoiceId = financial.getJournalEntryByInvoiceId;
 
   // ── Financial: Invoices ───────────────────────────────────────────────
   createInvoice = financial.createInvoice;

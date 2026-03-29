@@ -74,6 +74,7 @@ export type {
   UpdateInvoiceInput,
   ServicePreset,
   ServicePresetsDocument,
+  CancellationReasonCode,
 } from './invoice';
 
 // ── VAT Types (ADR-ACC-004) ─────────────────────────────────────────────────

@@ -153,6 +153,25 @@ export interface JournalEntry {
   quarter: FiscalQuarter;
   /** Σημειώσεις (προαιρετικό) */
   notes: string | null;
+
+  // — Reversal & Immutability (Phase 1a — AUDIT A-1) —
+  /** Κατάσταση εγγραφής: ACTIVE (ενεργή) ή REVERSED (αντιλογίστηκε) */
+  status: 'ACTIVE' | 'REVERSED';
+  /** True αν αυτή η εγγραφή είναι αντιλογιστική (reversal) άλλης */
+  isReversal?: boolean;
+  /** ID αντιλογιστικής εγγραφής (στο original, δείχνει στο reversal) */
+  reversalEntryId?: string;
+  /** ID αρχικής εγγραφής (στο reversal, δείχνει στο original) */
+  originalEntryId?: string;
+  /** Πότε αντιλογίστηκε (ISO 8601) */
+  reversedAt?: string;
+  /** Ποιος αντιλόγισε (user ID) */
+  reversedBy?: string;
+  /** Κωδικός λόγου ακύρωσης (flows from invoice cancellation) */
+  cancellationReasonCode?: string;
+  /** Σημειώσεις ακύρωσης */
+  cancellationNotes?: string;
+
   /** Timestamp δημιουργίας (ISO 8601) */
   createdAt: string;
   /** Timestamp τελευταίας ενημέρωσης (ISO 8601) */
@@ -193,7 +212,7 @@ export interface JournalEntryFilters {
  */
 export type CreateJournalEntryInput = Omit<
   JournalEntry,
-  'entryId' | 'createdAt' | 'updatedAt'
+  'entryId' | 'createdAt' | 'updatedAt' | 'status' | 'reversalEntryId' | 'reversedAt' | 'reversedBy'
 >;
 
 /**

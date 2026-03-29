@@ -32,6 +32,12 @@ export {
   getFiscalYearFromDate,
 } from './repository/firestore-helpers';
 
+// ── Reversal Service (standalone functions — no TDZ risk) ─────────────────
+export {
+  reverseJournalEntryForCancelledInvoice,
+  createCreditNoteForInvoice,
+} from './reversal-service';
+
 // ── Types (type-only re-exports — erased at runtime, no TDZ risk) ─────────
 export type {
   IAccountingRepository,

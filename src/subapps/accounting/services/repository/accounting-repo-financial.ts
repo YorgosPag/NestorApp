@@ -39,6 +39,14 @@ import { sanitizeForFirestore, isoNow } from './firestore-helpers';
 // JOURNAL ENTRIES
 // ============================================================================
 
+/** Backward compat: existing docs without status → ACTIVE */
+function applyJournalDefaults(entry: JournalEntry): JournalEntry {
+  if (!entry.status) {
+    return { ...entry, status: 'ACTIVE' };
+  }
+  return entry;
+}
+
 export async function createJournalEntry(
   data: CreateJournalEntryInput
 ): Promise<{ id: string }> {
@@ -47,6 +55,7 @@ export async function createJournalEntry(
   const doc: JournalEntry = {
     ...sanitizeForFirestore(data as unknown as Record<string, unknown>) as unknown as CreateJournalEntryInput,
     entryId: id,
+    status: 'ACTIVE',
     createdAt: now,
     updatedAt: now,
   };
@@ -66,7 +75,7 @@ export async function getJournalEntry(
   return safeFirestoreOperation(async (db) => {
     const snap = await db.collection(COLLECTIONS.ACCOUNTING_JOURNAL_ENTRIES).doc(entryId).get();
     if (!snap.exists) return null;
-    return snap.data() as JournalEntry;
+    return applyJournalDefaults(snap.data() as JournalEntry);
   }, null);
 }
 
@@ -104,7 +113,7 @@ export async function listJournalEntries(
     query = query.orderBy('date', 'desc').limit(pageSize);
 
     const snap = await query.get();
-    const items = snap.docs.map((d) => d.data() as JournalEntry);
+    const items = snap.docs.map((d) => applyJournalDefaults(d.data() as JournalEntry));
 
     return {
       items,
@@ -113,6 +122,20 @@ export async function listJournalEntries(
       pageSize,
     };
   }, { items: [], hasNext: false, totalShown: 0, pageSize });
+}
+
+export async function getJournalEntryByInvoiceId(
+  invoiceId: string
+): Promise<JournalEntry | null> {
+  return safeFirestoreOperation(async (db) => {
+    const snap = await db
+      .collection(COLLECTIONS.ACCOUNTING_JOURNAL_ENTRIES)
+      .where('invoiceId', '==', invoiceId)
+      .limit(1)
+      .get();
+    if (snap.empty) return null;
+    return applyJournalDefaults(snap.docs[0].data() as JournalEntry);
+  }, null);
 }
 
 // ============================================================================
