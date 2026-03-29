@@ -246,6 +246,24 @@
 
 ---
 
+## Q12a (2026-03-29): Πλήρης χαρτογράφηση Έργων — ALL fields + ALL relationships
+
+**Εντολή Γιώργου**: Πλήρης χαρτογράφηση Έργων (Projects) — ακολουθώντας τη δομή SPEC-008/009/010.
+
+**Απάντηση**: Δημιουργήθηκε SPEC-012-entity-mapping-projects.md με:
+
+- **7 sections**, **~90+ πεδία**, βάσει πραγματικού κώδικα (`Project`, `ProjectAddress`, `EfkaDeclarationData`, `LandownerEntry`)
+- **44 direct fields** (identification, business link, addresses, financials, dates, classification, licensing, boolean flags, bartex, EFKA)
+- **17 address fields** per entry (ADR-167 multi-address system)
+- **~25 EFKA fields** (nested object 1:1 — 7 required ΕΦΚΑ, ΑΜΟΕ, status, audit, documents[])
+- **4 landowner fields** per entry (ADR-244 bartex)
+- **6 enums** (ProjectStatus, ProjectType, ProjectPriority, ProjectRiskLevel, ProjectComplexity, ProjectAddressType)
+- **5 subcollections** (3 root + 2 RBAC)
+- **36 cross-entity references** — η πιο "πυκνή" οντότητα σε σχέσεις
+- **Report Builder impact**: Tier 1 (31 flat + 19 computed), Tier 2 (3 embedded + 6 cross-entity), Tier 3 card layout
+
+---
+
 ## Q13 (2026-03-29): Πλήρης χαρτογράφηση Κτιρίων — ALL fields + ALL relationships
 
 **Εντολή Γιώργου**: Πλήρης χαρτογράφηση Κτιρίων (Buildings) — ακολουθώντας τη δομή SPEC-008/009/010.
