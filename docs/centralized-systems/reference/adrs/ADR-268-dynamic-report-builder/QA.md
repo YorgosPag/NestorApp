@@ -347,6 +347,24 @@
 
 ---
 
+## Q21 (2026-03-29): Πλήρης χαρτογράφηση CRM & Επικοινωνία — 4 οντότητες
+
+**Εντολή Γιώργου**: Πλήρης χαρτογράφηση CRM group (Opportunities, CRM Tasks, Communications, Appointments) — ακολουθώντας τη δομή SPEC-008.
+
+**Απάντηση**: Δημιουργήθηκε SPEC-021-entity-mapping-crm.md με:
+
+- **4 οντότητες** σε 1 αρχείο, **~114 πεδία**, βάσει πραγματικού κώδικα (`Opportunity`, `CrmTask`, `Communication`, `AppointmentDocument`)
+- **Opportunity**: 23 direct + 9 nested (interestedIn 3-level deep: budget.min/max, desiredArea.min/max, projectIds[], buildingIds[], unitIds[], locations[]), 8-stage pipeline, 4 enums (24 τιμές), 7 cross-entity refs
+- **CRM Task**: 23 direct + 10 nested (viewingDetails + RecurrencePattern Phase 3), 3 enums (16 τιμές), 5 cross-entity refs
+- **Communication**: 24 direct + 3 AI fields (intentAnalysis, triageStatus, linkedTaskId), 5 enums (25 τιμές), 5 cross-entity refs, AI analysis integration (20+ intent types via MessageIntentAnalysis)
+- **Appointment**: 10 direct + 12 nested (source + requester + appointment), 1 enum (5 τιμές), 3 cross-entity refs, UC-001 AI Pipeline integration
+- **0 subcollections** (καμία οντότητα)
+- **20 cross-entity references** σύνολο (contacts, projects, buildings, units, opportunities, tasks, communications, ai_pipeline_queue, companies)
+- **Report Builder impact**: Tier 1 (58 flat + 19 computed), Tier 2 (9 arrays), Tier 3 (4 card layouts)
+- **Ειδικά**: TriageStatus SSoT (`src/constants/triage-statuses.ts`), IntentTypeValue SSoT (`src/schemas/ai-analysis.ts`)
+
+---
+
 ### ΣΥΝΟΨΗ ΕΥΡΗΜΑΤΩΝ
 
 #### ✅ ΔΕΝ χρειάζεται duplicate (ήδη καλύπτεται):
