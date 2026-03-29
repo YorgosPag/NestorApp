@@ -1,4 +1,9 @@
 {
+  "groups": {
+    "realestate": "Ακίνητα",
+    "people": "Πρόσωπα",
+    "specialists": "Ειδικότητες"
+  },
   "domains": {
     "projects": {
       "label": "Έργα",
@@ -177,6 +182,181 @@
           "E": "E",
           "F": "F",
           "G": "G"
+        }
+      }
+    },
+    "parking": {
+      "label": "Θέσεις Στάθμευσης",
+      "description": "Θέσεις parking σε κτήρια και ανοιχτούς χώρους",
+      "fields": {
+        "number": "Αριθμός",
+        "code": "Κωδικός",
+        "building": "Κτήριο",
+        "locationZone": "Ζώνη",
+        "type": "Τύπος",
+        "status": "Κατάσταση",
+        "floor": "Όροφος",
+        "area": "Εμβαδόν (τ.μ.)",
+        "price": "Τιμή",
+        "commercialStatus": "Εμπορική Κατάσταση"
+      },
+      "enums": {
+        "locationZone": {
+          "pilotis": "Πιλοτή",
+          "underground": "Υπόγειο",
+          "open_space": "Ανοιχτός Χώρος",
+          "rooftop": "Ταράτσα",
+          "covered_outdoor": "Στεγασμένος Εξωτερικός"
+        },
+        "type": {
+          "standard": "Κανονική",
+          "handicapped": "ΑμεΑ",
+          "motorcycle": "Μοτοσυκλέτα",
+          "electric": "Ηλεκτρικό",
+          "visitor": "Επισκέπτης"
+        },
+        "status": {
+          "available": "Διαθέσιμη",
+          "occupied": "Κατειλημμένη",
+          "reserved": "Κρατημένη",
+          "sold": "Πωλημένη",
+          "maintenance": "Συντήρηση"
+        },
+        "commercialStatus": {
+          "unavailable": "Μη Διαθέσιμο",
+          "for-sale": "Προς Πώληση",
+          "reserved": "Κρατημένο",
+          "sold": "Πωλημένο"
+        }
+      }
+    },
+    "storage": {
+      "label": "Αποθήκες",
+      "description": "Αποθηκευτικοί χώροι σε κτήρια",
+      "fields": {
+        "name": "Όνομα",
+        "code": "Κωδικός",
+        "building": "Κτήριο",
+        "type": "Τύπος",
+        "status": "Κατάσταση",
+        "floor": "Όροφος",
+        "area": "Εμβαδόν (τ.μ.)",
+        "price": "Τιμή",
+        "commercialStatus": "Εμπορική Κατάσταση",
+        "hasElectricity": "Ηλεκτρικό Ρεύμα",
+        "hasWater": "Ύδρευση",
+        "hasClimateControl": "Κλιματισμός"
+      },
+      "enums": {
+        "type": {
+          "large": "Μεγάλη",
+          "small": "Μικρή",
+          "basement": "Υπόγεια",
+          "ground": "Ισόγεια",
+          "special": "Ειδική",
+          "storage": "Αποθήκη",
+          "parking": "Parking",
+          "garage": "Γκαράζ",
+          "warehouse": "Αποθηκευτικός Χώρος"
+        },
+        "status": {
+          "available": "Διαθέσιμη",
+          "occupied": "Κατειλημμένη",
+          "maintenance": "Συντήρηση",
+          "reserved": "Κρατημένη",
+          "sold": "Πωλημένη",
+          "unavailable": "Μη Διαθέσιμη"
+        },
+        "commercialStatus": {
+          "unavailable": "Μη Διαθέσιμο",
+          "for-sale": "Προς Πώληση",
+          "reserved": "Κρατημένο",
+          "sold": "Πωλημένο"
+        }
+      }
+    },
+    "individuals": {
+      "label": "Φυσικά Πρόσωπα",
+      "description": "Πελάτες, συνεργάτες και φυσικά πρόσωπα",
+      "fields": {
+        "firstName": "Όνομα",
+        "lastName": "Επώνυμο",
+        "vatNumber": "ΑΦΜ",
+        "primaryEmail": "Email",
+        "primaryPhone": "Τηλέφωνο",
+        "city": "Πόλη",
+        "status": "Κατάσταση",
+        "profession": "Επάγγελμα",
+        "employer": "Εργοδότης",
+        "completenessRate": "Πληρότητα",
+        "specialty": "Ειδικότητα",
+        "birthDate": "Ημ. Γέννησης",
+        "gender": "Φύλο",
+        "taxOffice": "ΔΟΥ",
+        "fatherName": "Πατρώνυμο",
+        "amka": "ΑΜΚΑ",
+        "createdAt": "Δημιουργία"
+      },
+      "enums": {
+        "status": {
+          "active": "Ενεργό",
+          "inactive": "Ανενεργό",
+          "archived": "Αρχειοθετημένο"
+        },
+        "gender": {
+          "male": "Άνδρας",
+          "female": "Γυναίκα",
+          "other": "Άλλο"
+        }
+      }
+    },
+    "companies": {
+      "label": "Εταιρείες & Υπηρεσίες",
+      "description": "Εταιρείες, δημόσιες υπηρεσίες και οργανισμοί",
+      "fields": {
+        "companyName": "Επωνυμία",
+        "serviceName": "Όνομα Υπηρεσίας",
+        "type": "Κατηγορία",
+        "legalForm": "Νομική Μορφή",
+        "serviceType": "Τύπος Υπηρεσίας",
+        "vatNumber": "ΑΦΜ",
+        "registrationNumber": "Αρ. ΓΕΜΗ",
+        "taxOffice": "ΔΟΥ",
+        "industry": "Κλάδος",
+        "numberOfEmployees": "Αρ. Εργαζομένων",
+        "annualRevenue": "Ετήσιος Τζίρος",
+        "primaryEmail": "Email",
+        "primaryPhone": "Τηλέφωνο",
+        "city": "Πόλη",
+        "status": "Κατάσταση",
+        "createdAt": "Δημιουργία"
+      },
+      "enums": {
+        "type": {
+          "individual": "Φυσικό Πρόσωπο",
+          "company": "Εταιρεία",
+          "service": "Δημόσια Υπηρεσία"
+        },
+        "legalForm": {
+          "ΑΕ": "ΑΕ",
+          "ΕΠΕ": "ΕΠΕ",
+          "ΟΕ": "ΟΕ",
+          "ΕΕ": "ΕΕ",
+          "ΙΚΕ": "ΙΚΕ",
+          "ΚΟΙΝΣΕΠ": "ΚΟΙΝΣΕΠ",
+          "OTHER": "Άλλη"
+        },
+        "serviceType": {
+          "ministry": "Υπουργείο",
+          "tax_office": "Εφορία",
+          "municipality": "Δήμος",
+          "public_organization": "Δημόσιος Οργανισμός",
+          "other": "Άλλο"
+        },
+        "status": {
+          "active": "Ενεργή",
+          "inactive": "Ανενεργή",
+          "archived": "Αρχειοθετημένη"
         }
       }
     }

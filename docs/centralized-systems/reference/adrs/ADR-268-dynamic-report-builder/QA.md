@@ -2259,3 +2259,27 @@ interface ExportAuditEntry {
 - Αν Κατηγορία = "Δημόσια Υπηρεσία" → εμφάνιση Τύπος Υπηρεσίας, κρύψε Νομική Μορφή
 - Αν Κατηγορία = "Όλα" → εμφάνιση και τα δύο, '—' αν κενό
 - Υλοποίηση: `conditionalOn` property στο FieldDefinition (νέο πεδίο)
+
+---
+
+## Phase 4a Implementation Notes (2026-03-29)
+
+**Status**: IMPLEMENTED
+
+**Files Created**:
+- `src/config/report-builder/domain-defs-spaces.ts` — A5 Parking (10 fields) + A6 Storage (12 fields)
+- `src/config/report-builder/domain-defs-contacts.ts` — B1 Individuals (17 fields) + B2 Companies (16 fields)
+
+**Files Modified**:
+- `src/config/report-builder/report-builder-types.ts` — +BuilderDomainId (8 IDs), +DomainGroup, +PreFilter, +conditionalOn
+- `src/config/report-builder/domain-definitions.ts` — Registry expanded to 8 domains, all get `group` property
+- `src/services/report-engine/report-query-executor.ts` — preFilters support + array-index in getNestedValue
+- `src/components/reports/builder/DomainSelector.tsx` — Grouped Radix SelectGroup (Q87)
+- `src/i18n/locales/{el,en}/report-builder-domains.json` — +4 domains, +group labels
+- `src/config/report-builder/__tests__/domain-definitions.test.ts` — Tests for 8 domains, groups, preFilters, conditionalOn, array indexing
+
+**Key Decisions Implemented**:
+- Q87: Grouped UI with SelectGroup/SelectLabel (3 categories)
+- Q88: personaTypes deferred to Phase 4b
+- Q89: completenessRate field defined (auto-calc on save deferred)
+- Q92: conditionalOn metadata on 4 fields in B2 (companyName, serviceName, legalForm, serviceType)

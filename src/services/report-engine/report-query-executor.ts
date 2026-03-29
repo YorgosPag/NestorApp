@@ -19,6 +19,7 @@ import {
   type BuilderQueryResponse,
   type ReportBuilderFilter,
   type FieldDefinition,
+  type PreFilter,
 } from '@/config/report-builder/report-builder-types';
 
 const logger = createModuleLogger('ReportQueryExecutor');
@@ -63,6 +64,7 @@ export async function executeBuilderQuery(
     plan.postFilters.length > 0
       ? Math.min(request.limit * 3, BUILDER_LIMITS.MAX_SERVER_FETCH)
       : request.limit,
+    domain.preFilters,
   );
 
   // Apply post-filters
@@ -224,11 +226,23 @@ async function executeFirestoreQuery(
   sortField: string,
   sortDirection: 'asc' | 'desc',
   limit: number,
+  preFilters?: PreFilter[],
 ): Promise<Record<string, unknown>[]> {
   const db = getAdminFirestore();
   let query: FirebaseFirestore.Query = db
     .collection(collection)
     .where('companyId', '==', companyId);
+
+  // Apply domain pre-filters (e.g. type='individual' for B1)
+  if (preFilters) {
+    for (const pf of preFilters) {
+      query = query.where(
+        pf.fieldPath,
+        pf.opStr as FirebaseFirestore.WhereFilterOp,
+        pf.value,
+      );
+    }
+  }
 
   // Handle 'in' clauses with chunking
   const inClauses = clauses.filter((c) => c.opStr === 'in');
@@ -435,7 +449,12 @@ export function getNestedValue(obj: Record<string, unknown>, dotPath: string): u
   for (const part of parts) {
     if (current === null || current === undefined) return undefined;
     if (typeof current !== 'object') return undefined;
-    current = (current as Record<string, unknown>)[part];
+    // Array index support: emails.0.email → emails[0].email
+    if (Array.isArray(current) && /^\d+$/.test(part)) {
+      current = (current as unknown[])[parseInt(part, 10)];
+    } else {
+      current = (current as Record<string, unknown>)[part];
+    }
   }
 
   return current;

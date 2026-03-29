@@ -1,8 +1,9 @@
 /**
  * @module config/report-builder/domain-definitions
- * @enterprise ADR-268 — Domain Definitions for Dynamic Report Builder (Phase 1)
+ * @enterprise ADR-268 — Domain Definitions for Dynamic Report Builder (Phase 1 + 4a)
  *
- * Static field schemas for 4 domains: Projects, Buildings, Floors, Units.
+ * Static field schemas for 8 domains: Projects, Buildings, Floors, Units,
+ * Parking, Storage, Individuals, Companies & Services.
  * Each domain defines its Firestore collection, fields, types, and refs.
  * These definitions drive the UI (filter panel, column selector) and
  * the query engine (Firestore WHERE clauses, ref resolution).
@@ -14,6 +15,8 @@ import type {
   DomainDefinition,
   FieldDefinition,
 } from './report-builder-types';
+import { PARKING_DEFINITION, STORAGE_DEFINITION } from './domain-defs-spaces';
+import { INDIVIDUALS_DEFINITION, COMPANIES_DEFINITION } from './domain-defs-contacts';
 
 // ============================================================================
 // Enum Value Constants (SSoT — match actual Firestore data)
@@ -65,6 +68,7 @@ const LEGAL_PHASES = [
 const PROJECTS_DEFINITION: DomainDefinition = {
   id: 'projects',
   collection: COLLECTIONS.PROJECTS,
+  group: 'realestate',
   labelKey: 'domains.projects.label',
   descriptionKey: 'domains.projects.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template, not user-facing
@@ -91,6 +95,7 @@ const PROJECTS_DEFINITION: DomainDefinition = {
 const BUILDINGS_DEFINITION: DomainDefinition = {
   id: 'buildings',
   collection: COLLECTIONS.BUILDINGS,
+  group: 'realestate',
   labelKey: 'domains.buildings.label',
   descriptionKey: 'domains.buildings.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template, not user-facing
@@ -116,6 +121,7 @@ const BUILDINGS_DEFINITION: DomainDefinition = {
 const FLOORS_DEFINITION: DomainDefinition = {
   id: 'floors',
   collection: COLLECTIONS.FLOORS,
+  group: 'realestate',
   labelKey: 'domains.floors.label',
   descriptionKey: 'domains.floors.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template, not user-facing
@@ -135,6 +141,7 @@ const FLOORS_DEFINITION: DomainDefinition = {
 const UNITS_DEFINITION: DomainDefinition = {
   id: 'units',
   collection: COLLECTIONS.UNITS,
+  group: 'realestate',
   labelKey: 'domains.units.label',
   descriptionKey: 'domains.units.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template, not user-facing
@@ -181,10 +188,17 @@ const UNITS_DEFINITION: DomainDefinition = {
 // ============================================================================
 
 export const DOMAIN_DEFINITIONS: Record<BuilderDomainId, DomainDefinition> = {
+  // Phase 1 — Real Estate
   projects: PROJECTS_DEFINITION,
   buildings: BUILDINGS_DEFINITION,
   floors: FLOORS_DEFINITION,
   units: UNITS_DEFINITION,
+  // Phase 4a — Spaces
+  parking: PARKING_DEFINITION,
+  storage: STORAGE_DEFINITION,
+  // Phase 4a — Contacts
+  individuals: INDIVIDUALS_DEFINITION,
+  companies: COMPANIES_DEFINITION,
 };
 
 // ============================================================================

@@ -85,8 +85,27 @@ export interface ReportBuilderFilter {
 // Field & Domain Definitions
 // ============================================================================
 
-/** Phase 1 domain IDs */
-export type BuilderDomainId = 'projects' | 'buildings' | 'floors' | 'units';
+/** Domain IDs — Phase 1 (4) + Phase 4a (4) */
+export type BuilderDomainId =
+  | 'projects' | 'buildings' | 'floors' | 'units'
+  | 'parking' | 'storage' | 'individuals' | 'companies';
+
+/** Domain groups for UI categorization (Q87) */
+export type DomainGroup = 'realestate' | 'people' | 'specialists';
+
+/** Ordered groups for DomainSelector rendering */
+export const DOMAIN_GROUP_ORDER: readonly DomainGroup[] = [
+  'realestate',
+  'people',
+  'specialists',
+] as const;
+
+/** Pre-filter applied before user filters (e.g. type='individual') */
+export interface PreFilter {
+  fieldPath: string;
+  opStr: string;
+  value: unknown;
+}
 
 /** Schema for one field within a domain */
 export interface FieldDefinition {
@@ -112,6 +131,8 @@ export interface FieldDefinition {
   refDomain?: BuilderDomainId;
   /** Field on referenced doc to display (default: 'name') */
   refDisplayField?: string;
+  /** Q92 — field visible only when another field matches a value */
+  conditionalOn?: { field: string; value: string | string[] };
 }
 
 /** Complete domain configuration */
@@ -120,6 +141,8 @@ export interface DomainDefinition {
   id: BuilderDomainId;
   /** Firestore collection name (from COLLECTIONS) */
   collection: string;
+  /** UI group category (Q87) */
+  group: DomainGroup;
   /** i18n key for domain name */
   labelKey: string;
   /** i18n key for domain description */
@@ -132,6 +155,8 @@ export interface DomainDefinition {
   defaultSortField: string;
   /** Default sort direction */
   defaultSortDirection: 'asc' | 'desc';
+  /** Firestore WHERE clauses applied before user filters */
+  preFilters?: PreFilter[];
 }
 
 // ============================================================================
@@ -285,12 +310,16 @@ export const BUILDER_LIMITS = {
   MAX_AGGREGATIONS: 8,
 } as const;
 
-/** All valid domain IDs */
+/** All valid domain IDs (Phase 1 + Phase 4a) */
 export const VALID_DOMAIN_IDS: readonly BuilderDomainId[] = [
   'projects',
   'buildings',
   'floors',
   'units',
+  'parking',
+  'storage',
+  'individuals',
+  'companies',
 ] as const;
 
 // ============================================================================

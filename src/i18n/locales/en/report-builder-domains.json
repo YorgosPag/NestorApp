@@ -1,4 +1,9 @@
 {
+  "groups": {
+    "realestate": "Real Estate",
+    "people": "People",
+    "specialists": "Specialists"
+  },
   "domains": {
     "projects": {
       "label": "Projects",
@@ -177,6 +182,181 @@
           "E": "E",
           "F": "F",
           "G": "G"
+        }
+      }
+    },
+    "parking": {
+      "label": "Parking Spots",
+      "description": "Parking spaces in buildings and open areas",
+      "fields": {
+        "number": "Number",
+        "code": "Code",
+        "building": "Building",
+        "locationZone": "Zone",
+        "type": "Type",
+        "status": "Status",
+        "floor": "Floor",
+        "area": "Area (m²)",
+        "price": "Price",
+        "commercialStatus": "Commercial Status"
+      },
+      "enums": {
+        "locationZone": {
+          "pilotis": "Pilotis",
+          "underground": "Underground",
+          "open_space": "Open Space",
+          "rooftop": "Rooftop",
+          "covered_outdoor": "Covered Outdoor"
+        },
+        "type": {
+          "standard": "Standard",
+          "handicapped": "Handicapped",
+          "motorcycle": "Motorcycle",
+          "electric": "Electric",
+          "visitor": "Visitor"
+        },
+        "status": {
+          "available": "Available",
+          "occupied": "Occupied",
+          "reserved": "Reserved",
+          "sold": "Sold",
+          "maintenance": "Maintenance"
+        },
+        "commercialStatus": {
+          "unavailable": "Unavailable",
+          "for-sale": "For Sale",
+          "reserved": "Reserved",
+          "sold": "Sold"
+        }
+      }
+    },
+    "storage": {
+      "label": "Storage Units",
+      "description": "Storage spaces within buildings",
+      "fields": {
+        "name": "Name",
+        "code": "Code",
+        "building": "Building",
+        "type": "Type",
+        "status": "Status",
+        "floor": "Floor",
+        "area": "Area (m²)",
+        "price": "Price",
+        "commercialStatus": "Commercial Status",
+        "hasElectricity": "Electricity",
+        "hasWater": "Water",
+        "hasClimateControl": "Climate Control"
+      },
+      "enums": {
+        "type": {
+          "large": "Large",
+          "small": "Small",
+          "basement": "Basement",
+          "ground": "Ground",
+          "special": "Special",
+          "storage": "Storage",
+          "parking": "Parking",
+          "garage": "Garage",
+          "warehouse": "Warehouse"
+        },
+        "status": {
+          "available": "Available",
+          "occupied": "Occupied",
+          "maintenance": "Maintenance",
+          "reserved": "Reserved",
+          "sold": "Sold",
+          "unavailable": "Unavailable"
+        },
+        "commercialStatus": {
+          "unavailable": "Unavailable",
+          "for-sale": "For Sale",
+          "reserved": "Reserved",
+          "sold": "Sold"
+        }
+      }
+    },
+    "individuals": {
+      "label": "Individuals",
+      "description": "Clients, partners, and individual contacts",
+      "fields": {
+        "firstName": "First Name",
+        "lastName": "Last Name",
+        "vatNumber": "VAT Number",
+        "primaryEmail": "Email",
+        "primaryPhone": "Phone",
+        "city": "City",
+        "status": "Status",
+        "profession": "Profession",
+        "employer": "Employer",
+        "completenessRate": "Completeness",
+        "specialty": "Specialty",
+        "birthDate": "Date of Birth",
+        "gender": "Gender",
+        "taxOffice": "Tax Office",
+        "fatherName": "Father's Name",
+        "amka": "AMKA",
+        "createdAt": "Created"
+      },
+      "enums": {
+        "status": {
+          "active": "Active",
+          "inactive": "Inactive",
+          "archived": "Archived"
+        },
+        "gender": {
+          "male": "Male",
+          "female": "Female",
+          "other": "Other"
+        }
+      }
+    },
+    "companies": {
+      "label": "Companies & Services",
+      "description": "Companies, public services, and organizations",
+      "fields": {
+        "companyName": "Company Name",
+        "serviceName": "Service Name",
+        "type": "Category",
+        "legalForm": "Legal Form",
+        "serviceType": "Service Type",
+        "vatNumber": "VAT Number",
+        "registrationNumber": "Registration No.",
+        "taxOffice": "Tax Office",
+        "industry": "Industry",
+        "numberOfEmployees": "Employees",
+        "annualRevenue": "Annual Revenue",
+        "primaryEmail": "Email",
+        "primaryPhone": "Phone",
+        "city": "City",
+        "status": "Status",
+        "createdAt": "Created"
+      },
+      "enums": {
+        "type": {
+          "individual": "Individual",
+          "company": "Company",
+          "service": "Public Service"
+        },
+        "legalForm": {
+          "ΑΕ": "SA (ΑΕ)",
+          "ΕΠΕ": "Ltd (ΕΠΕ)",
+          "ΟΕ": "GP (ΟΕ)",
+          "ΕΕ": "LP (ΕΕ)",
+          "ΙΚΕ": "PC (ΙΚΕ)",
+          "ΚΟΙΝΣΕΠ": "SocEnt",
+          "OTHER": "Other"
+        },
+        "serviceType": {
+          "ministry": "Ministry",
+          "tax_office": "Tax Office",
+          "municipality": "Municipality",
+          "public_organization": "Public Organization",
+          "other": "Other"
+        },
+        "status": {
+          "active": "Active",
+          "inactive": "Inactive",
+          "archived": "Archived"
         }
       }
     }
