@@ -323,7 +323,7 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
       className={`border ${getStatusBorder('muted')} ${quick.card} bg-card ${PANEL_LAYOUT.SHADOW.LG} ${className}`}
     >
       <div className={`flex flex-wrap ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.SPACING.SM}`}>
-        <div className={`flex ${PANEL_LAYOUT.GAP.XS} flex-1 min-w-0 overflow-x-auto`}>
+        <div className={`flex ${PANEL_LAYOUT.GAP.XS} flex-1 min-w-0 overflow-x-auto overflow-y-visible`}>
           {/* 🏢 ENTERPRISE: Upload DXF - Shadcn Button (NO BORDERS) */}
           <UploadDxfButton
             title="Upload DXF File (Legacy)"
