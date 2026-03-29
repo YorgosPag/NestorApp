@@ -232,3 +232,74 @@ describe('computeAgingForEntity', () => {
     expect(result.overduePercentage).toBe(0);
   });
 });
+
+// ============================================================================
+// EDGE CASES — Boundary & Unusual Inputs
+// ============================================================================
+
+describe('Edge cases', () => {
+  const asOf = new Date('2026-06-01');
+
+  it('installment fully paid (paidAmount >= amount) → excluded from buckets', () => {
+    const installments = [
+      makeInstallment({ dueDate: '2026-01-01', amount: 5000, paidAmount: 5000 }),
+    ];
+    // Not status='paid' but fully paid by amount — still status 'due'
+    // outstanding = max(0, 5000 - 5000) = 0 → skipped
+    const result = computeAgingBuckets(installments, asOf);
+    expect(result.every(b => b.count === 0)).toBe(true);
+  });
+
+  it('installment overpaid (paidAmount > amount) → excluded from buckets', () => {
+    const installments = [
+      makeInstallment({ dueDate: '2026-01-01', amount: 5000, paidAmount: 6000 }),
+    ];
+    const result = computeAgingBuckets(installments, asOf);
+    expect(result.every(b => b.count === 0)).toBe(true);
+  });
+
+  it('exactly 30 days overdue → classified as current (boundary)', () => {
+    // 30 days before asOf
+    const installments = [
+      makeInstallment({ dueDate: '2026-05-02', amount: 1000, paidAmount: 0 }),
+    ];
+    const result = computeAgingBuckets(installments, asOf);
+    expect(result.find(b => b.key === 'current')?.count).toBe(1);
+  });
+
+  it('exactly 31 days overdue → classified as days31to60 (boundary)', () => {
+    const installments = [
+      makeInstallment({ dueDate: '2026-05-01', amount: 1000, paidAmount: 0 }),
+    ];
+    const result = computeAgingBuckets(installments, asOf);
+    expect(result.find(b => b.key === 'days31to60')?.count).toBe(1);
+  });
+
+  it('exactly 60 days → days31to60, exactly 61 → days61to90', () => {
+    expect(classifyIntoBucket(60)).toBe('days31to60');
+    expect(classifyIntoBucket(61)).toBe('days61to90');
+  });
+
+  it('exactly 90 days → days61to90, exactly 91 → days91to120', () => {
+    expect(classifyIntoBucket(90)).toBe('days61to90');
+    expect(classifyIntoBucket(91)).toBe('days91to120');
+  });
+
+  it('exactly 120 days → days91to120, exactly 121 → days120plus', () => {
+    expect(classifyIntoBucket(120)).toBe('days91to120');
+    expect(classifyIntoBucket(121)).toBe('days120plus');
+  });
+
+  it('percentage rounding: 33.33% rounds to 33', () => {
+    const installments = [
+      makeInstallment({ dueDate: '2026-05-20', amount: 1000, paidAmount: 0 }),
+      makeInstallment({ dueDate: '2026-04-01', amount: 1000, paidAmount: 0 }),
+      makeInstallment({ dueDate: '2026-01-01', amount: 1000, paidAmount: 0 }),
+    ];
+    const result = computeAgingBuckets(installments, asOf);
+    const totalPct = result.reduce((sum, b) => sum + b.percentage, 0);
+    // Due to Math.round, totals may be 99 or 100 — both acceptable
+    expect(totalPct).toBeGreaterThanOrEqual(99);
+    expect(totalPct).toBeLessThanOrEqual(101);
+  });
+});

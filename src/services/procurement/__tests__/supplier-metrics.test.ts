@@ -362,4 +362,118 @@ describe('Price trend grouping logic', () => {
     expect(result[0].month).toBe('2026-01');
     expect(result[1].month).toBe('2026-03');
   });
+
+  it('returns empty for no POs', () => {
+    expect(buildMonthlyPrices([])).toEqual([]);
+  });
+
+  it('multiple items per PO contribute separately', () => {
+    const pos = [
+      {
+        dateOrdered: '2026-01-10',
+        items: [
+          { unitPrice: 10, quantity: 100 },
+          { unitPrice: 20, quantity: 50 },
+        ],
+      },
+    ];
+    const result = buildMonthlyPrices(pos);
+    expect(result).toHaveLength(1);
+    // avg(10, 20) = 15
+    expect(result[0].averageUnitPrice).toBe(15);
+    expect(result[0].totalQuantity).toBe(150);
+  });
+});
+
+// ============================================================================
+// Edge Cases
+// ============================================================================
+
+describe('sumTotal — edge cases', () => {
+  it('includes closed status POs', () => {
+    const pos = [makePO({ status: 'closed', total: 5000 })];
+    expect(sumTotal(pos)).toBe(5000);
+  });
+
+  it('includes partially_delivered status POs', () => {
+    const pos = [makePO({ status: 'partially_delivered', total: 3000 })];
+    expect(sumTotal(pos)).toBe(3000);
+  });
+});
+
+describe('calcOnTimeRate — edge cases', () => {
+  it('dateDelivered equal to dateNeeded counts as on-time', () => {
+    const pos = [makePO({ dateDelivered: '2026-01-15', dateNeeded: '2026-01-15' })];
+    expect(calcOnTimeRate(pos)).toBe(100);
+  });
+
+  it('works with ISO date strings comparison (string comparison)', () => {
+    // String comparison: '2026-01-14' <= '2026-01-15' → on time
+    const pos = [makePO({ dateDelivered: '2026-01-14', dateNeeded: '2026-01-15' })];
+    expect(calcOnTimeRate(pos)).toBe(100);
+  });
+
+  it('rounds percentage correctly', () => {
+    // 1 on time out of 3 = 33.33% → rounds to 33
+    const pos = [
+      makePO({ dateDelivered: '2026-01-10', dateNeeded: '2026-01-15' }),
+      makePO({ dateDelivered: '2026-01-20', dateNeeded: '2026-01-15' }),
+      makePO({ dateDelivered: '2026-01-25', dateNeeded: '2026-01-15' }),
+    ];
+    expect(calcOnTimeRate(pos)).toBe(33);
+  });
+});
+
+describe('calcAverageLeadTime — edge cases', () => {
+  it('same-day delivery → 0 days', () => {
+    const pos = [makePO({ dateOrdered: '2026-01-15', dateDelivered: '2026-01-15' })];
+    expect(calcAverageLeadTime(pos)).toBe(0);
+  });
+
+  it('rounds to nearest day', () => {
+    // 7 + 8 = 15, avg = 7.5 → rounds to 8
+    const pos = [
+      makePO({ dateOrdered: '2026-01-01', dateDelivered: '2026-01-08' }), // 7
+      makePO({ dateOrdered: '2026-01-01', dateDelivered: '2026-01-09' }), // 8
+    ];
+    expect(calcAverageLeadTime(pos)).toBe(8);
+  });
+});
+
+describe('calcCancellationRate — edge cases', () => {
+  it('rounds percentage: 1 of 3 = 33%', () => {
+    const all = [makePO(), makePO(), makePO()];
+    const cancelled = [makePO()];
+    expect(calcCancellationRate(all, cancelled)).toBe(33);
+  });
+});
+
+describe('buildCategoryBreakdown — edge cases', () => {
+  it('aggregates same category across multiple POs', () => {
+    const pos = [
+      makePO({ status: 'ordered', items: [makeItem({ categoryCode: 'OIK-5', total: 1000 })] }),
+      makePO({ status: 'delivered', items: [makeItem({ categoryCode: 'OIK-5', total: 2000 })] }),
+    ];
+    const result = buildCategoryBreakdown(pos);
+    expect(result).toHaveLength(1);
+    expect(result[0].totalSpend).toBe(3000);
+    expect(result[0].orderCount).toBe(2);
+  });
+
+  it('sorts by spend descending', () => {
+    const pos = [
+      makePO({
+        status: 'ordered',
+        items: [
+          makeItem({ categoryCode: 'OIK-1', total: 500 }),
+          makeItem({ categoryCode: 'OIK-2', total: 2000 }),
+          makeItem({ categoryCode: 'OIK-3', total: 1000 }),
+        ],
+      }),
+    ];
+    const result = buildCategoryBreakdown(pos);
+    expect(result[0].categoryCode).toBe('OIK-2');
+    expect(result[1].categoryCode).toBe('OIK-3');
+    expect(result[2].categoryCode).toBe('OIK-1');
+  });
 });

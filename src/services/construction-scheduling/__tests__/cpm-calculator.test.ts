@@ -322,3 +322,110 @@ describe('computeCPM — project finish', () => {
     expect(result.criticalPathLength).toBe(20); // 10 + 10 days
   });
 });
+
+// ============================================================================
+// PARALLEL INDEPENDENT TASKS
+// ============================================================================
+
+describe('computeCPM — parallel independent tasks', () => {
+  it('longest task is critical, shorter has float', () => {
+    const tasks = [
+      makeTask({ id: 'A', name: 'Short', plannedStartDate: '2026-01-01', plannedEndDate: '2026-01-06', dependencies: [] }), // 5 days
+      makeTask({ id: 'B', name: 'Long', plannedStartDate: '2026-01-01', plannedEndDate: '2026-01-21', dependencies: [] }),  // 20 days
+    ];
+    const result = computeCPM(tasks, defaultPhases);
+
+    const taskA = result.tasks.find(t => t.taskId === 'A');
+    const taskB = result.tasks.find(t => t.taskId === 'B');
+
+    expect(taskB?.isCritical).toBe(true);
+    expect(taskA?.isCritical).toBe(false);
+    expect(taskA!.totalFloat).toBeGreaterThan(0);
+  });
+
+  it('equal-length parallel tasks are both critical', () => {
+    const tasks = [
+      makeTask({ id: 'A', name: 'Equal A', plannedStartDate: '2026-01-01', plannedEndDate: '2026-01-11', dependencies: [] }),
+      makeTask({ id: 'B', name: 'Equal B', plannedStartDate: '2026-01-01', plannedEndDate: '2026-01-11', dependencies: [] }),
+    ];
+    const result = computeCPM(tasks, defaultPhases);
+
+    // Both have same duration, both are critical
+    result.tasks.forEach(t => {
+      expect(t.isCritical).toBe(true);
+      expect(t.totalFloat).toBe(0);
+    });
+  });
+});
+
+// ============================================================================
+// SELF-DEPENDENCY
+// ============================================================================
+
+describe('computeCPM — self-dependency', () => {
+  it('handles task depending on itself', () => {
+    const tasks = [
+      makeTask({ id: 'A', dependencies: ['A'] }), // self-reference
+    ];
+    const result = computeCPM(tasks, defaultPhases);
+    // Self-dependency creates a cycle
+    expect(result.cyclicTaskIds).toContain('A');
+  });
+});
+
+// ============================================================================
+// LARGE DAG
+// ============================================================================
+
+describe('computeCPM — larger DAG (10 tasks)', () => {
+  it('processes 10-task linear chain correctly', () => {
+    const tasks = Array.from({ length: 10 }, (_, i) =>
+      makeTask({
+        id: `T${i}`,
+        name: `Task ${i}`,
+        plannedStartDate: '2026-01-01',
+        plannedEndDate: '2026-01-06', // 5 days each
+        dependencies: i > 0 ? [`T${i - 1}`] : [],
+      }),
+    );
+    const result = computeCPM(tasks, defaultPhases);
+
+    expect(result.isValid).toBe(true);
+    expect(result.tasks).toHaveLength(10);
+    expect(result.criticalPath).toHaveLength(10); // all critical in linear chain
+    expect(result.criticalPathLength).toBe(50); // 10 * 5 days
+  });
+});
+
+// ============================================================================
+// MINIMUM DURATION
+// ============================================================================
+
+describe('computeCPM — minimum duration enforcement', () => {
+  it('enforces minimum 1-day duration even with same start/end date', () => {
+    const tasks = [
+      makeTask({ id: 'A', plannedStartDate: '2026-01-01', plannedEndDate: '2026-01-01' }),
+    ];
+    const result = computeCPM(tasks, defaultPhases);
+    expect(result.tasks[0].durationDays).toBe(1); // Math.max(1, ...)
+  });
+});
+
+// ============================================================================
+// PHASE NAME RESOLUTION
+// ============================================================================
+
+describe('computeCPM — phase name resolution', () => {
+  it('resolves phase name from phases array', () => {
+    const phases = [makePhase({ id: 'phase_1', name: 'Foundation' })];
+    const tasks = [makeTask({ id: 'A', phaseId: 'phase_1' })];
+    const result = computeCPM(tasks, phases);
+    expect(result.tasks[0].phaseName).toBe('Foundation');
+  });
+
+  it('uses dash when phase not found', () => {
+    const tasks = [makeTask({ id: 'A', phaseId: 'unknown_phase' })];
+    const result = computeCPM(tasks, []); // no phases
+    expect(result.tasks[0].phaseName).toBe('—');
+  });
+});

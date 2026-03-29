@@ -369,4 +369,57 @@ describe('computeEVM', () => {
     const result = computeEVM(items, phases, [], new Date('2026-07-01'));
     expect(result.toCompletePI).toBe(99.99);
   });
+
+  it('EAC = BAC when CPI = 0 (no actual cost)', () => {
+    const items = [makeBOQItem({ linkedPhaseId: 'phase_1', actualQuantity: null, wasteFactor: 0 })];
+    const phases = [makePhase({ id: 'phase_1', progress: 50 })];
+    const result = computeEVM(items, phases, [], new Date('2026-04-01'));
+    // CPI = 0, so EAC falls back to BAC
+    expect(result.estimateAtCompletion).toBe(result.budgetAtCompletion);
+  });
+
+  it('handles empty items (BAC = 0)', () => {
+    const phases = [makePhase({ id: 'phase_1', progress: 50 })];
+    const result = computeEVM([], phases, [], new Date('2026-04-01'));
+    expect(result.budgetAtCompletion).toBe(0);
+    expect(result.earnedValue).toBe(0);
+    expect(result.actualCost).toBe(0);
+    expect(result.cpi).toBe(0);
+    expect(result.spi).toBe(0);
+  });
+
+  it('handles phase with start === end date', () => {
+    const items = [
+      makeBOQItem({ linkedPhaseId: 'phase_1', estimatedQuantity: 100, materialUnitCost: 10, laborUnitCost: 0, equipmentUnitCost: 0, wasteFactor: 0 }),
+    ];
+    const phases = [makePhase({
+      id: 'phase_1',
+      plannedStartDate: '2026-06-15',
+      plannedEndDate: '2026-06-15', // same day — edge case
+      progress: 50,
+    })];
+    // elapsed fraction when start === end → should be 1 if asOf >= start, 0 otherwise
+    const result = computeEVM(items, phases, [], new Date('2026-06-15'));
+    // Should not crash, PV should be full budget (elapsed = 1)
+    expect(result.plannedValue).toBe(1000);
+  });
+
+  it('schedule variance is positive when ahead of schedule', () => {
+    const items = [
+      makeBOQItem({ linkedPhaseId: 'phase_1', estimatedQuantity: 100, materialUnitCost: 10, laborUnitCost: 0, equipmentUnitCost: 0, wasteFactor: 0, actualQuantity: 80 }),
+    ];
+    const phases = [makePhase({
+      id: 'phase_1',
+      progress: 80, // 80% done
+      plannedStartDate: '2026-01-01',
+      plannedEndDate: '2026-12-31',
+    })];
+    // EV = 80% * 1000 = 800
+    // PV at midyear ≈ 50% * 1000 = 500
+    // SV = EV - PV = 800 - 500 = 300 (ahead of schedule)
+    const result = computeEVM(items, phases, [], new Date('2026-07-01'));
+    expect(result.scheduleVariance).toBeGreaterThan(0);
+    expect(result.spi).toBeGreaterThan(1);
+    expect(result.spiHealth).toBe('green');
+  });
 });

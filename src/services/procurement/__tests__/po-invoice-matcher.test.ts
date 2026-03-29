@@ -275,3 +275,99 @@ describe('Combined scoring — auto-match threshold', () => {
     expect(total).toBeLessThan(PO_MATCH_SCORING.AUTO_MATCH_THRESHOLD);
   });
 });
+
+// ============================================================================
+// Edge Cases — Boundary & Unicode
+// ============================================================================
+
+describe('scoreAmountPair — boundary cases', () => {
+  it('exactly 5% difference → exact match (boundary)', () => {
+    // 10000 * 1.05 = 10500, ratio = 0.05 exactly
+    expect(scoreAmountPair(10500, 10000)).toBe(PO_MATCH_SCORING.AMOUNT_EXACT_POINTS);
+  });
+
+  it('5.01% difference → near match (boundary)', () => {
+    // ratio = 501/10000 = 0.0501 > 0.05
+    expect(scoreAmountPair(10501, 10000)).toBe(PO_MATCH_SCORING.AMOUNT_NEAR_POINTS);
+  });
+
+  it('exactly 10% difference → near match (boundary)', () => {
+    expect(scoreAmountPair(11000, 10000)).toBe(PO_MATCH_SCORING.AMOUNT_NEAR_POINTS);
+  });
+
+  it('10.01% difference → no match (boundary)', () => {
+    expect(scoreAmountPair(11001, 10000)).toBe(0);
+  });
+
+  it('very small amounts work correctly', () => {
+    expect(scoreAmountPair(1.00, 1.00)).toBe(PO_MATCH_SCORING.AMOUNT_EXACT_POINTS);
+    expect(scoreAmountPair(0.50, 0.50)).toBe(PO_MATCH_SCORING.AMOUNT_EXACT_POINTS);
+  });
+
+  it('very large amounts work correctly', () => {
+    expect(scoreAmountPair(1000000, 1000000)).toBe(PO_MATCH_SCORING.AMOUNT_EXACT_POINTS);
+  });
+});
+
+describe('scoreDateProximity — boundary cases', () => {
+  it('exactly 30 days → near (boundary)', () => {
+    // 30 days apart
+    expect(scoreDateProximity('2026-01-31', '2026-01-01')).toBe(PO_MATCH_SCORING.DATE_NEAR_POINTS);
+  });
+
+  it('exactly 60 days → far (boundary)', () => {
+    expect(scoreDateProximity('2026-03-02', '2026-01-01')).toBe(PO_MATCH_SCORING.DATE_FAR_POINTS);
+  });
+
+  it('same date → near (0 days diff)', () => {
+    expect(scoreDateProximity('2026-01-15', '2026-01-15')).toBe(PO_MATCH_SCORING.DATE_NEAR_POINTS);
+  });
+
+  it('handles invalid date strings → 0', () => {
+    expect(scoreDateProximity('not-a-date', '2026-01-01')).toBe(0);
+  });
+});
+
+describe('scoreDescriptionMatch — Greek/Unicode', () => {
+  it('matches Greek descriptions (τσιμεντοσανίδες)', () => {
+    expect(scoreDescriptionMatch(
+      ['Τσιμεντοσανίδες Knauf 12mm'],
+      ['τσιμεντοσανίδες knauf 12mm'],
+    )).toBe(PO_MATCH_SCORING.DESCRIPTION_MATCH_POINTS);
+  });
+
+  it('matches Greek partial (σκυρόδεμα in longer string)', () => {
+    expect(scoreDescriptionMatch(
+      ['Σκυρόδεμα C25/30 αντλίας'],
+      ['σκυρόδεμα'],
+    )).toBe(PO_MATCH_SCORING.DESCRIPTION_MATCH_POINTS);
+  });
+
+  it('no match for different Greek words', () => {
+    expect(scoreDescriptionMatch(
+      ['Σωλήνες αποχέτευσης'],
+      ['Ηλεκτρολογικό υλικό'],
+    )).toBe(0);
+  });
+
+  it('handles extra whitespace in descriptions', () => {
+    expect(scoreDescriptionMatch(
+      ['  Τσιμέντο  Portland  '],
+      ['τσιμέντο portland'],
+    )).toBe(PO_MATCH_SCORING.DESCRIPTION_MATCH_POINTS);
+  });
+});
+
+describe('normalise function', () => {
+  it('lowercases and trims', () => {
+    expect(normalise('  HELLO World  ')).toBe('hello world');
+  });
+
+  it('collapses multiple spaces', () => {
+    expect(normalise('a   b    c')).toBe('a b c');
+  });
+
+  it('handles Greek characters', () => {
+    expect(normalise('  ΤΣΙΜΕΝΤΟ  ')).toBe('τσιμεντο');
+  });
+});

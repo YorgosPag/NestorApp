@@ -20,6 +20,7 @@ import {
   buildBOQVariance,
   buildTopBuyers,
   computeCompleteness,
+  buildOverdueInstallments,
 } from '../report-aggregator.helpers';
 
 // ─── Test Data Factories ───────────────────────────────────────────────
@@ -247,5 +248,98 @@ describe('computeCompleteness', () => {
     ];
     // Total: 5 / 8 = 62.5% → rounded to 63%
     expect(computeCompleteness(contacts)).toBe(63);
+  });
+});
+
+// ============================================================================
+// buildOverdueInstallments
+// ============================================================================
+
+describe('buildOverdueInstallments', () => {
+  it('extracts overdue installments from units with payment summary', () => {
+    const units = [
+      makeUnitDoc({
+        commercial: {
+          finalPrice: 100000,
+          buyerName: 'b1',
+          paymentSummary: { overdueInstallments: 2, remainingAmount: 25000 },
+        },
+      }),
+      makeUnitDoc({
+        commercial: {
+          finalPrice: 50000,
+          buyerName: 'b2',
+          paymentSummary: { overdueInstallments: 0, remainingAmount: 0 },
+        },
+      }),
+    ];
+    const result = buildOverdueInstallments(units);
+    // Only first unit has overdue > 0
+    expect(result).toHaveLength(1);
+    expect(result[0].amount).toBe(25000);
+    expect(result[0].status).toBe('due');
+  });
+
+  it('returns empty for units without overdue', () => {
+    const units = [
+      makeUnitDoc({
+        commercial: {
+          finalPrice: 100000,
+          buyerName: 'b1',
+          paymentSummary: { overdueInstallments: 0, remainingAmount: 0 },
+        },
+      }),
+    ];
+    expect(buildOverdueInstallments(units)).toEqual([]);
+  });
+
+  it('returns empty for units without payment summary', () => {
+    const units = [
+      makeUnitDoc({
+        commercial: { finalPrice: 100000, buyerName: 'b1', paymentSummary: null },
+      }),
+    ];
+    expect(buildOverdueInstallments(units)).toEqual([]);
+  });
+});
+
+// ============================================================================
+// Edge Cases
+// ============================================================================
+
+describe('Edge cases — buildRevenueByProject', () => {
+  it('uses project ID as fallback when not in names map', () => {
+    const units = [
+      makeUnitDoc({ project: 'unknown_proj', commercial: { finalPrice: 50000, buyerName: 'b', paymentSummary: null } }),
+    ];
+    const result = buildRevenueByProject(units, {});
+    expect(result['unknown_proj']).toBe(50000);
+  });
+});
+
+describe('Edge cases — buildPricePerSqm', () => {
+  it('handles multiple buildings correctly', () => {
+    const units = [
+      makeUnitDoc({ buildingId: 'bld_1', commercial: { finalPrice: 100000, buyerName: 'b', paymentSummary: null }, areas: { gross: 100 } }),
+      makeUnitDoc({ buildingId: 'bld_2', commercial: { finalPrice: 200000, buyerName: 'b', paymentSummary: null }, areas: { gross: 100 } }),
+    ];
+    const names = { bld_1: 'A', bld_2: 'B' };
+    const result = buildPricePerSqm(units, names);
+    expect(result).toHaveLength(2);
+    const a = result.find(r => r.building === 'A');
+    const b = result.find(r => r.building === 'B');
+    expect(a?.pricePerSqm).toBe(1000);
+    expect(b?.pricePerSqm).toBe(2000);
+  });
+});
+
+describe('Edge cases — buildTopBuyers', () => {
+  it('handles units with missing buyerName', () => {
+    const units = [
+      makeUnitDoc({ commercial: { finalPrice: 50000, buyerName: undefined as unknown as string, paymentSummary: null } }),
+    ];
+    // Should not crash
+    const result = buildTopBuyers(units, []);
+    expect(result.length).toBeLessThanOrEqual(10);
   });
 });

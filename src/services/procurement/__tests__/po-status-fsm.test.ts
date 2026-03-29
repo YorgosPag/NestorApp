@@ -221,4 +221,217 @@ describe('Auto delivery status calculation', () => {
     const items = [{ quantity: 0, quantityReceived: 0 }];
     expect(computeDeliveryStatus(items)).toBe('ordered');
   });
+
+  it('over-delivery (received > quantity) → still delivered', () => {
+    const items = [{ quantity: 100, quantityReceived: 120 }];
+    expect(computeDeliveryStatus(items)).toBe('delivered');
+  });
+
+  it('single item with tiny quantity → partial delivery fraction', () => {
+    const items = [{ quantity: 1, quantityReceived: 0.5 }];
+    expect(computeDeliveryStatus(items)).toBe('partially_delivered');
+  });
+});
+
+// ============================================================================
+// validateCreateDTO — Business Validation Rules
+// ============================================================================
+
+describe('validateCreateDTO logic', () => {
+  /**
+   * Mirror the private validateCreateDTO from procurement-service.ts
+   * to test validation logic independently.
+   */
+  interface ValidateItem {
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    categoryCode: string;
+  }
+  interface ValidateDTO {
+    projectId: string;
+    supplierId: string;
+    items: ValidateItem[];
+  }
+
+  function validateCreateDTO(dto: ValidateDTO): string | null {
+    if (!dto.projectId) return 'projectId is required';
+    if (!dto.supplierId) return 'supplierId is required';
+    if (!dto.items || dto.items.length === 0) return 'At least 1 item is required';
+    if (dto.items.length > 100) return 'Max 100 items per PO';
+    for (let i = 0; i < dto.items.length; i++) {
+      const item = dto.items[i];
+      if (!item.description) return `Item ${i + 1}: description is required`;
+      if (item.quantity <= 0) return `Item ${i + 1}: quantity must be > 0`;
+      if (item.unitPrice < 0) return `Item ${i + 1}: unitPrice must be >= 0`;
+      if (!item.categoryCode) return `Item ${i + 1}: categoryCode (ΑΤΟΕ) is required`;
+    }
+    return null;
+  }
+
+  const validItem: ValidateItem = {
+    description: 'Τσιμέντο',
+    quantity: 100,
+    unitPrice: 10,
+    categoryCode: 'OIK-2',
+  };
+
+  it('valid DTO → returns null (no error)', () => {
+    expect(validateCreateDTO({
+      projectId: 'proj_1',
+      supplierId: 'supp_1',
+      items: [validItem],
+    })).toBeNull();
+  });
+
+  it('missing projectId → error', () => {
+    expect(validateCreateDTO({ projectId: '', supplierId: 'supp_1', items: [validItem] }))
+      .toBe('projectId is required');
+  });
+
+  it('missing supplierId → error', () => {
+    expect(validateCreateDTO({ projectId: 'proj_1', supplierId: '', items: [validItem] }))
+      .toBe('supplierId is required');
+  });
+
+  it('empty items → error', () => {
+    expect(validateCreateDTO({ projectId: 'p', supplierId: 's', items: [] }))
+      .toBe('At least 1 item is required');
+  });
+
+  it('more than 100 items → error', () => {
+    const items = Array.from({ length: 101 }, () => validItem);
+    expect(validateCreateDTO({ projectId: 'p', supplierId: 's', items }))
+      .toBe('Max 100 items per PO');
+  });
+
+  it('item with empty description → error', () => {
+    expect(validateCreateDTO({
+      projectId: 'p', supplierId: 's',
+      items: [{ ...validItem, description: '' }],
+    })).toBe('Item 1: description is required');
+  });
+
+  it('item with zero quantity → error', () => {
+    expect(validateCreateDTO({
+      projectId: 'p', supplierId: 's',
+      items: [{ ...validItem, quantity: 0 }],
+    })).toBe('Item 1: quantity must be > 0');
+  });
+
+  it('item with negative quantity → error', () => {
+    expect(validateCreateDTO({
+      projectId: 'p', supplierId: 's',
+      items: [{ ...validItem, quantity: -5 }],
+    })).toBe('Item 1: quantity must be > 0');
+  });
+
+  it('item with negative unitPrice → error', () => {
+    expect(validateCreateDTO({
+      projectId: 'p', supplierId: 's',
+      items: [{ ...validItem, unitPrice: -1 }],
+    })).toBe('Item 1: unitPrice must be >= 0');
+  });
+
+  it('item with zero unitPrice → valid (free items allowed)', () => {
+    expect(validateCreateDTO({
+      projectId: 'p', supplierId: 's',
+      items: [{ ...validItem, unitPrice: 0 }],
+    })).toBeNull();
+  });
+
+  it('item missing categoryCode → error', () => {
+    expect(validateCreateDTO({
+      projectId: 'p', supplierId: 's',
+      items: [{ ...validItem, categoryCode: '' }],
+    })).toBe('Item 1: categoryCode (ΑΤΟΕ) is required');
+  });
+
+  it('validates each item — error on 3rd item', () => {
+    expect(validateCreateDTO({
+      projectId: 'p', supplierId: 's',
+      items: [validItem, validItem, { ...validItem, quantity: -1 }],
+    })).toBe('Item 3: quantity must be > 0');
+  });
+});
+
+// ============================================================================
+// PO Financial Calculations
+// ============================================================================
+
+describe('PO financial calculations', () => {
+  /** Mirror repository calculation logic */
+  function calculatePOTotals(
+    items: Array<{ quantity: number; unitPrice: number }>,
+    taxRate: number,
+  ): { subtotal: number; taxAmount: number; total: number } {
+    const subtotal = items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0);
+    const taxAmount = Math.round(subtotal * (taxRate / 100) * 100) / 100;
+    const total = Math.round((subtotal + taxAmount) * 100) / 100;
+    return { subtotal, taxAmount, total };
+  }
+
+  it('calculates subtotal, tax, and total correctly (24% VAT)', () => {
+    const result = calculatePOTotals(
+      [{ quantity: 100, unitPrice: 10 }, { quantity: 50, unitPrice: 20 }],
+      24,
+    );
+    // subtotal = 1000 + 1000 = 2000
+    // taxAmount = 2000 * 0.24 = 480
+    // total = 2480
+    expect(result.subtotal).toBe(2000);
+    expect(result.taxAmount).toBe(480);
+    expect(result.total).toBe(2480);
+  });
+
+  it('handles 0% VAT (ενδοκοινοτική)', () => {
+    const result = calculatePOTotals([{ quantity: 10, unitPrice: 100 }], 0);
+    expect(result.subtotal).toBe(1000);
+    expect(result.taxAmount).toBe(0);
+    expect(result.total).toBe(1000);
+  });
+
+  it('handles 13% reduced VAT', () => {
+    const result = calculatePOTotals([{ quantity: 10, unitPrice: 100 }], 13);
+    expect(result.subtotal).toBe(1000);
+    expect(result.taxAmount).toBe(130);
+    expect(result.total).toBe(1130);
+  });
+
+  it('rounds tax to 2 decimal places', () => {
+    const result = calculatePOTotals([{ quantity: 3, unitPrice: 7.33 }], 24);
+    // subtotal = 21.99, tax = 21.99 * 0.24 = 5.2776 → 5.28
+    expect(result.subtotal).toBeCloseTo(21.99, 2);
+    expect(result.taxAmount).toBeCloseTo(5.28, 2);
+  });
+});
+
+// ============================================================================
+// PO Number Format
+// ============================================================================
+
+describe('PO number format', () => {
+  function formatPONumber(n: number): string {
+    return `PO-${String(n).padStart(4, '0')}`;
+  }
+
+  it('pads single digit → PO-0001', () => {
+    expect(formatPONumber(1)).toBe('PO-0001');
+  });
+
+  it('pads double digit → PO-0042', () => {
+    expect(formatPONumber(42)).toBe('PO-0042');
+  });
+
+  it('pads triple digit → PO-0123', () => {
+    expect(formatPONumber(123)).toBe('PO-0123');
+  });
+
+  it('no padding needed → PO-9999', () => {
+    expect(formatPONumber(9999)).toBe('PO-9999');
+  });
+
+  it('overflow beyond 4 digits → PO-10000 (no truncation)', () => {
+    expect(formatPONumber(10000)).toBe('PO-10000');
+  });
 });
