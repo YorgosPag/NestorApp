@@ -365,6 +365,29 @@
 
 ---
 
+## Q19 (2026-03-29): Πλήρης χαρτογράφηση Πίνακα Χιλιοστών — ALL fields + ALL relationships
+
+**Εντολή Γιώργου**: Πλήρης χαρτογράφηση Πίνακα Ποσοστών Συνιδιοκτησίας (OwnershipPercentageTable) — λόγω εξαιρετικής πολυπλοκότητας σε ξεχωριστό SPEC.
+
+**Απάντηση**: Δημιουργήθηκε SPEC-019-entity-mapping-ownership-tables.md με:
+
+- **8 sections**, **~65+ πεδία** (+ 20×N rows + 9×M linkedSpaces), βάσει πραγματικού κώδικα (`OwnershipPercentageTable`, `OwnershipTableRow`, `LinkedSpaceDetail`, `BartexSummary`, `LandownerEntry`)
+- **19 direct fields** (identity, calculation params, summaries, legal)
+- **20 fields per row** (OwnershipTableRow — entity ref, areas, shares, coefficients, owner party, buyer, contracts)
+- **9 fields per linkedSpace** (LinkedSpaceDetail — tree-branch rendering)
+- **5+4×N fields** bartex (BartexSummary + LandownerEntry array)
+- **5 fields** revision (OwnershipTableRevision — immutable snapshot + audit)
+- **5 enums**: CalculationMethod, PropertyCategory, OwnerParty, OwnershipTableStatus, OwnershipEntityCollection
+- **3 μέθοδοι υπολογισμού**: Κατ' Εμβαδόν (Α), Κατ' Αντικειμ. Αξία (Β, ΠΟΛ 1149/1994), Κατ' Όγκον (Γ)
+- **15 floor coefficient entries** (Πίνακας Α + Β — ΑΑΔΕ)
+- **1 subcollection**: revisions (version history)
+- **13 cross-entity references** (projects 1:1, buildings, units, parking_spots, storage_units, contacts×2, revisions)
+- **Report Builder impact**: Dual-level (28 table-level + 20 row-level Tier 1 columns), 5 Tier 2 arrays, Tier 3 full ownership table card
+- **Νομοθετικό πλαίσιο**: Ν. 3741/1929, ΠΟΛ 1149/1994, ΑΚ 1002-1117
+- **Rounding**: Largest Remainder Method (Hamilton) → ΠΑΝΤΑ σύνολο = 1000
+
+---
+
 ### ΣΥΝΟΨΗ ΕΥΡΗΜΑΤΩΝ
 
 #### ✅ ΔΕΝ χρειάζεται duplicate (ήδη καλύπτεται):
