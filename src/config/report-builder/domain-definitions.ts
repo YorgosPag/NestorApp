@@ -17,6 +17,14 @@ import type {
 } from './report-builder-types';
 import { PARKING_DEFINITION, STORAGE_DEFINITION } from './domain-defs-spaces';
 import { INDIVIDUALS_DEFINITION, COMPANIES_DEFINITION } from './domain-defs-contacts';
+import { BUYERS_DEFINITION } from './domain-defs-buyers';
+import {
+  SUPPLIERS_DEFINITION,
+  ENGINEERS_DEFINITION,
+  WORKERS_DEFINITION,
+  LEGAL_DEFINITION,
+  AGENTS_DEFINITION,
+} from './domain-defs-persona';
 
 // ============================================================================
 // Enum Value Constants (SSoT — match actual Firestore data)
@@ -199,6 +207,14 @@ export const DOMAIN_DEFINITIONS: Record<BuilderDomainId, DomainDefinition> = {
   // Phase 4a — Contacts
   individuals: INDIVIDUALS_DEFINITION,
   companies: COMPANIES_DEFINITION,
+  // Phase 4b — Buyers (transaction-based)
+  buyers: BUYERS_DEFINITION,
+  // Phase 4b — Persona-based specialists
+  suppliers: SUPPLIERS_DEFINITION,
+  engineers: ENGINEERS_DEFINITION,
+  workers: WORKERS_DEFINITION,
+  legal: LEGAL_DEFINITION,
+  agents: AGENTS_DEFINITION,
 };
 
 // ============================================================================

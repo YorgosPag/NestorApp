@@ -443,6 +443,20 @@ function docToRow(doc: FirebaseFirestore.DocumentSnapshot): Record<string, unkno
 }
 
 export function getNestedValue(obj: Record<string, unknown>, dotPath: string): unknown {
+  // Persona resolver: persona.<type>.<field> → find matching persona in personas[]
+  if (dotPath.startsWith('persona.')) {
+    const [, personaType, ...fieldParts] = dotPath.split('.');
+    const personas = obj['personas'];
+    if (!Array.isArray(personas)) return undefined;
+    const match = personas.find(
+      (p: Record<string, unknown>) => p['personaType'] === personaType,
+    );
+    if (!match || !fieldParts.length) return undefined;
+    return fieldParts.length === 1
+      ? (match as Record<string, unknown>)[fieldParts[0]]
+      : getNestedValue(match as Record<string, unknown>, fieldParts.join('.'));
+  }
+
   const parts = dotPath.split('.');
   let current: unknown = obj;
 

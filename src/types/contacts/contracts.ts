@@ -153,6 +153,11 @@ export interface IndividualContact extends BaseContact {
   // SAP Business Partner pattern: role-based dynamic fields
   // Each persona activates conditional sections with role-specific fields
   personas?: import('./personas').PersonaData[];
+
+  // 🔍 ENTERPRISE: Denormalized persona types for Firestore querying (ADR-268 Q88)
+  // Auto-synced from personas[].personaType when contact is saved.
+  // Enables Firestore array-contains queries for report builder filtering.
+  personaTypes?: string[];
 }
 
 // Interface για Νομικά Πρόσωπα (Εταιρείες)

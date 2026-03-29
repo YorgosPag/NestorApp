@@ -1,9 +1,9 @@
 # SPEC-009: Phase 4 — Domains A5-A6, B1-B8 + Tier 2 Export
 
 **ADR**: 268 — Dynamic Report Builder
-**Version**: 1.1
+**Version**: 1.2
 **Last Updated**: 2026-03-29
-**Q&A References**: Q76-Q92
+**Q&A References**: Q76-Q94
 
 ---
 
@@ -18,7 +18,7 @@ Phase 4 προσθέτει **10 νέα domains** (A5-A6, B1-B8) και τον **
 | Υποφάση | Domains | Scope |
 |---------|---------|-------|
 | **4a** | A5 Parking, A6 Storage, B1 Individuals, B2 Companies & Services | **IMPLEMENTED 2026-03-29** — 4 domain configs + query engine + grouped UI |
-| **4b** | B3 Buyers, B4 Suppliers, B5 Engineers, B6 Workers, B7 Lawyers/Notaries, B8 Agents | 6 domain configs (persona-based + transaction-based) |
+| **4b** | B3 Buyers, B4 Suppliers, B5 Engineers, B6 Workers, B7 Lawyers/Notaries, B8 Agents | **IMPLEMENTED 2026-03-29** — 6 domains + persona resolver + personaTypes sync |
 | **4c** | Tier 2 Export Engine + Q47 Bucket Grouping + Q49 Conditional Highlighting | Generic engine + 2 deferred features |
 
 ---

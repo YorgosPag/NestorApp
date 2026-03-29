@@ -2283,3 +2283,65 @@ interface ExportAuditEntry {
 - Q88: personaTypes deferred to Phase 4b
 - Q89: completenessRate field defined (auto-calc on save deferred)
 - Q92: conditionalOn metadata on 4 fields in B2 (companyName, serviceName, legalForm, serviceType)
+
+---
+
+### Q93 (2026-03-29): Persona Field Access — Resolver vs Flat Fields
+
+**Ερώτηση**: Πώς γίνεται πρόσβαση στα persona-specific fields (π.χ. `teeRegistryNumber`, `dailyWage`) μέσα από τα personas[] array στο report builder;
+
+**Έρευνα Enterprise**: Salesforce/SAP/Dynamics 365 χρησιμοποιούν JOIN tables. Στο Firestore (NoSQL χωρίς JOINs), το equivalent είναι embedded resolver.
+
+**Επιλογές**:
+- **Α) Resolver `persona.<type>.<field>`**: Dot-path format που ψάχνει στο personas[] array. SSoT — μηδέν αντίγραφα.
+- **Β) Flat fields**: Denormalize στο top level (π.χ. `engineer_teeRegistryNumber`). Απλό query αλλά data duplication.
+
+**Απόφαση Γιώργου**: **Επιλογή Α — Persona Resolver (SSoT pattern)**
+- Field key format: `persona.engineer.teeRegistryNumber`, `persona.construction_worker.dailyWage`
+- Resolver στο `getNestedValue()`: αν path ξεκινά με `persona.` → βρες matching persona → πάρε field
+- SSoT = `personas[]` array (μοναδική πηγή αλήθειας)
+- Μηδέν data duplication, μηδέν sync logic
+- Enterprise SSoT pattern (Dynamics 365 adapted για Firestore)
+
+---
+
+### Q94 (2026-03-29): B3 Buyers — Firestore filter για buyerContactId
+
+**Ερώτηση**: Πώς φιλτράρουμε units που έχουν αγοραστή; Το `commercial.buyerContactId != null` δεν δουλεύει αξιόπιστα αν κάποια units δεν έχουν καθόλου το πεδίο.
+
+**Επιλογές**:
+- **Α) JS post-filter**: Φέρε όλα, φιλτράρισε σε JS. Αργό σε πολλά data.
+- **Β) Denormalized `hasBuyer: true`**: Νέο flag + sync. Data duplication.
+- **Γ) Schema discipline**: Εξασφάλισε ότι κάθε unit δημιουργείται με `commercial.buyerContactId: null`. Firestore `!= null` δουλεύει αν το πεδίο υπάρχει σε ΟΛΑ τα docs.
+
+**Απόφαση Γιώργου**: **Επιλογή Γ — Schema Discipline (Google pattern)**
+- Κάθε unit πρέπει να δημιουργείται με `commercial.buyerContactId: null`
+- Firestore `where('commercial.buyerContactId', '!=', null)` → native, γρήγορο
+- SSoT — κανένα δεύτερο πεδίο, κανένα sync
+- 0 migration (βάση άδεια/δοκιμαστική)
+
+---
+
+## Phase 4b Implementation Notes (2026-03-29)
+
+**Commit**: (pending)
+**Tests**: 1 suite, 206/206 PASS
+**TSC**: (pending background check)
+
+**Files Created**:
+- `src/config/report-builder/domain-defs-buyers.ts` — B3 Buyers (9 fields, transaction-based)
+- `src/config/report-builder/domain-defs-persona.ts` — B4-B8 (5 persona domains with shared contact fields)
+
+**Files Modified**:
+- `src/config/report-builder/report-builder-types.ts` — BuilderDomainId 8→14, PreFilter.opStr typed, VALID_DOMAIN_IDS +6
+- `src/config/report-builder/domain-definitions.ts` — Registry 8→14 domains
+- `src/services/report-engine/report-query-executor.ts` — Persona resolver in getNestedValue()
+- `src/types/contacts/contracts.ts` — +personaTypes: string[] on IndividualContact
+- `src/services/contacts.service.ts` — Auto-sync personaTypes from personas[] on create+update
+- `src/i18n/locales/{el,en}/report-builder-domains.json` — +6 domains + shared _persona fields
+- `src/config/report-builder/__tests__/domain-definitions.test.ts` — 206 tests (14 domains, persona resolver, preFilters)
+
+**Key Decisions Implemented**:
+- Q88: personaTypes denormalized field + auto-sync in contact service
+- Q93: Persona resolver `persona.<type>.<field>` in getNestedValue (SSoT)
+- Q94: B3 Buyers uses schema discipline (buyerContactId always present, != null filter)

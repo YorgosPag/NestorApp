@@ -310,6 +310,128 @@
         }
       }
     },
+    "_persona": {
+      "fields": {
+        "firstName": "First Name",
+        "lastName": "Last Name",
+        "vatNumber": "VAT Number",
+        "primaryEmail": "Email",
+        "primaryPhone": "Phone",
+        "status": "Status"
+      },
+      "enums": {
+        "status": {
+          "active": "Active",
+          "inactive": "Inactive",
+          "archived": "Archived"
+        }
+      }
+    },
+    "buyers": {
+      "label": "Buyers",
+      "description": "Sold units — by buyer",
+      "fields": {
+        "buyerName": "Buyer",
+        "unitName": "Unit",
+        "unitCode": "Unit Code",
+        "building": "Building",
+        "project": "Project",
+        "askingPrice": "Asking Price",
+        "finalPrice": "Final Price",
+        "legalPhase": "Legal Phase",
+        "saleDate": "Sale Date"
+      },
+      "enums": {
+        "legalPhase": {
+          "initial": "Initial",
+          "deedPrep": "Deed Preparation",
+          "documentReview": "Document Review",
+          "signaturePending": "Signature Pending",
+          "completed": "Completed",
+          "cancelled": "Cancelled"
+        }
+      }
+    },
+    "suppliers": {
+      "label": "Suppliers",
+      "description": "Material, equipment, and service suppliers",
+      "fields": {
+        "supplierCategory": "Category",
+        "paymentTermsDays": "Payment Terms (days)"
+      },
+      "enums": {
+        "supplierCategory": {
+          "materials": "Materials",
+          "equipment": "Equipment",
+          "subcontractor": "Subcontractor",
+          "services": "Services",
+          "other": "Other"
+        }
+      }
+    },
+    "engineers": {
+      "label": "Engineers",
+      "description": "Engineers with TEE registry",
+      "fields": {
+        "teeRegistryNumber": "TEE Registry No.",
+        "engineerSpecialty": "Specialty",
+        "licenseClass": "License Class",
+        "ptdeNumber": "PTDE No."
+      },
+      "enums": {
+        "engineerSpecialty": {
+          "civil": "Civil Engineer",
+          "architect": "Architect",
+          "mechanical": "Mechanical Engineer",
+          "electrical": "Electrical Engineer",
+          "surveyor": "Surveyor",
+          "chemical": "Chemical Engineer",
+          "mining": "Mining Engineer"
+        },
+        "licenseClass": {
+          "A": "Class A",
+          "B": "Class B",
+          "C": "Class C",
+          "D": "Class D"
+        }
+      }
+    },
+    "workers": {
+      "label": "Construction Workers",
+      "description": "Construction workers with EFKA/IKA registration",
+      "fields": {
+        "ikaNumber": "IKA Reg. No.",
+        "insuranceClassId": "Insurance Class",
+        "triennia": "Triennia",
+        "dailyWage": "Daily Wage",
+        "specialtyCode": "EFKA Specialty Code"
+      }
+    },
+    "legal": {
+      "label": "Legal Professionals",
+      "description": "Lawyers and Notaries",
+      "fields": {
+        "legalPersonaType": "Type",
+        "barAssociationNumber": "Bar Assoc. No.",
+        "barAssociation": "Bar Association",
+        "notaryRegistryNumber": "Notary Registry No.",
+        "notaryDistrict": "Notary District"
+      },
+      "enums": {
+        "legalPersonaType": {
+          "lawyer": "Lawyer",
+          "notary": "Notary"
+        }
+      }
+    },
+    "agents": {
+      "label": "Real Estate Agents",
+      "description": "Licensed real estate agents",
+      "fields": {
+        "licenseNumber": "License No.",
+        "agency": "Agency"
+      }
+    },
     "companies": {
       "label": "Companies & Services",
       "description": "Companies, public services, and organizations",

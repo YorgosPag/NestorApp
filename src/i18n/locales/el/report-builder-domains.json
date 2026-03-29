@@ -310,6 +310,128 @@
         }
       }
     },
+    "_persona": {
+      "fields": {
+        "firstName": "Όνομα",
+        "lastName": "Επώνυμο",
+        "vatNumber": "ΑΦΜ",
+        "primaryEmail": "Email",
+        "primaryPhone": "Τηλέφωνο",
+        "status": "Κατάσταση"
+      },
+      "enums": {
+        "status": {
+          "active": "Ενεργό",
+          "inactive": "Ανενεργό",
+          "archived": "Αρχειοθετημένο"
+        }
+      }
+    },
+    "buyers": {
+      "label": "Αγοραστές",
+      "description": "Μονάδες που έχουν πωληθεί — ανά αγοραστή",
+      "fields": {
+        "buyerName": "Αγοραστής",
+        "unitName": "Μονάδα",
+        "unitCode": "Κωδικός Μονάδας",
+        "building": "Κτήριο",
+        "project": "Έργο",
+        "askingPrice": "Τιμή Ζητούμενη",
+        "finalPrice": "Τελική Τιμή",
+        "legalPhase": "Νομική Φάση",
+        "saleDate": "Ημ. Πώλησης"
+      },
+      "enums": {
+        "legalPhase": {
+          "initial": "Αρχική",
+          "deedPrep": "Προετοιμασία Συμβολαίου",
+          "documentReview": "Έλεγχος Εγγράφων",
+          "signaturePending": "Εκκρεμής Υπογραφή",
+          "completed": "Ολοκληρωμένη",
+          "cancelled": "Ακυρωμένη"
+        }
+      }
+    },
+    "suppliers": {
+      "label": "Προμηθευτές",
+      "description": "Προμηθευτές υλικών, εξοπλισμού και υπηρεσιών",
+      "fields": {
+        "supplierCategory": "Κατηγορία",
+        "paymentTermsDays": "Όροι Πληρωμής (ημέρες)"
+      },
+      "enums": {
+        "supplierCategory": {
+          "materials": "Υλικά",
+          "equipment": "Εξοπλισμός",
+          "subcontractor": "Υπεργολάβος",
+          "services": "Υπηρεσίες",
+          "other": "Άλλο"
+        }
+      }
+    },
+    "engineers": {
+      "label": "Μηχανικοί",
+      "description": "Μηχανικοί με μητρώο ΤΕΕ",
+      "fields": {
+        "teeRegistryNumber": "Αρ. Μητρώου ΤΕΕ",
+        "engineerSpecialty": "Ειδικότητα",
+        "licenseClass": "Τάξη Πτυχίου",
+        "ptdeNumber": "Αρ. ΠΤΔΕ"
+      },
+      "enums": {
+        "engineerSpecialty": {
+          "civil": "Πολιτικός Μηχανικός",
+          "architect": "Αρχιτέκτονας",
+          "mechanical": "Μηχανολόγος",
+          "electrical": "Ηλεκτρολόγος",
+          "surveyor": "Τοπογράφος",
+          "chemical": "Χημικός Μηχανικός",
+          "mining": "Μεταλλειολόγος"
+        },
+        "licenseClass": {
+          "A": "Α΄ Τάξη",
+          "B": "Β΄ Τάξη",
+          "C": "Γ΄ Τάξη",
+          "D": "Δ΄ Τάξη"
+        }
+      }
+    },
+    "workers": {
+      "label": "Εργάτες Οικοδομής",
+      "description": "Εργατοτεχνίτες με εγγραφή ΕΦΚΑ/ΙΚΑ",
+      "fields": {
+        "ikaNumber": "ΑΜ ΙΚΑ",
+        "insuranceClassId": "Ασφαλιστική Κλάση",
+        "triennia": "Τριετίες",
+        "dailyWage": "Ημερομίσθιο",
+        "specialtyCode": "Κωδ. Ειδικότητας ΕΦΚΑ"
+      }
+    },
+    "legal": {
+      "label": "Νομικοί",
+      "description": "Δικηγόροι και Συμβολαιογράφοι",
+      "fields": {
+        "legalPersonaType": "Τύπος",
+        "barAssociationNumber": "Αρ. Μητρώου ΔΣ",
+        "barAssociation": "Δικηγορικός Σύλλογος",
+        "notaryRegistryNumber": "Αρ. Μητρώου ΣΣ",
+        "notaryDistrict": "Περιφέρεια ΣΣ"
+      },
+      "enums": {
+        "legalPersonaType": {
+          "lawyer": "Δικηγόρος",
+          "notary": "Συμβολαιογράφος"
+        }
+      }
+    },
+    "agents": {
+      "label": "Μεσίτες",
+      "description": "Μεσίτες ακινήτων με άδεια ΓΕ.ΜΗ.",
+      "fields": {
+        "licenseNumber": "Αρ. Αδείας",
+        "agency": "Μεσιτικό Γραφείο"
+      }
+    },
     "companies": {
       "label": "Εταιρείες & Υπηρεσίες",
       "description": "Εταιρείες, δημόσιες υπηρεσίες και οργανισμοί",

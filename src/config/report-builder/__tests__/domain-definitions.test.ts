@@ -1,7 +1,9 @@
 /**
  * @tests Domain Definitions — ADR-268 Report Builder
- * Validates all 8 domain schemas have correct structure, no duplicate keys, valid types.
+ * Validates all 14 domain schemas have correct structure, no duplicate keys, valid types.
+ * Phase 1: projects, buildings, floors, units
  * Phase 4a: +parking, storage, individuals, companies (group, preFilters, conditionalOn)
+ * Phase 4b: +buyers, suppliers, engineers, workers, legal, agents (persona resolver)
  */
 
 import {
@@ -22,8 +24,23 @@ import {
 /**
  * Inline copy of getNestedValue for testing — avoids importing server-only module.
  * The real function lives in report-query-executor.ts (server-only, Firebase Admin).
+ * Includes persona resolver: persona.<type>.<field> (Q93).
  */
 function getNestedValue(obj: Record<string, unknown>, dotPath: string): unknown {
+  // Persona resolver: persona.<type>.<field>
+  if (dotPath.startsWith('persona.')) {
+    const [, personaType, ...fieldParts] = dotPath.split('.');
+    const personas = obj['personas'];
+    if (!Array.isArray(personas)) return undefined;
+    const match = personas.find(
+      (p: Record<string, unknown>) => p['personaType'] === personaType,
+    );
+    if (!match || !fieldParts.length) return undefined;
+    return fieldParts.length === 1
+      ? (match as Record<string, unknown>)[fieldParts[0]]
+      : getNestedValue(match as Record<string, unknown>, fieldParts.join('.'));
+  }
+
   const parts = dotPath.split('.');
   let current: unknown = obj;
   for (const part of parts) {
@@ -43,13 +60,14 @@ function getNestedValue(obj: Record<string, unknown>, dotPath: string): unknown 
 // ============================================================================
 
 describe('Domain Definitions — Schema Integrity', () => {
-  it('defines all 8 domains (Phase 1 + Phase 4a)', () => {
+  it('defines all 14 domains (Phase 1 + 4a + 4b)', () => {
     const definedIds = Object.keys(DOMAIN_DEFINITIONS);
-    expect(definedIds).toHaveLength(8);
+    expect(definedIds).toHaveLength(14);
     expect(definedIds).toEqual(
       expect.arrayContaining([
         'projects', 'buildings', 'floors', 'units',
         'parking', 'storage', 'individuals', 'companies',
+        'buyers', 'suppliers', 'engineers', 'workers', 'legal', 'agents',
       ]),
     );
   });
@@ -102,7 +120,7 @@ describe('Domain Definitions — Schema Integrity', () => {
 });
 
 // ============================================================================
-// Phase 4a — Domain Groups (Q87)
+// Domain Groups (Q87)
 // ============================================================================
 
 describe('Domain Definitions — Groups', () => {
@@ -119,9 +137,15 @@ describe('Domain Definitions — Groups', () => {
     }
   });
 
-  it('contact domains have group people', () => {
-    for (const id of ['individuals', 'companies'] as BuilderDomainId[]) {
+  it('people domains have group people', () => {
+    for (const id of ['individuals', 'companies', 'buyers'] as BuilderDomainId[]) {
       expect(getDomainDefinition(id).group).toBe('people');
+    }
+  });
+
+  it('specialist domains have group specialists', () => {
+    for (const id of ['suppliers', 'engineers', 'workers', 'legal', 'agents'] as BuilderDomainId[]) {
+      expect(getDomainDefinition(id).group).toBe('specialists');
     }
   });
 
@@ -134,7 +158,7 @@ describe('Domain Definitions — Groups', () => {
 });
 
 // ============================================================================
-// Phase 4a — PreFilters
+// PreFilters (Phase 4a + 4b)
 // ============================================================================
 
 describe('Domain Definitions — PreFilters', () => {
@@ -160,6 +184,46 @@ describe('Domain Definitions — PreFilters', () => {
     });
   });
 
+  it('buyers has buyerContactId != null preFilter (Q94)', () => {
+    const def = getDomainDefinition('buyers');
+    expect(def.preFilters).toBeDefined();
+    expect(def.preFilters).toHaveLength(1);
+    expect(def.preFilters![0]).toEqual({
+      fieldPath: 'commercial.buyerContactId',
+      opStr: '!=',
+      value: null,
+    });
+  });
+
+  it('persona domains use array-contains on personaTypes (Q88)', () => {
+    const personaDomains: Array<{ id: BuilderDomainId; personaType: string }> = [
+      { id: 'suppliers', personaType: 'supplier' },
+      { id: 'engineers', personaType: 'engineer' },
+      { id: 'workers', personaType: 'construction_worker' },
+      { id: 'agents', personaType: 'real_estate_agent' },
+    ];
+
+    for (const { id, personaType } of personaDomains) {
+      const def = getDomainDefinition(id);
+      const personaFilter = def.preFilters!.find(
+        (pf) => pf.fieldPath === 'personaTypes',
+      );
+      expect(personaFilter).toBeDefined();
+      expect(personaFilter!.opStr).toBe('array-contains');
+      expect(personaFilter!.value).toBe(personaType);
+    }
+  });
+
+  it('legal uses array-contains-any for dual persona (Q80)', () => {
+    const def = getDomainDefinition('legal');
+    const personaFilter = def.preFilters!.find(
+      (pf) => pf.fieldPath === 'personaTypes',
+    );
+    expect(personaFilter).toBeDefined();
+    expect(personaFilter!.opStr).toBe('array-contains-any');
+    expect(personaFilter!.value).toEqual(['lawyer', 'notary']);
+  });
+
   it('parking has no preFilters', () => {
     expect(getDomainDefinition('parking').preFilters).toBeUndefined();
   });
@@ -176,7 +240,7 @@ describe('Domain Definitions — PreFilters', () => {
 });
 
 // ============================================================================
-// Phase 4a — ConditionalOn (Q92)
+// ConditionalOn (Q92)
 // ============================================================================
 
 describe('Domain Definitions — ConditionalOn', () => {
@@ -285,6 +349,17 @@ describe('Domain Definitions — Reference Fields', () => {
     expect(field?.refDomain).toBe('buildings');
     expect(field?.refDisplayField).toBe('name');
   });
+
+  it('buyers.buildingId refs buildings', () => {
+    const field = getFieldDefinition('buyers', 'buildingId');
+    expect(field?.refDomain).toBe('buildings');
+    expect(field?.refDisplayField).toBe('name');
+  });
+
+  it('buyers.project refs projects', () => {
+    const field = getFieldDefinition('buyers', 'project');
+    expect(field?.refDomain).toBe('projects');
+  });
 });
 
 // ============================================================================
@@ -366,7 +441,7 @@ describe('Domain Definitions — Format Consistency', () => {
 });
 
 // ============================================================================
-// getNestedValue — Array Index Support (Phase 4a)
+// getNestedValue — Array Index + Persona Resolver
 // ============================================================================
 
 describe('getNestedValue — Array Index Support', () => {
@@ -401,5 +476,150 @@ describe('getNestedValue — Array Index Support', () => {
       phones: [{ number: '+30-210-1234567', type: 'mobile' }],
     } as Record<string, unknown>;
     expect(getNestedValue(obj, 'phones.0.number')).toBe('+30-210-1234567');
+  });
+});
+
+// ============================================================================
+// Persona Resolver — Q93
+// ============================================================================
+
+describe('getNestedValue — Persona Resolver (Q93)', () => {
+  const contactWithPersonas: Record<string, unknown> = {
+    firstName: 'Νίκος',
+    lastName: 'Παπαδόπουλος',
+    personas: [
+      {
+        personaType: 'engineer',
+        status: 'active',
+        teeRegistryNumber: '12345',
+        engineerSpecialty: 'civil',
+        licenseClass: 'A',
+        ptdeNumber: 'PT-001',
+      },
+      {
+        personaType: 'client',
+        status: 'active',
+        clientSince: '2024-01-01',
+      },
+      {
+        personaType: 'construction_worker',
+        status: 'active',
+        ikaNumber: 'IKA-789',
+        dailyWage: 85.5,
+        insuranceClassId: 12,
+      },
+    ],
+  };
+
+  it('resolves persona.engineer.teeRegistryNumber', () => {
+    expect(getNestedValue(contactWithPersonas, 'persona.engineer.teeRegistryNumber'))
+      .toBe('12345');
+  });
+
+  it('resolves persona.engineer.engineerSpecialty', () => {
+    expect(getNestedValue(contactWithPersonas, 'persona.engineer.engineerSpecialty'))
+      .toBe('civil');
+  });
+
+  it('resolves persona.construction_worker.dailyWage', () => {
+    expect(getNestedValue(contactWithPersonas, 'persona.construction_worker.dailyWage'))
+      .toBe(85.5);
+  });
+
+  it('resolves persona.construction_worker.ikaNumber', () => {
+    expect(getNestedValue(contactWithPersonas, 'persona.construction_worker.ikaNumber'))
+      .toBe('IKA-789');
+  });
+
+  it('resolves persona.client.clientSince', () => {
+    expect(getNestedValue(contactWithPersonas, 'persona.client.clientSince'))
+      .toBe('2024-01-01');
+  });
+
+  it('returns undefined for non-existent persona type', () => {
+    expect(getNestedValue(contactWithPersonas, 'persona.supplier.supplierCategory'))
+      .toBeUndefined();
+  });
+
+  it('returns undefined for non-existent field on existing persona', () => {
+    expect(getNestedValue(contactWithPersonas, 'persona.engineer.nonExistentField'))
+      .toBeUndefined();
+  });
+
+  it('returns undefined when contact has no personas', () => {
+    const obj = { firstName: 'Test' } as Record<string, unknown>;
+    expect(getNestedValue(obj, 'persona.engineer.teeRegistryNumber'))
+      .toBeUndefined();
+  });
+
+  it('returns undefined when personas is empty array', () => {
+    const obj = { personas: [] } as Record<string, unknown>;
+    expect(getNestedValue(obj, 'persona.engineer.teeRegistryNumber'))
+      .toBeUndefined();
+  });
+
+  it('does not interfere with regular dot paths', () => {
+    const obj = { commercial: { buyerName: 'Test' } } as Record<string, unknown>;
+    expect(getNestedValue(obj, 'commercial.buyerName')).toBe('Test');
+  });
+});
+
+// ============================================================================
+// Phase 4b — Persona Domain Fields (B4-B8)
+// ============================================================================
+
+describe('Domain Definitions — Phase 4b Persona Fields', () => {
+  it('persona domains have persona.* field keys', () => {
+    const personaDomains: BuilderDomainId[] = [
+      'suppliers', 'engineers', 'workers', 'legal', 'agents',
+    ];
+
+    for (const id of personaDomains) {
+      const def = getDomainDefinition(id);
+      const personaFields = def.fields.filter((f) => f.key.startsWith('persona.'));
+      expect(personaFields.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('buyers domain has NO persona.* fields (transaction-based)', () => {
+    const def = getDomainDefinition('buyers');
+    const personaFields = def.fields.filter((f) => f.key.startsWith('persona.'));
+    expect(personaFields).toHaveLength(0);
+  });
+
+  it('engineers has teeRegistryNumber and engineerSpecialty', () => {
+    const def = getDomainDefinition('engineers');
+    const keys = def.fields.map((f) => f.key);
+    expect(keys).toContain('persona.engineer.teeRegistryNumber');
+    expect(keys).toContain('persona.engineer.engineerSpecialty');
+  });
+
+  it('workers has ikaNumber and dailyWage', () => {
+    const def = getDomainDefinition('workers');
+    const keys = def.fields.map((f) => f.key);
+    expect(keys).toContain('persona.construction_worker.ikaNumber');
+    expect(keys).toContain('persona.construction_worker.dailyWage');
+  });
+
+  it('legal has both lawyer and notary fields', () => {
+    const def = getDomainDefinition('legal');
+    const keys = def.fields.map((f) => f.key);
+    expect(keys).toContain('persona.lawyer.barAssociationNumber');
+    expect(keys).toContain('persona.notary.notaryRegistryNumber');
+  });
+
+  it('all persona domains share common contact fields', () => {
+    const personaDomains: BuilderDomainId[] = [
+      'suppliers', 'engineers', 'workers', 'legal', 'agents',
+    ];
+    const commonFields = ['firstName', 'lastName', 'emails.0.email', 'phones.0.number', 'status'];
+
+    for (const id of personaDomains) {
+      const def = getDomainDefinition(id);
+      const keys = def.fields.map((f) => f.key);
+      for (const common of commonFields) {
+        expect(keys).toContain(common);
+      }
+    }
   });
 });

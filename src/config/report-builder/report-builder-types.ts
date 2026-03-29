@@ -85,10 +85,11 @@ export interface ReportBuilderFilter {
 // Field & Domain Definitions
 // ============================================================================
 
-/** Domain IDs — Phase 1 (4) + Phase 4a (4) */
+/** Domain IDs — Phase 1 (4) + Phase 4a (4) + Phase 4b (6) */
 export type BuilderDomainId =
   | 'projects' | 'buildings' | 'floors' | 'units'
-  | 'parking' | 'storage' | 'individuals' | 'companies';
+  | 'parking' | 'storage' | 'individuals' | 'companies'
+  | 'buyers' | 'suppliers' | 'engineers' | 'workers' | 'legal' | 'agents';
 
 /** Domain groups for UI categorization (Q87) */
 export type DomainGroup = 'realestate' | 'people' | 'specialists';
@@ -103,7 +104,7 @@ export const DOMAIN_GROUP_ORDER: readonly DomainGroup[] = [
 /** Pre-filter applied before user filters (e.g. type='individual') */
 export interface PreFilter {
   fieldPath: string;
-  opStr: string;
+  opStr: '==' | '!=' | 'in' | 'array-contains' | 'array-contains-any';
   value: unknown;
 }
 
@@ -310,7 +311,7 @@ export const BUILDER_LIMITS = {
   MAX_AGGREGATIONS: 8,
 } as const;
 
-/** All valid domain IDs (Phase 1 + Phase 4a) */
+/** All valid domain IDs (Phase 1 + Phase 4a + Phase 4b) */
 export const VALID_DOMAIN_IDS: readonly BuilderDomainId[] = [
   'projects',
   'buildings',
@@ -320,6 +321,12 @@ export const VALID_DOMAIN_IDS: readonly BuilderDomainId[] = [
   'storage',
   'individuals',
   'companies',
+  'buyers',
+  'suppliers',
+  'engineers',
+  'workers',
+  'legal',
+  'agents',
 ] as const;
 
 // ============================================================================
