@@ -347,6 +347,28 @@
 
 ---
 
+## Q20 (2026-03-29): Πλήρης χαρτογράφηση Κατασκευής — 6 οντότητες
+
+**Εντολή Γιώργου**: Πλήρης χαρτογράφηση Construction group (BOQ Items, Construction Phases, Tasks, Resource Assignments, Baselines, Building Milestones) — ακολουθώντας τη δομή SPEC-008.
+
+**Απάντηση**: Δημιουργήθηκε SPEC-020-entity-mapping-construction.md με:
+
+- **6 οντότητες** σε 1 αρχείο, **128 πεδία**, βάσει πραγματικού κώδικα (`BOQItem`, `ConstructionPhase`, `ConstructionTask`, `ConstructionResourceAssignment`, `ConstructionBaseline`, `BuildingMilestone`)
+- **BOQ Items**: 31 πεδία, 8 enums (BOQMeasurementUnit 11v, BOQItemStatus 5v, κλπ), 5-state governance lifecycle, 3-level price inheritance (master/project/item), ΑΤΟΕ category codes
+- **Construction Phases**: 20 πεδία, 5-state status (planning→completed→blocked), delay tracking
+- **Construction Tasks**: 22 πεδία, dependencies[] for Critical Path Method (CPM)
+- **Resource Assignments**: 15 πεδία, 2 types (worker/equipment), max 20 per task
+- **Construction Baselines**: 10 πεδία, denormalized snapshots of phases[] + tasks[], max 10 per building
+- **Building Milestones**: 16 πεδία, 5 types (start→delivery), auto-generated MS-XXX codes
+- **14 enum types**, **56 enum values** σύνολο
+- **23 cross-entity references** (projects, buildings, units, contacts, invoices, phases↔tasks↔resources, PO→BOQ)
+- **4 computed types** (CostBreakdown, PriceResolution, VarianceResult, BOQCategoryCost)
+- **9 Firestore collections** (boq_items, boq_categories, boq_price_lists, boq_templates, construction_phases/tasks/baselines/resource_assignments, building_milestones)
+- **Report Builder impact**: Tier 1 ανά οντότητα (BOQ: 15 flat + 10 computed, Phases: 17, Tasks: 14, Resources: 8, Milestones: 8), Tier 2 arrays (6), Tier 3 card layouts (Phase + BOQ)
+- **Σχέση ADR-266**: Report Builder = cross-building tabular queries ΜΟΝΟ. S-Curve, CPM, Resource Histogram παραμένουν στο ADR-266.
+
+---
+
 ## Q21 (2026-03-29): Πλήρης χαρτογράφηση CRM & Επικοινωνία — 4 οντότητες
 
 **Εντολή Γιώργου**: Πλήρης χαρτογράφηση CRM group (Opportunities, CRM Tasks, Communications, Appointments) — ακολουθώντας τη δομή SPEC-008.
@@ -385,6 +407,50 @@
 - **Report Builder impact**: Dual-level (28 table-level + 20 row-level Tier 1 columns), 5 Tier 2 arrays, Tier 3 full ownership table card
 - **Νομοθετικό πλαίσιο**: Ν. 3741/1929, ΠΟΛ 1149/1994, ΑΚ 1002-1117
 - **Rounding**: Largest Remainder Method (Hamilton) → ΠΑΝΤΑ σύνολο = 1000
+
+---
+
+## Q17 (2026-03-29): Πλήρης χαρτογράφηση Οικονομικά A — Payment Plans + Cheques + Legal Contracts
+
+**Εντολή Γιώργου**: Πλήρης χαρτογράφηση 3 οικονομικών οντοτήτων (Group C1-C3) — ακολουθώντας τη δομή SPEC-008 template.
+
+**Απάντηση**: Δημιουργήθηκε SPEC-017-entity-mapping-financials-a.md με:
+
+### Οντότητα 1: Payment Plans (~100+ πεδία)
+- **23 direct fields** (references, amounts, tax regime, ADR-244 multi-owner, audit)
+- **Installments[]**: 11 πεδία ανά δόση, 5-state FSM
+- **LoanTracking[] (Phase 2)**: 35 πεδία, 15-state FSM, multi-bank support
+- **Config**: 9 πεδία (grace period, late fees, sequential/partial/overpayments)
+- **Payments subcollection**: 15 πεδία + PaymentMethodDetails (6 variants)
+- **12 enums** (64 τιμές), **5+15 FSM states**
+
+### Οντότητα 2: Cheques (~47 πεδία)
+- **35 direct fields** + ChequeContext (7 πεδία) + EndorsementChain[] (5 πεδία/entry)
+- **10-state FSM**, bounced workflow (ΤΕΙΡΕΣΙΑΣ + αστυνομία), Ν. 5960/1933
+- **5 enums** (25 τιμές)
+
+### Οντότητα 3: Legal Contracts (~65 πεδία)
+- **20 direct fields** + ProfessionalSnapshot ×3 (8 πεδία + variant)
+- **3 phases × 4 status states** (forward-only FSM), ΑΚ 402-403 αρραβώνας
+- **5 enums** (20 τιμές)
+
+**Σύνολο**: ~212+ πεδία, 22 enums, ~42 FSM states, 25 cross-entity references
+
+---
+
+## Q18 (2026-03-29): Πλήρης χαρτογράφηση Οικονομικών B — Purchase Orders + Brokerage + Commissions
+
+**Εντολή Γιώργου**: Πλήρης χαρτογράφηση 3 οντοτήτων (Purchase Orders, Brokerage Agreements, Commission Records) — ακολουθώντας τη δομή SPEC-008.
+
+**Απάντηση**: Δημιουργήθηκε SPEC-018-entity-mapping-financials-b.md με:
+
+- **3 οντότητες** σε 1 αρχείο, **~90+ πεδία**, βάσει πραγματικού κώδικα (`PurchaseOrder`, `BrokerageAgreement`, `CommissionRecord`)
+- **Purchase Orders**: 31 direct fields, 10 per line item, 7 per attachment, 7-state FSM (draft→closed+cancelled), 7 POCancellationReason, 4 POVatRate, 9 audit events, 6 permissions, PO-Invoice matching (6 criteria, 85pt threshold), Supplier Metrics (8 KPIs)
+- **Brokerage Agreements**: 19 direct fields, 3-state FSM, 3 ExclusivityType, 3 CommissionType, server-enforced exclusivity validation
+- **Commission Records**: 17 direct fields, 3-state FSM, immutable, pure commission calculation
+- **0 subcollections** (embedded arrays + flat documents)
+- **17 cross-entity references** (projects, buildings, contacts×4, units, boq_items, accounting_invoices, brokerage_agreements)
+- **Report Builder impact**: Tier 1 (PO: 21+8, Brokerage: 12+3, Commission: 11+2), Tier 2 (3 arrays), Tier 3 (2 card layouts)
 
 ---
 
