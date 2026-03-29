@@ -1001,3 +1001,1261 @@ Confirmation: "Κατάλαβα: Domain=Πλάνα Πληρωμών, Filter: sta
 #### ❌ ΔΕΝ χρειάζεται νέο spec/αρχείο:
 - Κανένα νέο αρχείο — οι υπάρχουσες 7 specs καλύπτουν πλήρως το scope
 - Οι μικρές προσθήκες γίνονται inline στα υπάρχοντα αρχεία
+
+---
+
+## Q41 (2026-03-29): Grouping Engine — Server-side ή Client-side;
+
+**Ερώτηση**: Το grouping/aggregation να γίνεται server-side (νέο API request) ή client-side (JS utility στα ήδη φορτωμένα rows);
+
+**Ανάλυση**:
+- Max rows: 2000 (BUILDER_LIMITS.MAX_ROW_LIMIT) — αμελητέο in-memory
+- Google Sheets: client-side pivot μέχρι ~50K rows
+- Looker: server-side μόνο όταν data > in-memory limits
+- Salesforce: server-side (αλλά για εκατομμύρια records)
+- Κανόνας Google: "Don't hit the server if the client already has the data"
+
+**Απόφαση Γιώργου**: **Client-side (Β)**
+
+**Τεχνική υλοποίηση**:
+- Νέο utility `grouping-engine.ts` — pure function, no side effects
+- Τρέχει στα ήδη fetched rows (0 API calls)
+- Instant regroup κατά αλλαγή group-by field
+- Clean separation: αν χρειαστεί server-side migration, αλλάζει μόνο 1 αρχείο
+- Ο `report-query-executor.ts` ΔΕΝ αλλάζει
+
+---
+
+## Q42 (2026-03-29): Aggregation Functions — Ποιες στα Grouped Subtotals;
+
+**Ερώτηση**: Ποιους υπολογισμούς θέλουμε στα grouped subtotals; COUNT+SUM+AVG ή και MIN/MAX;
+
+**Απόφαση Γιώργου**: **Όλες τις 5: COUNT + SUM + AVG + MIN + MAX**
+
+**Εφαρμογή ανά field type**:
+
+| Function | text | enum | number | currency | percentage | date | boolean |
+|----------|:----:|:----:|:------:|:--------:|:----------:|:----:|:-------:|
+| COUNT    | ✅   | ✅   | ✅     | ✅       | ✅         | ✅   | ✅      |
+| SUM      | —    | —    | ✅     | ✅       | —          | —    | —       |
+| AVG      | —    | —    | ✅     | ✅       | ✅         | —    | —       |
+| MIN      | —    | —    | ✅     | ✅       | ✅         | ✅   | —       |
+| MAX      | —    | —    | ✅     | ✅       | ✅         | ✅   | —       |
+
+**UI**: Subtotal row κάτω από κάθε ομάδα δείχνει τις εφαρμόσιμες aggregations ανά στήλη
+
+---
+
+## Q43 (2026-03-29): Chart Auto-Suggest — Τύπος chart βάσει group-by field type
+
+**Ερώτηση**: Πώς επιλέγεται αυτόματα ο τύπος chart; Ο χρήστης μπορεί να αλλάξει;
+
+**Απόφαση Γιώργου**: Σύμφωνος με auto-suggest + manual override.
+
+**Auto-suggest mapping**:
+
+| Group-by field type | Auto-suggest | Σκεπτικό |
+|---------------------|-------------|----------|
+| enum                | Pie         | Κατανομή ποσοστών |
+| ref                 | Bar         | Σύγκριση ανά entity |
+| date                | Line        | Χρονική τάση |
+| boolean             | Pie         | Ναι/Όχι κατανομή |
+
+**Διαθέσιμες εναλλακτικές** (ο χρήστης επιλέγει μετά): bar, pie, line, area, stacked-bar, funnel, gauge.
+
+**REUSE**: Όλα τα chart types υπάρχουν ήδη — `ReportChart.tsx` (bar/pie/line/area/stacked-bar), `ReportFunnel.tsx`, `ReportGauge.tsx`. Μηδέν νέα components.
+
+---
+
+## Q44 (2026-03-29): KPIs — Context-Aware Smart Summary (Google Pattern)
+
+**Ερώτηση**: Τι KPIs εμφανίζονται πάνω από τον πίνακα; Σταθερά 4 ή δυναμικά;
+
+**Ανάλυση Google Products**:
+- Google Sheets Pivot: Summary row μόνο (Grand Total)
+- Looker: 1-3 "single value tiles" — μόνο τα relevant
+- Google Analytics 4: Summary bar — total + top metric
+- Google Ads: Context-aware βάσει view (campaigns → spend/clicks, keywords → impressions/CTR)
+- Κοινό pattern: Λιγότερα αλλά πιο σημαντικά. Ποτέ generic cards "για να γεμίσει ο χώρος".
+
+**Απόφαση Γιώργου**: Context-aware δυναμικά KPIs (Google pattern).
+
+**Κανόνες εμφάνισης (max 4)**:
+
+| Συνθήκη | KPI |
+|---------|-----|
+| Πάντα | **Total Records** (COUNT) |
+| Αν υπάρχει currency column | **SUM** πρώτου currency (π.χ. "Σύνολο: €4.2M") |
+| Αν υπάρχει grouping | **Groups Count** + **Largest Group** |
+| Αν υπάρχει percentage column | **AVG** πρώτου percentage (π.χ. "Μ.Ο. Προόδου: 64%") |
+
+**Κανόνες**:
+- Max 4 KPIs — εμφανίζονται ΜΟΝΟ τα relevant
+- Αν δεν υπάρχει currency/percentage → 2 KPIs μόνο
+- Χωρίς sparkline — δεν υπάρχουν ιστορικά, θα ήταν misleading
+- REUSE: `ReportKPIGrid.tsx` (ADR-265)
+
+---
+
+## Q45 (2026-03-29): Grand Total Row — Γραμμή Γενικού Συνόλου
+
+**Ερώτηση**: Θέλουμε Grand Total row στο κάτω μέρος του πίνακα (σύνολο ΟΛΩΝ των ομάδων);
+
+**Απόφαση Γιώργου**: **ΝΑΙ**
+
+**Υλοποίηση**:
+- Γ��αμμή στο **κάτω μέρος** του πίνακα (accounting convention)
+- Sticky footer αν dataset > 20 rows (πάντα ορατή)
+- Εμφανίζεται **μόνο όταν υπάρχει grouping** (χωρίς grouping δεν έχει νόημα)
+- Δείχνει: COUNT total + SUM/AVG/MIN/MAX ανά στήλη (��διες aggregations με subtotals)
+- Visual: Bold, border-top, ελαφρώς πιο σκούρο background από subtotal rows
+- Pattern: Google Sheets pivot Grand Total, Salesforce Summary Reports
+
+---
+
+## Q46 (2026-03-29): % of Total Column — Ποσοστό επί Συνόλου
+
+**Ερώτηση**: Θέλουμε στήλη "% of Total" δίπλα στο count κάθε ομάδας (π.χ. "Πωλημένα: 45 — 51.7%");
+
+**Απόφαση Γιώργου**: **ΝΑΙ** (ως toggle, off by default)
+
+**Υλοποίηση**:
+- Toggle button στο UI (off by default, ο χρήστης ενεργοποιεί αν θέλει)
+- Εμφανίζεται δίπλα στο COUNT κάθε ομάδας: `45 (51.7%)`
+- Format: 1 decimal (`12.3%`)
+- Εμφανίζεται **μόνο όταν υπάρχει grouping**
+- Grand Total row δείχνει πάντα `(100%)`
+- Pattern: Looker "% of column total", Google Sheets "Show as % of grand total"
+
+---
+
+## Q47 (2026-03-29): Bucket/Range Grouping — Ομαδοποίηση σε Εύρη
+
+**Ερώτηση**: Θέλουμε bucket grouping (π.χ. τιμή <50K = "Μικρό", 50-150K = "Μεσαίο", >150K = "Μεγάλο");
+
+**Απόφαση Γιώργου**: **ΝΑΙ** — θέλει να υλοποιηθεί. Δεν πειράζει αν πάει Phase 2 ή Phase 4+.
+
+**Τεχνική ανάλυση**:
+- Εφαρμόζεται σε `number`, `currency`, `percentage` πεδία
+- Ο χρήστης ορίζει breakpoints (π.χ. [50000, 150000]) + labels (π.χ. ["Μικρό", "Μεσαίο", "Μεγάλο"])
+- Salesforce: max 5 bucket fields/report, max 20 buckets/field
+- Υλοποιείται στο `grouping-engine.ts` ως pre-processing βήμα πριν τη grouping λογική
+
+**Scheduling**: Phase 4+ (μετά τα βασικά grouping/charts/export — δεν μπλοκάρει Phase 2)
+- Pattern: Salesforce Bucket Fields, Looker Tiers/Bins
+
+---
+
+## Q48 (2026-03-29): Chart ↔ Table Cross-Filter — Κλικ Chart → Φιλτράρισμα Πίνακα
+
+**Ερώτηση**: Θέλουμε cross-filter (κλικ σε chart segment → ο πίνακας φιλτράρεται στην ομάδα);
+
+**Ανάλυση**:
+- Power BI, Google Looker, Google Analytics 4: **ΝΑΙ** (core feature)
+- Procore, Oracle P6, Sage 300: **ΟΧΙ** (στατικά reports)
+- Construction industry: δεν είναι standard
+- Google-level quality: ΝΑΙ, είναι standard UX pattern
+
+**Απόφαση Γιώργου**: **ΝΑΙ** — Google-level quality
+
+**Υλοποίηση**:
+- Κλικ σε pie/bar segment → πίνακας δείχνει ΜΟΝΟ αυτή την ομάδα
+- Filter chip εμφανίζεται πάνω από τον πίνακα: "Φίλτρο: Πωλημένα ✕"
+- Κλικ στο ✕ → πίνακας επιστρέφει σε όλα
+- Active segment opacity: 1, rest: 0.3 (visual feedback)
+- `ReportChart` ήδη έχει `onElementClick` prop — απλό state variable
+- Pattern: Power BI visual interactions, Google Looker cross-filtering
+
+---
+
+## Q49 (2026-03-29): Conditional Highlighting σε Subtotal Rows — Numeric Thresholds
+
+**Ερώτηση**: Θέλουμε conditional highlighting σε αριθμητικά subtotals (π.χ. SUM > €200K → πράσινο, < €50K → κόκκινο);
+
+**Απόφαση Γιώργου**: **ΝΑΙ** — θέλει να υπάρχει. Scheduling στην κρίση του Claude.
+
+**Τι υπάρχει ήδη (Phase 1)**:
+- `getStatusColor()` βάφει enum values (sold → πράσινο, available → μπλε)
+- Δουλεύει σε individual rows — ΔΕΝ χρειάζεται αλλαγή
+
+**Τι χρειάζεται (νέο)**:
+- UI για ορισμό thresholds ανά στήλη (max 3 conditions, Salesforce pattern)
+- Εφαρμογή χρωμάτων σε subtotal + grand total rows
+- Salesforce: max 3 conditions, μόνο numeric fields
+- Δομή: condition1 < breakpoint1 (κόκκινο), condition2 < breakpoint2 (κίτρινο), condition3 >= breakpoint2 (πράσινο)
+
+**Scheduling**: **Phase 4+** — απαιτεί threshold config UI, δεν μπλοκάρει Phase 2
+- Phase 2: Status colors στα enum fields (ήδη δουλεύει)
+- Phase 4+: Numeric threshold highlighting στα subtotal/grand total rows
+- Pattern: Salesforce Conditional Highlighting (max 3 conditions)
+
+---
+
+## Q50 (2026-03-29): WAI-ARIA Treegrid — Accessibility για Expand/Collapse
+
+**Τεχνική απόφαση** (δεν χρειάζεται έγκριση — W3C standard):
+
+- `role="treegrid"` στον πίνακα
+- `aria-expanded="true/false"` σε κάθε group row
+- `aria-level="1/2"` για επίπεδο ομαδοποίησης
+- Keyboard: → expand, ← collapse, Enter/Space toggle
+- **Scheduling**: Phase 2 (μαζί με expand/collapse, 0 extra κόστος)
+- Pattern: W3C WAI-ARIA APG Treegrid
+
+---
+
+## Q51 (2026-03-29): Sort Groups by Subtotal — Ταξινόμηση Ομάδων κατά Aggregate
+
+**Ερώτηση**: Θέλουμε ταξινόμηση ομάδων βάσει subtotal (π.χ. top groups by revenue);
+
+**Απόφαση Γιώργου**: **ΝΑΙ**
+
+**Υλοποίηση**:
+- Default: αλφαβητική ταξινόμηση ομάδων
+- Κλικ σε column header → ομάδες ταξινομούνται βάσει subtotal αυτής της στήλης
+- Ascending / Descending toggle (ίδιο UX με Phase 1 sort)
+- Απλή υλοποίηση: sort array of groups by aggregate value
+- **Scheduling**: Phase 2
+- Pattern: Google Sheets "Sort groups by subtotal", Looker dimension sort by measure
+
+---
+
+## Q52 (2026-03-29): 3D Περιστρεφόμενα Charts — Απόρριψη
+
+**Ερώτηση**: Θέλουμε 3D rotatable charts (360° σαν Google Maps);
+
+**Ανάλυση**: Google, Microsoft, Salesforce, Procore — ΚΑΝΕΙΣ δεν τα χρησιμοποιεί πλέον. Λόγοι:
+1. Παραπλανούν (perspective distortion)
+2. Κρύβουν δεδομένα (occlusion)
+3. Η 3η διάσταση δεν αντιπροσωπεύει δεδομένο (καθαρά αισθητική)
+4. Βαρύ rendering (WebGL/Three.js)
+
+**Απόφαση**: **ΟΧΙ** — αντί-Google-level quality. Αντί αυτού: animated transitions + cross-filter.
+
+---
+
+## Q53 (2026-03-29): Animated Transitions — Ομαλές Μεταβάσεις Charts + Table
+
+**Ερώτηση**: Θέλουμε animated transitions κατά αλλαγή grouping, cross-filter, expand/collapse;
+
+**Απόφαση Γιώργου**: **ΝΑΙ**
+
+**Τύποι animations**:
+
+| Πού | Animation | Διάρκεια |
+|-----|-----------|----------|
+| Bar/Pie chart αλλαγή grouping | Μπάρες grow/shrink ομαλά | 300ms |
+| Pie chart cross-filter | Μη-active segments fade to 30% opacity | 200ms |
+| KPI cards αλλαγή αριθμών | Number counting (€1.2M → €2.1M) | 300ms |
+| Table expand/collapse | Child rows slide down/up | 300ms ease |
+| Table cross-filter | Non-matching rows fade out | 200ms |
+
+**Κόστος**: ΜΗΔΕΝ νέες βιβλιοθήκες
+- Recharts: built-in `isAnimationActive`, `animationDuration` props
+- Table: CSS `transition: max-height 300ms ease, opacity 200ms ease`
+- KPI numbers: CSS `transition` ή lightweight counter logic
+
+**Scheduling**: Phase 2
+- Pattern: Google Analytics transitions, Apple Numbers, Power BI
+
+---
+
+## Q54 (2026-03-29): Chart Configuration — Ρυθμίσεις Εμφάνισης Charts
+
+**Ερώτηση**: Θέλουμε chart configuration (ρυθμίσεις χρωμάτων, legend, labels, axis κλπ);
+
+**Ανάλυση**:
+- Power BI / Tableau: 30+ ρυθμίσεις ανά chart (υπερβολικό για construction)
+- Looker / Google Sheets: 10-15 ρυθμίσεις (μέτριο)
+- Salesforce / Procore: βασικό — αλλαγή τύπου μόνο
+- Inline data editing μέσω chart: ΚΑΝΕΙΣ δεν το κάνει (charts = read-only)
+
+**Απόφαση Γιώργου**: Μόνο τα χρήσιμα, όχι over-engineering.
+
+**Phase 2**:
+- ✅ Αλλαγή τύπου chart (bar ↔ pie ↔ line ↔ area ↔ stacked-bar) — ήδη Q43
+- ✅ Show/hide legend toggle (1 γραμμή κώδικα, `showLegend` prop)
+
+**ΟΧΙ** (δεν αξίζουν):
+- ❌ Αλλαγή χρωμάτων — over-engineering
+- ❌ Αλλαγή X/Y axis — grouping field ορίζει ήδη τον axis
+- ❌ Αλλαγή τίτλου chart — auto-generated αρκεί
+- ❌ Chart size/position — fixed layout αρκεί
+- ❌ Inline data editing — κανείς δεν το κάνει
+
+---
+
+## Q55 (2026-03-29): Grouped Data στο PDF — Banded Architecture
+
+**Ερώτηση**: Όταν ο χρήστης έχει ενεργό grouping και κάνει export PDF, πώς εμφανίζονται τα δεδομένα;
+
+**Επιλογές που αξιολογήθηκαν**:
+
+| Επιλογή | Pattern | Ποιος το κάνει |
+|---------|---------|----------------|
+| A: Flat expand-all | Group header + detail rows + grand total | Salesforce, Procore |
+| B: Summary-only | Μόνο aggregations, χωρίς detail rows | Google Looker (online) |
+| C: Και τα δύο | Summary + page break + detail | Power BI Paginated |
+| **D: SAP Crystal Banded** | **Report Header → KPI Bar → Chart → [Group Header → Detail → Group Footer]* → Grand Total → Report Footer** | **SAP Crystal Reports, SSRS, JasperReports, Power BI Paginated** |
+
+**Industry Analysis**:
+
+| Πλατφόρμα | Pattern |
+|-----------|---------|
+| **SAP Crystal Reports** | Banded: 3 bands per group (header → detail → footer). De facto standard 30+ χρόνια |
+| **Oracle Primavera P6** | Hierarchical expand-all, WBS tree, subtotals |
+| **Autodesk Build** | Expand-all + page break per group |
+| **Procore** | Expand-all + summary header per group |
+| **Salesforce** | Expand-all + subtotals (simplified Crystal) |
+| **Microsoft SSRS** | Crystal-inspired banded architecture |
+| **Power BI Paginated** | Crystal-inspired, conditional expand/collapse |
+
+**Απόφαση Γιώργου**: **D — SAP Crystal Banded pattern**
+
+**Αρχιτεκτονική Bands (5 isolated functions, Google SRP)**:
+
+```
+┌─ REPORT HEADER ──────────────────────────────────────┐
+│ Λογότυπο | Τίτλος | Φίλτρα | Ημερομηνία             │
+├─ KPI SUMMARY BAR ────────────────────────────────────┤
+│ [156 Μονάδες] [€12.5M Αξία] [89 Πωλημένα]           │
+├─ CHART (PNG image via html-to-image) ────────────────┤
+│ Bar chart / Pie chart                                 │
+╠═ GROUP HEADER: "Κτίριο Α" ══════════════════════════╣
+│ ██ Κτίριο Α — 52 μονάδες | €4.2M | Avg €80.7K       │
+├─ DETAIL ROWS ────────────────────────────────────────┤
+│ A-101 │ Στούντιο │ Πωλημένο │ €65,000               │
+│ A-102 │ 2αρι     │ Διαθέσιμο│ €95,000               │
+├─ GROUP FOOTER: Subtotal ─────────────────────────────┤
+│ Σύνολο Κτιρίου Α: 52 │ €4,200,000 │ Avg: €80,769    │
+╠═ GROUP HEADER: "Κτίριο Β" ══════════════════════════╣
+│ ...                                                   │
+╠═ GRAND TOTAL ════════════════════════════════════════╣
+│ ██ ΓΕΝΙΚΟ ΣΥΝΟΛΟ: 156 │ €12,500,000 │ Avg: €80,128  │
+├─ REPORT FOOTER ──────────────────────────────────────┤
+│ Σελ. 1/3 │ Nestor App │ 29/03/2026                   │
+└──────────────────────────────────────────────────────┘
+```
+
+**Υλοποίηση — 1 function per band (extensible)**:
+
+| Band | Function | Status |
+|------|----------|--------|
+| Report Header | `drawReportHeader()` | ✅ ΥΠΑΡΧΕΙ (report-pdf-exporter.ts) |
+| KPI Summary | `drawKPICards()` | ✅ ΥΠΑΡΧΕΙ (report-pdf-exporter.ts) |
+| Chart Image | `drawChartImage()` | ✅ ΥΠΑΡΧΕΙ (report-pdf-exporter.ts) |
+| Grouped Table (header+detail+footer+grand) | `drawGroupedTable()` | 🆕 ΝΕΟ |
+| Report Footer | `addPageFooters()` | ✅ ΥΠΑΡΧΕΙ (report-pdf-exporter.ts) |
+
+**Extensibility**: Αύριο page-break-per-group = 1 flag. Tier 3 Contact Cards = νέο band type, ίδια αρχιτεκτονική.
+
+**Scheduling**: Phase 3
+
+---
+
+## Q56 (2026-03-29): Chart Image στο PDF — PNG Embed
+
+**Ερώτηση**: Όταν ο χρήστης έχει chart στην οθόνη και κάνει export PDF, ενσωματώνεται ως εικόνα ή μόνο δεδομένα;
+
+**Επιλογές**:
+
+| Επιλογή | Ποιος το κάνει |
+|---------|----------------|
+| A: PNG embed (html-to-image → PNG → jsPDF addImage) | SAP Crystal, Power BI, Salesforce, Procore |
+| B: Μόνο δεδομένα, χωρίς chart | Κανένας enterprise |
+
+**Απόφαση Γιώργου**: **A — PNG embed**
+
+**Υποδομή που ήδη υπάρχει**:
+- `html-to-image` v1.11.13 (ήδη εγκατεστημένο)
+- `drawChartImage()` στο `report-pdf-exporter.ts` (ήδη υλοποιημένο)
+- Resolution: 2x DPR (retina-quality) — SPEC-003
+- Fallback: placeholder "Γράφημα μη διαθέσιμο" αν αποτύχει capture
+
+**Νέος κώδικας**: 0 — πλήρης reuse existing infrastructure
+
+**Scheduling**: Phase 3
+
+---
+
+## Q57 (2026-03-29): Excel Formulas — Full Enterprise (Real Formulas Παντού)
+
+**Ερώτηση**: Τα Excel exports θα έχουν πραγματικές formulas ή static values;
+
+**Επιλογές**:
+
+| Επιλογή | Summary Sheet | Analysis Sheet (grouped) | Ποιος |
+|---------|--------------|--------------------------|-------|
+| A: Real formulas παντού | `=SUM(Data!E:E)` | `=COUNTIFS(Data!B:B,"Κτίριο Α")` | SAP, Oracle |
+| B: Static values | `12500000` | `52` | Basic tools |
+| C: Hybrid | `=SUM(Data!E:E)` | `52` (static) | Salesforce, Power BI |
+
+**Απόφαση Γιώργου**: **A — Full Enterprise (Real Formulas παντού)**
+
+**Υλοποίηση**:
+
+**Sheet "Σύνοψη" (Summary)**:
+```
+B5: =COUNTA(Δεδομένα!A2:A9999)    ← count records
+B6: =SUM(Δεδομένα!E2:E9999)        ← total currency
+B7: =AVERAGE(Δεδομένα!E2:E9999)    ← average
+B8: =MAX(Δεδομένα!E2:E9999)        ← max
+B9: =MIN(Δεδομένα!E2:E9999)        ← min
+```
+
+**Sheet "Ανάλυση" (Analysis — grouped)**:
+```
+A2: "Κτίριο Α"
+B2: =COUNTIFS(Δεδομένα!B:B,A2)                    ← count per group
+C2: =SUMIFS(Δεδομένα!E:E,Δεδομένα!B:B,A2)         ← sum per group
+D2: =AVERAGEIFS(Δεδομένα!E:E,Δεδομένα!B:B,A2)     ← avg per group
+E2: =B2/SUM(B:B)*100                               ← % of total
+
+Grand Total:
+B99: =SUM(B2:B98)
+C99: =SUM(C2:C98)
+```
+
+**Sheet "Δεδομένα" (Data)**: Raw values + auto-filters + freeze panes
+**Sheet "Raw Data"**: Unformatted, ISO dates, numbers — for BI import
+
+**Complexity notes**:
+- COUNTIFS/SUMIFS αναφέρονται στο sheet name "Δεδομένα" (ελληνικό — ExcelJS handles unicode)
+- Group values στο A column → formulas αναφέρονται σε A cell (dynamic)
+- Special characters σε group values: ExcelJS escapes αυτόματα
+
+**Scheduling**: Phase 3
+
+---
+
+## Q58 (2026-03-29): Filename Pattern — Domain-Aware Αγγλικά
+
+**Ερώτηση**: Πώς ονομάζεται το αρχείο PDF/Excel που κατεβάζει ο χρήστης;
+
+**Επιλογές**:
+
+| Επιλογή | Παράδειγμα |
+|---------|-----------|
+| A: Ελληνικά | `Αναφορά_Μονάδες_20260329_1530.pdf` |
+| B: Αγγλικά | `Report_Units_20260329_1530.xlsx` |
+| C: Bilingual | `Report_Μονάδες_20260329_1530.pdf` |
+| D: Domain-aware αγγλικά | `Nestor_Units_Report_2026-03-29.pdf` |
+
+**Industry Pattern**:
+- SAP: Αγγλικά filenames (universal OS compatibility)
+- Procore: `{ProjectName}_{ReportType}_{Date}.pdf`
+- Salesforce: `{ReportName}_{Timestamp}.xlsx`
+
+**Απόφαση Γιώργου**: **D — Domain-aware αγγλικά**
+
+**Pattern**: `Nestor_{DomainLabel}_Report_{YYYY-MM-DD}.{ext}`
+
+**Παραδείγματα**:
+- `Nestor_Units_Report_2026-03-29.pdf`
+- `Nestor_Projects_Report_2026-03-29.xlsx`
+- `Nestor_Buildings_Report_2026-03-29.pdf`
+- `Nestor_Floors_Report_2026-03-29.xlsx`
+
+**Γιατί**: Brand-aware, ασφαλές σε κάθε OS (no Unicode filenames), professional, sortable by date.
+
+**Scheduling**: Phase 3
+
+---
+
+## Q59 (2026-03-29): Cross-Filter State — User Choice (SAP Pattern)
+
+**Ερώτηση**: Αν ο χρήστης έχει ενεργό cross-filter (click σε chart segment), τι δεδομένα εξάγονται;
+
+**Επιλογές**:
+
+| Επιλογή | Εξαγωγή | Ποιος |
+|---------|---------|-------|
+| A: Full dataset | Πάντα ολόκληρο, αγνοεί cross-filter | Google Sheets, Salesforce |
+| B: Filtered view | Μόνο ό,τι βλέπει ο χρήστης | Power BI, Tableau |
+| C: User choice | Dialog: "Εξαγωγή όλων" ή "Εξαγωγή τρέχουσας προβολής" | SAP Crystal Reports |
+
+**Απόφαση Γιώργου**: **C — User choice (SAP Crystal Reports pattern)**
+
+**UI Implementation**:
+- Όταν cross-filter **ΔΕΝ** είναι ενεργό → export αμέσως (no dialog)
+- Όταν cross-filter **ΕΙΝΑΙ** ενεργό → dialog πριν export:
+
+```
+┌─────────────────────────────────────────────┐
+│ Εξαγωγή Αναφοράς                            │
+│                                              │
+│ Έχετε ενεργό φίλτρο: "Πωλημένα"            │
+│                                              │
+│ ○ Εξαγωγή όλων των δεδομένων (156 εγγραφές)│
+│ ● Εξαγωγή τρέχουσας προβολής (89 εγγραφές) │
+│                                              │
+│              [Ακύρωση]  [Εξαγωγή]           │
+└─────────────────────────────────────────────┘
+```
+
+**Τεχνική λεπτομέρεια**: Radix AlertDialog (ήδη στο project), 2 radio buttons, record count σε κάθε επιλογή.
+
+**Scheduling**: Phase 3
+
+---
+
+## Q60 (2026-03-29): Applied Filters — Εμφάνιση στο PDF/Excel
+
+**Ερώτηση**: Θέλουμε να φαίνονται τα εφαρμοσμένα filters στο export;
+
+**Επιλογές**:
+
+| Επιλογή | Ποιος |
+|---------|-------|
+| A: Ναι — PDF header + Excel Summary sheet | SAP, Procore, Salesforce, Power BI — ΟΛΟΙ |
+| B: Όχι | Κανένας enterprise |
+
+**Απόφαση Γιώργου**: **A — Εμφάνιση filters (universal standard)**
+
+**Υλοποίηση**:
+
+**PDF** — στο Report Header, κάτω από τον τίτλο:
+```
+Αναφορά: Μονάδες ανά Κτίριο
+Φίλτρα: Status = Πωλημένο · Τιμή > €50,000 · Έργο = Κορδελιό
+```
+
+**Excel** — στο Summary sheet, μετά τα metadata:
+```
+A3: "Φίλτρα"    B3: "Status = Πωλημένο · Τιμή > €50,000 · Έργο = Κορδελιό"
+```
+
+**Μορφοποίηση filter string**:
+- Pattern: `{fieldLabel} {operatorSymbol} {value}` separated by ` · `
+- Operator symbols: `=`, `≠`, `>`, `≥`, `<`, `≤`, `∈` (in), `~` (contains)
+- Αν δεν υπάρχουν filters: "Χωρίς φίλτρα"
+
+**Scheduling**: Phase 3
+
+---
+
+## Q61 (2026-03-29): Loading State — Button Spinner + Toast
+
+**Ερώτηση**: Τι βλέπει ο χρήστης κατά τη διάρκεια του export (2-5 sec);
+
+**Επιλογές**:
+
+| Επιλογή | UX | Ποιος |
+|---------|-----|-------|
+| A: Button spinner μόνο | Disabled button + spinner | Basic tools |
+| B: Button spinner + Toast | Spinner κατά generation + success/error toast | Salesforce, Procore |
+| C: Progress bar + Toast | Step-by-step progress + toast | SAP, Power BI |
+
+**Απόφαση Γιώργου**: **B — Button spinner + Toast**
+
+**UX Flow**:
+1. Χρήστης κάνει click "Export PDF" →
+2. Button γίνεται disabled + spinner icon + text "Εξαγωγή..." →
+3. (2-5 sec: chart capture → PDF/Excel generation → download trigger) →
+4. Button επιστρέφει σε normal state →
+5. Toast notification:
+   - ✅ Success: "Η αναφορά εξήχθη σε PDF" (green, 3sec auto-dismiss)
+   - ❌ Error: "Αποτυχία εξαγωγής — δοκιμάστε ξανά" (red, manual dismiss)
+
+**Τεχνική λεπτομέρεια**: Reuse existing toast system (sonner/react-hot-toast — ό,τι ήδη χρησιμοποιεί η εφαρμογή).
+
+**Scheduling**: Phase 3
+
+---
+
+## Q62 (2026-03-29): Excel Conditional Formatting — Full Enterprise
+
+**Ερώτηση**: Ποιοι conditional formatting κανόνες στο Excel Data sheet;
+
+**Απόφαση Γιώργου**: **Όλοι — Full enterprise**
+
+**Κανόνες**:
+
+| Κανόνας | Εφαρμογή | Pattern |
+|---------|----------|---------|
+| **Status colors** | Enum στήλες → χρώμα text βάσει τιμής (Πωλημένο=πράσινο, Κρατημένο=πορτοκαλί, Διαθέσιμο=γκρι) | Salesforce, Procore, SAP |
+| **Currency > median** | Currency στήλες → light green bg αν > median τιμή | Power BI, Google Sheets |
+| **Overdue dates** | Date στήλες → κόκκινο text αν < σήμερα | SAP, Oracle |
+| **Freeze panes** | Row 1 (headers) + Column A frozen | Όλοι |
+| **Auto-filter** | Dropdown filters στο header row | Όλοι |
+
+**Υπάρχουσα υποδομή (reuse)**:
+- ✅ Auto-filter: ήδη στο `report-excel-exporter.ts`
+- ✅ Overdue highlighting: ήδη στο `report-excel-exporter.ts` (`OVERDUE_FILL`)
+- 🆕 Status colors: νέο — map enum values → font color
+- 🆕 Currency > median: νέο — calculate median, apply conditional fill
+- 🆕 Freeze panes: νέο — `sheet.views = [{ state: 'frozen', ySplit: 1, xSplit: 1 }]`
+
+**Status color mapping** (reuse `getStatusColor()` from design system):
+- Enum values χρησιμοποιούν ήδη χρώματα στο UI → ίδια αντιστοίχιση στο Excel
+- Dynamic: διαβάζει τα `enumValues` από `FieldDefinition` → maps to Excel font colors
+
+**Scheduling**: Phase 3
+
+---
+
+## Q63 (2026-03-29): PDF Watermark — Optional Toggle (3 modes)
+
+**Ερώτηση**: Θέλουμε watermark στα exported PDFs;
+
+**Επιλογές**:
+
+| Επιλογή | Τι κάνει | Ποιος |
+|---------|---------|-------|
+| A: Static | "ΕΜΠΙΣΤΕΥΤΙΚΟ" diagonal σε κάθε σελίδα | SAP Crystal, Power BI |
+| B: Dynamic | Username + timestamp + "ΕΜΠΙΣΤΕΥΤΙΚΟ" | Enterprise DRM |
+| C: Optional toggle | Ο χρήστης επιλέγει: Off / Static / Dynamic | SAP Crystal (advanced) |
+| D: Χωρίς | — | — |
+
+**Απόφαση Γιώργου**: **C — Optional toggle (3 modes)**
+
+**UI στο Export Dialog** (dropdown):
+- **Χωρίς watermark** (default)
+- **ΕΜΠΙΣΤΕΥΤΙΚΟ** — static diagonal text
+- **ΕΜΠΙΣΤΕΥΤΙΚΟ + Χρήστης** — dynamic: username + timestamp
+
+**Τεχνική υλοποίηση**:
+- jsPDF `pdf.text()` με rotation 45° + opacity 15% (GState)
+- ~20 γραμμές κώδικα
+- Εφαρμόζεται σε κάθε σελίδα (loop στο `addPageFooters`)
+- Dynamic mode: `${username} — ${timestamp}` κάτω από "ΕΜΠΙΣΤΕΥΤΙΚΟ"
+
+**Scheduling**: Phase 3
+
+---
+
+## Q64 (2026-03-29): PDF Password Protection — Phase 4+
+
+**Ερώτηση**: Θέλουμε password protection / encryption στα exported PDFs;
+
+**Επιλογές**:
+
+| Επιλογή | Ποιος |
+|---------|-------|
+| A: Optional password (AES-128) | SAP Crystal, Adobe |
+| B: Permissions-only (disable copy/print) | Adobe, Power BI |
+| C: Και τα δύο (2 passwords) | SAP Crystal advanced |
+| D: Όχι — Phase 4+ | — |
+
+**Απόφαση Γιώργου**: **D — Phase 4+**
+
+**Γιατί αναβολή**:
+- jsPDF υποστηρίζει μόνο RC4 (αδύναμη κρυπτογράφηση)
+- AES-256 χρειάζεται εξωτερική βιβλιοθήκη ή post-processing
+- Watermark (Q63) καλύπτει ήδη "εμπιστευτικό" marking
+- Medium effort, χαμηλή προτεραιότητα σε αυτή τη φάση
+
+**Scheduling**: Phase 4+
+
+---
+
+## Q65 (2026-03-29): Repeat Table Headers — Κάθε Σελίδα PDF
+
+**Ερώτηση**: Όταν ο πίνακας σπάσει σε πολλές σελίδες, επαναλαμβάνονται τα column headers;
+
+**Επιλογές**:
+
+| Επιλογή | Ποιος |
+|---------|-------|
+| A: Ναι — headers σε κάθε σελίδα | SAP Crystal, SSRS, Power BI, Procore — ΟΛΟΙ |
+| B: Όχι — μόνο πρώτη σελίδα | Κανένας enterprise |
+
+**Απόφαση Γιώργου**: **A — Headers σε κάθε σελίδα**
+
+**Υλοποίηση**: Ήδη υπάρχει — `jspdf-autotable` default `showHead: 'everyPage'`. Ο υπάρχων exporter ήδη το κάνει. 0 νέος κώδικας.
+
+**Scheduling**: Phase 3 (ήδη λειτουργικό)
+
+---
+
+## Q66 (2026-03-29): Orphan/Widow Control + Keep-Together
+
+**Ερώτηση**: Πώς χειριζόμαστε page breaks στον πίνακα PDF;
+
+**Προβλήματα**:
+- **Orphan**: 1 μεμονωμένη γραμμή στο τέλος σελίδας (μη αναγνώσιμο)
+- **Widow**: 1 μεμονωμένη γραμμή στην αρχή νέας σελίδας
+- **Broken group**: Group header ("Κτίριο Α") μόνο στο τέλος σελίδας, detail rows στην επόμενη
+
+**Επιλογές**:
+
+| Επιλογή | Ποιος |
+|---------|-------|
+| A: Και τα δύο (orphan/widow + keep-together) | SAP Crystal, SSRS, Power BI |
+| B: Μόνο keep-together | — |
+| C: Phase 4+ | — |
+
+**Απόφαση Γιώργου**: **A — Και τα δύο**
+
+**Κανόνες**:
+- **Orphan/Widow**: Minimum 3 rows μετά/πριν page break
+- **Keep-Together**: Group header + τουλάχιστον 2 detail rows πρέπει να είναι μαζί στην ίδια σελίδα
+- Αν δεν χωράνε → page break ΠΡΙΝ τον group header
+
+**Τεχνική υλοποίηση**:
+- `jspdf-autotable`: `rowPageBreak: 'avoid'` για basic orphan control
+- Custom logic στο `drawGroupedTable()`: πριν κάθε group header, ελέγχει αν χωράνε ≥ header + 2 rows + footer στο υπόλοιπο σελίδας. Αν όχι → `pdf.addPage()`
+
+**Scheduling**: Phase 3
+
+---
+
+## Q67 (2026-03-29): Table of Contents + PDF Bookmarks — Και τα δύο
+
+**Ερώτηση**: Θέλουμε navigation σε μεγάλα PDFs (πολλά groups, πολλές σελίδες);
+
+**Επιλογές**:
+
+| Επιλογή | Ποιος |
+|---------|-------|
+| A: TOC page + Bookmarks | SAP Crystal, SSRS |
+| B: Μόνο bookmarks (sidebar) | Power BI paginated |
+| C: Μόνο TOC page | — |
+| D: Phase 4+ | — |
+
+**Απόφαση Γιώργου**: **A — Και τα δύο (TOC + Bookmarks)**
+
+**Γιατί**: Bookmarks = digital navigation (PDF viewer sidebar). TOC = physical navigation (εκτύπωση). Μαζί καλύπτουν κάθε χρήση.
+
+**Table of Contents (σελίδα 2, μετά το header)**:
+```
+Πίνακας Περιεχομένων
+─────────────────────────────────
+Κτίριο Α ..................... 3
+Κτίριο Β ..................... 5
+Κτίριο Γ ..................... 7
+Γενικό Σύνολο ................ 9
+```
+
+**PDF Bookmarks (sidebar outline)**:
+```
+▸ Αναφορά: Μονάδες ανά Κτίριο
+  ▸ Κτίριο Α (52 μονάδες)
+  ▸ Κτίριο Β (48 μονάδες)
+  ▸ Κτίριο Γ (35 μονάδες)
+  ▸ Γενικό Σύνολο
+```
+
+**Τεχνική υλοποίηση**:
+- **2-pass rendering**: 1ο pass → υπολογίζει σελίδες ανά group, 2ο pass → γράφει TOC + content
+- **Bookmarks**: jsPDF `pdf.outline.add(title, { pageNumber })` — native support
+- **TOC**: Dedicated page μετά header, πριν data — leader dots + page numbers
+- **Conditional**: TOC + bookmarks ΜΟΝΟ αν υπάρχει grouping ΚΑΙ >2 σελίδες. Αλλιώς skip (δεν χρειάζεται TOC σε 1-σέλιδο report)
+
+**Scheduling**: Phase 3
+
+---
+
+## Q68 (2026-03-29): Document Metadata — Author, Title, Keywords
+
+**Ερώτηση**: Θέλουμε document properties στα PDF/Excel exports;
+
+**Απόφαση Γιώργου**: **ΝΑΙ — Όλα**
+
+**Properties**:
+
+| Property | PDF (jsPDF) | Excel (ExcelJS) | Τιμή |
+|----------|------------|-----------------|------|
+| **Title** | `pdf.setProperties({ title })` | `workbook.title` | `"Units Report — Κορδελιό"` |
+| **Author** | `pdf.setProperties({ author })` | `workbook.creator` | `"Γ. Παγώνης"` (logged-in user) |
+| **Subject** | `pdf.setProperties({ subject })` | `workbook.subject` | `"Units filtered by Status=Πωλημένο"` |
+| **Creator** | `pdf.setProperties({ creator })` | `workbook.properties.creator` | `"Nestor Report Builder"` |
+| **Keywords** | `pdf.setProperties({ keywords })` | `workbook.keywords` | `"units, buildings, πωλημένο"` |
+| **Creation Date** | Αυτόματο | `workbook.created = new Date()` | Αυτόματο |
+
+**Effort**: 0 — native support και στις δύο βιβλιοθήκες. ~5 γραμμές κώδικα.
+
+**Scheduling**: Phase 3
+
+---
+
+## Q69 (2026-03-29): Excel Named Ranges
+
+**Ερώτηση**: Θέλουμε named ranges στο Excel αντί raw cell references;
+
+**Επιλογές**:
+
+| Επιλογή | Formula εμφάνιση | Ποιος |
+|---------|-----------------|-------|
+| A: Ναι | `=SUM(ReportData[Τιμή])` | Salesforce, Power BI, SAP |
+| B: Όχι | `=SUM(B2:B500)` | Basic tools |
+
+**Απόφαση Γιώργου**: **A — Named Ranges**
+
+**Named ranges**:
+
+| Range Name | Sheet | Περιγραφή |
+|-----------|-------|-----------|
+| `ReportData` | Δεδομένα | Ολόκληρος ο data table (headers + rows) |
+| `AnalysisData` | Ανάλυση | Grouped aggregations table |
+
+**Τεχνική υλοποίηση**: ExcelJS `worksheet.addTable({ name: 'ReportData', ref, columns, rows })` — auto-creates named range.
+
+**Effort**: Low — ~10 γραμμές κώδικα.
+
+**Scheduling**: Phase 3
+
+---
+
+## Q70 (2026-03-29): Excel Sheet Protection — Lock Formulas
+
+**Ερώτηση**: Θέλουμε προστασία formulas στο Excel ώστε να μη σβηστούν κατά λάθος;
+
+**Επιλογές**:
+
+| Επιλογή | Ποιος |
+|---------|-------|
+| A: Ναι — lock formula sheets, unlock data sheets | SAP, Oracle, Power BI |
+| B: Όχι — όλα editable | Basic tools |
+
+**Απόφαση Γιώργου**: **A — Lock Formulas**
+
+**Protection matrix**:
+
+| Sheet | Protected | Λόγος |
+|-------|-----------|-------|
+| Σύνοψη (Summary) | ✅ Locked | Formulas (=SUM, =AVERAGE) — μη σπάσουν |
+| Δεδομένα (Data) | ❌ Unlocked | Ο χρήστης μπορεί να κάνει edit data |
+| Ανάλυση (Analysis) | ✅ Locked | Formulas (=COUNTIFS, =SUMIFS) — μη σπάσουν |
+| Raw Data | ❌ Unlocked | Ελεύθερο για BI import/edit |
+
+**Τεχνική υλοποίηση**: ExcelJS `sheet.protect('', { selectLockedCells: true, selectUnlockedCells: true })` — χωρίς password (ο χρήστης μπορεί να κάνει unprotect αν θέλει), απλά warning.
+
+**Effort**: Low — ~5 γραμμές κώδικα ανά sheet.
+
+**Scheduling**: Phase 3
+
+---
+
+## Q71 (2026-03-29): Excel Print Setup — Landscape, Fit-to-Page, Header/Footer
+
+**Ερώτηση**: Θέλουμε pre-configured print setup στο Excel;
+
+**Απόφαση Γιώργου**: **ΝΑΙ — Όλα**
+
+**Features**:
+
+| Feature | ExcelJS code | Τιμή |
+|---------|-------------|------|
+| Landscape orientation | `sheet.pageSetup.orientation = 'landscape'` | Wide tables χωρούν |
+| Fit columns to 1 page | `sheet.pageSetup.fitToPage = true; fitToWidth = 1; fitToHeight = 0` | Auto-scaling |
+| Print header | `sheet.headerFooter.oddHeader = '&L&"Roboto"Nestor Report Builder&R&D'` | Brand + date |
+| Print footer | `sheet.headerFooter.oddFooter = '&LΣελίδα &P από &N&R&F'` | Page X of Y + filename |
+| Print area | `sheet.pageSetup.printArea = 'A1:Z500'` | Μόνο data cells |
+
+**Εφαρμόζεται σε**: Data sheet + Analysis sheet (τα printable). Summary + Raw δεν χρειάζονται print setup.
+
+**Effort**: ~6 γραμμές κώδικα. Universal enterprise standard.
+
+**Scheduling**: Phase 3
+
+---
+
+## Q72 (2026-03-29): Excel Outline/Group Rows — Collapsible Groups
+
+**Ερώτηση**: Θέλουμε expand/collapse groups στο Excel (ίδια εμπειρία με το UI treegrid);
+
+**Επιλογές**:
+
+| Επιλογή | Ποιος |
+|---------|-------|
+| A: Ναι — native Excel outline grouping | SAP, Power BI, Oracle |
+| B: Όχι — flat rows | Basic tools |
+
+**Απόφαση Γιώργου**: **A — Outline/Group Rows**
+
+**Εμφάνιση στο Excel**:
+```
+[−] Κτίριο Α — 52 μονάδες | €4,200,000
+      A-101 │ Στούντιο │ Πωλημένο │ €65,000
+      A-102 │ 2αρι     │ Διαθέσιμο│ €95,000
+      ...
+[+] Κτίριο Β — 48 μονάδες | €3,800,000    ← collapsed
+[−] Κτίριο Γ — 35 μονάδες | €2,800,000
+      ...
+    ΓΕΝΙΚΟ ΣΥΝΟΛΟ: 135 │ €10,800,000
+```
+
+**Τεχνική υλοποίηση**:
+- Detail rows: `sheet.getRow(n).outlineLevel = 1`
+- Group header rows: `outlineLevel = 0` (always visible)
+- Grand total: `outlineLevel = 0` (always visible)
+- Default: expanded (`sheet.properties.outlineLevelRow = 1`)
+- Εφαρμόζεται στο Data sheet ΜΟΝΟ αν υπάρχει grouping
+
+**Effort**: Low — ~10 γραμμές κώδικα.
+
+**Scheduling**: Phase 3
+
+---
+
+## Q73 (2026-03-29): Export Audit Log — Phase 4+
+
+**Ερώτηση**: Θέλουμε καταγραφή (audit log) κάθε export σε Firestore;
+
+**Επιλογές**:
+
+| Επιλογή | Ποιος |
+|---------|-------|
+| A: Ναι — Phase 3 | Salesforce, Power BI, SAP |
+| B: Phase 4+ | — |
+
+**Απόφαση Γιώργου**: **B — Phase 4+**
+
+**Γιατί αναβολή**:
+- Σε development mode δεν είναι blocker
+- Security model δεν είναι ακόμα production-ready (βλ. Security Audit 2025-12-15)
+- Η υποδομή (Firestore write) είναι trivial να προστεθεί αργότερα
+- GDPR Article 30 compliance απαιτείται μόνο σε production
+
+**Μελλοντικό schema (Phase 4+)**:
+```typescript
+interface ExportAuditEntry {
+  id: string;           // Enterprise ID
+  userId: string;
+  userEmail: string;
+  domain: BuilderDomainId;
+  filters: string;      // human-readable filter summary
+  format: 'pdf' | 'excel';
+  rowCount: number;
+  watermark: 'none' | 'static' | 'dynamic';
+  timestamp: Timestamp;
+}
+```
+
+**Scheduling**: Phase 4+
+
+---
+
+## Q74 (2026-03-29): Web Worker Generation — Phase 4+
+
+**Ερώτηση**: Θέλουμε PDF/Excel generation σε Web Worker (background thread) για responsive UI;
+
+**Επιλογές**:
+
+| Επιλογή | Ποιος |
+|---------|-------|
+| A: Web Worker | Enterprise standard |
+| B: Async chunking | Lightweight alternative |
+| C: Τίποτα (blocking) | — |
+| D: Phase 4+ | — |
+
+**Απόφαση Γιώργου**: **D — Phase 4+**
+
+**Γιατί αναβολή**:
+- Max 2000 rows (BUILDER_LIMITS) → generation 2-5 sec → αποδεκτό με spinner+toast (Q61)
+- jsPDF + html-to-image χρειάζονται DOM access — δεν τρέχουν σε pure Web Worker
+- Χρειάζεται OffscreenCanvas workaround → medium-high effort
+- Αξίζει μόνο αν τα data μεγαλώσουν (Phase 4+ cursor pagination, >5K rows)
+
+**Scheduling**: Phase 4+
+
+---
+
+## Q75 (2026-03-29): Export Preview — Phase 4+
+
+**Ερώτηση**: Θέλουμε modal preview πριν download;
+
+**Επιλογές**:
+
+| Επιλογή | Ποιος |
+|---------|-------|
+| A: Ναι — Phase 3 | Power BI, Adobe Analytics |
+| B: Phase 4+ | Salesforce, Procore, SAP (κατεβάζουν απευθείας) |
+
+**Απόφαση Γιώργου**: **B — Phase 4+**
+
+**Γιατί αναβολή**:
+- Η πλειοψηφία (Salesforce, Procore, SAP) κατεβάζει απευθείας
+- Ο χρήστης βλέπει ήδη τα data στο UI — ξέρει τι παίρνει
+- Preview προσθέτει extra βήμα χωρίς μεγάλη αξία στο Phase 3
+- Medium effort (PDF blob → Object URL → iframe modal)
+
+**Scheduling**: Phase 6
+
+---
+
+## Q76 (2026-03-29): Phase 4 — Σπάσιμο σε υποφάσεις;
+
+**Ερώτηση**: Η Phase 4 (10 domains + Tier 2 + deferred features) χωράει σε 1 context ή χρειάζεται σπάσιμο;
+
+**Ανάλυση**: 10 domain configs + Tier 2 engine + tests + ADR update = ~85-90% context. Κίνδυνος θορύβου.
+
+**Απόφαση Γιώργου**: **3 υποφάσεις**
+
+| Υποφάση | Περιεχόμενο |
+|---------|-------------|
+| 4a | A5 Parking, A6 Storage, B1 Individuals, B2 Companies & Services |
+| 4b | B3 Buyers, B4 Suppliers, B5 Engineers, B6 Workers, B7 Lawyers/Notaries, B8 Agents |
+| 4c | Tier 2 Export Engine (generic) + Q47 Bucket Grouping + Q49 Conditional Highlighting |
+
+**Deferred to Phase 6**: Q64 (PDF password), Q73 (audit log), Q74 (web worker), Q75 (export preview)
+
+---
+
+## Q77 (2026-03-29): Firestore Collections — Persona System
+
+**Ερώτηση**: Ποια είναι τα πραγματικά Firestore collection names για τα 10 domains;
+
+**Εύρημα**: B3-B8 ΔΕΝ είναι ξεχωριστά collections. Το `contacts` collection χρησιμοποιεί **persona system** (ADR-121):
+
+| Domain | Collection | Pre-filter |
+|--------|-----------|-----------|
+| A5 Parking | `parking_spots` | — |
+| A6 Storage | `storage_units` | — |
+| B1 Individuals | `contacts` | `type = 'individual'` |
+| B2 Companies & Services | `contacts` | `type = 'company' OR 'service'` |
+| B3 Buyers | `units` | `commercial.buyerContactId exists` → resolve buyer |
+| B4 Suppliers | `contacts` | `personas contains 'supplier'` |
+| B5 Engineers | `contacts` | `personas contains 'engineer'` |
+| B6 Workers | `contacts` | `personas contains 'construction_worker'` |
+| B7 Lawyers/Notaries | `contacts` | `personas contains 'lawyer' OR 'notary'` |
+| B8 Agents | `contacts` | `personas contains 'real_estate_agent'` |
+
+---
+
+## Q78 (2026-03-29): Tier 2 Export — Scope & PDF handling
+
+**Ερώτηση**: Tier 2 μόνο για B1+B2 ή παντού; Μόνο Excel ή και PDF;
+
+**Απόφαση Γιώργου**: **Generic engine — δουλεύει παντού** (contacts, companies, invoices, payment plans, κ.λπ.)
+
+**Output per format**:
+- **Excel**: Row repetition (1 γραμμή ανά child record, parent επαναλαμβάνεται)
+- **PDF**: Joined values σε 1 κελί (π.χ. "g.papa@work.gr, giannis@gmail.com")
+
+**Γιατί**: Στο Excel χρειάζεσαι filter/sort ανά τιμή. Στο PDF απλά διαβάζεις.
+
+---
+
+## Q79 (2026-03-29): B3 Buyers — Persona vs Transaction-based
+
+**Ερώτηση**: Αγοραστής = persona label ή πραγματική αγορά;
+
+**Εύρημα**: Υπάρχουν 2 ανεξάρτητοι μηχανισμοί:
+1. **Persona `client`** — ετικέτα, βάζεται χειροκίνητα (μπορεί να μην έχει αγοράσει)
+2. **`commercial.buyerContactId`** — σύνδεση unit → contact (πραγματική αγορά)
+
+**Enterprise Pattern** (Salesforce/SAP/Dynamics 365): Buyer = transaction-based, όχι label-based.
+
+**Απόφαση Γιώργου**: **B3 Buyers = units WHERE buyerContactId exists → resolve buyer**
+- Buyer μπορεί να είναι contact (φυσικό πρόσωπο) ή company (νομικό πρόσωπο)
+- "Ενδιαφερόμενοι χωρίς αγορά" → B1 Individuals + φίλτρο persona = client
+
+---
+
+## Q80 (2026-03-29): B7 Lawyers & Notaries — Ένα ή δύο domains;
+
+**Ερώτηση**: Ξεχωριστά domains ή ένα;
+
+**Εύρημα**: Στο persona system είναι 2 ξεχωριστές personas (`lawyer`, `notary`), αλλά στα legal contracts υπάρχει `LegalProfessionalRole`:
+- `seller_lawyer` (Δικηγόρος Πωλητή)
+- `buyer_lawyer` (Δικηγόρος Αγοραστή)
+- `notary` (Συμβολαιογράφος)
+
+**Απόφαση Γιώργου**: **Ένα domain "Νομικοί"** (Salesforce pattern) με φίλτρα:
+- Τύπος: Δικηγόρος / Συμβολαιογράφος / Όλοι
+- Ρόλος σε συμβόλαια: Δικηγόρος Αγοραστή / Δικηγόρος Πωλητή / Όλοι (cross-join με legal contracts)
+
+---
+
+## Q81 (2026-03-29): B2 Companies — 3 contact types στο ίδιο collection
+
+**Ερώτηση**: Τι τύποι υπάρχουν στο companies/contacts;
+
+**Εύρημα**: Το `contacts` collection έχει 3 types:
+- `individual` — Φυσικά πρόσωπα
+- `company` — Νομικά πρόσωπα (ΑΕ, ΕΠΕ, ΙΚΕ, ΟΕ, κ.λπ.)
+- `service` — Δημόσιες υπηρεσίες (ΔΟΥ, Δήμος, Κτηματολόγιο, κ.λπ.)
+
+**Ξεχωριστό collection `companies`**: Υπάρχει αλλά είναι **legacy**.
+
+**Απόφαση Γιώργου**: **Ένα domain "Εταιρείες & Υπηρεσίες"** (SAP Business Partner pattern)
+- `contacts WHERE type = 'company' OR type = 'service'`
+- Φίλτρο: Κατηγορία (Εταιρεία / Δημόσια Υπηρεσία / Όλα)
+- Naming "Εταιρείες & Υπηρεσίες" αντί "Οργανισμοί" (αποφυγή σύγχυσης με δημόσιο τομέα)
+
+---
+
+## Q82 (2026-03-29): B1 Individuals — Πόσα πεδία default visible;
+
+**Ερώτηση**: Contacts έχει 42+ πεδία. Πόσα default visible;
+
+**Enterprise Pattern** (Salesforce/SAP): ~15-20 core fields default, "More Fields" expandable.
+
+**Απόφαση Γιώργου**: **Salesforce/SAP pattern**
+- ~15 πεδία default visible: Όνομα, Επώνυμο, ΑΦΜ, Email (primary), Τηλέφωνο (primary), Πόλη, Status, Personas, Πληρότητα, Εργοδότης
+- Υπόλοιπα (~25) selectable στο column selector
+
+---
+
+## Q83 (2026-03-29): Detail Card — Νέο UI ή link;
+
+**Ερώτηση**: Αν ο χρήστης θέλει "καρτέλα" ενός entity, χτίζουμε νέο UI;
+
+**Enterprise Pattern** (Salesforce/SAP/Dynamics 365): Report table → click row → Detail Page (ήδη υπάρχει).
+
+**Απόφαση Γιώργου**: **Clickable link στην υπάρχουσα detail page** (entityLinkPath)
+- ΔΕΝ χτίζουμε νέο UI
+- Tier 3 Contact Card PDF (εκτυπώσιμη καρτέλα) → Phase 6
+
+---
+
+## Q84 (2026-03-29): Excel Export — Row Repetition ή και Concatenation;
+
+**Ερώτηση**: Στο Excel export, θέλουμε μόνο Row Repetition ή και τα δύο formats (Row Repetition + String Concatenation);
+
+**Έρευνα**: Οι enterprise πλατφόρμες (Salesforce, SAP Crystal, Power BI) προσφέρουν 2 επιλογές:
+- **Row Repetition**: 1 γραμμή ανά child record, parent fields επαναλαμβάνονται. Re-importable, ιδανικό για data analysis.
+- **String Concatenation**: Όλα τα children σε 1 κελί χωρισμένα με delimiter (π.χ. "email1, email2"). Compact, human-readable.
+
+**Απόφαση Γιώργου**: **Και τα δύο — toggle στο Export Dialog**
+- Default: Row Repetition (re-importable, industry standard)
+- Toggle: "Συμπτυγμένο" → String Concatenation (compact, 1 row per entity)
+- PDF: Πάντα Joined Values (Q78 — δεν αλλάζει)
+- Υλοποίηση στο Phase 4c (Tier 2 Export Engine)
+
+---
+
+## Q85 (2026-03-29): Bucket Grouping — Πόσους τύπους buckets;
+
+**Ερώτηση**: Στο Q47 αναφέραμε 3 τύπους bucket grouping. Πόσους υλοποιούμε;
+
+**Έρευνα**: Salesforce = μόνο Manual. Power BI/Tableau = Manual + Equal Width + Quantile.
+
+**Παράδειγμα**: 100 μονάδες, τιμές 30K-500K€, GroupBy Τιμή:
+- **Manual**: Ο χρήστης ορίζει breakpoints (0-50K, 50-100K, 100-200K, 200K+)
+- **Equal Width**: Αυτόματο — "4 ομάδες" → 30-148K, 148-265K, 265-383K, 383-500K
+- **Quantile**: Ίσος αριθμός εγγραφών ανά ομάδα (25 σε κάθε μία)
+
+**Απόφαση Γιώργου**: **Manual + Auto (Equal Width + Quantile)**
+- UI: Dropdown "Τύπος: Εύρη / Ισόπλατα εύρη / Ποσοτημόρια"
+- Αν Manual → εμφάνιση breakpoint editor
+- Αν Equal Width ή Quantile → input "Αρ. ομάδων" (default: 4)
+- Υλοποίηση στο Phase 4c
+
+---
+
+## Q86 (2026-03-29): Conditional Highlighting — Statistical ή Rule-based;
+
+**Ερώτηση**: Πώς χρωματίζονται τα subtotals στο grouped report;
+
+**Έρευνα**:
+- **Power BI**: Auto (color scale) + Rule-based (custom κανόνες) — πλήρες
+- **Tableau**: Μόνο auto (percentile rank) — απλό, δουλεύει
+- **Salesforce**: Κανένα conditional formatting σε subtotals
+- **SAP Crystal**: Section-level formulas — πολύπλοκο
+
+**Απόφαση Γιώργου**: **Tableau pattern — auto μόνο**
+- Toggle "Χρωματική επισήμανση" (default: off)
+- Όταν on: top 25% ομάδων = light green, bottom 25% = light red, middle = neutral
+- COUNT = 0 → gray text
+- Μηδενικό config από τον χρήστη — μόνο toggle
+- Υλοποίηση στο Phase 4c
+
+---
+
+## Q87 (2026-03-29): Domain Selector UI — Grouped Categories
+
+**Ερώτηση**: Με 14 domains μετά τη Phase 4, flat dropdown δεν χωράει. Grouped;
+
+**Έρευνα**: Salesforce χρησιμοποιεί grouped dropdown με categories στο Report Type selector.
+
+**Απόφαση Γιώργου**: **Grouped Radix SelectGroup με 3 κατηγορίες**
+
+```
+Ακίνητα:      Έργα | Κτήρια | Όροφοι | Μονάδες | Parking | Αποθήκες
+Πρόσωπα:      Φυσικά Πρόσωπα | Εταιρείες & Υπηρεσίες | Αγοραστές
+Ειδικότητες:  Μηχανικοί | Εργάτες | Νομικοί | Μεσίτες | Προμηθευτές
+```
+
+- Υλοποίηση: Radix `SelectGroup` + `SelectLabel` per category
+- Κάθε domain definition θα έχει `group` property για τη κατηγοριοποίηση
+- Υλοποίηση ξεκινά στο Phase 4a (αλλαγή DomainSelector)
+
+---
+
+## Q88 (2026-03-29): Persona Pre-filter — Firestore array-contains ή JS post-filter;
+
+**Ερώτηση**: Πώς φιλτράρουμε contacts ανά persona (engineer, supplier, κλπ) στο Firestore;
+
+**Πρόβλημα**: Το `personas` array περιέχει objects, όχι strings. Το Firestore `array-contains` δουλεύει μόνο σε primitive values.
+
+**Επιλογές**:
+- **JS post-filter**: Φέρε όλα τα contacts, φιλτράρισμα στο JS. 0 migration, αλλά αργό σε >10K records.
+- **Denormalized field**: Πεδίο `personaTypes: string[]` (π.χ. `['engineer', 'client']`). Firestore `array-contains 'engineer'` native.
+
+**Κρίσιμο context**: Η βάση δεδομένων είναι άδεια/δοκιμαστική → 0 migration script needed.
+
+**Απόφαση Γιώργου**: **Denormalized field — enterprise-level από day 1**
+- Προσθήκη `personaTypes: string[]` στο contact document
+- Auto-sync: κάθε φορά που αλλάζει persona → ενημέρωση `personaTypes`
+- Firestore `array-contains` → native, scalable, Google/Salesforce/SAP pattern
+- 0 migration needed (βάση άδεια)
+- Υλοποίηση στο Phase 4b (B4-B8 persona domains) — η sync logic προστίθεται στο contact service
+
+---
+
+## Q89 (2026-03-29): B1 Individuals — Completeness Rate πεδίο;
+
+**Ερώτηση**: Υπάρχει πεδίο `completenessRate` στο contact schema; Πώς το κάνουν οι μεγάλοι;
+
+**Έρευνα**:
+- **Salesforce**: "Data Quality" score, αποθηκεύεται στο record, auto-update στο save
+- **HubSpot**: "Contact completeness" progress bar, denormalized
+- **Dynamics 365**: "Data completeness dashboard"
+- **Zoho CRM**: "Profile completeness" percentage
+
+**Κοινό pattern**: ΟΛΟΙ αποθηκεύουν ως πεδίο (denormalized), ΟΧΙ live υπολογισμός.
+
+**Απόφαση Γιώργου**: **Ναι — Enterprise Completeness Rate (Salesforce pattern)**
+- Πεδίο `completenessRate: number` (0-100) στο contact document
+- Auto-calc κάθε φορά που αλλάζει η επαφή (save hook)
+- Υπολογισμός: πλήθος συμπληρωμένων πεδίων / σύνολο πεδίων × 100
+- Default visible στο B1 Individuals report
+- Υλοποίηση: Phase 4a (πεδίο + calc function), ενσωμάτωση στο contact save
+
+---
+
+## Q90 (2026-03-29): B4-B8 Computed Fields — Τώρα ή αργότερα;
+
+**Ερώτηση**: Τα _computed πεδία (orderCount, projectCount, workHours, contractCount, κλπ) απαιτούν cross-collection joins. Τώρα ή αργότερα;
+
+**Πεδία που αφορά**:
+- B4 Suppliers: `orderCount`, `orderTotal` (← purchase_orders)
+- B5 Engineers: `projectCount` (← projects)
+- B6 Workers: `workHours`, `overtimeHours` (← timesheets)
+- B7 Legal: `contractCount` (← legal_contracts)
+- B8 Agents: `agreementCount`, `activeAgreementCount`, `commissionTotal`
+
+**Απόφαση Γιώργου**: **Αργότερα — Phase 5+**
+- Phase 4b υλοποιεί μόνο direct Firestore fields + persona fields
+- Τα computed πεδία ΔΕΝ εμφανίζονται στο column selector (αφαιρούνται από SPEC)
+- Θα προστεθούν σε μελλοντική phase μαζί με cross-collection aggregation engine
+
+---
+
+## Q91 (2026-03-29): B7 Legal — Cross-join φίλτρο ρόλου τώρα ή αργότερα;
+
+**Ερώτηση**: Το φίλτρο "Ρόλος σε Συμβόλαια" (δικηγόρος αγοραστή/πωλητή/συμβολαιογράφος) απαιτεί cross-join με legal_contracts. Τώρα ή αργότερα;
+
+**Απόφαση Γιώργου**: **Αργότερα — Phase 5+**
+- Phase 4b: B7 Νομικοί με direct fields μόνο (Όνομα, Τύπος lawyer/notary, ΑΜ, Σύλλογος, κλπ)
+- Φίλτρο "Ρόλος σε Συμβόλαια" (cross-join) → Phase 5+ μαζί με τα computed fields
+- Φίλτρο "Τύπος: Δικηγόρος / Συμβολαιογράφος / Όλοι" ΥΠΑΡΧΕΙ (persona-based, no join)
+
+---
+
+## Q92 (2026-03-29): B2 Companies & Services — Conditional field visibility;
+
+**Ερώτηση**: Νομική Μορφή (company-only) και Τύπος Υπηρεσίας (service-only) — πώς χειρίζονται στον column selector;
+
+**Επιλογές**:
+- A) Όλα ορατά + '—' αν κενό (Salesforce Record Types pattern)
+- B) Dynamic στήλες — αν filter=company εμφάνιση Νομικής Μορφής, αν filter=service εμφάνιση Τύπου Υπηρεσίας
+
+**Απόφαση Γιώργου**: **Dynamic στήλες ανά filter**
+- Στο column selector: αν ο χρήστης φιλτράρει Κατηγορία = "Εταιρεία" → εμφάνιση Νομική Μορφή, κρύψε Τύπο Υπηρεσίας
+- Αν Κατηγορία = "Δημόσια Υπηρεσία" → εμφάνιση Τύπος Υπηρεσίας, κρύψε Νομική Μορφή
+- Αν Κατηγορία = "Όλα" → εμφάνιση και τα δύο, '—' αν κενό
+- Υλοποίηση: `conditionalOn` property στο FieldDefinition (νέο πεδίο)

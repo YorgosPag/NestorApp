@@ -31,6 +31,15 @@
 | [ACC-018](./ADR-ACC-018-invoice-pdf-generation.md) | Invoice PDF Generation (Δημιουργία PDF Τιμολογίων) | IMPLEMENTED | PDF/Export | 2026-03-17 |
 | [ACC-019](./ADR-ACC-019-invoice-email-sending.md) | Invoice Email Sending (Αποστολή Τιμολογίων μέσω Email) | IMPLEMENTED | Email/Delivery | 2026-03-17 |
 | [ACC-020](./ADR-ACC-020-withholding-tax-certificate.md) | Βεβαίωση Παρακράτησης Φόρου (Withholding Tax Certificate) | APPROVED | Tax Compliance | 2026-03-17 |
+| [ACC-021](./ADR-ACC-021-custom-categories.md) | Custom Expense/Income Categories | ACCEPTED | Categories | 2026-03-17 |
+
+---
+
+## Quality Audit Reports
+
+| Report | Date | Scope | Score |
+|--------|------|-------|-------|
+| [AUDIT-2026-03-29](./AUDIT-2026-03-29.md) | 2026-03-29 | Full audit: 142 files, 27 endpoints, 12 pages | **85/100** |
 
 ---
 
