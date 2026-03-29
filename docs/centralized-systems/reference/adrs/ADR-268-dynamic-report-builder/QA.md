@@ -246,6 +246,50 @@
 
 ---
 
+## Q13 (2026-03-29): Πλήρης χαρτογράφηση Κτιρίων — ALL fields + ALL relationships
+
+**Εντολή Γιώργου**: Πλήρης χαρτογράφηση Κτιρίων (Buildings) — ακολουθώντας τη δομή SPEC-008/009/010.
+
+**Απάντηση**: Δημιουργήθηκε SPEC-013-entity-mapping-buildings.md με:
+
+- **7 sections**, **210+ πεδία**, βάσει πραγματικού κώδικα (`Building`, `Floor`, `Property`, `ConstructionPhase`, `ConstructionTask`, `ConstructionBaseline`, `ConstructionResourceAssignment`, `BuildingMilestone`, `BOQItem`)
+- **40 direct fields** (core, dates, financial, classification, addresses, amenities, features, audit)
+- **36 BuildingFeatureKey values** (11 κατηγορίες — θέρμανση, ασφάλεια, βιομηχανικά, κλπ)
+- **6 boolean amenity flags** (parking, elevator, garden, pool, accessibility, furnished)
+- **7 nested/related entities** πλήρως χαρτογραφημένα:
+  - Floor (7 πεδία) + Property (13 πεδία, nested in Floor)
+  - ConstructionPhase (20 πεδία) + ConstructionTask (22 πεδία)
+  - ConstructionBaseline (10 πεδία) + ResourceAssignment (15 πεδία)
+  - BuildingMilestone (16 πεδία) + BOQItem (31 πεδία)
+- **23 cross-entity references** (units, floors, parking, storage, phases, tasks, baselines, resources, milestones, BOQ, contact_links, ownership_tables, POs, legal_contracts, payment_plans, obligations, opportunities, layers, κλπ)
+- **4 entity association roles** (supervisor, contractor, manager, engineer via contact_links)
+- **Report Builder impact**: Tier 1 columns (27 flat + 18 computed), Tier 2 arrays (9), Tier 3 card layout (12 sections)
+- **Deletion strategy**: BLOCK (δεν διαγράφεται αν έχει units/phases)
+
+---
+
+## Q15 (2026-03-29): Πλήρης χαρτογράφηση Αποθηκών — ALL fields + ALL relationships
+
+**Εντολή Γιώργου**: Πλήρης χαρτογράφηση Αποθηκών (Storage Rooms) — ακολουθώντας τη δομή SPEC-008/009/010.
+
+**Απάντηση**: Δημιουργήθηκε SPEC-015-entity-mapping-storage.md με:
+
+- **9 sections**, **~60 πεδία**, βάσει πραγματικού κώδικα (`Storage`, `StorageUnit`, `SpaceCommercialData`)
+- **21 primary fields** (Storage interface) + **20 legacy fields** (StorageUnit)
+- **6 SpaceCommercialData nested fields** (askingPrice, finalPrice, buyerContactId, κλπ)
+- **9 features** (i18n keys: electricity, light, security, κλπ)
+- **9 StorageType values** + **6 StorageStatus values** + **4 SpaceCommercialStatus values**
+- **10 direct cross-entity references** (projects, buildings, floors, units, contacts, companies, ownership_tables, contact_links, search_documents)
+- **3 indirect references** via unit.linkedSpaces[] (payment_plans, legal_contracts, cheques)
+- **0 subcollections** (σε αντίθεση με units)
+- **Report Builder impact**: Tier 1 columns (23 flat + 9 computed), Tier 2 arrays (4), Tier 3 card layout
+- **Cascade propagation**: code change → unit.linkedSpaces[].allocationCode
+- **Deletion strategy**: BLOCK conditional (sold = cannot delete)
+- **Σύγκριση Storage vs Parking** (shared SpaceCommercialData, LinkedSpace pattern)
+- **Migration 006**: Normalized building references (name → buildingId FK)
+
+---
+
 ## Q16 (2026-03-29): Πλήρης χαρτογράφηση Θέσεων Στάθμευσης — ALL fields + ALL relationships
 
 **Εντολή Γιώργου**: Πλήρης χαρτογράφηση Θέσεων Στάθμευσης (ParkingSpot) — ακολουθώντας τη δομή SPEC-008/009/010.
