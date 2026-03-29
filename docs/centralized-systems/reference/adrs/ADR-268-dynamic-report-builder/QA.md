@@ -266,6 +266,25 @@
 
 ---
 
+## Q14 (2026-03-29): Πλήρης χαρτογράφηση Μονάδων (Units) — ALL fields + ALL relationships
+
+**Εντολή Γιώργου**: Πλήρης χαρτογράφηση Μονάδων (Units) — ακολουθώντας τη δομή SPEC-008 template.
+
+**Απάντηση**: Δημιουργήθηκε SPEC-014-entity-mapping-units.md με:
+
+- **7 sections**, **130+ πεδία**, βάσει πραγματικού κώδικα (`Unit`, `UnitDoc`, `UnitModel`, `UnitCommercialData`)
+- **56 direct fields** (identity, hierarchy, triple status architecture, areas, layout, orientation, views, energy, systems, finishes, features, coverage)
+- **12 commercial nested fields** + `PaymentSummary` (16 fields) + `owners[]` (5 per entry)
+- **9 linkedSpaces fields** per entry (parking/storage allocation, ADR-199 sale appurtenances)
+- **Multi-level support** (ADR-236): `levels[]` (4 per level) + `levelData` (12 per level)
+- **6 subcollections**: payment_plans (25+ fields), payments (14 fields), photos, documents, history, grants
+- **20 cross-entity references** (projects, buildings, floors, contacts, parking, storage, legal_contracts, cheques, brokerage, ownership_tables, opportunities, communications, conversations, contact_links, file_links, companies, commission_records)
+- **Report Builder impact**: Tier 1 columns (28 flat + 15 computed = 43), Tier 2 arrays (10), Tier 3 unit card layout
+- **Τριπλή κατάσταση**: operationalStatus (physical) + commercialStatus (market, ADR-197) + legacy status (deprecated)
+- **Denormalized data**: paymentSummary (ADR-234) + legalPhase (ADR-230) στο `commercial` object
+
+---
+
 ### ΣΥΝΟΨΗ ΕΥΡΗΜΑΤΩΝ
 
 #### ✅ ΔΕΝ χρειάζεται duplicate (ήδη καλύπτεται):
