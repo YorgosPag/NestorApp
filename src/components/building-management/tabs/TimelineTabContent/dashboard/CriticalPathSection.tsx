@@ -47,7 +47,7 @@ function CPMRow({ task, t }: CPMRowProps) {
       isCritical && 'bg-orange-50/50 dark:bg-orange-950/20',
       task.hasCyclicDependency && 'bg-amber-50/50 dark:bg-amber-950/20',
     )}>
-      <td className="py-2 px-2 font-medium">
+      <th scope="row" className="py-2 px-2 font-medium">
         <div className="flex items-center gap-1.5">
           {isCritical && (
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-orange-500 flex-shrink-0" />
@@ -57,7 +57,7 @@ function CPMRow({ task, t }: CPMRowProps) {
           )}
           <span className="truncate">{task.taskCode}</span>
         </div>
-      </td>
+      </th>
       <td className="py-2 px-2 hidden lg:table-cell truncate max-w-[150px]">
         {task.taskName}
       </td>

@@ -112,6 +112,10 @@ export function ResourceHistogramChart({
 
   return (
     <ReportSection title={t(`${tBase}.title`)} id="resource-histogram">
+      <figure
+        role="img"
+        aria-label={t(`${tBase}.ariaLabel`)}
+      >
       <ResponsiveContainer width="100%" height={320}>
         <BarChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
           <XAxis
@@ -158,6 +162,37 @@ export function ResourceHistogramChart({
           ))}
         </BarChart>
       </ResponsiveContainer>
+
+      {/* Screen-reader data table */}
+      <table className="sr-only">
+        <caption>{t(`${tBase}.title`)}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{t(`${tBase}.colWeek`)}</th>
+            {resourceNames.map(name => (
+              <th key={name} scope="col">{chartConfig[name]?.label ?? name}</th>
+            ))}
+            <th scope="col">{t(`${tBase}.total`)}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map(bar => {
+            const total = resourceNames.reduce(
+              (sum, name) => sum + (Number(bar[name]) || 0), 0,
+            );
+            return (
+              <tr key={bar.weekLabel}>
+                <th scope="row">{bar.weekLabel}</th>
+                {resourceNames.map(name => (
+                  <td key={name}>{bar[name] ?? 0}h</td>
+                ))}
+                <td>{Math.round(total * 10) / 10}h</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      </figure>
     </ReportSection>
   );
 }

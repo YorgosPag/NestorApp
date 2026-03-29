@@ -110,6 +110,10 @@ export function SCurveChart({ data, loading, enableBrush }: SCurveChartProps) {
       title={t('tabs.timeline.dashboard.sCurve.title')}
       id="schedule-scurve"
     >
+      <figure
+        role="img"
+        aria-label={t('tabs.timeline.dashboard.sCurve.ariaLabel')}
+      >
       <div className="h-[350px] w-full sm:h-[400px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
@@ -180,6 +184,30 @@ export function SCurveChart({ data, loading, enableBrush }: SCurveChartProps) {
           </LineChart>
         </ResponsiveContainer>
       </div>
+
+      {/* Screen-reader data table */}
+      <table className="sr-only">
+        <caption>{t('tabs.timeline.dashboard.sCurve.title')}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{t('tabs.timeline.dashboard.sCurve.colDate')}</th>
+            <th scope="col">{t('tabs.timeline.dashboard.sCurve.pv')}</th>
+            <th scope="col">{t('tabs.timeline.dashboard.sCurve.ev')}</th>
+            <th scope="col">{t('tabs.timeline.dashboard.sCurve.ac')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map(point => (
+            <tr key={point.date}>
+              <td>{formatDateShort(point.date)}</td>
+              <td>{formatCurrency(point.plannedValue)}</td>
+              <td>{formatCurrency(point.earnedValue)}</td>
+              <td>{formatCurrency(point.actualCost)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      </figure>
     </ReportSection>
   );
 }

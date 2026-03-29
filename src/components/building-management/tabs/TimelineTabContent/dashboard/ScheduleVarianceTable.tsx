@@ -195,16 +195,20 @@ export function ScheduleVarianceTable({ rows, loading, baselineData, onClearBase
                     'border-b transition-colors hover:bg-muted/50',
                     isPhase && 'font-medium',
                   )}
+                  aria-expanded={isPhase ? isExpanded : undefined}
                 >
                   {/* Name with expand/indent */}
-                  <td className={cn('py-2 px-2', !isPhase && 'pl-8')}>
+                  <th scope="row" className={cn('py-2 px-2 font-normal', isPhase && 'font-medium', !isPhase && 'pl-8')}>
                     <span className="flex items-center gap-1.5">
                       {isPhase ? (
                         <button
                           type="button"
                           onClick={() => togglePhase(row.id)}
                           className="shrink-0"
-                          aria-label={isExpanded ? 'Collapse' : 'Expand'}
+                          aria-label={isExpanded
+                            ? t('tabs.timeline.dashboard.variance.collapsePhase', { name: row.name })
+                            : t('tabs.timeline.dashboard.variance.expandPhase', { name: row.name })
+                          }
                         >
                           {isExpanded
                             ? <ChevronDown className="h-4 w-4" />
@@ -216,7 +220,7 @@ export function ScheduleVarianceTable({ rows, loading, baselineData, onClearBase
                       )}
                       <span className="truncate">{row.code} {row.name}</span>
                     </span>
-                  </td>
+                  </th>
 
                   {/* Planned Start */}
                   <td className="py-2 px-2 hidden md:table-cell">

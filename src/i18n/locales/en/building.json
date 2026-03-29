@@ -1250,7 +1250,9 @@
           "pv": "Planned Value",
           "ev": "Earned Value",
           "ac": "Actual Cost",
-          "today": "Today"
+          "today": "Today",
+          "ariaLabel": "S-Curve chart showing Planned Value, Earned Value, and Actual Cost over time",
+          "colDate": "Date"
         },
         "variance": {
           "title": "Schedule Variance",
@@ -1263,7 +1265,9 @@
           "colActualEnd": "Actual End",
           "colVariance": "Variance",
           "colStatus": "Status",
-          "colProgress": "Progress"
+          "colProgress": "Progress",
+          "expandPhase": "Expand {{name}}",
+          "collapsePhase": "Collapse {{name}}"
         },
         "lookahead": {
           "title": "Lookahead",
@@ -1314,7 +1318,8 @@
           "permits": "Permits",
           "subcontractor": "Subcontractor",
           "other": "Other",
-          "unspecified": "Unspecified"
+          "unspecified": "Unspecified",
+          "ariaLabel": "Stacked bar chart showing delay reasons by construction phase"
         },
         "baseline": {
           "title": "Baseline Snapshots",
@@ -1357,7 +1362,9 @@
           "emptyDesc": "Assign workers or equipment to tasks to see resource loading.",
           "hoursPerWeek": "Hours / Week",
           "capacity": "40h Capacity",
-          "total": "Total"
+          "total": "Total",
+          "ariaLabel": "Stacked bar chart showing resource hours per week",
+          "colWeek": "Week"
         },
         "resourceUtilization": {
           "title": "Resource Utilization",

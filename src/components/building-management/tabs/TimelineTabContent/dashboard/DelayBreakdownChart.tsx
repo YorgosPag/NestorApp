@@ -122,6 +122,10 @@ export function DelayBreakdownChart({ data, loading }: DelayBreakdownChartProps)
       title={t('tabs.timeline.dashboard.delayBreakdown.title')}
       id="schedule-delay-breakdown"
     >
+      <figure
+        role="img"
+        aria-label={t('tabs.timeline.dashboard.delayBreakdown.ariaLabel')}
+      >
       <div className="h-[300px] w-full sm:h-[350px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
@@ -165,6 +169,32 @@ export function DelayBreakdownChart({ data, loading }: DelayBreakdownChartProps)
           </BarChart>
         </ResponsiveContainer>
       </div>
+
+      {/* Screen-reader data table */}
+      <table className="sr-only">
+        <caption>{t('tabs.timeline.dashboard.delayBreakdown.title')}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{t('tabs.timeline.dashboard.variance.colName')}</th>
+            {REASON_KEYS.map(reason => (
+              <th key={reason} scope="col">
+                {t(`tabs.timeline.dashboard.delayBreakdown.${reason}`)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.map(d => (
+            <tr key={d.phaseCode}>
+              <th scope="row">{d.phaseName}</th>
+              {REASON_KEYS.map(reason => (
+                <td key={reason}>{d.byReason[reason] ?? 0}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      </figure>
     </ReportSection>
   );
 }

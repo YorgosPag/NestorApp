@@ -1,7 +1,7 @@
 # ADR-266: Gantt & Construction Schedule Reports
 
-**Status**: PHASE C IN PROGRESS (Sub-phases 1+2+3+4 complete)
-**Date**: 2026-03-28
+**Status**: PHASE C COMPLETE (Sub-phases 1+2+3+4+5 complete)
+**Date**: 2026-03-29
 **Author**: Claude (Research Agents × 4)
 **Related ADRs**: ADR-034 (Gantt Chart), ADR-265 (Enterprise Reports System), ADR-175 (BOQ/Quantity Surveying)
 
@@ -15,6 +15,7 @@
 | 2026-03-28 | **Phase C Sub-phase 2 IMPLEMENTED**: Critical Path Method — CPM algorithm (forward/backward pass, Kahn's cycle detection), CriticalPathCard rewrite with real data, CriticalPathSection dashboard table, 7th KPI card, useCriticalPath hook, i18n (en+el) |
 | 2026-03-28 | **Phase C Sub-phase 3 IMPLEMENTED**: Baseline Snapshots — Firestore `construction_baselines` collection, `cbase_` enterprise IDs, API routes (GET list/detail, POST create, DELETE), client services, `useBaselineComparison` hook, `BaselineSection` UI (save dialog, list, compare toggle, delete), Variance Table baseline columns (start/end/vs baseline), i18n (en+el) |
 | 2026-03-29 | **Phase C Sub-phase 4 IMPLEMENTED**: Resource Allocation — Firestore `construction_resource_assignments`, `crasn_` enterprise IDs, API route (GET/POST/PATCH/DELETE), cascade delete on task/phase deletion, client service + `useResourceAssignments` hook, `ResourceAssignmentSection` in task edit dialog (workers + equipment), `ResourceHistogramChart` (stacked bar/week, 40h capacity line), `ResourceUtilizationKPIs` (3 cards), `DelayFieldsSection` extracted, i18n (en+el) |
+| 2026-03-29 | **Phase C Sub-phase 5 IMPLEMENTED**: Accessibility (WCAG AA) — Charts: `<figure role="img">` wrappers + sr-only data tables (SCurveChart, DelayBreakdownChart, ResourceHistogramChart). Tables: `<th scope="row">` on first column + `aria-expanded` on expandable phase rows (ScheduleVarianceTable, LookaheadTable, CriticalPathSection). KPI Cards: keyboard support (`role="button"`, `tabIndex`, `onKeyDown` Enter/Space, `aria-label`, focus-visible ring) in ReportKPIGrid. i18n (en+el) |
 
 ---
 
@@ -603,8 +604,22 @@ Dashboard → [Export ▼]
 - `src/components/.../dashboard/ResourceHistogramChart.tsx` (165 LOC)
 - `src/components/.../dashboard/ResourceUtilizationKPIs.tsx` (80 LOC)
 
-#### Sub-phase 5: Accessibility (Pending)
-4. Chart accessibility layer for screen readers
+#### Sub-phase 5: Accessibility (WCAG AA) ✅ IMPLEMENTED
+- Charts: `<figure role="img" aria-label>` wrapper + sr-only `<table>` with raw data for screen readers
+- Tables: `<th scope="row">` on first column (ScheduleVarianceTable, LookaheadTable, CriticalPathSection)
+- ScheduleVarianceTable: `aria-expanded` on phase rows, i18n expand/collapse labels with phase name
+- KPI Cards (ReportKPIGrid): `role="button"` + `tabIndex={0}` + `onKeyDown` (Enter/Space) + `aria-label` + focus-visible ring when clickable
+- i18n: en + el keys for aria-labels + expand/collapse
+
+**Modified files:**
+- `SCurveChart.tsx` (+figure wrap, +sr-only table)
+- `DelayBreakdownChart.tsx` (+figure wrap, +sr-only table)
+- `ResourceHistogramChart.tsx` (+figure wrap, +sr-only table)
+- `ScheduleVarianceTable.tsx` (+aria-expanded, +th scope="row", +i18n labels)
+- `LookaheadTable.tsx` (+th scope="row")
+- `CriticalPathSection.tsx` (+th scope="row")
+- `ReportKPIGrid.tsx` (+keyboard support, +aria-label, +focus-visible)
+- `en/el building.json` (+a11y i18n keys)
 
 ---
 

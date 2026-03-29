@@ -119,6 +119,15 @@ function KPICard({
   const color = kpi.color ?? 'blue';
   const Icon = kpi.icon;
 
+  const handleKeyDown = onClick
+    ? (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick(kpi, index);
+        }
+      }
+    : undefined;
+
   if (kpi.loading) {
     return (
       <Card>
@@ -151,8 +160,17 @@ function KPICard({
 
   return (
     <Card
-      className={cn(onClick && 'cursor-pointer transition-shadow hover:shadow-md')}
+      className={cn(
+        onClick && 'cursor-pointer transition-shadow hover:shadow-md',
+        onClick && 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+      )}
       onClick={() => onClick?.(kpi, index)}
+      {...(onClick && {
+        role: 'button' as const,
+        tabIndex: 0,
+        onKeyDown: handleKeyDown,
+        'aria-label': `${kpi.title}: ${kpi.value}${kpi.description ? `. ${kpi.description}` : ''}`,
+      })}
     >
       <CardContent className="p-4">
         <article className="flex flex-col gap-2">

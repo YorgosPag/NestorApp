@@ -112,9 +112,9 @@ export function LookaheadTable({
             <tbody>
               {rows.map(row => (
                 <tr key={row.id} className="border-b transition-colors hover:bg-muted/50">
-                  <td className="py-2 px-2 font-medium truncate max-w-[200px]">
+                  <th scope="row" className="py-2 px-2 font-medium truncate max-w-[200px]">
                     {row.taskName}
-                  </td>
+                  </th>
                   <td className="py-2 px-2 hidden sm:table-cell text-muted-foreground">
                     {row.phaseCode}
                   </td>
