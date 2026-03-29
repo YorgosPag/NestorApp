@@ -246,6 +246,26 @@
 
 ---
 
+## Q16 (2026-03-29): Πλήρης χαρτογράφηση Θέσεων Στάθμευσης — ALL fields + ALL relationships
+
+**Εντολή Γιώργου**: Πλήρης χαρτογράφηση Θέσεων Στάθμευσης (ParkingSpot) — ακολουθώντας τη δομή SPEC-008/009/010.
+
+**Απάντηση**: Δημιουργήθηκε SPEC-016-entity-mapping-parking.md με:
+
+- **9 sections**, **~34 πεδία**, βάσει πραγματικού κώδικα (`ParkingSpot`, `SpaceCommercialData`, `mapParkingDoc()`)
+- **22 direct fields** (number, code, type, status, locationZone, area, price, millesimalShares, κλπ)
+- **6 nested fields** (commercial overlay: askingPrice, finalPrice, buyerContactId, buyerName, listedDate, reservationDeposit)
+- **4 enums** (ParkingSpotType, ParkingSpotStatus, ParkingLocationZone, SpaceCommercialStatus) — 19 τιμές σύνολο
+- **0 subcollections**
+- **11 cross-entity references** (projects, buildings, floors, contacts, companies, units, ownership_tables, contact_links, search_documents, entity_links)
+- **Report Builder impact**: Tier 1 columns (17 flat + 8 computed), Tier 2 sources (3 cross-entity), Tier 3 card layout
+- **ADR-199 Sales Appurtenance**: millesimalShares → αυτοτελής vs παρακολούθημα
+- **ADR-233 Entity Code**: PK (underground) vs PY (υπαίθριο)
+- **ADR-232 Business Link**: linkedCompanyId (cascade από project)
+- **Ownership Table**: πάντα `participatesInCalculation=false`, `hasOwnShares=false`
+
+---
+
 ### ΣΥΝΟΨΗ ΕΥΡΗΜΑΤΩΝ
 
 #### ✅ ΔΕΝ χρειάζεται duplicate (ήδη καλύπτεται):
