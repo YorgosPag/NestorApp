@@ -19,8 +19,16 @@ import type { PipelineContext, PipelineStateValue } from '@/types/ai-pipeline';
 import { PipelineState } from '@/types/ai-pipeline';
 import type { PipelineAuditService } from './audit-service';
 import type { PipelineExecutionResult } from './pipeline-types';
-import { executeAgenticLoop } from './agentic-loop';
-import type { ChatMessage } from './agentic-loop';
+// ===== TOGGLE: Vercel AI SDK vs Legacy Agentic Loop =========================
+// Για να γυρίσεις στο ΠΑΛΙΟ σύστημα (rollback):
+//   1. Uncomment τις 2 γραμμές LEGACY παρακάτω
+//   2. Comment/delete τις 2 γραμμές ACTIVE
+// LEGACY: import { executeAgenticLoop } from './agentic-loop';
+// LEGACY: import type { ChatMessage } from './agentic-loop';
+// ACTIVE (Vercel AI SDK — 2026-03-29):
+import { executeAgenticLoop } from './vercel-ai-engine';
+import type { ChatMessage } from './vercel-ai-engine';
+// ===== END TOGGLE ============================================================
 import { getChatHistoryService } from './chat-history-service';
 import { AGENTIC_TOOL_DEFINITIONS } from './tools/agentic-tool-definitions';
 import type { AgenticContext } from './tools/agentic-tool-executor';

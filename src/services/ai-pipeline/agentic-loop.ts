@@ -1,6 +1,23 @@
 /**
+ * =============================================================================
+ * ⚠️ LEGACY — DISABLED (replaced by vercel-ai-engine.ts)
+ * =============================================================================
+ *
  * AGENTIC LOOP — Multi-step AI reasoning with iterative tool calling.
  * AI calls tools until it produces a final text answer.
+ *
+ * Αυτό το αρχείο ΑΠΕΝΕΡΓΟΠΟΙΗΘΗΚΕ στις 2026-03-29 στο πλαίσιο μετάβασης
+ * σε Vercel AI SDK. Ο κώδικας παραμένει για rollback purposes.
+ *
+ * Για να ΕΠΑΝΑΦΕΡΕΙΣ αυτό το αρχείο:
+ *   1. Στο agentic-path-executor.ts, αλλαγή import:
+ *      import { executeAgenticLoop } from './agentic-loop';
+ *      import type { ChatMessage } from './agentic-loop';
+ *   2. Comment/delete τα αντίστοιχα imports από './vercel-ai-engine'
+ *
+ * @see ./vercel-ai-engine.ts (ACTIVE — Vercel AI SDK replacement)
+ * @see ./vercel-ai-tool-adapter.ts (ACTIVE — tool adapter with guardrails)
+ *
  * @module services/ai-pipeline/agentic-loop
  * @see ADR-171 (Autonomous AI Agent)
  */

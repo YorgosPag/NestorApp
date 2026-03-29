@@ -18,7 +18,10 @@ import '../tools/__tests__/setup';
 
 // ── Mock agentic-specific dependencies ──
 
-import type { ChatMessage } from '../agentic-loop';
+// ===== TOGGLE: Mock matches active engine import in agentic-path-executor.ts =====
+// LEGACY: import type { ChatMessage } from '../agentic-loop';
+// ACTIVE (Vercel AI SDK — 2026-03-29):
+import type { ChatMessage } from '../vercel-ai-engine';
 
 const mockGetRecentHistory = jest.fn<Promise<ChatMessage[]>, []>(async () => []);
 const mockAddMessage = jest.fn<Promise<void>, [string, ChatMessage]>(async () => {});
@@ -30,7 +33,9 @@ jest.mock('../chat-history-service', () => ({
   })),
 }));
 
-jest.mock('../agentic-loop', () => ({
+// LEGACY: jest.mock('../agentic-loop', () => ({ executeAgenticLoop: jest.fn() }));
+// ACTIVE (Vercel AI SDK — 2026-03-29):
+jest.mock('../vercel-ai-engine', () => ({
   executeAgenticLoop: jest.fn(),
 }));
 
@@ -70,7 +75,8 @@ jest.mock('@/config/ai-analysis-config', () => ({
 // ── Import after mocks ──
 import { executeAgenticPath, buildChannelSenderId } from '../agentic-path-executor';
 import type { AgenticPathDeps } from '../agentic-path-executor';
-import { executeAgenticLoop } from '../agentic-loop';
+// LEGACY: import { executeAgenticLoop } from '../agentic-loop';
+import { executeAgenticLoop } from '../vercel-ai-engine';
 import { checkDailyCap, recordUsage } from '../ai-usage.service';
 import { sendPostReplyActions } from '../post-reply-actions';
 import { PipelineState } from '@/types/ai-pipeline';

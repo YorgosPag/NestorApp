@@ -1,6 +1,16 @@
 /**
+ * =============================================================================
+ * ⚠️ LEGACY — DISABLED (replaced by @ai-sdk/openai in vercel-ai-engine.ts)
+ * =============================================================================
+ *
  * OpenAI Chat Completions client for the agentic loop.
  * Extracted for Google file size standard (≤400 lines per general file).
+ *
+ * Αυτό το αρχείο ΑΠΕΝΕΡΓΟΠΟΙΗΘΗΚΕ στις 2026-03-29 στο πλαίσιο μετάβασης
+ * σε Vercel AI SDK. Ο κώδικας παραμένει για rollback purposes.
+ *
+ * @see ./vercel-ai-engine.ts (ACTIVE — uses @ai-sdk/openai provider)
+ *
  * @module services/ai-pipeline/agentic-openai-client
  * @see ADR-171 (Autonomous AI Agent)
  */

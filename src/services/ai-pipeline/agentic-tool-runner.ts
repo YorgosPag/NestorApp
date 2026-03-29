@@ -1,6 +1,18 @@
 /**
+ * =============================================================================
+ * ⚠️ LEGACY — DISABLED (replaced by vercel-ai-tool-adapter.ts)
+ * =============================================================================
+ *
  * AGENTIC TOOL RUNNER — Execute tool calls with anti-hallucination guardrails.
  * Extracted from agentic-loop.ts for Single Responsibility (Google SRP).
+ *
+ * Αυτό το αρχείο ΑΠΕΝΕΡΓΟΠΟΙΗΘΗΚΕ στις 2026-03-29 στο πλαίσιο μετάβασης
+ * σε Vercel AI SDK. Τα guardrails μεταφέρθηκαν στο vercel-ai-tool-adapter.ts.
+ * Ο κώδικας παραμένει για rollback purposes.
+ *
+ * @see ./vercel-ai-tool-adapter.ts (ACTIVE — tool adapter with guardrails)
+ * @see ./vercel-ai-engine.ts (ACTIVE — Vercel AI SDK engine)
+ *
  * @module services/ai-pipeline/agentic-tool-runner
  * @see ADR-171 (Autonomous AI Agent), ADR-263 (Anti-hallucination guardrails)
  */

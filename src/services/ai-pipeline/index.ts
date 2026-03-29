@@ -68,9 +68,11 @@ export type { MessengerFeedParams, MessengerFeedResult } from './channel-adapter
 export { InstagramChannelAdapter } from './channel-adapters/instagram-channel-adapter';
 export type { InstagramFeedParams, InstagramFeedResult } from './channel-adapters/instagram-channel-adapter';
 
-// ADR-171: Agentic Loop
-export { executeAgenticLoop } from './agentic-loop';
-export type { AgenticResult, ChatMessage, AgenticLoopConfig, OpenAIUsage } from './agentic-loop';
+// ADR-171: Agentic Loop — Vercel AI SDK (2026-03-29)
+// LEGACY: export { executeAgenticLoop } from './agentic-loop';
+// LEGACY: export type { AgenticResult, ChatMessage, AgenticLoopConfig, OpenAIUsage } from './agentic-loop';
+export { executeAgenticLoop } from './vercel-ai-engine';
+export type { AgenticResult, ChatMessage, AgenticLoopConfig, OpenAIUsage } from './vercel-ai-engine';
 
 // ADR-259A: AI Usage Tracking + Cost Protection
 export { recordUsage, checkDailyCap, getMonthlyUsage, calculateCost } from './ai-usage.service';
