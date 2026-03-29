@@ -454,6 +454,26 @@
 
 ---
 
+## Q22 (2026-03-29): Πλήρης χαρτογράφηση Λογιστικής — 6 οντότητες
+
+**Εντολή Γιώργου**: Πλήρης χαρτογράφηση GROUP F (Λογιστική): Invoices, Journal Entries, VAT Summaries, Bank Transactions, Expense Documents, EFKA — ακολουθώντας τη δομή SPEC-008.
+
+**Απάντηση**: Δημιουργήθηκε SPEC-022-entity-mapping-accounting.md με:
+
+- **6 οντότητες** σε 1 αρχείο, **~206 πεδία**, βάσει πραγματικού κώδικα (`Invoice`, `JournalEntry`, `VATQuarterSummary`, `VATAnnualSummary`, `BankTransaction`, `ReceivedExpenseDocument`, `EFKAAnnualSummary`, `EFKAPayment`)
+- **Invoices**: 74 πεδία (24 κύρια + 50 nested), 6 enums, 4 nested arrays (lineItems, vatBreakdown, payments, emailHistory), myDATA integration, withholding tax (ADR-ACC-020)
+- **Journal Entries**: 21 πεδία, 8 enums (25 account categories + custom), myDATA + E3 codes
+- **VAT Summaries**: 29 πεδία, computed/aggregate (ΟΧΙ persisted collection), τριμηνιαία Φ2 + ετήσια εκκαθάριση
+- **Bank Transactions**: 19 πεδία, 3 enums, matching engine (4 entity types: invoice/journal/efka/tax)
+- **Expense Documents**: 33 πεδία, 3 enums, AI extraction (OpenAI gpt-4o-mini vision), dual data layer (AI vs confirmed)
+- **EFKA**: 30+ πεδία, 3 enums, 3 εταιρικά variants (ΟΕ Partnership, ΕΠΕ, ΑΕ dual-mode employee/self-employed)
+- **19 σχέσεις** σύνολο (13 εσωτερικές accounting↔accounting + 6 εξωτερικές → contacts, projects, units, purchase_orders)
+- **8 Firestore collections** (accounting_invoices, journal_entries, bank_transactions, bank_accounts, import_batches, expense_documents, efka_payments, efka_config)
+- **1 computed entity** (VAT Summaries)
+- **Regulatory compliance**: ΦΠΑ Ν.2859/2000, ΕΦΚΑ Ν.4387/2016, myDATA ΑΑΔΕ, Παρακράτηση ADR-ACC-020
+
+---
+
 ### ΣΥΝΟΨΗ ΕΥΡΗΜΑΤΩΝ
 
 #### ✅ ΔΕΝ χρειάζεται duplicate (ήδη καλύπτεται):
