@@ -194,6 +194,29 @@
 
 ---
 
+## Q11 (2026-03-29): Πλήρης χαρτογράφηση Δημοσίων Υπηρεσιών — ALL fields + ALL relationships
+
+**Εντολή Γιώργου**: Πλήρης χαρτογράφηση Δημοσίων Υπηρεσιών (ServiceContact) — ακολουθώντας τη δομή SPEC-008/009.
+
+**Απάντηση**: Δημιουργήθηκε SPEC-010-entity-mapping-services.md με:
+
+- **9 sections**, **130+ πεδία**, βάσει πραγματικού κώδικα (`ServiceContact`, `service-config.ts`, `service.ts` mapper)
+- **22 direct fields** (type definition) + **13 extended fields** (mapper: shortName, category, legalStatus, headTitle, κλπ)
+- **~37 ωράριο fields** (operatingHours: 7 ημέρες × 5 πεδία + exceptions)
+- **~40 nested array fields** (emails, phones, addresses, websites, social media)
+- **8 responsiblePerson fields** (extends ContactPerson + responsibilities + availableHours)
+- **5 serviceType values** (ministry, tax_office, municipality, public_organization, other)
+- **0 persona types** (τύπος ορίζεται via serviceType enum)
+- **12 banking fields** (subcollection)
+- **9 cross-entity references** (contact_relationships, contact_links, communications, tasks, κλπ)
+- **Report Builder impact**: Tier 1 columns (25 flat + 6 computed), Tier 2 arrays (8), Tier 3 card layout
+- **Πίνακας σύγκρισης** 3 οντοτήτων (Individual vs Company vs Service) — 16 χαρακτηριστικά
+- **ΥΠΕΣ Registry integration**: PublicServicePicker + MinistryPicker (21 υπουργεία)
+
+**Ολοκληρώθηκε η χαρτογράφηση και των 3 οντοτήτων**: SPEC-008 (Φυσικά Πρόσωπα), SPEC-009 (Νομικά Πρόσωπα), SPEC-010 (Δημόσιες Υπηρεσίες).
+
+---
+
 ### ΣΥΝΟΨΗ ΕΥΡΗΜΑΤΩΝ
 
 #### ✅ ΔΕΝ χρειάζεται duplicate (ήδη καλύπτεται):
