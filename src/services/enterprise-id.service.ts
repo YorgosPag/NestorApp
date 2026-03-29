@@ -129,6 +129,8 @@ export const ENTERPRISE_ID_PREFIXES = {
   EXPENSE_DOC: 'exdoc',
   APY_CERTIFICATE: 'apy',
   CUSTOM_CATEGORY: 'custcat',
+  CUSTOMER_BALANCE: 'cbal',
+  FISCAL_PERIOD: 'fp',
 
   // ==========================================================================
   // FILE & MEDIA OPERATIONS
@@ -853,6 +855,22 @@ export class EnterpriseIdService {
   }
 
   /**
+   * 💰 Generate Customer Balance ID (Phase 1b)
+   * Format: cbal_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateCustomerBalanceId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.CUSTOMER_BALANCE).id;
+  }
+
+  /**
+   * 📅 Generate Fiscal Period ID (Phase 1b)
+   * Format: fp_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateFiscalPeriodId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.FISCAL_PERIOD).id;
+  }
+
+  /**
    * 🏭 Generate Fixed Asset ID
    * Format: fxa_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
    */
@@ -1498,6 +1516,8 @@ export const generateImportBatchId = () => enterpriseIdService.generateImportBat
 export const generateExpenseDocId = () => enterpriseIdService.generateExpenseDocId();
 export const generateApyCertificateId = () => enterpriseIdService.generateApyCertificateId();
 export const generateCustomCategoryId = () => enterpriseIdService.generateCustomCategoryId();
+export const generateCustomerBalanceId = () => enterpriseIdService.generateCustomerBalanceId();
+export const generateFiscalPeriodId = () => enterpriseIdService.generateFiscalPeriodId();
 
 // =============================================================================
 // AI PIPELINE & AUDIT

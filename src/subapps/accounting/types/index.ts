@@ -202,6 +202,24 @@ export type {
 } from './custom-category';
 export { isCustomCategoryCode } from './custom-category';
 
+// ── Customer Balance Types (Phase 1b — Q1-Q4) ──────────────────────────────
+export type {
+  AgingBuckets,
+  CreditHoldRule,
+  RiskClass,
+  CustomerBalance,
+  CreditCheckResult,
+} from './customer-balance';
+
+// ── Fiscal Period Types (Phase 1b — Q5-Q8) ──────────────────────────────────
+export type {
+  FiscalPeriodStatus,
+  FiscalPeriod,
+  YearEndChecklistStep,
+  YearEndChecklist,
+  PostingValidationResult,
+} from './fiscal-period';
+
 // ── Abstraction Interfaces (ADR-ACC-010) ────────────────────────────────────
 export type {
   IAccountingRepository,

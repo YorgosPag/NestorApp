@@ -38,6 +38,27 @@ export {
   createCreditNoteForInvoice,
 } from './reversal-service';
 
+// ── Balance Service (standalone functions — no TDZ risk) ─────────────────
+export {
+  calculateAgingBuckets,
+  recalculateCustomerBalance,
+  updateCustomerBalance,
+  reconcileAllBalances,
+  checkCreditLimit,
+} from './balance-service';
+
+// ── Fiscal Period Service (standalone functions — no TDZ risk) ───────────
+export {
+  createFiscalYear,
+  getPeriodForDate,
+  closePeriod,
+  lockPeriod,
+  reopenPeriod,
+  validatePostingAllowed,
+  getCurrentOpenPeriod,
+  getYearEndChecklist,
+} from './fiscal-period-service';
+
 // ── Types (type-only re-exports — erased at runtime, no TDZ risk) ─────────
 export type {
   IAccountingRepository,

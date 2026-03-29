@@ -333,6 +333,14 @@ export interface Invoice {
   /** ID πιστωτικού τιμολογίου που εκδόθηκε κατά αυτού (bidirectional link) */
   creditNoteInvoiceId?: string;
 
+  // — Dispute (Phase 1b — Q4, SAP B1 pattern) —
+  /** Αμφισβητούμενο τιμολόγιο; Παραμένει στο AR balance, εξαιρείται από aging alerts */
+  isDisputed?: boolean;
+  /** Λόγος αμφισβήτησης (free text) */
+  disputeReason?: string;
+  /** Ημερομηνία αμφισβήτησης (ISO 8601) */
+  disputeDate?: string;
+
   // — Metadata —
   /** Σημειώσεις/Παρατηρήσεις */
   notes: string | null;

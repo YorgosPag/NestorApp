@@ -80,6 +80,8 @@ import type {
   CreateCustomCategoryInput,
   UpdateCustomCategoryInput,
 } from './custom-category';
+import type { CustomerBalance } from './customer-balance';
+import type { FiscalPeriod } from './fiscal-period';
 
 // ============================================================================
 // ACCOUNTING REPOSITORY — CRUD Operations
@@ -176,6 +178,17 @@ export interface IAccountingRepository {
   listCustomCategories(includeInactive?: boolean): Promise<CustomCategoryDocument[]>;
   updateCustomCategory(categoryId: string, updates: UpdateCustomCategoryInput): Promise<void>;
   deleteCustomCategory(categoryId: string): Promise<void>;
+
+  // ── Customer Balances (Phase 1b — Q1-Q4) ────────────────────────────────
+  getCustomerBalance(customerId: string): Promise<CustomerBalance | null>;
+  upsertCustomerBalance(customerId: string, balance: CustomerBalance): Promise<void>;
+  listCustomerBalances(fiscalYear: number): Promise<CustomerBalance[]>;
+
+  // ── Fiscal Periods (Phase 1b — Q5-Q8) ───────────────────────────────────
+  getFiscalPeriod(periodId: string): Promise<FiscalPeriod | null>;
+  listFiscalPeriods(fiscalYear: number): Promise<FiscalPeriod[]>;
+  updateFiscalPeriod(periodId: string, updates: Partial<FiscalPeriod>): Promise<void>;
+  createFiscalPeriods(periods: FiscalPeriod[]): Promise<void>;
 }
 
 // ============================================================================

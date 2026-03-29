@@ -24,6 +24,7 @@ import { sanitizeForFirestore, isoNow } from './firestore-helpers';
 import * as financial from './accounting-repo-financial';
 import * as entities from './accounting-repo-entities';
 import * as operations from './accounting-repo-operations';
+import * as balances from './accounting-repo-balances';
 
 // ============================================================================
 // FIRESTORE ACCOUNTING REPOSITORY IMPLEMENTATION
@@ -150,4 +151,15 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
   listCustomCategories = operations.listCustomCategories;
   updateCustomCategory = operations.updateCustomCategory;
   deleteCustomCategory = operations.deleteCustomCategory;
+
+  // ── Balances: Customer Balances (Phase 1b) ───────────────────────────
+  getCustomerBalance = balances.getCustomerBalance;
+  upsertCustomerBalance = balances.upsertCustomerBalance;
+  listCustomerBalances = balances.listCustomerBalances;
+
+  // ── Balances: Fiscal Periods (Phase 1b) ──────────────────────────────
+  getFiscalPeriod = balances.getFiscalPeriod;
+  listFiscalPeriods = balances.listFiscalPeriods;
+  updateFiscalPeriod = balances.updateFiscalPeriod;
+  createFiscalPeriods = balances.createFiscalPeriods;
 }

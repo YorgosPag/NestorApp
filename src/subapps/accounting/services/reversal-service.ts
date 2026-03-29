@@ -18,6 +18,7 @@ import type { IAccountingRepository } from '../types/interfaces';
 import type { CreateJournalEntryInput } from '../types/journal';
 import type { Invoice, CancellationReasonCode } from '../types/invoice';
 import { isoNow, getQuarterFromDate, getFiscalYearFromDate } from './repository/firestore-helpers';
+import { validatePostingAllowed, getPeriodForDate, getCurrentOpenPeriod } from './fiscal-period-service';
 
 // ============================================================================
 // TYPES
@@ -63,10 +64,35 @@ export async function reverseJournalEntryForCancelledInvoice(
   }
 
   const now = isoNow();
+  const reversalDate = now.split('T')[0];
+
+  // Cross-period logic (Phase 1b — Q7):
+  // Αν η αρχική περίοδος είναι CLOSED/LOCKED → reversal στην τρέχουσα ανοιχτή
+  const originalPeriodResult = await validatePostingAllowed(repository, original.date);
+  let crossPeriodReversal = false;
+  let originalPeriodNum: number | undefined;
+  let reversalPeriodNum: number | undefined;
+
+  if (!originalPeriodResult.allowed) {
+    // Original period closed/locked → get current open period
+    const currentYear = getFiscalYearFromDate(now);
+    const openPeriod = await getCurrentOpenPeriod(repository, currentYear);
+
+    if (openPeriod) {
+      reversalPeriodNum = openPeriod.periodNumber;
+    }
+
+    const origPeriod = await getPeriodForDate(repository, original.date);
+    if (origPeriod) {
+      originalPeriodNum = origPeriod.periodNumber;
+    }
+
+    crossPeriodReversal = true;
+  }
 
   // Reversal entry: ίδια πεδία, αντίθετα ποσά
   const reversalInput: CreateJournalEntryInput = {
-    date: now.split('T')[0],
+    date: reversalDate,
     type: original.type,
     category: original.category,
     description: `ΑΝΤΙΛΟΓΙΣΜΟΣ — ${original.description}`,
@@ -88,6 +114,12 @@ export async function reverseJournalEntryForCancelledInvoice(
     originalEntryId: original.entryId,
     cancellationReasonCode: reasonCode,
     cancellationNotes: reasonNotes ?? undefined,
+    // Cross-period flags (Phase 1b — Q7)
+    ...(crossPeriodReversal ? {
+      crossPeriodReversal: true,
+      originalPeriod: originalPeriodNum,
+      reversalPeriod: reversalPeriodNum,
+    } : {}),
   };
 
   const { id: reversalEntryId } = await repository.createJournalEntry(reversalInput);

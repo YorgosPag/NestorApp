@@ -172,6 +172,14 @@ export interface JournalEntry {
   /** Σημειώσεις ακύρωσης */
   cancellationNotes?: string;
 
+  // — Cross-Period Reversal (Phase 1b — Q7) —
+  /** True αν αυτό είναι reversal σε κλεισμένη περίοδο */
+  crossPeriodReversal?: boolean;
+  /** Περίοδος αρχικής εγγραφής (1-13) */
+  originalPeriod?: number;
+  /** Περίοδος reversal (1-13) */
+  reversalPeriod?: number;
+
   /** Timestamp δημιουργίας (ISO 8601) */
   createdAt: string;
   /** Timestamp τελευταίας ενημέρωσης (ISO 8601) */
