@@ -217,6 +217,35 @@
 
 ---
 
+## Q12 (2026-03-29): ΑΔΙΑΠΡΑΓΜΑΤΕΥΤΟ — Google-Level Automated Testing
+
+**Εντολή Γιώργου**: Θέλω τα tests να είναι επιπέδου Google. Τίποτα λιγότερο. Αδιαπραγμάτευτο.
+
+**Απάντηση**: Δημιουργήθηκε SPEC-011-testing-strategy.md + ενημερώθηκε SPEC-007 v2.0 με:
+
+### Υπάρχοντα Tests (Inventory):
+- **8 test αρχεία**, **255 test cases** σε 3,235 γραμμές test code
+- Report Engine: 3 αρχεία (EVM, aging, aggregator helpers)
+- Procurement: 4 αρχεία (FSM, invoice matcher, supplier metrics, AI handler)
+- Construction Scheduling: 1 αρχείο (CPM calculator)
+- **Κενά**: PDF/Excel exporters, Report Builder UI, API routes, domain configs
+
+### Testing Strategy (Νέα):
+- **4-Layer Pyramid**: Unit (80%) → Component (15%) → Integration (5%) → E2E (optional)
+- **~18 νέα test αρχεία**, **~225-285 νέα test cases**
+- **Coverage target**: ≥ 80% statements, ≥ 75% branches, ≥ 90% functions
+- **Κανόνας**: Κώδικας + Tests = **ΙΔΙΟ COMMIT**, μηδενική εξαίρεση
+- **Pattern**: Factory functions + edge cases + error paths (ακολούθησε `evm-calculator.test.ts`)
+- **Mock strategy**: Mock Firestore/Auth/PDF/Excel, test pure logic ως-έχει
+- **npm script**: `test:report-builder` για targeted execution
+- **Pre-commit hook**: Αυτόματο test run αν staged files αφορούν report-builder
+
+### Ενημέρωση SPEC-007 v2.0:
+- Κάθε Phase πλέον έχει στήλη **Test Αρχεία** και **Εκτ. Tests**
+- Checklist delivery ανά Phase: κώδικας + tests + coverage ≥ 80% + ALL PASS
+
+---
+
 ### ΣΥΝΟΨΗ ΕΥΡΗΜΑΤΩΝ
 
 #### ✅ ΔΕΝ χρειάζεται duplicate (ήδη καλύπτεται):
