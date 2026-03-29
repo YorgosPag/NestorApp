@@ -12,16 +12,21 @@ import '@/lib/design-system';
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, Check, Clock, Link2 } from 'lucide-react';
+import { AlertTriangle, Check, Clock, Link2, X } from 'lucide-react';
 import { useState } from 'react';
 import { ReportTable, type ReportColumnDef } from '@/components/reports/core/ReportTable';
 import { ReportEmptyState } from '@/components/reports/core/ReportEmptyState';
+import { GroupedTreeGrid } from './GroupedTreeGrid';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { getStatusColor as dsGetStatusColor } from '@/lib/design-system';
 import type {
   BuilderQueryResponse,
   DomainDefinition,
+  GroupedRow,
+  GroupingResult,
+  ChartCrossFilter,
 } from '@/config/report-builder/report-builder-types';
 import { BUILDER_LIMITS } from '@/config/report-builder/report-builder-types';
 
@@ -35,6 +40,17 @@ interface ReportResultsProps {
   onLimitChange: (limit: number) => void;
   _onSort?: (field: string, direction: 'asc' | 'desc') => void;
   shareUrl: string;
+  // Phase 2 — Grouping props
+  groupingResult?: GroupingResult | null;
+  filteredGroups?: GroupedRow[] | null;
+  expandedGroups?: Set<string>;
+  onToggleGroup?: (groupKey: string) => void;
+  percentOfTotal?: Map<string, number> | null;
+  chartCrossFilter?: ChartCrossFilter | null;
+  onClearCrossFilter?: () => void;
+  groupSortKey?: string | null;
+  groupSortDirection?: 'asc' | 'desc';
+  onGroupSort?: (key: string, direction: 'asc' | 'desc') => void;
 }
 
 export function ReportResults({
@@ -46,6 +62,16 @@ export function ReportResults({
   limit,
   onLimitChange,
   shareUrl,
+  groupingResult,
+  filteredGroups,
+  expandedGroups,
+  onToggleGroup,
+  percentOfTotal,
+  chartCrossFilter,
+  onClearCrossFilter,
+  groupSortKey,
+  groupSortDirection,
+  onGroupSort,
 }: ReportResultsProps) {
   const { t } = useTranslation('report-builder');
   const { t: tDomains } = useTranslation('report-builder-domains');
@@ -84,8 +110,18 @@ export function ReportResults({
     return <ReportEmptyState type="noResults" />;
   }
 
+  const hasGrouping = !!groupingResult && !!filteredGroups && filteredGroups.length > 0;
+
   return (
     <section className="space-y-3" aria-label={t('results.title')}>
+      {/* Cross-filter chip */}
+      {chartCrossFilter && onClearCrossFilter && (
+        <CrossFilterChip
+          crossFilter={chartCrossFilter}
+          onClear={onClearCrossFilter}
+        />
+      )}
+
       {/* Row limit warning banner */}
       {results?.truncated && (
         <TruncationBanner
@@ -105,15 +141,33 @@ export function ReportResults({
         />
       )}
 
-      {/* Table */}
-      <ReportTable
-        columns={columnDefs}
-        data={results?.rows ?? []}
-        loading={loading}
-        sortable
-        onRowClick={handleRowClick}
-        pageSize={25}
-      />
+      {/* Grouped treegrid or flat table */}
+      {hasGrouping ? (
+        <GroupedTreeGrid
+          groups={filteredGroups}
+          grandTotals={groupingResult.grandTotals}
+          totalRowCount={groupingResult.totalRowCount}
+          columnDefs={columnDefs}
+          columns={columns}
+          domainDefinition={domainDefinition}
+          expandedGroups={expandedGroups ?? new Set()}
+          onToggleGroup={onToggleGroup}
+          percentOfTotal={percentOfTotal}
+          groupSortKey={groupSortKey}
+          groupSortDirection={groupSortDirection}
+          onGroupSort={onGroupSort}
+          loading={loading}
+        />
+      ) : (
+        <ReportTable
+          columns={columnDefs}
+          data={results?.rows ?? []}
+          loading={loading}
+          sortable
+          onRowClick={handleRowClick}
+          pageSize={25}
+        />
+      )}
     </section>
   );
 }
@@ -204,6 +258,33 @@ function TruncationBanner({
     </div>
   );
 }
+
+function CrossFilterChip({
+  crossFilter, onClear,
+}: { crossFilter: ChartCrossFilter; onClear: () => void }) {
+  const { t } = useTranslation('report-builder');
+  return (
+    <div className="flex items-center gap-2">
+      <Badge variant="secondary" className="gap-1.5 pr-1">
+        <span className="text-xs">
+          {t('crossFilter.filtered', { field: crossFilter.fieldKey, value: crossFilter.label })}
+        </span>
+        <button
+          type="button"
+          onClick={onClear}
+          className="ml-1 rounded-full p-0.5 hover:bg-muted"
+          aria-label={t('crossFilter.clear')}
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </Badge>
+    </div>
+  );
+}
+
+// ============================================================================
+// Sub-Components
+// ============================================================================
 
 function MetadataBar({
   totalMatched, generatedAt, shareUrl,

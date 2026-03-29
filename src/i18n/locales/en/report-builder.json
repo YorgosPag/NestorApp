@@ -66,5 +66,59 @@
   "share": {
     "copy": "Copy link",
     "copied": "Copied!"
+  },
+
+  "grouping": {
+    "title": "Group By",
+    "level1": "Group by",
+    "level2": "Then by",
+    "noGrouping": "No grouping",
+    "expandAll": "Expand All",
+    "collapseAll": "Collapse All",
+    "removeLevel2": "Remove second level"
+  },
+
+  "aggregations": {
+    "count": "Count",
+    "sum": "Sum",
+    "avg": "Average",
+    "min": "Min",
+    "max": "Max"
+  },
+
+  "chart": {
+    "title": "Visualization",
+    "type": "Chart type",
+    "bar": "Bar",
+    "line": "Line",
+    "pie": "Pie",
+    "area": "Area",
+    "stackedBar": "Stacked Bar",
+    "legend": "Show legend",
+    "suggested": "suggested"
+  },
+
+  "kpis": {
+    "title": "Key Metrics"
+  },
+
+  "percentOfTotal": {
+    "toggle": "Show % of Total",
+    "label": "% of Total"
+  },
+
+  "crossFilter": {
+    "filtered": "Filtered: {{field}} = {{value}}",
+    "clear": "Clear filter"
+  },
+
+  "grandTotal": {
+    "label": "Grand Total"
+  },
+
+  "accessibility": {
+    "expandGroup": "Expand group {{group}}",
+    "collapseGroup": "Collapse group {{group}}",
+    "sortBySubtotal": "Sort by {{column}} subtotal"
   }
 }

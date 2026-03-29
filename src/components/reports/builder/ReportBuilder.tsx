@@ -17,6 +17,9 @@ import { ColumnSelector } from './ColumnSelector';
 import { FilterPanel } from './FilterPanel';
 import { ReportResults } from './ReportResults';
 import { AIQueryInput } from './AIQueryInput';
+import { GroupBySelector } from './GroupBySelector';
+import { ChartSection } from './ChartSection';
+import { ReportKPIGrid } from '@/components/reports/core/ReportKPIGrid';
 import { Button } from '@/components/ui/button';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
 
@@ -63,6 +66,19 @@ export function ReportBuilder() {
               onClear={builder.clearFilters}
             />
 
+            {/* Group By Selector */}
+            <GroupBySelector
+              domainDefinition={builder.domainDefinition}
+              columns={builder.columns}
+              groupByConfig={builder.groupByConfig}
+              onConfigChange={builder.setGroupByConfig}
+              showPercentOfTotal={builder.showPercentOfTotal}
+              onTogglePercentOfTotal={builder.togglePercentOfTotal}
+              onExpandAll={builder.expandAllGroups}
+              onCollapseAll={builder.collapseAllGroups}
+              hasGroups={!!builder.groupingResult && builder.groupingResult.groups.length > 0}
+            />
+
             {/* Execute button */}
             <div className="flex items-center gap-3">
               <Button
@@ -78,6 +94,23 @@ export function ReportBuilder() {
               )}
             </div>
 
+            {/* KPIs — only when grouping is active */}
+            {builder.kpis.length > 0 && (
+              <ReportKPIGrid kpis={builder.kpis} columns={4} />
+            )}
+
+            {/* Chart — only when grouping is active */}
+            {builder.groupingResult && builder.activeChartType && builder.groupByConfig && builder.filteredGroups && (
+              <ChartSection
+                groupByConfig={builder.groupByConfig}
+                filteredGroups={builder.filteredGroups}
+                activeChartType={builder.activeChartType}
+                suggestedChartType={builder.suggestedChartType}
+                onChartTypeChange={builder.setChartType}
+                onCrossFilter={builder.applyChartCrossFilter}
+              />
+            )}
+
             <ReportResults
               results={builder.results}
               columns={builder.columns}
@@ -87,6 +120,16 @@ export function ReportBuilder() {
               limit={builder.limit}
               onLimitChange={builder.setLimit}
               shareUrl={builder.shareUrl}
+              groupingResult={builder.groupingResult}
+              filteredGroups={builder.filteredGroups}
+              expandedGroups={builder.expandedGroups}
+              onToggleGroup={builder.toggleGroupExpanded}
+              percentOfTotal={builder.percentOfTotal}
+              chartCrossFilter={builder.chartCrossFilter}
+              onClearCrossFilter={builder.clearChartCrossFilter}
+              groupSortKey={builder.groupSortKey}
+              groupSortDirection={builder.groupSortDirection}
+              onGroupSort={builder.setGroupSort}
             />
           </main>
 

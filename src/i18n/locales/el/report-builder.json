@@ -66,5 +66,59 @@
   "share": {
     "copy": "Αντιγραφή συνδέσμου",
     "copied": "Αντιγράφηκε!"
+  },
+
+  "grouping": {
+    "title": "Ομαδοποίηση",
+    "level1": "Ομαδοποίηση κατά",
+    "level2": "Και μετά κατά",
+    "noGrouping": "Χωρίς ομαδοποίηση",
+    "expandAll": "Ανάπτυξη Όλων",
+    "collapseAll": "Σύμπτυξη Όλων",
+    "removeLevel2": "Αφαίρεση δεύτερου επιπέδου"
+  },
+
+  "aggregations": {
+    "count": "Πλήθος",
+    "sum": "Άθροισμα",
+    "avg": "Μέσος Όρος",
+    "min": "Ελάχιστο",
+    "max": "Μέγιστο"
+  },
+
+  "chart": {
+    "title": "Οπτικοποίηση",
+    "type": "Τύπος γραφήματος",
+    "bar": "Ράβδοι",
+    "line": "Γραμμή",
+    "pie": "Πίτα",
+    "area": "Περιοχή",
+    "stackedBar": "Σωρευμένοι Ράβδοι",
+    "legend": "Εμφάνιση υπομνήματος",
+    "suggested": "προτεινόμενο"
+  },
+
+  "kpis": {
+    "title": "Βασικοί Δείκτες"
+  },
+
+  "percentOfTotal": {
+    "toggle": "Εμφάνιση % επί Συνόλου",
+    "label": "% Συνόλου"
+  },
+
+  "crossFilter": {
+    "filtered": "Φίλτρο: {{field}} = {{value}}",
+    "clear": "Καθαρισμός φίλτρου"
+  },
+
+  "grandTotal": {
+    "label": "Γενικό Σύνολο"
+  },
+
+  "accessibility": {
+    "expandGroup": "Ανάπτυξη ομάδας {{group}}",
+    "collapseGroup": "Σύμπτυξη ομάδας {{group}}",
+    "sortBySubtotal": "Ταξινόμηση κατά {{column}} υποσύνολο"
   }
 }

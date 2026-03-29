@@ -179,6 +179,64 @@ export interface AITranslatedQuery {
 }
 
 // ============================================================================
+// Phase 2 — Grouping & Aggregation Types
+// ============================================================================
+
+/** Aggregation function identifiers */
+export type AggregationFunction = 'COUNT' | 'SUM' | 'AVG' | 'MIN' | 'MAX';
+
+/** Maps FieldValueType to valid aggregation functions */
+export const AGGREGATIONS_BY_TYPE: Record<FieldValueType, readonly AggregationFunction[]> = {
+  text:       ['COUNT'],
+  enum:       ['COUNT'],
+  number:     ['COUNT', 'SUM', 'AVG', 'MIN', 'MAX'],
+  currency:   ['COUNT', 'SUM', 'AVG', 'MIN', 'MAX'],
+  percentage: ['COUNT', 'AVG', 'MIN', 'MAX'],
+  date:       ['COUNT', 'MIN', 'MAX'],
+  boolean:    ['COUNT'],
+} as const;
+
+/** A single aggregation applied to a field */
+export interface FieldAggregation {
+  fieldKey: string;
+  function: AggregationFunction;
+}
+
+/** Group-by configuration (1-2 levels) */
+export interface GroupByConfig {
+  level1: string;
+  level2?: string;
+  aggregations: FieldAggregation[];
+}
+
+/** A single grouped row in the output tree */
+export interface GroupedRow {
+  groupKey: string;
+  groupField: string;
+  depth: number;
+  aggregates: Record<string, number>;
+  children: Array<GroupedRow | Record<string, unknown>>;
+  rowCount: number;
+}
+
+/** Complete grouping result */
+export interface GroupingResult {
+  groups: GroupedRow[];
+  grandTotals: Record<string, number>;
+  totalRowCount: number;
+}
+
+/** Chart type for builder visualizations */
+export type BuilderChartType = 'bar' | 'line' | 'area' | 'pie' | 'stacked-bar';
+
+/** Cross-filter state from chart click */
+export interface ChartCrossFilter {
+  fieldKey: string;
+  value: string;
+  label: string;
+}
+
+// ============================================================================
 // URL State Encoding
 // ============================================================================
 
@@ -196,6 +254,8 @@ export interface BuilderURLState {
   sd?: 'asc' | 'desc';
   /** Row limit (only if non-default) */
   l?: string;
+  /** Base64-encoded JSON group-by config */
+  g?: string;
 }
 
 // ============================================================================
@@ -211,6 +271,10 @@ export const BUILDER_LIMITS = {
   FIRESTORE_IN_LIMIT: 10,
   /** Max docs to fetch server-side (for post-filter headroom) */
   MAX_SERVER_FETCH: 6000,
+  /** Phase 2 — Grouping limits */
+  MAX_GROUP_LEVELS: 2,
+  MAX_KPIS: 4,
+  MAX_AGGREGATIONS: 8,
 } as const;
 
 /** All valid domain IDs */
@@ -270,6 +334,7 @@ export function encodeBuilderState(
   sortField?: string,
   sortDirection?: 'asc' | 'desc',
   limit?: number,
+  groupByConfig?: GroupByConfig | null,
 ): string {
   const params = new URLSearchParams();
   params.set('d', domain);
@@ -290,6 +355,9 @@ export function encodeBuilderState(
   if (limit && limit !== BUILDER_LIMITS.DEFAULT_ROW_LIMIT) {
     params.set('l', String(limit));
   }
+  if (groupByConfig) {
+    params.set('g', btoa(JSON.stringify(groupByConfig)));
+  }
 
   return params.toString();
 }
@@ -303,6 +371,7 @@ export function decodeBuilderState(
   sortField: string;
   sortDirection: 'asc' | 'desc';
   limit: number;
+  groupByConfig: GroupByConfig;
 }> {
   const result: ReturnType<typeof decodeBuilderState> = {};
 
@@ -341,6 +410,18 @@ export function decodeBuilderState(
   if (l) {
     const num = Number(l);
     if (num > 0 && num <= BUILDER_LIMITS.MAX_ROW_LIMIT) result.limit = num;
+  }
+
+  const g = searchParams.get('g');
+  if (g) {
+    try {
+      const parsed = JSON.parse(atob(g)) as GroupByConfig;
+      if (parsed.level1 && Array.isArray(parsed.aggregations)) {
+        result.groupByConfig = parsed;
+      }
+    } catch {
+      // Invalid group-by encoding — ignore
+    }
   }
 
   return result;

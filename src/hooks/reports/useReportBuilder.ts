@@ -2,8 +2,8 @@
  * @module hooks/reports/useReportBuilder
  * @enterprise ADR-268 — Dynamic Report Builder State Management Hook
  *
- * Central hook managing domain, columns, filters, execution, AI, and URL state.
- * Follows the established pattern from useFinancialReport/useSalesReport.
+ * Central hook managing domain, columns, filters, execution, AI, URL state,
+ * and Phase 2 grouping (via useReportGrouping composition).
  */
 
 'use client';
@@ -28,54 +28,38 @@ import {
   type ReportBuilderFilter,
   type DomainDefinition,
 } from '@/config/report-builder/report-builder-types';
+import { useReportGrouping, type UseReportGroupingReturn } from './useReportGrouping';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export interface UseReportBuilderReturn {
-  // Domain
+export interface UseReportBuilderReturn extends UseReportGroupingReturn {
   domain: BuilderDomainId | null;
   domainDefinition: DomainDefinition | null;
   setDomain: (id: BuilderDomainId) => void;
-
-  // Columns
   columns: string[];
   setColumns: (columns: string[]) => void;
   toggleColumn: (fieldKey: string) => void;
   reorderColumns: (fromIndex: number, toIndex: number) => void;
-
-  // Filters
   filters: ReportBuilderFilter[];
   addFilter: (filter: Omit<ReportBuilderFilter, 'id'>) => void;
   removeFilter: (filterId: string) => void;
   updateFilter: (filterId: string, updates: Partial<Omit<ReportBuilderFilter, 'id'>>) => void;
   clearFilters: () => void;
-
-  // Sort
   sortField: string | null;
   sortDirection: 'asc' | 'desc';
   setSort: (field: string, direction: 'asc' | 'desc') => void;
-
-  // Limit
   limit: number;
   setLimit: (limit: number) => void;
-
-  // Results
   results: BuilderQueryResponse | null;
   loading: boolean;
   error: string | null;
-
-  // Execution
   executeQuery: () => Promise<void>;
   refetch: () => void;
-
-  // AI
   aiLoading: boolean;
   aiResult: AITranslatedQuery | null;
   submitAIQuery: (query: string) => Promise<void>;
-
-  // URL sharing
   shareUrl: string;
 }
 
@@ -83,7 +67,7 @@ export interface UseReportBuilderReturn {
 // Cache
 // ============================================================================
 
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 5 * 60 * 1000;
 
 interface CachedResult {
   key: string;
@@ -98,8 +82,6 @@ interface CachedResult {
 export function useReportBuilder(): UseReportBuilderReturn {
   const searchParams = useSearchParams();
 
-  // Restore from URL on mount
-  // Initial decode from URL — intentionally runs only on mount
   const initialState = useMemo(() => {
     if (!searchParams) return {};
     return decodeBuilderState(searchParams);
@@ -107,38 +89,33 @@ export function useReportBuilder(): UseReportBuilderReturn {
   }, []);
 
   // State
-  const [domain, setDomainState] = useState<BuilderDomainId | null>(
-    initialState.domain ?? null,
-  );
-  const [columns, setColumnsState] = useState<string[]>(
-    initialState.columns ?? [],
-  );
-  const [filters, setFilters] = useState<ReportBuilderFilter[]>(
-    initialState.filters ?? [],
-  );
-  const [sortField, setSortField] = useState<string | null>(
-    initialState.sortField ?? null,
-  );
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(
-    initialState.sortDirection ?? 'asc',
-  );
-  const [limit, setLimitState] = useState<number>(
-    initialState.limit ?? BUILDER_LIMITS.DEFAULT_ROW_LIMIT,
-  );
+  const [domain, setDomainState] = useState<BuilderDomainId | null>(initialState.domain ?? null);
+  const [columns, setColumnsState] = useState<string[]>(initialState.columns ?? []);
+  const [filters, setFilters] = useState<ReportBuilderFilter[]>(initialState.filters ?? []);
+  const [sortField, setSortField] = useState<string | null>(initialState.sortField ?? null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(initialState.sortDirection ?? 'asc');
+  const [limit, setLimitState] = useState<number>(initialState.limit ?? BUILDER_LIMITS.DEFAULT_ROW_LIMIT);
   const [results, setResults] = useState<BuilderQueryResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState<AITranslatedQuery | null>(null);
 
-  // Cache
   const cacheRef = useRef<CachedResult | null>(null);
 
-  // Domain definition
   const domainDefinition = useMemo(
     () => (domain ? getDomainDefinition(domain) : null),
     [domain],
   );
+
+  // Phase 2 — Grouping (composed hook)
+  const grouping = useReportGrouping({
+    results,
+    domainDefinition,
+    domain,
+    columns,
+    initialGroupByConfig: initialState.groupByConfig,
+  });
 
   // ========================================================================
   // Domain
@@ -151,30 +128,27 @@ export function useReportBuilder(): UseReportBuilderReturn {
     setResults(null);
     setError(null);
     setAiResult(null);
+    grouping.resetGrouping();
 
     const def = getDomainDefinition(id);
     setSortField(def.defaultSortField);
     setSortDirection(def.defaultSortDirection);
-  }, []);
+  }, [grouping.resetGrouping]);
 
   // ========================================================================
   // Columns
   // ========================================================================
 
-  const setColumns = useCallback((cols: string[]) => {
-    setColumnsState(cols);
-  }, []);
+  const setColumns = useCallback((cols: string[]) => { setColumnsState(cols); }, []);
 
   const toggleColumn = useCallback((fieldKey: string) => {
-    setColumnsState((prev) =>
-      prev.includes(fieldKey)
-        ? prev.filter((c) => c !== fieldKey)
-        : [...prev, fieldKey],
+    setColumnsState(prev =>
+      prev.includes(fieldKey) ? prev.filter(c => c !== fieldKey) : [...prev, fieldKey],
     );
   }, []);
 
   const reorderColumns = useCallback((fromIndex: number, toIndex: number) => {
-    setColumnsState((prev) => {
+    setColumnsState(prev => {
       const next = [...prev];
       const [moved] = next.splice(fromIndex, 1);
       next.splice(toIndex, 0, moved);
@@ -189,30 +163,23 @@ export function useReportBuilder(): UseReportBuilderReturn {
   const addFilter = useCallback(
     (filter: Omit<ReportBuilderFilter, 'id'>) => {
       if (filters.length >= BUILDER_LIMITS.MAX_ACTIVE_FILTERS) return;
-      setFilters((prev) => [
-        ...prev,
-        { ...filter, id: generateTempId() },
-      ]);
+      setFilters(prev => [...prev, { ...filter, id: generateTempId() }]);
     },
     [filters.length],
   );
 
   const removeFilter = useCallback((filterId: string) => {
-    setFilters((prev) => prev.filter((f) => f.id !== filterId));
+    setFilters(prev => prev.filter(f => f.id !== filterId));
   }, []);
 
   const updateFilter = useCallback(
     (filterId: string, updates: Partial<Omit<ReportBuilderFilter, 'id'>>) => {
-      setFilters((prev) =>
-        prev.map((f) => (f.id === filterId ? { ...f, ...updates } : f)),
-      );
+      setFilters(prev => prev.map(f => (f.id === filterId ? { ...f, ...updates } : f)));
     },
     [],
   );
 
-  const clearFilters = useCallback(() => {
-    setFilters([]);
-  }, []);
+  const clearFilters = useCallback(() => { setFilters([]); }, []);
 
   // ========================================================================
   // Sort & Limit
@@ -224,29 +191,25 @@ export function useReportBuilder(): UseReportBuilderReturn {
   }, []);
 
   const setLimit = useCallback((newLimit: number) => {
-    setLimitState(
-      Math.min(Math.max(1, newLimit), BUILDER_LIMITS.MAX_ROW_LIMIT),
-    );
+    setLimitState(Math.min(Math.max(1, newLimit), BUILDER_LIMITS.MAX_ROW_LIMIT));
   }, []);
 
   // ========================================================================
   // Query Execution
   // ========================================================================
 
-  const buildCacheKey = useCallback((): string => {
-    return JSON.stringify({ domain, filters, columns, sortField, sortDirection, limit });
-  }, [domain, filters, columns, sortField, sortDirection, limit]);
+  const buildCacheKey = useCallback(
+    () => JSON.stringify({ domain, filters, columns, sortField, sortDirection, limit }),
+    [domain, filters, columns, sortField, sortDirection, limit],
+  );
 
   const executeQuery = useCallback(async () => {
     if (!domain || columns.length === 0) return;
 
-    // Check cache
     const cacheKey = buildCacheKey();
-    if (cacheRef.current && cacheRef.current.key === cacheKey) {
-      if (Date.now() - cacheRef.current.timestamp < CACHE_TTL) {
-        setResults(cacheRef.current.data);
-        return;
-      }
+    if (cacheRef.current?.key === cacheKey && Date.now() - cacheRef.current.timestamp < CACHE_TTL) {
+      setResults(cacheRef.current.data);
+      return;
     }
 
     setLoading(true);
@@ -254,19 +217,10 @@ export function useReportBuilder(): UseReportBuilderReturn {
 
     try {
       const request: BuilderQueryRequest = {
-        domain,
-        filters,
-        columns,
-        sortField: sortField ?? undefined,
-        sortDirection,
-        limit,
+        domain, filters, columns,
+        sortField: sortField ?? undefined, sortDirection, limit,
       };
-
-      const response = await apiClient.post<BuilderQueryResponse>(
-        '/api/reports/builder',
-        request,
-      );
-
+      const response = await apiClient.post<BuilderQueryResponse>('/api/reports/builder', request);
       setResults(response);
       cacheRef.current = { key: cacheKey, data: response, timestamp: Date.now() };
     } catch (err) {
@@ -292,18 +246,11 @@ export function useReportBuilder(): UseReportBuilderReturn {
     setError(null);
 
     try {
-      const result = await apiClient.post<AITranslatedQuery>(
-        '/api/reports/builder/ai',
-        { query, locale: 'el' },
-      );
-
+      const result = await apiClient.post<AITranslatedQuery>('/api/reports/builder/ai', { query, locale: 'el' });
       setAiResult(result);
-
-      // Auto-populate builder state
       setDomainState(result.domain);
       setColumnsState(result.columns);
       setFilters(result.filters);
-
       const def = getDomainDefinition(result.domain);
       setSortField(def.defaultSortField);
       setSortDirection(def.defaultSortDirection);
@@ -321,51 +268,34 @@ export function useReportBuilder(): UseReportBuilderReturn {
   const shareUrl = useMemo(() => {
     if (!domain) return '';
     const qs = encodeBuilderState(
-      domain, filters, columns, sortField ?? undefined, sortDirection, limit,
+      domain, filters, columns, sortField ?? undefined, sortDirection, limit, grouping.groupByConfig,
     );
     if (typeof window === 'undefined') return `?${qs}`;
     return `${window.location.origin}${window.location.pathname}?${qs}`;
-  }, [domain, filters, columns, sortField, sortDirection, limit]);
+  }, [domain, filters, columns, sortField, sortDirection, limit, grouping.groupByConfig]);
 
-  // Sync URL on state change (without navigation)
   useEffect(() => {
     if (!domain || typeof window === 'undefined') return;
     const qs = encodeBuilderState(
-      domain, filters, columns, sortField ?? undefined, sortDirection, limit,
+      domain, filters, columns, sortField ?? undefined, sortDirection, limit, grouping.groupByConfig,
     );
     window.history.replaceState(null, '', `?${qs}`);
-  }, [domain, filters, columns, sortField, sortDirection, limit]);
+  }, [domain, filters, columns, sortField, sortDirection, limit, grouping.groupByConfig]);
 
   // ========================================================================
   // Return
   // ========================================================================
 
   return {
-    domain,
-    domainDefinition,
-    setDomain,
-    columns,
-    setColumns,
-    toggleColumn,
-    reorderColumns,
-    filters,
-    addFilter,
-    removeFilter,
-    updateFilter,
-    clearFilters,
-    sortField,
-    sortDirection,
-    setSort,
-    limit,
-    setLimit,
-    results,
-    loading,
-    error,
-    executeQuery,
-    refetch,
-    aiLoading,
-    aiResult,
-    submitAIQuery,
+    domain, domainDefinition, setDomain,
+    columns, setColumns, toggleColumn, reorderColumns,
+    filters, addFilter, removeFilter, updateFilter, clearFilters,
+    sortField, sortDirection, setSort,
+    limit, setLimit,
+    results, loading, error,
+    executeQuery, refetch,
+    aiLoading, aiResult, submitAIQuery,
     shareUrl,
+    ...grouping,
   };
 }
