@@ -5,7 +5,8 @@
     "crm": "CRM & Πωλήσεις",
     "financial": "Οικονομικά",
     "people": "Πρόσωπα",
-    "specialists": "Ειδικότητες"
+    "specialists": "Ειδικότητες",
+    "accounting": "Λογιστήριο"
   },
   "domains": {
     "projects": {
@@ -1310,6 +1311,260 @@
           "rejected": "Απορρίφθηκε",
           "cancelled": "Ακυρώθηκε",
           "completed": "Ολοκληρώθηκε"
+        }
+      }
+    },
+    "invoices": {
+      "label": "Τιμολόγια",
+      "description": "Διαχείριση τιμ��λογίων — ηλικίωση, παρακολούθηση πληρωμών, myDATA",
+      "fields": {
+        "series": "Σειρά",
+        "number": "Αριθμός",
+        "type": "Τύπος",
+        "customerName": "Πελάτης",
+        "customerVat": "ΑΦΜ Πελάτη",
+        "totalNetAmount": "Καθαρό Ποσό",
+        "totalVatAmount": "ΦΠΑ",
+        "totalGrossAmount": "Σύνολο",
+        "totalPaid": "Πληρωμένο",
+        "balanceDue": "Υπόλοιπο",
+        "paymentMethod": "Τρόπος Πληρωμής",
+        "paymentStatus": "Κατάσταση Πληρωμής",
+        "issueDate": "Ημ. Έκδοσης",
+        "dueDate": "Ημ. Λήξης",
+        "project": "Έργο",
+        "fiscalYear": "Χρήση",
+        "notes": "Σημειώσεις",
+        "createdAt": "Δημιουργία",
+        "daysPastDue": "Μέρες Καθυστέρησης",
+        "isOverdue": "Εκπρόθεσμο",
+        "paymentProgress": "Πρόοδος Πληρωμής",
+        "agingBucket": "Κατηγορία Ηλικίας",
+        "daysToPayment": "Μέρες ως Πληρωμή",
+        "outstandingAmount": "Ανεξόφλητο",
+        "mydataStatus": "myDATA",
+        "daysSinceIssued": "Μέρες από Έκδοση",
+        "isCancelled": "Ακυρωμένο",
+        "isCreditNote": "Πιστωτικό",
+        "paymentCount": "Πληρωμές",
+        "daysSinceLastPayment": "Μέρες από Πληρωμή",
+        "emailSentCount": "Emails",
+        "wasEmailed": "Στάλθηκε Email"
+      },
+      "enums": {
+        "type": {
+          "service_invoice": "Τιμολόγιο Παροχής Υπηρεσιών",
+          "sales_invoice": "Τιμολόγιο Πώλησης",
+          "retail_receipt": "Απόδειξη Λιανικής",
+          "service_receipt": "Απόδειξη Παροχής Υπηρεσιών",
+          "credit_invoice": "Πιστωτικό Τιμολόγιο",
+          "service_invoice_eu": "Τιμολόγιο Ενδοκοινοτικό",
+          "service_invoice_3rd": "Τιμολόγιο Τρίτη Χώρα"
+        },
+        "paymentStatus": {
+          "unpaid": "Ανεξόφλητο",
+          "partial": "Μερική Πληρωμή",
+          "paid": "Εξοφλημένο"
+        },
+        "paymentMethod": {
+          "cash": "Μετρητά",
+          "bank_transfer": "Τραπεζική Μεταφορά",
+          "card": "Κάρτα",
+          "check": "Επιταγή",
+          "credit": "Πίστωση",
+          "mixed": "Μικτά"
+        },
+        "mydataStatus": {
+          "draft": "Πρόχειρο",
+          "sent": "Στάλθηκε",
+          "accepted": "Αποδεκτό",
+          "rejected": "Απορρίφθηκε",
+          "cancelled": "Ακυρώθηκε"
+        },
+        "agingBucket": {
+          "current": "Τρέχον",
+          "days30": "1-30 Μέρες",
+          "days60": "31-60 Μέρες",
+          "days90": "61-90 Μέρες",
+          "over90": "90+ Μέρες"
+        }
+      }
+    },
+    "journalEntries": {
+      "label": "Ημερολόγιο",
+      "description": "Εγγραφές εσόδων & εξόδων — τρίμηνο, ΦΠΑ, αντιστροφές",
+      "fields": {
+        "date": "Ημερομηνία",
+        "type": "Τύπος",
+        "category": "Κατηγορία",
+        "description": "Περιγραφή",
+        "netAmount": "Καθαρό Ποσό",
+        "vatRate": "Συντελεστής ΦΠΑ",
+        "grossAmount": "Σύνολο",
+        "vatDeductible": "Εκπέσιμο ΦΠΑ",
+        "paymentMethod": "Τρόπος Πληρωμής",
+        "contact": "Επαφή",
+        "contactName": "Όνομα Επαφής",
+        "status": "Κατάσταση",
+        "fiscalYear": "Χρήση",
+        "quarter": "Τρίμηνο",
+        "notes": "Σημειώσεις",
+        "createdAt": "Δημιουργία",
+        "entryAge": "Ηλικία (μέρες)",
+        "hasInvoiceLink": "Με Τιμολόγιο",
+        "isReversed": "Αντεστραμμένη",
+        "fiscalQuarter": "Φορολογικό Τρίμηνο",
+        "computedVatAmount": "Ποσό ΦΠΑ",
+        "hasContact": "Με Επαφή"
+      },
+      "enums": {
+        "type": {
+          "income": "Έσοδο",
+          "expense": "Έξοδο"
+        },
+        "paymentMethod": {
+          "cash": "Μετρητά",
+          "bank_transfer": "Τραπεζική Μεταφορά",
+          "card": "Κάρτα",
+          "check": "Επιταγή",
+          "credit": "Πίστωση",
+          "mixed": "Μικτά"
+        },
+        "status": {
+          "ACTIVE": "Ενεργή",
+          "REVERSED": "Αντεστραμμένη"
+        },
+        "fiscalQuarter": {
+          "Q1": "Q1 (Ιαν-Μαρ)",
+          "Q2": "Q2 (Απρ-Ιουν)",
+          "Q3": "Q3 (Ιουλ-Σεπ)",
+          "Q4": "Q4 (Οκτ-Δεκ)"
+        }
+      }
+    },
+    "bankTransactions": {
+      "label": "Τραπεζικές Κινήσεις",
+      "description": "Κινήσεις τράπεζας — αντιστοίχιση, ηλικία, ταμειακή ροή",
+      "fields": {
+        "transactionDate": "Ημ. Κίνησης",
+        "valueDate": "Ημ. Αξίας",
+        "direction": "Κατεύθυνση",
+        "amount": "Ποσό",
+        "balanceAfter": "Υπόλοιπο Μετά",
+        "bankDescription": "Περιγραφή",
+        "counterparty": "Αντισυμβαλλόμενος",
+        "paymentReference": "Αναφορά",
+        "matchStatus": "Αντιστοίχιση",
+        "notes": "Σημειώσεις",
+        "createdAt": "Δημιουργία",
+        "isReconciled": "Συμφωνήθηκε",
+        "daysSinceTransaction": "Ηλικία (μέρες)",
+        "unmatchedAge": "Χωρίς Αντιστοίχιση (μέρες)",
+        "isInflow": "Εισερχόμενα",
+        "absoluteAmount": "Απόλ. Ποσό"
+      },
+      "enums": {
+        "direction": {
+          "credit": "Πίστωση (Εισ.)",
+          "debit": "Χρέωση (Εξ.)"
+        },
+        "matchStatus": {
+          "unmatched": "Χωρίς Αντιστοίχιση",
+          "auto_matched": "Αυτόματη",
+          "manual_matched": "Χειροκίνητη",
+          "excluded": "Εξαιρέθηκε"
+        },
+        "isReconciled": {
+          "matched": "Αντιστοιχίστηκε",
+          "unmatched": "Χωρίς Αντιστοίχ��ση",
+          "excluded": "Εξαιρέθηκε"
+        }
+      }
+    },
+    "expenseDocuments": {
+      "label": "Παραστατικά Εξόδων",
+      "description": "Τιμολόγια & αποδείξεις — AI επεξεργασία, εκπεσιμότητα, έλεγχος",
+      "fields": {
+        "type": "Τύπος Εγγράφου",
+        "status": "Κατάσταση",
+        "fileName": "Αρχείο",
+        "confirmedCategory": "Κατηγορία",
+        "confirmedNetAmount": "Καθαρό Ποσό",
+        "confirmedVatAmount": "ΦΠΑ",
+        "confirmedDate": "Ημ. Εγγράφου",
+        "confirmedIssuerName": "Εκδότης",
+        "fiscalYear": "Χρήση",
+        "notes": "Σημειώσεις",
+        "createdAt": "Μεταφόρτωση",
+        "hasDocument": "Με Αρχείο",
+        "computedVatAmount": "ΦΠΑ (υπολ.)",
+        "isDeductible": "Εκπέσιμο",
+        "documentAge": "Ηλικία (μέρες)",
+        "needsReview": "Χρειάζεται Έλεγχο",
+        "aiConfidence": "AI Αξιοπιστία",
+        "hasJournalEntry": "Στο Ημερολόγιο"
+      },
+      "enums": {
+        "type": {
+          "purchase_invoice": "Τιμολόγιο Αγοράς",
+          "receipt": "Απόδειξη",
+          "utility_bill": "Λογαριασμός ΔΕΚΟ",
+          "telecom_bill": "Λογαριασμός Τηλεπικοινωνιών",
+          "fuel_receipt": "Α��όδειξη Καυσίμων",
+          "bank_statement": "Τραπεζικό Extrait",
+          "other": "Άλλο"
+        },
+        "status": {
+          "processing": "Επεξεργασία",
+          "review": "Χρειάζεται Έλεγχο",
+          "confirmed": "Επιβεβαιωμένο",
+          "rejected": "Απορρίφθηκε"
+        }
+      }
+    },
+    "efkaPayments": {
+      "label": "Εισφορές ΕΦΚΑ",
+      "description": "Ασφαλιστικές εισφορές — καθυστερήσεις, κίνδυνος ΚΕΑΟ, πληρωμές",
+      "fields": {
+        "year": "Έτος",
+        "month": "Μήνας",
+        "amount": "Ποσό",
+        "dueDate": "Προθεσμία",
+        "paidDate": "Ημ. Πληρωμής",
+        "status": "Κατάσταση",
+        "notes": "Σημειώσεις",
+        "isOverdue": "Εκπρόθεσμο",
+        "daysOverdueOrUntilDue": "Μέρες +/-",
+        "keaoRisk": "Κίνδυνος ΚΕΑΟ",
+        "monthLabel": "Μήνας",
+        "contributionTotal": "Συνολική Εισφορά"
+      },
+      "enums": {
+        "status": {
+          "upcoming": "Επερχόμενη",
+          "due": "Οφειλόμενη",
+          "paid": "Πληρωμένη",
+          "overdue": "Εκπρόθεσμη",
+          "keao": "ΚΕΑΟ"
+        },
+        "keaoRisk": {
+          "low": "Χαμηλός",
+          "medium": "Μέτριος",
+          "high": "Υψηλός"
+        },
+        "monthLabel": {
+          "jan": "Ιανουάριος",
+          "feb": "Φεβρουάριος",
+          "mar": "Μάρτιος",
+          "apr": "Απρίλιος",
+          "may": "Μάιος",
+          "jun": "Ιούνιος",
+          "jul": "Ιούλιος",
+          "aug": "Αύγουστος",
+          "sep": "Σεπτέμβριος",
+          "oct": "Οκτώβριος",
+          "nov": "Νοέμβριος",
+          "dec": "Δεκέμβριος"
         }
       }
     }

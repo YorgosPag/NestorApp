@@ -5,7 +5,8 @@
     "crm": "CRM & Sales",
     "financial": "Financial",
     "people": "People",
-    "specialists": "Specialists"
+    "specialists": "Specialists",
+    "accounting": "Accounting"
   },
   "domains": {
     "projects": {
@@ -1310,6 +1311,260 @@
           "rejected": "Rejected",
           "cancelled": "Cancelled",
           "completed": "Completed"
+        }
+      }
+    },
+    "invoices": {
+      "label": "Invoices",
+      "description": "Invoice management — aging, payment tracking, myDATA compliance",
+      "fields": {
+        "series": "Series",
+        "number": "Number",
+        "type": "Type",
+        "customerName": "Customer",
+        "customerVat": "Customer VAT",
+        "totalNetAmount": "Net Amount",
+        "totalVatAmount": "VAT Amount",
+        "totalGrossAmount": "Gross Amount",
+        "totalPaid": "Total Paid",
+        "balanceDue": "Balance Due",
+        "paymentMethod": "Payment Method",
+        "paymentStatus": "Payment Status",
+        "issueDate": "Issue Date",
+        "dueDate": "Due Date",
+        "project": "Project",
+        "fiscalYear": "Fiscal Year",
+        "notes": "Notes",
+        "createdAt": "Created",
+        "daysPastDue": "Days Past Due",
+        "isOverdue": "Overdue",
+        "paymentProgress": "Payment Progress",
+        "agingBucket": "Aging Bucket",
+        "daysToPayment": "Days to Payment",
+        "outstandingAmount": "Outstanding",
+        "mydataStatus": "myDATA Status",
+        "daysSinceIssued": "Days Since Issued",
+        "isCancelled": "Cancelled",
+        "isCreditNote": "Credit Note",
+        "paymentCount": "Payments",
+        "daysSinceLastPayment": "Days Since Payment",
+        "emailSentCount": "Emails Sent",
+        "wasEmailed": "Emailed"
+      },
+      "enums": {
+        "type": {
+          "service_invoice": "Service Invoice",
+          "sales_invoice": "Sales Invoice",
+          "retail_receipt": "Retail Receipt",
+          "service_receipt": "Service Receipt",
+          "credit_invoice": "Credit Invoice",
+          "service_invoice_eu": "EU Service Invoice",
+          "service_invoice_3rd": "3rd Country Invoice"
+        },
+        "paymentStatus": {
+          "unpaid": "Unpaid",
+          "partial": "Partial",
+          "paid": "Paid"
+        },
+        "paymentMethod": {
+          "cash": "Cash",
+          "bank_transfer": "Bank Transfer",
+          "card": "Card",
+          "check": "Check",
+          "credit": "Credit",
+          "mixed": "Mixed"
+        },
+        "mydataStatus": {
+          "draft": "Draft",
+          "sent": "Sent",
+          "accepted": "Accepted",
+          "rejected": "Rejected",
+          "cancelled": "Cancelled"
+        },
+        "agingBucket": {
+          "current": "Current",
+          "days30": "1-30 Days",
+          "days60": "31-60 Days",
+          "days90": "61-90 Days",
+          "over90": "90+ Days"
+        }
+      }
+    },
+    "journalEntries": {
+      "label": "Journal Entries",
+      "description": "Income & expense entries — fiscal quarter, VAT, reversal tracking",
+      "fields": {
+        "date": "Date",
+        "type": "Type",
+        "category": "Category",
+        "description": "Description",
+        "netAmount": "Net Amount",
+        "vatRate": "VAT Rate",
+        "grossAmount": "Gross Amount",
+        "vatDeductible": "VAT Deductible",
+        "paymentMethod": "Payment Method",
+        "contact": "Contact",
+        "contactName": "Contact Name",
+        "status": "Status",
+        "fiscalYear": "Fiscal Year",
+        "quarter": "Quarter",
+        "notes": "Notes",
+        "createdAt": "Created",
+        "entryAge": "Age (days)",
+        "hasInvoiceLink": "Has Invoice",
+        "isReversed": "Reversed",
+        "fiscalQuarter": "Fiscal Quarter",
+        "computedVatAmount": "VAT Amount",
+        "hasContact": "Has Contact"
+      },
+      "enums": {
+        "type": {
+          "income": "Income",
+          "expense": "Expense"
+        },
+        "paymentMethod": {
+          "cash": "Cash",
+          "bank_transfer": "Bank Transfer",
+          "card": "Card",
+          "check": "Check",
+          "credit": "Credit",
+          "mixed": "Mixed"
+        },
+        "status": {
+          "ACTIVE": "Active",
+          "REVERSED": "Reversed"
+        },
+        "fiscalQuarter": {
+          "Q1": "Q1 (Jan-Mar)",
+          "Q2": "Q2 (Apr-Jun)",
+          "Q3": "Q3 (Jul-Sep)",
+          "Q4": "Q4 (Oct-Dec)"
+        }
+      }
+    },
+    "bankTransactions": {
+      "label": "Bank Transactions",
+      "description": "Bank movements — reconciliation status, matching age, cash flow",
+      "fields": {
+        "transactionDate": "Transaction Date",
+        "valueDate": "Value Date",
+        "direction": "Direction",
+        "amount": "Amount",
+        "balanceAfter": "Balance After",
+        "bankDescription": "Description",
+        "counterparty": "Counterparty",
+        "paymentReference": "Reference",
+        "matchStatus": "Match Status",
+        "notes": "Notes",
+        "createdAt": "Created",
+        "isReconciled": "Reconciled",
+        "daysSinceTransaction": "Age (days)",
+        "unmatchedAge": "Unmatched (days)",
+        "isInflow": "Inflow",
+        "absoluteAmount": "Abs. Amount"
+      },
+      "enums": {
+        "direction": {
+          "credit": "Credit (In)",
+          "debit": "Debit (Out)"
+        },
+        "matchStatus": {
+          "unmatched": "Unmatched",
+          "auto_matched": "Auto Matched",
+          "manual_matched": "Manual Matched",
+          "excluded": "Excluded"
+        },
+        "isReconciled": {
+          "matched": "Matched",
+          "unmatched": "Unmatched",
+          "excluded": "Excluded"
+        }
+      }
+    },
+    "expenseDocuments": {
+      "label": "Expense Documents",
+      "description": "Received invoices & receipts — AI processing, deductibility, review status",
+      "fields": {
+        "type": "Document Type",
+        "status": "Status",
+        "fileName": "File Name",
+        "confirmedCategory": "Category",
+        "confirmedNetAmount": "Net Amount",
+        "confirmedVatAmount": "VAT Amount",
+        "confirmedDate": "Document Date",
+        "confirmedIssuerName": "Issuer",
+        "fiscalYear": "Fiscal Year",
+        "notes": "Notes",
+        "createdAt": "Uploaded",
+        "hasDocument": "Has File",
+        "computedVatAmount": "VAT (computed)",
+        "isDeductible": "Deductible",
+        "documentAge": "Age (days)",
+        "needsReview": "Needs Review",
+        "aiConfidence": "AI Confidence",
+        "hasJournalEntry": "In Journal"
+      },
+      "enums": {
+        "type": {
+          "purchase_invoice": "Purchase Invoice",
+          "receipt": "Receipt",
+          "utility_bill": "Utility Bill",
+          "telecom_bill": "Telecom Bill",
+          "fuel_receipt": "Fuel Receipt",
+          "bank_statement": "Bank Statement",
+          "other": "Other"
+        },
+        "status": {
+          "processing": "Processing",
+          "review": "Needs Review",
+          "confirmed": "Confirmed",
+          "rejected": "Rejected"
+        }
+      }
+    },
+    "efkaPayments": {
+      "label": "EFKA Payments",
+      "description": "Social security contributions — overdue tracking, KEAO risk, payment status",
+      "fields": {
+        "year": "Year",
+        "month": "Month",
+        "amount": "Amount",
+        "dueDate": "Due Date",
+        "paidDate": "Paid Date",
+        "status": "Status",
+        "notes": "Notes",
+        "isOverdue": "Overdue",
+        "daysOverdueOrUntilDue": "Days +/-",
+        "keaoRisk": "KEAO Risk",
+        "monthLabel": "Month Name",
+        "contributionTotal": "Total Contribution"
+      },
+      "enums": {
+        "status": {
+          "upcoming": "Upcoming",
+          "due": "Due",
+          "paid": "Paid",
+          "overdue": "Overdue",
+          "keao": "KEAO"
+        },
+        "keaoRisk": {
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        },
+        "monthLabel": {
+          "jan": "January",
+          "feb": "February",
+          "mar": "March",
+          "apr": "April",
+          "may": "May",
+          "jun": "June",
+          "jul": "July",
+          "aug": "August",
+          "sep": "September",
+          "oct": "October",
+          "nov": "November",
+          "dec": "December"
         }
       }
     }

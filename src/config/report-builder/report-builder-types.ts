@@ -85,7 +85,7 @@ export interface ReportBuilderFilter {
 // Field & Domain Definitions
 // ============================================================================
 
-/** Domain IDs — Phase 1 (4) + Phase 4a (4) + Phase 4b (6) + Phase 5 (8) + Phase 6a (3) + Phase 6b (3) + Phase 6c (2) + Phase 6d (2) */
+/** Domain IDs — Phase 1 (4) + Phase 4a (4) + Phase 4b (6) + Phase 5 (8) + Phase 6a (3) + Phase 6b (3) + Phase 6c (2) + Phase 6d (2) + Phase 6e (2) + Phase 6f (3) */
 export type BuilderDomainId =
   | 'projects' | 'buildings' | 'floors' | 'units'
   | 'parking' | 'storage' | 'individuals' | 'companies'
@@ -95,10 +95,12 @@ export type BuilderDomainId =
   | 'constructionPhases' | 'constructionTasks' | 'resourceAssignments'
   | 'boqItems' | 'buildingMilestones' | 'constructionBaselines'
   | 'opportunities' | 'crmTasks'
-  | 'communications' | 'appointments';
+  | 'communications' | 'appointments'
+  | 'invoices' | 'journalEntries'
+  | 'bankTransactions' | 'expenseDocuments' | 'efkaPayments';
 
 /** Domain groups for UI categorization (Q87) */
-export type DomainGroup = 'realestate' | 'financial' | 'people' | 'specialists' | 'construction' | 'crm';
+export type DomainGroup = 'realestate' | 'financial' | 'people' | 'specialists' | 'construction' | 'crm' | 'accounting';
 
 /** Ordered groups for DomainSelector rendering */
 export const DOMAIN_GROUP_ORDER: readonly DomainGroup[] = [
@@ -106,6 +108,7 @@ export const DOMAIN_GROUP_ORDER: readonly DomainGroup[] = [
   'construction',
   'crm',
   'financial',
+  'accounting',
   'people',
   'specialists',
 ] as const;
@@ -328,7 +331,7 @@ export const BUILDER_LIMITS = {
   MAX_AGGREGATIONS: 8,
 } as const;
 
-/** All valid domain IDs (Phase 1 + Phase 4a + Phase 4b + Phase 5 + Phase 6a-6d) */
+/** All valid domain IDs (Phase 1 + Phase 4a + Phase 4b + Phase 5 + Phase 6a-6f) */
 export const VALID_DOMAIN_IDS: readonly BuilderDomainId[] = [
   'projects',
   'buildings',
@@ -362,6 +365,11 @@ export const VALID_DOMAIN_IDS: readonly BuilderDomainId[] = [
   'crmTasks',
   'communications',
   'appointments',
+  'invoices',
+  'journalEntries',
+  'bankTransactions',
+  'expenseDocuments',
+  'efkaPayments',
 ] as const;
 
 // ============================================================================

@@ -51,6 +51,15 @@ import {
   COMMUNICATIONS_DEFINITION,
   APPOINTMENTS_DEFINITION,
 } from './domain-defs-crm-ext';
+import {
+  INVOICES_DEFINITION,
+  JOURNAL_ENTRIES_DEFINITION,
+} from './domain-defs-accounting';
+import {
+  BANK_TRANSACTIONS_DEFINITION,
+  EXPENSE_DOCUMENTS_DEFINITION,
+  EFKA_PAYMENTS_DEFINITION,
+} from './domain-defs-accounting-ext';
 
 // ============================================================================
 // Enum Value Constants (SSoT — match actual Firestore data)
@@ -264,6 +273,13 @@ export const DOMAIN_DEFINITIONS: Record<BuilderDomainId, DomainDefinition> = {
   // Phase 6d — CRM extended domains
   communications: COMMUNICATIONS_DEFINITION,
   appointments: APPOINTMENTS_DEFINITION,
+  // Phase 6e — Accounting domains
+  invoices: INVOICES_DEFINITION,
+  journalEntries: JOURNAL_ENTRIES_DEFINITION,
+  // Phase 6f — Accounting extended domains
+  bankTransactions: BANK_TRANSACTIONS_DEFINITION,
+  expenseDocuments: EXPENSE_DOCUMENTS_DEFINITION,
+  efkaPayments: EFKA_PAYMENTS_DEFINITION,
 };
 
 // ============================================================================

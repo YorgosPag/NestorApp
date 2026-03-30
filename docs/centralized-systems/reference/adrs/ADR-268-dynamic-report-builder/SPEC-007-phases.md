@@ -251,7 +251,64 @@ src/i18n/locales/el/report-builder-domains.json                    ← EDIT: +3 
 
 **Running totals after Phase 6d**: 32 domains, 84 fields (17 computed CRM)
 
-### Phase 6e-6f: Accounting — PENDING
+### Phase 6e: Accounting Core — ✅ DONE (2026-03-30)
+
+**Research**: QuickBooks Enterprise, Xero, FreshBooks, Sage, myDATA ΑΑΔΕ
+**Gap Analysis**: 16 gaps identified → 16 questions → ALL approved by Γιώργος
+
+**Domains**:
+- F1 Invoices: ~20 flat + 14 computed (AR aging, DSO, payment progress, myDATA)
+- F2 Journal Entries: ~16 flat + 6 computed (entry age, fiscal quarter, reversal)
+
+**Computed fields (20)**:
+- G1: `daysPastDue` = days past due date (QuickBooks, Xero AR Aging)
+- G2: `isOverdue` = unpaid + past due (all platforms)
+- G3: `paymentProgress` = % paid (QuickBooks, Xero)
+- G4: `agingBucket` = current/30/60/90/90+ (QuickBooks AR Aging Detail)
+- G5: `daysToPayment` = DSO per invoice (Xero, Sage)
+- G6: `outstandingAmount` = gross - paid (all platforms)
+- G7: `entryAge` = days since journal entry (Sage)
+- G8: `hasInvoiceLink` = linked to invoice (Sage)
+- G9: `isReversed` = entry reversed (Sage, QuickBooks)
+- G19: `mydataStatus` = ΑΑΔΕ transmission status (myDATA compliance)
+- G20: `daysSinceIssued` = days since invoice issue (all platforms)
+- G21: `isCancelled` = invoice cancelled (QuickBooks, Sage)
+- G22: `isCreditNote` = credit note type (all platforms)
+- G23: `fiscalQuarter` = Q1-Q4 label (Sage, ΑΑΔΕ)
+- G24: `computedVatAmount` = VAT amount (all platforms)
+- G31: `paymentCount` = number of payments (QuickBooks, Xero)
+- G32: `daysSinceLastPayment` = last payment age (QuickBooks, Xero)
+- G33: `hasContact` = linked to contact (QuickBooks, Xero)
+- G37: `emailSentCount` = emails sent (QuickBooks, FreshBooks)
+- G38: `wasEmailed` = at least one email (all platforms)
+
+### Phase 6f: Accounting Extended — ✅ DONE (2026-03-30)
+
+**Domains**:
+- F4 Bank Transactions: ~11 flat + 5 computed (reconciliation, matching age)
+- F5 Expense Documents: ~11 flat + 7 computed (AI confidence, deductibility)
+- F6 EFKA Payments: ~7 flat + 5 computed (KEAO risk, overdue tracking)
+
+**Computed fields (17)**:
+- G10: `isReconciled` = matched/unmatched/excluded (Xero, QuickBooks)
+- G11: `daysSinceTransaction` = transaction age (all platforms)
+- G12: `unmatchedAge` = days waiting for match (Xero)
+- G13: `hasDocument` = file attached (FreshBooks, QuickBooks)
+- G14: `computedVatAmount` = VAT from confirmed/extracted (all platforms)
+- G15: `isDeductible` = tax deductible (ΑΑΔΕ, Sage)
+- G16: `isOverdue` = EFKA payment overdue (ΕΦΚΑ/ΚΕΑΟ)
+- G17: `daysOverdueOrUntilDue` = days +/- from due (ΕΦΚΑ)
+- G18: `keaoRisk` = low/medium/high risk (ΕΦΚΑ/ΚΕΑΟ >60 days)
+- G25: `isInflow` = credit direction (all platforms)
+- G26: `absoluteAmount` = positive amount for sorting (all platforms)
+- G27: `documentAge` = days since upload (FreshBooks)
+- G28: `needsReview` = status=review flag (Xero, FreshBooks AI)
+- G29: `monthLabel` = human month name (all platforms)
+- G30: `contributionTotal` = total EFKA amount (ΕΦΚΑ)
+- G35: `aiConfidence` = AI extraction confidence % (Xero, FreshBooks AI)
+- G36: `hasJournalEntry` = linked to journal (Sage, QuickBooks)
+
+**Running totals after Phase 6f**: 37 domains, ~160 fields (37 computed accounting)
 
 **Test αρχεία (ΥΠΟΧΡΕΩΤΙΚΑ):**
 ```
