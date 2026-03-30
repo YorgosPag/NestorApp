@@ -13,7 +13,7 @@
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/intl-utils';
-import type { EPETaxResult } from '../../types/tax';
+import type { EPETaxResult, AETaxResult } from '../../types/tax';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -24,24 +24,52 @@ import { cn } from '@/lib/utils';
 // ============================================================================
 
 interface CorporateTaxBreakdownProps {
-  result: EPETaxResult;
+  result: EPETaxResult | AETaxResult;
+  entityType: 'epe' | 'ae';
 }
 
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
-export function CorporateTaxBreakdown({ result }: CorporateTaxBreakdownProps) {
+export function CorporateTaxBreakdown({ result, entityType }: CorporateTaxBreakdownProps) {
   const { t } = useTranslation('accounting');
   const colors = useSemanticColors();
-  const { corporateTax, memberDividends, profitAfterTax, distributedDividends, retainedEarnings, totalDividendTax } = result;
+  const { corporateTax, profitAfterTax, distributedDividends, retainedEarnings, totalDividendTax } = result;
+
+  // Normalize per-member/shareholder dividends for both EPE and AE
+  const dividendItems = entityType === 'ae'
+    ? (result as AETaxResult).shareholderDividends.map((sd) => ({
+        id: sd.shareholderId,
+        name: sd.shareholderName,
+        dividendSharePercent: sd.dividendSharePercent,
+        grossDividend: sd.grossDividend,
+        dividendTaxAmount: sd.dividendTaxAmount,
+        netDividend: sd.netDividend,
+      }))
+    : (result as EPETaxResult).memberDividends.map((md) => ({
+        id: md.memberId,
+        name: md.memberName,
+        dividendSharePercent: md.dividendSharePercent,
+        grossDividend: md.grossDividend,
+        dividendTaxAmount: md.dividendTaxAmount,
+        netDividend: md.netDividend,
+      }));
+
+  const dividendsTitle = entityType === 'ae'
+    ? t('setup.corporateTax.shareholderDividends')
+    : t('setup.corporateTax.memberDividends');
+
+  const taxTitle = entityType === 'ae'
+    ? t('setup.corporateTax.titleAE')
+    : t('setup.corporateTax.title');
 
   return (
     <section className="space-y-4">
       {/* Corporate Tax Summary */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('setup.corporateTax.title')}</CardTitle>
+          <CardTitle>{taxTitle}</CardTitle>
         </CardHeader>
         <CardContent>
           <dl className="space-y-2 text-sm">
@@ -110,34 +138,34 @@ export function CorporateTaxBreakdown({ result }: CorporateTaxBreakdownProps) {
         </CardContent>
       </Card>
 
-      {/* Per-member dividends */}
-      {memberDividends.length > 0 && (
+      {/* Per-member/shareholder dividends */}
+      {dividendItems.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>{t('setup.corporateTax.memberDividends')}</CardTitle>
+            <CardTitle>{dividendsTitle}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {memberDividends.map((md) => (
-                <article key={md.memberId} className="rounded-md border p-3">
+              {dividendItems.map((item) => (
+                <article key={item.id} className="rounded-md border p-3">
                   <header className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-sm">{md.memberName}</h4>
+                    <h4 className="font-medium text-sm">{item.name}</h4>
                     <span className={cn("text-xs", colors.text.muted)}>
-                      {md.dividendSharePercent}%
+                      {item.dividendSharePercent}%
                     </span>
                   </header>
                   <dl className="grid grid-cols-3 gap-2 text-xs">
                     <div>
                       <dt className={colors.text.muted}>{t('setup.corporateTax.grossDividend')}</dt>
-                      <dd className="font-medium">{formatCurrency(md.grossDividend)}</dd>
+                      <dd className="font-medium">{formatCurrency(item.grossDividend)}</dd>
                     </div>
                     <div>
                       <dt className={colors.text.muted}>{t('setup.corporateTax.dividendTax')}</dt>
-                      <dd className="font-medium text-destructive">{formatCurrency(md.dividendTaxAmount)}</dd>
+                      <dd className="font-medium text-destructive">{formatCurrency(item.dividendTaxAmount)}</dd>
                     </div>
                     <div>
                       <dt className={colors.text.muted}>{t('setup.corporateTax.netDividend')}</dt>
-                      <dd className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(md.netDividend)}</dd>
+                      <dd className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(item.netDividend)}</dd>
                     </div>
                   </dl>
                 </article>

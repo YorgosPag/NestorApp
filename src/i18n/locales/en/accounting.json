@@ -17,6 +17,8 @@
     "newInvoice": "New Invoice",
     "newExpense": "New Expense",
     "editInvoice": "Edit Invoice",
+    "updateInvoice": "Update",
+    "editNotAllowed": "This invoice cannot be edited (status: {{status}}).",
     "invoiceDetails": "Invoice Details",
     "noInvoices": "No invoices found",
     "noInvoicesDescription": "Start by creating your first invoice",
@@ -545,6 +547,8 @@
       "dividendTax": "Dividend Tax 5%",
       "retainedEarnings": "Retained Earnings",
       "memberDividends": "Dividends per Member",
+      "shareholderDividends": "Dividends per Shareholder",
+      "titleAE": "AE Corporate Tax",
       "grossDividend": "Gross Dividend",
       "netDividend": "Net Dividend",
       "totalDividendTax": "Total Dividend Tax"

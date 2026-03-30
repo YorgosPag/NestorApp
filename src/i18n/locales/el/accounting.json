@@ -17,6 +17,8 @@
     "newInvoice": "Νέο Τιμολόγιο",
     "newExpense": "Νέο Έξοδο",
     "editInvoice": "Επεξεργασία Τιμολογίου",
+    "updateInvoice": "Ενημέρωση",
+    "editNotAllowed": "Αυτό το τιμολόγιο δεν μπορεί να επεξεργαστεί (κατάσταση: {{status}}).",
     "invoiceDetails": "Λεπτομέρειες Τιμολογίου",
     "noInvoices": "Δεν βρέθηκαν τιμολόγια",
     "noInvoicesDescription": "Ξεκινήστε δημιουργώντας το πρώτο σας τιμολόγιο",
@@ -545,6 +547,8 @@
       "dividendTax": "Φόρος Μερισμάτων 5%",
       "retainedEarnings": "Αδιανέμητα Κέρδη",
       "memberDividends": "Μερίσματα ανά Μέλος",
+      "shareholderDividends": "Μερίσματα ανά Μέτοχο",
+      "titleAE": "Εταιρικός Φόρος ΑΕ",
       "grossDividend": "Μικτό Μέρισμα",
       "netDividend": "Καθαρό Μέρισμα",
       "totalDividendTax": "Σύνολο Φόρου Μερισμάτων"

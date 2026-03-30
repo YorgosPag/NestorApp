@@ -238,6 +238,11 @@ export const LazyRoutes = {
     { loadingType: 'form', ssr: false }
   ),
 
+  AccountingEditInvoice: createLazyRoute(
+    () => import('@/subapps/accounting/components/invoices/EditInvoicePageContent').then(mod => ({ default: mod.EditInvoicePageContent })),
+    { loadingType: 'form', ssr: false }
+  ),
+
   AccountingJournal: createLazyRoute(
     () => import('@/subapps/accounting/components/journal/JournalPageContent').then(mod => ({ default: mod.JournalPageContent })),
     { loadingType: 'list', ssr: false }

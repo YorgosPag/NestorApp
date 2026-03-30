@@ -30,6 +30,7 @@ import type { DashboardStat } from '@/components/property-management/dashboard/U
 import { useAuth } from '@/hooks/useAuth';
 import { API_ROUTES } from '@/config/domain-constants';
 import { formatCurrency } from '../../utils/format';
+import { FiscalYearPicker } from '../shared/FiscalYearPicker';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -60,6 +61,7 @@ export function AccountingDashboard() {
   const router = useRouter();
   const { user } = useAuth();
 
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [stats, setStats] = useState<DashboardStats>({
     totalIncome: 0,
     totalExpenses: 0,
@@ -77,7 +79,7 @@ export function AccountingDashboard() {
     try {
       const token = await user.getIdToken();
       const headers: HeadersInit = { Authorization: `Bearer ${token}` };
-      const year = new Date().getFullYear();
+      const year = selectedYear;
 
       const [journalRes, vatRes, invoicesRes] = await Promise.all([
         fetch(`${API_ROUTES.ACCOUNTING.JOURNAL}?fiscalYear=${year}`, { headers }),
@@ -104,7 +106,7 @@ export function AccountingDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, selectedYear]);
 
   useEffect(() => {
     fetchStats();
@@ -159,13 +161,18 @@ export function AccountingDashboard() {
           <div>
             <h1 className="text-2xl font-bold text-foreground">{t('pages.dashboard')}</h1>
             <p className={cn("text-sm mt-1", colors.text.muted)}>
-              {new Date().getFullYear()}
+              {selectedYear}
             </p>
           </div>
-          <Button onClick={() => router.push('/accounting/invoices/new')}>
-            <Plus className="mr-2 h-4 w-4" />
-            {t('invoices.newInvoice')}
-          </Button>
+          <div className="flex items-center gap-3">
+            <div className="w-32">
+              <FiscalYearPicker value={selectedYear} onValueChange={setSelectedYear} />
+            </div>
+            <Button onClick={() => router.push('/accounting/invoices/new')}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t('invoices.newInvoice')}
+            </Button>
+          </div>
         </div>
       </header>
 

@@ -31,6 +31,7 @@ import { VATReportCard } from './VATReportCard';
 import { TaxEstimateCard } from './TaxEstimateCard';
 import { TaxDashboard } from './TaxDashboard';
 import { PartnerTaxBreakdown } from '../tax/PartnerTaxBreakdown';
+import { CorporateTaxBreakdown } from '../tax/CorporateTaxBreakdown';
 import { FinancialReportsDashboard } from './FinancialReportsDashboard';
 
 // ============================================================================
@@ -43,19 +44,43 @@ export function ReportsPageContent() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [showDashboard, setShowDashboard] = useState(true);
 
-  const { estimate, partnershipResult, entityType, loading } = useTaxEstimate({ fiscalYear: selectedYear });
+  const { estimate, partnershipResult, corporateResult, entityType, loading } = useTaxEstimate({ fiscalYear: selectedYear });
 
-  // ADR-229 Phase 2: Data-level loading guard
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-background">
-        <PageLoadingState icon={FileBarChart} message={t('reports.loading', { defaultValue: 'Φόρτωση αναφορών...' })} layout="contained" />
-      </main>
-    );
-  }
-
-  // Dashboard stats — entity-aware
+  // Dashboard stats — entity-aware (useMemo MUST be above early return — React hooks rule)
   const dashboardStats: DashboardStat[] = useMemo(() => {
+    if ((entityType === 'epe' || entityType === 'ae') && corporateResult) {
+      return [
+        {
+          title: t('reports.totalIncome'),
+          value: formatCurrency(corporateResult.corporateTax.grossIncome),
+          icon: TrendingUp,
+          color: 'green' as const,
+          loading,
+        },
+        {
+          title: t('reports.totalExpenses'),
+          value: formatCurrency(corporateResult.corporateTax.deductibleExpenses),
+          icon: TrendingDown,
+          color: 'red' as const,
+          loading,
+        },
+        {
+          title: t('reports.taxableIncome'),
+          value: formatCurrency(corporateResult.corporateTax.taxableIncome),
+          icon: Calculator,
+          color: 'blue' as const,
+          loading,
+        },
+        {
+          title: t('setup.corporateTax.totalObligation', { defaultValue: 'Φορολογική Υποχρέωση' }),
+          value: formatCurrency(corporateResult.corporateTax.totalObligation),
+          icon: DollarSign,
+          color: 'orange' as const,
+          loading,
+        },
+      ];
+    }
+
     if (entityType === 'oe' && partnershipResult) {
       return [
         {
@@ -124,7 +149,16 @@ export function ReportsPageContent() {
         loading,
       },
     ];
-  }, [estimate, partnershipResult, entityType, loading, t]);
+  }, [estimate, partnershipResult, corporateResult, entityType, loading, t]);
+
+  // ADR-229 Phase 2: Data-level loading guard (AFTER useMemo to avoid hooks violation)
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-background">
+        <PageLoadingState icon={FileBarChart} message={t('reports.loading', { defaultValue: 'Φόρτωση αναφορών...' })} layout="contained" />
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-background">
@@ -156,6 +190,8 @@ export function ReportsPageContent() {
           <section className="py-6 space-y-6">
             {entityType === 'oe' && partnershipResult ? (
               <PartnerTaxBreakdown result={partnershipResult} />
+            ) : (entityType === 'epe' || entityType === 'ae') && corporateResult ? (
+              <CorporateTaxBreakdown result={corporateResult} entityType={entityType} />
             ) : (
               <>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

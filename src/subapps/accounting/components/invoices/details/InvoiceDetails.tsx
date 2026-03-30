@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import Link from 'next/link';
 import { ArrowLeft, ClipboardCheck } from 'lucide-react';
@@ -26,6 +27,7 @@ interface InvoiceDetailsProps {
 export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
   const { t } = useTranslation('accounting');
   const colors = useSemanticColors();
+  const router = useRouter();
   const { user } = useAuth();
   const { profile: companyProfile } = useCompanySetup();
 
@@ -98,6 +100,7 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
           onRefresh={fetchInvoice}
           companyProfile={companyProfile}
           onSendEmail={() => setEmailDialogOpen(true)}
+          onEdit={() => router.push(`/accounting/invoices/${invoiceId}/edit`)}
         />
       </header>
 

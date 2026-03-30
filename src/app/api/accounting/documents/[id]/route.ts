@@ -21,8 +21,8 @@ import { withAuth, logFinancialTransition } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import { isoToday, getQuarterFromDate } from '@/subapps/accounting/services/repository/firestore-helpers';
-import type { AccountCategory, ExpenseCategory, CreateJournalEntryInput } from '@/subapps/accounting/types';
+import { isoToday } from '@/subapps/accounting/services/repository/firestore-helpers';
+import type { AccountCategory, ExpenseCategory } from '@/subapps/accounting/types';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 
@@ -88,7 +88,7 @@ async function handlePatch(
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const { repository } = createAccountingServices();
+        const { repository, service } = createAccountingServices();
         const parsed = safeParseBody(PatchDocumentSchema, await req.json());
         if (parsed.error) return parsed.error;
         const body = parsed.data;
@@ -119,35 +119,18 @@ async function handlePatch(
         const confirmedVatAmount = body.confirmedVatAmount ?? document.extractedData.vatAmount ?? 0;
         const confirmedDate = body.confirmedDate ?? document.extractedData.issueDate ?? isoToday();
         const confirmedIssuerName = body.confirmedIssuerName ?? document.extractedData.issuerName ?? null;
-
-        // Create journal entry for the confirmed expense
-        const vatRate = document.extractedData.vatRate ?? 24;
-        const vatAmount = confirmedVatAmount;
-        const grossAmount = confirmedNetAmount + vatAmount;
-        const quarter = getQuarterFromDate(confirmedDate);
-
-        const journalInput: CreateJournalEntryInput = {
-          date: confirmedDate,
-          type: 'expense',
-          category: confirmedCategory as AccountCategory,
-          description: `Παραστατικό: ${document.fileName}${confirmedIssuerName ? ` — ${confirmedIssuerName}` : ''}`,
-          netAmount: confirmedNetAmount,
-          vatRate,
-          vatAmount,
-          grossAmount,
-          vatDeductible: true,
-          paymentMethod: document.extractedData.paymentMethod ?? 'bank_transfer',
-          contactId: null,
-          contactName: confirmedIssuerName ?? null,
-          invoiceId: null,
-          mydataCode: 'category2_4',
-          e3Code: '585_001',
+        const journalEntry = await service.createJournalEntryFromExpense({
+          documentId: id,
+          fileName: document.fileName,
+          confirmedNetAmount,
+          confirmedVatAmount,
+          confirmedCategory: confirmedCategory as AccountCategory,
+          confirmedDate,
+          confirmedIssuerName: confirmedIssuerName ?? null,
+          confirmedPaymentMethod: document.extractedData.paymentMethod ?? 'bank_transfer',
           fiscalYear: document.fiscalYear,
-          quarter,
-          notes: `AI Document: ${id}`,
-        };
-
-        const { id: journalEntryId } = await repository.createJournalEntry(journalInput);
+        });
+        const journalEntryId = journalEntry?.entryId ?? null;
 
         // Update document with confirmed data
         await repository.updateExpenseDocument(id, {

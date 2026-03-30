@@ -13,7 +13,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { API_ROUTES } from '@/config/domain-constants';
-import type { TaxEstimate, PartnershipTaxResult, EntityType } from '@/subapps/accounting/types';
+import type { TaxEstimate, PartnershipTaxResult, EPETaxResult, AETaxResult, EntityType } from '@/subapps/accounting/types';
 
 // ============================================================================
 // TYPES
@@ -29,6 +29,8 @@ interface UseTaxEstimateReturn {
   estimate: TaxEstimate | null;
   /** Αποτέλεσμα φόρου ΟΕ (oe) */
   partnershipResult: PartnershipTaxResult | null;
+  /** Αποτέλεσμα εταιρικού φόρου ΕΠΕ/ΑΕ */
+  corporateResult: EPETaxResult | AETaxResult | null;
   /** Τύπος νομικής μορφής */
   entityType: EntityType | null;
   /** Κατάσταση φόρτωσης */
@@ -43,7 +45,7 @@ interface UseTaxEstimateReturn {
 interface TaxEstimateApiResponse {
   success: boolean;
   entityType: EntityType;
-  data: TaxEstimate | PartnershipTaxResult;
+  data: TaxEstimate | PartnershipTaxResult | EPETaxResult | AETaxResult;
 }
 
 // ============================================================================
@@ -56,6 +58,7 @@ export function useTaxEstimate(options: UseTaxEstimateOptions): UseTaxEstimateRe
 
   const [estimate, setEstimate] = useState<TaxEstimate | null>(null);
   const [partnershipResult, setPartnershipResult] = useState<PartnershipTaxResult | null>(null);
+  const [corporateResult, setCorporateResult] = useState<EPETaxResult | AETaxResult | null>(null);
   const [entityType, setEntityType] = useState<EntityType | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,15 +93,22 @@ export function useTaxEstimate(options: UseTaxEstimateOptions): UseTaxEstimateRe
       if (result.entityType === 'oe') {
         setPartnershipResult(result.data as PartnershipTaxResult);
         setEstimate(null);
+        setCorporateResult(null);
+      } else if (result.entityType === 'epe' || result.entityType === 'ae') {
+        setCorporateResult(result.data as EPETaxResult | AETaxResult);
+        setEstimate(null);
+        setPartnershipResult(null);
       } else {
         setEstimate(result.data as TaxEstimate);
         setPartnershipResult(null);
+        setCorporateResult(null);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'accounting.errors.taxEstimateLoadFailed';
       setError(message);
       setEstimate(null);
       setPartnershipResult(null);
+      setCorporateResult(null);
     } finally {
       setLoading(false);
     }
@@ -113,6 +123,7 @@ export function useTaxEstimate(options: UseTaxEstimateOptions): UseTaxEstimateRe
   return {
     estimate,
     partnershipResult,
+    corporateResult,
     entityType,
     loading,
     error,

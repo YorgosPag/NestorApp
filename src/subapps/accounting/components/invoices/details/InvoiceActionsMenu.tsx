@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MoreHorizontal, Printer, Download, Mail, Loader2 } from 'lucide-react';
+import { MoreHorizontal, Printer, Download, Mail, Loader2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -23,6 +23,7 @@ interface InvoiceActionsMenuProps {
   onRefresh: () => void;
   companyProfile: CompanyProfile | null;
   onSendEmail: () => void;
+  onEdit?: () => void;
 }
 
 /**
@@ -40,7 +41,7 @@ function buildPDFSettings(profile: CompanyProfile | null): InvoicePDFSettings {
   return settings;
 }
 
-export function InvoiceActionsMenu({ invoice, onRefresh, companyProfile, onSendEmail }: InvoiceActionsMenuProps) {
+export function InvoiceActionsMenu({ invoice, onRefresh, companyProfile, onSendEmail, onEdit }: InvoiceActionsMenuProps) {
   const { t } = useTranslation('accounting');
   const [downloading, setDownloading] = useState(false);
   const [printing, setPrinting] = useState(false);
@@ -70,6 +71,7 @@ export function InvoiceActionsMenu({ invoice, onRefresh, companyProfile, onSendE
   };
 
   const isLoading = downloading || printing;
+  const isEditable = invoice.mydata?.status === 'draft' || invoice.mydata?.status === 'rejected';
 
   return (
     <DropdownMenu>
@@ -83,6 +85,12 @@ export function InvoiceActionsMenu({ invoice, onRefresh, companyProfile, onSendE
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        {isEditable && onEdit && (
+          <DropdownMenuItem onClick={onEdit}>
+            <Pencil className="mr-2 h-4 w-4" />
+            {t('invoices.editInvoice', { defaultValue: 'Επεξεργασία' })}
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onClick={handlePrint} disabled={printing}>
           <Printer className="mr-2 h-4 w-4" />
           {t('forms.print')}

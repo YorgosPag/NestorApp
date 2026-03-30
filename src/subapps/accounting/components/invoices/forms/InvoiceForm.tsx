@@ -24,6 +24,7 @@ import { InvoicePreview } from './InvoicePreview';
 import { useServicePresets } from '@/subapps/accounting/hooks';
 import { useCompanySetup } from '@/subapps/accounting/hooks/useCompanySetup';
 import type {
+  Invoice,
   InvoiceType,
   InvoiceLineItem,
   InvoiceCustomer,
@@ -35,6 +36,10 @@ import type {
 interface InvoiceFormProps {
   onSuccess: (invoiceId: string) => void;
   onCancel: () => void;
+  /** Edit mode — pre-fill form with existing invoice data */
+  editMode?: boolean;
+  /** Existing invoice to edit (required when editMode=true) */
+  initialData?: Invoice;
 }
 
 // Configurable withholding rates — ADR-ACC-020
@@ -121,7 +126,24 @@ function calculateTotals(lineItems: InvoiceLineItem[]) {
   };
 }
 
-export function InvoiceForm({ onSuccess, onCancel }: InvoiceFormProps) {
+/**
+ * Build form state from existing invoice (edit mode pre-fill)
+ */
+function buildFormStateFromInvoice(invoice: Invoice): InvoiceFormState {
+  return {
+    type: invoice.type,
+    series: invoice.series,
+    issueDate: invoice.issueDate,
+    dueDate: invoice.dueDate ?? '',
+    customer: { ...invoice.customer },
+    lineItems: invoice.lineItems.map((li) => ({ ...li })),
+    paymentMethod: invoice.paymentMethod,
+    withholdingRate: (invoice.withholdingRate ?? 0) as WithholdingRateOption,
+    notes: invoice.notes ?? '',
+  };
+}
+
+export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: InvoiceFormProps) {
   const { t } = useTranslation('accounting');
   const { user } = useAuth();
   const { presets } = useServicePresets();
@@ -141,17 +163,21 @@ export function InvoiceForm({ onSuccess, onCancel }: InvoiceFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [form, setForm] = useState<InvoiceFormState>({
-    type: 'service_invoice',
-    series: 'A',
-    issueDate: new Date().toISOString().split('T')[0],
-    dueDate: '',
-    customer: { ...DEFAULT_CUSTOMER },
-    lineItems: [{ ...DEFAULT_LINE_ITEM }],
-    paymentMethod: 'bank_transfer',
-    withholdingRate: 0,
-    notes: '',
-  });
+  const [form, setForm] = useState<InvoiceFormState>(() =>
+    editMode && initialData
+      ? buildFormStateFromInvoice(initialData)
+      : {
+          type: 'service_invoice',
+          series: 'A',
+          issueDate: new Date().toISOString().split('T')[0],
+          dueDate: '',
+          customer: { ...DEFAULT_CUSTOMER },
+          lineItems: [{ ...DEFAULT_LINE_ITEM }],
+          paymentMethod: 'bank_transfer',
+          withholdingRate: 0,
+          notes: '',
+        }
+  );
 
   const updateField = useCallback(<K extends keyof InvoiceFormState>(
     key: K,
@@ -255,8 +281,13 @@ export function InvoiceForm({ onSuccess, onCancel }: InvoiceFormProps) {
         fiscalYear: currentYear,
       };
 
-      const res = await fetch(API_ROUTES.ACCOUNTING.INVOICES.LIST, {
-        method: 'POST',
+      const url = editMode && initialData
+        ? API_ROUTES.ACCOUNTING.INVOICES.BY_ID(initialData.invoiceId)
+        : API_ROUTES.ACCOUNTING.INVOICES.LIST;
+      const method = editMode ? 'PATCH' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -270,13 +301,16 @@ export function InvoiceForm({ onSuccess, onCancel }: InvoiceFormProps) {
       }
 
       const result = await res.json();
-      onSuccess(result.data?.id ?? result.id);
+      const invoiceId = editMode && initialData
+        ? initialData.invoiceId
+        : (result.data?.id ?? result.id);
+      onSuccess(invoiceId);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setSubmitting(false);
     }
-  }, [user, form, totals, t, onSuccess]);
+  }, [user, form, totals, t, onSuccess, editMode, initialData, companyProfile]);
 
   return (
     <div className="space-y-6">
@@ -442,7 +476,7 @@ export function InvoiceForm({ onSuccess, onCancel }: InvoiceFormProps) {
         </Button>
         <Button onClick={handleSubmit} disabled={submitting}>
           {submitting ? <Spinner size="small" className="mr-2" /> : null}
-          {t('forms.create')}
+          {editMode ? t('invoices.updateInvoice') : t('forms.create')}
         </Button>
       </footer>
     </div>

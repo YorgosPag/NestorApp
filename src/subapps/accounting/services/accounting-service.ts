@@ -19,8 +19,7 @@ import type { TaxResult, TaxEstimate, PartnershipTaxResult, EPETaxResult, AETaxR
 import type { EFKAAnnualSummary, PartnershipEFKASummary, EPEEFKASummary, AEEFKASummary } from '../types/efka';
 import type { DepreciationRecord } from '../types/assets';
 import type { CreateJournalEntryInput, JournalEntry } from '../types/journal';
-import type { FiscalQuarter } from '../types/common';
-import { TaxEngine } from './engines/tax-engine';
+import type { FiscalQuarter, AccountCategory } from '../types/common';
 import { getCategoryByCode } from '../config/account-categories';
 import { calculateMonthlyBreakdown } from './config/efka-config';
 import {
@@ -96,6 +95,62 @@ export class AccountingService {
     }
 
     return entry;
+  }
+
+  // ── Journal Entry from Expense Document ─────────────────────────────────
+
+  /**
+   * Δημιουργία εγγραφής Ε-Ε από επιβεβαιωμένο παραστατικό εξόδου
+   *
+   * Κεντρικοποιημένη λογική — ακριβώς όπως createJournalEntryFromInvoice().
+   * Καλείται από τον documents/[id] PATCH handler κατά το confirm.
+   */
+  async createJournalEntryFromExpense(params: {
+    documentId: string;
+    fileName: string;
+    confirmedNetAmount: number;
+    confirmedVatAmount: number;
+    confirmedCategory: AccountCategory;
+    confirmedDate: string;
+    confirmedIssuerName: string | null;
+    confirmedPaymentMethod: string;
+    fiscalYear: number;
+  }): Promise<JournalEntry | null> {
+    const grossAmount = params.confirmedNetAmount + params.confirmedVatAmount;
+    const quarter = getQuarterFromMonth(
+      parseInt(params.confirmedDate.substring(5, 7), 10)
+    );
+    const vatRate = params.confirmedVatAmount > 0
+      ? Math.round((params.confirmedVatAmount / params.confirmedNetAmount) * 100)
+      : 0;
+
+    const description = params.confirmedIssuerName
+      ? `Παραστατικό: ${params.fileName} — ${params.confirmedIssuerName}`
+      : `Παραστατικό: ${params.fileName}`;
+
+    const entryInput: CreateJournalEntryInput = {
+      date: params.confirmedDate,
+      type: 'expense',
+      category: params.confirmedCategory,
+      description,
+      netAmount: params.confirmedNetAmount,
+      vatRate,
+      vatAmount: params.confirmedVatAmount,
+      grossAmount,
+      vatDeductible: true,
+      paymentMethod: params.confirmedPaymentMethod,
+      contactId: null,
+      contactName: params.confirmedIssuerName,
+      invoiceId: null,
+      mydataCode: 'category2_4',
+      e3Code: '585_001',
+      fiscalYear: params.fiscalYear,
+      quarter,
+      notes: `AI Document: ${params.documentId}`,
+    };
+
+    const { id } = await this.repository.createJournalEntry(entryInput);
+    return this.repository.getJournalEntry(id);
   }
 
   // ── VAT Dashboard ───────────────────────────────────────────────────────
@@ -195,10 +250,7 @@ export class AccountingService {
       efkaByPartner.set(p.partnerId, paid);
     }
 
-    // Cast to TaxEngine for partnership method
-    const taxEngine = this.taxEngine as TaxEngine;
-
-    return taxEngine.calculatePartnershipTax(
+    return this.taxEngine.calculatePartnershipTax(
       fiscalYear,
       totalIncome,
       totalExpenses,
@@ -238,11 +290,8 @@ export class AccountingService {
       efkaManagerTotal += paid;
     }
 
-    // Cast to TaxEngine for corporate method
-    const taxEngine = this.taxEngine as TaxEngine;
-
     const activeMembers = members.filter((m) => m.isActive);
-    return taxEngine.calculateCorporateTax(
+    return this.taxEngine.calculateCorporateTax(
       fiscalYear,
       totalIncome,
       totalExpenses,
@@ -291,10 +340,8 @@ export class AccountingService {
       // Employee mode EFKA is employer cost, not deductible from corporate tax
     }
 
-    const taxEngine = this.taxEngine as TaxEngine;
-
     const activeShareholders = shareholders.filter((s) => s.isActive);
-    return taxEngine.calculateAETax(
+    return this.taxEngine.calculateAETax(
       fiscalYear,
       totalIncome,
       totalExpenses,
