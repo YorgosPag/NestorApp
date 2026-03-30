@@ -292,7 +292,7 @@
 | **ADR-265** | Vision-in-the-Loop — Document Images in Agentic Loop | ✅ IMPLEMENTED | 2026-03-27 | AI Architecture | [📄](./adrs/ADR-264-document-preview-mode.md#changelog) |
 | **ADR-266** | Gantt & Construction Schedule Reports (Dashboard) | ✅ PHASE A IMPLEMENTED | 2026-03-28 | Reports / Construction | [📄](./adrs/ADR-266-gantt-construction-reports.md) |
 | **ADR-267** | Lightweight Procurement Module — Purchase Orders & Material Tracking | ✅ PHASE A IMPLEMENTED | 2026-03-28 | Procurement / Supply Chain | [📄](./adrs/ADR-267-lightweight-procurement-module.md) |
-| **ADR-268** | Dynamic Report Builder — Cross-Entity Tabular Reports + PDF/Excel Export | ✅ PHASE 6a IMPLEMENTED | 2026-03-30 | Reports / Analytics | [📄](./adrs/ADR-268-dynamic-report-builder/ADR-268.md) |
+| **ADR-268** | Dynamic Report Builder — Cross-Entity Tabular Reports + PDF/Excel Export + Cash Flow Forecast | ✅ ALL 8 PHASES COMPLETE | 2026-03-30 | Reports / Analytics | [📄](./adrs/ADR-268-dynamic-report-builder/ADR-268.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
