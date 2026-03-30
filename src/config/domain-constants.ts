@@ -667,7 +667,11 @@ export const API_ROUTES = {
     BANK: {
       TRANSACTIONS: '/api/accounting/bank/transactions',
       IMPORT: '/api/accounting/bank/import',
+      CANDIDATES: '/api/accounting/bank/candidates',
+      MATCH: '/api/accounting/bank/match',
+      MATCH_BATCH: '/api/accounting/bank/match-batch',
     },
+    REPORTS: '/api/accounting/reports',
     DOCUMENTS: {
       LIST: '/api/accounting/documents',
       BY_ID: (id: string) => `/api/accounting/documents/${id}` as const,

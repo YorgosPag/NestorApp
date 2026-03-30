@@ -1,6 +1,6 @@
 # DECISIONS-PHASE-2: Wire Up Dead Code — MatchingEngine + Reports
 
-> **Status**: ΥΠΟΦΑΣΗ 2a ✅ + 2b ✅ | 2c-2e PENDING
+> **Status**: ΥΠΟΦΑΣΗ 2a ✅ + 2b ✅ + 2c ✅ + 2d ✅ | 2e PENDING
 > **Date**: 2026-03-30
 > **Scope**: Φάση 2 του accounting roadmap
 > **Depends on**: Phase 1a ✅, Phase 1b ✅, Phase 1c ✅
@@ -543,8 +543,36 @@ Email scheduling (αυτόματη μηνιαία αποστολή) → μελλ
 |---|---|---|---|---|
 | **2a** MatchingEngine Core ✅ | Q1, Q3, Q4 | 5 NEW | 6 EDIT | DONE |
 | **2b** Rule Learning ✅ | Q5 | 3 NEW | 5 EDIT | DONE |
-| **2c** Reports Engine | Q6, Q7, Q9, Q10 | ~12 | ~0 | ~8 ώρες |
-| **2d** Reconciliation UI | Q2, Q11 | ~8 | ~0 | ~7 ώρες |
+| **2c** Reports Engine ✅ | Q6, Q7, Q9, Q10 | 13 NEW | 1 EDIT | DONE |
+| **2d** Reconciliation UI ✅ | Q2, Q11 | 12 NEW | 6 EDIT | DONE |
 | **2e** Reports Dashboard UI | Q8, Q12 | ~12 | ~0 | ~8 ώρες |
 | **ΣΥΝΟΛΟ** | **12 αποφάσεις** | **~40 αρχεία** | **~8 τροποποιήσεις** | **~35 ώρες** |
+
+---
+
+## Changelog
+
+### 2026-03-30 — Phase 2c: Reports Engine (13 νέα αρχεία)
+- `types/reports.ts` — ReportType, ComparativeColumn<T>, 8 result interfaces
+- `services/reports/report-date-utils.ts` — Date preset resolution
+- `services/reports/comparative-engine.ts` — Generic comparative computations
+- 8 report generators: expense-by-category, income-by-customer, trial-balance, ar-aging, bank-reconciliation, profit-and-loss, tax-summary, cash-flow
+- `services/reports/index.ts` — Registry + barrel export
+- `app/api/accounting/reports/[type]/route.ts` — GET endpoint
+- Updated `types/index.ts` barrel
+
+### 2026-03-30 — Phase 2d: Reconciliation UI (12 νέα αρχεία)
+- `components/reconciliation/tier-colors.ts` — Tier-to-color mapping
+- `hooks/useMatchCandidates.ts` — Candidate fetching with AbortController
+- `hooks/useMatchActions.ts` — Match, batch, exclude actions
+- `hooks/useMatchingConfig.ts` — Firestore config read/write
+- `components/reconciliation/CandidateCard.tsx` — Single candidate card
+- `components/reconciliation/CandidateGroupCard.tsx` — N:M group card
+- `components/reconciliation/TransactionsPanel.tsx` — Left panel with filters
+- `components/reconciliation/CandidatesPanel.tsx` — Right panel with candidates
+- `components/reconciliation/BatchActionsToolbar.tsx` — Batch actions
+- `components/reconciliation/MatchingSettingsDialog.tsx` — Settings with sliders
+- `components/reconciliation/ReconciliationPageContent.tsx` — Main orchestrator
+- `app/accounting/reconciliation/page.tsx` — Page route
+- Updated: lazyRoutes, navigation, i18n (en+el), domain-constants
 

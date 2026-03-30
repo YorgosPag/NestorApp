@@ -669,6 +669,63 @@
     "variablePrice": "Μεταβλητή τιμή",
     "saveSuccess": "Οι υπηρεσίες αποθηκεύτηκαν επιτυχώς",
     "saveError": "Σφάλμα αποθήκευσης υπηρεσιών"
+  },
+  "reconciliation": {
+    "title": "Συμφωνία Τράπεζας",
+    "description": "Αντιστοίχιση τραπεζικών κινήσεων με τιμολόγια και εγγραφές",
+    "transactions": "Κινήσεις",
+    "candidates": "Υποψήφιες Αντιστοιχίσεις",
+    "unmatched": "χωρίς αντιστοίχιση",
+    "noTransactions": "Δεν βρέθηκαν κινήσεις",
+    "noCandidates": "Δεν βρέθηκαν υποψήφιες αντιστοιχίσεις",
+    "allReconciled": "Όλες οι κινήσεις αντιστοιχίστηκαν",
+    "selectTransaction": "Επιλέξτε μια κίνηση για να δείτε τις υποψήφιες αντιστοιχίσεις",
+    "matchAction": "Αντιστοίχιση",
+    "excludeAction": "Εξαίρεση",
+    "unmatchAction": "Αναίρεση",
+    "matchReasons": "λόγοι αντιστοίχισης",
+    "groupMatch": "Ομαδική Αντιστοίχιση ({{count}} στοιχεία)",
+    "groupTotal": "Σύνολο",
+    "filterAll": "Όλες",
+    "filterUnmatched": "Χωρίς Αντιστοίχιση",
+    "filterAutoMatched": "Αυτόματη Αντιστοίχιση",
+    "filterManualMatched": "Χειροκίνητη Αντιστοίχιση",
+    "filterExcluded": "Εξαιρέθηκαν",
+    "selectAll": "Επιλογή όλων",
+    "date": "Ημερομηνία",
+    "description": "Περιγραφή",
+    "amount": "Ποσό",
+    "status": "Κατάσταση",
+    "confidence": "Βεβαιότητα",
+    "amountDifference": "Διαφορά Ποσού",
+    "batchAcceptAll": "Αποδοχή Όλων Auto",
+    "batchAcceptSelected": "Αποδοχή Επιλεγμένων",
+    "batchConfirm": "Αποδοχή {{count}} αυτόματων αντιστοιχίσεων;",
+    "batchProgress": "Επεξεργασία {{completed}}/{{total}}...",
+    "batchComplete": "{{matched}} από {{total}} αντιστοιχίστηκαν επιτυχώς",
+    "settings": "Ρυθμίσεις",
+    "settingsTitle": "Ρυθμίσεις Αντιστοίχισης",
+    "thresholdsSection": "Όρια Βεβαιότητας",
+    "thresholds": {
+      "auto": "Αυτόματη (≥)",
+      "suggest": "Προτεινόμενη (≥)",
+      "manual": "Χειροκίνητη (≥)"
+    },
+    "weightsSection": "Βάρη Βαθμολόγησης",
+    "weights": {
+      "description": "Περιγραφή",
+      "amount": "Ποσό",
+      "currency": "Νόμισμα",
+      "date": "Ημερομηνία",
+      "sumError": "Τα βάρη πρέπει να αθροίζουν σε 100%"
+    },
+    "saveSettings": "Αποθήκευση",
+    "tiers": {
+      "autoMatch": "Αυτόματη",
+      "suggested": "Προτεινόμενη",
+      "manualReview": "Χειροκίνητη",
+      "noMatch": "Χωρίς Αντιστοίχιση"
+    }
   }
 }
 

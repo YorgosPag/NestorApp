@@ -669,6 +669,63 @@
     "variablePrice": "Variable price",
     "saveSuccess": "Service presets saved successfully",
     "saveError": "Error saving presets"
+  },
+  "reconciliation": {
+    "title": "Bank Reconciliation",
+    "description": "Match bank transactions with invoices and journal entries",
+    "transactions": "Transactions",
+    "candidates": "Match Candidates",
+    "unmatched": "unmatched",
+    "noTransactions": "No transactions found",
+    "noCandidates": "No matching candidates found",
+    "allReconciled": "All transactions reconciled",
+    "selectTransaction": "Select a transaction to view match candidates",
+    "matchAction": "Match",
+    "excludeAction": "Exclude",
+    "unmatchAction": "Unmatch",
+    "matchReasons": "match reasons",
+    "groupMatch": "Group Match ({{count}} items)",
+    "groupTotal": "Total",
+    "filterAll": "All",
+    "filterUnmatched": "Unmatched",
+    "filterAutoMatched": "Auto Matched",
+    "filterManualMatched": "Manual Matched",
+    "filterExcluded": "Excluded",
+    "selectAll": "Select all",
+    "date": "Date",
+    "description": "Description",
+    "amount": "Amount",
+    "status": "Status",
+    "confidence": "Confidence",
+    "amountDifference": "Amount Difference",
+    "batchAcceptAll": "Accept All Auto",
+    "batchAcceptSelected": "Accept Selected",
+    "batchConfirm": "Accept {{count}} auto-matched transactions?",
+    "batchProgress": "Processing {{completed}}/{{total}}...",
+    "batchComplete": "{{matched}} of {{total}} matched successfully",
+    "settings": "Settings",
+    "settingsTitle": "Matching Settings",
+    "thresholdsSection": "Confidence Thresholds",
+    "thresholds": {
+      "auto": "Auto Match (≥)",
+      "suggest": "Suggest (≥)",
+      "manual": "Manual Review (≥)"
+    },
+    "weightsSection": "Scoring Weights",
+    "weights": {
+      "description": "Description",
+      "amount": "Amount",
+      "currency": "Currency",
+      "date": "Date",
+      "sumError": "Weights must sum to 100%"
+    },
+    "saveSettings": "Save Settings",
+    "tiers": {
+      "autoMatch": "Auto Match",
+      "suggested": "Suggested",
+      "manualReview": "Manual Review",
+      "noMatch": "No Match"
+    }
   }
 }
 

@@ -249,6 +249,37 @@ export type {
   AuditEntryFilters,
 } from './accounting-audit';
 
+// ── Reports Types (Phase 2c — Q6-Q10) ──────────────────────────────────────
+export type {
+  ReportType,
+  ReportDatePreset,
+  ReportDateFilter,
+  ResolvedPeriods,
+  ChangeMetric,
+  ComparativeColumn,
+  ReportResult,
+  ReportGeneratorDeps,
+  ReportGenerator,
+  CategoryBreakdown,
+  ReportDataMap,
+  ProfitAndLossData,
+  TrialBalanceRow,
+  TrialBalanceData,
+  ARAgingCustomerRow,
+  ARAgingData,
+  VATSummaryRow,
+  TaxSummaryData,
+  BankReconciliationItem,
+  BankReconciliationData,
+  CashFlowItem,
+  CashFlowSection,
+  CashFlowData,
+  CustomerIncomeRow,
+  IncomeByCustomerData,
+  ExpenseCategoryRow,
+  ExpenseByCategoryData,
+} from './reports';
+
 // ── Abstraction Interfaces (ADR-ACC-010) ────────────────────────────────────
 export type {
   IAccountingRepository,

@@ -253,6 +253,11 @@ export const LazyRoutes = {
     { loadingType: 'list', ssr: false }
   ),
 
+  AccountingReconciliation: createLazyRoute(
+    () => import('@/subapps/accounting/components/reconciliation/ReconciliationPageContent').then(mod => ({ default: mod.ReconciliationPageContent })),
+    { loadingType: 'list', ssr: false }
+  ),
+
   AccountingEFKA: createLazyRoute(
     () => import('@/subapps/accounting/components/efka/EFKAPageContent').then(mod => ({ default: mod.EFKAPageContent })),
     { loadingType: 'dashboard', ssr: false }
