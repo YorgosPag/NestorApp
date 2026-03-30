@@ -13,7 +13,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import type { MatchingConfig } from '@/subapps/accounting/types';
 import { DEFAULT_MATCHING_CONFIG } from '@/subapps/accounting/types';
-import { COLLECTIONS, DOCUMENT_IDS } from '@/config/firestore-collections';
+import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
 
 /**
  * Read/write matching config from Firestore.
@@ -36,7 +36,7 @@ export function useMatchingConfig() {
       const { getFirestore, doc, getDoc } = await import('firebase/firestore');
       const { getApp } = await import('firebase/app');
       const db = getFirestore(getApp());
-      const docRef = doc(db, COLLECTIONS.ACCOUNTING_SETTINGS, DOCUMENT_IDS.ACCT_MATCHING_CONFIG);
+      const docRef = doc(db, COLLECTIONS.ACCOUNTING_SETTINGS, SYSTEM_DOCS.ACCT_MATCHING_CONFIG);
       const snap = await getDoc(docRef);
       if (snap.exists()) {
         setConfig(snap.data() as MatchingConfig);
@@ -54,7 +54,7 @@ export function useMatchingConfig() {
       const { getFirestore, doc, setDoc } = await import('firebase/firestore');
       const { getApp } = await import('firebase/app');
       const db = getFirestore(getApp());
-      const docRef = doc(db, COLLECTIONS.ACCOUNTING_SETTINGS, DOCUMENT_IDS.ACCT_MATCHING_CONFIG);
+      const docRef = doc(db, COLLECTIONS.ACCOUNTING_SETTINGS, SYSTEM_DOCS.ACCT_MATCHING_CONFIG);
       await setDoc(docRef, newConfig, { merge: true });
       setConfig(newConfig);
       return true;
