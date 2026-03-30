@@ -98,6 +98,7 @@ export async function listBankTransactions(
     if (filters.accountId) query = query.where('accountId', '==', filters.accountId);
     if (filters.direction) query = query.where('direction', '==', filters.direction);
     if (filters.matchStatus) query = query.where('matchStatus', '==', filters.matchStatus);
+    if (filters.matchGroupId) query = query.where('matchGroupId', '==', filters.matchGroupId);
 
     query = query.orderBy('transactionDate', 'desc').limit(pageSize);
 

@@ -1,9 +1,10 @@
 /**
  * @fileoverview CSV Import Service — Bank Statement CSV Parsing & Import
- * @description Parsing + batch import of bank transactions via per-bank CSV configs
+ * @description Single Source of Truth for CSV parsing (bank-specific + auto-detect)
  * @author Claude Code (Anthropic AI) + Giorgos Pagonis
  * @created 2026-02-09
- * @version 1.0.0
+ * @version 2.0.0
+ * @see DECISIONS-PHASE-2.md Q4 — Wire up CSVImportService (SSoT)
  * @see ADR-ACC-008 Bank Reconciliation
  * @compliance CLAUDE.md Enterprise Standards — zero `any`
  */
@@ -13,100 +14,57 @@ import type {
   BankTransaction,
   CSVParserConfig,
   ImportBatch,
+  TransactionDirection,
 } from '../../types/bank';
 import { getSupportedBanks, getParserConfig } from '../config/csv-parsers';
 import { isoNow } from '../repository/firestore-helpers';
 
 // ============================================================================
-// CSV IMPORT SERVICE IMPLEMENTATION
+// PARSED TRANSACTION TYPE (fields NOT set by CSV parser)
 // ============================================================================
 
-/**
- * CSV Import Service — Εισαγωγή τραπεζικών CSV
- *
- * Implements ICSVImportService interface.
- * Strategy pattern: each bank has its own parser config.
- */
+type ParsedTransaction = Omit<
+  BankTransaction,
+  | 'transactionId'
+  | 'matchStatus'
+  | 'matchedEntityId'
+  | 'matchedEntityType'
+  | 'matchConfidence'
+  | 'importBatchId'
+  | 'notes'
+  | 'createdAt'
+  | 'updatedAt'
+>;
+
+// ============================================================================
+// CSV IMPORT SERVICE
+// ============================================================================
+
 export class CSVImportService implements ICSVImportService {
   constructor(private readonly repository: IAccountingRepository) {}
 
-  /**
-   * Λήψη υποστηριζόμενων τραπεζών
-   */
   getSupportedBanks(): CSVParserConfig[] {
     return getSupportedBanks();
   }
 
   /**
-   * Parsing CSV αρχείου σε τραπεζικές κινήσεις
+   * Parse CSV — supports bank-specific configs OR auto-detect mode
    *
-   * @param fileContent - Περιεχόμενο CSV (string, ήδη decoded)
-   * @param bankCode - Κωδικός τράπεζας (π.χ. 'NBG')
-   * @returns Parsed transactions (χωρίς IDs — θα προστεθούν κατά import)
+   * @param fileContent - CSV text content
+   * @param bankCode - Bank code (e.g. 'NBG') or 'auto' for auto-detection
    */
   async parseCSV(
     fileContent: string,
     bankCode: string
-  ): Promise<
-    Array<
-      Omit<
-        BankTransaction,
-        | 'transactionId'
-        | 'matchStatus'
-        | 'matchedEntityId'
-        | 'matchedEntityType'
-        | 'matchConfidence'
-        | 'importBatchId'
-        | 'notes'
-        | 'createdAt'
-        | 'updatedAt'
-      >
-    >
-  > {
-    const config = getParserConfig(bankCode);
-    if (!config) {
-      throw new Error(`[CSVImportService] Unsupported bank code: ${bankCode}`);
+  ): Promise<ParsedTransaction[]> {
+    if (bankCode === 'auto') {
+      return this.autoDetectParse(fileContent);
     }
-
-    const lines = fileContent.split('\n').filter((line) => line.trim().length > 0);
-
-    // Skip header rows
-    const dataLines = lines.slice(config.skipRows);
-
-    const transactions: Array<
-      Omit<
-        BankTransaction,
-        | 'transactionId'
-        | 'matchStatus'
-        | 'matchedEntityId'
-        | 'matchedEntityType'
-        | 'matchConfidence'
-        | 'importBatchId'
-        | 'notes'
-        | 'createdAt'
-        | 'updatedAt'
-      >
-    > = [];
-
-    for (const line of dataLines) {
-      const columns = splitCSVLine(line, config.delimiter);
-      if (columns.length < 3) continue; // Skip malformed rows
-
-      const parsed = parseSingleRow(columns, config);
-      if (parsed) {
-        transactions.push(parsed);
-      }
-    }
-
-    return transactions;
+    return this.bankSpecificParse(fileContent, bankCode);
   }
 
   /**
-   * Εισαγωγή parsed κινήσεων στη βάση
-   *
-   * @param transactions - Parsed κινήσεις
-   * @param accountId - ID τραπεζικού λογαριασμού
-   * @returns ImportBatch metadata
+   * Import parsed transactions into Firestore
    */
   async importTransactions(
     transactions: Array<Omit<BankTransaction, 'transactionId' | 'createdAt' | 'updatedAt'>>,
@@ -117,7 +75,6 @@ export class CSVImportService implements ICSVImportService {
     let skippedCount = 0;
     const errors: string[] = [];
 
-    // Create batch record first
     const { id: batchId } = await this.repository.createImportBatch({
       accountId,
       fileName: `import_${now}`,
@@ -129,7 +86,6 @@ export class CSVImportService implements ICSVImportService {
       importedAt: now,
     });
 
-    // Import each transaction
     for (let i = 0; i < transactions.length; i++) {
       try {
         const txn = transactions[i];
@@ -153,7 +109,7 @@ export class CSVImportService implements ICSVImportService {
       }
     }
 
-    const batch: ImportBatch = {
+    return {
       batchId,
       accountId,
       fileName: `import_${now}`,
@@ -164,18 +120,61 @@ export class CSVImportService implements ICSVImportService {
       errors,
       importedAt: now,
     };
+  }
 
-    return batch;
+  // ── Bank-Specific Parsing ────────────────────────────────────────────────
+
+  private bankSpecificParse(fileContent: string, bankCode: string): ParsedTransaction[] {
+    const config = getParserConfig(bankCode);
+    if (!config) {
+      throw new Error(`[CSVImportService] Unsupported bank code: ${bankCode}`);
+    }
+
+    const lines = fileContent.split('\n').filter((line) => line.trim().length > 0);
+    const dataLines = lines.slice(config.skipRows);
+    const transactions: ParsedTransaction[] = [];
+
+    for (const line of dataLines) {
+      const columns = splitCSVLine(line, config.delimiter);
+      if (columns.length < 3) continue;
+      const parsed = parseBankRow(columns, config);
+      if (parsed) transactions.push(parsed);
+    }
+
+    return transactions;
+  }
+
+  // ── Auto-Detect Parsing (Greek bank CSV) ─────────────────────────────────
+
+  private autoDetectParse(fileContent: string): ParsedTransaction[] {
+    const lines = fileContent
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+
+    if (lines.length < 2) return [];
+
+    const headerLine = lines[0]!;
+    const delimiter = detectDelimiter(headerLine);
+    const headers = headerLine.split(delimiter);
+    const columnMap = detectColumnMapping(headers);
+    const dataLines = lines.slice(1);
+    const transactions: ParsedTransaction[] = [];
+
+    for (const line of dataLines) {
+      const columns = line.split(delimiter);
+      const parsed = parseAutoDetectedRow(columns, columnMap);
+      if (parsed) transactions.push(parsed);
+    }
+
+    return transactions;
   }
 }
 
 // ============================================================================
-// PARSING HELPERS
+// BANK-SPECIFIC PARSING HELPERS
 // ============================================================================
 
-/**
- * Split CSV line respecting quoted fields
- */
 function splitCSVLine(line: string, delimiter: string): string[] {
   const result: string[] = [];
   let current = '';
@@ -192,58 +191,36 @@ function splitCSVLine(line: string, delimiter: string): string[] {
     }
   }
   result.push(current.trim());
-
   return result;
 }
 
-/**
- * Parse a single CSV row into a partial BankTransaction
- */
-function parseSingleRow(
+function parseBankRow(
   columns: string[],
   config: CSVParserConfig
-): Omit<
-  BankTransaction,
-  | 'transactionId'
-  | 'matchStatus'
-  | 'matchedEntityId'
-  | 'matchedEntityType'
-  | 'matchConfidence'
-  | 'importBatchId'
-  | 'notes'
-  | 'createdAt'
-  | 'updatedAt'
-> | null {
+): ParsedTransaction | null {
   try {
     const mapping = config.columnMapping;
-
-    // Parse dates
     const valueDateRaw = columns[mapping.valueDate];
     if (!valueDateRaw) return null;
-    const valueDate = parseDate(valueDateRaw, config.dateFormat);
+    const valueDate = parseBankDate(valueDateRaw, config.dateFormat);
 
     const transactionDate =
       mapping.transactionDate !== null && columns[mapping.transactionDate]
-        ? parseDate(columns[mapping.transactionDate], config.dateFormat)
+        ? parseBankDate(columns[mapping.transactionDate], config.dateFormat)
         : valueDate;
 
-    // Parse amount
     let amount: number;
-    let direction: 'credit' | 'debit';
+    let direction: TransactionDirection;
 
     if (mapping.amount !== null && columns[mapping.amount]) {
-      const rawAmount = parseDecimal(columns[mapping.amount], config.decimalSeparator);
+      const rawAmount = parseBankDecimal(columns[mapping.amount], config.decimalSeparator);
       amount = Math.abs(rawAmount);
       direction = rawAmount >= 0 ? 'credit' : 'debit';
     } else {
-      const debit =
-        mapping.debitAmount !== null && columns[mapping.debitAmount]
-          ? parseDecimal(columns[mapping.debitAmount], config.decimalSeparator)
-          : 0;
-      const credit =
-        mapping.creditAmount !== null && columns[mapping.creditAmount]
-          ? parseDecimal(columns[mapping.creditAmount], config.decimalSeparator)
-          : 0;
+      const debit = mapping.debitAmount !== null && columns[mapping.debitAmount]
+        ? parseBankDecimal(columns[mapping.debitAmount], config.decimalSeparator) : 0;
+      const credit = mapping.creditAmount !== null && columns[mapping.creditAmount]
+        ? parseBankDecimal(columns[mapping.creditAmount], config.decimalSeparator) : 0;
 
       if (credit > 0) {
         amount = credit;
@@ -256,76 +233,186 @@ function parseSingleRow(
 
     if (amount === 0) return null;
 
-    // Parse other fields
-    const description = columns[mapping.description] ?? '';
-    const balance =
-      mapping.balance !== null && columns[mapping.balance]
-        ? parseDecimal(columns[mapping.balance], config.decimalSeparator)
-        : null;
-    const counterparty =
-      mapping.counterparty !== null && columns[mapping.counterparty]
-        ? columns[mapping.counterparty] || null
-        : null;
-    const paymentReference =
-      mapping.reference !== null && columns[mapping.reference]
-        ? columns[mapping.reference] || null
-        : null;
-
     return {
-      accountId: '', // Set by caller
+      accountId: '',
       valueDate,
       transactionDate,
       direction,
       amount,
       currency: 'EUR',
-      balanceAfter: balance,
-      bankDescription: description,
-      counterparty,
-      paymentReference,
+      balanceAfter: mapping.balance !== null && columns[mapping.balance]
+        ? parseBankDecimal(columns[mapping.balance], config.decimalSeparator) : null,
+      bankDescription: columns[mapping.description] ?? '',
+      counterparty: mapping.counterparty !== null && columns[mapping.counterparty]
+        ? columns[mapping.counterparty] || null : null,
+      paymentReference: mapping.reference !== null && columns[mapping.reference]
+        ? columns[mapping.reference] || null : null,
     };
   } catch {
     return null;
   }
 }
 
-/**
- * Parse date string to ISO 8601 (YYYY-MM-DD)
- */
-function parseDate(dateStr: string, format: string): string {
+function parseBankDate(dateStr: string, format: string): string {
   const cleaned = dateStr.trim();
-
   if (format === 'DD/MM/YYYY') {
     const parts = cleaned.split('/');
     if (parts.length === 3) {
       return `${parts[2]}-${parts[1]?.padStart(2, '0')}-${parts[0]?.padStart(2, '0')}`;
     }
   }
-
-  if (format === 'YYYY-MM-DD') {
-    return cleaned;
-  }
-
-  // Fallback: try to parse as-is
+  if (format === 'YYYY-MM-DD') return cleaned;
   return cleaned;
 }
 
-/**
- * Parse decimal number with configurable separator
- */
-function parseDecimal(value: string, decimalSeparator: string): number {
-  const cleaned = value
-    .trim()
-    .replace(/[^\d,.\-]/g, '');
-
+function parseBankDecimal(value: string, decimalSeparator: string): number {
+  const cleaned = value.trim().replace(/[^\d,.-]/g, '');
   let normalized: string;
   if (decimalSeparator === ',') {
-    // Remove thousand separators (.) and replace decimal (,) with (.)
     normalized = cleaned.replace(/\./g, '').replace(',', '.');
   } else {
-    // Remove thousand separators (,)
     normalized = cleaned.replace(/,/g, '');
   }
-
   const result = parseFloat(normalized);
   return isNaN(result) ? 0 : result;
+}
+
+// ============================================================================
+// AUTO-DETECT PARSING HELPERS
+// ============================================================================
+
+interface AutoColumnMap {
+  dateIdx: number;
+  descIdx: number;
+  debitIdx: number | null;
+  creditIdx: number | null;
+  amountIdx: number | null;
+  balanceIdx: number | null;
+  counterpartyIdx: number | null;
+  referenceIdx: number | null;
+}
+
+function detectDelimiter(headerLine: string): string {
+  const semicolonCount = (headerLine.match(/;/g) ?? []).length;
+  const commaCount = (headerLine.match(/,/g) ?? []).length;
+  const tabCount = (headerLine.match(/\t/g) ?? []).length;
+
+  if (tabCount > semicolonCount && tabCount > commaCount) return '\t';
+  if (semicolonCount > commaCount) return ';';
+  return ',';
+}
+
+function detectColumnMapping(headers: string[]): AutoColumnMap {
+  const normalized = headers.map((h) => h.trim().toLowerCase().replace(/"/g, ''));
+
+  const datePatterns = ['ημερομηνία', 'date', 'ημ/νία', 'value date', 'valuedate', 'ημ.αξίας'];
+  const descPatterns = ['περιγραφή', 'description', 'αιτιολογία', 'details', 'narrative'];
+  const debitPatterns = ['χρέωση', 'debit', 'withdrawal', 'χρεωση'];
+  const creditPatterns = ['πίστωση', 'credit', 'deposit', 'πιστωση'];
+  const amountPatterns = ['ποσό', 'amount', 'ποσο'];
+  const balancePatterns = ['υπόλοιπο', 'balance', 'υπολοιπο'];
+  const counterpartyPatterns = ['δικαιούχος', 'counterparty', 'beneficiary', 'αντισυμβαλλόμενος'];
+  const refPatterns = ['αριθμός', 'reference', 'ref', 'αριθμος συναλλαγής'];
+
+  const findIdx = (patterns: string[]): number | null => {
+    for (const pattern of patterns) {
+      const idx = normalized.findIndex((h) => h.includes(pattern));
+      if (idx !== -1) return idx;
+    }
+    return null;
+  };
+
+  return {
+    dateIdx: findIdx(datePatterns) ?? 0,
+    descIdx: findIdx(descPatterns) ?? 1,
+    debitIdx: findIdx(debitPatterns),
+    creditIdx: findIdx(creditPatterns),
+    amountIdx: findIdx(amountPatterns),
+    balanceIdx: findIdx(balancePatterns),
+    counterpartyIdx: findIdx(counterpartyPatterns),
+    referenceIdx: findIdx(refPatterns),
+  };
+}
+
+function parseAutoDetectedRow(
+  columns: string[],
+  columnMap: AutoColumnMap
+): ParsedTransaction | null {
+  const dateRaw = columns[columnMap.dateIdx] ?? '';
+  const valueDate = parseAutoDate(dateRaw);
+  if (!valueDate) return null;
+
+  const description = (columns[columnMap.descIdx] ?? '').trim().replace(/"/g, '');
+  if (!description) return null;
+
+  let amount: number | null = null;
+  let direction: TransactionDirection = 'credit';
+
+  if (columnMap.debitIdx !== null && columnMap.creditIdx !== null) {
+    const debitVal = parseAutoAmount(columns[columnMap.debitIdx] ?? '');
+    const creditVal = parseAutoAmount(columns[columnMap.creditIdx] ?? '');
+
+    if (debitVal && debitVal > 0) {
+      amount = debitVal;
+      direction = 'debit';
+    } else if (creditVal && creditVal > 0) {
+      amount = creditVal;
+      direction = 'credit';
+    }
+  } else if (columnMap.amountIdx !== null) {
+    const rawAmount = parseAutoAmount(columns[columnMap.amountIdx] ?? '');
+    if (rawAmount !== null) {
+      amount = Math.abs(rawAmount);
+      direction = rawAmount < 0 ? 'debit' : 'credit';
+    }
+  }
+
+  if (!amount || amount <= 0) return null;
+
+  return {
+    accountId: '',
+    valueDate,
+    transactionDate: valueDate,
+    direction,
+    amount,
+    currency: 'EUR',
+    balanceAfter: columnMap.balanceIdx !== null
+      ? parseAutoAmount(columns[columnMap.balanceIdx] ?? '') : null,
+    bankDescription: description,
+    counterparty: columnMap.counterpartyIdx !== null
+      ? (columns[columnMap.counterpartyIdx] ?? '').trim().replace(/"/g, '') || null : null,
+    paymentReference: columnMap.referenceIdx !== null
+      ? (columns[columnMap.referenceIdx] ?? '').trim().replace(/"/g, '') || null : null,
+  };
+}
+
+function parseAutoDate(raw: string): string | null {
+  const trimmed = raw.trim().replace(/"/g, '');
+  if (!trimmed) return null;
+
+  const dmyMatch = trimmed.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})$/);
+  if (dmyMatch) {
+    const [, day, month, year] = dmyMatch;
+    return `${year}-${month?.padStart(2, '0')}-${day?.padStart(2, '0')}`;
+  }
+
+  const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoMatch) return trimmed;
+
+  return null;
+}
+
+function parseAutoAmount(raw: string): number | null {
+  const trimmed = raw.trim().replace(/"/g, '').replace(/\s/g, '');
+  if (!trimmed || trimmed === '-') return null;
+
+  if (trimmed.includes(',') && trimmed.indexOf(',') > trimmed.lastIndexOf('.')) {
+    const normalized = trimmed.replace(/\./g, '').replace(',', '.');
+    const num = parseFloat(normalized);
+    return Number.isNaN(num) ? null : num;
+  }
+
+  const normalized = trimmed.replace(/,/g, '');
+  const num = parseFloat(normalized);
+  return Number.isNaN(num) ? null : num;
 }

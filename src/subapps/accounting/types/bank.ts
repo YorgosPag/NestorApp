@@ -102,9 +102,15 @@ export interface BankTransaction {
   /** ID αντιστοιχισμένης εγγραφής (invoice, journal entry, EFKA κ.λπ.) */
   matchedEntityId: string | null;
   /** Τύπος αντιστοιχισμένης εγγραφής */
-  matchedEntityType: 'invoice' | 'journal_entry' | 'efka_payment' | 'tax_payment' | null;
+  matchedEntityType: MatchableEntityType | null;
   /** Βαθμός εμπιστοσύνης αντιστοίχισης (0-100, null αν χειροκίνητη) */
   matchConfidence: number | null;
+
+  // — N:M Matching (Phase 2a) —
+  /** Group ID for N:M matches (null for 1:1 or unmatched) */
+  matchGroupId?: string | null;
+  /** All matched entity references (for N:M; single-element for 1:1) */
+  matchedEntities?: MatchedEntityRef[] | null;
 
   // — Metadata —
   /** ID batch εισαγωγής */
@@ -182,7 +188,7 @@ export interface MatchCandidate {
   /** ID εγγραφής (invoice, journal, EFKA κ.λπ.) */
   entityId: string;
   /** Τύπος εγγραφής */
-  entityType: 'invoice' | 'journal_entry' | 'efka_payment' | 'tax_payment';
+  entityType: MatchableEntityType;
   /** Περιγραφή (για εμφάνιση) */
   displayLabel: string;
   /** Ποσό εγγραφής */
@@ -193,6 +199,8 @@ export interface MatchCandidate {
   confidence: number;
   /** Λόγοι αντιστοίχισης (π.χ. 'Ίδιο ποσό', 'Κοντινή ημερομηνία') */
   matchReasons: string[];
+  /** Tier classification based on confidence thresholds */
+  tier: MatchTier;
 }
 
 /**
@@ -208,9 +216,15 @@ export interface MatchResult {
   /** ID αντιστοιχισμένης εγγραφής (null αν excluded/unmatched) */
   matchedEntityId: string | null;
   /** Τύπος αντιστοιχισμένης εγγραφής */
-  matchedEntityType: 'invoice' | 'journal_entry' | 'efka_payment' | 'tax_payment' | null;
+  matchedEntityType: MatchableEntityType | null;
   /** Βαθμός εμπιστοσύνης */
   confidence: number | null;
+  /** Group ID for N:M matches */
+  matchGroupId?: string | null;
+  /** All transaction IDs in this match group (N:M) */
+  transactionIds?: string[];
+  /** All matched entities in this group (N:M) */
+  matchedEntities?: MatchedEntityRef[];
 }
 
 // ============================================================================
@@ -266,4 +280,49 @@ export interface BankTransactionFilters {
   maxAmount?: number;
   /** Αναζήτηση κειμένου (description, counterparty) */
   searchText?: string;
+  /** Filter by N:M match group ID */
+  matchGroupId?: string;
+}
+
+// ============================================================================
+// N:M MATCHING TYPES (Phase 2a — SAP/Midday pattern)
+// ============================================================================
+
+/** Matchable entity types */
+export type MatchableEntityType = 'invoice' | 'journal_entry' | 'efka_payment' | 'tax_payment';
+
+/** Confidence tier classification (Q2 decision) */
+export type MatchTier = 'auto_match' | 'suggested' | 'manual_review' | 'no_match';
+
+/** Reference to a matched entity (used in N:M groups) */
+export interface MatchedEntityRef {
+  /** Entity Firestore document ID */
+  entityId: string;
+  /** Entity type */
+  entityType: MatchableEntityType;
+  /** Allocated amount from this entity */
+  amount: number;
+}
+
+/**
+ * Group of candidates that together match one or more transactions (N:M)
+ *
+ * Used when a single transaction maps to multiple invoices (1:N),
+ * or multiple transactions map to one invoice (N:1), or mixed (N:M).
+ */
+export interface MatchCandidateGroup {
+  /** Unique group identifier */
+  groupId: string;
+  /** Individual candidates in the group */
+  candidates: MatchCandidate[];
+  /** Combined amount of all candidates */
+  totalAmount: number;
+  /** Weighted confidence for the group */
+  confidence: number;
+  /** Human-readable description */
+  displayLabel: string;
+  /** Match reasons aggregated */
+  matchReasons: string[];
+  /** Tier classification based on group confidence */
+  tier: MatchTier;
 }

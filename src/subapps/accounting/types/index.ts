@@ -165,11 +165,23 @@ export type {
   CSVParserConfig,
   CSVColumnMapping,
   MatchCandidate,
+  MatchCandidateGroup,
   MatchResult,
+  MatchedEntityRef,
+  MatchableEntityType,
+  MatchTier,
   ImportBatchStatus,
   ImportBatch,
   BankTransactionFilters,
 } from './bank';
+
+// ── Matching Config Types (Phase 2a — SAP/Midday) ──────────────────────────
+export type {
+  MatchingScoringWeights,
+  MatchingThresholds,
+  MatchingConfig,
+} from './matching-config';
+export { DEFAULT_MATCHING_CONFIG } from './matching-config';
 
 // ── AI Document Processing Types (ADR-ACC-005) ─────────────────────────────
 export type {

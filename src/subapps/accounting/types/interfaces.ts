@@ -64,10 +64,13 @@ import type {
   BankTransactionFilters,
   BankAccountConfig,
   MatchCandidate,
+  MatchCandidateGroup,
   MatchResult,
+  MatchedEntityRef,
   ImportBatch,
   CSVParserConfig,
 } from './bank';
+import type { MatchingConfig } from './matching-config';
 import type {
   ReceivedExpenseDocument,
   ExtractedDocumentData,
@@ -301,14 +304,26 @@ export interface IMatchingEngine {
   /** Εύρεση υποψήφιων αντιστοιχίσεων για μία συναλλαγή */
   findCandidates(transaction: BankTransaction): Promise<MatchCandidate[]>;
 
-  /** Εφαρμογή αντιστοίχισης */
+  /** Εφαρμογή αντιστοίχισης (1:1) */
   matchTransaction(transactionId: string, entityId: string, entityType: MatchResult['matchedEntityType']): Promise<MatchResult>;
 
-  /** Μαζική αυτόματη αντιστοίχιση (batch) */
+  /** Μαζική αντιστοίχιση (batch) — 1st pass: 1:1, 2nd pass: N:M grouping */
   matchBatch(transactionIds: string[]): Promise<MatchResult[]>;
 
-  /** Αναίρεση αντιστοίχισης */
+  /** Αναίρεση αντιστοίχισης (1:1) */
   unmatchTransaction(transactionId: string): Promise<void>;
+
+  /** Εύρεση N:M candidate groups για πολλαπλές συναλλαγές */
+  findCandidateGroups(transactions: BankTransaction[]): Promise<MatchCandidateGroup[]>;
+
+  /** Αντιστοίχιση N:M group: πολλές συναλλαγές ↔ πολλές εγγραφές */
+  matchGroup(transactionIds: string[], entityRefs: MatchedEntityRef[]): Promise<MatchResult[]>;
+
+  /** Αναίρεση ολόκληρου N:M group */
+  unmatchGroup(matchGroupId: string): Promise<void>;
+
+  /** Φόρτωση config (Firestore override ή defaults) */
+  getConfig(): Promise<MatchingConfig>;
 }
 
 // ============================================================================

@@ -17,6 +17,8 @@ import { FirestoreAccountingRepository } from './repository/firestore-accounting
 import { VATEngine } from './engines/vat-engine';
 import { TaxEngine } from './engines/tax-engine';
 import { DepreciationEngine } from './engines/depreciation-engine';
+import { MatchingEngine } from './engines/matching-engine';
+import { CSVImportService } from './external/csv-import-service';
 
 /**
  * Δημιουργία πλήρους stack λογιστικών services
@@ -39,6 +41,8 @@ export function createAccountingServices() {
   const vatEngine = new VATEngine(repository);
   const taxEngine = new TaxEngine(repository);
   const depreciationEngine = new DepreciationEngine(repository);
+  const matchingEngine = new MatchingEngine(repository);
+  const csvImportService = new CSVImportService(repository);
   const service = new AccountingService(repository, vatEngine, taxEngine, depreciationEngine);
 
   return {
@@ -47,5 +51,7 @@ export function createAccountingServices() {
     vatEngine,
     taxEngine,
     depreciationEngine,
+    matchingEngine,
+    csvImportService,
   };
 }

@@ -386,6 +386,10 @@ export const SYSTEM_DOCS = {
   // Path: accounting_efka_config/user_config — EFKA user configuration
   ACCT_EFKA_USER_CONFIG: process.env.NEXT_PUBLIC_ACCT_EFKA_USER_CONFIG_DOC || 'user_config',
 
+  // 🔄 ACCOUNTING MATCHING ENGINE CONFIG (Phase 2a — SAP/Midday pattern)
+  // Path: accounting_settings/matching_config — Weighted scoring weights + thresholds
+  ACCT_MATCHING_CONFIG: process.env.NEXT_PUBLIC_ACCT_MATCHING_CONFIG_DOC || 'matching_config',
+
   // 🔔 UI SYNC SIGNAL (Server→Client bridge for AI agent mutations)
   // Path: config/ui_sync_signal — Written by Admin SDK, read by client onSnapshot
   // Allows server-side AI operations to notify the client UI of Firestore changes
