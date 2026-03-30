@@ -57,7 +57,7 @@
 | M-007: EFKA Tracker | ACC-006, ACC-017 | ΤΣΜΕΔΕ/ΤΕΕ + OE/EPE/AE EFKA |
 | M-008: Fixed Assets | ACC-007 | Asset registry, depreciation |
 | M-009: Bank Reconciliation | ACC-008 | Account sync, transaction matching |
-| M-010: Reports | ACC-004, ACC-009, ACC-016 | VAT, income tax, corporate tax reports |
+| M-010: Reports & Dashboard | ACC-004, ACC-009, ACC-016, Phase 2c+2e | VAT, income tax, 8 financial reports, comparative dashboard, PDF/Excel/CSV export |
 | Entity: ΟΕ | ACC-012 | Partnership: pass-through tax, per-partner EFKA |
 | Entity: ΕΠΕ | ACC-014 | LLC: 22% corporate tax, dividends, manager EFKA |
 | Entity: ΑΕ | ACC-015, ACC-016, ACC-017 | Corporation: shareholders, board, dual-mode EFKA |
@@ -147,3 +147,20 @@ Full React UI: 12 API routes, 8 hooks, 2 i18n files, navigation integration, inv
 | 5D | ΑΕ (Ανώνυμη Εταιρεία) | ACC-015, ACC-016, ACC-017 | 2026-02-12 |
 
 **All 4 entity types implemented**: Ατομική, ΟΕ, ΕΠΕ, ΑΕ — discriminated union `CompanyProfile`.
+
+### Phase 6: Matching Engine + Reports (2026-03-30) — DONE
+
+| Sub-Phase | Description | Decision Doc | Date |
+|-----------|-------------|-------------|------|
+| 2a | MatchingEngine Core — SAP/Midday weighted scoring | DECISIONS-PHASE-2 Q1,Q3,Q4 | 2026-03-30 |
+| 2b | Rule Learning Engine — Pattern recognition | DECISIONS-PHASE-2 Q5 | 2026-03-30 |
+| 2c | Reports Engine — 8 generators + API + types | DECISIONS-PHASE-2 Q6-Q10 | 2026-03-30 |
+| 2d | Reconciliation UI — Split view + batch actions | DECISIONS-PHASE-2 Q2,Q11 | 2026-03-30 |
+| 2e | Reports Dashboard UI — 8-card dashboard + detail + PDF/Excel/CSV export | DECISIONS-PHASE-2 Q8,Q12 | 2026-03-30 |
+
+**Key files (Phase 2e):**
+- `services/export/report-table-adapter.ts` — Shared flatten logic for all exporters
+- `hooks/useReport.ts` + `hooks/useReportsDashboard.ts` — Data fetching
+- `components/reports/FinancialReportsDashboard.tsx` — 8-card grid
+- `components/reports/ReportDetailView.tsx` — Drill-down with comparative table
+- `services/export/{csv,excel,pdf}-exporter.ts` — 3 export formats
